@@ -1201,27 +1201,27 @@
       "types": {
         "llm": {
           "label": "LLM (Modello Linguistico)",
-          "description": "Assistente intelligente con IA generativa"
+          "description": "IA conversazionale — ragiona, risponde a domande e chatta usando un modello linguistico"
         },
         "task": {
           "label": "Attività",
-          "description": "Automazione di attività specifiche"
+          "description": "Orchestra attività tra sotto-agenti, ognuna con un output definito"
         },
         "sequential": {
           "label": "Sequential",
-          "description": "Esegue agenti in sequenza"
+          "description": "Esegue sotto-agenti in catena, passando il risultato di ogni fase alla successiva"
         },
         "parallel": {
           "label": "Parallel",
-          "description": "Esegue agenti in parallelo"
+          "description": "Esegue più sotto-agenti contemporaneamente per attività indipendenti"
         },
         "loop": {
           "label": "Loop",
-          "description": "Esegue agenti in ciclo"
+          "description": "Ripete i sotto-agenti fino al raggiungimento di una condizione o numero di iterazioni"
         },
         "external": {
           "label": "Integrazioni Esterne",
-          "description": "Connette ed esegue integrazioni esterne"
+          "description": "Delega ai flussi di Flowise, n8n, Typebot, Dify o OpenAI"
         }
       },
       "badges": {
@@ -1297,7 +1297,8 @@
       "validationError": "Descrivi brevemente cosa fa il tuo agente (minimo 10 caratteri)",
       "tip": "Consiglio:",
       "tipContent": "Sii chiaro e specifico. Più dettagli fornisci, meglio l'agente comprenderà il suo ruolo e risponderà di conseguenza.",
-      "generateWithAI": "Genera con IA"
+      "generateWithAI": "Genera con IA",
+      "aiNotConfigured": "Integrazione OpenAI non configurata. Vai in Impostazioni → Integrazioni per abilitare le funzionalità IA."
     },
     "promptGenerator": {
       "title": "Generatore di Prompt con IA",

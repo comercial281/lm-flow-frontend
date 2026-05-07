@@ -137,9 +137,9 @@ const CustomToolsSelectionDialog = ({
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col">
-          {/* Search */}
-          <div className="p-4 border-b">
-            <div className="relative">
+          {/* Search + Create */}
+          <div className="p-4 border-b flex gap-2 items-center">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={t('dialogs.customTools.searchPlaceholder')}
@@ -148,6 +148,18 @@ const CustomToolsSelectionDialog = ({
                 className="pl-10"
               />
             </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                onOpenChange(false);
+                navigate('/agents/custom-tools');
+              }}
+              className="gap-2 flex-shrink-0"
+            >
+              <Plus className="h-4 w-4" />
+              {t('tools.customTools.create')}
+            </Button>
           </div>
 
           {/* Tools List */}

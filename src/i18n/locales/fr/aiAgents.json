@@ -1203,27 +1203,27 @@
       "types": {
         "llm": {
           "label": "LLM (Modèle de Langage)",
-          "description": "Assistant intelligent avec IA générative"
+          "description": "IA conversationnelle — raisonne, répond aux questions et discute avec un modèle de langage"
         },
         "task": {
           "label": "Tâche",
-          "description": "Automatisation de tâches spécifiques"
+          "description": "Orchestre des tâches entre sous-agents, chacune avec une sortie définie"
         },
         "sequential": {
           "label": "Sequential",
-          "description": "Exécute les agents en séquence"
+          "description": "Exécute les sous-agents en chaîne, passant le résultat de chaque étape à la suivante"
         },
         "parallel": {
           "label": "Parallel",
-          "description": "Exécute les agents en parallèle"
+          "description": "Exécute plusieurs sous-agents simultanément pour des tâches indépendantes"
         },
         "loop": {
           "label": "Loop",
-          "description": "Exécute les agents en boucle"
+          "description": "Répète les sous-agents jusqu'à atteindre une condition ou un nombre d'itérations"
         },
         "external": {
           "label": "Intégrations Externes",
-          "description": "Connecte et exécute des intégrations externes"
+          "description": "Délègue aux flux Flowise, n8n, Typebot, Dify ou OpenAI"
         }
       },
       "badges": {
@@ -1299,7 +1299,8 @@
       "validationError": "Décrivez brièvement ce que fait votre agent (minimum 10 caractères)",
       "tip": "Conseil :",
       "tipContent": "Soyez clair et spécifique. Plus vous fournissez de détails, mieux l'agent comprendra son rôle et répondra en conséquence.",
-      "generateWithAI": "Générer avec IA"
+      "generateWithAI": "Générer avec IA",
+      "aiNotConfigured": "Intégration OpenAI non configurée. Allez dans Paramètres → Intégrations pour activer les fonctionnalités IA."
     },
     "promptGenerator": {
       "title": "Générateur de Prompt avec IA",
