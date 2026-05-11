@@ -86,6 +86,7 @@
       "pipelines": "Pipeline",
       "agents": "Agenti",
       "channels": "Canali",
+      "automation": "Automazioni",
       "tutorials": "Tutorial",
       "settings": "Impostazioni"
     },

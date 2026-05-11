@@ -17,6 +17,7 @@ import {
   Tags,
   TestTube,
   Wand,
+  Workflow,
   Settings,
   List,
   GraduationCap,
@@ -136,6 +137,13 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     href: '/channels',
     icon: Layers,
     resource: 'channels',
+    action: 'read',
+  },
+  {
+    name: t('menu.customer.automation'),
+    href: '/automation',
+    icon: Workflow,
+    resource: 'automation_rules',
     action: 'read',
   },
   {

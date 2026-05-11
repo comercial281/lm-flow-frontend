@@ -39,7 +39,8 @@ import ScheduledActions from '@/pages/Customer/Contacts/ScheduledActions';
 import { Channels, ChannelSettings, NewChannel } from '@/pages/Customer/Channels';
 const ChatPage = React.lazy(() => import('@/pages/Customer/Chat/ChatPage'));
 
-// import Automation from '../pages/Customer/Automation';
+import Automation from '../pages/Customer/Automation';
+import AutomationForm from '../pages/Customer/Automation/AutomationForm';
 // import AutomationFlowEditor from '../pages/Customer/Automation/AutomationFlowEditor';
 import Pipelines from '@/pages/Customer/Pipelines/Pipelines';
 import PipelineKanban from '@/pages/Customer/Pipelines/PipelineKanban';
@@ -440,13 +441,13 @@ const AppRouter = () => {
             }
           />
 
-          {/* <Route
+          <Route
             path="/automation"
             element={
               <PrivateRoute>
                 <CustomerRoute>
                   <MainLayout>
-                    <PermissionRoute resource="automations" action="read">
+                    <PermissionRoute resource="automation_rules" action="read">
                       <Automation />
                     </PermissionRoute>
                   </MainLayout>
@@ -456,11 +457,41 @@ const AppRouter = () => {
           />
 
           <Route
+            path="/automation/new"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PermissionRoute resource="automation_rules" action="create">
+                      <AutomationForm mode="create" />
+                    </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/automation/:id/edit"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PermissionRoute resource="automation_rules" action="update">
+                      <AutomationForm mode="edit" />
+                    </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          {/* <Route
             path="/automation/:id/flow"
             element={
               <PrivateRoute>
                 <CustomerRoute>
-                  <PermissionRoute resource="automations" action="update">
+                  <PermissionRoute resource="automation_rules" action="update">
                     <AutomationFlowEditor />
                   </PermissionRoute>
                 </CustomerRoute>

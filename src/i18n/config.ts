@@ -27,6 +27,7 @@ import ptBRCannedResponses from './locales/pt-BR/cannedResponses.json';
 import ptBRCustomAttributes from './locales/pt-BR/customAttributes.json';
 import ptBRLabels from './locales/pt-BR/labels.json';
 import ptBRMacros from './locales/pt-BR/macros.json';
+import ptBRAutomation from './locales/pt-BR/automation.json';
 import ptBRTeams from './locales/pt-BR/teams.json';
 import ptBRUsers from './locales/pt-BR/users.json';
 import ptBRMarketplace from './locales/pt-BR/marketplace.json';
@@ -118,6 +119,7 @@ import enCannedResponses from './locales/en/cannedResponses.json';
 import enCustomAttributes from './locales/en/customAttributes.json';
 import enLabels from './locales/en/labels.json';
 import enMacros from './locales/en/macros.json';
+import enAutomation from './locales/en/automation.json';
 import enTeams from './locales/en/teams.json';
 import enUsers from './locales/en/users.json';
 import enMarketplace from './locales/en/marketplace.json';
@@ -341,6 +343,7 @@ const resources = {
     customAttributes: ptBRCustomAttributes,
     labels: ptBRLabels,
     macros: ptBRMacros,
+    automation: ptBRAutomation,
     teams: ptBRTeams,
     users: ptBRUsers,
     marketplace: ptBRMarketplace,
@@ -438,6 +441,7 @@ const resources = {
     customAttributes: enCustomAttributes,
     labels: enLabels,
     macros: enMacros,
+    automation: enAutomation,
     teams: enTeams,
     users: enUsers,
     marketplace: enMarketplace,
