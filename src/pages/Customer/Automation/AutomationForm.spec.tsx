@@ -87,6 +87,43 @@ describe('AutomationForm', () => {
     });
   });
 
+  it('restores From and To pickers when editing a rule that uses attribute_changed', async () => {
+    const { automationService } = await import('@/services/automation/automationService');
+    vi.mocked(automationService.getAutomation).mockResolvedValue({
+      id: 'rule-2',
+      name: 'On status transition',
+      description: '',
+      event_name: 'conversation_updated',
+      active: true,
+      mode: 'simple',
+      conditions: [
+        {
+          attribute_key: 'status',
+          filter_operator: 'attribute_changed',
+          query_operator: 'AND',
+          values: { from: ['open'], to: ['resolved'] },
+        },
+      ],
+      actions: [{ action_name: 'send_message', action_params: ['hi'] }],
+    } as never);
+
+    renderForm('edit', '/automation/rule-2/edit');
+
+    await waitFor(() => {
+      expect(screen.getByText(/form\.title\.edit/)).toBeTruthy();
+    });
+
+    // The From / To labels should appear, proving the renderer branched on
+    // the attribute_changed shape rather than falling back to the flat-array
+    // single-value picker. Both labels and the operator label exist because
+    // they share the i18n key suffix, so we assert that we see at least one
+    // of each.
+    await waitFor(() => {
+      expect(screen.getAllByText(/form\.fields\.conditionRow\.from/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/form\.fields\.conditionRow\.to/).length).toBeGreaterThan(0);
+    });
+  });
+
   it('navigates back to list and toasts on 404 in edit mode', async () => {
     const { automationService } = await import('@/services/automation/automationService');
     vi.mocked(automationService.getAutomation).mockRejectedValue({

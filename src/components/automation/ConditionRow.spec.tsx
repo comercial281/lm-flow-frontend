@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -8,6 +9,20 @@ import {
 } from '@/pages/Customer/Automation/registries';
 import ConditionRow from './ConditionRow';
 import type { AutomationFormData } from '@/hooks/automation/useAutomationFormData';
+
+class ResizeObserverPolyfill {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+globalThis.ResizeObserver = globalThis.ResizeObserver ?? (ResizeObserverPolyfill as never);
+
+if (!Element.prototype.hasPointerCapture) {
+  Element.prototype.hasPointerCapture = () => false;
+}
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
 
 const emptyFormData: AutomationFormData = {
   inboxes: [],
@@ -58,6 +73,62 @@ describe('ConditionRow', () => {
     };
     render(<Wrapper defaultValues={defaults} />);
     expect(screen.getByText(/form\.fields\.conditionRow\.attribute/)).toBeTruthy();
+  });
+
+  it('omits attribute_changed from the operator dropdown on conversation_created (no previous value)', async () => {
+    const user = userEvent.setup();
+    const defaults: AutomationRuleFormData = {
+      name: 'Test',
+      description: '',
+      event_name: 'conversation_created',
+      active: true,
+      mode: 'simple',
+      conditions: [
+        {
+          attribute_key: 'status',
+          filter_operator: 'equal_to',
+          query_operator: 'AND',
+          values: [],
+        },
+      ],
+      actions: [{ action_name: 'send_message', action_params: ['hello'] }],
+    };
+    render(<Wrapper defaultValues={defaults} />);
+
+    const triggers = screen.getAllByRole('combobox');
+    expect(triggers.length).toBeGreaterThanOrEqual(2);
+    await user.click(triggers[1]);
+
+    const options = screen.getAllByRole('option').map((el) => el.textContent ?? '');
+    expect(options.some((label) => /equal_to/.test(label))).toBe(true);
+    expect(options.some((label) => /attribute_changed/.test(label))).toBe(false);
+  });
+
+  it('exposes attribute_changed in the operator dropdown on conversation_updated', async () => {
+    const user = userEvent.setup();
+    const defaults: AutomationRuleFormData = {
+      name: 'Test',
+      description: '',
+      event_name: 'conversation_updated',
+      active: true,
+      mode: 'simple',
+      conditions: [
+        {
+          attribute_key: 'status',
+          filter_operator: 'equal_to',
+          query_operator: 'AND',
+          values: [],
+        },
+      ],
+      actions: [{ action_name: 'send_message', action_params: ['hello'] }],
+    };
+    render(<Wrapper defaultValues={defaults} />);
+
+    const triggers = screen.getAllByRole('combobox');
+    await user.click(triggers[1]);
+
+    const options = screen.getAllByRole('option').map((el) => el.textContent ?? '');
+    expect(options.some((label) => /attribute_changed/.test(label))).toBe(true);
   });
 
   it('renders From and To labels when filter_operator is attribute_changed', () => {
