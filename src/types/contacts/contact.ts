@@ -237,7 +237,7 @@ export interface ContactsFilterParams {
 
 export interface ContactCreateData {
   name: string;
-  type: 'person' | 'company';
+  type: 'person' | 'company' | 'group';
   email?: string;
   phone_number?: string;
   identifier?: string;
