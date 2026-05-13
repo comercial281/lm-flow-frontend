@@ -20,7 +20,7 @@ export interface AutomationCondition {
   attribute_key: string;
   filter_operator: string;
   query_operator?: string;
-  values: string[] | number[];
+  values: (string | number)[];
   custom_attribute_type?: string;
 }
 
@@ -80,7 +80,7 @@ export interface AutomationConditionNodeData extends Record<string, unknown> {
   type: 'condition';
   attribute_key: string;
   filter_operator: string;
-  values: string[] | number[];
+  values: (string | number)[];
   custom_attribute_type?: string;
   label: string;
 }
