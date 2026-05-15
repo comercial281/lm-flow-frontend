@@ -105,11 +105,7 @@
     "testConnection": "Testar Ligacao",
     "testing": "A testar...",
     "testFailed": "Teste de ligacao falhou",
-    "testError": "Falha ao executar teste de ligacao",
-    "envWarning": {
-      "title": "Atenção:",
-      "body": "Guardar aqui persiste a escolha, mas o serviço de ficheiros ainda lê ACTIVE_STORAGE_SERVICE das variáveis de ambiente no arranque. Até a EVO-1050 ser concluída, configure storage via env vars para fazer efeito."
-    }
+    "testError": "Falha ao executar teste de ligacao"
   },
   "socialLogin": {
     "title": "Provedores de Autenticação",

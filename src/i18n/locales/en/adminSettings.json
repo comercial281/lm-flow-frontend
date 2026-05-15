@@ -105,11 +105,7 @@
     "testConnection": "Test Connection",
     "testing": "Testing...",
     "testFailed": "Connection test failed",
-    "testError": "Failed to run connection test",
-    "envWarning": {
-      "title": "Heads up:",
-      "body": "Saving here persists the choice, but the file service still reads ACTIVE_STORAGE_SERVICE from environment variables at boot time. Until EVO-1050 ships, configure storage via env vars to take effect."
-    }
+    "testError": "Failed to run connection test"
   },
   "socialLogin": {
     "title": "Authentication Providers",
