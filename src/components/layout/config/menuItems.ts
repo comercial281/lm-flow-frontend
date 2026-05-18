@@ -20,12 +20,11 @@ import {
   Workflow,
   Settings,
   List,
-  // GraduationCap, // hidden enterprise menu — see below
   Shield,
   Package,
-  // Filter, // hidden enterprise menu — see below
-  // Megaphone, // hidden enterprise menu — see below
-  // Route, // hidden enterprise menu — see below
+  Filter,
+  Megaphone,
+  Route,
   ShieldCheck,
 } from 'lucide-react';
 
@@ -120,21 +119,20 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     resource: 'automation_rules',
     action: 'read',
   },
-  // Hidden in community — these features ship with the enterprise edition.
-  // {
-  //   name: t('menu.customer.journeys'),
-  //   href: '/journeys',
-  //   icon: Route,
-  //   resource: 'journeys',
-  //   action: 'read',
-  // },
-  // {
-  //   name: t('menu.customer.campaigns'),
-  //   href: '/campaigns',
-  //   icon: Megaphone,
-  //   resource: 'campaigns',
-  //   action: 'read',
-  // },
+  {
+    name: t('menu.customer.journeys'),
+    href: '/journeys',
+    icon: Route,
+    resource: 'journeys',
+    action: 'read',
+  },
+  {
+    name: t('menu.customer.campaigns'),
+    href: '/campaigns',
+    icon: Megaphone,
+    resource: 'campaigns',
+    action: 'read',
+  },
   {
     id: 'customer-agents',
     name: t('menu.customer.agents'),
@@ -173,12 +171,6 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     resource: 'channels',
     action: 'read',
   },
-  // Hidden in community — tutorials experience ships with the enterprise edition.
-  // {
-  //   name: t('menu.customer.tutorials'),
-  //   href: '/tutorials',
-  //   icon: GraduationCap,
-  // },
   {
     id: 'customer-settings',
     name: t('menu.customer.settings'),
@@ -219,14 +211,13 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         resource: 'custom_attribute_definitions',
         action: 'read',
       },
-      // Hidden in community — segments ship with the enterprise edition.
-      // {
-      //   name: t('menu.settings.segments'),
-      //   href: '/settings/segments',
-      //   icon: Filter,
-      //   resource: 'segments',
-      //   action: 'read',
-      // },
+      {
+        name: t('menu.settings.segments'),
+        href: '/settings/segments',
+        icon: Filter,
+        resource: 'segments',
+        action: 'read',
+      },
       {
         name: t('menu.settings.cannedResponses'),
         href: '/settings/canned-responses',
