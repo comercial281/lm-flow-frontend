@@ -77,22 +77,22 @@ export const Saving: Story = {
 };
 
 export const WithLastSaved: Story = {
-  name: 'Pristine + lastSaved timestamp (lives inside the persist cluster)',
+  name: 'Pristine + relative lastSaved ("Saved just now" / "Saved 10 seconds ago")',
   args: {
     ...baseArgs,
     hasUnsavedChanges: false,
-    lastSaved: new Date(),
-    lastSavedFormatter: (date) => `Saved ${date.toLocaleTimeString()}`,
+    lastSaved: new Date(Date.now() - 10_000),
+    lastSavedFormatter: () => 'Saved 10 seconds ago',
   },
 };
 
 export const DirtyWithUnsavedChangesHint: Story = {
-  name: 'Dirty + lastSaved + unsavedChangesHint suffix',
+  name: 'Dirty + relative lastSaved + unsavedChangesHint suffix',
   args: {
     ...baseArgs,
     hasUnsavedChanges: true,
-    lastSaved: new Date(),
-    lastSavedFormatter: (date) => `Last save: ${date.toLocaleTimeString()}`,
+    lastSaved: new Date(Date.now() - 90_000),
+    lastSavedFormatter: () => 'Saved 2 minutes ago',
     unsavedChangesHint: 'Auto-save in 10s',
   },
 };
@@ -118,7 +118,7 @@ export const PortugueseLabels: Story = {
     moreActionsLabel: 'Mais ações',
     unsavedChangesHint: 'Auto-save em 10s',
     hasUnsavedChanges: true,
-    lastSaved: new Date(),
-    lastSavedFormatter: (date) => `Último save: ${date.toLocaleTimeString()}`,
+    lastSaved: new Date(Date.now() - 30_000),
+    lastSavedFormatter: () => 'Salvo há 30 segundos',
   },
 };

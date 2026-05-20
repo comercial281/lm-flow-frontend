@@ -67,6 +67,8 @@
     "viewSessions": "Ver Sessões",
     "moreActions": "Mais ações",
     "lastSaved": "Último save: {{time}}",
+    "lastSavedRelative": "Salvo {{relative}}",
+    "lastSavedJustNow": "agora mesmo",
     "autoSaveInfo": "Auto-save em 10s",
     "saveSuccess": "Jornada salva com sucesso",
     "saveError": "Não foi possível salvar a jornada",

@@ -67,6 +67,8 @@
     "viewSessions": "Ver sesiones",
     "moreActions": "Más acciones",
     "lastSaved": "Último guardado: {{time}}",
+    "lastSavedRelative": "Guardado {{relative}}",
+    "lastSavedJustNow": "ahora mismo",
     "autoSaveInfo": "Auto-guardado en 10s",
     "saveSuccess": "Jornada guardada con éxito",
     "saveError": "No fue posible guardar la jornada",

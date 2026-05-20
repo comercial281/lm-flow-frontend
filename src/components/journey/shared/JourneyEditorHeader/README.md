@@ -28,11 +28,20 @@ import { JourneyEditorHeader } from '@/components/journey/shared/JourneyEditorHe
   saveLabel={t('flowEditor.save')}
   savingLabel={t('flowEditor.saving')}
   savedLabel={t('flowEditor.saved')}
-  lastSavedFormatter={(d) => t('flowEditor.lastSaved', { time: d.toLocaleTimeString() })}
+  lastSavedFormatter={(date) =>
+    t('flowEditor.lastSavedRelative', {
+      relative: formatRelativeTime(date, relativeNow, {
+        locale: currentLanguage,
+        justNowLabel: t('flowEditor.lastSavedJustNow'),
+      }),
+    })
+  }
   unsavedChangesHint={t('flowEditor.autoSaveInfo')}
   moreActionsLabel={t('flowEditor.moreActions')}
 />
 ```
+
+`relativeNow` comes from the `useRelativeTime(lastSaved)` hook in `@/lib/useRelativeTime` — it returns a `Date` that ticks at an adaptive cadence (5s when fresher than 1m, 30s up to 1h, 5min beyond), so the rendered text updates by itself without the header holding any state.
 
 ### Props
 
@@ -53,7 +62,7 @@ import { JourneyEditorHeader } from '@/components/journey/shared/JourneyEditorHe
 | `saveLabel` | `string?` | `'Save'` | Visible when `hasUnsavedChanges && !isSaving`. |
 | `savingLabel` | `string?` | `'Saving…'` | Visible (and announced) when `isSaving`. |
 | `savedLabel` | `string?` | `'Saved'` | Visible when pristine. |
-| `lastSavedFormatter` | `(date: Date) => string?` | `date.toLocaleTimeString()` | Override the timestamp format (typically uses an i18n key). |
+| `lastSavedFormatter` | `(date: Date) => string?` | `date.toLocaleTimeString()` | Override the timestamp format. Default consumer wires `formatRelativeTime(date, relativeNow, …)` so the strip shows natural-language deltas — `Salvo agora mesmo` / `Salvo há 10 segundos` / `Saved 2 minutes ago`. Avoid raw `HH:MM:SS`. |
 | `unsavedChangesHint` | `string?` | — | When provided AND there are unsaved changes AND a `lastSaved` timestamp exists, the hint is appended after the timestamp with a `•` separator (e.g. `Last save: 14:30 • Auto-save in 10s`). |
 | `moreActionsLabel` | `string?` | `'More actions'` | ARIA label on the kebab trigger button. |
 

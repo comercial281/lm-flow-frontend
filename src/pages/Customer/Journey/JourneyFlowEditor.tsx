@@ -10,6 +10,8 @@ import { EnvironmentManager, type JourneyVariable } from '@/components/journey/e
 import { JourneyEditorHeader } from '@/components/journey/shared/JourneyEditorHeader';
 import { SessionsViewer } from '@/components/journey/SessionsViewer';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { formatRelativeTime } from '@/lib/relativeTime';
+import { useRelativeTime } from '@/lib/useRelativeTime';
 
 // Importar todos os nodes da jornada por categoria
 import { JourneyTriggerNode } from '@/components/journey/nodes/trigger/JourneyTriggerNode';
@@ -89,7 +91,7 @@ import {
 function JourneyFlowEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t } = useLanguage('journey');
+  const { t, currentLanguage } = useLanguage('journey');
 
   const [journey, setJourney] = useState<Journey | null>(null);
   const [loading, setLoading] = useState(true);
@@ -656,6 +658,8 @@ function JourneyFlowEditor() {
     edges: Array.isArray(journey.flowData?.edges) ? journey.flowData.edges : initialEdges,
   };
 
+  const relativeNow = useRelativeTime(lastSaved);
+
   return (
     <div className="h-screen flex flex-col">
       <JourneyEditorHeader
@@ -675,7 +679,12 @@ function JourneyFlowEditor() {
         savingLabel={t('flowEditor.saving')}
         savedLabel={t('flowEditor.saved')}
         lastSavedFormatter={(date) =>
-          t('flowEditor.lastSaved', { time: date.toLocaleTimeString() })
+          t('flowEditor.lastSavedRelative', {
+            relative: formatRelativeTime(date, relativeNow, {
+              locale: currentLanguage,
+              justNowLabel: t('flowEditor.lastSavedJustNow'),
+            }),
+          })
         }
         unsavedChangesHint={t('flowEditor.autoSaveInfo')}
         moreActionsLabel={t('flowEditor.moreActions')}

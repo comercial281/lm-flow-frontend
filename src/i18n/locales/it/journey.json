@@ -67,6 +67,8 @@
     "viewSessions": "Vedi sessioni",
     "moreActions": "Altre azioni",
     "lastSaved": "Ultimo salvataggio: {{time}}",
+    "lastSavedRelative": "Salvato {{relative}}",
+    "lastSavedJustNow": "adesso",
     "autoSaveInfo": "Salvataggio automatico in 10s",
     "saveSuccess": "Percorso salvato con successo",
     "saveError": "Impossibile salvare il percorso",
