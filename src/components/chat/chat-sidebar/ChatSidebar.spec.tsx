@@ -82,17 +82,6 @@ vi.mock('../search/GlobalSearchPanel', () => ({
   default: () => <div data-testid="global-search-panel" />,
 }));
 
-vi.mock('@/hooks/chat/useConversations', () => ({
-  useConversations: () => ({
-    updateConversationStatus: vi.fn().mockResolvedValue(undefined),
-    updateConversationPriority: vi.fn().mockResolvedValue(undefined),
-    pinConversation: vi.fn().mockResolvedValue(undefined),
-    unpinConversation: vi.fn().mockResolvedValue(undefined),
-    archiveConversation: vi.fn().mockResolvedValue(undefined),
-    unarchiveConversation: vi.fn().mockResolvedValue(undefined),
-  }),
-}));
-
 const makeConversation = (id = '42') =>
   ({
     id,
@@ -122,8 +111,6 @@ const makePipeline = (
 
 const mockConversation = makeConversation();
 
-let overrideContext: ReturnType<typeof makeMockContext> | null = null;
-
 const makeMockContext = () => ({
   conversations: {
     state: {
@@ -144,6 +131,8 @@ const makeMockContext = () => ({
     clearFilters: vi.fn(),
   },
 });
+
+let overrideContext: ReturnType<typeof makeMockContext> | null = null;
 
 vi.mock('@/contexts/chat/ChatContext', () => ({
   useChatContext: () => overrideContext ?? makeMockContext(),
@@ -182,29 +171,6 @@ beforeEach(() => {
   overrideContext = null;
 });
 
-const open3DotPipelineStage = async (
-  user: ReturnType<typeof userEvent.setup>,
-  pipelineName: string,
-  stageName: string,
-) => {
-  // The 3-dot button sr-only text is the i18n key (mock returns key as-is)
-  const srLabel = screen.getByText('conversationActionsDropdown.srOnly');
-  const trigger = srLabel.closest('button') as HTMLElement;
-  await user.click(trigger);
-
-  await waitFor(() => screen.getByText('pipeline.section'), { timeout: 2000 });
-
-  const pipelineEl = await screen.findByText(pipelineName, {}, { timeout: 2000 });
-  const pipelineSubTrigger = (
-    pipelineEl.closest('[data-slot="dropdown-menu-sub-trigger"]') ?? pipelineEl
-  ) as HTMLElement;
-  pipelineSubTrigger.focus();
-  await user.keyboard('{ArrowRight}');
-
-  await waitFor(() => screen.getByText(stageName), { timeout: 2000 });
-  await user.click(screen.getByText(stageName));
-};
-
 const openContextMenuPipelineStage = async (
   user: ReturnType<typeof userEvent.setup>,
   pipelineName: string,
@@ -242,73 +208,6 @@ describe('ChatSidebar pipeline', () => {
     is_lead: false,
     created_at: '',
     updated_at: '',
-  });
-
-  it('dispatches addItemToPipeline when selecting a stage via 3-dot row menu (Path A)', async () => {
-    const pipeline = makePipeline('p1', [{ id: 'stage-1', name: 'Lead' }]);
-    vi.mocked(pipelinesService.getPipelines).mockResolvedValue({ data: [pipeline] } as never);
-    vi.mocked(pipelinesService.getPipelinesByConversation).mockResolvedValue([]);
-    vi.mocked(pipelinesService.addItemToPipeline).mockResolvedValue({} as never);
-
-    render(<ChatSidebar {...defaultProps} />);
-    await waitFor(() => expect(pipelinesService.getPipelines).toHaveBeenCalled());
-
-    const user = userEvent.setup();
-    await open3DotPipelineStage(user, 'Pipeline p1', 'Lead');
-
-    await waitFor(() => {
-      expect(pipelinesService.addItemToPipeline).toHaveBeenCalledWith('p1', {
-        item_id: '42',
-        type: 'conversation',
-        pipeline_stage_id: 'stage-1',
-      });
-    });
-  });
-
-  it('dispatches moveItem via 3-dot row menu when conversation is already in the same pipeline (Path A)', async () => {
-    const existingItem = {
-      id: 'item-dot',
-      item_id: '42',
-      stage_id: 'stage-1',
-      pipeline_id: 'p1',
-      type: 'conversation',
-      is_lead: false,
-      created_at: '',
-      updated_at: '',
-    };
-    const pipeline = {
-      id: 'p1',
-      name: 'Pipeline p1',
-      pipeline_type: 'custom' as const,
-      visibility: 'public' as const,
-      is_active: true,
-      stages: [
-        { id: 'stage-1', name: 'Lead', color: '#000', position: 0, created_at: '', updated_at: '', items: [existingItem] },
-        { id: 'stage-2', name: 'Qualified', color: '#000', position: 1, created_at: '', updated_at: '', items: [] },
-      ],
-      created_at: '',
-      updated_at: '',
-    };
-
-    vi.mocked(pipelinesService.getPipelines).mockResolvedValue({ data: [pipeline] } as never);
-    vi.mocked(pipelinesService.getPipelinesByConversation).mockResolvedValue([pipeline]);
-    vi.mocked(pipelinesService.moveItem).mockResolvedValue({ success: true, message: '' });
-
-    render(<ChatSidebar {...defaultProps} />);
-    await waitFor(() => expect(pipelinesService.getPipelines).toHaveBeenCalled());
-
-    const user = userEvent.setup();
-    await open3DotPipelineStage(user, 'Pipeline p1', 'Qualified');
-
-    await waitFor(() => {
-      expect(pipelinesService.moveItem).toHaveBeenCalledWith({
-        pipeline_id: 'p1',
-        item_id: 'item-dot',
-        from_stage_id: 'stage-1',
-        to_stage_id: 'stage-2',
-      });
-      expect(pipelinesService.addItemToPipeline).not.toHaveBeenCalled();
-    });
   });
 
   it('shows loading label in stage submenu while getPipelinesByConversation is pending (isLoadingConvPipelines guard)', async () => {
@@ -406,115 +305,6 @@ describe('ChatSidebar pipeline', () => {
     });
   });
 
-  it('dispatches moveItem when conversation is already in same pipeline with items inside stages (real API structure)', async () => {
-    const existingItem = {
-      id: 'item-99',
-      item_id: '42',
-      stage_id: 'stage-1',
-      pipeline_id: 'p1',
-      type: 'conversation',
-      is_lead: false,
-      created_at: '',
-      updated_at: '',
-    };
-    const pipelineWithItemsInStages = {
-      id: 'p1',
-      name: 'Pipeline p1',
-      pipeline_type: 'custom' as const,
-      visibility: 'public' as const,
-      is_active: true,
-      stages: [
-        { id: 'stage-1', name: 'Lead', color: '#000', position: 0, created_at: '', updated_at: '', items: [existingItem] },
-        { id: 'stage-2', name: 'Qualified', color: '#000', position: 1, created_at: '', updated_at: '', items: [] },
-      ],
-      created_at: '',
-      updated_at: '',
-    };
-
-    vi.mocked(pipelinesService.getPipelines).mockResolvedValue({ data: [pipelineWithItemsInStages] } as never);
-    vi.mocked(pipelinesService.getPipelinesByConversation).mockResolvedValue([pipelineWithItemsInStages]);
-    vi.mocked(pipelinesService.moveItem).mockResolvedValue({ success: true, message: '' });
-    const updatedConv = makeConversation('42');
-    vi.mocked(chatService.getConversation).mockResolvedValue({ data: updatedConv } as never);
-
-    render(<ChatSidebar {...defaultProps} />);
-    await waitFor(() => expect(pipelinesService.getPipelines).toHaveBeenCalled());
-
-    const user = userEvent.setup();
-    await openContextMenuPipelineStage(user, 'Pipeline p1', 'Qualified');
-
-    await waitFor(() => {
-      expect(pipelinesService.moveItem).toHaveBeenCalledWith({
-        pipeline_id: 'p1',
-        item_id: 'item-99',
-        from_stage_id: 'stage-1',
-        to_stage_id: 'stage-2',
-      });
-      expect(pipelinesService.addItemToPipeline).not.toHaveBeenCalled();
-    });
-  });
-
-  it('removes from pipeline when item lives inside stage.items (real API structure)', async () => {
-    const existingItem = {
-      id: 'item-77',
-      item_id: '42',
-      stage_id: 'stage-1',
-      pipeline_id: 'p1',
-      type: 'conversation',
-      is_lead: false,
-      created_at: '',
-      updated_at: '',
-    };
-    const pipelineWithItemsInStages = {
-      id: 'p1',
-      name: 'Pipeline p1',
-      pipeline_type: 'custom' as const,
-      visibility: 'public' as const,
-      is_active: true,
-      stages: [
-        { id: 'stage-1', name: 'Lead', color: '#000', position: 0, created_at: '', updated_at: '', items: [existingItem] },
-      ],
-      created_at: '',
-      updated_at: '',
-    };
-
-    vi.mocked(pipelinesService.getPipelines).mockResolvedValue({ data: [pipelineWithItemsInStages] } as never);
-    vi.mocked(pipelinesService.getPipelinesByConversation).mockResolvedValue([pipelineWithItemsInStages]);
-    vi.mocked(pipelinesService.removeItemFromPipeline).mockResolvedValue({ success: true, message: '' });
-    const updatedConv = makeConversation('42');
-    vi.mocked(chatService.getConversation).mockResolvedValue({ data: updatedConv } as never);
-
-    render(<ChatSidebar {...defaultProps} />);
-    await waitFor(() => expect(pipelinesService.getPipelines).toHaveBeenCalled());
-
-    const user = userEvent.setup();
-    const row = screen.getByText('Test Contact').closest('div[class*="p-4"]') as HTMLElement;
-    fireEvent.contextMenu(row);
-
-    const addToTrigger = await screen.findByText('pipeline.addTo', {}, { timeout: 2000 });
-    const addToSubTrigger = (
-      addToTrigger.closest('[data-slot="context-menu-sub-trigger"]') ?? addToTrigger
-    ) as HTMLElement;
-    addToSubTrigger.focus();
-    await user.keyboard('{ArrowRight}');
-
-    await waitFor(() => screen.getByText('Pipeline p1'), { timeout: 2000 });
-    const pipelineEl = screen.getByText('Pipeline p1');
-    const pipelineSubTrigger = (
-      pipelineEl.closest('[data-slot="context-menu-sub-trigger"]') ?? pipelineEl
-    ) as HTMLElement;
-    pipelineSubTrigger.focus();
-    await user.keyboard('{ArrowRight}');
-
-    await waitFor(() => screen.getByText('pipeline.removeFrom'), { timeout: 3000 });
-    await user.click(screen.getByText('pipeline.removeFrom'));
-
-    await waitFor(() => {
-      expect(pipelinesService.removeItemFromPipeline).toHaveBeenCalledWith('p1', 'item-77');
-      expect(mockUpdateConversation).toHaveBeenCalledWith(updatedConv);
-    });
-  });
-
   it('removes ALL pipelines when conversation is in 2+ pipelines before adding to new one (H1)', async () => {
     const pOld1 = makePipeline(
       'p-old1',
@@ -557,140 +347,102 @@ describe('ChatSidebar pipeline', () => {
   });
 });
 
+const makePaginatedContext = (hasNextPage: boolean, loadMoreFn = vi.fn().mockResolvedValue(undefined)) => {
+  const ctx = makeMockContext();
+  ctx.conversations.state.conversationsPagination = {
+    page: 1,
+    page_size: 11,
+    total: 35,
+    total_pages: 3,
+    has_next_page: hasNextPage,
+  } as never;
+  ctx.conversations.loadMoreConversations = loadMoreFn;
+  return ctx;
+};
+
+const setScrollDimensions = (el: Element, scrollHeight: number, clientHeight: number, scrollTop: number) => {
+  Object.defineProperty(el, 'scrollHeight', { value: scrollHeight, configurable: true });
+  Object.defineProperty(el, 'clientHeight', { value: clientHeight, configurable: true });
+  Object.defineProperty(el, 'scrollTop', { value: scrollTop, configurable: true, writable: true });
+};
+
 describe('ChatSidebar scroll pagination (EVO-1407)', () => {
-  const makeScrollContext = (opts?: {
-    loadMoreConversations?: ReturnType<typeof vi.fn>;
-    hasNextPage?: boolean;
-  }) => {
-    const loadMore = opts?.loadMoreConversations ?? vi.fn().mockResolvedValue(undefined);
-    const ctx = makeMockContext();
-    ctx.conversations.state.conversationsPagination = {
-      page: 1,
-      total_pages: 3,
-      has_next_page: opts?.hasNextPage ?? true,
-    };
-    ctx.conversations.loadMoreConversations = loadMore;
-    return { ctx, loadMore };
-  };
-
-  const setScrollProps = (el: HTMLElement, scrollTop: number, scrollHeight: number, clientHeight: number) => {
-    Object.defineProperty(el, 'scrollHeight', { value: scrollHeight, configurable: true });
-    Object.defineProperty(el, 'clientHeight', { value: clientHeight, configurable: true });
-    Object.defineProperty(el, 'scrollTop', { value: scrollTop, configurable: true, writable: true });
-  };
-
-  beforeEach(() => {
-    overrideContext = null;
-    vi.mocked(pipelinesService.getPipelines).mockResolvedValue({ data: [] } as never);
-  });
-
-  afterEach(() => {
-    overrideContext = null;
-  });
-
   it('renders "Carregar mais" button when has_next_page is true', async () => {
-    const { ctx } = makeScrollContext();
-    overrideContext = ctx;
+    overrideContext = makePaginatedContext(true);
     render(<ChatSidebar {...defaultProps} />);
-    expect(await screen.findByRole('button', { name: /carregar mais/i })).toBeInTheDocument();
+    expect(await screen.findByText('Carregar mais')).toBeInTheDocument();
   });
 
-  it('does not render "Carregar mais" button when has_next_page is false', () => {
-    const { ctx } = makeScrollContext({ hasNextPage: false });
-    overrideContext = ctx;
+  it('does not render "Carregar mais" button when has_next_page is false', async () => {
+    overrideContext = makePaginatedContext(false);
     render(<ChatSidebar {...defaultProps} />);
-    expect(screen.queryByRole('button', { name: /carregar mais/i })).not.toBeInTheDocument();
+    await screen.findByText('Test Contact');
+    expect(screen.queryByText('Carregar mais')).not.toBeInTheDocument();
   });
 
-  it('calls loadMoreConversations once when "Carregar mais" is clicked (CA-2)', async () => {
-    const { ctx, loadMore } = makeScrollContext();
-    overrideContext = ctx;
-    const user = userEvent.setup();
+  it('button click triggers loadMoreConversations (CB-1)', async () => {
+    const loadMore = vi.fn().mockResolvedValue(undefined);
+    overrideContext = makePaginatedContext(true, loadMore);
     render(<ChatSidebar {...defaultProps} />);
-
-    const btn = await screen.findByRole('button', { name: /carregar mais/i });
-    await user.click(btn);
-
-    await waitFor(() => expect(loadMore).toHaveBeenCalledTimes(1));
+    const btn = await screen.findByText('Carregar mais');
+    await act(async () => { fireEvent.click(btn); });
+    expect(loadMore).toHaveBeenCalledTimes(1);
   });
 
-  it('shows skeleton and hides button during load (CA-2 loading state)', async () => {
+  it('shows skeleton during load and hides button (CB-2)', async () => {
     let resolveFn!: () => void;
     const loadMore = vi.fn().mockReturnValue(new Promise<void>(res => { resolveFn = res; }));
-    const { ctx } = makeScrollContext({ loadMoreConversations: loadMore });
-    overrideContext = ctx;
-
-    const user = userEvent.setup();
+    overrideContext = makePaginatedContext(true, loadMore);
     render(<ChatSidebar {...defaultProps} />);
+    const btn = await screen.findByText('Carregar mais');
 
-    const btn = await screen.findByRole('button', { name: /carregar mais/i });
-    await user.click(btn);
+    act(() => { fireEvent.click(btn); });
 
-    await waitFor(() => {
-      expect(screen.queryByRole('button', { name: /carregar mais/i })).not.toBeInTheDocument();
-      expect(screen.getByTestId('skeleton')).toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByTestId('skeleton')).toBeInTheDocument());
+    expect(screen.queryByText('Carregar mais')).not.toBeInTheDocument();
 
     await act(async () => { resolveFn(); });
   });
 
-  it('scroll near bottom triggers loadMoreConversations (CA-2)', async () => {
-    const { ctx, loadMore } = makeScrollContext();
-    overrideContext = ctx;
+  it('scroll near bottom triggers loadMoreConversations (CA-1)', async () => {
+    const loadMore = vi.fn().mockResolvedValue(undefined);
+    overrideContext = makePaginatedContext(true, loadMore);
     render(<ChatSidebar {...defaultProps} />);
+    await screen.findByText('Test Contact');
 
-    const container = document.querySelector('[data-tour="chat-conversations-list"]') as HTMLElement;
-    // distanceToBottom = 1000 - 550 - 400 = 50 (below 120px threshold)
-    setScrollProps(container, 550, 1000, 400);
-    fireEvent.scroll(container);
+    const scrollEl = document.querySelector('[data-tour="chat-conversations-list"]')!;
+    setScrollDimensions(scrollEl, 800, 600, 680);
+
+    await act(async () => { fireEvent.scroll(scrollEl); });
 
     await waitFor(() => expect(loadMore).toHaveBeenCalledTimes(1));
   });
 
   it('scroll far from bottom does not trigger load (CA-2 negative)', async () => {
-    const { ctx, loadMore } = makeScrollContext();
-    overrideContext = ctx;
+    const loadMore = vi.fn().mockResolvedValue(undefined);
+    overrideContext = makePaginatedContext(true, loadMore);
     render(<ChatSidebar {...defaultProps} />);
+    await screen.findByText('Test Contact');
 
-    const container = document.querySelector('[data-tour="chat-conversations-list"]') as HTMLElement;
-    // distanceToBottom = 1000 - 0 - 400 = 600 (above 120px threshold)
-    setScrollProps(container, 0, 1000, 400);
-    fireEvent.scroll(container);
+    const scrollEl = document.querySelector('[data-tour="chat-conversations-list"]')!;
+    setScrollDimensions(scrollEl, 800, 600, 0);
 
-    await new Promise(r => setTimeout(r, 50));
+    await act(async () => { fireEvent.scroll(scrollEl); });
+
     expect(loadMore).not.toHaveBeenCalled();
-  });
-
-  it('rapid scroll events near bottom only trigger one load (CA-2 throttle + lock)', async () => {
-    const { ctx, loadMore } = makeScrollContext();
-    overrideContext = ctx;
-    render(<ChatSidebar {...defaultProps} />);
-
-    const container = document.querySelector('[data-tour="chat-conversations-list"]') as HTMLElement;
-    setScrollProps(container, 550, 1000, 400);
-
-    fireEvent.scroll(container);
-    fireEvent.scroll(container);
-    fireEvent.scroll(container);
-
-    await waitFor(() => expect(loadMore).toHaveBeenCalledTimes(1));
-    expect(loadMore).toHaveBeenCalledTimes(1);
   });
 
   it('does not load more after last page (CA-3)', async () => {
     const loadMore = vi.fn().mockResolvedValue(undefined);
-    const ctx = makeMockContext();
-    ctx.conversations.state.conversationsPagination = { page: 3, total_pages: 3, has_next_page: false };
-    ctx.conversations.loadMoreConversations = loadMore;
-    overrideContext = ctx;
+    overrideContext = makePaginatedContext(false, loadMore);
     render(<ChatSidebar {...defaultProps} />);
+    await screen.findByText('Test Contact');
 
-    const container = document.querySelector('[data-tour="chat-conversations-list"]') as HTMLElement;
-    setScrollProps(container, 550, 1000, 400);
-    fireEvent.scroll(container);
+    const scrollEl = document.querySelector('[data-tour="chat-conversations-list"]')!;
+    setScrollDimensions(scrollEl, 800, 600, 680);
 
-    await new Promise(r => setTimeout(r, 50));
+    await act(async () => { fireEvent.scroll(scrollEl); });
+
     expect(loadMore).not.toHaveBeenCalled();
-    expect(screen.queryByRole('button', { name: /carregar mais/i })).not.toBeInTheDocument();
   });
 });

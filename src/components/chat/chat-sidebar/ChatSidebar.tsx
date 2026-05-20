@@ -55,7 +55,6 @@ import { NoConversations } from '../empty-states';
 import ContactAvatar from '../contact/ContactAvatar';
 import ConversationBadges from '../conversation/ConversationBadges';
 import ConversationsFilter from '../conversation/ConversationsFilter';
-import ConversationActionsDropdown from '../conversation/ConversationActionsDropdown';
 import GlobalSearchPanel from '../search/GlobalSearchPanel';
 import { BaseFilter } from '@/types/core';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -68,7 +67,6 @@ import type {
   SearchContactResult,
   SearchMessageResult,
 } from '@/types/chat/search';
-import { findItemInPipeline } from '@/utils/chat/pipelineUtils';
 
 interface ChatSidebarProps {
   mobileView: 'list' | 'chat';
@@ -189,17 +187,6 @@ const ChatSidebar = ({
     return () => { cancelled = true; };
   }, []);
 
-  const handleRetryLoadPipelines = useCallback(async () => {
-    setPipelinesLoadFailed(false);
-    try {
-      const resp = await pipelinesService.getPipelines({ is_active: true });
-      setAllPipelines(resp.data ?? []);
-      setIsPipelinesLoaded(true);
-    } catch {
-      setPipelinesLoadFailed(true);
-    }
-  }, []);
-
   const loadConversationPipelineState = useCallback(async (convId: string) => {
     const current = pipelineFetchCountRef.current.get(convId) ?? 0;
     const fetchId = current + 1;
@@ -254,9 +241,11 @@ const ChatSidebar = ({
       const existingInOtherPipelines = currentPipelines.filter(p => p.id !== pipeline.id);
 
       if (existingInSamePipeline) {
-        const item = findItemInPipeline(existingInSamePipeline, convId);
+        const item = existingInSamePipeline.items?.find(
+          i => String(i.item_id) === convId,
+        );
         const itemId = item?.id;
-        if (!itemId) { toast.error(t('pipeline.moveError')); return; }
+        if (!itemId) return;
         try {
           await pipelinesService.moveItem({
             pipeline_id: pipeline.id,
@@ -281,7 +270,7 @@ const ChatSidebar = ({
         if (existingInOtherPipelines.length > 0) {
           const removeResults = await Promise.allSettled(
             existingInOtherPipelines.map(p => {
-              const item = findItemInPipeline(p, convId);
+              const item = p.items?.find(i => String(i.item_id) === convId);
               return item?.id
                 ? pipelinesService.removeItemFromPipeline(p.id, item.id)
                 : Promise.resolve();
@@ -320,9 +309,9 @@ const ChatSidebar = ({
   const handleRemoveFromPipeline = useCallback(
     async (conversation: Conversation, pipeline: Pipeline) => {
       const convId = String(conversation.id);
-      const item = findItemInPipeline(pipeline, convId);
+      const item = pipeline.items?.find(i => String(i.item_id) === convId);
       const itemId = item?.id;
-      if (!itemId) { toast.error(t('pipeline.removeError')); return; }
+      if (!itemId) return;
       try {
         await pipelinesService.removeItemFromPipeline(pipeline.id, itemId);
         toast.success(t('pipeline.removeSuccess'));
@@ -380,61 +369,59 @@ const ChatSidebar = ({
 
       return (
         <>
-          {allPipelines.map(pipeline => {
-            const convInThisPipeline = currentPipelines.find(p => p.id === pipeline.id);
-            const currentItem = convInThisPipeline
-              ? findItemInPipeline(convInThisPipeline, convId)
-              : undefined;
-            return (
-              <ContextMenuSub key={pipeline.id}>
-                <ContextMenuSubTrigger className="flex items-center gap-2">
-                  <GitBranch className="h-4 w-4" />
-                  {pipeline.name}
-                </ContextMenuSubTrigger>
-                <ContextMenuSubContent>
-                  {isConvLoading ? (
-                    <ContextMenuLabel className="text-xs">{t('pipeline.loading')}</ContextMenuLabel>
-                  ) : (
-                    <>
-                      {(pipeline.stages ?? []).map(stage => {
-                        const isCurrentStage = currentItem?.stage_id === stage.id;
+          {allPipelines.map(pipeline => (
+            <ContextMenuSub key={pipeline.id}>
+              <ContextMenuSubTrigger className="flex items-center gap-2">
+                <GitBranch className="h-4 w-4" />
+                {pipeline.name}
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent>
+                {isConvLoading ? (
+                  <ContextMenuLabel className="text-xs">{t('pipeline.loading')}</ContextMenuLabel>
+                ) : (
+                  <>
+                    {(pipeline.stages ?? []).map(stage => {
+                      const convInThisPipeline = currentPipelines.find(p => p.id === pipeline.id);
+                      const currentItem = convInThisPipeline?.items?.find(
+                        i => String(i.item_id) === convId,
+                      );
+                      const isCurrentStage = currentItem?.stage_id === stage.id;
 
-                        return (
-                          <ContextMenuItem
-                            key={stage.id}
-                            onClick={e => {
-                              e.stopPropagation();
-                              handlePipelineStageSelect(conversation, pipeline, stage);
-                            }}
-                            className="flex items-center gap-2"
-                          >
-                            {isCurrentStage && <Check className="h-3 w-3 text-primary" />}
-                            {!isCurrentStage && <span className="w-3" />}
-                            {stage.name}
-                          </ContextMenuItem>
-                        );
-                      })}
-                      {convInThisPipeline && (
-                        <>
-                          <ContextMenuSeparator />
-                          <ContextMenuItem
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleRemoveFromPipeline(conversation, convInThisPipeline);
-                            }}
-                            className="flex items-center gap-2 text-destructive focus:text-destructive"
-                          >
-                            <X className="h-4 w-4" />
-                            {t('pipeline.removeFrom')}
-                          </ContextMenuItem>
-                        </>
-                      )}
-                    </>
-                  )}
-                </ContextMenuSubContent>
-              </ContextMenuSub>
-            );
-          })}
+                      return (
+                        <ContextMenuItem
+                          key={stage.id}
+                          onClick={e => {
+                            e.stopPropagation();
+                            handlePipelineStageSelect(conversation, pipeline, stage);
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          {isCurrentStage && <Check className="h-3 w-3 text-primary" />}
+                          {!isCurrentStage && <span className="w-3" />}
+                          {stage.name}
+                        </ContextMenuItem>
+                      );
+                    })}
+                    {currentPipelines.some(p => p.id === pipeline.id) && (
+                      <>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleRemoveFromPipeline(conversation, pipeline);
+                          }}
+                          className="flex items-center gap-2 text-destructive focus:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                          {t('pipeline.removeFrom')}
+                        </ContextMenuItem>
+                      </>
+                    )}
+                  </>
+                )}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+          ))}
         </>
       );
     },
@@ -571,20 +558,18 @@ const ChatSidebar = ({
     const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
     if (distanceToBottom > 120) return;
 
-    // Update throttle timestamp only when we're actually near the bottom and about to load
+    // Update throttle timestamp only after confirming we are near the bottom
     lastScrollTimeRef.current = now;
     loadingMoreRef.current = true;
     setIsLoadingMoreConversations(true);
 
-    // Save position — visibleConversations re-sort after load can reset scrollTop to 0
     const scrollTop = container.scrollTop;
 
     try {
       await conversations.loadMoreConversations();
     } finally {
       setIsLoadingMoreConversations(false);
-
-      // Release lock inside RAF so scroll position is restored before new scroll events can trigger
+      // Release lock inside RAF so the scroll restoration fires before new events can re-enter
       requestAnimationFrame(() => {
         if (sidebarScrollRef.current) {
           sidebarScrollRef.current.scrollTop = scrollTop;
@@ -598,7 +583,6 @@ const ChatSidebar = ({
     if (loadingMoreRef.current || isLoadingMoreConversations || !hasNextPage) return;
 
     const container = sidebarScrollRef.current;
-    // Save position — visibleConversations re-sort after load can reset scrollTop to 0
     const savedScrollTop = container?.scrollTop ?? 0;
 
     loadingMoreRef.current = true;
@@ -607,8 +591,6 @@ const ChatSidebar = ({
       await conversations.loadMoreConversations();
     } finally {
       setIsLoadingMoreConversations(false);
-
-      // Release lock inside RAF so scroll position is restored before new scroll events can trigger
       requestAnimationFrame(() => {
         if (sidebarScrollRef.current) {
           sidebarScrollRef.current.scrollTop = savedScrollTop;
@@ -944,7 +926,7 @@ const ChatSidebar = ({
       data-tour="chat-sidebar"
       className={`
         ${mobileView === 'list' ? 'flex' : 'hidden'} md:flex
-        w-full ${selectedConversationIds.size > 0 ? 'md:w-96' : 'md:w-80'} border-r bg-card/50 flex-col h-full overflow-hidden
+        w-full ${selectedConversationIds.size > 0 ? 'md:w-96' : 'md:w-80'} border-r bg-card/50 flex-col h-full
       `}
     >
       {/* Search and Filter Header */}
@@ -1063,13 +1045,13 @@ const ChatSidebar = ({
       {/* Conversations List */}
       <div
         ref={sidebarScrollRef}
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+        className="flex-1 overflow-y-auto"
         onScroll={handleSidebarScroll}
         data-tour="chat-conversations-list"
       >
         {!conversations ? (
           <ConversationSkeleton count={8} />
-        ) : (conversations.state.conversationsLoading && !isLoadingMoreConversations) || filters.state.isApplyingFilters ? (
+        ) : conversations.state.conversationsLoading || filters.state.isApplyingFilters ? (
           <ConversationSkeleton count={8} />
         ) : conversations.state.conversationsError ? (
           <div className="p-4 text-center">
@@ -1122,7 +1104,7 @@ const ChatSidebar = ({
                 conversation,
                 <div
                   key={conversation.id}
-                  className={`group p-4 hover:bg-accent cursor-pointer transition-colors ${
+                  className={`p-4 hover:bg-accent cursor-pointer transition-colors ${
                     isSelected
                       ? 'bg-primary/10 border-l-2 border-l-primary'
                       : 'border-b border-border/50'
@@ -1217,39 +1199,16 @@ const ChatSidebar = ({
                         )}
                       </div>
                     </div>
-                    <div
-                      className="flex flex-col items-end gap-1 flex-shrink-0"
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                        <ConversationActionsDropdown
-                          conversation={conversation}
-                          allPipelines={allPipelines}
-                          isPipelinesLoaded={isPipelinesLoaded}
-                          pipelinesForConversation={convPipelineStates.get(String(conversation.id)) ?? []}
-                          pipelinesLoadFailed={pipelinesLoadFailed}
-                          isLoadingPipelines={loadingConvPipelines.has(String(conversation.id))}
-                          onPipelineStageSelect={(pipeline, stage) =>
-                            handlePipelineStageSelect(conversation, pipeline, stage)
-                          }
-                          onRemoveFromPipeline={pipeline =>
-                            handleRemoveFromPipeline(conversation, pipeline)
-                          }
-                          onDropdownOpen={() =>
-                            loadConversationPipelineState(String(conversation.id))
-                          }
-                          onRetryLoadPipelines={handleRetryLoadPipelines}
-                          onMarkAsRead={() => onMarkAsRead(conversation)}
-                          onMarkAsUnread={() => onMarkAsUnread(conversation)}
-                          onAssignAgent={() => onAssignAgent(conversation)}
-                          onAssignTeam={() => onAssignTeam(conversation)}
-                          onAssignTag={() => onAssignTag(conversation)}
-                          onDeleteConversation={() => onDeleteConversation(conversation)}
-                        />
-                      </div>
-                      {(conversations.getUnreadCount(conversation.id) || 0) > 0 && (
-                        <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
-                      )}
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      {(() => {
+                        // ðŸ"µ INDICADOR PADRÃƒO: Bolinha pequena seguindo padrÃ£o do sistema
+                        const hasUnreadMessages =
+                          (conversations.getUnreadCount(conversation.id) || 0) > 0;
+
+                        return hasUnreadMessages ? (
+                          <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                 </div>,
