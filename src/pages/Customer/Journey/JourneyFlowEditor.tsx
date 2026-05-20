@@ -795,8 +795,7 @@ function JourneyFlowEditor() {
         isSaving={isSaving}
         onSave={saveChanges}
         onFlowDataChange={handleFlowDataChange}
-        autoSave={true}
-        autoSaveInterval={10000}
+        autoSave={false}
         showHeader={false}
         showToolbar={false}
         nodeTypes={nodeTypes}
