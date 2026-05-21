@@ -74,7 +74,7 @@
     "recoveryBody": "Nous avons trouvé des modifications non enregistrées de {{when}} stockées localement. Récupérer ou ignorer ?",
     "recover": "Récupérer",
     "discard": "Ignorer",
-    "saveErrorBanner": "Échec de l'enregistrement : {{reason}}. Nouvelle tentative dans 30s.",
+    "saveErrorBanner": "Échec de l'enregistrement : {{reason}}. Nouvelle tentative dans {{seconds}}s.",
     "saveErrorBannerNoRetry": "Échec de l'enregistrement : {{reason}}. Cliquez sur Enregistrer pour réessayer.",
     "saveErrorMessages": {
       "network": "Erreur réseau",

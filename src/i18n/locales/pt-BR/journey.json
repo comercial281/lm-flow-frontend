@@ -74,7 +74,7 @@
     "recoveryBody": "Encontramos alterações não salvas de {{when}} armazenadas localmente. Recuperar ou descartar?",
     "recover": "Recuperar",
     "discard": "Descartar",
-    "saveErrorBanner": "Falha ao salvar: {{reason}}. Tentando de novo em 30s.",
+    "saveErrorBanner": "Falha ao salvar: {{reason}}. Tentando de novo em {{seconds}}s.",
     "saveErrorBannerNoRetry": "Falha ao salvar: {{reason}}. Clique em Salvar para tentar novamente.",
     "saveErrorMessages": {
       "network": "Erro de rede",

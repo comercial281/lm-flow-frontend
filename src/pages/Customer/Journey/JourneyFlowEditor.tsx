@@ -137,6 +137,7 @@ function JourneyFlowEditor() {
   const lastSavedAt = useFlowEditorStore((s) => s.lastSavedAt);
   const lastError = useFlowEditorStore((s) => s.lastError);
   const retryScheduled = useFlowEditorStore((s) => s.retryScheduled);
+  const nextRetryDelayMs = useFlowEditorStore((s) => s.nextRetryDelayMs);
   const recoveryCandidate = useFlowEditorStore((s) => s.recoveryCandidate);
   const recoveryEpoch = useFlowEditorStore((s) => s.recoveryEpoch);
 
@@ -573,7 +574,7 @@ function JourneyFlowEditor() {
       return;
     }
 
-    store.beginSave();
+    store.beginSave({ resetRetryBudget: !opts?.silent });
     try {
       const flowData = {
         nodes: normalizeNodesForPersist(snapshot.nodes),
@@ -776,8 +777,11 @@ function JourneyFlowEditor() {
       {status === 'error' && lastError ? (
         <FlowFeedbackBanner variant="error" className="mx-4 mt-2">
           <p>
-            {retryScheduled
-              ? t('flowEditor.saveErrorBanner', { reason: lastError })
+            {retryScheduled && nextRetryDelayMs !== null
+              ? t('flowEditor.saveErrorBanner', {
+                  reason: lastError,
+                  seconds: Math.round(nextRetryDelayMs / 1000),
+                })
               : t('flowEditor.saveErrorBannerNoRetry', { reason: lastError })}
           </p>
         </FlowFeedbackBanner>

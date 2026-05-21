@@ -74,7 +74,7 @@
     "recoveryBody": "Encontramos cambios sin guardar de {{when}} almacenados localmente. ¿Recuperar o descartar?",
     "recover": "Recuperar",
     "discard": "Descartar",
-    "saveErrorBanner": "Error al guardar: {{reason}}. Reintentando en 30s.",
+    "saveErrorBanner": "Error al guardar: {{reason}}. Reintentando en {{seconds}}s.",
     "saveErrorBannerNoRetry": "Error al guardar: {{reason}}. Haz clic en Guardar para intentarlo de nuevo.",
     "saveErrorMessages": {
       "network": "Error de red",

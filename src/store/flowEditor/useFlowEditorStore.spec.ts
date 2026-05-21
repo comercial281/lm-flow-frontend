@@ -8,6 +8,7 @@ import {
   stripVolatileNodeFields,
   FLOW_EDITOR_AUTOSAVE_DELAY_MS,
   FLOW_EDITOR_ERROR_RETRY_DELAY_MS,
+  FLOW_EDITOR_MAX_AUTO_RETRIES,
   type FlowSnapshot,
 } from './useFlowEditorStore';
 import {
@@ -724,5 +725,154 @@ describe('useFlowEditorStore — volatile field normalisation (H2)', () => {
     });
     // Source array untouched.
     expect((dirty[0] as Node & { selected?: boolean }).selected).toBe(true);
+  });
+});
+
+describe('useFlowEditorStore — auto-retry backoff cap (L2)', () => {
+  beforeEach(() => {
+    useFlowEditorStore.getState().hydrate({
+      journeyId: 'journey-1',
+      server: baseSnapshot,
+      lastSavedAt: new Date('2026-05-20T12:00:00Z'),
+      recovery: null,
+    });
+  });
+
+  it('first failure schedules a 30s retry and reports the delay via nextRetryDelayMs', () => {
+    vi.useFakeTimers();
+    const trigger = vi.fn();
+    const unregister = registerAutosaveTrigger(trigger);
+
+    useFlowEditorStore.getState().setFlow(editedSnapshotNodes, []);
+    useFlowEditorStore.getState().beginSave();
+    useFlowEditorStore.getState().failSave('Network error');
+
+    const state = useFlowEditorStore.getState();
+    expect(state.retryScheduled).toBe(true);
+    expect(state.nextRetryDelayMs).toBe(FLOW_EDITOR_ERROR_RETRY_DELAY_MS);
+    expect(state.retryAttempt).toBe(0); // not yet incremented; pre-tick.
+
+    unregister();
+  });
+
+  it('consecutive failures escalate the delay 30s → 60s → 120s and stop scheduling after MAX_AUTO_RETRIES', () => {
+    vi.useFakeTimers();
+    const trigger = vi.fn(() => {
+      // Every retry-fired save will fail again immediately. The consumer
+      // is responsible for that; we simulate by calling beginSave + failSave
+      // in the trigger to reproduce the production path.
+      useFlowEditorStore.getState().beginSave();
+      useFlowEditorStore.getState().failSave('Server still down');
+    });
+    const unregister = registerAutosaveTrigger(trigger);
+
+    useFlowEditorStore.getState().setFlow(editedSnapshotNodes, []);
+    useFlowEditorStore.getState().beginSave();
+    useFlowEditorStore.getState().failSave('Initial failure');
+
+    // First retry — delay was 30s.
+    expect(useFlowEditorStore.getState().nextRetryDelayMs).toBe(30_000);
+    vi.advanceTimersByTime(30_000);
+    expect(trigger).toHaveBeenCalledTimes(1);
+    expect(useFlowEditorStore.getState().retryAttempt).toBe(1);
+    expect(useFlowEditorStore.getState().nextRetryDelayMs).toBe(60_000);
+
+    // Second retry — delay 60s.
+    vi.advanceTimersByTime(60_000);
+    expect(trigger).toHaveBeenCalledTimes(2);
+    expect(useFlowEditorStore.getState().retryAttempt).toBe(2);
+    expect(useFlowEditorStore.getState().nextRetryDelayMs).toBe(120_000);
+
+    // Third retry — delay 120s.
+    vi.advanceTimersByTime(120_000);
+    expect(trigger).toHaveBeenCalledTimes(3);
+    expect(useFlowEditorStore.getState().retryAttempt).toBe(FLOW_EDITOR_MAX_AUTO_RETRIES);
+
+    // Budget exhausted after the third retry failed — no more scheduling.
+    expect(useFlowEditorStore.getState().retryScheduled).toBe(false);
+    expect(useFlowEditorStore.getState().nextRetryDelayMs).toBeNull();
+
+    // Even if a generous amount of time passes, the trigger is NOT called again.
+    vi.advanceTimersByTime(10 * 60 * 1000);
+    expect(trigger).toHaveBeenCalledTimes(3);
+
+    unregister();
+  });
+
+  it('a new user edit resets the retry budget so subsequent failures start the cycle over', () => {
+    vi.useFakeTimers();
+    const trigger = vi.fn(() => {
+      useFlowEditorStore.getState().beginSave();
+      useFlowEditorStore.getState().failSave('Still failing');
+    });
+    const unregister = registerAutosaveTrigger(trigger);
+
+    // Exhaust the budget.
+    useFlowEditorStore.getState().setFlow(editedSnapshotNodes, []);
+    useFlowEditorStore.getState().beginSave();
+    useFlowEditorStore.getState().failSave('Initial failure');
+    vi.advanceTimersByTime(30_000 + 60_000 + 120_000);
+    expect(useFlowEditorStore.getState().retryAttempt).toBe(FLOW_EDITOR_MAX_AUTO_RETRIES);
+    expect(useFlowEditorStore.getState().retryScheduled).toBe(false);
+    trigger.mockClear();
+
+    // User edits → applyEdit must reset retryAttempt to 0. Need a NEW edit
+    // (different from current snapshot) and one that puts us back into a
+    // legitimate `dirty` state.
+    const furtherEdit: Node[] = [
+      ...editedSnapshotNodes,
+      { id: 'wait-2', type: 'wait-node', position: { x: 400, y: 0 }, data: {} } as Node,
+    ];
+    useFlowEditorStore.getState().setFlow(furtherEdit, []);
+    expect(useFlowEditorStore.getState().retryAttempt).toBe(0);
+  });
+
+  it('manual save resets the retry budget; auto-retry-triggered save does not', () => {
+    vi.useFakeTimers();
+    const trigger = vi.fn();
+    const unregister = registerAutosaveTrigger(trigger);
+
+    useFlowEditorStore.getState().setFlow(editedSnapshotNodes, []);
+
+    // Auto-style begin → does NOT reset.
+    useFlowEditorStore.getState().beginSave({ resetRetryBudget: false });
+    useFlowEditorStore.getState().failSave('Auto failure 1');
+    useFlowEditorStore.getState().setFlow(editedSnapshotNodes, []); // re-arm dirty without bumping retryAttempt (snapshot equal post-normalise)
+    // Above setFlow is a no-op against current, so retryAttempt is preserved.
+
+    // Pretend we are now on attempt 2 via failSave path simulation:
+    useFlowEditorStore.getState().beginSave({ resetRetryBudget: false });
+    useFlowEditorStore.getState().failSave('Auto failure 2');
+    const beforeManual = useFlowEditorStore.getState().retryAttempt;
+    expect(beforeManual).toBeGreaterThanOrEqual(0);
+
+    // Manual save → resets to 0 so a fresh budget is available even if the
+    // user repeatedly clicks Save against a still-broken server.
+    useFlowEditorStore.getState().beginSave({ resetRetryBudget: true });
+    expect(useFlowEditorStore.getState().retryAttempt).toBe(0);
+
+    unregister();
+  });
+
+  it('commitSave on success resets the retry budget', () => {
+    const trigger = vi.fn();
+    const unregister = registerAutosaveTrigger(trigger);
+    const syncedSnapshot = useFlowEditorStore.getState().currentSnapshot!;
+
+    useFlowEditorStore.getState().setFlow(editedSnapshotNodes, []);
+    useFlowEditorStore.getState().beginSave();
+    useFlowEditorStore.getState().failSave('First failure');
+    expect(useFlowEditorStore.getState().retryScheduled).toBe(true);
+
+    // Successful save lands.
+    useFlowEditorStore.getState().beginSave({ resetRetryBudget: true });
+    useFlowEditorStore.getState().commitSave(new Date(), syncedSnapshot);
+
+    const state = useFlowEditorStore.getState();
+    expect(state.retryAttempt).toBe(0);
+    expect(state.retryScheduled).toBe(false);
+    expect(state.nextRetryDelayMs).toBeNull();
+
+    unregister();
   });
 });

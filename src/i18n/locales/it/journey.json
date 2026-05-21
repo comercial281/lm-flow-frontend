@@ -74,7 +74,7 @@
     "recoveryBody": "Abbiamo trovato modifiche non salvate da {{when}} memorizzate localmente. Recuperare o scartare?",
     "recover": "Recupera",
     "discard": "Scarta",
-    "saveErrorBanner": "Salvataggio fallito: {{reason}}. Nuovo tentativo tra 30s.",
+    "saveErrorBanner": "Salvataggio fallito: {{reason}}. Nuovo tentativo tra {{seconds}}s.",
     "saveErrorBannerNoRetry": "Salvataggio fallito: {{reason}}. Fai clic su Salva per riprovare.",
     "saveErrorMessages": {
       "network": "Errore di rete",

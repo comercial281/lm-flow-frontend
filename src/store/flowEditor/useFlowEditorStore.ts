@@ -29,6 +29,21 @@ export type FlowEditorState = {
    * trigger is registered and the promise would be a lie.
    */
   retryScheduled: boolean;
+  /**
+   * Actual delay (ms) of the currently-scheduled auto-retry, or `null` when
+   * no retry is in flight (either no failure yet, or the retry budget has
+   * been exhausted). Consumers display this in the failure banner so the
+   * promised wait time matches the actual schedule across consecutive
+   * failures (30s on the first retry, 60s on the second, 120s on the third).
+   */
+  nextRetryDelayMs: number | null;
+  /**
+   * How many automatic retries have already been scheduled in the current
+   * error streak. Reset to 0 on success, on a new user edit, and on manual
+   * save. Capped at `FLOW_EDITOR_MAX_AUTO_RETRIES`; beyond that, the banner
+   * tells the user to click Save manually.
+   */
+  retryAttempt: number;
   serverSnapshot: FlowSnapshot | null;
   currentSnapshot: FlowSnapshot | null;
   recoveryCandidate: { snapshot: FlowSnapshot; timestamp: Date } | null;
@@ -54,7 +69,15 @@ export type FlowEditorState = {
   setFlow: (nodes: Node[], edges: Edge[]) => void;
 
   // Save lifecycle (driven by consumer — store provides transitions only)
-  beginSave: () => void;
+  /**
+   * Move into `saving`. Pass `resetRetryBudget: true` when the save was
+   * triggered by an explicit user action (manual Save button) — that
+   * resets the auto-retry counter so a failure restarts the 30s/60s/120s
+   * backoff from scratch. Pass `false` (or nothing) when the save was
+   * triggered by the autosave timer or the auto-retry timer — those
+   * should NOT reset the counter, otherwise the cap is never reached.
+   */
+  beginSave: (opts?: { resetRetryBudget?: boolean }) => void;
   /**
    * Mark a save as successfully landed.
    *
@@ -76,6 +99,17 @@ export type FlowEditorState = {
 const DEFAULT_AUTOSAVE_DELAY_MS = 5000;
 const IDB_DEBOUNCE_MS = 500;
 const ERROR_RETRY_DELAY_MS = 30_000;
+const MAX_AUTO_RETRIES = 3;
+
+/**
+ * Exponential backoff: 30s, 60s, 120s. After three failed retries, give
+ * up and surface the manual-retry banner — looping forever against a
+ * server that has been down for two minutes is just noise.
+ */
+function computeNextRetryDelay(attempt: number): number | null {
+  if (attempt >= MAX_AUTO_RETRIES) return null;
+  return ERROR_RETRY_DELAY_MS * Math.pow(2, attempt);
+}
 
 /**
  * Singleton timer / trigger slots.
@@ -197,6 +231,8 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => {
       status: becameDirty ? 'dirty' : 'idle',
       lastError: null,
       retryScheduled: false,
+      nextRetryDelayMs: null,
+      retryAttempt: 0,
     });
 
     if (becameDirty) {
@@ -212,6 +248,8 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => {
     lastSavedAt: null,
     lastError: null,
     retryScheduled: false,
+    nextRetryDelayMs: null,
+    retryAttempt: 0,
     serverSnapshot: null,
     currentSnapshot: null,
     recoveryCandidate: null,
@@ -241,6 +279,8 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => {
         lastSavedAt,
         lastError: null,
         retryScheduled: false,
+        nextRetryDelayMs: null,
+        retryAttempt: 0,
         serverSnapshot: server,
         currentSnapshot: server,
         recoveryCandidate,
@@ -259,6 +299,8 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => {
         lastSavedAt: null,
         lastError: null,
         retryScheduled: false,
+        nextRetryDelayMs: null,
+        retryAttempt: 0,
         serverSnapshot: null,
         currentSnapshot: null,
         recoveryCandidate: null,
@@ -268,10 +310,16 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => {
 
     setFlow: (nodes, edges) => applyEdit({ nodes, edges }),
 
-    beginSave: () => {
+    beginSave: (opts) => {
       clearAutosaveTimer();
       clearErrorRetryTimer();
-      set({ status: 'saving', lastError: null, retryScheduled: false });
+      set({
+        status: 'saving',
+        lastError: null,
+        retryScheduled: false,
+        nextRetryDelayMs: null,
+        ...(opts?.resetRetryBudget ? { retryAttempt: 0 } : {}),
+      });
     },
 
     commitSave: (savedAt, syncedSnapshot) => {
@@ -293,6 +341,8 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => {
           lastSavedAt: savedAt,
           lastError: null,
           retryScheduled: false,
+          nextRetryDelayMs: null,
+          retryAttempt: 0,
           serverSnapshot: syncedSnapshot,
         });
         scheduleIdbWrite(state.journeyId, current);
@@ -307,6 +357,8 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => {
         lastSavedAt: savedAt,
         lastError: null,
         retryScheduled: false,
+        nextRetryDelayMs: null,
+        retryAttempt: 0,
         serverSnapshot: syncedSnapshot,
       });
 
@@ -318,31 +370,41 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => {
 
     failSave: (message) => {
       clearErrorRetryTimer();
-      const scheduled = pendingSaveTrigger !== null;
-      set({ status: 'error', lastError: message, retryScheduled: scheduled });
+      const state = get();
+      const attempt = state.retryAttempt;
+      const delay = computeNextRetryDelay(attempt);
+      const willRetry = pendingSaveTrigger !== null && delay !== null;
 
-      // AC#4: schedule a single auto-retry in 30s. The banner text promises
-      // it; only honour the promise when a trigger is registered (the
-      // retryScheduled flag lets the UI hide the false promise when not).
-      // Subsequent failures restart the 30s timer (consecutive failures stay
-      // on the cycle). Any manual save / new edit / commit cancels it.
-      if (pendingSaveTrigger) {
+      set({
+        status: 'error',
+        lastError: message,
+        retryScheduled: willRetry,
+        nextRetryDelayMs: willRetry ? delay : null,
+      });
+
+      // AC#4 with bounded backoff: schedule an auto-retry at 30s, then
+      // 60s, then 120s. After the 3rd failed retry we stop scheduling and
+      // the banner switches to "click Save to try again" — infinite retry
+      // against a server that has been down for minutes is just noise.
+      // Any manual save / new edit / commit resets `retryAttempt` to 0.
+      if (willRetry && delay !== null) {
         errorRetryTimerId = setTimeout(() => {
           errorRetryTimerId = null;
           // Re-check that we still have a trigger AND status is still error.
           // The trigger we captured at failSave time could be stale if the
           // consumer's effect cycle re-registered between failure and retry.
           if (pendingSaveTrigger && get().status === 'error') {
+            set({ retryAttempt: attempt + 1 });
             pendingSaveTrigger();
           } else if (!pendingSaveTrigger) {
             // Trigger gone (component unmounted / re-registered). Mark the
             // banner as no-longer-truthful so it does not keep promising.
-            set({ retryScheduled: false });
+            set({ retryScheduled: false, nextRetryDelayMs: null });
           } else {
             // Status moved on, retry obsolete.
-            set({ retryScheduled: false });
+            set({ retryScheduled: false, nextRetryDelayMs: null });
           }
-        }, ERROR_RETRY_DELAY_MS);
+        }, delay);
       }
     },
 
@@ -357,6 +419,8 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => {
         recoveryCandidate: null,
         lastError: null,
         retryScheduled: false,
+        nextRetryDelayMs: null,
+        retryAttempt: 0,
         recoveryEpoch: state.recoveryEpoch + 1,
       });
 
@@ -404,3 +468,4 @@ export function registerAutosaveTrigger(trigger: () => void): () => void {
 export const FLOW_EDITOR_AUTOSAVE_DELAY_MS = DEFAULT_AUTOSAVE_DELAY_MS;
 export const FLOW_EDITOR_IDB_DEBOUNCE_MS = IDB_DEBOUNCE_MS;
 export const FLOW_EDITOR_ERROR_RETRY_DELAY_MS = ERROR_RETRY_DELAY_MS;
+export const FLOW_EDITOR_MAX_AUTO_RETRIES = MAX_AUTO_RETRIES;

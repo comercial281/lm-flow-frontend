@@ -74,7 +74,7 @@
     "recoveryBody": "We found unsaved changes from {{when}} stored locally. Recover them or discard?",
     "recover": "Recover",
     "discard": "Discard",
-    "saveErrorBanner": "Save failed: {{reason}}. Retrying in 30s.",
+    "saveErrorBanner": "Save failed: {{reason}}. Retrying in {{seconds}}s.",
     "saveErrorBannerNoRetry": "Save failed: {{reason}}. Click Save to try again.",
     "saveErrorMessages": {
       "network": "Network error",

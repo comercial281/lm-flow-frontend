@@ -74,7 +74,7 @@
     "recoveryBody": "Encontrámos alterações não guardadas de {{when}} no armazenamento local. Recuperar ou descartar?",
     "recover": "Recuperar",
     "discard": "Descartar",
-    "saveErrorBanner": "Falha ao guardar: {{reason}}. A tentar novamente em 30s.",
+    "saveErrorBanner": "Falha ao guardar: {{reason}}. A tentar novamente em {{seconds}}s.",
     "saveErrorBannerNoRetry": "Falha ao guardar: {{reason}}. Clique em Guardar para tentar novamente.",
     "saveErrorMessages": {
       "network": "Erro de rede",
