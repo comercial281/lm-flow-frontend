@@ -5,6 +5,7 @@ import {
   useFlowEditorStore,
   registerAutosaveTrigger,
   FLOW_EDITOR_AUTOSAVE_DELAY_MS,
+  FLOW_EDITOR_ERROR_RETRY_DELAY_MS,
   type FlowSnapshot,
 } from './useFlowEditorStore';
 import {
@@ -246,6 +247,128 @@ describe('useFlowEditorStore — save lifecycle', () => {
     const state = useFlowEditorStore.getState();
     expect(state.status).toBe('dirty');
     expect(state.lastError).toBeNull();
+  });
+});
+
+describe('useFlowEditorStore — error retry (AC#4)', () => {
+  beforeEach(() => {
+    useFlowEditorStore.getState().hydrate({
+      journeyId: 'journey-1',
+      server: baseSnapshot,
+      lastSavedAt: new Date('2026-05-20T12:00:00Z'),
+      recovery: null,
+    });
+  });
+
+  it('schedules an auto-retry 30s after failSave when a trigger is registered', () => {
+    vi.useFakeTimers();
+    const trigger = vi.fn();
+    const unregister = registerAutosaveTrigger(trigger);
+
+    useFlowEditorStore.getState().setFlow(editedSnapshotNodes, []);
+    useFlowEditorStore.getState().beginSave();
+    useFlowEditorStore.getState().failSave('Network error');
+
+    vi.advanceTimersByTime(FLOW_EDITOR_ERROR_RETRY_DELAY_MS - 1);
+    expect(trigger).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(2);
+    expect(trigger).toHaveBeenCalledTimes(1);
+
+    unregister();
+  });
+
+  it('does not retry when a new edit cancels the error state before the retry fires', () => {
+    vi.useFakeTimers();
+    const trigger = vi.fn();
+    const unregister = registerAutosaveTrigger(trigger);
+
+    useFlowEditorStore.getState().setFlow(editedSnapshotNodes, []);
+    useFlowEditorStore.getState().beginSave();
+    useFlowEditorStore.getState().failSave('Network error');
+
+    // A new edit while in error transitions the store back to dirty and
+    // also cancels the retry timer. The new edit arms a fresh autosave
+    // (which will legitimately fire the trigger at +5s). What we are
+    // testing here is that the original 30s retry does NOT add a second
+    // trigger call on top of the autosave one.
+    const further: Node[] = [
+      ...editedSnapshotNodes,
+      { id: 'wait-2', type: 'wait-node', position: { x: 400, y: 0 }, data: {} } as Node,
+    ];
+    useFlowEditorStore.getState().setFlow(further, []);
+
+    vi.advanceTimersByTime(FLOW_EDITOR_AUTOSAVE_DELAY_MS);
+    expect(trigger).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(FLOW_EDITOR_ERROR_RETRY_DELAY_MS);
+    expect(trigger).toHaveBeenCalledTimes(1);
+
+    unregister();
+  });
+
+  it('cancels the retry timer when manual save (beginSave) fires before it lands', () => {
+    vi.useFakeTimers();
+    const trigger = vi.fn();
+    const unregister = registerAutosaveTrigger(trigger);
+
+    useFlowEditorStore.getState().setFlow(editedSnapshotNodes, []);
+    useFlowEditorStore.getState().beginSave();
+    useFlowEditorStore.getState().failSave('Network error');
+
+    vi.advanceTimersByTime(10_000);
+    useFlowEditorStore.getState().beginSave();
+
+    vi.advanceTimersByTime(FLOW_EDITOR_ERROR_RETRY_DELAY_MS);
+    expect(trigger).not.toHaveBeenCalled();
+
+    unregister();
+  });
+
+  it('cancels the retry timer on successful commitSave', () => {
+    vi.useFakeTimers();
+    const trigger = vi.fn();
+    const unregister = registerAutosaveTrigger(trigger);
+
+    useFlowEditorStore.getState().setFlow(editedSnapshotNodes, []);
+    useFlowEditorStore.getState().beginSave();
+    useFlowEditorStore.getState().failSave('Network error');
+
+    useFlowEditorStore.getState().commitSave(new Date('2026-05-20T12:00:30Z'));
+
+    vi.advanceTimersByTime(FLOW_EDITOR_ERROR_RETRY_DELAY_MS * 2);
+    expect(trigger).not.toHaveBeenCalled();
+
+    unregister();
+  });
+
+  it('restarts the retry cycle on a consecutive failure (still 30s from the latest fail)', () => {
+    vi.useFakeTimers();
+    const trigger = vi.fn();
+    const unregister = registerAutosaveTrigger(trigger);
+
+    useFlowEditorStore.getState().setFlow(editedSnapshotNodes, []);
+    useFlowEditorStore.getState().beginSave();
+    useFlowEditorStore.getState().failSave('Network error');
+
+    // 25s elapse — the first retry timer was on its way at +30s.
+    vi.advanceTimersByTime(25_000);
+
+    // Simulate the retry firing as `beginSave` from the consumer, then
+    // failing again. The new failSave should reset the 30s window from
+    // the latest failure, not from the original.
+    useFlowEditorStore.getState().beginSave();
+    useFlowEditorStore.getState().failSave('Network error');
+
+    // The original 30s window would already have fired by 25+10=35 — but
+    // it was cancelled. The new 30s window starts now.
+    vi.advanceTimersByTime(10_000);
+    expect(trigger).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(FLOW_EDITOR_ERROR_RETRY_DELAY_MS - 10_000 + 1);
+    expect(trigger).toHaveBeenCalledTimes(1);
+
+    unregister();
   });
 });
 

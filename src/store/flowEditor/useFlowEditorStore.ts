@@ -46,9 +46,11 @@ export type FlowEditorState = {
 
 const DEFAULT_AUTOSAVE_DELAY_MS = 5000;
 const IDB_DEBOUNCE_MS = 500;
+const ERROR_RETRY_DELAY_MS = 30_000;
 
 let autosaveTimerId: ReturnType<typeof setTimeout> | null = null;
 let idbWriteTimerId: ReturnType<typeof setTimeout> | null = null;
+let errorRetryTimerId: ReturnType<typeof setTimeout> | null = null;
 let pendingSaveTrigger: (() => void) | null = null;
 
 function clearAutosaveTimer(): void {
@@ -62,6 +64,13 @@ function clearIdbWriteTimer(): void {
   if (idbWriteTimerId !== null) {
     clearTimeout(idbWriteTimerId);
     idbWriteTimerId = null;
+  }
+}
+
+function clearErrorRetryTimer(): void {
+  if (errorRetryTimerId !== null) {
+    clearTimeout(errorRetryTimerId);
+    errorRetryTimerId = null;
   }
 }
 
@@ -95,6 +104,7 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => ({
   hydrate: ({ journeyId, server, lastSavedAt, recovery }) => {
     clearAutosaveTimer();
     clearIdbWriteTimer();
+    clearErrorRetryTimer();
 
     let recoveryCandidate: FlowEditorState['recoveryCandidate'] = null;
     if (recovery) {
@@ -123,6 +133,7 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => ({
   reset: () => {
     clearAutosaveTimer();
     clearIdbWriteTimer();
+    clearErrorRetryTimer();
     pendingSaveTrigger = null;
     set({
       journeyId: null,
@@ -158,6 +169,7 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => ({
     if (becameDirty) {
       scheduleIdbWrite(state.journeyId, next);
       clearAutosaveTimer();
+      clearErrorRetryTimer();
       if (pendingSaveTrigger) {
         const trigger = pendingSaveTrigger;
         autosaveTimerId = setTimeout(() => {
@@ -190,6 +202,7 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => ({
     if (becameDirty) {
       scheduleIdbWrite(state.journeyId, next);
       clearAutosaveTimer();
+      clearErrorRetryTimer();
       if (pendingSaveTrigger) {
         const trigger = pendingSaveTrigger;
         autosaveTimerId = setTimeout(() => {
@@ -202,6 +215,7 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => ({
 
   beginSave: () => {
     clearAutosaveTimer();
+    clearErrorRetryTimer();
     set({ status: 'saving', lastError: null });
   },
 
@@ -211,6 +225,7 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => ({
 
     clearAutosaveTimer();
     clearIdbWriteTimer();
+    clearErrorRetryTimer();
 
     set({
       status: 'idle',
@@ -226,7 +241,20 @@ export const useFlowEditorStore = create<FlowEditorState>((set, get) => ({
   },
 
   failSave: (message) => {
+    clearErrorRetryTimer();
     set({ status: 'error', lastError: message });
+
+    // AC#4: schedule a single auto-retry in 30s. The banner text promises
+    // it; this honours the promise without putting the user on the hook.
+    // Subsequent failures restart the 30s timer (consecutive failures stay
+    // on the cycle). Any manual save / new edit / commit cancels it.
+    if (pendingSaveTrigger) {
+      const trigger = pendingSaveTrigger;
+      errorRetryTimerId = setTimeout(() => {
+        errorRetryTimerId = null;
+        if (get().status === 'error') trigger();
+      }, ERROR_RETRY_DELAY_MS);
+    }
   },
 
   acceptRecovery: () => {
@@ -284,3 +312,4 @@ export function registerAutosaveTrigger(trigger: () => void): () => void {
 /** Constants exposed for tests and consumer code. */
 export const FLOW_EDITOR_AUTOSAVE_DELAY_MS = DEFAULT_AUTOSAVE_DELAY_MS;
 export const FLOW_EDITOR_IDB_DEBOUNCE_MS = IDB_DEBOUNCE_MS;
+export const FLOW_EDITOR_ERROR_RETRY_DELAY_MS = ERROR_RETRY_DELAY_MS;
