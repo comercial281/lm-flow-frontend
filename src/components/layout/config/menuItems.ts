@@ -197,6 +197,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         icon: Zap,
       },
       {
+        name: 'Automações Boas-Vindas',
+        href: '/settings/welcome-automations',
+        icon: Zap,
+      },
+      {
         name: t('menu.settings.macros'),
         href: '/settings/macros',
         icon: Settings,

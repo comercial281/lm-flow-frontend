@@ -51,6 +51,7 @@ import Labels from '@/pages/Customer/Settings/Labels';
 import CustomAttributes from '@/pages/Customer/Settings/CustomAttributes';
 import CannedResponses from '@/pages/Customer/Settings/CannedResponses';
 import { QuickReplies } from '@/pages/Customer/Settings/QuickReplies';
+import { WelcomeAutomations } from '@/pages/Customer/Settings/WelcomeAutomations';
 import { Macros } from '@/pages/Customer/Settings/Macros';
 import { Integrations } from '@/pages/Customer/Settings/Integrations';
 import EmailTemplateEditor from '@/pages/Customer/Settings/EmailTemplateEditor';
@@ -581,6 +582,19 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <QuickReplies />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/settings/welcome-automations"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <WelcomeAutomations />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>
