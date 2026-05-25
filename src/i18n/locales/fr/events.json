@@ -21,6 +21,7 @@
     "customValuePlaceholder": "valeur",
     "customAddLabel": "+ Ajouter une propriété",
     "requiredFieldMissing": "Champ obligatoire",
-    "customWarning": "Les événements personnalisés ne sont pas validés par schéma"
+    "customWarning": "Les événements personnalisés ne sont pas validés par schéma",
+    "customRemoveAriaLabel": "Supprimer la propriété"
   }
 }

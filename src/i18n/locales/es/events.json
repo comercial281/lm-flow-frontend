@@ -21,6 +21,7 @@
     "customValuePlaceholder": "valor",
     "customAddLabel": "+ Añadir propiedad",
     "requiredFieldMissing": "Campo obligatorio",
-    "customWarning": "Los eventos personalizados no se validan por schema"
+    "customWarning": "Los eventos personalizados no se validan por schema",
+    "customRemoveAriaLabel": "Eliminar propiedad"
   }
 }

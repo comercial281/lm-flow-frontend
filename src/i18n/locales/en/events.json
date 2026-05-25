@@ -21,6 +21,7 @@
     "customValuePlaceholder": "value",
     "customAddLabel": "+ Add property",
     "requiredFieldMissing": "Required field",
-    "customWarning": "Custom events are not schema-validated"
+    "customWarning": "Custom events are not schema-validated",
+    "customRemoveAriaLabel": "Remove property"
   }
 }

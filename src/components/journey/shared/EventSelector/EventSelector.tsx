@@ -86,7 +86,7 @@ export function EventSelector({
           className={cn('w-full justify-between font-normal', className)}
         >
           <span className={cn(!selected && 'text-muted-foreground')}>{triggerLabel}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" aria-hidden="true" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -145,6 +145,7 @@ function CommandGroupSection({
                 'mr-2 h-4 w-4',
                 value === item.eventName ? 'opacity-100' : 'opacity-0',
               )}
+              aria-hidden="true"
             />
             <div className="flex flex-col">
               <span>{selectedLabel(item, currentLanguage)}</span>
