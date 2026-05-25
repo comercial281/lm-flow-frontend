@@ -62,12 +62,13 @@ export default function NotificationItem({
   const dateFnsLocale = DATE_FNS_LOCALES[currentLanguage] ?? enUS;
   const isUnread = !notification.read_at;
 
+  const sender = notification.sender ?? null;
   const contact = notification.primary_actor?.contact ?? null;
   const displayId = notification.primary_actor?.display_id;
   const channelType = notification.primary_actor?.channel ?? null;
 
-  const contactName = contact?.name ?? (displayId ? `#${displayId}` : t('notifications.item.noAssignee'));
-  const contactAvatarUrl = contact?.avatar_url ?? undefined;
+  const senderName = sender?.name ?? contact?.name ?? (displayId ? `#${displayId}` : t('notifications.item.noAssignee'));
+  const senderAvatarUrl = sender?.avatar_url ?? contact?.avatar_url ?? undefined;
 
   const channelName = channelType ? CHANNEL_NAMES[channelType] ?? null : null;
   const badgeLabel = NEW_MESSAGE_TYPES.has(notification.notification_type) && channelName
@@ -104,12 +105,12 @@ export default function NotificationItem({
             )}
           </div>
 
-          {/* Contact avatar */}
+          {/* Sender avatar */}
           <div className="flex-shrink-0 ml-2">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={contactAvatarUrl} alt={contactName} />
+              <AvatarImage src={senderAvatarUrl} alt={senderName} />
               <AvatarFallback className="text-xs bg-primary/20 text-primary">
-                {getInitials(contact?.name ?? '')}
+                {getInitials(sender?.name ?? contact?.name ?? '')}
               </AvatarFallback>
             </Avatar>
           </div>
@@ -118,7 +119,7 @@ export default function NotificationItem({
           <div className="flex-1 ml-3 overflow-hidden">
             <div className="flex justify-between items-center gap-2">
               <span className="font-semibold text-foreground truncate text-sm">
-                {contactName}
+                {senderName}
               </span>
               <span className="text-xs text-muted-foreground flex-shrink-0">
                 {timeLabel}
