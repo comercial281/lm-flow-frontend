@@ -36,6 +36,7 @@ const CATALOG: CatalogEntry[] = [
     description: 'Integre com Facebook e Instagram Ads para capturar leads diretamente do formulário de anúncios.',
     category: 'Marketing',
     tags: ['leads', 'facebook', 'instagram', 'ads'],
+    configPath: '/settings/integrations/meta-ads',
     logo: '📘',
   },
   {
@@ -62,6 +63,7 @@ const CATALOG: CatalogEntry[] = [
     description: 'Integre com RD Station Marketing para automações de e-mail e nutrição de leads.',
     category: 'Marketing',
     tags: ['email', 'automação', 'marketing'],
+    configPath: '/settings/integrations/rd-station',
     logo: '🔵',
   },
   {
@@ -70,6 +72,7 @@ const CATALOG: CatalogEntry[] = [
     description: 'Plataforma de gestão para construtoras e imobiliárias. Sincronize imóveis e clientes.',
     category: 'Imobiliário',
     tags: ['imóveis', 'construtora', 'crm-imob'],
+    configPath: '/settings/integrations/studio360',
     logo: '🏗️',
   },
   {
@@ -78,6 +81,7 @@ const CATALOG: CatalogEntry[] = [
     description: 'Plataforma de automação de marketing. Envie leads capturados para funis de nutrição.',
     category: 'Marketing',
     tags: ['email', 'automação', 'funil'],
+    configPath: '/settings/integrations/leadlovers',
     logo: '🎯',
   },
   {
@@ -86,6 +90,7 @@ const CATALOG: CatalogEntry[] = [
     description: 'Portal de imóveis lançamentos. Sincronize empreendimentos e interesse de compradores.',
     category: 'Imobiliário',
     tags: ['lançamentos', 'empreendimentos', 'portal'],
+    configPath: '/settings/integrations/orulo',
     logo: '🏢',
   },
   {
