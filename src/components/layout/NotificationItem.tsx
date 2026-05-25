@@ -1,31 +1,25 @@
 import { useLanguage } from '@/hooks/useLanguage';
 import { useRelativeTime } from '@/lib/useRelativeTime';
 import { Avatar, AvatarFallback, AvatarImage, Button } from '@evoapi/design-system';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR, pt, enUS, es, fr, it } from 'date-fns/locale';
+import type { Locale as DateFnsLocale } from 'date-fns';
 import { useMemo } from 'react';
 import { Notification } from '@/services/notifications/NotificationsService';
+
+const DATE_FNS_LOCALES: Record<string, DateFnsLocale> = {
+  'pt-BR': ptBR,
+  'pt': pt,
+  'en': enUS,
+  'es': es,
+  'fr': fr,
+  'it': it,
+};
 
 interface NotificationItemProps {
   notification: Notification;
   onOpen: (notification: Notification) => void;
   getTypeLabel: (type: string) => string;
-}
-
-function formatNotificationTime(date: Date, now: Date): string {
-  const diffMs = now.getTime() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
-  const diffMonth = Math.floor(diffDay / 30);
-  const diffYear = Math.floor(diffDay / 365);
-
-  if (diffSec < 5) return 'agora';
-  if (diffSec < 60) return `há ${diffSec} segundo${diffSec !== 1 ? 's' : ''}`;
-  if (diffMin < 60) return `há ${diffMin} minuto${diffMin !== 1 ? 's' : ''}`;
-  if (diffHour < 24) return `há ${diffHour} hora${diffHour !== 1 ? 's' : ''}`;
-  if (diffDay < 30) return `há ${diffDay} dia${diffDay !== 1 ? 's' : ''}`;
-  if (diffMonth < 12) return `há ${diffMonth} ${diffMonth !== 1 ? 'meses' : 'mês'}`;
-  return `há ${diffYear} ano${diffYear !== 1 ? 's' : ''}`;
 }
 
 const CHANNEL_NAMES: Record<string, string> = {
@@ -41,7 +35,7 @@ const CHANNEL_NAMES: Record<string, string> = {
   'Channel::TwitterProfile': 'Twitter',
   'Channel::Slack': 'Slack',
   'Channel::TwilioSms': 'SMS',
-  'Channel::Voice': 'Voz',
+  'Channel::Voice': 'Voice',
 };
 
 const NEW_MESSAGE_TYPES = new Set([
@@ -64,7 +58,8 @@ export default function NotificationItem({
   onOpen,
   getTypeLabel,
 }: NotificationItemProps) {
-  const { t } = useLanguage('layout');
+  const { t, currentLanguage } = useLanguage('layout');
+  const dateFnsLocale = DATE_FNS_LOCALES[currentLanguage] ?? enUS;
   const isUnread = !notification.read_at;
 
   const contact = notification.primary_actor?.contact ?? null;
@@ -86,9 +81,9 @@ export default function NotificationItem({
     return isNaN(d.getTime()) ? null : d;
   }, [notification.last_activity_at]);
 
-  const now = useRelativeTime(activityDate);
+  useRelativeTime(activityDate);
   const timeLabel = activityDate
-    ? formatNotificationTime(activityDate, now)
+    ? formatDistanceToNow(activityDate, { addSuffix: true, locale: dateFnsLocale })
     : t('notifications.item.someTimeAgo');
 
   const preview = notification.push_message_body || notification.push_message_title || t('notifications.item.noContent');
