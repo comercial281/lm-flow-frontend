@@ -115,7 +115,7 @@ export const OAuthAuthorize: React.FC = () => {
           <div className="bg-background/80 backdrop-blur-sm border rounded-lg p-6 shadow-lg text-center">
             <h1 className="text-2xl font-bold mb-4">{t('authorize.titles.loginRequired')}</h1>
             <p className="text-muted-foreground mb-6">{t('authorize.descriptions.needLogin')}</p>
-            <Button onClick={() => window.location.href = '/auth'} className="w-full">
+            <Button onClick={() => window.location.href = '/login'} className="w-full">
               {t('authorize.buttons.goToLogin')}
             </Button>
           </div>

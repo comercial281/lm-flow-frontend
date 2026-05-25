@@ -44,7 +44,7 @@ apiPublic.interceptors.response.use(
       }
 
       // Evitar redirecionamento se já estiver na página de login
-      const isLoginPage = window.location.pathname === '/auth';
+      const isLoginPage = window.location.pathname === '/login';
       const isOnboardingPage = window.location.pathname.startsWith('/onboarding');
 
 

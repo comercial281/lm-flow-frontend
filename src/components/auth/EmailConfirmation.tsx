@@ -42,7 +42,7 @@ const EmailConfirmation = () => {
 
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        navigate('/auth');
+        navigate('/login');
       }, 3000);
     } catch (error: any) {
       setConfirmationStatus('error');
@@ -167,7 +167,7 @@ const EmailConfirmation = () => {
             )}
 
             <div className="text-center">
-              <Button variant="link" onClick={() => navigate('/auth')} className="text-sm">
+              <Button variant="link" onClick={() => navigate('/login')} className="text-sm">
                 {t('auth.emailConfirmation.backToLogin')}
               </Button>
             </div>

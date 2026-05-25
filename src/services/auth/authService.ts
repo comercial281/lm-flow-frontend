@@ -79,7 +79,7 @@ export const register = async (data: RegisterRequest): Promise<RegisterResponse>
   // Add required parameters
   const registrationData = {
     ...data,
-    confirm_success_url: `${window.location.origin}/auth?confirmation_success=true`,
+    confirm_success_url: `${window.location.origin}/login?confirmation_success=true`,
   };
 
   const response = await apiAuth.post<RegisterResponse>('/auth/register', registrationData);

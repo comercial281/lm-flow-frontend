@@ -163,11 +163,11 @@ authApi.interceptors.response.use(
 
         useAuthStore.getState().clearUser();
 
-        const isLoginPage = window.location.pathname === '/auth';
+        const isLoginPage = window.location.pathname === '/login';
         const isOnboardingPage = window.location.pathname.startsWith('/onboarding');
 
         if (!isLoginPage && !isOnboardingPage) {
-          window.location.href = '/auth?session_expired=true';
+          window.location.href = '/login?session_expired=true';
         }
 
         return Promise.reject(refreshError);
