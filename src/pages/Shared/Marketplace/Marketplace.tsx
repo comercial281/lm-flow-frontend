@@ -1,342 +1,359 @@
-import { useState, useEffect } from 'react';
-import { useLanguage } from '@/hooks/useLanguage';
-import { Button, Card, CardContent, Badge, Input } from '@evoapi/design-system';
-import {
-  Package,
-  Search,
-  Star,
-  ExternalLink,
-  Download,
-  User,
-  ImageIcon,
-  Filter,
-  X,
-} from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Input, Badge, Button } from '@evoapi/design-system';
+import { Search, CheckCircle2, XCircle, Link, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
+import api from '@/services/core/api';
 
-interface MarketplaceProduct {
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface IntegrationRecord {
   id: string;
+  integration_type: string;
+  display_name: string;
+  is_enabled: boolean;
+  status: 'disconnected' | 'connecting' | 'connected' | 'error';
+  connected_at: string | null;
+  config: Record<string, unknown>;
+}
+
+// ─── Static catalog ──────────────────────────────────────────────────────────
+
+interface CatalogEntry {
+  type: string;
   name: string;
   description: string;
-  thumbnail?: string;
-  author: string;
-  version: string;
+  category: string;
   tags: string[];
-  rating: number;
-  downloads: number;
-  price: number;
-  currency: string;
-  external_url?: string;
+  configPath?: string; // route in the app
+  docsUrl?: string;
+  logo: string; // emoji fallback
 }
 
-interface MarketplacePagination {
-  current_page: number;
-  total_pages: number;
-  total: number;
-  per_page: number;
-}
+const CATALOG: CatalogEntry[] = [
+  {
+    type: 'meta_ads',
+    name: 'Meta Ads',
+    description: 'Integre com Facebook e Instagram Ads para capturar leads diretamente do formulário de anúncios.',
+    category: 'Marketing',
+    tags: ['leads', 'facebook', 'instagram', 'ads'],
+    logo: '📘',
+  },
+  {
+    type: 'whatsapp_evolution',
+    name: 'WhatsApp Evolution API',
+    description: 'Envio e recepção de mensagens WhatsApp via Evolution API — base do canal de comunicação.',
+    category: 'Comunicação',
+    tags: ['whatsapp', 'mensagens', 'canal'],
+    configPath: '/channels',
+    logo: '💬',
+  },
+  {
+    type: 'hubspot',
+    name: 'HubSpot CRM',
+    description: 'Sincronize contatos, negócios e atividades com o HubSpot.',
+    category: 'CRM',
+    tags: ['crm', 'contatos', 'pipeline'],
+    configPath: '/settings/integrations/hubspot',
+    logo: '🟠',
+  },
+  {
+    type: 'rd_station',
+    name: 'RD Station',
+    description: 'Integre com RD Station Marketing para automações de e-mail e nutrição de leads.',
+    category: 'Marketing',
+    tags: ['email', 'automação', 'marketing'],
+    logo: '🔵',
+  },
+  {
+    type: 'studio360',
+    name: 'Studio360',
+    description: 'Plataforma de gestão para construtoras e imobiliárias. Sincronize imóveis e clientes.',
+    category: 'Imobiliário',
+    tags: ['imóveis', 'construtora', 'crm-imob'],
+    logo: '🏗️',
+  },
+  {
+    type: 'leadlovers',
+    name: 'Leadlovers',
+    description: 'Plataforma de automação de marketing. Envie leads capturados para funis de nutrição.',
+    category: 'Marketing',
+    tags: ['email', 'automação', 'funil'],
+    logo: '🎯',
+  },
+  {
+    type: 'orulo',
+    name: 'Órulo',
+    description: 'Portal de imóveis lançamentos. Sincronize empreendimentos e interesse de compradores.',
+    category: 'Imobiliário',
+    tags: ['lançamentos', 'empreendimentos', 'portal'],
+    logo: '🏢',
+  },
+  {
+    type: 'zapier',
+    name: 'Zapier',
+    description: 'Conecte o Chave Flow com mais de 5.000 apps via Zapier com webhooks.',
+    category: 'Automação',
+    tags: ['webhook', 'automação', 'zap'],
+    configPath: '/settings/integrations/webhooks',
+    logo: '⚡',
+  },
+  {
+    type: 'n8n',
+    name: 'n8n',
+    description: 'Automações avançadas com n8n self-hosted. Use webhooks para disparar e receber eventos.',
+    category: 'Automação',
+    tags: ['webhook', 'automação', 'self-hosted'],
+    configPath: '/settings/integrations/webhooks',
+    logo: '🔄',
+  },
+  {
+    type: 'google_calendar',
+    name: 'Google Calendar',
+    description: 'Sincronize agendamentos de visitas com Google Calendar e crie eventos Meet automaticamente.',
+    category: 'Produtividade',
+    tags: ['agenda', 'meet', 'visitas'],
+    logo: '📅',
+  },
+  {
+    type: 'openai',
+    name: 'OpenAI',
+    description: 'Habilite transcrição de áudio (Whisper) e respostas inteligentes com GPT.',
+    category: 'IA',
+    tags: ['ia', 'gpt', 'transcrição', 'whisper'],
+    configPath: '/settings/integrations/openai',
+    logo: '🤖',
+  },
+  {
+    type: 'make',
+    name: 'Make (Integromat)',
+    description: 'Automatize processos complexos com Make. Conecte com qualquer app via webhook.',
+    category: 'Automação',
+    tags: ['automação', 'webhook', 'make'],
+    configPath: '/settings/integrations/webhooks',
+    logo: '🔧',
+  },
+];
 
-const Marketplace = () => {
-  const { t } = useLanguage('marketplace');
-  const [products, setProducts] = useState<MarketplaceProduct[]>([]);
+const CATEGORIES = ['Todos', ...Array.from(new Set(CATALOG.map(c => c.category)))];
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
+export default function Marketplace() {
+  const [records, setRecords] = useState<IntegrationRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [availableTags, setAvailableTags] = useState<string[]>([]);
-  const [pagination, setPagination] = useState<MarketplacePagination | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('Todos');
+  const [connecting, setConnecting] = useState<string | null>(null);
 
-  // Simulated data for demonstration
-  const mockProducts: MarketplaceProduct[] = [
-    {
-      id: '1',
-      name: t('mockProducts.aiAssistant.name'),
-      description: t('mockProducts.aiAssistant.description'),
-      thumbnail: '',
-      author: 'EvoAI Team',
-      version: '1.2.0',
-      tags: ['assistant', 'ai', 'research'],
-      rating: 4.8,
-      downloads: 1250,
-      price: 0,
-      currency: 'USD',
-    },
-    {
-      id: '2',
-      name: t('mockProducts.customerSupport.name'),
-      description: t('mockProducts.customerSupport.description'),
-      thumbnail: '',
-      author: 'Support Solutions',
-      version: '2.1.5',
-      tags: ['customer-support', 'automation', 'chat'],
-      rating: 4.6,
-      downloads: 850,
-      price: 29.99,
-      currency: 'USD',
-    },
-    {
-      id: '3',
-      name: t('mockProducts.dataAnalysis.name'),
-      description: t('mockProducts.dataAnalysis.description'),
-      thumbnail: '',
-      author: 'Data Corp',
-      version: '1.0.3',
-      tags: ['data-analysis', 'reports', 'analytics'],
-      rating: 4.9,
-      downloads: 425,
-      price: 49.99,
-      currency: 'USD',
-    },
-  ];
-
-  // Simulated API call
-  const loadProducts = async () => {
+  const load = useCallback(async () => {
     try {
-      setLoading(true);
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      setProducts(mockProducts);
-      setPagination({
-        current_page: 1,
-        total_pages: 1,
-        total: mockProducts.length,
-        per_page: 10,
-      });
-
-      // Extract unique tags
-      const allTags = mockProducts.flatMap(product => product.tags);
-      setAvailableTags([...new Set(allTags)]);
-    } catch (error) {
-      console.error('Error loading products:', error);
-      toast.error(t('messages.loadError'));
+      const res = await api.get('/integrations');
+      setRecords((res.data as { data: IntegrationRecord[] }).data ?? []);
+    } catch {
+      // If no integrations exist yet, that's fine — show catalog with all disconnected
+      setRecords([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadProducts();
   }, []);
 
-  const handleTagToggle = (tag: string) => {
-    setSelectedTags(prev => (prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]));
+  useEffect(() => { load(); }, [load]);
+
+  const getRecord = (type: string) => records.find(r => r.integration_type === type);
+
+  const handleConnect = async (entry: CatalogEntry) => {
+    if (entry.configPath) {
+      window.location.href = entry.configPath;
+      return;
+    }
+
+    setConnecting(entry.type);
+    try {
+      // Try to find existing record or create + connect
+      const existing = getRecord(entry.type);
+      if (existing) {
+        await api.post(`/integrations/${existing.id}/connect`);
+        toast.success(`${entry.name} conectado`);
+      } else {
+        const create = await api.post('/integrations', {
+          integration: { integration_type: entry.type, display_name: entry.name },
+        });
+        const newId = (create.data as { data: { id: string } }).data.id;
+        await api.post(`/integrations/${newId}/connect`);
+        toast.success(`${entry.name} conectado`);
+      }
+      await load();
+    } catch {
+      toast.error(`Erro ao conectar ${entry.name}`);
+    } finally {
+      setConnecting(null);
+    }
   };
 
-  const clearFilters = () => {
-    setSearchQuery('');
-    setSelectedTags([]);
+  const handleDisconnect = async (entry: CatalogEntry) => {
+    const rec = getRecord(entry.type);
+    if (!rec) return;
+    setConnecting(entry.type);
+    try {
+      await api.post(`/integrations/${rec.id}/disconnect`);
+      toast.success(`${entry.name} desconectado`);
+      await load();
+    } catch {
+      toast.error(`Erro ao desconectar ${entry.name}`);
+    } finally {
+      setConnecting(null);
+    }
   };
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTags =
-      selectedTags.length === 0 || selectedTags.some(tag => product.tags.includes(tag));
-    return matchesSearch && matchesTags;
+  const filtered = CATALOG.filter(entry => {
+    if (category !== 'Todos' && entry.category !== category) return false;
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return entry.name.toLowerCase().includes(q) ||
+      entry.description.toLowerCase().includes(q) ||
+      entry.tags.some(t => t.toLowerCase().includes(q));
   });
 
-  const formatPrice = (price: number, currency: string) => {
-    if (price === 0) return t('product.free');
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: currency === 'USD' ? 'USD' : 'BRL',
-    }).format(price);
+  const StatusBadge = ({ type }: { type: string }) => {
+    const rec = getRecord(type);
+    if (!rec || rec.status === 'disconnected') return null;
+    return (
+      <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-medium ${
+        rec.status === 'connected'
+          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+          : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+      }`}>
+        {rec.status === 'connected' ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+        {rec.status === 'connected' ? 'Conectado' : rec.status}
+      </span>
+    );
   };
-
-  const ProductCard = ({ product }: { product: MarketplaceProduct }) => (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="relative w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
-        {product.thumbnail ? (
-          <img src={product.thumbnail} alt={product.name} className="w-full h-full object-cover" />
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <ImageIcon className="h-16 w-16 text-gray-400" />
-          </div>
-        )}
-      </div>
-
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          <div>
-            <h3 className="font-semibold text-lg line-clamp-1">{product.name}</h3>
-            <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
-          </div>
-
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <User className="h-4 w-4" />
-            <span>{product.author}</span>
-            <span>•</span>
-            <span>v{product.version}</span>
-          </div>
-
-          <div className="flex flex-wrap gap-1">
-            {product.tags.slice(0, 3).map(tag => (
-              <Badge key={tag} variant="secondary" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
-            {product.tags.length > 3 && (
-              <Badge variant="outline" className="text-xs">
-                +{product.tags.length - 3}
-              </Badge>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                <span className="text-sm font-medium">{product.rating}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Download className="h-4 w-4" />
-                <span className="text-sm">{product.downloads}</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="font-semibold">{formatPrice(product.price, product.currency)}</div>
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <Button className="flex-1" size="sm">
-              {t('product.install')}
-            </Button>
-            {product.external_url && (
-              <Button variant="outline" size="sm">
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <h1 className="text-3xl font-bold">{t('header.title')}</h1>
-          <Badge variant="secondary" className="gap-1">
-            <Package className="h-4 w-4" />
-            {t('header.productsCount', { count: filteredProducts.length })}
-          </Badge>
-        </div>
-        <p className="text-muted-foreground text-lg">
-          {t('header.subtitle')}
+      <div className="border-b bg-background/95 backdrop-blur p-6">
+        <h1 className="text-2xl font-bold mb-1">Marketplace de Integrações</h1>
+        <p className="text-muted-foreground text-sm">
+          Conecte o Chave Flow com as ferramentas do ecossistema imobiliário
         </p>
       </div>
 
-      {/* Search and Filters */}
-      <div className="p-6 border-b">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">{t('search.title')}</h3>
-              {(searchQuery || selectedTags.length > 0) && (
-                <Button variant="outline" size="sm" onClick={clearFilters} className="gap-2">
-                  <X className="h-4 w-4" />
-                  {t('search.clearFilters')}
-                </Button>
-              )}
-            </div>
-
-            <div className="space-y-4">
-              {/* Search Input */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t('search.placeholder')}
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              {/* Tags Filter */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Filter className="h-4 w-4" />
-                  <span className="text-sm font-medium">{t('search.tagsLabel')}</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {availableTags.map(tag => (
-                    <Badge
-                      key={tag}
-                      variant={selectedTags.includes(tag) ? 'default' : 'outline'}
-                      className="cursor-pointer"
-                      onClick={() => handleTagToggle(tag)}
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Filters */}
+      <div className="px-6 py-4 border-b flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar integrações..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setCategory(cat)}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                category === cat
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 p-6 overflow-y-auto">
+      {/* Grid */}
+      <div className="flex-1 overflow-y-auto p-6">
         {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <Package className="h-8 w-8 animate-pulse" />
+          <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
+            Carregando integrações...
           </div>
-        ) : filteredProducts.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center h-48 text-center">
-              <Package className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold mb-2">{t('empty.title')}</h3>
-              <p className="text-muted-foreground mb-4">
-                {t('empty.description')}
-              </p>
-              <Button onClick={clearFilters}>{t('empty.action')}</Button>
-            </CardContent>
-          </Card>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <Search className="h-10 w-10 mb-3" />
+            <p className="text-sm">Nenhuma integração encontrada para "{search}"</p>
+            <button onClick={() => { setSearch(''); setCategory('Todos'); }} className="text-xs text-primary mt-2 hover:underline">
+              Limpar filtros
+            </button>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filtered.map(entry => {
+              const rec = getRecord(entry.type);
+              const isConnected = rec?.status === 'connected';
+              const isLoading = connecting === entry.type;
+
+              return (
+                <div key={entry.type} className="flex flex-col rounded-xl border border-border bg-card p-5 hover:shadow-md transition-shadow">
+                  {/* Logo + category */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-2xl">
+                        {entry.logo}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-sm">{entry.name}</h3>
+                        <span className="text-xs text-muted-foreground">{entry.category}</span>
+                      </div>
+                    </div>
+                    <StatusBadge type={entry.type} />
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-xs text-muted-foreground line-clamp-3 flex-1 mb-4">
+                    {entry.description}
+                  </p>
+
+                  {/* Tags */}
+                  <div className="flex flex-wrap gap-1 mb-4">
+                    {entry.tags.slice(0, 3).map(tag => (
+                      <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                    ))}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    {isConnected ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-xs"
+                        disabled={isLoading}
+                        onClick={() => handleDisconnect(entry)}
+                      >
+                        <XCircle className="h-3.5 w-3.5 mr-1" />
+                        {isLoading ? 'Desconectando...' : 'Desconectar'}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="flex-1 text-xs"
+                        disabled={isLoading}
+                        onClick={() => handleConnect(entry)}
+                      >
+                        <Link className="h-3.5 w-3.5 mr-1" />
+                        {isLoading ? 'Conectando...' : entry.configPath ? 'Configurar' : 'Conectar'}
+                      </Button>
+                    )}
+                    {entry.docsUrl && (
+                      <Button variant="ghost" size="sm" asChild className="px-2">
+                        <a href={entry.docsUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
-
-      {/* Pagination (if needed) */}
-      {pagination && pagination.total_pages > 1 && (
-        <div className="p-6 border-t">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              {t('pagination.pageInfo', { current: pagination.current_page, total: pagination.total_pages, count: pagination.total })}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              >
-                {t('pagination.previous')}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === pagination.total_pages}
-                onClick={() => setCurrentPage(prev => Math.min(pagination.total_pages, prev + 1))}
-              >
-                {t('pagination.next')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
-};
-
-export default Marketplace;
+}
