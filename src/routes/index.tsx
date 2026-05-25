@@ -1464,7 +1464,7 @@ const AppRouter = () => {
           />
 
           <Route
-            path="/profile"
+            path="/profile/:section?"
             element={
               <PrivateRoute>
                 <MainLayout>
