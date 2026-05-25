@@ -15,6 +15,8 @@ export interface UserType {
 import type { StandardResponse, ResponseMeta } from '@/types/core';
 
 export interface LoginData {
+  // Chave Flow backend returns access_token at the top level of `data`
+  access_token?: string;
   user: {
     id: string;
     name: string;
@@ -25,7 +27,8 @@ export interface LoginData {
     confirmed?: boolean;
     role?: Role;
   };
-  token: {
+  // Some upstream forks nest the token differently — keep both shapes supported
+  token?: {
     access_token?: string;
     token?: {
       access_token?: string;

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 140" fill="none">
+  <defs>
+    <linearGradient id="purpleGradL" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9333EA"/>
+      <stop offset="100%" stop-color="#5B21B6"/>
+    </linearGradient>
+    <linearGradient id="purpleGradDarkL" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#4C1D95"/>
+    </linearGradient>
+    <linearGradient id="goldGradL" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+    <linearGradient id="goldGradKeyL" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="50%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="42" y="22" width="14" height="58" fill="url(#purpleGradL)"/>
+  <rect x="58" y="14" width="16" height="66" fill="url(#goldGradL)"/>
+  <rect x="76" y="20" width="14" height="60" fill="url(#purpleGradDarkL)"/>
+  <rect x="92" y="30" width="12" height="50" fill="url(#purpleGradL)"/>
+
+  <path d="M30 84 L72 50 L114 84 Z" fill="url(#purpleGradL)"/>
+  <rect x="42" y="80" width="60" height="20" fill="url(#purpleGradDarkL)"/>
+  <rect x="64" y="84" width="16" height="14" fill="#F59E0B"/>
+  <line x1="72" y1="84" x2="72" y2="98" stroke="#1F1F1F" stroke-width="1.2"/>
+  <line x1="64" y1="91" x2="80" y2="91" stroke="#1F1F1F" stroke-width="1.2"/>
+
+  <circle cx="28" cy="108" r="13" fill="none" stroke="url(#goldGradKeyL)" stroke-width="6"/>
+  <rect x="40" y="105" width="68" height="6" fill="url(#goldGradKeyL)"/>
+  <rect x="96" y="111" width="6" height="9" fill="url(#goldGradKeyL)"/>
+  <rect x="104" y="111" width="6" height="6" fill="url(#goldGradKeyL)"/>
+
+  <text x="148" y="86" font-family="'Space Grotesk', 'Inter', system-ui, sans-serif" font-weight="700" font-size="44" letter-spacing="2" fill="#0F0520">CHAVE</text>
+  <text x="318" y="86" font-family="'Space Grotesk', 'Inter', system-ui, sans-serif" font-weight="700" font-size="44" letter-spacing="2" fill="url(#goldGradL)">FLOW</text>
+</svg>

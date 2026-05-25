@@ -19,9 +19,13 @@ import { useAuthStore } from '@/store/authStore';
 const processApiResponse = (response: any): LoginResponse => {
   const loginData = extractData<LoginData>(response);
 
+  // Backend (Chave Flow) returns: { success, data: { access_token, user, accounts }, meta, message }
+  // extractData unwraps to data: { access_token, user, accounts }
   const token =
+    loginData?.access_token ||
     loginData?.token?.access_token ||
     loginData?.token?.token?.access_token ||
+    response?.data?.data?.access_token ||
     response?.data?.access_token;
 
   if (token) {
