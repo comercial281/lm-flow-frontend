@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { Loader2, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { adminConfigService } from '@/services/admin/adminConfigService';
+import type { AdminConfigData } from '@/types/admin/adminConfig';
 import { useGlobalConfig } from '@/contexts/GlobalConfigContext';
 import { extractError } from '@/utils/apiHelpers';
 
@@ -98,7 +99,7 @@ export default function EvolutionHubConfig() {
   const onSubmit = async (values: FormData) => {
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = {
+      const payload: AdminConfigData = {
         EVOLUTION_HUB_ENABLED: String(values.EVOLUTION_HUB_ENABLED),
         EVOLUTION_HUB_URL: values.EVOLUTION_HUB_URL || '',
       };
