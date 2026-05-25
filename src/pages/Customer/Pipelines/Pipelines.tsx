@@ -58,12 +58,23 @@ const INITIAL_STATE: PipelinesState = {
   sortOrder: 'asc',
 };
 
+type PipelineTypeTab = 'all' | 'sale' | 'rental';
+
+const TYPE_TABS: { key: PipelineTypeTab; label: string }[] = [
+  { key: 'all', label: 'Todos' },
+  { key: 'sale', label: 'Venda' },
+  { key: 'rental', label: 'Locação' },
+];
+
+const REAL_ESTATE_TYPES = ['sale', 'rental'];
+
 export default function Pipelines() {
   const { t } = useLanguage('pipelines');
   const { can, isReady: permissionsReady } = useUserPermissions();
   const navigate = useNavigate();
   const [state, setState] = useState<PipelinesState>(INITIAL_STATE);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [activeTab, setActiveTab] = useState<PipelineTypeTab>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pipelineToDelete, setPipelineToDelete] = useState<Pipeline | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -295,14 +306,21 @@ export default function Pipelines() {
     }
   };
 
-  // Filter pipelines by search
+  // Filter pipelines by type tab then by search
+  const tabFilteredPipelines = state.pipelines.filter(pipeline => {
+    if (activeTab === 'all') return true;
+    return pipeline.pipeline_type === activeTab;
+  });
+
   const filteredPipelines = state.searchQuery
-    ? state.pipelines.filter(
+    ? tabFilteredPipelines.filter(
         pipeline =>
           pipeline.name.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
           pipeline.description?.toLowerCase().includes(state.searchQuery.toLowerCase()),
       )
-    : state.pipelines;
+    : tabFilteredPipelines;
+
+  const hasRealEstatePipelines = state.pipelines.some(p => REAL_ESTATE_TYPES.includes(p.pipeline_type));
 
   return (
     <div className="h-full flex flex-col p-4">
@@ -315,6 +333,30 @@ export default function Pipelines() {
           onNewPipeline={handleCreatePipeline}
         />
       </div>
+
+      {/* Type Tabs — only shown when real-estate pipelines exist */}
+      {hasRealEstatePipelines && (
+        <div className="flex gap-1 border-b border-border mb-4 mt-2">
+          {TYPE_TABS.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                activeTab === tab.key
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.label}
+              <span className="ml-1.5 text-xs">
+                ({tab.key === 'all'
+                  ? state.pipelines.length
+                  : state.pipelines.filter(p => p.pipeline_type === tab.key).length})
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* View Mode Toggle */}
       <div className="flex items-center justify-end mb-3" data-tour="pipelines-view-toggle">

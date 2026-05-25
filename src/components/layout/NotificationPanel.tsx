@@ -78,6 +78,14 @@ export default function NotificationPanel({
     }
   };
 
+  const handleMarkOneAsRead = async (notification: Notification) => {
+    try {
+      await actions.markAsRead(notification);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
   const handleOpenSettings = () => {
     navigate('/settings/account');
     onClose();
@@ -160,6 +168,7 @@ export default function NotificationPanel({
               key={notification.id}
               notification={notification}
               onOpen={handleOpenNotification}
+              onMarkRead={handleMarkOneAsRead}
               getTypeLabel={getNotificationTypeLabel}
             />
           ))

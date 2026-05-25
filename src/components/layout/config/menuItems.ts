@@ -21,6 +21,7 @@ import {
   List,
   GraduationCap,
   Shield,
+  Zap,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -189,6 +190,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         icon: MessageCircle,
         resource: 'canned_responses',
         action: 'read',
+      },
+      {
+        name: 'Respostas Rápidas',
+        href: '/settings/quick-replies',
+        icon: Zap,
       },
       {
         name: t('menu.settings.macros'),

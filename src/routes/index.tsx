@@ -50,6 +50,7 @@ import Users from '@/pages/Customer/Settings/Users';
 import Labels from '@/pages/Customer/Settings/Labels';
 import CustomAttributes from '@/pages/Customer/Settings/CustomAttributes';
 import CannedResponses from '@/pages/Customer/Settings/CannedResponses';
+import { QuickReplies } from '@/pages/Customer/Settings/QuickReplies';
 import { Macros } from '@/pages/Customer/Settings/Macros';
 import { Integrations } from '@/pages/Customer/Settings/Integrations';
 import EmailTemplateEditor from '@/pages/Customer/Settings/EmailTemplateEditor';
@@ -567,6 +568,19 @@ const AppRouter = () => {
                     <PermissionRoute resource="canned_responses" action="read">
                       <CannedResponses />
                     </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/settings/quick-replies"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <QuickReplies />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>
