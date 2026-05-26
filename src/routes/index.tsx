@@ -54,6 +54,7 @@ import { QuickReplies } from '@/pages/Customer/Settings/QuickReplies';
 import { WelcomeAutomations } from '@/pages/Customer/Settings/WelcomeAutomations';
 import { LeadAutomations } from '@/pages/Customer/Settings/LeadAutomations';
 import { SiteBuilder } from '@/pages/Customer/Settings/SiteBuilder';
+import { DynamicForms } from '@/pages/Customer/Settings/DynamicForms';
 import { Properties } from '@/pages/Customer/Properties';
 import { Visits } from '@/pages/Customer/Visits';
 import { Proposals } from '@/pages/Customer/Proposals';
@@ -632,6 +633,19 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <SiteBuilder />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/settings/dynamic-forms"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <DynamicForms />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>

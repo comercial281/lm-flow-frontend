@@ -28,6 +28,7 @@ import {
   FileSignature,
   ClipboardList,
   Globe,
+  FileText,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -243,6 +244,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         name: 'Site Builder',
         href: '/settings/site-builder',
         icon: Globe,
+      },
+      {
+        name: 'Formulários',
+        href: '/settings/dynamic-forms',
+        icon: FileText,
       },
       {
         name: t('menu.settings.macros'),
