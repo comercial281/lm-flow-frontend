@@ -139,7 +139,8 @@ export const propertiesService = {
   async batchGenerateDescriptions(ids: string[]): Promise<Array<{
     id: string; status: 'ok' | 'error'; headline?: string; description?: string; error?: string;
   }>> {
-    const res = await api.post('/properties/batch_generate_descriptions', { ids });
+    // Backend espera { property_ids: [...] }, não { ids: [...] }
+    const res = await api.post('/properties/batch_generate_descriptions', { property_ids: ids });
     return (res.data as { data: Array<{ id: string; status: string; headline?: string; description?: string; error?: string }> }).data as Array<{
       id: string; status: 'ok' | 'error'; headline?: string; description?: string; error?: string;
     }>;
@@ -180,6 +181,15 @@ export const PROPERTY_TYPE_LABELS: Record<string, string> = {
   penthouse:       'Cobertura',
   duplex:          'Duplex',
   triplex:         'Triplex',
+  // Tipos nativos do backend (enums 13-20) — antes não mapeados
+  cobertura:       'Cobertura',
+  sobrado:         'Sobrado',
+  sala_comercial:  'Sala Comercial',
+  galpao:          'Galpão',
+  predio:          'Prédio',
+  terreno:         'Terreno',
+  chacara:         'Chácara',
+  sitio:           'Sítio',
   other:           'Outro',
 };
 

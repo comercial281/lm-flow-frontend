@@ -117,6 +117,7 @@ const CATALOG: CatalogEntry[] = [
     description: 'Sincronize agendamentos de visitas com Google Calendar e crie eventos Meet automaticamente.',
     category: 'Produtividade',
     tags: ['agenda', 'meet', 'visitas'],
+    configPath: '/settings/integrations',
     logo: '📅',
   },
   {
