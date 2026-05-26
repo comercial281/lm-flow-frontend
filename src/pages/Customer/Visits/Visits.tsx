@@ -17,7 +17,7 @@ import {
   Plus,
   CalendarClock,
   Building2,
-  User,
+  User as UserIcon,
   Clock,
   CheckCircle2,
   XCircle,
@@ -422,6 +422,9 @@ export default function Visits() {
                   placeholder="Buscar por nome ou telefone..."
                   className="pl-9"
                 />
+                {contactSearching && (
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+                )}
               </div>
               {showContactDropdown && contactResults.length > 0 && (
                 <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
@@ -439,7 +442,7 @@ export default function Visits() {
               )}
               {selectedContact && (
                 <div className="mt-1 text-xs text-emerald-600 font-medium flex items-center gap-1">
-                  <User className="h-3 w-3" />
+                  <UserIcon className="h-3 w-3" />
                   {selectedContact.name} selecionado
                 </div>
               )}
@@ -477,7 +480,7 @@ export default function Visits() {
               )}
               {selectedRealtor && (
                 <div className="mt-1 text-xs text-emerald-600 font-medium flex items-center gap-1">
-                  <User className="h-3 w-3" />
+                  <UserIcon className="h-3 w-3" />
                   {selectedRealtor.available_name ?? selectedRealtor.name} selecionado
                 </div>
               )}
@@ -653,7 +656,7 @@ function VisitCard({
 
         {visit.contact && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-            <User className="h-3 w-3 flex-shrink-0" />
+            <UserIcon className="h-3 w-3 flex-shrink-0" />
             <span>{visit.contact.name}</span>
             {visit.contact.phone_number && (
               <>
@@ -697,8 +700,4 @@ function VisitCard({
       </div>
     </div>
   );
-}
-
-function isPast(iso: string) {
-  return new Date(iso) < new Date();
 }
