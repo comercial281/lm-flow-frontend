@@ -54,6 +54,7 @@ import { QuickReplies } from '@/pages/Customer/Settings/QuickReplies';
 import { WelcomeAutomations } from '@/pages/Customer/Settings/WelcomeAutomations';
 import { LeadAutomations } from '@/pages/Customer/Settings/LeadAutomations';
 import { Properties } from '@/pages/Customer/Properties';
+import { Visits } from '@/pages/Customer/Visits';
 import { Macros } from '@/pages/Customer/Settings/Macros';
 import { Integrations } from '@/pages/Customer/Settings/Integrations';
 import EmailTemplateEditor from '@/pages/Customer/Settings/EmailTemplateEditor';
@@ -1350,6 +1351,19 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <Properties />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/visits"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <Visits />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>

@@ -24,6 +24,7 @@ import {
   Zap,
   Store,
   Building2,
+  CalendarClock,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -107,6 +108,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: 'Imóveis',
     href: '/properties',
     icon: Building2,
+  },
+  {
+    name: 'Agenda de Visitas',
+    href: '/visits',
+    icon: CalendarClock,
   },
   {
     id: 'customer-agents',
