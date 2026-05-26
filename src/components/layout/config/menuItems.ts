@@ -26,6 +26,7 @@ import {
   Building2,
   CalendarClock,
   FileSignature,
+  ClipboardList,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -119,6 +120,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: 'Propostas',
     href: '/proposals',
     icon: FileSignature,
+  },
+  {
+    name: 'Captação',
+    href: '/property-capture-requests',
+    icon: ClipboardList,
   },
   {
     id: 'customer-agents',

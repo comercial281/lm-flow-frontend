@@ -56,6 +56,7 @@ import { LeadAutomations } from '@/pages/Customer/Settings/LeadAutomations';
 import { Properties } from '@/pages/Customer/Properties';
 import { Visits } from '@/pages/Customer/Visits';
 import { Proposals } from '@/pages/Customer/Proposals';
+import { PropertyCaptureRequests } from '@/pages/Customer/PropertyCapture';
 import { Macros } from '@/pages/Customer/Settings/Macros';
 import { Integrations } from '@/pages/Customer/Settings/Integrations';
 import EmailTemplateEditor from '@/pages/Customer/Settings/EmailTemplateEditor';
@@ -1378,6 +1379,19 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <Proposals />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/property-capture-requests"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PropertyCaptureRequests />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>
