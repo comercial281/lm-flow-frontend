@@ -103,6 +103,10 @@ export default function Properties() {
   const [scoringId, setScoringId]               = useState<string | null>(null);
 
   const [photosProperty, setPhotosProperty] = useState<Property | null>(null);
+  const [stats, setStats] = useState<{
+    active: number; reserved: number; sold: number; rented: number;
+    exclusive: number; featured: number;
+  } | null>(null);
 
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -125,7 +129,10 @@ export default function Properties() {
     }
   }, [search, filterStatus, filterType, filterTransaction]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    propertiesService.stats().then(setStats).catch(() => {});
+  }, []);
 
   const handleSearch = (val: string) => {
     setSearch(val);
@@ -336,6 +343,18 @@ export default function Properties() {
           )}
         </div>
       </div>
+
+      {/* Stats bar */}
+      {stats && (
+        <div className="border-b px-6 py-2 flex flex-wrap gap-4 text-xs text-muted-foreground bg-muted/30">
+          <span><strong className="text-foreground">{stats.active}</strong> ativos</span>
+          <span><strong className="text-foreground">{stats.reserved}</strong> reservados</span>
+          <span><strong className="text-foreground">{stats.sold}</strong> vendidos</span>
+          <span><strong className="text-foreground">{stats.rented}</strong> alugados</span>
+          <span><strong className="text-violet-600">{stats.exclusive}</strong> exclusivos</span>
+          <span><strong className="text-amber-600">{stats.featured}</strong> em destaque</span>
+        </div>
+      )}
 
       {/* Grid */}
       <div className="flex-1 overflow-y-auto p-6">
