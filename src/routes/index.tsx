@@ -53,6 +53,7 @@ import CannedResponses from '@/pages/Customer/Settings/CannedResponses';
 import { QuickReplies } from '@/pages/Customer/Settings/QuickReplies';
 import { WelcomeAutomations } from '@/pages/Customer/Settings/WelcomeAutomations';
 import { LeadAutomations } from '@/pages/Customer/Settings/LeadAutomations';
+import { Properties } from '@/pages/Customer/Properties';
 import { Macros } from '@/pages/Customer/Settings/Macros';
 import { Integrations } from '@/pages/Customer/Settings/Integrations';
 import EmailTemplateEditor from '@/pages/Customer/Settings/EmailTemplateEditor';
@@ -1338,6 +1339,19 @@ const AppRouter = () => {
                 <MainLayout>
                   <Documentation />
                 </MainLayout>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/properties"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <Properties />
+                  </MainLayout>
+                </CustomerRoute>
               </PrivateRoute>
             }
           />

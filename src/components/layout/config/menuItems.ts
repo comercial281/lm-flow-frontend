@@ -23,6 +23,7 @@ import {
   Shield,
   Zap,
   Store,
+  Building2,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -101,6 +102,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     icon: SquareKanban,
     resource: 'pipelines',
     action: 'read',
+  },
+  {
+    name: 'Imóveis',
+    href: '/properties',
+    icon: Building2,
   },
   {
     id: 'customer-agents',
