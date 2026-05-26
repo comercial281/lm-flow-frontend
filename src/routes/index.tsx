@@ -52,6 +52,7 @@ import CustomAttributes from '@/pages/Customer/Settings/CustomAttributes';
 import CannedResponses from '@/pages/Customer/Settings/CannedResponses';
 import { QuickReplies } from '@/pages/Customer/Settings/QuickReplies';
 import { WelcomeAutomations } from '@/pages/Customer/Settings/WelcomeAutomations';
+import { LeadAutomations } from '@/pages/Customer/Settings/LeadAutomations';
 import { Macros } from '@/pages/Customer/Settings/Macros';
 import { Integrations } from '@/pages/Customer/Settings/Integrations';
 import EmailTemplateEditor from '@/pages/Customer/Settings/EmailTemplateEditor';
@@ -600,6 +601,19 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <WelcomeAutomations />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/settings/lead-automations"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <LeadAutomations />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>

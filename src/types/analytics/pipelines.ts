@@ -83,7 +83,7 @@ export interface Pipeline {
   id: string;
   name: string;
   description?: string;
-  pipeline_type: 'custom' | 'sales' | 'support' | 'marketing';
+  pipeline_type: 'custom' | 'sales' | 'support' | 'marketing' | 'sale' | 'rental' | 'onboarding';
   visibility: 'private' | 'public' | 'team';
   is_active: boolean;
   is_default?: boolean;
@@ -147,7 +147,7 @@ export interface PipelinesListParams {
 export interface CreatePipelineData {
   name: string;
   description?: string;
-  pipeline_type?: 'custom' | 'sales' | 'support' | 'marketing';
+  pipeline_type?: 'custom' | 'sales' | 'support' | 'marketing' | 'sale' | 'rental' | 'onboarding';
   visibility?: 'private' | 'public' | 'team';
   is_active?: boolean;
   stages?: PipelineStage[];

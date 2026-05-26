@@ -477,6 +477,16 @@ export default function PipelineKanban() {
 
               {/* Quick Stats and Actions */}
               <div className="flex w-full flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm lg:w-auto">
+                {pipeline?.pipeline_type === 'sale' && (
+                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 border-0">
+                    Venda
+                  </Badge>
+                )}
+                {pipeline?.pipeline_type === 'rental' && (
+                  <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400 border-0">
+                    Locação
+                  </Badge>
+                )}
                 <div className="text-center min-w-16">
                   <div className="font-semibold text-foreground">
                     {pipeline?.item_count || pipeline?.conversations_count || 0}

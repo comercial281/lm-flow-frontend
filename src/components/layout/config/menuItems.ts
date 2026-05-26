@@ -22,6 +22,7 @@ import {
   GraduationCap,
   Shield,
   Zap,
+  Store,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -140,6 +141,13 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     action: 'read',
   },
   {
+    name: 'Marketplace',
+    href: '/marketplace',
+    icon: Store,
+    resource: 'integrations',
+    action: 'read',
+  },
+  {
     name: t('menu.customer.tutorials'),
     href: '/tutorials',
     icon: GraduationCap,
@@ -199,6 +207,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
       {
         name: 'Automações Boas-Vindas',
         href: '/settings/welcome-automations',
+        icon: Zap,
+      },
+      {
+        name: 'Automações de Lead',
+        href: '/settings/lead-automations',
         icon: Zap,
       },
       {
