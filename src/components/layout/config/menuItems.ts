@@ -27,6 +27,7 @@ import {
   CalendarClock,
   FileSignature,
   ClipboardList,
+  Globe,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -237,6 +238,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         name: 'Automações de Lead',
         href: '/settings/lead-automations',
         icon: Zap,
+      },
+      {
+        name: 'Site Builder',
+        href: '/settings/site-builder',
+        icon: Globe,
       },
       {
         name: t('menu.settings.macros'),

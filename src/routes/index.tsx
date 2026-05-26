@@ -53,6 +53,7 @@ import CannedResponses from '@/pages/Customer/Settings/CannedResponses';
 import { QuickReplies } from '@/pages/Customer/Settings/QuickReplies';
 import { WelcomeAutomations } from '@/pages/Customer/Settings/WelcomeAutomations';
 import { LeadAutomations } from '@/pages/Customer/Settings/LeadAutomations';
+import { SiteBuilder } from '@/pages/Customer/Settings/SiteBuilder';
 import { Properties } from '@/pages/Customer/Properties';
 import { Visits } from '@/pages/Customer/Visits';
 import { Proposals } from '@/pages/Customer/Proposals';
@@ -618,6 +619,19 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <LeadAutomations />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/settings/site-builder"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <SiteBuilder />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>
