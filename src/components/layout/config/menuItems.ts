@@ -25,6 +25,7 @@ import {
   Store,
   Building2,
   CalendarClock,
+  FileSignature,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -113,6 +114,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: 'Agenda de Visitas',
     href: '/visits',
     icon: CalendarClock,
+  },
+  {
+    name: 'Propostas',
+    href: '/proposals',
+    icon: FileSignature,
   },
   {
     id: 'customer-agents',
