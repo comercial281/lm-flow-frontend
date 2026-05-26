@@ -377,6 +377,17 @@ class ContactsService {
     });
     return extractResponse<Contact>(response) as ContactsResponse;
   }
+
+  // AI Lead Qualification — Story 9-11 / Epic 10
+  async qualifyLead(contactId: string | number): Promise<{
+    status: string;
+    score: number;
+    reasoning: string;
+    insights?: string[];
+  }> {
+    const response = await api.post(`/contacts/${contactId}/qualify`);
+    return (response.data as { data: { status: string; score: number; reasoning: string; insights?: string[] } }).data;
+  }
 }
 
 export const contactsService = new ContactsService();
