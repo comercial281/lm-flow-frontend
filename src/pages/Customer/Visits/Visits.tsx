@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import {
   Button,
@@ -24,6 +24,8 @@ import {
   MapPin,
   Phone,
   Star,
+  Search,
+  ChevronDown,
 } from 'lucide-react';
 import {
   visitsService,
@@ -32,6 +34,9 @@ import {
   VISIT_STATUS_LABELS,
   VISIT_STATUS_COLORS,
 } from '@/services/visits/visitsService';
+import { propertiesService, Property } from '@/services/properties/propertiesService';
+import contactsService from '@/services/contacts/contactsService';
+import type { Contact } from '@/types/contacts';
 
 const FILTER_TABS = [
   { key: '', label: 'Todas' },
@@ -97,6 +102,22 @@ export default function Visits() {
   const [cancelReason, setCancelReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Property + contact search state
+  const [propertyQuery, setPropertyQuery] = useState('');
+  const [propertyResults, setPropertyResults] = useState<Property[]>([]);
+  const [propertySearching, setPropertySearching] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
+
+  const [contactQuery, setContactQuery] = useState('');
+  const [contactResults, setContactResults] = useState<Contact[]>([]);
+  const [contactSearching, setContactSearching] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [showContactDropdown, setShowContactDropdown] = useState(false);
+
+  const propertyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const contactTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const load = useCallback(async (status = activeTab) => {
     setLoading(true);
     try {
@@ -117,9 +138,62 @@ export default function Visits() {
     load(key);
   };
 
+  const searchProperties = (q: string) => {
+    if (propertyTimeout.current) clearTimeout(propertyTimeout.current);
+    if (!q.trim()) { setPropertyResults([]); setShowPropertyDropdown(false); return; }
+    setPropertySearching(true);
+    propertyTimeout.current = setTimeout(async () => {
+      try {
+        const res = await propertiesService.list({ q, per_page: 8 });
+        setPropertyResults(res.data ?? []);
+        setShowPropertyDropdown(true);
+      } catch { setPropertyResults([]); }
+      finally { setPropertySearching(false); }
+    }, 300);
+  };
+
+  const selectProperty = (p: Property) => {
+    setSelectedProperty(p);
+    setForm(f => ({ ...f, property_id: p.id }));
+    setPropertyQuery(p.title);
+    setShowPropertyDropdown(false);
+  };
+
+  const searchContacts = (q: string) => {
+    if (contactTimeout.current) clearTimeout(contactTimeout.current);
+    if (!q.trim()) { setContactResults([]); setShowContactDropdown(false); return; }
+    setContactSearching(true);
+    contactTimeout.current = setTimeout(async () => {
+      try {
+        const res = await contactsService.searchContacts({ q, page: 1, per_page: 8 });
+        setContactResults(res.data ?? []);
+        setShowContactDropdown(true);
+      } catch { setContactResults([]); }
+      finally { setContactSearching(false); }
+    }, 300);
+  };
+
+  const selectContact = (c: Contact) => {
+    setSelectedContact(c);
+    setForm(f => ({ ...f, contact_id: String(c.id) }));
+    setContactQuery(c.name);
+    setShowContactDropdown(false);
+  };
+
+  const openScheduleModal = () => {
+    setForm(EMPTY_FORM);
+    setPropertyQuery('');
+    setContactQuery('');
+    setSelectedProperty(null);
+    setSelectedContact(null);
+    setPropertyResults([]);
+    setContactResults([]);
+    setModalOpen(true);
+  };
+
   const handleSave = async () => {
-    if (!form.property_id.trim()) { toast.error('ID do imóvel é obrigatório'); return; }
-    if (!form.contact_id.trim())  { toast.error('ID do contato é obrigatório'); return; }
+    if (!form.property_id.trim()) { toast.error('Selecione um imóvel'); return; }
+    if (!form.contact_id.trim())  { toast.error('Selecione um contato'); return; }
     if (!form.scheduled_at)       { toast.error('Data/hora é obrigatória'); return; }
     setSaving(true);
     try {
@@ -184,7 +258,7 @@ export default function Visits() {
             </h1>
             <p className="text-sm text-muted-foreground">{total} visita{total !== 1 ? 's' : ''}</p>
           </div>
-          <Button onClick={() => setModalOpen(true)}>
+          <Button onClick={openScheduleModal}>
             <Plus className="h-4 w-4 mr-2" />
             Agendar visita
           </Button>
@@ -218,7 +292,7 @@ export default function Visits() {
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <CalendarClock className="h-12 w-12 mb-3" />
             <p className="text-sm font-medium">Nenhuma visita encontrada</p>
-            <Button className="mt-4" onClick={() => setModalOpen(true)}>
+            <Button className="mt-4" onClick={openScheduleModal}>
               <Plus className="h-4 w-4 mr-2" />
               Agendar primeira visita
             </Button>
@@ -265,24 +339,79 @@ export default function Visits() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div>
-              <UILabel>ID do imóvel *</UILabel>
-              <Input
-                value={form.property_id}
-                onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))}
-                placeholder="UUID do imóvel"
-                className="mt-1 font-mono text-sm"
-              />
+            {/* Property search */}
+            <div className="relative">
+              <UILabel>Imóvel *</UILabel>
+              <div className="relative mt-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  value={propertyQuery}
+                  onChange={e => { setPropertyQuery(e.target.value); searchProperties(e.target.value); }}
+                  onFocus={() => propertyResults.length > 0 && setShowPropertyDropdown(true)}
+                  placeholder="Buscar por título, código..."
+                  className="pl-9"
+                />
+                {propertySearching && (
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+                )}
+              </div>
+              {showPropertyDropdown && propertyResults.length > 0 && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {propertyResults.map(p => (
+                    <button
+                      key={p.id}
+                      className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0 text-sm"
+                      onClick={() => selectProperty(p)}
+                    >
+                      <div className="font-medium truncate">{p.title}</div>
+                      <div className="text-xs text-muted-foreground">{p.code} · {p.address_city}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedProperty && (
+                <div className="mt-1 text-xs text-emerald-600 font-medium flex items-center gap-1">
+                  <Building2 className="h-3 w-3" />
+                  {selectedProperty.code} selecionado
+                </div>
+              )}
             </div>
-            <div>
-              <UILabel>ID do contato *</UILabel>
-              <Input
-                value={form.contact_id}
-                onChange={e => setForm(f => ({ ...f, contact_id: e.target.value }))}
-                placeholder="UUID do contato"
-                className="mt-1 font-mono text-sm"
-              />
+
+            {/* Contact search */}
+            <div className="relative">
+              <UILabel>Contato *</UILabel>
+              <div className="relative mt-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  value={contactQuery}
+                  onChange={e => { setContactQuery(e.target.value); searchContacts(e.target.value); }}
+                  onFocus={() => contactResults.length > 0 && setShowContactDropdown(true)}
+                  placeholder="Buscar por nome ou telefone..."
+                  className="pl-9"
+                />
+              </div>
+              {showContactDropdown && contactResults.length > 0 && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {contactResults.map(c => (
+                    <button
+                      key={c.id}
+                      className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0 text-sm"
+                      onClick={() => selectContact(c)}
+                    >
+                      <div className="font-medium truncate">{c.name}</div>
+                      <div className="text-xs text-muted-foreground">{c.phone_number}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedContact && (
+                <div className="mt-1 text-xs text-emerald-600 font-medium flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  {selectedContact.name} selecionado
+                </div>
+              )}
             </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <UILabel>Data e hora *</UILabel>
@@ -302,15 +431,6 @@ export default function Visits() {
                   min={15}
                   step={15}
                   className="mt-1"
-                />
-              </div>
-              <div>
-                <UILabel>ID do corretor</UILabel>
-                <Input
-                  value={form.realtor_id ?? ''}
-                  onChange={e => setForm(f => ({ ...f, realtor_id: e.target.value || null }))}
-                  placeholder="Opcional"
-                  className="mt-1 font-mono text-sm"
                 />
               </div>
             </div>
