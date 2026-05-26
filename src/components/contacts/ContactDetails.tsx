@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   Dialog,
@@ -37,6 +37,10 @@ import {
   // CalendarClock,
   GitBranch,
   Merge,
+  Plus,
+  TrendingUp,
+  ChevronRight,
+  X,
 } from 'lucide-react';
 // import { ScheduledActionsList } from '@/components/scheduledActions';
 import { Contact } from '@/types/contacts';
@@ -44,6 +48,12 @@ import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import ContactPipelineItem from '@/components/pipelines/ContactPipelineItem';
 import { toast } from 'sonner';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
+import {
+  propertyInterestsService,
+  PropertyInterest,
+  INTEREST_STAGE_LABELS,
+  INTEREST_STAGE_COLORS,
+} from '@/services/propertyInterests/propertyInterestsService';
 
 interface ContactDetailsProps {
   open: boolean;
@@ -73,6 +83,22 @@ export default function ContactDetails({
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
   const [contactsToMerge, setContactsToMerge] = useState<Contact[]>([]);
   const [merging, setMerging] = useState(false);
+  const [propertyInterests, setPropertyInterests] = useState<PropertyInterest[]>([]);
+  const [interestsLoading, setInterestsLoading] = useState(false);
+  const [newInterestPropertyId, setNewInterestPropertyId] = useState('');
+  const [addingInterest, setAddingInterest] = useState(false);
+
+  const loadPropertyInterests = useCallback(async (contactId: string) => {
+    setInterestsLoading(true);
+    try {
+      const res = await propertyInterestsService.listByContact(contactId);
+      setPropertyInterests(res.data);
+    } catch {
+      setPropertyInterests([]);
+    } finally {
+      setInterestsLoading(false);
+    }
+  }, []);
 
   // Reset tab when contact changes
   useEffect(() => {
@@ -82,6 +108,48 @@ export default function ContactDetails({
       setPersonsSearch('');
     }
   }, [contact?.id]);
+
+  useEffect(() => {
+    if (contact?.id && activeTab === 'properties') {
+      loadPropertyInterests(contact.id);
+    }
+  }, [contact?.id, activeTab, loadPropertyInterests]);
+
+  const handleAddInterest = async () => {
+    if (!contact || !newInterestPropertyId.trim()) return;
+    setAddingInterest(true);
+    try {
+      await propertyInterestsService.create({
+        contact_id: contact.id,
+        property_id: newInterestPropertyId.trim(),
+        interest_stage: 'interested',
+      });
+      setNewInterestPropertyId('');
+      loadPropertyInterests(contact.id);
+    } catch {
+      toast.error('Erro ao adicionar interesse');
+    } finally {
+      setAddingInterest(false);
+    }
+  };
+
+  const handleAdvanceInterest = async (id: string) => {
+    try {
+      await propertyInterestsService.advance(id);
+      if (contact) loadPropertyInterests(contact.id);
+    } catch {
+      toast.error('Não foi possível avançar o estágio');
+    }
+  };
+
+  const handleRemoveInterest = async (id: string) => {
+    try {
+      await propertyInterestsService.delete(id);
+      if (contact) loadPropertyInterests(contact.id);
+    } catch {
+      toast.error('Erro ao remover interesse');
+    }
+  };
 
   // Filter companies by search - MUST be before early return
   const filteredCompanies = useMemo(() => {
@@ -178,6 +246,7 @@ export default function ContactDetails({
     // Scheduled Actions temporarily disabled - feature is in development
     // { value: 'scheduled-actions', icon: CalendarClock, label: t('scheduledActions.label') },
     { value: 'pipeline', icon: GitBranch, label: t('details.tabs.pipeline') },
+    { value: 'properties', icon: Building2, label: 'Imóveis' },
     { value: 'history', icon: History, label: t('details.tabs.history') },
     { value: 'notes', icon: StickyNote, label: t('details.tabs.notes') },
     { value: 'attributes', icon: Settings, label: t('details.tabs.attributes') },
@@ -447,6 +516,103 @@ export default function ContactDetails({
                 <ContactPipelineItem
                   contactId={contact.id}
                 />
+              </TabsContent>
+
+              {/* Property Interests Tab */}
+              <TabsContent value="properties" className="py-6 mt-0">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <Building2 className="h-5 w-5" />
+                      Imóveis de Interesse
+                    </h3>
+                    <Badge variant="secondary">{propertyInterests.length} imóveis</Badge>
+                  </div>
+
+                  {/* Add interest */}
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="ID do imóvel (UUID)"
+                      value={newInterestPropertyId}
+                      onChange={e => setNewInterestPropertyId(e.target.value)}
+                      className="flex-1"
+                      onKeyDown={e => e.key === 'Enter' && handleAddInterest()}
+                    />
+                    <Button size="sm" onClick={handleAddInterest} disabled={addingInterest || !newInterestPropertyId.trim()}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Adicionar
+                    </Button>
+                  </div>
+
+                  {/* List */}
+                  {interestsLoading ? (
+                    <div className="text-center text-muted-foreground py-8 text-sm">Carregando...</div>
+                  ) : propertyInterests.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-10">
+                      <Building2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                      <p className="text-sm">Nenhum imóvel vinculado</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {propertyInterests.map(pi => {
+                        const stageColor = INTEREST_STAGE_COLORS[pi.interest_stage] ?? '';
+                        const stageLabel = INTEREST_STAGE_LABELS[pi.interest_stage] ?? pi.interest_stage;
+                        const isClosed = pi.interest_stage === 'closed_won' || pi.interest_stage === 'closed_lost';
+                        return (
+                          <div key={pi.id} className="border rounded-lg p-3 flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <span className="font-medium text-sm truncate">
+                                  {pi.property?.title ?? pi.property_id.slice(0, 8)}
+                                </span>
+                                {pi.property?.code && (
+                                  <span className="text-xs text-muted-foreground">{pi.property.code}</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge className={`text-xs ${stageColor}`}>{stageLabel}</Badge>
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <TrendingUp className="h-3 w-3" />
+                                  {pi.match_score}% match
+                                </div>
+                                {pi.property?.display_price && (
+                                  <span className="text-xs text-muted-foreground">{pi.property.display_price}</span>
+                                )}
+                              </div>
+                              {pi.property?.neighborhood && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {pi.property.neighborhood}{pi.property.city && `, ${pi.property.city}`}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {!isClosed && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => handleAdvanceInterest(pi.id)}
+                                  title="Avançar estágio"
+                                >
+                                  <ChevronRight className="h-3 w-3" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-muted-foreground hover:text-destructive"
+                                onClick={() => handleRemoveInterest(pi.id)}
+                                title="Remover interesse"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </TabsContent>
 
               <TabsContent value="attributes" className="py-6 mt-0">

@@ -113,6 +113,28 @@ export const propertiesService = {
   async delete(id: string): Promise<void> {
     await api.delete(`/properties/${id}`);
   },
+
+  async generateDescription(
+    id: string,
+    opts: { tone?: string; audience?: string; focus?: string; apply?: boolean } = {}
+  ): Promise<{ headline: string; description: string; highlights: string[] }> {
+    const res = await api.post(`/properties/${id}/generate_description`, opts);
+    return (res.data as { data: { headline: string; description: string; highlights: string[] } }).data;
+  },
+
+  async calculateScore(id: string): Promise<{ score: number; label: string; breakdown: Record<string, number> }> {
+    const res = await api.post(`/properties/${id}/calculate_score`);
+    return (res.data as { data: { score: number; label: string; breakdown: Record<string, number> } }).data;
+  },
+
+  async cepLookup(cep: string): Promise<{
+    logradouro: string; bairro: string; localidade: string; uf: string;
+  }> {
+    const res = await api.get('/properties/cep_lookup', { params: { cep } });
+    return (res.data as { data: Record<string, string> }).data as {
+      logradouro: string; bairro: string; localidade: string; uf: string;
+    };
+  },
 };
 
 export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
