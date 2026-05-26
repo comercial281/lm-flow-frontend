@@ -59,6 +59,7 @@ import { Properties } from '@/pages/Customer/Properties';
 import { Visits } from '@/pages/Customer/Visits';
 import { Proposals } from '@/pages/Customer/Proposals';
 import { PropertyCaptureRequests } from '@/pages/Customer/PropertyCapture';
+import { PropertyInterests } from '@/pages/Customer/PropertyInterests';
 import { Macros } from '@/pages/Customer/Settings/Macros';
 import { Integrations } from '@/pages/Customer/Settings/Integrations';
 import EmailTemplateEditor from '@/pages/Customer/Settings/EmailTemplateEditor';
@@ -1420,6 +1421,19 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <PropertyCaptureRequests />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/property-interests"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PropertyInterests />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>

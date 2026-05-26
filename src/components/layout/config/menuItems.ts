@@ -29,6 +29,7 @@ import {
   ClipboardList,
   Globe,
   FileText,
+  TrendingUp,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -127,6 +128,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: 'Captação',
     href: '/property-capture-requests',
     icon: ClipboardList,
+  },
+  {
+    name: 'Interesses',
+    href: '/property-interests',
+    icon: TrendingUp,
   },
   {
     id: 'customer-agents',
