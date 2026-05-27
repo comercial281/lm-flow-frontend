@@ -260,7 +260,7 @@ export default function ClientInstances() {
               <Building2 className="h-6 w-6 text-primary" />
               Clientes CRM
             </h1>
-            <p className="text-sm text-muted-foreground">Gerencie as instâncias Chave Flow de cada cliente</p>
+            <p className="text-sm text-muted-foreground">Gerencie as instâncias LM Flow de cada cliente</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={load}>

@@ -56,7 +56,7 @@
     "generic": "Ocorreu um erro durante a configuração. Tente novamente.",
     "alreadySetup": "Esta instância já foi configurada."
   },
-  "footer": "Isso criará a conta de administrador da sua instância Chave Flow.",
+  "footer": "Isso criará a conta de administrador da sua instância LM Flow.",
   "language": {
     "portuguese": "Português",
     "english": "English",

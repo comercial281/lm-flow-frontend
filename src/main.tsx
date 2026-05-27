@@ -7,7 +7,7 @@ import { initTheme } from './utils/themeUtils';
 import { initGA4 } from './utils/ga4Utils';
 import * as Sentry from '@sentry/react';
 
-// Chave Flow: Sentry React SDK — Story 1.1
+// LM Flow: Sentry React SDK — Story 1.1
 // VITE_SENTRY_DSN must be set in Railway environment variables
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({

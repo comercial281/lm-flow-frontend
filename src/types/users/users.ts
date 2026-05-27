@@ -16,7 +16,7 @@ export interface User {
   availability: 'online' | 'busy' | 'offline';
   availability_status?: 'online' | 'busy' | 'offline'; // Alias for availability
   role?: Role;
-  chave_role?: CRole; // Chave Flow role: agent | manager | admin
+  chave_role?: CRole; // LM Flow role: agent | manager | admin
   confirmed: boolean;
   created_at: string;
   updated_at: string;

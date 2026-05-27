@@ -15,7 +15,7 @@ export interface UserType {
 import type { StandardResponse, ResponseMeta } from '@/types/core';
 
 export interface LoginData {
-  // Chave Flow backend returns access_token at the top level of `data`
+  // LM Flow backend returns access_token at the top level of `data`
   access_token?: string;
   user: {
     id: string;

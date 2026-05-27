@@ -19,7 +19,7 @@ import type { User, UserFormData, UserUpdateData, CRole } from '@/types/users';
 import { Loader2, Shield } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 
-// Chave Flow roles — static, single-tenant
+// LM Flow roles — static, single-tenant
 const CHAVE_ROLES: { value: CRole; label: string; description: string }[] = [
   {
     value: 'admin',

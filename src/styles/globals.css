@@ -43,8 +43,8 @@
 }
 
 /* ====================================================================
- * Chave Flow brand palette — overrides Tailwind/shadcn defaults
- * Primary: purple gradient (#7C3AED → #5B21B6)
+ * LM Flow brand palette — overrides Tailwind/shadcn defaults
+ * Primary: purple gradient (#7B2CFF → #5B21B6)
  * Accent:  gold gradient (#FCD34D → #D97706)
  * ==================================================================== */
 :root {

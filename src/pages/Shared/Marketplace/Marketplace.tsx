@@ -96,7 +96,7 @@ const CATALOG: CatalogEntry[] = [
   {
     type: 'zapier',
     name: 'Zapier',
-    description: 'Conecte o Chave Flow com mais de 5.000 apps via Zapier com webhooks.',
+    description: 'Conecte o LM Flow com mais de 5.000 apps via Zapier com webhooks.',
     category: 'Automação',
     tags: ['webhook', 'automação', 'zap'],
     configPath: '/settings/integrations/webhooks',
@@ -241,7 +241,7 @@ export default function Marketplace() {
       <div className="border-b bg-background/95 backdrop-blur p-6">
         <h1 className="text-2xl font-bold mb-1">Marketplace de Integrações</h1>
         <p className="text-muted-foreground text-sm">
-          Conecte o Chave Flow com as ferramentas do ecossistema imobiliário
+          Conecte o LM Flow com as ferramentas do ecossistema imobiliário
         </p>
       </div>
 
