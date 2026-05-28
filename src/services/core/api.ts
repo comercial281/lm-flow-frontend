@@ -130,6 +130,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError as Error, null);
         isRefreshing = false;
+        return Promise.reject(refreshError);
       }
     }
 

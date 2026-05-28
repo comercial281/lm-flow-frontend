@@ -102,7 +102,7 @@ authApi.interceptors.response.use(
 
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       const isPublicRoute = [
         '/auth/sign_in',
         '/auth/register',
