@@ -15,7 +15,6 @@ import {
 } from '@evoapi/design-system';
 import { Plus, Edit, Trash2, Zap, ChevronDown, ChevronUp, ToggleLeft, ToggleRight } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
-import { AutomationLogs } from '@/components/automations/AutomationLogs';
 import {
   leadAutomationService,
   LeadAutomationRule,
@@ -257,9 +256,7 @@ export default function LeadAutomations() {
                     </>
                   )}
 
-                  <div className="border-t border-border mt-3 -mx-5">
-                    <AutomationLogs automationRuleId={rule.id} />
-                  </div>
+
                 </div>
               )}
             </div>
