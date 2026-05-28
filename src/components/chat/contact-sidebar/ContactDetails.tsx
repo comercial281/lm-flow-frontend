@@ -3,11 +3,23 @@ import React, { useState } from 'react';
 
 import { useLanguage } from '@/hooks/useLanguage';
 import { useConversations } from '@/hooks/chat/useConversations';
+import { useNavigate } from 'react-router-dom';
 
 import { contactsService } from '@/services/contacts/contactsService';
 
 import { Button } from '@evoapi/design-system/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@evoapi/design-system/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@evoapi/design-system/alert-dialog';
 import {
   User,
   Phone,
@@ -21,6 +33,7 @@ import {
   Copy,
   Hash,
   Edit,
+  Trash2,
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -38,9 +51,11 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({ contact }) => {
   const { t } = useLanguage('chat');
 
   const { updateContactInConversations } = useConversations();
+  const navigate = useNavigate();
 
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<FullContact | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const formatCustomAttributeKey = (key: string): string => {
     return key
@@ -113,6 +128,18 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({ contact }) => {
     setContactModalOpen(open);
   };
 
+  const handleDeleteContact = async () => {
+    if (!contact?.id) return;
+    try {
+      await contactsService.deleteContact(String(contact.id));
+      toast.success('Contato deletado');
+      navigate('/contacts');
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+      toast.error('Erro ao deletar contato');
+    }
+  };
+
   if (!contact) return null;
 
   return (
@@ -165,11 +192,31 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({ contact }) => {
             />
           )} */}
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleEditContact}>
             <Edit className="h-4 w-4" />
             {t('contactSidebar.contactDetails.actions.edit')}
           </Button>
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="h-4 w-4" />
+                Deletar contato
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Deletar contato</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação não pode ser desfeita. O contato e suas conversas serão removidos permanentemente.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteContact}>Deletar</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardFooter>
       </Card>
 

@@ -270,6 +270,15 @@ class ChatService {
     );
     return extractData<Message>(response);
   }
+
+  async bulkAction(params: {
+    type: string;
+    ids: string[];
+    fields?: Record<string, unknown>;
+    labels?: { add?: string[]; remove?: string[] };
+  }): Promise<void> {
+    await api.post('/bulk_actions', params);
+  }
 }
 
 // Export singleton instance

@@ -32,6 +32,7 @@ import {
   Archive,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useChatContext } from '@/contexts/chat/ChatContext';
 import { Conversation, ConversationFilter } from '@/types/chat/api';
 import { formatConversationTime, formatDetailedTime } from '@/utils/time/timeHelpers';
@@ -127,6 +128,7 @@ const ChatSidebar = ({
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [isLoadingMoreConversations, setIsLoadingMoreConversations] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [selectedConversations, setSelectedConversations] = useState<Set<string>>(new Set());
   const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
   const loadingMoreRef = useRef(false);
 
@@ -226,6 +228,23 @@ const ChatSidebar = ({
   const handleClearFilters = async () => {
     setConversationFilters([]);
     onFilterClear();
+  };
+
+  const handleBulkResolve = async () => {
+    const count = selectedConversations.size;
+    try {
+      await chatService.bulkAction({
+        type: 'Conversation',
+        ids: Array.from(selectedConversations),
+        fields: { status: 'resolved' },
+      });
+      setSelectedConversations(new Set());
+      await conversations.loadConversations({});
+      toast.success(`${count} conversa${count !== 1 ? 's' : ''} resolvida${count !== 1 ? 's' : ''}`);
+    } catch (error) {
+      console.error('Bulk resolve error:', error);
+      toast.error('Erro ao resolver conversas');
+    }
   };
 
   const pagination = conversations.state.conversationsPagination;
@@ -655,6 +674,34 @@ const ChatSidebar = ({
         )}
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedConversations.size > 0 && (
+        <div className="px-3 py-2 border-b bg-primary/5 flex items-center justify-between">
+          <span className="text-sm font-medium">
+            {selectedConversations.size} selecionada{selectedConversations.size !== 1 ? 's' : ''}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleBulkResolve}
+              className="h-7 text-xs"
+            >
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Resolver todas
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedConversations(new Set())}
+              className="h-7 text-xs"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Conversations List */}
       <div
         ref={sidebarScrollRef}
@@ -723,6 +770,21 @@ const ChatSidebar = ({
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <input
+                        type="checkbox"
+                        checked={selectedConversations.has(String(conversation.id))}
+                        onChange={e => {
+                          e.stopPropagation();
+                          setSelectedConversations(prev => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(String(conversation.id));
+                            else next.delete(String(conversation.id));
+                            return next;
+                          });
+                        }}
+                        onClick={e => e.stopPropagation()}
+                        className="mt-1 flex-shrink-0 cursor-pointer"
+                      />
                       <ContactAvatar
                         contact={conversation.contact}
                         channelType={channelType}
@@ -731,9 +793,16 @@ const ChatSidebar = ({
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <p className="font-medium truncate">
-                              {conversation.contact?.name || t('chatSidebar.contactNoName')}
-                            </p>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium truncate">
+                                {conversation.contact?.name || t('chatSidebar.contactNoName')}
+                              </p>
+                              {conversation.contact?.phone_number && (
+                                <p className="text-xs text-muted-foreground/70 truncate">
+                                  {conversation.contact.phone_number}
+                                </p>
+                              )}
+                            </div>
                             {Boolean(conversation.custom_attributes?.pinned) && (
                               <Pin className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                             )}
