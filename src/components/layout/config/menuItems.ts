@@ -261,6 +261,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         icon: Zap,
       },
       {
+        name: 'Produtos',
+        href: '/settings/products',
+        icon: Store,
+      },
+      {
         name: 'Site Builder',
         href: '/settings/site-builder',
         icon: Globe,
