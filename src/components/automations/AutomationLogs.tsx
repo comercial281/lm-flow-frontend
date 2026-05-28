@@ -38,7 +38,7 @@ export function AutomationLogs({ automationRuleId }: AutomationLogsProps) {
     setError(false);
     api
       .get(`/automation_rules/${automationRuleId}/logs`)
-      .then((res) => setLogs(res.data))
+      .then((res) => setLogs(res.data.data))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [automationRuleId]);

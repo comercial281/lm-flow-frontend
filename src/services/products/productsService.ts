@@ -17,15 +17,15 @@ export interface Product {
 export const productsService = {
   async list(params?: { status?: string; q?: string }): Promise<Product[]> {
     const response = await api.get('/products', { params });
-    return response.data;
+    return response.data.data;
   },
   async create(data: Partial<Product>): Promise<Product> {
     const response = await api.post('/products', { product: data });
-    return response.data;
+    return response.data.data;
   },
   async update(id: number, data: Partial<Product>): Promise<Product> {
     const response = await api.put(`/products/${id}`, { product: data });
-    return response.data;
+    return response.data.data;
   },
   async delete(id: number): Promise<void> {
     await api.delete(`/products/${id}`);
