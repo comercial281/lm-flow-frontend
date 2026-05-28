@@ -218,6 +218,13 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         action: 'read',
       },
       {
+        name: 'Cargos e Permissões',
+        href: '/settings/roles',
+        icon: Shield,
+        resource: 'users',
+        action: 'read',
+      },
+      {
         name: t('menu.settings.labels'),
         href: '/settings/labels',
         icon: Tags,

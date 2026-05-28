@@ -47,6 +47,7 @@ import { AccountSettings } from '@/pages/Customer/Settings/Account';
 import Teams from '@/pages/Customer/Settings/Teams/Teams';
 import { AddUsers } from '@/pages/Customer/Settings/Teams';
 import Users from '@/pages/Customer/Settings/Users';
+import RolesPage from '@/pages/Customer/Settings/Roles';
 import Labels from '@/pages/Customer/Settings/Labels';
 import CustomAttributes from '@/pages/Customer/Settings/CustomAttributes';
 import CannedResponses from '@/pages/Customer/Settings/CannedResponses';
@@ -507,6 +508,21 @@ const AppRouter = () => {
                   <MainLayout>
                     <PermissionRoute resource="users" action="read">
                       <Users />
+                    </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/settings/roles"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PermissionRoute resource="users" action="read">
+                      <RolesPage />
                     </PermissionRoute>
                   </MainLayout>
                 </CustomerRoute>

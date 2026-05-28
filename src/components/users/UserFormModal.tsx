@@ -15,28 +15,32 @@ import {
 } from '@evoapi/design-system';
 import { toast } from 'sonner';
 import usersService from '@/services/users/usersService';
+import { customRolesService } from '@/services/customRoles/customRolesService';
 import type { User, UserFormData, UserUpdateData, CRole } from '@/types/users';
+import type { CustomRole } from '@/types/customRoles';
 import { Loader2, Shield } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 
-// LM Flow roles — static, single-tenant
-const CHAVE_ROLES: { value: CRole; label: string; description: string }[] = [
-  {
-    value: 'admin',
-    label: 'Administrador',
-    description: 'Acesso total ao sistema',
-  },
-  {
-    value: 'manager',
-    label: 'Gerente',
-    description: 'Gestão de imóveis, clientes e relatórios',
-  },
-  {
-    value: 'agent',
-    label: 'Corretor',
-    description: 'Atendimento e cadastro de interesse',
-  },
+// Fallback estático (mostrado enquanto o backend não respondeu ou se
+// a API de cargos falhar). Substituído pelos cargos reais do DB assim
+// que carregar.
+const FALLBACK_ROLES: { value: CRole; label: string; description: string }[] = [
+  { value: 'admin',   label: 'Administrador', description: 'Acesso total ao sistema' },
+  { value: 'manager', label: 'Gerente',       description: 'Gestão de imóveis, clientes e relatórios' },
+  { value: 'agent',   label: 'Corretor',      description: 'Atendimento e cadastro de interesse' },
 ];
+
+// Mapping: legacy enum (chave_role) -> system role slug
+const ENUM_TO_SLUG: Record<string, string> = {
+  admin:   'administrador',
+  manager: 'gerente',
+  agent:   'corretor',
+};
+const SLUG_TO_ENUM: Record<string, CRole> = {
+  administrador: 'admin',
+  gerente:       'manager',
+  corretor:      'agent',
+};
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -49,15 +53,26 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
   const { t } = useLanguage('users');
 
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<UserFormData & { chave_role: CRole }>({
+  const [formData, setFormData] = useState<UserFormData & { chave_role: CRole; custom_role_id?: number | null }>({
     name: '',
     email: '',
     chave_role: 'agent',
     availability: 'online',
     password: '',
     confirmPassword: '',
+    custom_role_id: null,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
+
+  // Carrega cargos dinâmicos ao abrir o modal
+  useEffect(() => {
+    if (!isOpen) return;
+    customRolesService
+      .list()
+      .then(setCustomRoles)
+      .catch(() => setCustomRoles([]));
+  }, [isOpen]);
 
   useEffect(() => {
     if (user) {
@@ -66,6 +81,7 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
         email: user.email,
         chave_role: user.chave_role ?? 'agent',
         availability: user.availability || 'online',
+        custom_role_id: (user as any).custom_role_id ?? null,
       });
     } else {
       setFormData({
@@ -75,6 +91,7 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
         availability: 'online',
         password: '',
         confirmPassword: '',
+        custom_role_id: null,
       });
     }
     setErrors({});
@@ -133,22 +150,28 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
     setLoading(true);
     try {
       if (user) {
-        const updateData: UserUpdateData = {
+        const updateData: any = {
           name: formData.name,
-          chave_role: formData.chave_role,
           availability: formData.availability,
         };
+        // Send custom_role_id when one is selected; backend syncs chave_role automatically.
+        if (formData.custom_role_id) {
+          updateData.custom_role_id = formData.custom_role_id;
+        } else {
+          updateData.chave_role = formData.chave_role;
+        }
         if (formData.password) updateData.password = formData.password;
         await usersService.updateUser(user.id, updateData);
         toast.success(t('form.messages.updateSuccess'));
       } else {
-        const createData = {
+        const createData: any = {
           name: formData.name,
           email: formData.email,
           chave_role: formData.chave_role,
           availability: formData.availability,
           password: formData.password,
         };
+        if (formData.custom_role_id) createData.custom_role_id = formData.custom_role_id;
         await usersService.createUser(createData as UserFormData);
         toast.success(t('form.messages.createSuccess'));
       }
@@ -163,7 +186,11 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
     }
   };
 
-  const selectedRole = CHAVE_ROLES.find(r => r.value === formData.chave_role);
+  // Quando um custom_role está selecionado, usa ele. Senão, mostra o enum fallback.
+  const selectedCustomRole = customRoles.find(r => r.id === formData.custom_role_id);
+  const selectedRole = selectedCustomRole
+    ? { value: formData.chave_role, label: selectedCustomRole.name, description: selectedCustomRole.description ?? '' }
+    : FALLBACK_ROLES.find(r => r.value === formData.chave_role);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -216,22 +243,59 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
               Perfil de acesso
             </Label>
             <Select
-              value={formData.chave_role}
-              onValueChange={value => handleFieldChange('chave_role', value)}
+              value={formData.custom_role_id ? `custom:${formData.custom_role_id}` : `enum:${formData.chave_role}`}
+              onValueChange={value => {
+                if (value.startsWith('custom:')) {
+                  const id = Number(value.slice(7));
+                  const role = customRoles.find(r => r.id === id);
+                  setFormData(prev => ({
+                    ...prev,
+                    custom_role_id: id,
+                    chave_role: (SLUG_TO_ENUM[role?.slug ?? ''] ?? 'agent') as CRole,
+                  }));
+                } else {
+                  const enumVal = value.slice(5) as CRole;
+                  // Sincroniza com cargo do sistema correspondente, se existir
+                  const slug = ENUM_TO_SLUG[enumVal];
+                  const role = customRoles.find(r => r.slug === slug);
+                  setFormData(prev => ({
+                    ...prev,
+                    chave_role: enumVal,
+                    custom_role_id: role?.id ?? null,
+                  }));
+                }
+              }}
               disabled={loading}
             >
               <SelectTrigger className="bg-sidebar border-sidebar-border text-sidebar-foreground">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {CHAVE_ROLES.map(role => (
-                  <SelectItem key={role.value} value={role.value}>
-                    <span className="font-medium">{role.label}</span>
+                {customRoles.length === 0 &&
+                  FALLBACK_ROLES.map(role => (
+                    <SelectItem key={role.value} value={`enum:${role.value}`}>
+                      <span className="font-medium">{role.label}</span>
+                    </SelectItem>
+                  ))}
+                {customRoles.map(role => (
+                  <SelectItem key={role.id} value={`custom:${role.id}`}>
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="inline-block h-2 w-2 rounded-full"
+                        style={{ background: role.color }}
+                      />
+                      <span className="font-medium">{role.name}</span>
+                      {role.system && (
+                        <span className="rounded bg-muted px-1 py-0.5 text-[10px] uppercase text-muted-foreground">
+                          sistema
+                        </span>
+                      )}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {selectedRole && (
+            {selectedRole && selectedRole.description && (
               <p className="text-xs text-sidebar-foreground/60">{selectedRole.description}</p>
             )}
           </div>
