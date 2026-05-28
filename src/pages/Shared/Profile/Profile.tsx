@@ -156,7 +156,7 @@ const Profile = () => {
         try {
           // Fazer chamada para /profile para buscar dados completos
           const response = await profileService.getProfile();
-          const profileUser = response.user;
+          const profileUser = response;
 
           setUserData(prev => ({
             ...prev,
@@ -357,7 +357,7 @@ const Profile = () => {
 
       // Buscar dados atualizados do perfil para garantir que temos os dados mais recentes
       const profileResponse = await profileService.getProfile();
-      const updatedUser = profileResponse.user;
+      const updatedUser = profileResponse;
 
       // Atualizar dados do usuário no store DIRETAMENTE para refletir mudanças imediatamente
       if (user) {

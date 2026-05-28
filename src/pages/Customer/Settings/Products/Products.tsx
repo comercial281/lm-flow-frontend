@@ -199,7 +199,7 @@ export default function Products() {
         searchPlaceholder="Buscar por nome ou SKU..."
         primaryAction={{
           label: 'Novo produto',
-          icon: Plus,
+          icon: <Plus />,
           onClick: openCreate,
         }}
       />

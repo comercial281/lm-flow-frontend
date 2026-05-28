@@ -163,11 +163,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const profileData = await profileService.getProfile();
 
-      if (profileData?.user) {
+      if (profileData) {
         const currentUserData = user || {} as UserResponse;
         const updatedUser: UserResponse = {
           ...currentUserData,
-          ...profileData.user,
+          ...profileData,
         };
 
         setUser(updatedUser);

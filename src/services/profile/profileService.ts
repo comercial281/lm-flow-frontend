@@ -2,7 +2,6 @@ import apiAuth from '@/services/core/apiAuth';
 import { extractData } from '@/utils/apiHelpers';
 import type { UserProfile } from '@/types/users';
 import type { ProfileUpdateData, PasswordChangeData } from '@/types/users';
-import type { Account } from '@/types/settings';
 
 // Re-export types for convenience
 export type { ProfileUpdateData, PasswordChangeData };
@@ -11,9 +10,9 @@ class ProfileService {
   /**
    * Get user profile
    */
-  async getProfile(): Promise<{ user: UserProfile; accounts: Account[] }> {
+  async getProfile(): Promise<UserProfile> {
     const response = await apiAuth.get('/profile');
-    return extractData<{ user: UserProfile; accounts: Account[] }>(response);
+    return extractData<UserProfile>(response);
   }
 
   /**
