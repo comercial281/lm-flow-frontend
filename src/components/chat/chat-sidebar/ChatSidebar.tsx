@@ -113,6 +113,7 @@ const ChatSidebar = ({
       selectedConversationId: string | null;
       conversationsPagination: {
         page?: number;
+        total?: number;
         total_pages?: number;
         has_next_page?: boolean;
       } | null;
@@ -617,8 +618,10 @@ const ChatSidebar = ({
         {/* Filter Actions */}
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
-            {visibleConversations.length}{' '}
-            {visibleConversations.length === 1
+            {pagination?.total != null && pagination.total > visibleConversations.length
+              ? `${visibleConversations.length} / ${pagination.total}`
+              : visibleConversations.length}{' '}
+            {(pagination?.total ?? visibleConversations.length) === 1
               ? t('chatSidebar.conversation')
               : t('chatSidebar.conversations')}
           </span>
@@ -655,7 +658,7 @@ const ChatSidebar = ({
       {/* Conversations List */}
       <div
         ref={sidebarScrollRef}
-        className="flex-1 overflow-y-auto"
+        className="flex-1 min-h-0 overflow-y-auto"
         onScroll={handleSidebarScroll}
         data-tour="chat-conversations-list"
       >

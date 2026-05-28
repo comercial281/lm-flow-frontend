@@ -24,6 +24,7 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
 
   // Refs para evitar chamadas múltiplas simultâneas
   const loadingRef = useRef(false);
+  const loadingMoreRef = useRef(false);
   const loadingSpecificRef = useRef<Set<string>>(new Set());
   const selectionLockRef = useRef(false);
   const lastCleanupRef = useRef(0);
@@ -116,11 +117,16 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     const totalPages = pagination?.total_pages || 1;
     const hasNextPage = pagination?.has_next_page ?? currentPage < totalPages;
 
-    if (!hasNextPage || loadingRef.current || state.conversationsLoading) {
+    if (!hasNextPage || loadingMoreRef.current || state.conversationsLoading) {
       return;
     }
 
-    await loadConversations({ page: currentPage + 1 });
+    loadingMoreRef.current = true;
+    try {
+      await loadConversations({ page: currentPage + 1 });
+    } finally {
+      loadingMoreRef.current = false;
+    }
   }, [state.conversationsPagination, state.conversationsLoading, loadConversations]);
 
   const loadSpecificConversation = useCallback(
