@@ -38,6 +38,7 @@ import PipelineItemCustomAttributes from './PipelineItemCustomAttributes';
 import PipelineTasksList, { PipelineTasksListRef } from './tasks/PipelineTasksList';
 import CreateTaskModal from './tasks/CreateTaskModal';
 import EditTaskModal from './tasks/EditTaskModal';
+import CardConversationTab from './CardConversationTab';
 
 interface Service {
   name: string;
@@ -263,8 +264,9 @@ export default function EditItemModal({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="details">{t('editItem.tabs.details')}</TabsTrigger>
+            <TabsTrigger value="conversation">Conversa</TabsTrigger>
             <TabsTrigger value="services">{t('editItem.tabs.services')}</TabsTrigger>
             <TabsTrigger value="attributes">{t('editItem.tabs.attributes')}</TabsTrigger>
             <TabsTrigger value="tasks" className="relative">
@@ -340,6 +342,11 @@ export default function EditItemModal({
                 rows={3}
               />
             </div>
+          </TabsContent>
+
+          {/* Conversation Tab — WhatsApp inline (sprint follow-up) */}
+          <TabsContent value="conversation" className="py-4 overflow-y-auto max-h-[60vh]">
+            {item && <CardConversationTab item={item} />}
           </TabsContent>
 
           {/* Services Tab */}
