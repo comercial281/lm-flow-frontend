@@ -63,7 +63,33 @@ export const visitsService = {
     const res = await api.post(`${BASE}/${id}/cancel`, { reason });
     return (res.data as { data: Visit }).data;
   },
+
+  async reschedule(id: string, scheduled_at: string): Promise<Visit> {
+    const res = await api.post(`${BASE}/${id}/reschedule`, { scheduled_at });
+    return (res.data as { data: Visit }).data;
+  },
+
+  async leadPicker(q: string = '', per_page: number = 20): Promise<LeadPickerItem[]> {
+    const res = await api.get(`${BASE}/lead_picker`, { params: { q, per_page } });
+    return (res.data as { data: LeadPickerItem[] }).data;
+  },
+
+  async quickCreateContact(payload: { name: string; phone_number: string; email?: string }): Promise<LeadPickerItem> {
+    const res = await api.post(`${BASE}/quick_create_contact`, payload);
+    return (res.data as { data: LeadPickerItem }).data;
+  },
 };
+
+export interface LeadPickerItem {
+  id: string;
+  name: string;
+  phone_number?: string | null;
+  email?: string | null;
+  in_pipeline: boolean;
+  pipeline_id?: string | null;
+  stage_name?: string | null;
+  updated_at?: string;
+}
 
 export const VISIT_STATUS_LABELS: Record<string, string> = {
   scheduled:   'Agendada',

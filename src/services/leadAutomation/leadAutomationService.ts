@@ -66,17 +66,20 @@ export const leadAutomationService = {
 };
 
 export const TRIGGER_LABELS: Record<string, string> = {
-  'lead.created':          'Lead criado',
-  'lead.stage_changed':    'Estágio alterado',
-  'lead.visit_scheduled':  'Visita agendada',
-  'lead.visit_completed':  'Visita realizada',
-  'lead.interest_created': 'Interesse em imóvel',
-  'lead.inactive_7d':      'Inativo há 7 dias',
-  'lead.inactive_14d':     'Inativo há 14 dias',
-  'lead.property_matched': 'Imóvel compatível encontrado',
-  'lead.tag_added':        'Etiqueta adicionada',
-  'lead.message_received': 'Mensagem recebida do lead',
-  'lead.no_reply_after':   'Sem resposta após período',
+  'lead.created':              'Lead criado',
+  'lead.stage_changed':        'Estágio alterado',
+  'lead.visit_scheduled':      'Visita agendada',
+  'lead.visit_completed':      'Visita realizada',
+  'lead.visit_reminder_24h':   'Lembrete — 1 dia antes da visita',
+  'lead.visit_reminder_1h':    'Lembrete — 1 hora antes da visita',
+  'lead.visit_reminder_15min': 'Lembrete — 15 minutos antes da visita',
+  'lead.interest_created':     'Interesse em imóvel',
+  'lead.inactive_7d':          'Inativo há 7 dias',
+  'lead.inactive_14d':         'Inativo há 14 dias',
+  'lead.property_matched':     'Imóvel compatível encontrado',
+  'lead.tag_added':            'Etiqueta adicionada',
+  'lead.message_received':     'Mensagem recebida do lead',
+  'lead.no_reply_after':       'Sem resposta após período',
 };
 
 export const ACTION_TYPE_LABELS: Record<string, string> = {

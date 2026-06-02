@@ -1,0 +1,113 @@
+/* Sobrescrita do react-big-calendar pra casar com o tema do LM Flow */
+
+.visits-calendar-wrapper {
+  --rbc-bg: hsl(var(--background));
+  --rbc-fg: hsl(var(--foreground));
+  --rbc-muted: hsl(var(--muted-foreground));
+  --rbc-border: hsl(var(--border));
+  --rbc-today: hsl(var(--primary) / 0.06);
+  --rbc-off-range-bg: hsl(var(--muted) / 0.4);
+}
+
+.visits-calendar-wrapper .rbc-calendar {
+  background: var(--rbc-bg);
+  color: var(--rbc-fg);
+  font-family: inherit;
+}
+
+.visits-calendar-wrapper .rbc-toolbar {
+  margin-bottom: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.visits-calendar-wrapper .rbc-toolbar button {
+  background: transparent;
+  color: var(--rbc-fg);
+  border: 1px solid var(--rbc-border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.visits-calendar-wrapper .rbc-toolbar button:hover {
+  background: hsl(var(--muted) / 0.5);
+}
+.visits-calendar-wrapper .rbc-toolbar button.rbc-active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+.visits-calendar-wrapper .rbc-toolbar-label {
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.visits-calendar-wrapper .rbc-header,
+.visits-calendar-wrapper .rbc-time-header-content,
+.visits-calendar-wrapper .rbc-time-content,
+.visits-calendar-wrapper .rbc-month-view,
+.visits-calendar-wrapper .rbc-time-view,
+.visits-calendar-wrapper .rbc-day-bg + .rbc-day-bg,
+.visits-calendar-wrapper .rbc-month-row + .rbc-month-row,
+.visits-calendar-wrapper .rbc-time-header.rbc-overflowing,
+.visits-calendar-wrapper .rbc-timeslot-group {
+  border-color: var(--rbc-border) !important;
+}
+
+.visits-calendar-wrapper .rbc-header {
+  padding: 8px 4px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--rbc-muted);
+}
+
+.visits-calendar-wrapper .rbc-today {
+  background-color: var(--rbc-today);
+}
+
+.visits-calendar-wrapper .rbc-off-range-bg {
+  background-color: var(--rbc-off-range-bg);
+}
+.visits-calendar-wrapper .rbc-off-range {
+  color: var(--rbc-muted);
+}
+
+.visits-calendar-wrapper .rbc-time-gutter,
+.visits-calendar-wrapper .rbc-label {
+  font-size: 0.75rem;
+  color: var(--rbc-muted);
+}
+
+.visits-calendar-wrapper .rbc-event {
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+.visits-calendar-wrapper .rbc-event.rbc-selected {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 1px;
+}
+
+.visits-calendar-wrapper .rbc-current-time-indicator {
+  background-color: hsl(var(--destructive));
+  height: 2px;
+}
+
+.visits-calendar-wrapper .rbc-show-more {
+  color: hsl(var(--primary));
+  font-weight: 500;
+  background: transparent;
+}
+
+/* Dark mode boosts (variáveis CSS já lidam, mas garante hover legível) */
+.dark .visits-calendar-wrapper .rbc-toolbar button:hover {
+  background: hsl(var(--muted) / 0.8);
+}

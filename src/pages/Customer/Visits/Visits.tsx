@@ -26,19 +26,24 @@ import {
   Star,
   Search,
   ChevronDown,
+  CalendarDays,
+  List,
 } from 'lucide-react';
+import type { View, SlotInfo } from 'react-big-calendar';
 import {
   visitsService,
   Visit,
   VisitFormData,
+  LeadPickerItem,
   VISIT_STATUS_LABELS,
   VISIT_STATUS_COLORS,
 } from '@/services/visits/visitsService';
 import { propertiesService, Property } from '@/services/properties/propertiesService';
-import { contactsService } from '@/services/contacts/contactsService';
-import type { Contact } from '@/types/contacts';
 import { usersService } from '@/services/users';
 import type { User } from '@/types/users';
+
+import { VisitsCalendar, CalendarEvent } from '@/components/visits/VisitsCalendar';
+import { LeadCombobox } from '@/components/visits/LeadCombobox';
 
 const FILTER_TABS = [
   { key: '', label: 'Todas' },
@@ -79,11 +84,23 @@ function isPast(iso: string) {
   return new Date(iso) < new Date();
 }
 
+/** Converte Date local pra string aceita por <input type="datetime-local"> (YYYY-MM-DDTHH:mm). */
+function toLocalInput(d: Date): string {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+type ViewMode = 'calendar' | 'list';
+
 export default function Visits() {
   const [visits, setVisits]         = useState<Visit[]>([]);
   const [total, setTotal]           = useState(0);
   const [loading, setLoading]       = useState(false);
   const [activeTab, setActiveTab]   = useState('');
+  const [viewMode, setViewMode]     = useState<ViewMode>('calendar');
+
+  const [calView, setCalView]       = useState<View>('week');
+  const [calDate, setCalDate]       = useState<Date>(new Date());
 
   const [modalOpen, setModalOpen]   = useState(false);
   const [form, setForm]             = useState<VisitFormData>(EMPTY_FORM);
@@ -95,18 +112,14 @@ export default function Visits() {
   const [cancelReason, setCancelReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Property + contact search state
+  // Property + realtor search state
   const [propertyQuery, setPropertyQuery] = useState('');
   const [propertyResults, setPropertyResults] = useState<Property[]>([]);
   const [propertySearching, setPropertySearching] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
 
-  const [contactQuery, setContactQuery] = useState('');
-  const [contactResults, setContactResults] = useState<Contact[]>([]);
-  const [contactSearching, setContactSearching] = useState(false);
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [showContactDropdown, setShowContactDropdown] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<LeadPickerItem | null>(null);
 
   const [realtorQuery, setRealtorQuery] = useState('');
   const [realtorResults, setRealtorResults] = useState<User[]>([]);
@@ -115,13 +128,12 @@ export default function Visits() {
   const [showRealtorDropdown, setShowRealtorDropdown] = useState(false);
 
   const propertyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const contactTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const realtorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async (status = activeTab) => {
     setLoading(true);
     try {
-      const res = await visitsService.list({ status: status || undefined, per_page: 100 });
+      const res = await visitsService.list({ status: status || undefined, per_page: 500 });
       setVisits(res.data ?? []);
       setTotal(res.meta?.total ?? 0);
     } catch {
@@ -159,20 +171,6 @@ export default function Visits() {
     setShowPropertyDropdown(false);
   };
 
-  const searchContacts = (q: string) => {
-    if (contactTimeout.current) clearTimeout(contactTimeout.current);
-    if (!q.trim()) { setContactResults([]); setShowContactDropdown(false); return; }
-    setContactSearching(true);
-    contactTimeout.current = setTimeout(async () => {
-      try {
-        const res = await contactsService.searchContacts({ q, page: 1, per_page: 8 });
-        setContactResults(res.data ?? []);
-        setShowContactDropdown(true);
-      } catch { setContactResults([]); }
-      finally { setContactSearching(false); }
-    }, 300);
-  };
-
   const searchRealtors = (q: string) => {
     if (realtorTimeout.current) clearTimeout(realtorTimeout.current);
     if (!q.trim()) { setRealtorResults([]); setShowRealtorDropdown(false); return; }
@@ -194,23 +192,19 @@ export default function Visits() {
     setShowRealtorDropdown(false);
   };
 
-  const selectContact = (c: Contact) => {
-    setSelectedContact(c);
-    setForm(f => ({ ...f, contact_id: String(c.id) }));
-    setContactQuery(c.name);
-    setShowContactDropdown(false);
+  const handleLeadChange = (lead: LeadPickerItem) => {
+    setSelectedLead(lead);
+    setForm(f => ({ ...f, contact_id: lead.id }));
   };
 
-  const openScheduleModal = () => {
-    setForm(EMPTY_FORM);
+  const openScheduleModal = (prefill?: Partial<VisitFormData>) => {
+    setForm({ ...EMPTY_FORM, ...prefill });
     setPropertyQuery('');
-    setContactQuery('');
     setRealtorQuery('');
     setSelectedProperty(null);
-    setSelectedContact(null);
+    setSelectedLead(null);
     setSelectedRealtor(null);
     setPropertyResults([]);
-    setContactResults([]);
     setRealtorResults([]);
     setModalOpen(true);
   };
@@ -268,13 +262,39 @@ export default function Visits() {
     }
   };
 
+  const handleSelectSlot = (slot: SlotInfo) => {
+    openScheduleModal({
+      scheduled_at: toLocalInput(slot.start as Date),
+      duration_minutes: Math.max(30, Math.round(((slot.end as Date).getTime() - (slot.start as Date).getTime()) / 60000)),
+    });
+  };
+
+  const handleSelectEvent = (event: CalendarEvent) => {
+    const visit = event.resource;
+    if (visit.status === 'scheduled' || visit.status === 'confirmed' || visit.status === 'in_progress') {
+      setActionModal({ visit, action: 'complete' });
+    } else {
+      toast.info(`Visita ${VISIT_STATUS_LABELS[visit.status] ?? visit.status}`);
+    }
+  };
+
+  const handleReschedule = async (visit: Visit, newStart: Date) => {
+    try {
+      const updated = await visitsService.reschedule(visit.id, newStart.toISOString());
+      setVisits(prev => prev.map(v => v.id === updated.id ? updated : v));
+      toast.success('Visita reagendada');
+    } catch {
+      toast.error('Erro ao reagendar');
+    }
+  };
+
   const grouped = groupByDate(visits);
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="border-b bg-background/95 backdrop-blur px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <CalendarClock className="h-6 w-6 text-primary" />
@@ -282,33 +302,69 @@ export default function Visits() {
             </h1>
             <p className="text-sm text-muted-foreground">{total} visita{total !== 1 ? 's' : ''}</p>
           </div>
-          <Button onClick={openScheduleModal}>
-            <Plus className="h-4 w-4 mr-2" />
-            Agendar visita
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* View toggle */}
+            <div className="inline-flex rounded-md border border-border bg-background p-0.5">
+              <button
+                onClick={() => setViewMode('calendar')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+                  viewMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <CalendarDays className="h-3.5 w-3.5" />
+                Calendário
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+                  viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <List className="h-3.5 w-3.5" />
+                Lista
+              </button>
+            </div>
+            <Button onClick={() => openScheduleModal()}>
+              <Plus className="h-4 w-4 mr-2" />
+              Agendar visita
+            </Button>
+          </div>
         </div>
 
-        {/* Tab filters */}
-        <div className="flex gap-1 flex-wrap">
-          {FILTER_TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => switchTab(tab.key)}
-              className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
-                activeTab === tab.key
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {/* Filtros — só na lista */}
+        {viewMode === 'list' && (
+          <div className="flex gap-1 flex-wrap">
+            {FILTER_TABS.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => switchTab(tab.key)}
+                className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                  activeTab === tab.key
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
-        {loading ? (
+        {viewMode === 'calendar' ? (
+          <VisitsCalendar
+            visits={visits}
+            view={calView}
+            date={calDate}
+            onView={setCalView}
+            onNavigate={setCalDate}
+            onSelectSlot={handleSelectSlot}
+            onSelectEvent={handleSelectEvent}
+            onReschedule={handleReschedule}
+          />
+        ) : loading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
             Carregando visitas...
           </div>
@@ -316,7 +372,7 @@ export default function Visits() {
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <CalendarClock className="h-12 w-12 mb-3" />
             <p className="text-sm font-medium">Nenhuma visita encontrada</p>
-            <Button className="mt-4" onClick={openScheduleModal}>
+            <Button className="mt-4" onClick={() => openScheduleModal()}>
               <Plus className="h-4 w-4 mr-2" />
               Agendar primeira visita
             </Button>
@@ -401,43 +457,8 @@ export default function Visits() {
               )}
             </div>
 
-            {/* Contact search */}
-            <div className="relative">
-              <UILabel>Contato *</UILabel>
-              <div className="relative mt-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  value={contactQuery}
-                  onChange={e => { setContactQuery(e.target.value); searchContacts(e.target.value); }}
-                  onFocus={() => contactResults.length > 0 && setShowContactDropdown(true)}
-                  placeholder="Buscar por nome ou telefone..."
-                  className="pl-9"
-                />
-                {contactSearching && (
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
-                )}
-              </div>
-              {showContactDropdown && contactResults.length > 0 && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                  {contactResults.map(c => (
-                    <button
-                      key={c.id}
-                      className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0 text-sm"
-                      onClick={() => selectContact(c)}
-                    >
-                      <div className="font-medium truncate">{c.name}</div>
-                      <div className="text-xs text-muted-foreground">{c.phone_number}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {selectedContact && (
-                <div className="mt-1 text-xs text-emerald-600 font-medium flex items-center gap-1">
-                  <UserIcon className="h-3 w-3" />
-                  {selectedContact.name} selecionado
-                </div>
-              )}
-            </div>
+            {/* Lead combobox unificado (leads kanban + contacts + criar novo) */}
+            <LeadCombobox value={selectedLead} onChange={handleLeadChange} />
 
             {/* Realtor search */}
             <div className="relative">
