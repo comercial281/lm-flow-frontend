@@ -43,6 +43,7 @@ export interface MenuItem {
   permissions?: string[];
   requireAll?: boolean;
   requiredRoleKey?: string;
+  requiredEmail?: string | string[];
 }
 
 export interface SubMenuItem {
@@ -54,6 +55,7 @@ export interface SubMenuItem {
   permissions?: string[];
   requireAll?: boolean;
   requiredRoleKey?: string;
+  requiredEmail?: string | string[];
 }
 
 export interface ProfileMenuItem {
@@ -183,8 +185,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: 'Clientes CRM',
     href: '/super-admin/clients',
     icon: Building2,
-    resource: 'client_instances',
-    action: 'read',
+    requiredEmail: 'giovani@chaveflow.com.br',
   },
   {
     name: t('menu.customer.tutorials'),
@@ -334,8 +335,16 @@ export const shouldShowMenuItem = (
   canFunction: (resource: string, action: string) => boolean,
   canAnyFunction: (permissions: string[]) => boolean,
   canAllFunction: (permissions: string[]) => boolean,
-  userRoleKey?: string
+  userRoleKey?: string,
+  userEmail?: string
 ): boolean => {
+  // Gate por email (espelha checagens server-side hardcoded por email, ex: super-admin)
+  if (item.requiredEmail) {
+    if (!userEmail) return false;
+    const allowed = Array.isArray(item.requiredEmail) ? item.requiredEmail : [item.requiredEmail];
+    if (!allowed.includes(userEmail)) return false;
+  }
+
   // Verificar role obrigatória
   if (item.requiredRoleKey) {
     return userRoleKey === item.requiredRoleKey;
@@ -363,15 +372,16 @@ export const filterMenuItemsByPermissions = (
   canFunction: (resource: string, action: string) => boolean,
   canAnyFunction: (permissions: string[]) => boolean,
   canAllFunction: (permissions: string[]) => boolean,
-  userRoleKey?: string
+  userRoleKey?: string,
+  userEmail?: string
 ): MenuItem[] => {
   return items
-    .filter(item => shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey))
+    .filter(item => shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail))
     .map(item => {
       // Se o item tem subitens, filtrar os subitens também
       if (item.subItems && item.subItems.length > 0) {
         const filteredSubItems = item.subItems.filter(subItem =>
-          shouldShowMenuItem(subItem, canFunction, canAnyFunction, canAllFunction, userRoleKey)
+          shouldShowMenuItem(subItem, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail)
         );
 
         // Se não há subitens visíveis, não mostrar o item pai
