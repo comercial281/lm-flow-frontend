@@ -83,16 +83,17 @@ export const followupSequencesService = {
   },
 };
 
-// Admin endpoints — seed template, status, fast_test bypass.
+// Apply template — endpoint REST autenticado (admin only). Substituiu
+// /_admin/followup/reseed_template (que ainda existe como fallback).
 export const followupAdminService = {
-  async reseedTemplate(token = 'chaveflow-debug-2026'): Promise<{
+  async reseedTemplate(): Promise<{
     pipeline_id: string;
     pipeline_name: string;
     stages_count: number;
     sequences: string[];
     labels_count: number;
   }> {
-    const res = await api.post(`/_admin/followup/reseed_template`, null, { params: { token } });
+    const res = await api.post(`${BASE}/seed_template`);
     return (res.data as {
       data: {
         pipeline_id: string;
