@@ -54,6 +54,7 @@ import CannedResponses from '@/pages/Customer/Settings/CannedResponses';
 import { QuickReplies } from '@/pages/Customer/Settings/QuickReplies';
 import { WelcomeAutomations } from '@/pages/Customer/Settings/WelcomeAutomations';
 import { LeadAutomations } from '@/pages/Customer/Settings/LeadAutomations';
+import { FollowupSequences } from '@/pages/Customer/Settings/FollowupSequences';
 import { SiteBuilder } from '@/pages/Customer/Settings/SiteBuilder';
 import { DynamicForms } from '@/pages/Customer/Settings/DynamicForms';
 import { Properties } from '@/pages/Customer/Properties';
@@ -639,6 +640,19 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <LeadAutomations />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/settings/follow-ups"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <FollowupSequences />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>
