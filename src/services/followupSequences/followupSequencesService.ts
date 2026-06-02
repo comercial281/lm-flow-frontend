@@ -81,6 +81,20 @@ export const followupSequencesService = {
     });
     return (res.data as { data: { contact_id: string; sequence_slug: string; pending_jobs: number } }).data;
   },
+
+  async uploadMedia(file: File): Promise<{
+    url: string;
+    filename: string;
+    content_type: string;
+    byte_size: number;
+  }> {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await api.post(`${BASE}/upload_media`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return (res.data as { data: { url: string; filename: string; content_type: string; byte_size: number } }).data;
+  },
 };
 
 // Apply template — endpoint REST autenticado (admin only). Substituiu

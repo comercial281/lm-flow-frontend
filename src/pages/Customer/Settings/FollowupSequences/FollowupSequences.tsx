@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import {
   Button,
@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@evoapi/design-system';
-import { Clock, Edit, Send, ToggleLeft, ToggleRight, Trash2, Plus, GripVertical } from 'lucide-react';
+import { Clock, Edit, Send, ToggleLeft, ToggleRight, Trash2, Plus, GripVertical, Upload, Loader2 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import {
   followupSequencesService,
@@ -27,6 +27,45 @@ import {
   MESSAGE_TYPE_LABELS,
   formatDelay,
 } from '@/services/followupSequences/followupSequencesService';
+
+function MediaUploadButton({
+  messageType,
+  onUploaded,
+}: {
+  messageType: 'text' | 'audio' | 'image' | 'video';
+  onUploaded: (url: string) => void;
+}) {
+  const ref = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const accept =
+    messageType === 'audio' ? 'audio/*' : messageType === 'image' ? 'image/*' : 'video/*';
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const out = await followupSequencesService.uploadMedia(file);
+      onUploaded(out.url);
+      toast.success(`Upload OK (${(out.byte_size / 1024).toFixed(0)} KB)`);
+    } catch {
+      toast.error('Falha no upload. Cheque tamanho (máx 16MB) e tipo.');
+    } finally {
+      setUploading(false);
+      if (ref.current) ref.current.value = '';
+    }
+  };
+
+  return (
+    <>
+      <input ref={ref} type="file" accept={accept} className="hidden" onChange={handleFile} />
+      <Button type="button" variant="outline" size="sm" onClick={() => ref.current?.click()} disabled={uploading}>
+        {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+      </Button>
+    </>
+  );
+}
 
 const EMPTY_STEP = (position: number): FollowupStep => ({
   position,
@@ -272,8 +311,19 @@ export default function FollowupSequences() {
                     {s.message_type !== 'text' && (
                       <div className="mt-2 grid grid-cols-2 gap-2">
                         <div>
-                          <UILabel className="text-xs">URL da mídia</UILabel>
-                          <Input value={s.media_url ?? ''} onChange={e => updateStep(idx, { media_url: e.target.value })} />
+                          <UILabel className="text-xs">URL da mídia (ou clique upload)</UILabel>
+                          <div className="flex gap-1">
+                            <Input
+                              className="flex-1"
+                              value={s.media_url ?? ''}
+                              onChange={e => updateStep(idx, { media_url: e.target.value })}
+                              placeholder="https://... ou faça upload"
+                            />
+                            <MediaUploadButton
+                              messageType={s.message_type}
+                              onUploaded={url => updateStep(idx, { media_url: url })}
+                            />
+                          </div>
                         </div>
                         <div>
                           <UILabel className="text-xs">Legenda (opcional)</UILabel>
