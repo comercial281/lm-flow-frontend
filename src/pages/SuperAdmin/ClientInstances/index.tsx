@@ -239,8 +239,7 @@ export default function ClientInstances() {
     load();
   };
 
-  const ALLOWED_SUPER_ADMINS = ['comercial@lealmidia.com.br', 'giovani@chaveflow.com.br'];
-  if (!user?.email || !ALLOWED_SUPER_ADMINS.includes(user.email)) {
+  if (user?.email !== 'comercial@lealmidia.com.br') {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
         Acesso restrito.
