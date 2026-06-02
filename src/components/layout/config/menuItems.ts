@@ -185,8 +185,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: 'Clientes CRM',
     href: '/super-admin/clients',
     icon: Building2,
-    // Whitelist: mantem legacy enquanto Railway envs nao migram (Fase 2 do rollout).
-    requiredEmail: ['comercial@lealmidia.com.br', 'giovani@chaveflow.com.br'],
+    requiredEmail: 'comercial@lealmidia.com.br',
   },
   {
     name: t('menu.customer.tutorials'),
