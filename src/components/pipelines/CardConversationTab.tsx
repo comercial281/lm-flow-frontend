@@ -101,7 +101,8 @@ export default function CardConversationTab({ item }: CardConversationTabProps) 
           <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma mensagem ainda.</p>
         ) : (
           messages.map(m => {
-            const isOutgoing = m.message_type === 1 || m.message_type === 'outgoing';
+            const mt: unknown = m.message_type;
+            const isOutgoing = mt === 1 || mt === 'outgoing';
             return (
               <div
                 key={m.id}

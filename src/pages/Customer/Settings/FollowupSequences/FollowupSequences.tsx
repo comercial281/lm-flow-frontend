@@ -147,7 +147,7 @@ export default function FollowupSequences() {
         <p className="text-sm text-muted-foreground">Carregando...</p>
       ) : sequences.length === 0 ? (
         <EmptyState
-          icon={<Clock className="h-12 w-12" />}
+          icon={Clock}
           title="Nenhuma sequência cadastrada"
           description="As sequências aparecem aqui após o primeiro deploy."
         />
