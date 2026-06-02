@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   Dialog,
@@ -27,6 +28,12 @@ export default function DeletePipelineModal({
   loading,
 }: DeletePipelineModalProps) {
   const { t } = useLanguage('pipelines');
+  const [confirmCascade, setConfirmCascade] = useState(false);
+
+  // Reset cascade-confirm state every time the modal opens for a new pipeline
+  useEffect(() => {
+    if (!open) setConfirmCascade(false);
+  }, [open]);
 
   if (!pipeline) return null;
 
@@ -139,6 +146,17 @@ export default function DeletePipelineModal({
           </div>
         </div>
 
+        {hasItems && confirmCascade && (
+          <div className="p-4 bg-destructive/10 border-2 border-destructive rounded-lg mb-2">
+            <p className="text-sm font-semibold text-destructive">
+              Deseja excluir junto com os {itemCount} lead{itemCount !== 1 ? 's' : ''} dentro do pipeline?
+            </p>
+            <p className="text-xs text-destructive/80 mt-1">
+              Esta ação é permanente. Os leads serão removidos junto com o pipeline.
+            </p>
+          </div>
+        )}
+
         <DialogFooter>
           <Button
             variant="outline"
@@ -149,10 +167,20 @@ export default function DeletePipelineModal({
           </Button>
           <Button
             variant="destructive"
-            onClick={onConfirm}
+            onClick={() => {
+              if (hasItems && !confirmCascade) {
+                setConfirmCascade(true);
+                return;
+              }
+              onConfirm();
+            }}
             disabled={loading}
           >
-            {loading ? t('deletePipeline.deleting') : t('deletePipeline.delete')}
+            {loading
+              ? t('deletePipeline.deleting')
+              : hasItems && confirmCascade
+                ? `Sim, excluir pipeline e ${itemCount} lead${itemCount !== 1 ? 's' : ''}`
+                : t('deletePipeline.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>
