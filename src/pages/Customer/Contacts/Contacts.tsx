@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Dialog,
@@ -69,6 +70,8 @@ export default function Contacts() {
   const { can, isReady: permissionsReady } = useUserPermissions();
   const [state, setState] = useState<ContactsState>(INITIAL_STATE);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const isMobile = useIsMobile();
+  const effectiveViewMode: 'cards' | 'table' = isMobile ? 'cards' : viewMode;
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
@@ -827,7 +830,7 @@ export default function Contacts() {
           <Sparkles className="h-4 w-4" />
           Qualificar em lote
         </Button>
-        <div className="flex items-center border rounded-lg">
+        <div className="hidden md:flex items-center border rounded-lg">
           <Button
             variant={viewMode === 'cards' ? 'default' : 'ghost'}
             size="sm"
@@ -864,8 +867,8 @@ export default function Contacts() {
             }}
             className="h-full"
           />
-        ) : viewMode === 'cards' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        ) : effectiveViewMode === 'cards' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
             {state.contacts.map(contact => (
               <ContactCard
                 key={contact.id}
