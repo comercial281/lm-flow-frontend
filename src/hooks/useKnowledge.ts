@@ -102,7 +102,13 @@ function errMsg(e: unknown): string {
 }
 
 function tenantApiUrl(): string {
-  return (import.meta.env.VITE_API_URL as string | undefined) ?? '';
+  // Usa VITE_AUTH_API_URL (onde vive /api/v1/profile) ou cai pro VITE_API_URL.
+  // Espelha a logica do apiAuth (services/core/apiAuth.ts).
+  return (
+    (import.meta.env.VITE_AUTH_API_URL as string | undefined) ??
+    (import.meta.env.VITE_API_URL as string | undefined) ??
+    ''
+  );
 }
 
 async function callAdmin(
