@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, Building2, CheckCircle, AlertCircle, Loader2, Copy, ExternalLink, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, RefreshCw, Building2, CheckCircle, AlertCircle, Loader2, Copy, ExternalLink, Trash2, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Input, Label } from '@evoapi/design-system';
 import clientInstancesService, { ClientInstance, CreateClientInstancePayload } from '@/services/clientInstances/clientInstancesService';
 import { useAuth } from '@/contexts/AuthContext';
+import MembersModal from './MembersModal';
 
 const STATUS_LABEL: Record<string, string> = {
   pending:               'Aguardando',
@@ -29,8 +30,9 @@ function InstanceCard({ instance, onDelete }: {
   onDelete: () => void;
   onRefresh?: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied]     = useState(false);
+  const [expanded, setExpanded]       = useState(false);
+  const [copied, setCopied]           = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
 
   const copyLink = () => {
     if (!instance.frontend_link) return;
@@ -59,6 +61,12 @@ function InstanceCard({ instance, onDelete }: {
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
+          {instance.status === 'active' && (
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setMembersOpen(true)}>
+              <Users className="h-3 w-3" />
+              Membros
+            </Button>
+          )}
           {instance.status === 'active' && instance.frontend_link && (
             <>
               <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={copyLink}>
@@ -81,6 +89,8 @@ function InstanceCard({ instance, onDelete }: {
           </Button>
         </div>
       </div>
+
+      <MembersModal instance={instance} open={membersOpen} onClose={() => setMembersOpen(false)} />
 
       {instance.error_message && (
         <p className="mt-2 text-xs text-red-600 bg-red-50 rounded p-2">{instance.error_message}</p>
