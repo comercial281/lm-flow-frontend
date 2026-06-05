@@ -22,6 +22,30 @@ export interface CreateClientInstancePayload {
   admin_name?: string;
 }
 
+export interface TenantUser {
+  id: string;
+  email: string;
+  name: string;
+  display_name?: string | null;
+  chave_role: 'admin' | 'manager' | 'agent';
+  role?: { key?: string; name?: string; color?: string };
+  custom_role_id?: number | null;
+  availability_status?: string;
+  has_stored_password: boolean;
+  password_set_at: string | null;
+  password_set_by: string | null;
+  password_stale: boolean;
+  generated_password?: string | null; // only present in create/reset responses
+}
+
+export interface CreateTenantUserPayload {
+  email: string;
+  name: string;
+  password?: string;
+  chave_role?: 'admin' | 'manager' | 'agent';
+  remember_password?: boolean;
+}
+
 const clientInstancesService = {
   list: () =>
     apiClient.get<{ data: ClientInstance[] }>('/client_instances'),
@@ -36,6 +60,39 @@ const clientInstancesService = {
 
   delete: (id: number) =>
     apiClient.delete(`/client_instances/${id}`),
+
+  // --- Tenant members ---
+
+  listMembers: (id: number) =>
+    apiClient.get<{ success: boolean; data: TenantUser[] }>(`/client_instances/${id}/users`),
+
+  addMember: (id: number, payload: CreateTenantUserPayload) =>
+    apiClient.post<{ success: boolean; data: TenantUser }>(
+      `/client_instances/${id}/users`, payload
+    ),
+
+  updateMember: (id: number, userId: string, patch: Partial<{ name: string; email: string; chave_role: string }>) =>
+    apiClient.patch<{ success: boolean; data: TenantUser }>(
+      `/client_instances/${id}/users/${userId}`, patch
+    ),
+
+  removeMember: (id: number, userId: string) =>
+    apiClient.delete(`/client_instances/${id}/users/${userId}`),
+
+  resetMemberPassword: (id: number, userId: string) =>
+    apiClient.post<{ success: boolean; data: TenantUser; message: string }>(
+      `/client_instances/${id}/users/${userId}/reset_password`, {}
+    ),
+
+  setMemberPassword: (id: number, userId: string, password: string) =>
+    apiClient.post<{ success: boolean; data: TenantUser }>(
+      `/client_instances/${id}/users/${userId}/set_password`, { password }
+    ),
+
+  revealMemberPassword: (id: number, userId: string) =>
+    apiClient.post<{ success: boolean; data: { password: string | null; stale: boolean; reason?: string; password_set_at?: string; password_set_by?: string } }>(
+      `/client_instances/${id}/users/${userId}/reveal_password`, {}
+    ),
 };
 
 export default clientInstancesService;
