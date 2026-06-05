@@ -1,113 +1,63 @@
-/* Sobrescrita do react-big-calendar pra casar com o tema do LM Flow */
+/* Tokens locais do calendário editorial — usados pelo VisitsCalendar.tsx */
 
-.visits-calendar-wrapper {
-  --rbc-bg: hsl(var(--background));
-  --rbc-fg: hsl(var(--foreground));
-  --rbc-muted: hsl(var(--muted-foreground));
-  --rbc-border: hsl(var(--border));
-  --rbc-today: hsl(var(--primary) / 0.06);
-  --rbc-off-range-bg: hsl(var(--muted) / 0.4);
-}
-
-.visits-calendar-wrapper .rbc-calendar {
-  background: var(--rbc-bg);
-  color: var(--rbc-fg);
-  font-family: inherit;
+.visits-cal {
+  --status-scheduled: oklch(0.62 0.24 295);
+  --status-confirmed: oklch(0.72 0.18 150);
+  --status-in_progress: oklch(0.83 0.16 80);
+  --status-completed: oklch(0.55 0.02 280);
+  --status-no_show: oklch(0.62 0.22 25);
+  --status-cancelled: oklch(0.6 0.22 25);
+  --status-rescheduled: oklch(0.7 0.16 305);
 }
 
-.visits-calendar-wrapper .rbc-toolbar {
-  margin-bottom: 12px;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.visits-calendar-wrapper .rbc-toolbar button {
-  background: transparent;
-  color: var(--rbc-fg);
-  border: 1px solid var(--rbc-border);
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 120ms ease;
-}
-.visits-calendar-wrapper .rbc-toolbar button:hover {
-  background: hsl(var(--muted) / 0.5);
-}
-.visits-calendar-wrapper .rbc-toolbar button.rbc-active {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  border-color: hsl(var(--primary));
-}
-.visits-calendar-wrapper .rbc-toolbar-label {
-  font-size: 1rem;
-  font-weight: 600;
-  text-transform: capitalize;
+.visits-cal-bg {
+  background:
+    radial-gradient(120% 80% at 0% 0%, color-mix(in oklch, var(--primary) 14%, transparent) 0%, transparent 55%),
+    radial-gradient(80% 60% at 100% 0%, color-mix(in oklch, var(--accent) 8%, transparent) 0%, transparent 60%);
 }
 
-.visits-calendar-wrapper .rbc-header,
-.visits-calendar-wrapper .rbc-time-header-content,
-.visits-calendar-wrapper .rbc-time-content,
-.visits-calendar-wrapper .rbc-month-view,
-.visits-calendar-wrapper .rbc-time-view,
-.visits-calendar-wrapper .rbc-day-bg + .rbc-day-bg,
-.visits-calendar-wrapper .rbc-month-row + .rbc-month-row,
-.visits-calendar-wrapper .rbc-time-header.rbc-overflowing,
-.visits-calendar-wrapper .rbc-timeslot-group {
-  border-color: var(--rbc-border) !important;
+/* Noise overlay sutil — só no dark, dá textura analógica de "papel" */
+.dark .visits-cal-noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+  pointer-events: none;
 }
 
-.visits-calendar-wrapper .rbc-header {
-  padding: 8px 4px;
-  font-weight: 600;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: var(--rbc-muted);
+.visits-cal-glow-today {
+  background: radial-gradient(circle at center, color-mix(in oklch, var(--primary) 30%, transparent), transparent 70%);
+  filter: blur(10px);
 }
 
-.visits-calendar-wrapper .rbc-today {
-  background-color: var(--rbc-today);
+.visits-cal-now-line {
+  background: linear-gradient(to right,
+    transparent,
+    color-mix(in oklch, var(--primary) 80%, transparent) 8%,
+    color-mix(in oklch, var(--primary) 80%, transparent) 92%,
+    transparent);
 }
 
-.visits-calendar-wrapper .rbc-off-range-bg {
-  background-color: var(--rbc-off-range-bg);
+/* Animação de entrada dos cards — staggered via inline animation-delay */
+@keyframes visitCardIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-.visits-calendar-wrapper .rbc-off-range {
-  color: var(--rbc-muted);
-}
-
-.visits-calendar-wrapper .rbc-time-gutter,
-.visits-calendar-wrapper .rbc-label {
-  font-size: 0.75rem;
-  color: var(--rbc-muted);
+.visits-cal-card-in {
+  animation: visitCardIn 360ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
-.visits-calendar-wrapper .rbc-event {
-  border-radius: 6px;
-  padding: 3px 6px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  border: none;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+/* Drop target pulse */
+@keyframes dropPulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--primary) 35%, transparent); }
+  50%      { box-shadow: inset 0 0 0 2px color-mix(in oklch, var(--primary) 75%, transparent); }
 }
-.visits-calendar-wrapper .rbc-event.rbc-selected {
-  outline: 2px solid hsl(var(--ring));
-  outline-offset: 1px;
+.visits-cal-drop {
+  animation: dropPulse 1200ms ease-in-out infinite;
+  background: color-mix(in oklch, var(--primary) 8%, transparent);
 }
 
-.visits-calendar-wrapper .rbc-current-time-indicator {
-  background-color: hsl(var(--destructive));
-  height: 2px;
-}
-
-.visits-calendar-wrapper .rbc-show-more {
-  color: hsl(var(--primary));
-  font-weight: 500;
-  background: transparent;
-}
-
-/* Dark mode boosts (variáveis CSS já lidam, mas garante hover legível) */
-.dark .visits-calendar-wrapper .rbc-toolbar button:hover {
-  background: hsl(var(--muted) / 0.8);
-}
+.visits-cal-font-display { font-family: var(--font-display); font-feature-settings: 'ss01', 'ss02', 'ss03'; }
+.visits-cal-font-mono { font-family: var(--font-mono); }
