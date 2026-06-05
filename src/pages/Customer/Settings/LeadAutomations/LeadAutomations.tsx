@@ -19,9 +19,20 @@ import {
   leadAutomationService,
   LeadAutomationRule,
   LeadAutomationRuleFormData,
+  LeadAutomationAction,
+  LeadAutomationCondition,
   TRIGGER_LABELS,
   ACTION_TYPE_LABELS,
 } from '@/services/leadAutomation/leadAutomationService';
+import {
+  useAutomationResources,
+  triggerNeedsCondition,
+  ConditionEditor,
+  ActionEditor,
+  validateRule,
+  formatConditionSummary,
+  formatActionSummary,
+} from './LeadAutomationsEditors';
 
 const TRIGGERS = Object.entries(TRIGGER_LABELS).map(([value, label]) => ({ value, label }));
 const ACTION_TYPES = Object.entries(ACTION_TYPE_LABELS).map(([value, label]) => ({ value, label }));
@@ -31,7 +42,7 @@ const EMPTY_FORM: LeadAutomationRuleFormData = {
   description: '',
   trigger: 'lead.created',
   conditions: [],
-  actions: [{ type: 'add_label', params: {} }],
+  actions: [{ type: 'start_followup_sequence', params: {} }],
   is_active: true,
   priority: 0,
   pipeline_id: null,
@@ -50,6 +61,8 @@ export default function LeadAutomations() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [toDelete, setToDelete] = useState<LeadAutomationRule | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const resources = useAutomationResources(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,6 +101,12 @@ export default function LeadAutomations() {
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Nome é obrigatório'); return; }
     if (form.actions.length === 0) { toast.error('Adicione pelo menos uma ação'); return; }
+
+    const validation = validateRule(form.trigger, form.conditions, form.actions);
+    if (!validation.ok) {
+      toast.error(validation.error ?? 'Configuração inválida');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -133,16 +152,36 @@ export default function LeadAutomations() {
     }
   };
 
+  const setTrigger = (trigger: string) =>
+    setForm(f => ({
+      ...f,
+      trigger,
+      // limpa condição quando troca de gatilho — campos são incompatíveis entre triggers.
+      conditions: triggerNeedsCondition(trigger) ? f.conditions : [],
+    }));
+
+  const setCondition = (next: LeadAutomationCondition | null) =>
+    setForm(f => ({ ...f, conditions: next ? [next] : [] }));
+
   const addAction = () =>
-    setForm(f => ({ ...f, actions: [...f.actions, { type: 'add_label', params: {} }] }));
+    setForm(f => ({
+      ...f,
+      actions: [...f.actions, { type: 'start_followup_sequence', params: {} }],
+    }));
 
   const removeAction = (i: number) =>
     setForm(f => ({ ...f, actions: f.actions.filter((_, idx) => idx !== i) }));
 
-  const updateAction = (i: number, type: string) =>
+  const updateActionType = (i: number, type: string) =>
     setForm(f => ({
       ...f,
       actions: f.actions.map((a, idx) => idx === i ? { type, params: {} } : a),
+    }));
+
+  const updateActionFull = (i: number, next: LeadAutomationAction) =>
+    setForm(f => ({
+      ...f,
+      actions: f.actions.map((a, idx) => idx === i ? next : a),
     }));
 
   return (
@@ -242,7 +281,8 @@ export default function LeadAutomations() {
                   {rule.actions.map((a, i) => (
                     <div key={i} className="flex items-center gap-2 text-sm">
                       <Zap className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                      <span>{ACTION_TYPE_LABELS[a.type] ?? a.type}</span>
+                      <span className="font-medium">{ACTION_TYPE_LABELS[a.type] ?? a.type}</span>
+                      <span className="text-muted-foreground">{formatActionSummary(a, resources)}</span>
                     </div>
                   ))}
                   {rule.conditions.length > 0 && (
@@ -250,13 +290,11 @@ export default function LeadAutomations() {
                       <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mt-3 mb-2">Condições</div>
                       {rule.conditions.map((c, i) => (
                         <div key={i} className="text-sm text-muted-foreground">
-                          {c.field} {c.operator} {JSON.stringify(c.value)}
+                          {formatConditionSummary(rule.trigger, c, resources)}
                         </div>
                       ))}
                     </>
                   )}
-
-
                 </div>
               )}
             </div>
@@ -301,7 +339,7 @@ export default function LeadAutomations() {
                 <UILabel>Gatilho *</UILabel>
                 <select
                   value={form.trigger}
-                  onChange={e => setForm(f => ({ ...f, trigger: e.target.value }))}
+                  onChange={e => setTrigger(e.target.value)}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   {TRIGGERS.map(t => (
@@ -322,6 +360,18 @@ export default function LeadAutomations() {
               </div>
             </div>
 
+            {/* Condição do gatilho (dinâmica) */}
+            {triggerNeedsCondition(form.trigger) && (
+              <div className="rounded-lg border border-border bg-muted/20 p-3">
+                <ConditionEditor
+                  trigger={form.trigger}
+                  condition={form.conditions[0] ?? null}
+                  onChange={setCondition}
+                  resources={resources}
+                />
+              </div>
+            )}
+
             {/* Actions */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -333,25 +383,32 @@ export default function LeadAutomations() {
               </div>
               <div className="space-y-2">
                 {form.actions.map((action, i) => (
-                  <div key={i} className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/20">
-                    <select
-                      value={action.type}
-                      onChange={e => updateAction(i, e.target.value)}
-                      className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      {ACTION_TYPES.map(a => (
-                        <option key={a.value} value={a.value}>{a.label}</option>
-                      ))}
-                    </select>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive flex-shrink-0"
-                      onClick={() => removeAction(i)}
-                      disabled={form.actions.length === 1}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div key={i} className="p-3 rounded-lg border border-border bg-muted/20 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={action.type}
+                        onChange={e => updateActionType(i, e.target.value)}
+                        className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        {ACTION_TYPES.map(a => (
+                          <option key={a.value} value={a.value}>{a.label}</option>
+                        ))}
+                      </select>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive flex-shrink-0"
+                        onClick={() => removeAction(i)}
+                        disabled={form.actions.length === 1}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <ActionEditor
+                      action={action}
+                      onChange={next => updateActionFull(i, next)}
+                      resources={resources}
+                    />
                   </div>
                 ))}
               </div>
