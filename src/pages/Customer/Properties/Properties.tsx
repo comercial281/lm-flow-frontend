@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, DragEvent } from 'react';
 import { toast } from 'sonner';
 import {
   Button,
@@ -35,6 +35,9 @@ import {
   Crown,
   Eye,
   EyeOff,
+  Upload,
+  Link as LinkIcon,
+  Film,
 } from 'lucide-react';
 import {
   propertiesService,
@@ -49,6 +52,8 @@ import {
   propertyPhotosService,
   PropertyPhoto,
   PHOTO_TYPE_LABELS,
+  ACCEPTED_MIME_TYPES,
+  MAX_UPLOAD_BYTES,
 } from '@/services/propertyPhotos/propertyPhotosService';
 
 const EMPTY_FORM: PropertyFormData = {
@@ -199,13 +204,15 @@ export default function Properties() {
         const updated = await propertiesService.update(editing.id, form);
         setProperties(prev => prev.map(p => p.id === updated.id ? updated : p));
         toast.success('Imóvel atualizado');
+        setModalOpen(false);
       } else {
         const created = await propertiesService.create(form);
         setProperties(prev => [created, ...prev]);
         setTotal(t => t + 1);
-        toast.success('Imóvel cadastrado');
+        toast.success('Imóvel cadastrado — agora envie as fotos');
+        setModalOpen(false);
+        setPhotosProperty(created);
       }
-      setModalOpen(false);
     } catch {
       toast.error('Erro ao salvar imóvel');
     } finally {
@@ -611,11 +618,26 @@ export default function Properties() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Salvando...' : editing ? 'Salvar' : 'Cadastrar'}
-            </Button>
+          <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between gap-2">
+            <div>
+              {editing && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { setPhotosProperty(editing); }}
+                  className="gap-2"
+                >
+                  <Image className="h-4 w-4" />
+                  Gerenciar fotos
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? 'Salvando...' : editing ? 'Salvar' : 'Cadastrar e enviar fotos'}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -869,10 +891,15 @@ function PropertyPhotosDialog({
 }) {
   const [photos, setPhotos] = useState<PropertyPhoto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [dragOver, setDragOver] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
   const [newUrl, setNewUrl] = useState('');
   const [newType, setNewType] = useState('main');
   const [newCaption, setNewCaption] = useState('');
+  const [addingUrl, setAddingUrl] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadPhotos = useCallback(async () => {
     setLoading(true);
@@ -887,9 +914,62 @@ function PropertyPhotosDialog({
 
   useEffect(() => { loadPhotos(); }, [loadPhotos]);
 
-  const handleAdd = async () => {
+  const validateFiles = (files: File[]): { ok: File[]; rejected: string[] } => {
+    const ok: File[] = [];
+    const rejected: string[] = [];
+    files.forEach(f => {
+      if (!ACCEPTED_MIME_TYPES.includes(f.type)) {
+        rejected.push(`${f.name}: tipo não suportado (${f.type || 'desconhecido'})`);
+        return;
+      }
+      if (f.size > MAX_UPLOAD_BYTES) {
+        rejected.push(`${f.name}: maior que ${MAX_UPLOAD_BYTES / (1024 * 1024)}MB`);
+        return;
+      }
+      ok.push(f);
+    });
+    return { ok, rejected };
+  };
+
+  const handleUpload = async (rawFiles: File[]) => {
+    const { ok, rejected } = validateFiles(rawFiles);
+    rejected.forEach(msg => toast.error(msg));
+    if (!ok.length) return;
+
+    setUploading(true);
+    setUploadProgress(0);
+    try {
+      const created = await propertyPhotosService.upload(property.id, ok, {
+        photoType: newType,
+        published: true,
+        onProgress: setUploadProgress,
+      });
+      setPhotos(prev => [...prev, ...created]);
+      toast.success(`${created.length} foto${created.length !== 1 ? 's' : ''} enviada${created.length !== 1 ? 's' : ''}`);
+    } catch (e) {
+      toast.error('Erro ao enviar fotos');
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length) void handleUpload(files);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files ?? []);
+    if (files.length) void handleUpload(files);
+  };
+
+  const handleAddByUrl = async () => {
     if (!newUrl.trim()) { toast.error('URL da foto é obrigatória'); return; }
-    setAdding(true);
+    setAddingUrl(true);
     try {
       const photo = await propertyPhotosService.create(property.id, {
         file_url: newUrl.trim(),
@@ -900,11 +980,11 @@ function PropertyPhotosDialog({
       setPhotos(prev => [...prev, photo]);
       setNewUrl('');
       setNewCaption('');
-      toast.success('Foto adicionada');
+      toast.success('Foto adicionada por URL');
     } catch {
       toast.error('Erro ao adicionar foto');
     } finally {
-      setAdding(false);
+      setAddingUrl(false);
     }
   };
 
@@ -950,39 +1030,92 @@ function PropertyPhotosDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Add photo */}
-        <div className="border border-dashed border-border rounded-lg p-4 space-y-3">
-          <p className="text-sm font-medium">Adicionar foto por URL</p>
-          <div className="flex gap-2">
-            <Input
-              value={newUrl}
-              onChange={e => setNewUrl(e.target.value)}
-              placeholder="https://... (URL pública da imagem)"
-              className="flex-1 text-sm"
-            />
-            <select
-              value={newType}
-              onChange={e => setNewType(e.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-            >
-              {Object.entries(PHOTO_TYPE_LABELS).map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <Input
-              value={newCaption}
-              onChange={e => setNewCaption(e.target.value)}
-              placeholder="Legenda (opcional)"
-              className="flex-1 text-sm"
-            />
-            <Button onClick={handleAdd} disabled={adding} size="sm">
-              {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
-              Adicionar
-            </Button>
-          </div>
+        {/* Dropzone — upload nativo de fotos e vídeos */}
+        <div
+          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => !uploading && fileInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors text-center ${
+            dragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/30'
+          } ${uploading ? 'opacity-60 pointer-events-none' : ''}`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={ACCEPTED_MIME_TYPES.join(',')}
+            onChange={handleFileInputChange}
+            className="hidden"
+          />
+          {uploading ? (
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              <p className="text-sm font-medium">Enviando {uploadProgress}%...</p>
+              <div className="w-full max-w-xs bg-muted rounded-full h-1.5 overflow-hidden">
+                <div className="bg-primary h-full transition-all" style={{ width: `${uploadProgress}%` }} />
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex gap-2 text-primary">
+                <Upload className="h-7 w-7" />
+                <Film className="h-7 w-7 opacity-60" />
+              </div>
+              <p className="text-sm font-medium">Arraste fotos ou vídeos aqui, ou clique para selecionar</p>
+              <p className="text-xs text-muted-foreground">
+                Aceita JPG, PNG, WebP, HEIC, MP4, MOV, WebM · máx {MAX_UPLOAD_BYTES / (1024 * 1024)}MB por arquivo
+              </p>
+            </div>
+          )}
         </div>
+
+        <div className="flex items-center gap-3">
+          <UILabel className="text-xs text-muted-foreground shrink-0">Categorizar como:</UILabel>
+          <select
+            value={newType}
+            onChange={e => setNewType(e.target.value)}
+            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            disabled={uploading}
+          >
+            {Object.entries(PHOTO_TYPE_LABELS).map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => setShowUrlInput(s => !s)}
+            className="ml-auto text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+          >
+            <LinkIcon className="h-3 w-3" />
+            {showUrlInput ? 'Ocultar URL externa' : 'Adicionar por URL externa'}
+          </button>
+        </div>
+
+        {showUrlInput && (
+          <div className="border border-dashed border-border rounded-lg p-3 space-y-2">
+            <div className="flex gap-2">
+              <Input
+                value={newUrl}
+                onChange={e => setNewUrl(e.target.value)}
+                placeholder="https://... (URL pública da imagem/vídeo já hospedado)"
+                className="flex-1 text-sm"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={newCaption}
+                onChange={e => setNewCaption(e.target.value)}
+                placeholder="Legenda (opcional)"
+                className="flex-1 text-sm"
+              />
+              <Button onClick={handleAddByUrl} disabled={addingUrl} size="sm">
+                {addingUrl ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
+                Adicionar
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Photo list */}
         {loading ? (
@@ -997,14 +1130,27 @@ function PropertyPhotosDialog({
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {photos.map(photo => (
+            {photos.map(photo => {
+              const isVideo = photo.content_type?.startsWith('video/') || photo.photo_type === 'video';
+              return (
               <div key={photo.id} className="group relative rounded-lg overflow-hidden border border-border bg-muted aspect-video">
-                <img
-                  src={photo.file_url}
-                  alt={photo.alt_text ?? photo.caption ?? ''}
-                  className="w-full h-full object-cover"
-                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
+                {isVideo ? (
+                  <video
+                    src={photo.file_url}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                    preload="metadata"
+                    controls
+                  />
+                ) : (
+                  <img
+                    src={photo.thumbnail_url || photo.file_url}
+                    alt={photo.alt_text ?? photo.caption ?? ''}
+                    className="w-full h-full object-cover"
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                )}
 
                 {/* Badges */}
                 <div className="absolute top-1.5 left-1.5 flex gap-1">
@@ -1058,7 +1204,8 @@ function PropertyPhotosDialog({
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
