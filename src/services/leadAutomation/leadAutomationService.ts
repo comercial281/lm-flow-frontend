@@ -65,6 +65,8 @@ export const leadAutomationService = {
   },
 };
 
+// Triggers emitidos pelo backend Rails (LeadAutomationExecutorJob.perform_later).
+// 'lead.no_reply_after' está no model mas nenhum job emite — removido da UI.
 export const TRIGGER_LABELS: Record<string, string> = {
   'lead.created':              'Lead criado',
   'lead.stage_changed':        'Estágio alterado',
@@ -79,15 +81,15 @@ export const TRIGGER_LABELS: Record<string, string> = {
   'lead.property_matched':     'Imóvel compatível encontrado',
   'lead.tag_added':            'Etiqueta adicionada',
   'lead.message_received':     'Mensagem recebida do lead',
-  'lead.no_reply_after':       'Sem resposta após período',
 };
 
+// Actions processadas pelo LeadAutomation::Executor.
+// 'wait' é no-op no executor (só faz sentido em FollowupSequence step) — removido da UI.
 export const ACTION_TYPE_LABELS: Record<string, string> = {
   send_whatsapp_message:   'Enviar mensagem WhatsApp',
   send_audio:              'Enviar áudio',
   send_image:              'Enviar imagem',
   send_video:              'Enviar vídeo',
-  wait:                    'Aguardar (delay)',
   start_followup_sequence: 'Iniciar sequência de follow-up',
   assign_broker:           'Atribuir corretor',
   add_label:               'Adicionar etiqueta',

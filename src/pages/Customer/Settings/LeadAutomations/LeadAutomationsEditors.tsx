@@ -19,9 +19,9 @@ import type {
 // Catálogos por gatilho/ação
 // ============================================================================
 
+// Triggers cujo context emitido tem campos filtraveis (LeadFollowupListener etc).
 const TRIGGERS_WITH_CONDITION = new Set([
   'lead.tag_added',
-  'lead.no_reply_after',
   'lead.message_received',
   'lead.stage_changed',
 ]);
@@ -29,20 +29,19 @@ const TRIGGERS_WITH_CONDITION = new Set([
 export const triggerNeedsCondition = (trigger: string): boolean =>
   TRIGGERS_WITH_CONDITION.has(trigger);
 
-// Ações cujo `params` é obrigatório pra automação fazer sentido.
+// Params obrigatórios por action.type — chaves exatas do backend (LeadAutomation::Executor).
 const ACTIONS_REQUIRING_PARAMS: Record<string, string[]> = {
   send_whatsapp_message:   ['message'],
   send_audio:              ['media_url'],
   send_image:              ['media_url'],
   send_video:              ['media_url'],
-  wait:                    ['duration', 'unit'],
-  start_followup_sequence: ['sequence_id'],
-  assign_broker:           ['broker_id'],
-  add_label:               ['label'],
-  remove_label:            ['label'],
+  start_followup_sequence: ['sequence_slug'],
+  assign_broker:           ['user_id'],
+  add_label:               ['label_id'],
+  remove_label:            ['label_id'],
   move_pipeline_stage:     ['stage_id'],
   create_task:             ['title'],
-  notify_group:            ['group_id', 'message'],
+  notify_group:            ['group_jid', 'message'],
   send_quick_reply:        ['quick_reply_id'],
 };
 
@@ -132,6 +131,8 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
   if (!triggerNeedsCondition(trigger)) return null;
 
   // --- lead.tag_added ---
+  // Backend emite context { contact_id, conversation_id, label: <nome da tag> }
+  // matches?: actual = context['label'] → compara string ==.
   if (trigger === 'lead.tag_added') {
     const value = typeof condition?.value === 'string' ? condition.value : '';
     return (
@@ -140,7 +141,7 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
         <select
           value={value}
           onChange={e =>
-            onChange({ field: 'tag', operator: 'equals', value: e.target.value })
+            onChange({ field: 'label', operator: 'eq', value: e.target.value })
           }
           className={baseSelectClass}
         >
@@ -158,44 +159,14 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
     );
   }
 
-  // --- lead.no_reply_after ---
-  if (trigger === 'lead.no_reply_after') {
-    const raw = typeof condition?.value === 'string' ? condition.value : '24h';
-    const m = raw.match(/^(\d+)\s*(m|h|d)?$/i);
-    const num = m ? parseInt(m[1], 10) : 24;
-    const unit = (m?.[2]?.toLowerCase() ?? 'h') as 'm' | 'h' | 'd';
-    const commit = (n: number, u: string) =>
-      onChange({ field: 'duration', operator: 'gte', value: `${n}${u}` });
-    return (
-      <div>
-        <UILabel>Sem resposta por *</UILabel>
-        <div className="grid grid-cols-2 gap-2 mt-1">
-          <Input
-            type="number"
-            min={1}
-            value={num}
-            onChange={e => commit(parseInt(e.target.value) || 1, unit)}
-          />
-          <select
-            value={unit}
-            onChange={e => commit(num, e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            <option value="m">minutos</option>
-            <option value="h">horas</option>
-            <option value="d">dias</option>
-          </select>
-        </div>
-      </div>
-    );
-  }
-
   // --- lead.message_received ---
+  // Backend emite context { contact_id, conversation_id, message_id, content: <texto da msg> }
+  // Operators do backend: 'eq' (igual exato) e 'contains' (substring).
   if (trigger === 'lead.message_received') {
     const value = typeof condition?.value === 'string' ? condition.value : '';
-    const operator = condition?.operator === 'equals' ? 'equals' : 'contains';
+    const operator = condition?.operator === 'eq' ? 'eq' : 'contains';
     const commit = (op: string, val: string) =>
-      onChange(val ? { field: 'keyword', operator: op, value: val } : null);
+      onChange(val ? { field: 'content', operator: op, value: val } : null);
     return (
       <div className="space-y-2">
         <div>
@@ -206,7 +177,7 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
             className={baseSelectClass}
           >
             <option value="contains">Contém</option>
-            <option value="equals">É igual a</option>
+            <option value="eq">É igual a</option>
           </select>
           <p className="text-xs text-muted-foreground mt-1">
             <strong>Contém:</strong> dispara se a mensagem tiver a palavra em qualquer lugar (recomendado).{' '}
@@ -230,6 +201,8 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
   }
 
   // --- lead.stage_changed ---
+  // Backend emite context { ..., from_stage_id, to_stage_id }.
+  // Pra filtrar por estágio destino, usamos field=to_stage_id.
   if (trigger === 'lead.stage_changed') {
     const value = typeof condition?.value === 'string' ? condition.value : '';
     const allStages = Object.entries(resources.stagesByPipeline).flatMap(
@@ -244,7 +217,7 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
         <select
           value={value}
           onChange={e =>
-            onChange({ field: 'stage_id', operator: 'equals', value: e.target.value })
+            onChange({ field: 'to_stage_id', operator: 'eq', value: e.target.value })
           }
           className={baseSelectClass}
         >
@@ -279,17 +252,18 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
 
   switch (action.type) {
     // ----- start_followup_sequence -----
+    // Backend lookup: FollowupSequence.active.find_by(slug: slug). Value = slug, NÃO id.
     case 'start_followup_sequence':
       return (
         <Field label="Sequência de follow-up *">
           <select
-            value={String(params.sequence_id ?? '')}
-            onChange={e => setParam('sequence_id', e.target.value)}
+            value={String(params.sequence_slug ?? '')}
+            onChange={e => setParam('sequence_slug', e.target.value)}
             className={baseSelectClass}
           >
             <option value="">Selecione uma sequência</option>
             {resources.sequences.map(s => (
-              <option key={s.id} value={s.id}>
+              <option key={s.id} value={s.slug}>
                 {s.name}{!s.is_active ? ' (inativa)' : ''}
               </option>
             ))}
@@ -338,50 +312,14 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
         </>
       );
 
-    // ----- wait -----
-    case 'wait': {
-      const dur = Number(params.duration ?? 1);
-      const unit = String(params.unit ?? 'hours');
-      return (
-        <Field label="Aguardar *">
-          <div className="grid grid-cols-2 gap-2 mt-1">
-            <Input
-              type="number"
-              min={1}
-              value={dur}
-              onChange={e =>
-                onChange({
-                  ...action,
-                  params: { ...params, duration: parseInt(e.target.value) || 1, unit },
-                })
-              }
-            />
-            <select
-              value={unit}
-              onChange={e =>
-                onChange({
-                  ...action,
-                  params: { ...params, duration: dur, unit: e.target.value },
-                })
-              }
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-            >
-              <option value="minutes">minutos</option>
-              <option value="hours">horas</option>
-              <option value="days">dias</option>
-            </select>
-          </div>
-        </Field>
-      );
-    }
-
     // ----- assign_broker -----
+    // Backend lookup: User.find_by(id: user_id).
     case 'assign_broker':
       return (
         <Field label="Corretor *">
           <select
-            value={String(params.broker_id ?? '')}
-            onChange={e => setParam('broker_id', e.target.value)}
+            value={String(params.user_id ?? '')}
+            onChange={e => setParam('user_id', e.target.value)}
             className={baseSelectClass}
           >
             <option value="">Selecione um corretor</option>
@@ -393,18 +331,19 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       );
 
     // ----- add_label / remove_label -----
+    // Backend lookup: Label.find_by(id: label_id). Value = UUID, NÃO título.
     case 'add_label':
     case 'remove_label':
       return (
         <Field label="Etiqueta *">
           <select
-            value={String(params.label ?? '')}
-            onChange={e => setParam('label', e.target.value)}
+            value={String(params.label_id ?? '')}
+            onChange={e => setParam('label_id', e.target.value)}
             className={baseSelectClass}
           >
             <option value="">Selecione uma etiqueta</option>
             {resources.labels.map(l => (
-              <option key={l.id} value={l.title}>{l.title}</option>
+              <option key={l.id} value={l.id}>{l.title}</option>
             ))}
           </select>
         </Field>
@@ -476,13 +415,14 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       );
 
     // ----- notify_group -----
+    // Backend: HTTParty.post envia { number: group_jid, text: message } pro Evolution.
     case 'notify_group':
       return (
         <>
-          <Field label="ID do grupo WhatsApp *" hint="JID do grupo (ex: 5511999999999-160…@g.us)">
+          <Field label="JID do grupo WhatsApp *" hint="ID do grupo no Evolution (ex: 120363xxxxxxxxxxx@g.us)">
             <Input
-              value={String(params.group_id ?? '')}
-              onChange={e => setParam('group_id', e.target.value)}
+              value={String(params.group_jid ?? '')}
+              onChange={e => setParam('group_jid', e.target.value)}
               placeholder="…@g.us"
               className="mt-1"
             />
@@ -595,11 +535,8 @@ export function formatConditionSummary(
   if (trigger === 'lead.tag_added') {
     return `Etiqueta: ${condition.value}`;
   }
-  if (trigger === 'lead.no_reply_after') {
-    return `Sem resposta por: ${condition.value}`;
-  }
   if (trigger === 'lead.message_received') {
-    const op = condition.operator === 'equals' ? 'É igual a' : 'Contém';
+    const op = condition.operator === 'eq' ? 'É igual a' : 'Contém';
     return `${op}: "${condition.value}"`;
   }
   if (trigger === 'lead.stage_changed') {
@@ -617,7 +554,7 @@ export function formatActionSummary(
   const p = action.params ?? {};
   switch (action.type) {
     case 'start_followup_sequence': {
-      const seq = resources.sequences.find(s => s.id === p.sequence_id);
+      const seq = resources.sequences.find(s => s.slug === p.sequence_slug);
       return seq ? `Sequência: ${seq.name}` : 'Sequência: (não definida)';
     }
     case 'send_whatsapp_message':
@@ -626,15 +563,15 @@ export function formatActionSummary(
     case 'send_image':
     case 'send_video':
       return p.media_url ? `Mídia: ${String(p.media_url).slice(0, 40)}…` : '(sem mídia)';
-    case 'wait':
-      return `${p.duration ?? '?'} ${p.unit ?? ''}`;
     case 'assign_broker': {
-      const u = resources.users.find(x => x.id === p.broker_id);
+      const u = resources.users.find(x => x.id === p.user_id);
       return u ? `Corretor: ${u.name}` : 'Corretor: (não definido)';
     }
     case 'add_label':
-    case 'remove_label':
-      return `Etiqueta: ${p.label ?? '(não definida)'}`;
+    case 'remove_label': {
+      const l = resources.labels.find(x => x.id === p.label_id);
+      return l ? `Etiqueta: ${l.title}` : 'Etiqueta: (não definida)';
+    }
     case 'move_pipeline_stage': {
       const stages = p.pipeline_id ? resources.stagesByPipeline[String(p.pipeline_id)] : undefined;
       const stage = stages?.find(s => s.id === p.stage_id);
@@ -643,7 +580,7 @@ export function formatActionSummary(
     case 'create_task':
       return p.title ? `Tarefa: ${p.title}` : '(tarefa sem título)';
     case 'notify_group':
-      return p.group_id ? `Grupo: ${String(p.group_id).slice(0, 30)}…` : '(sem grupo)';
+      return p.group_jid ? `Grupo: ${String(p.group_jid).slice(0, 30)}…` : '(sem grupo)';
     case 'send_quick_reply': {
       const qr = resources.quickReplies.find(q => q.id === p.quick_reply_id);
       return qr ? `Resposta: ${qr.title}` : '(não definida)';
