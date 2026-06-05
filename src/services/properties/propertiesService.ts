@@ -42,6 +42,10 @@ export interface Property {
     useful_area_m2: number;
     total_area_m2: number;
   };
+  on_sign?: boolean;
+  responsible_id?: string | null;
+  captor_id?: string | null;
+  owner_contact_id?: string | null;
   responsible?: { id: string; name: string } | null;
   captor?: { id: string; name: string } | null;
   created_at: string;
@@ -59,19 +63,49 @@ export interface PropertyFormData {
   stage: string;
   sale_price?: number | null;
   rent_price?: number | null;
+  condo_fee?: number | null;
+  iptu?: number | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
   suites?: number | null;
   parking_spaces?: number | null;
   useful_area_m2?: number | null;
+  total_area_m2?: number | null;
   address_street?: string;
   address_number?: string;
+  address_complement?: string;
   address_neighborhood?: string;
   address_city?: string;
   address_state?: string;
   address_zip?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   exclusive?: boolean;
   featured?: boolean;
+  published_on_site?: boolean;
+  on_sign?: boolean;
+  responsible_id?: string | null;
+  captor_id?: string | null;
+  owner_contact_id?: string | null;
+}
+
+export interface PropertyMapMarker {
+  id: string;
+  code: string;
+  title: string;
+  lat: number | null;
+  lng: number | null;
+  city?: string;
+  neighborhood?: string;
+  display_price?: string;
+  transaction_type: string;
+  property_type: string;
+  icon_summary?: {
+    bedrooms: number;
+    bathrooms: number;
+    parking: number;
+    useful_area_m2: number;
+  };
 }
 
 export interface PropertiesListParams {
@@ -144,6 +178,14 @@ export const propertiesService = {
     return (res.data as { data: Array<{ id: string; status: string; headline?: string; description?: string; error?: string }> }).data as Array<{
       id: string; status: 'ok' | 'error'; headline?: string; description?: string; error?: string;
     }>;
+  },
+
+  async mapBounds(bounds?: {
+    ne_lat?: number; ne_lng?: number; sw_lat?: number; sw_lng?: number;
+    transaction_type?: string; property_type?: string; max?: number;
+  }): Promise<PropertyMapMarker[]> {
+    const res = await api.get('/properties/map', { params: bounds });
+    return (res.data as { data: PropertyMapMarker[] }).data;
   },
 
   async stats(): Promise<{

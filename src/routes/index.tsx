@@ -57,7 +57,7 @@ import { LeadAutomations } from '@/pages/Customer/Settings/LeadAutomations';
 import { FollowupSequences } from '@/pages/Customer/Settings/FollowupSequences';
 import { SiteBuilder } from '@/pages/Customer/Settings/SiteBuilder';
 import { DynamicForms } from '@/pages/Customer/Settings/DynamicForms';
-import { Properties } from '@/pages/Customer/Properties';
+import { Properties, PropertiesMap } from '@/pages/Customer/Properties';
 import { Visits } from '@/pages/Customer/Visits';
 import { Proposals } from '@/pages/Customer/Proposals';
 import { PropertyCaptureRequests } from '@/pages/Customer/PropertyCapture';
@@ -1427,6 +1427,19 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <Properties />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/properties/map"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PropertiesMap />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>

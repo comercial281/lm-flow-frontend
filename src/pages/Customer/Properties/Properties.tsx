@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, DragEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Button,
@@ -66,25 +67,36 @@ const EMPTY_FORM: PropertyFormData = {
   stage: 'ready',
   sale_price: null,
   rent_price: null,
+  condo_fee: null,
+  iptu: null,
   bedrooms: null,
   bathrooms: null,
   suites: null,
   parking_spaces: null,
   useful_area_m2: null,
+  total_area_m2: null,
   address_street: '',
   address_number: '',
+  address_complement: '',
   address_neighborhood: '',
   address_city: '',
   address_state: '',
   address_zip: '',
+  latitude: null,
+  longitude: null,
   exclusive: false,
   featured: false,
+  published_on_site: false,
+  on_sign: false,
+  responsible_id: null,
+  captor_id: null,
 };
 
 const formatCurrency = (v?: number | null) =>
   v != null ? `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : null;
 
 export default function Properties() {
+  const navigate = useNavigate();
   const [properties, setProperties] = useState<Property[]>([]);
   const [total, setTotal]           = useState(0);
   const [loading, setLoading]       = useState(false);
@@ -122,6 +134,9 @@ export default function Properties() {
     exclusive: number; featured: number;
   } | null>(null);
 
+  // Sprint 2: usuários do tenant (responsável/captador)
+  const [tenantUsers, setTenantUsers] = useState<Array<{ id: string; name: string }>>([]);
+
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async (q = search, status = filterStatus, type = filterType, transaction = filterTransaction) => {
@@ -146,6 +161,17 @@ export default function Properties() {
   useEffect(() => {
     load();
     propertiesService.stats().then(setStats).catch(() => {});
+    // Carrega usuários do tenant pra select de responsável/captador.
+    // Tolerante a falha: se endpoint retornar erro, mantém array vazio (UI cai pro "Nenhum").
+    import('@/services/users/usersService').then(({ default: svc }) => {
+      svc.getUsers({ per_page: 100 })
+        .then((res: any) => {
+          const list: Array<{ id: string; name: string }> = (res?.data ?? res?.users ?? [])
+            .map((u: any) => ({ id: String(u.id), name: u.name || u.email || `user_${u.id}` }));
+          setTenantUsers(list);
+        })
+        .catch(() => setTenantUsers([]));
+    }).catch(() => setTenantUsers([]));
   }, []);
 
   const handleSearch = (val: string) => {
@@ -179,19 +205,30 @@ export default function Properties() {
       stage: p.stage,
       sale_price: p.sale_price,
       rent_price: p.rent_price,
+      condo_fee: p.condo_fee ?? null,
+      iptu: p.iptu ?? null,
       bedrooms: p.bedrooms,
       bathrooms: p.bathrooms,
       suites: p.suites,
       parking_spaces: p.parking_spaces,
       useful_area_m2: p.useful_area_m2,
+      total_area_m2: p.total_area_m2 ?? null,
       address_street: p.address_street ?? '',
       address_number: p.address_number ?? '',
+      address_complement: p.address_complement ?? '',
       address_neighborhood: p.address_neighborhood ?? '',
       address_city: p.address_city ?? '',
       address_state: p.address_state ?? '',
       address_zip: p.address_zip ?? '',
+      latitude: p.latitude ?? null,
+      longitude: p.longitude ?? null,
       exclusive: p.exclusive ?? false,
       featured: p.featured ?? false,
+      published_on_site: p.published_on_site ?? false,
+      on_sign: p.on_sign ?? false,
+      responsible_id: p.responsible?.id ?? p.responsible_id ?? null,
+      captor_id: p.captor?.id ?? p.captor_id ?? null,
+      owner_contact_id: p.owner_contact_id ?? null,
     });
     setModalOpen(true);
   };
@@ -324,6 +361,10 @@ export default function Properties() {
             <p className="text-sm text-muted-foreground">{total} imóvel{total !== 1 ? 's' : ''} cadastrado{total !== 1 ? 's' : ''}</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => navigate('/properties/map')}>
+              <MapPin className="h-4 w-4 mr-2" />
+              Ver no mapa
+            </Button>
             <Button variant="outline" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
               <Wand2 className="h-4 w-4 mr-2" />
               IA em lote
@@ -510,6 +551,16 @@ export default function Properties() {
                     placeholder="2500" className="mt-1" />
                 </div>
               )}
+              <div>
+                <UILabel>Condomínio (R$/mês)</UILabel>
+                <Input type="number" value={f.condo_fee ?? ''} onChange={e => setF({ condo_fee: e.target.value ? parseFloat(e.target.value) : null })}
+                  placeholder="800" className="mt-1" />
+              </div>
+              <div>
+                <UILabel>IPTU (R$/ano)</UILabel>
+                <Input type="number" value={f.iptu ?? ''} onChange={e => setF({ iptu: e.target.value ? parseFloat(e.target.value) : null })}
+                  placeholder="1200" className="mt-1" />
+              </div>
             </div>
 
             {/* Specs */}
@@ -520,6 +571,7 @@ export default function Properties() {
                 { label: 'Suítes', key: 'suites' as const },
                 { label: 'Vagas', key: 'parking_spaces' as const },
                 { label: 'Área útil (m²)', key: 'useful_area_m2' as const },
+                { label: 'Área total (m²)', key: 'total_area_m2' as const },
               ].map(({ label, key }) => (
                 <div key={key}>
                   <UILabel>{label}</UILabel>
@@ -564,6 +616,11 @@ export default function Properties() {
                   placeholder="1578" className="mt-1" />
               </div>
               <div>
+                <UILabel>Complemento</UILabel>
+                <Input value={f.address_complement ?? ''} onChange={e => setF({ address_complement: e.target.value })}
+                  placeholder="Apto 102" className="mt-1" />
+              </div>
+              <div>
                 <UILabel>Bairro</UILabel>
                 <Input value={f.address_neighborhood} onChange={e => setF({ address_neighborhood: e.target.value })}
                   placeholder="Bela Vista" className="mt-1" />
@@ -577,6 +634,42 @@ export default function Properties() {
                 <UILabel>Estado (UF)</UILabel>
                 <Input value={f.address_state} onChange={e => setF({ address_state: e.target.value })}
                   placeholder="SP" maxLength={2} className="mt-1" />
+              </div>
+              <div>
+                <UILabel className="text-xs text-muted-foreground">Latitude (opcional, p/ mapa)</UILabel>
+                <Input type="number" step="any" value={f.latitude ?? ''} onChange={e => setF({ latitude: e.target.value ? parseFloat(e.target.value) : null })}
+                  placeholder="-23.5505" className="mt-1" />
+              </div>
+              <div>
+                <UILabel className="text-xs text-muted-foreground">Longitude (opcional, p/ mapa)</UILabel>
+                <Input type="number" step="any" value={f.longitude ?? ''} onChange={e => setF({ longitude: e.target.value ? parseFloat(e.target.value) : null })}
+                  placeholder="-46.6333" className="mt-1" />
+              </div>
+            </div>
+
+            {/* Atribuição: responsável + captador */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <UILabel>Corretor responsável</UILabel>
+                <select
+                  value={f.responsible_id ?? ''}
+                  onChange={e => setF({ responsible_id: e.target.value || null })}
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Nenhum</option>
+                  {tenantUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <UILabel>Captador</UILabel>
+                <select
+                  value={f.captor_id ?? ''}
+                  onChange={e => setF({ captor_id: e.target.value || null })}
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Nenhum</option>
+                  {tenantUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
               </div>
             </div>
 
@@ -606,7 +699,7 @@ export default function Properties() {
             </div>
 
             {/* Flags */}
-            <div className="flex gap-6">
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={f.exclusive} onChange={e => setF({ exclusive: e.target.checked })} className="rounded" />
                 <span className="text-sm">Exclusividade</span>
@@ -614,6 +707,14 @@ export default function Properties() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={f.featured} onChange={e => setF({ featured: e.target.checked })} className="rounded" />
                 <span className="text-sm">Destaque</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={f.published_on_site ?? false} onChange={e => setF({ published_on_site: e.target.checked })} className="rounded" />
+                <span className="text-sm">Publicar no site</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={f.on_sign ?? false} onChange={e => setF({ on_sign: e.target.checked })} className="rounded" />
+                <span className="text-sm">Tem placa</span>
               </label>
             </div>
           </div>
