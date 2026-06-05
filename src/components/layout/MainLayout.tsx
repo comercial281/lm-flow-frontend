@@ -20,6 +20,7 @@ import {
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useMenuState } from '@/hooks/useMenuState';
 import { useDashboardApps } from '@/hooks/useDashboardApps';
 import { injectDashboardAppsIntoMenu } from '@/utils/injectDashboardApps';
@@ -33,6 +34,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const { t } = useLanguage('layout');
   const { user, logout } = useAuth();
   const { can, canAny, canAll } = usePermissions();
+  const { features: tenantFeatures } = useTenantFeatures();
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
@@ -68,14 +70,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   const menuItems = useMemo(() => {
     const rawMenuItems = getMenuItems();
-    let finalItems = filterMenuItemsByPermissions(rawMenuItems, can, canAny, canAll, user?.role?.key, user?.email);
+    let finalItems = filterMenuItemsByPermissions(rawMenuItems, can, canAny, canAll, user?.role?.key, user?.email, tenantFeatures);
 
     if (dashboardApps.length > 0) {
       finalItems = injectDashboardAppsIntoMenu(finalItems, dashboardApps);
     }
 
     return finalItems;
-  }, [getMenuItems, can, canAny, canAll, dashboardApps, user?.role?.key, user?.email]);
+  }, [getMenuItems, can, canAny, canAll, dashboardApps, user?.role?.key, user?.email, tenantFeatures]);
 
   // Use the custom menu state hook
   const menuState = useMenuState(menuItems, setIsMobileMenuOpen);

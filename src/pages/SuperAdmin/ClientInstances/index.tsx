@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, Building2, CheckCircle, AlertCircle, Loader2, Copy, ExternalLink, Trash2, ChevronDown, ChevronUp, Users } from 'lucide-react';
+import { Plus, RefreshCw, Building2, CheckCircle, AlertCircle, Loader2, Copy, ExternalLink, Trash2, ChevronDown, ChevronUp, Users, ToggleLeft } from 'lucide-react';
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Input, Label } from '@evoapi/design-system';
 import clientInstancesService, { ClientInstance, CreateClientInstancePayload } from '@/services/clientInstances/clientInstancesService';
 import { useAuth } from '@/contexts/AuthContext';
 import MembersModal from './MembersModal';
+import FeaturesModal from './FeaturesModal';
 
 const STATUS_LABEL: Record<string, string> = {
   pending:               'Aguardando',
@@ -25,14 +26,15 @@ function StatusIcon({ status }: { status: string }) {
   return <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />;
 }
 
-function InstanceCard({ instance, onDelete }: {
+function InstanceCard({ instance, onDelete, onRefresh }: {
   instance: ClientInstance;
   onDelete: () => void;
   onRefresh?: () => void;
 }) {
-  const [expanded, setExpanded]       = useState(false);
-  const [copied, setCopied]           = useState(false);
-  const [membersOpen, setMembersOpen] = useState(false);
+  const [expanded, setExpanded]         = useState(false);
+  const [copied, setCopied]             = useState(false);
+  const [membersOpen, setMembersOpen]   = useState(false);
+  const [featuresOpen, setFeaturesOpen] = useState(false);
 
   const copyLink = () => {
     if (!instance.frontend_link) return;
@@ -67,6 +69,12 @@ function InstanceCard({ instance, onDelete }: {
               Membros
             </Button>
           )}
+          {instance.status === 'active' && (
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setFeaturesOpen(true)}>
+              <ToggleLeft className="h-3 w-3" />
+              Funções
+            </Button>
+          )}
           {instance.status === 'active' && instance.frontend_link && (
             <>
               <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={copyLink}>
@@ -91,6 +99,12 @@ function InstanceCard({ instance, onDelete }: {
       </div>
 
       <MembersModal instance={instance} open={membersOpen} onClose={() => setMembersOpen(false)} />
+      <FeaturesModal
+        instance={instance}
+        open={featuresOpen}
+        onClose={() => setFeaturesOpen(false)}
+        onSaved={() => onRefresh?.()}
+      />
 
       {instance.error_message && (
         <p className="mt-2 text-xs text-red-600 bg-red-50 rounded p-2">{instance.error_message}</p>

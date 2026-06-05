@@ -6,6 +6,7 @@ import AppInitializer from './components/AppInitializer';
 import { GlobalConfigProvider } from './contexts/GlobalConfigContext';
 import { NotificationsProvider } from './contexts/NotificationsContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
+import { TenantFeaturesProvider } from './contexts/TenantFeaturesContext';
 import { UISettingsApplier } from './components/UISettingsApplier';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -36,13 +37,15 @@ function App() {
           <GlobalConfigProvider>
             <UISettingsApplier />
             <PermissionsProvider>
-              <NotificationsProvider>
-                <AppInitializer>
-                  <ImpersonationBar />
-                  <AppRouter />
-                  <ThemedToaster />
-                </AppInitializer>
-              </NotificationsProvider>
+              <TenantFeaturesProvider>
+                <NotificationsProvider>
+                  <AppInitializer>
+                    <ImpersonationBar />
+                    <AppRouter />
+                    <ThemedToaster />
+                  </AppInitializer>
+                </NotificationsProvider>
+              </TenantFeaturesProvider>
             </PermissionsProvider>
           </GlobalConfigProvider>
         </DarkModeProvider>
