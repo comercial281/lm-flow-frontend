@@ -12,7 +12,6 @@ import {
   Users2,
   Clock,
   Code,
-  MessageCircle,
   Key,
   Tags,
   TestTube,
@@ -30,6 +29,7 @@ import {
   Globe,
   FileText,
   TrendingUp,
+  Rocket,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -240,16 +240,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         action: 'read',
       },
       {
-        name: t('menu.settings.cannedResponses'),
-        href: '/settings/canned-responses',
-        icon: MessageCircle,
+        name: 'Funis de Mensagem',
+        href: '/settings/message-funnels',
+        icon: Rocket,
         resource: 'canned_responses',
         action: 'read',
-      },
-      {
-        name: 'Respostas Rápidas',
-        href: '/settings/quick-replies',
-        icon: Zap,
       },
       {
         name: 'Automações Boas-Vindas',
