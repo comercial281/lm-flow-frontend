@@ -401,6 +401,7 @@ const ChatArea = ({
           inboxId={selectedConversation?.inbox_id || ''}
           channelType={selectedConversation?.inbox?.channel_type || ''}
           channelProvider={channelProvider}
+          selectedConversation={selectedConversation}
         />
       </div>
     </div>

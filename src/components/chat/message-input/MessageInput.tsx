@@ -18,14 +18,11 @@ import {
   X,
   Reply,
   PenLine,
-  MessageSquareText,
-  Zap,
+  Rocket,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { AudioRecordingData } from '@/hooks/chat/useAudioRecorder';
-import { useCannedResponses } from '@/hooks/chat/useCannedResponses';
-import { useQuickReplies } from '@/hooks/chat/useQuickReplies';
 import { useMessageSignature } from '@/hooks/useMessageSignature';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,12 +34,10 @@ import ReplyModeToggle from '../ReplyModeToggle';
 import AudioRecorder from '../audio';
 
 import { AIAssistanceButton } from '../ai-assistance';
-import { CannedResponsesList } from '../canned-responses';
-import { QuickRepliesList } from '../quick-replies';
+import { MessageFunnelPopover } from '../message-funnels';
 import { RichTextEditor, RichTextEditorRef } from '../rich-text-editor';
 
-import { ReplyMode, Message } from '@/types/chat/api';
-import type { CannedResponse } from '@/types/knowledge';
+import { ReplyMode, Message, Conversation } from '@/types/chat/api';
 
 import { MessageTemplateModal } from '../message-template';
 import '../rich-text-editor/RichTextEditor.css';
@@ -69,6 +64,8 @@ interface MessageInputProps {
   inboxId: string;
   channelType?: string;
   channelProvider?: string;
+  // Conversa completa pra interpolação de variáveis no dispatch de funis
+  selectedConversation?: Conversation | null;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -83,6 +80,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   inboxId,
   channelType,
   channelProvider,
+  selectedConversation = null,
 }) => {
   const { t } = useLanguage('chat');
   const { user } = useAuth();
@@ -117,84 +115,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const { isSignatureEnabled, toggleSignature, hasSignature, appendSignatureIfEnabled } =
     useMessageSignature();
 
-  // 🎯 CANNED RESPONSES: Estado e hook
-  const [selectedCannedResponse, setSelectedCannedResponse] = useState<CannedResponse | null>(null);
-  const [selectedCannedResponseId, setSelectedCannedResponseId] = useState<string | null>(null);
-
-  const [showCannedResponses, setShowCannedResponses] = useState(false);
-  const [cannedResponseQuery, setCannedResponseQuery] = useState('');
-  const [selectedCannedIndex, setSelectedCannedIndex] = useState(0);
   const [currentEditorMessage, setCurrentEditorMessage] = useState('');
-  const { searchCannedResponses, isLoading: isCannedResponsesLoading } = useCannedResponses({
-    enabled: !!inboxId,
-  });
 
-  // 🎯 QUICK REPLIES
-  const [showQuickReplies, setShowQuickReplies] = useState(false);
-  const { quickReplies, isLoading: isQuickRepliesLoading } = useQuickReplies();
-
-  const hasCannedMedia =
-    !!selectedCannedResponse &&
-    !!selectedCannedResponse.attachments &&
-    selectedCannedResponse.attachments.length > 0;
-
-  // 🎯 CANNED RESPONSES: Detectar "/" no input e filtrar
-  const detectCannedResponseTrigger = useCallback(
-    (text: string) => {
-      // Detectar se digitou "/" no início ou após espaço
-      const match = text.match(/(?:^|\s)\/([\w-]*)$/);
-
-      if (match) {
-        const query = match[1] || ''; // Texto após "/"
-        setCannedResponseQuery(query);
-        setShowCannedResponses(true);
-        setSelectedCannedIndex(0); // Reset seleção ao abrir
-        return true;
-      }
-
-      // Se não tem "/", fecha o dropdown
-      if (showCannedResponses) {
-        setShowCannedResponses(false);
-        setCannedResponseQuery('');
-      }
-
-      return false;
-    },
-    [showCannedResponses],
-  );
-
-  const handleSelectCannedResponse = useCallback(
-    async (cannedResponse: CannedResponse) => {
-      const currentMessage = richEditorRef.current?.getContent() || '';
-
-      const slashIndex = currentMessage.lastIndexOf('/');
-      const newMessage =
-        slashIndex >= 0
-          ? currentMessage.substring(0, slashIndex) + cannedResponse.content
-          : cannedResponse.content;
-
-      richEditorRef.current?.setContent(newMessage);
-      setCurrentEditorMessage(newMessage);
-
-      setSelectedCannedResponse(cannedResponse);
-      setSelectedCannedResponseId(cannedResponse.id);
-
-      setShowCannedResponses(false);
-      setCannedResponseQuery('');
-      setSelectedCannedIndex(0);
-
-      setTimeout(() => {
-        richEditorRef.current?.focus();
-      }, 0);
-    },
-    [],
-  );
-
-  // 🎯 CANNED RESPONSES: Filtrar respostas com base na query
-  const filteredCannedResponses = React.useMemo(() => {
-    if (!showCannedResponses) return [];
-    return searchCannedResponses(cannedResponseQuery);
-  }, [showCannedResponses, cannedResponseQuery, searchCannedResponses]);
+  // 🎯 FUNIS DE MENSAGEM (substitui Canned Responses + Quick Replies)
+  const [showFunnels, setShowFunnels] = useState(false);
 
   // Forçar modo de nota privada quando a conversa está pendente
   useEffect(() => {
@@ -365,35 +289,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
     [onSendMessage, t],
   );
 
-  const handleSelectQuickReply = useCallback(
-    (reply: import('@/types/knowledge').QuickReply) => {
-      richEditorRef.current?.setContent(reply.content);
-      setCurrentEditorMessage(reply.content);
-      setShowQuickReplies(false);
-      setTimeout(() => richEditorRef.current?.focus(), 0);
-    },
-    [],
-  );
-
-  // 🎯 CANNED RESPONSES: Abrir/fechar dropdown via botão
-  const handleCannedResponsesClick = useCallback(() => {
-    if (showCannedResponses) {
-      // Se já está aberto, fechar
-      setShowCannedResponses(false);
-      setCannedResponseQuery('');
-      setSelectedCannedIndex(0);
-    } else {
-      // Abrir com todas as respostas (sem filtro)
-      setCannedResponseQuery('');
-      setShowCannedResponses(true);
-      setSelectedCannedIndex(0);
-
-      setTimeout(() => {
-        richEditorRef.current?.focus();
-      }, 0);
-    }
-  }, [showCannedResponses]);
-
   const handleSend = async () => {
     const isPrivate = replyMode === ReplyMode.NOTE;
     let currentMessage = richEditorRef.current?.getContent() || '';
@@ -414,16 +309,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
         files: selectedFiles.length > 0 ? selectedFiles : undefined,
         isPrivate,
         templateParams: undefined,
-        cannedResponseId: selectedCannedResponseId,
+        cannedResponseId: null,
       });
 
       richEditorRef.current?.clear();
       setCurrentEditorMessage('');
       setSelectedFiles([]);
       setUploadProgress({});
-
-      setSelectedCannedResponse(null);
-      setSelectedCannedResponseId(null);
 
       if (replyToMessage && onCancelReply) {
         onCancelReply();
@@ -441,48 +333,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
       setUploadProgress({});
     }
   };
-
-  // 🎯 CANNED RESPONSES: Navegação por teclado
-  const handleCannedResponseKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      // Se o dropdown de canned responses está aberto
-      if (showCannedResponses && filteredCannedResponses.length > 0) {
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          setSelectedCannedIndex(prev =>
-            prev < filteredCannedResponses.length - 1 ? prev + 1 : prev,
-          );
-          return true;
-        }
-
-        if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          setSelectedCannedIndex(prev => (prev > 0 ? prev - 1 : prev));
-          return true;
-        }
-
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const selectedCanned = filteredCannedResponses[selectedCannedIndex];
-          if (selectedCanned) {
-            handleSelectCannedResponse(selectedCanned);
-          }
-          return true;
-        }
-
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          setShowCannedResponses(false);
-          setCannedResponseQuery('');
-          setSelectedCannedIndex(0);
-          return true;
-        }
-      }
-
-      return false;
-    },
-    [showCannedResponses, filteredCannedResponses, selectedCannedIndex, handleSelectCannedResponse],
-  );
 
   const handleFilesSelected = (files: File[]) => {
     setSelectedFiles(prev => [...prev, ...files]);
@@ -592,8 +442,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
       )}
 
       <Card className={cardClassNames}>
-        {/* File Preview – só quando NÃO tiver mídia da canned */}
-        {selectedFiles.length > 0 && !hasCannedMedia && (
+        {/* File Preview */}
+        {selectedFiles.length > 0 && (
           <div className="border-b border-border bg-muted/30">
             <FilePreview
               files={selectedFiles}
@@ -605,53 +455,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
           </div>
         )}
 
-        {/* Banner da mídia da resposta rápida selecionada */}
-        {hasCannedMedia && (
-          <div className="border-b border-border bg-muted/20 px-4 py-2 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">
-                Esta resposta rápida inclui {selectedCannedResponse!.attachments!.length} arquivo(s)
-                de mídia. Eles serão enviados junto com a mensagem.
-              </span>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 flex-shrink-0"
-              onClick={() => {
-                setSelectedCannedResponse(null);
-                setSelectedCannedResponseId(null);
-              }}
-              disabled={isSending}
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
-        )}
-
         {/* Input Area */}
         <CardContent className="p-4 px-4 py-4 relative">
-          {/* 🎯 CANNED RESPONSES: Dropdown de sugestões */}
-          {showCannedResponses && (
-            <CannedResponsesList
-              cannedResponses={filteredCannedResponses}
-              selectedIndex={selectedCannedIndex}
-              searchQuery={cannedResponseQuery}
-              isLoading={isCannedResponsesLoading}
-              onSelect={handleSelectCannedResponse}
-            />
-          )}
-
-          {/* 🎯 QUICK REPLIES: Dropdown */}
-          {showQuickReplies && (
-            <QuickRepliesList
-              quickReplies={quickReplies}
-              isLoading={isQuickRepliesLoading}
-              onSelect={handleSelectQuickReply}
-              onClose={() => setShowQuickReplies(false)}
-            />
-          )}
+          {/* 🚀 FUNIS DE MENSAGEM (substitui Canned Responses + Quick Replies) */}
+          <MessageFunnelPopover
+            isOpen={showFunnels}
+            onClose={() => setShowFunnels(false)}
+            conversation={selectedConversation}
+            onSendMessage={onSendMessage}
+          />
 
           {/* Primeira linha: Reply Mode Toggle + Botões de ação rápida */}
           <div className="flex items-center justify-between mb-3 gap-3">
@@ -718,7 +530,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 onFilesSelected={handleFilesSelected}
                 maxFileSize={10}
                 multiple={true}
-                disabled={isDisabled || isSending || isPendingConversation || hasCannedMedia}
+                disabled={isDisabled || isSending || isPendingConversation}
               />
 
               {/* Emoji Button */}
@@ -738,28 +550,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   onClose={() => setShowEmojiPicker(false)}
                 />
               </div>
-              {/* Canned Responses Button */}
-              <Button
-                variant={showCannedResponses ? 'default' : 'ghost'}
-                size="icon"
-                disabled={isDisabled || isSending || isPendingConversation}
-                className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
-                onClick={handleCannedResponsesClick}
-                title={t('messageInput.cannedResponses.tooltip')}
-              >
-                <MessageSquareText className="h-4 w-4" />
-              </Button>
 
-              {/* Quick Replies Button */}
+              {/* 🚀 Funis de Mensagem (substitui Canned Responses + Quick Replies) */}
               <Button
-                variant={showQuickReplies ? 'default' : 'ghost'}
+                variant={showFunnels ? 'default' : 'ghost'}
                 size="icon"
                 disabled={isDisabled || isSending || isPendingConversation}
                 className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
-                onClick={() => setShowQuickReplies(v => !v)}
-                title="Respostas Rápidas"
+                onClick={() => setShowFunnels(v => !v)}
+                title="Funis de Mensagem"
               >
-                <Zap className="h-4 w-4" />
+                <Rocket className="h-4 w-4" />
               </Button>
 
               {/* Template Button */}
@@ -788,7 +589,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 }
                 onChange={content => {
                   setCurrentEditorMessage(content);
-                  detectCannedResponseTrigger(content);
                   if (content.trim()) {
                     handleTypingStart();
                   } else {
@@ -796,10 +596,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   }
                 }}
                 onKeyDown={event => {
-                  if (handleCannedResponseKeyDown(event as unknown as React.KeyboardEvent)) {
-                    return true;
-                  }
-
                   if (event.altKey) {
                     if (event.key === 'p' || event.key === 'P') {
                       event.preventDefault();

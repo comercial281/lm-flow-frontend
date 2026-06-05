@@ -50,8 +50,9 @@ import Users from '@/pages/Customer/Settings/Users';
 import RolesPage from '@/pages/Customer/Settings/Roles';
 import Labels from '@/pages/Customer/Settings/Labels';
 import CustomAttributes from '@/pages/Customer/Settings/CustomAttributes';
-import CannedResponses from '@/pages/Customer/Settings/CannedResponses';
-import { QuickReplies } from '@/pages/Customer/Settings/QuickReplies';
+// CannedResponses + QuickReplies foram aposentadas — substituídas por MessageFunnels.
+// As páginas antigas continuam no disco mas suas rotas redirecionam pro novo módulo.
+import { MessageFunnels } from '@/pages/Customer/Settings/MessageFunnels';
 import { WelcomeAutomations } from '@/pages/Customer/Settings/WelcomeAutomations';
 import { LeadAutomations } from '@/pages/Customer/Settings/LeadAutomations';
 import { FollowupSequences } from '@/pages/Customer/Settings/FollowupSequences';
@@ -592,14 +593,15 @@ const AppRouter = () => {
             }
           />
 
+          {/* Novo módulo unificado — Funis de Mensagem (substitui Prontas + Rápidas) */}
           <Route
-            path="/settings/canned-responses"
+            path="/settings/message-funnels"
             element={
               <PrivateRoute>
                 <CustomerRoute>
                   <MainLayout>
                     <PermissionRoute resource="canned_responses" action="read">
-                      <CannedResponses />
+                      <MessageFunnels />
                     </PermissionRoute>
                   </MainLayout>
                 </CustomerRoute>
@@ -607,17 +609,15 @@ const AppRouter = () => {
             }
           />
 
+          {/* Rotas legadas — redirecionam pro novo módulo. Imports e páginas antigas ficam
+              vivos durante a janela de migração (rake message_funnels:migrate_legacy copia o conteúdo). */}
+          <Route
+            path="/settings/canned-responses"
+            element={<Navigate to="/settings/message-funnels" replace />}
+          />
           <Route
             path="/settings/quick-replies"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <QuickReplies />
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
+            element={<Navigate to="/settings/message-funnels" replace />}
           />
 
           <Route
