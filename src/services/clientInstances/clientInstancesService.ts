@@ -13,7 +13,15 @@ export interface ClientInstance {
   frontend_link: string | null;
   error_message: string | null;
   provisioning_log: { time: string; message: string }[];
+  enabled_features?: Record<string, boolean>;
+  resolved_features?: Record<string, boolean>;
   created_at: string;
+}
+
+export interface FeatureCatalogItem {
+  key: string;
+  label: string;
+  group: 'menus' | 'settings' | string;
 }
 
 export interface CreateClientInstancePayload {
@@ -93,6 +101,14 @@ const clientInstancesService = {
     apiClient.post<{ success: boolean; data: { password: string | null; stale: boolean; reason?: string; password_set_at?: string; password_set_by?: string } }>(
       `/client_instances/${id}/users/${userId}/reveal_password`, {}
     ),
+
+  // --- Feature flags por tenant ---
+
+  featureCatalog: () =>
+    apiClient.get<{ data: FeatureCatalogItem[] }>('/client_instances/feature_catalog/list'),
+
+  updateFeatures: (id: number, features: Record<string, boolean>) =>
+    apiClient.patch<{ data: ClientInstance }>(`/client_instances/${id}/features`, { features }),
 };
 
 export default clientInstancesService;

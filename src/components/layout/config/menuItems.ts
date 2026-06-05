@@ -44,6 +44,12 @@ export interface MenuItem {
   requireAll?: boolean;
   requiredRoleKey?: string;
   requiredEmail?: string | string[];
+  /**
+   * Chave do catálogo de tenant features (ver ClientInstance::FEATURE_CATALOG no backend master).
+   * Quando definida, o item só aparece se features[key] !== false.
+   * Ausência da key OU features sem essa key => item visível (ON por padrão).
+   */
+  featureKey?: string;
 }
 
 export interface SubMenuItem {
@@ -56,6 +62,7 @@ export interface SubMenuItem {
   requireAll?: boolean;
   requiredRoleKey?: string;
   requiredEmail?: string | string[];
+  featureKey?: string;
 }
 
 export interface ProfileMenuItem {
@@ -72,6 +79,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     icon: PieChart,
     resource: 'dashboard',
     action: 'read',
+    featureKey: 'dashboard',
   },
   {
     name: t('menu.customer.conversations'),
@@ -79,6 +87,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     icon: MessageSquare,
     resource: 'conversations',
     action: 'read',
+    featureKey: 'conversations',
   },
   {
     id: 'customer-contacts',
@@ -87,6 +96,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     icon: Contact,
     resource: 'contacts',
     action: 'read',
+    featureKey: 'contacts',
     subItems: [
       {
         name: t('menu.contacts.list'),
@@ -110,31 +120,37 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     icon: SquareKanban,
     resource: 'pipelines',
     action: 'read',
+    featureKey: 'pipelines',
   },
   {
     name: 'Imóveis',
     href: '/properties',
     icon: Building2,
+    featureKey: 'properties',
   },
   {
     name: 'Agenda de Visitas',
     href: '/visits',
     icon: CalendarClock,
+    featureKey: 'visits',
   },
   {
     name: 'Propostas',
     href: '/proposals',
     icon: FileSignature,
+    featureKey: 'proposals',
   },
   {
     name: 'Captação',
     href: '/property-capture-requests',
     icon: ClipboardList,
+    featureKey: 'property_capture',
   },
   {
     name: 'Interesses',
     href: '/property-interests',
     icon: TrendingUp,
+    featureKey: 'property_interests',
   },
   {
     id: 'customer-agents',
@@ -143,6 +159,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     icon: Bot,
     resource: 'ai_agents',
     action: 'read',
+    featureKey: 'ai_agents',
     subItems: [
       {
         name: t('menu.agents.list'),
@@ -173,6 +190,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     icon: Layers,
     resource: 'channels',
     action: 'read',
+    featureKey: 'channels',
   },
   {
     name: 'Marketplace',
@@ -180,6 +198,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     icon: Store,
     resource: 'integrations',
     action: 'read',
+    featureKey: 'marketplace',
   },
   {
     name: 'Clientes CRM',
@@ -191,6 +210,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: t('menu.customer.tutorials'),
     href: '/tutorials',
     icon: GraduationCap,
+    featureKey: 'tutorials',
   },
   {
     id: 'customer-settings',
@@ -245,36 +265,43 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         icon: Rocket,
         resource: 'canned_responses',
         action: 'read',
+        featureKey: 'message_funnels',
       },
       {
         name: 'Automações Boas-Vindas',
         href: '/settings/welcome-automations',
         icon: Zap,
+        featureKey: 'welcome_automations',
       },
       {
         name: 'Automações de Lead',
         href: '/settings/lead-automations',
         icon: Zap,
+        featureKey: 'lead_automations',
       },
       {
         name: 'Follow-ups',
         href: '/settings/follow-ups',
         icon: Zap,
+        featureKey: 'follow_ups',
       },
       {
         name: 'Produtos',
         href: '/settings/products',
         icon: Store,
+        featureKey: 'products',
       },
       {
         name: 'Site Builder',
         href: '/settings/site-builder',
         icon: Globe,
+        featureKey: 'site_builder',
       },
       {
         name: 'Formulários',
         href: '/settings/dynamic-forms',
         icon: FileText,
+        featureKey: 'dynamic_forms',
       },
       {
         name: t('menu.settings.macros'),
@@ -336,8 +363,15 @@ export const shouldShowMenuItem = (
   canAnyFunction: (permissions: string[]) => boolean,
   canAllFunction: (permissions: string[]) => boolean,
   userRoleKey?: string,
-  userEmail?: string
+  userEmail?: string,
+  features?: Record<string, boolean>
 ): boolean => {
+  // Gate por tenant feature flag (mais alta prioridade — desligado no painel
+  // master = desaparece independente de permissão).
+  if (item.featureKey && features && features[item.featureKey] === false) {
+    return false;
+  }
+
   // Gate por email (espelha checagens server-side hardcoded por email, ex: super-admin)
   if (item.requiredEmail) {
     if (!userEmail) return false;
@@ -373,15 +407,16 @@ export const filterMenuItemsByPermissions = (
   canAnyFunction: (permissions: string[]) => boolean,
   canAllFunction: (permissions: string[]) => boolean,
   userRoleKey?: string,
-  userEmail?: string
+  userEmail?: string,
+  features?: Record<string, boolean>
 ): MenuItem[] => {
   return items
-    .filter(item => shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail))
+    .filter(item => shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features))
     .map(item => {
       // Se o item tem subitens, filtrar os subitens também
       if (item.subItems && item.subItems.length > 0) {
         const filteredSubItems = item.subItems.filter(subItem =>
-          shouldShowMenuItem(subItem, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail)
+          shouldShowMenuItem(subItem, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features)
         );
 
         // Se não há subitens visíveis, não mostrar o item pai
