@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import {
   Search, Plus, FileText, Building2, User, TrendingUp,
   Send, CheckCircle, XCircle, RefreshCw, ChevronDown,
@@ -33,6 +34,9 @@ import {
   PROPOSAL_STATUS_COLORS,
   PROPOSAL_TYPE_LABELS,
 } from '@/services/proposals/proposalsService';
+import { propertiesService, Property } from '@/services/properties/propertiesService';
+import { LeadCombobox } from '@/components/visits/LeadCombobox';
+import { LeadPickerItem } from '@/services/visits/visitsService';
 
 function formatCurrency(value?: number | null): string {
   if (value == null) return '-';
@@ -90,6 +94,56 @@ export default function Proposals() {
   const [rejectModal, setRejectModal] = useState<RejectModalState>({ open: false, proposalId: '', reason: '' });
   const [counterModal, setCounterModal] = useState<CounterModalState>({ open: false, proposalId: '', value: '' });
 
+  // Property combobox state (mirrors pattern from Visits.tsx)
+  const [propertyQuery, setPropertyQuery] = useState('');
+  const [propertyResults, setPropertyResults] = useState<Property[]>([]);
+  const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
+  const [propertySearching, setPropertySearching] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const propertyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const propertyWrapperRef = useRef<HTMLDivElement | null>(null);
+
+  // Lead combobox state
+  const [selectedLead, setSelectedLead] = useState<LeadPickerItem | null>(null);
+
+  // Close property dropdown on outside click
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (propertyWrapperRef.current && !propertyWrapperRef.current.contains(e.target as Node)) {
+        setShowPropertyDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+
+  const searchProperties = (q: string) => {
+    setPropertyQuery(q);
+    if (propertyTimeout.current) clearTimeout(propertyTimeout.current);
+    if (!q.trim()) { setPropertyResults([]); setShowPropertyDropdown(false); return; }
+    setPropertySearching(true);
+    propertyTimeout.current = setTimeout(async () => {
+      try {
+        const res = await propertiesService.list({ q, per_page: 8 });
+        setPropertyResults(res.data ?? []);
+        setShowPropertyDropdown(true);
+      } catch { setPropertyResults([]); }
+      finally { setPropertySearching(false); }
+    }, 300);
+  };
+
+  const selectProperty = (p: Property) => {
+    setSelectedProperty(p);
+    setForm(f => ({ ...f, property_id: p.id }));
+    setPropertyQuery(p.title);
+    setShowPropertyDropdown(false);
+  };
+
+  const handleLeadChange = (lead: LeadPickerItem) => {
+    setSelectedLead(lead);
+    setForm(f => ({ ...f, contact_id: lead.id }));
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -120,6 +174,10 @@ export default function Proposals() {
   const openCreate = () => {
     setForm(EMPTY_FORM);
     setEditProposal(null);
+    setSelectedProperty(null);
+    setSelectedLead(null);
+    setPropertyQuery('');
+    setPropertyResults([]);
     setCreateOpen(true);
   };
 
@@ -135,11 +193,16 @@ export default function Proposals() {
       conditions: proposal.conditions ?? '',
     });
     setEditProposal(proposal);
+    setSelectedProperty(proposal.property ? { id: proposal.property.id, title: proposal.property.title, code: proposal.property.code } as Property : null);
+    setSelectedLead(proposal.contact ? { id: proposal.contact.id, name: proposal.contact.name } as LeadPickerItem : null);
+    setPropertyQuery(proposal.property?.title ?? '');
     setCreateOpen(true);
   };
 
   const handleSave = async () => {
-    if (!form.property_id || !form.contact_id || !form.offered_value) return;
+    if (!form.property_id) { toast.error('Selecione um imóvel'); return; }
+    if (!form.contact_id) { toast.error('Selecione um lead'); return; }
+    if (!form.offered_value) { toast.error('Informe o valor ofertado'); return; }
     setSaving(true);
     try {
       const data: ProposalFormData = {
@@ -154,48 +217,82 @@ export default function Proposals() {
       };
       if (editProposal) {
         await proposalsService.update(editProposal.id, data);
+        toast.success('Proposta atualizada');
       } else {
         await proposalsService.create(data);
+        toast.success('Rascunho criado');
       }
       setCreateOpen(false);
       load();
+    } catch {
+      toast.error('Erro ao salvar proposta');
     } finally {
       setSaving(false);
     }
   };
 
   const handleSend = async (id: string) => {
-    await proposalsService.send(id);
-    load();
+    try {
+      await proposalsService.send(id);
+      toast.success('Proposta enviada — WhatsApp disparado pro lead');
+      load();
+    } catch {
+      toast.error('Erro ao enviar proposta');
+    }
   };
 
   const handleAccept = async (id: string) => {
-    await proposalsService.accept(id);
-    load();
+    try {
+      await proposalsService.accept(id);
+      toast.success('Proposta aceita');
+      load();
+    } catch {
+      toast.error('Erro ao aceitar');
+    }
   };
 
   const handleWithdraw = async (id: string) => {
-    await proposalsService.withdraw(id);
-    load();
+    try {
+      await proposalsService.withdraw(id);
+      toast.success('Proposta marcada como desistência');
+      load();
+    } catch {
+      toast.error('Erro ao registrar desistência');
+    }
   };
 
   const handleReject = async () => {
     if (!rejectModal.reason) return;
-    await proposalsService.reject(rejectModal.proposalId, rejectModal.reason);
-    setRejectModal({ open: false, proposalId: '', reason: '' });
-    load();
+    try {
+      await proposalsService.reject(rejectModal.proposalId, rejectModal.reason);
+      toast.success('Proposta rejeitada');
+      setRejectModal({ open: false, proposalId: '', reason: '' });
+      load();
+    } catch {
+      toast.error('Erro ao rejeitar');
+    }
   };
 
   const handleCounter = async () => {
     if (!counterModal.value) return;
-    await proposalsService.counter(counterModal.proposalId, parseFloat(counterModal.value));
-    setCounterModal({ open: false, proposalId: '', value: '' });
-    load();
+    try {
+      await proposalsService.counter(counterModal.proposalId, parseFloat(counterModal.value));
+      toast.success('Contra-proposta enviada');
+      setCounterModal({ open: false, proposalId: '', value: '' });
+      load();
+    } catch {
+      toast.error('Erro ao enviar contra-proposta');
+    }
   };
 
   const handleDelete = async (id: string) => {
-    await proposalsService.delete(id);
-    load();
+    try {
+      await proposalsService.delete(id);
+      toast.success('Proposta excluída');
+      load();
+    } catch {
+      toast.error('Erro ao excluir');
+    }
   };
 
   const stats = {
@@ -304,24 +401,53 @@ export default function Proposals() {
             <DialogTitle>{editProposal ? 'Editar Proposta' : 'Nova Proposta'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>ID do Imóvel *</Label>
+            {/* Property combobox */}
+            <div className="relative" ref={propertyWrapperRef}>
+              <Label>Imóvel *</Label>
+              <div className="relative mt-1">
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
-                  placeholder="UUID do imóvel"
-                  value={form.property_id}
-                  onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))}
+                  placeholder="Buscar imóvel por título, código ou bairro..."
+                  value={propertyQuery}
+                  onChange={e => searchProperties(e.target.value)}
+                  onFocus={() => { if (propertyResults.length) setShowPropertyDropdown(true); }}
+                  className="pl-9"
                 />
+                {propertySearching && (
+                  <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+                )}
               </div>
-              <div>
-                <Label>ID do Lead *</Label>
-                <Input
-                  placeholder="UUID do contato"
-                  value={form.contact_id}
-                  onChange={e => setForm(f => ({ ...f, contact_id: e.target.value }))}
-                />
-              </div>
+              {showPropertyDropdown && propertyResults.length > 0 && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-64 overflow-y-auto">
+                  {propertyResults.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0"
+                      onClick={() => selectProperty(p)}
+                    >
+                      <div className="font-medium text-sm truncate">{p.title}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {[p.code, p.address_neighborhood, p.address_city].filter(Boolean).join(' · ') || '—'}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedProperty && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  Selecionado: <span className="font-medium text-foreground">{selectedProperty.code}</span> · {selectedProperty.title}
+                </div>
+              )}
             </div>
+
+            {/* Lead combobox */}
+            <LeadCombobox
+              value={selectedLead}
+              onChange={handleLeadChange}
+              label="Lead *"
+              placeholder="Buscar lead ou contato por nome/telefone..."
+            />
 
             <div className="grid grid-cols-2 gap-3">
               <div>
