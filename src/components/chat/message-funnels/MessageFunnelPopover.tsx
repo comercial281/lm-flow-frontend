@@ -5,11 +5,12 @@ import {
   Rocket, X, Play, Pause, Type, Mic, Image as ImageIcon, Video, FileText, Search, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { messageFunnelsService } from '@/services/messageFunnels/messageFunnelsService';
+import { messageFunnelsService, tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
 import type {
   MessageFunnel,
   MessageFunnelItem,
   FunnelItemKind,
+  TenantTemplateVariable,
 } from '@/types/messageFunnels';
 import type { Conversation } from '@/types/chat/api';
 
@@ -39,41 +40,106 @@ function firstName(name?: string | null): string {
 
 interface ResolveContext {
   conversation?: Conversation | null;
+  customVars?: TenantTemplateVariable[];
+}
+
+type ContactShape = {
+  name?: string;
+  phone_number?: string | null;
+  email?: string | null;
+  custom_attributes?: Record<string, unknown>;
+  additional_attributes?: Record<string, unknown>;
+};
+
+function getContact(conv: ResolveContext['conversation']): ContactShape | undefined {
+  const c = conv as (typeof conv & { contact?: ContactShape }) | null | undefined;
+  return c?.contact ?? (c?.meta?.sender as ContactShape | undefined);
 }
 
 /**
- * Substitui placeholders {{token}} pelos valores reais do contato.
- * Built-in cobre o set fixo. Tokens desconhecidos ficam intactos (visualmente
- * óbvio que algo errou) e geram warn no console pro operador notar.
+ * Resolve uma variável customizada (TenantTemplateVariable) pro seu valor real,
+ * baseado no `value_source` armazenado pelo super-admin.
+ *
+ * Caminhos suportados:
+ *   contact.email                         → contact.email
+ *   contact.phone_number                  → contact.phone_number
+ *   contact.name                          → contact.name (nome completo)
+ *   contact.custom_attributes.<chave>     → contact.custom_attributes[chave] OU additional_attributes[chave]
+ *   literal:<texto>                       → texto (independente do lead)
+ *
+ * Outros caminhos retornam '' (warn + chip vazio no envio).
+ */
+function resolveCustom(
+  value_source: string,
+  conv: ResolveContext['conversation'],
+): string {
+  if (!value_source) return '';
+  if (value_source.startsWith('literal:')) {
+    return value_source.slice('literal:'.length);
+  }
+  const contact = getContact(conv);
+  if (!contact) return '';
+
+  if (value_source === 'contact.email') return String(contact.email ?? '');
+  if (value_source === 'contact.phone_number') return String(contact.phone_number ?? '');
+  if (value_source === 'contact.name') return String(contact.name ?? '');
+
+  if (value_source.startsWith('contact.custom_attributes.')) {
+    const key = value_source.slice('contact.custom_attributes.'.length).trim();
+    if (!key) return '';
+    const fromCustom = contact.custom_attributes?.[key];
+    const fromAdditional = contact.additional_attributes?.[key];
+    const val = fromCustom ?? fromAdditional ?? '';
+    return val == null ? '' : String(val);
+  }
+
+  // eslint-disable-next-line no-console
+  console.warn(`[funnel] value_source desconhecido: "${value_source}"`);
+  return '';
+}
+
+/**
+ * Substitui placeholders {{token}} pelos valores reais.
+ *
+ * Ordem de resolução:
+ *   1. Built-in fixo ({{nome}}, {{telefone}}, {{email}}, {{pipeline}}, {{estagio}})
+ *   2. Custom var do tenant (TenantTemplateVariable.value_source resolvido)
+ *   3. Token desconhecido: deixa {{token}} literal + console.warn
  *
  * Caminhos lidos do Conversation (smoke test 2026-06-06 mostrou que `meta.sender`
- * vem vazio enquanto `contact` está populado — sempre):
- *   conversation.contact.{name, phone_number, email}     (primário — fonte de verdade)
- *   conversation.meta.sender.{name, phone_number, email} (fallback)
- *   conversation.pipeline.name                            ({{pipeline}})
- *   conversation.pipeline_stage.name                      ({{estagio}})
+ * vem vazio enquanto `contact` está populado):
+ *   conversation.contact.{name, phone_number, email, custom_attributes/additional_attributes}
+ *   conversation.meta.sender.* (fallback)
+ *   conversation.pipeline.name        ({{pipeline}})
+ *   conversation.pipeline_stage.name  ({{estagio}})
  */
 function interpolate(template: string, ctx: ResolveContext): string {
   if (!template) return '';
   const conv = ctx.conversation as (typeof ctx.conversation & {
-    contact?: { name?: string; phone_number?: string | null; email?: string | null };
     pipeline?: { name?: string };
     pipeline_stage?: { name?: string };
   }) | null | undefined;
 
-  const contact = conv?.contact ?? conv?.meta?.sender;
+  const contact = getContact(conv);
 
   const builtin: Record<string, string> = {
     nome: firstName(contact?.name),
-    telefone: contact?.phone_number ?? '',
-    email: contact?.email ?? '',
+    telefone: String(contact?.phone_number ?? ''),
+    email: String(contact?.email ?? ''),
     pipeline: conv?.pipeline?.name ?? '',
     estagio: conv?.pipeline_stage?.name ?? '',
   };
 
+  const customByToken: Record<string, TenantTemplateVariable> = {};
+  for (const v of ctx.customVars ?? []) {
+    if (v.active) customByToken[v.token.toLowerCase()] = v;
+  }
+
   return template.replace(/\{\{\s*([a-z_][a-z0-9_]*)\s*\}\}/gi, (raw, token: string) => {
     const key = token.toLowerCase();
     if (key in builtin) return builtin[key];
+    const custom = customByToken[key];
+    if (custom) return resolveCustom(custom.value_source, conv);
     // eslint-disable-next-line no-console
     console.warn(`[funnel] variável {{${token}}} sem valor disponível no contexto do chat`);
     return raw;
@@ -85,6 +151,7 @@ function interpolate(template: string, ctx: ResolveContext): string {
 interface DispatchHelpers {
   onSendMessage: (opts: SendMessageOptions) => Promise<void>;
   conversation?: Conversation | null;
+  customVars?: TenantTemplateVariable[];
 }
 
 async function fetchAsFile(item: MessageFunnelItem): Promise<File> {
@@ -126,14 +193,16 @@ async function dispatchFunnel(
     }
     onProgress?.(i + 1, sorted.length);
 
+    const ctx: ResolveContext = {
+      conversation: helpers.conversation,
+      customVars: helpers.customVars,
+    };
     if (item.kind === 'text') {
-      const text = interpolate(item.text_content ?? '', { conversation: helpers.conversation });
+      const text = interpolate(item.text_content ?? '', ctx);
       await helpers.onSendMessage({ content: text, isPrivate: false });
     } else {
       const file = await fetchAsFile(item);
-      const caption = item.media_caption
-        ? interpolate(item.media_caption, { conversation: helpers.conversation })
-        : '';
+      const caption = item.media_caption ? interpolate(item.media_caption, ctx) : '';
       await helpers.onSendMessage({ content: caption, files: [file], isPrivate: false });
     }
   }
@@ -152,6 +221,7 @@ export default function MessageFunnelPopover({
   isOpen, onClose, conversation, onSendMessage,
 }: MessageFunnelPopoverProps) {
   const [funnels, setFunnels] = useState<MessageFunnel[]>([]);
+  const [customVars, setCustomVars] = useState<TenantTemplateVariable[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   // Após o fix de re-render cascading (dispatch fora do Popover), `running` é só pra
@@ -162,9 +232,19 @@ export default function MessageFunnelPopover({
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
-    messageFunnelsService
-      .list({ activeOnly: true })
-      .then(setFunnels)
+    // Busca funis ativos + vars custom do tenant em paralelo. Custom vars
+    // resolvem placeholders {{token}} dos funis no momento do envio.
+    Promise.all([
+      messageFunnelsService.list({ activeOnly: true }),
+      tenantTemplateVariablesService
+        .list()
+        .then(res => res.custom)
+        .catch(() => [] as TenantTemplateVariable[]),
+    ])
+      .then(([f, v]) => {
+        setFunnels(f);
+        setCustomVars(v);
+      })
       .catch(() => toast.error('Erro ao carregar funis'))
       .finally(() => setLoading(false));
     setTimeout(() => inputRef.current?.focus(), 50);
@@ -196,7 +276,7 @@ export default function MessageFunnelPopover({
       })...`,
     );
     try {
-      await dispatchFunnel(funnel, { onSendMessage, conversation });
+      await dispatchFunnel(funnel, { onSendMessage, conversation, customVars });
       messageFunnelsService.touch(funnel.id).catch(() => {});
       toast.success(`Funil "${funnel.name}" enviado`, { id: toastId });
     } catch (err) {
