@@ -53,6 +53,7 @@ import CustomAttributes from '@/pages/Customer/Settings/CustomAttributes';
 // CannedResponses + QuickReplies foram aposentadas — substituídas por MessageFunnels.
 // As páginas antigas continuam no disco mas suas rotas redirecionam pro novo módulo.
 import { MessageFunnels } from '@/pages/Customer/Settings/MessageFunnels';
+import { TemplateVariables } from '@/pages/Customer/Settings/TemplateVariables';
 import { WelcomeAutomations } from '@/pages/Customer/Settings/WelcomeAutomations';
 import { LeadAutomations } from '@/pages/Customer/Settings/LeadAutomations';
 import { FollowupSequences } from '@/pages/Customer/Settings/FollowupSequences';
@@ -602,6 +603,21 @@ const AppRouter = () => {
                   <MainLayout>
                     <PermissionRoute resource="canned_responses" action="read">
                       <MessageFunnels />
+                    </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/settings/template-variables"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PermissionRoute resource="canned_responses" action="read">
+                      <TemplateVariables />
                     </PermissionRoute>
                   </MainLayout>
                 </CustomerRoute>

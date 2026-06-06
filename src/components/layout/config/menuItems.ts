@@ -268,6 +268,14 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         featureKey: 'message_funnels',
       },
       {
+        name: 'Variáveis de Funis',
+        href: '/settings/template-variables',
+        icon: Code,
+        resource: 'canned_responses',
+        action: 'read',
+        featureKey: 'message_funnels',
+      },
+      {
         name: 'Automações Boas-Vindas',
         href: '/settings/welcome-automations',
         icon: Zap,
