@@ -35,23 +35,44 @@ export default function FeaturesModal({ instance, open, onClose, onSaved }: Prop
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
-    try {
-      const [catRes, instRes] = await Promise.all([
-        clientInstancesService.featureCatalog(),
-        clientInstancesService.get(instance.id),
-      ]);
-      const cat = catRes.data.data;
-      const inst = instRes.data.data;
-      setCatalog(cat);
-      // Estado inicial: resolved_features tem TODAS as keys com default ON.
-      const resolved = inst.resolved_features
-        ?? cat.reduce((acc, f) => ({ ...acc, [f.key]: true }), {} as Record<string, boolean>);
-      setFeatures({ ...resolved });
-    } catch (e) {
-      setError(pickError(e));
-    } finally {
-      setLoading(false);
+    // allSettled pra que falha em uma chamada não derrube o modal inteiro
+    // (cenário comum em janela de deploy: backend velho ainda no ar).
+    const [catSettled, instSettled] = await Promise.allSettled([
+      clientInstancesService.featureCatalog(),
+      clientInstancesService.get(instance.id),
+    ]);
+
+    let cat: FeatureCatalogItem[] = [];
+    if (catSettled.status === 'fulfilled') {
+      const raw = catSettled.value?.data?.data;
+      if (Array.isArray(raw)) cat = raw;
     }
+
+    let resolved: Record<string, boolean> = {};
+    if (instSettled.status === 'fulfilled') {
+      resolved = instSettled.value?.data?.data?.resolved_features ?? {};
+    }
+
+    // Se não veio catálogo do backend (deploy em andamento), monta default
+    // ON a partir do que tiver de resolved — modal abre exibindo mensagem.
+    if (cat.length === 0 && Object.keys(resolved).length > 0) {
+      cat = Object.keys(resolved).map(key => ({ key, label: key, group: 'menus' }));
+    }
+
+    setCatalog(cat);
+    // Default ON pra qualquer key do catálogo ausente em resolved.
+    const filled = cat.reduce(
+      (acc, f) => ({ ...acc, [f.key]: resolved[f.key] !== false }),
+      {} as Record<string, boolean>
+    );
+    setFeatures(filled);
+
+    if (catSettled.status === 'rejected' || instSettled.status === 'rejected') {
+      const reason = catSettled.status === 'rejected' ? catSettled.reason : (instSettled as any).reason;
+      setError(`Backend ainda subindo o deploy — ${pickError(reason)}. Recarregue em ~1min.`);
+    }
+
+    setLoading(false);
   }, [instance.id]);
 
   useEffect(() => {

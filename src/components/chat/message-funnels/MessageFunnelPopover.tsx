@@ -154,7 +154,9 @@ export default function MessageFunnelPopover({
   const [funnels, setFunnels] = useState<MessageFunnel[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
-  const [running, setRunning] = useState<{ id: string; idx: number; total: number } | null>(null);
+  // Após o fix de re-render cascading (dispatch fora do Popover), `running` é só pra
+  // bloquear duplo-click instantâneo enquanto onClose() não foi processado.
+  const [running] = useState<{ id: string; idx: number; total: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -181,22 +183,25 @@ export default function MessageFunnelPopover({
       toast.error('Funil sem itens');
       return;
     }
-    setRunning({ id: funnel.id, idx: 0, total: funnel.items.length });
+    // Fecha o popover imediatamente e dispara o loop "fora" do escopo de render dele.
+    // Sem isso, cada setRunning() força re-render do Popover -> MessageInput -> ChatArea
+    // -> ChatPage (450KB bundle), e a UI parece congelar durante o dispatch — sintoma
+    // observado no smoke test E2E de 2026-06-06.
+    const total = funnel.items.length;
+    const totalDelay = funnel.items.reduce((acc, it) => acc + (it.delay_seconds || 0), 0);
+    onClose();
+    const toastId = toast.loading(
+      `Disparando funil "${funnel.name}" (${total} ${total === 1 ? 'item' : 'itens'}${
+        totalDelay > 0 ? `, ~${totalDelay}s` : ''
+      })...`,
+    );
     try {
-      await dispatchFunnel(
-        funnel,
-        { onSendMessage, conversation },
-        (idx, total) => setRunning({ id: funnel.id, idx, total }),
-      );
-      // Incrementa usage no backend (best-effort, não bloqueia)
+      await dispatchFunnel(funnel, { onSendMessage, conversation });
       messageFunnelsService.touch(funnel.id).catch(() => {});
-      toast.success(`Funil "${funnel.name}" enviado`);
-      onClose();
+      toast.success(`Funil "${funnel.name}" enviado`, { id: toastId });
     } catch (err) {
       const msg = (err as Error)?.message ?? 'Falha no envio';
-      toast.error(`Falha no envio: ${msg}`);
-    } finally {
-      setRunning(null);
+      toast.error(`Falha no envio: ${msg}`, { id: toastId });
     }
   }
 
