@@ -147,7 +147,7 @@ export default function CollaboratorsForm({
       case 'online':
         return 'bg-green-500';
       case 'busy':
-        return 'bg-yellow-500';
+        return 'bg-orange-500';
       case 'offline':
         return 'bg-gray-400';
       default:

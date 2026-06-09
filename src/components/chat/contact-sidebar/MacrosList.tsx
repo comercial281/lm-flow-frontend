@@ -130,8 +130,8 @@ const MacrosList: React.FC<MacrosListProps> = ({ conversationId, onMacroExecuted
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader className="text-left space-y-4">
             <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-yellow-500/10 rounded-full flex items-center justify-center">
-                <Zap className="h-6 w-6 text-yellow-500" />
+              <div className="flex-shrink-0 w-12 h-12 bg-orange-500/10 rounded-full flex items-center justify-center">
+                <Zap className="h-6 w-6 text-orange-500" />
               </div>
               <div className="flex-1 space-y-2">
                 <AlertDialogTitle className="text-lg font-semibold">
@@ -157,7 +157,7 @@ const MacrosList: React.FC<MacrosListProps> = ({ conversationId, onMacroExecuted
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={executeMacro}
-              className="w-full sm:w-auto bg-yellow-500 text-white hover:bg-yellow-600 focus:ring-yellow-500"
+              className="w-full sm:w-auto bg-orange-500 text-white hover:bg-orange-600 focus:ring-orange-500"
             >
               <Play className="h-4 w-4 mr-2" />
               {t('contactSidebar.macros.dialog.execute')}

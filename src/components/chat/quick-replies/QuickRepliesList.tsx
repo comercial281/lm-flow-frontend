@@ -60,7 +60,7 @@ const QuickRepliesList: React.FC<QuickRepliesListProps> = ({
       <>
         {parts.map((part, i) =>
           part.toLowerCase() === search.toLowerCase() ? (
-            <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 text-foreground">
+            <mark key={i} className="bg-orange-200 dark:bg-orange-800 text-foreground">
               {part}
             </mark>
           ) : (

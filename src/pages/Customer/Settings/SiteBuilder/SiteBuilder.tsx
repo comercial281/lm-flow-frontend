@@ -671,7 +671,7 @@ export default function SiteBuilder() {
                     {article.status === 'published' && (
                       <Button variant="ghost" size="icon" title="Arquivar"
                         onClick={() => handleArchiveArticle(article)}>
-                        <Archive className="h-4 w-4 text-amber-600" />
+                        <Archive className="h-4 w-4 text-orange-600" />
                       </Button>
                     )}
                     <Button variant="ghost" size="icon" onClick={() => openEditArticle(article)}>

@@ -321,7 +321,7 @@ export default function Proposals() {
         <div className="grid grid-cols-4 gap-3 mb-4">
           {[
             { label: 'Total', value: stats.total, icon: FileText, color: 'text-blue-600' },
-            { label: 'Em aberto', value: stats.sent, icon: Send, color: 'text-amber-600' },
+            { label: 'Em aberto', value: stats.sent, icon: Send, color: 'text-orange-600' },
             { label: 'Aceitas', value: stats.accepted, icon: CheckCircle, color: 'text-emerald-600' },
             { label: 'Volume fechado', value: formatCurrency(stats.totalValue), icon: TrendingUp, color: 'text-violet-600' },
           ].map(s => (
@@ -647,7 +647,7 @@ function ProposalCard({ proposal, onEdit, onDelete, onSend, onAccept, onReject, 
                 <p className="text-xs text-muted-foreground">Valor ofertado</p>
                 <p className="text-sm font-semibold text-foreground">{proposal.display_offered_value}</p>
                 {proposal.counter_value && (
-                  <p className="text-xs text-amber-600">Contra: {formatCurrency(proposal.counter_value)}</p>
+                  <p className="text-xs text-orange-600">Contra: {formatCurrency(proposal.counter_value)}</p>
                 )}
               </div>
             </div>

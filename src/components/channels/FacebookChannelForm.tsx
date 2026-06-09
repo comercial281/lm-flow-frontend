@@ -282,9 +282,9 @@ export default function FacebookChannelForm({ onSuccess, onCancel }: FacebookCha
       <div className="space-y-6" data-tour="facebook-connect">
         {/* Configuration Check */}
         {!isFacebookConfigured && (
-          <div className="flex items-start gap-3 p-4 rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20">
+          <div className="flex items-start gap-3 p-4 rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-950/20">
             <svg
-              className="w-5 h-5 text-yellow-600 mt-0.5"
+              className="w-5 h-5 text-orange-600 mt-0.5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -297,10 +297,10 @@ export default function FacebookChannelForm({ onSuccess, onCancel }: FacebookCha
               />
             </svg>
             <div>
-              <h4 className="font-medium text-yellow-800 dark:text-yellow-200">
+              <h4 className="font-medium text-orange-800 dark:text-orange-200">
                 {t('errors.facebookNotConfigured')}
               </h4>
-              <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+              <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
                 {t('errors.facebookConfigMessage')}
               </p>
             </div>
@@ -498,11 +498,11 @@ export default function FacebookChannelForm({ onSuccess, onCancel }: FacebookCha
       {/* No Pages Available */}
       {!isLoading && !hasError && pages.length === 0 && hasLoginStarted && (
         <div className="text-center space-y-4">
-          <div className="p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-            <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">
+          <div className="p-4 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+            <h4 className="font-medium text-orange-800 dark:text-orange-200 mb-2">
               {t('errors.noPagesAvailable')}
             </h4>
-            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+            <p className="text-sm text-orange-700 dark:text-orange-300">
               {t('errors.noPagesAvailableMessage')}
             </p>
           </div>

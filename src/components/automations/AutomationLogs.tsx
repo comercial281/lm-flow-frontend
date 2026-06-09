@@ -19,7 +19,7 @@ interface AutomationLogsProps {
 const STATUS_ICON = {
   success: <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />,
   failed: <XCircle className="h-4 w-4 text-destructive flex-shrink-0" />,
-  partial: <Clock className="h-4 w-4 text-yellow-500 flex-shrink-0" />,
+  partial: <Clock className="h-4 w-4 text-orange-500 flex-shrink-0" />,
 };
 
 const BADGE_VARIANT: Record<AutomationLog['status'], 'default' | 'destructive' | 'secondary'> = {

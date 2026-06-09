@@ -104,7 +104,7 @@ export default function PropertiesMap() {
                   <>
                     <strong className="text-foreground">{valid.length}</strong> imóvel{valid.length !== 1 ? 'es' : ''} com coordenadas
                     {withoutCoords > 0 && (
-                      <span className="ml-2 text-amber-600">
+                      <span className="ml-2 text-orange-600">
                         · {withoutCoords} sem lat/lng (não aparece{withoutCoords !== 1 ? 'm' : ''} no mapa)
                       </span>
                     )}

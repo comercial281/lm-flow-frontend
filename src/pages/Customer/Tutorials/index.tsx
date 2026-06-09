@@ -59,8 +59,8 @@ const Tutorials = () => {
           </div>
         </div>
         <div className="flex-1 flex items-center justify-center p-6">
-          <div className="max-w-md bg-card border border-amber-500/40 rounded-xl p-6 flex items-start gap-3">
-            <AlertTriangle size={20} className="text-amber-500 shrink-0 mt-0.5" />
+          <div className="max-w-md bg-card border border-orange-500/40 rounded-xl p-6 flex items-start gap-3">
+            <AlertTriangle size={20} className="text-orange-500 shrink-0 mt-0.5" />
             <div className="text-sm">
               <p className="font-semibold mb-1">Tutorial indisponivel</p>
               <p className="text-muted-foreground text-xs">

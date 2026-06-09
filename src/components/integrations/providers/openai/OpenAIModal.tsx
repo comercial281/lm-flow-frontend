@@ -160,10 +160,10 @@ export default function OpenAIModal({
           </Card>
 
           {/* Security Warning */}
-          <Card className="p-4 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+          <Card className="p-4 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800">
             <div className="flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-amber-700 dark:text-amber-300">
+              <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-orange-700 dark:text-orange-300">
                 <strong>{t('openai.modal.security.title')}</strong> {t('openai.modal.security.description')}
               </div>
             </div>

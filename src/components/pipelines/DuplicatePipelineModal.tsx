@@ -102,8 +102,8 @@ export default function DuplicatePipelineModal({
               </div>
             </div>
 
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-lg p-3">
-              <div className="text-sm text-amber-800 dark:text-amber-200">
+            <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/30 rounded-lg p-3">
+              <div className="text-sm text-orange-800 dark:text-orange-200">
                 <div className="font-medium mb-1">⚠️ {t('duplicatePipeline.noteLabel')}</div>
                 <div className="text-xs">
                   {t('duplicatePipeline.noteMessage')}

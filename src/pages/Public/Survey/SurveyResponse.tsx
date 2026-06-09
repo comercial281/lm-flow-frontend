@@ -10,7 +10,7 @@ import { Button } from '@evoapi/design-system';
 const getEmojiRatings = (t: any) => [
   { value: 1, icon: Frown, labelKey: t('survey.rating.veryDissatisfied'), color: 'text-red-500' },
   { value: 2, icon: Frown, labelKey: t('survey.rating.dissatisfied'), color: 'text-orange-400' },
-  { value: 3, icon: Meh, labelKey: t('survey.rating.neutral'), color: 'text-yellow-500' },
+  { value: 3, icon: Meh, labelKey: t('survey.rating.neutral'), color: 'text-orange-500' },
   { value: 4, icon: Smile, labelKey: t('survey.rating.satisfied'), color: 'text-green-400' },
   { value: 5, icon: Smile, labelKey: t('survey.rating.verySatisfied'), color: 'text-green-500' },
 ];
@@ -208,7 +208,7 @@ const SurveyResponse = () => {
                     <Star
                       className={`w-10 h-10 ${
                         selectedRating && value <= selectedRating
-                          ? 'fill-yellow-400 text-yellow-400'
+                          ? 'fill-orange-400 text-orange-400'
                           : 'text-muted-foreground'
                       }`}
                     />

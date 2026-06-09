@@ -1950,7 +1950,7 @@ const ZapiWhatsAppConfig: React.FC<{
     } else if (statusLower === 'disconnected' || statusLower === 'close') {
       return <Badge className="bg-red-600 dark:bg-red-500 text-white">Disconnected</Badge>;
     } else if (statusLower === 'connecting') {
-      return <Badge className="bg-yellow-600 dark:bg-yellow-500 text-white">Connecting</Badge>;
+      return <Badge className="bg-orange-600 dark:bg-orange-500 text-white">Connecting</Badge>;
     }
     return <Badge variant="secondary">{status}</Badge>;
   };

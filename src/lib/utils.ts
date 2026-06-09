@@ -275,7 +275,7 @@ export function createMiniMapNodeColors(customColors: Record<string, string> = {
   const defaultColors = {
     'trigger-node': '#10b981',
     'action-node': '#3b82f6',
-    'condition-node': '#f59e0b',
+    'condition-node': '#f97316',
     'communication-node': '#8b5cf6',
     'flow-node': '#06b6d4',
     'assign-agent-node': '#3b82f6',
@@ -288,7 +288,7 @@ export function createMiniMapNodeColors(customColors: Record<string, string> = {
     'send-transcript-node': '#14b8a6',
     'send-webhook-node': '#8b5cf6',
     'mute-conversation-node': '#f97316',
-    'snooze-conversation-node': '#eab308',
+    'snooze-conversation-node': '#f97316',
     'resolve-conversation-node': '#10b981',
     'change-priority-node': '#6366f1',
   };

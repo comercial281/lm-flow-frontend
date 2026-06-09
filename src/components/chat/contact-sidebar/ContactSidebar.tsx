@@ -263,7 +263,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                 <CollapsibleHeader
                   title={t('contactSidebar.sections.macros.title')}
                   description={t('contactSidebar.sections.macros.description')}
-                  icon={<Zap className="h-4 w-4 text-yellow-500" />}
+                  icon={<Zap className="h-4 w-4 text-orange-500" />}
                   isOpen={showMacros}
                   onToggle={() => setShowMacros(!showMacros)}
                 />

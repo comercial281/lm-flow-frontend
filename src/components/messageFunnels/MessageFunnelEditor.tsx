@@ -46,7 +46,7 @@ const KIND_COLORS: Record<FunnelItemKind, string> = {
   audio: '#00a884',
   image: '#3b82f6',
   video: '#f43f5e',
-  document: '#f59e0b',
+  document: '#f97316',
 };
 
 // ── Tipos internos ───────────────────────────────────────────────────────────
@@ -491,7 +491,7 @@ function ItemEditor({
               )}
               {item.kind === 'document' && (
                 <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
-                  <FileText size={20} className="text-amber-500" />
+                  <FileText size={20} className="text-orange-500" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
@@ -603,7 +603,7 @@ function ItemEditor({
         <span className="text-xs text-muted-foreground">segundos antes de enviar</span>
         {index === 0 && item.delay_seconds > 0 && (
           <div
-            className="flex items-center gap-1 text-xs text-amber-500 ml-auto"
+            className="flex items-center gap-1 text-xs text-orange-500 ml-auto"
             title="1º item costuma ter delay 0"
           >
             <AlertCircle size={10} />

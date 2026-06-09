@@ -62,7 +62,7 @@ export default function PipelineTaskItem({
       case 'high':
         return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400';
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400';
       case 'low':
         return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
       default:

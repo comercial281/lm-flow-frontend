@@ -295,7 +295,7 @@ export default function PipelineItemCard({
 
           {/* Tasks próximas do vencimento */}
           {item.tasks_info?.due_soon_count > 0 && (
-            <Badge title={t('tasks.status.dueSoon')} className="h-5 px-1.5 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+            <Badge title={t('tasks.status.dueSoon')} className="h-5 px-1.5 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">
               <Clock className="w-3 h-3 mr-1" />
               {item.tasks_info.due_soon_count}
             </Badge>

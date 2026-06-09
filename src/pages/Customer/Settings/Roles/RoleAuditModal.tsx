@@ -32,7 +32,7 @@ const ACTION_COLORS: Record<string, string> = {
   deleted: 'bg-red-500',
   permission_added: 'bg-emerald-500',
   permission_removed: 'bg-orange-500',
-  permission_replaced: 'bg-yellow-500',
+  permission_replaced: 'bg-orange-500',
   renamed: 'bg-purple-500',
   cloned: 'bg-pink-500',
   restored: 'bg-cyan-500',

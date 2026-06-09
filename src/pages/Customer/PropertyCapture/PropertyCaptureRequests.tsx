@@ -124,9 +124,9 @@ export default function PropertyCaptureRequests() {
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
-            <p className="text-xs text-amber-700 dark:text-amber-400">Aguardando análise</p>
-            <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">{stats.pending}</p>
+          <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3">
+            <p className="text-xs text-orange-700 dark:text-orange-400">Aguardando análise</p>
+            <p className="text-2xl font-bold text-orange-700 dark:text-orange-400">{stats.pending}</p>
           </div>
           <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3">
             <p className="text-xs text-emerald-700 dark:text-emerald-400">Aprovadas</p>

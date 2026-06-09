@@ -62,7 +62,7 @@ export const EmojiPickerComponent: React.FC<EmojiPickerComponentProps> = ({
         <Smile
           size={20}
           className={`transition-colors duration-200 ${
-            isOpen ? 'text-amber-500' : 'text-slate-500 hover:text-slate-700'
+            isOpen ? 'text-orange-500' : 'text-slate-500 hover:text-slate-700'
           }`}
         />
       </button>

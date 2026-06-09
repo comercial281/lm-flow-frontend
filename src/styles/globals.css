@@ -52,7 +52,7 @@
 /* ====================================================================
  * LM Flow brand palette — overrides Tailwind/shadcn defaults
  * Primary: purple gradient (#7B2CFF → #5B21B6)
- * Accent:  gold gradient (#FCD34D → #D97706)
+ * Accent:  soft violet highlight (marca) — sem dourado/amarelo
  * ==================================================================== */
 :root {
   --background: oklch(1 0 0);
@@ -67,7 +67,7 @@
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.83 0.16 80);
+  --accent: oklch(0.85 0.10 295);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
@@ -84,9 +84,9 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.55 0.22 295);
   --chart-1: oklch(0.55 0.22 295);
-  --chart-2: oklch(0.83 0.16 80);
+  --chart-2: oklch(0.70 0.14 200);
   --chart-3: oklch(0.45 0.18 295);
-  --chart-4: oklch(0.7 0.18 60);
+  --chart-4: oklch(0.65 0.20 350);
   --chart-5: oklch(0.65 0.12 305);
 }
 
@@ -103,7 +103,7 @@
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.18 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.83 0.16 80);
+  --accent: oklch(0.85 0.10 295);
   --accent-foreground: oklch(0.145 0 0);
   --destructive: oklch(0.65 0.24 27);
   --destructive-foreground: oklch(0.985 0 0);
@@ -119,9 +119,9 @@
   --sidebar-border: oklch(0.22 0 0);
   --sidebar-ring: oklch(0.62 0.24 295);
   --chart-1: oklch(0.62 0.24 295);
-  --chart-2: oklch(0.83 0.16 80);
+  --chart-2: oklch(0.70 0.14 200);
   --chart-3: oklch(0.48 0.2 295);
-  --chart-4: oklch(0.7 0.18 60);
+  --chart-4: oklch(0.65 0.20 350);
   --chart-5: oklch(0.7 0.14 305);
 }
 

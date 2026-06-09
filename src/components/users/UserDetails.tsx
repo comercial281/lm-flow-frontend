@@ -56,7 +56,7 @@ export default function UserDetails({
       case 'online':
         return 'text-green-600';
       case 'busy':
-        return 'text-yellow-600';
+        return 'text-orange-600';
       case 'offline':
       default:
         return 'text-gray-600';

@@ -556,7 +556,7 @@ export default function Visits() {
                 <div className="flex gap-1 mt-2">
                   {[1,2,3,4,5].map(n => (
                     <button key={n} onClick={() => setRating(n)}>
-                      <Star className={`h-6 w-6 ${n <= rating ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground'}`} />
+                      <Star className={`h-6 w-6 ${n <= rating ? 'text-orange-400 fill-orange-400' : 'text-muted-foreground'}`} />
                     </button>
                   ))}
                 </div>
@@ -616,7 +616,7 @@ function VisitCard({
 
   return (
     <div className={`flex gap-4 p-4 rounded-xl border border-border bg-card ${
-      isPastVisit && isActive ? 'border-amber-300 dark:border-amber-700' : ''
+      isPastVisit && isActive ? 'border-orange-300 dark:border-orange-700' : ''
     }`}>
       {/* Time column */}
       <div className="flex-shrink-0 w-16 text-center">
@@ -639,13 +639,13 @@ function VisitCard({
               {VISIT_STATUS_LABELS[visit.status] ?? visit.status}
             </span>
             {isPastVisit && isActive && (
-              <span className="ml-2 text-xs text-amber-600 dark:text-amber-400 font-medium">Atrasada</span>
+              <span className="ml-2 text-xs text-orange-600 dark:text-orange-400 font-medium">Atrasada</span>
             )}
           </div>
           {visit.rating != null && (
             <div className="flex items-center gap-0.5">
               {[1,2,3,4,5].map(n => (
-                <Star key={n} className={`h-3.5 w-3.5 ${n <= (visit.rating ?? 0) ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground'}`} />
+                <Star key={n} className={`h-3.5 w-3.5 ${n <= (visit.rating ?? 0) ? 'text-orange-400 fill-orange-400' : 'text-muted-foreground'}`} />
               ))}
             </div>
           )}

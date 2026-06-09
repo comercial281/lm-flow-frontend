@@ -97,7 +97,7 @@ export default function PipelineSwitcher({
     }
     switch (pipeline.pipeline_type) {
       case 'sale': return '#10b981';
-      case 'rental': return '#f59e0b';
+      case 'rental': return '#f97316';
       case 'sales': return '#10b981';
       case 'support': return '#3b82f6';
       case 'marketing': return '#8b5cf6';

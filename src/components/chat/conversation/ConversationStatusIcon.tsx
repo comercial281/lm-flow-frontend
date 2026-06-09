@@ -24,8 +24,8 @@ const ConversationStatusIcon: React.FC<ConversationStatusIconProps> = ({ status,
       case 'pending':
         return {
           icon: Clock,
-          color: 'text-yellow-600',
-          bgColor: 'bg-yellow-100',
+          color: 'text-orange-600',
+          bgColor: 'bg-orange-100',
           label: t('conversationStatusIcon.pending.label'),
           description: t('conversationStatusIcon.pending.description'),
         };

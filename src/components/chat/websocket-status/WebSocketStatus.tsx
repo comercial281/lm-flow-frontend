@@ -35,9 +35,9 @@ const WebSocketStatus: React.FC<WebSocketStatusProps> = ({
         variant: 'destructive' as const,
         icon: <WifiOff className="h-3 w-3" />,
         text: t('webSocketStatus.reconnecting'),
-        bgColor: 'bg-yellow-500/10',
-        textColor: 'text-yellow-600',
-        borderColor: 'border-yellow-500/20',
+        bgColor: 'bg-orange-500/10',
+        textColor: 'text-orange-600',
+        borderColor: 'border-orange-500/20',
       };
     }
   };

@@ -23,7 +23,7 @@ const KIND_ICONS: Record<FunnelItemKind, typeof Type> = {
   text: Type, audio: Mic, image: ImageIcon, video: Video, document: FileText,
 };
 const KIND_COLORS: Record<FunnelItemKind, string> = {
-  text: '#7c3aed', audio: '#00a884', image: '#3b82f6', video: '#f43f5e', document: '#f59e0b',
+  text: '#7c3aed', audio: '#00a884', image: '#3b82f6', video: '#f43f5e', document: '#f97316',
 };
 
 export default function MessageFunnels() {

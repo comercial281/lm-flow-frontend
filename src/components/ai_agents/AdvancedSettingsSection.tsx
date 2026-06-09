@@ -150,7 +150,7 @@ const AdvancedSettingsSection = ({
           <div className="flex items-start justify-between p-4 bg-muted/30 rounded-lg border">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <Zap className="h-5 w-5 text-yellow-500" />
+                <Zap className="h-5 w-5 text-orange-500" />
                 <Label htmlFor="planner" className="font-medium">
                   {t('planner.title')}
                 </Label>

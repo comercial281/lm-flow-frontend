@@ -203,7 +203,7 @@ const MessageList: React.FC<MessageListProps> = ({
                   } ${m.type === 'out'
                     ? 'text-white rounded-tr-[2px]'
                     : m.isSystem || m.type === 'system'
-                      ? 'bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-center italic'
+                      ? 'bg-orange-50 text-orange-800 border border-orange-200 rounded-lg text-center italic'
                       : 'bg-white text-slate-900 border border-slate-200 rounded-tl-[2px]'
                   } ${m.attachments?.length ? 'p-2' : 'px-3 py-2'}`}
                 style={m.type === 'out' ? { backgroundColor: widgetColor } : undefined}

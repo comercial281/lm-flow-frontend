@@ -42,7 +42,7 @@ const STAGE_FILTERS = [
 
 const SCORE_COLOR = (score: number) => {
   if (score >= 80) return 'text-emerald-600';
-  if (score >= 50) return 'text-amber-600';
+  if (score >= 50) return 'text-orange-600';
   return 'text-muted-foreground';
 };
 

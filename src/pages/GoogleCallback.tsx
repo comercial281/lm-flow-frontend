@@ -119,7 +119,7 @@ export default function GoogleCallback() {
           {/* Header com Google Icon */}
           <div className="text-center pb-6 border-b">
             <div className="flex items-center justify-center gap-3">
-              <div className="p-3 rounded-full bg-gradient-to-br from-red-500 via-yellow-500 to-green-500">
+              <div className="p-3 rounded-full bg-gradient-to-br from-red-500 via-orange-500 to-green-500">
                 <Mail className="h-8 w-8 text-white" />
               </div>
               <h1 className="text-2xl font-bold">Gmail</h1>

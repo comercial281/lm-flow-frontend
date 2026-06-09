@@ -152,7 +152,7 @@ export default function PipelinesTable({
                   "text-xs px-2 py-1 rounded-full",
                   pipeline.is_active
                     ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400"
-                    : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400"
+                    : "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400"
                 )}>
                   {pipeline.is_active ? t('pipelinesTable.status.active') : t('pipelinesTable.status.inactive')}
                 </span>

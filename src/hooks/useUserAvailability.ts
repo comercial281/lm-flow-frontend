@@ -34,7 +34,7 @@ export function useUserAvailability() {
 
 export const availabilityOptions = [
   { value: 'online', label: 'Online', color: 'bg-green-500' },
-  { value: 'busy', label: 'Ocupado', color: 'bg-yellow-500' },
+  { value: 'busy', label: 'Ocupado', color: 'bg-orange-500' },
   { value: 'offline', label: 'Offline', color: 'bg-gray-500' },
 ] as const;
 

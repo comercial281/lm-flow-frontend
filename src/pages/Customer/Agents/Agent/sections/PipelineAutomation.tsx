@@ -58,7 +58,7 @@ const TASK_TYPES = [
 
 const PRIORITIES = [
   { value: 'low', label: 'Baixa', color: 'text-gray-500' },
-  { value: 'medium', label: 'Média', color: 'text-yellow-500' },
+  { value: 'medium', label: 'Média', color: 'text-orange-500' },
   { value: 'high', label: 'Alta', color: 'text-orange-500' },
   { value: 'urgent', label: 'Urgente', color: 'text-red-500' },
 ];

@@ -47,7 +47,7 @@ const CannedResponsesList: React.FC<CannedResponsesListProps> = ({
       <span>
         {parts.map((part, index) =>
           part.toLowerCase() === query.toLowerCase() ? (
-            <mark key={index} className="bg-yellow-200 dark:bg-yellow-800 text-foreground">
+            <mark key={index} className="bg-orange-200 dark:bg-orange-800 text-foreground">
               {part}
             </mark>
           ) : (

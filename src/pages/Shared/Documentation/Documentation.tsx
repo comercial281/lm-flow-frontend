@@ -204,9 +204,9 @@ const Documentacao = () => {
                 <li dangerouslySetInnerHTML={{ __html: t('content.gettingStarted.steps.step4') }} />
               </ol>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mt-8">
-                <h3 className="text-lg font-semibold text-yellow-900 mb-2">{t('content.tip.title')}</h3>
-                <p className="text-yellow-800">
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 mt-8">
+                <h3 className="text-lg font-semibold text-orange-900 mb-2">{t('content.tip.title')}</h3>
+                <p className="text-orange-800">
                   {t('content.tip.description')}
                 </p>
               </div>

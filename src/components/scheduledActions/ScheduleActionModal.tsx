@@ -526,7 +526,7 @@ export function ScheduleActionModal({
                   </SelectContent>
                 </Select>
                 {channelOptions.length === 0 && !loadingInboxes && (
-                  <p className="text-sm text-amber-600">
+                  <p className="text-sm text-orange-600">
                     {t('scheduledActions.messages.noChannelsConfigured')}
                   </p>
                 )}

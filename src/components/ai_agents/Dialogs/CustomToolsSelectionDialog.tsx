@@ -106,7 +106,7 @@ const CustomToolsSelectionDialog = ({
     const colors: Record<string, string> = {
       GET: 'bg-green-500/10 text-green-600 border-green-500/30',
       POST: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
-      PUT: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30',
+      PUT: 'bg-orange-500/10 text-orange-600 border-orange-500/30',
       PATCH: 'bg-orange-500/10 text-orange-600 border-orange-500/30',
       DELETE: 'bg-red-500/10 text-red-600 border-red-500/30',
     };

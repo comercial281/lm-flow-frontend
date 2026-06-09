@@ -227,7 +227,7 @@ export default function Marketplace() {
       <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-medium ${
         rec.status === 'connected'
           ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-          : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+          : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
       }`}>
         {rec.status === 'connected' ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
         {rec.status === 'connected' ? 'Conectado' : rec.status}

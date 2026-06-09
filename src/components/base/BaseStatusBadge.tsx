@@ -24,9 +24,9 @@ const statusConfig = {
     borderClassName: 'border-red-600 dark:border-[#6A231D]',
   },
   pending: {
-    bgClassName: 'bg-amber-500 dark:bg-yellow-500',
+    bgClassName: 'bg-orange-500 dark:bg-orange-500',
     textClassName: 'text-white',
-    borderClassName: 'border-amber-500 dark:border-yellow-500',
+    borderClassName: 'border-orange-500 dark:border-orange-500',
   },
   success: {
     bgClassName: 'bg-emerald-600 dark:bg-[#26533D]',
@@ -39,9 +39,9 @@ const statusConfig = {
     borderClassName: 'border-red-600 dark:border-[#6A231D]',
   },
   warning: {
-    bgClassName: 'bg-amber-500 dark:bg-yellow-500',
+    bgClassName: 'bg-orange-500 dark:bg-orange-500',
     textClassName: 'text-white',
-    borderClassName: 'border-amber-500 dark:border-yellow-500',
+    borderClassName: 'border-orange-500 dark:border-orange-500',
   }
 };
 

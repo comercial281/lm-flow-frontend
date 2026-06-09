@@ -113,7 +113,7 @@ function PasswordCell({
               {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />} Ver
             </Button>
           ) : stale ? (
-            <span className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1">
+            <span className="text-xs text-orange-700 dark:text-orange-400 flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" /> cliente trocou
             </span>
           ) : (

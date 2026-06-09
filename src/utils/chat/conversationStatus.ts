@@ -39,8 +39,8 @@ export const getStatusConfig = (status: string): StatusConfig => {
     pending: {
       label: 'Pendente',
       description: 'Aguardando resposta do cliente',
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100',
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-100',
     },
     resolved: {
       label: 'Resolvida',

@@ -643,7 +643,7 @@ const MessageTemplateForm: React.FC<MessageTemplateFormProps> = ({
         text: t('settings.messageTemplates.status.approved'),
       },
       PENDING: {
-        color: 'bg-yellow-600 dark:bg-yellow-500 text-white',
+        color: 'bg-orange-600 dark:bg-orange-500 text-white',
         text: t('settings.messageTemplates.status.pending'),
       },
       REJECTED: {

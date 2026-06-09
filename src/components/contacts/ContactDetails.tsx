@@ -690,7 +690,7 @@ export default function ContactDetails({
                 <div className="text-center">
                   <div className={`text-4xl font-bold ${
                     qualifyResult.score >= 70 ? 'text-emerald-500' :
-                    qualifyResult.score >= 40 ? 'text-amber-500' : 'text-red-500'
+                    qualifyResult.score >= 40 ? 'text-orange-500' : 'text-red-500'
                   }`}>
                     {qualifyResult.score}
                   </div>
@@ -699,7 +699,7 @@ export default function ContactDetails({
                 <div>
                   <Badge className={
                     qualifyResult.status === 'qualified' ? 'bg-emerald-100 text-emerald-700' :
-                    qualifyResult.status === 'warm' ? 'bg-amber-100 text-amber-700' :
+                    qualifyResult.status === 'warm' ? 'bg-orange-100 text-orange-700' :
                     'bg-slate-100 text-slate-700'
                   }>
                     {qualifyResult.status === 'qualified' ? 'Qualificado' :

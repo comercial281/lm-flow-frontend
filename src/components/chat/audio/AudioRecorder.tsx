@@ -144,7 +144,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
           {isRecording && !isPaused && (
             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
           )}
-          {isRecording && isPaused && <div className="w-2 h-2 bg-yellow-500 rounded-full" />}
+          {isRecording && isPaused && <div className="w-2 h-2 bg-orange-500 rounded-full" />}
           <span className="text-lg font-mono font-medium">{formatDuration(duration)}</span>
           {isPaused && (
             <span className="text-sm text-muted-foreground">

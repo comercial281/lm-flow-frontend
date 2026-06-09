@@ -49,7 +49,7 @@ export default function NotificationBell() {
         >
           <Bell className={cn('h-5 w-5', isOpen && 'text-primary')} />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-1 bg-yellow-400 text-black text-xs font-medium min-w-[1rem] h-4 rounded-full flex items-center justify-center px-1">
+            <span className="absolute -top-0.5 -right-1 bg-orange-400 text-black text-xs font-medium min-w-[1rem] h-4 rounded-full flex items-center justify-center px-1">
               {getUnreadCountDisplay()}
             </span>
           )}

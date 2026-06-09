@@ -91,7 +91,7 @@ export default function PipelineCard({
 
               {/* Default badge */}
               {pipeline.is_default && (
-                <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400 flex items-center gap-1">
+                <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400 flex items-center gap-1">
                   <Star className="h-3 w-3 fill-current" />
                   {t('pipelineCard.default')}
                 </span>

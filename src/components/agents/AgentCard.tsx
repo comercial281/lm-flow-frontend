@@ -32,9 +32,9 @@ export default function AgentCard({
       accent: 'from-blue-500/10 to-transparent',
     },
     sequential: {
-      badge: 'border-amber-500 text-amber-400 bg-amber-500/10',
-      ring: 'ring-1 ring-amber-500/40',
-      accent: 'from-amber-500/10 to-transparent',
+      badge: 'border-orange-500 text-orange-400 bg-orange-500/10',
+      ring: 'ring-1 ring-orange-500/40',
+      accent: 'from-orange-500/10 to-transparent',
     },
     parallel: {
       badge: 'border-violet-500 text-violet-400 bg-violet-500/10',

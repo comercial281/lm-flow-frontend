@@ -43,7 +43,7 @@ export default function AgentsTable({
       },
       sequential: {
         label: 'Agente Sequencial',
-        color: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900 dark:text-amber-200 dark:border-amber-700',
+        color: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-200 dark:border-orange-700',
       },
       parallel: {
         label: 'Agente Paralelo',

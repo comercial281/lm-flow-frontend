@@ -54,7 +54,7 @@ export default function PipelineItemTasksBadge({ tasks, compact = false }: Pipel
           </Badge>
         )}
         {counters.dueSoon > 0 && counters.overdue === 0 && (
-          <Badge className="h-5 px-1.5 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+          <Badge className="h-5 px-1.5 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">
             <Clock className="w-3 h-3 mr-1" />
             {counters.dueSoon}
           </Badge>
@@ -81,7 +81,7 @@ export default function PipelineItemTasksBadge({ tasks, compact = false }: Pipel
 
       {/* Tasks próximas do vencimento */}
       {counters.dueSoon > 0 && (
-        <Badge className="h-6 px-2 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+        <Badge className="h-6 px-2 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">
           <Clock className="w-3 h-3 mr-1" />
           {counters.dueSoon} próxima{counters.dueSoon > 1 ? 's' : ''}
         </Badge>

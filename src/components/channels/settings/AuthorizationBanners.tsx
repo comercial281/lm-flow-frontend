@@ -83,25 +83,25 @@ const GoogleReauthorizeBanner: React.FC<{
   };
 
   return (
-    <Card className="border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/10">
+    <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/10">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-yellow-700 dark:text-yellow-400 mt-0.5" />
+          <AlertTriangle className="w-5 h-5 text-orange-700 dark:text-orange-400 mt-0.5" />
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <Mail className="w-4 h-4 text-red-600 dark:text-red-400" />
-              <h3 className="font-semibold text-yellow-900 dark:text-yellow-200">
+              <h3 className="font-semibold text-orange-900 dark:text-orange-200">
                 {t('settings.authorizationBanners.google.title')}
               </h3>
             </div>
-            <p className="text-sm text-yellow-800 dark:text-yellow-300 mb-3">
+            <p className="text-sm text-orange-800 dark:text-orange-300 mb-3">
               {t('settings.authorizationBanners.google.description')}
             </p>
             <Button
               onClick={handleReauthorize}
               loading={isReauthorizing}
               size="sm"
-              className="bg-yellow-600 hover:bg-yellow-700 text-white"
+              className="bg-orange-600 hover:bg-orange-700 text-white"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               {t('settings.authorizationBanners.google.button')}

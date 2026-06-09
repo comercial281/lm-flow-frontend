@@ -54,7 +54,7 @@ const Banner: React.FC<BannerProps> = ({
     primary: 'bg-primary text-primary-foreground',
     secondary: 'bg-secondary text-secondary-foreground',
     alert: 'bg-destructive/90 text-destructive-foreground',
-    warning: 'bg-yellow-500 text-white dark:bg-yellow-600',
+    warning: 'bg-orange-500 text-white dark:bg-orange-600',
   };
 
   return (

@@ -44,70 +44,70 @@ const colorStyles = {
     gradient: "bg-gradient-to-br from-blue-950/40 to-neutral-900/90",
     glow: "shadow-[0_0_15px_rgba(59,130,246,0.15)]",
     selectedGlow: "shadow-[0_0_25px_rgba(59,130,246,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400" // Mantém o padrão atual de handles amarelos
+    handle: "bg-violet-500 border-violet-400" // handles na cor da marca (violeta)
   },
   orange: {
     border: "border-orange-700/70 hover:border-orange-500",
     gradient: "bg-gradient-to-br from-orange-950/40 to-neutral-900/90",
     glow: "shadow-[0_0_15px_rgba(249,115,22,0.15)]",
     selectedGlow: "shadow-[0_0_25px_rgba(249,115,22,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    handle: "bg-violet-500 border-violet-400"
   },
   green: {
     border: "border-green-700/70 hover:border-green-500",
     gradient: "bg-gradient-to-br from-green-950/40 to-neutral-900/90",
     glow: "shadow-[0_0_15px_rgba(34,197,94,0.15)]",
     selectedGlow: "shadow-[0_0_25px_rgba(34,197,94,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    handle: "bg-violet-500 border-violet-400"
   },
   red: {
     border: "border-red-700/70 hover:border-red-500",
     gradient: "bg-gradient-to-br from-red-950/40 to-neutral-900/90",
     glow: "shadow-[0_0_15px_rgba(239,68,68,0.15)]",
     selectedGlow: "shadow-[0_0_25px_rgba(239,68,68,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    handle: "bg-violet-500 border-violet-400"
   },
   yellow: {
-    border: "border-yellow-700/70 hover:border-yellow-500",
-    gradient: "bg-gradient-to-br from-yellow-950/40 to-neutral-900/90",
-    glow: "shadow-[0_0_15px_rgba(234,179,8,0.15)]",
-    selectedGlow: "shadow-[0_0_25px_rgba(234,179,8,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    border: "border-orange-700/70 hover:border-orange-500",
+    gradient: "bg-gradient-to-br from-orange-950/40 to-neutral-900/90",
+    glow: "shadow-[0_0_15px_rgba(249,115,22,0.15)]",
+    selectedGlow: "shadow-[0_0_25px_rgba(249,115,22,0.3)]",
+    handle: "bg-violet-500 border-violet-400"
   },
   purple: {
     border: "border-purple-700/70 hover:border-purple-500",
     gradient: "bg-gradient-to-br from-purple-950/40 to-neutral-900/90",
     glow: "shadow-[0_0_15px_rgba(168,85,247,0.15)]",
     selectedGlow: "shadow-[0_0_25px_rgba(168,85,247,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    handle: "bg-violet-500 border-violet-400"
   },
   indigo: {
     border: "border-indigo-700/70 hover:border-indigo-500",
     gradient: "bg-gradient-to-br from-indigo-950/40 to-neutral-900/90",
     glow: "shadow-[0_0_15px_rgba(99,102,241,0.15)]",
     selectedGlow: "shadow-[0_0_25px_rgba(99,102,241,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    handle: "bg-violet-500 border-violet-400"
   },
   pink: {
     border: "border-pink-700/70 hover:border-pink-500",
     gradient: "bg-gradient-to-br from-pink-950/40 to-neutral-900/90",
     glow: "shadow-[0_0_15px_rgba(236,72,153,0.15)]",
     selectedGlow: "shadow-[0_0_25px_rgba(236,72,153,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    handle: "bg-violet-500 border-violet-400"
   },
   emerald: {
     border: "border-emerald-700/70 hover:border-emerald-500",
     gradient: "bg-gradient-to-br from-emerald-950/40 to-neutral-900/90",
     glow: "shadow-[0_0_15px_rgba(16,185,129,0.15)]",
     selectedGlow: "shadow-[0_0_25px_rgba(16,185,129,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    handle: "bg-violet-500 border-violet-400"
   },
   slate: {
     border: "border-slate-700/70 hover:border-slate-500",
     gradient: "bg-gradient-to-br from-slate-800/40 to-neutral-900/90",
     glow: "shadow-[0_0_15px_rgba(100,116,139,0.15)]",
     selectedGlow: "shadow-[0_0_25px_rgba(100,116,139,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    handle: "bg-violet-500 border-violet-400"
   },
   // Cores extras mantendo compatibilidade
   cyan: {
@@ -115,42 +115,42 @@ const colorStyles = {
     gradient: "bg-gradient-to-br from-cyan-950/40 to-neutral-900/90",
     glow: "shadow-[0_0_15px_rgba(6,182,212,0.15)]",
     selectedGlow: "shadow-[0_0_25px_rgba(6,182,212,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    handle: "bg-violet-500 border-violet-400"
   },
   teal: {
     border: "border-teal-700/70 hover:border-teal-500",
     gradient: "bg-gradient-to-br from-teal-950/40 to-neutral-900/90",
     glow: "shadow-[0_0_15px_rgba(20,184,166,0.15)]",
     selectedGlow: "shadow-[0_0_25px_rgba(20,184,166,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    handle: "bg-violet-500 border-violet-400"
   },
   lime: {
     border: "border-lime-700/70 hover:border-lime-500",
     gradient: "bg-gradient-to-br from-lime-950/40 to-neutral-900/90",
     glow: "shadow-[0_0_15px_rgba(132,204,22,0.15)]",
     selectedGlow: "shadow-[0_0_25px_rgba(132,204,22,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    handle: "bg-violet-500 border-violet-400"
   },
   amber: {
-    border: "border-amber-700/70 hover:border-amber-500",
-    gradient: "bg-gradient-to-br from-amber-950/40 to-neutral-900/90",
-    glow: "shadow-[0_0_15px_rgba(245,158,11,0.15)]",
-    selectedGlow: "shadow-[0_0_25px_rgba(245,158,11,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    border: "border-orange-700/70 hover:border-orange-500",
+    gradient: "bg-gradient-to-br from-orange-950/40 to-neutral-900/90",
+    glow: "shadow-[0_0_15px_rgba(249,115,22,0.15)]",
+    selectedGlow: "shadow-[0_0_25px_rgba(249,115,22,0.3)]",
+    handle: "bg-violet-500 border-violet-400"
   },
   rose: {
     border: "border-rose-700/70 hover:border-rose-500",
     gradient: "bg-gradient-to-br from-rose-950/40 to-neutral-900/90",
     glow: "shadow-[0_0_15px_rgba(244,63,94,0.15)]",
     selectedGlow: "shadow-[0_0_25px_rgba(244,63,94,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    handle: "bg-violet-500 border-violet-400"
   },
   violet: {
     border: "border-violet-700/70 hover:border-violet-500",
     gradient: "bg-gradient-to-br from-violet-950/40 to-neutral-900/90",
     glow: "shadow-[0_0_15px_rgba(139,92,246,0.15)]",
     selectedGlow: "shadow-[0_0_25px_rgba(139,92,246,0.3)]",
-    handle: "bg-yellow-500 border-yellow-400"
+    handle: "bg-violet-500 border-violet-400"
   }
 };
 
@@ -249,8 +249,8 @@ export function BaseFlowNode({
           <Handle
             className={cn(
               "!w-3 !h-3 !rounded-full !border-2 transition-all duration-300 hover:scale-110",
-              isSourceHandleConnected ? "!bg-yellow-500 !border-yellow-400" : "!bg-neutral-400 !border-neutral-500",
-              selected && isSourceHandleConnected && "!bg-yellow-400 !border-yellow-300"
+              isSourceHandleConnected ? "!bg-violet-500 !border-violet-400" : "!bg-neutral-400 !border-neutral-500",
+              selected && isSourceHandleConnected && "!bg-violet-400 !border-violet-300"
             )}
             style={{
               right: sourcePosition === Position.Right ? "-8px" : undefined,

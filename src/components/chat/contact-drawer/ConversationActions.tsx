@@ -212,7 +212,7 @@ const StatusButton: React.FC<StatusButtonProps> = ({ status, current, onClick, d
       },
       pending: {
         label: t('contactSidebar.conversationActions.status.pending'),
-        color: 'text-yellow-600 bg-yellow-50 border-yellow-200',
+        color: 'text-orange-600 bg-orange-50 border-orange-200',
       },
       snoozed: {
         label: t('contactSidebar.conversationActions.status.snoozed'),

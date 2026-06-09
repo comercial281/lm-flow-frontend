@@ -29,8 +29,8 @@ const Unauthorized: React.FC = () => {
             {t('description')}
           </p>
 
-          <div className="border-l-4 border-yellow-400 bg-yellow-50 p-4">
-            <p className="text-sm text-yellow-800">
+          <div className="border-l-4 border-orange-400 bg-orange-50 p-4">
+            <p className="text-sm text-orange-800">
               <strong className="font-semibold">{t('contactAdmin.title')}</strong>
               <br />
               {t('contactAdmin.message')}

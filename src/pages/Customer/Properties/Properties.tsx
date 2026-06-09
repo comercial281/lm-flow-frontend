@@ -440,7 +440,7 @@ export default function Properties() {
           <span><strong className="text-foreground">{stats.sold}</strong> vendidos</span>
           <span><strong className="text-foreground">{stats.rented}</strong> alugados</span>
           <span><strong className="text-violet-600">{stats.exclusive}</strong> exclusivos</span>
-          <span><strong className="text-amber-600">{stats.featured}</strong> em destaque</span>
+          <span><strong className="text-orange-600">{stats.featured}</strong> em destaque</span>
         </div>
       )}
 
@@ -892,7 +892,7 @@ function PropertyCard({
         </div>
         {p.featured && (
           <div className="absolute top-2 right-2">
-            <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+            <Star className="h-4 w-4 text-orange-400 fill-orange-400" />
           </div>
         )}
 
@@ -957,7 +957,7 @@ function PropertyCard({
           <div className="flex items-center gap-2">
             {score != null ? (
               <span className={`text-xs font-medium flex items-center gap-1 ${
-                score >= 70 ? 'text-emerald-600' : score >= 40 ? 'text-amber-600' : 'text-red-500'
+                score >= 70 ? 'text-emerald-600' : score >= 40 ? 'text-orange-600' : 'text-red-500'
               }`}>
                 <Gauge className="h-3 w-3" />
                 {score}%
@@ -1256,7 +1256,7 @@ function PropertyPhotosDialog({
                 {/* Badges */}
                 <div className="absolute top-1.5 left-1.5 flex gap-1">
                   {photo.is_cover && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500 text-white font-medium flex items-center gap-0.5">
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500 text-white font-medium flex items-center gap-0.5">
                       <Crown className="h-2.5 w-2.5" />
                       Capa
                     </span>
@@ -1280,7 +1280,7 @@ function PropertyPhotosDialog({
                   {!photo.is_cover && (
                     <button
                       onClick={() => handleSetCover(photo)}
-                      className="p-1.5 rounded bg-amber-500 text-white hover:bg-amber-600"
+                      className="p-1.5 rounded bg-orange-500 text-white hover:bg-orange-600"
                       title="Definir como capa"
                     >
                       <Crown className="h-3.5 w-3.5" />

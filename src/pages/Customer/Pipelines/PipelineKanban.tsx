@@ -483,7 +483,7 @@ export default function PipelineKanban() {
                   </Badge>
                 )}
                 {pipeline?.pipeline_type === 'rental' && (
-                  <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400 border-0">
+                  <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400 border-0">
                     Locação
                   </Badge>
                 )}
@@ -888,7 +888,7 @@ export default function PipelineKanban() {
                               {item.tasks_info?.due_soon_count > 0 && (
                                 <Badge
                                   title={t('tasks.status.dueSoon')}
-                                  className="h-5 px-1.5 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
+                                  className="h-5 px-1.5 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400"
                                 >
                                   <Clock className="w-3 h-3 mr-1" />
                                   {item.tasks_info.due_soon_count}

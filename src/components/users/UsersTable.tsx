@@ -50,7 +50,7 @@ export default function UsersTable({
       case 'online':
         return 'text-green-600';
       case 'busy':
-        return 'text-yellow-600';
+        return 'text-orange-600';
       case 'offline':
       default:
         return 'text-gray-600';
@@ -140,7 +140,7 @@ export default function UsersTable({
               {t('table.columns.confirmed')}
             </Badge>
           ) : (
-            <Badge variant="outline" className="text-xs text-yellow-600">
+            <Badge variant="outline" className="text-xs text-orange-600">
               {t('table.columns.pending')}
             </Badge>
           )}

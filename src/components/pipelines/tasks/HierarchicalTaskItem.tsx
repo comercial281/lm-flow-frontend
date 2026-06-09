@@ -223,7 +223,7 @@ export default function HierarchicalTaskItem({
       case 'high':
         return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
       case 'low':
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
       default:
@@ -261,7 +261,7 @@ export default function HierarchicalTaskItem({
           'group relative rounded-lg border bg-card p-3 hover:shadow-md transition-all',
           task.status === 'completed' && 'opacity-60',
           task.overdue && task.status === 'pending' && 'border-red-300 dark:border-red-800',
-          task.due_soon && task.status === 'pending' && 'border-yellow-300 dark:border-yellow-800',
+          task.due_soon && task.status === 'pending' && 'border-orange-300 dark:border-orange-800',
         )}
       >
         {/* Depth indicator line */}
@@ -453,7 +453,7 @@ export default function HierarchicalTaskItem({
                   className={cn(
                     'flex items-center gap-1',
                     task.overdue && task.status === 'pending' && 'text-red-600 dark:text-red-400 font-medium',
-                    task.due_soon && task.status === 'pending' && 'text-yellow-600 dark:text-yellow-400 font-medium',
+                    task.due_soon && task.status === 'pending' && 'text-orange-600 dark:text-orange-400 font-medium',
                   )}
                 >
                   <Calendar className="w-3 h-3" />

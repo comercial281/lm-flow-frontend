@@ -450,8 +450,8 @@ export default function StartConversationModal({
               {useTemplate && (
                 <div className="space-y-3 p-3 border rounded-lg">
                   {messageTemplates.length === 0 ? (
-                    <div className="p-3 rounded-md border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800">
-                      <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                    <div className="p-3 rounded-md border border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800">
+                      <p className="text-sm text-orange-700 dark:text-orange-400">
                         ⚠️ Nenhum template disponível. Desative "Usar Template" para enviar uma
                         mensagem livre.
                       </p>

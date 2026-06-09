@@ -38,7 +38,7 @@ export default function ImobSummarySection() {
       label: 'Propostas em aberto',
       value: null,
       icon: FileSignature,
-      color: 'text-amber-600 dark:text-amber-400',
+      color: 'text-orange-600 dark:text-orange-400',
       href: '/proposals',
       description: 'Aguardando resposta',
     },

@@ -242,7 +242,7 @@ const CustomerDashboardPage = () => {
   const channelShareData = useMemo(() => {
     if (!data) return [];
 
-    const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
+    const colors = ['#22c55e', '#3b82f6', '#f97316', '#ec4899', '#8b5cf6', '#06b6d4'];
 
     return data.channels.map((channel, index) => ({
       name: channel.name,

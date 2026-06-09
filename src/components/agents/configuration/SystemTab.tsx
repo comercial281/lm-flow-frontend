@@ -509,7 +509,7 @@ export const SystemTab = ({
             {/* Usar Emojis */}
             <div className="flex items-center justify-between py-3 border-b">
               <div className="flex items-start gap-3 flex-1">
-                <Smile className="h-5 w-5 text-yellow-500 mt-0.5" />
+                <Smile className="h-5 w-5 text-orange-500 mt-0.5" />
                 <div className="flex-1">
                   <Label htmlFor="use-emojis-messages" className="font-medium cursor-pointer">
                     {t('edit.configuration.behavior.useEmojis') || 'Usar Emojis Nas Respostas'}
@@ -579,7 +579,7 @@ export const SystemTab = ({
             {/* Usar Emojis */}
             <div className="flex items-center justify-between py-3 border-b last:border-0">
               <div className="flex items-start gap-3 flex-1">
-                <Smile className="h-5 w-5 text-yellow-500 mt-0.5" />
+                <Smile className="h-5 w-5 text-orange-500 mt-0.5" />
                 <div className="flex-1">
                   <Label htmlFor="use-emojis-a2a-task" className="font-medium cursor-pointer">
                     {t('edit.configuration.behavior.useEmojis') || 'Usar Emojis Nas Respostas'}

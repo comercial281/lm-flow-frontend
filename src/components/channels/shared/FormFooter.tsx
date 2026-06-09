@@ -76,8 +76,8 @@ export const FormFooter = ({
     <div className="border-t border-border bg-muted/20 px-6 py-4">
       {/* Aviso quando health check não passou */}
       {isDisabledByHealthCheck && (
-        <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+        <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+          <p className="text-sm text-orange-800 dark:text-orange-200">
             ⚠️ {t('newChannel.messages.testConnectionFirst')}
           </p>
         </div>

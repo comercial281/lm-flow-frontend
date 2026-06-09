@@ -34,7 +34,7 @@ const StatusFilter: React.FC<StatusFilterProps> = ({
     {
       value: 'pending',
       label: t('filters.status.options.pending'),
-      color: 'text-yellow-700',
+      color: 'text-orange-700',
       count: null,
     },
     {

@@ -342,7 +342,7 @@ export const GeneralTab = ({
               {/* Planner */}
               <div className="flex items-start justify-between py-3">
                 <div className="flex items-start gap-3 flex-1">
-                  <Zap className="h-5 w-5 text-yellow-500 mt-0.5" />
+                  <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <Label htmlFor="planner" className="font-medium cursor-pointer">

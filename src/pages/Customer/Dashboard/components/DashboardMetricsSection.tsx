@@ -103,7 +103,7 @@ const DashboardMetricsSection = ({ data, t }: DashboardMetricsSectionProps) => {
             value={data.follow_ups.pending}
             subtitle={`${data.follow_ups.overdue} ${tx('dashboard.status.overdue', 'em atraso')}`}
             icon={AlertTriangle}
-            accentClassName="bg-amber-500/20 text-amber-400"
+            accentClassName="bg-violet-500/20 text-violet-400"
             importance="primary"
             status={followUpStatus}
             tooltip={{ title: tTours('dashboard.step5.title'), content: tTours('dashboard.step5.content') }}
@@ -180,10 +180,10 @@ const DashboardMetricsSection = ({ data, t }: DashboardMetricsSectionProps) => {
         </Card>
 
         <div className="xl:col-span-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-4">
-          <Card className="border-dashed border-amber-500/40 bg-amber-500/[0.03]" data-tour="dashboard-active-conversations">
+          <Card className="border-dashed border-violet-500/40 bg-violet-500/[0.03]" data-tour="dashboard-active-conversations">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-amber-400" />
+                <MessageSquare className="h-4 w-4 text-violet-400" />
                 {tx('dashboard.stats.activeConversations', 'Conversas ativas agora')}
                 <TooltipInfo title={tTours('dashboard.step7.title')} content={tTours('dashboard.step7.content')} />
               </CardTitle>
@@ -191,7 +191,7 @@ const DashboardMetricsSection = ({ data, t }: DashboardMetricsSectionProps) => {
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-2xl font-semibold">{data.stats.open_conversations}</div>
-                <Badge variant="outline" className="border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-500/10">
+                <Badge variant="outline" className="border-violet-500/40 text-violet-700 dark:text-violet-300 bg-violet-500/10">
                   {data.stats.open_conversations > 0
                     ? tx('dashboard.status.monitor', 'Monitorar')
                     : tx('dashboard.status.good', 'Estável')}
@@ -220,7 +220,7 @@ const DashboardMetricsSection = ({ data, t }: DashboardMetricsSectionProps) => {
                     unassignedStatus.tone === 'critical'
                       ? 'border-red-500/40 text-red-700 dark:text-red-300 bg-red-500/10'
                       : unassignedStatus.tone === 'warning'
-                        ? 'border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-500/10'
+                        ? 'border-orange-500/40 text-orange-700 dark:text-orange-300 bg-orange-500/10'
                         : 'border-emerald-500/40 text-emerald-700 dark:text-emerald-300 bg-emerald-500/10'
                   }
                 >
