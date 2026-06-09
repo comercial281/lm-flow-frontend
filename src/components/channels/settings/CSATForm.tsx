@@ -366,7 +366,7 @@ export default function CSATForm({
           <div className="flex items-center justify-between pb-4 border-b border-border">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20">
-                <Star className="w-5 h-5 text-orange-700 dark:text-orange-400" />
+                <Star className="w-5 h-5 text-violet-700 dark:text-violet-400" />
               </div>
               <div>
                 <h4 className="font-semibold text-foreground">{t('settings.csat.title')}</h4>

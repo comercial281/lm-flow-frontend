@@ -81,7 +81,7 @@ function StarDisplayOption({ selected, onSelect, t }: DisplayOptionProps & { t: 
           aria-label={t('settings.csat.displayType.starLabel', { number: n })}
         >
           <Star
-            className={`w-6 h-6 ${selected ? 'fill-orange-400 text-orange-400' : 'fill-muted text-muted-foreground'}`}
+            className={`w-6 h-6 ${selected ? 'fill-violet-400 text-violet-400' : 'fill-muted text-muted-foreground'}`}
           />
         </div>
       ))}

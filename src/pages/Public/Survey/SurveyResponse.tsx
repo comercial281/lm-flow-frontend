@@ -208,7 +208,7 @@ const SurveyResponse = () => {
                     <Star
                       className={`w-10 h-10 ${
                         selectedRating && value <= selectedRating
-                          ? 'fill-orange-400 text-orange-400'
+                          ? 'fill-violet-400 text-violet-400'
                           : 'text-muted-foreground'
                       }`}
                     />

@@ -892,7 +892,7 @@ function PropertyCard({
         </div>
         {p.featured && (
           <div className="absolute top-2 right-2">
-            <Star className="h-4 w-4 text-orange-400 fill-orange-400" />
+            <Star className="h-4 w-4 text-violet-400 fill-violet-400" />
           </div>
         )}
 

@@ -556,7 +556,7 @@ export default function Visits() {
                 <div className="flex gap-1 mt-2">
                   {[1,2,3,4,5].map(n => (
                     <button key={n} onClick={() => setRating(n)}>
-                      <Star className={`h-6 w-6 ${n <= rating ? 'text-orange-400 fill-orange-400' : 'text-muted-foreground'}`} />
+                      <Star className={`h-6 w-6 ${n <= rating ? 'text-violet-400 fill-violet-400' : 'text-muted-foreground'}`} />
                     </button>
                   ))}
                 </div>
@@ -645,7 +645,7 @@ function VisitCard({
           {visit.rating != null && (
             <div className="flex items-center gap-0.5">
               {[1,2,3,4,5].map(n => (
-                <Star key={n} className={`h-3.5 w-3.5 ${n <= (visit.rating ?? 0) ? 'text-orange-400 fill-orange-400' : 'text-muted-foreground'}`} />
+                <Star key={n} className={`h-3.5 w-3.5 ${n <= (visit.rating ?? 0) ? 'text-violet-400 fill-violet-400' : 'text-muted-foreground'}`} />
               ))}
             </div>
           )}
