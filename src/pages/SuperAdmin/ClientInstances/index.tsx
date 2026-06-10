@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, RefreshCw, Building2, CheckCircle, AlertCircle, Loader2, Copy, ExternalLink, Trash2, ChevronDown, ChevronUp, Users, ToggleLeft } from 'lucide-react';
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Input, Label } from '@evoapi/design-system';
 import clientInstancesService, { ClientInstance, CreateClientInstancePayload } from '@/services/clientInstances/clientInstancesService';
+import { buildMasterSsoUrl } from '@/utils/masterSso';
 import { useAuth } from '@/contexts/AuthContext';
 import MembersModal from './MembersModal';
 import FeaturesModal from './FeaturesModal';
@@ -35,6 +36,21 @@ function InstanceCard({ instance, onDelete, onRefresh }: {
   const [copied, setCopied]             = useState(false);
   const [membersOpen, setMembersOpen]   = useState(false);
   const [featuresOpen, setFeaturesOpen] = useState(false);
+  const [entering, setEntering]         = useState(false);
+
+  const enterAsMaster = async () => {
+    setEntering(true);
+    try {
+      const res = await clientInstancesService.sso(instance.id);
+      const { token, frontend_url, name } = res.data.data;
+      window.open(buildMasterSsoUrl(frontend_url, token, name), '_blank');
+    } catch (e) {
+      console.error('Falha no SSO master:', e);
+      alert('Falha ao entrar no CRM do cliente.');
+    } finally {
+      setEntering(false);
+    }
+  };
 
   const copyLink = () => {
     if (!instance.frontend_link) return;
@@ -81,12 +97,15 @@ function InstanceCard({ instance, onDelete, onRefresh }: {
                 <Copy className="h-3 w-3" />
                 {copied ? 'Copiado!' : 'Link'}
               </Button>
-              <a href={instance.frontend_link} target="_blank" rel="noreferrer">
-                <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
-                  <ExternalLink className="h-3 w-3" />
-                  Abrir
-                </Button>
-              </a>
+              <Button
+                size="sm"
+                className="h-7 text-xs gap-1"
+                disabled={entering}
+                onClick={enterAsMaster}
+              >
+                <ExternalLink className="h-3 w-3" />
+                {entering ? 'Entrando...' : 'Entrar'}
+              </Button>
             </>
           )}
           <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={onDelete}>

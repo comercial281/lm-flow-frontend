@@ -5,7 +5,7 @@
 
 import { useAuthStore } from '@/store/authStore';
 
-export const SUPER_ADMIN_EMAIL = 'giovani@chaveflow.com.br';
+export const SUPER_ADMIN_EMAIL = 'comercial@lealmidia.com.br';
 
 export function useIsSuperAdmin(): boolean {
   const email = useAuthStore((s) => s.currentUser?.email);

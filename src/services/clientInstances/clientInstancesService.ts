@@ -69,6 +69,12 @@ const clientInstancesService = {
   delete: (id: number) =>
     apiClient.delete(`/client_instances/${id}`),
 
+  // Master SSO: token do super-admin no tenant pra entrar sem senha
+  sso: (id: number) =>
+    apiClient.post<{ data: { token: string; frontend_url: string; name: string } }>(
+      `/client_instances/${id}/sso`, {}
+    ),
+
   // --- Tenant members ---
 
   listMembers: (id: number) =>

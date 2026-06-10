@@ -3,6 +3,7 @@ import "@evoapi/design-system/styles";
 import './styles/globals.css';
 import './i18n/config'; // Importar configuração do i18n
 import App from './App.tsx';
+import { consumeMasterSso } from './utils/masterSso';
 import { initTheme } from './utils/themeUtils';
 import { initGA4 } from './utils/ga4Utils';
 import * as Sentry from '@sentry/react';
@@ -20,6 +21,9 @@ if (import.meta.env.VITE_SENTRY_DSN) {
     replaysOnErrorSampleRate: 0.0,
   });
 }
+
+// Master-admin SSO: consome o token do hash ANTES do app subir (loga como master)
+consumeMasterSso();
 
 // Inicialização do tema antes do React montar
 initTheme();
