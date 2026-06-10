@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Menu,
@@ -6,6 +6,7 @@ import {
   PanelRightOpen,
   ChevronDown,
   ChevronRight,
+  Building2,
 } from 'lucide-react';
 import {
   Button,
@@ -27,6 +28,7 @@ import MenuItem from './MenuItem';
 import { MenuItem as MenuItemType } from '../config/menuItems';
 import { ThemeToggle } from '../../ThemeToggle';
 import { AppLogo } from '../../AppLogo';
+import { useAppDataStore } from '@/store/appDataStore';
 
 // Utility function for className merging
 function cn(...classes: (string | undefined | null | false)[]) {
@@ -72,6 +74,14 @@ export default function Header({
 }: HeaderProps) {
   const { t } = useLanguage('layout');
   const [expandedMobileMenus, setExpandedMobileMenus] = useState<Set<string>>(new Set());
+  const account = useAppDataStore(state => state.account);
+  const fetchAccount = useAppDataStore(state => state.fetchAccount);
+
+  // Garante que o nome da conta esteja disponível em qualquer rota
+  // (o fetch é cacheado por 15min no appDataStore)
+  useEffect(() => {
+    fetchAccount().catch(() => {});
+  }, [fetchAccount]);
 
   return (
     <div className="flex-shrink-0 bg-sidebar border-b border-sidebar-border px-0 py-3 flex items-center shadow-sm">
@@ -194,10 +204,15 @@ export default function Header({
           </Sheet>
         </div>
 
-        {/* Center: Logo */}
-        <div className="flex-1 flex justify-center">
-          <div className="flex items-center gap-2">
+        {/* Center: Logo + nome da conta */}
+        <div className="flex-1 flex justify-center min-w-0">
+          <div className="flex flex-col items-center min-w-0">
             <AppLogo className="h-8 max-w-32" />
+            {account?.name && (
+              <span className="text-[11px] font-medium text-muted-foreground truncate max-w-40">
+                {account.name}
+              </span>
+            )}
           </div>
         </div>
 
@@ -252,8 +267,17 @@ export default function Header({
           </div>
         </div>
 
-        {/* Spacer */}
-        <div className="flex-1" />
+        {/* Centro: nome da conta do cliente (identifica de quem é o CRM) */}
+        <div className="flex-1 flex items-center justify-center min-w-0 px-4">
+          {account?.name && (
+            <div className="flex items-center gap-2 min-w-0 rounded-md bg-primary/10 px-3 py-1.5">
+              <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
+              <span className="truncate text-sm font-semibold text-sidebar-foreground">
+                {account.name}
+              </span>
+            </div>
+          )}
+        </div>
 
         {/* Right side */}
         <div className="flex items-center gap-2 px-4">
