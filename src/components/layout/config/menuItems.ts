@@ -390,7 +390,7 @@ export const shouldShowMenuItem = (
   }
 
   // Gate por tenant raiz (apenas no deploy principal, não em tenants de clientes)
-  if (item.rootTenantOnly && import.meta.env.VITE_IS_ROOT_TENANT !== 'true') {
+  if ('rootTenantOnly' in item && item.rootTenantOnly && import.meta.env.VITE_IS_ROOT_TENANT !== 'true') {
     return false;
   }
 
