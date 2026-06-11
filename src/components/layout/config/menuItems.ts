@@ -51,6 +51,8 @@ export interface MenuItem {
    * Ausência da key OU features sem essa key => item visível (ON por padrão).
    */
   featureKey?: string;
+  /** Quando true, só aparece no tenant raiz (VITE_IS_ROOT_TENANT=true). */
+  rootTenantOnly?: boolean;
 }
 
 export interface SubMenuItem {
@@ -206,6 +208,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     href: '/super-admin/clients',
     icon: Building2,
     requiredEmail: 'comercial@lealmidia.com.br',
+    rootTenantOnly: true,
   },
   {
     name: t('menu.customer.tutorials'),
@@ -383,6 +386,11 @@ export const shouldShowMenuItem = (
   // Gate por tenant feature flag (mais alta prioridade — desligado no painel
   // master = desaparece independente de permissão).
   if (item.featureKey && features && features[item.featureKey] === false) {
+    return false;
+  }
+
+  // Gate por tenant raiz (apenas no deploy principal, não em tenants de clientes)
+  if (item.rootTenantOnly && import.meta.env.VITE_IS_ROOT_TENANT !== 'true') {
     return false;
   }
 
