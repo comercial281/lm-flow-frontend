@@ -5,7 +5,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { Button } from '@evoapi/design-system/button';
 import { Card, CardHeader, CardContent } from '@evoapi/design-system/card';
 import { Badge } from '@evoapi/design-system/badge';
-import { X, User, FileText, MessageSquare, Clock, ChevronDown, Zap, GitBranch, Tag, Info } from 'lucide-react';
+import { X, User, FileText, MessageSquare, Clock, ChevronDown, Zap, GitBranch, Tag, Info, Megaphone, ExternalLink } from 'lucide-react';
 
 import ContactHeader from './ContactHeader';
 import ContactDetails from './ContactDetails';
@@ -88,6 +88,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
   const [showConversationInfo, setShowConversationInfo] = useState(false);
   const [showConversationAttributes, setShowConversationAttributes] = useState(false);
   const [showContactAttributes, setShowContactAttributes] = useState(false);
+  const [showAdReferral, setShowAdReferral] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [conversationPipelines, setConversationPipelines] = useState<Pipeline[]>([]);
   const [isLoadingPipelines, setIsLoadingPipelines] = useState(false);
@@ -217,7 +218,67 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
             )}
           </Card>
 
-          {/* 2. Pipeline - Gerenciar funil */}
+          {/* 2. Origem do Anuncio - so aparece quando tem externalAdReply */}
+          {conversation?.additional_attributes?.ad_referral && (
+            <Card className="border-orange-200 bg-orange-50/30 dark:border-orange-800 dark:bg-orange-950/20">
+              <CardHeader className="pb-2">
+                <CollapsibleHeader
+                  title="Origem do Anuncio"
+                  description={(conversation.additional_attributes.ad_referral as any)?.title || 'Meta Ads'}
+                  icon={<Megaphone className="h-4 w-4 text-orange-500" />}
+                  isOpen={showAdReferral}
+                  onToggle={() => setShowAdReferral(!showAdReferral)}
+                />
+              </CardHeader>
+
+              {showAdReferral && (
+                <CardContent className="pt-0 px-3 pb-3">
+                  {(() => {
+                    const ref = conversation.additional_attributes.ad_referral as any;
+                    const appLabel = ref.source_app === 'instagram' ? 'Instagram' : 'Facebook';
+                    return (
+                      <div className="space-y-2">
+                        {ref.title && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Anuncio</span>
+                            <span className="font-medium text-right max-w-[60%] truncate" title={ref.title}>{ref.title}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Plataforma</span>
+                          <span className="font-medium">{appLabel}</span>
+                        </div>
+                        {ref.source_id && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">ID do Anuncio</span>
+                            <span className="font-mono text-xs text-muted-foreground">{ref.source_id}</span>
+                          </div>
+                        )}
+                        {ref.body && (
+                          <div className="text-xs text-muted-foreground bg-muted/40 rounded p-2 mt-1 line-clamp-3">
+                            {ref.body}
+                          </div>
+                        )}
+                        {ref.source_url && (
+                          <a
+                            href={ref.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-xs text-orange-600 hover:underline mt-1"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Ver anuncio original
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {/* 3. Pipeline - Gerenciar funil */}
           {(conversation || contact) && (
             <Card>
               <CardHeader className="pb-2">
