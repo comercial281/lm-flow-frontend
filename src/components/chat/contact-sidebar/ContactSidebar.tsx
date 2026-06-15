@@ -244,7 +244,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
               <CardHeader className="pb-2">
                 <CollapsibleHeader
                   title="Origem do Anuncio"
-                  description={(conversation.additional_attributes.ad_referral as any)?.title || 'Meta Ads'}
+                  description={(conversation!.additional_attributes.ad_referral as any)?.title || 'Meta Ads'}
                   icon={<Megaphone className="h-4 w-4 text-orange-500" />}
                   isOpen={showAdReferral}
                   onToggle={() => setShowAdReferral(!showAdReferral)}
@@ -254,7 +254,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
               {showAdReferral && (
                 <CardContent className="pt-0 px-3 pb-3">
                   {(() => {
-                    const ref = conversation.additional_attributes.ad_referral as any;
+                    const ref = conversation!.additional_attributes.ad_referral as any;
                     const appLabel = ref.source_app === 'instagram' ? 'Instagram' : 'Facebook';
                     return (
                       <div className="space-y-2">
