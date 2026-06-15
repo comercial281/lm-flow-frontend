@@ -239,7 +239,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
           </Card>
 
           {/* 2. Origem do Anuncio - so aparece quando tem externalAdReply */}
-          {conversation?.additional_attributes?.ad_referral && (
+          {Boolean(conversation?.additional_attributes?.ad_referral) && (
             <Card className="border-orange-200 bg-orange-50/30 dark:border-orange-800 dark:bg-orange-950/20">
               <CardHeader className="pb-2">
                 <CollapsibleHeader
