@@ -28,9 +28,10 @@ import {
   Switch,
   Checkbox,
 } from '@evoapi/design-system';
-import { AlertTriangle, Mail, Volume2, Bell, Keyboard, Play } from 'lucide-react';
+import { AlertTriangle, Mail, Volume2, Bell, Keyboard, Play, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useAuthStore } from '@/store/authStore';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
@@ -46,6 +47,7 @@ import { ProfilePhotoUploader, TwoFactorSetup } from '@/components/shared/profil
 
 const Profile = () => {
   const { user, refreshUser, logout } = useAuth();
+  const { status: pushStatus, subscribe: subscribePush, unsubscribe: unsubscribePush, isSupported: pushSupported } = usePushNotifications();
   const { t } = useLanguage('profile');
   const normalizedUserAvatar = normalizeAvatarUrl(user?.avatar_url);
   const modifierKey = getModifierKey(); // 'Cmd' on Mac, 'Ctrl' on others
@@ -694,43 +696,34 @@ const Profile = () => {
   };
 
   const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) {
-      toast.error('Browser notifications are not supported');
+    if (!pushSupported) {
+      toast.error('Notificações push não são suportadas neste navegador');
       return;
     }
-
-    // Check current permission status
-    let permission = Notification.permission;
-
-    // If permission is default, request it
-    if (permission === 'default') {
-      permission = await Notification.requestPermission();
+    if (pushStatus === 'subscribed') {
+      await unsubscribePush();
+      setNotificationSettings(prev => ({ ...prev, browser_push_enabled: false }));
+      toast.success('Notificações desativadas');
+      return;
     }
-
-    // Update state based on permission
-    const isGranted = permission === 'granted';
-    setNotificationSettings(prev => ({
-      ...prev,
-      browser_push_enabled: isGranted,
-    }));
-
-    if (isGranted) {
-      toast.success(t('notifications.browserPermission.granted'));
-    } else if (permission === 'denied') {
-      toast.error(t('notifications.browserPermission.denied'));
+    const ok = await subscribePush();
+    setNotificationSettings(prev => ({ ...prev, browser_push_enabled: ok }));
+    if (ok) {
+      toast.success('Notificações ativadas! Você vai receber alertas mesmo com o app fechado.');
+    } else if (Notification.permission === 'denied') {
+      toast.error('Permissão negada. Habilite nas configurações do navegador/celular.');
     }
   };
 
-  // Check browser notification permission on mount
+  // Sincroniza estado do switch com status real da subscription PWA
   useEffect(() => {
-    if ('Notification' in window) {
-      const permission = Notification.permission;
+    if (pushStatus !== 'loading') {
       setNotificationSettings(prev => ({
         ...prev,
-        browser_push_enabled: permission === 'granted',
+        browser_push_enabled: pushStatus === 'subscribed',
       }));
     }
-  }, []);
+  }, [pushStatus]);
 
   const renderInterfaceSettings = () => (
     <div className="space-y-6">
@@ -881,20 +874,40 @@ const Profile = () => {
         <CardDescription>{t('notifications.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Permissão do navegador */}
+        {/* Banner: instalar como app */}
+        <div className="flex items-start gap-3 p-4 border rounded-lg bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800">
+          <Smartphone className="h-5 w-5 text-violet-600 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-medium text-violet-900 dark:text-violet-200">Instalar como aplicativo</p>
+            <p className="text-sm text-violet-700 dark:text-violet-400 mt-1">
+              Para receber notificações no celular, primeiro instale o LM Flow como app:
+            </p>
+            <div className="mt-2 space-y-1 text-sm text-violet-700 dark:text-violet-400">
+              <p><strong>Android (Chrome):</strong> menu &gt; "Adicionar à tela inicial"</p>
+              <p><strong>iPhone (Safari):</strong> botao Compartilhar &gt; "Adicionar à Tela de Início"</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Permissão de notificações push */}
         <div className="flex items-center justify-between p-4 border rounded-lg">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <Bell className="h-5 w-5 text-violet-600" />
             <div>
-              <p className="font-medium">{t('notifications.browserPermission.title')}</p>
+              <p className="font-medium">Notificações push</p>
               <p className="text-sm text-muted-foreground">
-                {t('notifications.browserPermission.description')}
+                {pushStatus === 'denied'
+                  ? 'Permissao negada. Habilite nas configuracoes do celular.'
+                  : pushStatus === 'unsupported'
+                  ? 'Nao suportado neste navegador. Use Chrome (Android) ou Safari (iPhone).'
+                  : 'Receba alertas de novas mensagens mesmo com o app fechado.'}
               </p>
             </div>
           </div>
           <Switch
             checked={notificationSettings.browser_push_enabled}
             onCheckedChange={requestNotificationPermission}
+            disabled={pushStatus === 'denied' || pushStatus === 'unsupported' || pushStatus === 'loading'}
           />
         </div>
 

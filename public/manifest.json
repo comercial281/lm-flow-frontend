@@ -1,0 +1,39 @@
+{
+  "name": "LM Flow",
+  "short_name": "LM Flow",
+  "description": "CRM imobiliário com WhatsApp, pipeline e automação.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f0520",
+  "theme_color": "#7c3aed",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Conversas",
+      "url": "/app/conversations",
+      "description": "Abrir conversas WhatsApp"
+    }
+  ],
+  "categories": ["business", "productivity"]
+}

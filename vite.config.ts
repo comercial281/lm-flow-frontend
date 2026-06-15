@@ -2,18 +2,32 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import tailwindcss from '@tailwindcss/vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react(), 
+    react(),
     tailwindcss(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      manifest: false, // usamos o public/manifest.json manualmente
+      workbox: {
+        globPatterns: ['**/*.{css,html,ico,png,svg,woff2}'], // exclui JS grande do precache
+        importScripts: ['/push-sw.js'],
+        navigateFallback: null,
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB
+      },
+      devOptions: {
+        enabled: false, // desliga em dev (evita conflito com HMR)
+      },
+    }),
   ],
   build: {
-    // Reduce chunking to minimize requests via ngrok
     rollupOptions: {
       output: {
-        manualChunks: undefined, // Disable auto chunking
+        manualChunks: undefined,
       },
     },
   },
@@ -34,27 +48,24 @@ export default defineConfig({
     },
   },
   server: {
-    host: true, // Listen on all addresses
+    host: true,
     port: 5173,
     strictPort: true,
-    allowedHosts: true, // Allow all hosts (like evolution-hub)
-    cors: true, // Enable CORS for ngrok
+    allowedHosts: true,
+    cors: true,
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Origin, X-Requested-With, Content-Type, Accept',
     },
     hmr: {
-      // Reduce HMR overhead via ngrok
-      overlay: false, // Disable error overlay
+      overlay: false,
     },
     fs: {
-      // Reduce file system requests
       strict: false,
     },
   },
   optimizeDeps: {
-    // Pre-bundle these to avoid dynamic imports via ngrok
     include: [
       'react',
       'react-dom',
@@ -64,10 +75,8 @@ export default defineConfig({
       'sonner',
       'zustand',
     ],
-    // Force optimization on start
     force: true,
   },
-  // Reduce module transformation in dev
   esbuild: {
     logOverride: { 'this-is-undefined-in-esm': 'silent' },
   },

@@ -1,4 +1,7 @@
 import { createRoot } from 'react-dom/client';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — virtual module gerado pelo vite-plugin-pwa em build
+import { registerSW } from 'virtual:pwa-register';
 import "@evoapi/design-system/styles";
 import './styles/globals.css';
 import './i18n/config'; // Importar configuração do i18n
@@ -7,6 +10,11 @@ import { consumeMasterSso } from './utils/masterSso';
 import { initTheme } from './utils/themeUtils';
 import { initGA4 } from './utils/ga4Utils';
 import * as Sentry from '@sentry/react';
+
+// Registra o Service Worker PWA (atualiza silenciosamente)
+if ('serviceWorker' in navigator) {
+  registerSW({ immediate: true });
+}
 
 // LM Flow: Sentry React SDK — Story 1.1
 // VITE_SENTRY_DSN must be set in Railway environment variables
