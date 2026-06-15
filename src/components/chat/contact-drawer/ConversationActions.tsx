@@ -1,38 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
 import { Button } from '@evoapi/design-system/button';
 import { Badge } from '@evoapi/design-system/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@evoapi/design-system/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@evoapi/design-system/select';
 import { Settings, UserPlus, UserMinus, Tag, Zap, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { Conversation } from '@/types/chat/api';
+import { useConversations } from '@/hooks/chat/useConversations';
 import { useLanguage } from '@/hooks/useLanguage';
+import type { Label } from '@/types/settings';
+import { chatService } from '@/services/chat/chatService';
+import usersService from '@/services/users/usersService';
+import type { User } from '@/types/users';
 
 interface ConversationActionsProps {
   conversation: Conversation | null;
+  onFilterReload?: () => Promise<void>;
 }
 
-const ConversationActions: React.FC<ConversationActionsProps> = ({ conversation }) => {
+const ConversationActions: React.FC<ConversationActionsProps> = ({
+  conversation,
+  onFilterReload,
+}) => {
   const { t } = useLanguage('chat');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isUpdatingPriority, setIsUpdatingPriority] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
+  const [agents, setAgents] = useState<User[]>([]);
 
-  const handleStatusChange = async (newStatus: string) => {
+  const conversations = useConversations();
+
+  useEffect(() => {
+    if (!conversation?.inbox_id) return;
+    usersService.getAssignableAgents(String(conversation.inbox_id))
+      .then((res: User[] | { data: User[] }) => setAgents(Array.isArray(res) ? res : (res as { data: User[] }).data ?? []))
+      .catch(() => {});
+  }, [conversation?.inbox_id]);
+
+  const handleStatusChange = async (newStatus: 'open' | 'resolved' | 'pending' | 'snoozed') => {
     if (!conversation) return;
 
     setIsUpdatingStatus(true);
     try {
-      // TODO: Implementar API call para atualizar status
-      // await chatService.updateConversationStatus(conversation.id, newStatus);
-
-      toast.success(
-        t('contactSidebar.conversationActions.status.changed', {
-          status: getStatusDisplayName(newStatus),
-        }),
-      );
+      await conversations.updateConversationStatus(conversation.id, newStatus, onFilterReload);
     } catch (error) {
-      toast.error(t('contactSidebar.conversationActions.status.error'));
+      console.error('Error updating status:', error);
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handlePriorityChange = async (newPriority: 'low' | 'medium' | 'high' | 'urgent' | null) => {
+    if (!conversation) return;
+
+    setIsUpdatingPriority(true);
+    try {
+      await conversations.updateConversationPriority(conversation.id, newPriority, onFilterReload);
+    } catch (error) {
+      console.error('Error updating priority:', error);
+    } finally {
+      setIsUpdatingPriority(false);
     }
   };
 
@@ -41,30 +69,19 @@ const ConversationActions: React.FC<ConversationActionsProps> = ({ conversation 
 
     setIsAssigning(true);
     try {
-      // TODO: Implementar API call para atribuição
-      // await chatService.assignConversation(conversation.id, agentId);
-
+      await chatService.assignConversation(String(conversation.id), agentId ?? undefined);
       if (agentId) {
         toast.success(t('contactSidebar.conversationActions.assignment.assignedSuccess'));
       } else {
         toast.success(t('contactSidebar.conversationActions.assignment.unassignedSuccess'));
       }
+      onFilterReload?.();
     } catch (error) {
+      console.error('Error assigning agent:', error);
       toast.error(t('contactSidebar.conversationActions.assignment.error'));
     } finally {
       setIsAssigning(false);
     }
-  };
-
-  const getStatusDisplayName = (status: string): string => {
-    const statusMap = {
-      open: t('contactSidebar.conversationActions.status.open'),
-      resolved: t('contactSidebar.conversationActions.status.resolved'),
-      pending: t('contactSidebar.conversationActions.status.pending'),
-      snoozed: t('contactSidebar.conversationActions.status.snoozed'),
-    };
-
-    return statusMap[status as keyof typeof statusMap] || status;
   };
 
   return (
@@ -116,24 +133,37 @@ const ConversationActions: React.FC<ConversationActionsProps> = ({ conversation 
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {/* TODO: Implementar AssigneeSelector real */}
-          <div className="text-sm text-muted-foreground p-3 border rounded-lg bg-muted/30">
-            {conversation?.assignee_id
-              ? t('contactSidebar.conversationActions.assignment.assignedTo', {
-                  id: conversation.assignee_id,
-                })
-              : t('contactSidebar.conversationActions.assignment.notAssigned')}
-          </div>
-
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => handleAssigneeChange(null)}
+          <Select
+            value={conversation?.assignee_id ? String(conversation.assignee_id) : '__none__'}
+            onValueChange={(val) => handleAssigneeChange(val === '__none__' ? null : val)}
             disabled={isAssigning}
           >
-            <UserMinus className="h-4 w-4 mr-2" />
-            {t('contactSidebar.conversationActions.assignment.unassign')}
-          </Button>
+            <SelectTrigger className="w-full text-sm">
+              <SelectValue placeholder={t('contactSidebar.conversationActions.assignment.notAssigned')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">
+                {t('contactSidebar.conversationActions.assignment.notAssigned')}
+              </SelectItem>
+              {agents.map((agent) => (
+                <SelectItem key={agent.id} value={String(agent.id)}>
+                  {agent.name || agent.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {conversation?.assignee_id && (
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => handleAssigneeChange(null)}
+              disabled={isAssigning}
+            >
+              <UserMinus className="h-4 w-4 mr-2" />
+              {t('contactSidebar.conversationActions.assignment.unassign')}
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -146,10 +176,9 @@ const ConversationActions: React.FC<ConversationActionsProps> = ({ conversation 
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {/* Labels Atuais */}
-          {conversation?.labels&& conversation.labels.length > 0 ? (
+          {conversation?.labels && conversation.labels.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {conversation.labels.map((label: any) => (
+              {conversation.labels.map((label: Label) => (
                 <Badge key={label.id} variant="secondary" className="text-xs">
                   {label.title}
                 </Badge>
@@ -161,7 +190,6 @@ const ConversationActions: React.FC<ConversationActionsProps> = ({ conversation 
             </div>
           )}
 
-          {/* TODO: Implementar LabelsManager real */}
           <Button variant="outline" className="w-full justify-start">
             <Tag className="h-4 w-4 mr-2" />
             {t('contactSidebar.conversationActions.labels.manage')}
@@ -178,10 +206,44 @@ const ConversationActions: React.FC<ConversationActionsProps> = ({ conversation 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-sm text-muted-foreground p-3 border rounded-lg bg-muted/30">
-            {/* TODO: Implementar seletor de prioridade real */}
-            {t('contactSidebar.conversationActions.priority.none')}
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <PriorityButton
+              priority="low"
+              current={conversation?.priority}
+              onClick={() => handlePriorityChange('low')}
+              disabled={isUpdatingPriority}
+            />
+            <PriorityButton
+              priority="medium"
+              current={conversation?.priority}
+              onClick={() => handlePriorityChange('medium')}
+              disabled={isUpdatingPriority}
+            />
+            <PriorityButton
+              priority="high"
+              current={conversation?.priority}
+              onClick={() => handlePriorityChange('high')}
+              disabled={isUpdatingPriority}
+            />
+            <PriorityButton
+              priority="urgent"
+              current={conversation?.priority}
+              onClick={() => handlePriorityChange('urgent')}
+              disabled={isUpdatingPriority}
+            />
           </div>
+
+          {conversation?.priority && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePriorityChange(null)}
+              disabled={isUpdatingPriority}
+              className="w-full justify-start text-xs"
+            >
+              {t('contactSidebar.conversationActions.priority.remove')}
+            </Button>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -229,6 +291,67 @@ const StatusButton: React.FC<StatusButtonProps> = ({ status, current, onClick, d
   };
 
   const config = getStatusConfig(status);
+
+  return (
+    <Button
+      variant={isCurrent ? 'default' : 'outline'}
+      size="sm"
+      onClick={onClick}
+      disabled={disabled}
+      className={`justify-start relative ${isCurrent ? '' : config.color}`}
+    >
+      {isCurrent && <Check className="h-3 w-3 mr-2" />}
+      {config.label}
+    </Button>
+  );
+};
+
+// Priority Button Component
+interface PriorityButtonProps {
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  current?: string | null;
+  onClick: () => void;
+  disabled: boolean;
+}
+
+const PriorityButton: React.FC<PriorityButtonProps> = ({
+  priority,
+  current,
+  onClick,
+  disabled,
+}) => {
+  const { t } = useLanguage('chat');
+  const isCurrent = priority === current;
+
+  const getPriorityConfig = (priority: string) => {
+    const configs = {
+      low: {
+        label: t('contactSidebar.conversationActions.priority.low'),
+        color: 'text-gray-600 bg-gray-50 border-gray-200',
+      },
+      medium: {
+        label: t('contactSidebar.conversationActions.priority.medium'),
+        color: 'text-blue-600 bg-blue-50 border-blue-200',
+      },
+      high: {
+        label: t('contactSidebar.conversationActions.priority.high'),
+        color: 'text-orange-600 bg-orange-50 border-orange-200',
+      },
+      urgent: {
+        label: t('contactSidebar.conversationActions.priority.urgent'),
+        color: 'text-red-600 bg-red-50 border-red-200',
+      },
+    };
+
+    return (
+      configs[priority as keyof typeof configs] || {
+        label: priority,
+        color: 'text-gray-600 bg-gray-50 border-gray-200',
+      }
+    );
+  };
+
+  const config = getPriorityConfig(priority);
 
   return (
     <Button
