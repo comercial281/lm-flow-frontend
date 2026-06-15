@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { Button } from '@evoapi/design-system/button';
 import { Badge } from '@evoapi/design-system/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@evoapi/design-system/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@evoapi/design-system/select';
 import { Settings, UserPlus, UserMinus, Tag, Zap, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { Conversation } from '@/types/chat/api';
 import { useConversations } from '@/hooks/chat/useConversations';
 import { useLanguage } from '@/hooks/useLanguage';
 import type { Label } from '@/types/settings';
+import { chatService } from '@/services/chat/chatService';
+import usersService from '@/services/users/usersService';
+import type { User } from '@/types/users';
 
 interface ConversationActionsProps {
   conversation: Conversation | null;
@@ -23,8 +27,16 @@ const ConversationActions: React.FC<ConversationActionsProps> = ({
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isUpdatingPriority, setIsUpdatingPriority] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
+  const [agents, setAgents] = useState<User[]>([]);
 
   const conversations = useConversations();
+
+  useEffect(() => {
+    if (!conversation?.inbox_id) return;
+    usersService.getAssignableAgents(String(conversation.inbox_id))
+      .then((res: User[] | { data: User[] }) => setAgents(Array.isArray(res) ? res : (res as { data: User[] }).data ?? []))
+      .catch(() => {});
+  }, [conversation?.inbox_id]);
 
   const handleStatusChange = async (newStatus: 'open' | 'resolved' | 'pending' | 'snoozed') => {
     if (!conversation) return;
@@ -59,14 +71,13 @@ const ConversationActions: React.FC<ConversationActionsProps> = ({
 
     setIsAssigning(true);
     try {
-      // TODO: Implementar API call para atribuição
-      // await chatService.assignConversation(conversation.id, agentId);
-
+      await chatService.assignConversation(String(conversation.id), agentId ?? undefined);
       if (agentId) {
         toast.success(t('contactSidebar.conversationActions.assignment.assignedSuccess'));
       } else {
         toast.success(t('contactSidebar.conversationActions.assignment.unassignedSuccess'));
       }
+      onFilterReload?.();
     } catch (error) {
       console.error('Error assigning agent:', error);
       toast.error(t('contactSidebar.conversationActions.assignment.error'));
@@ -135,24 +146,38 @@ const ConversationActions: React.FC<ConversationActionsProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0 space-y-2">
-          {/* TODO: Implementar AssigneeSelector real */}
-          <div className="text-sm text-muted-foreground p-3 border rounded-lg bg-muted/30">
-            {conversation?.assignee_id
-              ? t('contactSidebar.conversationActions.assignment.assignedTo', {
-                  id: conversation.assignee_id,
-                })
-              : t('contactSidebar.conversationActions.assignment.notAssigned')}
-          </div>
-
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => handleAssigneeChange(null)}
+          <Select
+            value={conversation?.assignee_id ? String(conversation.assignee_id) : '__none__'}
+            onValueChange={(val) => handleAssigneeChange(val === '__none__' ? null : val)}
             disabled={isAssigning}
           >
-            <UserMinus className="h-4 w-4 mr-2" />
-            {t('contactSidebar.conversationActions.assignment.unassign')}
-          </Button>
+            <SelectTrigger className="w-full text-sm">
+              <SelectValue placeholder={t('contactSidebar.conversationActions.assignment.notAssigned')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">
+                {t('contactSidebar.conversationActions.assignment.notAssigned')}
+              </SelectItem>
+              {agents.map((agent) => (
+                <SelectItem key={agent.id} value={String(agent.id)}>
+                  {agent.name || agent.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {conversation?.assignee_id && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              onClick={() => handleAssigneeChange(null)}
+              disabled={isAssigning}
+            >
+              <UserMinus className="h-4 w-4 mr-2" />
+              {t('contactSidebar.conversationActions.assignment.unassign')}
+            </Button>
+          )}
         </CardContent>
       </Card>
 

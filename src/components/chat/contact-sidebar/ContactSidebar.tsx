@@ -20,6 +20,7 @@ import { pipelinesService } from '@/services/pipelines';
 import type { Pipeline } from '@/types/analytics';
 
 import { Contact, Conversation } from '@/types/chat/api';
+import { contactsService } from '@/services/contacts/contactsService';
 
 interface ContactSidebarProps {
   isOpen: boolean;
@@ -91,6 +92,10 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
   const [isMobile, setIsMobile] = useState(false);
   const [conversationPipelines, setConversationPipelines] = useState<Pipeline[]>([]);
   const [isLoadingPipelines, setIsLoadingPipelines] = useState(false);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [newNote, setNewNote] = useState('');
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [prevConversations, setPrevConversations] = useState<any[]>([]);
 
   // Detectar se é mobile para controlar renderização
   useEffect(() => {
@@ -102,6 +107,21 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Carregar notas e conversas anteriores do contato
+  useEffect(() => {
+    if (!contact?.id) {
+      setNotes([]);
+      setPrevConversations([]);
+      return;
+    }
+    contactsService.getContactNotes(String(contact.id))
+      .then(res => setNotes(res.data ?? []))
+      .catch(() => setNotes([]));
+    contactsService.getContactConversations(String(contact.id))
+      .then(res => setPrevConversations(res.data ?? []))
+      .catch(() => setPrevConversations([]));
+  }, [contact?.id]);
 
   // Carregar pipelines da conversation uma única vez
   const loadConversationPipelines = useCallback(async () => {
@@ -287,17 +307,69 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                 title={t('contactSidebar.sections.contactNotes.title')}
                 description={t('contactSidebar.sections.contactNotes.description')}
                 icon={<FileText className="h-4 w-4 text-orange-500" />}
-                count={0}
+                count={notes.length}
                 isOpen={showContactNotes}
                 onToggle={() => setShowContactNotes(!showContactNotes)}
               />
             </CardHeader>
 
             {showContactNotes && (
-              <CardContent className="pt-0 px-3 pb-3">
-                <div className="text-sm text-muted-foreground p-2 rounded bg-muted/30">
-                  {/* TODO: Implementar ContactNotes real */}
-                  {t('contactSidebar.sections.contactNotes.noNotes')}
+              <CardContent className="pt-0 px-3 pb-3 space-y-2">
+                {notes.length === 0 ? (
+                  <div className="text-sm text-muted-foreground p-2 rounded bg-muted/30">
+                    {t('contactSidebar.sections.contactNotes.noNotes')}
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin">
+                    {notes.map((note: any) => (
+                      <div key={note.id} className="text-xs p-2 rounded bg-muted/30 border border-border">
+                        <p className="whitespace-pre-wrap break-words">{note.content}</p>
+                        {note.created_at && (
+                          <p className="text-muted-foreground mt-1">
+                            {new Date(note.created_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2 pt-1">
+                  <input
+                    className="flex-1 text-xs border border-border rounded px-2 py-1 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                    placeholder={t('contactSidebar.sections.contactNotes.placeholder') || 'Nova nota...'}
+                    value={newNote}
+                    onChange={e => setNewNote(e.target.value)}
+                    onKeyDown={async e => {
+                      if (e.key === 'Enter' && newNote.trim() && contact?.id) {
+                        setIsSavingNote(true);
+                        try {
+                          const created = await contactsService.createContactNote(String(contact.id), newNote.trim());
+                          setNotes(prev => [created, ...prev]);
+                          setNewNote('');
+                        } catch { /* noop */ } finally {
+                          setIsSavingNote(false);
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    disabled={isSavingNote || !newNote.trim()}
+                    onClick={async () => {
+                      if (!newNote.trim() || !contact?.id) return;
+                      setIsSavingNote(true);
+                      try {
+                        const created = await contactsService.createContactNote(String(contact.id), newNote.trim());
+                        setNotes(prev => [created, ...prev]);
+                        setNewNote('');
+                      } catch { /* noop */ } finally {
+                        setIsSavingNote(false);
+                      }
+                    }}
+                  >
+                    {isSavingNote ? '...' : '+'}
+                  </Button>
                 </div>
               </CardContent>
             )}
@@ -310,7 +382,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                 title={t('contactSidebar.sections.previousConversations.title')}
                 description={t('contactSidebar.sections.previousConversations.description')}
                 icon={<MessageSquare className="h-4 w-4 text-purple-500" />}
-                count={0}
+                count={prevConversations.length}
                 isOpen={showPreviousConversations}
                 onToggle={() => setShowPreviousConversations(!showPreviousConversations)}
               />
@@ -318,10 +390,31 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
 
             {showPreviousConversations && (
               <CardContent className="pt-0 px-3 pb-3">
-                <div className="text-sm text-muted-foreground p-2 rounded bg-muted/30">
-                  {/* TODO: Implementar ContactConversations real */}
-                  {t('contactSidebar.sections.previousConversations.loading')}
-                </div>
+                {prevConversations.length === 0 ? (
+                  <div className="text-sm text-muted-foreground p-2 rounded bg-muted/30">
+                    {t('contactSidebar.sections.previousConversations.loading')}
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin">
+                    {prevConversations.map((conv: any) => (
+                      <div key={conv.id} className="text-xs p-2 rounded bg-muted/30 border border-border flex justify-between items-center">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-medium">{conv.inbox_name || `#${conv.id}`}</p>
+                          {conv.created_at && (
+                            <p className="text-muted-foreground">
+                              {new Date(conv.created_at).toLocaleDateString('pt-BR')}
+                            </p>
+                          )}
+                        </div>
+                        <span className={`ml-2 flex-shrink-0 text-xs px-1.5 py-0.5 rounded capitalize ${
+                          conv.status === 'open' ? 'bg-blue-100 text-blue-700' :
+                          conv.status === 'resolved' ? 'bg-green-100 text-green-700' :
+                          'bg-muted text-muted-foreground'
+                        }`}>{conv.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             )}
           </Card>
