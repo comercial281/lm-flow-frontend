@@ -33,6 +33,7 @@ import {
   Search,
   X,
   Download,
+  Upload,
 } from 'lucide-react';
 
 import { pipelinesService } from '@/services/pipelines';
@@ -47,6 +48,7 @@ import PipelineSwitcher from '@/components/pipelines/PipelineSwitcher';
 import EditPipelineModal from '@/components/pipelines/EditPipelineModal';
 import CreateStageModal from '@/components/pipelines/CreateStageModal';
 import AddItemModal from '@/components/pipelines/AddItemModal';
+import ImportLeadsModal from '@/components/pipelines/ImportLeadsModal';
 import RemoveItemModal from '@/components/pipelines/RemoveItemModal';
 import EditItemModal from '@/components/pipelines/EditItemModal';
 import EditStageModal from '@/components/pipelines/EditStageModal';
@@ -104,6 +106,7 @@ export default function PipelineKanban() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [showDateFilter, setShowDateFilter] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   // Load pipeline data
   const loadPipelineData = useCallback(async () => {
@@ -668,6 +671,16 @@ export default function PipelineKanban() {
                     <div className="text-muted-foreground">{t('kanban.header.totalValue')}</div>
                   </div>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setImportModalOpen(true)}
+                  className="whitespace-nowrap"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Importar
+                </Button>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -1301,6 +1314,18 @@ export default function PipelineKanban() {
           stages={stages}
           preselectedStage={selectedStageForItem}
           onItemAdded={handleItemAdded}
+        />
+      )}
+
+      {/* Import Leads Modal */}
+      {pipeline && (
+        <ImportLeadsModal
+          open={importModalOpen}
+          onOpenChange={setImportModalOpen}
+          pipelineId={pipeline.id}
+          pipelineName={pipeline.name}
+          stages={stages}
+          onImported={loadPipelineData}
         />
       )}
 
