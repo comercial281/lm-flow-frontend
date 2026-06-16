@@ -1,6 +1,28 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button, Textarea } from '@evoapi/design-system';
-import { MessageCircle, Send, Loader2, RefreshCw, Paperclip, Rocket, Bell, X } from 'lucide-react';
+import { MessageCircle, Send, Loader2, RefreshCw, Paperclip, Rocket, Bell, X, Mic } from 'lucide-react';
+
+const OPENAI_KEY = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
+
+async function transcribeAudioUrl(audioUrl: string): Promise<string> {
+  const resp = await fetch(audioUrl);
+  if (!resp.ok) throw new Error('Erro ao baixar áudio');
+  const blob = await resp.blob();
+  const ext = audioUrl.split('?')[0].split('.').pop() ?? 'ogg';
+  const file = new File([blob], `audio.${ext}`, { type: blob.type || 'audio/ogg' });
+  const form = new FormData();
+  form.append('file', file);
+  form.append('model', 'whisper-1');
+  form.append('language', 'pt');
+  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${OPENAI_KEY}` },
+    body: form,
+  });
+  if (!res.ok) throw new Error('Erro na transcrição');
+  const data = await res.json();
+  return data.text as string;
+}
 import { toast } from 'sonner';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import MessageFunnelPopover from '@/components/chat/message-funnels/MessageFunnelPopover';
@@ -45,6 +67,45 @@ interface Attachment {
   file_name?: string;
 }
 
+function AudioAttachment({ url }: { url: string }) {
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcription, setTranscription] = useState<string | null>(null);
+
+  const handleTranscribe = async () => {
+    if (!OPENAI_KEY) { setTranscription('Chave OpenAI não configurada.'); return; }
+    setTranscribing(true);
+    try {
+      const text = await transcribeAudioUrl(url);
+      setTranscription(text);
+    } catch {
+      setTranscription('Erro ao transcrever.');
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  return (
+    <div className="mt-1 space-y-1">
+      <audio controls src={url} className="w-full max-w-xs" />
+      {transcription ? (
+        <div className="rounded-md bg-muted/60 px-2 py-1.5 text-xs text-foreground leading-relaxed">
+          {transcription}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={handleTranscribe}
+          disabled={transcribing}
+          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+        >
+          {transcribing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mic className="h-3 w-3" />}
+          {transcribing ? 'Transcrevendo...' : 'Transcrever'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function MediaAttachment({ att }: { att: Attachment }) {
   const url = att.url ?? '';
   const ft = (att.file_type ?? '').toLowerCase();
@@ -60,7 +121,7 @@ function MediaAttachment({ att }: { att: Attachment }) {
     );
   }
   if (ft.startsWith('audio/') || /\.(mp3|ogg|webm|m4a|aac|opus)$/i.test(url)) {
-    return <audio controls src={url} className="mt-1 w-full max-w-xs" />;
+    return <AudioAttachment url={url} />;
   }
   if (ft.startsWith('video/') || /\.(mp4|mov|avi|webm|mkv)$/i.test(url)) {
     return <video controls src={url} className="mt-1 max-h-48 w-full rounded" />;

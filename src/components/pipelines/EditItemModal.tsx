@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useAccountUsers } from '@/hooks/useAccountUsers';
 import {
@@ -31,7 +32,7 @@ import {
   PopoverTrigger,
   Badge,
 } from '@evoapi/design-system';
-import { Plus, Trash2, ChevronsUpDown, Check, User, Phone, Mail, History, Loader2, Tag, Shuffle, X, RefreshCw, Home, Settings2, Link } from 'lucide-react';
+import { Plus, Trash2, ChevronsUpDown, Check, User, Phone, Mail, History, Loader2, Tag, Shuffle, X, RefreshCw, Home, Settings2, Link, MessageSquare } from 'lucide-react';
 import { PipelineItem, PipelineStage, Pipeline, PipelineTask, CreateTaskData, UpdateTaskData, PipelineServiceDefinition } from '@/types/analytics';
 import pipelineServiceDefinitionsService from '@/services/pipelines/pipelineServiceDefinitionsService';
 import PipelineItemCustomAttributes from './PipelineItemCustomAttributes';
@@ -78,6 +79,7 @@ export default function EditItemModal({
   loading,
 }: EditItemModalProps) {
   const { t } = useLanguage('pipelines');
+  const navigate = useNavigate();
   const { users } = useAccountUsers();
   const [notes, setNotes] = useState('');
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
@@ -171,6 +173,22 @@ export default function EditItemModal({
 
       // Load history immediately on open
       loadHistory(item);
+
+      // Auto-tag "meta" for Facebook/Meta leads
+      const convId = item.conversation?.id ? String(item.conversation.id) : null;
+      const existingLabels = Array.isArray((item.conversation as any)?.labels)
+        ? ((item.conversation as any).labels as any[]).map((l: any) => typeof l === 'string' ? l : l?.title ?? '')
+        : [];
+      const contactAttrs = (item.contact as any)?.additional_attributes ?? {};
+      const convAttrs = (item.conversation as any)?.additional_attributes ?? {};
+      const allAttrs = { ...convAttrs, ...contactAttrs };
+      const isMeta = ['campaign_source', 'utm_source', 'lead_source'].some(k =>
+        String(allAttrs[k] ?? '').toLowerCase().includes('meta') ||
+        String(allAttrs[k] ?? '').toLowerCase().includes('facebook')
+      ) || String(allAttrs['campaign_medium'] ?? '').toLowerCase() === 'cpc';
+      if (isMeta && convId && !existingLabels.includes('meta')) {
+        conversationAPI.addLabels(convId, ['meta']).catch(() => {});
+      }
     }
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -288,23 +306,38 @@ export default function EditItemModal({
             <DialogTitle className="truncate text-base font-semibold">{getItemDisplayName()}</DialogTitle>
             <DialogDescription className="text-xs">#{getItemDisplayId()}</DialogDescription>
           </div>
-          <button
-            type="button"
-            title="Copiar link do card"
-            className="shrink-0 mt-0.5 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            onClick={() => {
-              const url = `${window.location.origin}/pipelines/${item.pipeline_id}?card=${item.id}`;
-              navigator.clipboard.writeText(url).then(() => {
-                const el = document.createElement('div');
-                el.textContent = 'Link copiado!';
-                el.className = 'fixed bottom-4 right-4 z-[9999] bg-foreground text-background text-xs px-3 py-2 rounded-lg shadow-lg';
-                document.body.appendChild(el);
-                setTimeout(() => el.remove(), 2000);
-              });
-            }}
-          >
-            <Link className="h-3.5 w-3.5" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0 mt-0.5">
+            {item.conversation?.id && (
+              <button
+                type="button"
+                title="Ir para conversa"
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                onClick={() => {
+                  onOpenChange(false);
+                  navigate(`/conversations/${item.conversation!.id}`);
+                }}
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              type="button"
+              title="Copiar link do card"
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              onClick={() => {
+                const url = `${window.location.origin}/pipelines/${item.pipeline_id}?card=${item.id}`;
+                navigator.clipboard.writeText(url).then(() => {
+                  const el = document.createElement('div');
+                  el.textContent = 'Link copiado!';
+                  el.className = 'fixed bottom-4 right-4 z-[9999] bg-foreground text-background text-xs px-3 py-2 rounded-lg shadow-lg';
+                  document.body.appendChild(el);
+                  setTimeout(() => el.remove(), 2000);
+                });
+              }}
+            >
+              <Link className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
