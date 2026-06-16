@@ -1,7 +1,7 @@
 // Tutorial LM Flow — Central de Conhecimento global (Docs + Aulas).
 // Conteudo armazenado no Supabase do LM Hub (cpagtgvtvyenrabpacqc).
 // Leitura publica via anon key; edicao restrita ao super-admin universal
-// (giovani@chaveflow.com.br) via Edge Function `tutorial-admin`.
+// (comercial@lealmidia.com.br) via Edge Function `tutorial-admin`.
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';

@@ -1,5 +1,5 @@
 // Gate de super-admin universal do LM Flow.
-// Conforme reference_lm_flow_super_admin: giovani@chaveflow.com.br eh
+// Conforme reference_lm_flow_super_admin: comercial@lealmidia.com.br eh
 // injetado como super-admin em TODO tenant via SUPER_ADMIN_* env vars.
 // Esse hook eh a fonte unica usada pelos botoes de edicao no Tutorial.
 
