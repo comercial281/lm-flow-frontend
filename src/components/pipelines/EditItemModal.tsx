@@ -31,7 +31,7 @@ import {
   PopoverTrigger,
   Badge,
 } from '@evoapi/design-system';
-import { Plus, Trash2, ChevronsUpDown, Check, User, Phone, Mail, History, Loader2, Tag, Shuffle, X, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, ChevronsUpDown, Check, User, Phone, Mail, History, Loader2, Tag, Shuffle, X, RefreshCw, Home, Settings2 } from 'lucide-react';
 import { PipelineItem, PipelineStage, Pipeline, PipelineTask, CreateTaskData, UpdateTaskData, PipelineServiceDefinition } from '@/types/analytics';
 import pipelineServiceDefinitionsService from '@/services/pipelines/pipelineServiceDefinitionsService';
 import PipelineItemCustomAttributes from './PipelineItemCustomAttributes';
@@ -39,6 +39,8 @@ import PipelineTasksList, { PipelineTasksListRef } from './tasks/PipelineTasksLi
 import CreateTaskModal from './tasks/CreateTaskModal';
 import EditTaskModal from './tasks/EditTaskModal';
 import CardConversationTab from './CardConversationTab';
+import CardActionsPanel from './CardActionsPanel';
+import CardPropertyInterests from './CardPropertyInterests';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { contactEventsService } from '@/services/contacts/contactEventsService';
 import { labelsService } from '@/services/contacts/labelsService';
@@ -287,16 +289,24 @@ export default function EditItemModal({
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-3 shrink-0">
+          <TabsList className="grid w-full grid-cols-5 shrink-0">
             <TabsTrigger value="overview">Detalhes</TabsTrigger>
             <TabsTrigger value="conversation">Conversa</TabsTrigger>
+            <TabsTrigger value="properties" className="flex items-center gap-1">
+              <Home className="h-3 w-3" />
+              Imóveis
+            </TabsTrigger>
             <TabsTrigger value="tasks" className="relative">
               {t('editItem.tabs.tasks')}
               {(pendingCount > 0 || overdueCount > 0) && (
-                <span className="ml-2 px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
+                <span className="ml-1 px-1 py-0.5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
                   {pendingCount + overdueCount}
                 </span>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="actions" className="flex items-center gap-1">
+              <Settings2 className="h-3 w-3" />
+              Ações
             </TabsTrigger>
           </TabsList>
 
@@ -505,6 +515,27 @@ export default function EditItemModal({
                 onCreateClick={() => setShowCreateTaskModal(true)}
                 onEditClick={(task: PipelineTask) => { setTaskToEdit(task); setShowEditTaskModal(true); }}
                 onAddSubtask={(parentTask: PipelineTask) => { setParentTaskForSubtask(parentTask); setShowCreateTaskModal(true); }}
+              />
+            )}
+          </TabsContent>
+
+          {/* Imóveis de interesse */}
+          <TabsContent value="properties" className="flex-1 overflow-y-auto mt-0 pt-3">
+            {item && (
+              <CardPropertyInterests
+                item={item}
+              />
+            )}
+          </TabsContent>
+
+          {/* Ações */}
+          <TabsContent value="actions" className="flex-1 overflow-y-auto mt-0 pt-3">
+            {item && (
+              <CardActionsPanel
+                item={item}
+                stages={stages}
+                onClose={() => onOpenChange(false)}
+                onStageChanged={(newStageId) => setSelectedStageId(newStageId)}
               />
             )}
           </TabsContent>
