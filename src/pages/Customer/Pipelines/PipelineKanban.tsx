@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Badge,
+  Input,
 } from '@evoapi/design-system';
 import {
   ArrowLeft,
@@ -29,6 +30,9 @@ import {
   AlertCircle,
   Clock,
   CheckCircle2,
+  Search,
+  X,
+  Download,
 } from 'lucide-react';
 
 import { pipelinesService } from '@/services/pipelines';
@@ -94,6 +98,12 @@ export default function PipelineKanban() {
   const scheduleActionContactId =
     selectedConversationForSchedule?.conversation?.contact?.id ??
     selectedConversationForSchedule?.contact?.id;
+
+  // Search & filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [showDateFilter, setShowDateFilter] = useState(false);
 
   // Load pipeline data
   const loadPipelineData = useCallback(async () => {
@@ -453,6 +463,62 @@ export default function PipelineKanban() {
     }
   };
 
+  // Filter stages by search query and date range
+  const filteredStages = useMemo(() => {
+    if (!searchQuery && !dateFrom && !dateTo) return stages;
+    const q = searchQuery.toLowerCase();
+    const from = dateFrom ? new Date(dateFrom).getTime() : null;
+    const to = dateTo ? new Date(dateTo + 'T23:59:59').getTime() : null;
+    return stages.map(stage => ({
+      ...stage,
+      items: (stage.items || []).filter(item => {
+        const matchesSearch =
+          !q ||
+          (item.contact?.name || '').toLowerCase().includes(q) ||
+          (item.contact?.email || '').toLowerCase().includes(q) ||
+          (item.contact?.phone_number || '').toLowerCase().includes(q);
+        const enteredMs =
+          typeof item.entered_at === 'number'
+            ? item.entered_at * 1000
+            : new Date(item.created_at).getTime();
+        const matchesFrom = !from || enteredMs >= from;
+        const matchesTo = !to || enteredMs <= to;
+        return matchesSearch && matchesFrom && matchesTo;
+      }),
+    }));
+  }, [stages, searchQuery, dateFrom, dateTo]);
+
+  // Export leads as CSV
+  const handleExportCSV = () => {
+    const allItems = stages.flatMap(stage =>
+      (stage.items || []).map(item => ({
+        nome: item.contact?.name || '',
+        email: item.contact?.email || '',
+        telefone: item.contact?.phone_number || '',
+        etapa: stage.name,
+        valor: item.value || '',
+        entrada: item.entered_at
+          ? new Date(item.entered_at * 1000).toLocaleDateString('pt-BR')
+          : new Date(item.created_at).toLocaleDateString('pt-BR'),
+      })),
+    );
+    if (allItems.length === 0) {
+      toast.error('Nenhum lead para exportar.');
+      return;
+    }
+    const headers = ['nome', 'email', 'telefone', 'etapa', 'valor', 'entrada'];
+    const rows = allItems.map(r => headers.map(h => `"${String((r as any)[h]).replace(/"/g, '""')}"`).join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leads-${pipeline?.name || 'pipeline'}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${allItems.length} leads exportados.`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -520,6 +586,16 @@ export default function PipelineKanban() {
                   </div>
                 )}
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportCSV}
+                  className="whitespace-nowrap"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar
+                </Button>
+
+                <Button
                   variant="default"
                   size="sm"
                   onClick={() => handleAddItem()}
@@ -564,6 +640,67 @@ export default function PipelineKanban() {
                 </DropdownMenu>
               </div>
             </div>
+
+            {/* Search & date filter bar */}
+            <div className="flex flex-wrap items-center gap-2 pb-3">
+              <div className="relative flex-1 min-w-[200px] max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Buscar por nome, email ou telefone"
+                  className="pl-9 pr-8 h-9"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              <Button
+                variant={showDateFilter || dateFrom || dateTo ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setShowDateFilter(v => !v)}
+                className="whitespace-nowrap"
+              >
+                <CalendarClock className="w-4 h-4 mr-2" />
+                Período
+              </Button>
+
+              {showDateFilter && (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={e => setDateFrom(e.target.value)}
+                    className="h-9 w-auto"
+                  />
+                  <span className="text-muted-foreground text-sm">até</span>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={e => setDateTo(e.target.value)}
+                    className="h-9 w-auto"
+                  />
+                  {(dateFrom || dateTo) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setDateFrom('');
+                        setDateTo('');
+                      }}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -576,7 +713,7 @@ export default function PipelineKanban() {
               style={{ width: 'fit-content', minWidth: '100%' }}
             >
               {/* Stage Columns */}
-              {stages.map((stage: PipelineStage) => (
+              {filteredStages.map((stage: PipelineStage) => (
                 <div key={stage.id} className="w-80 flex-shrink-0">
                   <div className="bg-background rounded-xl shadow-sm border border-border h-full flex flex-col">
                     {/* Stage Header */}
@@ -714,9 +851,24 @@ export default function PipelineKanban() {
                           {/* Contact Info Header */}
                           <div className="flex items-start space-x-3 mb-3">
                             <div className="relative">
+                              {item.contact?.avatar_url ? (
+                                <img
+                                  src={item.contact.avatar_url}
+                                  alt={item.contact?.name || ''}
+                                  className="w-10 h-10 rounded-full object-cover shadow-sm bg-muted"
+                                  onError={e => {
+                                    // Fallback para inicial se a foto do WhatsApp falhar
+                                    const el = e.currentTarget;
+                                    const fallback = el.nextElementSibling as HTMLElement | null;
+                                    el.style.display = 'none';
+                                    if (fallback) fallback.style.display = 'flex';
+                                  }}
+                                />
+                              ) : null}
                               <div
-                                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm"
+                                className="w-10 h-10 rounded-full items-center justify-center text-white text-sm font-bold shadow-sm"
                                 style={{
+                                  display: item.contact?.avatar_url ? 'none' : 'flex',
                                   backgroundColor: getContactColor(item.contact?.name),
                                 }}
                               >
