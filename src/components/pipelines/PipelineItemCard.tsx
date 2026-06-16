@@ -94,20 +94,12 @@ export default function PipelineItemCard({
       {/* Contact Info Header */}
       <div className="flex items-start space-x-3 mb-3">
         <div className="relative">
-          {item.contact?.avatar_url ? (
-            <img
-              src={item.contact.avatar_url}
-              alt={item.contact?.name || ''}
-              className="w-10 h-10 rounded-full object-cover shadow-sm"
-            />
-          ) : (
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm"
-              style={{ backgroundColor: getContactColor(item.contact?.name) }}
-            >
-              {item.contact?.name?.[0]?.toUpperCase() || 'U'}
-            </div>
-          )}
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm"
+            style={{ backgroundColor: getContactColor(item.contact?.name) }}
+          >
+            {item.contact?.name?.[0]?.toUpperCase() || 'U'}
+          </div>
           {/* Online indicator */}
           <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 border-2 border-background rounded-full" />
         </div>
