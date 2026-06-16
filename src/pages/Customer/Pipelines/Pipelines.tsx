@@ -544,7 +544,7 @@ export default function Pipelines() {
                 <li>Pipeline "Leads (Marketing)" com 4 colunas (Novo / Primeiro Contato / Follow-up Curto / Follow-up Longo)</li>
                 <li>10 etiquetas coloridas (meta-ads, follow-up, follow-up1-6, recuperado-pelo-follow-up, keyword-trigger)</li>
                 <li>2 sequências de mensagens com 6 passos editáveis cada</li>
-                <li>2 regras de automação (tag meta-ads → funil; palavra-chave → funil)</li>
+                <li>3 regras de automacao (tag meta-ads → funil; palavra-chave → funil; lead recuperado → etiqueta + move coluna)</li>
               </ul>
               Nada é destruído; se já existe, mantém. Você pode editar tudo depois em Configurações → Follow-ups.
             </DialogDescription>
