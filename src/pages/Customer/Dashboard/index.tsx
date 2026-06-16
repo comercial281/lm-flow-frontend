@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Badge, Card, CardContent } from '@evoapi/design-system';
 import { BaseHeader } from '@/components/base';
@@ -91,6 +91,8 @@ const CustomerDashboardPage = () => {
   const [data, setData] = useState<CustomerDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [silentRefreshing, setSilentRefreshing] = useState(false);
   const [draftFilters, setDraftFilters] = useState<DashboardFilterState>(defaultFilters);
   const [appliedFilters, setAppliedFilters] = useState<DashboardFilterState>(defaultFilters);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
@@ -99,24 +101,52 @@ const CustomerDashboardPage = () => {
   const [inboxes, setInboxes] = useState<DashboardOption[]>([]);
   const [users, setUsers] = useState<DashboardOption[]>([]);
 
-  const loadDashboard = useCallback(async (filters: DashboardFilterState) => {
-    setLoading(true);
+  const appliedFiltersRef = useRef(appliedFilters);
+  appliedFiltersRef.current = appliedFilters;
+
+  const loadDashboard = useCallback(async (filters: DashboardFilterState, silent = false) => {
+    if (silent) {
+      setSilentRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
 
     try {
       const response = await customerDashboardService.getCustomerDashboard(buildDashboardParams(filters));
       setData(response);
+      setLastUpdated(new Date());
     } catch (err) {
       console.error('Error loading customer dashboard:', err);
-      setError(t('dashboard.error') || 'Falha ao carregar dashboard');
+      if (!silent) setError(t('dashboard.error') || 'Falha ao carregar dashboard');
     } finally {
       setLoading(false);
+      setSilentRefreshing(false);
     }
   }, [t]);
 
   useEffect(() => {
     loadDashboard(appliedFilters);
   }, [appliedFilters, loadDashboard]);
+
+  // Auto-refresh a cada 2 minutos + ao focar a aba
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadDashboard(appliedFiltersRef.current, true);
+    }, 2 * 60 * 1000);
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        loadDashboard(appliedFiltersRef.current, true);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [loadDashboard]);
 
   useEffect(() => {
     const loadFilterOptions = async () => {
@@ -290,7 +320,21 @@ const CustomerDashboardPage = () => {
         />
       </div>
 
-      <div className="-mt-3 flex justify-end" data-tour="dashboard-period-badge">
+      <div className="-mt-3 flex items-center justify-end gap-3" data-tour="dashboard-period-badge">
+        {lastUpdated && (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full"
+              style={{
+                background: silentRefreshing ? '#f59e0b' : '#10b981',
+                animation: silentRefreshing ? 'lmd-pulse-ring 1s ease-in-out infinite' : 'none',
+              }}
+            />
+            {silentRefreshing
+              ? 'Sincronizando...'
+              : `Atualizado às ${lastUpdated.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+          </span>
+        )}
         <Badge variant="secondary">
           {currentPeriodLabel} ({data.period.days} dias)
         </Badge>
