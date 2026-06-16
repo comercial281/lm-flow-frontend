@@ -207,7 +207,7 @@ export default function Header({
         {/* Center: Logo + nome da conta */}
         <div className="flex-1 flex justify-center min-w-0">
           <div className="flex flex-col items-center min-w-0">
-            <AppLogo className="h-8 max-w-32" />
+            <Link to="/dashboard"><AppLogo className="h-8 max-w-32" /></Link>
             {account?.name && (
               <span className="text-[11px] font-medium text-muted-foreground truncate max-w-40">
                 {account.name}
@@ -239,7 +239,7 @@ export default function Header({
           {/* App Logo - only show when not collapsed */}
           {!isCollapsed && (
             <div className="flex-shrink-0 flex items-center gap-2">
-              <AppLogo className="h-8 max-w-32" />
+              <Link to="/dashboard"><AppLogo className="h-8 max-w-32" /></Link>
             </div>
           )}
 
