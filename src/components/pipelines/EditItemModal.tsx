@@ -346,7 +346,15 @@ export default function EditItemModal({
 
           {/* Conversation Tab — WhatsApp inline (sprint follow-up) */}
           <TabsContent value="conversation" className="py-4 overflow-y-auto max-h-[60vh]">
-            {item && <CardConversationTab item={item} />}
+            {item && (
+              <CardConversationTab
+                item={item}
+                onCreateReminder={() => {
+                  setActiveTab('tasks');
+                  setShowCreateTaskModal(true);
+                }}
+              />
+            )}
           </TabsContent>
 
           {/* Services Tab */}
