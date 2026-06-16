@@ -23,6 +23,8 @@ import type {
 const TRIGGERS_WITH_CONDITION = new Set([
   'lead.tag_added',
   'lead.message_received',
+  'lead.keyword_detected',
+  'lead.meta_ads_lead',
   'lead.stage_changed',
 ]);
 
@@ -200,6 +202,55 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
             Em branco = dispara em qualquer mensagem recebida.
           </p>
         </div>
+      </div>
+    );
+  }
+
+  // --- lead.meta_ads_lead ---
+  // Backend emite context { contact_id, conversation_id, campaign_name, adset_name, ad_name }
+  // Filtro opcional: campaign_name contains <nome>. Sem filtro = dispara em qualquer lead Meta Ads.
+  if (trigger === 'lead.meta_ads_lead') {
+    const value = typeof condition?.value === 'string' ? condition.value : '';
+    const commit = (val: string) =>
+      onChange(val ? { field: 'campaign_name', operator: 'contains', value: val } : null);
+    return (
+      <div className="space-y-2">
+        <div>
+          <UILabel>Campanha (opcional)</UILabel>
+          <Input
+            value={value}
+            onChange={e => commit(e.target.value)}
+            placeholder="Ex: Imoveis SP, Lancamento..."
+            className="mt-1"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Em branco = dispara para leads de qualquer campanha Meta Ads.
+            Preenchido = so dispara se o nome da campanha contiver o texto.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // --- lead.keyword_detected ---
+  // Backend emite context { ..., content: <texto da msg> } — mesmo payload que lead.message_received.
+  // Separado pra deixar claro o caso de uso: detectar palavra-chave especifica.
+  if (trigger === 'lead.keyword_detected') {
+    const value = typeof condition?.value === 'string' ? condition.value : '';
+    const commit = (val: string) =>
+      onChange(val ? { field: 'content', operator: 'contains', value: val } : null);
+    return (
+      <div>
+        <UILabel>Palavra-chave *</UILabel>
+        <Input
+          value={value}
+          onChange={e => commit(e.target.value)}
+          placeholder="Ex: visita, agendar, preco, quando..."
+          className="mt-1"
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Dispara quando a mensagem do lead contiver essa palavra (sem diferenciar maiusculas/minusculas).
+        </p>
       </div>
     );
   }
@@ -576,8 +627,9 @@ export function validateRule(
   actions: LeadAutomationAction[],
 ): ValidationResult {
   if (triggerNeedsCondition(trigger)) {
-    // message_received é o único onde a condição é opcional (keyword vazia = qualquer msg).
-    const isOptional = trigger === 'lead.message_received';
+    // message_received e meta_ads_lead têm condição opcional.
+    const isOptional =
+      trigger === 'lead.message_received' || trigger === 'lead.meta_ads_lead';
     const hasValue =
       conditions.length > 0 &&
       conditions[0].value !== '' &&
@@ -619,8 +671,16 @@ export function formatConditionSummary(
     return `Etiqueta: ${condition.value}`;
   }
   if (trigger === 'lead.message_received') {
-    const op = condition.operator === 'eq' ? 'É igual a' : 'Contém';
+    const op = condition.operator === 'eq' ? 'E igual a' : 'Contem';
     return `${op}: "${condition.value}"`;
+  }
+  if (trigger === 'lead.keyword_detected') {
+    return `Palavra-chave: "${condition.value}"`;
+  }
+  if (trigger === 'lead.meta_ads_lead') {
+    return condition.value
+      ? `Campanha contem: "${condition.value}"`
+      : 'Qualquer campanha Meta Ads';
   }
   if (trigger === 'lead.stage_changed') {
     const allStages = Object.values(resources.stagesByPipeline).flat();
