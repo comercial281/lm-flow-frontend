@@ -5,11 +5,11 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { Button } from '@evoapi/design-system/button';
 import { Card, CardHeader, CardContent } from '@evoapi/design-system/card';
 import { Badge } from '@evoapi/design-system/badge';
-import { X, User, FileText, MessageSquare, Clock, ChevronDown, Zap, GitBranch, Tag, Info, Megaphone, ExternalLink } from 'lucide-react';
+import { X, User, FileText, MessageSquare, Clock, ChevronDown, GitBranch, Tag, Info, Megaphone, ExternalLink } from 'lucide-react';
 
 import ContactHeader from './ContactHeader';
 import ContactDetails from './ContactDetails';
-import MacrosList from './MacrosList';
+// import MacrosList from './MacrosList'; // OCULTO
 
 import EditableContactCustomAttributes from './EditableContactCustomAttributes';
 import EditableConversationCustomAttributes from './EditableConversationCustomAttributes';
@@ -82,7 +82,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
 
   // Estados para controlar seções expandidas/colapsadas (padrão Agents.tsx)
   const [showContactDetails, setShowContactDetails] = useState(false);
-  const [showMacros, setShowMacros] = useState(false);
+  // const [showMacros, setShowMacros] = useState(false); // OCULTO
   const [showPipeline, setShowPipeline] = useState(false);
   const [showContactNotes, setShowContactNotes] = useState(false);
   const [showPreviousConversations, setShowPreviousConversations] = useState(false);
