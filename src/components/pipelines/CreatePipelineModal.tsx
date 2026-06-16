@@ -100,9 +100,9 @@ const getStageTemplates = (t: (key: string) => string): Record<
       position: 1
     },
     {
-      name: t('createPipeline.templates.marketing.nurturing.name'),
+      name: t('createPipeline.templates.marketing.sdrQualifying.name'),
       color: '#F59E0B',
-      description: t('createPipeline.templates.marketing.nurturing.description'),
+      description: t('createPipeline.templates.marketing.sdrQualifying.description'),
       position: 2
     },
     {
@@ -112,10 +112,28 @@ const getStageTemplates = (t: (key: string) => string): Record<
       position: 3
     },
     {
-      name: t('createPipeline.templates.marketing.converted.name'),
+      name: t('createPipeline.templates.marketing.meetingScheduled.name'),
+      color: '#F97316',
+      description: t('createPipeline.templates.marketing.meetingScheduled.description'),
+      position: 4
+    },
+    {
+      name: t('createPipeline.templates.marketing.proposal.name'),
+      color: '#A855F7',
+      description: t('createPipeline.templates.marketing.proposal.description'),
+      position: 5
+    },
+    {
+      name: t('createPipeline.templates.marketing.closed.name'),
       color: '#10B981',
-      description: t('createPipeline.templates.marketing.converted.description'),
-      position: 4,
+      description: t('createPipeline.templates.marketing.closed.description'),
+      position: 6
+    },
+    {
+      name: t('createPipeline.templates.marketing.disqualified.name'),
+      color: '#EF4444',
+      description: t('createPipeline.templates.marketing.disqualified.description'),
+      position: 7,
     },
   ],
   custom: [

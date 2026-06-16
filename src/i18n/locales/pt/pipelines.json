@@ -154,20 +154,32 @@
       },
       "marketing": {
         "lead": {
-          "name": "Lead",
-          "description": "Leads gerados"
+          "name": "Novo Lead",
+          "description": "Entrada via anuncio"
         },
-        "nurturing": {
-          "name": "Nutrição",
-          "description": "Em processo de nutrição"
+        "sdrQualifying": {
+          "name": "SDR Qualificando",
+          "description": "Atendimento automatico em andamento"
         },
         "qualified": {
           "name": "Qualificado",
-          "description": "Lead qualificado"
+          "description": "Interesse confirmado pelo SDR"
         },
-        "converted": {
-          "name": "Convertido",
-          "description": "Convertido em oportunidade"
+        "meetingScheduled": {
+          "name": "Reuniao Agendada",
+          "description": "Visita ou call marcada"
+        },
+        "proposal": {
+          "name": "Em Proposta",
+          "description": "Negociacao ativa"
+        },
+        "closed": {
+          "name": "Fechou",
+          "description": "Virou cliente"
+        },
+        "disqualified": {
+          "name": "Desqualificado",
+          "description": "Fora do perfil"
         }
       },
       "custom": {
