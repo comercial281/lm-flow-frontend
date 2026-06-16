@@ -11,7 +11,7 @@ import {
   DialogTitle,
   Button,
 } from '@evoapi/design-system';
-import { Grid3X3, List, Users, Sparkles, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Grid3X3, List, Users } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -87,16 +87,6 @@ export default function Contacts() {
   const [eventsContact, setEventsContact] = useState<Contact | null>(null);
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
   const [contactsToMerge, setContactsToMerge] = useState<Contact[]>([]);
-  const [batchQualifyModalOpen, setBatchQualifyModalOpen] = useState(false);
-  const [batchQualifySelected, setBatchQualifySelected] = useState<Set<string>>(new Set());
-  const [batchQualifyRunning, setBatchQualifyRunning] = useState(false);
-  const [batchQualifyResults, setBatchQualifyResults] = useState<Array<{
-    contact_id: string | number;
-    status: string;
-    score: number;
-    reasoning: string;
-    error?: string;
-  }> | null>(null);
 
   // Load contacts
   const loadContacts = useCallback(
@@ -720,31 +710,6 @@ export default function Contacts() {
     }
   };
 
-  // Batch qualify
-  const handleBatchQualify = async () => {
-    if (batchQualifySelected.size === 0) return;
-    setBatchQualifyRunning(true);
-    setBatchQualifyResults(null);
-    try {
-      const results = await contactsService.batchQualifyLeads(Array.from(batchQualifySelected));
-      setBatchQualifyResults(results);
-    } catch (error) {
-      console.error('Error batch qualifying:', error);
-      toast.error('Erro ao qualificar contatos em lote');
-    } finally {
-      setBatchQualifyRunning(false);
-    }
-  };
-
-  const toggleBatchQualifySelect = (id: string) => {
-    setBatchQualifySelected(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   // Handle conversation creation
   const handleConversationCreated = (conversationId: string) => {
     toast.success(t('messages.conversationStarted'));
@@ -812,21 +777,8 @@ export default function Contacts() {
       />
       </div>
 
-      {/* View Mode Toggle + Batch Qualify */}
-      <div className="flex items-center justify-between mb-3" data-tour="contacts-view-toggle">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            setBatchQualifySelected(new Set());
-            setBatchQualifyResults(null);
-            setBatchQualifyModalOpen(true);
-          }}
-          className="flex items-center gap-2"
-        >
-          <Sparkles className="h-4 w-4" />
-          Qualificar em lote
-        </Button>
+      {/* View Mode Toggle */}
+      <div className="flex items-center justify-end mb-3" data-tour="contacts-view-toggle">
         <div className="flex items-center border rounded-lg">
           <Button
             variant={viewMode === 'cards' ? 'default' : 'ghost'}
@@ -1082,137 +1034,6 @@ export default function Contacts() {
         loading={state.loading.bulk}
       />
 
-      {/* Batch Qualify Modal */}
-      <Dialog open={batchQualifyModalOpen} onOpenChange={open => {
-        if (!open) {
-          setBatchQualifyModalOpen(false);
-          setBatchQualifyResults(null);
-          setBatchQualifySelected(new Set());
-        }
-      }}>
-        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-violet-500" />
-              Qualificação IA em lote
-            </DialogTitle>
-            <DialogDescription>
-              Selecione os contatos que deseja qualificar com IA. O sistema analisará o perfil de cada um.
-            </DialogDescription>
-          </DialogHeader>
-
-          {!batchQualifyResults ? (
-            <>
-              <div className="flex items-center justify-between px-1 py-2 border-b">
-                <span className="text-sm text-muted-foreground">
-                  {batchQualifySelected.size} de {state.contacts.length} selecionados
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    if (batchQualifySelected.size === state.contacts.length) {
-                      setBatchQualifySelected(new Set());
-                    } else {
-                      setBatchQualifySelected(new Set(state.contacts.map(c => c.id)));
-                    }
-                  }}
-                >
-                  {batchQualifySelected.size === state.contacts.length ? 'Desmarcar todos' : 'Selecionar todos'}
-                </Button>
-              </div>
-              <div className="flex-1 overflow-y-auto space-y-1 py-1">
-                {state.contacts.map(contact => (
-                  <div
-                    key={contact.id}
-                    className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer"
-                    onClick={() => toggleBatchQualifySelect(contact.id)}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={batchQualifySelected.has(contact.id)}
-                      onChange={() => toggleBatchQualifySelect(contact.id)}
-                      onClick={e => e.stopPropagation()}
-                      className="h-4 w-4 accent-violet-600"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{contact.name || '—'}</p>
-                      <p className="text-xs text-muted-foreground truncate">{contact.email || contact.phone_number || '—'}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setBatchQualifyModalOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleBatchQualify}
-                  disabled={batchQualifySelected.size === 0 || batchQualifyRunning}
-                  className="bg-violet-600 hover:bg-violet-700 text-white"
-                >
-                  {batchQualifyRunning ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Qualificando...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Qualificar {batchQualifySelected.size > 0 ? `(${batchQualifySelected.size})` : ''}
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
-            </>
-          ) : (
-            <>
-              <div className="flex-1 overflow-y-auto space-y-2 py-2">
-                {batchQualifyResults.map(result => {
-                  const contact = state.contacts.find(c => String(c.id) === String(result.contact_id));
-                  const isError = !!result.error;
-                  return (
-                    <div key={String(result.contact_id)} className={`flex items-start gap-3 p-3 rounded-lg border ${isError ? 'border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900' : 'border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-900'}`}>
-                      {isError
-                        ? <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                        : <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                      }
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{contact?.name || String(result.contact_id)}</p>
-                        {isError ? (
-                          <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">{result.error}</p>
-                        ) : (
-                          <>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Score: {result.score}</span>
-                              <span className="text-xs text-muted-foreground capitalize">{result.status}</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{result.reasoning}</p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setBatchQualifyResults(null);
-                    setBatchQualifySelected(new Set());
-                  }}
-                >
-                  Qualificar mais
-                </Button>
-                <Button onClick={() => setBatchQualifyModalOpen(false)}>
-                  Fechar
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

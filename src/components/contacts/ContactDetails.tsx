@@ -5,7 +5,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
   Button,
   Avatar,
   AvatarFallback,
@@ -42,7 +41,6 @@ import {
   TrendingUp,
   ChevronRight,
   X,
-  Sparkles,
 } from 'lucide-react';
 // import { ScheduledActionsList } from '@/components/scheduledActions';
 import { Contact } from '@/types/contacts';
@@ -89,9 +87,6 @@ export default function ContactDetails({
   const [interestsLoading, setInterestsLoading] = useState(false);
   const [newInterestPropertyId, setNewInterestPropertyId] = useState('');
   const [addingInterest, setAddingInterest] = useState(false);
-  const [qualifyResult, setQualifyResult] = useState<{ status: string; score: number; reasoning: string; insights?: string[] } | null>(null);
-  const [qualifyLoading, setQualifyLoading] = useState(false);
-  const [qualifyModalOpen, setQualifyModalOpen] = useState(false);
 
   const loadPropertyInterests = useCallback(async (contactId: string) => {
     setInterestsLoading(true);
@@ -242,21 +237,6 @@ export default function ContactDetails({
     }
   };
 
-  const handleQualify = async () => {
-    if (!contact) return;
-    setQualifyLoading(true);
-    setQualifyModalOpen(true);
-    setQualifyResult(null);
-    try {
-      const result = await contactsService.qualifyLead(contact.id);
-      setQualifyResult(result);
-    } catch {
-      toast.error('Erro ao qualificar lead via IA');
-      setQualifyModalOpen(false);
-    } finally {
-      setQualifyLoading(false);
-    }
-  };
 
   // Dynamic tabs based on contact type
   const tabs = [
@@ -318,10 +298,6 @@ export default function ContactDetails({
                   {t('header.mergeContacts')}
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={handleQualify} disabled={qualifyLoading}>
-                <Sparkles className="h-4 w-4 mr-2" />
-                {qualifyLoading ? 'Qualificando...' : 'Qualificar IA'}
-              </Button>
             </div>
             <div className="flex items-start gap-3 mb-2">
               <ContactTypeBadge type={contact.type || 'person'} />
@@ -670,74 +646,6 @@ export default function ContactDetails({
         loading={merging}
       />
 
-      {/* AI Qualify Result Modal */}
-      <Dialog open={qualifyModalOpen} onOpenChange={setQualifyModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-violet-500" />
-              Qualificação IA — {contact?.name}
-            </DialogTitle>
-          </DialogHeader>
-          {qualifyLoading ? (
-            <div className="flex flex-col items-center justify-center py-8 gap-3 text-muted-foreground">
-              <Sparkles className="h-8 w-8 animate-pulse text-violet-400" />
-              <p className="text-sm">Analisando perfil do lead...</p>
-            </div>
-          ) : qualifyResult ? (
-            <div className="space-y-4 py-2">
-              <div className="flex items-center gap-4">
-                <div className="text-center">
-                  <div className={`text-4xl font-bold ${
-                    qualifyResult.score >= 70 ? 'text-emerald-500' :
-                    qualifyResult.score >= 40 ? 'text-orange-500' : 'text-red-500'
-                  }`}>
-                    {qualifyResult.score}
-                  </div>
-                  <div className="text-xs text-muted-foreground">score</div>
-                </div>
-                <div>
-                  <Badge className={
-                    qualifyResult.status === 'qualified' ? 'bg-emerald-100 text-emerald-700' :
-                    qualifyResult.status === 'warm' ? 'bg-orange-100 text-orange-700' :
-                    'bg-slate-100 text-slate-700'
-                  }>
-                    {qualifyResult.status === 'qualified' ? 'Qualificado' :
-                     qualifyResult.status === 'warm' ? 'Morno' :
-                     qualifyResult.status === 'cold' ? 'Frio' : qualifyResult.status}
-                  </Badge>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Raciocínio</p>
-                <p className="text-sm leading-relaxed">{qualifyResult.reasoning}</p>
-              </div>
-              {qualifyResult.insights && qualifyResult.insights.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Insights</p>
-                  <ul className="space-y-1">
-                    {qualifyResult.insights.map((insight, i) => (
-                      <li key={i} className="text-sm flex items-start gap-2">
-                        <span className="text-violet-500 mt-0.5">•</span>
-                        {insight}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setQualifyModalOpen(false)}>Fechar</Button>
-            {!qualifyLoading && (
-              <Button variant="outline" onClick={handleQualify}>
-                <Sparkles className="h-4 w-4 mr-2" />
-                Requalificar
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Dialog>
   );
 }
