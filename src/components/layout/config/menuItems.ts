@@ -325,13 +325,14 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         icon: FileText,
         featureKey: 'dynamic_forms',
       },
-      {
-        name: t('menu.settings.macros'),
-        href: '/settings/macros',
-        icon: Settings,
-        resource: 'macros',
-        action: 'read',
-      },
+      // MACROS OCULTO — habilitar quando pronto
+      // {
+      //   name: t('menu.settings.macros'),
+      //   href: '/settings/macros',
+      //   icon: Settings,
+      //   resource: 'macros',
+      //   action: 'read',
+      // },
       {
         name: 'Lembretes',
         href: '/settings/whatsapp-reminders',

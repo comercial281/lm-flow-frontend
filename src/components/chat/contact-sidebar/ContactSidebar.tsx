@@ -337,8 +337,8 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
             </Card>
           )}
 
-          {/* 3. Macros - Executar automações */}
-          {conversation && (
+          {/* 3. Macros - OCULTO — habilitar quando pronto */}
+          {/* {conversation && (
             <Card>
               <CardHeader className="pb-2">
                 <CollapsibleHeader
@@ -359,7 +359,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                 </CardContent>
               )}
             </Card>
-          )}
+          )} */}
 
           {/* 4. Contact Notes - Notas do contato */}
           <Card>
