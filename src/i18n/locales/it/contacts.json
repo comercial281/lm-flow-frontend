@@ -519,7 +519,10 @@
       "identifier": "Identificatore",
       "created_at": "Data di Creazione",
       "last_activity_at": "Ultima Attività",
-      "type": "Tipo di Contatto"
+      "type": "Tipo di Contatto",
+      "labels": "Etichette",
+      "city": "Città",
+      "company": "Azienda"
     }
   },
   "import": {

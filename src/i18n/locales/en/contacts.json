@@ -527,7 +527,10 @@
       "identifier": "Identifier",
       "created_at": "Creation Date",
       "last_activity_at": "Last Activity",
-      "type": "Contact Type"
+      "type": "Contact Type",
+      "labels": "Tags",
+      "city": "City",
+      "company": "Company"
     }
   },
   "import": {

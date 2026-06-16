@@ -53,6 +53,14 @@ export const OPERATOR_TYPES_5: FilterOperatorType[] = [
   { key: 'is_not_present', label: 'filter.operators.is_not_present', value: 'is_not_present' },
 ];
 
+// Operadores suportados pelo backend para filtro de labels/tags (sem contains)
+export const OPERATOR_TYPES_LABEL: FilterOperatorType[] = [
+  { key: 'equal_to', label: 'filter.operators.equal_to', value: 'equal_to' },
+  { key: 'not_equal_to', label: 'filter.operators.not_equal_to', value: 'not_equal_to' },
+  { key: 'is_present', label: 'filter.operators.is_present', value: 'is_present' },
+  { key: 'is_not_present', label: 'filter.operators.is_not_present', value: 'is_not_present' },
+];
+
 // Tipos de filtro para contatos
 export const CONTACT_FILTER_TYPES: FilterType[] = [
   {
@@ -101,6 +109,34 @@ export const CONTACT_FILTER_TYPES: FilterType[] = [
     inputType: 'date',
     dataType: 'date',
     filterOperators: OPERATOR_TYPES_5,
+    attribute_type: 'standard',
+  },
+  {
+    // Tags do contato (taggings). Opções carregadas dinamicamente em ContactsFilter.
+    attributeKey: 'labels',
+    attributeI18nKey: 'filter.attributes.labels',
+    inputType: 'search_select',
+    dataType: 'text',
+    filterOperators: OPERATOR_TYPES_LABEL,
+    attribute_type: 'standard',
+    options: [],
+  },
+  {
+    // additional_attributes.city (resolvido no backend via filter_keys.yml)
+    attributeKey: 'city',
+    attributeI18nKey: 'filter.attributes.city',
+    inputType: 'plain_text',
+    dataType: 'text',
+    filterOperators: OPERATOR_TYPES_3,
+    attribute_type: 'standard',
+  },
+  {
+    // additional_attributes.company
+    attributeKey: 'company',
+    attributeI18nKey: 'filter.attributes.company',
+    inputType: 'plain_text',
+    dataType: 'text',
+    filterOperators: OPERATOR_TYPES_3,
     attribute_type: 'standard',
   },
 ];
