@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useAccountUsers } from '@/hooks/useAccountUsers';
 import {
@@ -31,7 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@evoapi/design-system';
-import { Plus, Trash2, ChevronsUpDown, Check } from 'lucide-react';
+import { Plus, Trash2, ChevronsUpDown, Check, User, Phone, Mail, History, Loader2 } from 'lucide-react';
 import { PipelineItem, PipelineStage, Pipeline, PipelineTask, CreateTaskData, UpdateTaskData, PipelineServiceDefinition } from '@/types/analytics';
 import pipelineServiceDefinitionsService from '@/services/pipelines/pipelineServiceDefinitionsService';
 import PipelineItemCustomAttributes from './PipelineItemCustomAttributes';
@@ -39,6 +39,9 @@ import PipelineTasksList, { PipelineTasksListRef } from './tasks/PipelineTasksLi
 import CreateTaskModal from './tasks/CreateTaskModal';
 import EditTaskModal from './tasks/EditTaskModal';
 import CardConversationTab from './CardConversationTab';
+import { conversationAPI } from '@/services/conversations/conversationService';
+import { contactEventsService } from '@/services/contacts/contactEventsService';
+import type { ContactEvent } from '@/types/notifications/contact-events';
 
 interface Service {
   name: string;
@@ -80,6 +83,10 @@ export default function EditItemModal({
   const [activeTab, setActiveTab] = useState('details');
   const [catalogServices, setCatalogServices] = useState<PipelineServiceDefinition[]>([]);
   const [openServicePopover, setOpenServicePopover] = useState<number | null>(null);
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState<string | null>(null);
+  const [assigningUser, setAssigningUser] = useState(false);
+  const [historyEvents, setHistoryEvents] = useState<ContactEvent[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Task modals state
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
@@ -134,10 +141,41 @@ export default function EditItemModal({
         .getServiceDefinitions(item.pipeline_id)
         .then((data) => { if (!cancelled) setCatalogServices(data); })
         .catch(() => { if (!cancelled) setCatalogServices([]); });
+
+      // Init assignee from conversation
+      const currentAssigneeId = item.conversation?.assignee?.id;
+      setSelectedAssigneeId(currentAssigneeId ? String(currentAssigneeId) : null);
     }
 
     return () => { cancelled = true; };
   }, [open, item]);
+
+  const handleAssigneeChange = useCallback(async (userId: string) => {
+    if (!item?.conversation?.id) return;
+    setSelectedAssigneeId(userId === 'unassigned' ? null : userId);
+    setAssigningUser(true);
+    try {
+      await conversationAPI.assignConversation(item.conversation.id, userId === 'unassigned' ? null : Number(userId));
+    } catch {
+      // silent — best effort
+    } finally {
+      setAssigningUser(false);
+    }
+  }, [item]);
+
+  const loadHistory = useCallback(async () => {
+    const contactId = item?.contact?.id ?? item?.conversation?.contact?.id;
+    if (!contactId) return;
+    setHistoryLoading(true);
+    try {
+      const res = await contactEventsService.getContactEvents(String(contactId), { limit: 50 });
+      setHistoryEvents(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setHistoryEvents([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [item]);
 
   const handleSubmit = () => {
     if (!selectedStageId) return;
@@ -258,17 +296,35 @@ export default function EditItemModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle>{t('editItem.title')}</DialogTitle>
-          <DialogDescription>{t('editItem.description')}</DialogDescription>
-        </DialogHeader>
+        {/* Header with contact photo + name */}
+        <div className="flex items-center gap-3">
+          <div className="relative shrink-0">
+            {item?.contact?.avatar_url ? (
+              <img
+                src={item.contact.avatar_url}
+                alt={getItemDisplayName()}
+                className="w-12 h-12 rounded-full object-cover border border-border"
+              />
+            ) : (
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold"
+                style={{ backgroundColor: '#7C3AED' }}
+              >
+                {getItemDisplayName()?.[0]?.toUpperCase() || 'U'}
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <DialogTitle className="truncate">{getItemDisplayName()}</DialogTitle>
+            <DialogDescription>#{getItemDisplayId()}</DialogDescription>
+          </div>
+        </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === 'history') loadHistory(); }} className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="details">{t('editItem.tabs.details')}</TabsTrigger>
             <TabsTrigger value="conversation">Conversa</TabsTrigger>
-            <TabsTrigger value="services">{t('editItem.tabs.services')}</TabsTrigger>
-            <TabsTrigger value="attributes">{t('editItem.tabs.attributes')}</TabsTrigger>
+            <TabsTrigger value="history">Histórico</TabsTrigger>
             <TabsTrigger value="tasks" className="relative">
               {t('editItem.tabs.tasks')}
               {(pendingCount > 0 || overdueCount > 0) && (
@@ -280,16 +336,64 @@ export default function EditItemModal({
           </TabsList>
 
           {/* Details Tab */}
-          <TabsContent value="details" className="py-4 space-y-6 overflow-y-auto max-h-[60vh]">
-            {/* Item Info (read-only) */}
-            <div className="p-4 bg-muted/50 rounded-lg border border-border">
-              <h4 className="font-medium text-foreground mb-2">
-                {getItemDisplayName()}
-              </h4>
-              <p className="text-sm text-muted-foreground">
-                #{getItemDisplayId()}
-              </p>
+          <TabsContent value="details" className="py-4 space-y-4 overflow-y-auto max-h-[60vh]">
+            {/* Contact Info (read-only) */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Input
+                  readOnly
+                  value={item?.contact?.name || item?.conversation?.contact?.name || ''}
+                  placeholder="Nome"
+                  className="bg-muted/40 cursor-default"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Input
+                  readOnly
+                  value={item?.contact?.phone_number || item?.conversation?.contact?.phone_number || ''}
+                  placeholder="Telefone"
+                  className="bg-muted/40 cursor-default"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Input
+                  readOnly
+                  value={item?.contact?.email || item?.conversation?.contact?.email || ''}
+                  placeholder="E-mail"
+                  className="bg-muted/40 cursor-default"
+                />
+              </div>
             </div>
+
+            {/* Responsável */}
+            {item?.conversation?.id && (
+              <div className="grid gap-2">
+                <Label className="flex items-center gap-1">
+                  Responsável
+                  {assigningUser && <Loader2 className="h-3 w-3 animate-spin" />}
+                </Label>
+                <Select
+                  value={selectedAssigneeId ?? 'unassigned'}
+                  onValueChange={handleAssigneeChange}
+                  disabled={assigningUser}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sem responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Sem responsável</SelectItem>
+                    {users.map(u => (
+                      <SelectItem key={u.id} value={String(u.id)}>
+                        {u.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Current Stage */}
             <div className="grid gap-2">
@@ -313,21 +417,6 @@ export default function EditItemModal({
                       </div>
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Currency Selection */}
-            <div className="grid gap-2">
-              <Label>{t('editItem.currency')}</Label>
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BRL">{t('editItem.currencies.brl')}</SelectItem>
-                  <SelectItem value="USD">{t('editItem.currencies.usd')}</SelectItem>
-                  <SelectItem value="EUR">{t('editItem.currencies.eur')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -357,7 +446,56 @@ export default function EditItemModal({
             )}
           </TabsContent>
 
-          {/* Services Tab */}
+          {/* History Tab */}
+          <TabsContent value="history" className="py-4 overflow-y-auto max-h-[60vh]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <History className="h-4 w-4" />
+                Histórico de atividade
+              </h3>
+              <Button variant="ghost" size="sm" onClick={loadHistory} disabled={historyLoading}>
+                {historyLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Atualizar'}
+              </Button>
+            </div>
+            {historyLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : historyEvents.length === 0 ? (
+              <p className="py-12 text-center text-sm text-muted-foreground">
+                Nenhuma atividade registrada ainda.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {historyEvents.map(ev => (
+                  <div key={ev.id} className="flex gap-3 rounded-lg border border-border p-3 text-sm">
+                    <div className="mt-0.5 w-2 h-2 rounded-full bg-primary shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium truncate">{ev.eventName}</span>
+                        <span className="text-[11px] text-muted-foreground shrink-0">
+                          {new Date(ev.occurredAt).toLocaleString('pt-BR', {
+                            day: '2-digit', month: '2-digit',
+                            hour: '2-digit', minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      {ev.properties && Object.keys(ev.properties).length > 0 && (
+                        <p className="mt-0.5 text-xs text-muted-foreground truncate">
+                          {Object.entries(ev.properties)
+                            .slice(0, 3)
+                            .map(([k, v]) => `${k}: ${v}`)
+                            .join(' · ')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Services Tab (hidden from tabs bar, kept for data compatibility) */}
           <TabsContent value="services" className="py-4 space-y-4 overflow-y-auto max-h-[60vh]">
             <div className="flex items-center justify-between mb-4">
               <div>
