@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, RefreshCw, Building2, CheckCircle, AlertCircle, Loader2,
   Copy, ExternalLink, Trash2, ChevronDown, ChevronUp, Users, ToggleLeft,
-  BarChart3, List, Archive, ArchiveRestore,
+  BarChart3, List, Archive, ArchiveRestore, UploadCloud,
 } from 'lucide-react';
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Input, Label } from '@evoapi/design-system';
 import clientInstancesService, {
@@ -47,6 +47,7 @@ function InstanceCard({ instance, onDelete, onArchive, onRefresh }: {
   const [membersOpen, setMembersOpen]   = useState(false);
   const [featuresOpen, setFeaturesOpen] = useState(false);
   const [entering, setEntering]         = useState(false);
+  const [syncing, setSyncing]           = useState(false);
 
   const enterAsMaster = async () => {
     setEntering(true);
@@ -67,6 +68,19 @@ function InstanceCard({ instance, onDelete, onArchive, onRefresh }: {
     navigator.clipboard.writeText(instance.frontend_link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const syncFrontend = async () => {
+    setSyncing(true);
+    try {
+      const res = await clientInstancesService.syncFrontend(instance.id);
+      alert(`Deploy iniciado: ${res.data.message}`);
+    } catch (e: any) {
+      const msg = e?.response?.data?.error ?? 'Erro ao iniciar deploy';
+      alert(`Falha: ${msg}`);
+    } finally {
+      setSyncing(false);
+    }
   };
 
   return (
@@ -106,6 +120,17 @@ function InstanceCard({ instance, onDelete, onArchive, onRefresh }: {
               <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={copyLink}>
                 <Copy className="h-3 w-3" />
                 {copied ? 'Copiado!' : 'Link'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1"
+                disabled={syncing}
+                onClick={syncFrontend}
+                title="Refaz o deploy Vercel deste tenant com o codigo atual"
+              >
+                {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <UploadCloud className="h-3 w-3" />}
+                {syncing ? 'Subindo...' : 'Sync'}
               </Button>
               <Button
                 size="sm"
@@ -274,6 +299,7 @@ export default function ClientInstances() {
   const [loadingDash, setLoadingDash] = useState(false);
 
   const [modalOpen, setModalOpen]   = useState(false);
+  const [syncingAll, setSyncingAll] = useState(false);
 
   const loadList = useCallback(async () => {
     setLoadingList(true);
@@ -333,6 +359,25 @@ export default function ClientInstances() {
     else loadDashboard();
   };
 
+  const handleSyncAll = async () => {
+    if (!confirm('Vai fazer redeploy Vercel de TODOS os tenants ativos. Continuar?')) return;
+    setSyncingAll(true);
+    try {
+      const res = await clientInstancesService.syncAllFrontends();
+      const results = res.data.data;
+      const ok   = results.filter(r => r.success).map(r => r.name).join(', ');
+      const fail = results.filter(r => !r.success).map(r => `${r.name}: ${r.error}`).join('\n');
+      let msg = res.data.message;
+      if (ok)   msg += `\nOK: ${ok}`;
+      if (fail) msg += `\nFalhou:\n${fail}`;
+      alert(msg);
+    } catch (e: any) {
+      alert(e?.response?.data?.error ?? 'Erro ao sincronizar todos');
+    } finally {
+      setSyncingAll(false);
+    }
+  };
+
   if (user?.email !== 'comercial@lealmidia.com.br') {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -360,6 +405,19 @@ export default function ClientInstances() {
             <Button variant="outline" size="sm" onClick={handleRefresh}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Atualizar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSyncAll}
+              disabled={syncingAll}
+              title="Redeploy Vercel de todos os tenants (atualiza todos com o codigo da raiz)"
+            >
+              {syncingAll
+                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                : <UploadCloud className="h-4 w-4 mr-2" />
+              }
+              {syncingAll ? 'Sincronizando...' : 'Sync Todos'}
             </Button>
             <Button size="sm" onClick={() => setModalOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />

@@ -154,6 +154,18 @@ const clientInstancesService = {
 
   updateFeatures: (id: number, features: Record<string, boolean>) =>
     apiClient.patch<{ data: ClientInstance }>(`/client_instances/${id}/features`, { features }),
+
+  // --- Vercel deploy sync ---
+
+  syncFrontend: (id: number) =>
+    apiClient.post<{ success: boolean; message: string; data: { url: string; id: string } }>(
+      `/client_instances/${id}/sync_frontend`, {}
+    ),
+
+  syncAllFrontends: () =>
+    apiClient.post<{ success: boolean; message: string; data: { id: number; name: string; success: boolean; url?: string; deploy_id?: string; error?: string }[] }>(
+      '/client_instances/sync_all_frontends', {}
+    ),
 };
 
 export default clientInstancesService;
