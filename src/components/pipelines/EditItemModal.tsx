@@ -31,7 +31,7 @@ import {
   PopoverTrigger,
   Badge,
 } from '@evoapi/design-system';
-import { Plus, Trash2, ChevronsUpDown, Check, User, Phone, Mail, History, Loader2, Tag, Shuffle, X, RefreshCw, Home, Settings2 } from 'lucide-react';
+import { Plus, Trash2, ChevronsUpDown, Check, User, Phone, Mail, History, Loader2, Tag, Shuffle, X, RefreshCw, Home, Settings2, Link } from 'lucide-react';
 import { PipelineItem, PipelineStage, Pipeline, PipelineTask, CreateTaskData, UpdateTaskData, PipelineServiceDefinition } from '@/types/analytics';
 import pipelineServiceDefinitionsService from '@/services/pipelines/pipelineServiceDefinitionsService';
 import PipelineItemCustomAttributes from './PipelineItemCustomAttributes';
@@ -283,9 +283,28 @@ export default function EditItemModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="shrink-0 pb-2 border-b border-border">
-          <DialogTitle className="truncate text-base font-semibold">{getItemDisplayName()}</DialogTitle>
-          <DialogDescription className="text-xs">#{getItemDisplayId()}</DialogDescription>
+        <div className="shrink-0 pb-2 border-b border-border flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <DialogTitle className="truncate text-base font-semibold">{getItemDisplayName()}</DialogTitle>
+            <DialogDescription className="text-xs">#{getItemDisplayId()}</DialogDescription>
+          </div>
+          <button
+            type="button"
+            title="Copiar link do card"
+            className="shrink-0 mt-0.5 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            onClick={() => {
+              const url = `${window.location.origin}/pipelines/${item.pipeline_id}?card=${item.id}`;
+              navigator.clipboard.writeText(url).then(() => {
+                const el = document.createElement('div');
+                el.textContent = 'Link copiado!';
+                el.className = 'fixed bottom-4 right-4 z-[9999] bg-foreground text-background text-xs px-3 py-2 rounded-lg shadow-lg';
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 2000);
+              });
+            }}
+          >
+            <Link className="h-3.5 w-3.5" />
+          </button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">

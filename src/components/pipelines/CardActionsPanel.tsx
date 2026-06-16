@@ -41,9 +41,7 @@ export default function CardActionsPanel({
 
   const [followUpActive, setFollowUpActive] = useState(convLabels.includes(FOLLOW_UP_LABEL));
   const [followUpPaused, setFollowUpPaused] = useState(convLabels.includes('follow-up-pausado'));
-  const [botPaused, setBotPaused] = useState(
-    (item.conversation as any)?.muted ?? convLabels.includes(BOT_PAUSED_LABEL)
-  );
+  const [botPaused, setBotPaused] = useState(convLabels.includes(BOT_PAUSED_LABEL));
 
   const [togglingFollowUp, setTogglingFollowUp] = useState(false);
   const [togglingBot, setTogglingBot] = useState(false);
@@ -100,11 +98,11 @@ export default function CardActionsPanel({
     setTogglingBot(true);
     try {
       if (botPaused) {
-        await conversationAPI.unmuteConversation(convId);
+        await conversationAPI.removeLabels(convId, [BOT_PAUSED_LABEL]);
         setBotPaused(false);
         toast.success('Chatbot reativado');
       } else {
-        await conversationAPI.muteConversation(convId);
+        await conversationAPI.addLabels(convId, [BOT_PAUSED_LABEL]);
         setBotPaused(true);
         toast.success('Chatbot pausado');
       }

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
@@ -55,6 +55,7 @@ export default function PipelineKanban() {
   const { t } = useLanguage('pipelines');
   const { pipelineId } = useParams<{ pipelineId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [pipeline, setPipeline] = useState<Pipeline | null>(null);
@@ -128,6 +129,19 @@ export default function PipelineKanban() {
     loadPipelineData();
     loadAllPipelines();
   }, [loadPipelineData, loadAllPipelines]);
+
+  // Auto-open card from ?card= URL param
+  useEffect(() => {
+    const cardId = searchParams.get('card');
+    if (!cardId || loading) return;
+    const allItems = stages.flatMap(s => s.items ?? []);
+    const found = allItems.find(i => i.id === cardId);
+    if (found) {
+      setItemToEdit(found);
+      setShowEditItemModal(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, stages, loading, setSearchParams]);
 
   // Handle pipeline change
   const handlePipelineChange = (newPipelineId: string) => {

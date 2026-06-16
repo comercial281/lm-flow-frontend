@@ -1,6 +1,6 @@
 import { useLanguage } from '@/hooks/useLanguage';
 import { Button, Badge, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@evoapi/design-system';
-import { Edit, Trash2, MoreVertical, Phone, Mail, MessageSquare, User, Clock, AlertCircle, ListTodo, CheckCircle2, GripVertical, GitBranch } from 'lucide-react';
+import { Edit, Trash2, MoreVertical, Phone, Mail, MessageSquare, User, Clock, AlertCircle, ListTodo, CheckCircle2, GripVertical, GitBranch, Megaphone } from 'lucide-react';
 import { PipelineItem, Pipeline, PipelineStage } from '@/types/analytics';
 
 interface PipelineItemCardProps {
@@ -166,6 +166,23 @@ export default function PipelineItemCard({
           )}
         </div>
       )}
+
+      {/* Ad / Campaign Source */}
+      {(() => {
+        const attrs = (item.contact as any)?.additional_attributes ?? (item.conversation as any)?.additional_attributes ?? {};
+        const adName = attrs.ad_name ?? attrs.campaign_name ?? attrs.utm_campaign;
+        const adSet = attrs.adset_name ?? attrs.campaign_source ?? attrs.utm_source;
+        if (!adName && !adSet) return null;
+        return (
+          <div className="mb-3 flex items-start gap-1.5 rounded-md bg-violet-50 dark:bg-violet-900/10 border border-violet-100 dark:border-violet-800/30 px-2 py-1.5">
+            <Megaphone className="w-3 h-3 text-violet-500 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              {adName && <p className="text-xs font-medium text-violet-700 dark:text-violet-300 truncate">{adName}</p>}
+              {adSet && <p className="text-[10px] text-violet-500 dark:text-violet-400 truncate">{adSet}</p>}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Last Message Preview */}
       {item.conversation?.last_non_activity_message?.content && (
