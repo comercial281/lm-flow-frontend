@@ -1,5 +1,5 @@
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@evoapi/design-system';
-import { Bot, Layers, TrendingUp, Users } from 'lucide-react';
+import { Layers, TrendingUp, Users } from 'lucide-react';
 import { OperationHeatmapCard } from '@/components/charts';
 import type { CustomerDashboardResponse } from '@/types/analytics/dashboard';
 import { formatCurrency, formatSeconds } from './dashboardUtils';
@@ -220,7 +220,6 @@ const DashboardPerformanceSection = ({ data, t }: DashboardPerformanceSectionPro
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 gap-4">
           <Card data-tour="dashboard-agents-performance">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -259,47 +258,6 @@ const DashboardPerformanceSection = ({ data, t }: DashboardPerformanceSectionPro
               )}
             </CardContent>
           </Card>
-
-          <Card data-tour="dashboard-ai-agents-performance">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center">
-                  <Bot className="h-4 w-4 text-muted-foreground" />
-                </div>
-                {tx('dashboard.agents.aiTitle', 'Desempenho dos Agentes de IA')}
-                <TooltipInfo title={tTours('dashboard.step20.title')} content={tTours('dashboard.step20.content')} />
-              </CardTitle>
-              <CardDescription className="mt-1">
-                {tx('dashboard.agents.aiSubtitle', 'Volume e participação dos agentes IA nas respostas')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {data.ai_agents.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  {tx('dashboard.agents.aiEmpty', 'Sem mensagens de IA no período selecionado.')}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {data.ai_agents.slice(0, 5).map(agent => (
-                    <div key={agent.id} className="flex items-center justify-between p-3 rounded-md border bg-muted/20">
-                      <div>
-                        <div className="font-semibold">{agent.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {agent.messages} {tx('dashboard.agents.aiMessages', 'mensagens IA')} ({agent.percentage}%)
-                        </div>
-                      </div>
-                      <div className="text-right min-w-[120px]">
-                        <div className="text-sm text-muted-foreground">
-                          {agent.conversations} {t('dashboard.agents.conversations')}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </section>
   );

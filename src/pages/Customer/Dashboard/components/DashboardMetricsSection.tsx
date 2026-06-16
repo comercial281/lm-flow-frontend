@@ -1,4 +1,4 @@
-import { Clock, MessageSquare, Bot, CheckCircle2, AlertTriangle, UserX, Users } from 'lucide-react';
+import { Clock, MessageSquare, CheckCircle2, AlertTriangle, UserX } from 'lucide-react';
 import { Badge, Card, CardContent, CardHeader, CardTitle } from '@evoapi/design-system';
 import type { CustomerDashboardResponse } from '@/types/analytics/dashboard';
 import DashboardMetricCard from './DashboardMetricCard';
@@ -147,10 +147,6 @@ const DashboardMetricsSection = ({ data, t }: DashboardMetricsSectionProps) => {
       ? { label: tx('dashboard.status.warning', 'Atenção'), tone: 'warning' as const }
       : { label: tx('dashboard.status.critical', 'Risco operacional'), tone: 'critical' as const };
 
-  const hasAiVsHumanSample = (data.ai_vs_human.ai_messages_count + data.ai_vs_human.human_messages_count) > 0;
-  const aiShare = data.ai_vs_human.ai_messages_share;
-  const humanShare = data.ai_vs_human.human_messages_share;
-
   return (
     <section className="space-y-4">
       <SectionHeader
@@ -212,125 +208,34 @@ const DashboardMetricsSection = ({ data, t }: DashboardMetricsSectionProps) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-        <Card
-          className="xl:col-span-7 relative overflow-hidden"
-          data-tour="dashboard-ia-vs-human"
-          style={{
-            borderColor: 'rgba(124,58,237,0.2)',
-            background: 'linear-gradient(135deg, rgba(124,58,237,0.04) 0%, transparent 70%)',
-          }}
-        >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -top-8 -right-8 h-32 w-32 rounded-full blur-3xl"
-            style={{ background: 'rgba(124,58,237,0.08)' }}
-          />
-          <CardHeader className="pb-3 relative">
-            <CardTitle className="text-base flex items-center gap-2">
-              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-violet-500/15">
-                <Bot className="h-4 w-4 text-violet-400" />
-              </div>
-              {tx('dashboard.aiVsHuman.title', 'IA vs Humano')}
-              <TooltipInfo title={tTours('dashboard.step6.title')} content={tTours('dashboard.step6.content')} />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5 relative">
-            {!hasAiVsHumanSample ? (
-              <div className="rounded-lg border border-dashed border-muted-foreground/20 bg-muted/10 p-4 text-sm text-muted-foreground">
-                {tx('dashboard.aiVsHuman.noDataHint', 'IA ainda não está ativa neste período, ou as respostas não foram classificadas.')}
-              </div>
-            ) : (
-              <>
-                <div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
-                    <span className="flex items-center gap-1.5">
-                      <span className="inline-block w-2 h-2 rounded-full bg-indigo-400" />
-                      IA {aiShare}%
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      Humano {humanShare}%
-                      <span className="inline-block w-2 h-2 rounded-full bg-sky-400" />
-                    </span>
-                  </div>
-                  <div className="h-3 rounded-full overflow-hidden bg-muted/40">
-                    <div className="h-full flex">
-                      <div
-                        className="h-full rounded-l-full transition-all duration-700"
-                        style={{ width: `${aiShare}%`, background: 'linear-gradient(90deg, #6366f1 0%, #818cf8 100%)' }}
-                      />
-                      <div
-                        className="h-full rounded-r-full transition-all duration-700"
-                        style={{ width: `${humanShare}%`, background: 'linear-gradient(90deg, #38bdf8 0%, #7dd3fc 100%)' }}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                    <span>{data.ai_vs_human.ai_messages_count.toLocaleString('pt-BR')} respostas IA</span>
-                    <span>{data.ai_vs_human.human_messages_count.toLocaleString('pt-BR')} respostas humanas</span>
-                  </div>
-                </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <StatusCard
+          icon={MessageSquare}
+          iconColor="text-violet-400"
+          iconBg="bg-violet-500/15"
+          title={tx('dashboard.stats.activeConversations', 'Conversas ativas agora')}
+          value={data.stats.open_conversations}
+          statusLabel={data.stats.open_conversations > 0
+            ? tx('dashboard.status.monitor', 'Monitorar')
+            : tx('dashboard.status.good', 'Estável')}
+          statusTone={data.stats.open_conversations > 0 ? 'warning' : 'good'}
+          description={tx('dashboard.status.currentBacklog', 'Backlog operacional atual')}
+          dataTour="dashboard-active-conversations"
+          tooltip={{ title: tTours('dashboard.step7.title'), content: tTours('dashboard.step7.content') }}
+        />
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div
-                    className="rounded-lg border p-3"
-                    style={{ borderColor: 'rgba(99,102,241,0.2)', background: 'rgba(99,102,241,0.04)' }}
-                  >
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Bot className="h-3.5 w-3.5 text-indigo-400" />
-                      {tx('dashboard.aiVsHuman.aiFirstResponse', '1ª resposta IA')}
-                    </div>
-                    <div className="text-xl font-semibold mt-1 text-indigo-400">
-                      {formatSeconds(data.ai_vs_human.avg_first_response_time_ai_seconds)}
-                    </div>
-                  </div>
-                  <div
-                    className="rounded-lg border p-3"
-                    style={{ borderColor: 'rgba(56,189,248,0.2)', background: 'rgba(56,189,248,0.04)' }}
-                  >
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Users className="h-3.5 w-3.5 text-sky-400" />
-                      {tx('dashboard.aiVsHuman.humanFirstResponse', '1ª resposta humana')}
-                    </div>
-                    <div className="text-xl font-semibold mt-1 text-sky-400">
-                      {formatSeconds(data.ai_vs_human.avg_first_response_time_human_seconds)}
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="xl:col-span-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-4">
-          <StatusCard
-            icon={MessageSquare}
-            iconColor="text-violet-400"
-            iconBg="bg-violet-500/15"
-            title={tx('dashboard.stats.activeConversations', 'Conversas ativas agora')}
-            value={data.stats.open_conversations}
-            statusLabel={data.stats.open_conversations > 0
-              ? tx('dashboard.status.monitor', 'Monitorar')
-              : tx('dashboard.status.good', 'Estável')}
-            statusTone={data.stats.open_conversations > 0 ? 'warning' : 'good'}
-            description={tx('dashboard.status.currentBacklog', 'Backlog operacional atual')}
-            dataTour="dashboard-active-conversations"
-            tooltip={{ title: tTours('dashboard.step7.title'), content: tTours('dashboard.step7.content') }}
-          />
-
-          <StatusCard
-            icon={UserX}
-            iconColor="text-rose-400"
-            iconBg="bg-rose-500/15"
-            title={tx('dashboard.stats.unassignedConversations', 'Sem responsável')}
-            value={data.stats.unassigned_conversations}
-            statusLabel={unassignedStatus.label}
-            statusTone={unassignedStatus.tone}
-            description={`${data.stats.pending_conversations} ${tx('dashboard.status.pendingNow', 'pendentes agora')}`}
-            dataTour="dashboard-unassigned"
-            tooltip={{ title: tTours('dashboard.step8.title'), content: tTours('dashboard.step8.content') }}
-          />
-        </div>
+        <StatusCard
+          icon={UserX}
+          iconColor="text-rose-400"
+          iconBg="bg-rose-500/15"
+          title={tx('dashboard.stats.unassignedConversations', 'Sem responsável')}
+          value={data.stats.unassigned_conversations}
+          statusLabel={unassignedStatus.label}
+          statusTone={unassignedStatus.tone}
+          description={`${data.stats.pending_conversations} ${tx('dashboard.status.pendingNow', 'pendentes agora')}`}
+          dataTour="dashboard-unassigned"
+          tooltip={{ title: tTours('dashboard.step8.title'), content: tTours('dashboard.step8.content') }}
+        />
       </div>
     </section>
   );

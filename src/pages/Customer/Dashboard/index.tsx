@@ -11,6 +11,7 @@ import { usersService } from '@/services/users';
 import { customerDashboardService } from '@/services/dashboard/customerDashboardService';
 import type { CustomerDashboardParams, CustomerDashboardResponse } from '@/types/analytics/dashboard';
 import DashboardFiltersDialog from './components/DashboardFiltersDialog';
+import CommercialKPISection from './components/CommercialKPISection';
 import DashboardMetricsSection from './components/DashboardMetricsSection';
 import DashboardTrendsSection from './components/DashboardTrendsSection';
 import DashboardPerformanceSection from './components/DashboardPerformanceSection';
@@ -294,6 +295,8 @@ const CustomerDashboardPage = () => {
           {currentPeriodLabel} ({data.period.days} dias)
         </Badge>
       </div>
+
+      <CommercialKPISection data={data} />
 
       <div data-tour="dashboard-metrics">
         <DashboardMetricsSection data={data} t={t} />
