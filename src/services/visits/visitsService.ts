@@ -2,7 +2,7 @@ import api from '@/services/core/api';
 
 export interface Visit {
   id: string;
-  property_id: string;
+  property_id: string | null;
   contact_id: string;
   realtor_id?: string | null;
   status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled';
@@ -19,7 +19,7 @@ export interface Visit {
 }
 
 export interface VisitFormData {
-  property_id: string;
+  property_id?: string | null;
   contact_id: string;
   realtor_id?: string | null;
   scheduled_at: string;

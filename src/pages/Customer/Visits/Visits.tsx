@@ -210,12 +210,15 @@ export default function Visits() {
   };
 
   const handleSave = async () => {
-    if (!form.property_id.trim()) { toast.error('Selecione um imóvel'); return; }
     if (!form.contact_id.trim())  { toast.error('Selecione um contato'); return; }
     if (!form.scheduled_at)       { toast.error('Data/hora é obrigatória'); return; }
     setSaving(true);
     try {
-      const created = await visitsService.create(form);
+      const payload: VisitFormData = {
+        ...form,
+        property_id: form.property_id?.trim() ? form.property_id : null,
+      };
+      const created = await visitsService.create(payload);
       setVisits(prev => [created, ...prev]);
       setTotal(t => t + 1);
       toast.success('Visita agendada');
@@ -421,7 +424,7 @@ export default function Visits() {
           <div className="space-y-4 py-2">
             {/* Property search */}
             <div className="relative">
-              <UILabel>Imóvel *</UILabel>
+              <UILabel>Imóvel (opcional)</UILabel>
               <div className="relative mt-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
