@@ -548,6 +548,10 @@ export function ScheduleActionModal({
                   required
                   className={errors.message ? 'border-red-500' : ''}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Variáveis: <code>{'{{nome}}'}</code> <code>{'{{nome_completo}}'}</code>{' '}
+                  <code>{'{{telefone}}'}</code> <code>{'{{email}}'}</code> — substituídas pelos dados do contato no envio.
+                </p>
                 {errors.message && <p className="text-sm text-red-500">{errors.message}</p>}
               </div>
             </>
