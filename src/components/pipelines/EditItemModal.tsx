@@ -32,7 +32,7 @@ import {
   PopoverTrigger,
   Badge,
 } from '@evoapi/design-system';
-import { Plus, Trash2, ChevronsUpDown, Check, User, Phone, Mail, History, Loader2, Tag, Shuffle, X, RefreshCw, Home, Settings2, Link, MessageSquare } from 'lucide-react';
+import { Plus, Trash2, ChevronsUpDown, Check, User, Phone, Mail, History, Loader2, Tag, Shuffle, X, RefreshCw, Home, Settings2, Link, MessageSquare, Megaphone } from 'lucide-react';
 import { PipelineItem, PipelineStage, Pipeline, PipelineTask, CreateTaskData, UpdateTaskData, PipelineServiceDefinition } from '@/types/analytics';
 import pipelineServiceDefinitionsService from '@/services/pipelines/pipelineServiceDefinitionsService';
 import PipelineItemCustomAttributes from './PipelineItemCustomAttributes';
@@ -404,12 +404,16 @@ export default function EditItemModal({
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-5 shrink-0">
+          <TabsList className="grid w-full grid-cols-6 shrink-0">
             <TabsTrigger value="overview">Detalhes</TabsTrigger>
             <TabsTrigger value="conversation">Conversa</TabsTrigger>
             <TabsTrigger value="properties" className="flex items-center gap-1">
               <Home className="h-3 w-3" />
               Imóveis
+            </TabsTrigger>
+            <TabsTrigger value="origin" className="flex items-center gap-1">
+              <Megaphone className="h-3 w-3" />
+              Origem
             </TabsTrigger>
             <TabsTrigger value="tasks" className="relative">
               {t('editItem.tabs.tasks')}
@@ -445,6 +449,30 @@ export default function EditItemModal({
                     <Input readOnly value={item.contact?.email || (item.conversation as any)?.contact?.email || ''} placeholder="E-mail" className="bg-muted/40 cursor-default text-sm h-8" />
                   </div>
                 </div>
+
+                {/* Respostas do formulário (perguntas personalizadas da campanha) */}
+                {(() => {
+                  const ca = ((item.contact as any)?.custom_attributes) ?? {};
+                  const HIDE = new Set(['empreendimento', 'imovel_codigo', 'origem_lead']);
+                  const entries = Object.entries(ca).filter(([k, v]) => !HIDE.has(k) && v != null && v !== '');
+                  if (entries.length === 0) return null;
+                  return (
+                    <div className="grid gap-1.5">
+                      <Label className="flex items-center gap-1 text-xs">
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        Respostas do lead
+                      </Label>
+                      <div className="rounded-lg border border-border/60 bg-muted/20 p-2 space-y-1.5">
+                        {entries.map(([k, v]) => (
+                          <div key={k} className="flex items-start justify-between gap-3 text-xs">
+                            <span className="text-muted-foreground shrink-0 capitalize">{k.replace(/_/g, ' ')}</span>
+                            <span className="text-right font-medium break-words">{String(v)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Tags */}
                 <div className="grid gap-1.5">
@@ -670,6 +698,52 @@ export default function EditItemModal({
                 item={item}
               />
             )}
+          </TabsContent>
+
+          {/* Origem do lead (campanha / anúncio / tracking) */}
+          <TabsContent value="origin" className="flex-1 overflow-y-auto mt-0 pt-3">
+            {(() => {
+              const ar = ((item.contact as any)?.additional_attributes?.ad_referral)
+                ?? ((item.conversation as any)?.additional_attributes?.ad_referral) ?? {};
+              const LABELS: Record<string, string> = {
+                source: 'Origem', campaign_name: 'Campanha', adset_name: 'Conjunto', ad_name: 'Anúncio',
+                campaign_id: 'ID da campanha', adset_id: 'ID do conjunto', ad_id: 'ID do anúncio',
+                form_id: 'ID do formulário', page_id: 'ID da página', page_name: 'Página', leadgen_id: 'ID do lead (Meta)',
+                lead_name: 'Nome', lead_email: 'E-mail', lead_phone: 'Telefone',
+                lead_hour: 'Hora do lead', lead_weekday: 'Dia da semana',
+                captured_at: 'Capturado em', fb_created_at: 'Criado no Facebook', lead_created_time: 'Data do lead',
+              };
+              const entries = Object.entries(ar).filter(([k, v]) => k !== 'extra_fields' && v != null && v !== '');
+              const extra = (ar as any).extra_fields && typeof (ar as any).extra_fields === 'object' ? (ar as any).extra_fields : null;
+              if (entries.length === 0 && !extra) {
+                return <div className="text-sm text-muted-foreground py-12 text-center border border-dashed border-border rounded-lg">Sem dados de origem para este lead.</div>;
+              }
+              return (
+                <div className="space-y-4">
+                  <div className="grid gap-2">
+                    {entries.map(([k, v]) => (
+                      <div key={k} className="flex items-start justify-between gap-3 text-sm border-b border-border/50 pb-1.5">
+                        <span className="text-muted-foreground shrink-0">{LABELS[k] ?? k.replace(/_/g, ' ')}</span>
+                        <span className="text-right font-medium break-all">{String(v)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {extra && Object.keys(extra).length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Respostas do formulário</h4>
+                      <div className="grid gap-2">
+                        {Object.entries(extra).map(([k, v]) => (
+                          <div key={k} className="flex items-start justify-between gap-3 text-sm border-b border-border/50 pb-1.5">
+                            <span className="text-muted-foreground shrink-0 capitalize">{k.replace(/_/g, ' ')}</span>
+                            <span className="text-right font-medium break-all">{String(v)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </TabsContent>
 
           {/* Ações */}

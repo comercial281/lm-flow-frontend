@@ -1,6 +1,6 @@
 import { useLanguage } from '@/hooks/useLanguage';
 import { Button, Badge, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@evoapi/design-system';
-import { Edit, Trash2, MoreVertical, Phone, Mail, MessageSquare, User, Clock, AlertCircle, ListTodo, CheckCircle2, GripVertical, GitBranch, Megaphone } from 'lucide-react';
+import { Edit, Trash2, MoreVertical, Phone, Mail, MessageSquare, User, Clock, AlertCircle, ListTodo, CheckCircle2, GripVertical, GitBranch, Megaphone, Home } from 'lucide-react';
 import { PipelineItem, Pipeline, PipelineStage } from '@/types/analytics';
 
 interface PipelineItemCardProps {
@@ -180,6 +180,27 @@ export default function PipelineItemCard({
               {adName && <p className="text-xs font-medium text-violet-700 dark:text-violet-300 truncate">{adName}</p>}
               {adSet && <p className="text-[10px] text-violet-500 dark:text-violet-400 truncate">{adSet}</p>}
             </div>
+          </div>
+        );
+      })()}
+
+      {/* Imóvel de origem (empreendimento) */}
+      {(() => {
+        const cf = (item as any)?.custom_fields ?? {};
+        const ca = (item.contact as any)?.custom_attributes ?? {};
+        let imovel = cf.Empreendimento || cf.empreendimento || ca.empreendimento;
+        if (!imovel) {
+          const ar = (item.contact as any)?.additional_attributes?.ad_referral
+            ?? (item.conversation as any)?.additional_attributes?.ad_referral ?? {};
+          const src = ar.adset_name || ar.campaign_name || '';
+          const m = String(src).match(/\[([^\]]+)\]/g);
+          if (m && m[1]) imovel = m[1].replace(/[[\]]/g, '').trim();
+        }
+        if (!imovel) return null;
+        return (
+          <div className="mb-3 flex items-center gap-1.5 rounded-md bg-primary/5 border border-primary/20 px-2 py-1.5">
+            <Home className="w-3 h-3 text-primary shrink-0" />
+            <span className="text-xs font-medium text-foreground truncate">{String(imovel)}</span>
           </div>
         );
       })()}
