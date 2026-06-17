@@ -62,10 +62,10 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
 
   const handleSearch = useCallback(async (q: string) => {
     setSearchQuery(q);
-    if (q.trim().length < 2) { setSearchResults([]); return; }
     setSearching(true);
     try {
-      const res = await propertiesService.list({ q, status: 'active', per_page: 20 });
+      // q vazio lista todos os imóveis ativos (ao clicar/focar); com texto, filtra
+      const res = await propertiesService.list({ q: q.trim() || undefined, status: 'active', per_page: 50 });
       setSearchResults(res.data ?? []);
     } catch {
       setSearchResults([]);
@@ -135,7 +135,7 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
             <Input
               value={searchQuery}
               onChange={e => handleSearch(e.target.value)}
-              onFocus={() => setSearchOpen(true)}
+              onFocus={() => { setSearchOpen(true); handleSearch(searchQuery); }}
               placeholder="Buscar imóvel por código ou título..."
               className="pl-8 h-9 text-sm"
             />
