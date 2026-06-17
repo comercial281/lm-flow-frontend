@@ -89,6 +89,42 @@ export interface FeatureCatalogItem {
   group: 'menus' | 'settings' | string;
 }
 
+export interface AutomationItem {
+  source: 'n8n' | 'make';
+  external_id: number | string;
+  name: string;
+  raw_name: string;
+  active: boolean;
+  client: string;
+  internal: boolean;
+  mislabeled: boolean;
+  link: string;
+}
+
+export interface AutomationGroup {
+  client: string;
+  internal: boolean;
+  total: number;
+  active: number;
+  inactive: number;
+  mislabeled: number;
+  automations: AutomationItem[];
+}
+
+export interface AutomationsMonitorData {
+  groups: AutomationGroup[];
+  generated_at: string;
+  overview: {
+    clients: number;
+    automations: number;
+    active: number;
+    inactive: number;
+    mislabeled: number;
+    sources: { n8n: number; make: number };
+  };
+  errors: string[];
+}
+
 export interface CreateClientInstancePayload {
   name: string;
   admin_email: string;
@@ -128,6 +164,9 @@ const clientInstancesService = {
 
   monitoring: () =>
     apiClient.get<{ success: boolean; data: MonitoringData }>('/super/monitoring'),
+
+  automations: () =>
+    apiClient.get<{ success: boolean; data: AutomationsMonitorData }>('/super/automations'),
 
   archive: (id: number) =>
     apiClient.post<{ success: boolean; data: ClientInstance }>(`/client_instances/${id}/archive`, {}),

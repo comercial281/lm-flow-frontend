@@ -10,6 +10,7 @@ import DonutChartCard from '@/components/charts/DonutChartCard';
 import clientInstancesService, {
   MonitoringData, MonitoringTenant, MonitoringWhatsapp,
 } from '@/services/clientInstances/clientInstancesService';
+import AutomationsSection from './AutomationsSection';
 
 const DONUT_COLORS = ['#7c3aed', '#6366f1', '#0ea5e9', '#14b8a6', '#f59e0b', '#ec4899'];
 
@@ -236,6 +237,9 @@ export default function Monitoring() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Automações externas (n8n + Make) por cliente */}
+          <AutomationsSection />
         </>
       )}
     </div>
