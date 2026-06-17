@@ -4,6 +4,7 @@ export interface MonitoringWhatsapp {
   inbox: string | null;
   provider: string;
   reauth_required: boolean;
+  connected: boolean | null;
   connection: Record<string, unknown>;
 }
 

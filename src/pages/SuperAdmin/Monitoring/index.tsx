@@ -14,10 +14,11 @@ import AutomationsSection from './AutomationsSection';
 
 const DONUT_COLORS = ['#7c3aed', '#6366f1', '#0ea5e9', '#14b8a6', '#f59e0b', '#ec4899'];
 
-function channelOff(w: MonitoringWhatsapp): boolean {
-  const c = w.connection as Record<string, unknown> | null;
-  if (!c || typeof c !== 'object') return false;
-  return c['connection'] === 'disconnected' || !!c['error'];
+// Um canal só conta como problema se está desconectado AO VIVO E o cliente
+// não teve nenhuma mensagem em 24h (sem tráfego que prove o contrário).
+// Evita falso alarme do canal compartilhado que dá falso-negativo.
+function channelOff(w: MonitoringWhatsapp, inbound24: number): boolean {
+  return w.connected === false && inbound24 === 0;
 }
 
 function ageLabel(mins: number | null): string {
@@ -181,7 +182,7 @@ export default function Monitoring() {
             <CardContent className="pt-2">
               <div className="divide-y divide-border">
                 {tenants.map((t: MonitoringTenant) => {
-                  const offChannels = t.whatsapp.filter(channelOff);
+                  const offChannels = t.whatsapp.filter((w) => channelOff(w, t.inbound_24h));
                   return (
                     <div key={t.backend_url} className="py-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                       <div className="flex items-center gap-2 md:w-64">
@@ -208,7 +209,7 @@ export default function Monitoring() {
                           <span className="text-xs text-muted-foreground">sem canal</span>
                         )}
                         {t.whatsapp.map((w, i) => {
-                          const off = channelOff(w);
+                          const off = channelOff(w, t.inbound_24h);
                           return (
                             <span
                               key={i}
