@@ -94,6 +94,17 @@ function parseCSV(text: string): { headers: string[]; rows: string[][] } {
   return { headers, rows: nonEmpty };
 }
 
+// Normaliza telefone para E.164 (backend exige). Limpa tudo que não é dígito
+// e prefixa "+". Mantém "+" já existente. Vazio retorna vazio.
+function normalizePhoneE164(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  const hadPlus = trimmed.startsWith('+');
+  const digits = trimmed.replace(/\D/g, '');
+  if (!digits) return '';
+  return hadPlus ? `+${digits}` : `+${digits}`;
+}
+
 // Adivinha o campo de destino pelo nome da coluna
 function guessTarget(header: string, customKeys: string[]): string {
   const h = header.toLowerCase().trim();
@@ -234,7 +245,10 @@ export default function ImportLeadsModal({
         if (!target || target === 'ignore' || cell === '') return;
         if (target === 'value') value = cell;
         else if (target === 'notes') notes = cell;
-        else if (target.startsWith('custom:')) data.custom_attributes[target.slice(7)] = cell;
+        else if (target === 'phone_number') {
+          const phone = normalizePhoneE164(cell);
+          if (phone) data.phone_number = phone;
+        } else if (target.startsWith('custom:')) data.custom_attributes[target.slice(7)] = cell;
         else data[target] = cell;
       });
 
@@ -248,24 +262,58 @@ export default function ImportLeadsModal({
       if (Object.keys(data.custom_attributes).length === 0) delete data.custom_attributes;
 
       try {
-        const contact = await contactsService.createContact(data as ContactFormData);
+        const created: any = await contactsService.createContact(data as ContactFormData);
+        const contactId = created?.id || created?.contact?.id;
+        if (!contactId) throw new Error('contato criado sem id');
         const customFields: Record<string, unknown> = {};
         if (value) {
           const num = parseFloat(value.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.'));
           if (!isNaN(num)) customFields.value = num;
         }
         if (notes) customFields.notes = notes;
-        await pipelinesService.addItemToPipeline(pipelineId, {
-          item_id: contact.id,
-          type: 'contact',
-          pipeline_stage_id: stageId,
-          notes: notes || undefined,
-          custom_fields: Object.keys(customFields).length ? customFields : undefined,
-        });
+        const hasCustom = Object.keys(customFields).length > 0;
+        try {
+          await pipelinesService.addItemToPipeline(pipelineId, {
+            item_id: contactId,
+            type: 'contact',
+            pipeline_stage_id: stageId,
+            notes: notes || undefined,
+            custom_fields: hasCustom ? customFields : undefined,
+          });
+        } catch (addErr: any) {
+          // O contato pode já ter entrado no pipeline automaticamente (auto-enroll
+          // do pipeline padrão). Nesse caso, mover pra etapa escolhida em vez de falhar.
+          const addMsg =
+            addErr?.response?.data?.error?.message || addErr?.response?.data?.message || '';
+          if (/already in this pipeline/i.test(addMsg)) {
+            const pls = await contactsService.getContactPipelines(contactId);
+            const match = (pls || []).find((p: any) => p.pipeline?.id === pipelineId);
+            const itemId = match?.item?.id;
+            if (itemId) {
+              if (match.stage?.id !== stageId) {
+                await pipelinesService.moveItem({
+                  item_id: itemId,
+                  pipeline_id: pipelineId,
+                  from_stage_id: match.stage?.id,
+                  to_stage_id: stageId,
+                });
+              }
+              if (notes || hasCustom) {
+                await pipelinesService.updateItemInPipeline(pipelineId, itemId, {
+                  notes: notes || undefined,
+                  custom_fields: hasCustom ? customFields : undefined,
+                });
+              }
+            }
+          } else {
+            throw addErr;
+          }
+        }
         ok++;
       } catch (err: any) {
         fail++;
-        const msg = err?.response?.data?.message || err?.message || 'erro';
+        const msg =
+          err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'erro';
         collectedErrors.push(`Linha ${r + 2} (${data.name}): ${msg}`);
       }
       setProgress({ done: r + 1, total, ok, fail });
