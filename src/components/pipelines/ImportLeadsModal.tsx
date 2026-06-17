@@ -309,6 +309,20 @@ export default function ImportLeadsModal({
             throw addErr;
           }
         }
+
+        // Não duplicar: tirar o lead de qualquer outro pipeline em que ele tenha
+        // entrado (auto-enroll do pipeline padrão), deixando só no pipeline alvo.
+        try {
+          const allPls = await contactsService.getContactPipelines(contactId);
+          const others = (allPls || []).filter(
+            (p: any) => p.pipeline?.id && p.pipeline.id !== pipelineId && p.item?.id,
+          );
+          for (const o of others) {
+            await pipelinesService.removeItemFromPipeline(o.pipeline.id, o.item.id);
+          }
+        } catch {
+          /* limpeza best-effort: não falhar o import se não conseguir remover de outro pipeline */
+        }
         ok++;
       } catch (err: any) {
         fail++;
