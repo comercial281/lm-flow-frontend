@@ -219,24 +219,26 @@ export default function PipelineKanban() {
       return;
     }
 
-    // Optimistic update: move the card locally and keep a snapshot to revert on error.
-    // Antes recarregava o board inteiro (loadPipelineData) — piscava a tela toda. Agora é instantâneo.
-    const movedItem = { ...draggedItem, stage_id: targetStageId, pipeline_stage_id: targetStageId };
-    const snapshot = stages;
-    setStages(prev =>
-      prev.map(s => {
-        if (s.id === fromStageId) {
-          return { ...s, items: (s.items || []).filter(i => i.id !== draggedItem.id) };
-        }
-        if (s.id === targetStageId) {
-          return { ...s, items: [movedItem, ...(s.items || [])] };
-        }
-        return s;
-      }),
-    );
-    setDraggedItem(null);
-    isDraggingRef.current = false;
-    suppressClickUntilRef.current = Date.now() + 200;
+    // Optimistic update: move item locally BEFORE API call
+    const previousStages = stages;
+    const optimisticStages = stages.map(stage => {
+      if (stage.id === draggedItem.stage_id) {
+        return {
+          ...stage,
+          items: (stage.items || []).filter(item => item.id !== draggedItem.id),
+        };
+      }
+      if (stage.id === targetStageId) {
+        return {
+          ...stage,
+          items: [...(stage.items || []), { ...draggedItem, stage_id: targetStageId }],
+        };
+      }
+      return stage;
+    });
+
+    setStages(optimisticStages);
+    toast.success(t('kanban.messages.itemMoved'));
 
     try {
       await pipelinesService.moveItem({
@@ -245,11 +247,16 @@ export default function PipelineKanban() {
         from_stage_id: fromStageId,
         to_stage_id: targetStageId,
       });
-      toast.success(t('kanban.messages.itemMoved'));
+      // API call succeeded — optimistic update was correct, no need to reload
     } catch (error) {
       console.error('Error moving item:', error);
+      // Rollback on failure
+      setStages(previousStages);
       toast.error(t('kanban.messages.itemMoveError'));
-      setStages(snapshot); // revert
+    } finally {
+      setDraggedItem(null);
+      isDraggingRef.current = false;
+      suppressClickUntilRef.current = Date.now() + 200;
     }
   };
 
