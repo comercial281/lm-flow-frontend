@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 
 import { pipelinesService } from '@/services/pipelines';
+import { visitsService } from '@/services/visits/visitsService';
 import {
   Pipeline,
   PipelineStage,
@@ -127,6 +128,25 @@ export default function PipelineKanban() {
     }
   }, [pipelineId]);
 
+  // Próximas visitas por contato (pra mostrar dia/hora no card).
+  const [visitsByContact, setVisitsByContact] = useState<Record<string, string>>({});
+  const loadUpcomingVisits = useCallback(async () => {
+    try {
+      const res = await visitsService.list({ upcoming: 'true', per_page: 500 });
+      const map: Record<string, string> = {};
+      (res.data || []).forEach(v => {
+        if (!v.contact_id) return;
+        // mantém a visita mais próxima por contato
+        if (!map[v.contact_id] || new Date(v.scheduled_at) < new Date(map[v.contact_id])) {
+          map[v.contact_id] = v.scheduled_at;
+        }
+      });
+      setVisitsByContact(map);
+    } catch {
+      /* visitas são enriquecimento opcional do card */
+    }
+  }, []);
+
   // Load all pipelines for selector
   const loadAllPipelines = useCallback(async () => {
     try {
@@ -141,7 +161,8 @@ export default function PipelineKanban() {
   useEffect(() => {
     loadPipelineData();
     loadAllPipelines();
-  }, [loadPipelineData, loadAllPipelines]);
+    loadUpcomingVisits();
+  }, [loadPipelineData, loadAllPipelines, loadUpcomingVisits]);
 
   // Auto-open card from ?card= URL param
   useEffect(() => {
@@ -323,6 +344,18 @@ export default function PipelineKanban() {
       : [];
   };
   const hasVisitScheduled = (item: PipelineItem) => itemLabels(item).includes('visita-agendada');
+  // Dia/hora da próxima visita do lead (do mapa carregado de /visits).
+  const itemVisitLabel = (item: PipelineItem): string | null => {
+    const cid = item.contact?.id || item.conversation?.contact?.id;
+    const when = cid ? visitsByContact[cid] : undefined;
+    if (!when) return null;
+    return new Date(when).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   // Pipeline management handlers
   const handleEditPipeline = () => {
@@ -999,14 +1032,14 @@ export default function PipelineKanban() {
                                   </span>
                                 );
                               })()}
-                              {/* Visita agendada */}
-                              {hasVisitScheduled(item) && (
+                              {/* Visita agendada — mostra dia/hora se houver visita carregada, senão só a tag */}
+                              {(itemVisitLabel(item) || hasVisitScheduled(item)) && (
                                 <span
                                   title="Visita agendada"
                                   className="inline-flex items-center gap-1 mb-1 ml-1 px-1.5 py-0.5 rounded-md text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                                 >
                                   <CalendarClock className="w-3 h-3" />
-                                  Visita agendada
+                                  {itemVisitLabel(item) ? `Visita ${itemVisitLabel(item)}` : 'Visita agendada'}
                                 </span>
                               )}
                               {/* Contact details */}
