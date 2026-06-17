@@ -523,6 +523,10 @@
       "labels": "Etichette",
       "city": "Città",
       "company": "Azienda"
+    },
+    "quick": {
+      "allTags": "Tutte le etichette",
+      "clear": "Pulisci"
     }
   },
   "import": {

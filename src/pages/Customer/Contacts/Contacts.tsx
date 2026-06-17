@@ -29,6 +29,7 @@ import ContactModal from '@/components/contacts/ContactModal';
 import StartConversationModal from '@/components/contacts/StartConversationModal';
 import ContactDetails from '@/components/contacts/ContactDetails';
 import ContactsFilter from '@/components/contacts/ContactsFilter';
+import ContactQuickFilters from '@/components/contacts/ContactQuickFilters';
 import ContactImportModal from '@/components/contacts/ContactImportModal';
 import ContactExportModal from '@/components/contacts/ContactExportModal';
 import ContactEventsModal from '@/components/contacts/ContactEventsModal';
@@ -776,6 +777,9 @@ export default function Contacts() {
         showFilters={true}
       />
       </div>
+
+      {/* Atalhos de filtro rápido */}
+      <ContactQuickFilters activeFilters={activeFilters} onApply={handleApplyFilters} />
 
       {/* View Mode Toggle */}
       <div className="flex items-center justify-end mb-3" data-tour="contacts-view-toggle">

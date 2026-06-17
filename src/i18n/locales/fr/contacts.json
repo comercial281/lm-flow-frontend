@@ -523,6 +523,10 @@
       "labels": "Étiquettes",
       "city": "Ville",
       "company": "Entreprise"
+    },
+    "quick": {
+      "allTags": "Toutes les étiquettes",
+      "clear": "Effacer"
     }
   },
   "import": {

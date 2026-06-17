@@ -531,6 +531,10 @@
       "labels": "Tags",
       "city": "City",
       "company": "Company"
+    },
+    "quick": {
+      "allTags": "All tags",
+      "clear": "Clear"
     }
   },
   "import": {
