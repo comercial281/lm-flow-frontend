@@ -230,6 +230,7 @@ export default function ImportLeadsModal({
     const total = rows.length;
     setProgress({ done: 0, total, ok: 0, fail: 0 });
     const collectedErrors: string[] = [];
+    const importedContactIds: string[] = [];
     let ok = 0;
     let fail = 0;
 
@@ -310,19 +311,7 @@ export default function ImportLeadsModal({
           }
         }
 
-        // Não duplicar: tirar o lead de qualquer outro pipeline em que ele tenha
-        // entrado (auto-enroll do pipeline padrão), deixando só no pipeline alvo.
-        try {
-          const allPls = await contactsService.getContactPipelines(contactId);
-          const others = (allPls || []).filter(
-            (p: any) => p.pipeline?.id && p.pipeline.id !== pipelineId && p.item?.id,
-          );
-          for (const o of others) {
-            await pipelinesService.removeItemFromPipeline(o.pipeline.id, o.item.id);
-          }
-        } catch {
-          /* limpeza best-effort: não falhar o import se não conseguir remover de outro pipeline */
-        }
+        importedContactIds.push(contactId);
         ok++;
       } catch (err: any) {
         fail++;
@@ -331,6 +320,29 @@ export default function ImportLeadsModal({
         collectedErrors.push(`Linha ${r + 2} (${data.name}): ${msg}`);
       }
       setProgress({ done: r + 1, total, ok, fail });
+    }
+
+    // Passe final anti-duplicação. O auto-enroll no pipeline padrão é assíncrono
+    // (job em background), então pode entrar DEPOIS do create. Aqui esperamos e
+    // removemos cada lead importado de qualquer pipeline que não seja o alvo.
+    // Duas passadas com espera pra pegar enroll atrasado.
+    if (importedContactIds.length > 0) {
+      for (let pass = 0; pass < 2; pass++) {
+        await new Promise(res => setTimeout(res, pass === 0 ? 2500 : 2500));
+        for (const cid of importedContactIds) {
+          try {
+            const pls = await contactsService.getContactPipelines(cid);
+            const others = (pls || []).filter(
+              (p: any) => p.pipeline?.id && p.pipeline.id !== pipelineId && p.item?.id,
+            );
+            for (const o of others) {
+              await pipelinesService.removeItemFromPipeline(o.pipeline.id, o.item.id);
+            }
+          } catch {
+            /* best-effort: não atrapalha o resultado do import */
+          }
+        }
+      }
     }
 
     setErrors(collectedErrors);
