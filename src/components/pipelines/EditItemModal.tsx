@@ -45,6 +45,7 @@ import CardPropertyInterests from './CardPropertyInterests';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { contactEventsService } from '@/services/contacts/contactEventsService';
 import { labelsService } from '@/services/contacts/labelsService';
+import { contactsService } from '@/services/contacts/contactsService';
 import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
 
@@ -97,6 +98,10 @@ export default function EditItemModal({
   // Roleta (round-robin index display — read only, informativo)
   const [rouletteUser, setRouletteUser] = useState<string | null>(null);
 
+  // Responsável padrão do contato
+  const [defaultAssigneeId, setDefaultAssigneeId] = useState<string | null>(null);
+  const [savingDefaultAssignee, setSavingDefaultAssignee] = useState(false);
+
   // Tags/labels
   const [availableLabels, setAvailableLabels] = useState<LabelType[]>([]);
   const [activeLabels, setActiveLabels] = useState<string[]>([]);
@@ -147,6 +152,11 @@ export default function EditItemModal({
       // Responsável
       const currentAssigneeId = item.conversation?.assignee?.id;
       setSelectedAssigneeId(currentAssigneeId ? String(currentAssigneeId) : null);
+
+      // Responsável padrão do contato
+      const contact = item.contact || (item.conversation as any)?.contact;
+      const defaultAssignee = (contact as any)?.default_assignee_id;
+      setDefaultAssigneeId(defaultAssignee ? String(defaultAssignee) : null);
 
       // Roleta: mostra o próximo usuário na fila (round-robin simples baseado em id)
       if (users.length > 0) {
@@ -218,6 +228,20 @@ export default function EditItemModal({
       await conversationAPI.assignConversation(item.conversation.id, userId === 'unassigned' ? null : userId);
     } catch { /* silent */ } finally {
       setAssigningUser(false);
+    }
+  }, [item]);
+
+  const handleDefaultAssigneeChange = useCallback(async (userId: string) => {
+    const contact = item?.contact || (item?.conversation as any)?.contact;
+    if (!contact?.id) return;
+    setDefaultAssigneeId(userId === 'unassigned' ? null : userId);
+    setSavingDefaultAssignee(true);
+    try {
+      await contactsService.updateContact(contact.id, {
+        default_assignee_id: userId === 'unassigned' ? null : userId,
+      });
+    } catch { /* silent */ } finally {
+      setSavingDefaultAssignee(false);
     }
   }, [item]);
 
@@ -508,6 +532,27 @@ export default function EditItemModal({
                         <SelectValue placeholder="Selecionar da roleta" />
                       </SelectTrigger>
                       <SelectContent>
+                        {users.map(u => (
+                          <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Responsável Padrão do Contato */}
+                {item.contact && users.length > 0 && (
+                  <div className="grid gap-1.5">
+                    <Label className="flex items-center gap-1 text-xs">
+                      Responsável Padrão
+                      {savingDefaultAssignee && <Loader2 className="h-3 w-3 animate-spin" />}
+                    </Label>
+                    <Select value={defaultAssigneeId ?? 'unassigned'} onValueChange={handleDefaultAssigneeChange} disabled={savingDefaultAssignee}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Nenhum" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Nenhum</SelectItem>
                         {users.map(u => (
                           <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
                         ))}
