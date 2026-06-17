@@ -137,14 +137,20 @@ function MediaUploadButton({
   messageType,
   onUploaded,
 }: {
-  messageType: 'text' | 'audio' | 'image' | 'video';
+  messageType: 'text' | 'audio' | 'image' | 'video' | 'document';
   onUploaded: (url: string) => void;
 }) {
   const ref = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
 
   const accept =
-    messageType === 'audio' ? 'audio/*' : messageType === 'image' ? 'image/*' : 'video/*';
+    messageType === 'audio'
+      ? 'audio/*'
+      : messageType === 'image'
+      ? 'image/*'
+      : messageType === 'document'
+      ? '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/pdf'
+      : 'video/*';
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
