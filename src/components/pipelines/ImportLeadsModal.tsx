@@ -8,6 +8,7 @@ import {
   DialogTitle,
   Button,
   Label,
+  Input,
   Select,
   SelectContent,
   SelectItem,
@@ -26,9 +27,11 @@ import { customAttributesService } from '@/services/customAttributes/customAttri
 interface ImportLeadsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  pipelineId: string;
+  // Quando pipelineId/stages são passados: importa pro pipeline (kanban).
+  // Quando omitidos: importa só pro CRM de Contatos (sem etapa/pipeline).
+  pipelineId?: string;
   pipelineName?: string;
-  stages: PipelineStage[];
+  stages?: PipelineStage[];
   onImported: () => void;
 }
 
@@ -43,6 +46,7 @@ const FIXED_TARGETS: { value: string; label: string }[] = [
 ];
 
 const NONE_TAG = '__none__';
+const CREATE_TAG = '__create__';
 
 type Step = 'upload' | 'map' | 'importing' | 'done';
 
@@ -126,6 +130,7 @@ export default function ImportLeadsModal({
   stages,
   onImported,
 }: ImportLeadsModalProps) {
+  const isPipelineMode = !!pipelineId;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>('upload');
   const [fileName, setFileName] = useState('');
@@ -135,6 +140,8 @@ export default function ImportLeadsModal({
   const [stageId, setStageId] = useState('');
   const [tag, setTag] = useState(NONE_TAG);
   const [labels, setLabels] = useState<{ id: string; title: string }[]>([]);
+  const [newTagName, setNewTagName] = useState('');
+  const [creatingTag, setCreatingTag] = useState(false);
   const [customAttrs, setCustomAttrs] = useState<{ attribute_key: string; attribute_display_name: string }[]>([]);
   const [progress, setProgress] = useState({ done: 0, total: 0, ok: 0, fail: 0 });
   const [errors, setErrors] = useState<string[]>([]);
@@ -142,7 +149,7 @@ export default function ImportLeadsModal({
   // Carrega tags, campos personalizados e stage default ao abrir
   useEffect(() => {
     if (!open) return;
-    setStageId(stages[0]?.id || '');
+    setStageId(stages?.[0]?.id || '');
     labelsService
       .getLabels()
       .then(res => setLabels(((res.data as any[]) || []).map(l => ({ id: l.id, title: l.title }))))
@@ -177,9 +184,29 @@ export default function ImportLeadsModal({
     setRows([]);
     setMapping({});
     setTag(NONE_TAG);
+    setNewTagName('');
     setProgress({ done: 0, total: 0, ok: 0, fail: 0 });
     setErrors([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Cria uma etiqueta nova na hora e já a seleciona.
+  const handleCreateTag = async () => {
+    const title = newTagName.trim();
+    if (!title) return;
+    setCreatingTag(true);
+    try {
+      await labelsService.createLabel({ title, color: '#7C3AED', show_on_sidebar: true });
+      const res = await labelsService.getLabels();
+      setLabels(((res.data as any[]) || []).map(l => ({ id: l.id, title: l.title })));
+      setTag(title);
+      setNewTagName('');
+      toast.success(`Etiqueta "${title}" criada.`);
+    } catch {
+      toast.error('Não consegui criar a etiqueta.');
+    } finally {
+      setCreatingTag(false);
+    }
   };
 
   const handleClose = (v: boolean) => {
@@ -222,7 +249,7 @@ export default function ImportLeadsModal({
       toast.error('Mapeie ao menos uma coluna para "Nome".');
       return;
     }
-    if (!stageId) {
+    if (isPipelineMode && !stageId) {
       toast.error('Escolha a coluna (etapa) do pipeline.');
       return;
     }
@@ -259,7 +286,7 @@ export default function ImportLeadsModal({
         setProgress({ done: r + 1, total, ok, fail });
         continue;
       }
-      if (tag !== NONE_TAG) data.labels = [tag];
+      if (tag !== NONE_TAG && tag !== CREATE_TAG) data.labels = [tag];
       if (Object.keys(data.custom_attributes).length === 0) delete data.custom_attributes;
 
       try {
@@ -273,6 +300,7 @@ export default function ImportLeadsModal({
         }
         if (notes) customFields.notes = notes;
         const hasCustom = Object.keys(customFields).length > 0;
+        if (isPipelineMode && pipelineId) {
         try {
           await pipelinesService.addItemToPipeline(pipelineId, {
             item_id: contactId,
@@ -310,6 +338,7 @@ export default function ImportLeadsModal({
             throw addErr;
           }
         }
+        }
 
         importedContactIds.push(contactId);
         ok++;
@@ -326,7 +355,7 @@ export default function ImportLeadsModal({
     // (job em background), então pode entrar DEPOIS do create. Aqui esperamos e
     // removemos cada lead importado de qualquer pipeline que não seja o alvo.
     // Duas passadas com espera pra pegar enroll atrasado.
-    if (importedContactIds.length > 0) {
+    if (isPipelineMode && importedContactIds.length > 0) {
       for (let pass = 0; pass < 2; pass++) {
         await new Promise(res => setTimeout(res, pass === 0 ? 2500 : 2500));
         for (const cid of importedContactIds) {
@@ -357,9 +386,15 @@ export default function ImportLeadsModal({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Importar leads {pipelineName ? `· ${pipelineName}` : ''}</DialogTitle>
+          <DialogTitle>
+            {isPipelineMode
+              ? `Importar leads ${pipelineName ? `· ${pipelineName}` : ''}`
+              : 'Importar contatos'}
+          </DialogTitle>
           <DialogDescription>
-            Suba uma planilha CSV, diga para onde vai cada coluna, escolha a etapa e a etiqueta, e confirme.
+            {isPipelineMode
+              ? 'Suba uma planilha CSV, diga para onde vai cada coluna, escolha a etapa e a etiqueta, e confirme.'
+              : 'Suba uma planilha CSV, diga para onde vai cada coluna, escolha a etiqueta, e confirme.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -443,26 +478,43 @@ export default function ImportLeadsModal({
               )}
             </div>
 
-            {/* Destino no pipeline */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border">
+            {/* Destino: etapa (só no modo pipeline) + etiqueta */}
+            <div
+              className={`grid grid-cols-1 gap-4 pt-2 border-t border-border ${
+                isPipelineMode ? 'sm:grid-cols-2' : ''
+              }`}
+            >
+              {isPipelineMode && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Etapa (coluna do pipeline)</Label>
+                  <Select value={stageId} onValueChange={setStageId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolher etapa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(stages || []).map(s => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
-                <Label className="text-sm">Etapa (coluna do pipeline)</Label>
-                <Select value={stageId} onValueChange={setStageId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Escolher etapa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stages.map(s => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm">Etiqueta (tag) nos leads</Label>
-                <Select value={tag} onValueChange={setTag}>
+                <Label className="text-sm">
+                  {isPipelineMode ? 'Etiqueta (tag) nos leads' : 'Etiqueta (tag) nos contatos'}
+                </Label>
+                <Select
+                  value={tag === CREATE_TAG ? CREATE_TAG : tag}
+                  onValueChange={v => {
+                    if (v === CREATE_TAG) {
+                      setTag(CREATE_TAG);
+                    } else {
+                      setTag(v);
+                    }
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Sem etiqueta" />
                   </SelectTrigger>
@@ -473,8 +525,34 @@ export default function ImportLeadsModal({
                         {l.title}
                       </SelectItem>
                     ))}
+                    <SelectItem value={CREATE_TAG}>+ Criar nova etiqueta</SelectItem>
                   </SelectContent>
                 </Select>
+
+                {tag === CREATE_TAG && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <Input
+                      value={newTagName}
+                      onChange={e => setNewTagName(e.target.value)}
+                      placeholder="Nome da etiqueta"
+                      className="h-9"
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleCreateTag();
+                        }
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleCreateTag}
+                      disabled={!newTagName.trim() || creatingTag}
+                      className="whitespace-nowrap"
+                    >
+                      {creatingTag ? 'Criando...' : 'Criar'}
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

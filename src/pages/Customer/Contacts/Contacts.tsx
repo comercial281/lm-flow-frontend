@@ -30,7 +30,7 @@ import StartConversationModal from '@/components/contacts/StartConversationModal
 import ContactDetails from '@/components/contacts/ContactDetails';
 import ContactsFilter from '@/components/contacts/ContactsFilter';
 import ContactQuickFilters from '@/components/contacts/ContactQuickFilters';
-import ContactImportModal from '@/components/contacts/ContactImportModal';
+import ImportLeadsModal from '@/components/pipelines/ImportLeadsModal';
 import ContactExportModal from '@/components/contacts/ContactExportModal';
 import ContactEventsModal from '@/components/contacts/ContactEventsModal';
 import ContactMergeModal from '@/components/contacts/ContactMergeModal';
@@ -515,31 +515,6 @@ export default function Contacts() {
     setExportModalOpen(true);
   };
 
-  const handleImportModalSubmit = async (file: File) => {
-    if (!can('contacts', 'read')) {
-      toast.error('Você não tem permissão para visualizar contatos');
-      return;
-    }
-
-    setState(prev => ({ ...prev, loading: { ...prev.loading, import: true } }));
-
-    try {
-      await contactsService.importContacts(file);
-      toast.success(t('messages.importQueued'));
-
-      // Refresh the list
-      loadContacts();
-    } catch (error: unknown) {
-      console.error('Error importing contacts:', error);
-      const errorMessage =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        t('messages.importError');
-      toast.error(errorMessage);
-    } finally {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, import: false } }));
-    }
-  };
-
   interface ExportModalParams {
     format: 'csv' | 'xlsx';
     fields: string[];
@@ -1004,12 +979,11 @@ export default function Contacts() {
         onClearFilters={handleClearFilters}
       />
 
-      {/* Contact Import Modal */}
-      <ContactImportModal
+      {/* Contact Import Modal (com mapeamento de colunas e etiqueta) */}
+      <ImportLeadsModal
         open={importModalOpen}
         onOpenChange={setImportModalOpen}
-        onImport={handleImportModalSubmit}
-        loading={state.loading.import}
+        onImported={() => loadContacts()}
       />
 
       {/* Contact Export Modal */}
