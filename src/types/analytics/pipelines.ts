@@ -215,6 +215,12 @@ export interface PipelineItem {
   };
   // Additional fields from backend
   custom_fields?: any;
+  // Imóvel vinculado (interesse mais avançado do lead) pro card do board.
+  primary_property?: {
+    id: string;
+    title?: string | null;
+    code?: string | null;
+  } | null;
   position?: number; // ordem manual no kanban (epoch da chegada por padrão)
   entered_at?: number;
   completed_at?: number | null;

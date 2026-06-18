@@ -37,6 +37,7 @@ import {
   MessageCircle,
   Megaphone,
   Archive,
+  Home,
 } from 'lucide-react';
 
 import { pipelinesService } from '@/services/pipelines';
@@ -1398,6 +1399,18 @@ export default function PipelineKanban() {
                                 >
                                   <CalendarClock className="w-3 h-3" />
                                   {itemVisitLabel(item) ? `Visita ${itemVisitLabel(item)}` : 'Visita agendada'}
+                                </span>
+                              )}
+                              {/* Imóvel vinculado ao lead */}
+                              {item.primary_property && (
+                                <span
+                                  title="Imóvel vinculado"
+                                  className="inline-flex items-center gap-1 mb-1 ml-1 px-1.5 py-0.5 rounded-md text-xs font-semibold bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 max-w-[180px]"
+                                >
+                                  <Home className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">
+                                    {item.primary_property.title || item.primary_property.code || 'Imóvel'}
+                                  </span>
                                 </span>
                               )}
                               {/* Contact details */}
