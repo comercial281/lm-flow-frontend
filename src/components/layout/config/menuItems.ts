@@ -35,6 +35,7 @@ import {
   Bell,
   Shuffle,
   Library,
+  FileInput,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -315,6 +316,13 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         name: 'Automações de Lead',
         href: '/settings/lead-automations',
         icon: Zap,
+        featureKey: 'lead_automations',
+        clientToggleKey: 'client_manage_automations',
+      },
+      {
+        name: 'Formulários (Meta)',
+        href: '/settings/lead-ads-forms',
+        icon: FileInput,
         featureKey: 'lead_automations',
         clientToggleKey: 'client_manage_automations',
       },

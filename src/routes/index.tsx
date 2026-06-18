@@ -56,6 +56,7 @@ import { MessageFunnels } from '@/pages/Customer/Settings/MessageFunnels';
 import { TemplateVariables } from '@/pages/Customer/Settings/TemplateVariables';
 import { WelcomeAutomations } from '@/pages/Customer/Settings/WelcomeAutomations';
 import { LeadAutomations } from '@/pages/Customer/Settings/LeadAutomations';
+import LeadAdsForms from '@/pages/Customer/Settings/LeadAdsForms';
 import { FollowupSequences } from '@/pages/Customer/Settings/FollowupSequences';
 import { SiteBuilder } from '@/pages/Customer/Settings/SiteBuilder';
 import { DynamicForms } from '@/pages/Customer/Settings/DynamicForms';
@@ -660,6 +661,19 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <LeadAutomations />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/settings/lead-ads-forms"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <LeadAdsForms />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>
