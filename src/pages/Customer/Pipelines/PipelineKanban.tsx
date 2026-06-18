@@ -706,6 +706,39 @@ export default function PipelineKanban() {
     setShowEditItemModal(true);
   };
 
+  // Move otimista do card pra outra etapa, SEM reload (fluido igual o arrastar).
+  // Usado pelas ações do card no modal ("Mover para coluna", "Ganho/Perdido")
+  // e pela mudança de Fase ao salvar. O card pula de coluna na hora; o refresh
+  // de dados acontece em segundo plano (silencioso), sem piscar a tela.
+  const moveItemToStageLocal = useCallback((itemId: string, toStageId: string) => {
+    if (!toStageId) return;
+    setStages(prev => {
+      let moved: PipelineItem | undefined;
+      const without = prev.map(stage => ({
+        ...stage,
+        items: (stage.items || []).filter(i => {
+          if (String(i.id) === String(itemId)) {
+            moved = { ...i, stage_id: toStageId, pipeline_stage_id: toStageId } as PipelineItem;
+            return false;
+          }
+          return true;
+        }),
+      }));
+      if (!moved) return prev;
+      return without.map(stage =>
+        String(stage.id) === String(toStageId)
+          ? { ...stage, items: [moved as PipelineItem, ...(stage.items || [])] }
+          : stage,
+      );
+    });
+    // Mantém o card aberto coerente com a nova etapa.
+    setItemToEdit(prev =>
+      prev && String(prev.id) === String(itemId)
+        ? ({ ...prev, stage_id: toStageId, pipeline_stage_id: toStageId } as PipelineItem)
+        : prev,
+    );
+  }, []);
+
   const handleUpdateItem = async (data: {
     notes: string;
     stage_id: string;
@@ -715,9 +748,12 @@ export default function PipelineKanban() {
   }) => {
     if (!itemToEdit || !pipelineId) return;
 
+    const movedId = itemToEdit.id;
+    const stageChanged = String(itemToEdit.stage_id) !== String(data.stage_id);
+
     setIsEditingItem(true);
     try {
-      await pipelinesService.updateItemInPipeline(pipelineId, itemToEdit.id, {
+      await pipelinesService.updateItemInPipeline(pipelineId, movedId, {
         pipeline_stage_id: data.stage_id,
         notes: data.notes,
         custom_fields: {
@@ -730,11 +766,14 @@ export default function PipelineKanban() {
       toast.success(t('kanban.messages.itemUpdated'));
       setShowEditItemModal(false);
       setItemToEdit(null);
-      // Reload pipeline data to reflect changes
-      await loadPipelineData();
+      // Move otimista na hora + refresh silencioso (sem o spinner de tela cheia
+      // que dava a sensação de "recarregar a página").
+      if (stageChanged) moveItemToStageLocal(movedId, data.stage_id);
+      await loadPipelineData(true);
     } catch (error) {
       console.error('Error updating item:', error);
       toast.error(t('kanban.messages.itemUpdateError'));
+      await loadPipelineData(true);
     } finally {
       setIsEditingItem(false);
     }
@@ -1654,6 +1693,7 @@ export default function PipelineKanban() {
           stages={stages}
           pipeline={pipeline}
           onSubmit={handleUpdateItem}
+          onItemStageMoved={moveItemToStageLocal}
           loading={isEditingItem}
         />
       )}
