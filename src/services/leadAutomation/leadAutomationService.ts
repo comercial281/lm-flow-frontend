@@ -140,6 +140,7 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
   move_pipeline_stage:     'Mover no pipeline',
   create_task:             'Criar tarefa',
   notify_group:            'Notificar grupo',
+  notify_user:             'Avisar usuário no WhatsApp (lembrete)',
   notify_broker:           'Notificar corretor (WhatsApp pessoal)',
   notify_gestor:           'Notificar gestor (WhatsApp)',
   send_quick_reply:        'Enviar resposta rapida',

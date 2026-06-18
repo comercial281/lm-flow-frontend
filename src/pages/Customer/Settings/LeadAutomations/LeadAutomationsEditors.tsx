@@ -49,6 +49,7 @@ const ACTIONS_REQUIRING_PARAMS: Record<string, string[]> = {
   move_pipeline_stage:     ['stage_id'],
   create_task:             ['title'],
   notify_group:            ['group_jid', 'message'],
+  notify_user:             ['user_id', 'message'],
   send_quick_reply:        ['quick_reply_id'],
   notify_broker:           ['message'],
   notify_gestor:           ['message'],
@@ -593,6 +594,49 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
         </>
       );
 
+    // ----- notify_user -----
+    // Backend: notify_user(user_id, message) -> manda no WhatsApp cadastrado do usuário.
+    case 'notify_user': {
+      const selected = resources.users.find(u => u.id === String(params.user_id ?? ''));
+      const selectedWa = (selected as unknown as { whatsapp_number?: string })?.whatsapp_number;
+      return (
+        <>
+          <Field label="Avisar qual usuário? *">
+            <select
+              value={String(params.user_id ?? '')}
+              onChange={e => setParam('user_id', e.target.value)}
+              className={baseSelectClass}
+            >
+              <option value="">Selecione um usuário</option>
+              {resources.users.map(u => {
+                const wa = (u as unknown as { whatsapp_number?: string }).whatsapp_number;
+                return (
+                  <option key={u.id} value={u.id}>
+                    {u.name}{wa ? ` (${wa})` : ' — sem WhatsApp cadastrado'}
+                  </option>
+                );
+              })}
+            </select>
+          </Field>
+          {selected && !selectedWa && (
+            <p className="text-xs text-red-500 mt-1">
+              Esse usuário não tem WhatsApp cadastrado. Cadastre em Configurações &gt; Usuários pra ele receber o lembrete.
+            </p>
+          )}
+          <Field label="Mensagem do lembrete *" hint="Enviada no WhatsApp do usuário escolhido. Toque numa variável pra inserir.">
+            <Textarea
+              value={String(params.message ?? '')}
+              onChange={e => setParam('message', e.target.value)}
+              placeholder="Novo lead do anúncio: {{nome_completo}} — {{telefone}}"
+              rows={3}
+              className="mt-1 resize-none"
+            />
+            <VariableChips onInsert={tok => appendToParam('message', tok)} />
+          </Field>
+        </>
+      );
+    }
+
     // ----- send_quick_reply -----
     case 'send_quick_reply':
       return (
@@ -840,6 +884,10 @@ export function formatActionSummary(
       return p.title ? `Tarefa: ${p.title}` : '(tarefa sem título)';
     case 'notify_group':
       return p.group_jid ? `Grupo: ${String(p.group_jid).slice(0, 30)}…` : '(sem grupo)';
+    case 'notify_user': {
+      const u = resources.users.find(x => x.id === p.user_id);
+      return u ? `Avisar: ${u.name}` : 'Avisar usuário: (não definido)';
+    }
     case 'send_quick_reply': {
       const qr = resources.quickReplies.find(q => q.id === p.quick_reply_id);
       return qr ? `Resposta: ${qr.title}` : '(nao definida)';

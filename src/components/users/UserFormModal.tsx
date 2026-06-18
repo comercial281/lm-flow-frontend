@@ -61,6 +61,7 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
     password: '',
     confirmPassword: '',
     custom_role_id: null,
+    whatsapp_number: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
@@ -82,6 +83,7 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
         chave_role: user.chave_role ?? 'agent',
         availability: user.availability || 'online',
         custom_role_id: (user as any).custom_role_id ?? null,
+        whatsapp_number: user.whatsapp_number ?? '',
       });
     } else {
       setFormData({
@@ -92,6 +94,7 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
         password: '',
         confirmPassword: '',
         custom_role_id: null,
+        whatsapp_number: '',
       });
     }
     setErrors({});
@@ -161,6 +164,7 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
           updateData.chave_role = formData.chave_role;
         }
         if (formData.password) updateData.password = formData.password;
+        updateData.whatsapp_number = formData.whatsapp_number ?? '';
         await usersService.updateUser(user.id, updateData);
         toast.success(t('form.messages.updateSuccess'));
       } else {
@@ -172,6 +176,7 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
           password: formData.password,
         };
         if (formData.custom_role_id) createData.custom_role_id = formData.custom_role_id;
+        if (formData.whatsapp_number) createData.whatsapp_number = formData.whatsapp_number;
         await usersService.createUser(createData as UserFormData);
         toast.success(t('form.messages.createSuccess'));
       }
@@ -234,6 +239,23 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
                 {t('form.fields.email.cannotChange')}
               </p>
             )}
+          </div>
+
+          {/* WhatsApp (para receber lembretes de automação) */}
+          <div className="space-y-2">
+            <Label htmlFor="whatsapp_number">WhatsApp</Label>
+            <Input
+              id="whatsapp_number"
+              type="tel"
+              value={formData.whatsapp_number ?? ''}
+              onChange={e => handleFieldChange('whatsapp_number', e.target.value)}
+              placeholder="Ex: 5511959462815 (com DDD e país)"
+              className="bg-sidebar border-sidebar-border text-sidebar-foreground"
+              disabled={loading}
+            />
+            <p className="text-xs text-sidebar-foreground/60">
+              Número que recebe os lembretes das automações (ação "Avisar usuário no WhatsApp").
+            </p>
           </div>
 
           {/* Perfil de acesso */}
