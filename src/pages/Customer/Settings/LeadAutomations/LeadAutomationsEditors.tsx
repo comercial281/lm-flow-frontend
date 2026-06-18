@@ -41,6 +41,7 @@ const ACTIONS_REQUIRING_PARAMS: Record<string, string[]> = {
   send_image:              ['media_url'],
   send_video:              ['media_url'],
   send_document:           ['media_url'],
+  send_sticker:            ['media_url'],
   start_followup_sequence: ['sequence_slug'],
   assign_broker:           ['user_id'],
   add_label:               ['label_id'],
@@ -437,9 +438,13 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     case 'send_audio':
     case 'send_image':
     case 'send_video':
+    case 'send_sticker':
       return (
         <>
-          <Field label="URL da mídia *">
+          <Field
+            label="URL da mídia *"
+            hint={action.type === 'send_sticker' ? 'PNG ou WebP. A Evolution converte pra figurinha.' : undefined}
+          >
             <Input
               value={String(params.media_url ?? '')}
               onChange={e => setParam('media_url', e.target.value)}
@@ -447,7 +452,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               className="mt-1"
             />
           </Field>
-          {action.type !== 'send_audio' && (
+          {(action.type === 'send_image' || action.type === 'send_video') && (
             <Field label="Legenda">
               <Input
                 value={String(params.caption ?? '')}
@@ -815,6 +820,8 @@ export function formatActionSummary(
     case 'send_image':
     case 'send_video':
       return p.media_url ? `Mídia: ${String(p.media_url).slice(0, 40)}…` : '(sem mídia)';
+    case 'send_sticker':
+      return p.media_url ? `Figurinha: ${String(p.media_url).slice(0, 40)}…` : '(sem figurinha)';
     case 'assign_broker': {
       const u = resources.users.find(x => x.id === p.user_id);
       return u ? `Corretor: ${u.name}` : 'Corretor: (não definido)';

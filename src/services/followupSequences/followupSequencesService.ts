@@ -1,6 +1,6 @@
 import api from '@/services/core/api';
 
-export type FollowupMessageType = 'text' | 'audio' | 'image' | 'video' | 'document';
+export type FollowupMessageType = 'text' | 'audio' | 'image' | 'video' | 'document' | 'sticker';
 
 export interface FollowupStep {
   id?: string;
@@ -127,6 +127,7 @@ export const MESSAGE_TYPE_LABELS: Record<FollowupMessageType, string> = {
   image:    'Imagem',
   video:    'Vídeo',
   document: 'Documento',
+  sticker:  'Figurinha',
 };
 
 // Pretty delay labels (cumulative from sequence start)

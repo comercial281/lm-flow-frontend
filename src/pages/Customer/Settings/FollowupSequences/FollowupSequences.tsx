@@ -167,7 +167,7 @@ function MediaUploadButton({
   messageType,
   onUploaded,
 }: {
-  messageType: 'text' | 'audio' | 'image' | 'video' | 'document';
+  messageType: 'text' | 'audio' | 'image' | 'video' | 'document' | 'sticker';
   onUploaded: (url: string) => void;
 }) {
   const ref = useRef<HTMLInputElement | null>(null);
@@ -178,6 +178,8 @@ function MediaUploadButton({
       ? 'audio/*'
       : messageType === 'image'
       ? 'image/*'
+      : messageType === 'sticker'
+      ? 'image/png,image/webp'
       : messageType === 'document'
       ? '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/pdf'
       : 'video/*';
