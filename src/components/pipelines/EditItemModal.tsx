@@ -775,8 +775,13 @@ export default function EditItemModal({
                 lead_name: 'Nome', lead_email: 'E-mail', lead_phone: 'Telefone',
                 lead_hour: 'Hora do lead', lead_weekday: 'Dia da semana',
                 captured_at: 'Capturado em', fb_created_at: 'Criado no Facebook', lead_created_time: 'Data do lead',
+                // Click-to-WhatsApp (anúncio FB/Instagram → zap)
+                title: 'Anúncio', body: 'Descrição do anúncio', source_app: 'Plataforma',
+                source_url: 'Link do anúncio', source_id: 'ID do anúncio', source_type: 'Tipo',
+                ctwa_clid: 'ID do clique', thumbnail_url: 'Imagem do anúncio',
               };
-              const entries = Object.entries(ar).filter(([k, v]) => k !== 'extra_fields' && v != null && v !== '');
+              const HIDDEN = new Set(['thumbnail_url']);
+              const entries = Object.entries(ar).filter(([k, v]) => k !== 'extra_fields' && !HIDDEN.has(k) && v != null && v !== '');
               const extra = (ar as any).extra_fields && typeof (ar as any).extra_fields === 'object' ? (ar as any).extra_fields : null;
               if (entries.length === 0 && !extra) {
                 return <div className="text-sm text-muted-foreground py-12 text-center border border-dashed border-border rounded-lg">Sem dados de origem para este lead.</div>;
