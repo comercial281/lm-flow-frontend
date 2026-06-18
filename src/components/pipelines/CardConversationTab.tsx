@@ -174,10 +174,14 @@ export default function CardConversationTab({ item, onCreateReminder }: CardConv
     if (!conversationId) return;
     setLoading(true);
     try {
-      const res = await conversationAPI.getMessages(conversationId);
-      const msgs = Array.isArray(res.data)
-        ? res.data
-        : (res.data as { payload?: Message[] }).payload ?? [];
+      // getMessages já vem desembrulhado pra Message[] (extractData devolve
+      // response.data.data). O código antigo lia res.data — que num array é
+      // undefined — e zerava SEMPRE as mensagens (o famoso "0 mensagens").
+      const raw = (await conversationAPI.getMessages(conversationId)) as unknown;
+      const msgs: Message[] = Array.isArray(raw)
+        ? (raw as Message[])
+        : (((raw as { data?: Message[]; payload?: Message[] })?.data
+            ?? (raw as { payload?: Message[] })?.payload) ?? []);
       setMessages(msgs);
     } catch {
       // silent — conversation may not exist yet
