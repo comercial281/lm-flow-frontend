@@ -90,19 +90,11 @@ export default function PipelineKanban() {
   const scrollBoard = (dir: 'left' | 'right') => {
     const el = boardScrollRef.current;
     if (!el) return;
-    // ~uma coluna (320px) + gap. Scroll instantâneo: o `behavior:'smooth'`
-    // é no-op neste contexto (overflow-x-auto + overflow-y-hidden), então
-    // animamos na mão pra manter a sensação suave sem depender da API.
-    const start = el.scrollLeft;
-    const target = start + (dir === 'left' ? -344 : 344);
-    const t0 = performance.now();
-    const step = (now: number) => {
-      const p = Math.min((now - t0) / 220, 1);
-      const ease = 1 - Math.pow(1 - p, 3); // easeOutCubic
-      el.scrollLeft = start + (target - start) * ease;
-      if (p < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
+    // ~uma coluna (320px) + gap. Atribuição direta no scrollLeft: tanto a API
+    // `scrollBy({behavior:'smooth'})` quanto `requestAnimationFrame` são no-op
+    // neste contexto (smooth não anima aqui; rAF não roda com a aba em background).
+    // `scrollLeft +=` clampa sozinho nos limites e funciona sempre.
+    el.scrollLeft += dir === 'left' ? -344 : 344;
   };
 
   // Modal states
