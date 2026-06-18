@@ -8,6 +8,10 @@ export interface LeadAdsFormConfig {
   pipeline_id: string | null;
   pipeline_stage_id: string | null;
   label_ids: string[];
+  // Roteamento de entrada: responsável fixo OU roleta + imóvel vinculado.
+  default_assignee_id: string | null;
+  roleta_config_id: string | null;
+  property_id: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -28,6 +32,9 @@ export interface LeadAdsFormConfigFormData {
   pipeline_stage_id: string | null;
   is_active: boolean;
   label_ids: string[];
+  default_assignee_id?: string | null;
+  roleta_config_id?: string | null;
+  property_id?: string | null;
 }
 
 // Resposta de meta_forms — pode vir { data, error } se a Meta não estiver conectada.

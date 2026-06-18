@@ -23,6 +23,8 @@ import {
   MetaForm,
 } from '@/services/leadAds/leadAdsFormsService';
 import { useAutomationResources } from '../LeadAutomations/LeadAutomationsEditors';
+import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
+import { propertiesService, type Property } from '@/services/properties/propertiesService';
 
 const baseSelectClass =
   'mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
@@ -33,6 +35,9 @@ interface FormState {
   pipeline_id: string;
   pipeline_stage_id: string;
   label_ids: string[];
+  // "Quem assume" combinado: '' | 'user:<id>' | 'roleta:<id>'. Derivado no save.
+  assign_to: string;
+  property_id: string;
   is_active: boolean;
 }
 
@@ -42,8 +47,20 @@ const emptyFormState = (form_id = '', form_name = ''): FormState => ({
   pipeline_id: '',
   pipeline_stage_id: '',
   label_ids: [],
+  assign_to: '',
+  property_id: '',
   is_active: true,
 });
+
+// Decodifica/codifica o "assign_to" combinado em default_assignee_id/roleta_config_id.
+const encodeAssignTo = (cfg: { default_assignee_id?: string | null; roleta_config_id?: string | null }): string =>
+  cfg.roleta_config_id ? `roleta:${cfg.roleta_config_id}` : cfg.default_assignee_id ? `user:${cfg.default_assignee_id}` : '';
+
+const decodeAssignTo = (assignTo: string): { default_assignee_id: string | null; roleta_config_id: string | null } => {
+  if (assignTo.startsWith('user:')) return { default_assignee_id: assignTo.slice(5), roleta_config_id: null };
+  if (assignTo.startsWith('roleta:')) return { default_assignee_id: null, roleta_config_id: assignTo.slice(7) };
+  return { default_assignee_id: null, roleta_config_id: null };
+};
 
 export default function LeadAdsForms() {
   const resources = useAutomationResources(true);
@@ -60,6 +77,18 @@ export default function LeadAdsForms() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<LeadAdsFormConfig | null>(null);
   const [form, setForm] = useState<FormState>(emptyFormState());
+
+  // Roletas (ativas) e imóveis pra escolher no roteamento de entrada.
+  const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  useEffect(() => {
+    roletaConfigService.getAll()
+      .then(list => setRoletas((list || []).filter(r => r.is_active)))
+      .catch(() => setRoletas([]));
+    propertiesService.list({ status: 'active', per_page: 100 })
+      .then(res => setProperties(res.data ?? []))
+      .catch(() => setProperties([]));
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -109,6 +138,8 @@ export default function LeadAdsForms() {
       pipeline_id:       cfg.pipeline_id ?? '',
       pipeline_stage_id: cfg.pipeline_stage_id ?? '',
       label_ids:         cfg.label_ids ?? [],
+      assign_to:         encodeAssignTo(cfg),
+      property_id:       cfg.property_id ?? '',
       is_active:         cfg.is_active,
     });
     setModalOpen(true);
@@ -118,13 +149,17 @@ export default function LeadAdsForms() {
     if (!form.pipeline_id) { toast.error('Selecione um pipeline'); return; }
     if (!form.pipeline_stage_id) { toast.error('Selecione uma etapa'); return; }
 
+    const assign = decodeAssignTo(form.assign_to);
     const payload: LeadAdsFormConfigFormData = {
-      form_id:           form.form_id,
-      form_name:         form.form_name,
-      pipeline_id:       form.pipeline_id,
-      pipeline_stage_id: form.pipeline_stage_id,
-      is_active:         form.is_active,
-      label_ids:         form.label_ids,
+      form_id:             form.form_id,
+      form_name:           form.form_name,
+      pipeline_id:         form.pipeline_id,
+      pipeline_stage_id:   form.pipeline_stage_id,
+      is_active:           form.is_active,
+      label_ids:           form.label_ids,
+      default_assignee_id: assign.default_assignee_id,
+      roleta_config_id:    assign.roleta_config_id,
+      property_id:         form.property_id || null,
     };
 
     setSaving(true);
@@ -149,12 +184,15 @@ export default function LeadAdsForms() {
   const handleToggle = async (cfg: LeadAdsFormConfig) => {
     try {
       const updated = await leadAdsFormsService.update(cfg.id, {
-        form_id:           cfg.form_id,
-        form_name:         cfg.form_name,
-        pipeline_id:       cfg.pipeline_id,
-        pipeline_stage_id: cfg.pipeline_stage_id,
-        is_active:         !cfg.is_active,
-        label_ids:         cfg.label_ids ?? [],
+        form_id:             cfg.form_id,
+        form_name:           cfg.form_name,
+        pipeline_id:         cfg.pipeline_id,
+        pipeline_stage_id:   cfg.pipeline_stage_id,
+        is_active:           !cfg.is_active,
+        label_ids:           cfg.label_ids ?? [],
+        default_assignee_id: cfg.default_assignee_id ?? null,
+        roleta_config_id:    cfg.roleta_config_id ?? null,
+        property_id:         cfg.property_id ?? null,
       });
       setConfigs(prev => prev.map(c => c.id === updated.id ? updated : c));
       toast.success(updated.is_active ? 'Ativado' : 'Desativado');
@@ -390,6 +428,52 @@ export default function LeadAdsForms() {
                   })}
                 </div>
               )}
+            </div>
+
+            {/* Quem assume o lead na entrada: responsável fixo OU roleta */}
+            <div>
+              <UILabel htmlFor="assign_to">Quem assume o lead</UILabel>
+              <select
+                id="assign_to"
+                className={baseSelectClass}
+                value={form.assign_to}
+                onChange={e => setForm(f => ({ ...f, assign_to: e.target.value }))}
+              >
+                <option value="">Ninguém (entra sem responsável)</option>
+                {resources.users.length > 0 && (
+                  <optgroup label="Responsável fixo">
+                    {resources.users.map(u => (
+                      <option key={u.id} value={`user:${u.id}`}>{u.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {roletas.length > 0 && (
+                  <optgroup label="Roleta">
+                    {roletas.map(r => (
+                      <option key={r.id} value={`roleta:${r.id}`}>{r.inbox_name || 'Roleta'}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Fixo manda pro mesmo corretor; roleta distribui automático entre os corretores.
+              </p>
+            </div>
+
+            {/* Imóvel vinculado a todo lead desse formulário */}
+            <div>
+              <UILabel htmlFor="property_id">Imóvel vinculado (opcional)</UILabel>
+              <select
+                id="property_id"
+                className={baseSelectClass}
+                value={form.property_id}
+                onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))}
+              >
+                <option value="">Nenhum</option>
+                {properties.map(p => (
+                  <option key={p.id} value={p.id}>{p.title || p.code || 'Imóvel'}</option>
+                ))}
+              </select>
             </div>
 
             <div className="flex items-center gap-2">
