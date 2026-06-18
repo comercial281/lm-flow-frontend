@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,12 @@ import {
   Play,
   Ban,
   ChevronLeft,
+  Image as ImageIcon,
+  Mic,
+  Video,
+  Upload,
+  Send,
+  Paperclip,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PipelineStage } from '@/types/analytics';
@@ -66,6 +72,32 @@ function preview(text: string, name = 'Giovani') {
   return text.replace(/\{\{?\s*nome\s*\}?\}/gi, name);
 }
 
+const KINDS: { kind: BroadcastVariation['kind']; label: string; icon: typeof Mic }[] = [
+  { kind: 'text', label: 'Texto', icon: MessageSquareText },
+  { kind: 'image', label: 'Imagem', icon: ImageIcon },
+  { kind: 'audio', label: 'Áudio', icon: Mic },
+  { kind: 'video', label: 'Vídeo', icon: Video },
+];
+
+const KIND_LABEL: Record<BroadcastVariation['kind'], string> = {
+  text: 'Texto',
+  image: 'Imagem',
+  audio: 'Áudio',
+  video: 'Vídeo',
+};
+
+function acceptFor(kind: BroadcastVariation['kind']) {
+  if (kind === 'image') return 'image/*';
+  if (kind === 'audio') return 'audio/*';
+  if (kind === 'video') return 'video/*';
+  return '*/*';
+}
+
+function isVariationValid(v: BroadcastVariation) {
+  if (v.kind === 'text') return v.text.trim() !== '';
+  return (v.media_url || '').trim() !== ''; // imagem/áudio/vídeo precisam de arquivo
+}
+
 export default function BulkDispatchModal({
   open,
   onOpenChange,
@@ -92,6 +124,12 @@ export default function BulkDispatchModal({
   const [pauseS, setPauseS] = useState(60);
   const [businessHours, setBusinessHours] = useState(true);
 
+  // Mídia + teste
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+  const fileRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [testPhone, setTestPhone] = useState('');
+  const [testing, setTesting] = useState(false);
+
   // Acompanhamento
   const [campaigns, setCampaigns] = useState<BroadcastCampaign[]>([]);
   const [creating, setCreating] = useState(false);
@@ -107,6 +145,7 @@ export default function BulkDispatchModal({
     setBatchSize(10);
     setPauseS(60);
     setBusinessHours(true);
+    setTestPhone('');
   }, []);
 
   const refreshList = useCallback(async () => {
@@ -153,10 +192,7 @@ export default function BulkDispatchModal({
     };
   }, [open, view, pipelineId, audienceMode, stageId, audiencePayload]);
 
-  const validVariations = useMemo(
-    () => variations.filter(v => v.text.trim() !== '' || (v.media_url || '').trim() !== ''),
-    [variations],
-  );
+  const validVariations = useMemo(() => variations.filter(isVariationValid), [variations]);
 
   const step1Ok = (recipientCount ?? 0) > 0;
   const step2Ok = validVariations.length > 0 && validVariations.length === variations.length;
@@ -177,6 +213,46 @@ export default function BulkDispatchModal({
   const removeVariation = (i: number) =>
     setVariations(vs => (vs.length <= 1 ? vs : vs.filter((_, idx) => idx !== i)));
 
+  const handleUpload = async (i: number, file?: File) => {
+    if (!file) return;
+    if (file.size > 16 * 1024 * 1024) {
+      toast.error('Arquivo muito grande (máx. 16MB).');
+      return;
+    }
+    setUploadingIdx(i);
+    try {
+      const { url } = await broadcastsService.uploadMedia(file);
+      updateVariation(i, { media_url: url });
+      toast.success('Arquivo anexado.');
+    } catch {
+      toast.error('Não consegui enviar o arquivo.');
+    } finally {
+      setUploadingIdx(null);
+    }
+  };
+
+  const handleTest = async () => {
+    const phone = testPhone.replace(/\D/g, '');
+    if (phone.length < 10) {
+      toast.error('Número inválido (use DDD + número, ex: 5511999999999).');
+      return;
+    }
+    const v = validVariations[0];
+    if (!v) {
+      toast.error('Escreva a mensagem antes de testar.');
+      return;
+    }
+    setTesting(true);
+    try {
+      await broadcastsService.testSend(phone, v);
+      toast.success('Teste enviado! Confere o WhatsApp.');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.errors?.[0] || 'Falha ao enviar o teste.');
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const handleClose = (v: boolean) => {
     if (step === 'creating') return;
     onOpenChange(v);
@@ -190,7 +266,7 @@ export default function BulkDispatchModal({
         name: undefined,
         pipeline_id: pipelineId,
         audience: { mode: audienceMode, stage_id: audienceMode === 'stage' ? stageId : undefined },
-        variations: validVariations.map(v => ({ kind: 'text', text: v.text })),
+        variations: validVariations.map(v => ({ kind: v.kind, text: v.text, media_url: v.media_url })),
         min_interval_seconds: minS,
         max_interval_seconds: maxS,
         batch_size: batchSize,
@@ -403,7 +479,7 @@ export default function BulkDispatchModal({
                   </span>
                 </div>
                 {variations.map((v, i) => (
-                  <div key={i} className="space-y-1.5">
+                  <div key={i} className="space-y-2 border border-border rounded-lg p-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-muted-foreground">
                         Versão {i + 1}
@@ -418,12 +494,73 @@ export default function BulkDispatchModal({
                         </button>
                       )}
                     </div>
-                    <textarea
-                      value={v.text}
-                      onChange={e => updateVariation(i, { text: e.target.value })}
-                      placeholder="Oi {{nome}}, tudo bem? ..."
-                      className={textareaCls}
-                    />
+
+                    {/* tipo de mensagem */}
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {KINDS.map(k => {
+                        const Icon = k.icon;
+                        const active = v.kind === k.kind;
+                        return (
+                          <button
+                            key={k.kind}
+                            onClick={() => updateVariation(i, { kind: k.kind })}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs border transition-colors ${
+                              active
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'border-border text-muted-foreground hover:bg-muted'
+                            }`}
+                          >
+                            <Icon className="w-3.5 h-3.5" />
+                            {k.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* texto (ou legenda da mídia); áudio não tem texto */}
+                    {v.kind !== 'audio' && (
+                      <textarea
+                        value={v.text}
+                        onChange={e => updateVariation(i, { text: e.target.value })}
+                        placeholder={
+                          v.kind === 'text' ? 'Oi {{nome}}, tudo bem? ...' : 'Legenda (opcional)'
+                        }
+                        className={textareaCls}
+                      />
+                    )}
+
+                    {/* upload de mídia (imagem/áudio/vídeo) */}
+                    {v.kind !== 'text' && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          ref={el => {
+                            fileRefs.current[i] = el;
+                          }}
+                          type="file"
+                          accept={acceptFor(v.kind)}
+                          className="hidden"
+                          onChange={e => handleUpload(i, e.target.files?.[0])}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fileRefs.current[i]?.click()}
+                          disabled={uploadingIdx === i}
+                        >
+                          {uploadingIdx === i ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4 mr-1" />
+                          )}
+                          {v.media_url ? 'Trocar arquivo' : 'Enviar arquivo'}
+                        </Button>
+                        {v.media_url && (
+                          <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> anexado
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
                 {variations.length < 4 && (
@@ -537,10 +674,48 @@ export default function BulkDispatchModal({
                 <div className="space-y-2">
                   {validVariations.map((v, i) => (
                     <div key={i} className="p-3 rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
-                      <span className="text-xs text-muted-foreground block mb-1">Versão {i + 1} (exemplo)</span>
-                      {preview(v.text)}
+                      <span className="text-xs text-muted-foreground block mb-1">
+                        Versão {i + 1} · {KIND_LABEL[v.kind]}
+                      </span>
+                      {v.kind !== 'text' && (
+                        <span className="text-xs text-primary flex items-center gap-1 mb-1">
+                          <Paperclip className="w-3 h-3" /> mídia anexada
+                        </span>
+                      )}
+                      {v.text ? (
+                        preview(v.text)
+                      ) : (
+                        <span className="text-muted-foreground italic">(sem legenda)</span>
+                      )}
                     </div>
                   ))}
+                </div>
+
+                {/* Enviar teste pra um número antes de disparar pros leads */}
+                <div className="border-t border-border pt-3 space-y-2">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <Send className="w-3.5 h-3.5" /> Enviar teste pra um número (opcional)
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={testPhone}
+                      onChange={e => setTestPhone(e.target.value)}
+                      placeholder="5511999999999"
+                      className="h-9"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleTest}
+                      disabled={testing}
+                      className="whitespace-nowrap"
+                    >
+                      {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enviar teste'}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Manda a Versão 1 só pra esse número, sem tocar nos leads.
+                  </p>
                 </div>
               </div>
             )}

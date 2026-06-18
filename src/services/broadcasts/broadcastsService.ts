@@ -89,6 +89,15 @@ class BroadcastsService {
     });
     return extractData<{ url: string }>(res);
   }
+
+  async testSend(phone: string, variation: BroadcastVariation): Promise<void> {
+    await api.post(`${this.base}/test_send`, {
+      phone,
+      kind: variation.kind,
+      text: variation.text,
+      media_url: variation.media_url,
+    });
+  }
 }
 
 export const broadcastsService = new BroadcastsService();
