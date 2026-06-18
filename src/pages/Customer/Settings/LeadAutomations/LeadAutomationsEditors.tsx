@@ -360,10 +360,42 @@ interface ActionEditorProps {
   resources: AutomationResources;
 }
 
+// Variáveis interpoladas pelo backend (LeadAutomation::Executor#interpolate).
+const MESSAGE_VARS: { label: string; token: string }[] = [
+  { label: 'Nome',          token: '{{nome}}' },
+  { label: 'Nome completo', token: '{{nome_completo}}' },
+  { label: 'Telefone',      token: '{{telefone}}' },
+  { label: 'E-mail',        token: '{{email}}' },
+  { label: 'Data',          token: '{{data}}' },
+  { label: 'Hora',          token: '{{hora}}' },
+  { label: 'Link do card',  token: '{{link_do_card}}' },
+];
+
+// Chips de variável: 1 clique insere o token no campo. Reutilizável em msg/legenda/notificações.
+function VariableChips({ onInsert }: { onInsert: (token: string) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1 mt-1.5">
+      <span className="text-xs text-muted-foreground mr-1">Inserir variável:</span>
+      {MESSAGE_VARS.map(v => (
+        <button
+          key={v.token}
+          type="button"
+          onClick={() => onInsert(v.token)}
+          className="text-xs px-2 py-0.5 rounded-full border border-input bg-muted/40 hover:bg-muted transition-colors"
+        >
+          {v.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function ActionEditor({ action, onChange, resources }: ActionEditorProps) {
   const params = (action.params ?? {}) as Record<string, string | number>;
   const setParam = (key: string, value: string | number) =>
     onChange({ ...action, params: { ...params, [key]: value } });
+  const appendToParam = (key: string, token: string) =>
+    setParam(key, `${String(params[key] ?? '')}${token}`);
 
   switch (action.type) {
     // ----- start_followup_sequence -----
@@ -389,7 +421,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     // ----- send_whatsapp_message -----
     case 'send_whatsapp_message':
       return (
-        <Field label="Mensagem *" hint="Use {{nome}} pra personalizar com o nome do lead.">
+        <Field label="Mensagem *" hint="Toque numa variável pra inserir. No envio ela vira o dado real do lead.">
           <Textarea
             value={String(params.message ?? '')}
             onChange={e => setParam('message', e.target.value)}
@@ -397,6 +429,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             rows={3}
             className="mt-1 resize-none"
           />
+          <VariableChips onInsert={tok => appendToParam('message', tok)} />
         </Field>
       );
 
@@ -422,6 +455,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                 placeholder="Opcional"
                 className="mt-1"
               />
+              <VariableChips onInsert={tok => appendToParam('caption', tok)} />
             </Field>
           )}
         </>
@@ -549,6 +583,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               rows={3}
               className="mt-1 resize-none"
             />
+            <VariableChips onInsert={tok => appendToParam('message', tok)} />
           </Field>
         </>
       );
@@ -629,6 +664,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             rows={3}
             className="mt-1 resize-none"
           />
+          <VariableChips onInsert={tok => appendToParam('message', tok)} />
         </Field>
       );
 
@@ -646,6 +682,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             rows={3}
             className="mt-1 resize-none"
           />
+          <VariableChips onInsert={tok => appendToParam('message', tok)} />
         </Field>
       );
 
