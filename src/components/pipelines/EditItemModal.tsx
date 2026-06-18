@@ -172,12 +172,19 @@ export default function EditItemModal({
       // Labels ativas: da conversa (lead de WhatsApp) ou, na ausência de conversa
       // (lead de cadastro/formulário Meta), do contato — senão a tag do contato
       // ficava invisível no modal.
-      const rawLabels = (item.conversation as any)?.labels
-        ?? (item.contact as any)?.labels
-        ?? [];
-      setActiveLabels(Array.isArray(rawLabels)
-        ? rawLabels.map((l: any) => (typeof l === 'string' ? l : l?.title ?? '')).filter(Boolean)
-        : []);
+      // Prefere a lista NÃO-VAZIA (conversa OU contato). `??` falhava porque o
+      // serializer pode mandar labels:[] (array vazio, que não é null) na conversa,
+      // escondendo a tag do contato. E labels do contato vêm como {name}, da
+      // conversa como {title} — por isso lemos title ?? name.
+      const convLabels = (item.conversation as any)?.labels;
+      const contactLabels = (item.contact as any)?.labels;
+      const rawLabels =
+        (Array.isArray(convLabels) && convLabels.length ? convLabels
+          : Array.isArray(contactLabels) && contactLabels.length ? contactLabels
+          : []);
+      setActiveLabels(rawLabels
+        .map((l: any) => (typeof l === 'string' ? l : (l?.title ?? l?.name ?? '')))
+        .filter(Boolean));
 
       // Fetch catalog e labels disponíveis
       pipelineServiceDefinitionsService
