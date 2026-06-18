@@ -160,20 +160,32 @@
       },
       "marketing": {
         "lead": {
-          "name": "Lead",
-          "description": "Generated leads"
+          "name": "New Lead",
+          "description": "Entry via ad"
         },
-        "nurturing": {
-          "name": "Nurturing",
-          "description": "In nurturing process"
+        "sdrQualifying": {
+          "name": "SDR Qualifying",
+          "description": "Automated qualification in progress"
         },
         "qualified": {
           "name": "Qualified",
-          "description": "Qualified lead"
+          "description": "Interest confirmed by SDR"
         },
-        "converted": {
-          "name": "Converted",
-          "description": "Converted to opportunity"
+        "meetingScheduled": {
+          "name": "Meeting Scheduled",
+          "description": "Visit or call booked"
+        },
+        "proposal": {
+          "name": "In Proposal",
+          "description": "Active negotiation"
+        },
+        "closed": {
+          "name": "Closed",
+          "description": "Became a client"
+        },
+        "disqualified": {
+          "name": "Disqualified",
+          "description": "Outside the profile"
         }
       },
       "custom": {
