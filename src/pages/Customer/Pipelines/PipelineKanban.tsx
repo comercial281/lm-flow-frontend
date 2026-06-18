@@ -14,8 +14,6 @@ import {
 } from '@evoapi/design-system';
 import {
   ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
   Plus,
   MoreVertical,
   GripVertical,
@@ -79,26 +77,9 @@ export default function PipelineKanban() {
   const isDraggingRef = useRef(false);
   const suppressClickUntilRef = useRef(0);
 
-  // Navegação horizontal do board (setas) — o scroll nativo existe mas é pouco
-  // descobrível no desktop (barrinha escondida, mouse sem scroll lateral).
+  // Scroll horizontal do board — feito por arrastar-pra-rolar e roda do mouse
+  // (ver handlers abaixo). O scroll nativo é pouco descobrível no desktop.
   const boardScrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-  const updateScrollButtons = useCallback(() => {
-    const el = boardScrollRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 8);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
-  }, []);
-  const scrollBoard = (dir: 'left' | 'right') => {
-    const el = boardScrollRef.current;
-    if (!el) return;
-    // ~uma coluna (320px) + gap. Atribuição direta no scrollLeft: tanto a API
-    // `scrollBy({behavior:'smooth'})` quanto `requestAnimationFrame` são no-op
-    // neste contexto (smooth não anima aqui; rAF não roda com a aba em background).
-    // `scrollLeft +=` clampa sozinho nos limites e funciona sempre.
-    el.scrollLeft += dir === 'left' ? -344 : 344;
-  };
 
   // Auto-scroll enquanto arrasta um card: chegar perto da borda do board rola
   // na horizontal (pra alcançar coluna escondida); perto do topo/fundo de uma
@@ -141,6 +122,63 @@ export default function PipelineKanban() {
   const handleBoardDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     dragPointerRef.current = { x: e.clientX, y: e.clientY, active: true };
+  };
+
+  // Arrastar-pra-rolar (pan): clicar no fundo do board e arrastar move na
+  // horizontal — scroll lateral natural no desktop, sem depender de seta nem da
+  // barrinha. Não inicia se o clique foi num card/botão/input (deixa o drag do
+  // card e os cliques funcionarem normal).
+  const panRef = useRef({ active: false, startX: 0, startScroll: 0, moved: false });
+  const handleBoardMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const el = boardScrollRef.current;
+    if (!el) return;
+    if (
+      (e.target as HTMLElement).closest(
+        '[draggable="true"], button, a, input, textarea, select, [role="button"], [data-no-pan]',
+      )
+    ) {
+      return;
+    }
+    panRef.current = { active: true, startX: e.clientX, startScroll: el.scrollLeft, moved: false };
+    el.style.cursor = 'grabbing';
+  };
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const p = panRef.current;
+      if (!p.active) return;
+      const el = boardScrollRef.current;
+      if (!el) return;
+      const dx = e.clientX - p.startX;
+      if (Math.abs(dx) > 3) p.moved = true;
+      el.scrollLeft = p.startScroll - dx;
+    };
+    const onUp = () => {
+      const p = panRef.current;
+      if (!p.active) return;
+      p.active = false;
+      const el = boardScrollRef.current;
+      if (el) el.style.cursor = '';
+      // bloqueia o clique fantasma logo após um arraste real
+      if (p.moved) suppressClickUntilRef.current = Date.now() + 200;
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, []);
+
+  // Roda do mouse vertical vira scroll horizontal quando o cursor está sobre o
+  // board mas fora de uma lista de cards (colunas têm scroll vertical próprio).
+  const handleBoardWheel = (e: React.WheelEvent) => {
+    if (e.deltaY === 0 || e.shiftKey) return;
+    const overColumnList = (e.target as HTMLElement).closest('[data-col-scroll]');
+    if (overColumnList) return; // deixa a roda rolar os cards da coluna
+    const el = boardScrollRef.current;
+    if (!el) return;
+    el.scrollLeft += e.deltaY;
   };
 
   // Modal states
@@ -703,18 +741,6 @@ export default function PipelineKanban() {
     }));
   }, [stages, searchQuery, dateFrom, dateTo]);
 
-  // Recalcula as setas de navegação quando o board muda de tamanho/conteúdo.
-  useEffect(() => {
-    updateScrollButtons();
-    const el = boardScrollRef.current;
-    if (!el) return;
-    el.addEventListener('scroll', updateScrollButtons, { passive: true });
-    window.addEventListener('resize', updateScrollButtons);
-    return () => {
-      el.removeEventListener('scroll', updateScrollButtons);
-      window.removeEventListener('resize', updateScrollButtons);
-    };
-  }, [updateScrollButtons, filteredStages, loading]);
 
   // Garante que o auto-scroll do drag pare se o componente desmontar no meio.
   useEffect(() => stopAutoScroll, [stopAutoScroll]);
@@ -965,31 +991,12 @@ export default function PipelineKanban() {
 
         {/* Kanban Board */}
         <div className="flex-1 overflow-hidden relative">
-          {/* Setas de navegação horizontal — só aparecem quando há coluna escondida */}
-          {canScrollLeft && (
-            <button
-              type="button"
-              onClick={() => scrollBoard('left')}
-              aria-label="Ver etapas anteriores"
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-background/95 border border-border shadow-md flex items-center justify-center text-foreground hover:bg-muted hover:border-primary/40 transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-          )}
-          {canScrollRight && (
-            <button
-              type="button"
-              onClick={() => scrollBoard('right')}
-              aria-label="Ver próximas etapas"
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-background/95 border border-border shadow-md flex items-center justify-center text-foreground hover:bg-muted hover:border-primary/40 transition-colors"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          )}
           <div
             ref={boardScrollRef}
-            className="h-full overflow-x-auto overflow-y-hidden px-4 sm:px-6 lg:px-8 py-6"
+            className="h-full overflow-x-auto overflow-y-hidden px-4 sm:px-6 lg:px-8 py-6 cursor-grab"
             onDragOver={handleBoardDragOver}
+            onMouseDown={handleBoardMouseDown}
+            onWheel={handleBoardWheel}
           >
             {/* Kanban Content */}
             <div
