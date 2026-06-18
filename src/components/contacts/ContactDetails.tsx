@@ -18,6 +18,7 @@ import {
 } from '@evoapi/design-system';
 import ContactStatusBadge from './ContactStatusBadge';
 import ContactTypeBadge from './ContactTypeBadge';
+import ContactConversationTab from './ContactConversationTab';
 import ContactMergeSelectorModal from './ContactMergeSelectorModal';
 import ContactMergeModal from './ContactMergeModal';
 import { contactsService } from '@/services/contacts/contactsService';
@@ -246,6 +247,7 @@ export default function ContactDetails({
     ...(hasPersons ? [{ value: 'persons', icon: Users, label: t('details.tabs.persons') }] : []),
     // Scheduled Actions temporarily disabled - feature is in development
     // { value: 'scheduled-actions', icon: CalendarClock, label: t('scheduledActions.label') },
+    { value: 'conversation', icon: MessageSquare, label: 'Conversa' },
     { value: 'pipeline', icon: GitBranch, label: t('details.tabs.pipeline') },
     { value: 'properties', icon: Building2, label: 'Imóveis' },
     { value: 'history', icon: History, label: t('details.tabs.history') },
@@ -511,6 +513,10 @@ export default function ContactDetails({
                   <StickyNote className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>{t('details.notImplemented.notes')}</p>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="conversation" className="py-6 mt-0">
+                <ContactConversationTab contactId={contact.id} />
               </TabsContent>
 
               <TabsContent value="pipeline" className="py-6 mt-0">
