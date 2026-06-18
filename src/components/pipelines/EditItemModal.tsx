@@ -47,6 +47,7 @@ import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { contactEventsService } from '@/services/contacts/contactEventsService';
 import { labelsService } from '@/services/contacts/labelsService';
+import { contactsService } from '@/services/contacts/contactsService';
 import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
 
@@ -236,45 +237,67 @@ export default function EditItemModal({
     }
   }, [item]);
 
+  // Alvo da tag: conversa (lead WhatsApp) OU, na ausência dela, o contato
+  // (lead de formulário/cadastro não tem conversa). Sem isso, o lead de
+  // formulário não recebia tag nenhuma pelo modal.
+  const labelTargetConvId = item?.conversation?.id ? String(item.conversation.id) : null;
+  const labelTargetContactId =
+    item?.contact?.id ?? (item?.conversation as any)?.contact?.id ?? null;
+
+  // Persiste a lista de tags no alvo certo. Conversa = add/remove incremental;
+  // Contato = PATCH substitui a lista inteira (label_list no backend).
+  const persistLabels = useCallback(
+    async (nextLabels: string[], change: { added?: string; removed?: string }) => {
+      if (labelTargetConvId) {
+        if (change.added) await conversationAPI.addLabels(labelTargetConvId, [change.added]);
+        if (change.removed) await conversationAPI.removeLabels(labelTargetConvId, [change.removed]);
+        return;
+      }
+      if (labelTargetContactId) {
+        await contactsService.updateContact(String(labelTargetContactId), { labels: nextLabels });
+      }
+    },
+    [labelTargetConvId, labelTargetContactId],
+  );
+
   const toggleLabel = useCallback(async (labelTitle: string) => {
-    if (!item?.conversation?.id) return;
+    if (!labelTargetConvId && !labelTargetContactId) return;
     setSavingLabel(true);
     try {
       const has = activeLabels.includes(labelTitle);
-      if (has) {
-        await conversationAPI.removeLabels(item.conversation.id, [labelTitle]);
-        setActiveLabels(prev => prev.filter(l => l !== labelTitle));
-      } else {
-        await conversationAPI.addLabels(item.conversation.id, [labelTitle]);
-        setActiveLabels(prev => [...prev, labelTitle]);
-      }
+      const next = has
+        ? activeLabels.filter(l => l !== labelTitle)
+        : [...activeLabels, labelTitle];
+      await persistLabels(next, has ? { removed: labelTitle } : { added: labelTitle });
+      setActiveLabels(next);
     } catch { /* silent */ } finally {
       setSavingLabel(false);
     }
-  }, [item, activeLabels]);
+  }, [activeLabels, persistLabels, labelTargetConvId, labelTargetContactId]);
 
   const createAndApplyLabel = useCallback(async (rawTitle: string) => {
     const title = rawTitle.trim();
-    if (!title || !item?.conversation?.id) return;
+    if (!title || (!labelTargetConvId && !labelTargetContactId)) return;
     setCreatingLabel(true);
     try {
       const created = await labelsService.createLabel({ title, color: '#7C3AED', show_on_sidebar: true });
       // O backend normaliza o título (minúsculo). Usa o título canônico retornado
-      // pra a lista e a conversa baterem com o que ficou gravado.
+      // pra a lista e o alvo baterem com o que ficou gravado.
       const canonical = (created as any)?.title ?? title.toLowerCase();
       setAvailableLabels(prev =>
         prev.some(l => l.title === canonical) ? prev : [...prev, created as unknown as LabelType]
       );
       if (!activeLabels.includes(canonical)) {
-        await conversationAPI.addLabels(item.conversation.id, [canonical]);
-        setActiveLabels(prev => [...prev, canonical]);
+        const next = [...activeLabels, canonical];
+        await persistLabels(next, { added: canonical });
+        setActiveLabels(next);
       }
     } catch { /* silent */ } finally {
       setCreatingLabel(false);
       setLabelPopoverOpen(false);
       setLabelSearch('');
     }
-  }, [item, activeLabels]);
+  }, [activeLabels, persistLabels, labelTargetConvId, labelTargetContactId]);
 
   const handleSubmit = () => {
     if (!selectedStageId) return;
@@ -531,7 +554,7 @@ export default function EditItemModal({
                       </Badge>
                     ))}
                   </div>
-                  {item.conversation?.id && (
+                  {(labelTargetConvId || labelTargetContactId) && (
                     <Popover open={labelPopoverOpen} onOpenChange={setLabelPopoverOpen}>
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="h-7 text-xs w-full justify-start">

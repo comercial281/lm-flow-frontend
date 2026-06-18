@@ -43,12 +43,22 @@ export const useGlobalWebSocket = (handlers: GlobalWebSocketHandlers) => {
       const wsProtocol = apiUrl.includes('https') ? 'wss:' : 'ws:';
       const websocketHost = apiUrl.replace(/^https?:/, wsProtocol);
 
+      // Re-emite os eventos como evento de janela pro board (e qualquer tela)
+      // reagir ao vivo sem abrir uma 2ª conexão WS. Conexão global única.
+      const emitRealtime = (kind: 'message' | 'conversation') =>
+        window.dispatchEvent(new CustomEvent('lmflow:realtime', { detail: { kind } }));
+
       // Create chat event handlers that forward to our global handlers
       const chatHandlers: ChatEventHandlers = {
         onMessageCreated: (data) => {
+          emitRealtime('message');
           handlersRef.current.onMessageCreated?.(data);
         },
+        onConversationCreated: () => {
+          emitRealtime('conversation');
+        },
         onConversationUpdated: (data) => {
+          emitRealtime('conversation');
           handlersRef.current.onConversationUpdated?.(data);
         },
         onNotificationCreated: (data) => {

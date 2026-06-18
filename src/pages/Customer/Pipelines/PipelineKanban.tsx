@@ -315,6 +315,28 @@ export default function PipelineKanban() {
     };
   }, [loadPipelineData, loadUpcomingVisits]);
 
+  // AO VIVO (websocket): lead/mensagem nova chega pelo evento global 'lmflow:realtime'
+  // (re-emitido pela conexão WS do app em useGlobalWebSocket). Refresh silencioso
+  // com debounce de 1.5s pra colapsar rajadas (conversation.created + message.created
+  // chegam juntos). O poll de 60s acima fica de rede de segurança se o WS cair.
+  useEffect(() => {
+    let timer: number | undefined;
+    const onRealtime = () => {
+      if (document.visibilityState !== 'visible' || isDraggingRef.current) return;
+      clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (isDraggingRef.current) return;
+        loadPipelineData(true);
+        loadUpcomingVisits();
+      }, 1500);
+    };
+    window.addEventListener('lmflow:realtime', onRealtime);
+    return () => {
+      window.removeEventListener('lmflow:realtime', onRealtime);
+      clearTimeout(timer);
+    };
+  }, [loadPipelineData, loadUpcomingVisits]);
+
   // Auto-open card from ?card= URL param
   useEffect(() => {
     const cardId = searchParams.get('card');
