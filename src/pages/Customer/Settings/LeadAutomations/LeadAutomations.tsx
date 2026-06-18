@@ -47,6 +47,15 @@ import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 const TRIGGERS = Object.entries(TRIGGER_LABELS).map(([value, label]) => ({ value, label }));
 const ACTION_TYPES = Object.entries(ACTION_TYPE_LABELS).map(([value, label]) => ({ value, label }));
 
+// Explica quando cada gatilho dispara — tira a confusão entre "todo lead" e "lead de anúncio".
+const TRIGGER_HINTS: Record<string, string> = {
+  'lead.created': 'Dispara pra TODO lead novo. Use o filtro de Origem abaixo pra valer só pra anúncio (formulário ou WhatsApp).',
+  'lead.campaign_received': 'Dispara SÓ quando o lead clica num anúncio e cai direto no WhatsApp (Click-to-WhatsApp).',
+  'lead.tag_added': 'Dispara quando uma etiqueta é adicionada. Escolha qual etiqueta abaixo.',
+  'lead.message_received': 'Dispara quando o lead manda uma mensagem. Filtre por palavra-chave abaixo (opcional).',
+  'lead.stage_changed': 'Dispara quando o lead muda de etapa no funil.',
+};
+
 const EMPTY_FORM: LeadAutomationRuleFormData = {
   name: '',
   description: '',
@@ -469,6 +478,9 @@ export default function LeadAutomations() {
                     <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
+                {TRIGGER_HINTS[form.trigger] && (
+                  <p className="text-xs text-muted-foreground mt-1">{TRIGGER_HINTS[form.trigger]}</p>
+                )}
               </div>
 
               <div>

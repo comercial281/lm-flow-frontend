@@ -15,6 +15,7 @@ import {
   type LeadAutomationCondition,
   type LeadAutomationAction,
   type AdOrigin,
+  type FormOrigin,
 } from '@/services/leadAutomation/leadAutomationService';
 
 // ============================================================================
@@ -65,6 +66,7 @@ export interface AutomationResources {
   stagesByPipeline: Record<string, PipelineStage[]>;
   quickReplies: QuickReply[];
   adOrigins: AdOrigin[];
+  formOrigins: FormOrigin[];
   loading: boolean;
 }
 
@@ -76,6 +78,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
   const [stagesByPipeline, setStagesByPipeline] = useState<Record<string, PipelineStage[]>>({});
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [adOrigins, setAdOrigins] = useState<AdOrigin[]>([]);
+  const [formOrigins, setFormOrigins] = useState<FormOrigin[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -84,13 +87,14 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     setLoading(true);
 
     (async () => {
-      const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes] = await Promise.allSettled([
+      const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes] = await Promise.allSettled([
         labelsService.getLabels(),
         followupSequencesService.getAll(),
         usersService.getUsers(),
         pipelinesService.getPipelines(),
         quickRepliesService.getQuickReplies(),
         leadAutomationService.getAdOrigins(),
+        leadAutomationService.getFormOrigins(),
       ]);
 
       if (cancelled) return;
@@ -100,6 +104,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
       if (usersRes.status === 'fulfilled') setUsers(usersRes.value.data ?? []);
       if (qrRes.status === 'fulfilled') setQuickReplies(qrRes.value.data ?? []);
       if (adRes.status === 'fulfilled') setAdOrigins(adRes.value ?? []);
+      if (formRes.status === 'fulfilled') setFormOrigins(formRes.value ?? []);
 
       if (pipelinesRes.status === 'fulfilled') {
         const list = pipelinesRes.value.data ?? [];
@@ -122,7 +127,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     return () => { cancelled = true; };
   }, [enabled]);
 
-  return { labels, sequences, users, pipelines, stagesByPipeline, quickReplies, adOrigins, loading };
+  return { labels, sequences, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, loading };
 }
 
 // ============================================================================
@@ -145,27 +150,60 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
   // --- lead.created ---
   // Origem do lead (opcional). Backend resolve 'source' do ad_referral no Executor:
   // formulario (Meta Lead Ads) | lead_whats_meta (CTWA) | organico.
+  // Quando origem = Formulário, dá pra afunilar por form_id (qual formulário).
+  // Condição emitida (sempre 1 só, o backend casa por form_id ou por source):
+  //   form X selecionado → { form_id eq X }   (já implica formulário)
+  //   formulário sem form específico → { source eq formulario }
+  //   outras origens → { source eq <origem> }
   if (trigger === 'lead.created') {
-    const value = typeof condition?.value === 'string' ? condition.value : '';
+    const field = condition?.field;
+    const rawValue = typeof condition?.value === 'string' ? condition.value : '';
+    const origin = field === 'form_id' ? 'formulario' : (field === 'source' ? rawValue : '');
+    const formId = field === 'form_id' ? rawValue : '';
+
+    const commitOrigin = (o: string) => {
+      if (!o) return onChange(null);
+      onChange({ field: 'source', operator: 'eq', value: o });
+    };
+    const commitForm = (fid: string) => {
+      onChange(fid
+        ? { field: 'form_id', operator: 'eq', value: fid }
+        : { field: 'source', operator: 'eq', value: 'formulario' });
+    };
+
     return (
-      <div>
-        <UILabel>Origem do lead (opcional)</UILabel>
-        <select
-          value={value}
-          onChange={e =>
-            onChange(e.target.value ? { field: 'source', operator: 'eq', value: e.target.value } : null)
-          }
-          className={baseSelectClass}
-        >
-          <option value="">Qualquer origem</option>
-          <option value="formulario">Formulário (Meta Lead Ads)</option>
-          <option value="lead_whats_meta">Lead Whats Meta (anúncio no WhatsApp)</option>
-          <option value="organico">Orgânico (sem anúncio)</option>
-        </select>
-        <p className="text-xs text-muted-foreground mt-1">
-          Em branco = qualquer lead novo. <strong>Formulário</strong>: veio de um formulário de anúncio.{' '}
-          <strong>Lead Whats Meta</strong>: clicou no anúncio e caiu direto no WhatsApp.
-        </p>
+      <div className="space-y-2">
+        <div>
+          <UILabel>Origem do lead (opcional)</UILabel>
+          <select value={origin} onChange={e => commitOrigin(e.target.value)} className={baseSelectClass}>
+            <option value="">Qualquer origem</option>
+            <option value="formulario">Formulário (Meta Lead Ads)</option>
+            <option value="lead_whats_meta">Lead Whats Meta (anúncio no WhatsApp)</option>
+            <option value="organico">Orgânico (sem anúncio)</option>
+          </select>
+          <p className="text-xs text-muted-foreground mt-1">
+            Em branco = qualquer lead novo. <strong>Formulário</strong>: veio de um formulário de anúncio.{' '}
+            <strong>Lead Whats Meta</strong>: clicou no anúncio e caiu direto no WhatsApp.
+          </p>
+        </div>
+
+        {origin === 'formulario' && (
+          <div>
+            <UILabel>Qual formulário? (opcional)</UILabel>
+            <select value={formId} onChange={e => commitForm(e.target.value)} className={baseSelectClass}>
+              <option value="">Qualquer formulário</option>
+              {resources.formOrigins.map(f => (
+                <option key={f.form_id} value={f.form_id}>
+                  {(f.form_name || f.form_id)}{f.count > 0 ? ` · ${f.count} lead${f.count === 1 ? '' : 's'}` : ''}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Em branco = qualquer formulário. Escolha um pra esse fluxo valer só pros leads daquele formulário.
+              {resources.formOrigins.length === 0 && ' (Nenhum formulário conectado ainda — veja Configurações → Formulários (Meta).)'}
+            </p>
+          </div>
+        )}
       </div>
     );
   }
@@ -693,6 +731,10 @@ export function formatConditionSummary(
   resources: AutomationResources,
 ): string {
   if (trigger === 'lead.created') {
+    if (condition.field === 'form_id') {
+      const f = resources.formOrigins.find(x => x.form_id === condition.value);
+      return `Formulário: ${f?.form_name || condition.value}`;
+    }
     const labels: Record<string, string> = {
       formulario: 'Formulário (Meta Lead Ads)',
       lead_whats_meta: 'Lead Whats Meta (anúncio no WhatsApp)',

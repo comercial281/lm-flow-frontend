@@ -81,6 +81,12 @@ export const leadAutomationService = {
     const res = await api.get(`${BASE}/ad_origins`);
     return (res.data as { data: AdOrigin[] }).data ?? [];
   },
+
+  // Formulários (Meta Lead Ads) conhecidos, pra filtrar a automação por formulário.
+  async getFormOrigins(): Promise<FormOrigin[]> {
+    const res = await api.get(`${BASE}/form_origins`);
+    return (res.data as { data: FormOrigin[] }).data ?? [];
+  },
 };
 
 // Anúncio de origem agregado (vindo do ad_referral das conversas/contatos).
@@ -89,6 +95,13 @@ export interface AdOrigin {
   title: string | null;
   campaign_name: string | null;
   source: string;
+  count: number;
+}
+
+// Formulário (Meta Lead Ads) conhecido — config salva ou já trouxe lead.
+export interface FormOrigin {
+  form_id: string;
+  form_name: string | null;
   count: number;
 }
 
