@@ -170,6 +170,43 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
     );
   }
 
+  // --- lead.campaign_received (Lead Whats Meta / CTWA) ---
+  // Funil por anúncio: filtra por ad_id. O Executor resolve ad_id do ad_referral.
+  if (trigger === 'lead.campaign_received') {
+    const value = typeof condition?.value === 'string' ? condition.value : '';
+    const commit = (v: string) =>
+      onChange(v ? { field: 'ad_id', operator: 'eq', value: v } : null);
+    const withId = resources.adOrigins.filter(o => o.ad_id);
+    return (
+      <div className="space-y-2">
+        <div>
+          <UILabel>Qual anúncio? (opcional)</UILabel>
+          <select value={value} onChange={e => commit(e.target.value)} className={baseSelectClass}>
+            <option value="">Qualquer anúncio (todo lead que veio de anúncio no WhatsApp)</option>
+            {withId.map(o => (
+              <option key={o.ad_id!} value={o.ad_id!}>
+                {(o.title || o.campaign_name || o.ad_id)} · {o.count} lead{o.count === 1 ? '' : 's'}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground mt-1">
+            Em branco = vale pra qualquer anúncio. Escolha um anúncio pra esse fluxo valer só pra ele.
+            {withId.length === 0 && ' (Nenhum anúncio detectado ainda — cole o ID abaixo ou espere chegar lead de anúncio.)'}
+          </p>
+        </div>
+        <div>
+          <UILabel>Ou cole o ID do anúncio</UILabel>
+          <Input
+            value={value}
+            onChange={e => commit(e.target.value)}
+            placeholder="Ex: 120210..."
+            className="mt-1"
+          />
+        </div>
+      </div>
+    );
+  }
+
   // --- lead.tag_added ---
   // Backend emite context { contact_id, conversation_id, label: <nome da tag> }
   // matches?: actual = context['label'] → compara string ==.
@@ -614,7 +651,10 @@ export function validateRule(
   if (triggerNeedsCondition(trigger)) {
     // Condição opcional: message_received (keyword vazia = qualquer msg) e
     // lead.created (origem vazia = qualquer lead novo).
-    const isOptional = trigger === 'lead.message_received' || trigger === 'lead.created';
+    const isOptional =
+      trigger === 'lead.message_received' ||
+      trigger === 'lead.created' ||
+      trigger === 'lead.campaign_received';
     const hasValue =
       conditions.length > 0 &&
       conditions[0].value !== '' &&
@@ -659,6 +699,11 @@ export function formatConditionSummary(
       organico: 'Orgânico (sem anúncio)',
     };
     return `Origem: ${labels[String(condition.value)] ?? condition.value}`;
+  }
+  if (trigger === 'lead.campaign_received') {
+    if (!condition?.value) return 'Qualquer anúncio';
+    const o = resources.adOrigins.find(a => a.ad_id === condition.value);
+    return `Anúncio: ${o?.title || o?.campaign_name || condition.value}`;
   }
   if (trigger === 'lead.tag_added') {
     return `Etiqueta: ${condition.value}`;
