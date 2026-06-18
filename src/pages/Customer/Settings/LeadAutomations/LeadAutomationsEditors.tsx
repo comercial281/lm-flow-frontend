@@ -371,6 +371,13 @@ const MESSAGE_VARS: { label: string; token: string }[] = [
   { label: 'Data',          token: '{{data}}' },
   { label: 'Hora',          token: '{{hora}}' },
   { label: 'Link do card',  token: '{{link_do_card}}' },
+  { label: 'Origem',        token: '{{origem}}' },
+  { label: 'Campanha',      token: '{{campanha}}' },
+  { label: 'Conjunto',      token: '{{conjunto}}' },
+  { label: 'Anúncio',       token: '{{anuncio}}' },
+  { label: 'Título anúncio', token: '{{titulo_anuncio}}' },
+  { label: 'Plataforma',    token: '{{plataforma}}' },
+  { label: 'Respostas form', token: '{{respostas}}' },
 ];
 
 // Chips de variável: 1 clique insere o token no campo. Reutilizável em msg/legenda/notificações.
