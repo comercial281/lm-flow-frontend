@@ -171,6 +171,19 @@ class PipelinesService {
     return extractData<{ success: boolean; message: string }>(response);
   }
 
+  // Reorder item within/across stage (ordem manual no kanban)
+  async reorderItem(
+    pipelineId: string,
+    itemId: string,
+    data: { position: number; new_stage_id?: string },
+  ): Promise<{ success: boolean; message: string }> {
+    const response = await api.patch(
+      `/pipelines/${pipelineId}/pipeline_items/${itemId}/reorder`,
+      data,
+    );
+    return extractData<{ success: boolean; message: string }>(response);
+  }
+
   // Get available conversations for pipeline
   async getAvailableConversations(
     pipelineId: string,

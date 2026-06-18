@@ -319,62 +319,119 @@ export default function PipelineKanban() {
     e.preventDefault();
   };
 
-  const handleDrop = async (e: React.DragEvent, targetStageId: string) => {
-    e.preventDefault();
+  // Limpa o estado de arraste (reuso entre drop em coluna e em card).
+  const finishDrag = () => {
+    setDraggedItem(null);
+    isDraggingRef.current = false;
+    suppressClickUntilRef.current = Date.now() + 200;
+    stopAutoScroll();
+  };
 
-    if (!draggedItem) return;
+  // Valor de ordenação do card: position quando existe, senão a chegada
+  // (entered_at/created_at em epoch). Mesma escala em ambos (segundos).
+  const itemPos = (it: PipelineItem): number =>
+    typeof it.position === 'number'
+      ? it.position
+      : typeof it.entered_at === 'number'
+      ? it.entered_at
+      : new Date(it.created_at).getTime() / 1000;
 
-    const fromStageId = draggedItem.stage_id;
+  // Onde o cursor está sobre o card alvo (metade de cima = acima, baixo = abaixo).
+  const dragOverPosRef = useRef<'above' | 'below'>('above');
 
-    // Don't move if dropping on same stage
-    if (fromStageId === targetStageId) {
-      setDraggedItem(null);
-      isDraggingRef.current = false;
-      suppressClickUntilRef.current = Date.now() + 200;
-      stopAutoScroll();
+  // Move/reordena o card arrastado para targetStageId na position newPos,
+  // inserindo no índice insertIdx (no array já SEM o card arrastado).
+  // Atualização otimista + persistência via /reorder.
+  const commitReorder = async (targetStageId: string, newPos: number, insertIdx: number) => {
+    if (!draggedItem || !pipelineId) {
+      finishDrag();
       return;
     }
-
-    // Optimistic update: move item locally BEFORE API call
+    const fromStageId = draggedItem.stage_id;
     const previousStages = stages;
-    const optimisticStages = stages.map(stage => {
-      if (stage.id === draggedItem.stage_id) {
-        return {
-          ...stage,
-          items: (stage.items || []).filter(item => item.id !== draggedItem.id),
-        };
-      }
+    const moved = {
+      ...draggedItem,
+      stage_id: targetStageId,
+      pipeline_stage_id: targetStageId,
+      position: newPos,
+    };
+    const next = stages.map(stage => {
+      let items = (stage.items || []).filter(i => i.id !== draggedItem.id);
       if (stage.id === targetStageId) {
-        return {
-          ...stage,
-          items: [...(stage.items || []), { ...draggedItem, stage_id: targetStageId }],
-        };
+        items = [...items];
+        const idx = Math.max(0, Math.min(insertIdx, items.length));
+        items.splice(idx, 0, moved);
       }
-      return stage;
+      return { ...stage, items };
     });
-
-    setStages(optimisticStages);
-    toast.success(t('kanban.messages.itemMoved'));
+    setStages(next);
 
     try {
-      await pipelinesService.moveItem({
-        item_id: draggedItem.id,
-        pipeline_id: pipelineId!,
-        from_stage_id: fromStageId,
-        to_stage_id: targetStageId,
+      await pipelinesService.reorderItem(pipelineId, draggedItem.id, {
+        position: newPos,
+        ...(fromStageId !== targetStageId ? { new_stage_id: targetStageId } : {}),
       });
-      // API call succeeded — optimistic update was correct, no need to reload
     } catch (error) {
-      console.error('Error moving item:', error);
-      // Rollback on failure
+      console.error('Error reordering item:', error);
       setStages(previousStages);
       toast.error(t('kanban.messages.itemMoveError'));
     } finally {
-      setDraggedItem(null);
-      isDraggingRef.current = false;
-      suppressClickUntilRef.current = Date.now() + 200;
-      stopAutoScroll();
+      finishDrag();
     }
+  };
+
+  // Drop na área da coluna (fora de um card): lead vai pro TOPO da coluna
+  // destino. Soltar na mesma coluna (área vazia) não muda nada.
+  const handleDrop = (e: React.DragEvent, targetStageId: string) => {
+    e.preventDefault();
+    if (!draggedItem) return;
+    if (draggedItem.stage_id === targetStageId) {
+      finishDrag();
+      return;
+    }
+    const targetStage = stages.find(s => s.id === targetStageId);
+    const items = targetStage?.items || [];
+    const newPos = items.length ? itemPos(items[0]) + 1 : Date.now() / 1000;
+    void commitReorder(targetStageId, newPos, 0);
+  };
+
+  // Marca acima/abaixo conforme a metade do card sob o cursor.
+  const handleCardDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    dragOverPosRef.current = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below';
+  };
+
+  // Drop em cima de um card: insere acima/abaixo dele e grava a position no
+  // ponto médio entre os vizinhos (ou topo+1 / fundo-1 nas pontas).
+  const handleCardDrop = (e: React.DragEvent, targetItem: PipelineItem, targetStageId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedItem || draggedItem.id === targetItem.id) {
+      finishDrag();
+      return;
+    }
+    const where = dragOverPosRef.current;
+    const targetStage = stages.find(s => s.id === targetStageId);
+    if (!targetStage) {
+      finishDrag();
+      return;
+    }
+    const arr = (targetStage.items || []).filter(i => i.id !== draggedItem.id);
+    const at = arr.findIndex(i => i.id === targetItem.id);
+    if (at < 0) {
+      finishDrag();
+      return;
+    }
+    const insertIdx = where === 'above' ? at : at + 1;
+    const above = arr[insertIdx - 1];
+    const below = arr[insertIdx];
+    let newPos: number;
+    if (!above) newPos = itemPos(below) + 1;
+    else if (!below) newPos = itemPos(above) - 1;
+    else newPos = (itemPos(above) + itemPos(below)) / 2;
+    void commitReorder(targetStageId, newPos, insertIdx);
   };
 
   const handleDragEnd = () => {
@@ -1081,6 +1138,8 @@ export default function PipelineKanban() {
                           draggable
                           onDragStart={() => handleDragStart(item)}
                           onDragEnd={handleDragEnd}
+                          onDragOver={handleCardDragOver}
+                          onDrop={e => handleCardDrop(e, item, stage.id)}
                           onClick={() => {
                             if (!isDraggingRef.current && Date.now() > suppressClickUntilRef.current) {
                               handleEditItem(item);

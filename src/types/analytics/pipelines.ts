@@ -214,6 +214,7 @@ export interface PipelineItem {
   };
   // Additional fields from backend
   custom_fields?: any;
+  position?: number; // ordem manual no kanban (epoch da chegada por padrão)
   entered_at?: number;
   completed_at?: number | null;
   days_in_pipeline?: number;
