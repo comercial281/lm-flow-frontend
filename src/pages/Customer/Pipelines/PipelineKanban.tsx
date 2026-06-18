@@ -963,7 +963,7 @@ export default function PipelineKanban() {
         {/* Header */}
         <div className="flex-shrink-0 bg-background border-b border-border shadow-sm">
           <div className="px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col gap-3 py-3 lg:h-16 lg:flex-row lg:items-center lg:justify-between lg:py-0">
+            <div className="flex flex-col gap-3 py-3 lg:min-h-16 lg:flex-row lg:items-center lg:justify-between lg:py-2">
               {/* Navigation and Pipeline Info */}
               <div className="flex items-center gap-3 min-w-0">
                 <Button
@@ -986,7 +986,7 @@ export default function PipelineKanban() {
               </div>
 
               {/* Quick Stats and Actions */}
-              <div className="flex w-full flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm lg:w-auto">
+              <div className="flex w-full flex-wrap items-center justify-end gap-1.5 sm:gap-2 lg:gap-3 text-xs sm:text-sm lg:w-auto xl:flex-nowrap">
                 {pipeline?.pipeline_type === 'sale' && (
                   <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 border-0">
                     Venda
@@ -997,30 +997,31 @@ export default function PipelineKanban() {
                     Locação
                   </Badge>
                 )}
-                <div className="text-center min-w-16">
-                  <div className="font-semibold text-foreground">
+                <div className="text-center">
+                  <div className="font-semibold text-foreground leading-tight">
                     {pipeline?.item_count || pipeline?.conversations_count || 0}
                   </div>
-                  <div className="text-muted-foreground">{t('kanban.header.conversations')}</div>
+                  <div className="hidden sm:block text-muted-foreground">{t('kanban.header.conversations')}</div>
                 </div>
-                <div className="text-center min-w-14">
-                  <div className="font-semibold text-foreground">{stages.length}</div>
-                  <div className="text-muted-foreground">{t('kanban.header.stages')}</div>
+                <div className="text-center">
+                  <div className="font-semibold text-foreground leading-tight">{stages.length}</div>
+                  <div className="hidden sm:block text-muted-foreground">{t('kanban.header.stages')}</div>
                 </div>
                 {calculatePipelineTotal() > 0 && (
-                  <div className="text-center min-w-20">
-                    <div className="font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
+                  <div className="hidden md:block text-center">
+                    <div className="font-semibold text-green-600 dark:text-green-400 whitespace-nowrap leading-tight">
                       R$ {formatCurrency(calculatePipelineTotal())}
                     </div>
                     <div className="text-muted-foreground">{t('kanban.header.totalValue')}</div>
                   </div>
                 )}
+                {/* Botões secundários: só em telas largas (xl). Abaixo disso vão pro menu. */}
                 {canImport && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setImportModalOpen(true)}
-                    className="whitespace-nowrap"
+                    className="hidden xl:inline-flex whitespace-nowrap"
                   >
                     <Upload className="w-4 h-4 mr-2" />
                     Importar
@@ -1032,7 +1033,7 @@ export default function PipelineKanban() {
                     variant="outline"
                     size="sm"
                     onClick={handleExportCSV}
-                    className="whitespace-nowrap"
+                    className="hidden xl:inline-flex whitespace-nowrap"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Exportar
@@ -1044,7 +1045,7 @@ export default function PipelineKanban() {
                     variant="outline"
                     size="sm"
                     onClick={() => setDisparoModalOpen(true)}
-                    className="whitespace-nowrap"
+                    className="hidden xl:inline-flex whitespace-nowrap"
                   >
                     <Megaphone className="w-4 h-4 mr-2" />
                     Disparo em massa
@@ -1058,8 +1059,8 @@ export default function PipelineKanban() {
                     onClick={() => handleAddItem()}
                     className="whitespace-nowrap"
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    {t('kanban.header.addItem')}
+                    <Plus className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">{t('kanban.header.addItem')}</span>
                   </Button>
                 )}
 
@@ -1071,6 +1072,26 @@ export default function PipelineKanban() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    {/* Ações que somem da barra em telas < xl ficam acessíveis aqui */}
+                    {canImport && (
+                      <DropdownMenuItem className="xl:hidden" onClick={() => setImportModalOpen(true)}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Importar
+                      </DropdownMenuItem>
+                    )}
+                    {canExport && (
+                      <DropdownMenuItem className="xl:hidden" onClick={handleExportCSV}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar
+                      </DropdownMenuItem>
+                    )}
+                    {canBulkDispatch && (
+                      <DropdownMenuItem className="xl:hidden" onClick={() => setDisparoModalOpen(true)}>
+                        <Megaphone className="h-4 w-4 mr-2" />
+                        Disparo em massa
+                      </DropdownMenuItem>
+                    )}
+                    {(canImport || canExport || canBulkDispatch) && <DropdownMenuSeparator className="xl:hidden" />}
                     <DropdownMenuItem onClick={handleEditPipeline}>
                       <Edit className="h-4 w-4 mr-2" />
                       {t('kanban.header.editPipeline')}

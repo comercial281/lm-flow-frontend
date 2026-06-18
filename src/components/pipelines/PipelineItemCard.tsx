@@ -140,6 +140,26 @@ export default function PipelineItemCard({
         </div>
       </div>
 
+      {/* Tags / Etiquetas do contato (ex: "tráfego pago") */}
+      {Array.isArray((item.contact as any)?.labels) && (item.contact as any).labels.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1">
+          {(item.contact as any).labels.map((label: any, idx: number) => {
+            const color = label?.color || '#7c3aed';
+            const name = label?.name || label?.title;
+            if (!name) return null;
+            return (
+              <span
+                key={`${name}-${idx}`}
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                style={{ backgroundColor: `${color}22`, color }}
+              >
+                {name}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {/* Pipeline and Stage Info */}
       {(pipeline || stage) && (
         <div className="mb-3 flex items-center gap-2 flex-wrap">
