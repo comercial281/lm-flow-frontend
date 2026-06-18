@@ -16,6 +16,16 @@ if ('serviceWorker' in navigator) {
   registerSW({ immediate: true });
 }
 
+// Rede de segurança contra "tela branca" pós-deploy: se um chunk lazy falhar ao
+// carregar (hash trocou num deploy novo e o cache aponta pro arquivo antigo, 404),
+// recarrega a página uma única vez pra pegar o index.html/chunks atuais.
+window.addEventListener('vite:preloadError', () => {
+  if (!sessionStorage.getItem('lm_chunk_reloaded')) {
+    sessionStorage.setItem('lm_chunk_reloaded', '1');
+    window.location.reload();
+  }
+});
+
 // LM Flow: Sentry React SDK — Story 1.1
 // VITE_SENTRY_DSN must be set in Railway environment variables
 if (import.meta.env.VITE_SENTRY_DSN) {

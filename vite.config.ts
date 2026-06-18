@@ -14,9 +14,15 @@ export default defineConfig({
       injectRegister: 'auto',
       manifest: false, // usamos o public/manifest.json manualmente
       workbox: {
-        globPatterns: ['**/*.{css,html,ico,png,svg,woff2}'], // exclui JS grande do precache
+        // NÃO precachear index.html: senão o SW serve o HTML antigo do cache, que
+        // referencia chunks /assets/index-*.js já substituídos por um deploy novo
+        // (404 → tela branca). HTML sempre vem da rede; só assets estáticos cacheiam.
+        globPatterns: ['**/*.{css,ico,png,svg,woff2}'],
         importScripts: ['/push-sw.js'],
         navigateFallback: null,
+        cleanupOutdatedCaches: true, // remove precache de versões antigas na ativação
+        clientsClaim: true, // assume o controle das abas abertas imediatamente
+        skipWaiting: true, // ativa o SW novo na hora (não espera fechar todas as abas)
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB
       },
       devOptions: {
