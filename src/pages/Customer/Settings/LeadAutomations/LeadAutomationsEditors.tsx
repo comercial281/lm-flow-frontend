@@ -422,6 +422,11 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     return () => { cancelled = true; };
   }, [action.type, instanceParam]);
 
+  // Usuários do sistema com WhatsApp cadastrado — pra mandar o lembrete no privado deles.
+  const usersWithWhatsapp = resources.users.filter(
+    u => String((u as { whatsapp_number?: string }).whatsapp_number ?? '').trim() !== '',
+  ) as Array<User & { whatsapp_number?: string }>;
+
   switch (action.type) {
     // ----- start_followup_sequence -----
     // Backend lookup: FollowupSequence.active.find_by(slug: slug). Value = slug, NÃO id.
@@ -605,28 +610,33 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               className="mt-1"
             />
           </Field>
-          <Field label="Grupo *" hint={loadingGroups ? 'Carregando grupos da instância…' : 'Escolha o grupo do cliente pela lista.'}>
+          <Field label="Destino do lembrete *" hint={loadingGroups ? 'Carregando…' : 'O grupo do cliente, ou um usuário (vai no WhatsApp privado dele).'}>
             <select
               value={String(params.group_jid ?? '')}
               onChange={e => setParam('group_jid', e.target.value)}
               className={baseSelectClass}
             >
-              <option value="">{loadingGroups ? 'Carregando…' : 'Selecione um grupo'}</option>
-              {groups.map(g => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-              {params.group_jid && !groups.some(g => g.id === params.group_jid) && (
+              <option value="">{loadingGroups ? 'Carregando…' : 'Selecione o destino'}</option>
+              {groups.length > 0 && (
+                <optgroup label="Grupo do cliente">
+                  {groups.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </optgroup>
+              )}
+              {usersWithWhatsapp.length > 0 && (
+                <optgroup label="Usuários (privado)">
+                  {usersWithWhatsapp.map(u => (
+                    <option key={u.id} value={String(u.whatsapp_number)}>{u.name} (privado)</option>
+                  ))}
+                </optgroup>
+              )}
+              {params.group_jid
+                && !groups.some(g => g.id === params.group_jid)
+                && !usersWithWhatsapp.some(u => String(u.whatsapp_number) === params.group_jid) && (
                 <option value={String(params.group_jid)}>{String(params.group_jid)}</option>
               )}
             </select>
-          </Field>
-          <Field label="Ou cole o JID manualmente" hint="Só se o grupo não aparecer na lista (ex: …@g.us).">
-            <Input
-              value={String(params.group_jid ?? '')}
-              onChange={e => setParam('group_jid', e.target.value)}
-              placeholder="…@g.us"
-              className="mt-1"
-            />
           </Field>
           <Field label="Mensagem *">
             <Textarea
