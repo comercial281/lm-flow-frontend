@@ -406,6 +406,22 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
   const appendToParam = (key: string, token: string) =>
     setParam(key, `${String(params[key] ?? '')}${token}`);
 
+  // Grupos de WhatsApp pro dropdown do "Notificar grupo" (carrega da instância escolhida).
+  const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const instanceParam = String(params.instance ?? '');
+  useEffect(() => {
+    if (action.type !== 'notify_group') return;
+    let cancelled = false;
+    setLoadingGroups(true);
+    leadAutomationService
+      .getGroups(instanceParam || undefined)
+      .then(g => { if (!cancelled) setGroups(g); })
+      .catch(() => { if (!cancelled) setGroups([]); })
+      .finally(() => { if (!cancelled) setLoadingGroups(false); });
+    return () => { cancelled = true; };
+  }, [action.type, instanceParam]);
+
   switch (action.type) {
     // ----- start_followup_sequence -----
     // Backend lookup: FollowupSequence.active.find_by(slug: slug). Value = slug, NÃO id.
@@ -581,19 +597,34 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     case 'notify_group':
       return (
         <>
-          <Field label="JID do grupo WhatsApp *" hint="ID do grupo no Evolution (ex: 120363xxxxxxxxxxx@g.us)">
-            <Input
-              value={String(params.group_jid ?? '')}
-              onChange={e => setParam('group_jid', e.target.value)}
-              placeholder="…@g.us"
-              className="mt-1"
-            />
-          </Field>
-          <Field label="Instância (opcional)" hint="Deixe vazio pra usar a instância do cliente. Use o nome de uma instância específica (ex: Operacional (LM01)) quando o grupo é atendido por ela.">
+          <Field label="Instância" hint="Instância de WhatsApp que envia (e de onde os grupos são listados). Para grupos de cliente use a central: Operacional (LM01).">
             <Input
               value={String(params.instance ?? '')}
               onChange={e => setParam('instance', e.target.value)}
               placeholder="Operacional (LM01)"
+              className="mt-1"
+            />
+          </Field>
+          <Field label="Grupo *" hint={loadingGroups ? 'Carregando grupos da instância…' : 'Escolha o grupo do cliente pela lista.'}>
+            <select
+              value={String(params.group_jid ?? '')}
+              onChange={e => setParam('group_jid', e.target.value)}
+              className={baseSelectClass}
+            >
+              <option value="">{loadingGroups ? 'Carregando…' : 'Selecione um grupo'}</option>
+              {groups.map(g => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+              {params.group_jid && !groups.some(g => g.id === params.group_jid) && (
+                <option value={String(params.group_jid)}>{String(params.group_jid)}</option>
+              )}
+            </select>
+          </Field>
+          <Field label="Ou cole o JID manualmente" hint="Só se o grupo não aparecer na lista (ex: …@g.us).">
+            <Input
+              value={String(params.group_jid ?? '')}
+              onChange={e => setParam('group_jid', e.target.value)}
+              placeholder="…@g.us"
               className="mt-1"
             />
           </Field>

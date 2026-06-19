@@ -87,7 +87,18 @@ export const leadAutomationService = {
     const res = await api.get(`${BASE}/form_origins`);
     return (res.data as { data: FormOrigin[] }).data ?? [];
   },
+
+  // Grupos de WhatsApp (por nome) de uma instância, pro dropdown do "Notificar grupo".
+  async getGroups(instance?: string): Promise<WaGroup[]> {
+    const res = await api.get(`${BASE}/groups`, { params: instance ? { instance } : {} });
+    return (res.data as { data: { groups: WaGroup[] } }).data?.groups ?? [];
+  },
 };
+
+export interface WaGroup {
+  id: string;   // JID …@g.us
+  name: string;
+}
 
 // Anúncio de origem agregado (vindo do ad_referral das conversas/contatos).
 export interface AdOrigin {
