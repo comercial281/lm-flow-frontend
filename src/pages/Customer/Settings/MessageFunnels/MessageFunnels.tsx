@@ -12,7 +12,7 @@ import {
 } from '@evoapi/design-system';
 import {
   Rocket, Search, Plus, Edit2, Trash2, Type, Mic, Image as ImageIcon,
-  Video, FileText, Pause,
+  Video, FileText, Pause, Archive, ArchiveRestore,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import MessageFunnelEditor from '@/components/messageFunnels/MessageFunnelEditor';
@@ -87,6 +87,17 @@ export default function MessageFunnels() {
     }
   };
 
+  // Arquivar = active:false (some do chat, fica em Settings). Desarquivar = active:true.
+  const handleToggleArchive = async (f: MessageFunnel) => {
+    try {
+      await messageFunnelsService.update(f.id, { active: !f.active });
+      toast.success(f.active ? 'Funil arquivado' : 'Funil reativado');
+      await load();
+    } catch {
+      toast.error('Erro ao arquivar funil');
+    }
+  };
+
   return (
     <div className="h-full flex flex-col p-4">
       {/* Header */}
@@ -139,6 +150,7 @@ export default function MessageFunnels() {
                 funnel={funnel}
                 onEdit={() => handleEdit(funnel)}
                 onDelete={() => handleDelete(funnel)}
+                onToggleArchive={() => handleToggleArchive(funnel)}
               />
             ))}
           </div>
@@ -182,9 +194,10 @@ interface FunnelCardProps {
   funnel: MessageFunnel;
   onEdit: () => void;
   onDelete: () => void;
+  onToggleArchive: () => void;
 }
 
-function FunnelCard({ funnel, onEdit, onDelete }: FunnelCardProps) {
+function FunnelCard({ funnel, onEdit, onDelete, onToggleArchive }: FunnelCardProps) {
   return (
     <div className="border border-border rounded-lg p-4 hover:border-primary/40 transition-colors flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
@@ -205,6 +218,16 @@ function FunnelCard({ funnel, onEdit, onDelete }: FunnelCardProps) {
         <div className="flex items-center gap-0.5 shrink-0">
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit} aria-label="Editar">
             <Edit2 size={13} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={onToggleArchive}
+            aria-label={funnel.active ? 'Arquivar' : 'Reativar'}
+            title={funnel.active ? 'Arquivar (some do chat)' : 'Reativar'}
+          >
+            {funnel.active ? <Archive size={13} /> : <ArchiveRestore size={13} />}
           </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onDelete} aria-label="Excluir">
             <Trash2 size={13} />

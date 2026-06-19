@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent } from '@evoapi/design-system/card';
 import { Button } from '@evoapi/design-system/button';
 import {
-  Rocket, X, Play, Pause, Type, Mic, Image as ImageIcon, Video, FileText, Search, Loader2, Plus,
+  Rocket, X, Play, Type, Mic, Image as ImageIcon, Video, FileText, Search, Loader2, Plus,
+  Archive, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { messageFunnelsService, tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
@@ -296,6 +297,28 @@ export default function MessageFunnelPopover({
     }
   }
 
+  // Arquivar = active:false → some da lista do chat (continua em Configurações).
+  async function handleArchive(funnel: MessageFunnel) {
+    try {
+      await messageFunnelsService.update(funnel.id, { active: false });
+      toast.success(`Funil "${funnel.name}" arquivado`);
+      loadFunnels();
+    } catch {
+      toast.error('Erro ao arquivar funil');
+    }
+  }
+
+  async function handleDelete(funnel: MessageFunnel) {
+    if (!window.confirm(`Excluir o funil "${funnel.name}"? Esta ação não pode ser desfeita.`)) return;
+    try {
+      await messageFunnelsService.destroy(funnel.id);
+      toast.success(`Funil "${funnel.name}" excluído`);
+      loadFunnels();
+    } catch {
+      toast.error('Erro ao excluir funil');
+    }
+  }
+
   if (!isOpen) return null;
 
   return (
@@ -372,52 +395,76 @@ export default function MessageFunnelPopover({
               const isRunning = running?.id === funnel.id;
               const dimmed = running && !isRunning;
               return (
-                <button
+                <div
                   key={funnel.id}
-                  onClick={() => handleDispatch(funnel)}
-                  disabled={!!running}
-                  className={`w-full text-left px-4 py-3 transition-all duration-150 border-b border-border last:border-b-0 hover:bg-muted/50 ${
+                  className={`group relative transition-all duration-150 border-b border-border last:border-b-0 hover:bg-muted/50 ${
                     isRunning ? 'bg-primary/10 border-l-4 border-l-primary' : 'border-l-4 border-l-transparent'
                   } ${dimmed ? 'opacity-50' : ''}`}
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Rocket size={12} className="text-primary shrink-0" />
-                    <span className="text-sm font-semibold text-foreground truncate">{funnel.name}</span>
-                    {!funnel.active && (
-                      <span className="text-xs text-muted-foreground ml-auto inline-flex items-center gap-0.5">
-                        <Pause size={10} /> pausado
-                      </span>
-                    )}
-                    {isRunning && (
-                      <span className="text-xs text-primary ml-auto font-semibold animate-pulse inline-flex items-center gap-1">
-                        <Play size={10} fill="currentColor" /> Enviando {running.idx}/{running.total}
-                      </span>
-                    )}
-                  </div>
-                  {funnel.description && (
-                    <p className="text-xs text-muted-foreground truncate mb-1">{funnel.description}</p>
-                  )}
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {funnel.items.slice(0, 10).map(item => {
-                      const Icon = KIND_ICONS[item.kind];
-                      const color = KIND_COLORS[item.kind];
-                      return (
-                        <span
-                          key={item.id}
-                          className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-xs"
-                          style={{ background: color + '20', color }}
-                          title={item.text_content?.slice(0, 60) ?? item.media_filename ?? item.kind}
-                        >
-                          <Icon size={9} />
-                          {item.delay_seconds > 0 && <span>·{item.delay_seconds}s</span>}
+                  <button
+                    type="button"
+                    onClick={() => handleDispatch(funnel)}
+                    disabled={!!running}
+                    className="w-full text-left px-4 py-3"
+                  >
+                    <div className="flex items-center gap-2 mb-1 pr-14">
+                      <Rocket size={12} className="text-primary shrink-0" />
+                      <span className="text-sm font-semibold text-foreground truncate">{funnel.name}</span>
+                      {isRunning && (
+                        <span className="text-xs text-primary ml-auto font-semibold animate-pulse inline-flex items-center gap-1">
+                          <Play size={10} fill="currentColor" /> Enviando {running.idx}/{running.total}
                         </span>
-                      );
-                    })}
-                    {funnel.items.length > 10 && (
-                      <span className="text-xs text-muted-foreground">+{funnel.items.length - 10}</span>
+                      )}
+                    </div>
+                    {funnel.description && (
+                      <p className="text-xs text-muted-foreground truncate mb-1">{funnel.description}</p>
                     )}
-                  </div>
-                </button>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {funnel.items.slice(0, 10).map(item => {
+                        const Icon = KIND_ICONS[item.kind];
+                        const color = KIND_COLORS[item.kind];
+                        return (
+                          <span
+                            key={item.id}
+                            className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-xs"
+                            style={{ background: color + '20', color }}
+                            title={item.text_content?.slice(0, 60) ?? item.media_filename ?? item.kind}
+                          >
+                            <Icon size={9} />
+                            {item.delay_seconds > 0 && <span>·{item.delay_seconds}s</span>}
+                          </span>
+                        );
+                      })}
+                      {funnel.items.length > 10 && (
+                        <span className="text-xs text-muted-foreground">+{funnel.items.length - 10}</span>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Ações por funil (não disparam o funil) */}
+                  {!running && (
+                    <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); handleArchive(funnel); }}
+                        className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-muted text-muted-foreground"
+                        aria-label="Arquivar"
+                        title="Arquivar (some do chat)"
+                      >
+                        <Archive size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); handleDelete(funnel); }}
+                        className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-muted text-destructive"
+                        aria-label="Excluir"
+                        title="Excluir funil"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  )}
+                </div>
               );
             })
           )}
