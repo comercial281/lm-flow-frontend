@@ -133,6 +133,7 @@ export const TRIGGER_LABELS: Record<string, string> = {
   'lead.tag_added':            'Etiqueta adicionada',
   'lead.message_received':     'Mensagem recebida do lead',
   'lead.campaign_received':    'Lead Whats Meta (anúncio no WhatsApp / CTWA)',
+  'lead.no_reply_after':       'Sem resposta após X minutos',
 };
 
 // Actions processadas pelo LeadAutomation::Executor.

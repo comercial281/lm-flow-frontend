@@ -29,6 +29,7 @@ const TRIGGERS_WITH_CONDITION = new Set([
   'lead.tag_added',
   'lead.message_received',
   'lead.stage_changed',
+  'lead.no_reply_after',
 ]);
 
 export const triggerNeedsCondition = (trigger: string): boolean =>
@@ -272,6 +273,31 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
             Nenhuma etiqueta cadastrada. Crie em Configurações &rarr; Etiquetas.
           </p>
         )}
+      </div>
+    );
+  }
+
+  // --- lead.no_reply_after ---
+  // Dispatcher (Followup::NoReplyEnrollJob) roda o executor com context[no_reply_minutes]=decorridos.
+  // A condição no_reply_minutes gte X define o tempo (editável aqui).
+  if (trigger === 'lead.no_reply_after') {
+    const minutes = condition?.field === 'no_reply_minutes' ? (Number(condition.value) || 30) : 30;
+    return (
+      <div>
+        <UILabel>Sem resposta após quantos minutos? *</UILabel>
+        <Input
+          type="number"
+          min={1}
+          value={minutes}
+          onChange={e =>
+            onChange({ field: 'no_reply_minutes', operator: 'gte', value: String(parseInt(e.target.value) || 1) })
+          }
+          className="mt-1"
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Dispara quando o lead recebeu o 1º contato e não respondeu nesse tempo (ex: 30 = meia hora).
+          Edite aqui quando quiser. A ação típica é "Adicionar etiqueta: follow-up".
+        </p>
       </div>
     );
   }
