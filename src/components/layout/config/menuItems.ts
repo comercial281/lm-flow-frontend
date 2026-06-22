@@ -215,7 +215,10 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     icon: Store,
     resource: 'integrations',
     action: 'read',
-    featureKey: 'marketplace',
+    // Acesso da Leal Mídia: super-admin SEMPRE vê; cliente só se a Leal Mídia
+    // ligar o toggle "marketplace" nas Funções dele (default OFF — ver
+    // DEFAULT_OFF_FEATURES no backend). Não faz sentido cliente ver isso.
+    clientToggleKey: 'marketplace',
   },
   {
     name: 'Clientes CRM',
