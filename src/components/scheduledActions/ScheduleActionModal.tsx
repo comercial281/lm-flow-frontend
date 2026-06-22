@@ -16,6 +16,11 @@ import {
   Textarea,
 } from '@evoapi/design-system';
 import { scheduledActionsService } from '@/services/scheduledActions/scheduledActionsService';
+import {
+  scheduledTemplatesService,
+  type MessageTemplate,
+  type SequenceTemplate,
+} from '@/services/scheduledActions/scheduledTemplatesService';
 import { followupSequencesService } from '@/services/followupSequences/followupSequencesService';
 import InboxesService from '@/services/channels/inboxesService';
 import { contactsService } from '@/services/contacts';
@@ -23,7 +28,8 @@ import type { ScheduledAction, CreateScheduledAction } from '@/types/automation'
 import type { Inbox } from '@/types/channels/inbox';
 import type { Contact } from '@/types/contacts';
 import { useLanguage } from '@/hooks/useLanguage';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, Plus, Trash2, Save, ListOrdered } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   buildChannelOptions,
   getMessagingInboxes,
@@ -71,6 +77,96 @@ export function ScheduleActionModal({
     media_url: '',
   });
   const [uploadingMedia, setUploadingMedia] = useState(false);
+
+  // ---- Sequência de mensagens (funil agendado) ----
+  // Modo: false = 1 mensagem (comportamento original), true = vários disparos
+  // a partir da data, cada passo com um delay relativo ao anterior.
+  const [seqMode, setSeqMode] = useState(false);
+  type SeqStep = { message: string; delayValue: number; delayUnit: 'minutes' | 'hours' | 'days' };
+  const [steps, setSteps] = useState<SeqStep[]>([{ message: '', delayValue: 0, delayUnit: 'hours' }]);
+  const [msgTemplates, setMsgTemplates] = useState<MessageTemplate[]>([]);
+  const [seqTemplates, setSeqTemplates] = useState<SequenceTemplate[]>([]);
+  const [savingTpl, setSavingTpl] = useState(false);
+
+  const unitMin = (u: SeqStep['delayUnit']) => (u === 'minutes' ? 1 : u === 'hours' ? 60 : 1440);
+  const stepDelayMin = useCallback(
+    (s: SeqStep, i: number) => (i === 0 ? 0 : Math.max(0, Math.round(s.delayValue)) * unitMin(s.delayUnit)),
+    [],
+  );
+  // Converte minutos salvos de volta pra valor+unidade mais "redondo".
+  const minToStep = (m: number): { delayValue: number; delayUnit: SeqStep['delayUnit'] } => {
+    if (m > 0 && m % 1440 === 0) return { delayValue: m / 1440, delayUnit: 'days' };
+    if (m > 0 && m % 60 === 0) return { delayValue: m / 60, delayUnit: 'hours' };
+    return { delayValue: m, delayUnit: 'minutes' };
+  };
+
+  const updateStep = (i: number, patch: Partial<SeqStep>) =>
+    setSteps(prev => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+  const addStep = () =>
+    setSteps(prev => [...prev, { message: '', delayValue: 1, delayUnit: 'days' }]);
+  const removeStep = (i: number) =>
+    setSteps(prev => (prev.length <= 1 ? prev : prev.filter((_, idx) => idx !== i)));
+
+  // Carrega templates (mensagem + sequências) ao abrir.
+  useEffect(() => {
+    if (!open) return;
+    scheduledTemplatesService.listMessages().then(setMsgTemplates).catch(() => setMsgTemplates([]));
+    scheduledTemplatesService.listSequences().then(setSeqTemplates).catch(() => setSeqTemplates([]));
+  }, [open]);
+
+  const applyMsgTemplate = (i: number, tplId: string) => {
+    const tpl = msgTemplates.find(t => t.id === tplId);
+    if (tpl) updateStep(i, { message: tpl.message });
+  };
+
+  const saveStepAsTemplate = async (i: number) => {
+    const msg = steps[i]?.message?.trim();
+    if (!msg) {
+      toast.error('Escreva a mensagem antes de salvar o template.');
+      return;
+    }
+    const name = window.prompt('Nome do template de mensagem:')?.trim();
+    if (!name) return;
+    try {
+      await scheduledTemplatesService.createMessage(name, msg);
+      toast.success('Template de mensagem salvo.');
+      setMsgTemplates(await scheduledTemplatesService.listMessages());
+    } catch {
+      toast.error('Não consegui salvar o template.');
+    }
+  };
+
+  const saveSequence = async () => {
+    const valid = steps.filter(s => s.message.trim());
+    if (valid.length === 0) {
+      toast.error('Escreva ao menos uma mensagem na sequência.');
+      return;
+    }
+    const name = window.prompt('Nome da sequência salva:')?.trim();
+    if (!name) return;
+    setSavingTpl(true);
+    try {
+      await scheduledTemplatesService.createSequence(
+        name,
+        steps.map((s, i) => ({ message: s.message.trim(), delay_minutes: stepDelayMin(s, i) })),
+      );
+      toast.success('Sequência salva.');
+      setSeqTemplates(await scheduledTemplatesService.listSequences());
+    } catch {
+      toast.error('Não consegui salvar a sequência.');
+    } finally {
+      setSavingTpl(false);
+    }
+  };
+
+  const loadSequence = (tplId: string) => {
+    const tpl = seqTemplates.find(t => t.id === tplId);
+    if (!tpl || !tpl.steps.length) return;
+    setSteps(
+      tpl.steps.map(s => ({ message: s.message || '', ...minToStep(Number(s.delay_minutes) || 0) })),
+    );
+    setSeqMode(true);
+  };
 
   const channelOptions = useMemo<ChannelOption[]>(() => buildChannelOptions(availableInboxes, t), [availableInboxes, t]);
 
@@ -286,8 +382,53 @@ export function ScheduleActionModal({
     }
   }, [action, open]);
 
+  // Agenda uma SEQUÊNCIA: cria N ações "send_message" a partir da data, cada uma
+  // no offset acumulado dos delays. Reusa o executor de scheduled_actions.
+  const handleSubmitSequence = async () => {
+    const errs: Record<string, string> = {};
+    if (!formData.scheduled_for) errs.scheduled_for = t('scheduledActions.validationRequired.dateTime');
+    if (!formData.channel) errs.channel = t('scheduledActions.validationRequired.channel');
+    const valid = steps.filter(s => s.message.trim());
+    if (Object.keys(errs).length > 0 || valid.length === 0) {
+      setErrors(errs);
+      if (valid.length === 0) toast.error('Escreva ao menos uma mensagem na sequência.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const startMs = new Date(formData.scheduled_for).getTime();
+      let cum = 0;
+      for (let i = 0; i < steps.length; i++) {
+        const s = steps[i];
+        cum += stepDelayMin(s, i);
+        if (!s.message.trim()) continue;
+        const when = new Date(startMs + cum * 60000).toISOString();
+        await scheduledActionsService.create({
+          contact_id: selectedContactId,
+          action_type: 'send_message',
+          scheduled_for: when,
+          recurrence_type: 'once',
+          payload: { channel: formData.channel, message: s.message.trim() },
+        } as CreateScheduledAction);
+      }
+      toast.success(`${valid.length} mensagem(ns) agendada(s) na sequência.`);
+      onClose();
+    } catch (error) {
+      console.error('Error scheduling sequence:', error);
+      toast.error('Falha ao agendar a sequência.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Modo sequência só vale pra mensagem (vários disparos).
+    if (seqMode && formData.action_type === 'send_message' && !action) {
+      void handleSubmitSequence();
+      return;
+    }
 
     if (!validateForm()) {
       return;
@@ -544,6 +685,41 @@ export function ScheduleActionModal({
                 {errors.channel && <p className="text-sm text-red-500">{errors.channel}</p>}
               </div>
 
+              {/* Modo: mensagem única (original) vs sequência (vários disparos) */}
+              {!action && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={!seqMode ? 'default' : 'outline'}
+                    onClick={() => setSeqMode(false)}
+                  >
+                    Mensagem única
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={seqMode ? 'default' : 'outline'}
+                    onClick={() => setSeqMode(true)}
+                  >
+                    <ListOrdered className="h-3.5 w-3.5 mr-1" /> Sequência
+                  </Button>
+                  {seqMode && seqTemplates.length > 0 && (
+                    <Select value="" onValueChange={loadSequence}>
+                      <SelectTrigger className="h-8 w-44 text-xs">
+                        <SelectValue placeholder="Carregar sequência salva" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {seqTemplates.map(tpl => (
+                          <SelectItem key={tpl.id} value={tpl.id}>{tpl.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              )}
+
+              {!seqMode && (
               <div className="space-y-2">
                 <Label htmlFor="message">{t('scheduledActions.message')}</Label>
                 <Textarea
@@ -619,6 +795,112 @@ export function ScheduleActionModal({
                   )}
                 </div>
               </div>
+              )}
+
+              {/* SEQUÊNCIA DE MENSAGENS — vários disparos a partir da data */}
+              {seqMode && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm flex items-center gap-1.5">
+                      <ListOrdered className="h-4 w-4" /> Mensagens da sequência
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={saveSequence}
+                      disabled={savingTpl}
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-1 disabled:opacity-50"
+                    >
+                      <Save className="h-3.5 w-3.5" /> Salvar sequência
+                    </button>
+                  </div>
+
+                  {steps.map((s, i) => (
+                    <div key={i} className="rounded-lg border border-border p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-muted-foreground">Passo {i + 1}</span>
+                        <div className="flex items-center gap-2">
+                          {msgTemplates.length > 0 && (
+                            <Select value="" onValueChange={v => applyMsgTemplate(i, v)}>
+                              <SelectTrigger className="h-7 w-36 text-xs">
+                                <SelectValue placeholder="Usar template" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {msgTemplates.map(tpl => (
+                                  <SelectItem key={tpl.id} value={tpl.id}>{tpl.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          <button
+                            type="button"
+                            title="Salvar esta mensagem como template"
+                            onClick={() => saveStepAsTemplate(i)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <Save className="h-3.5 w-3.5" />
+                          </button>
+                          {steps.length > 1 && (
+                            <button
+                              type="button"
+                              title="Remover passo"
+                              onClick={() => removeStep(i)}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {i === 0 ? (
+                        <p className="text-[11px] text-muted-foreground">
+                          Dispara na data/hora escolhida acima.
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="text-muted-foreground">Enviar</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={s.delayValue}
+                            onChange={e => updateStep(i, { delayValue: Number(e.target.value) || 0 })}
+                            className="h-7 w-16 text-xs"
+                          />
+                          <select
+                            value={s.delayUnit}
+                            onChange={e => updateStep(i, { delayUnit: e.target.value as SeqStep['delayUnit'] })}
+                            className="h-7 rounded-md border border-border bg-background px-2 text-xs"
+                          >
+                            <option value="minutes">minutos</option>
+                            <option value="hours">horas</option>
+                            <option value="days">dias</option>
+                          </select>
+                          <span className="text-muted-foreground">depois do passo anterior</span>
+                        </div>
+                      )}
+
+                      <Textarea
+                        value={s.message}
+                        onChange={e => updateStep(i, { message: e.target.value })}
+                        rows={3}
+                        placeholder="Mensagem deste passo..."
+                        className="text-sm"
+                      />
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={addStep}
+                    className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Adicionar mensagem
+                  </button>
+                  <p className="text-[11px] text-muted-foreground">
+                    Variáveis: <code>{'{{nome}}'}</code> <code>{'{{telefone}}'}</code> etc. Cada passo vira um agendamento.
+                  </p>
+                </div>
+              )}
             </>
           )}
 
