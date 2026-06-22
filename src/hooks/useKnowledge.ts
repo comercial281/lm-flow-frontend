@@ -45,6 +45,7 @@ export interface KnowledgeModule {
   titulo: string;
   descricao: string | null;
   capa_url: string | null;
+  tenant_slug: string | null; // null = global (todos os tenants); slug = só aquele cliente
   ordem: number;
   created_at: string;
   updated_at: string;
@@ -56,12 +57,23 @@ export interface KnowledgeLesson {
   titulo: string;
   descricao_md: string;
   video_url: string;
-  video_provider: 'youtube' | 'vimeo';
+  video_provider: 'youtube' | 'vimeo' | 'upload';
   video_id: string;
+  storage_path: string | null;
   duracao_min: number | null;
   ordem: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface LessonComment {
+  id: string;
+  tenant_slug: string;
+  lesson_id: string;
+  user_ref: string;
+  author_name: string;
+  body: string;
+  created_at: string;
 }
 
 // ── Cache global + invalidation bus ────────────────────────────────────────
@@ -101,6 +113,16 @@ function errMsg(e: unknown): string {
   return 'Erro inesperado';
 }
 
+// Slug do tenant atual (deploy). null/'' = só conteúdo global.
+export const TENANT_SLUG = ((import.meta.env.VITE_TENANT_SLUG as string | undefined) ?? '').trim();
+
+// Identidade do usuário logado (auth Rails) — usada pra filtrar progresso e
+// marcar autoria de comentários no lado da leitura. A escrita real é carimbada
+// pela Edge Function a partir do JWT, nunca confiando no client.
+export function getCurrentUserRef(): string {
+  return (useAuthStore.getState().currentUser?.email ?? '').toLowerCase().trim();
+}
+
 function tenantApiUrl(): string {
   // Usa VITE_AUTH_API_URL (onde vive /api/v1/profile) ou cai pro VITE_API_URL.
   // Espelha a logica do apiAuth (services/core/apiAuth.ts).
@@ -112,8 +134,8 @@ function tenantApiUrl(): string {
 }
 
 async function callAdmin(
-  resource: 'categories' | 'docs' | 'modules' | 'lessons' | 'links',
-  op: 'create' | 'update' | 'delete',
+  resource: 'categories' | 'docs' | 'modules' | 'lessons' | 'links' | 'progress' | 'comments' | 'upload',
+  op: 'create' | 'update' | 'delete' | 'set' | 'unset' | 'sign',
   payload: Record<string, unknown>,
 ): Promise<unknown> {
   const token = useAuthStore.getState().accessToken;
@@ -329,10 +351,13 @@ export function useDeleteDoc() {
 // ── MODULOS ────────────────────────────────────────────────────────────────
 
 export function useModules() {
-  return useQuery<KnowledgeModule[]>('knowledge_modules', async () => {
-    const { data, error } = await supabaseLmHub
-      .from('knowledge_modules')
-      .select('*')
+  return useQuery<KnowledgeModule[]>(`knowledge_modules:${TENANT_SLUG || 'global'}`, async () => {
+    let query = supabaseLmHub.from('knowledge_modules').select('*');
+    // Mostra módulos globais (tenant_slug null) + os deste cliente específico.
+    query = TENANT_SLUG
+      ? query.or(`tenant_slug.is.null,tenant_slug.eq.${TENANT_SLUG}`)
+      : query.is('tenant_slug', null);
+    const { data, error } = await query
       .order('ordem', { ascending: true })
       .order('created_at', { ascending: false });
     if (error) throw error;
@@ -341,16 +366,32 @@ export function useModules() {
 }
 
 export function useCreateModule() {
-  return useMutation<{ titulo: string; descricao?: string; capa_url?: string }, KnowledgeModule>(
+  return useMutation<
+    { titulo: string; descricao?: string; capa_url?: string; tenant_slug?: string | null },
+    KnowledgeModule
+  >(
     async (input) => {
       const res = (await callAdmin('modules', 'create', {
         titulo: input.titulo,
         descricao: input.descricao ?? null,
         capa_url: input.capa_url ?? null,
+        tenant_slug: input.tenant_slug ?? null,
       })) as { data: KnowledgeModule };
       return res.data;
     },
     { successMessage: 'Modulo criado', invalidateKeys: ['knowledge_modules'] },
+  );
+}
+
+export function useUpdateModule() {
+  return useMutation<
+    { id: string; titulo?: string; descricao?: string | null; capa_url?: string | null; tenant_slug?: string | null; ordem?: number },
+    void
+  >(
+    async (input) => {
+      await callAdmin('modules', 'update', input);
+    },
+    { invalidateKeys: ['knowledge_modules'] },
   );
 }
 
@@ -382,6 +423,25 @@ export function useLessons(moduleId: string | null) {
   );
 }
 
+// Todas as aulas dos módulos visíveis — usado pra calcular progresso no catálogo.
+export function useAllLessons(moduleIds: string[]) {
+  const key = `knowledge_lessons:all:${moduleIds.slice().sort().join(',')}`;
+  return useQuery<KnowledgeLesson[]>(
+    key,
+    async () => {
+      if (moduleIds.length === 0) return [];
+      const { data, error } = await supabaseLmHub
+        .from('knowledge_lessons')
+        .select('*')
+        .in('module_id', moduleIds)
+        .order('ordem', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as KnowledgeLesson[];
+    },
+    moduleIds.length > 0,
+  );
+}
+
 import { parseVideoUrl } from '@/pages/Customer/Tutorials/_internal/lib';
 
 export function useCreateLesson() {
@@ -409,5 +469,134 @@ export function useDeleteLesson() {
       await callAdmin('lessons', 'delete', { id });
     },
     { successMessage: 'Aula removida', invalidateKeys: ['knowledge_lessons'] },
+  );
+}
+
+export function useUpdateLesson() {
+  return useMutation<
+    { id: string; titulo?: string; descricao_md?: string; duracao_min?: number | null; ordem?: number },
+    void
+  >(
+    async (input) => {
+      await callAdmin('lessons', 'update', input);
+    },
+    { invalidateKeys: ['knowledge_lessons'] },
+  );
+}
+
+// Upload de vídeo direto: pede signed URL à edge (super-admin), sobe o arquivo
+// pro bucket knowledge-videos e cria a aula apontando pra URL pública.
+export function useUploadLessonVideo() {
+  return useMutation<
+    {
+      module_id: string;
+      titulo: string;
+      file: File;
+      descricao_md?: string;
+      duracao_min?: number;
+    },
+    void
+  >(
+    async (input) => {
+      const signed = (await callAdmin('upload', 'sign', {
+        filename: input.file.name,
+        tenant_slug: TENANT_SLUG || 'global',
+      })) as { data: { path: string; token: string; signedUrl: string; publicUrl: string } };
+      const { path, token, publicUrl } = signed.data;
+
+      const { error: upErr } = await supabaseLmHub.storage
+        .from('knowledge-videos')
+        .uploadToSignedUrl(path, token, input.file);
+      if (upErr) throw upErr;
+
+      await callAdmin('lessons', 'create', {
+        module_id: input.module_id,
+        titulo: input.titulo,
+        descricao_md: input.descricao_md ?? '',
+        video_url: publicUrl,
+        video_provider: 'upload',
+        video_id: path,
+        storage_path: path,
+        duracao_min: input.duracao_min ?? null,
+      });
+    },
+    { successMessage: 'Aula enviada', invalidateKeys: ['knowledge_lessons'] },
+  );
+}
+
+// ── PROGRESSO (por usuário do tenant) ───────────────────────────────────────
+
+// Mapa { lesson_id: true } das aulas concluídas pelo usuário logado.
+export function useProgress() {
+  const ref = getCurrentUserRef();
+  return useQuery<Record<string, boolean>>(
+    `knowledge_progress:${TENANT_SLUG}:${ref}`,
+    async () => {
+      if (!ref) return {};
+      const { data, error } = await supabaseLmHub
+        .from('knowledge_lesson_progress_flow')
+        .select('lesson_id')
+        .eq('tenant_slug', TENANT_SLUG)
+        .eq('user_ref', ref);
+      if (error) throw error;
+      const map: Record<string, boolean> = {};
+      (data ?? []).forEach((r: { lesson_id: string }) => {
+        map[r.lesson_id] = true;
+      });
+      return map;
+    },
+  );
+}
+
+export function useToggleProgress() {
+  return useMutation<{ lesson_id: string; done: boolean }, void>(
+    async ({ lesson_id, done }) => {
+      await callAdmin('progress', done ? 'set' : 'unset', {
+        tenant_slug: TENANT_SLUG,
+        lesson_id,
+      });
+    },
+    { invalidateKeys: ['knowledge_progress'] },
+  );
+}
+
+// ── COMENTÁRIOS (por aula, escopados ao tenant) ─────────────────────────────
+
+export function useComments(lessonId: string | null) {
+  return useQuery<LessonComment[]>(
+    `knowledge_comments:${lessonId ?? 'null'}`,
+    async () => {
+      const { data, error } = await supabaseLmHub
+        .from('knowledge_lesson_comments')
+        .select('*')
+        .eq('tenant_slug', TENANT_SLUG)
+        .eq('lesson_id', lessonId!)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as LessonComment[];
+    },
+    lessonId !== null,
+  );
+}
+
+export function useCreateComment() {
+  return useMutation<{ lesson_id: string; body: string }, void>(
+    async (input) => {
+      await callAdmin('comments', 'create', {
+        tenant_slug: TENANT_SLUG,
+        lesson_id: input.lesson_id,
+        body: input.body,
+      });
+    },
+    { successMessage: 'Comentário enviado', invalidateKeys: ['knowledge_comments'] },
+  );
+}
+
+export function useDeleteComment() {
+  return useMutation<string, void>(
+    async (id) => {
+      await callAdmin('comments', 'delete', { id });
+    },
+    { successMessage: 'Comentário removido', invalidateKeys: ['knowledge_comments'] },
   );
 }
