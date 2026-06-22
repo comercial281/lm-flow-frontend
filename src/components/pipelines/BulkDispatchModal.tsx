@@ -45,6 +45,8 @@ import {
   BroadcastVariation,
   AudienceMode,
 } from '@/services/broadcasts/broadcastsService';
+import { labelsService } from '@/services/contacts/labelsService';
+import type { Label as LabelType } from '@/types/settings';
 
 interface BulkDispatchModalProps {
   open: boolean;
@@ -111,6 +113,8 @@ export default function BulkDispatchModal({
   // Audiência
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('pipeline');
   const [stageId, setStageId] = useState('');
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  const [availableLabels, setAvailableLabels] = useState<LabelType[]>([]);
   const [recipientCount, setRecipientCount] = useState<number | null>(null);
   const [countingAudience, setCountingAudience] = useState(false);
 
@@ -138,6 +142,7 @@ export default function BulkDispatchModal({
     setStep('audience');
     setAudienceMode('pipeline');
     setStageId('');
+    setSelectedLabels([]);
     setRecipientCount(null);
     setVariations([{ kind: 'text', text: '' }]);
     setMinS(4);
@@ -167,16 +172,29 @@ export default function BulkDispatchModal({
       const hasActive = list.some(c => c.status === 'running' || c.status === 'paused');
       setView(hasActive ? 'list' : 'new');
     });
+    // Etiquetas disponíveis pra segmentar por tag.
+    labelsService
+      .getLabels()
+      .then(res => setAvailableLabels(Array.isArray(res.data) ? (res.data as LabelType[]) : []))
+      .catch(() => setAvailableLabels([]));
   }, [open, refreshList, resetWizard]);
 
   // Conta destinatários quando a audiência muda (só na view de criação).
   const audiencePayload = useMemo(
-    () => ({ mode: audienceMode, stage_id: audienceMode === 'stage' ? stageId : undefined }),
-    [audienceMode, stageId],
+    () => ({
+      mode: audienceMode,
+      stage_id: audienceMode === 'stage' ? stageId : undefined,
+      labels: audienceMode === 'tag' ? selectedLabels : undefined,
+    }),
+    [audienceMode, stageId, selectedLabels],
   );
   useEffect(() => {
     if (!open || view !== 'new') return;
     if (audienceMode === 'stage' && !stageId) {
+      setRecipientCount(null);
+      return;
+    }
+    if (audienceMode === 'tag' && selectedLabels.length === 0) {
       setRecipientCount(null);
       return;
     }
@@ -265,7 +283,11 @@ export default function BulkDispatchModal({
       await broadcastsService.create({
         name: undefined,
         pipeline_id: pipelineId,
-        audience: { mode: audienceMode, stage_id: audienceMode === 'stage' ? stageId : undefined },
+        audience: {
+          mode: audienceMode,
+          stage_id: audienceMode === 'stage' ? stageId : undefined,
+          labels: audienceMode === 'tag' ? selectedLabels : undefined,
+        },
         variations: validVariations.map(v => ({ kind: v.kind, text: v.text, media_url: v.media_url })),
         min_interval_seconds: minS,
         max_interval_seconds: maxS,
@@ -423,9 +445,50 @@ export default function BulkDispatchModal({
                     <SelectContent>
                       <SelectItem value="pipeline">Todos os leads do pipeline</SelectItem>
                       <SelectItem value="stage">Uma etapa específica</SelectItem>
+                      <SelectItem value="tag">Por etiqueta (tag)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {audienceMode === 'tag' && (
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Etiquetas</Label>
+                    {availableLabels.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Nenhuma etiqueta cadastrada ainda.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {availableLabels.map(l => {
+                          const active = selectedLabels.includes(l.title);
+                          const color = l.color || '#7c3aed';
+                          return (
+                            <button
+                              key={l.title}
+                              type="button"
+                              onClick={() =>
+                                setSelectedLabels(prev =>
+                                  prev.includes(l.title) ? prev.filter(t => t !== l.title) : [...prev, l.title],
+                                )
+                              }
+                              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border transition-colors ${
+                                active ? 'text-white' : 'text-foreground hover:bg-muted'
+                              }`}
+                              style={
+                                active
+                                  ? { backgroundColor: color, borderColor: color }
+                                  : { borderColor: `${color}66` }
+                              }
+                            >
+                              {l.title}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <p className="text-[11px] text-muted-foreground">
+                      Recebe quem tem qualquer uma das etiquetas marcadas.
+                    </p>
+                  </div>
+                )}
 
                 {audienceMode === 'stage' && (
                   <div className="space-y-1.5">
@@ -451,7 +514,11 @@ export default function BulkDispatchModal({
                       <Loader2 className="w-4 h-4 animate-spin" /> Contando destinatários...
                     </>
                   ) : recipientCount === null ? (
-                    <span className="text-muted-foreground">Escolha a etapa pra contar os destinatários.</span>
+                    <span className="text-muted-foreground">
+                      {audienceMode === 'tag'
+                        ? 'Marque ao menos uma etiqueta pra contar os destinatários.'
+                        : 'Escolha a etapa pra contar os destinatários.'}
+                    </span>
                   ) : (
                     <>
                       <Users className="w-4 h-4 text-primary" />

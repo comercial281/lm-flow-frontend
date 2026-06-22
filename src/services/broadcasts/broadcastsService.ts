@@ -1,7 +1,7 @@
 import api from '@/services/core/api';
 import { extractData } from '@/utils/apiHelpers';
 
-export type AudienceMode = 'pipeline' | 'stage' | 'manual';
+export type AudienceMode = 'pipeline' | 'stage' | 'manual' | 'tag';
 export type BroadcastStatus = 'running' | 'paused' | 'completed' | 'cancelled' | 'failed';
 
 export interface BroadcastVariation {
@@ -34,6 +34,8 @@ export interface BroadcastAudience {
   mode: AudienceMode;
   stage_id?: string;
   contact_ids?: string[];
+  /** Etiquetas (tags) da conversa quando mode === 'tag'. Match em qualquer uma. */
+  labels?: string[];
 }
 
 export interface CreateBroadcastPayload {
