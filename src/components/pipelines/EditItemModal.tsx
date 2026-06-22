@@ -41,6 +41,7 @@ import EditTaskModal from './tasks/EditTaskModal';
 import CardConversationTab from './CardConversationTab';
 import CardActionsPanel from './CardActionsPanel';
 import CardNotesTab from './CardNotesTab';
+import CreateRoletaModal from './CreateRoletaModal';
 import CardPropertyInterests from './CardPropertyInterests';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
@@ -112,6 +113,7 @@ export default function EditItemModal({
   // o round-robin fake. Escolher uma atribui o lead via sorteio ponderado.
   const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
   const [assigningRoleta, setAssigningRoleta] = useState(false);
+  const [showCreateRoleta, setShowCreateRoleta] = useState(false);
 
   // Tags/labels
   const [availableLabels, setAvailableLabels] = useState<LabelType[]>([]);
@@ -421,8 +423,10 @@ export default function EditItemModal({
   const canCreateLabel = trimmedLabelSearch.length > 0 && !exactLabelExists;
 
   // Conta as abas visíveis pra ajustar o grid e não deixar buraco quando uma feature está off.
-  // Fixas: Detalhes, Conversa, Origem. Opcionais: Imóveis, Tarefas, Observações.
-  const visibleTabsCount = 3 + (canProperties ? 1 : 0) + (canTasks ? 1 : 0) + (canNotes ? 1 : 0);
+  // Fixas: Detalhes, Conversa, Origem. Opcionais: Imóveis, Retorno.
+  // Observações saiu da barra de abas — agora vive no painel direito do Detalhes,
+  // dividindo espaço com o Histórico.
+  const visibleTabsCount = 3 + (canProperties ? 1 : 0) + (canTasks ? 1 : 0);
   const tabsGridClass = {
     3: 'grid-cols-3',
     4: 'grid-cols-4',
@@ -505,18 +509,12 @@ export default function EditItemModal({
             </TabsTrigger>
             {canTasks && (
               <TabsTrigger value="tasks" className="relative">
-                {t('editItem.tabs.tasks')}
+                Retorno
                 {(pendingCount > 0 || overdueCount > 0) && (
                   <span className="ml-1 px-1 py-0.5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
                     {pendingCount + overdueCount}
                   </span>
                 )}
-              </TabsTrigger>
-            )}
-            {canNotes && (
-              <TabsTrigger value="notes" className="flex items-center gap-1">
-                <MessageSquare className="h-3 w-3" />
-                Observações
               </TabsTrigger>
             )}
           </TabsList>
@@ -661,27 +659,26 @@ export default function EditItemModal({
                     Roleta de atendimento
                     {assigningRoleta && <Loader2 className="h-3 w-3 animate-spin" />}
                   </Label>
-                  {roletas.length === 0 ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 text-sm justify-start"
-                      onClick={() => { onOpenChange(false); navigate('/settings/roleta-config'); }}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1" /> Criar roleta
-                    </Button>
-                  ) : (
-                    <Select value="" onValueChange={handleAssignViaRoleta} disabled={assigningRoleta}>
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Atribuir por uma roleta" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roletas.map(r => (
-                          <SelectItem key={r.id} value={r.id}>{r.inbox_name || 'Roleta'}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                  <Select
+                    value=""
+                    onValueChange={(v) => {
+                      if (v === '__create__') { setShowCreateRoleta(true); return; }
+                      handleAssignViaRoleta(v);
+                    }}
+                    disabled={assigningRoleta}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder={roletas.length ? 'Atribuir por uma roleta' : 'Nenhuma roleta — criar uma'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roletas.map(r => (
+                        <SelectItem key={r.id} value={r.id}>{r.inbox_name || 'Roleta'}</SelectItem>
+                      ))}
+                      <SelectItem value="__create__" className="text-primary font-medium">
+                        + Criar roleta
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Fase */}
@@ -723,47 +720,65 @@ export default function EditItemModal({
                 </div>
               </div>
 
-              {/* RIGHT: history */}
+              {/* RIGHT: histórico (em cima) + observações (embaixo), dividindo a altura */}
               <div className="flex flex-col overflow-hidden border-l border-border pl-4 min-h-0">
-                <div className="flex items-center justify-between mb-3 shrink-0">
-                  <h4 className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground uppercase tracking-wide">
-                    <History className="h-3.5 w-3.5" />
-                    Histórico
-                  </h4>
-                  <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => loadHistory()} disabled={historyLoading}>
-                    <RefreshCw className={`h-3 w-3 ${historyLoading ? 'animate-spin' : ''}`} />
-                  </Button>
-                </div>
-                <div className="flex-1 overflow-y-auto space-y-2">
-                  {historyLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : historyEvents.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-12">
-                      Nenhuma atividade registrada.
-                    </p>
-                  ) : (
-                    historyEvents.map(ev => (
-                      <div key={ev.id} className="flex gap-2 text-xs">
-                        <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-1">
-                            <span className="font-medium truncate">{ev.eventName}</span>
-                            <span className="text-[10px] text-muted-foreground shrink-0 whitespace-nowrap">
-                              {new Date(ev.occurredAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                          {ev.properties && Object.keys(ev.properties).length > 0 && (
-                            <p className="text-muted-foreground truncate">
-                              {Object.entries(ev.properties).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(' · ')}
-                            </p>
-                          )}
-                        </div>
+                {/* Histórico */}
+                <div className={`flex flex-col overflow-hidden min-h-0 ${canNotes ? 'flex-1 pb-3' : 'flex-1'}`}>
+                  <div className="flex items-center justify-between mb-3 shrink-0">
+                    <h4 className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground uppercase tracking-wide">
+                      <History className="h-3.5 w-3.5" />
+                      Histórico
+                    </h4>
+                    <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => loadHistory()} disabled={historyLoading}>
+                      <RefreshCw className={`h-3 w-3 ${historyLoading ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto space-y-2">
+                    {historyLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                       </div>
-                    ))
-                  )}
+                    ) : historyEvents.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-12">
+                        Nenhuma atividade registrada.
+                      </p>
+                    ) : (
+                      historyEvents.map(ev => (
+                        <div key={ev.id} className="flex gap-2 text-xs">
+                          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-1">
+                              <span className="font-medium truncate">{ev.eventName}</span>
+                              <span className="text-[10px] text-muted-foreground shrink-0 whitespace-nowrap">
+                                {new Date(ev.occurredAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            {ev.properties && Object.keys(ev.properties).length > 0 && (
+                              <p className="text-muted-foreground truncate">
+                                {Object.entries(ev.properties).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
+
+                {/* Observações (comentários da equipe) — dividindo o espaço, abaixo do histórico */}
+                {canNotes && (
+                  <div className="flex flex-col overflow-hidden min-h-0 flex-1 border-t border-border pt-3">
+                    <h4 className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground uppercase tracking-wide mb-3 shrink-0">
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      Observações
+                    </h4>
+                    <div className="flex-1 overflow-hidden min-h-0">
+                      <CardNotesTab
+                        contactId={item.contact?.id ? String(item.contact.id) : ((item.conversation as any)?.contact?.id ? String((item.conversation as any).contact.id) : null)}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>
@@ -856,16 +871,7 @@ export default function EditItemModal({
             })()}
           </TabsContent>
 
-          {/* Observações (comentários da equipe) */}
-          {canNotes && (
-            <TabsContent value="notes" className="flex-1 overflow-hidden mt-0 pt-3">
-              {item && (
-                <CardNotesTab
-                  contactId={item.contact?.id ? String(item.contact.id) : ((item.conversation as any)?.contact?.id ? String((item.conversation as any).contact.id) : null)}
-                />
-              )}
-            </TabsContent>
-          )}
+          {/* Observações saiu daqui: agora vive no painel direito da aba Detalhes. */}
 
           {/* Services Tab (hidden from tabs, kept for data compat) */}
           <TabsContent value="services" className="py-4 space-y-4 overflow-y-auto max-h-[60vh]">
@@ -970,6 +976,14 @@ export default function EditItemModal({
           />
         </>
       )}
+
+      {/* Criação de roleta direto do card (sem ir pra Configurações) */}
+      <CreateRoletaModal
+        open={showCreateRoleta}
+        onOpenChange={setShowCreateRoleta}
+        users={users}
+        onCreated={(roleta) => setRoletas(prev => [...prev, roleta])}
+      />
     </Dialog>
   );
 }
