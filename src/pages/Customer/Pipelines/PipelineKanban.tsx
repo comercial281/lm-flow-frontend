@@ -542,6 +542,17 @@ export default function PipelineKanban() {
   const resolveItemAvatar = (item: PipelineItem): string | undefined => {
     return item.contact?.avatar_url || item.conversation?.contact?.avatar_url || undefined;
   };
+  // ID único do lead pro card. Usa o id do contato (a pessoa), não o número da
+  // conversa: lead importado sem WhatsApp não tem conversa, então display_id caía
+  // tudo no mesmo número. Contato é único por lead e estável.
+  const resolveItemRef = (item: PipelineItem): string => {
+    const id =
+      item.contact?.id ||
+      item.conversation?.contact?.id ||
+      item.item_id ||
+      item.id;
+    return String(id).padStart(4, '0');
+  };
   // Data de chegada do lead no pipeline (quando o card entrou).
   const formatArrivalDate = (item: PipelineItem): string | null => {
     const raw = item.entered_at
@@ -1310,7 +1321,12 @@ export default function PipelineKanban() {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={async () => {
-                                      await navigator.clipboard.writeText(String(item.id));
+                                      const ref =
+                                        item.contact?.id ||
+                                        item.conversation?.contact?.id ||
+                                        item.item_id ||
+                                        item.id;
+                                      await navigator.clipboard.writeText(String(ref));
                                       toast.success(t('kanban.idCopied'));
                                     }}
                                   >
@@ -1391,7 +1407,7 @@ export default function PipelineKanban() {
                                   {resolveItemName(item)}
                                 </h4>
                                 <span className="text-xs text-muted-foreground font-medium">
-                                  #{item.conversation?.display_id}
+                                  #{resolveItemRef(item)}
                                 </span>
                               </div>
                               {/* Tempo sem contato (medido pela conversa da instância WhatsApp) */}

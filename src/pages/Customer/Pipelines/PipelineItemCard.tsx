@@ -149,7 +149,12 @@ const PipelineItemCardComponent = memo(({
               {name}
             </h4>
             <span className="text-xs text-muted-foreground font-medium">
-              #{item.conversation?.display_id}
+              #{String(
+                item.contact?.id ||
+                  item.conversation?.contact?.id ||
+                  item.item_id ||
+                  item.id
+              ).padStart(4, '0')}
             </span>
           </div>
           {daysNoContact && daysNoContact >= 3 && (
