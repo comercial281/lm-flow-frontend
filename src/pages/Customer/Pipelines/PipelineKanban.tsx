@@ -434,17 +434,27 @@ export default function PipelineKanban() {
     }
   };
 
-  // Drop na área da coluna (fora de um card): lead vai pro TOPO da coluna
-  // destino. Soltar na mesma coluna (área vazia) não muda nada.
+  // Drop na área da coluna (fora de um card):
+  // - outra coluna: lead vai pro TOPO da coluna destino.
+  // - mesma coluna (área vazia abaixo dos cards): manda o card pro FUNDO.
+  //   Sem isso, arrastar pro espaço vazio embaixo não fazia nada e dava a
+  //   impressão de que o card "não desce".
   const handleDrop = (e: React.DragEvent, targetStageId: string) => {
     e.preventDefault();
     if (!draggedItem) return;
+    const targetStage = stages.find(s => s.id === targetStageId);
+    const items = (targetStage?.items || []).filter(i => i.id !== draggedItem.id);
     if (draggedItem.stage_id === targetStageId) {
-      finishDrag();
+      // mesma coluna: já está sozinho na coluna → nada a fazer
+      if (!items.length) {
+        finishDrag();
+        return;
+      }
+      // fundo da coluna: position menor que a do último card
+      const newPos = itemPos(items[items.length - 1]) - 1;
+      void commitReorder(targetStageId, newPos, items.length);
       return;
     }
-    const targetStage = stages.find(s => s.id === targetStageId);
-    const items = targetStage?.items || [];
     const newPos = items.length ? itemPos(items[0]) + 1 : Date.now() / 1000;
     void commitReorder(targetStageId, newPos, 0);
   };
