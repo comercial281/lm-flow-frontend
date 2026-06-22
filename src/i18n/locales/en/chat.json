@@ -730,7 +730,8 @@
       "created_at": "Creation Date",
       "last_activity_at": "Last Activity",
       "priority": "Priority",
-      "pipeline_id": "Pipeline"
+      "pipeline_id": "Pipeline",
+      "pipeline_stage_id": "Stage (Column)"
     },
     "options": {
       "status": {

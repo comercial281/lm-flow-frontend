@@ -36,6 +36,9 @@ import {
   Upload,
   Send,
   Paperclip,
+  Save,
+  Bookmark,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PipelineStage } from '@/types/analytics';
@@ -120,6 +123,48 @@ export default function BulkDispatchModal({
 
   // Mensagens
   const [variations, setVariations] = useState<BroadcastVariation[]>([{ kind: 'text', text: '' }]);
+
+  // Modelos de envio salvos (reutilizáveis). Guardados no navegador — por enquanto
+  // por dispositivo; dá pra promover a compartilhado no backend depois.
+  const TPL_KEY = 'lmflow:broadcast-msg-templates';
+  const [msgTemplates, setMsgTemplates] = useState<{ name: string; variations: BroadcastVariation[] }[]>([]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(TPL_KEY);
+      if (raw) setMsgTemplates(JSON.parse(raw));
+    } catch {
+      /* localStorage indisponível */
+    }
+  }, []);
+  const persistTemplates = (list: { name: string; variations: BroadcastVariation[] }[]) => {
+    setMsgTemplates(list);
+    try {
+      localStorage.setItem(TPL_KEY, JSON.stringify(list));
+    } catch {
+      /* ignore */
+    }
+  };
+  const saveCurrentAsTemplate = () => {
+    if (!variations.some(v => v.text?.trim() || v.media_url)) {
+      toast.error('Escreva a mensagem antes de salvar o modelo.');
+      return;
+    }
+    const name = window.prompt('Nome do modelo:')?.trim();
+    if (!name) return;
+    const next = [
+      ...msgTemplates.filter(t => t.name !== name),
+      { name, variations: JSON.parse(JSON.stringify(variations)) },
+    ];
+    persistTemplates(next);
+    toast.success('Modelo salvo');
+  };
+  const applyTemplate = (tpl: { name: string; variations: BroadcastVariation[] }) => {
+    setVariations(
+      tpl.variations?.length ? JSON.parse(JSON.stringify(tpl.variations)) : [{ kind: 'text', text: '' }],
+    );
+    toast.success(`Modelo "${tpl.name}" aplicado`);
+  };
+  const deleteTemplate = (name: string) => persistTemplates(msgTemplates.filter(t => t.name !== name));
 
   // Cadência
   const [minS, setMinS] = useState(4);
@@ -563,6 +608,47 @@ export default function BulkDispatchModal({
                   <span className="text-xs text-muted-foreground">
                     Use <code className="text-primary">{'{{nome}}'}</code> pro primeiro nome do lead
                   </span>
+                </div>
+
+                {/* Modelos de envio: salvar o que está escrito e reaproveitar depois */}
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border p-2">
+                  <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                    <Bookmark className="w-3.5 h-3.5" /> Modelos
+                  </span>
+                  {msgTemplates.length === 0 && (
+                    <span className="text-xs text-muted-foreground">nenhum salvo ainda</span>
+                  )}
+                  {msgTemplates.map(tpl => (
+                    <span
+                      key={tpl.name}
+                      className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => applyTemplate(tpl)}
+                        className="hover:text-primary"
+                        title="Aplicar este modelo"
+                      >
+                        {tpl.name}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteTemplate(tpl.name)}
+                        className="text-muted-foreground hover:text-destructive"
+                        title="Excluir modelo"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={saveCurrentAsTemplate}
+                    className="ml-auto h-7"
+                  >
+                    <Save className="w-3.5 h-3.5 mr-1" /> Salvar modelo
+                  </Button>
                 </div>
                 {variations.map((v, i) => (
                   <div key={i} className="space-y-2 border border-border rounded-lg p-3">

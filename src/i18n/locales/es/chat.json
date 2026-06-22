@@ -693,7 +693,8 @@
       "created_at": "Fecha de Creación",
       "last_activity_at": "Última Actividad",
       "priority": "Prioridad",
-      "pipeline_id": "Pipeline"
+      "pipeline_id": "Pipeline",
+      "pipeline_stage_id": "Etapa (Columna)"
     },
     "options": {
       "status": {

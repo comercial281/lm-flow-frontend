@@ -12,6 +12,7 @@ import ContactDetails from './ContactDetails';
 // import MacrosList from './MacrosList'; // OCULTO
 
 import EditableContactCustomAttributes from './EditableContactCustomAttributes';
+import ContactTagsManager from './ContactTagsManager';
 
 import ConversationPipelineItem from '@/components/pipelines/ConversationPipelineItem';
 import PipelineManagement from '@/components/chat/contact-sidebar/PipelineManagement';
@@ -616,7 +617,17 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
               </CardHeader>
 
               {showContactAttributes && (
-                <CardContent className="pt-0 px-3 pb-3">
+                <CardContent className="pt-0 px-3 pb-3 space-y-4">
+                  {/* Tags do lead (mesmas globais do card do kanban) */}
+                  <div>
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">Tags</p>
+                    <ContactTagsManager
+                      contactId={String(contact.id)}
+                      conversationId={conversation ? String(conversation.id) : undefined}
+                      initialLabels={(contact as { labels?: Array<{ name?: string; title?: string; color?: string }> }).labels}
+                      onUpdated={onFilterReload}
+                    />
+                  </div>
                   <EditableContactCustomAttributes
                     contact={contact}
                     onContactUpdate={onFilterReload}

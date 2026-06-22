@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import InboxesService from '@/services/channels/inboxesService';
 import chatService from '@/services/chat/chatService';
+import { pipelinesService } from '@/services/pipelines';
 import { Inbox } from '@/types/channels/inbox';
 import type { Pipeline, Label, Team } from '@/types/chat/api';
 
@@ -9,6 +10,7 @@ interface FilterOptions {
   teams: Array<{ label: string; value: string }>;
   labels: Array<{ label: string; value: string }>;
   pipelines: Array<{ label: string; value: string }>;
+  stages: Array<{ label: string; value: string }>;
   loading: boolean;
   error: string | null;
 }
@@ -30,6 +32,7 @@ export const useFilterOptions = (params: UseFilterOptionsParams = {}): FilterOpt
     teams: [],
     labels: [],
     pipelines: [],
+    stages: [],
     loading: false,
     error: null,
   });
@@ -41,13 +44,14 @@ export const useFilterOptions = (params: UseFilterOptionsParams = {}): FilterOpt
       setOptions(prev => ({ ...prev, loading: true, error: null }));
 
       try {
-        // ✅ Carregar inboxes, pipelines, labels e teams
-        const [inboxesResponse, pipelinesResponse, labelsResponse, teamsResponse] =
+        // ✅ Carregar inboxes, pipelines, labels, teams e etapas
+        const [inboxesResponse, pipelinesResponse, labelsResponse, teamsResponse, stagesResponse] =
           await Promise.allSettled([
             InboxesService.list(),
             chatService.getAvailablePipelines(),
             chatService.getAvailableLabels(),
             chatService.getAvailableTeams(),
+            pipelinesService.getPipelines({ include_items: false }),
           ]);
 
         // ✅ Processar inboxes
@@ -108,11 +112,26 @@ export const useFilterOptions = (params: UseFilterOptionsParams = {}): FilterOpt
           );
         }
 
+        // ✅ Processar etapas (coluna) de todos os pipelines → "Pipeline › Etapa"
+        const stages: Array<{ label: string; value: string }> = [];
+        if (stagesResponse.status === 'fulfilled') {
+          const list = stagesResponse.value?.data || [];
+          list.forEach(pipeline => {
+            (pipeline.stages || []).forEach(stage => {
+              stages.push({
+                label: `${pipeline.name} › ${stage.name}`,
+                value: stage.id.toString(),
+              });
+            });
+          });
+        }
+
         setOptions({
           inboxes,
           teams,
           labels,
           pipelines,
+          stages,
           loading: false,
           error: null,
         });
