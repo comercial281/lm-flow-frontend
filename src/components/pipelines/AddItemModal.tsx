@@ -17,11 +17,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@evoapi/design-system';
-import { Search, User, Phone, Mail, MessageSquare } from 'lucide-react';
+import { Search, User, Phone, Mail, MessageSquare, ListChecks, UserPlus } from 'lucide-react';
 import { ConversationForModal, PipelineStage } from '@/types/analytics';
 import { pipelinesService } from '@/services/pipelines';
+import { contactsService } from '@/services/contacts';
 import { toast } from 'sonner';
-import { Contact } from '@/types/contacts';
+import { Contact, ContactFormData } from '@/types/contacts';
+
+// Normaliza telefone para E.164 (backend exige). Limpa tudo que não é dígito e prefixa "+".
+function normalizePhoneE164(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  const digits = trimmed.replace(/\D/g, '');
+  if (!digits) return '';
+  return `+${digits}`;
+}
 
 interface Item {
   id: string;
@@ -79,6 +89,11 @@ export default function AddItemModal({
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
 
+  // Modo: pegar item existente ou criar um lead novo do zero.
+  const [mode, setMode] = useState<'existing' | 'new'>('existing');
+  const [newLead, setNewLead] = useState({ name: '', phone: '', email: '' });
+  const [isCreating, setIsCreating] = useState(false);
+
   // Initialize modal
   useEffect(() => {
     if (open) {
@@ -87,6 +102,8 @@ export default function AddItemModal({
       setSearchQuery('');
       setNotes('');
       setItemType('conversation');
+      setMode('existing');
+      setNewLead({ name: '', phone: '', email: '' });
 
       // Pre-select stage
       if (preselectedStage) {
@@ -173,6 +190,73 @@ export default function AddItemModal({
     }
   };
 
+  // Cria um lead novo do zero e já o adiciona na etapa escolhida.
+  const handleCreateLead = async () => {
+    if (!selectedStage) return;
+    const name = newLead.name.trim();
+    if (!name) {
+      toast.error('Informe ao menos o nome do lead.');
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const payload: ContactFormData = { type: 'person', name };
+      const phone = normalizePhoneE164(newLead.phone);
+      if (phone) payload.phone_number = phone;
+      const email = newLead.email.trim();
+      if (email) payload.email = email;
+
+      const created = (await contactsService.createContact(payload)) as Contact & {
+        contact?: { id: string };
+      };
+      const contactId = created?.id || created?.contact?.id;
+      if (!contactId) throw new Error('Contato criado sem id.');
+
+      try {
+        await pipelinesService.addItemToPipeline(pipelineId, {
+          item_id: contactId,
+          type: 'contact',
+          pipeline_stage_id: selectedStage.id,
+          custom_fields: {},
+          notes: notes || undefined,
+        });
+      } catch (addErr) {
+        // Pode já ter entrado no pipeline automaticamente (auto-enroll do padrão).
+        // Nesse caso, mover pra etapa escolhida em vez de falhar.
+        const e = addErr as { response?: { data?: { error?: { message?: string }; message?: string } } };
+        const addMsg = e?.response?.data?.error?.message || e?.response?.data?.message || '';
+        if (/already in this pipeline/i.test(addMsg)) {
+          const pls = await contactsService.getContactPipelines(contactId);
+          const match = (pls || []).find(p => p.pipeline?.id === pipelineId);
+          const itemId = match?.item?.id;
+          if (itemId && match?.stage?.id !== selectedStage.id) {
+            await pipelinesService.moveItem({
+              item_id: itemId,
+              pipeline_id: pipelineId,
+              from_stage_id: match?.stage?.id,
+              to_stage_id: selectedStage.id,
+            });
+          }
+        } else {
+          throw addErr;
+        }
+      }
+
+      toast.success('Lead criado e adicionado ao pipeline.');
+      onItemAdded();
+      onOpenChange(false);
+    } catch (error) {
+      let errorMessage = 'Não consegui criar o lead.';
+      if (error instanceof Error) errorMessage = error.message;
+      const e = error as { response?: { data?: { error?: { message?: string }; message?: string } } };
+      errorMessage = e?.response?.data?.error?.message || e?.response?.data?.message || errorMessage;
+      toast.error(errorMessage);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   // Get contact color for avatar
   const getContactColor = (name?: string) => {
     if (!name) return '#6B7280';
@@ -229,6 +313,62 @@ export default function AddItemModal({
             </Select>
           </div>
 
+          {/* Mode toggle: pegar existente x criar novo */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={mode === 'existing' ? 'default' : 'outline'}
+              onClick={() => setMode('existing')}
+              className="justify-center"
+            >
+              <ListChecks className="mr-2 h-4 w-4" />
+              Item existente
+            </Button>
+            <Button
+              type="button"
+              variant={mode === 'new' ? 'default' : 'outline'}
+              onClick={() => setMode('new')}
+              className="justify-center"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Criar novo lead
+            </Button>
+          </div>
+
+          {/* MODO: CRIAR LEAD NOVO */}
+          {mode === 'new' && (
+            <div className="grid gap-3">
+              <div className="grid gap-2">
+                <Label>Nome *</Label>
+                <Input
+                  placeholder="Nome do lead"
+                  value={newLead.name}
+                  onChange={e => setNewLead(p => ({ ...p, name: e.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Telefone (WhatsApp)</Label>
+                <Input
+                  placeholder="ex: 5543998196577"
+                  value={newLead.phone}
+                  onChange={e => setNewLead(p => ({ ...p, phone: e.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>E-mail</Label>
+                <Input
+                  type="email"
+                  placeholder="email@exemplo.com"
+                  value={newLead.email}
+                  onChange={e => setNewLead(p => ({ ...p, email: e.target.value }))}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* MODO: ITEM EXISTENTE */}
+          {mode === 'existing' && (
+          <>
           {/* Item Type Selection */}
           <div className="grid gap-2">
             <Label>{t('addItem.itemType')}</Label>
@@ -359,6 +499,8 @@ export default function AddItemModal({
               )}
             </div>
           </div>
+          </>
+          )}
 
           {/* Notes */}
           <div className="grid gap-2">
@@ -373,12 +515,25 @@ export default function AddItemModal({
         </div>
 
         <DialogFooter className="flex-shrink-0 mt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isAdding}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isAdding || isCreating}
+          >
             {t('addItem.cancel')}
           </Button>
-          <Button onClick={handleAddItem} disabled={!canAddItem || isAdding}>
-            {isAdding ? t('addItem.adding') : t('addItem.add')}
-          </Button>
+          {mode === 'new' ? (
+            <Button
+              onClick={handleCreateLead}
+              disabled={!selectedStage || !newLead.name.trim() || isCreating}
+            >
+              {isCreating ? 'Criando...' : 'Criar e adicionar'}
+            </Button>
+          ) : (
+            <Button onClick={handleAddItem} disabled={!canAddItem || isAdding}>
+              {isAdding ? t('addItem.adding') : t('addItem.add')}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
