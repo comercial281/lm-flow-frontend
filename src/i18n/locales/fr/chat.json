@@ -318,9 +318,10 @@
         "description": "Gérer l'entonnoir de vente"
       },
       "contactNotes": {
-        "title": "Notes du Contact",
-        "description": "Annotations importantes",
-        "noNotes": "Aucune note ajoutée pour le moment"
+        "title": "Commentaires",
+        "description": "Commentaires du lead (synchronisés avec la carte)",
+        "noNotes": "Aucun commentaire pour le moment",
+        "placeholder": "Écrire un commentaire..."
       },
       "previousConversations": {
         "title": "Conversations Précédentes",

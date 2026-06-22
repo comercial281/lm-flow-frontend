@@ -287,7 +287,11 @@ const ChatHeader = ({
           >
             <ContactAvatar contact={conversation.contact} />
           </div>
-          <div>
+          <div
+            className="cursor-pointer rounded-md px-1 -mx-1 hover:bg-muted/60 transition-colors"
+            onClick={onContactSidebarOpen}
+            title={t('chatHeader.openContactInfo', 'Ver dados do contato')}
+          >
             <h3 className="font-semibold">
               {conversation.contact?.name || t('chatHeader.contactNoName')}
             </h3>

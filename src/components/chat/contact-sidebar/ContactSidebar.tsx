@@ -5,14 +5,13 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { Button } from '@evoapi/design-system/button';
 import { Card, CardHeader, CardContent } from '@evoapi/design-system/card';
 import { Badge } from '@evoapi/design-system/badge';
-import { X, User, FileText, MessageSquare, Clock, ChevronDown, GitBranch, Tag, Info, Megaphone, ExternalLink } from 'lucide-react';
+import { X, User, FileText, MessageSquare, Clock, ChevronDown, GitBranch, Tag, Megaphone, ExternalLink } from 'lucide-react';
 
 import ContactHeader from './ContactHeader';
 import ContactDetails from './ContactDetails';
 // import MacrosList from './MacrosList'; // OCULTO
 
 import EditableContactCustomAttributes from './EditableContactCustomAttributes';
-import EditableConversationCustomAttributes from './EditableConversationCustomAttributes';
 
 import ConversationPipelineItem from '@/components/pipelines/ConversationPipelineItem';
 import PipelineManagement from '@/components/chat/contact-sidebar/PipelineManagement';
@@ -528,14 +527,14 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
             )}
           </Card>
 
-          {/* 6. Conversation Custom Attributes - Atributos personalizados da conversa */}
+          {/* 6. Origem - de onde veio o lead + todos os dados da conversa */}
           {conversation && (
             <Card>
               <CardHeader className="pb-2">
                 <CollapsibleHeader
-                  title={t('contactSidebar.sections.conversationAttributes.title')}
-                  description={t('contactSidebar.sections.conversationAttributes.description')}
-                  icon={<Info className="h-4 w-4 text-cyan-500" />}
+                  title="Origem"
+                  description="De onde veio o lead e todos os dados"
+                  icon={<Megaphone className="h-4 w-4 text-cyan-500" />}
                   isOpen={showConversationAttributes}
                   onToggle={() => setShowConversationAttributes(!showConversationAttributes)}
                 />
@@ -543,10 +542,61 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
 
               {showConversationAttributes && (
                 <CardContent className="pt-0 px-3 pb-3">
-                  <EditableConversationCustomAttributes
-                    conversation={conversation}
-                    onConversationUpdate={onFilterReload}
-                  />
+                  {(() => {
+                    const add = (conversation.additional_attributes || {}) as Record<string, unknown>;
+                    const ref = add.ad_referral as Record<string, unknown> | undefined;
+                    // Origem principal: anúncio (CTWA) > canal/inbox
+                    const originLabel = ref
+                      ? `Anúncio ${ref.source_app === 'instagram' ? 'Instagram' : 'Facebook'}`
+                      : conversation.inbox_name || 'WhatsApp';
+                    // Achata os dados em pares chave/valor legíveis (sem objetos crus).
+                    const rows: Array<{ k: string; v: string }> = [];
+                    const pushVal = (k: string, v: unknown) => {
+                      if (v == null || v === '') return;
+                      if (typeof v === 'object') return; // objetos aninhados tratados à parte
+                      rows.push({ k, v: String(v) });
+                    };
+                    Object.entries(add).forEach(([k, v]) => {
+                      if (k === 'ad_referral') return;
+                      pushVal(k, v);
+                    });
+                    if (ref) Object.entries(ref).forEach(([k, v]) => pushVal(`anúncio.${k}`, v));
+                    const custom = (conversation.custom_attributes || {}) as Record<string, unknown>;
+                    Object.entries(custom).forEach(([k, v]) => pushVal(k, v));
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Origem</span>
+                          <span className="font-medium text-right max-w-[60%] truncate" title={originLabel}>
+                            {originLabel}
+                          </span>
+                        </div>
+                        {Boolean(ref?.source_url) && (
+                          <a
+                            href={String(ref!.source_url)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-xs text-orange-600 hover:underline"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Ver anúncio original
+                          </a>
+                        )}
+                        {rows.length === 0 ? (
+                          <div className="text-xs text-muted-foreground">Sem dados adicionais.</div>
+                        ) : (
+                          rows.map(({ k, v }) => (
+                            <div key={k} className="flex justify-between gap-2 text-xs">
+                              <span className="text-muted-foreground break-all">{k}</span>
+                              <span className="font-medium text-right max-w-[60%] break-all" title={v}>
+                                {v}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               )}
             </Card>

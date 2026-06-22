@@ -131,6 +131,7 @@ export default function BulkDispatchModal({
   // Mídia + teste
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   const fileRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const textRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
   const [testPhone, setTestPhone] = useState('');
   const [testing, setTesting] = useState(false);
 
@@ -230,6 +231,24 @@ export default function BulkDispatchModal({
     setVariations(vs => (vs.length >= 4 ? vs : [...vs, { kind: 'text', text: '' }]));
   const removeVariation = (i: number) =>
     setVariations(vs => (vs.length <= 1 ? vs : vs.filter((_, idx) => idx !== i)));
+
+  // Insere a variável (ex: {{nome}}) na posição do cursor do textarea da versão i.
+  const insertVariable = (i: number, token: string) => {
+    const el = textRefs.current[i];
+    const cur = variations[i]?.text || '';
+    if (!el) {
+      updateVariation(i, { text: cur + token });
+      return;
+    }
+    const start = el.selectionStart ?? cur.length;
+    const end = el.selectionEnd ?? cur.length;
+    updateVariation(i, { text: cur.slice(0, start) + token + cur.slice(end) });
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + token.length;
+      el.setSelectionRange(pos, pos);
+    });
+  };
 
   const handleUpload = async (i: number, file?: File) => {
     if (!file) return;
@@ -586,14 +605,27 @@ export default function BulkDispatchModal({
 
                     {/* texto (ou legenda da mídia); áudio não tem texto */}
                     {v.kind !== 'audio' && (
-                      <textarea
-                        value={v.text}
-                        onChange={e => updateVariation(i, { text: e.target.value })}
-                        placeholder={
-                          v.kind === 'text' ? 'Oi {{nome}}, tudo bem? ...' : 'Legenda (opcional)'
-                        }
-                        className={textareaCls}
-                      />
+                      <>
+                        <textarea
+                          ref={el => {
+                            textRefs.current[i] = el;
+                          }}
+                          value={v.text}
+                          onChange={e => updateVariation(i, { text: e.target.value })}
+                          placeholder={
+                            v.kind === 'text' ? 'Oi {{nome}}, tudo bem? ...' : 'Legenda (opcional)'
+                          }
+                          className={textareaCls}
+                        />
+                        {/* Inserir variável clicando (vai pro cursor) */}
+                        <button
+                          type="button"
+                          onClick={() => insertVariable(i, '{{nome}}')}
+                          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        >
+                          <Plus className="w-3 h-3" /> {'{{nome}}'}
+                        </button>
+                      </>
                     )}
 
                     {/* upload de mídia (imagem/áudio/vídeo) */}

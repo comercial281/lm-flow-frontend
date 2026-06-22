@@ -318,9 +318,10 @@
         "description": "Gestionar embudo de ventas"
       },
       "contactNotes": {
-        "title": "Notas del Contacto",
-        "description": "Anotaciones importantes",
-        "noNotes": "No se han agregado notas aún"
+        "title": "Comentarios",
+        "description": "Comentarios del lead (sincronizados con la tarjeta)",
+        "noNotes": "Aún no hay comentarios",
+        "placeholder": "Escribir un comentario..."
       },
       "previousConversations": {
         "title": "Conversaciones Anteriores",

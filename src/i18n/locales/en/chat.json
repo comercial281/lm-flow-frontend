@@ -323,9 +323,10 @@
         "description": "Manage sales funnel"
       },
       "contactNotes": {
-        "title": "Contact Notes",
-        "description": "Important notes",
-        "noNotes": "No notes added yet"
+        "title": "Comments",
+        "description": "Lead comments (synced with the card)",
+        "noNotes": "No comments yet",
+        "placeholder": "Write a comment..."
       },
       "previousConversations": {
         "title": "Previous Conversations",

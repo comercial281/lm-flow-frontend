@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import InboxesService from '@/services/channels/inboxesService';
 import chatService from '@/services/chat/chatService';
 import { Inbox } from '@/types/channels/inbox';
-import type { Pipeline } from '@/types/chat/api';
+import type { Pipeline, Label, Team } from '@/types/chat/api';
 
 interface FilterOptions {
   inboxes: Array<{ label: string; value: string }>;
@@ -41,11 +41,14 @@ export const useFilterOptions = (params: UseFilterOptionsParams = {}): FilterOpt
       setOptions(prev => ({ ...prev, loading: true, error: null }));
 
       try {
-        // ✅ Carregar inboxes e pipelines
-        const [inboxesResponse, pipelinesResponse] = await Promise.allSettled([
-          InboxesService.list(),
-          chatService.getAvailablePipelines(),
-        ]);
+        // ✅ Carregar inboxes, pipelines, labels e teams
+        const [inboxesResponse, pipelinesResponse, labelsResponse, teamsResponse] =
+          await Promise.allSettled([
+            InboxesService.list(),
+            chatService.getAvailablePipelines(),
+            chatService.getAvailableLabels(),
+            chatService.getAvailableTeams(),
+          ]);
 
         // ✅ Processar inboxes
         const inboxes: Array<{ label: string; value: string }> = [];
@@ -81,9 +84,29 @@ export const useFilterOptions = (params: UseFilterOptionsParams = {}): FilterOpt
           }
         }
 
-        // ❌ Teams e Labels temporariamente vazios (APIs não implementadas no chatService)
-        const teams: Array<{ label: string; value: string }> = [];
+        // ✅ Processar labels (o backend filtra por NOME da tag → value = title)
         const labels: Array<{ label: string; value: string }> = [];
+        if (labelsResponse.status === 'fulfilled') {
+          const raw = labelsResponse.value;
+          const list = Array.isArray(raw) ? raw : (raw as { data?: Label[] })?.data || [];
+          labels.push(
+            ...list
+              .filter((l: Label) => !!l?.title)
+              .map((l: Label) => ({ label: l.title, value: l.title })),
+          );
+        }
+
+        // ✅ Processar teams (filtra por id)
+        const teams: Array<{ label: string; value: string }> = [];
+        if (teamsResponse.status === 'fulfilled') {
+          const raw = teamsResponse.value;
+          const list = Array.isArray(raw) ? raw : (raw as { data?: Team[] })?.data || [];
+          teams.push(
+            ...list
+              .filter((tm: Team) => !!tm?.name)
+              .map((tm: Team) => ({ label: tm.name, value: tm.id.toString() })),
+          );
+        }
 
         setOptions({
           inboxes,

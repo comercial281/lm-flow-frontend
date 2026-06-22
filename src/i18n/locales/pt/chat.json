@@ -327,9 +327,10 @@
         "description": "Gerenciar funil de vendas"
       },
       "contactNotes": {
-        "title": "Notas do Contato",
-        "description": "Anotações importantes",
-        "noNotes": "Nenhuma nota adicionada ainda"
+        "title": "Comentários",
+        "description": "Comentários do lead (sincronizados com o card)",
+        "noNotes": "Nenhum comentário ainda",
+        "placeholder": "Escrever um comentário..."
       },
       "previousConversations": {
         "title": "Conversas Anteriores",

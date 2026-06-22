@@ -318,9 +318,10 @@
         "description": "Gestire l'imbuto di vendita"
       },
       "contactNotes": {
-        "title": "Note del Contatto",
-        "description": "Annotazioni importanti",
-        "noNotes": "Nessuna nota aggiunta ancora"
+        "title": "Commenti",
+        "description": "Commenti del lead (sincronizzati con la scheda)",
+        "noNotes": "Nessun commento ancora",
+        "placeholder": "Scrivi un commento..."
       },
       "previousConversations": {
         "title": "Conversazioni Precedenti",
