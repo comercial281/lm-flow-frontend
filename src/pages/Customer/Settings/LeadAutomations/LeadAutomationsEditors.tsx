@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Input, Label as UILabel, Textarea } from '@evoapi/design-system';
+import { Input, Label as UILabel, Textarea, Button } from '@evoapi/design-system';
+import { Plus, Pencil } from 'lucide-react';
 
+import MessageFunnelEditor from '@/components/messageFunnels/MessageFunnelEditor';
+import { messageFunnelsService } from '@/services/messageFunnels/messageFunnelsService';
+import type { MessageFunnel } from '@/types/messageFunnels';
 import { labelsService } from '@/services/contacts/labelsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import usersService from '@/services/users/usersService';
@@ -43,6 +47,7 @@ const ACTIONS_REQUIRING_PARAMS: Record<string, string[]> = {
   send_video:              ['media_url'],
   send_document:           ['media_url'],
   send_sticker:            ['media_url'],
+  send_message_funnel:     ['funnel_id'],
   start_followup_sequence: ['sequence_slug'],
   assign_broker:           ['user_id'],
   add_label:               ['label_id'],
@@ -70,6 +75,8 @@ export interface AutomationResources {
   quickReplies: QuickReply[];
   adOrigins: AdOrigin[];
   formOrigins: FormOrigin[];
+  messageFunnels: MessageFunnel[];
+  reloadFunnels: () => void;
   loading: boolean;
 }
 
@@ -82,7 +89,15 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
   const [adOrigins, setAdOrigins] = useState<AdOrigin[]>([]);
   const [formOrigins, setFormOrigins] = useState<FormOrigin[]>([]);
+  const [messageFunnels, setMessageFunnels] = useState<MessageFunnel[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Recarrega a lista de funis (usado após criar/editar um funil dentro da automação).
+  const reloadFunnels = () => {
+    messageFunnelsService.list({ activeOnly: false })
+      .then(list => setMessageFunnels(list ?? []))
+      .catch(() => { /* funis são opcionais — não trava a tela */ });
+  };
 
   useEffect(() => {
     if (!enabled) return;
@@ -90,7 +105,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     setLoading(true);
 
     (async () => {
-      const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes] = await Promise.allSettled([
+      const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes, funnelsRes] = await Promise.allSettled([
         labelsService.getLabels(),
         followupSequencesService.getAll(),
         usersService.getUsers(),
@@ -98,6 +113,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
         quickRepliesService.getQuickReplies(),
         leadAutomationService.getAdOrigins(),
         leadAutomationService.getFormOrigins(),
+        messageFunnelsService.list({ activeOnly: false }),
       ]);
 
       if (cancelled) return;
@@ -108,6 +124,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
       if (qrRes.status === 'fulfilled') setQuickReplies(qrRes.value.data ?? []);
       if (adRes.status === 'fulfilled') setAdOrigins(adRes.value ?? []);
       if (formRes.status === 'fulfilled') setFormOrigins(formRes.value ?? []);
+      if (funnelsRes.status === 'fulfilled') setMessageFunnels(funnelsRes.value ?? []);
 
       if (pipelinesRes.status === 'fulfilled') {
         const list = pipelinesRes.value.data ?? [];
@@ -130,7 +147,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     return () => { cancelled = true; };
   }, [enabled]);
 
-  return { labels, sequences, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, loading };
+  return { labels, sequences, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, reloadFunnels, loading };
 }
 
 // ============================================================================
@@ -435,6 +452,10 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
   // Grupos de WhatsApp pro dropdown do "Notificar grupo" (carrega da instância escolhida).
   const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
+  // Editor de Funil embutido (ação "Disparar funil de mensagens"): reusa o MESMO
+  // componente do chat — subir mídia, gravar áudio, delay por passo, variáveis, reordenar.
+  const [funnelEditorOpen, setFunnelEditorOpen] = useState(false);
+  const [funnelToEdit, setFunnelToEdit] = useState<MessageFunnel | undefined>(undefined);
   const instanceParam = String(params.instance ?? '');
   useEffect(() => {
     if (action.type !== 'notify_group') return;
@@ -454,6 +475,71 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
   ) as Array<User & { whatsapp_number?: string }>;
 
   switch (action.type) {
+    // ----- send_message_funnel -----
+    // "Igual ao funil": escolhe um funil pronto OU cria/edita um na hora com o MESMO
+    // editor do chat. O backend (Executor#send_message_funnel) dispara cada passo.
+    case 'send_message_funnel': {
+      const selectedFunnelId = String(params.funnel_id ?? '');
+      const selectedFunnel = resources.messageFunnels.find(f => f.id === selectedFunnelId);
+      return (
+        <>
+          <Field
+            label="Funil de mensagens *"
+            hint="Mesma sequência que o atendente dispara no chat (texto, áudio, imagem, vídeo — com delay por passo)."
+          >
+            <select
+              value={selectedFunnelId}
+              onChange={e => setParam('funnel_id', e.target.value)}
+              className={baseSelectClass}
+            >
+              <option value="">Selecione um funil</option>
+              {resources.messageFunnels.map(f => (
+                <option key={f.id} value={f.id}>
+                  {f.name}{f.items?.length ? ` · ${f.items.length} passo${f.items.length === 1 ? '' : 's'}` : ''}
+                </option>
+              ))}
+            </select>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => { setFunnelToEdit(undefined); setFunnelEditorOpen(true); }}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> Criar funil novo
+              </Button>
+              {selectedFunnel && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setFunnelToEdit(selectedFunnel); setFunnelEditorOpen(true); }}
+                >
+                  <Pencil className="h-3.5 w-3.5 mr-1" /> Editar funil
+                </Button>
+              )}
+            </div>
+            {resources.messageFunnels.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Nenhum funil ainda. Clique em <strong>Criar funil novo</strong> pra montar (sobe mídia, grava áudio, delay por passo).
+              </p>
+            )}
+          </Field>
+
+          <MessageFunnelEditor
+            open={funnelEditorOpen}
+            onClose={() => setFunnelEditorOpen(false)}
+            funnel={funnelToEdit}
+            onSaved={saved => {
+              resources.reloadFunnels();
+              setParam('funnel_id', saved.id);
+              setFunnelEditorOpen(false);
+            }}
+          />
+        </>
+      );
+    }
+
     // ----- start_followup_sequence -----
     // Backend lookup: FollowupSequence.active.find_by(slug: slug). Value = slug, NÃO id.
     case 'start_followup_sequence':
@@ -948,6 +1034,10 @@ export function formatActionSummary(
       return p.media_url ? `Mídia: ${String(p.media_url).slice(0, 40)}…` : '(sem mídia)';
     case 'send_sticker':
       return p.media_url ? `Figurinha: ${String(p.media_url).slice(0, 40)}…` : '(sem figurinha)';
+    case 'send_message_funnel': {
+      const f = resources.messageFunnels.find(x => x.id === p.funnel_id);
+      return f ? `Funil: ${f.name}` : 'Funil: (não definido)';
+    }
     case 'assign_broker': {
       const u = resources.users.find(x => x.id === p.user_id);
       return u ? `Corretor: ${u.name}` : 'Corretor: (não definido)';

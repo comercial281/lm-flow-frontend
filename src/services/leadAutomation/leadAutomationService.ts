@@ -144,6 +144,7 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
   send_video:              'Enviar video',
   send_document:           'Enviar documento',
   send_sticker:            'Enviar figurinha',
+  send_message_funnel:     'Disparar funil de mensagens',
   start_followup_sequence: 'Iniciar sequencia de follow-up',
   assign_broker:           'Atribuir corretor',
   assign_via_roleta:       'Distribuir via roleta',
