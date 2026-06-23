@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronRight,
   Building2,
+  Search,
 } from 'lucide-react';
 import {
   Button,
@@ -57,6 +58,7 @@ interface HeaderProps {
   isMenuItemActive: (href: string) => boolean;
   isMenuWithSubItemsActive: (item: MenuItemType) => boolean;
   handleMenuClick: (item: MenuItemType, e: React.MouseEvent) => void;
+  onOpenSearch?: () => void;
 }
 
 export default function Header({
@@ -71,6 +73,7 @@ export default function Header({
   setLogoutDialogOpen,
   isMenuWithSubItemsActive,
   handleMenuClick,
+  onOpenSearch,
 }: HeaderProps) {
   const { t } = useLanguage('layout');
   const [expandedMobileMenus, setExpandedMobileMenus] = useState<Set<string>>(new Set());
@@ -218,6 +221,17 @@ export default function Header({
 
         {/* Right: Notifications and User Menu */}
         <div className="flex-1 flex justify-end items-center gap-2">
+          {onOpenSearch && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onOpenSearch}
+              className="text-sidebar-foreground cursor-pointer"
+            >
+              <Search className="h-5 w-5" />
+              <span className="sr-only">Buscar</span>
+            </Button>
+          )}
           <TourFab />
           <NotificationBell />
           <ProfileMenu
@@ -281,6 +295,19 @@ export default function Header({
 
         {/* Right side */}
         <div className="flex items-center gap-2 px-4">
+          {onOpenSearch && (
+            <button
+              type="button"
+              onClick={onOpenSearch}
+              className="hidden lg:flex items-center gap-2 rounded-md border border-sidebar-border bg-background/50 px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent transition-colors cursor-pointer"
+            >
+              <Search className="h-4 w-4" />
+              <span>Buscar...</span>
+              <kbd className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium tracking-wide">
+                Ctrl K
+              </kbd>
+            </button>
+          )}
           <TourFab />
           {/* Theme Toggle */}
           <ThemeToggle />

@@ -25,6 +25,7 @@ import { useMenuState } from '@/hooks/useMenuState';
 import { useDashboardApps } from '@/hooks/useDashboardApps';
 import { injectDashboardAppsIntoMenu } from '@/utils/injectDashboardApps';
 import { WelcomeTourModal } from '@/components/WelcomeTourModal';
+import GlobalCommandPalette from '@/components/command-palette/GlobalCommandPalette';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -43,6 +44,19 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+
+  // Atalho global Cmd+K (Mac) / Ctrl+K (Windows) abre a busca global.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setCommandOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // Load dashboard apps for sidebar integration
   const { apps: dashboardApps } = useDashboardApps({
@@ -125,6 +139,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         isMenuItemActive={menuState.isMenuItemActive}
         isMenuWithSubItemsActive={menuState.isMenuWithSubItemsActive}
         handleMenuClick={menuState.handleMenuClick}
+        onOpenSearch={() => setCommandOpen(true)}
       />
 
       {/* Main Layout Container */}
@@ -146,6 +161,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
         </main>
 
       </div>
+
+      {/* Busca global (Cmd+K) */}
+      <GlobalCommandPalette
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        menuItems={menuItems}
+      />
 
       {/* Tour */}
       <WelcomeTourModal />

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, DragEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Button,
@@ -107,7 +107,8 @@ export default function Properties() {
   const [saving, setSaving]         = useState(false);
   const [deleting, setDeleting]     = useState(false);
 
-  const [search, setSearch]                   = useState('');
+  const [searchParams]                        = useSearchParams();
+  const [search, setSearch]                   = useState(searchParams.get('q') ?? '');
   const [filterStatus, setFilterStatus]       = useState('');
   const [filterType, setFilterType]           = useState('');
   const [filterTransaction, setFilterTransaction] = useState('');
