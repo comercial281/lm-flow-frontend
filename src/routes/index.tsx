@@ -1689,8 +1689,9 @@ const AppRouter = () => {
           />
 
           {/* Super Admin — gerenciamento de instâncias de clientes */}
+          <Route path="/super-admin/clients" element={<Navigate to="/super-admin/clientes" replace />} />
           <Route
-            path="/super-admin/clients"
+            path="/super-admin/clientes"
             element={
               <PrivateRoute>
                 <MainLayout>
