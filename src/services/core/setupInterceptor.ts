@@ -1,4 +1,5 @@
 import { AxiosInstance, AxiosError } from 'axios';
+import { getTenantSlug } from '@/services/core/tenant';
 
 // Applied to all API instances to handle 503 SETUP_REQUIRED responses.
 // Dispatches a custom event consumed by RouterGuard, which calls logout()
@@ -10,6 +11,18 @@ import { AxiosInstance, AxiosError } from 'axios';
 let isDispatching = false;
 
 export function applySetupInterceptor(instance: AxiosInstance): void {
+  // SaaS multi-tenant: injeta X-Tenant (do subdomínio) em TODA requisição de
+  // TODA instância axios. Casa com o TenantResolution do backend. Sem subdomínio
+  // (apex/localhost) não manda nada => schema public/legado.
+  instance.interceptors.request.use(config => {
+    const tenant = getTenantSlug();
+    if (tenant) {
+      config.headers.set?.('X-Tenant', tenant);
+      (config.headers as Record<string, unknown>)['X-Tenant'] = tenant;
+    }
+    return config;
+  });
+
   instance.interceptors.response.use(
     response => {
       // Reset flag when any successful response arrives — the server is healthy
