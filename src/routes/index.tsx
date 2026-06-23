@@ -30,6 +30,7 @@ import SurveyResponse from '@/pages/Public/Survey/SurveyResponse';
 
 // Páginas customer — lazy (code-splitting): cada página vira um chunk próprio,
 // baixado só quando a rota é acessada. Reduz o bundle inicial (era ~7MB num arquivo).
+const SaasSignup = lazyWithRetry(() => import('@/pages/Auth/SaasSignup'));
 const Dashboard = lazyWithRetry(() => import('@/pages/Customer/Dashboard'));
 const Agents = lazyWithRetry(() => import('@/pages/Customer/Agents'));
 const AgentEditPage = lazyWithRetry(() => import('@/pages/Customer/Agents/Agent/AgentEditPage'));
@@ -177,6 +178,24 @@ const AppRouter = () => {
             element={
               <PublicRoute>
                 <Auth />
+              </PublicRoute>
+            }
+          />
+
+          {/* SaaS: cadastro self-serve (apex lmflow.com.br) */}
+          <Route
+            path="/cadastro"
+            element={
+              <PublicRoute>
+                <SaasSignup />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <PublicRoute>
+                <SaasSignup />
               </PublicRoute>
             }
           />
