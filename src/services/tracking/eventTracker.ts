@@ -171,7 +171,7 @@ class EventTracker {
     if (!this.queue.length) return;
     const batch = this.queue.splice(0, this.queue.length);
     try {
-      const token = sessionStorage.getItem('access_token');
+      const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
       fetch(`${import.meta.env.VITE_API_URL}/api/v1/tracking/events`, {
         method: 'POST',
         keepalive: true,

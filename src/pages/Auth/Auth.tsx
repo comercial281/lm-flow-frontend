@@ -127,6 +127,7 @@ export const Auth: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('login');
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginPass, setShowLoginPass] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loginError, setLoginError] = useState('');
   const [registerError, setRegisterError] = useState('');
   const [forgotPasswordError, setForgotPasswordError] = useState('');
@@ -177,12 +178,13 @@ export const Auth: React.FC = () => {
   type RegisterFormData = z.infer<typeof registerSchema>;
   type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
-  const loginForm = useForm<LoginFormData>({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } });
+  const loginForm = useForm<LoginFormData>({ resolver: zodResolver(loginSchema), defaultValues: { email: (typeof window !== 'undefined' && localStorage.getItem('lmflow:email')) || '', password: '' } });
   const registerForm = useForm<RegisterFormData>({ resolver: zodResolver(registerSchema), defaultValues: { fullName: '', email: '', password: '', confirmPassword: '' } });
   const forgotPasswordForm = useForm<ForgotPasswordFormData>({ resolver: zodResolver(forgotPasswordSchema), defaultValues: { email: '' } });
 
   const onLoginSubmit = async (data: LoginFormData) => {
     setIsLoading(true); setLoginError('');
+    try { if (rememberMe) localStorage.setItem('lmflow:email', data.email); else localStorage.removeItem('lmflow:email'); } catch { /* noop */ }
     try {
       // reCAPTCHA não pode travar o login: nos subdomínios novos (*.lmflow.com.br)
       // o reCAPTCHA pode falhar por domínio não-registrado. O backend não exige o
@@ -342,6 +344,7 @@ export const Auth: React.FC = () => {
                         <div className="relative">
                           <Input
                             id={id} type={field === 'password' && showLoginPass ? 'text' : type} placeholder={label} disabled={isLoading}
+                            autoComplete={field === 'password' ? 'current-password' : 'username'}
                             className="bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-violet-500/60 focus:ring-violet-500/20 pr-10"
                             {...loginForm.register(field)}
                           />
@@ -358,7 +361,16 @@ export const Auth: React.FC = () => {
                       </motion.div>
                     ))}
 
-                    <motion.div custom={3} variants={fadeUpVariant} initial="hidden" animate="visible" className="flex justify-end">
+                    <motion.div custom={3} variants={fadeUpVariant} initial="hidden" animate="visible" className="flex justify-between items-center">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={e => setRememberMe(e.target.checked)}
+                          className="w-3.5 h-3.5 rounded accent-violet-500 cursor-pointer"
+                        />
+                        <span className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>Lembrar de mim</span>
+                      </label>
                       <button
                         type="button"
                         onClick={() => setActiveTab('forgot')}
