@@ -56,6 +56,13 @@ const SECTORS: Sector[] = [
     featureKey: 'follow_ups',
   },
   {
+    key: 'follow-up-auto',
+    name: 'Follow-up automático',
+    path: '/automations/follow-up-auto',
+    icon: Repeat,
+    featureKey: 'follow_ups',
+  },
+  {
     key: 'whatsapp-reminders',
     name: 'Lembretes',
     path: '/automations/whatsapp-reminders',
