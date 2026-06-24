@@ -22,7 +22,7 @@ import MfaVerification from '@/components/auth/MfaVerification';
 import { twoFactorService } from '@/services/profile/twoFactorService';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, Globe, ArrowRight, ChevronLeft, Eye, EyeOff } from 'lucide-react';
@@ -335,31 +335,52 @@ export const Auth: React.FC = () => {
                   )}
 
                   <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                    {[
-                      { i: 1, id: 'login-email', type: 'email', label: t('auth.login.email'), field: 'email' as const },
-                      { i: 2, id: 'login-password', type: 'password', label: t('auth.login.password'), field: 'password' as const },
-                    ].map(({ i, id, type, label, field }) => (
-                      <motion.div key={field} custom={i} variants={fadeUpVariant} initial="hidden" animate="visible" className={fieldCls}>
-                        <Label htmlFor={id} className="text-white/70 text-sm">{label}</Label>
-                        <div className="relative">
-                          <Input
-                            id={id} type={field === 'password' && showLoginPass ? 'text' : type} placeholder={label} disabled={isLoading}
-                            autoComplete={field === 'password' ? 'current-password' : 'username'}
-                            className="bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-violet-500/60 focus:ring-violet-500/20 pr-10"
-                            {...loginForm.register(field)}
-                          />
-                          {field === 'password' && (
-                            <button type="button" tabIndex={-1} onClick={() => setShowLoginPass(v => !v)}
-                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
-                              {showLoginPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
+                    {/* Email */}
+                    <motion.div custom={1} variants={fadeUpVariant} initial="hidden" animate="visible" className={fieldCls}>
+                      <Label htmlFor="login-email" className="text-white/70 text-sm">{t('auth.login.email')}</Label>
+                      <Input
+                        id="login-email" type="email" placeholder={t('auth.login.email')} disabled={isLoading}
+                        autoComplete="username"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-violet-500/60 focus:ring-violet-500/20"
+                        {...loginForm.register('email')}
+                      />
+                      {loginForm.formState.errors.email && (
+                        <p className={errorCls}>{loginForm.formState.errors.email.message}</p>
+                      )}
+                    </motion.div>
+
+                    {/* Senha — Controller garante que autopreenchimento do browser é rastreado */}
+                    <motion.div custom={2} variants={fadeUpVariant} initial="hidden" animate="visible" className={fieldCls}>
+                      <Label htmlFor="login-password" className="text-white/70 text-sm">{t('auth.login.password')}</Label>
+                      <div className="relative">
+                        <Controller
+                          control={loginForm.control}
+                          name="password"
+                          render={({ field: f }) => (
+                            <Input
+                              id="login-password"
+                              type={showLoginPass ? 'text' : 'password'}
+                              placeholder={t('auth.login.password')}
+                              disabled={isLoading}
+                              autoComplete="current-password"
+                              className="bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-violet-500/60 focus:ring-violet-500/20 pr-10"
+                              {...f}
+                            />
                           )}
-                        </div>
-                        {loginForm.formState.errors[field] && (
-                          <p className={errorCls}>{loginForm.formState.errors[field]?.message}</p>
-                        )}
-                      </motion.div>
-                    ))}
+                        />
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onClick={() => setShowLoginPass(v => !v)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors z-10"
+                        >
+                          {showLoginPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      {loginForm.formState.errors.password && (
+                        <p className={errorCls}>{loginForm.formState.errors.password.message}</p>
+                      )}
+                    </motion.div>
 
                     <motion.div custom={3} variants={fadeUpVariant} initial="hidden" animate="visible" className="flex justify-between items-center">
                       <label className="flex items-center gap-2 cursor-pointer select-none">
