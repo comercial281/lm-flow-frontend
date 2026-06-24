@@ -117,7 +117,7 @@ export interface FormOrigin {
 }
 
 // Triggers emitidos pelo backend Rails (LeadAutomationExecutorJob.perform_later).
-// 'lead.no_reply_after' está no model mas nenhum job emite — removido da UI.
+// 'lead.no_reply_after' é emitido por Followup::NoReplyEnrollJob (roda a cada 1 min).
 export const TRIGGER_LABELS: Record<string, string> = {
   'lead.created':              'Lead criado',
   'lead.stage_changed':        'Estágio alterado',

@@ -1013,6 +1013,9 @@ export function formatConditionSummary(
     const stage = allStages.find(s => s.id === condition.value);
     return `Para o estágio: ${stage?.name ?? condition.value}`;
   }
+  if (trigger === 'lead.no_reply_after') {
+    return `Sem resposta por ${condition.value} min`;
+  }
   return `${condition.field} ${condition.operator} ${JSON.stringify(condition.value)}`;
 }
 

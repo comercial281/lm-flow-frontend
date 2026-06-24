@@ -54,6 +54,7 @@ const TRIGGER_HINTS: Record<string, string> = {
   'lead.tag_added': 'Dispara quando uma etiqueta é adicionada. Escolha qual etiqueta abaixo.',
   'lead.message_received': 'Dispara quando o lead manda uma mensagem. Filtre por palavra-chave abaixo (opcional).',
   'lead.stage_changed': 'Dispara quando o lead muda de etapa no funil.',
+  'lead.no_reply_after': 'Dispara quando o lead não responde após X minutos da última mensagem enviada. Define o tempo na condição abaixo.',
 };
 
 const EMPTY_FORM: LeadAutomationRuleFormData = {
