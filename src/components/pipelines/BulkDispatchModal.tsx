@@ -119,6 +119,9 @@ export default function BulkDispatchModal({
   const [items, setItems] = useState<SequenceDraftItem[]>([newSequenceItem()]);
   const [variables, setVariables] = useState<TemplateVariable[]>([]);
 
+  // Nome do envio (vai pro registro/LOG e pra lista de disparos)
+  const [campaignName, setCampaignName] = useState('');
+
   // Cadência
   const [minS, setMinS] = useState(4);
   const [maxS, setMaxS] = useState(8);
@@ -141,6 +144,7 @@ export default function BulkDispatchModal({
     setSelectedLabels([]);
     setRecipientCount(null);
     setItems([newSequenceItem()]);
+    setCampaignName('');
     setMinS(4);
     setMaxS(8);
     setBatchSize(10);
@@ -276,7 +280,7 @@ export default function BulkDispatchModal({
     setStep('creating');
     try {
       await broadcastsService.create({
-        name: undefined,
+        name: campaignName.trim() || undefined,
         pipeline_id: pipelineId,
         audience: {
           mode: audienceMode,
@@ -631,6 +635,16 @@ export default function BulkDispatchModal({
                 <Label className="text-sm flex items-center gap-1.5">
                   <ListChecks className="w-4 h-4" /> Revisar e disparar
                 </Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Nome do envio (aparece no registro/LOG)</Label>
+                  <Input
+                    value={campaignName}
+                    onChange={e => setCampaignName(e.target.value)}
+                    placeholder="Ex: Oferta lançamento — base quente"
+                    maxLength={120}
+                    className="h-9"
+                  />
+                </div>
                 <div className="rounded-lg border border-border divide-y divide-border text-sm">
                   <div className="flex justify-between p-2.5">
                     <span className="text-muted-foreground">Destinatários</span>
