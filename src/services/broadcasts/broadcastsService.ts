@@ -15,7 +15,7 @@ export interface BroadcastVariation {
 // com delay por item, por destinatário. Ver MessageSequenceEditor.
 export interface BroadcastSequenceItem {
   position: number;
-  kind: 'text' | 'audio' | 'image' | 'video' | 'document';
+  kind: 'text' | 'audio' | 'image' | 'video' | 'document' | 'delay';
   text_content: string | null;
   media_url: string | null;
   media_caption: string | null;

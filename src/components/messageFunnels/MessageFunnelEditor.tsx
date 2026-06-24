@@ -115,6 +115,7 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved }: 
     if (items.length === 0) return 'Adicione pelo menos 1 item.';
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
+      if (it.kind === 'delay') continue; // item de espera não precisa de conteúdo
       if (it.kind === 'text' && !(it.text_content ?? '').trim()) {
         return `Item ${i + 1}: texto vazio.`;
       }

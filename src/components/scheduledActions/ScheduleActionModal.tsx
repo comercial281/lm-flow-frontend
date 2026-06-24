@@ -59,6 +59,7 @@ interface ScheduleBlock {
 const unitMin = (u: DelayUnit) => (u === 'minutes' ? 1 : u === 'hours' ? 60 : 1440);
 
 function itemIsValid(it: SequenceDraftItem) {
+  if (it.kind === 'delay') return true; // item de espera é sempre válido
   return it.kind === 'text' ? (it.text_content ?? '').trim() !== '' : !!it.media_url;
 }
 

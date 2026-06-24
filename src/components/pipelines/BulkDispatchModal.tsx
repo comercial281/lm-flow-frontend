@@ -30,6 +30,7 @@ import {
   ChevronLeft,
   Send,
   Paperclip,
+  Save,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PipelineStage } from '@/types/analytics';
@@ -41,8 +42,11 @@ import {
 } from '@/services/broadcasts/broadcastsService';
 import { labelsService } from '@/services/contacts/labelsService';
 import type { Label as LabelType } from '@/types/settings';
-import { tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
-import type { TemplateVariable } from '@/types/messageFunnels';
+import {
+  messageFunnelsService,
+  tenantTemplateVariablesService,
+} from '@/services/messageFunnels/messageFunnelsService';
+import type { MessageFunnel, MessageFunnelItem, TemplateVariable } from '@/types/messageFunnels';
 import MessageSequenceEditor, {
   type SequenceDraftItem,
   newSequenceItem,
@@ -73,6 +77,7 @@ const KIND_LABEL: Record<SequenceDraftItem['kind'], string> = {
   audio: 'Áudio',
   video: 'Vídeo',
   document: 'Documento',
+  delay: 'Aguardar',
 };
 
 // Preview substituindo {{nome}} por um exemplo só na revisão.
@@ -81,6 +86,7 @@ function preview(text: string, name = 'Giovani') {
 }
 
 function itemIsValid(it: SequenceDraftItem) {
+  if (it.kind === 'delay') return true; // item de espera é sempre válido
   return it.kind === 'text' ? (it.text_content ?? '').trim() !== '' : !!it.media_url;
 }
 
@@ -95,6 +101,20 @@ function toSequencePayload(items: SequenceDraftItem[]): BroadcastSequenceItem[] 
     media_filename: it.media_filename,
     delay_seconds: it.delay_seconds,
   }));
+}
+
+// Item de funil salvo → item do editor (mesmo mapeamento do agendar/funil).
+function draftFromFunnelItem(it: MessageFunnelItem): SequenceDraftItem {
+  return {
+    uiKey: crypto.randomUUID(),
+    kind: it.kind,
+    text_content: it.text_content,
+    media_url: it.media_url,
+    media_filename: it.media_filename,
+    media_caption: it.media_caption,
+    delay_seconds: it.delay_seconds,
+    pendingFile: null,
+  };
 }
 
 export default function BulkDispatchModal({
@@ -118,6 +138,7 @@ export default function BulkDispatchModal({
   // Mensagem (sequência multi-item — MESMO editor do funil)
   const [items, setItems] = useState<SequenceDraftItem[]>([newSequenceItem()]);
   const [variables, setVariables] = useState<TemplateVariable[]>([]);
+  const [funnelTemplates, setFunnelTemplates] = useState<MessageFunnel[]>([]);
 
   // Nome do envio (vai pro registro/LOG e pra lista de disparos)
   const [campaignName, setCampaignName] = useState('');
@@ -203,7 +224,53 @@ export default function BulkDispatchModal({
           { token: 'email', placeholder: '{{email}}', label: 'E-mail', builtin: true },
         ]),
       );
+    messageFunnelsService
+      .list({ activeOnly: true })
+      .then(setFunnelTemplates)
+      .catch(() => setFunnelTemplates([]));
   }, [open, refreshList, resetWizard]);
+
+  // Carrega um modelo salvo (funil) na sequência atual.
+  const loadTemplate = async (funnelId: string) => {
+    try {
+      const funnel = await messageFunnelsService.get(funnelId);
+      setItems(funnel.items.length ? funnel.items.map(draftFromFunnelItem) : [newSequenceItem()]);
+      toast.success(`Modelo "${funnel.name}" carregado`);
+    } catch {
+      toast.error('Não consegui carregar o modelo.');
+    }
+  };
+
+  // Salva a sequência atual como modelo reutilizável na biblioteca (funil compartilhado).
+  const saveAsTemplate = async () => {
+    const valid = items.filter(itemIsValid);
+    if (!valid.length) {
+      toast.error('Monte a sequência antes de salvar o modelo.');
+      return;
+    }
+    const name = window.prompt('Nome do modelo:')?.trim();
+    if (!name) return;
+    try {
+      await messageFunnelsService.create({
+        name,
+        category: 'geral',
+        active: true,
+        shared: true,
+        items: toSequencePayload(valid).map((it, idx) => ({
+          position: idx,
+          kind: it.kind,
+          text_content: it.text_content,
+          media_caption: it.media_caption,
+          media_filename: it.media_filename,
+          delay_seconds: it.delay_seconds,
+        })),
+      });
+      toast.success('Modelo salvo na biblioteca.');
+      setFunnelTemplates(await messageFunnelsService.list({ activeOnly: true }));
+    } catch {
+      toast.error('Não consegui salvar o modelo.');
+    }
+  };
 
   // Conta destinatários quando a audiência muda (só na view de criação).
   const audiencePayload = useMemo(
@@ -546,13 +613,36 @@ export default function BulkDispatchModal({
             {/* STEP 2 — Mensagem (sequência) */}
             {step === 'messages' && (
               <div className="space-y-4 py-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <Label className="text-sm flex items-center gap-1.5">
                     <MessageSquareText className="w-4 h-4" /> Sequência de mensagens
                   </Label>
-                  <span className="text-xs text-muted-foreground">
-                    Cada lead recebe os itens em ordem
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {funnelTemplates.length > 0 && (
+                      <Select value="" onValueChange={loadTemplate}>
+                        <SelectTrigger className="h-7 w-40 text-xs">
+                          <SelectValue placeholder="Usar modelo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {funnelTemplates.map(f => (
+                            <SelectItem key={f.id} value={f.id}>
+                              {f.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={saveAsTemplate}
+                      className="h-7 text-xs"
+                      title="Salvar a sequência como modelo na biblioteca"
+                    >
+                      <Save className="w-3.5 h-3.5 mr-1" /> Salvar modelo
+                    </Button>
+                  </div>
                 </div>
 
                 <MessageSequenceEditor

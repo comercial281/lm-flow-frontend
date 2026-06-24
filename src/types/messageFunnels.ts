@@ -1,7 +1,9 @@
 // Types do módulo Funis de Mensagem — substitui Respostas Prontas + Respostas Rápidas.
 // Backend: app/controllers/api/v1/message_funnels_controller.rb (evo-ai-crm-community)
 
-export type FunnelItemKind = 'text' | 'audio' | 'image' | 'video' | 'document';
+// 'delay' = item de espera puro (igual "adicionar áudio", mas só aguarda N segundos
+// antes do próximo). Não envia conteúdo.
+export type FunnelItemKind = 'text' | 'audio' | 'image' | 'video' | 'document' | 'delay';
 
 export interface MessageFunnelItem {
   id: string;

@@ -39,7 +39,7 @@ export function newSequenceItem(kind: FunnelItemKind = 'text'): SequenceDraftIte
     media_url: null,
     media_filename: null,
     media_caption: null,
-    delay_seconds: 0,
+    delay_seconds: kind === 'delay' ? 30 : 0,
     pendingFile: null,
   };
 }
@@ -50,6 +50,7 @@ const KIND_LABELS: Record<FunnelItemKind, string> = {
   image: 'Imagem',
   video: 'Vídeo',
   document: 'Documento',
+  delay: 'Aguardar',
 };
 const KIND_ICONS: Record<FunnelItemKind, typeof Type> = {
   text: Type,
@@ -57,6 +58,7 @@ const KIND_ICONS: Record<FunnelItemKind, typeof Type> = {
   image: ImageIcon,
   video: Video,
   document: FileText,
+  delay: Clock,
 };
 const KIND_COLORS: Record<FunnelItemKind, string> = {
   text: '#7c3aed',
@@ -64,6 +66,7 @@ const KIND_COLORS: Record<FunnelItemKind, string> = {
   image: '#3b82f6',
   video: '#f43f5e',
   document: '#f97316',
+  delay: '#64748b',
 };
 
 // ── Props ────────────────────────────────────────────────────────────────────
@@ -225,7 +228,7 @@ function ItemEditor({
           <Icon size={12} />
           <span className="text-xs font-semibold">{KIND_LABELS[item.kind]}</span>
         </div>
-        {item.kind !== 'text' && (
+        {item.kind !== 'text' && item.kind !== 'delay' && (
           <select
             value={item.kind}
             onChange={e =>
@@ -281,7 +284,7 @@ function ItemEditor({
       )}
 
       {/* Mídia */}
-      {item.kind !== 'text' && (
+      {item.kind !== 'text' && item.kind !== 'delay' && (
         <div className="space-y-2">
           {item.media_url ? (
             <div className="flex items-center gap-2 bg-background border border-border rounded-lg px-2.5 py-2">
@@ -395,31 +398,33 @@ function ItemEditor({
         </div>
       )}
 
-      {/* Delay (Fase 1: campo embutido; vira item-adicionável na Fase 2) */}
-      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
-        <Clock size={12} className="text-muted-foreground shrink-0" />
-        <span className="text-xs text-muted-foreground">Aguardar</span>
-        <Input
-          type="number"
-          min={0}
-          max={600}
-          value={item.delay_seconds}
-          onChange={e =>
-            onUpdate({ delay_seconds: Math.max(0, Math.min(600, Number(e.target.value) || 0)) })
-          }
-          className="w-16 h-7 text-xs text-center"
-        />
-        <span className="text-xs text-muted-foreground">segundos antes de enviar</span>
-        {index === 0 && item.delay_seconds > 0 && (
-          <div
-            className="flex items-center gap-1 text-xs text-orange-500 ml-auto"
-            title="1º item costuma ter delay 0"
-          >
-            <AlertCircle size={10} />
-            <span>1º item</span>
-          </div>
-        )}
-      </div>
+      {/* Item de espera: só aguarda N segundos antes do próximo item. */}
+      {item.kind === 'delay' && (
+        <div className="flex items-center gap-2">
+          <Clock size={14} className="text-muted-foreground shrink-0" />
+          <span className="text-xs text-muted-foreground">Aguardar</span>
+          <Input
+            type="number"
+            min={1}
+            max={600}
+            value={item.delay_seconds}
+            onChange={e =>
+              onUpdate({ delay_seconds: Math.max(1, Math.min(600, Number(e.target.value) || 1)) })
+            }
+            className="w-20 h-8 text-sm text-center"
+          />
+          <span className="text-xs text-muted-foreground">segundos antes do próximo</span>
+          {index === 0 && (
+            <div
+              className="flex items-center gap-1 text-xs text-orange-500 ml-auto"
+              title="Espera como 1º item não faz sentido"
+            >
+              <AlertCircle size={10} />
+              <span>1º item</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -474,7 +479,7 @@ function VariableChips({ variables, targetRef, currentValue, onChange }: Variabl
 // ── Add item buttons ─────────────────────────────────────────────────────────
 
 function AddItemButtons({ onAdd }: { onAdd: (kind: FunnelItemKind) => void }) {
-  const kinds: FunnelItemKind[] = ['text', 'audio', 'image', 'video', 'document'];
+  const kinds: FunnelItemKind[] = ['text', 'audio', 'image', 'video', 'document', 'delay'];
   return (
     <div className="flex flex-wrap gap-1.5 mt-3">
       <span className="text-xs text-muted-foreground flex items-center mr-1">+ Adicionar:</span>

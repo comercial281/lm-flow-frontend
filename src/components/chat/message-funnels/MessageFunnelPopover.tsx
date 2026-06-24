@@ -3,7 +3,7 @@ import { Card, CardContent } from '@evoapi/design-system/card';
 import { Button } from '@evoapi/design-system/button';
 import {
   Rocket, X, Play, Type, Mic, Image as ImageIcon, Video, FileText, Search, Loader2, Plus,
-  Archive, Trash2,
+  Archive, Trash2, Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { messageFunnelsService, tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
@@ -28,10 +28,10 @@ interface SendMessageOptions {
 }
 
 const KIND_ICONS: Record<FunnelItemKind, typeof Type> = {
-  text: Type, audio: Mic, image: ImageIcon, video: Video, document: FileText,
+  text: Type, audio: Mic, image: ImageIcon, video: Video, document: FileText, delay: Clock,
 };
 const KIND_COLORS: Record<FunnelItemKind, string> = {
-  text: '#7c3aed', audio: '#00a884', image: '#3b82f6', video: '#f43f5e', document: '#f97316',
+  text: '#7c3aed', audio: '#00a884', image: '#3b82f6', video: '#f43f5e', document: '#f97316', delay: '#64748b',
 };
 
 // ── Interpolação de variáveis ────────────────────────────────────────────────
@@ -198,6 +198,8 @@ async function dispatchFunnel(
       await new Promise(r => setTimeout(r, item.delay_seconds * 1000));
     }
     onProgress?.(i + 1, sorted.length);
+
+    if (item.kind === 'delay') continue; // item de espera: só aguarda, não envia
 
     const ctx: ResolveContext = {
       conversation: helpers.conversation,

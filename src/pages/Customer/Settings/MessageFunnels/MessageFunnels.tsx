@@ -12,7 +12,7 @@ import {
 } from '@evoapi/design-system';
 import {
   Rocket, Search, Plus, Edit2, Trash2, Type, Mic, Image as ImageIcon,
-  Video, FileText, Pause, Archive, ArchiveRestore,
+  Video, FileText, Pause, Archive, ArchiveRestore, Clock,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import MessageFunnelEditor from '@/components/messageFunnels/MessageFunnelEditor';
@@ -20,10 +20,10 @@ import { messageFunnelsService } from '@/services/messageFunnels/messageFunnelsS
 import type { MessageFunnel, FunnelItemKind } from '@/types/messageFunnels';
 
 const KIND_ICONS: Record<FunnelItemKind, typeof Type> = {
-  text: Type, audio: Mic, image: ImageIcon, video: Video, document: FileText,
+  text: Type, audio: Mic, image: ImageIcon, video: Video, document: FileText, delay: Clock,
 };
 const KIND_COLORS: Record<FunnelItemKind, string> = {
-  text: '#7c3aed', audio: '#00a884', image: '#3b82f6', video: '#f43f5e', document: '#f97316',
+  text: '#7c3aed', audio: '#00a884', image: '#3b82f6', video: '#f43f5e', document: '#f97316', delay: '#64748b',
 };
 
 export default function MessageFunnels() {
