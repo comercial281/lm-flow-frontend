@@ -1,5 +1,7 @@
-import { Suspense } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import { isRootTenantHost } from '@/components/layout/config/menuItems';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import PrivateRoute from './PrivateRoute';
 import PublicRoute from './PublicRoute';
@@ -69,6 +71,15 @@ const PropertiesMap = lazyWithRetry(() => import('@/pages/Customer/Properties').
 const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => ({ default: m.Visits })));
 const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
 const PropertyCaptureRequests = lazyWithRetry(() => import('@/pages/Customer/PropertyCapture').then(m => ({ default: m.PropertyCaptureRequests })));
+// Gate de rota super-admin: só renderiza no deploy raiz (app.lmflow.com.br) E
+// logado como super-admin. Em subdomínio de cliente (*.lmflow.com.br) ou usuário
+// comum, redireciona pra home — defesa extra além do bloqueio server-side (401/403).
+function SuperAdminRoute({ children }: { children: ReactNode }) {
+  const isSuper = useIsSuperAdmin();
+  if (!isRootTenantHost() || !isSuper) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 const ClientInstances = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances'));
 const Monitoring = lazyWithRetry(() => import('@/pages/SuperAdmin/Monitoring'));
 const AutomationTemplatesPage = lazyWithRetry(() => import('@/pages/SuperAdmin/AutomationTemplates/AutomationTemplates'));
@@ -1704,7 +1715,9 @@ const AppRouter = () => {
             element={
               <PrivateRoute>
                 <MainLayout>
-                  <ClientInstances />
+                  <SuperAdminRoute>
+                    <ClientInstances />
+                  </SuperAdminRoute>
                 </MainLayout>
               </PrivateRoute>
             }
@@ -1716,7 +1729,9 @@ const AppRouter = () => {
             element={
               <PrivateRoute>
                 <MainLayout>
-                  <Monitoring />
+                  <SuperAdminRoute>
+                    <Monitoring />
+                  </SuperAdminRoute>
                 </MainLayout>
               </PrivateRoute>
             }
@@ -1728,7 +1743,9 @@ const AppRouter = () => {
             element={
               <PrivateRoute>
                 <MainLayout>
-                  <AutomationTemplatesPage />
+                  <SuperAdminRoute>
+                    <AutomationTemplatesPage />
+                  </SuperAdminRoute>
                 </MainLayout>
               </PrivateRoute>
             }
@@ -1740,7 +1757,9 @@ const AppRouter = () => {
             element={
               <PrivateRoute>
                 <MainLayout>
-                  <PooledClients />
+                  <SuperAdminRoute>
+                    <PooledClients />
+                  </SuperAdminRoute>
                 </MainLayout>
               </PrivateRoute>
             }

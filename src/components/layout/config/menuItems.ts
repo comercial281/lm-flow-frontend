@@ -372,6 +372,22 @@ export const getProfileMenuItems = (
 };
 
 // Função utilitária para verificar se um item de menu deve ser exibido
+/**
+ * Detecta em RUNTIME se estamos no deploy raiz (app.lmflow.com.br / dev) e não
+ * num subdomínio de cliente. Necessário porque UM único build (com
+ * VITE_IS_ROOT_TENANT='true') serve TODOS os subdomínios *.lmflow.com.br via
+ * wildcard — então o flag de build-time não distingue raiz de cliente, e os
+ * menus de super-admin (rootTenantOnly) vazavam pra dentro do CRM do cliente.
+ */
+export function isRootTenantHost(): boolean {
+  if (typeof window === 'undefined') return true;
+  const h = window.location.hostname.toLowerCase();
+  if (h === 'localhost' || h === '127.0.0.1') return true; // dev local
+  if (h.endsWith('.vercel.app')) return true; // previews do projeto principal
+  // raiz = app.lmflow.com.br (ou apex). Cliente = renato/mybroker/...lmflow.com.br
+  return h === 'app.lmflow.com.br' || h === 'lmflow.com.br';
+}
+
 export const shouldShowMenuItem = (
   item: MenuItem | SubMenuItem,
   canFunction: (resource: string, action: string) => boolean,
@@ -396,7 +412,7 @@ export const shouldShowMenuItem = (
   }
 
   // Gate por tenant raiz (apenas no deploy principal, não em tenants de clientes)
-  if ('rootTenantOnly' in item && item.rootTenantOnly && import.meta.env.VITE_IS_ROOT_TENANT !== 'true') {
+  if ('rootTenantOnly' in item && item.rootTenantOnly && !isRootTenantHost()) {
     return false;
   }
 
