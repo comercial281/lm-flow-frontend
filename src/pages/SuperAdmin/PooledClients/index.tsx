@@ -1,7 +1,8 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
-import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock } from 'lucide-react';
+import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone } from 'lucide-react';
 import api from '@/services/core/api';
 import NewTenantWizard from './NewTenantWizard';
+import ClientBroadcastModal from './ClientBroadcastModal';
 
 interface PooledTenant {
   id: string; name: string; slug: string; status: string;
@@ -81,6 +82,7 @@ export default function PooledClients() {
   const [entering, setEntering] = useState<string | null>(null);
   const [membersOf, setMembersOf] = useState<PooledTenant | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+  const [showBroadcast, setShowBroadcast] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,6 +122,10 @@ export default function PooledClients() {
         <div className="flex gap-2">
           <button onClick={load} className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-md border border-border text-muted-foreground hover:text-foreground">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Atualizar
+          </button>
+          <button onClick={() => setShowBroadcast(true)} disabled={tenants.length === 0}
+            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md border border-violet-500/40 text-violet-300 hover:bg-violet-500/10 disabled:opacity-40">
+            <Megaphone className="w-4 h-4" /> Comunicado
           </button>
           <button onClick={() => setShowWizard(true)}
             className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md font-semibold text-white"
@@ -180,6 +186,7 @@ export default function PooledClients() {
       )}
       {membersOf && <MembersModal tenant={membersOf} onClose={() => setMembersOf(null)} />}
       {showWizard && <NewTenantWizard onClose={() => setShowWizard(false)} onCreated={load} />}
+      {showBroadcast && <ClientBroadcastModal tenants={tenants} onClose={() => setShowBroadcast(false)} />}
     </div>
   );
 }
