@@ -5,7 +5,10 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { Button } from '@evoapi/design-system/button';
 import { Card, CardHeader, CardContent } from '@evoapi/design-system/card';
 import { Badge } from '@evoapi/design-system/badge';
-import { X, User, FileText, MessageSquare, Clock, ChevronDown, GitBranch, Tag, Megaphone, ExternalLink } from 'lucide-react';
+import { X, User, FileText, MessageSquare, Clock, ChevronDown, GitBranch, Tag, Megaphone, ExternalLink, Pencil, Check } from 'lucide-react';
+import { Input } from '@evoapi/design-system/input';
+import { toast } from 'sonner';
+import apiAuth from '@/services/core/apiAuth';
 
 import ContactHeader from './ContactHeader';
 import ContactDetails from './ContactDetails';
@@ -603,7 +606,10 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
             </Card>
           )}
 
-          {/* 7. Contact Custom Attributes - Atributos personalizados do contato */}
+          {/* 6b. Nome do atendente nesta conversa */}
+          {conversation && <AgentDisplayNameCard conversation={conversation} />}
+
+          {/* 7. Contact Custom Attributes */}
           {contact && (
             <Card>
               <CardHeader className="pb-2">
@@ -639,6 +645,59 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
         </div>
       </div>
     </>
+  );
+};
+
+// --- AgentDisplayNameCard ---
+interface AgentDisplayNameCardProps { conversation: Conversation; }
+const AgentDisplayNameCard: React.FC<AgentDisplayNameCardProps> = ({ conversation }) => {
+  const currentName = (conversation?.additional_attributes as any)?.agent_display_name ?? '';
+  const [editing, setEditing] = React.useState(false);
+  const [value, setValue] = React.useState(currentName);
+  const [saving, setSaving] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => { setValue((conversation?.additional_attributes as any)?.agent_display_name ?? ''); }, [conversation?.additional_attributes]);
+  React.useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await apiAuth.patch(`/conversations/${conversation.id}`, { additional_attributes: { agent_display_name: value.trim() } });
+      toast.success('Nome do atendente atualizado');
+      setEditing(false);
+    } catch { toast.error('Erro ao salvar nome'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-2">
+          <Pencil className="h-4 w-4 text-indigo-500" />
+          <div>
+            <h3 className="text-sm font-semibold">Nome do atendente (nesta conversa)</h3>
+            <p className="text-xs text-muted-foreground">Aparece acima das mensagens enviadas</p>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0 px-3 pb-3">
+        {editing ? (
+          <div className="flex gap-2">
+            <Input ref={inputRef} value={value} onChange={e => setValue(e.target.value)}
+              placeholder="Ex: João Silva" className="text-sm h-8 flex-1"
+              onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} />
+            <Button size="sm" className="h-8 px-2" onClick={handleSave} disabled={saving}><Check className="h-3 w-3" /></Button>
+            <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setEditing(false)}><X className="h-3 w-3" /></Button>
+          </div>
+        ) : (
+          <button onClick={() => setEditing(true)} className="w-full text-left flex items-center justify-between gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+            <span className="text-sm text-muted-foreground">{currentName || 'Clique para definir um nome'}</span>
+            <Pencil className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+          </button>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
