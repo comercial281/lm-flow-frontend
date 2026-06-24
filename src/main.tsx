@@ -12,9 +12,28 @@ import { initGA4 } from './utils/ga4Utils';
 import { reloadForNewVersion } from './utils/chunkReload';
 import * as Sentry from '@sentry/react';
 
-// Registra o Service Worker PWA (atualiza silenciosamente)
+// Registra o Service Worker PWA (atualiza silenciosamente).
+// Aba aberta há horas NÃO pega deploy novo sozinha (o build em memória continua
+// o antigo até um reload manual) — era a causa de "essa aba não loga / sumiu o
+// olho": JS pré-fix preso. Com registerType:'autoUpdate', assim que o SW acha
+// uma versão nova ele ativa e recarrega a página. Só faltava DISPARAR a checagem
+// em abas de vida longa: fazemos a cada 60s e ao voltar o foco pra aba.
 if ('serviceWorker' in navigator) {
-  registerSW({ immediate: true });
+  registerSW({
+    immediate: true,
+    onRegisteredSW(_swUrl: string, registration: ServiceWorkerRegistration | undefined) {
+      if (!registration) return;
+      const checkForUpdate = () => {
+        registration.update().catch(() => {
+          /* offline / falha de rede: ignora, tenta de novo no próximo ciclo */
+        });
+      };
+      setInterval(checkForUpdate, 60_000);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') checkForUpdate();
+      });
+    },
+  });
 }
 
 // Rede de segurança global pós-deploy: se um chunk lazy falhar ao carregar
