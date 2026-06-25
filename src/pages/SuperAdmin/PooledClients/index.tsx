@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
-import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal } from 'lucide-react';
+import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2 } from 'lucide-react';
 import api from '@/services/core/api';
 import NewTenantWizard from './NewTenantWizard';
 import ClientBroadcastModal from './ClientBroadcastModal';
@@ -7,7 +7,7 @@ import ClientBroadcastModal from './ClientBroadcastModal';
 interface PooledTenant {
   id: string; name: string; slug: string; status: string;
   members: number | null; login_url: string; admin_email?: string;
-  settings?: Record<string, any>;
+  settings?: Record<string, any>; archived?: boolean;
 }
 interface Member { id: string; email: string; name?: string; }
 
@@ -186,14 +186,35 @@ export default function PooledClients() {
   const [featuresOf, setFeaturesOf] = useState<PooledTenant | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [showBroadcast, setShowBroadcast] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<PooledTenant | null>(null);
+  const [deleteText, setDeleteText] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { const r = await api.get('/super/pooled_tenants'); setTenants(r.data?.data || []); }
+    try { const r = await api.get(`/super/pooled_tenants${showArchived ? '?archived=true' : ''}`); setTenants(r.data?.data || []); }
     catch { /* noop */ }
     finally { setLoading(false); }
-  }, []);
+  }, [showArchived]);
   useEffect(() => { load(); }, [load]);
+
+  const doAction = async (t: PooledTenant, action: 'suspend' | 'unsuspend' | 'archive' | 'unarchive') => {
+    setBusyId(t.id);
+    try { await api.post(`/super/pooled_tenants/${t.id}/${action}`); await load(); }
+    catch (e: any) { alert(e?.response?.data?.error || 'Falha na ação.'); }
+    finally { setBusyId(null); }
+  };
+
+  const doDelete = async () => {
+    if (!confirmDelete) return;
+    setBusyId(confirmDelete.id);
+    try {
+      await api.delete(`/super/pooled_tenants/${confirmDelete.id}`, { data: { confirm_slug: deleteText.trim() } });
+      setConfirmDelete(null); setDeleteText(''); await load();
+    } catch (e: any) { alert(e?.response?.data?.error || 'Falha ao excluir.'); }
+    finally { setBusyId(null); }
+  };
 
   // Poll enquanto algum tenant estiver provisionando (status 'trial')
   useEffect(() => {
@@ -223,6 +244,10 @@ export default function PooledClients() {
           <p className="text-sm text-muted-foreground">Entre, gerencie membros e senhas de cada CRM.</p>
         </div>
         <div className="flex gap-2">
+          <button onClick={() => setShowArchived(v => !v)}
+            className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-md border ${showArchived ? 'border-violet-500/50 text-violet-300 bg-violet-500/10' : 'border-border text-muted-foreground hover:text-foreground'}`}>
+            <Archive className="w-4 h-4" /> {showArchived ? 'Ativos' : 'Arquivados'}
+          </button>
           <button onClick={load} className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-md border border-border text-muted-foreground hover:text-foreground">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Atualizar
           </button>
@@ -283,6 +308,34 @@ export default function PooledClients() {
                     <SlidersHorizontal className="w-4 h-4" /> Funções
                   </button>
                 </div>
+                <div className="flex gap-2 mt-2 pt-2 border-t border-white/5">
+                  {t.status === 'suspended' && !t.archived ? (
+                    <button onClick={() => doAction(t, 'unsuspend')} disabled={busyId === t.id}
+                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50">
+                      <Play className="w-3.5 h-3.5" /> Descongelar
+                    </button>
+                  ) : !t.archived ? (
+                    <button onClick={() => doAction(t, 'suspend')} disabled={busyId === t.id || isProvisioning}
+                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-amber-500/30 text-amber-300 hover:bg-amber-500/10 disabled:opacity-50">
+                      <Snowflake className="w-3.5 h-3.5" /> Congelar
+                    </button>
+                  ) : null}
+                  {t.archived ? (
+                    <button onClick={() => doAction(t, 'unarchive')} disabled={busyId === t.id}
+                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-violet-500/30 text-violet-300 hover:bg-violet-500/10 disabled:opacity-50">
+                      <ArchiveRestore className="w-3.5 h-3.5" /> Desarquivar
+                    </button>
+                  ) : (
+                    <button onClick={() => doAction(t, 'archive')} disabled={busyId === t.id || isProvisioning}
+                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-border text-muted-foreground hover:text-foreground disabled:opacity-50">
+                      <Archive className="w-3.5 h-3.5" /> Arquivar
+                    </button>
+                  )}
+                  <button onClick={() => { setConfirmDelete(t); setDeleteText(''); }} disabled={busyId === t.id}
+                    className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-red-500/30 text-red-400 hover:bg-red-500/10 disabled:opacity-50 ml-auto">
+                    <Trash2 className="w-3.5 h-3.5" /> Excluir
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -295,6 +348,31 @@ export default function PooledClients() {
       {featuresOf && <FeaturesModal tenant={featuresOf} onClose={() => setFeaturesOf(null)} />}
       {showWizard && <NewTenantWizard onClose={() => setShowWizard(false)} onCreated={load} />}
       {showBroadcast && <ClientBroadcastModal tenants={tenants} onClose={() => setShowBroadcast(false)} />}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={() => setConfirmDelete(null)}>
+          <div className="w-full max-w-md rounded-xl overflow-hidden" style={{ background: '#150a26', border: '1px solid rgba(239,68,68,0.4)' }} onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b" style={{ borderColor: 'rgba(239,68,68,0.25)' }}>
+              <h3 className="text-red-400 font-bold text-sm flex items-center gap-2"><Trash2 className="w-4 h-4" /> Excluir cliente — irreversível</h3>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <p className="text-sm text-white/80">
+                Isso <strong>apaga permanentemente</strong> o CRM de <strong>{confirmDelete.name}</strong> e <strong>todos os dados</strong> (conversas, leads, pipeline). Não tem volta.
+              </p>
+              <p className="text-xs text-white/50">Pra confirmar, digite o slug exato: <code className="text-red-300">{confirmDelete.slug}</code></p>
+              <input value={deleteText} onChange={e => setDeleteText(e.target.value)} placeholder={confirmDelete.slug} autoFocus
+                className="w-full px-3 py-2 rounded-lg text-sm text-white placeholder-white/25 outline-none"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(239,68,68,0.3)' }} />
+            </div>
+            <div className="flex justify-between px-5 py-4 border-t" style={{ borderColor: 'rgba(239,68,68,0.2)' }}>
+              <button onClick={() => setConfirmDelete(null)} className="text-sm px-4 py-2 rounded-lg border border-white/10 text-white/60 hover:text-white">Cancelar</button>
+              <button onClick={doDelete} disabled={busyId === confirmDelete.id || deleteText.trim() !== confirmDelete.slug}
+                className="flex items-center gap-1.5 text-sm px-5 py-2 rounded-lg font-semibold text-white disabled:opacity-40" style={{ background: '#dc2626' }}>
+                {busyId === confirmDelete.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Excluir definitivamente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
