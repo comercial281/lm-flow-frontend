@@ -12,7 +12,7 @@ import {
   Badge,
 } from '@evoapi/design-system';
 import {
-  FileInput, RefreshCw, Edit, ToggleLeft, ToggleRight, AlertTriangle, ArrowRight,
+  FileInput, RefreshCw, Edit, ToggleLeft, ToggleRight, AlertTriangle, ArrowRight, Download,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import EmptyState from '@/components/base/EmptyState';
@@ -21,6 +21,7 @@ import {
   LeadAdsFormConfig,
   LeadAdsFormConfigFormData,
   MetaForm,
+  BackfillResult,
 } from '@/services/leadAds/leadAdsFormsService';
 import { useAutomationResources } from '../LeadAutomations/LeadAutomationsEditors';
 import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
@@ -77,6 +78,28 @@ export default function LeadAdsForms() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<LeadAdsFormConfig | null>(null);
   const [form, setForm] = useState<FormState>(emptyFormState());
+
+  // Importar leads recentes que não entraram (backfill)
+  const [backfillOpen, setBackfillOpen] = useState(false);
+  const [backfillDays, setBackfillDays] = useState(3);
+  const [backfillBusy, setBackfillBusy] = useState(false);
+  const [backfillPreview, setBackfillPreview] = useState<BackfillResult | null>(null);
+
+  const runBackfill = async (dryRun: boolean) => {
+    setBackfillBusy(true);
+    try {
+      const r = await leadAdsFormsService.backfill(backfillDays, dryRun);
+      setBackfillPreview(r);
+      if (!dryRun) {
+        toast.success(`${r.importados} lead(s) importado(s)`);
+        load();
+      }
+    } catch {
+      toast.error('Erro ao importar leads');
+    } finally {
+      setBackfillBusy(false);
+    }
+  };
 
   // Roletas (ativas) e imóveis pra escolher no roteamento de entrada.
   const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
@@ -235,11 +258,71 @@ export default function LeadAdsForms() {
             Defina pra onde cada formulário de Lead Ads envia os leads no CRM
           </p>
         </div>
-        <Button onClick={handleSync} disabled={syncing}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-          {syncing ? 'Sincronizando...' : 'Sincronizar formulários'}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => { setBackfillPreview(null); setBackfillOpen(true); }}>
+            <Download className="h-4 w-4 mr-2" />
+            Importar leads recentes
+          </Button>
+          <Button onClick={handleSync} disabled={syncing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Sincronizando...' : 'Sincronizar formulários'}
+          </Button>
+        </div>
       </div>
+
+      {/* Modal: importar leads recentes (backfill) */}
+      <Dialog open={backfillOpen} onOpenChange={setBackfillOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Importar leads recentes</DialogTitle>
+            <DialogDescription>
+              Busca no Facebook os leads dos formulários e traz pro CRM os que ainda não entraram.
+              Não duplica os que já existem.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <UILabel htmlFor="bf_days">Período (dias)</UILabel>
+              <select id="bf_days" value={backfillDays}
+                onChange={e => { setBackfillDays(Number(e.target.value)); setBackfillPreview(null); }}
+                className={baseSelectClass}>
+                <option value={1}>Último 1 dia</option>
+                <option value={3}>Últimos 3 dias</option>
+                <option value={7}>Últimos 7 dias</option>
+                <option value={15}>Últimos 15 dias</option>
+                <option value={30}>Últimos 30 dias</option>
+              </select>
+            </div>
+
+            {backfillPreview && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm space-y-1">
+                <p>Encontrados: <strong>{backfillPreview.total_leads}</strong></p>
+                <p>Já no CRM: <strong>{backfillPreview.ja_no_crm}</strong></p>
+                <p className="text-primary">Faltam entrar: <strong>{backfillPreview.faltavam}</strong></p>
+                {backfillPreview.dry_run === false && (
+                  <p className="text-green-600">Importados agora: <strong>{backfillPreview.importados}</strong></p>
+                )}
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              Dica: confira primeiro. Ao importar, os leads entram no pipeline e podem disparar as
+              automações de entrada — desative o primeiro contato antes se não quiser avisar leads antigos.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => runBackfill(true)} disabled={backfillBusy}>
+              {backfillBusy ? 'Conferindo...' : 'Conferir'}
+            </Button>
+            <Button onClick={() => runBackfill(false)}
+              disabled={backfillBusy || !backfillPreview || backfillPreview.faltavam === 0}>
+              {backfillBusy ? 'Importando...' : `Importar${backfillPreview ? ` ${backfillPreview.faltavam}` : ''}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Aviso Meta não conectada */}
       {metaError && (

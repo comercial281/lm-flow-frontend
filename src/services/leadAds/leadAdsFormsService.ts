@@ -70,4 +70,21 @@ export const leadAdsFormsService = {
     const body = res.data as { data?: MetaForm[]; error?: string };
     return { data: body.data ?? [], error: body.error };
   },
+
+  // Importa retroativamente os leads dos últimos N dias que ainda não entraram.
+  // dryRun=true só conta (não cria). Idempotente por telefone.
+  async backfill(sinceDays: number, dryRun: boolean): Promise<BackfillResult> {
+    const res = await api.post(`${BASE}/backfill`, { since_days: sinceDays, dry_run: dryRun });
+    return (res.data as { data: BackfillResult }).data;
+  },
 };
+
+export interface BackfillResult {
+  since_days: number;
+  dry_run: boolean;
+  total_leads: number;
+  ja_no_crm: number;
+  faltavam: number;
+  importados: number;
+  por_formulario: { form: string; total: number; existing: number; missing: number }[];
+}
