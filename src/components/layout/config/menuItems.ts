@@ -221,8 +221,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     clientToggleKey: 'marketplace',
   },
   {
+    // Página única de clientes SaaS (pooled): lista + membros corretos por schema,
+    // Dashboard, Logs e Métricas de Uso. Substitui a antiga /super-admin/clientes
+    // (ClientInstances legado), cujo "Membros" via proxy mostrava o tenant errado.
     name: 'Clientes CRM',
-    href: '/super-admin/clientes',
+    href: '/super-admin/pooled-clients',
     icon: Building2,
     requiredEmail: 'comercial@lealmidia.com.br',
     rootTenantOnly: true,

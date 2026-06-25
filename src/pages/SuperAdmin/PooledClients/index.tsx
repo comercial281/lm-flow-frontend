@@ -1,8 +1,14 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
-import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2 } from 'lucide-react';
+import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud } from 'lucide-react';
 import api from '@/services/core/api';
 import NewTenantWizard from './NewTenantWizard';
 import ClientBroadcastModal from './ClientBroadcastModal';
+import clientInstancesService, { DashboardData } from '@/services/clientInstances/clientInstancesService';
+import DashboardView from '../ClientInstances/DashboardView';
+import LogsView from '../ClientInstances/LogsView';
+import UserMetricsView from '../ClientInstances/UserMetricsView';
+
+type ViewTab = 'clients' | 'dashboard' | 'logs' | 'metrics';
 
 interface PooledTenant {
   id: string; name: string; slug: string; status: string;
@@ -206,6 +212,10 @@ export default function PooledClients() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<PooledTenant | null>(null);
   const [deleteText, setDeleteText] = useState('');
+  const [tab, setTab] = useState<ViewTab>('clients');
+  const [dashData, setDashData] = useState<DashboardData | null>(null);
+  const [loadingDash, setLoadingDash] = useState(false);
+  const [syncingAll, setSyncingAll] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -214,6 +224,37 @@ export default function PooledClients() {
     finally { setLoading(false); }
   }, [showArchived]);
   useEffect(() => { load(); }, [load]);
+
+  // Aba Dashboard: métricas por cliente (snapshots pooled-aware do SyncClientMetricsJob).
+  const loadDashboard = useCallback(async () => {
+    setLoadingDash(true);
+    try { const r = await clientInstancesService.dashboard(); setDashData(r.data.data); }
+    catch { setDashData(null); }
+    finally { setLoadingDash(false); }
+  }, []);
+  useEffect(() => { if (tab === 'dashboard') loadDashboard(); }, [tab, loadDashboard]);
+
+  // Arquivar a partir do card de métrica (id do ClientInstance, não do Tenant pooled).
+  const handleArchiveCI = async (id: number) => {
+    if (!window.confirm('Arquivar este cliente das métricas?')) return;
+    try { await clientInstancesService.archive(id); loadDashboard(); } catch { alert('Falha ao arquivar.'); }
+  };
+
+  const handleSyncAll = async () => {
+    if (!window.confirm('Vai fazer redeploy Vercel de TODOS os tenants ativos. Continuar?')) return;
+    setSyncingAll(true);
+    try {
+      const res = await clientInstancesService.syncAllFrontends();
+      const results = res.data.data;
+      const ok = results.filter(r => r.success).map(r => r.name).join(', ');
+      const fail = results.filter(r => !r.success).map(r => `${r.name}: ${r.error}`).join('\n');
+      let msg = res.data.message;
+      if (ok) msg += `\nOK: ${ok}`;
+      if (fail) msg += `\nFalhou:\n${fail}`;
+      alert(msg);
+    } catch (e: any) { alert(e?.response?.data?.error ?? 'Erro ao sincronizar todos'); }
+    finally { setSyncingAll(false); }
+  };
 
   const doAction = async (t: PooledTenant, action: 'suspend' | 'unsuspend' | 'archive' | 'unarchive') => {
     setBusyId(t.id);
@@ -251,37 +292,75 @@ export default function PooledClients() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-violet-500" /> Clientes (SaaS)
-          </h1>
-          <p className="text-sm text-muted-foreground">Entre, gerencie membros e senhas de cada CRM.</p>
+    <div className="flex flex-col h-full">
+      <div className="px-6 pt-6 shrink-0">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-violet-500" /> Clientes (SaaS)
+            </h1>
+            <p className="text-sm text-muted-foreground">Entre, gerencie membros, métricas e logs de cada CRM.</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => (tab === 'dashboard' ? loadDashboard() : load())}
+              className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-md border border-border text-muted-foreground hover:text-foreground">
+              <RefreshCw className={`w-4 h-4 ${loading || loadingDash ? 'animate-spin' : ''}`} /> Atualizar
+            </button>
+            <button onClick={handleSyncAll} disabled={syncingAll}
+              title="Redeploy Vercel de todos os tenants (atualiza todos com o código da raiz)"
+              className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-md border border-border text-muted-foreground hover:text-foreground disabled:opacity-50">
+              {syncingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+              {syncingAll ? 'Sincronizando...' : 'Sync Todos'}
+            </button>
+            {tab === 'clients' && (
+              <>
+                <button onClick={() => setShowArchived(v => !v)}
+                  className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-md border ${showArchived ? 'border-violet-500/50 text-violet-300 bg-violet-500/10' : 'border-border text-muted-foreground hover:text-foreground'}`}>
+                  <Archive className="w-4 h-4" /> {showArchived ? 'Ativos' : 'Arquivados'}
+                </button>
+                <button onClick={() => setShowBroadcast(true)} disabled={tenants.length === 0}
+                  className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md border border-violet-500/40 text-violet-300 hover:bg-violet-500/10 disabled:opacity-40">
+                  <Megaphone className="w-4 h-4" /> Comunicado
+                </button>
+                <button onClick={() => setShowWizard(true)}
+                  className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md font-semibold text-white"
+                  style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}>
+                  <Plus className="w-4 h-4" /> Novo Cliente
+                </button>
+              </>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => setShowArchived(v => !v)}
-            className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-md border ${showArchived ? 'border-violet-500/50 text-violet-300 bg-violet-500/10' : 'border-border text-muted-foreground hover:text-foreground'}`}>
-            <Archive className="w-4 h-4" /> {showArchived ? 'Ativos' : 'Arquivados'}
-          </button>
-          <button onClick={load} className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-md border border-border text-muted-foreground hover:text-foreground">
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Atualizar
-          </button>
-          <button onClick={() => setShowBroadcast(true)} disabled={tenants.length === 0}
-            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md border border-violet-500/40 text-violet-300 hover:bg-violet-500/10 disabled:opacity-40">
-            <Megaphone className="w-4 h-4" /> Comunicado
-          </button>
-          <button onClick={() => setShowWizard(true)}
-            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md font-semibold text-white"
-            style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}>
-            <Plus className="w-4 h-4" /> Novo Cliente
-          </button>
+
+        {/* Abas */}
+        <div className="flex items-center gap-1 border-b">
+          {([
+            { id: 'clients', label: 'Clientes', Icon: List },
+            { id: 'dashboard', label: 'Dashboard', Icon: BarChart3 },
+            { id: 'logs', label: 'Logs', Icon: ScrollText },
+            { id: 'metrics', label: 'Métricas de Uso', Icon: Gauge },
+          ] as { id: ViewTab; label: string; Icon: typeof List }[]).map(({ id, label, Icon }) => (
+            <button key={id} onClick={() => setTab(id)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                tab === id ? 'border-violet-500 text-violet-400' : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}>
+              <Icon className="h-3.5 w-3.5" /> {label}
+            </button>
+          ))}
         </div>
       </div>
-      {loading && tenants.length === 0 ? (
+
+      <div className="flex-1 overflow-auto px-6 py-4 min-h-0">
+      {tab === 'dashboard' ? (
+        <DashboardView data={dashData} loading={loadingDash} onArchive={handleArchiveCI} />
+      ) : tab === 'logs' ? (
+        <div className="h-full"><LogsView /></div>
+      ) : tab === 'metrics' ? (
+        <div className="h-full"><UserMetricsView /></div>
+      ) : loading && tenants.length === 0 ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-violet-500" /></div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 max-w-5xl mx-auto">
           {tenants.map(t => {
             const st = STATUS[t.status] || { label: t.status, cls: 'bg-white/10 text-white/60 border-white/20' };
             const isProvisioning = t.status === 'trial';
@@ -360,6 +439,7 @@ export default function PooledClients() {
           )}
         </div>
       )}
+      </div>
       {membersOf && <MembersModal tenant={membersOf} onClose={() => setMembersOf(null)} />}
       {featuresOf && <FeaturesModal tenant={featuresOf} onClose={() => setFeaturesOf(null)} />}
       {showWizard && <NewTenantWizard onClose={() => setShowWizard(false)} onCreated={load} />}
