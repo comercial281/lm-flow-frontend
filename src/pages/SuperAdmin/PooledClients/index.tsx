@@ -46,6 +46,16 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
     finally { setAdding(false); }
   };
 
+  const removeMember = async (m: Member) => {
+    if (!window.confirm(`Remover o acesso de ${m.email}? Ele não conseguirá mais logar neste CRM.`)) return;
+    setSavingId(m.id);
+    try {
+      await api.post(`/super/pooled_tenants/${tenant.id}/remove_member`, { user_id: m.id });
+      setMembers(prev => prev.filter(x => x.id !== m.id));
+    } catch (e: any) { alert(e?.response?.data?.error || 'Falha ao remover.'); }
+    finally { setSavingId(null); }
+  };
+
   const setPassword = async (m: Member) => {
     const pwd = window.prompt(`Nova senha para ${m.email} (min. 8 caracteres):`);
     if (!pwd) return;
@@ -85,6 +95,12 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
                 {savingId === m.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />}
                 Trocar senha
               </button>
+              {!/@lealmidia\.com\.br$/i.test(m.email) && (
+                <button onClick={() => removeMember(m)} disabled={savingId === m.id} title="Remover acesso"
+                  className="flex items-center justify-center p-1.5 rounded-md border border-red-500/20 text-red-400/70 hover:text-red-400 hover:border-red-500/40 disabled:opacity-50">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           ))}
         </div>
