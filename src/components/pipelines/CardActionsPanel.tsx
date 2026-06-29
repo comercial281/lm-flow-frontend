@@ -10,6 +10,7 @@ import { conversationAPI } from '@/services/conversations/conversationService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { visitsService } from '@/services/visits/visitsService';
 import { ScheduleActionModal } from '@/components/scheduledActions/ScheduleActionModal';
+import FollowupTimeline from './FollowupTimeline';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
 
@@ -234,6 +235,11 @@ export default function CardActionsPanel({
         {!convId && (
           <p className="text-[10px] text-muted-foreground">Disponível apenas para leads com conversa WhatsApp.</p>
         )}
+        {/* Linha do tempo dos passos do follow-up (o que o robô já mandou e o que falta) */}
+        <div className="pt-1 border-t border-border/60 mt-1">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Linha do tempo</p>
+          <FollowupTimeline contactId={contactId ? String(contactId) : null} conversationId={convId} />
+        </div>
       </div>
 
       {/* Chatbot */}
