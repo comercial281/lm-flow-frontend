@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -666,7 +667,7 @@ const AgentDisplayNameCard: React.FC<AgentDisplayNameCardProps> = ({ conversatio
       await apiAuth.patch(`/conversations/${conversation.id}`, { additional_attributes: { agent_display_name: value.trim() } });
       toast.success('Nome do atendente atualizado');
       setEditing(false);
-    } catch { toast.error('Erro ao salvar nome'); }
+    } catch (e) { toast.error(apiErrorMessage(e, 'Erro ao salvar nome')); }
     finally { setSaving(false); }
   };
 

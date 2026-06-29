@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -81,8 +82,8 @@ export default function AutomationLibraryModal({ open, onClose, onApplied }: Pro
       setAppliedIds(prev => [...prev, tpl.id]);
       toast.success(`"${tpl.name}" adicionada`);
       onApplied();
-    } catch {
-      toast.error('Erro ao adicionar template');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao adicionar template'));
     } finally {
       setApplyingId(null);
     }

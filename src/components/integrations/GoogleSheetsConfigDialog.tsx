@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Dialog,
   DialogContent,
@@ -138,7 +139,7 @@ const GoogleSheetsConfigDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving Google Sheets configuration:', error);
-      toast.error('Erro ao salvar configurações');
+      toast.error(apiErrorMessage(error, 'Erro ao salvar configurações'));
     }
   };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   Dialog,
@@ -127,8 +128,8 @@ export default function ContactDetails({
       });
       setNewInterestPropertyId('');
       loadPropertyInterests(contact.id);
-    } catch {
-      toast.error('Erro ao adicionar interesse');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao adicionar interesse'));
     } finally {
       setAddingInterest(false);
     }
@@ -138,8 +139,8 @@ export default function ContactDetails({
     try {
       await propertyInterestsService.advance(id);
       if (contact) loadPropertyInterests(contact.id);
-    } catch {
-      toast.error('Não foi possível avançar o estágio');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não foi possível avançar o estágio'));
     }
   };
 
@@ -147,8 +148,8 @@ export default function ContactDetails({
     try {
       await propertyInterestsService.delete(id);
       if (contact) loadPropertyInterests(contact.id);
-    } catch {
-      toast.error('Erro ao remover interesse');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao remover interesse'));
     }
   };
 

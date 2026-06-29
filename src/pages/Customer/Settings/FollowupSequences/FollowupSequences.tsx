@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import {
   Button,
@@ -309,8 +310,8 @@ export default function FollowupSequences() {
       toast.success('Sequência salva.');
       closeEditor();
       load();
-    } catch {
-      toast.error('Falha ao salvar.');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Falha ao salvar.'));
     } finally {
       setSaving(false);
     }

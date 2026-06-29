@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Dialog,
   DialogContent,
@@ -160,7 +161,7 @@ const StripeConfigDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving Stripe configuration:', error);
-      toast.error('Erro ao salvar configurações');
+      toast.error(apiErrorMessage(error, 'Erro ao salvar configurações'));
     }
   };
 

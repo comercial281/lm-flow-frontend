@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Input,
   Button,
@@ -77,8 +78,8 @@ export function LeadCombobox({ value, onChange, placeholder = 'Buscar lead ou co
       setQuickName('');
       setQuickPhone('');
       setOpen(false);
-    } catch {
-      toast.error('Erro ao criar contato');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao criar contato'));
     } finally {
       setQuickSaving(false);
     }

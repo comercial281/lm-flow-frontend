@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { contactsService } from '@/services/contacts/contactsService';
@@ -76,9 +77,9 @@ export default function ContactTagsManager({
         else await chatService.removeLabels(conversationId, [changed]);
       }
       onUpdated?.();
-    } catch {
+    } catch (e) {
       setTags(prev);
-      toast.error('Erro ao salvar a tag');
+      toast.error(apiErrorMessage(e, 'Erro ao salvar a tag'));
     } finally {
       setSaving(false);
     }

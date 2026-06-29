@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import { Button, Input, Badge } from '@evoapi/design-system';
 import { Plus, Trash2, Loader2, Search, Home, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -88,8 +89,8 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
       setSearchResults([]);
       setSearchOpen(false);
       await load();
-    } catch {
-      toast.error('Erro ao adicionar imóvel');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao adicionar imóvel'));
     } finally {
       setAdding(null);
     }
@@ -101,8 +102,8 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
       await propertyInterestsService.delete(interestId);
       toast.success('Imóvel removido');
       await load();
-    } catch {
-      toast.error('Erro ao remover');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao remover'));
     } finally {
       setRemoving(null);
     }

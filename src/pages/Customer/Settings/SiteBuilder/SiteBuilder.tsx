@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import {
   Button,
@@ -203,8 +204,8 @@ export default function SiteBuilder() {
         toast.success('Site criado');
       }
       setSiteFormDirty(false);
-    } catch {
-      toast.error('Erro ao salvar site');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao salvar site'));
     } finally {
       setSaving(false);
     }
@@ -249,8 +250,8 @@ export default function SiteBuilder() {
         toast.success('Página criada');
       }
       setPageModal(false);
-    } catch {
-      toast.error('Erro ao salvar página');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao salvar página'));
     } finally {
       setSaving(false);
     }
@@ -299,8 +300,8 @@ export default function SiteBuilder() {
         toast.success('Artigo criado');
       }
       setArticleModal(false);
-    } catch {
-      toast.error('Erro ao salvar artigo');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao salvar artigo'));
     } finally {
       setSaving(false);
     }

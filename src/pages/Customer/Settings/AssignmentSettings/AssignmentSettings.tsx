@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardContent } from '@evoapi/design-system/card';
 import { Button } from '@evoapi/design-system/button';
@@ -68,8 +69,8 @@ export default function AssignmentSettings() {
         : i
       ));
       toast.success('Configuração salva!');
-    } catch {
-      toast.error('Erro ao salvar');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao salvar'));
     } finally {
       setSaving(false);
     }

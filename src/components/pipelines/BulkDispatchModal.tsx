@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Dialog,
   DialogContent,
@@ -267,8 +268,8 @@ export default function BulkDispatchModal({
       });
       toast.success('Modelo salvo na biblioteca.');
       setFunnelTemplates(await messageFunnelsService.list({ activeOnly: true }));
-    } catch {
-      toast.error('Não consegui salvar o modelo.');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não consegui salvar o modelo.'));
     }
   };
 

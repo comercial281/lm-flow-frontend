@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import {
   Button,
@@ -197,8 +198,8 @@ export default function LeadAdsForms() {
         toast.success('Configuração salva');
       }
       setModalOpen(false);
-    } catch {
-      toast.error('Erro ao salvar configuração');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao salvar configuração'));
     } finally {
       setSaving(false);
     }

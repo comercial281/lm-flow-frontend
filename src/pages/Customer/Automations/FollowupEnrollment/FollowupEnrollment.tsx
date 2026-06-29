@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import { Button } from '@evoapi/design-system';
 import { Loader2, Repeat, CheckCircle2, Info } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,8 +25,8 @@ export function FollowupEnrollment() {
       setEnabled(c.enabled);
       setAudience(c.audience);
       setSequenceSlug(c.sequence_slug ?? c.sequences[0]?.slug ?? '');
-    } catch {
-      toast.error('Erro ao carregar a configuração');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao carregar a configuração'));
     } finally {
       setLoading(false);
     }
@@ -43,8 +44,8 @@ export function FollowupEnrollment() {
       setAudience(c.audience);
       setSequenceSlug(c.sequence_slug ?? '');
       toast.success(enabled ? 'Follow-up automático ligado' : 'Follow-up automático desligado');
-    } catch {
-      toast.error('Erro ao salvar');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao salvar'));
     } finally {
       setSaving(false);
     }

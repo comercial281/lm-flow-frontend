@@ -108,6 +108,22 @@ export function extractError(error: any): ErrorInfo {
 }
 
 /**
+ * Mensagem de erro pronta pra toast: pega a mensagem REAL do backend
+ * (error.response.data.error.message / .message) e cai no fallback só se não houver.
+ * Use em catch de forms pra não esconder a validação atrás de um "Erro ao X" genérico.
+ * @param error - erro capturado (axios)
+ * @param fallback - mensagem padrão se o backend não mandar nada
+ */
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  const e = error as { response?: { data?: { error?: { message?: string }; message?: string } }; message?: string };
+  return (
+    e?.response?.data?.error?.message ||
+    e?.response?.data?.message ||
+    fallback
+  );
+}
+
+/**
  * Extract success message from response
  * @param response - Axios response object
  * @returns Success message or undefined

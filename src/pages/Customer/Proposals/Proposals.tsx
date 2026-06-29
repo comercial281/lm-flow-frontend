@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import {
   Search, Plus, FileText, Building2, User, TrendingUp,
@@ -226,8 +227,8 @@ export default function Proposals() {
       }
       setCreateOpen(false);
       load();
-    } catch {
-      toast.error('Erro ao salvar proposta');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao salvar proposta'));
     } finally {
       setSaving(false);
     }

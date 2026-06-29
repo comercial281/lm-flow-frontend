@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import {
   Button,
@@ -163,8 +164,8 @@ export default function LeadAutomations() {
         toast.success('Automação criada');
       }
       setModalOpen(false);
-    } catch {
-      toast.error('Erro ao salvar automação');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao salvar automação'));
     } finally {
       setSaving(false);
     }

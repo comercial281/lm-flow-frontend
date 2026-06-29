@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import {
   Button,
@@ -130,8 +131,8 @@ export default function DynamicForms() {
         toast.success('Formulário criado');
       }
       setFormModalOpen(false);
-    } catch {
-      toast.error('Erro ao salvar formulário');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao salvar formulário'));
     } finally {
       setFormSaving(false);
     }
@@ -181,8 +182,8 @@ export default function DynamicForms() {
       setAddingField(false);
       setForms(prev => prev.map(f => f.id === activeForm.id ? { ...f, field_count: f.field_count + 1 } : f));
       toast.success('Campo adicionado');
-    } catch {
-      toast.error('Erro ao adicionar campo');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao adicionar campo'));
     } finally {
       setFieldSaving(false);
     }
