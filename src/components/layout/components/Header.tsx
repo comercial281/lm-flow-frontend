@@ -265,6 +265,7 @@ export default function Header({
                   variant="ghost"
                   size="icon"
                   onClick={toggleSidebar}
+                  aria-label={isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
                   className="h-8 w-8 text-sidebar-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent flex-shrink-0 cursor-pointer"
                 >
                   {isCollapsed ? (
