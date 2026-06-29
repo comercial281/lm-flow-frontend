@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import { useLanguage } from '@/hooks/useLanguage';
 import { Card, CardContent, CardHeader, CardTitle, Button } from '@evoapi/design-system';
 import { Activity, Clock, Filter, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
@@ -133,7 +134,7 @@ export default function ContactEventsTimeline({
                     {stats ? (
                       <>
                         {stats.totalEvents} {t('events.stats.events')} • {t('events.stats.last')}: {stats.lastEvent ?
-                          new Date(stats.lastEvent).toLocaleDateString('pt-BR') : '-'}
+                          formatDateBR(stats.lastEvent) : '-'}
                       </>
                     ) : (
                       t('events.stats.loading')

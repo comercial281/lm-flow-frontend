@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import { useLanguage } from '@/hooks/useLanguage';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, Badge } from '@evoapi/design-system';
 import { Activity, Loader2, BarChart3, Calendar, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
@@ -96,7 +97,7 @@ export default function ContactEventsModal({ open, onOpenChange, contact }: Cont
                           <span className="text-xs font-medium text-success">{t('events.stats.first')}</span>
                         </div>
                         <span className="text-sm font-semibold text-foreground">
-                          {stats.firstEvent ? new Date(stats.firstEvent).toLocaleDateString('pt-BR') : '-'}
+                          {stats.firstEvent ? formatDateBR(stats.firstEvent) : '-'}
                         </span>
                         <span className="text-xs text-muted-foreground">{t('events.stats.event')}</span>
                       </div>
@@ -108,7 +109,7 @@ export default function ContactEventsModal({ open, onOpenChange, contact }: Cont
                           <span className="text-xs font-medium text-warning">{t('events.stats.last')}</span>
                         </div>
                         <span className="text-sm font-semibold text-foreground">
-                          {stats.lastEvent ? new Date(stats.lastEvent).toLocaleDateString('pt-BR') : '-'}
+                          {stats.lastEvent ? formatDateBR(stats.lastEvent) : '-'}
                         </span>
                         <span className="text-xs text-muted-foreground">{t('events.stats.event')}</span>
                       </div>

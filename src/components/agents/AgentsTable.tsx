@@ -1,4 +1,5 @@
 import { Badge, Button } from '@evoapi/design-system';
+import { formatDateBR } from '@/utils/dateUtils';
 import { Bot, ExternalLink, ArrowRight, GitBranch, RefreshCw, MoreHorizontal } from 'lucide-react';
 import { Agent } from '@/types/agents';
 import { BaseTable, TableColumn } from '@/components/base';
@@ -131,7 +132,7 @@ export default function AgentsTable({
       sortable: true,
       render: agent => (
         <span className="text-muted-foreground">
-          {agent.created_at && new Date(agent.created_at).toLocaleDateString('pt-BR')}
+          {agent.created_at && formatDateBR(agent.created_at)}
         </span>
       ),
     },

@@ -1,4 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
+import { formatDateBR } from '@/utils/dateUtils';
 import {
   Dialog,
   DialogContent,
@@ -131,7 +132,7 @@ export default function CustomMCPServerDetails({
                   <label className="text-sm font-medium text-muted-foreground">{t('details.labels.createdAt')}</label>
                   <p className="text-sm mt-1 flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    {new Date(server.created_at).toLocaleDateString('pt-BR')}
+                    {formatDateBR(server.created_at)}
                   </p>
                 </div>
               </div>

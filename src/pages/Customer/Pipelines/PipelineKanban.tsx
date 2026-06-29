@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -1034,8 +1035,8 @@ export default function PipelineKanban() {
         etapa: stage.name,
         valor: item.value || '',
         entrada: item.entered_at
-          ? new Date(item.entered_at * 1000).toLocaleDateString('pt-BR')
-          : new Date(item.created_at).toLocaleDateString('pt-BR'),
+          ? formatDateBR(item.entered_at * 1000)
+          : formatDateBR(item.created_at),
       })),
     );
     if (allItems.length === 0) {
@@ -1865,9 +1866,7 @@ export default function PipelineKanban() {
                               <span title={t('kanban.item.arrivedAt', 'Lead chegou em')}>
                                 {formatArrivalDate(item) ||
                                   (item.conversation?.last_activity_at
-                                    ? new Date(
-                                        item.conversation.last_activity_at * 1000,
-                                      ).toLocaleDateString('pt-BR')
+                                    ? formatDateBR(item.conversation.last_activity_at * 1000,)
                                     : '')}
                               </span>
                             </div>

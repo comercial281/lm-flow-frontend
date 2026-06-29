@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDateTimeBR } from '@/utils/dateUtils';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   Dialog,
@@ -232,7 +233,7 @@ export default function CreateTaskModal({
             />
             {parentTask?.due_date && (
               <p className="text-xs text-muted-foreground">
-                {t('tasks.form.exactDueDate')}: {new Date(parentTask.due_date).toLocaleString('pt-BR')}
+                {t('tasks.form.exactDueDate')}: {formatDateTimeBR(parentTask.due_date)}
               </p>
             )}
             {errors.due_date && (

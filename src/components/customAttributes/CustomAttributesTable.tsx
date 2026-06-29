@@ -1,4 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
+import { formatDateBR } from '@/utils/dateUtils';
 import { Edit, Trash2 } from 'lucide-react';
 import BaseTable from '@/components/base/BaseTable';
 import { CustomAttributeDefinition, ATTRIBUTE_TYPE_OPTIONS, AttributeModel } from '@/types/settings';
@@ -122,7 +123,7 @@ export default function CustomAttributesTable({
       sortable: true,
       render: (attribute: CustomAttributeDefinition) => (
         <div className="text-sm text-muted-foreground">
-          {new Date(attribute.created_at).toLocaleDateString('pt-BR')}
+          {formatDateBR(attribute.created_at)}
         </div>
       ),
     },

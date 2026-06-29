@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import {
   Search, RefreshCw, CheckCircle, XCircle, User,
   Phone, Mail, MapPin, DollarSign, ClipboardList,
@@ -38,7 +39,7 @@ function formatCurrency(v?: number | null) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('pt-BR');
+  return formatDateBR(iso);
 }
 
 export default function PropertyCaptureRequests() {

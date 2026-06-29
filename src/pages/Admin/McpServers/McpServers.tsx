@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import {
   Button,
   Table,
@@ -293,7 +294,7 @@ const McpServers = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(server.created_at).toLocaleDateString('pt-BR')}
+                        {formatDateBR(server.created_at)}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>

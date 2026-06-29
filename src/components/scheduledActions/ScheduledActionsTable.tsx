@@ -1,4 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
+import { formatDateTimeBR } from '@/utils/dateUtils';
 import { Edit, X, Clock, AlertCircle } from 'lucide-react';
 import { ScheduledAction } from '@/types/automation';
 import { BaseTable, TableColumn, TableAction } from '@/components/base';
@@ -106,7 +107,7 @@ export default function ScheduledActionsTable({
       render: action => (
         <div className="space-y-1">
           <div className="text-sm">
-            {new Date(action.scheduled_for).toLocaleString('pt-BR')}
+            {formatDateTimeBR(action.scheduled_for)}
           </div>
           {action.status === 'scheduled' && !action.overdue && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -129,7 +130,7 @@ export default function ScheduledActionsTable({
       sortable: true,
       render: action => (
         <div className="text-sm text-muted-foreground">
-          {new Date(action.created_at).toLocaleString('pt-BR')}
+          {formatDateTimeBR(action.created_at)}
         </div>
       ),
     },

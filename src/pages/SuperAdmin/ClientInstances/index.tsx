@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import {
   Plus, RefreshCw, Building2, CheckCircle, AlertCircle, Loader2,
   Copy, ExternalLink, Trash2, ChevronDown, ChevronUp, Users, ToggleLeft,
@@ -203,7 +204,7 @@ function InstanceCard({ instance, onDelete, onArchive, onRefresh }: {
             </div>
           )}
           <p className="text-xs text-muted-foreground">
-            Criado em {new Date(instance.created_at).toLocaleDateString('pt-BR')}
+            Criado em {formatDateBR(instance.created_at)}
           </p>
         </div>
       )}

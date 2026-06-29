@@ -2,6 +2,7 @@
 // Links: digitar `[texto](https://...)` no markdown. Render via react-markdown.
 
 import { useState } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import { Plus, Pin, PinOff, Pencil, Trash2, ArrowLeft, X, Save } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -245,7 +246,7 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
                     {doc.content_md.replace(/[#*_>`-]/g, '').slice(0, 160) || '— sem texto —'}
                   </p>
                   <p className="text-[10px] text-muted-foreground/70 mt-2">
-                    Atualizado em {new Date(doc.updated_at).toLocaleDateString('pt-BR')}
+                    Atualizado em {formatDateBR(doc.updated_at)}
                   </p>
                 </div>
               </div>

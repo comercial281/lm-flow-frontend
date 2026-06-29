@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { formatDateTimeBR } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 import {
   Button, Input, Label as UILabel, Badge,
@@ -285,7 +286,7 @@ export default function RoletaConfigPage() {
                   {STATUS_LABEL[a.status] ?? a.status}
                 </span>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {new Date(a.assigned_at).toLocaleString('pt-BR')}
+                  {formatDateTimeBR(a.assigned_at)}
                 </p>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 
 import { useLanguage } from '@/hooks/useLanguage';
@@ -391,7 +392,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                         <p className="whitespace-pre-wrap break-words">{note.content}</p>
                         {note.created_at && (
                           <p className="text-muted-foreground mt-1">
-                            {new Date(note.created_at).toLocaleDateString('pt-BR')}
+                            {formatDateBR(note.created_at)}
                           </p>
                         )}
                       </div>
@@ -467,7 +468,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                           <p className="truncate font-medium">{conv.inbox_name || `#${conv.id}`}</p>
                           {conv.created_at && (
                             <p className="text-muted-foreground">
-                              {new Date(conv.created_at).toLocaleDateString('pt-BR')}
+                              {formatDateBR(conv.created_at)}
                             </p>
                           )}
                         </div>

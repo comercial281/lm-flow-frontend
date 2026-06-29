@@ -1,4 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
+import { formatDateBR } from '@/utils/dateUtils';
 import { Button, Badge, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@evoapi/design-system';
 import { Edit, Trash2, MoreVertical, Phone, Mail, MessageSquare, User, Clock, AlertCircle, ListTodo, CheckCircle2, GripVertical, GitBranch, Megaphone, Home } from 'lucide-react';
 import { PipelineItem, Pipeline, PipelineStage } from '@/types/analytics';
@@ -395,8 +396,8 @@ export default function PipelineItemCard({
           </div>
           <span>
             {item.conversation?.last_activity_at
-              ? new Date(item.conversation.last_activity_at * 1000).toLocaleDateString('pt-BR')
-              : new Date((item.entered_at || 0) * 1000).toLocaleDateString('pt-BR')}
+              ? formatDateBR(item.conversation.last_activity_at * 1000)
+              : formatDateBR((item.entered_at || 0) * 1000)}
           </span>
         </div>
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import {
@@ -77,7 +78,7 @@ const EMPTY_ARTICLE_FORM: ArticleFormData = {
 };
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('pt-BR');
+  return formatDateBR(iso);
 }
 
 export default function SiteBuilder() {

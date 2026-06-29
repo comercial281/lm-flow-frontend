@@ -1,4 +1,5 @@
 import { Building2, Wifi, WifiOff, Server, MessageSquare, Users, LayoutList, Archive } from 'lucide-react';
+import { formatDateBR } from '@/utils/dateUtils';
 import { Button } from '@evoapi/design-system';
 import type { ClientInstance } from '@/services/clientInstances/clientInstancesService';
 
@@ -112,7 +113,7 @@ export default function ClientMetricCard({ instance, onArchive }: Props) {
 
       {snap && (
         <p className="text-[10px] text-muted-foreground text-right">
-          Atualizado: {new Date(snap.date).toLocaleDateString('pt-BR')}
+          Atualizado: {formatDateBR(snap.date)}
         </p>
       )}
     </div>

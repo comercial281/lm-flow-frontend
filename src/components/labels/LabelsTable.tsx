@@ -1,4 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
+import { formatDateBR } from '@/utils/dateUtils';
 import { Edit, Trash2 } from 'lucide-react';
 import BaseTable from '@/components/base/BaseTable';
 import { Label } from '@/types/settings';
@@ -87,7 +88,7 @@ export default function LabelsTable({
         const ms = typeof raw === 'number' || /^\d+$/.test(String(raw)) ? Number(raw) * 1000 : Date.parse(String(raw));
         return (
           <div className="text-sm text-muted-foreground">
-            {Number.isFinite(ms) ? new Date(ms).toLocaleDateString('pt-BR') : '-'}
+            {Number.isFinite(ms) ? formatDateBR(ms) : '-'}
           </div>
         );
       },

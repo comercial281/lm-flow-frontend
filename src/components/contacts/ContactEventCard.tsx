@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatDateTimeBR } from '@/utils/dateUtils';
 import { useLanguage } from '@/hooks/useLanguage';
 import { Card, CardContent, Badge, Button } from '@evoapi/design-system';
 import {
@@ -205,7 +206,7 @@ const formatPropertyValue = (key: string, value: unknown, t: (key: string, optio
   // Special formatting for specific keys
   if (key.includes('_at') || key.includes('timestamp')) {
     try {
-      return new Date(String(value)).toLocaleString('pt-BR');
+      return formatDateTimeBR(String(value));
     } catch {
       return String(value);
     }

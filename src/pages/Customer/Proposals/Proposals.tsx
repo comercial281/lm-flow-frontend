@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import {
@@ -47,7 +48,7 @@ function formatCurrency(value?: number | null): string {
 
 function formatDate(iso?: string | null): string {
   if (!iso) return '-';
-  return new Date(iso).toLocaleDateString('pt-BR');
+  return formatDateBR(iso);
 }
 
 interface ProposalFormState {

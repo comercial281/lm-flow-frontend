@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatDateTimeBR } from '@/utils/dateUtils';
 import { CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Badge } from '@evoapi/design-system/badge';
 import api from '@/services/core/api';
@@ -80,7 +81,7 @@ export function AutomationLogs({ automationRuleId }: AutomationLogsProps) {
                   {log.status}
                 </Badge>
                 <span className="text-muted-foreground">
-                  {new Date(log.created_at).toLocaleString('pt-BR')}
+                  {formatDateTimeBR(log.created_at)}
                 </span>
                 {log.conversation_id != null && (
                   <span className="text-muted-foreground">

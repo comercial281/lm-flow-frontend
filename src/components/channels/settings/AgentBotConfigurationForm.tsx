@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import {
   Card,
   CardContent,
@@ -1081,9 +1082,7 @@ export default function AgentBotConfigurationForm({
                                                   )}
                                                   {post.created_time && (
                                                     <p className="text-xs text-muted-foreground mt-1">
-                                                      {new Date(
-                                                        post.created_time,
-                                                      ).toLocaleDateString()}
+                                                      {formatDateBR(post.created_time,)}
                                                     </p>
                                                   )}
                                                 </div>

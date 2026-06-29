@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatDateTimeBR } from '@/utils/dateUtils';
 import {
   Dialog,
   DialogContent,
@@ -90,7 +91,7 @@ export default function RoleAuditModal({ open, onClose, role }: Props) {
                       {ACTION_LABELS[log.action] ?? log.action}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {new Date(log.created_at).toLocaleString('pt-BR')}
+                      {formatDateTimeBR(log.created_at)}
                     </span>
                   </div>
                   {log.note && (

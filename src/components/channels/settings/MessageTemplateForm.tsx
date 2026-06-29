@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -825,7 +826,7 @@ const MessageTemplateForm: React.FC<MessageTemplateFormProps> = ({
                   <TableCell>{template.language}</TableCell>
                   <TableCell>
                     {template.created_at
-                      ? new Date(template.created_at).toLocaleDateString('pt-BR')
+                      ? formatDateBR(template.created_at)
                       : '-'}
                   </TableCell>
                   <TableCell>
