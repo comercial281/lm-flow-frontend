@@ -1,7 +1,7 @@
 import { useLanguage } from '@/hooks/useLanguage';
 import { formatDateBR } from '@/utils/dateUtils';
 import { Button, Badge, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/ds';
-import { Edit, Trash2, MoreVertical, Phone, Mail, MessageSquare, User, Clock, AlertCircle, ListTodo, CheckCircle2, GripVertical, GitBranch, Megaphone, Home } from 'lucide-react';
+import { Edit, Trash2, MoreVertical, Phone, Mail, MessageSquare, User, Clock, AlertCircle, ListTodo, CheckCircle2, GripVertical, GitBranch, Megaphone, Home, Calendar } from 'lucide-react';
 import { PipelineItem, Pipeline, PipelineStage } from '@/types/analytics';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 
@@ -140,6 +140,41 @@ export default function PipelineItemCard({
           </div>
         </div>
       </div>
+
+      {/* Ações rápidas do corretor — responder em <30s sem abrir o lead */}
+      {item.contact?.phone_number && (
+        <div className="mb-3 flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+          <a
+            href={`tel:${item.contact.phone_number.replace(/[^\d+]/g, '')}`}
+            className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+            title={t('kanban.item.call', 'Ligar')}
+          >
+            <Phone className="w-3.5 h-3.5" />
+            {t('kanban.item.call', 'Ligar')}
+          </a>
+          <a
+            href={`https://wa.me/${(item.contact.phone_number.match(/\d/g) || []).join('')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-400 transition-colors"
+            title="WhatsApp"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            WhatsApp
+          </a>
+          {onView && (
+            <button
+              type="button"
+              onClick={() => onView(item)}
+              className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              title={t('kanban.item.schedule', 'Agendar')}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              {t('kanban.item.schedule', 'Agendar')}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Tags / Etiquetas do contato (ex: "tráfego pago") */}
       {Array.isArray((item.contact as any)?.labels) && (item.contact as any).labels.length > 0 && (
