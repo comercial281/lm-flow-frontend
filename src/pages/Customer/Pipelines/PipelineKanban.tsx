@@ -1699,6 +1699,39 @@ export default function PipelineKanban() {
                             </div>
                           </div>
 
+                          {/* Ações rápidas do corretor — responder em <30s sem abrir o lead */}
+                          {item.contact?.phone_number && (
+                            <div className="mb-3 flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                              <a
+                                href={`tel:${item.contact.phone_number.replace(/[^\d+]/g, '')}`}
+                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                                title="Ligar"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                                Ligar
+                              </a>
+                              <a
+                                href={`https://wa.me/${(item.contact.phone_number.match(/\d/g) || []).join('')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-400 transition-colors"
+                                title="WhatsApp"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                WhatsApp
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => handleEditItem(item)}
+                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                                title="Agendar"
+                              >
+                                <CalendarClock className="w-3.5 h-3.5" />
+                                Agendar
+                              </button>
+                            </div>
+                          )}
+
                           {/* Etiquetas/Tags do contato (ex: tráfego pago) */}
                           {Array.isArray((item.contact as any)?.labels) && (item.contact as any).labels.length > 0 && (
                             <div className="mb-3 flex flex-wrap gap-1">
