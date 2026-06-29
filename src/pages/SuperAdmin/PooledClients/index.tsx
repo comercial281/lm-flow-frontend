@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
-import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud } from 'lucide-react';
+import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, Eye, EyeOff } from 'lucide-react';
 import api from '@/services/core/api';
 import NewTenantWizard from './NewTenantWizard';
 import ClientBroadcastModal from './ClientBroadcastModal';
@@ -15,7 +15,7 @@ interface PooledTenant {
   members: number | null; login_url: string; admin_email?: string;
   settings?: Record<string, any>; archived?: boolean; created_at?: string;
 }
-interface Member { id: string; email: string; name?: string; }
+interface Member { id: string; email: string; name?: string; plain_password?: string; }
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   active:    { label: 'Ativo',         cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
@@ -32,6 +32,8 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
   const [newPwd, setNewPwd] = useState('');
+  const [visiblePwds, setVisiblePwds] = useState<Set<string>>(new Set());
+  const togglePwd = (id: string) => setVisiblePwds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
 
   const loadMembers = () =>
     api.get(`/super/pooled_tenants/${tenant.id}/members`)
@@ -69,7 +71,7 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
     setSavingId(m.id);
     try {
       await api.post(`/super/pooled_tenants/${tenant.id}/set_password`, { user_id: m.id, password: pwd });
-      alert(`Senha de ${m.email} trocada.`);
+      setMembers(prev => prev.map(x => x.id === m.id ? { ...x, plain_password: pwd } : x));
     } catch { alert('Falha ao trocar a senha.'); }
     finally { setSavingId(null); }
   };
@@ -96,6 +98,16 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
                 <div className="text-sm text-white/90 truncate">{m.name || m.email}</div>
                 <div className="text-xs text-white/40 truncate">{m.email}</div>
               </div>
+              {m.plain_password && (
+                <div className="flex items-center gap-1 px-2 py-1.5 rounded-md" style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)' }}>
+                  <span className="text-xs font-mono text-white/70" style={{ minWidth: 60 }}>
+                    {visiblePwds.has(m.id) ? m.plain_password : '••••••••'}
+                  </span>
+                  <button onClick={() => togglePwd(m.id)} className="text-white/40 hover:text-white/80 ml-1">
+                    {visiblePwds.has(m.id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              )}
               <button onClick={() => setPassword(m)} disabled={savingId === m.id}
                 className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border border-white/10 text-white/60 hover:text-white hover:border-violet-500/40 disabled:opacity-50">
                 {savingId === m.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />}
