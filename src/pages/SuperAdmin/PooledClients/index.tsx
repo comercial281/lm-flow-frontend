@@ -13,7 +13,7 @@ type ViewTab = 'clients' | 'dashboard' | 'logs' | 'metrics';
 interface PooledTenant {
   id: string; name: string; slug: string; status: string;
   members: number | null; login_url: string; admin_email?: string;
-  settings?: Record<string, any>; archived?: boolean;
+  settings?: Record<string, any>; archived?: boolean; created_at?: string;
 }
 interface Member { id: string; email: string; name?: string; }
 
@@ -273,9 +273,13 @@ export default function PooledClients() {
     finally { setBusyId(null); }
   };
 
-  // Poll enquanto algum tenant estiver provisionando (status 'trial')
+  // Poll só enquanto algum tenant estiver REALMENTE provisionando (trial recém-criado),
+  // não pra trial legado já provisionado (senão pollava pra sempre).
   useEffect(() => {
-    if (!tenants.some(t => t.status === 'trial')) return;
+    const stillProvisioning = tenants.some(t =>
+      t.status === 'trial' && t.created_at && (Date.now() - Date.parse(t.created_at)) < 15 * 60 * 1000,
+    );
+    if (!stillProvisioning) return;
     const timer = setTimeout(load, 4000);
     return () => clearTimeout(timer);
   }, [tenants, load]);
@@ -362,8 +366,14 @@ export default function PooledClients() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 max-w-5xl mx-auto">
           {tenants.map(t => {
-            const st = STATUS[t.status] || { label: t.status, cls: 'bg-white/10 text-white/60 border-white/20' };
-            const isProvisioning = t.status === 'trial';
+            // "Provisionando" = status trial SÓ durante a janela real (criado há
+            // pouco). Tenant trial antigo já está provisionado (o job vira pra
+            // active no fim; legados ficam trial) — não pode travar o "Entrar".
+            const createdMs = t.created_at ? Date.parse(t.created_at) : 0;
+            const isProvisioning = t.status === 'trial' && createdMs > 0 && (Date.now() - createdMs) < 15 * 60 * 1000;
+            const st = isProvisioning
+              ? STATUS.trial
+              : (STATUS[t.status === 'trial' ? 'active' : t.status] || { label: t.status, cls: 'bg-white/10 text-white/60 border-white/20' });
             return (
               <div key={t.id} className="rounded-xl p-4 border" style={{ background: 'rgba(124,58,237,0.04)', borderColor: 'rgba(124,58,237,0.15)' }}>
                 <div className="flex items-start justify-between gap-2">
