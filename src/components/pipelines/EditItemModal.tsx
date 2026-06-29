@@ -823,8 +823,10 @@ export default function EditItemModal({
           {/* Origem do lead (campanha / anúncio / tracking) */}
           <TabsContent value="origin" className="flex-1 overflow-y-auto mt-0 pt-3">
             {(() => {
-              const ar = ((item.contact as any)?.additional_attributes?.ad_referral)
-                ?? ((item.conversation as any)?.additional_attributes?.ad_referral) ?? {};
+              const ar = (item as any).lead_origin
+                ?? ((item.contact as any)?.additional_attributes?.ad_referral)
+                ?? ((item.conversation as any)?.additional_attributes?.ad_referral)
+                ?? {};
               const LABELS: Record<string, string> = {
                 source: 'Origem', campaign_name: 'Campanha', adset_name: 'Conjunto', ad_name: 'Anúncio',
                 campaign_id: 'ID da campanha', adset_id: 'ID do conjunto', ad_id: 'ID do anúncio',
