@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/ds';
 import { useLanguage } from '../../../hooks/useLanguage';
 import NotificationBell from '../NotificationBell';
+import PlantaoToggle from './PlantaoToggle';
 import ProfileMenu from './ProfileMenu';
 import { TourFab } from '@/components/TourFab';
 import MenuItem from './MenuItem';
@@ -233,6 +234,7 @@ export default function Header({
             </Button>
           )}
           <TourFab />
+          <PlantaoToggle compact />
           <NotificationBell />
           <ProfileMenu
             user={user}
@@ -312,6 +314,8 @@ export default function Header({
           <TourFab />
           {/* Theme Toggle */}
           <ThemeToggle />
+          {/* Modo Plantão (push de lead novo) */}
+          <PlantaoToggle />
           {/* Notifications */}
           <NotificationBell />
           {/* User Menu */}
