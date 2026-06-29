@@ -1657,6 +1657,27 @@ export default function PipelineKanban() {
                                   </span>
                                 );
                               })()}
+                              {/* Temperatura do lead (qualificação IA: quente/morno/frio) */}
+                              {(() => {
+                                const s = String((item.contact as any)?.qualification_status || '').toLowerCase();
+                                const map: Record<string, { label: string; cls: string }> = {
+                                  hot:  { label: 'Quente', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+                                  warm: { label: 'Morno',  cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+                                  cold: { label: 'Frio',   cls: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400' },
+                                };
+                                const m = map[s];
+                                if (!m) return null;
+                                const score = (item.contact as any)?.qualification_score;
+                                return (
+                                  <span
+                                    title={`Lead ${m.label}${score ? ` · score ${score}` : ''}`}
+                                    className={`inline-flex items-center gap-1 mb-1 ml-1 px-1.5 py-0.5 rounded-md text-xs font-semibold ${m.cls}`}
+                                  >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                    {m.label}
+                                  </span>
+                                );
+                              })()}
                               {/* Visita agendada — mostra dia/hora se houver visita carregada, senão só a tag */}
                               {(itemVisitLabel(item) || hasVisitScheduled(item)) && (
                                 <span
