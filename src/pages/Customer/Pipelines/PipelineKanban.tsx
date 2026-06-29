@@ -233,6 +233,8 @@ export default function PipelineKanban() {
   const [timePreset, setTimePreset] = useState<'all' | 'today' | '7d' | '30d' | 'custom'>('all');
   // Filtro por tags: nomes selecionados (vazio = todas).
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  // #13 Detector de lead largado: filtra só quem está sem contato há 7+ dias.
+  const [abandonedOnly, setAbandonedOnly] = useState(false);
   // Filtro por colunas: ids de etapas ocultas (vazio = todas visíveis).
   const [hiddenStages, setHiddenStages] = useState<string[]>([]);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -982,6 +984,7 @@ export default function PipelineKanban() {
     (searchQuery ? 1 : 0) +
     (timePreset !== 'all' ? 1 : 0) +
     (selectedTags.length ? 1 : 0) +
+    (abandonedOnly ? 1 : 0) +
     (hiddenStages.length ? 1 : 0);
   const clearAllFilters = () => {
     setSearchQuery('');
@@ -989,6 +992,7 @@ export default function PipelineKanban() {
     setDateFrom('');
     setDateTo('');
     setSelectedTags([]);
+    setAbandonedOnly(false);
     setHiddenStages([]);
   };
 
@@ -997,7 +1001,7 @@ export default function PipelineKanban() {
     const visible = stages.filter(s => !hiddenStages.includes(s.id));
     const q = searchQuery.toLowerCase();
     const { from, to } = timeRange;
-    if (!q && !from && !to && selectedTags.length === 0) return visible;
+    if (!q && !from && !to && selectedTags.length === 0 && !abandonedOnly) return visible;
     return visible.map(stage => ({
       ...stage,
       items: (stage.items || []).filter(item => {
@@ -1015,11 +1019,14 @@ export default function PipelineKanban() {
         const tags = itemTagNames(item);
         const matchesTags =
           selectedTags.length === 0 || selectedTags.some(t => tags.includes(t));
-        return matchesSearch && matchesFrom && matchesTo && matchesTags;
+        // Largado = sem contato há 7+ dias (mesma régua do badge "Xd sem contato").
+        const d = lastContactDays(item);
+        const matchesAbandoned = !abandonedOnly || (d != null && d >= 7);
+        return matchesSearch && matchesFrom && matchesTo && matchesTags && matchesAbandoned;
       }),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stages, searchQuery, timeRange, selectedTags, hiddenStages]);
+  }, [stages, searchQuery, timeRange, selectedTags, hiddenStages, abandonedOnly]);
 
 
   // Garante que o auto-scroll do drag pare se o componente desmontar no meio.
@@ -1340,6 +1347,18 @@ export default function PipelineKanban() {
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              {/* #13 Filtro: só leads largados (sem contato há 7+ dias) */}
+              <Button
+                variant={abandonedOnly ? 'default' : 'outline'}
+                size="sm"
+                className="whitespace-nowrap"
+                onClick={() => setAbandonedOnly(v => !v)}
+                title="Mostrar só leads sem contato há 7+ dias (largados)"
+              >
+                <Clock className="w-4 h-4 mr-2" />
+                Largados
+              </Button>
 
               {/* Filtro por COLUNAS (mostrar/ocultar etapas) */}
               <DropdownMenu>
