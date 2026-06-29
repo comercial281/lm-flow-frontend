@@ -240,6 +240,12 @@ export default function Properties() {
 
   const handleSave = async () => {
     if (!form.title.trim()) { toast.error('Título é obrigatório'); return; }
+    // Valor de venda é obrigatório p/ Venda/Venda e Locação (regra do backend) —
+    // avisa antes de bater na API.
+    if ((form.transaction_type === 'sale' || form.transaction_type === 'sale_rent') && !form.sale_price) {
+      toast.error('Informe o Valor de venda (obrigatório para imóveis à venda).');
+      return;
+    }
     setSaving(true);
     try {
       if (editing) {
@@ -255,8 +261,12 @@ export default function Properties() {
         setModalOpen(false);
         setPhotosProperty(created);
       }
-    } catch {
-      toast.error('Erro ao salvar imóvel');
+    } catch (e) {
+      // Surfaça a mensagem real do backend (ex.: "Valor de venda é obrigatório...")
+      // em vez de um genérico que deixa o usuário sem saber o que corrigir.
+      const err = e as { response?: { data?: { error?: { message?: string }; message?: string } } };
+      const msg = err?.response?.data?.error?.message || err?.response?.data?.message || 'Erro ao salvar imóvel';
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -550,7 +560,7 @@ export default function Properties() {
             <div className="grid grid-cols-2 gap-4">
               {(f.transaction_type === 'sale' || f.transaction_type === 'sale_rent') && (
                 <div>
-                  <UILabel>Valor de venda (R$)</UILabel>
+                  <UILabel>Valor de venda (R$) *</UILabel>
                   <Input type="number" value={f.sale_price ?? ''} onChange={e => setF({ sale_price: e.target.value ? parseFloat(e.target.value) : null })}
                     placeholder="450000" className="mt-1" />
                 </div>
