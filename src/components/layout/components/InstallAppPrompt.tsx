@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Download, X, Share } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 
@@ -37,6 +38,9 @@ export default function InstallAppPrompt() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [show, setShow] = useState(false);
   const [iosHelp, setIosHelp] = useState(false);
+  const location = useLocation();
+  // Esconde em telas com barra de ação fixa embaixo (composer da conversa) pra não cobrir o input.
+  const onBottomBarRoute = /^\/conversations\/.+/.test(location.pathname);
 
   useEffect(() => {
     if (isStandalone() || recentlyDismissed()) return;
@@ -63,7 +67,7 @@ export default function InstallAppPrompt() {
     };
   }, []);
 
-  if (!show) return null;
+  if (!show || onBottomBarRoute) return null;
 
   const ios = isIos();
 

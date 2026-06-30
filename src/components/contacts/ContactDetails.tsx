@@ -259,8 +259,7 @@ export default function ContactDetails({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="!max-w-[75vw] !w-[75vw] max-h-[90vh] p-0 gap-0 flex flex-col"
-        style={{ maxWidth: '75vw', width: '75vw' }}
+        className="!w-[95vw] !max-w-[95vw] sm:!w-[75vw] sm:!max-w-[75vw] max-h-[90vh] p-0 gap-0 flex flex-col"
       >
         <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <DialogTitle>{t('details.title')}</DialogTitle>
@@ -356,14 +355,11 @@ export default function ContactDetails({
           onValueChange={setActiveTab}
           className="flex-1 flex flex-col overflow-hidden"
         >
-          <TabsList
-            className="shrink-0 mx-6 mt-4 mb-0 grid"
-            style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}
-          >
+          <TabsList className="shrink-0 mx-6 mt-4 mb-0 flex overflow-x-auto">
             {tabs.map(tab => {
               const Icon = tab.icon;
               return (
-                <TabsTrigger key={tab.value} value={tab.value} className="flex items-center gap-2">
+                <TabsTrigger key={tab.value} value={tab.value} className="flex items-center gap-2 flex-1 min-w-fit whitespace-nowrap">
                   <Icon className="h-4 w-4" />
                   {tab.label}
                 </TabsTrigger>

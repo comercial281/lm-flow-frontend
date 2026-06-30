@@ -324,7 +324,7 @@ export default function Proposals() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
           {[
             { label: 'Total', value: stats.total, icon: FileText, color: 'text-blue-600' },
             { label: 'Em aberto', value: stats.sent, icon: Send, color: 'text-orange-600' },

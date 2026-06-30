@@ -101,7 +101,9 @@ export default function Visits() {
   const [activeTab, setActiveTab]   = useState('');
   const [viewMode, setViewMode]     = useState<ViewMode>('calendar');
 
-  const [calView, setCalView]       = useState<View>('week');
+  // No celular a grade de 7 colunas (semana) fica espremida → abre em "Dia".
+  const [calView, setCalView]       = useState<View>(() =>
+    (typeof window !== 'undefined' && window.innerWidth < 640) ? 'day' : 'week');
   const [calDate, setCalDate]       = useState<Date>(new Date());
 
   const [modalOpen, setModalOpen]   = useState(false);
