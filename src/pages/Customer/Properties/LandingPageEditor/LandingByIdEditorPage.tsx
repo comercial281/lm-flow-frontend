@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { LandingEditor } from '@/features/landing/editor';
+import { LandingEditor, useLandingEditorStore } from '@/features/landing/editor';
 import {
   toLandingProperty,
   type BlockInstance,
+  type BrandMode,
   type LandingProperty,
+  type LandingTheme,
 } from '@/features/landing/blocks';
 import { landingPageService } from '@/services/landingPages/landingPageService';
 import { toLandingPhotos } from '@/services/landingPages/landingDataAdapters';
@@ -23,6 +25,8 @@ export default function LandingByIdEditorPage() {
   const [siteId, setSiteId] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<BlockInstance[]>([]);
   const [property, setProperty] = useState<LandingProperty | null>(null);
+  const [theme, setThemeState] = useState<Partial<LandingTheme>>({});
+  const [brandMode, setBrandModeState] = useState<BrandMode>('client');
   const [title, setTitle] = useState('Landing Page');
 
   useEffect(() => {
@@ -52,6 +56,8 @@ export default function LandingByIdEditorPage() {
         setSiteId(site.id);
         setBlocks(lp.blocks);
         setProperty(prop);
+        setThemeState(lp.theme);
+        setBrandModeState((lp.dto.brand_mode as BrandMode) ?? 'client');
         setTitle(lp.dto.title || 'Landing Page');
         setLoading(false);
       } catch {
@@ -69,7 +75,8 @@ export default function LandingByIdEditorPage() {
     if (!siteId || !pageId) return;
     setSaving(true);
     try {
-      await landingPageService.saveBlocks(siteId, pageId, next);
+      const { theme: t, brandMode: bm } = useLandingEditorStore.getState();
+      await landingPageService.saveBlocks(siteId, pageId, next, t, bm);
       toast.success('Landing page salva');
     } catch {
       toast.error('Erro ao salvar a landing page');
@@ -107,6 +114,8 @@ export default function LandingByIdEditorPage() {
         title={`Landing: ${title}`}
         initialBlocks={blocks}
         property={property}
+        initialTheme={theme}
+        initialBrandMode={brandMode}
         saving={saving}
         onSave={handleSave}
         onBack={() => navigate('/landings')}

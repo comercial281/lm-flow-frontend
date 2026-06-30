@@ -1,15 +1,10 @@
-import { BlockRenderer, type LandingProperty, type LandingTheme } from '@/features/landing/blocks';
+import { BlockRenderer, type LandingProperty } from '@/features/landing/blocks';
 import { useLandingEditorStore } from './landingEditorStore';
 
 /** Live preview inside a phone mockup. Renders hidden blocks dimmed. */
-export function PhonePreview({
-  property,
-  theme,
-}: {
-  property?: LandingProperty | null;
-  theme?: Partial<LandingTheme>;
-}) {
+export function PhonePreview({ property }: { property?: LandingProperty | null }) {
   const blocks = useLandingEditorStore((s) => s.blocks);
+  const theme = useLandingEditorStore((s) => s.theme);
   return (
     <div className="flex h-full items-start justify-center overflow-auto p-6">
       <div

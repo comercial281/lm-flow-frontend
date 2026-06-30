@@ -1,6 +1,7 @@
 import api from '@/services/core/api';
 import {
   type BlockInstance,
+  type BrandMode,
   type LandingTheme,
   defaultLandingBlocks,
   parsePageBlocks,
@@ -118,15 +119,20 @@ export const landingPageService = {
     return toLandingPage(unwrap<LandingPageDTO>(res));
   },
 
-  /** Persist the block arrangement + theme edited in the visual editor. */
+  /** Persist the block arrangement + theme + brand mode from the editor. */
   async saveBlocks(
     siteId: string,
     pageId: string,
     blocks: BlockInstance[],
     theme?: Partial<LandingTheme>,
+    brandMode?: BrandMode,
   ): Promise<LandingPage> {
     const res = await api.put(`/sites/${siteId}/pages/${pageId}`, {
-      page: { content_blocks: blocks, ...(theme ? { theme } : {}) },
+      page: {
+        content_blocks: blocks,
+        ...(theme ? { theme } : {}),
+        ...(brandMode ? { brand_mode: brandMode } : {}),
+      },
     });
     // Re-validate what the server stored so the editor reloads a clean state.
     const dto = unwrap<LandingPageDTO>(res);

@@ -40,6 +40,15 @@ export interface LandingProperty {
   responsibleName?: string;
 }
 
+/** Branding source for a landing's theme. */
+export type BrandMode = 'client' | 'development' | 'both';
+
+export const BRAND_MODE_LABELS: Record<BrandMode, string> = {
+  client: 'Marca do cliente',
+  development: 'Marca do empreendimento',
+  both: 'Cliente + empreendimento',
+};
+
 /** Per-page theme tokens (resolved from site/brand_mode/empreendimento). */
 export interface LandingTheme {
   primary: string;

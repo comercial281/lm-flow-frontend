@@ -3,6 +3,8 @@ import {
   type BlockConfig,
   type BlockInstance,
   type BlockType,
+  type BrandMode,
+  type LandingTheme,
   createBlock,
 } from '@/features/landing/blocks';
 
@@ -20,8 +22,12 @@ interface LandingEditorState {
   dirty: boolean;
   past: BlockInstance[][];
   future: BlockInstance[][];
+  theme: Partial<LandingTheme>;
+  brandMode: BrandMode;
 
-  load: (blocks: BlockInstance[]) => void;
+  load: (blocks: BlockInstance[], theme?: Partial<LandingTheme>, brandMode?: BrandMode) => void;
+  setTheme: (patch: Partial<LandingTheme>) => void;
+  setBrandMode: (mode: BrandMode) => void;
   select: (id: string | null) => void;
   addBlock: (type: BlockType) => void;
   removeBlock: (id: string) => void;
@@ -54,9 +60,22 @@ export const useLandingEditorStore = create<LandingEditorState>((set, get) => {
     dirty: false,
     past: [],
     future: [],
+    theme: {},
+    brandMode: 'client',
 
-    load: (blocks) =>
-      set({ blocks: clone(blocks), selectedId: null, dirty: false, past: [], future: [] }),
+    load: (blocks, theme = {}, brandMode = 'client') =>
+      set({
+        blocks: clone(blocks),
+        theme: { ...theme },
+        brandMode,
+        selectedId: null,
+        dirty: false,
+        past: [],
+        future: [],
+      }),
+
+    setTheme: (patch) => set((s) => ({ theme: { ...s.theme, ...patch }, dirty: true })),
+    setBrandMode: (mode) => set({ brandMode: mode, dirty: true }),
 
     select: (id) => set({ selectedId: id }),
 

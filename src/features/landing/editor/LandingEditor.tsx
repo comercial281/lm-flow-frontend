@@ -1,17 +1,24 @@
 import { useEffect } from 'react';
 import { ArrowLeft, Redo2, Save, Undo2 } from 'lucide-react';
-import type { BlockInstance, LandingProperty, LandingTheme } from '@/features/landing/blocks';
+import type {
+  BlockInstance,
+  BrandMode,
+  LandingProperty,
+  LandingTheme,
+} from '@/features/landing/blocks';
 import { useLandingEditorStore } from './landingEditorStore';
 import { PhonePreview } from './PhonePreview';
 import { SectionList } from './SectionList';
 import { BlockLibrary } from './BlockLibrary';
 import { BlockConfigPanel } from './BlockConfigPanel';
+import { AppearancePanel } from './AppearancePanel';
 
 export interface LandingEditorProps {
   title?: string;
   initialBlocks: BlockInstance[];
   property?: LandingProperty | null;
-  theme?: Partial<LandingTheme>;
+  initialTheme?: Partial<LandingTheme>;
+  initialBrandMode?: BrandMode;
   saving?: boolean;
   onSave: (blocks: BlockInstance[]) => void;
   onBack?: () => void;
@@ -24,7 +31,8 @@ export function LandingEditor({
   title = 'Editar Página',
   initialBlocks,
   property,
-  theme,
+  initialTheme,
+  initialBrandMode,
   saving = false,
   onSave,
   onBack,
@@ -39,8 +47,8 @@ export function LandingEditor({
   const markSaved = useLandingEditorStore((s) => s.markSaved);
 
   useEffect(() => {
-    load(initialBlocks);
-  }, [initialBlocks, load]);
+    load(initialBlocks, initialTheme, initialBrandMode);
+  }, [initialBlocks, initialTheme, initialBrandMode, load]);
 
   const handleSave = () => {
     onSave(blocks);
@@ -100,7 +108,7 @@ export function LandingEditor({
       {/* body */}
       <div className="flex min-h-0 flex-1">
         <main className="min-w-0 flex-1 bg-neutral-900/40">
-          <PhonePreview property={property} theme={theme} />
+          <PhonePreview property={property} />
         </main>
         <aside className="flex w-[340px] flex-none flex-col overflow-y-auto border-l border-neutral-800 p-4">
           <section className="mb-6">
@@ -110,6 +118,10 @@ export function LandingEditor({
           <section className="mb-6">
             <h3 className="mb-2 text-sm font-semibold text-neutral-200">Configurações</h3>
             <BlockConfigPanel />
+          </section>
+          <section className="mb-6">
+            <h3 className="mb-2 text-sm font-semibold text-neutral-200">Aparência</h3>
+            <AppearancePanel />
           </section>
           <section>
             <h3 className="mb-2 text-sm font-semibold text-neutral-200">Adicionar seção</h3>
