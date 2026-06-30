@@ -32,7 +32,9 @@ import {
 } from '@/types/integrations';
 
 class IntegrationsService {
-  private readonly baseURL = '/api/v1/integrations';
+  // baseURL do apiClient já é ${VITE_API_URL}/api/v1 — NÃO repetir /api/v1 aqui,
+  // senão provider auth/callback/sync batem em /api/v1/api/v1/integrations/... → 404.
+  private readonly baseURL = '/integrations';
 
   // General integrations
   async getIntegrations(): Promise<IntegrationsResponse> {
