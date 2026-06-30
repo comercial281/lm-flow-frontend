@@ -40,7 +40,6 @@
       "RAILWAY_ENVIRONMENT",
       "RAILWAY_SERVICE_API_URL",
       "RAILWAY_PUBLIC_DOMAIN",
-      "RAILWAY_SERVICE_CHAVE_FLOW_API_URL",
       "RAILWAY_VOLUME_ID",
       "RAILWAY_VOLUME_MOUNT_PATH",
       "RAILWAY_VOLUME_NAME"
@@ -67,8 +66,8 @@
       "backend": {
         "serviceId": "4eda6c37-1e17-497b-8a7b-3138b6fd7feb",
         "environmentId": "129d777e-64a1-4cb6-bca4-e2ce3281d528",
-        "url": "https://chave-flow-api-staging.up.railway.app",
-        "_note": "Env production do raiz tem postgres FAILED desde 20/05 (nunca subiu). O frontend lm-flow-frontend.vercel.app aponta pra staging (unica saudavel). Watchdog mede o que esta de fato no ar."
+        "url": "https://lm-flow-api-staging.up.railway.app",
+        "_note": "Backend pooled unico (api.lmflow.com.br / lm-flow-api-staging.up.railway.app). Watchdog mede o que esta de fato no ar."
       }
     },
     {
@@ -82,19 +81,6 @@
         "serviceId": "bb0b82f1-6cb0-44eb-a92c-f0569304546b",
         "environmentId": "3e4fe7f3-c7f1-4ce6-abdf-2b8edb969ca0",
         "url": "https://api-production-c0ba.up.railway.app"
-      }
-    },
-    {
-      "key": "renato-abdel",
-      "label": "Renato Abdel (142)",
-      "frontend": {
-        "projectId": "prj_5hYYMEIpusm1esdJWur0aRuGfXMv",
-        "url": "https://chave-flow-142-renato-abdel.vercel.app"
-      },
-      "backend": {
-        "serviceId": "09bbb3ad-c764-4c5b-a10f-c512bbfe1ce0",
-        "environmentId": "77da2b6d-59ff-4c9e-8cda-e67eb26bfedb",
-        "url": "https://api-production-e35e.up.railway.app"
       }
     },
     {
