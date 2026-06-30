@@ -18,7 +18,7 @@ export default function PipelinesHeader({
   const { t } = useLanguage('pipelines');
 
   return (
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">{t('pipelinesHeader.title')}</h1>
         <p className="text-muted-foreground">
@@ -29,8 +29,8 @@ export default function PipelinesHeader({
         </p>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative w-80">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+        <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             type="text"
@@ -41,7 +41,7 @@ export default function PipelinesHeader({
           />
         </div>
 
-        <Button onClick={onNewPipeline} data-tour="pipelines-new-button">
+        <Button onClick={onNewPipeline} data-tour="pipelines-new-button" className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           {t('pipelinesHeader.newPipeline')}
         </Button>

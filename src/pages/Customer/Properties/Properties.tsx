@@ -367,7 +367,7 @@ export default function Properties() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="border-b bg-background/95 backdrop-blur px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Building2 className="h-6 w-6 text-primary" />
@@ -375,7 +375,7 @@ export default function Properties() {
             </h1>
             <p className="text-sm text-muted-foreground">{total} imóvel{total !== 1 ? 's' : ''} cadastrado{total !== 1 ? 's' : ''}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={() => navigate('/properties/map')}>
               <MapPin className="h-4 w-4 mr-2" />
               Ver no mapa
