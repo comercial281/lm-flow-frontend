@@ -26,6 +26,18 @@ async function transcribeAudioUrl(audioUrl: string): Promise<string> {
 import { toast } from 'sonner';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import MessageFunnelPopover from '@/components/chat/message-funnels/MessageFunnelPopover';
+import { useWebSocketContext } from '@/contexts/chat/WebSocketContext';
+
+// Hook seguro — não lança se o WebSocketProvider não estiver na árvore acima.
+function useSafeWsHandlers() {
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const { registerHandlers } = useWebSocketContext();
+    return registerHandlers;
+  } catch {
+    return undefined;
+  }
+}
 import type { PipelineItem } from '@/types/analytics';
 import type { Message, Conversation } from '@/types/chat/api';
 
@@ -34,7 +46,7 @@ interface CardConversationTabProps {
   onCreateReminder?: () => void;
 }
 
-const POLL_INTERVAL_MS = 10_000;
+const POLL_INTERVAL_MS = 8_000;
 
 function formatTs(raw: string | number): string {
   const ts = typeof raw === 'number' ? raw * 1000 : Date.parse(String(raw));
@@ -152,11 +164,12 @@ function MessageBubble({ m, isOutgoing }: { m: Message; isOutgoing: boolean }) {
 }
 
 export default function CardConversationTab({ item, onCreateReminder }: CardConversationTabProps) {
-  // Carrega a conversa sempre que o card tiver uma — antes só carregava quando
-  // item.type === 'conversation' (com item_id), então lead com conversa mas type
-  // diferente vinha com 0 mensagens. Prioriza o id real da conversa.
+  // conversationId: prioriza conversa direta do item, depois whatsapp_conversation_id
+  // (form leads que têm conversa WA associada ao contato mas não ao pipeline item).
   const conversationId =
     (item.conversation?.id ? String(item.conversation.id) : null) ??
+    ((item as any).conversation_id ? String((item as any).conversation_id) : null) ??
+    ((item as any).whatsapp_conversation_id ? String((item as any).whatsapp_conversation_id) : null) ??
     (item.type === 'conversation' ? item.item_id : null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -169,6 +182,27 @@ export default function CardConversationTab({ item, onCreateReminder }: CardConv
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const contactName = resolveContactName(item);
+
+  // WebSocket — recebe mensagens em tempo real sem esperar o poll.
+  const registerHandlers = useSafeWsHandlers();
+
+  useEffect(() => {
+    if (!registerHandlers || !conversationId) return;
+    const prevHandlers: { onMessageCreated?: unknown } = {};
+    registerHandlers({
+      onMessageCreated: (msg: Message) => {
+        if (String((msg as any).conversation_id) !== conversationId) return;
+        setMessages(prev => {
+          if (prev.some(m => String(m.id) === String(msg.id))) return prev;
+          return [...prev, msg];
+        });
+      },
+    });
+    return () => {
+      // Limpa o handler ao desmontar
+      registerHandlers({ onMessageCreated: undefined as any });
+    };
+  }, [registerHandlers, conversationId]);
 
   const load = useCallback(async () => {
     if (!conversationId) return;
@@ -259,7 +293,7 @@ export default function CardConversationTab({ item, onCreateReminder }: CardConv
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs text-muted-foreground">
           {contactName && <span className="font-medium text-foreground">{contactName} · </span>}
-          {messages.length} mensagem{messages.length === 1 ? '' : 's'} · atualiza a cada 10s
+          {messages.length} mensagem{messages.length === 1 ? '' : 's'} · tempo real
         </span>
         <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
           <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
