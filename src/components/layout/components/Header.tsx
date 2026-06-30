@@ -88,7 +88,7 @@ export default function Header({
   }, [fetchAccount]);
 
   return (
-    <div role="banner" className="flex-shrink-0 bg-sidebar border-b border-sidebar-border px-0 py-3 flex items-center shadow-sm">
+    <div role="banner" className="flex-shrink-0 bg-sidebar border-b border-sidebar-border px-0 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] flex items-center shadow-sm">
       {/* Mobile Layout */}
       <div className="md:hidden flex items-center w-full px-4">
         {/* Left: Menu Button */}

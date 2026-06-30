@@ -89,7 +89,7 @@ export default function InstallAppPrompt() {
   };
 
   return (
-    <div className="fixed inset-x-3 bottom-3 z-50 md:inset-x-auto md:right-4 md:w-96">
+    <div className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 md:inset-x-auto md:right-4 md:w-96">
       <div className="rounded-xl border border-primary/50 bg-card shadow-2xl ring-1 ring-primary/15 p-4">
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
