@@ -43,6 +43,7 @@ import {
 } from './LeadAutomationsEditors';
 import AutomationLibraryModal from './AutomationLibraryModal';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import NotificationCenter from './NotificationCenter';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 
 const TRIGGERS = Object.entries(TRIGGER_LABELS).map(([value, label]) => ({ value, label }));
@@ -282,6 +283,9 @@ export default function LeadAutomations() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Central de Notificações — presets de push em toggle */}
+      <NotificationCenter />
 
       {/* Tabs Ativas / Arquivadas */}
       <div className="flex gap-1 mb-4 border-b border-border">
