@@ -6,7 +6,7 @@ let cachedVapidKey: string | null = null;
 async function getVapidPublicKey(): Promise<string> {
   if (cachedVapidKey) return cachedVapidKey;
   const res = await apiClient.get<{ vapid_public_key: string }>(
-    '/api/v1/push_subscriptions/vapid_public_key'
+    '/push_subscriptions/vapid_public_key'
   );
   cachedVapidKey = res.data.vapid_public_key;
   return cachedVapidKey as string;
@@ -34,7 +34,7 @@ export async function subscribeToPush(): Promise<boolean> {
   });
 
   try {
-    await apiClient.post('/api/v1/push_subscriptions', {
+    await apiClient.post('/push_subscriptions', {
       push_subscription: subscription.toJSON(),
     });
   } catch (err) {
@@ -53,7 +53,7 @@ export async function unsubscribeFromPush(): Promise<void> {
   const subscription = await registration.pushManager.getSubscription();
   if (!subscription) return;
 
-  await apiClient.delete('/api/v1/push_subscriptions', {
+  await apiClient.delete('/push_subscriptions', {
     data: { endpoint: subscription.endpoint },
   });
   await subscription.unsubscribe();
