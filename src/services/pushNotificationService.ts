@@ -5,11 +5,18 @@ let cachedVapidKey: string | null = null;
 
 async function getVapidPublicKey(): Promise<string> {
   if (cachedVapidKey) return cachedVapidKey;
-  const res = await apiClient.get<{ vapid_public_key: string }>(
+  // Backend responde no envelope padrão { success, data: { vapid_public_key }, meta }.
+  // axios já coloca o corpo em res.data, então a chave fica em res.data.data.vapid_public_key.
+  // Ler res.data.vapid_public_key (sem o .data extra) devolvia undefined → o
+  // applicationServerKey ficava inválido → pushManager.subscribe() lançava →
+  // toast "Erro ao alterar modo plantão". Suporta os dois formatos por segurança.
+  const res = await apiClient.get<{ data?: { vapid_public_key?: string }; vapid_public_key?: string }>(
     '/push_subscriptions/vapid_public_key'
   );
-  cachedVapidKey = res.data.vapid_public_key;
-  return cachedVapidKey as string;
+  const key = res.data?.data?.vapid_public_key ?? res.data?.vapid_public_key;
+  if (!key) throw new Error('VAPID public key ausente na resposta do backend');
+  cachedVapidKey = key;
+  return cachedVapidKey;
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
