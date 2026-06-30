@@ -68,6 +68,7 @@ const SiteBuilder = lazyWithRetry(() => import('@/pages/Customer/Settings/SiteBu
 const DynamicForms = lazyWithRetry(() => import('@/pages/Customer/Settings/DynamicForms').then(m => ({ default: m.DynamicForms })));
 const Properties = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.Properties })));
 const PropertiesMap = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.PropertiesMap })));
+const LandingPageEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingPageEditorPage'));
 const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => ({ default: m.Visits })));
 const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
 const PropertyCaptureRequests = lazyWithRetry(() => import('@/pages/Customer/PropertyCapture').then(m => ({ default: m.PropertyCaptureRequests })));
@@ -1629,6 +1630,17 @@ const AppRouter = () => {
                   <MainLayout>
                     <PropertiesMap />
                   </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/properties/:id/landing"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <LandingPageEditor />
                 </CustomerRoute>
               </PrivateRoute>
             }
