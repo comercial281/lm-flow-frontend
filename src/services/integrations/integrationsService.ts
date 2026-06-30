@@ -48,9 +48,10 @@ class IntegrationsService {
   }
 
   async toggleIntegration(integrationId: string, enabled: boolean): Promise<IntegrationToggleResponse> {
-    const response = await api.post(`/integrations/${integrationId}/toggle`, {
-      enabled
-    });
+    // Backend não tem rota /toggle — tem /connect e /disconnect (member). Chamar /toggle
+    // dava 404 ao ligar/desligar integração. Roteia pelo verbo certo conforme `enabled`.
+    const action = enabled ? 'connect' : 'disconnect';
+    const response = await api.post(`/integrations/${integrationId}/${action}`, {});
     return extractData<IntegrationToggleResponse>(response);
   }
 
