@@ -33,9 +33,16 @@ export async function subscribeToPush(): Promise<boolean> {
     applicationServerKey: urlBase64ToUint8Array(vapidKey),
   });
 
-  await apiClient.post('/api/v1/push_subscriptions', {
-    push_subscription: subscription.toJSON(),
-  });
+  try {
+    await apiClient.post('/api/v1/push_subscriptions', {
+      push_subscription: subscription.toJSON(),
+    });
+  } catch (err) {
+    // Cancela a subscription no browser se o backend rejeitou — evita estado inconsistente.
+    await subscription.unsubscribe().catch(() => {});
+    console.error('[Push] falha ao registrar no backend:', err);
+    return false;
+  }
 
   return true;
 }

@@ -19,13 +19,17 @@ export default function PlantaoToggle({ compact = false }: { compact?: boolean }
       toast.error('Notificações bloqueadas no navegador. Libere nas permissões do site e tente de novo.');
       return;
     }
-    if (on) {
-      await unsubscribe();
-      toast.success('Modo plantão desligado neste aparelho');
-    } else {
-      const ok = await subscribe();
-      if (ok) toast.success('Modo plantão ativado — você recebe lead novo na hora neste aparelho');
-      else toast.error('Não foi possível ativar (permissão negada no navegador)');
+    try {
+      if (on) {
+        await unsubscribe();
+        toast.success('Modo plantão desligado neste aparelho');
+      } else {
+        const ok = await subscribe();
+        if (ok) toast.success('Modo plantão ativado — você recebe lead novo na hora neste aparelho');
+        else toast.error('Não foi possível ativar. Verifique as permissões do navegador.');
+      }
+    } catch {
+      toast.error('Erro ao alterar modo plantão. Tente novamente.');
     }
   };
 
