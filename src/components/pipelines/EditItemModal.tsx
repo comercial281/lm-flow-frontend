@@ -838,11 +838,14 @@ export default function EditItemModal({
                 title: 'Anúncio', body: 'Descrição do anúncio', source_app: 'Plataforma',
                 source_url: 'Link do anúncio', source_id: 'ID do anúncio', source_type: 'Tipo',
                 ctwa_clid: 'ID do clique', thumbnail_url: 'Imagem do anúncio',
+                // Landing Page
+                landing_name: 'Landing', landing_slug: 'Slug', landing_url: 'Link da landing',
               };
               const HIDDEN = new Set(['thumbnail_url', 'source']);
               const source = (ar as any).source as string | undefined;
               const isCtwa = source === 'whatsapp_ctwa';
               const isForm = source === 'meta_lead_ads';
+              const isLanding = source === 'landing';
               const entries = Object.entries(ar).filter(([k, v]) => k !== 'extra_fields' && !HIDDEN.has(k) && v != null && v !== '');
               const extra = (ar as any).extra_fields && typeof (ar as any).extra_fields === 'object' ? (ar as any).extra_fields : null;
               if (entries.length === 0 && !extra) {
@@ -850,9 +853,9 @@ export default function EditItemModal({
               }
               return (
                 <div className="space-y-4">
-                  {(isCtwa || isForm) && (
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${isCtwa ? 'bg-green-500/15 text-green-600 dark:text-green-400' : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'}`}>
-                      <span>{isCtwa ? '💬 WhatsApp Direto (CTWA)' : '📋 Formulário Meta Ads'}</span>
+                  {(isCtwa || isForm || isLanding) && (
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${isCtwa ? 'bg-green-500/15 text-green-600 dark:text-green-400' : isLanding ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400' : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'}`}>
+                      <span>{isCtwa ? '💬 WhatsApp Direto (CTWA)' : isForm ? '📋 Formulário Meta Ads' : '🌐 Landing Page'}</span>
                     </div>
                   )}
                   <div className="grid gap-2">
