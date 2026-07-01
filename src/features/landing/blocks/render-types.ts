@@ -99,10 +99,12 @@ export interface BlockComponentProps<T extends BlockType = BlockType> {
   theme: LandingTheme;
 }
 
-/** pt-BR currency. */
-export function formatBRL(value?: number | null): string {
-  if (value == null || Number.isNaN(value)) return '';
-  return value.toLocaleString('pt-BR', {
+/** pt-BR currency. Coerces string decimals (Rails serializes decimal as string). */
+export function formatBRL(value?: number | string | null): string {
+  if (value == null) return '';
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return '';
+  return n.toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
     maximumFractionDigits: 0,
