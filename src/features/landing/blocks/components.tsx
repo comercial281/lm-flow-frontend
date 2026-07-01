@@ -154,7 +154,7 @@ function TechSheetBlock({ config, property }: BlockComponentProps<'tech_sheet'>)
           <div
             key={i.field}
             className="flex items-center gap-3 rounded-xl p-3"
-            style={{ background: 'rgba(255,255,255,0.05)' }}
+            style={{ background: 'var(--lp-card)' }}
           >
             <span style={{ color: 'var(--lp-icon)' }}>{i.meta.icon}</span>
             <div>
@@ -237,7 +237,7 @@ function MapBlock({ config, property }: BlockComponentProps<'map'>) {
       {config.pois.length > 0 && (
         <ul className="space-y-2 text-sm">
           {config.pois.map((poi, i) => (
-            <li key={i} className="flex items-center justify-between border-b border-white/10 pb-2">
+            <li key={i} className="flex items-center justify-between border-b border-[color:var(--lp-border)] pb-2">
               <span>{poi.label}</span>
               <span className="rounded-full px-2 py-0.5 text-xs" style={{ background: 'var(--lp-primary)', color: '#fff' }}>
                 {poi.minutes} min
@@ -326,7 +326,7 @@ function FinanceSimulatorBlock({ config, property }: BlockComponentProps<'financ
       <SliderRow label="Entrada" value={entradaPct} min={0} max={50} onChange={setEntradaPct} suffix="%" />
       <SliderRow label="Reforços" value={reforcoPct} min={0} max={50} onChange={setReforcoPct} suffix="%" />
       <SliderRow label="Prazo" value={prazo} min={12} max={240} onChange={setPrazo} suffix=" meses" />
-      <div className="mt-4 space-y-2 rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.06)' }}>
+      <div className="mt-4 space-y-2 rounded-xl p-4" style={{ background: 'var(--lp-card)' }}>
         <div className="flex justify-between text-sm">
           <span className="opacity-70">Entrada</span>
           <span className="font-semibold">{formatBRL(calc.entrada)}</span>
@@ -337,7 +337,7 @@ function FinanceSimulatorBlock({ config, property }: BlockComponentProps<'financ
             <span className="font-semibold">{formatBRL(calc.reforco)}</span>
           </div>
         )}
-        <div className="flex justify-between border-t border-white/10 pt-2">
+        <div className="flex justify-between border-t border-[color:var(--lp-border)] pt-2">
           <span className="opacity-70">Mensais ({prazo}x)</span>
           <span className="text-lg font-bold" style={{ color: 'var(--lp-accent)' }}>
             {formatBRL(calc.mensal)}
@@ -352,7 +352,7 @@ function ConstructionProgressBlock({ config }: BlockComponentProps<'construction
   return (
     <Section>
       <SectionTitle>Progresso de Obra</SectionTitle>
-      <div className="mb-3 h-3 w-full overflow-hidden rounded-full bg-white/10">
+      <div className="mb-3 h-3 w-full overflow-hidden rounded-full bg-[color:var(--lp-card)]">
         <div className="h-full rounded-full" style={{ width: `${config.percent}%`, background: 'var(--lp-primary)' }} />
       </div>
       <p className="mb-3 text-sm font-semibold">{config.percent}% concluído</p>
@@ -477,7 +477,7 @@ function ApartmentTypesBlock({ config }: BlockComponentProps<'apartment_types'>)
       <SectionTitle>{config.title}</SectionTitle>
       <div className="space-y-3">
         {config.items.map((it, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
+          <div key={i} className="flex items-center gap-3 rounded-xl p-3" style={{ background: 'var(--lp-card)' }}>
             {it.planUrl && <img src={it.planUrl} alt={it.name} className="h-16 w-16 rounded object-cover" />}
             <div className="flex-1">
               <div className="text-sm font-semibold">{it.name}</div>
@@ -495,7 +495,7 @@ function LeadFormBlock({ config }: BlockComponentProps<'lead_form'>) {
   // Full multi-step quiz lands in LB-S6. Here: the entry card + CTA.
   return (
     <Section>
-      <div className="rounded-2xl p-5 text-center" style={{ background: 'rgba(255,255,255,0.06)' }}>
+      <div className="rounded-2xl p-5 text-center" style={{ background: 'var(--lp-card)' }}>
         <h2 className="mb-3 text-lg font-bold">{config.title}</h2>
         <button
           type="button"
