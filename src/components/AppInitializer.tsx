@@ -156,16 +156,15 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
     }
   };
 
-  if (!isInitialized) {
-    return (
-      <LoadingScreen fullScreen showLogo />
-    );
-  }
+  // Rotas públicas (landing de anúncio, portal, login) NÃO devem mostrar o splash
+  // "LM Flow" — o visitante do anúncio tem que ver a página na hora, não a marca
+  // do CRM. Elas cuidam do próprio carregamento.
+  const path = typeof window !== 'undefined' ? window.location.pathname : '';
+  const isPublicPath = ['/lp', '/imovel', '/portal', '/auth', '/login', '/register', '/widget', '/setup']
+    .some((p) => path.startsWith(p));
 
-  if (initError) {
-    return (
-      <LoadingScreen fullScreen showLogo />
-    );
+  if ((!isInitialized || initError) && !isPublicPath) {
+    return <LoadingScreen fullScreen showLogo />;
   }
 
   return <>{children}</>;
