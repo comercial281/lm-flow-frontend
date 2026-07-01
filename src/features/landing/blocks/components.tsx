@@ -320,9 +320,32 @@ function FinanceSimulatorBlock({ config, property }: BlockComponentProps<'financ
     return { entrada, reforco, mensal };
   }, [base, entradaPct, reforcoPct, prazo, config.reforcoQty]);
 
+  const chavesPct = config.chavesPct;
+  const mensaisPct = Math.max(0, 100 - entradaPct - reforcoPct - chavesPct);
+  const segs = [
+    { label: 'Entrada', pct: entradaPct, color: '#16A34A' },
+    { label: 'Mensais', pct: mensaisPct, color: '#0EA5E9' },
+    { label: 'Reforços', pct: reforcoPct, color: '#F59E0B' },
+    { label: 'Chaves', pct: chavesPct, color: '#94A3B8' },
+  ];
+
   return (
     <Section>
-      <SectionTitle>Simulador de Financiamento</SectionTitle>
+      <SectionTitle>Plano de Pagamento</SectionTitle>
+      <p className="-mt-3 mb-3 text-xs opacity-60">Pagamento direto com a construtora</p>
+
+      {/* barra segmentada */}
+      <div className="mb-2 flex h-2.5 w-full overflow-hidden rounded-full" style={{ background: 'var(--lp-card)' }}>
+        {segs.map((s) => (s.pct > 0 ? <div key={s.label} style={{ width: `${s.pct}%`, background: s.color }} /> : null))}
+      </div>
+      <div className="mb-4 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+        {segs.map((s) => (
+          <span key={s.label} className="inline-flex items-center gap-1 opacity-80">
+            <span className="h-2 w-2 rounded-full" style={{ background: s.color }} /> {s.label} ({Math.round(s.pct)}%)
+          </span>
+        ))}
+      </div>
+
       <SliderRow label="Entrada" value={entradaPct} min={0} max={50} onChange={setEntradaPct} suffix="%" />
       <SliderRow label="Reforços" value={reforcoPct} min={0} max={50} onChange={setReforcoPct} suffix="%" />
       <SliderRow label="Prazo" value={prazo} min={12} max={240} onChange={setPrazo} suffix=" meses" />
@@ -344,6 +367,9 @@ function FinanceSimulatorBlock({ config, property }: BlockComponentProps<'financ
           </span>
         </div>
       </div>
+      <p className="mt-2 text-[10px] opacity-50">
+        * Simulação ilustrativa. Condições sujeitas à aprovação da incorporadora.
+      </p>
     </Section>
   );
 }
@@ -395,22 +421,42 @@ function ConsultantBlock({ config, property }: BlockComponentProps<'consultant'>
 
 function BrokerAudioBlock({ config }: BlockComponentProps<'broker_audio'>) {
   if (empty(config.audioUrl)) return null;
+  // Waveform decorativa (alturas determinísticas por índice).
+  const bars = Array.from({ length: 40 }, (_, i) => 20 + ((i * 37) % 80));
   return (
     <Section>
-      <div className="flex items-center gap-3">
-        <Mic size={20} style={{ color: 'var(--lp-icon)' }} />
-        <div className="flex-1">
-          {config.label && <div className="mb-1 text-sm opacity-80">{config.label}</div>}
-          <audio controls src={config.audioUrl} className="w-full" />
+      <div className="rounded-2xl p-4" style={{ background: 'var(--lp-card)' }}>
+        <div className="mb-2 flex items-center gap-2">
+          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full" style={{ background: 'var(--lp-primary)' }}>
+            <Mic size={16} className="text-white" />
+          </div>
+          <div className="text-sm font-semibold">{config.label || 'Explicação do Plano de Pagamento'}</div>
         </div>
+        <div className="mb-2 flex h-8 items-center gap-[2px]">
+          {bars.map((h, i) => (
+            <span key={i} className="flex-1 rounded-full" style={{ height: `${h}%`, background: 'var(--lp-icon)', opacity: 0.55 }} />
+          ))}
+        </div>
+        <audio controls src={config.audioUrl} className="w-full" />
       </div>
     </Section>
   );
 }
 
 function ValuationHistoryBlock({ config }: BlockComponentProps<'valuation_history'>) {
-  if (!config.points.length) return null;
-  const max = Math.max(...config.points.map((p) => p.value));
+  if (config.points.length < 2) return null;
+  const W = 300;
+  const H = 110;
+  const pad = 10;
+  const values = config.points.map((p) => p.value);
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const span = max - min || 1;
+  const n = config.points.length;
+  const x = (i: number) => pad + (i * (W - 2 * pad)) / (n - 1);
+  const y = (v: number) => H - pad - ((v - min) / span) * (H - 2 * pad);
+  const line = config.points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
+  const area = `${line} L${x(n - 1).toFixed(1)},${H - pad} L${x(0).toFixed(1)},${H - pad} Z`;
   return (
     <Section>
       <SectionTitle>
@@ -418,16 +464,15 @@ function ValuationHistoryBlock({ config }: BlockComponentProps<'valuation_histor
           <TrendingUp size={18} style={{ color: 'var(--lp-icon)' }} /> {config.title}
         </span>
       </SectionTitle>
-      <div className="flex items-end gap-2" style={{ height: 120 }}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 130 }}>
+        <path d={area} fill="var(--lp-accent)" opacity={0.12} />
+        <path d={line} fill="none" stroke="var(--lp-accent)" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
         {config.points.map((p, i) => (
-          <div key={i} className="flex flex-1 flex-col items-center justify-end gap-1">
-            <div
-              className="w-full rounded-t"
-              style={{ height: `${max ? (p.value / max) * 100 : 0}%`, background: 'var(--lp-primary)' }}
-            />
-            <span className="text-[10px] opacity-70">{p.label}</span>
-          </div>
+          <circle key={i} cx={x(i)} cy={y(p.value)} r={3} fill="var(--lp-accent)" />
         ))}
+      </svg>
+      <div className="flex justify-between text-[10px] opacity-60">
+        {config.points.map((p, i) => <span key={i}>{p.label}</span>)}
       </div>
     </Section>
   );
