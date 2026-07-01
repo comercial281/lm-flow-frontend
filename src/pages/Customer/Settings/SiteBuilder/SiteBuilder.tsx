@@ -18,7 +18,9 @@ import {
 import {
   Globe, Plus, Edit, Trash2, FileText, Newspaper,
   ExternalLink, Archive, Send, RefreshCw, Users,
+  LayoutTemplate, Copy, Check, Home, Building2, Search, MessageCircle,
 } from 'lucide-react';
+import { getTenantSlug } from '@/services/core/tenant';
 import {
   siteBuilderService,
   Site,
@@ -35,6 +37,7 @@ import {
 } from '@/services/siteBuilder/siteBuilderService';
 
 const TABS = [
+  { key: 'portal', label: 'Portal', icon: LayoutTemplate },
   { key: 'config', label: 'Configurações', icon: Globe },
   { key: 'pages', label: 'Páginas', icon: FileText },
   { key: 'articles', label: 'Artigos', icon: Newspaper },
@@ -84,7 +87,8 @@ function formatDate(iso: string) {
 export default function SiteBuilder() {
   const [site, setSite] = useState<Site | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('config');
+  const [activeTab, setActiveTab] = useState('portal');
+  const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Site form
@@ -409,6 +413,94 @@ export default function SiteBuilder() {
           );
         })}
       </div>
+
+      {/* Portal tab */}
+      {activeTab === 'portal' && (() => {
+        const portalUrl = `${window.location.origin}/portal/${getTenantSlug() ?? site?.slug ?? ''}`;
+        const brand = site?.branding.primary_color || '#0E7C5A';
+        const copyLink = () => {
+          navigator.clipboard?.writeText(portalUrl);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1800);
+        };
+        return (
+          <div className="space-y-6">
+            {/* Template escolhido */}
+            <section className="overflow-hidden rounded-xl border border-border bg-card">
+              <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 flex-none items-center justify-center rounded-xl text-white" style={{ background: brand }}>
+                    <LayoutTemplate className="h-7 w-7" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-semibold">Portal Imobiliário</h2>
+                      <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Ativo</Badge>
+                    </div>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                      Template <strong>Moderno (Editorial)</strong> — o site público da imobiliária, com a sua marca e os seus imóveis.
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href={portalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white"
+                  style={{ background: brand }}
+                >
+                  <ExternalLink className="h-4 w-4" /> Ver portal
+                </a>
+              </div>
+
+              {/* Link público */}
+              <div className="border-t border-border bg-muted/30 p-5">
+                <UILabel className="text-xs text-muted-foreground">Link público do portal</UILabel>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <Input readOnly value={portalUrl} className="flex-1 font-mono text-sm" />
+                  <Button variant="outline" size="sm" onClick={copyLink} className="flex-none">
+                    {copied ? <><Check className="mr-1 h-4 w-4 text-emerald-600" /> Copiado</> : <><Copy className="mr-1 h-4 w-4" /> Copiar</>}
+                  </Button>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Indexável no Google. Depois dá pra apontar um domínio próprio na aba Configurações.
+                </p>
+              </div>
+            </section>
+
+            {/* O que o portal faz */}
+            <section className="rounded-xl border border-border bg-card p-5">
+              <h3 className="mb-4 text-base font-semibold">O que já vem pronto</h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {[
+                  { icon: Home, title: 'Home com busca', desc: 'Vitrine dos imóveis com busca por tipo, bairro, cidade e dormitórios.' },
+                  { icon: Building2, title: 'Página de cada imóvel', desc: 'Gerada sozinha de cada imóvel publicado — galeria, ficha, mapa. Indexável.' },
+                  { icon: MessageCircle, title: 'Contato via WhatsApp', desc: 'Botão de WhatsApp em cada imóvel e captura de lead direto no seu CRM.' },
+                  { icon: Search, title: 'SEO da sua marca', desc: 'Usa sua logo, cores e conteúdo (editáveis na aba Configurações).' },
+                ].map((f) => (
+                  <div key={f.title} className="flex gap-3">
+                    <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg" style={{ background: `${brand}1a`, color: brand }}>
+                      <f.icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">{f.title}</div>
+                      <p className="text-xs text-muted-foreground">{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
+                <Button variant="outline" size="sm" onClick={() => setActiveTab('config')}>
+                  <Edit className="mr-1.5 h-4 w-4" /> Editar marca e SEO
+                </Button>
+                <a href="/properties" className="inline-flex items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted">
+                  <Building2 className="mr-1.5 h-4 w-4" /> Gerenciar imóveis
+                </a>
+              </div>
+            </section>
+          </div>
+        );
+      })()}
 
       {/* Config tab */}
       {activeTab === 'config' && (
