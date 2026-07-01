@@ -43,33 +43,57 @@ export default function ProfilePhotoUploader({
     setPhotoUrl(normalizeAvatarUrl(initialPhoto));
   }, [initialPhoto]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isHeicFile = (file: File) => {
+    const type = file.type.toLowerCase();
+    const name = file.name.toLowerCase();
+    return type === 'image/heic' || type === 'image/heif' || name.endsWith('.heic') || name.endsWith('.heif');
+  };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     if (!file) return;
 
+    let workingFile = file;
+
+    // Browsers can't decode/preview HEIC (iPhone default format) — convert to JPEG first.
+    if (isHeicFile(file)) {
+      try {
+        setIsConverting(true);
+        const heic2any = (await import('heic2any')).default;
+        const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+        const blob = Array.isArray(converted) ? converted[0] : converted;
+        workingFile = new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+      } catch (error) {
+        console.error('Error converting HEIC photo:', error);
+        toast.error(t('photoUploader.heicConversionError'));
+        return;
+      } finally {
+        setIsConverting(false);
+      }
+    }
+
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    if (!workingFile.type.startsWith('image/')) {
       toast.error(t('photoUploader.fileTypeError'));
       return;
     }
 
     // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    if (workingFile.size > 5 * 1024 * 1024) {
       toast.error(t('photoUploader.fileSizeError'));
       return;
     }
 
-    const localPreviewUrl = URL.createObjectURL(file);
+    const localPreviewUrl = URL.createObjectURL(workingFile);
     setCropImageUrl(localPreviewUrl);
-    setPendingFile(file);
+    setPendingFile(workingFile);
     setIsCropOpen(true);
-
-    // Clear input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
   };
 
   const handleUploadClick = () => {
@@ -157,11 +181,15 @@ export default function ProfilePhotoUploader({
           variant="outline"
           size="sm"
           onClick={handleUploadClick}
-          disabled={isUploading}
+          disabled={isUploading || isConverting}
           className="flex items-center gap-2"
         >
           <Upload className="h-4 w-4" />
-          {isUploading ? t('photoUploader.uploading') : t('photoUploader.changePhoto')}
+          {isConverting
+            ? t('photoUploader.converting')
+            : isUploading
+              ? t('photoUploader.uploading')
+              : t('photoUploader.changePhoto')}
         </Button>
 
         <p className="text-xs text-muted-foreground">
@@ -173,7 +201,7 @@ export default function ProfilePhotoUploader({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.heic,.heif"
         onChange={handleFileSelect}
         className="hidden"
       />

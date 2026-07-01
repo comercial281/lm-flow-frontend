@@ -285,7 +285,9 @@
       "uploading": "Caricamento...",
       "fileTypeError": "Seleziona solo file di immagine",
       "fileSizeError": "L'immagine deve essere al massimo di 5MB",
-      "fileInfo": "JPG, PNG o GIF. Massimo 5MB.",
+      "fileInfo": "JPG, PNG, GIF o HEIC (foto iPhone). Massimo 5MB.",
+      "converting": "Conversione...",
+      "heicConversionError": "Impossibile convertire questa foto HEIC. Prova a esportarla come JPG prima di caricarla.",
       "photoRemoved": "Foto rimossa con successo",
       "photoRemoveError": "Errore durante la rimozione della foto"
     },
