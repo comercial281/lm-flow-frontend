@@ -7,7 +7,7 @@ import { BLOCK_REGISTRY, type BlockInstance } from '@/features/landing/blocks';
 async function uploadFile(file: File): Promise<string> {
   const fd = new FormData();
   fd.append('attachment', file);
-  const res = await api.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  const res = await api.post('/uploads', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
   return (res.data as { data: { file_url: string } }).data.file_url;
 }
 
