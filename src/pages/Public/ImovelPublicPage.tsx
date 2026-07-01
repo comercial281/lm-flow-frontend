@@ -2,6 +2,7 @@ import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   BlockRenderer,
+  defaultPropertyBlocks,
   safeParsePageBlocks,
   type BlockInstance,
   type LandingProperty,
@@ -153,7 +154,9 @@ export default function ImovelPublicPage() {
         const json = (await res.json()) as { data: ImovelDTO };
         const dto = json.data;
         if (!active) return;
-        setBlocks(safeParsePageBlocks(dto.template));
+        // Site sem template customizado -> renderiza o template padrão do portal.
+        const parsed = safeParsePageBlocks(dto.template);
+        setBlocks(parsed.length ? parsed : defaultPropertyBlocks());
         setTheme(dto.theme ?? {});
         setProperty(toProperty(dto.property));
 

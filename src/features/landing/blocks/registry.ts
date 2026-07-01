@@ -209,3 +209,26 @@ export function defaultLandingBlocks(): BlockInstance[] {
     createBlock('sticky_cta'),
   ];
 }
+
+/** Template padrao da PAGINA DE IMOVEL do portal (Produto A). Mais informativo e
+ *  SEO que a landing de anuncio: ficha, galeria, infraestrutura, localizacao,
+ *  valorizacao, obras entregues, corretor. Usado quando o site ainda nao
+ *  customizou o template (editor e render publico caem nele). */
+export function defaultPropertyBlocks(): BlockInstance[] {
+  return [
+    createBlock('hero'),
+    createBlock('price_band'),
+    createBlock('tech_sheet'),
+    createBlock('description'),
+    createBlock('gallery'),
+    createBlock('amenities'),
+    createBlock('apartment_types'),
+    createBlock('construction_progress'),
+    createBlock('map'),
+    createBlock('valuation_history'),
+    createBlock('track_record'),
+    createBlock('consultant'),
+    createBlock('lead_form'),
+    createBlock('sticky_cta'),
+  ];
+}

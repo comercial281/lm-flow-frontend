@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LandingEditor } from '@/features/landing/editor';
 import {
+  defaultPropertyBlocks,
   toLandingProperty,
   type BlockInstance,
   type LandingProperty,
@@ -51,7 +52,8 @@ export default function PropertyTemplateEditorPage() {
         }
 
         setSiteId(site.id);
-        setBlocks(tpl);
+        // Template vazio -> começa do template padrão (não tela em branco).
+        setBlocks(tpl.length ? tpl : defaultPropertyBlocks());
         setProperty(prop);
         setLoading(false);
       } catch {
