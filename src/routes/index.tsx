@@ -71,6 +71,7 @@ const PropertiesMap = lazyWithRetry(() => import('@/pages/Customer/Properties').
 const LandingPageEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingPageEditorPage'));
 const LandingByIdEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingByIdEditorPage'));
 const LandingsList = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingsListPage'));
+const SimulatorDemo = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/SimulatorDemoPage'));
 const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => ({ default: m.Visits })));
 const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
 const PropertyCaptureRequests = lazyWithRetry(() => import('@/pages/Customer/PropertyCapture').then(m => ({ default: m.PropertyCaptureRequests })));
@@ -1667,6 +1668,17 @@ const AppRouter = () => {
               <PrivateRoute>
                 <CustomerRoute>
                   <LandingByIdEditor />
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/simulador"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <SimulatorDemo />
                 </CustomerRoute>
               </PrivateRoute>
             }
