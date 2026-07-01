@@ -1,13 +1,17 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
+import { getTenantSlug } from '@/services/core/tenant';
 
 // Estado de features que cada tenant frontend lê do master no boot.
-// Lê de:
-//   VITE_MASTER_API_URL  → URL base do backend master (ex: https://api-master.up.railway.app)
-//   VITE_TENANT_SLUG     → slug do tenant (ex: meu-imovel-imob)
+// Resolve em RUNTIME (não em build-time), porque UM único build wildcard serve
+// TODOS os subdomínios *.lmflow.com.br:
+//   masterUrl → VITE_MASTER_API_URL, senão VITE_API_URL (mesma base do resto do
+//               app, ex: https://api.lmflow.com.br)
+//   slug      → getTenantSlug() pelo subdomínio (mesmo mecanismo do header
+//               X-Tenant), com fallback pro VITE_TENANT_SLUG de build (legado)
 //
-// Quando qualquer dos dois estiver ausente OU a chamada falhar, cai pra
-// fallback `all-on` — nunca esconde nada. Isso garante que tenants legados
-// (sem env var) continuam funcionando 100% até serem migrados.
+// Quando não há slug (apex/super-admin) OU a chamada falhar, cai pra fallback
+// `all-on` — nunca esconde nada. Isso garante que o super-admin e tenants
+// legados continuam funcionando 100%.
 
 const CACHE_KEY_PREFIX = 'lm_flow_tenant_features:';
 const CACHE_TTL_MS     = 5 * 60 * 1000; // 5 min
@@ -77,8 +81,9 @@ async function fetchFeatures(masterUrl: string, slug: string): Promise<Record<st
 }
 
 export function TenantFeaturesProvider({ children }: { children: ReactNode }) {
-  const masterUrl = (import.meta.env.VITE_MASTER_API_URL as string | undefined)?.trim();
-  const slug      = (import.meta.env.VITE_TENANT_SLUG as string | undefined)?.trim();
+  const masterUrl = ((import.meta.env.VITE_MASTER_API_URL as string | undefined)
+    || (import.meta.env.VITE_API_URL as string | undefined))?.trim();
+  const slug = (getTenantSlug() || (import.meta.env.VITE_TENANT_SLUG as string | undefined)?.trim()) || undefined;
 
   const [state, setState] = useState<TenantFeaturesState>(() => {
     if (!masterUrl || !slug) {

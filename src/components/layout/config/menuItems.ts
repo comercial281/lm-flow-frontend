@@ -214,6 +214,9 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: 'Automações',
     href: '/automations',
     icon: Zap,
+    // Feature gerenciada pela Leal Mídia: super-admin SEMPRE vê; o cliente só vê
+    // se a Leal Mídia ligar "client_manage_automations" nas Funções do CRM.
+    clientToggleKey: 'client_manage_automations',
   },
   {
     name: 'Marketplace',
@@ -266,7 +269,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         name: t('menu.settings.account'),
         href: '/settings/account',
         icon: User,
-        // Configurações de conta são sempre disponíveis - sem permissão específica
+        // A rota /settings/account é protegida por accounts.read (PermissionRoute).
+        // Gate do menu tem que casar com a rota, senão o corretor vê o item,
+        // clica e cai em "Acesso Negado" (/unauthorized).
+        resource: 'accounts',
+        action: 'read',
       },
       {
         name: t('menu.settings.users'),
@@ -307,6 +314,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         name: 'Automações',
         href: '/automations',
         icon: Zap,
+        clientToggleKey: 'client_manage_automations',
       },
       {
         name: 'Produtos',
