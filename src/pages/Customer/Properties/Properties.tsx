@@ -40,6 +40,7 @@ import {
   Link as LinkIcon,
   Film,
   Megaphone,
+  LayoutTemplate,
 } from 'lucide-react';
 import {
   propertiesService,
@@ -384,6 +385,10 @@ export default function Properties() {
             <Button variant="outline" onClick={() => navigate('/landings')}>
               <Megaphone className="h-4 w-4 mr-2" />
               Landings
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/properties/template-imovel')}>
+              <LayoutTemplate className="h-4 w-4 mr-2" />
+              Página de imóvel
             </Button>
             {canAiBatch && (
               <Button variant="outline" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>

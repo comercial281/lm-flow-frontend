@@ -1,4 +1,5 @@
 import api from '@/services/core/api';
+import type { BlockInstance } from '@/features/landing/blocks/contract';
 
 export interface SiteBranding {
   logo_url?: string | null;
@@ -44,6 +45,8 @@ export interface Site {
   pages_count?: number;
   articles_count?: number;
   leads_count?: number;
+  /** Template único da página de imóvel (portal Produto A). Só vem no show (deep). */
+  property_page_template?: BlockInstance[];
   created_at: string;
   updated_at: string;
 }
@@ -182,6 +185,16 @@ export const siteBuilderService = {
 
   async deleteSite(id: string): Promise<void> {
     await api.delete(`/sites/${id}`);
+  },
+
+  // Portal (Produto A): template único da página de imóvel do site.
+  async getPropertyTemplate(siteId: string): Promise<BlockInstance[]> {
+    const res = await api.get(`/sites/${siteId}`);
+    return (res.data as { data: Site }).data.property_page_template ?? [];
+  },
+
+  async savePropertyTemplate(siteId: string, blocks: BlockInstance[]): Promise<void> {
+    await api.put(`/sites/${siteId}`, { site: { property_page_template: blocks } });
   },
 
   // Pages

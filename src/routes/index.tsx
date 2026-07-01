@@ -71,8 +71,10 @@ const PropertiesMap = lazyWithRetry(() => import('@/pages/Customer/Properties').
 const LandingPageEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingPageEditorPage'));
 const LandingByIdEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingByIdEditorPage'));
 const LandingsList = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingsListPage'));
+const PropertyTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/PropertyTemplateEditor/PropertyTemplateEditorPage'));
 const SimulatorDemo = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/SimulatorDemoPage'));
 const LandingPublic = lazyWithRetry(() => import('@/pages/Public/LandingPublicPage'));
+const ImovelPublic = lazyWithRetry(() => import('@/pages/Public/ImovelPublicPage'));
 const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => ({ default: m.Visits })));
 const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
 const Contracts = lazyWithRetry(() => import('@/pages/Customer/Contracts').then(m => ({ default: m.Contracts })));
@@ -1675,6 +1677,18 @@ const AppRouter = () => {
             }
           />
 
+          {/* Editor do template único da página de imóvel (portal Produto A). */}
+          <Route
+            path="/properties/template-imovel"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <PropertyTemplateEditor />
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
           <Route
             path="/simulador"
             element={
@@ -1688,6 +1702,9 @@ const AppRouter = () => {
 
           {/* Público (sem login) — landing de anúncio hospedada. */}
           <Route path="/lp/:tenant/:slug" element={<LandingPublic />} />
+
+          {/* Público INDEXÁVEL — página de imóvel do portal (Produto A). */}
+          <Route path="/imovel/:tenant/:code" element={<ImovelPublic />} />
 
           <Route
             path="/visits"
