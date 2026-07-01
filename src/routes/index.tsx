@@ -75,6 +75,7 @@ const PropertyTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Prop
 const SimulatorDemo = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/SimulatorDemoPage'));
 const LandingPublic = lazyWithRetry(() => import('@/pages/Public/LandingPublicPage'));
 const ImovelPublic = lazyWithRetry(() => import('@/pages/Public/ImovelPublicPage'));
+const PortalHome = lazyWithRetry(() => import('@/pages/Public/PortalHomePage'));
 const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => ({ default: m.Visits })));
 const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
 const Contracts = lazyWithRetry(() => import('@/pages/Customer/Contracts').then(m => ({ default: m.Contracts })));
@@ -1705,6 +1706,9 @@ const AppRouter = () => {
 
           {/* Público INDEXÁVEL — página de imóvel do portal (Produto A). */}
           <Route path="/imovel/:tenant/:code" element={<ImovelPublic />} />
+
+          {/* Público INDEXÁVEL — home/listagem de imóveis do portal. */}
+          <Route path="/portal/:tenant" element={<PortalHome />} />
 
           <Route
             path="/visits"
