@@ -1,0 +1,4 @@
+# App/CRM/landings da Leal Mídia: NÃO indexar (padrão fechado).
+# Só os portais imobiliários (app separado) serão indexáveis, tratado à parte.
+User-agent: *
+Disallow: /
