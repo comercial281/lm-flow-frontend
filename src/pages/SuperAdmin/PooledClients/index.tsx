@@ -175,6 +175,29 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
     } finally { setSavingKey(null); }
   };
 
+  // Regra de ENTRADA no pipe (tenant.settings.only_ad_leads): quando ligado, só
+  // entra no funil lead que veio de anúncio de verdade (ad_referral presente) —
+  // orgânico fica fora. Salva via update do pooled_tenants (preserva os group_jids).
+  const [onlyAds, setOnlyAds] = useState<boolean>(!!tenant.settings?.only_ad_leads);
+  const [savingAds, setSavingAds] = useState(false);
+  const toggleOnlyAds = async () => {
+    const next = !onlyAds;
+    setSavingAds(true);
+    setOnlyAds(next);
+    try {
+      const s = tenant.settings || {};
+      await api.patch(`/super/pooled_tenants/${tenant.id}`, {
+        name: tenant.name,
+        only_ad_leads: next,
+        whatsapp_reminder_group_jid: s.whatsapp_reminder_group_jid || '',
+        whatsapp_logs_group_jid: s.whatsapp_logs_group_jid || '',
+      });
+    } catch {
+      setOnlyAds(!next);
+      alert('Falha ao salvar a regra do pipe.');
+    } finally { setSavingAds(false); }
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
       <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-xl overflow-hidden"
@@ -187,6 +210,19 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
           <button onClick={onClose} className="text-white/40 hover:text-white/80"><X className="w-4 h-4" /></button>
         </div>
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1"
+            style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.25)' }}>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-white/90">Pipe só com leads de anúncio (ADS)</div>
+              <div className="text-xs text-white/40">Só entra no funil o lead que veio de campanha (ad_referral). Orgânico fica fora.</div>
+            </div>
+            <button onClick={toggleOnlyAds} disabled={savingAds}
+              className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${onlyAds ? 'bg-violet-600' : 'bg-white/15'}`}>
+              {savingAds
+                ? <Loader2 className="w-3 h-3 animate-spin text-white absolute top-1.5 left-3.5" />
+                : <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${onlyAds ? 'left-5' : 'left-1'}`} />}
+            </button>
+          </div>
           {loading ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-violet-400" /></div>
           ) : catalog.map(f => {
