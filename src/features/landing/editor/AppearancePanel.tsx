@@ -1,6 +1,7 @@
 import {
   BRAND_MODE_LABELS,
   DEFAULT_LANDING_THEME,
+  LANDING_TEMPLATES,
   type BrandMode,
   type LandingTheme,
 } from '@/features/landing/blocks';
@@ -30,6 +31,23 @@ export function AppearancePanel() {
 
   return (
     <div className="space-y-4">
+      <div>
+        <span className="mb-1 block text-xs text-neutral-400">Aplicar template</span>
+        <div className="grid grid-cols-2 gap-2">
+          {LANDING_TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTheme(t.theme)}
+              className="flex items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800 px-2 py-2 text-left text-xs text-neutral-100 hover:border-violet-500"
+            >
+              <span className="flex-none rounded-full" style={{ width: 14, height: 14, background: t.theme.primary, boxShadow: `0 0 0 2px ${t.theme.bgEnd}` }} />
+              <span className="truncate">{t.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div>
         <span className="mb-1 block text-xs text-neutral-400">Fonte da marca</span>
         <select

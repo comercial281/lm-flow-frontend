@@ -86,6 +86,63 @@ export function themeToCssVars(theme: LandingTheme): Record<string, string> {
   };
 }
 
+/** Templates de aparência prontos (todos dark — os blocos assumem fundo escuro). */
+export interface LandingTemplate {
+  id: string;
+  name: string;
+  theme: LandingTheme;
+}
+
+export const LANDING_TEMPLATES: LandingTemplate[] = [
+  {
+    id: 'vgv-elite',
+    name: 'VGV Elite',
+    theme: {
+      primary: '#16A34A',
+      accent: '#22C55E',
+      bgStart: '#0A0A0B',
+      bgEnd: '#141416',
+      blockBg: '#1B1B1F',
+      icon: '#22C55E',
+      text: '#FFFFFF',
+      fontFamily: 'Inter, sans-serif',
+    },
+  },
+  {
+    id: 'violeta',
+    name: 'Violeta LM',
+    theme: { ...DEFAULT_LANDING_THEME },
+  },
+  {
+    id: 'ouro',
+    name: 'Ouro Premium',
+    theme: {
+      primary: '#B8860B',
+      accent: '#EAB308',
+      bgStart: '#0B0A08',
+      bgEnd: '#15120C',
+      blockBg: '#1C1710',
+      icon: '#EAB308',
+      text: '#FBF7EE',
+      fontFamily: 'Space Grotesk, sans-serif',
+    },
+  },
+  {
+    id: 'oceano',
+    name: 'Oceano',
+    theme: {
+      primary: '#2563EB',
+      accent: '#38BDF8',
+      bgStart: '#060B16',
+      bgEnd: '#0B1220',
+      blockBg: '#111A2B',
+      icon: '#38BDF8',
+      text: '#EAF2FF',
+      fontFamily: 'Inter, sans-serif',
+    },
+  },
+];
+
 export const STAGE_LABELS: Record<NonNullable<LandingProperty['stage']>, string> = {
   ready: 'PRONTO',
   in_construction: 'EM OBRA',

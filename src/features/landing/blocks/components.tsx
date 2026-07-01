@@ -8,7 +8,6 @@ import {
   Check,
   MapPin,
   Mic,
-  Play,
   Ruler,
   TrendingUp,
   UserRound,
@@ -269,6 +268,43 @@ function VideoBlock({ config }: BlockComponentProps<'video'>) {
   );
 }
 
+function SliderRow({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+  suffix,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+  suffix: string;
+}) {
+  return (
+    <div className="mb-4">
+      <div className="mb-1 flex justify-between text-sm">
+        <span className="opacity-80">{label}</span>
+        <span className="font-semibold">
+          {value}
+          {suffix}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-current"
+        style={{ accentColor: 'var(--lp-accent)' }}
+      />
+    </div>
+  );
+}
+
 function FinanceSimulatorBlock({ config, property }: BlockComponentProps<'finance_simulator'>) {
   const base = config.basePrice ?? property?.salePrice ?? 0;
   const [entradaPct, setEntradaPct] = useState(config.entradaPct);
@@ -284,47 +320,12 @@ function FinanceSimulatorBlock({ config, property }: BlockComponentProps<'financ
     return { entrada, reforco, mensal };
   }, [base, entradaPct, reforcoPct, prazo, config.reforcoQty]);
 
-  const Row = ({
-    label,
-    value,
-    min,
-    max,
-    onChange,
-    suffix,
-  }: {
-    label: string;
-    value: number;
-    min: number;
-    max: number;
-    onChange: (v: number) => void;
-    suffix: string;
-  }) => (
-    <div className="mb-4">
-      <div className="mb-1 flex justify-between text-sm">
-        <span className="opacity-80">{label}</span>
-        <span className="font-semibold">
-          {value}
-          {suffix}
-        </span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full"
-        style={{ accentColor: 'var(--lp-primary)' }}
-      />
-    </div>
-  );
-
   return (
     <Section>
       <SectionTitle>Simulador de Financiamento</SectionTitle>
-      <Row label="Entrada" value={entradaPct} min={0} max={50} onChange={setEntradaPct} suffix="%" />
-      <Row label="Reforços" value={reforcoPct} min={0} max={50} onChange={setReforcoPct} suffix="%" />
-      <Row label="Prazo" value={prazo} min={12} max={240} onChange={setPrazo} suffix=" meses" />
+      <SliderRow label="Entrada" value={entradaPct} min={0} max={50} onChange={setEntradaPct} suffix="%" />
+      <SliderRow label="Reforços" value={reforcoPct} min={0} max={50} onChange={setReforcoPct} suffix="%" />
+      <SliderRow label="Prazo" value={prazo} min={12} max={240} onChange={setPrazo} suffix=" meses" />
       <div className="mt-4 space-y-2 rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.06)' }}>
         <div className="flex justify-between text-sm">
           <span className="opacity-70">Entrada</span>
@@ -510,17 +511,25 @@ function LeadFormBlock({ config }: BlockComponentProps<'lead_form'>) {
   );
 }
 
+function WhatsAppIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  );
+}
+
 function StickyCtaBlock({ config }: BlockComponentProps<'sticky_cta'>) {
   return (
-    <div className="sticky bottom-0 z-20 w-full p-3" style={{ background: 'linear-gradient(transparent, var(--lp-bg-end) 40%)' }}>
+    <div className="pointer-events-none sticky bottom-0 z-20 w-full p-3">
       <button
         type="button"
         data-lp-action={config.action}
         data-whatsapp-phone={config.whatsappPhone ?? ''}
-        className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold text-white shadow-lg"
-        style={{ background: config.action === 'whatsapp' ? '#16a34a' : 'var(--lp-primary)' }}
+        className="pointer-events-auto flex w-full items-center justify-center gap-2 rounded-full px-5 py-3.5 font-semibold text-white shadow-[0_8px_30px_rgba(22,163,74,0.5)]"
+        style={{ background: '#16a34a' }}
       >
-        {config.action === 'whatsapp' && <Play size={16} />} {config.label}
+        <WhatsAppIcon size={20} /> {config.label}
       </button>
     </div>
   );

@@ -181,8 +181,14 @@ export default function LandingPublicPage() {
   }
 
   return (
-    <div className="min-h-screen" onClickCapture={onCtaClick}>
-      <BlockRenderer blocks={blocks} property={property} theme={theme} />
+    <div
+      className="flex min-h-screen w-full justify-center"
+      style={{ background: theme.bgEnd ?? '#0A0A0B' }}
+      onClickCapture={onCtaClick}
+    >
+      <div className="relative w-full max-w-[460px] shadow-2xl">
+        <BlockRenderer blocks={blocks} property={property} theme={theme} />
+      </div>
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
