@@ -43,6 +43,7 @@ export function BlockRenderer({ blocks, property, theme, showHidden = false, onS
         background: `linear-gradient(var(--lp-bg-start), var(--lp-bg-end))`,
         color: 'var(--lp-text)',
         fontFamily: 'var(--lp-font)',
+        paddingBottom: '5.5rem', // espaço pro CTA fixo não cobrir o conteúdo
       }}
     >
       {blocks.map((block) => {

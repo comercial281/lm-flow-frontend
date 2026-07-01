@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Building2, Copy, ExternalLink, Loader2, Megaphone, Plus, Rocket, Trash2 } from 'lucide-react';
+import { Building2, Copy, ExternalLink, GitBranch, Loader2, Megaphone, Plus, Rocket, Trash2 } from 'lucide-react';
 import {
   landingPageService,
   type LandingPageDTO,
 } from '@/services/landingPages/landingPageService';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import { getTenantSlug } from '@/services/core/tenant';
+import LeadRoutingModal from './LeadRoutingModal';
 
 function slugify(name: string): string {
   return name
@@ -30,6 +31,7 @@ export default function LandingsListPage() {
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [routingPage, setRoutingPage] = useState<LandingPageDTO | null>(null);
 
   const reload = async (sid: string) => setLandings(await landingPageService.listLandings(sid));
 
@@ -164,10 +166,16 @@ export default function LandingsListPage() {
                       {published ? 'Publicada' : 'Rascunho'}
                     </span>
                   </div>
-                  <button type="button" onClick={() => handleDelete(l.id)} title="Excluir"
-                    className="text-muted-foreground opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => setRoutingPage(l)} title="Roteamento do lead (pipeline/coluna/tag)"
+                      className="text-muted-foreground hover:text-primary">
+                      <GitBranch className="h-4 w-4" />
+                    </button>
+                    <button type="button" onClick={() => handleDelete(l.id)} title="Excluir"
+                      className="text-muted-foreground opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <button type="button" onClick={() => navigate(`/landings/${l.id}`)} className="flex-1 text-left">
@@ -206,6 +214,18 @@ export default function LandingsListPage() {
             );
           })}
         </div>
+      )}
+
+      {routingPage && siteId && (
+        <LeadRoutingModal
+          siteId={siteId}
+          page={routingPage}
+          onClose={() => setRoutingPage(null)}
+          onSaved={() => {
+            setRoutingPage(null);
+            reload(siteId);
+          }}
+        />
       )}
     </div>
   );

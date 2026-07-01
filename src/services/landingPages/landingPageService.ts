@@ -21,6 +21,9 @@ export interface LandingPageDTO {
   indexable: boolean;
   active: boolean;
   public_host?: string | null;
+  lead_pipeline_id?: string | null;
+  lead_stage_id?: string | null;
+  lead_label_id?: string | null;
   content_blocks: unknown[];
   theme?: Partial<LandingTheme> | null;
   content_html?: string | null;
@@ -92,6 +95,16 @@ export const landingPageService = {
   /** Move back to draft (unpublish). */
   async unpublish(siteId: string, pageId: string): Promise<LandingPageDTO> {
     const res = await api.put(`/sites/${siteId}/pages/${pageId}`, { page: { active: false } });
+    return unwrap<LandingPageDTO>(res);
+  },
+
+  /** Salva o roteamento de lead da landing (pipeline/estagio/tag de destino). */
+  async saveRouting(
+    siteId: string,
+    pageId: string,
+    routing: { lead_pipeline_id: string | null; lead_stage_id: string | null; lead_label_id: string | null },
+  ): Promise<LandingPageDTO> {
+    const res = await api.put(`/sites/${siteId}/pages/${pageId}`, { page: routing });
     return unwrap<LandingPageDTO>(res);
   },
 

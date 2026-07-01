@@ -650,8 +650,10 @@ function WhatsAppIcon({ size = 20 }: { size?: number }) {
 }
 
 function StickyCtaBlock({ config }: BlockComponentProps<'sticky_cta'>) {
+  // Fixo no rodapé da viewport, sempre visível ao rolar (não só no fim).
+  // Centralizado e limitado à largura da coluna da landing.
   return (
-    <div className="pointer-events-none sticky bottom-0 z-20 w-full p-3">
+    <div className="pointer-events-none fixed bottom-3 left-1/2 z-40 w-[min(420px,calc(100vw-1.5rem))] -translate-x-1/2">
       <button
         type="button"
         data-lp-action={config.action}
