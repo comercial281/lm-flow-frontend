@@ -115,26 +115,17 @@ const RouterGuard: React.FC<RouterGuardProps> = ({ children }) => {
     }
   }, [location, isAuthenticated, user, isLoading, permissionsReady, navigate, setupRequired, setupLoading]);
 
-  // Show loading spinner while setup status is being checked
-  if (setupLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  // Show loading spinner while checking auth or loading permissions
+  // Gate de auth: enquanto resolve setup/auth/permissoes, nao renderiza os
+  // filhos (senao pisca login), mas SEM spinner full-screen — o carregamento
+  // gigante no boot nao fazia sentido pro usuario. Tela fica limpa ate pronto.
   const isCurrentPathPublic = SPECIAL_ROUTES.PUBLIC_ROUTES.some(route =>
     location.pathname.startsWith(route)
   );
 
+  if (setupLoading) return null;
+
   if (isLoading || (!isCurrentPathPublic && isAuthenticated && !permissionsReady)) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
+    return null;
   }
 
   return <>{children}</>;
