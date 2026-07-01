@@ -153,6 +153,12 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     featureKey: 'proposals',
   },
   {
+    name: 'Contratos',
+    href: '/contracts',
+    icon: FileText,
+    featureKey: 'contracts',
+  },
+  {
     name: 'Captação',
     href: '/property-capture-requests',
     icon: ClipboardList,

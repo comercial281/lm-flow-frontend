@@ -75,6 +75,7 @@ const SimulatorDemo = lazyWithRetry(() => import('@/pages/Customer/Properties/La
 const LandingPublic = lazyWithRetry(() => import('@/pages/Public/LandingPublicPage'));
 const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => ({ default: m.Visits })));
 const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
+const Contracts = lazyWithRetry(() => import('@/pages/Customer/Contracts').then(m => ({ default: m.Contracts })));
 const PropertyCaptureRequests = lazyWithRetry(() => import('@/pages/Customer/PropertyCapture').then(m => ({ default: m.PropertyCaptureRequests })));
 // Gate de rota super-admin: só renderiza no deploy raiz (app.lmflow.com.br) E
 // logado como super-admin. Em subdomínio de cliente (*.lmflow.com.br) ou usuário
@@ -1708,6 +1709,19 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <Proposals />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/contracts"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <Contracts />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>
