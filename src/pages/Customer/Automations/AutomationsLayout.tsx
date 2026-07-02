@@ -2,6 +2,7 @@ import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
 import { Zap, Rocket, Code, FileInput, Repeat, Bell, Shuffle, SlidersHorizontal } from 'lucide-react';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import { isRootTenantHost } from '@/components/layout/config/menuItems';
 import type { LucideIcon } from 'lucide-react';
 
 interface Sector {
@@ -13,6 +14,8 @@ interface Sector {
   featureKey?: string;
   /** Acesso gerenciado pela Leal Mídia: super-admin sempre vê; cliente só se === true. */
   clientToggleKey?: string;
+  // Some no painel MASTER (app.lmflow, host raiz): telas que so fazem sentido no CRM do cliente.
+  hideOnRoot?: boolean;
 }
 
 // Cada "setor" da aba Automações. Mesmas páginas que antes viviam soltas em
@@ -44,6 +47,7 @@ const SECTORS: Sector[] = [
     key: 'lead-ads-forms',
     name: 'Formulários (Meta)',
     path: '/automations/lead-ads-forms',
+    hideOnRoot: true,
     icon: FileInput,
     featureKey: 'lead_automations',
     clientToggleKey: 'client_manage_automations',
@@ -91,6 +95,7 @@ export default function AutomationsLayout() {
 
   // Espelha a mesma regra de visibilidade do menu lateral (shouldShowMenuItem).
   const visible = SECTORS.filter(s => {
+    if (s.hideOnRoot && isRootTenantHost()) return false;
     // Super-admin (Leal Mídia) NUNCA perde um setor — vê e opera tudo, mesmo o
     // que está OFF pro cliente. O cliente segue os toggles normalmente.
     if (s.featureKey && features[s.featureKey] === false && !isSuper) return false;
