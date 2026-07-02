@@ -90,7 +90,6 @@ function SuperAdminRoute({ children }: { children: ReactNode }) {
 }
 
 const ClientInstances = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances'));
-const Monitoring = lazyWithRetry(() => import('@/pages/SuperAdmin/Monitoring'));
 const AutomationTemplatesPage = lazyWithRetry(() => import('@/pages/SuperAdmin/AutomationTemplates/AutomationTemplates'));
 const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients'));
 const RoletaConfigPage = lazyWithRetry(() => import('@/pages/Customer/Settings/RoletaConfig/RoletaConfig'));
@@ -1806,20 +1805,6 @@ const AppRouter = () => {
                 <MainLayout>
                   <SuperAdminRoute>
                     <ClientInstances />
-                  </SuperAdminRoute>
-                </MainLayout>
-              </PrivateRoute>
-            }
-          />
-
-          {/* Super Admin — monitoramento de saúde dos CRMs */}
-          <Route
-            path="/super-admin/monitoring"
-            element={
-              <PrivateRoute>
-                <MainLayout>
-                  <SuperAdminRoute>
-                    <Monitoring />
                   </SuperAdminRoute>
                 </MainLayout>
               </PrivateRoute>
