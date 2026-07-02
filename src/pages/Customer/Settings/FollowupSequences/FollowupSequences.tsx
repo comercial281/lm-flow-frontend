@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/ds';
-import { Clock, Edit, Send, ToggleLeft, ToggleRight, Trash2, Plus, GripVertical, Upload, Loader2 } from 'lucide-react';
+import { Clock, Edit, Send, ToggleLeft, ToggleRight, Trash2, Plus, GripVertical, Upload, Loader2, Mic, Square } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import {
   followupSequencesService,
@@ -164,6 +164,8 @@ function StageSelector({
   );
 }
 
+// Mesma capacidade do modal de funil (MessageSequenceEditor): áudio pode ser
+// ANEXADO (upload) ou GRAVADO na hora (MediaRecorder). Os outros tipos só upload.
 function MediaUploadButton({
   messageType,
   onUploaded,
@@ -173,6 +175,11 @@ function MediaUploadButton({
 }) {
   const ref = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordDur, setRecordDur] = useState(0);
+  const mediaRecRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<number | null>(null);
 
   const accept =
     messageType === 'audio'
@@ -185,9 +192,11 @@ function MediaUploadButton({
       ? '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/pdf'
       : 'video/*';
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const doUpload = async (file: File) => {
+    if (file.size > 16 * 1024 * 1024) {
+      toast.error('Arquivo muito grande (máx 16MB).');
+      return;
+    }
     setUploading(true);
     try {
       const out = await followupSequencesService.uploadMedia(file);
@@ -197,14 +206,67 @@ function MediaUploadButton({
       toast.error('Falha no upload. Cheque tamanho (máx 16MB) e tipo.');
     } finally {
       setUploading(false);
-      if (ref.current) ref.current.value = '';
     }
   };
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await doUpload(file);
+    if (ref.current) ref.current.value = '';
+  };
+
+  const startRec = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+      const mr = new MediaRecorder(stream, { mimeType });
+      chunksRef.current = [];
+      mr.ondataavailable = ev => { if (ev.data.size > 0) chunksRef.current.push(ev.data); };
+      mr.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        stream.getTracks().forEach(t => t.stop());
+        void doUpload(new File([blob], `audio-${Date.now()}.webm`, { type: mimeType }));
+      };
+      mr.start();
+      mediaRecRef.current = mr;
+      setRecording(true);
+      setRecordDur(0);
+      timerRef.current = window.setInterval(() => setRecordDur(d => d + 1), 1000);
+    } catch {
+      toast.error('Sem acesso ao microfone.');
+    }
+  };
+
+  const stopRec = () => {
+    mediaRecRef.current?.stop();
+    setRecording(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
+
+  if (recording) {
+    return (
+      <div className="flex items-center gap-1">
+        <span className="text-xs font-mono text-red-500">
+          {String(Math.floor(recordDur / 60)).padStart(2, '0')}:{String(recordDur % 60).padStart(2, '0')}
+        </span>
+        <Button type="button" variant="destructive" size="sm" onClick={stopRec} title="Parar gravação">
+          <Square className="h-3 w-3" fill="currentColor" />
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <>
       <input ref={ref} type="file" accept={accept} className="hidden" onChange={handleFile} />
-      <Button type="button" variant="outline" size="sm" onClick={() => ref.current?.click()} disabled={uploading}>
+      {messageType === 'audio' && (
+        <Button type="button" variant="outline" size="sm" onClick={startRec} disabled={uploading} title="Gravar áudio">
+          {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mic className="h-3 w-3" />}
+        </Button>
+      )}
+      <Button type="button" variant="outline" size="sm" onClick={() => ref.current?.click()} disabled={uploading} title="Anexar arquivo">
         {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
       </Button>
     </>
