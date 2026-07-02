@@ -40,3 +40,7 @@ yalc.lock
 .env.test.development
 .env.test.production
 .vercel
+
+# Vercel build env dump (nunca versionar)
+.vercel-master-env
+.vercel*.env
