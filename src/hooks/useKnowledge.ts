@@ -524,6 +524,29 @@ export function useUploadLessonVideo() {
   );
 }
 
+// Upload de imagem de capa do módulo: pede signed URL à edge (super-admin),
+// sobe o arquivo pro bucket knowledge-videos (público, sem restrição de MIME)
+// e devolve a URL pública pra usar no capa_url do módulo.
+export function useUploadModuleCover() {
+  return useMutation<{ file: File }, string>(
+    async (input) => {
+      const signed = (await callAdmin('upload', 'sign', {
+        filename: input.file.name,
+        tenant_slug: TENANT_SLUG || 'global',
+      })) as { data: { path: string; token: string; signedUrl: string; publicUrl: string } };
+      const { path, token, publicUrl } = signed.data;
+
+      const { error: upErr } = await supabaseLmHub.storage
+        .from('knowledge-videos')
+        .uploadToSignedUrl(path, token, input.file);
+      if (upErr) throw upErr;
+
+      return publicUrl;
+    },
+    { successMessage: 'Capa enviada' },
+  );
+}
+
 // ── PROGRESSO (por usuário do tenant) ───────────────────────────────────────
 
 // Mapa { lesson_id: true } das aulas concluídas pelo usuário logado.

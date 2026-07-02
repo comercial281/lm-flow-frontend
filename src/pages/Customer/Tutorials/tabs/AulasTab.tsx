@@ -1,12 +1,13 @@
 // Aba Aulas — catálogo de módulos no estilo área de membros. Abre o CoursePlayer.
 
-import { useMemo, useState } from 'react';
-import { Plus, PlayCircle, Trash2, X, Pencil, GraduationCap, Lock } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { Plus, PlayCircle, Trash2, X, Pencil, GraduationCap, Lock, ImagePlus, Loader2 } from 'lucide-react';
 import {
   useModules,
   useCreateModule,
   useUpdateModule,
   useDeleteModule,
+  useUploadModuleCover,
   useAllLessons,
   useProgress,
   TENANT_SLUG,
@@ -192,6 +193,8 @@ export default function AulasTab({ canEdit }: Props) {
 function ModuleForm({ editing, onClose }: { editing: KnowledgeModule | null; onClose: () => void }) {
   const createModule = useCreateModule();
   const updateModule = useUpdateModule();
+  const uploadCover = useUploadModuleCover();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [titulo, setTitulo] = useState(editing?.titulo ?? '');
   const [descricao, setDescricao] = useState(editing?.descricao ?? '');
@@ -201,6 +204,22 @@ function ModuleForm({ editing, onClose }: { editing: KnowledgeModule | null; onC
 
   const busy = createModule.isPending || updateModule.isPending;
   const canScopeTenant = Boolean(TENANT_SLUG);
+
+  async function handleCoverFile(file: File | null) {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      window.alert('Selecione um arquivo de imagem.');
+      return;
+    }
+    try {
+      const url = await uploadCover.mutateAsync({ file });
+      setCapaUrl(url);
+    } catch {
+      // toast de erro já é exibido pelo hook
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
 
   async function submit() {
     if (!titulo.trim()) return;
@@ -246,12 +265,61 @@ function ModuleForm({ editing, onClose }: { editing: KnowledgeModule | null; onC
         rows={2}
         className="w-full bg-background border border-border rounded px-3 py-2 text-sm resize-y"
       />
-      <input
-        value={capaUrl}
-        onChange={(e) => setCapaUrl(e.target.value)}
-        placeholder="URL da capa (opcional)"
-        className="w-full bg-background border border-border rounded px-3 py-2 text-sm"
-      />
+      {/* Capa (thumbnail) — upload de imagem ou URL */}
+      <div>
+        <p className="text-[11px] text-muted-foreground mb-1.5">Capa do módulo (thumbnail)</p>
+        <div className="flex items-start gap-3">
+          <div className="relative w-32 shrink-0 aspect-video rounded-lg border border-border overflow-hidden bg-gradient-to-br from-primary/20 via-purple-500/10 to-muted flex items-center justify-center">
+            {capaUrl ? (
+              <>
+                <img src={capaUrl} alt="Capa" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => setCapaUrl('')}
+                  className="absolute top-1 right-1 p-1 bg-black/55 text-white hover:text-red-400 rounded-md backdrop-blur"
+                  title="Remover capa"
+                  type="button"
+                >
+                  <X size={12} />
+                </button>
+              </>
+            ) : (
+              <PlayCircle size={24} className="text-primary/60" strokeWidth={1.5} />
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0 space-y-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleCoverFile(e.target.files?.[0] ?? null)}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadCover.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border hover:border-primary/40 disabled:opacity-50"
+              type="button"
+            >
+              {uploadCover.isPending ? (
+                <>
+                  <Loader2 size={12} className="animate-spin" /> Enviando...
+                </>
+              ) : (
+                <>
+                  <ImagePlus size={12} /> Enviar imagem
+                </>
+              )}
+            </button>
+            <input
+              value={capaUrl}
+              onChange={(e) => setCapaUrl(e.target.value)}
+              placeholder="ou cole uma URL da capa"
+              className="w-full bg-background border border-border rounded px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+      </div>
       {/* Escopo */}
       <div>
         <p className="text-[11px] text-muted-foreground mb-1">Quem vê este módulo</p>
