@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/contexts/PermissionsContext';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 
 interface PermissionRouteProps {
   children: React.ReactNode;
@@ -39,9 +40,19 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
 }) => {
   const navigate = useNavigate();
   const { can, canAny, canAll, isReady, loading } = usePermissions();
+  const isSuperAdmin = useIsSuperAdmin();
 
   // Memoizar verificações de permissão para evitar recálculos desnecessários
   const permissionCheck = useMemo(() => {
+    // O super-admin (comercial@lealmidia.com.br) vê e opera TODAS as funções,
+    // incluindo as páginas de configuração de integrações (installation_configs).
+    // Ele é injetado como super-admin em todo tenant e o backend segue guardando
+    // cada mutação; aqui só liberamos a navegação. Não depende de permissões
+    // carregarem, então isenta antes do gate de loading.
+    if (isSuperAdmin) {
+      return { hasAccess: true, shouldRedirect: false, isLoading: false };
+    }
+
     if (loading || !isReady) {
       return { hasAccess: false, shouldRedirect: false, isLoading: true };
     }
@@ -65,7 +76,7 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
       shouldRedirect: !hasPermission && !fallback,
       isLoading: false
     };
-  }, [can, canAny, canAll, permissions, requireAll, resource, action, fallback, loading, isReady]);
+  }, [can, canAny, canAll, permissions, requireAll, resource, action, fallback, loading, isReady, isSuperAdmin]);
 
   // Usar useEffect para navegação para evitar chamadas durante render
   useEffect(() => {
