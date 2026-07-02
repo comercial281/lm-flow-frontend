@@ -60,6 +60,12 @@ export interface MenuItem {
   clientToggleKey?: string;
   /** Quando true, só aparece no tenant raiz (VITE_IS_ROOT_TENANT=true). */
   rootTenantOnly?: boolean;
+  /**
+   * Anotado em runtime (não configurar à mão): true quando o item está visível
+   * pra ele (super-admin) mas OCULTO pro cliente pelo estado atual dos toggles.
+   * O Sidebar usa isso pra mostrar o selo "oculto pro cliente" — só o super vê.
+   */
+  hiddenFromClient?: boolean;
 }
 
 export interface SubMenuItem {
@@ -75,6 +81,7 @@ export interface SubMenuItem {
   featureKey?: string;
   clientToggleKey?: string;
   rootTenantOnly?: boolean;
+  hiddenFromClient?: boolean;
 }
 
 export interface ProfileMenuItem {
@@ -405,6 +412,25 @@ export function isRootTenantHost(): boolean {
   return h === 'app.lmflow.com.br' || h === 'lmflow.com.br';
 }
 
+// Super-admin Leal Mídia: a conta comercial@ (fantasma em todo tenant). Precisa
+// enxergar e operar todas as funções, mesmo as OFF pro cliente.
+export function isSuperAdminEmail(email?: string): boolean {
+  if (!email) return false;
+  return email.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase();
+}
+
+// Um item aparece pra ele (super) mas está OCULTO pro cliente quando:
+//  - featureKey está explicitamente false (cliente não veria), ou
+//  - clientToggleKey não está true (default OFF — só a Leal Mídia liga).
+function isHiddenFromClient(
+  item: MenuItem | SubMenuItem,
+  features?: Record<string, boolean>
+): boolean {
+  if (item.featureKey && features?.[item.featureKey] === false) return true;
+  if (item.clientToggleKey && features?.[item.clientToggleKey] !== true) return true;
+  return false;
+}
+
 export const shouldShowMenuItem = (
   item: MenuItem | SubMenuItem,
   canFunction: (resource: string, action: string) => boolean,
@@ -414,9 +440,12 @@ export const shouldShowMenuItem = (
   userEmail?: string,
   features?: Record<string, boolean>
 ): boolean => {
-  // Gate por tenant feature flag (mais alta prioridade — desligado no painel
-  // master = desaparece independente de permissão).
-  if (item.featureKey && features && features[item.featureKey] === false) {
+  const isSuper = isSuperAdminEmail(userEmail);
+
+  // Gate por tenant feature flag (desligado no painel master = desaparece pro
+  // CLIENTE). O super-admin (Leal Mídia) NUNCA perde o item — ele precisa
+  // enxergar e operar tudo, mesmo o que está OFF pro cliente (aí ganha o selo).
+  if (item.featureKey && features && features[item.featureKey] === false && !isSuper) {
     return false;
   }
 
@@ -424,7 +453,6 @@ export const shouldShowMenuItem = (
   // Super-admin (Leal Mídia) SEMPRE vê; o cliente só vê se o toggle estiver
   // explicitamente ligado no painel de Funções do CRM (default OFF).
   if (item.clientToggleKey) {
-    const isSuper = !!userEmail && userEmail.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase();
     if (!isSuper && features?.[item.clientToggleKey] !== true) return false;
   }
 
@@ -471,14 +499,22 @@ export const filterMenuItemsByPermissions = (
   userEmail?: string,
   features?: Record<string, boolean>
 ): MenuItem[] => {
+  const isSuper = isSuperAdminEmail(userEmail);
+  // Só o super-admin recebe o selo "oculto pro cliente"; o cliente nunca vê
+  // esses itens (foram filtrados), então nunca vê selo.
+  const mark = (item: MenuItem | SubMenuItem) =>
+    isSuper ? isHiddenFromClient(item, features) : false;
+
   return items
     .filter(item => shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features))
-    .map(item => {
+    .map((item): MenuItem | null => {
       // Se o item tem subitens, filtrar os subitens também
       if (item.subItems && item.subItems.length > 0) {
-        const filteredSubItems = item.subItems.filter(subItem =>
-          shouldShowMenuItem(subItem, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features)
-        );
+        const filteredSubItems = item.subItems
+          .filter(subItem =>
+            shouldShowMenuItem(subItem, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features)
+          )
+          .map(subItem => ({ ...subItem, hiddenFromClient: mark(subItem) }));
 
         // Se não há subitens visíveis, não mostrar o item pai
         if (filteredSubItems.length === 0) {
@@ -487,11 +523,12 @@ export const filterMenuItemsByPermissions = (
 
         return {
           ...item,
+          hiddenFromClient: mark(item),
           subItems: filteredSubItems
         };
       }
 
-      return item;
+      return { ...item, hiddenFromClient: mark(item) };
     })
     .filter((item): item is MenuItem => item !== null);
 };

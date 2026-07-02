@@ -91,7 +91,9 @@ export default function AutomationsLayout() {
 
   // Espelha a mesma regra de visibilidade do menu lateral (shouldShowMenuItem).
   const visible = SECTORS.filter(s => {
-    if (s.featureKey && features[s.featureKey] === false) return false;
+    // Super-admin (Leal Mídia) NUNCA perde um setor — vê e opera tudo, mesmo o
+    // que está OFF pro cliente. O cliente segue os toggles normalmente.
+    if (s.featureKey && features[s.featureKey] === false && !isSuper) return false;
     if (s.clientToggleKey && !isSuper && features[s.clientToggleKey] !== true) return false;
     return true;
   });
