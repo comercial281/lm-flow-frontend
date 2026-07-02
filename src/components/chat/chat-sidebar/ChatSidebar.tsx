@@ -616,8 +616,8 @@ const ChatSidebar = ({
           </Button>
         </div>
 
-        {/* Seletor rápido de instância (WhatsApp) — só aparece com 2+ instâncias */}
-        {inboxOptions.length > 1 && (
+        {/* Seletor rápido de instância (WhatsApp) — filtra a lista por instância */}
+        {inboxOptions.length > 0 && (
           <div className="flex items-center gap-2">
             <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">Instância</span>
             <select
