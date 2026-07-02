@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, EyeOff } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -57,6 +57,11 @@ export default function MenuItem({
         <>
           <div className="flex items-center gap-2 flex-1">
             <span className="font-medium text-sm">{item.name}</span>
+            {item.hiddenFromClient && (
+              <span className="flex items-center" title="Oculto pro cliente (você vê como super-admin)">
+                <EyeOff className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" aria-label="Oculto pro cliente" />
+              </span>
+            )}
           </div>
           {hasSubItems && !mobile && (
             <div className="ml-auto">
