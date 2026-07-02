@@ -141,6 +141,14 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     featureKey: 'pipelines',
   },
   {
+    // Painel "Equipe & Acessos" — só admins (gate resource users/update).
+    name: 'Equipe',
+    href: '/equipe',
+    icon: Users2,
+    resource: 'users',
+    action: 'update',
+  },
+  {
     name: 'Imóveis',
     href: '/properties',
     icon: Building2,
