@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { formatDateBR } from '@/utils/dateUtils';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
@@ -19,8 +19,10 @@ import {
   Globe, Plus, Edit, Trash2, FileText, Newspaper,
   ExternalLink, Archive, Send, RefreshCw, Users,
   LayoutTemplate, Copy, Check, Home, Building2, Search, MessageCircle,
+  Upload, Loader2, Sparkles,
 } from 'lucide-react';
 import { getTenantSlug } from '@/services/core/tenant';
+import { extractLogoColors } from '@/utils/logoColors';
 import {
   siteBuilderService,
   Site,
@@ -94,6 +96,15 @@ export default function SiteBuilder() {
   // Site form
   const [siteForm, setSiteForm] = useState<SiteFormData>(EMPTY_SITE_FORM);
   const [siteFormDirty, setSiteFormDirty] = useState(false);
+
+  // Logo upload + extração de cores (determinística, canvas)
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+
+  // Preencher com IA (proposta — o usuário revisa e salva)
+  const [aiText, setAiText] = useState('');
+  const [aiRunning, setAiRunning] = useState(false);
+  const [aiAboutHtml, setAiAboutHtml] = useState<string | null>(null);
 
   // Pages
   const [pages, setPages] = useState<SitePage[]>([]);
@@ -219,6 +230,86 @@ export default function SiteBuilder() {
   const setF = (field: Partial<SiteFormData>) => {
     setSiteForm(prev => ({ ...prev, ...field }));
     setSiteFormDirty(true);
+  };
+
+  // Sobe a logo E extrai as cores dela (canvas local, sem IA): preenche
+  // logo_url + cor primária/destaque de uma vez. Usuário revisa e salva.
+  const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (logoInputRef.current) logoInputRef.current.value = '';
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { toast.error('Logo muito grande (máx 8MB).'); return; }
+
+    setLogoUploading(true);
+    try {
+      // Cores primeiro (arquivo local — funciona mesmo se o upload falhar).
+      const colors = await extractLogoColors(file);
+      const { url } = await siteBuilderService.uploadAsset(file);
+      setF({
+        logo_url: url,
+        ...(colors ? { primary_color: colors.primary, accent_color: colors.accent } : {}),
+      });
+      toast.success(colors
+        ? `Logo no ar. Cores extraídas: ${colors.primary} / ${colors.accent} — revise e salve.`
+        : 'Logo no ar. Não achei cor de marca na imagem (P&B?) — cores mantidas.');
+    } catch {
+      toast.error('Falha no upload da logo.');
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  // IA lê o material colado e devolve os campos NOS LUGARES CERTOS do form.
+  // Nada é salvo sozinho: o form fica sujo e o usuário revisa + salva.
+  const handleAiSetup = async () => {
+    if (!site) { toast.error('Crie o site primeiro (aba Configurações).'); return; }
+    if (aiText.trim().length < 40) { toast.error('Cole um material com mais contexto (mín. 40 caracteres).'); return; }
+    setAiRunning(true);
+    try {
+      const p = await siteBuilderService.aiSetup(site.id, aiText.trim());
+      const patch: Partial<SiteFormData> = {};
+      if (p.name) patch.name = p.name;
+      if (p.seo_title) patch.seo_title = p.seo_title;
+      if (p.seo_description) patch.seo_description = p.seo_description;
+      if (p.contact_phone) patch.contact_phone = p.contact_phone;
+      if (p.contact_whatsapp) patch.contact_whatsapp = p.contact_whatsapp;
+      if (p.contact_email) patch.contact_email = p.contact_email;
+      if (p.contact_address) patch.contact_address = p.contact_address;
+      const filled = Object.keys(patch).length;
+      if (filled === 0 && !p.about_html) {
+        toast.error('A IA não achou dados utilizáveis nesse material.');
+        return;
+      }
+      setF(patch);
+      setAiAboutHtml(p.about_html ?? null);
+      toast.success(`${filled} campo${filled !== 1 ? 's' : ''} preenchido${filled !== 1 ? 's' : ''}. Revise e clique em Salvar.`);
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'IA falhou ao interpretar o material.'));
+    } finally {
+      setAiRunning(false);
+    }
+  };
+
+  // Cria a página "Sobre nós" com o HTML proposto pela IA (clique explícito).
+  const handleCreateAboutPage = async () => {
+    if (!site || !aiAboutHtml) return;
+    setSaving(true);
+    try {
+      await siteBuilderService.createPage(site.id, {
+        title: 'Sobre nós',
+        slug: 'sobre-nos',
+        content: aiAboutHtml,
+        active: true,
+        in_menu: true,
+        menu_position: 99,
+      });
+      toast.success('Página "Sobre nós" criada (aba Páginas).');
+      setAiAboutHtml(null);
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Falha ao criar a página.'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Pages handlers
@@ -505,6 +596,40 @@ export default function SiteBuilder() {
       {/* Config tab */}
       {activeTab === 'config' && (
         <div className="space-y-6">
+          {/* Preencher com IA */}
+          <section className="rounded-xl border border-primary/30 bg-primary/5 p-5">
+            <h2 className="mb-1 flex items-center gap-2 text-base font-semibold">
+              <Sparkles className="h-4 w-4 text-primary" /> Preencher com IA
+            </h2>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Cole a apresentação da imobiliária (texto do Instagram, sobre-nós, documento institucional).
+              A IA distribui as informações nos campos certos abaixo — nome, SEO, contato e página Sobre.
+              Nada é salvo sozinho: você revisa e clica em Salvar.
+            </p>
+            <Textarea
+              value={aiText}
+              onChange={e => setAiText(e.target.value)}
+              rows={4}
+              placeholder="Ex: A Imobiliária XYZ atua há 15 anos em Campinas com foco em lançamentos... Fale com a gente no (19) 99999-9999 ou contato@xyz.com.br"
+              className="resize-none bg-background"
+            />
+            <div className="mt-2 flex items-center gap-2">
+              <Button onClick={handleAiSetup} disabled={aiRunning || !site}>
+                {aiRunning
+                  ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Interpretando...</>
+                  : <><Sparkles className="mr-1.5 h-4 w-4" /> Preencher campos</>}
+              </Button>
+              {aiAboutHtml && (
+                <Button variant="outline" onClick={handleCreateAboutPage} disabled={saving}>
+                  <FileText className="mr-1.5 h-4 w-4" /> Criar página "Sobre nós" com o texto gerado
+                </Button>
+              )}
+              {!site && (
+                <span className="text-xs text-muted-foreground">Crie o site primeiro (preencha o nome e salve).</span>
+              )}
+            </div>
+          </section>
+
           {/* Basic */}
           <section className="rounded-xl border border-border bg-card p-5">
             <h2 className="text-base font-semibold mb-4">Informações básicas</h2>
@@ -542,9 +667,26 @@ export default function SiteBuilder() {
             <h2 className="text-base font-semibold mb-4">Identidade visual</h2>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <UILabel>Logo URL</UILabel>
-                <Input value={siteForm.logo_url ?? ''} onChange={e => setF({ logo_url: e.target.value })}
-                  placeholder="https://..." className="mt-1" />
+                <UILabel>Logo</UILabel>
+                <div className="mt-1 flex items-center gap-2">
+                  {siteForm.logo_url && (
+                    <img src={siteForm.logo_url} alt="logo"
+                      className="h-9 w-9 rounded border border-border object-contain bg-white flex-none"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  )}
+                  <Input value={siteForm.logo_url ?? ''} onChange={e => setF({ logo_url: e.target.value })}
+                    placeholder="https://... ou envie o arquivo" className="flex-1" />
+                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoFile} />
+                  <Button type="button" variant="outline" onClick={() => logoInputRef.current?.click()}
+                    disabled={logoUploading} className="flex-none">
+                    {logoUploading
+                      ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Enviando...</>
+                      : <><Upload className="mr-1.5 h-4 w-4" /> Enviar logo</>}
+                  </Button>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Ao enviar a logo, as cores da marca abaixo são extraídas dela automaticamente.
+                </p>
               </div>
               <div>
                 <UILabel>Cor primária</UILabel>
