@@ -43,6 +43,8 @@ import ConversationBadges from '../conversation/ConversationBadges';
 import ConversationsFilter from '../conversation/ConversationsFilter';
 import GlobalSearchPanel from '../search/GlobalSearchPanel';
 import { BaseFilter } from '@/types/core';
+import InboxesService from '@/services/channels/inboxesService';
+import type { Inbox } from '@/types/channels/inbox';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useDebounce } from '@/hooks/useDebounce';
 import chatService from '@/services/chat/chatService';
@@ -133,6 +135,23 @@ const ChatSidebar = ({
   };
   const filters = chatContext.filters;
   const [conversationFilters, setConversationFilters] = useState<BaseFilter[]>([]);
+  // Instâncias (inboxes/WhatsApp) do tenant — pro seletor rápido de instância.
+  const [inboxOptions, setInboxOptions] = useState<Array<{ id: string; label: string }>>([]);
+  useEffect(() => {
+    let alive = true;
+    InboxesService.list()
+      .then((res) => {
+        if (!alive) return;
+        setInboxOptions(
+          (res.data ?? []).map((i: Inbox) => {
+            const ch = i.channel_type?.split('::')[1] || '';
+            return { id: String(i.id), label: ch ? `${i.name} (${ch})` : i.name };
+          }),
+        );
+      })
+      .catch(() => { /* silencioso */ });
+    return () => { alive = false; };
+  }, []);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [isLoadingMoreConversations, setIsLoadingMoreConversations] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -232,6 +251,27 @@ const ChatSidebar = ({
   const handleClearFilters = async () => {
     setConversationFilters([]);
     onFilterClear();
+  };
+
+  // Seletor rápido de instância: aplica/remove um filtro inbox_id.
+  const selectedInboxId = String(
+    conversationFilters.find((f) => f.attributeKey === 'inbox_id')?.values ?? '',
+  );
+  const applyInstanceFilter = (inboxId: string) => {
+    const others = conversationFilters.filter((f) => f.attributeKey !== 'inbox_id');
+    const next: BaseFilter[] = inboxId
+      ? [
+          ...others,
+          {
+            attributeKey: 'inbox_id',
+            filterOperator: 'equal_to',
+            values: inboxId,
+            queryOperator: 'and',
+            attributeModel: 'standard',
+          },
+        ]
+      : others;
+    handleApplyFilters(next);
   };
 
   const handleBulkResolve = async () => {
@@ -575,6 +615,24 @@ const ChatSidebar = ({
             {t('chatSidebar.view.archived')}
           </Button>
         </div>
+
+        {/* Seletor rápido de instância (WhatsApp) — só aparece com 2+ instâncias */}
+        {inboxOptions.length > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">Instância</span>
+            <select
+              value={selectedInboxId}
+              onChange={(e) => applyInstanceFilter(e.target.value)}
+              className="h-8 flex-1 cursor-pointer rounded-md border border-border bg-background px-2 text-sm outline-none focus:border-primary"
+              aria-label="Filtrar por instância"
+            >
+              <option value="">Todas as instâncias</option>
+              {inboxOptions.map((i) => (
+                <option key={i.id} value={i.id}>{i.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
