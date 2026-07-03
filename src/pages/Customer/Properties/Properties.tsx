@@ -476,25 +476,67 @@ export default function Properties() {
     return String(out?.value ?? '').trim();
   };
 
-  // Book em PDF ou Word: extrai o texto no próprio navegador e manda pra IA.
-  // Sem dependência nova no projeto; arquivo só de imagem (PDF escaneado) avisa.
+  // OCR em português (Tesseract via CDN) — foto ou PDF escaneado (sem camada de texto).
+  const ocrImage = async (img: Blob | HTMLCanvasElement): Promise<string> => {
+    await loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const Tesseract = (window as any).Tesseract;
+    const { data } = await Tesseract.recognize(img, 'por');
+    return String(data?.text ?? '').trim();
+  };
+
+  // PDF escaneado: renderiza cada página num canvas e passa por OCR (lento — limita 5 págs).
+  const ocrPdfScanned = async (buf: ArrayBuffer): Promise<string> => {
+    const cdnBase = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pdfjs: any = await import(/* @vite-ignore */ `${cdnBase}/pdf.min.mjs`);
+    pdfjs.GlobalWorkerOptions.workerSrc = `${cdnBase}/pdf.worker.min.mjs`;
+    const pdf = await pdfjs.getDocument({ data: buf }).promise;
+    const pages = Math.min(pdf.numPages, 5);
+    let text = '';
+    for (let p = 1; p <= pages; p++) {
+      const page = await pdf.getPage(p);
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) continue;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      text += `${await ocrImage(canvas)}\n`;
+    }
+    return text.trim();
+  };
+
+  // Book em PDF, Word ou FOTO: extrai o texto no navegador e manda pra IA.
+  // PDF sem texto (escaneado) e imagens passam por OCR. Sem dependência nova no projeto.
   const onPickBook = async (file: File | undefined) => {
     if (!file) return;
     const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
     const isDocx = /officedocument\.wordprocessingml|\.docx$/i.test(`${file.type} ${file.name}`);
-    if (!isPdf && !isDocx) {
-      toast.error('Envie o book em PDF ou Word (.docx).');
+    const isImage = /^image\//i.test(file.type) || /\.(png|jpe?g|webp|gif|bmp|tiff?)$/i.test(file.name);
+    if (!isPdf && !isDocx && !isImage) {
+      toast.error('Envie o book em PDF, Word (.docx) ou foto (imagem).');
       return;
     }
     setPdfReading(true);
     try {
-      const buf = await file.arrayBuffer();
-      const text = isDocx ? await extractDocxText(buf) : await extractPdfText(buf);
-      if (!text) {
-        toast.error(isDocx
-          ? 'Não achei texto nesse Word.'
-          : 'Esse PDF não tem texto (parece escaneado/imagem). Cole o texto do book.');
-        return;
+      let text = '';
+      if (isDocx) {
+        text = await extractDocxText(await file.arrayBuffer());
+        if (!text) { toast.error('Não achei texto nesse Word.'); return; }
+      } else if (isImage) {
+        toast.info('Lendo a foto com OCR (pode levar alguns segundos)...');
+        text = await ocrImage(file);
+        if (!text) { toast.error('Não consegui ler texto nessa foto.'); return; }
+      } else {
+        // PDF: tenta a camada de texto; se vazio (escaneado), cai pro OCR.
+        text = await extractPdfText(await file.arrayBuffer());
+        if (!text) {
+          toast.info('PDF escaneado: lendo com OCR (pode levar alguns segundos)...');
+          text = await ocrPdfScanned(await file.arrayBuffer());
+        }
+        if (!text) { toast.error('Não consegui extrair texto desse PDF.'); return; }
       }
       setAiText(prev => (prev ? `${prev}\n\n${text}` : text));
       toast.success('Book lido. Enviando pra IA...');
@@ -669,7 +711,7 @@ export default function Properties() {
               <Wand2 className="h-4 w-4" />
               Preencher com IA
               <span className="ml-auto text-xs font-normal text-muted-foreground">
-                {aiOpen ? 'ocultar' : 'texto, book (PDF/Word) ou link'}
+                {aiOpen ? 'ocultar' : 'texto, book (PDF/Word/foto) ou link'}
               </span>
             </button>
 
@@ -694,7 +736,7 @@ export default function Properties() {
                 <input
                   ref={pdfInputRef}
                   type="file"
-                  accept="application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  accept="application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
                   className="hidden"
                   onChange={e => { onPickBook(e.target.files?.[0]); e.target.value = ''; }}
                 />
@@ -708,7 +750,7 @@ export default function Properties() {
                 >
                   {pdfReading
                     ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Lendo o book...</>
-                    : <><Upload className="mr-1 h-4 w-4" /> Subir book (PDF ou Word)</>}
+                    : <><Upload className="mr-1 h-4 w-4" /> Subir book (PDF, Word ou foto)</>}
                 </Button>
 
                 <div className="flex items-center justify-between gap-2">
