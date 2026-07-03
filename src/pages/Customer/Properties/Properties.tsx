@@ -131,6 +131,8 @@ export default function Properties() {
   const [aiText, setAiText]       = useState('');
   const [aiUrl, setAiUrl]         = useState('');
   const [aiRunning, setAiRunning] = useState(false);
+  const [pdfReading, setPdfReading] = useState(false);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
 
   const [photosProperty, setPhotosProperty] = useState<Property | null>(null);
 
@@ -371,11 +373,9 @@ export default function Properties() {
   const f = form;
   const setF = (patch: Partial<PropertyFormData>) => setForm(prev => ({ ...prev, ...patch }));
 
-  // IA lê o texto colado / book / link do anúncio e preenche o form (sem salvar).
-  const runAiExtract = async () => {
-    const text = aiText.trim();
-    const url = aiUrl.trim();
-    if (!text && !url) { toast.error('Cole um texto ou um link do imóvel'); return; }
+  // IA lê o texto colado / book (PDF) / link do anúncio e preenche o form (sem salvar).
+  const doAiExtract = async (text: string, url: string) => {
+    if (!text && !url) { toast.error('Cole um texto, envie um PDF ou um link do imóvel'); return; }
     setAiRunning(true);
     try {
       const r = await propertiesService.aiExtract({ text: text || undefined, url: url || undefined });
@@ -411,6 +411,48 @@ export default function Properties() {
       toast.error(msg || 'Não consegui ler o material. Tente colar o texto direto.');
     } finally {
       setAiRunning(false);
+    }
+  };
+
+  const runAiExtract = () => doAiExtract(aiText.trim(), aiUrl.trim());
+
+  // Book em PDF: extrai o texto no próprio navegador (pdf.js via CDN) e manda pra IA.
+  // Sem dependência nova no projeto; PDF escaneado (só imagem) não tem texto e avisa.
+  const onPickPdf = async (file: File | undefined) => {
+    if (!file) return;
+    if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+      toast.error('Envie um arquivo PDF do book.');
+      return;
+    }
+    setPdfReading(true);
+    try {
+      // specifier em variável: o TS não tenta resolver o módulo do CDN (não é dep local)
+      const cdnBase = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pdfjs: any = await import(/* @vite-ignore */ `${cdnBase}/pdf.min.mjs`);
+      pdfjs.GlobalWorkerOptions.workerSrc = `${cdnBase}/pdf.worker.min.mjs`;
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjs.getDocument({ data: buf }).promise;
+      const pages = Math.min(pdf.numPages, 30);
+      let text = '';
+      for (let p = 1; p <= pages; p++) {
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        text += content.items.map((it: any) => it.str ?? '').join(' ') + '\n';
+      }
+      text = text.trim();
+      if (!text) {
+        toast.error('Esse PDF não tem texto (parece escaneado/imagem). Cole o texto do book.');
+        return;
+      }
+      setAiText(prev => (prev ? `${prev}\n\n${text}` : text));
+      toast.success('Book lido. Enviando pra IA...');
+      await doAiExtract(text, '');
+    } catch {
+      toast.error('Não consegui ler o PDF. Tente colar o texto do book.');
+    } finally {
+      setPdfReading(false);
     }
   };
 
@@ -577,7 +619,7 @@ export default function Properties() {
               <Wand2 className="h-4 w-4" />
               Preencher com IA
               <span className="ml-auto text-xs font-normal text-muted-foreground">
-                {aiOpen ? 'ocultar' : 'colar texto ou link'}
+                {aiOpen ? 'ocultar' : 'texto, PDF do book ou link'}
               </span>
             </button>
 
@@ -597,11 +639,33 @@ export default function Properties() {
                     placeholder="Ou cole o link de um anúncio (ex: portal, site do imóvel)"
                   />
                 </div>
+
+                {/* Book em PDF: input escondido + botão que dispara a leitura no navegador */}
+                <input
+                  ref={pdfInputRef}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  className="hidden"
+                  onChange={e => { onPickPdf(e.target.files?.[0]); e.target.value = ''; }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => pdfInputRef.current?.click()}
+                  disabled={pdfReading || aiRunning}
+                >
+                  {pdfReading
+                    ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Lendo o PDF...</>
+                    : <><Upload className="mr-1 h-4 w-4" /> Subir PDF do book</>}
+                </Button>
+
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs text-muted-foreground">
                     A IA só preenche o que estiver no material. Você revisa antes de salvar.
                   </p>
-                  <Button type="button" size="sm" onClick={runAiExtract} disabled={aiRunning}>
+                  <Button type="button" size="sm" onClick={runAiExtract} disabled={aiRunning || pdfReading}>
                     {aiRunning
                       ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Lendo...</>
                       : <><Wand2 className="mr-1 h-4 w-4" /> Preencher</>}
