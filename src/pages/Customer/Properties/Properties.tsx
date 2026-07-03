@@ -134,6 +134,11 @@ export default function Properties() {
   const [pdfReading, setPdfReading] = useState(false);
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
+  // Mídias (fotos/vídeos/áudios) anexadas direto no cadastro — sobem após criar o imóvel
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
+
   const [photosProperty, setPhotosProperty] = useState<Property | null>(null);
 
   // Batch generate
@@ -205,6 +210,9 @@ export default function Properties() {
   const openCreate = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
+    setMediaFiles([]);
+    setAiText('');
+    setAiUrl('');
     setModalOpen(true);
   };
 
@@ -267,7 +275,20 @@ export default function Properties() {
         const created = await propertiesService.create(form);
         setProperties(prev => [created, ...prev]);
         setTotal(t => t + 1);
-        toast.success('Imóvel cadastrado — agora envie as fotos');
+        // Sobe as mídias que o usuário anexou no próprio modal (fotos/vídeos/áudios).
+        if (mediaFiles.length) {
+          setUploadingMedia(true);
+          try {
+            await propertyPhotosService.upload(created.id, mediaFiles);
+            toast.success(`Imóvel cadastrado com ${mediaFiles.length} mídia${mediaFiles.length > 1 ? 's' : ''}`);
+          } catch {
+            toast.warning('Imóvel cadastrado, mas algumas mídias falharam. Reenvie no gerenciador de fotos.');
+          } finally {
+            setUploadingMedia(false);
+          }
+        } else {
+          toast.success('Imóvel cadastrado — agora envie as fotos');
+        }
         setModalOpen(false);
         setPhotosProperty(created);
       }
@@ -674,6 +695,68 @@ export default function Properties() {
               </div>
             )}
           </div>
+
+          {/* Mídias direto no cadastro — fotos, vídeos e áudios (sobem após criar) */}
+          {!editing && (
+            <div className="mt-3 rounded-lg border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Image className="h-4 w-4" />
+                  Fotos, vídeos e áudios
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => mediaInputRef.current?.click()}
+                  disabled={uploadingMedia || saving}
+                >
+                  {uploadingMedia
+                    ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Enviando...</>
+                    : <><Upload className="mr-1 h-4 w-4" /> Adicionar</>}
+                </Button>
+              </div>
+              <input
+                ref={mediaInputRef}
+                type="file"
+                multiple
+                accept={ACCEPTED_MIME_TYPES.join(',')}
+                className="hidden"
+                onChange={e => {
+                  const fs = Array.from(e.target.files ?? []);
+                  if (fs.length) setMediaFiles(prev => [...prev, ...fs]);
+                  e.target.value = '';
+                }}
+              />
+              {mediaFiles.length === 0 ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Opcional. Envie agora ou depois. Áudio de explicação do imóvel também vale.
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-1">
+                  {mediaFiles.map((file, i) => (
+                    <li key={`${file.name}-${i}`} className="flex items-center gap-2 text-xs">
+                      {file.type.startsWith('video/')
+                        ? <Film className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                        : file.type.startsWith('audio/')
+                          ? <Megaphone className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                          : <Image className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />}
+                      <span className="flex-1 truncate">{file.name}</span>
+                      <span className="text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                      <button
+                        type="button"
+                        onClick={() => setMediaFiles(prev => prev.filter((_, x) => x !== i))}
+                        className="text-muted-foreground hover:text-destructive"
+                        aria-label="Remover"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           <div className="space-y-4 py-2">
             {/* Basic */}
