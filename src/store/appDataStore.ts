@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { accountService } from '@/services/account/accountService';
 import usersService from '@/services/users/usersService';
 import InboxesService from '@/services/channels/inboxesService';
@@ -75,7 +76,10 @@ function dedupe(key: ResourceKey, run: () => Promise<void>): Promise<void> {
   return promise;
 }
 
-export const useAppDataStore = create<AppDataState>((set, get) => {
+// Persistido em sessionStorage: F5 pinta as telas na hora com o dado anterior
+// (o TTL de 15min decide se re-busca). sessionStorage é por origem/aba, então
+// cada tenant (subdomínio) tem o seu — sem vazar dado entre clientes.
+export const useAppDataStore = create<AppDataState>()(persist((set, get) => {
   // Cache por timestamp (não por "lista não-vazia"): resposta vazia também
   // é resposta — tenant sem teams não pode re-buscar em toda montagem.
   const isFresh = (key: ResourceKey) => Date.now() - get().lastFetchTimestamps[key] < CACHE_DURATION;
@@ -259,4 +263,16 @@ export const useAppDataStore = create<AppDataState>((set, get) => {
       });
     },
   };
-});
+}, {
+  name: 'lmflow:app-data:v1',
+  storage: createJSONStorage(() => sessionStorage),
+  // Persistir só os dados + timestamps (nunca os flags de loading/initialized).
+  partialize: state => ({
+    account: state.account,
+    agents: state.agents,
+    inboxes: state.inboxes,
+    labels: state.labels,
+    teams: state.teams,
+    lastFetchTimestamps: state.lastFetchTimestamps,
+  }),
+}));

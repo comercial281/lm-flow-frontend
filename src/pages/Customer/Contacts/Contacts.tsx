@@ -63,6 +63,10 @@ const INITIAL_STATE: ContactsState = {
   sortOrder: 'asc',
 };
 
+// Último payload por combinação de parâmetros (memória da sessão): voltar pra
+// tela de contatos pinta a lista na hora e revalida por trás.
+const contactsPayloadCache = new Map<string, Awaited<ReturnType<typeof contactsService.getContacts>>>();
+
 export default function Contacts() {
   const { t } = useLanguage('contacts');
   const { contactId: contactIdFromRoute } = useParams<{ contactId?: string }>();
@@ -92,19 +96,15 @@ export default function Contacts() {
   // Load contacts
   const loadContacts = useCallback(
     async (params?: Partial<ContactsListParams>) => {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, list: true } }));
+      const requestParams: ContactsListParams = {
+        page: 1,
+        per_page: DEFAULT_PAGE_SIZE,
+        sort: 'name',
+        order: 'asc',
+        ...params,
+      };
 
-      try {
-        const requestParams: ContactsListParams = {
-          page: 1,
-          per_page: DEFAULT_PAGE_SIZE,
-          sort: 'name',
-          order: 'asc',
-          ...params,
-        };
-
-        const response = await contactsService.getContacts(requestParams);
-
+      const applyResponse = (response: Awaited<ReturnType<typeof contactsService.getContacts>>) => {
         const total = response.meta?.pagination?.total || 0;
         const pageSize = response.meta?.pagination?.page_size || DEFAULT_PAGE_SIZE;
 
@@ -123,6 +123,22 @@ export default function Contacts() {
           },
           loading: { ...prev.loading, list: false },
         }));
+      };
+
+      // Revisita com os mesmos parâmetros: pinta na hora com o payload
+      // anterior e revalida por trás (stale-while-revalidate).
+      const cacheKey = JSON.stringify(requestParams);
+      const cached = contactsPayloadCache.get(cacheKey);
+      if (cached) {
+        applyResponse(cached);
+      } else {
+        setState(prev => ({ ...prev, loading: { ...prev.loading, list: true } }));
+      }
+
+      try {
+        const response = await contactsService.getContacts(requestParams);
+        contactsPayloadCache.set(cacheKey, response);
+        applyResponse(response);
       } catch (error) {
         console.error('Error loading contacts:', error);
 
@@ -132,7 +148,7 @@ export default function Contacts() {
           console.error('Account not found or without permission. Stopping contact attempts.');
         }
 
-        toast.error(t('messages.loadError'));
+        if (!cached) toast.error(t('messages.loadError'));
         setState(prev => ({ ...prev, loading: { ...prev.loading, list: false } }));
       }
     },

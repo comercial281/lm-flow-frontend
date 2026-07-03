@@ -85,6 +85,10 @@ const formatDateLabel = (value: string) => {
   return `${day}/${month}/${year}`;
 };
 
+// Último payload por combinação de filtros (memória da sessão): voltar pro
+// dashboard pinta os KPIs na hora e a versão fresca chega por trás.
+const dashboardPayloadCache = new Map<string, CustomerDashboardResponse>();
+
 const CustomerDashboardPage = () => {
   const { t } = useLanguage('customerDashboard');
   const [defaultFilters] = useState<DashboardFilterState>(() => getDefaultFilterState());
@@ -105,7 +109,17 @@ const CustomerDashboardPage = () => {
   appliedFiltersRef.current = appliedFilters;
 
   const loadDashboard = useCallback(async (filters: DashboardFilterState, silent = false) => {
-    if (silent) {
+    const params = buildDashboardParams(filters);
+    const cacheKey = JSON.stringify(params);
+
+    // Revisita com o mesmo filtro: pinta na hora com o payload anterior e
+    // revalida silencioso por trás (stale-while-revalidate).
+    const cached = dashboardPayloadCache.get(cacheKey);
+    if (!silent && cached) {
+      setData(cached);
+      setLoading(false);
+      setSilentRefreshing(true);
+    } else if (silent) {
       setSilentRefreshing(true);
     } else {
       setLoading(true);
@@ -113,12 +127,13 @@ const CustomerDashboardPage = () => {
     setError(null);
 
     try {
-      const response = await customerDashboardService.getCustomerDashboard(buildDashboardParams(filters));
+      const response = await customerDashboardService.getCustomerDashboard(params);
+      dashboardPayloadCache.set(cacheKey, response);
       setData(response);
       setLastUpdated(new Date());
     } catch (err) {
       console.error('Error loading customer dashboard:', err);
-      if (!silent) setError(t('dashboard.error') || 'Falha ao carregar dashboard');
+      if (!silent && !cached) setError(t('dashboard.error') || 'Falha ao carregar dashboard');
     } finally {
       setLoading(false);
       setSilentRefreshing(false);

@@ -9,6 +9,7 @@ import {
 import { ChevronDown, Search, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Pipeline } from '@/types/analytics';
+import { prefetchPipeline } from '@/pages/Customer/Pipelines/pipelinePayloadCache';
 
 interface PipelineRowProps {
   pipeline: Pipeline;
@@ -23,6 +24,8 @@ function PipelineRow({ pipeline, selected, onSelect, getPipelineColor, getStatus
   return (
     <DropdownMenuItem
       onClick={() => onSelect(pipeline.id.toString())}
+      // hover: já baixa o payload do board por trás — trocar de pipe abre na hora
+      onMouseEnter={() => prefetchPipeline(pipeline.id.toString())}
       className="flex items-start gap-3 px-3 py-3 cursor-pointer text-sm text-foreground hover:bg-sidebar-accent rounded-sm mx-1"
     >
       <div

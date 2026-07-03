@@ -69,10 +69,7 @@ import ReorderStagesModal from '@/components/pipelines/ReorderStagesModal';
 import { ScheduleActionModal } from '@/components/scheduledActions';
 import { NotesHistoryModal } from '@/components/pipelines/NotesHistoryModal';
 import ArchivedLeadsModal from '@/components/pipelines/ArchivedLeadsModal';
-
-// Último payload de cada pipeline (memória da sessão): reabrir um pipe pinta o
-// board instantaneamente enquanto a versão fresca chega por trás.
-const pipelinePayloadCache = new Map<string, Pipeline>();
+import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
 
 export default function PipelineKanban() {
   const { t } = useLanguage('pipelines');
@@ -260,7 +257,7 @@ export default function PipelineKanban() {
 
     // Reabrir um pipe já visitado renderiza NA HORA com o último payload do
     // servidor e revalida silencioso por trás (stale-while-revalidate).
-    const cached = pipelinePayloadCache.get(pipelineId);
+    const cached = getCachedPipeline(pipelineId);
     const showSpinner = !silent && !cached;
     if (!silent && cached) {
       setPipeline(cached);
@@ -273,7 +270,7 @@ export default function PipelineKanban() {
       // Load pipeline with all data (stages, items, tasks_info, services_info)
       const pipelineData = await pipelinesService.getPipeline(pipelineId);
 
-      pipelinePayloadCache.set(pipelineId, pipelineData);
+      setCachedPipeline(pipelineId, pipelineData);
       setPipeline(pipelineData);
       setStages(pipelineData.stages || []);
     } catch (error) {

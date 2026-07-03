@@ -18,6 +18,10 @@ import { Contact, Conversation, ConversationListParams } from '@/types/chat/api'
 import { PaginationMeta } from '@/types/core';
 import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 
+// Último payload da página 1 por filtro (memória da sessão): voltar pras
+// Conversas pinta a lista na hora e a versão fresca chega por trás.
+const conversationsPayloadCache = new Map<string, Awaited<ReturnType<typeof chatService.getConversations>>>();
+
 export function ConversationsProvider({ children }: { children: React.ReactNode }) {
   const { t } = useLanguage('chat');
   const [state, dispatch] = useReducer(conversationsReducer, initialState);
@@ -51,13 +55,25 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
         return;
       }
 
+      const requestedPage = Number(params?.page || 1);
+      const shouldAppend = requestedPage > 1;
+
+      // Revisita da página 1 com o mesmo filtro: pinta a lista NA HORA com o
+      // payload anterior e revalida por trás (stale-while-revalidate). O
+      // WebSocket continua mantendo a lista viva depois.
+      const cacheKey = JSON.stringify(params ?? {});
+      const cached = shouldAppend ? undefined : conversationsPayloadCache.get(cacheKey);
+      if (cached) {
+        const { conversations, pagination } = extractConversationsData(cached);
+        dispatch({ type: 'SET_CONVERSATIONS', payload: { conversations, pagination } });
+      }
+
       loadingRef.current = true;
-      dispatch({ type: 'SET_CONVERSATIONS_LOADING', payload: true });
+      if (!cached) dispatch({ type: 'SET_CONVERSATIONS_LOADING', payload: true });
 
       try {
-        const requestedPage = Number(params?.page || 1);
-        const shouldAppend = requestedPage > 1;
         const response = await chatService.getConversations(params);
+        if (!shouldAppend && response?.data) conversationsPayloadCache.set(cacheKey, response);
 
         if (!response || !response.data) {
           dispatch({

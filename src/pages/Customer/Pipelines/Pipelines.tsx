@@ -36,6 +36,7 @@ import {
 } from '@/components/pipelines/index';
 import DeletePipelineModal from '@/components/pipelines/DeletePipelineModal';
 import { PipelinesTour } from '@/tours';
+import { prefetchPipeline } from './pipelinePayloadCache';
 
 const INITIAL_STATE: PipelinesState = {
   pipelines: [],
@@ -448,16 +449,19 @@ export default function Pipelines() {
         ) : viewMode === 'cards' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPipelines.map(pipeline => (
-              <PipelineCard
-                key={pipeline.id}
-                pipeline={pipeline}
-                onView={handleViewPipeline}
-                onEdit={handleEditPipeline}
-                onDelete={handleDeletePipeline}
-                onDuplicate={handleDuplicatePipeline}
-                onToggleStatus={handleToggleStatus}
-                onSetAsDefault={handleSetAsDefault}
-              />
+              // onMouseEnter: passou o mouse, o payload do board já desce por
+              // trás — clicar abre instantâneo (prefetch com dedupe + TTL).
+              <div key={pipeline.id} onMouseEnter={() => prefetchPipeline(pipeline.id)}>
+                <PipelineCard
+                  pipeline={pipeline}
+                  onView={handleViewPipeline}
+                  onEdit={handleEditPipeline}
+                  onDelete={handleDeletePipeline}
+                  onDuplicate={handleDuplicatePipeline}
+                  onToggleStatus={handleToggleStatus}
+                  onSetAsDefault={handleSetAsDefault}
+                />
+              </div>
             ))}
           </div>
         ) : (
