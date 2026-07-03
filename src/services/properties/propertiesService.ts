@@ -123,6 +123,29 @@ export interface PropertiesResponse {
   meta: { total: number; page: number; per_page: number };
 }
 
+/** Proposta da IA (ai_extract) — só o que estava no material; ausente = null. */
+export interface AiExtractResult {
+  title?: string | null;
+  transaction_type?: string | null;
+  property_type?: string | null;
+  sale_price?: number | null;
+  rent_price?: number | null;
+  condo_fee?: number | null;
+  iptu?: number | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  suites?: number | null;
+  parking_spaces?: number | null;
+  useful_area_m2?: number | null;
+  total_area_m2?: number | null;
+  address_neighborhood?: string | null;
+  address_city?: string | null;
+  address_state?: string | null;
+  address_cep?: string | null;
+  address_street?: string | null;
+  description?: string | null;
+}
+
 export const propertiesService = {
   async list(params: PropertiesListParams = {}): Promise<PropertiesResponse> {
     const res = await api.get('/properties', { params });
@@ -154,6 +177,13 @@ export const propertiesService = {
   ): Promise<{ headline: string; description: string; highlights: string[] }> {
     const res = await api.post(`/properties/${id}/generate_description`, opts);
     return (res.data as { data: { headline: string; description: string; highlights: string[] } }).data;
+  },
+
+  /** IA lê texto colado OU link de um anúncio e PROPÕE os campos do imóvel +
+   *  descrição no tom humano. Não salva — o form é preenchido pro corretor revisar. */
+  async aiExtract(data: { text?: string; url?: string }): Promise<AiExtractResult> {
+    const res = await api.post('/properties/ai_extract', data);
+    return (res.data as { data: AiExtractResult }).data;
   },
 
   async calculateScore(id: string): Promise<{ score: number; label: string; breakdown: Record<string, number> }> {

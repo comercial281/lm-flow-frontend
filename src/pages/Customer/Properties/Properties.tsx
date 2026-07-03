@@ -126,6 +126,12 @@ export default function Properties() {
   const [propertyScores, setPropertyScores]     = useState<Record<string, number>>({});
   const [scoringId, setScoringId]               = useState<string | null>(null);
 
+  // Preencher com IA (cola texto / book / link do anúncio -> preenche o form)
+  const [aiOpen, setAiOpen]       = useState(false);
+  const [aiText, setAiText]       = useState('');
+  const [aiUrl, setAiUrl]         = useState('');
+  const [aiRunning, setAiRunning] = useState(false);
+
   const [photosProperty, setPhotosProperty] = useState<Property | null>(null);
 
   // Batch generate
@@ -365,6 +371,49 @@ export default function Properties() {
   const f = form;
   const setF = (patch: Partial<PropertyFormData>) => setForm(prev => ({ ...prev, ...patch }));
 
+  // IA lê o texto colado / book / link do anúncio e preenche o form (sem salvar).
+  const runAiExtract = async () => {
+    const text = aiText.trim();
+    const url = aiUrl.trim();
+    if (!text && !url) { toast.error('Cole um texto ou um link do imóvel'); return; }
+    setAiRunning(true);
+    try {
+      const r = await propertiesService.aiExtract({ text: text || undefined, url: url || undefined });
+      const patch: Partial<PropertyFormData> = {};
+      const put = <K extends keyof PropertyFormData>(k: K, v: PropertyFormData[K] | null | undefined) => {
+        if (v !== null && v !== undefined && v !== '') patch[k] = v;
+      };
+      put('title', r.title);
+      put('transaction_type', r.transaction_type);
+      put('property_type', r.property_type);
+      put('sale_price', r.sale_price);
+      put('rent_price', r.rent_price);
+      put('condo_fee', r.condo_fee);
+      put('iptu', r.iptu);
+      put('bedrooms', r.bedrooms);
+      put('bathrooms', r.bathrooms);
+      put('suites', r.suites);
+      put('parking_spaces', r.parking_spaces);
+      put('useful_area_m2', r.useful_area_m2);
+      put('total_area_m2', r.total_area_m2);
+      put('address_neighborhood', r.address_neighborhood);
+      put('address_city', r.address_city);
+      put('address_state', r.address_state);
+      put('address_zip', r.address_cep);       // backend usa cep, form usa zip
+      put('address_street', r.address_street);
+      put('description', r.description);
+      const filled = Object.keys(patch).length;
+      if (!filled) { toast.error('A IA não achou dados no material. Revise o texto/link.'); return; }
+      setF(patch);
+      toast.success(`IA preencheu ${filled} campo${filled > 1 ? 's' : ''}. Revise e ajuste antes de salvar.`);
+    } catch (err) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      toast.error(msg || 'Não consegui ler o material. Tente colar o texto direto.');
+    } finally {
+      setAiRunning(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -517,6 +566,50 @@ export default function Properties() {
             <DialogTitle>{editing ? 'Editar imóvel' : 'Cadastrar imóvel'}</DialogTitle>
             <DialogDescription>Preencha as informações do imóvel</DialogDescription>
           </DialogHeader>
+
+          {/* Preencher com IA — cola texto / book / link do anúncio e a IA distribui nos campos */}
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <button
+              type="button"
+              onClick={() => setAiOpen(o => !o)}
+              className="flex w-full items-center gap-2 text-sm font-medium text-primary"
+            >
+              <Wand2 className="h-4 w-4" />
+              Preencher com IA
+              <span className="ml-auto text-xs font-normal text-muted-foreground">
+                {aiOpen ? 'ocultar' : 'colar texto ou link'}
+              </span>
+            </button>
+
+            {aiOpen && (
+              <div className="mt-3 space-y-2">
+                <Textarea
+                  value={aiText}
+                  onChange={e => setAiText(e.target.value)}
+                  placeholder="Cole aqui todas as informações do imóvel (texto do book, anúncio, descrição...). A IA lê e distribui em cada campo, e escreve a descrição no tom certo. Nada é obrigatório."
+                  className="min-h-[100px]"
+                />
+                <div className="flex items-center gap-2">
+                  <LinkIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                  <Input
+                    value={aiUrl}
+                    onChange={e => setAiUrl(e.target.value)}
+                    placeholder="Ou cole o link de um anúncio (ex: portal, site do imóvel)"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    A IA só preenche o que estiver no material. Você revisa antes de salvar.
+                  </p>
+                  <Button type="button" size="sm" onClick={runAiExtract} disabled={aiRunning}>
+                    {aiRunning
+                      ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Lendo...</>
+                      : <><Wand2 className="mr-1 h-4 w-4" /> Preencher</>}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="space-y-4 py-2">
             {/* Basic */}
