@@ -70,6 +70,10 @@ import { ScheduleActionModal } from '@/components/scheduledActions';
 import { NotesHistoryModal } from '@/components/pipelines/NotesHistoryModal';
 import ArchivedLeadsModal from '@/components/pipelines/ArchivedLeadsModal';
 
+// Último payload de cada pipeline (memória da sessão): reabrir um pipe pinta o
+// board instantaneamente enquanto a versão fresca chega por trás.
+const pipelinePayloadCache = new Map<string, Pipeline>();
+
 export default function PipelineKanban() {
   const { t } = useLanguage('pipelines');
   const { pipelineId } = useParams<{ pipelineId: string }>();
@@ -254,18 +258,29 @@ export default function PipelineKanban() {
   const loadPipelineData = useCallback(async (silent = false) => {
     if (!pipelineId) return;
 
-    if (!silent) setLoading(true);
+    // Reabrir um pipe já visitado renderiza NA HORA com o último payload do
+    // servidor e revalida silencioso por trás (stale-while-revalidate).
+    const cached = pipelinePayloadCache.get(pipelineId);
+    const showSpinner = !silent && !cached;
+    if (!silent && cached) {
+      setPipeline(cached);
+      setStages(cached.stages || []);
+      setLoading(false);
+    }
+
+    if (showSpinner) setLoading(true);
     try {
       // Load pipeline with all data (stages, items, tasks_info, services_info)
       const pipelineData = await pipelinesService.getPipeline(pipelineId);
 
+      pipelinePayloadCache.set(pipelineId, pipelineData);
       setPipeline(pipelineData);
       setStages(pipelineData.stages || []);
     } catch (error) {
       console.error('Error loading pipeline data:', error);
-      if (!silent) toast.error(t('kanban.messages.loadDataError'));
+      if (showSpinner) toast.error(t('kanban.messages.loadDataError'));
     } finally {
-      if (!silent) setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   }, [pipelineId]);
 
