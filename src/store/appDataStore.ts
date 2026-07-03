@@ -59,197 +59,204 @@ interface AppDataState {
 // Cache duration - 15 minutes
 const CACHE_DURATION = 15 * 60 * 1000;
 
-export const useAppDataStore = create<AppDataState>((set, get) => ({
-  account: null,
-  agents: [],
-  inboxes: [],
-  labels: [],
-  teams: [],
+type ResourceKey = 'account' | 'agents' | 'inboxes' | 'labels' | 'teams';
 
-  isLoadingAccount: false,
-  isLoadingAgents: false,
-  isLoadingInboxes: false,
-  isLoadingLabels: false,
-  isLoadingTeams: false,
+// Dedupe de requests em voo: componentes que montam juntos compartilham a
+// mesma Promise em vez de disparar chamadas idênticas em paralelo.
+const inflight: Partial<Record<ResourceKey, Promise<void>>> = {};
 
-  initialized: false,
-  lastFetchTimestamps: {
-    account: 0,
-    agents: 0,
-    inboxes: 0,
-    labels: 0,
-    teams: 0,
-  },
+function dedupe(key: ResourceKey, run: () => Promise<void>): Promise<void> {
+  const existing = inflight[key];
+  if (existing) return existing;
+  const promise = run().finally(() => {
+    delete inflight[key];
+  });
+  inflight[key] = promise;
+  return promise;
+}
 
-  fetchAccount: async (forceRefresh = false) => {
-    const state = get();
-    const now = Date.now();
-    const timeSinceLastFetch = now - state.lastFetchTimestamps.account;
+export const useAppDataStore = create<AppDataState>((set, get) => {
+  // Cache por timestamp (não por "lista não-vazia"): resposta vazia também
+  // é resposta — tenant sem teams não pode re-buscar em toda montagem.
+  const isFresh = (key: ResourceKey) => Date.now() - get().lastFetchTimestamps[key] < CACHE_DURATION;
 
-    if (!forceRefresh && state.account && timeSinceLastFetch < CACHE_DURATION) {
-      return;
-    }
+  const stamp = (key: ResourceKey) => ({
+    ...get().lastFetchTimestamps,
+    [key]: Date.now(),
+  });
 
-    set({ isLoadingAccount: true });
-    try {
-      const result = await accountService.getAccount();
-      set({
-        account: result,
-        isLoadingAccount: false,
-        lastFetchTimestamps: { ...state.lastFetchTimestamps, account: now }
+  return {
+    account: null,
+    agents: [],
+    inboxes: [],
+    labels: [],
+    teams: [],
+
+    isLoadingAccount: false,
+    isLoadingAgents: false,
+    isLoadingInboxes: false,
+    isLoadingLabels: false,
+    isLoadingTeams: false,
+
+    initialized: false,
+    lastFetchTimestamps: {
+      account: 0,
+      agents: 0,
+      inboxes: 0,
+      labels: 0,
+      teams: 0,
+    },
+
+    fetchAccount: async (forceRefresh = false) => {
+      if (!forceRefresh && get().account && isFresh('account')) return;
+
+      return dedupe('account', async () => {
+        set({ isLoadingAccount: true });
+        try {
+          const result = await accountService.getAccount();
+          set({
+            account: result,
+            isLoadingAccount: false,
+            lastFetchTimestamps: stamp('account'),
+          });
+        } catch (error) {
+          console.error('Failed to fetch account:', error);
+          set({ isLoadingAccount: false });
+          throw error;
+        }
       });
-    } catch (error) {
-      console.error('Failed to fetch account:', error);
-      set({ isLoadingAccount: false });
-      throw error;
-    }
-  },
+    },
 
-  fetchAgents: async (forceRefresh = false) => {
-    const state = get();
-    const now = Date.now();
-    const timeSinceLastFetch = now - state.lastFetchTimestamps.agents;
+    fetchAgents: async (forceRefresh = false) => {
+      if (!forceRefresh && isFresh('agents')) return;
 
-    if (!forceRefresh && state.agents.length > 0 && timeSinceLastFetch < CACHE_DURATION) {
-      return;
-    }
-
-    set({ isLoadingAgents: true });
-    try {
-      const response = await usersService.getUsers();
-      set({
-        agents: response.data,
-        isLoadingAgents: false,
-        lastFetchTimestamps: { ...state.lastFetchTimestamps, agents: now }
+      return dedupe('agents', async () => {
+        set({ isLoadingAgents: true });
+        try {
+          const response = await usersService.getUsers();
+          set({
+            agents: response.data,
+            isLoadingAgents: false,
+            lastFetchTimestamps: stamp('agents'),
+          });
+        } catch (error) {
+          console.error('Failed to fetch agents:', error);
+          set({ isLoadingAgents: false });
+          throw error;
+        }
       });
-    } catch (error) {
-      console.error('Failed to fetch agents:', error);
-      set({ isLoadingAgents: false });
-      throw error;
-    }
-  },
+    },
 
-  fetchInboxes: async (forceRefresh = false) => {
-    const state = get();
-    const now = Date.now();
-    const timeSinceLastFetch = now - state.lastFetchTimestamps.inboxes;
+    fetchInboxes: async (forceRefresh = false) => {
+      if (!forceRefresh && isFresh('inboxes')) return;
 
-    if (!forceRefresh && state.inboxes.length > 0 && timeSinceLastFetch < CACHE_DURATION) {
-      return;
-    }
-
-    set({ isLoadingInboxes: true });
-    try {
-      const inboxes = await InboxesService.list();
-      set({
-        inboxes: inboxes.data,
-        isLoadingInboxes: false,
-        lastFetchTimestamps: { ...state.lastFetchTimestamps, inboxes: now }
+      return dedupe('inboxes', async () => {
+        set({ isLoadingInboxes: true });
+        try {
+          const inboxes = await InboxesService.list();
+          set({
+            inboxes: inboxes.data,
+            isLoadingInboxes: false,
+            lastFetchTimestamps: stamp('inboxes'),
+          });
+        } catch (error) {
+          console.error('Failed to fetch inboxes:', error);
+          set({ isLoadingInboxes: false });
+          throw error;
+        }
       });
-    } catch (error) {
-      console.error('Failed to fetch inboxes:', error);
-      set({ isLoadingInboxes: false });
-      throw error;
-    }
-  },
+    },
 
-  fetchLabels: async (forceRefresh = false) => {
-    const state = get();
-    const now = Date.now();
-    const timeSinceLastFetch = now - state.lastFetchTimestamps.labels;
+    fetchLabels: async (forceRefresh = false) => {
+      if (!forceRefresh && isFresh('labels')) return;
 
-    if (!forceRefresh && state.labels.length > 0 && timeSinceLastFetch < CACHE_DURATION) {
-      return;
-    }
-
-    set({ isLoadingLabels: true });
-    try {
-      const response = await labelsService.getLabels();
-      set({
-        labels: response.data,
-        isLoadingLabels: false,
-        lastFetchTimestamps: { ...state.lastFetchTimestamps, labels: now }
+      return dedupe('labels', async () => {
+        set({ isLoadingLabels: true });
+        try {
+          const response = await labelsService.getLabels();
+          set({
+            labels: response.data,
+            isLoadingLabels: false,
+            lastFetchTimestamps: stamp('labels'),
+          });
+        } catch (error) {
+          console.error('Failed to fetch labels:', error);
+          set({ isLoadingLabels: false });
+          throw error;
+        }
       });
-    } catch (error) {
-      console.error('Failed to fetch labels:', error);
-      set({ isLoadingLabels: false });
-      throw error;
-    }
-  },
+    },
 
-  fetchTeams: async (forceRefresh = false) => {
-    const state = get();
-    const now = Date.now();
-    const timeSinceLastFetch = now - state.lastFetchTimestamps.teams;
+    fetchTeams: async (forceRefresh = false) => {
+      if (!forceRefresh && isFresh('teams')) return;
 
-    if (!forceRefresh && state.teams.length > 0 && timeSinceLastFetch < CACHE_DURATION) {
-      return;
-    }
-
-    set({ isLoadingTeams: true });
-    try {
-      const response = await TeamsService.getTeams();
-      set({
-        teams: response.data,
-        isLoadingTeams: false,
-        lastFetchTimestamps: { ...state.lastFetchTimestamps, teams: now }
+      return dedupe('teams', async () => {
+        set({ isLoadingTeams: true });
+        try {
+          const response = await TeamsService.getTeams();
+          set({
+            teams: response.data,
+            isLoadingTeams: false,
+            lastFetchTimestamps: stamp('teams'),
+          });
+        } catch (error) {
+          console.error('Failed to fetch teams:', error);
+          set({ isLoadingTeams: false });
+          throw error;
+        }
       });
-    } catch (error) {
-      console.error('Failed to fetch teams:', error);
-      set({ isLoadingTeams: false });
-      throw error;
-    }
-  },
+    },
 
-  initializeAppData: async () => {
-    set({ initialized: true });
-    await get().initializeAppDataDeferred();
-  },
+    initializeAppData: async () => {
+      set({ initialized: true });
+      await get().initializeAppDataDeferred();
+    },
 
-  initializeAppDataDeferred: async (options = {}) => {
-    const forceRefresh = options.forceRefresh ?? false;
-    const shouldLoadAgents = options.agents ?? true;
-    const shouldLoadInboxes = options.inboxes ?? true;
-    const shouldLoadLabels = options.labels ?? true;
-    const shouldLoadTeams = options.teams ?? true;
+    initializeAppDataDeferred: async (options = {}) => {
+      const forceRefresh = options.forceRefresh ?? false;
+      const shouldLoadAgents = options.agents ?? true;
+      const shouldLoadInboxes = options.inboxes ?? true;
+      const shouldLoadLabels = options.labels ?? true;
+      const shouldLoadTeams = options.teams ?? true;
 
-    const tasks: Promise<void>[] = [];
-    tasks.push(get().fetchAccount(forceRefresh));
-    if (shouldLoadAgents) tasks.push(get().fetchAgents(forceRefresh));
-    if (shouldLoadInboxes) tasks.push(get().fetchInboxes(forceRefresh));
-    if (shouldLoadLabels) tasks.push(get().fetchLabels(forceRefresh));
-    if (shouldLoadTeams) tasks.push(get().fetchTeams(forceRefresh));
+      const tasks: Promise<void>[] = [];
+      tasks.push(get().fetchAccount(forceRefresh));
+      if (shouldLoadAgents) tasks.push(get().fetchAgents(forceRefresh));
+      if (shouldLoadInboxes) tasks.push(get().fetchInboxes(forceRefresh));
+      if (shouldLoadLabels) tasks.push(get().fetchLabels(forceRefresh));
+      if (shouldLoadTeams) tasks.push(get().fetchTeams(forceRefresh));
 
-    await Promise.allSettled(tasks);
-  },
+      await Promise.allSettled(tasks);
+    },
 
-  removeInbox: inboxId => {
-    set(state => ({
-      inboxes: state.inboxes.filter(inbox => inbox.id !== inboxId),
-    }));
-  },
+    removeInbox: inboxId => {
+      set(state => ({
+        inboxes: state.inboxes.filter(inbox => inbox.id !== inboxId),
+      }));
+    },
 
-  addInbox: inbox => {
-    set(state => ({
-      inboxes: [...state.inboxes, inbox],
-    }));
-  },
+    addInbox: inbox => {
+      set(state => ({
+        inboxes: [...state.inboxes, inbox],
+      }));
+    },
 
-  clearAppData: () => {
-    set({
-      account: null,
-      agents: [],
-      inboxes: [],
-      labels: [],
-      teams: [],
-      initialized: false,
-      lastFetchTimestamps: {
-        account: 0,
-        agents: 0,
-        inboxes: 0,
-        labels: 0,
-        teams: 0,
-      },
-    });
-  },
-}));
+    clearAppData: () => {
+      set({
+        account: null,
+        agents: [],
+        inboxes: [],
+        labels: [],
+        teams: [],
+        initialized: false,
+        lastFetchTimestamps: {
+          account: 0,
+          agents: 0,
+          inboxes: 0,
+          labels: 0,
+          teams: 0,
+        },
+      });
+    },
+  };
+});

@@ -124,6 +124,9 @@ export default function Pipelines() {
           per_page: state.meta.pagination.page_size,
           sort: 'name',
           order: 'asc',
+          // Lista só mostra nome/etapas/contagem — não baixar TODOS os itens
+          // de TODOS os pipelines (payload cai de ~centenas de KB pra ~3KB).
+          include_items: false,
           ...params,
         };
 
