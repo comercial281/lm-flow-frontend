@@ -3,8 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LandingEditor, useLandingEditorStore } from '@/features/landing/editor';
 import {
+  createBlock,
   toLandingProperty,
   type BlockInstance,
+  type BlockType,
   type BrandMode,
   type LandingPhoto,
   type LandingProperty,
@@ -17,6 +19,26 @@ import {
   type PropertyPhoto,
 } from '@/services/propertyPhotos/propertyPhotosService';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
+
+// Landing de imóvel nova nasce com um esqueleto pronto (não em branco): as seções
+// já renderizam com os dados reais do imóvel (preço, ficha, fotos, mapa). O corretor
+// só ajusta e salva, em vez de montar do zero.
+const DEFAULT_LANDING_SECTIONS: BlockType[] = [
+  'hero',
+  'price_band',
+  'gallery',
+  'tech_sheet',
+  'description',
+  'amenities',
+  'map',
+  'finance_simulator',
+  'lead_form',
+  'sticky_cta',
+];
+
+function seedDefaultBlocks(): BlockInstance[] {
+  return DEFAULT_LANDING_SECTIONS.map((t) => createBlock(t));
+}
 
 function toLandingPhotos(photos: PropertyPhoto[]): LandingPhoto[] {
   return photos
@@ -70,7 +92,8 @@ export default function LandingPageEditorPage() {
         if (!active) return;
         setSiteId(site.id);
         setPageId(lp.dto.id);
-        setBlocks(lp.blocks);
+        // Landing vazia (recém-criada) → abre já com o esqueleto padrão preenchido.
+        setBlocks(lp.blocks.length ? lp.blocks : seedDefaultBlocks());
         setProperty(toLandingProperty(prop, toLandingPhotos(photos)));
         setThemeState(lp.theme);
         setBrandModeState((lp.dto.brand_mode as BrandMode) ?? 'development');
