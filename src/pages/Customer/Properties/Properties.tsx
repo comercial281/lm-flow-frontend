@@ -437,41 +437,70 @@ export default function Properties() {
 
   const runAiExtract = () => doAiExtract(aiText.trim(), aiUrl.trim());
 
-  // Book em PDF: extrai o texto no próprio navegador (pdf.js via CDN) e manda pra IA.
-  // Sem dependência nova no projeto; PDF escaneado (só imagem) não tem texto e avisa.
-  const onPickPdf = async (file: File | undefined) => {
+  // Carrega um script UMD do CDN uma vez (usado pelo mammoth pra ler .docx).
+  const loadScriptOnce = (src: string) =>
+    new Promise<void>((resolve, reject) => {
+      if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('script load failed'));
+      document.head.appendChild(s);
+    });
+
+  // Extrai o texto de um PDF no navegador (pdf.js via CDN). Vazio = PDF escaneado.
+  const extractPdfText = async (buf: ArrayBuffer): Promise<string> => {
+    const cdnBase = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build';
+    // specifier em variável: o TS não tenta resolver o módulo do CDN (não é dep local)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pdfjs: any = await import(/* @vite-ignore */ `${cdnBase}/pdf.min.mjs`);
+    pdfjs.GlobalWorkerOptions.workerSrc = `${cdnBase}/pdf.worker.min.mjs`;
+    const pdf = await pdfjs.getDocument({ data: buf }).promise;
+    const pages = Math.min(pdf.numPages, 30);
+    let text = '';
+    for (let p = 1; p <= pages; p++) {
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      text += content.items.map((it: any) => it.str ?? '').join(' ') + '\n';
+    }
+    return text.trim();
+  };
+
+  // Extrai o texto de um .docx (Word) no navegador (mammoth via CDN).
+  const extractDocxText = async (buf: ArrayBuffer): Promise<string> => {
+    await loadScriptOnce('https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mammoth = (window as any).mammoth;
+    const out = await mammoth.extractRawText({ arrayBuffer: buf });
+    return String(out?.value ?? '').trim();
+  };
+
+  // Book em PDF ou Word: extrai o texto no próprio navegador e manda pra IA.
+  // Sem dependência nova no projeto; arquivo só de imagem (PDF escaneado) avisa.
+  const onPickBook = async (file: File | undefined) => {
     if (!file) return;
-    if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
-      toast.error('Envie um arquivo PDF do book.');
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    const isDocx = /officedocument\.wordprocessingml|\.docx$/i.test(`${file.type} ${file.name}`);
+    if (!isPdf && !isDocx) {
+      toast.error('Envie o book em PDF ou Word (.docx).');
       return;
     }
     setPdfReading(true);
     try {
-      // specifier em variável: o TS não tenta resolver o módulo do CDN (não é dep local)
-      const cdnBase = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build';
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pdfjs: any = await import(/* @vite-ignore */ `${cdnBase}/pdf.min.mjs`);
-      pdfjs.GlobalWorkerOptions.workerSrc = `${cdnBase}/pdf.worker.min.mjs`;
       const buf = await file.arrayBuffer();
-      const pdf = await pdfjs.getDocument({ data: buf }).promise;
-      const pages = Math.min(pdf.numPages, 30);
-      let text = '';
-      for (let p = 1; p <= pages; p++) {
-        const page = await pdf.getPage(p);
-        const content = await page.getTextContent();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        text += content.items.map((it: any) => it.str ?? '').join(' ') + '\n';
-      }
-      text = text.trim();
+      const text = isDocx ? await extractDocxText(buf) : await extractPdfText(buf);
       if (!text) {
-        toast.error('Esse PDF não tem texto (parece escaneado/imagem). Cole o texto do book.');
+        toast.error(isDocx
+          ? 'Não achei texto nesse Word.'
+          : 'Esse PDF não tem texto (parece escaneado/imagem). Cole o texto do book.');
         return;
       }
       setAiText(prev => (prev ? `${prev}\n\n${text}` : text));
       toast.success('Book lido. Enviando pra IA...');
       await doAiExtract(text, '');
     } catch {
-      toast.error('Não consegui ler o PDF. Tente colar o texto do book.');
+      toast.error('Não consegui ler o arquivo. Tente colar o texto do book.');
     } finally {
       setPdfReading(false);
     }
@@ -640,7 +669,7 @@ export default function Properties() {
               <Wand2 className="h-4 w-4" />
               Preencher com IA
               <span className="ml-auto text-xs font-normal text-muted-foreground">
-                {aiOpen ? 'ocultar' : 'texto, PDF do book ou link'}
+                {aiOpen ? 'ocultar' : 'texto, book (PDF/Word) ou link'}
               </span>
             </button>
 
@@ -661,13 +690,13 @@ export default function Properties() {
                   />
                 </div>
 
-                {/* Book em PDF: input escondido + botão que dispara a leitura no navegador */}
+                {/* Book em PDF ou Word: input escondido + botão que lê no navegador */}
                 <input
                   ref={pdfInputRef}
                   type="file"
-                  accept="application/pdf,.pdf"
+                  accept="application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   className="hidden"
-                  onChange={e => { onPickPdf(e.target.files?.[0]); e.target.value = ''; }}
+                  onChange={e => { onPickBook(e.target.files?.[0]); e.target.value = ''; }}
                 />
                 <Button
                   type="button"
@@ -678,8 +707,8 @@ export default function Properties() {
                   disabled={pdfReading || aiRunning}
                 >
                   {pdfReading
-                    ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Lendo o PDF...</>
-                    : <><Upload className="mr-1 h-4 w-4" /> Subir PDF do book</>}
+                    ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Lendo o book...</>
+                    : <><Upload className="mr-1 h-4 w-4" /> Subir book (PDF ou Word)</>}
                 </Button>
 
                 <div className="flex items-center justify-between gap-2">
