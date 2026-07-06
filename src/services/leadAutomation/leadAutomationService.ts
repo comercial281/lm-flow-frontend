@@ -21,6 +21,7 @@ export interface LeadAutomationRule {
   is_active: boolean;
   archived?: boolean;
   archived_at?: string | null;
+  favorite?: boolean;
   priority: number;
   pipeline_id?: string | null;
   created_by?: { id: string; name: string } | null;
@@ -35,6 +36,7 @@ export interface LeadAutomationRuleFormData {
   conditions: LeadAutomationCondition[];
   actions: LeadAutomationAction[];
   is_active: boolean;
+  favorite?: boolean;
   priority: number;
   pipeline_id?: string | null;
 }

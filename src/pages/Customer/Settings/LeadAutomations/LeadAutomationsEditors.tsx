@@ -187,16 +187,25 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
     const field = condition?.field;
     const rawValue = typeof condition?.value === 'string' ? condition.value : '';
     const origin = field === 'form_id' ? 'formulario' : (field === 'source' ? rawValue : '');
-    const formId = field === 'form_id' ? rawValue : '';
+    // Formulários selecionados: aceita array (operator "in") ou valor único legado (eq).
+    const selectedForms: string[] = field === 'form_id'
+      ? (Array.isArray(condition?.value) ? condition!.value : (rawValue ? [rawValue] : []))
+      : [];
 
     const commitOrigin = (o: string) => {
       if (!o) return onChange(null);
       onChange({ field: 'source', operator: 'eq', value: o });
     };
-    const commitForm = (fid: string) => {
-      onChange(fid
-        ? { field: 'form_id', operator: 'eq', value: fid }
+    const commitForms = (ids: string[]) => {
+      // Nenhum marcado = qualquer formulário (só filtra por origem).
+      onChange(ids.length
+        ? { field: 'form_id', operator: 'in', value: ids }
         : { field: 'source', operator: 'eq', value: 'formulario' });
+    };
+    const toggleForm = (fid: string) => {
+      commitForms(selectedForms.includes(fid)
+        ? selectedForms.filter(x => x !== fid)
+        : [...selectedForms, fid]);
     };
 
     return (
@@ -217,18 +226,35 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
 
         {origin === 'formulario' && (
           <div>
-            <UILabel>Qual formulário? (opcional)</UILabel>
-            <select value={formId} onChange={e => commitForm(e.target.value)} className={baseSelectClass}>
-              <option value="">Qualquer formulário</option>
-              {resources.formOrigins.map(f => (
-                <option key={f.form_id} value={f.form_id}>
-                  {(f.form_name || f.form_id)}{f.count > 0 ? ` · ${f.count} lead${f.count === 1 ? '' : 's'}` : ''}
-                </option>
-              ))}
-            </select>
+            <UILabel>Quais formulários? (opcional)</UILabel>
+            <div className="mt-1 max-h-52 overflow-y-auto rounded-md border border-border divide-y divide-border">
+              {resources.formOrigins.length === 0 ? (
+                <p className="text-xs text-muted-foreground p-2">
+                  Nenhum formulário conectado ainda — veja Configurações → Formulários (Meta).
+                </p>
+              ) : (
+                resources.formOrigins.map(f => (
+                  <label
+                    key={f.form_id}
+                    className="flex items-center gap-2 px-2.5 py-2 cursor-pointer hover:bg-muted/50 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedForms.includes(f.form_id)}
+                      onChange={() => toggleForm(f.form_id)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    <span className="truncate">
+                      {(f.form_name || f.form_id)}
+                      {f.count > 0 ? ` · ${f.count} lead${f.count === 1 ? '' : 's'}` : ''}
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Em branco = qualquer formulário. Escolha um pra esse fluxo valer só pros leads daquele formulário.
-              {resources.formOrigins.length === 0 && ' (Nenhum formulário conectado ainda — veja Configurações → Formulários (Meta).)'}
+              Nenhum marcado = qualquer formulário. Marque um ou mais pra esse fluxo valer só pros leads
+              daqueles formulários.
             </p>
           </div>
         )}
@@ -1071,8 +1097,9 @@ export function formatConditionSummary(
 ): string {
   if (trigger === 'lead.created') {
     if (condition.field === 'form_id') {
-      const f = resources.formOrigins.find(x => x.form_id === condition.value);
-      return `Formulário: ${f?.form_name || condition.value}`;
+      const ids = Array.isArray(condition.value) ? condition.value : [condition.value];
+      const names = ids.map(id => resources.formOrigins.find(x => x.form_id === id)?.form_name || id);
+      return `${names.length > 1 ? 'Formulários' : 'Formulário'}: ${names.join(', ')}`;
     }
     const labels: Record<string, string> = {
       formulario: 'Formulário (Meta Lead Ads)',
