@@ -72,6 +72,17 @@ const EMPTY_FORM: LeadAutomationRuleFormData = {
 
 type Tab = 'active' | 'archived';
 
+// Favoritos no topo, depois priority, depois criação. O backend NÃO ordena por
+// favorite (coluna pode faltar em schema de tenant pooled), então a ordem final é
+// aplicada aqui no cliente — no load e em toda mudança.
+function sortRules(list: LeadAutomationRule[]): LeadAutomationRule[] {
+  return [...list].sort((a, b) => {
+    if (!!b.favorite !== !!a.favorite) return (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0);
+    if ((a.priority ?? 0) !== (b.priority ?? 0)) return (a.priority ?? 0) - (b.priority ?? 0);
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+}
+
 export default function LeadAutomations() {
   const isSuperAdmin = useIsSuperAdmin();
   const { features } = useTenantFeatures();
@@ -100,7 +111,7 @@ export default function LeadAutomations() {
   const load = useCallback(async (which: Tab) => {
     setLoading(true);
     try {
-      setRules(await leadAutomationService.getAll(which === 'archived'));
+      setRules(sortRules(await leadAutomationService.getAll(which === 'archived')));
     } catch {
       toast.error('Erro ao carregar automações');
     } finally {
@@ -203,14 +214,6 @@ export default function LeadAutomations() {
       toast.error('Erro ao alterar status');
     }
   };
-
-  // Mesma ordem do backend (scope :ordered): favoritos primeiro, depois priority, depois criação.
-  const sortRules = (list: LeadAutomationRule[]): LeadAutomationRule[] =>
-    [...list].sort((a, b) => {
-      if (!!b.favorite !== !!a.favorite) return (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0);
-      if ((a.priority ?? 0) !== (b.priority ?? 0)) return (a.priority ?? 0) - (b.priority ?? 0);
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    });
 
   const handleFavorite = async (rule: LeadAutomationRule) => {
     const fav = !rule.favorite;
