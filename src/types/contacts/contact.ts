@@ -62,6 +62,22 @@ export interface ContactAdditionalAttributes {
   campaign_source?: string;
   campaign_medium?: string;
   campaign_name?: string;
+  credit_check?: CreditCheckResult;
+}
+
+export type CreditCheckStatus = 'clean' | 'restricted' | 'unknown';
+
+export interface CreditCheckResult {
+  checked_at: string;
+  provider: string;
+  datasets: string[];
+  status: CreditCheckStatus;
+  has_restriction: boolean | null;
+  score: number | null;
+  summary: string;
+  checked_by?: string | null;
+  // Resposta crua da BigDataCorp — guardada sempre para inspeção
+  raw?: unknown;
 }
 
 export interface ContactLabel {
@@ -170,6 +186,7 @@ export interface ContactConversation {
   assignee?: {
     name: string;
   };
+  custom_attributes?: Record<string, unknown>;
 }
 
 export interface ContactFilter {

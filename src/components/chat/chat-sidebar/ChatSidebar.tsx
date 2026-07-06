@@ -593,27 +593,32 @@ const ChatSidebar = ({
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
+          <button
             type="button"
-            variant={showArchived ? 'ghost' : 'secondary'}
-            size="sm"
-            className="h-8 cursor-pointer"
             aria-pressed={!showArchived}
             onClick={() => setShowArchived(false)}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+              !showArchived
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
             {t('chatSidebar.view.active')}
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
-            variant={showArchived ? 'secondary' : 'ghost'}
-            size="sm"
-            className="h-8 cursor-pointer"
             aria-pressed={showArchived}
             onClick={() => setShowArchived(true)}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+              showArchived
+                ? 'bg-orange-100 text-orange-700 shadow-sm dark:bg-orange-950/40 dark:text-orange-400'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
+            <Archive className="h-3 w-3" />
             {t('chatSidebar.view.archived')}
-          </Button>
+          </button>
         </div>
 
         {/* Seletor rápido de instância (WhatsApp) — filtra a lista por instância */}

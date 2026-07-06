@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button, Textarea } from '@/components/ui/ds';
-import { MessageCircle, Send, Loader2, RefreshCw, Paperclip, Rocket, Bell, X, Mic } from 'lucide-react';
+import { MessageCircle, Send, Loader2, RefreshCw, Paperclip, Rocket, Bell, X, Mic, Archive, ArchiveX } from 'lucide-react';
 
 const OPENAI_KEY = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
 
@@ -25,6 +25,7 @@ async function transcribeAudioUrl(audioUrl: string): Promise<string> {
 }
 import { toast } from 'sonner';
 import { conversationAPI } from '@/services/conversations/conversationService';
+import { chatService } from '@/services/chat/chatService';
 import MessageFunnelPopover from '@/components/chat/message-funnels/MessageFunnelPopover';
 import { useWebSocketContext } from '@/contexts/chat/WebSocketContext';
 
@@ -177,6 +178,10 @@ export default function CardConversationTab({ item, onCreateReminder }: CardConv
   const [text, setText] = useState('');
   const [funnelOpen, setFunnelOpen] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isArchived, setIsArchived] = useState(
+    Boolean(item.conversation?.custom_attributes?.archived)
+  );
+  const [archiving, setArchiving] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -270,6 +275,26 @@ export default function CardConversationTab({ item, onCreateReminder }: CardConv
     await doSend(opts.content, opts.files);
   };
 
+  const toggleArchive = async () => {
+    if (!conversationId) return;
+    setArchiving(true);
+    try {
+      if (isArchived) {
+        await chatService.unarchiveConversation(conversationId);
+        setIsArchived(false);
+        toast.success('Conversa desarquivada');
+      } else {
+        await chatService.archiveConversation(conversationId);
+        setIsArchived(true);
+        toast.success('Conversa arquivada');
+      }
+    } catch {
+      toast.error('Falha ao arquivar conversa');
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   // Cast item.conversation to Conversation — funnel popover só usa contact fields
   const convForFunnel = (item.conversation ?? null) as unknown as Conversation | null;
 
@@ -289,14 +314,44 @@ export default function CardConversationTab({ item, onCreateReminder }: CardConv
   return (
     <div className="flex h-[60vh] flex-col">
       {/* header */}
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">
-          {contactName && <span className="font-medium text-foreground">{contactName} · </span>}
-          {messages.length} mensagem{messages.length === 1 ? '' : 's'} · tempo real
-        </span>
-        <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
-          <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
-        </Button>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs text-muted-foreground truncate">
+            {contactName && <span className="font-medium text-foreground">{contactName} · </span>}
+            {messages.length} mensagem{messages.length === 1 ? '' : 's'} · tempo real
+          </span>
+          {isArchived && (
+            <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700 dark:bg-orange-950/40 dark:text-orange-400">
+              <Archive className="h-2.5 w-2.5" />
+              Arquivada
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            title={isArchived ? 'Desarquivar conversa' : 'Arquivar conversa'}
+            onClick={toggleArchive}
+            disabled={archiving}
+            className={`flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-colors ${
+              isArchived
+                ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-950/40 dark:text-orange-400'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            }`}
+          >
+            {archiving ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : isArchived ? (
+              <ArchiveX className="h-3 w-3" />
+            ) : (
+              <Archive className="h-3 w-3" />
+            )}
+            {isArchived ? 'Desarquivar' : 'Arquivar'}
+          </button>
+          <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </div>
 
       {/* messages list */}

@@ -273,6 +273,7 @@ export interface PipelineItem {
         type: string;
       };
     };
+    custom_attributes?: Record<string, unknown>;
     last_non_activity_message?: {
       id: string;
       content: string;
