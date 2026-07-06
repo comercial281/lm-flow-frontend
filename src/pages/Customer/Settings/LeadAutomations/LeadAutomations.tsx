@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/ds';
 import {
   Plus, Edit, Trash2, Zap, ChevronDown, ChevronUp, ToggleLeft, ToggleRight,
-  Archive, ArchiveRestore, BookOpen, Lock,
+  Archive, ArchiveRestore, BookOpen, Lock, Copy,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import {
@@ -169,6 +169,26 @@ export default function LeadAutomations() {
       toast.error(apiErrorMessage(e, 'Erro ao salvar automação'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDuplicate = async (rule: LeadAutomationRule) => {
+    try {
+      // Cópia nasce DESLIGADA pra não disparar sem querer; usuário liga quando quiser.
+      const created = await leadAutomationService.create({
+        name:        `${rule.name} (cópia)`,
+        description: rule.description ?? '',
+        trigger:     rule.trigger,
+        conditions:  rule.conditions,
+        actions:     rule.actions,
+        is_active:   false,
+        priority:    rule.priority,
+        pipeline_id: rule.pipeline_id,
+      });
+      setRules(prev => [...prev, created]);
+      toast.success('Automação duplicada (desligada)');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao duplicar automação'));
     }
   };
 
@@ -393,6 +413,15 @@ export default function LeadAutomations() {
                       </Button>
                     </>
                   )}
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Duplicar"
+                    onClick={() => handleDuplicate(rule)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
 
                   <Button
                     variant="ghost"

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button, Input, Textarea } from '@/components/ui/ds';
 import {
   X, Trash2, Type, Mic, Image as ImageIcon, Video, FileText,
-  ChevronUp, ChevronDown, Square, Upload, Clock, AlertCircle, Loader2,
+  ChevronUp, ChevronDown, Square, Upload, Clock, AlertCircle, Loader2, Copy,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { FunnelItemKind, TemplateVariable } from '@/types/messageFunnels';
@@ -102,6 +102,17 @@ export default function MessageSequenceEditor({ items, onChange, variables, uplo
     onChange([...items, newSequenceItem(kind)]);
   };
 
+  const duplicateItem = (uiKey: string) => {
+    const idx = items.findIndex(it => it.uiKey === uiKey);
+    if (idx < 0) return;
+    // Cópia logo abaixo do original. uiKey novo; serverItemId zerado pra o backend
+    // criar um item novo (não sobrescrever o original ao salvar).
+    const copy: SequenceDraftItem = { ...items[idx], uiKey: crypto.randomUUID(), serverItemId: undefined };
+    const next = [...items];
+    next.splice(idx + 1, 0, copy);
+    onChange(next);
+  };
+
   return (
     <div>
       <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
@@ -118,6 +129,7 @@ export default function MessageSequenceEditor({ items, onChange, variables, uplo
             uploadMedia={uploadMedia}
             onUpdate={patch => updateItem(it.uiKey, patch)}
             onRemove={() => removeItem(it.uiKey)}
+            onDuplicate={() => duplicateItem(it.uiKey)}
             onMoveUp={() => moveItem(it.uiKey, 'up')}
             onMoveDown={() => moveItem(it.uiKey, 'down')}
           />
@@ -138,12 +150,13 @@ interface ItemEditorProps {
   uploadMedia?: (file: File) => Promise<{ url: string }>;
   onUpdate: (patch: Partial<SequenceDraftItem>) => void;
   onRemove: () => void;
+  onDuplicate: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
 }
 
 function ItemEditor({
-  item, index, totalCount, variables, uploadMedia, onUpdate, onRemove, onMoveUp, onMoveDown,
+  item, index, totalCount, variables, uploadMedia, onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown,
 }: ItemEditorProps) {
   const Icon = KIND_ICONS[item.kind];
   const color = KIND_COLORS[item.kind];
@@ -255,6 +268,10 @@ function ItemEditor({
           <Button variant="ghost" size="icon" className="h-7 w-7"
                   onClick={onMoveDown} disabled={index === totalCount - 1} aria-label="Mover pra baixo">
             <ChevronDown size={14} />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7"
+                  onClick={onDuplicate} aria-label="Duplicar" title="Duplicar">
+            <Copy size={14} />
           </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
                   onClick={onRemove} disabled={totalCount === 1} aria-label="Remover">
