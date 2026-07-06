@@ -840,22 +840,33 @@ export default function EditItemModal({
                 ctwa_clid: 'ID do clique', thumbnail_url: 'Imagem do anúncio',
                 // Landing Page
                 landing_name: 'Landing', landing_slug: 'Slug', landing_url: 'Link da landing',
+                // Origem universal (manual / orgânico / tracking interno)
+                inbox_name: 'Caixa de entrada', added_by_name: 'Adicionado por',
               };
-              const HIDDEN = new Set(['thumbnail_url', 'source']);
+              const HIDDEN = new Set(['thumbnail_url', 'source', 'entered_via', 'added_by_id', 'channel_type']);
+              // Rótulo + cor por origem. Todo lead tem origem (nunca "sem dados"):
+              // anúncio, formulário, landing, UTM, WhatsApp orgânico, manual ou não identificada.
+              const SOURCE_META: Record<string, { label: string; cls: string }> = {
+                whatsapp_ctwa:    { label: '💬 WhatsApp Direto (CTWA)', cls: 'bg-green-500/15 text-green-600 dark:text-green-400' },
+                meta_lead_ads:    { label: '📋 Formulário Meta Ads', cls: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
+                landing:          { label: '🌐 Landing Page', cls: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
+                utm:              { label: 'Campanha (UTM)', cls: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
+                organic_whatsapp: { label: 'WhatsApp orgânico', cls: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
+                manual:           { label: 'Adicionado manualmente', cls: 'bg-slate-500/15 text-slate-600 dark:text-slate-300' },
+                unknown:          { label: 'Origem não identificada', cls: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' },
+              };
               const source = (ar as any).source as string | undefined;
-              const isCtwa = source === 'whatsapp_ctwa';
-              const isForm = source === 'meta_lead_ads';
-              const isLanding = source === 'landing';
+              const meta = source ? SOURCE_META[source] : undefined;
               const entries = Object.entries(ar).filter(([k, v]) => k !== 'extra_fields' && !HIDDEN.has(k) && v != null && v !== '');
               const extra = (ar as any).extra_fields && typeof (ar as any).extra_fields === 'object' ? (ar as any).extra_fields : null;
-              if (entries.length === 0 && !extra) {
+              if (entries.length === 0 && !extra && !meta) {
                 return <div className="text-sm text-muted-foreground py-12 text-center border border-dashed border-border rounded-lg">Sem dados de origem para este lead.</div>;
               }
               return (
                 <div className="space-y-4">
-                  {(isCtwa || isForm || isLanding) && (
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${isCtwa ? 'bg-green-500/15 text-green-600 dark:text-green-400' : isLanding ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400' : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'}`}>
-                      <span>{isCtwa ? '💬 WhatsApp Direto (CTWA)' : isForm ? '📋 Formulário Meta Ads' : '🌐 Landing Page'}</span>
+                  {meta && (
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${meta.cls}`}>
+                      <span>{meta.label}</span>
                     </div>
                   )}
                   <div className="grid gap-2">
