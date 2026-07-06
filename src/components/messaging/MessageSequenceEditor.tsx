@@ -341,13 +341,22 @@ function ItemEditor({
                 </Button>
               </div>
             ) : (
-              <Button
-                variant="outline"
-                onClick={startRec}
-                className="w-full justify-center gap-2 border-dashed"
-              >
-                <Mic size={14} /> Gravar áudio
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={startRec}
+                  className="flex-1 justify-center gap-2 border-dashed"
+                >
+                  <Mic size={14} /> Gravar áudio
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-1 justify-center gap-2 border-dashed"
+                >
+                  <Upload size={14} /> Subir arquivo
+                </Button>
+              </div>
             )
           ) : (
             <Button
