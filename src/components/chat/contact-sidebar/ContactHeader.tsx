@@ -19,7 +19,7 @@ const ContactHeader: React.FC<ContactHeaderProps> = ({ contact }) => {
 
         {/* Info Principal */}
         <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-semibold truncate">
+          <h2 className="lm-redact text-xl font-semibold truncate">
             {contact?.name || t('contactSidebar.contactHeader.contactNoName')}
           </h2>
 
@@ -34,25 +34,25 @@ const ContactHeader: React.FC<ContactHeaderProps> = ({ contact }) => {
             {contact?.phone_number && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Phone className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{contact.phone_number}</span>
+                <span className="lm-redact truncate">{contact.phone_number}</span>
               </div>
             )}
             {contact?.identifier && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Hash className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{contact.identifier}</span>
+                <span className="lm-redact truncate">{contact.identifier}</span>
               </div>
             )}
             {contact?.email && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Mail className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{contact.email}</span>
+                <span className="lm-redact truncate">{contact.email}</span>
               </div>
             )}
             {contact?.location && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <MapPin className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{contact.location}</span>
+                <span className="lm-redact truncate">{contact.location}</span>
               </div>
             )}
           </div>

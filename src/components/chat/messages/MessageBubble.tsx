@@ -323,7 +323,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 <ReplyPreview message={replyToMessage} isOwn={false} />
               )}
 
-              <div className={isDeleted ? 'opacity-60' : ''}>{renderMessageContent()}</div>
+              <div className={`lm-redact ${isDeleted ? 'opacity-60' : ''}`}>{renderMessageContent()}</div>
             </div>,
           )}
 
@@ -398,7 +398,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       <div className={`${isThreadReply ? 'max-w-[calc(70%-2rem)]' : 'max-w-[70%]'} ${isOwn ? 'ml-auto' : ''}`}>
         {/* 📛 Nome: mostrar apenas para contatos (lado esquerdo) - sempre mostrar em replies */}
         {!isOwn && (isThreadReply || !showAvatar) && (
-          <div className="text-xs mb-1 flex items-center gap-1.5 text-muted-foreground">
+          <div className="lm-redact text-xs mb-1 flex items-center gap-1.5 text-muted-foreground">
             {message.sender?.name || t('messages.messageBubble.userFallback')}
           </div>
         )}
