@@ -1,7 +1,22 @@
 // Aba Aulas — catálogo de módulos no estilo área de membros. Abre o CoursePlayer.
 
-import { useMemo, useRef, useState } from 'react';
-import { Plus, PlayCircle, Trash2, X, Pencil, GraduationCap, Lock, ImagePlus, Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Plus,
+  PlayCircle,
+  Trash2,
+  X,
+  Pencil,
+  GraduationCap,
+  Lock,
+  ImagePlus,
+  Loader2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  GripVertical,
+  Check,
+} from 'lucide-react';
 import {
   useModules,
   useCreateModule,
@@ -30,6 +45,7 @@ export default function AulasTab({ canEdit }: Props) {
   const [openModule, setOpenModule] = useState<KnowledgeModule | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<KnowledgeModule | null>(null);
+  const [reordering, setReordering] = useState(false);
 
   // Progresso por módulo + global.
   const byModule = useMemo(() => {
@@ -75,17 +91,28 @@ export default function AulasTab({ canEdit }: Props) {
             </div>
           )}
         </div>
-        {canEdit && !showForm && (
-          <button
-            onClick={() => {
-              setEditing(null);
-              setShowForm(true);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 rounded-lg shrink-0"
-            type="button"
-          >
-            <Plus size={12} /> Novo módulo
-          </button>
+        {canEdit && !showForm && !reordering && (
+          <div className="flex items-center gap-2 shrink-0">
+            {modules.length > 1 && (
+              <button
+                onClick={() => setReordering(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-foreground border border-border hover:border-primary/40 rounded-lg"
+                type="button"
+              >
+                <ArrowUpDown size={12} /> Reordenar
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setEditing(null);
+                setShowForm(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 rounded-lg"
+              type="button"
+            >
+              <Plus size={12} /> Novo módulo
+            </button>
+          </div>
         )}
       </div>
 
@@ -98,6 +125,10 @@ export default function AulasTab({ canEdit }: Props) {
               setEditing(null);
             }}
           />
+        )}
+
+        {reordering && (
+          <ReorderPanel modules={modules} onClose={() => setReordering(false)} />
         )}
 
         {isLoading && <p className="text-xs text-muted-foreground">Carregando...</p>}
@@ -113,6 +144,7 @@ export default function AulasTab({ canEdit }: Props) {
           </div>
         )}
 
+        {!reordering && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {modules.map((m) => {
             const prog = byModule[m.id] ?? { total: 0, done: 0 };
@@ -184,6 +216,144 @@ export default function AulasTab({ canEdit }: Props) {
             );
           })}
         </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Painel de reordenação de módulos (admin) ───────────────────────────────
+// Lista os módulos em ordem, permite mover pra cima/baixo (setas ou arraste)
+// e salva gravando `ordem` sequencial (0,1,2,...) em quem mudou de posição.
+function ReorderPanel({ modules, onClose }: { modules: KnowledgeModule[]; onClose: () => void }) {
+  const updateModule = useUpdateModule();
+  const [order, setOrder] = useState<KnowledgeModule[]>(modules);
+  const [saving, setSaving] = useState(false);
+  const dragIndex = useRef<number | null>(null);
+
+  // Mantém a lista sincronizada se os módulos recarregarem por baixo.
+  useEffect(() => {
+    setOrder(modules);
+  }, [modules]);
+
+  const dirty = useMemo(
+    () => order.some((m, i) => m.id !== modules[i]?.id),
+    [order, modules],
+  );
+
+  function move(from: number, to: number) {
+    if (to < 0 || to >= order.length || from === to) return;
+    setOrder((prev) => {
+      const next = prev.slice();
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      // Grava `ordem` sequencial (0,1,2,...) só para quem mudou de posição.
+      await Promise.all(
+        order
+          .map((m, i) => ({ m, i }))
+          .filter(({ m, i }) => m.ordem !== i)
+          .map(({ m, i }) => updateModule.mutateAsync({ id: m.id, ordem: i })),
+      );
+      onClose();
+    } catch {
+      // erro já exibido via toast pelo hook
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mb-6 bg-card border border-border rounded-xl p-4 max-w-2xl">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="text-xs font-semibold">Reordenar módulos</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Arraste ou use as setas para definir a ordem que os alunos veem.
+          </p>
+        </div>
+        <button onClick={onClose} type="button" className="text-muted-foreground hover:text-foreground">
+          <X size={14} />
+        </button>
+      </div>
+
+      <ul className="space-y-1.5">
+        {order.map((m, i) => (
+          <li
+            key={m.id}
+            draggable
+            onDragStart={() => {
+              dragIndex.current = i;
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (dragIndex.current !== null && dragIndex.current !== i) {
+                move(dragIndex.current, i);
+                dragIndex.current = i;
+              }
+            }}
+            onDragEnd={() => {
+              dragIndex.current = null;
+            }}
+            className="flex items-center gap-2 bg-background border border-border rounded-lg px-2.5 py-2"
+          >
+            <GripVertical size={14} className="text-muted-foreground/50 cursor-grab shrink-0" />
+            <span className="w-6 text-center text-[11px] font-semibold text-muted-foreground shrink-0">
+              {i + 1}
+            </span>
+            <span className="flex-1 min-w-0 truncate text-sm">{m.titulo}</span>
+            {m.tenant_slug && (
+              <span className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground border border-border rounded-full shrink-0">
+                <Lock size={9} /> Exclusivo
+              </span>
+            )}
+            <div className="flex items-center gap-0.5 shrink-0">
+              <button
+                onClick={() => move(i, i - 1)}
+                disabled={i === 0}
+                className="p-1 text-muted-foreground hover:text-primary disabled:opacity-30 disabled:hover:text-muted-foreground"
+                title="Mover para cima"
+                type="button"
+              >
+                <ArrowUp size={14} />
+              </button>
+              <button
+                onClick={() => move(i, i + 1)}
+                disabled={i === order.length - 1}
+                className="p-1 text-muted-foreground hover:text-primary disabled:opacity-30 disabled:hover:text-muted-foreground"
+                title="Mover para baixo"
+                type="button"
+              >
+                <ArrowDown size={14} />
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="flex justify-end gap-2 mt-4">
+        <button
+          onClick={onClose}
+          className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={save}
+          disabled={!dirty || saving}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-50 rounded-lg"
+          type="button"
+        >
+          {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+          {saving ? 'Salvando...' : 'Salvar ordem'}
+        </button>
       </div>
     </div>
   );
