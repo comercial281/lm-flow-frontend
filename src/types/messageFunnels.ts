@@ -36,6 +36,7 @@ export interface MessageFunnel {
 // Payload pra criar/editar (frontend → backend).
 // `media_signed_id` é gerado por direct upload do ActiveStorage Rails (POST /rails/active_storage/direct_uploads).
 export interface FunnelItemPayload {
+  id?: string;               // id do item existente (edição) — backend faz upsert e PRESERVA a mídia já anexada; ausente = item novo
   position: number;
   kind: FunnelItemKind;
   text_content?: string | null;
