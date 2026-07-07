@@ -474,13 +474,52 @@ export function useDeleteLesson() {
 
 export function useUpdateLesson() {
   return useMutation<
-    { id: string; titulo?: string; descricao_md?: string; duracao_min?: number | null; ordem?: number },
+    {
+      id: string;
+      titulo?: string;
+      descricao_md?: string;
+      duracao_min?: number | null;
+      ordem?: number;
+      // Troca de vídeo por embed (YouTube/Vimeo).
+      video_url?: string;
+      video_provider?: 'youtube' | 'vimeo' | 'upload';
+      video_id?: string;
+      storage_path?: string | null;
+    },
     void
   >(
     async (input) => {
       await callAdmin('lessons', 'update', input);
     },
     { invalidateKeys: ['knowledge_lessons'] },
+  );
+}
+
+// Troca o vídeo de uma aula existente por um novo arquivo enviado: assina,
+// sobe pro bucket e atualiza a aula pra apontar pro novo upload.
+export function useReplaceLessonVideo() {
+  return useMutation<{ id: string; file: File }, void>(
+    async ({ id, file }) => {
+      const signed = (await callAdmin('upload', 'sign', {
+        filename: file.name,
+        tenant_slug: TENANT_SLUG || 'global',
+      })) as { data: { path: string; token: string; signedUrl: string; publicUrl: string } };
+      const { path, token, publicUrl } = signed.data;
+
+      const { error: upErr } = await supabaseLmHub.storage
+        .from('knowledge-videos')
+        .uploadToSignedUrl(path, token, file);
+      if (upErr) throw upErr;
+
+      await callAdmin('lessons', 'update', {
+        id,
+        video_url: publicUrl,
+        video_provider: 'upload',
+        video_id: path,
+        storage_path: path,
+      });
+    },
+    { successMessage: 'Vídeo atualizado', invalidateKeys: ['knowledge_lessons'] },
   );
 }
 
