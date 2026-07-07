@@ -139,6 +139,9 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved }: 
         active,
         shared: true,
         items: items.map((it, idx) => ({
+          // Manda o id do item existente pro backend fazer upsert e PRESERVAR a
+          // mídia já anexada (antes o update apagava a mídia de quem não foi reanexado).
+          ...(it.serverItemId ? { id: it.serverItemId } : {}),
           position: idx,
           kind: it.kind,
           text_content: it.text_content,
