@@ -4,7 +4,6 @@ import { Button, Badge, DropdownMenu, DropdownMenuContent, DropdownMenuItem, Dro
 import { Edit, Trash2, MoreVertical, Phone, Mail, MessageSquare, User, Clock, AlertCircle, ListTodo, CheckCircle2, GripVertical, GitBranch, Megaphone, Home, Calendar } from 'lucide-react';
 import { PipelineItem, Pipeline, PipelineStage } from '@/types/analytics';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
-import CreditCheckBadge from '@/components/contacts/CreditCheckBadge';
 
 interface PipelineItemCardProps {
   item: PipelineItem;
@@ -241,17 +240,6 @@ export default function PipelineItemCard({
               {adName && <p className="text-xs font-medium text-violet-700 dark:text-violet-300 truncate">{adName}</p>}
               {adSet && <p className="text-[10px] text-violet-500 dark:text-violet-400 truncate">{adSet}</p>}
             </div>
-          </div>
-        );
-      })()}
-
-      {/* Situação de CPF (BigDataCorp) */}
-      {(() => {
-        const cc = (item.contact as any)?.additional_attributes?.credit_check;
-        if (!cc?.status) return null;
-        return (
-          <div className="mb-3">
-            <CreditCheckBadge status={cc.status} score={cc.score} compact />
           </div>
         );
       })()}
