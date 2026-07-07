@@ -30,6 +30,7 @@ type MessagesAction =
   | { type: 'SET_MESSAGES_ERROR'; payload: { conversationId: string; error: string | null } }
   | { type: 'ADD_MESSAGE'; payload: { conversationId: string; message: Message } }
   | { type: 'UPDATE_MESSAGE'; payload: { conversationId: string; message: Message } }
+  | { type: 'REMOVE_MESSAGE'; payload: { conversationId: string; messageId: string } }
   | {
       type: 'REPLACE_MESSAGE';
       payload: { conversationId: string; tempId: string; message: Message };
@@ -278,6 +279,19 @@ function messagesReducer(state: MessagesState, action: MessagesAction): Messages
         messages: {
           ...state.messages,
           [action.payload.conversationId]: updatedMessages,
+        },
+      };
+    }
+
+    case 'REMOVE_MESSAGE': {
+      const conversationMessages = state.messages[action.payload.conversationId] || [];
+      return {
+        ...state,
+        messages: {
+          ...state.messages,
+          [action.payload.conversationId]: conversationMessages.filter(
+            msg => msg.id !== action.payload.messageId,
+          ),
         },
       };
     }
@@ -800,16 +814,15 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const onDeleteMessage = useCallback(
     async (conversationId: string, message: Message) => {
       try {
-        // Chamar API para deletar mensagem
-        const deletedMessage = await chatService.deleteMessage(conversationId, message.id);
+        // Exclui de verdade (backend faz hard delete + apaga no WhatsApp p/ todos
+        // quando é mensagem nossa). Removemos a mensagem da lista — não fica esmaecida.
+        await chatService.deleteMessage(conversationId, message.id);
 
-        // A API retorna a mensagem marcada como deletada
-        // Atualizar o estado local
         dispatch({
-          type: 'UPDATE_MESSAGE',
+          type: 'REMOVE_MESSAGE',
           payload: {
             conversationId,
-            message: deletedMessage,
+            messageId: message.id,
           },
         });
 
