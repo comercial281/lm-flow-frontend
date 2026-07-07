@@ -14,6 +14,7 @@ interface PooledTenant {
   id: string; name: string; slug: string; status: string;
   members: number | null; login_url: string; admin_email?: string;
   settings?: Record<string, any>; archived?: boolean; created_at?: string;
+  max_whatsapp_channels?: number; whatsapp_channels_used?: number | null;
 }
 interface Member { id: string; email: string; name?: string; plain_password?: string; }
 
@@ -198,6 +199,26 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
     } finally { setSavingAds(false); }
   };
 
+  // Limite de canais de WhatsApp que o cliente pode criar (0 = ilimitado).
+  const [maxWa, setMaxWa] = useState<number>(Number(tenant.max_whatsapp_channels ?? tenant.settings?.max_whatsapp_channels ?? 5) || 0);
+  const [savingMax, setSavingMax] = useState(false);
+  const usedWa = tenant.whatsapp_channels_used;
+  const saveMaxWa = async () => {
+    setSavingMax(true);
+    try {
+      const s = tenant.settings || {};
+      await api.patch(`/super/pooled_tenants/${tenant.id}`, {
+        name: tenant.name,
+        only_ad_leads: !!s.only_ad_leads,
+        whatsapp_reminder_group_jid: s.whatsapp_reminder_group_jid || '',
+        whatsapp_logs_group_jid: s.whatsapp_logs_group_jid || '',
+        max_whatsapp_channels: maxWa,
+      });
+    } catch {
+      alert('Falha ao salvar o limite de canais.');
+    } finally { setSavingMax(false); }
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
       <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-xl overflow-hidden"
@@ -221,6 +242,23 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
               {savingAds
                 ? <Loader2 className="w-3 h-3 animate-spin text-white absolute top-1.5 left-3.5" />
                 : <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${onlyAds ? 'left-5' : 'left-1'}`} />}
+            </button>
+          </div>
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1"
+            style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.25)' }}>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-white/90">Máximo de canais de WhatsApp</div>
+              <div className="text-xs text-white/40">
+                Quantas instâncias este cliente pode conectar. 0 = ilimitado.
+                {typeof usedWa === 'number' && <> Usando {usedWa} de {maxWa > 0 ? maxWa : '∞'}.</>}
+              </div>
+            </div>
+            <input type="number" min={0} value={maxWa}
+              onChange={e => setMaxWa(Math.max(0, parseInt(e.target.value || '0', 10) || 0))}
+              className="w-14 px-2 py-1 rounded bg-white/10 text-white text-sm text-center outline-none flex-shrink-0" />
+            <button onClick={saveMaxWa} disabled={savingMax}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-600 text-white flex-shrink-0 disabled:opacity-50">
+              {savingMax ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvar'}
             </button>
           </div>
           {loading ? (
