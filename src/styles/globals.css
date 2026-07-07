@@ -368,6 +368,22 @@
   }
 }
 
+/* ─── Modo Demo (borra dados sensíveis p/ gravar tutoriais) ─────────────── */
+/* Liga/desliga pela classe .demo-mode no <html> (DemoModeContext).
+   Marque qualquer dado de cliente com class="lm-redact" pra ser borrado. */
+html.demo-mode .lm-redact {
+  filter: blur(6px);
+  transition: filter 0.12s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* Blur mais forte pra avatares/imagens de contato */
+html.demo-mode .lm-redact-img {
+  filter: blur(10px);
+  transition: filter 0.12s ease;
+  user-select: none;
+}
+
 /* ─── Dashboard pulse dot ───────────────────────────────────────────────── */
 @keyframes lmd-pulse-ring {
   0%, 100% { transform: scale(1); opacity: 0.75; }

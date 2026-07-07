@@ -621,8 +621,8 @@ const ChatSidebar = ({
           </button>
         </div>
 
-        {/* Seletor rápido de instância (WhatsApp) — filtra a lista por instância */}
-        {inboxOptions.length > 0 && (
+        {/* Seletor rápido de instância (WhatsApp) — só aparece com 2+ instâncias */}
+        {inboxOptions.length > 1 && (
           <div className="flex items-center gap-2">
             <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">Instância</span>
             <select
@@ -812,11 +812,11 @@ const ChatSidebar = ({
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                               <div className="min-w-0 flex-1">
-                                <p className="font-medium truncate">
+                                <p className="lm-redact font-medium truncate">
                                   {conversation.contact?.name || t('chatSidebar.contactNoName')}
                                 </p>
                                 {conversation.contact?.phone_number && (
-                                  <p className="text-xs text-muted-foreground/70 truncate">
+                                  <p className="lm-redact text-xs text-muted-foreground/70 truncate">
                                     {conversation.contact.phone_number}
                                   </p>
                                 )}
@@ -845,7 +845,7 @@ const ChatSidebar = ({
                             </div>
                           </div>
 
-                          <p className="text-sm text-muted-foreground truncate">
+                          <p className="lm-redact text-sm text-muted-foreground truncate">
                             {getLastMessage(conversation)}
                           </p>
 

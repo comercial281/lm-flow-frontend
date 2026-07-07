@@ -292,7 +292,7 @@ const ChatHeader = ({
             onClick={onContactSidebarOpen}
             title={t('chatHeader.openContactInfo', 'Ver dados do contato')}
           >
-            <h3 className="font-semibold">
+            <h3 className="lm-redact font-semibold">
               {conversation.contact?.name || t('chatHeader.contactNoName')}
             </h3>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">

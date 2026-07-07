@@ -66,16 +66,16 @@ export default function ContactsTable({
         >
           <ContactAvatar contact={contact} size="md" showColoredFallback={true} />
           <div className="min-w-0 flex-1">
-            <div className="font-medium text-sm truncate mb-1">
+            <div className="lm-redact font-medium text-sm truncate mb-1">
               {contact.name || t('table.noName')}
             </div>
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              {contact.email && <span className="truncate">{contact.email}</span>}
+              {contact.email && <span className="lm-redact truncate">{contact.email}</span>}
               {contact.email && contact.phone_number && (
                 <span className="text-muted-foreground/50">|</span>
               )}
               {contact.phone_number && (
-                <span className="whitespace-nowrap">{contact.phone_number}</span>
+                <span className="lm-redact whitespace-nowrap">{contact.phone_number}</span>
               )}
             </div>
           </div>
