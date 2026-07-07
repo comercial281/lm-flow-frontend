@@ -17,6 +17,8 @@ export interface BroadcastSequenceItem {
   position: number;
   kind: 'text' | 'audio' | 'image' | 'video' | 'document' | 'delay';
   text_content: string | null;
+  /** Variações extras do texto; o backend sorteia uma por destinatário. */
+  text_variations?: string[];
   media_url: string | null;
   media_caption: string | null;
   media_filename: string | null;

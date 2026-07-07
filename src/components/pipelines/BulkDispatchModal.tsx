@@ -93,15 +93,19 @@ function itemIsValid(it: SequenceDraftItem) {
 
 // Converte os itens do editor no payload de sequência do backend.
 function toSequencePayload(items: SequenceDraftItem[]): BroadcastSequenceItem[] {
-  return items.map((it, idx) => ({
-    position: idx,
-    kind: it.kind,
-    text_content: it.text_content,
-    media_url: it.media_url,
-    media_caption: it.media_caption,
-    media_filename: it.media_filename,
-    delay_seconds: it.delay_seconds,
-  }));
+  return items.map((it, idx) => {
+    const variations = (it.text_variations ?? []).map(s => s.trim()).filter(Boolean);
+    return {
+      position: idx,
+      kind: it.kind,
+      text_content: it.text_content,
+      ...(variations.length ? { text_variations: variations } : {}),
+      media_url: it.media_url,
+      media_caption: it.media_caption,
+      media_filename: it.media_filename,
+      delay_seconds: it.delay_seconds,
+    };
+  });
 }
 
 // Item de funil salvo → item do editor (mesmo mapeamento do agendar/funil).
@@ -651,6 +655,7 @@ export default function BulkDispatchModal({
                   onChange={setItems}
                   variables={variables}
                   uploadMedia={broadcastsService.uploadMedia.bind(broadcastsService)}
+                  allowTextVariations
                 />
 
                 <p className="text-xs text-muted-foreground">
@@ -817,6 +822,9 @@ export default function BulkDispatchModal({
                       <span className="text-xs text-muted-foreground block mb-1">
                         #{i + 1} · {KIND_LABEL[it.kind]}
                         {it.delay_seconds > 0 && ` · aguarda ${it.delay_seconds}s`}
+                        {it.kind === 'text' &&
+                          (it.text_variations?.filter(v => v.trim()).length ?? 0) > 0 &&
+                          ` · ${(it.text_variations?.filter(v => v.trim()).length ?? 0) + 1} variações (sorteia 1/lead)`}
                       </span>
                       {it.kind !== 'text' && (
                         <span className="text-xs text-primary flex items-center gap-1 mb-1">
