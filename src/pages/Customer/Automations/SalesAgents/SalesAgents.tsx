@@ -99,6 +99,7 @@ export default function SalesAgents() {
         handoff_message: patch.handoff_message ?? selected.handoff_message,
         qualification_questions: patch.qualification_questions ?? selected.qualification_questions,
         inbox_id: patch.inbox_id ?? selected.inbox_id,
+        trigger_keyword: patch.trigger_keyword ?? selected.trigger_keyword,
         temperature: patch.temperature ?? selected.temperature,
       });
       setSelected(updated);
@@ -269,6 +270,20 @@ function ConfigTab({
           ))}
         </select>
         <p className="text-xs text-muted-foreground mt-1">A IA só responde os leads que chegam por esse canal.</p>
+      </div>
+
+      <div>
+        <Label htmlFor="keyword">Palavra-chave de ativação (opcional)</Label>
+        <Input
+          id="keyword"
+          placeholder="Ex: fluxoimob"
+          value={agent.trigger_keyword ?? ''}
+          onChange={(e) => onChange({ ...agent, trigger_keyword: e.target.value })}
+          onBlur={() => onSave({ trigger_keyword: (agent.trigger_keyword ?? '').trim() || null })}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Se preenchido, a IA só entra na conversa quando o lead mandar essa palavra. Vazio = atende todo lead do canal. Ótimo pra testar sem afetar todos os leads.
+        </p>
       </div>
 
       <div>

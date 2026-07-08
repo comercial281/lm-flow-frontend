@@ -7,6 +7,7 @@ export interface SalesAgent {
   name: string;
   enabled: boolean;
   mode: SalesAgentMode;
+  trigger_keyword: string | null;
   persona_role: string | null;
   persona_goal: string | null;
   instructions: string | null;
@@ -32,6 +33,7 @@ export interface SalesAgentPayload {
   name: string;
   enabled?: boolean;
   mode?: SalesAgentMode;
+  trigger_keyword?: string | null;
   persona_role?: string | null;
   persona_goal?: string | null;
   instructions?: string | null;
