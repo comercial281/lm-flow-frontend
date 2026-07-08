@@ -858,7 +858,13 @@ export default function EditItemModal({
               const source = (ar as any).source as string | undefined;
               const meta = source ? SOURCE_META[source] : undefined;
               const entries = Object.entries(ar).filter(([k, v]) => k !== 'extra_fields' && !HIDDEN.has(k) && v != null && v !== '');
-              const extra = (ar as any).extra_fields && typeof (ar as any).extra_fields === 'object' ? (ar as any).extra_fields : null;
+              // Respostas do formulário Meta: o backend grava o hash completo de
+              // respostas em additional_attributes.form_answers (antes só nome/email/
+              // telefone eram aproveitados). Fallback pro extra_fields legado.
+              const formAnswers = (item.contact as any)?.additional_attributes?.form_answers
+                ?? (item.conversation as any)?.additional_attributes?.form_answers;
+              const extra = ((ar as any).extra_fields && typeof (ar as any).extra_fields === 'object' ? (ar as any).extra_fields : null)
+                ?? (formAnswers && typeof formAnswers === 'object' && Object.keys(formAnswers).length ? formAnswers : null);
               if (entries.length === 0 && !extra && !meta) {
                 return <div className="text-sm text-muted-foreground py-12 text-center border border-dashed border-border rounded-lg">Sem dados de origem para este lead.</div>;
               }
