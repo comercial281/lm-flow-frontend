@@ -96,6 +96,7 @@ const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClien
 const RoletaConfigPage = lazyWithRetry(() => import('@/pages/Customer/Settings/RoletaConfig/RoletaConfig'));
 const AssignmentSettingsPage = lazyWithRetry(() => import('@/pages/Customer/Settings/AssignmentSettings/AssignmentSettings'));
 const AutomationsLayout = lazyWithRetry(() => import('@/pages/Customer/Automations/AutomationsLayout'));
+const SalesAgents = lazyWithRetry(() => import('@/pages/Customer/Automations/SalesAgents/SalesAgents'));
 const PropertyInterests = lazyWithRetry(() => import('@/pages/Customer/PropertyInterests').then(m => ({ default: m.PropertyInterests })));
 const Macros = lazyWithRetry(() => import('@/pages/Customer/Settings/Macros').then(m => ({ default: m.Macros })));
 const WhatsappReminders = lazyWithRetry(() => import('@/pages/Customer/Settings/WhatsappReminders'));
@@ -570,6 +571,14 @@ const AppRouter = () => {
                   <PermissionRoute resource="canned_responses" action="read">
                     <TemplateVariables />
                   </PermissionRoute>
+                </Suspense>
+              }
+            />
+            <Route
+              path="sales-agents"
+              element={
+                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
+                  <SalesAgents />
                 </Suspense>
               }
             />

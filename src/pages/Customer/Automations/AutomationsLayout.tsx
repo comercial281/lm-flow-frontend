@@ -1,5 +1,5 @@
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { Zap, Rocket, Code, FileInput, Repeat, Bell, Shuffle, SlidersHorizontal } from 'lucide-react';
+import { Zap, Rocket, Code, FileInput, Repeat, Bell, Shuffle, SlidersHorizontal, Bot } from 'lucide-react';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { isRootTenantHost } from '@/components/layout/config/menuItems';
@@ -34,6 +34,14 @@ const SECTORS: Sector[] = [
     path: '/automations/template-variables',
     icon: Code,
     featureKey: 'message_funnels',
+  },
+  {
+    key: 'sales-agents',
+    name: 'IA Vendedora',
+    path: '/automations/sales-agents',
+    icon: Bot,
+    featureKey: 'lead_automations',
+    clientToggleKey: 'client_manage_automations',
   },
   {
     key: 'lead-automations',
