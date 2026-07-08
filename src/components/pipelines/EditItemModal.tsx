@@ -859,9 +859,12 @@ export default function EditItemModal({
               const meta = source ? SOURCE_META[source] : undefined;
               const entries = Object.entries(ar).filter(([k, v]) => k !== 'extra_fields' && !HIDDEN.has(k) && v != null && v !== '');
               // Respostas do formulário Meta: o backend grava o hash completo de
-              // respostas em additional_attributes.form_answers (antes só nome/email/
-              // telefone eram aproveitados). Fallback pro extra_fields legado.
-              const formAnswers = (item.contact as any)?.additional_attributes?.form_answers
+              // respostas em custom_attributes.form_answers (antes só nome/email/telefone
+              // eram aproveitados). Le tambem additional_attributes por compat com leads
+              // gravados na versao anterior. Fallback pro extra_fields legado.
+              const formAnswers = (item.contact as any)?.custom_attributes?.form_answers
+                ?? (item.contact as any)?.additional_attributes?.form_answers
+                ?? (item.conversation as any)?.custom_attributes?.form_answers
                 ?? (item.conversation as any)?.additional_attributes?.form_answers;
               const extra = ((ar as any).extra_fields && typeof (ar as any).extra_fields === 'object' ? (ar as any).extra_fields : null)
                 ?? (formAnswers && typeof formAnswers === 'object' && Object.keys(formAnswers).length ? formAnswers : null);
