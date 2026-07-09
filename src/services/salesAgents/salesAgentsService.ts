@@ -77,6 +77,13 @@ export interface TestHistoryItem {
   content: string;
 }
 
+export interface SalesAgentPropertyLink {
+  link: string;
+  message: string;
+  number: string;
+  property: { id: string; code: string; title: string } | null;
+}
+
 const BASE = '/sales_agents';
 
 export const salesAgentsService = {
@@ -109,13 +116,23 @@ export const salesAgentsService = {
     message: string,
     history: TestHistoryItem[] = [],
     contactName?: string,
+    propertyCode?: string,
   ): Promise<SalesAgentTestResult> {
     const res = await api.post(`${BASE}/${id}/test_run`, {
       message,
       history,
       contact_name: contactName,
+      property_code: propertyCode || undefined,
     });
     return (res.data as { data: SalesAgentTestResult }).data;
+  },
+
+  // Gera o link wa.me pra colar no anúncio (código do imóvel + palavra-gatilho).
+  async propertyLink(id: string, propertyCode?: string): Promise<SalesAgentPropertyLink> {
+    const res = await api.get(`${BASE}/${id}/property_link`, {
+      params: { property_code: propertyCode || undefined },
+    });
+    return (res.data as { data: SalesAgentPropertyLink }).data;
   },
 
   // --- base de conhecimento ---

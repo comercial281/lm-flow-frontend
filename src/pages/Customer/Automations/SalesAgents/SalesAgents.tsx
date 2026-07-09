@@ -1,13 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Button, Input, Label, Textarea } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2 } from 'lucide-react';
+import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check } from 'lucide-react';
 import {
   salesAgentsService,
   type SalesAgent,
   type SalesAgentDocument,
   type SalesAgentMode,
   type SalesAgentTestResult,
+  type SalesAgentPropertyLink,
   type TestHistoryItem,
 } from '@/services/salesAgents/salesAgentsService';
 import inboxesService from '@/services/channels/inboxesService';
@@ -468,6 +469,81 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
   );
 }
 
+// ---------------- Link de anúncio (por imóvel) ----------------
+
+function PropertyLinkBox({
+  agent, propertyCode, onCodeChange,
+}: {
+  agent: SalesAgent;
+  propertyCode: string;
+  onCodeChange: (v: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<SalesAgentPropertyLink | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const generate = async () => {
+    setBusy(true);
+    try {
+      const r = await salesAgentsService.propertyLink(agent.id, propertyCode.trim() || undefined);
+      setResult(r);
+    } catch {
+      toast.error('Não foi possível gerar o link. Confira se o canal de WhatsApp está conectado no agente.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copy = async () => {
+    if (!result?.link) return;
+    try {
+      await navigator.clipboard.writeText(result.link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+      toast.success('Link copiado');
+    } catch {
+      toast.error('Erro ao copiar');
+    }
+  };
+
+  return (
+    <div className="border border-sidebar-border rounded-md p-4 space-y-3 bg-muted/10">
+      <div className="flex items-center gap-2 text-sm font-medium"><Link2 className="h-4 w-4" /> Link de anúncio com IA</div>
+      <p className="text-xs text-muted-foreground">
+        Cole este link no anúncio (Facebook, Google, YouTube) ou na landing do imóvel. O lead clica, cai no WhatsApp com
+        a mensagem pronta e a IA já sabe de qual imóvel ele veio.
+      </p>
+      <div className="flex gap-2">
+        <Input
+          placeholder="Código do imóvel (ex: AP123)"
+          value={propertyCode}
+          onChange={(e) => onCodeChange(e.target.value)}
+        />
+        <Button size="sm" onClick={generate} disabled={busy}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar link'}
+        </Button>
+      </div>
+      {result?.link && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Input readOnly value={result.link} className="text-xs" />
+            <Button size="sm" variant="outline" onClick={copy}>
+              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Mensagem pré-pronta: <span className="italic">"{result.message}"</span>
+            {result.property && <> — imóvel <strong>{result.property.code}</strong> ({result.property.title})</>}
+          </p>
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">
+        O mesmo código digitado aqui também é usado no teste abaixo, pra você ver a IA falando desse imóvel.
+      </p>
+    </div>
+  );
+}
+
 // ---------------- Test ----------------
 
 function TestTab({ agent }: { agent: SalesAgent }) {
@@ -475,6 +551,7 @@ function TestTab({ agent }: { agent: SalesAgent }) {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<SalesAgentTestResult | null>(null);
+  const [propertyCode, setPropertyCode] = useState('');
 
   const send = async () => {
     if (!message.trim()) return;
@@ -484,7 +561,7 @@ function TestTab({ agent }: { agent: SalesAgent }) {
     const newHistory: TestHistoryItem[] = [...history, { role: 'user', content: userMsg }];
     setHistory(newHistory);
     try {
-      const result = await salesAgentsService.testRun(agent.id, userMsg, history, 'Lead Teste');
+      const result = await salesAgentsService.testRun(agent.id, userMsg, history, 'Lead Teste', propertyCode.trim() || undefined);
       setHistory([...newHistory, { role: 'assistant', content: result.reply }]);
       setLast(result);
     } catch {
@@ -497,6 +574,8 @@ function TestTab({ agent }: { agent: SalesAgent }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Converse como se fosse o lead. Não envia nada no WhatsApp — é só teste.</p>
+
+      <PropertyLinkBox agent={agent} propertyCode={propertyCode} onCodeChange={setPropertyCode} />
 
       <div className="border border-sidebar-border rounded-md p-3 h-72 overflow-auto space-y-2 bg-muted/20">
         {history.length === 0 ? (
