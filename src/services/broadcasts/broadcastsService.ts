@@ -53,10 +53,45 @@ export interface BroadcastAudience {
   labels?: string[];
 }
 
+/** Canal de saída do disparo: Evolution (sessão livre) ou WhatsApp Oficial (Cloud API, template aprovado). */
+export type BroadcastChannelKind = 'evolution' | 'whatsapp_cloud';
+
+/** Config do disparo pelo canal OFICIAL: template aprovado + variáveis (ordem = {{1}},{{2}}...). */
+export interface BroadcastTemplateConfig {
+  inbox_id?: string;
+  template_name: string;
+  language?: string;
+  parameters?: string[];
+}
+
+/** Template aprovado de um canal oficial (WhatsApp Cloud). */
+export interface CloudTemplateOption {
+  name: string;
+  language: string;
+  category?: string;
+  status?: string;
+  approved: boolean;
+  variables: string[];
+  variable_count: number;
+  content: string;
+}
+
+/** Canal oficial (WhatsApp Cloud) conectado + seus templates. */
+export interface CloudChannelOption {
+  inbox_id: string;
+  name: string;
+  phone_number: string;
+  templates: CloudTemplateOption[];
+}
+
 export interface CreateBroadcastPayload {
   name?: string;
   pipeline_id: string;
   audience: BroadcastAudience;
+  /** Canal de saída. Default evolution. */
+  channel_kind?: BroadcastChannelKind;
+  /** Config do template quando channel_kind === 'whatsapp_cloud'. */
+  template_config?: BroadcastTemplateConfig;
   /** Sequência de itens (modo novo, unificado com o funil). */
   funnel_items?: BroadcastSequenceItem[];
   /** Variações A/B legadas (mantido só pra compat de campanhas antigas). */
@@ -124,6 +159,21 @@ class BroadcastsService {
   // Manda a SEQUÊNCIA inteira só pra um número de teste (sem criar campanha).
   async testSendSequence(phone: string, items: BroadcastSequenceItem[]): Promise<void> {
     await api.post(`${this.base}/test_send`, { phone, funnel_items: items });
+  }
+
+  // Canais OFICIAIS (WhatsApp Cloud) conectados + templates aprovados, pra UI de disparo.
+  async whatsappCloudOptions(): Promise<CloudChannelOption[]> {
+    const res = await api.get(`${this.base}/whatsapp_cloud_options`);
+    return extractData<CloudChannelOption[]>(res) || [];
+  }
+
+  // Manda UM template aprovado só pra um número de teste (canal oficial).
+  async testSendTemplate(phone: string, tc: BroadcastTemplateConfig): Promise<void> {
+    await api.post(`${this.base}/test_send`, {
+      phone,
+      channel_kind: 'whatsapp_cloud',
+      template_config: tc,
+    });
   }
 }
 
