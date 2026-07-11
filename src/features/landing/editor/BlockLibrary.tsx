@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   BLOCK_CATEGORY_LABELS,
   BLOCK_LIBRARY,
@@ -27,7 +28,10 @@ export function BlockLibrary() {
                 <button
                   key={meta.type}
                   type="button"
-                  onClick={() => addBlock(meta.type)}
+                  onClick={() => {
+                    addBlock(meta.type);
+                    toast.success(`Seção "${meta.label}" adicionada`);
+                  }}
                   title={meta.description}
                   className="flex items-center gap-1.5 rounded-lg border border-neutral-700 bg-neutral-800 px-2 py-2 text-left text-xs text-neutral-100 hover:border-violet-500"
                 >
