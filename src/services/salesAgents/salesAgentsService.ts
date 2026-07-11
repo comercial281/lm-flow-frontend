@@ -56,7 +56,9 @@ export interface SalesAgentPayload {
   greeting?: string | null;
   qualification_questions?: string[];
   handoff_message?: string | null;
+  model?: string;
   temperature?: number;
+  max_context_tokens?: number;
   inbox_id?: string | null;
   pipeline_id?: string | null;
   stage_id?: string | null;

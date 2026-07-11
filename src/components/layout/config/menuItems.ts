@@ -141,6 +141,15 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     featureKey: 'pipelines',
   },
   {
+    // IA Vendedora (pré-atendimento). Promovida de sub-item de Automações para
+    // item de topo do CRM (URL própria /ia-vendedora). Feature gerenciada pela
+    // Leal Mídia: super-admin SEMPRE vê; cliente só se ligar o toggle.
+    name: 'IA Vendedora',
+    href: '/ia-vendedora',
+    icon: Bot,
+    clientToggleKey: 'client_manage_automations',
+  },
+  {
     // Painel "Equipe & Acessos" — só admins (gate resource users/update).
     name: 'Equipe',
     href: '/equipe',

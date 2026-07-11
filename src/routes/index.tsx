@@ -525,6 +525,21 @@ const AppRouter = () => {
             }
           />
 
+          {/* IA Vendedora — item de topo do CRM (URL própria). Antes vivia como
+              sub-aba de Automações (/automations/sales-agents). */}
+          <Route
+            path="/ia-vendedora"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <SalesAgents />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
           <Route
             path="/pipelines/:pipelineId"
             element={
@@ -575,14 +590,9 @@ const AppRouter = () => {
                 </Suspense>
               }
             />
-            <Route
-              path="sales-agents"
-              element={
-                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <SalesAgents />
-                </Suspense>
-              }
-            />
+            {/* IA Vendedora saiu de Automações e virou item de topo /ia-vendedora.
+                Mantém redirect para não quebrar deep-links antigos. */}
+            <Route path="sales-agents" element={<Navigate to="/ia-vendedora" replace />} />
             <Route
               path="lead-automations"
               element={
