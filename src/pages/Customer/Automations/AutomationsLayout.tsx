@@ -1,5 +1,5 @@
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { Zap, Rocket, Code, FileInput, Repeat, Bell, Shuffle, SlidersHorizontal, Bot } from 'lucide-react';
+import { Zap, Rocket, Code, FileInput, Repeat, Bell, Shuffle, SlidersHorizontal, Bot, Target } from 'lucide-react';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { isRootTenantHost } from '@/components/layout/config/menuItems';
@@ -92,6 +92,13 @@ const SECTORS: Sector[] = [
     name: 'Distribuição de Leads',
     path: '/automations/assignment-settings',
     icon: SlidersHorizontal,
+    featureKey: 'lead_automations',
+  },
+  {
+    key: 'pixel-capi',
+    name: 'Pixel / CAPI',
+    path: '/automations/pixel-capi',
+    icon: Target,
     featureKey: 'lead_automations',
   },
 ];
