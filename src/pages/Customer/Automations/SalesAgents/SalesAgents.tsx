@@ -7,6 +7,8 @@ import {
   type SalesAgent,
   type SalesAgentDocument,
   type SalesAgentMode,
+  type ActiveHours,
+  type ActiveHoursMode,
   type SalesAgentTestResult,
   type SalesAgentPropertyLink,
   type TestHistoryItem,
@@ -102,6 +104,12 @@ export default function SalesAgents() {
         inbox_id: patch.inbox_id ?? selected.inbox_id,
         trigger_keyword: patch.trigger_keyword ?? selected.trigger_keyword,
         temperature: patch.temperature ?? selected.temperature,
+        active_hours: patch.active_hours ?? selected.active_hours,
+        followup_enabled: patch.followup_enabled ?? selected.followup_enabled,
+        followup_only: patch.followup_only ?? selected.followup_only,
+        followup_min_days: patch.followup_min_days ?? selected.followup_min_days,
+        followup_max_days: patch.followup_max_days ?? selected.followup_max_days,
+        followup_max_attempts: patch.followup_max_attempts ?? selected.followup_max_attempts,
       });
       setSelected(updated);
       setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
@@ -346,7 +354,132 @@ function ConfigTab({
         />
       </div>
 
+      <ScheduleSection agent={agent} onSave={onSave} />
+      <FollowupSection agent={agent} onChange={onChange} onSave={onSave} />
+
       {saving && <p className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Salvando...</p>}
+    </div>
+  );
+}
+
+// ---------------- Horário de atuação ----------------
+
+const SCHEDULE_OPTIONS: [ActiveHoursMode, string, string][] = [
+  ['always', 'Sempre (24 horas)', 'A IA responde a qualquer hora.'],
+  ['outside_business', 'Fora do horário comercial (18h às 07h)', 'Só responde à noite/madrugada — quando não tem ninguém no time.'],
+  ['custom', 'Horário personalizado', 'Você escolhe a janela em que ela responde.'],
+];
+
+function ScheduleSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
+  const hours: ActiveHours = agent.active_hours ?? {};
+  const mode: ActiveHoursMode = hours.mode ?? 'always';
+  const win = hours.windows?.[0] ?? { start: '08:00', end: '18:00' };
+
+  const setMode = (m: ActiveHoursMode) => {
+    const next: ActiveHours = { ...hours, mode: m, tz: hours.tz ?? 'America/Sao_Paulo' };
+    if (m === 'custom' && !next.windows?.length) next.windows = [{ start: '08:00', end: '18:00' }];
+    onSave({ active_hours: next });
+  };
+  const setWindow = (start: string, end: string) => {
+    onSave({ active_hours: { ...hours, mode: 'custom', tz: hours.tz ?? 'America/Sao_Paulo', windows: [{ start, end }] } });
+  };
+
+  return (
+    <div className="pt-2 border-t border-sidebar-border">
+      <Label>Horário de atuação</Label>
+      <div className="grid grid-cols-1 gap-2 mt-1">
+        {SCHEDULE_OPTIONS.map(([m, title, help]) => (
+          <label
+            key={m}
+            className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer ${
+              mode === m ? 'border-primary bg-primary/5' : 'border-sidebar-border'
+            }`}
+          >
+            <input type="radio" name="schedule_mode" className="mt-1" checked={mode === m} onChange={() => setMode(m)} />
+            <div>
+              <div className="text-sm font-medium">{title}</div>
+              <div className="text-xs text-muted-foreground">{help}</div>
+            </div>
+          </label>
+        ))}
+      </div>
+      {mode === 'custom' && (
+        <div className="flex items-end gap-3 mt-2">
+          <div>
+            <Label htmlFor="win_start" className="text-xs">Das</Label>
+            <Input id="win_start" type="time" value={win.start} className="mt-1 w-32"
+              onChange={(e) => setWindow(e.target.value, win.end)} />
+          </div>
+          <div>
+            <Label htmlFor="win_end" className="text-xs">Até</Label>
+            <Input id="win_end" type="time" value={win.end} className="mt-1 w-32"
+              onChange={(e) => setWindow(win.start, e.target.value)} />
+          </div>
+          <p className="text-xs text-muted-foreground pb-2">Se o fim for menor que o início, vira a madrugada (ex: 20h às 06h).</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------- Follow-up automático ----------------
+
+function FollowupSection({
+  agent, onChange, onSave,
+}: {
+  agent: SalesAgent;
+  onChange: (a: SalesAgent) => void;
+  onSave: (patch: Partial<SalesAgent>) => void;
+}) {
+  const on = agent.followup_enabled;
+  return (
+    <div className="pt-2 border-t border-sidebar-border">
+      <label className="flex items-start gap-3 cursor-pointer">
+        <input type="checkbox" className="mt-1" checked={on} onChange={(e) => onSave({ followup_enabled: e.target.checked })} />
+        <div>
+          <div className="text-sm font-medium">Follow-up automático</div>
+          <div className="text-xs text-muted-foreground">
+            Se o lead sumir, a IA volta sozinha com uma mensagem personalizada (baseada em toda a conversa e no imóvel), na cadência que você definir. Infinito por padrão.
+          </div>
+        </div>
+      </label>
+
+      {on && (
+        <div className="mt-3 space-y-3 pl-7">
+          <div className="flex items-end gap-3">
+            <div>
+              <Label htmlFor="fu_min" className="text-xs">A cada (mín. dias)</Label>
+              <Input id="fu_min" type="number" min={1} max={365} value={agent.followup_min_days ?? 2} className="mt-1 w-24"
+                onChange={(e) => onChange({ ...agent, followup_min_days: Number(e.target.value) })}
+                onBlur={() => onSave({ followup_min_days: Math.max(1, Number(agent.followup_min_days) || 2) })} />
+            </div>
+            <div>
+              <Label htmlFor="fu_max" className="text-xs">até (máx. dias)</Label>
+              <Input id="fu_max" type="number" min={1} max={365} value={agent.followup_max_days ?? 3} className="mt-1 w-24"
+                onChange={(e) => onChange({ ...agent, followup_max_days: Number(e.target.value) })}
+                onBlur={() => onSave({ followup_max_days: Math.max(Number(agent.followup_min_days) || 1, Number(agent.followup_max_days) || 3) })} />
+            </div>
+            <p className="text-xs text-muted-foreground pb-2">A IA espera um tempo aleatório nessa faixa entre cada follow-up.</p>
+          </div>
+
+          <div>
+            <Label htmlFor="fu_max_att" className="text-xs">Máximo de follow-ups (0 = infinito, para sempre)</Label>
+            <Input id="fu_max_att" type="number" min={0} value={agent.followup_max_attempts ?? 0} className="mt-1 w-40"
+              onChange={(e) => onChange({ ...agent, followup_max_attempts: Number(e.target.value) })}
+              onBlur={() => onSave({ followup_max_attempts: Math.max(0, Number(agent.followup_max_attempts) || 0) })} />
+          </div>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" className="mt-1" checked={agent.followup_only} onChange={(e) => onSave({ followup_only: e.target.checked })} />
+            <div>
+              <div className="text-sm font-medium">Só follow-up (não responde ao vivo)</div>
+              <div className="text-xs text-muted-foreground">
+                A IA não conversa com o lead — apenas faz os follow-ups de reengajamento. O atendimento ao vivo fica com o corretor.
+              </div>
+            </div>
+          </label>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,17 @@ import api from '@/services/core/api';
 
 export type SalesAgentMode = 'seller' | 'sdr' | 'assistant';
 
+export type ActiveHoursMode = 'always' | 'outside_business' | 'custom';
+export interface ActiveHoursWindow {
+  start: string; // "HH:MM"
+  end: string;   // "HH:MM"
+}
+export interface ActiveHours {
+  mode?: ActiveHoursMode;
+  tz?: string;
+  windows?: ActiveHoursWindow[];
+}
+
 export interface SalesAgent {
   id: string;
   name: string;
@@ -23,7 +34,12 @@ export interface SalesAgent {
   inbox_name: string | null;
   pipeline_id: string | null;
   stage_id: string | null;
-  active_hours: Record<string, unknown>;
+  active_hours: ActiveHours;
+  followup_enabled: boolean;
+  followup_only: boolean;
+  followup_min_days: number;
+  followup_max_days: number;
+  followup_max_attempts: number;
   documents_count: number;
   created_at: string;
   updated_at: string;
@@ -44,6 +60,12 @@ export interface SalesAgentPayload {
   inbox_id?: string | null;
   pipeline_id?: string | null;
   stage_id?: string | null;
+  active_hours?: ActiveHours;
+  followup_enabled?: boolean;
+  followup_only?: boolean;
+  followup_min_days?: number;
+  followup_max_days?: number;
+  followup_max_attempts?: number;
 }
 
 export interface SalesAgentDocument {
