@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Reorder } from 'framer-motion';
 import { Eye, EyeOff, GripVertical, Trash2 } from 'lucide-react';
 import { BLOCK_REGISTRY } from '@/features/landing/blocks';
@@ -12,6 +13,17 @@ export function SectionList() {
   const removeBlock = useLandingEditorStore((s) => s.removeBlock);
   const select = useLandingEditorStore((s) => s.select);
 
+  // Ao adicionar uma seção (a lista cresce), rola a seção nova — que já vem
+  // selecionada — pra dentro da vista, pra ficar claro que foi adicionada.
+  const itemRefs = useRef<Record<string, HTMLElement | null>>({});
+  const prevCount = useRef(blocks.length);
+  useEffect(() => {
+    if (blocks.length > prevCount.current && selectedId) {
+      itemRefs.current[selectedId]?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+    }
+    prevCount.current = blocks.length;
+  }, [blocks.length, selectedId]);
+
   if (!blocks.length) {
     return <p className="px-3 py-4 text-sm text-neutral-400">Nenhuma seção ainda.</p>;
   }
@@ -25,6 +37,9 @@ export function SectionList() {
           <Reorder.Item
             key={block.id}
             value={block}
+            ref={(el: HTMLElement | null) => {
+              itemRefs.current[block.id] = el;
+            }}
             className={`flex items-center gap-2 rounded-lg border px-2 py-2 ${
               active ? 'border-violet-500 bg-violet-500/10' : 'border-neutral-700 bg-neutral-800'
             }`}
