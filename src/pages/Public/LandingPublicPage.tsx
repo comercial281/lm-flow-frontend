@@ -147,6 +147,14 @@ export default function LandingPublicPage() {
         if (qualification === 'qualified' && ev.qualified !== false) trackPixel('LeadQualificado', true);
         if (qualification === 'disqualified' && ev.disqualified) trackPixel('LeadDesqualificado', true);
       }
+      // Fatia 4b: se a landing usa páginas de resultado com URL própria,
+      // redireciona (PageView próprio no Pixel) em vez da tela in-page.
+      const leadForm = blocks.find((b) => b.type === 'lead_form');
+      const resultMode = (leadForm?.config as { resultMode?: string } | undefined)?.resultMode;
+      if (resultMode === 'url') {
+        const path = qualification === 'disqualified' ? 'desqualificado' : 'obrigado';
+        window.location.assign(`/lp/${encodeURIComponent(tenant)}/${encodeURIComponent(slug)}/${path}`);
+      }
       return { qualification };
     } catch {
       return {};

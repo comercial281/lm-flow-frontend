@@ -233,6 +233,12 @@ const leadFormConfig = z.object({
     .string()
     .max(400)
     .default('Recebemos seus dados. No momento este imóvel pode não ser o ideal pro seu perfil, mas vamos te avisar sobre outras oportunidades que combinam com você.'),
+  /* --- Páginas de resultado (Fatia 4b). 'inline' = tela na mesma página (4a);
+     'url' = redireciona pra /lp/<slug>/obrigado|desqualificado (PageView
+     próprio pro Pixel). --- */
+  resultMode: z.enum(['inline', 'url']).default('inline'),
+  thankyouTitle: z.string().max(120).default('Recebemos suas informações!'),
+  thankyouMessage: z.string().max(400).default('Em breve um especialista entrará em contato com você. Fique de olho no seu WhatsApp.'),
 });
 
 const stickyCtaConfig = z.object({
