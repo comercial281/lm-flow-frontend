@@ -9,11 +9,14 @@ import {
   type SalesAgentMode,
   type ActiveHours,
   type ActiveHoursMode,
+  type SalesAgentTrigger,
+  type SalesAgentTriggerType,
   type SalesAgentTestResult,
   type SalesAgentPropertyLink,
   type TestHistoryItem,
 } from '@/services/salesAgents/salesAgentsService';
 import inboxesService from '@/services/channels/inboxesService';
+import pipelinesService from '@/services/pipelines/pipelinesService';
 
 type Tab = 'config' | 'knowledge' | 'test';
 
@@ -103,6 +106,7 @@ export default function SalesAgents() {
         qualification_questions: patch.qualification_questions ?? selected.qualification_questions,
         inbox_id: patch.inbox_id ?? selected.inbox_id,
         trigger_keyword: patch.trigger_keyword ?? selected.trigger_keyword,
+        triggers: patch.triggers ?? selected.triggers,
         model: patch.model ?? selected.model,
         temperature: patch.temperature ?? selected.temperature,
         max_context_tokens: patch.max_context_tokens ?? selected.max_context_tokens,
@@ -296,6 +300,8 @@ function ConfigTab({
           Se preenchido, a IA só entra na conversa quando o lead mandar essa palavra. Vazio = atende todo lead do canal. Ótimo pra testar sem afetar todos os leads.
         </p>
       </div>
+
+      <TriggersSection agent={agent} onSave={onSave} />
 
       <div>
         <Label htmlFor="role">Quem ela é (persona)</Label>
@@ -577,6 +583,138 @@ function AdvancedSection({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------- Gatilhos de ativação (multi) ----------------
+
+const TRIGGER_TYPES: { value: SalesAgentTriggerType; label: string }[] = [
+  { value: 'keyword', label: 'Contém palavra' },
+  { value: 'origin', label: 'Origem do lead' },
+  { value: 'property', label: 'Imóvel (código / form)' },
+  { value: 'pipeline_stage', label: 'Coluna de pipeline' },
+];
+
+interface PipelineOpt { id: string; name: string }
+interface StageOpt { id: string; name: string }
+
+function newTrigger(type: SalesAgentTriggerType): SalesAgentTrigger {
+  switch (type) {
+    case 'keyword': return { type, value: '' };
+    case 'origin': return { type, mode: 'ads' };
+    case 'property': return { type, mode: 'any' };
+    case 'pipeline_stage': return { type, pipeline_id: '', stage_id: '' };
+  }
+}
+
+function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
+  const triggers = agent.triggers ?? [];
+  const [pipelines, setPipelines] = useState<PipelineOpt[]>([]);
+  const [stagesByPipeline, setStagesByPipeline] = useState<Record<string, StageOpt[]>>({});
+
+  useEffect(() => {
+    pipelinesService.getPipelines()
+      .then((res) => {
+        const raw = (res as unknown as { data?: PipelineOpt[] }).data ?? (Array.isArray(res) ? (res as PipelineOpt[]) : []);
+        setPipelines(raw.map((p) => ({ id: String(p.id), name: p.name })));
+      })
+      .catch(() => setPipelines([]));
+  }, []);
+
+  const loadStages = (pipelineId: string) => {
+    if (!pipelineId || stagesByPipeline[pipelineId]) return;
+    pipelinesService.getPipelineStages(pipelineId)
+      .then((res) => {
+        const raw = (res as unknown as { data?: StageOpt[] }).data ?? (Array.isArray(res) ? (res as StageOpt[]) : []);
+        setStagesByPipeline((prev) => ({ ...prev, [pipelineId]: raw.map((s) => ({ id: String(s.id), name: s.name })) }));
+      })
+      .catch(() => undefined);
+  };
+
+  useEffect(() => {
+    triggers.forEach((t) => { if (t.type === 'pipeline_stage' && t.pipeline_id) loadStages(t.pipeline_id); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggers]);
+
+  const commit = (next: SalesAgentTrigger[]) => onSave({ triggers: next });
+  const update = (i: number, patch: Partial<SalesAgentTrigger>) => commit(triggers.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
+  const remove = (i: number) => commit(triggers.filter((_, idx) => idx !== i));
+  const add = () => commit([...triggers, newTrigger('keyword')]);
+
+  return (
+    <div className="pt-2 border-t border-sidebar-border">
+      <div className="flex items-center gap-2">
+        <SlidersHorizontal className="h-4 w-4 text-primary" />
+        <Label>Gatilhos de ativação (avançado)</Label>
+      </div>
+      <p className="text-xs text-muted-foreground mt-1 mb-2">
+        A IA ativa quando QUALQUER gatilho bater (além da palavra-chave acima). Sem nenhum gatilho = atende todo lead do canal.
+      </p>
+
+      <div className="space-y-2">
+        {triggers.map((t, i) => (
+          <div key={i} className="flex flex-wrap items-center gap-2 p-2 rounded-md border border-sidebar-border">
+            <select
+              value={t.type}
+              onChange={(e) => commit(triggers.map((tr, idx) => (idx === i ? newTrigger(e.target.value as SalesAgentTriggerType) : tr)))}
+              className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
+            >
+              {TRIGGER_TYPES.map((tt) => <option key={tt.value} value={tt.value}>{tt.label}</option>)}
+            </select>
+
+            {t.type === 'keyword' && (
+              <Input className="flex-1 min-w-40" placeholder="palavra (ex: fluxoimob)" value={t.value ?? ''}
+                onChange={(e) => update(i, { value: e.target.value })} onBlur={() => commit(triggers)} />
+            )}
+
+            {t.type === 'origin' && (
+              <select value={t.mode ?? 'ads'} onChange={(e) => update(i, { mode: e.target.value })}
+                className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+                <option value="ads">Só anúncios (FB/IG/Google)</option>
+                <option value="all">Todos os leads</option>
+              </select>
+            )}
+
+            {t.type === 'property' && (
+              <>
+                <select value={t.mode ?? 'any'} onChange={(e) => update(i, { mode: e.target.value })}
+                  className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+                  <option value="any">Qualquer imóvel (veio de form/anúncio de imóvel)</option>
+                  <option value="code">Imóvel específico (código)</option>
+                </select>
+                {t.mode === 'code' && (
+                  <Input className="w-32" placeholder="código" value={t.code ?? ''}
+                    onChange={(e) => update(i, { code: e.target.value })} onBlur={() => commit(triggers)} />
+                )}
+              </>
+            )}
+
+            {t.type === 'pipeline_stage' && (
+              <>
+                <select value={t.pipeline_id ?? ''} onChange={(e) => { loadStages(e.target.value); update(i, { pipeline_id: e.target.value, stage_id: '' }); }}
+                  className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+                  <option value="">— pipeline —</option>
+                  {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <select value={t.stage_id ?? ''} onChange={(e) => update(i, { stage_id: e.target.value })} disabled={!t.pipeline_id}
+                  className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+                  <option value="">— coluna —</option>
+                  {(stagesByPipeline[t.pipeline_id ?? ''] ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </>
+            )}
+
+            <button onClick={() => remove(i)} className="ml-auto text-muted-foreground hover:text-red-500" title="Remover gatilho">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <Button size="sm" variant="outline" onClick={add} className="mt-2">
+        <Plus className="h-4 w-4 mr-1" /> Adicionar gatilho
+      </Button>
     </div>
   );
 }

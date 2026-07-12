@@ -13,6 +13,16 @@ export interface ActiveHours {
   windows?: ActiveHoursWindow[];
 }
 
+export type SalesAgentTriggerType = 'keyword' | 'origin' | 'property' | 'pipeline_stage';
+export interface SalesAgentTrigger {
+  type: SalesAgentTriggerType;
+  value?: string;        // keyword: a palavra
+  mode?: string;         // origin: 'all' | 'ads' ; property: 'any' | 'code'
+  code?: string;         // property: código do imóvel
+  pipeline_id?: string;  // pipeline_stage
+  stage_id?: string;     // pipeline_stage
+}
+
 export interface SalesAgent {
   id: string;
   name: string;
@@ -35,6 +45,7 @@ export interface SalesAgent {
   pipeline_id: string | null;
   stage_id: string | null;
   active_hours: ActiveHours;
+  triggers: SalesAgentTrigger[];
   followup_enabled: boolean;
   followup_only: boolean;
   followup_min_days: number;
@@ -63,6 +74,7 @@ export interface SalesAgentPayload {
   pipeline_id?: string | null;
   stage_id?: string | null;
   active_hours?: ActiveHours;
+  triggers?: SalesAgentTrigger[];
   followup_enabled?: boolean;
   followup_only?: boolean;
   followup_min_days?: number;
