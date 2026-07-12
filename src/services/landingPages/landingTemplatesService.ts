@@ -22,9 +22,10 @@ export const landingTemplatesService = {
     return unwrap<LandingTemplateDTO[]>(res);
   },
 
-  /** Salva uma landing existente como template (copia blocos + tema). */
-  async createFromPage(pageId: string, name: string): Promise<LandingTemplateDTO> {
-    const res = await api.post('/landing_templates', { page_id: pageId, name });
+  /** Salva uma landing existente como template (copia blocos + tema).
+   *  scope 'global' (todos os clientes) só o super-admin pode; senão 'tenant'. */
+  async createFromPage(pageId: string, name: string, scope: 'tenant' | 'global' = 'tenant'): Promise<LandingTemplateDTO> {
+    const res = await api.post('/landing_templates', { page_id: pageId, name, scope });
     return unwrap<LandingTemplateDTO>(res);
   },
 
