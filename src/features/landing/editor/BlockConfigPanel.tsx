@@ -176,6 +176,53 @@ function Fields({ block }: { block: BlockInstance }) {
           <Field label="Texto do botão"><Text value={c.ctaLabel as string} onChange={(v) => set({ ctaLabel: v })} /></Field>
 
           <div className="mt-2 rounded-lg border border-neutral-800 p-3">
+            <p className="mb-1 text-xs font-semibold text-neutral-200">Perguntas do quiz</p>
+            <p className="mb-3 text-xs text-neutral-500">As perguntas de filtragem antes de pedir o contato. Uma opção por linha.</p>
+            <div className="space-y-3">
+              {steps.map((st, si) => (
+                <div key={si} className="rounded-md border border-neutral-800 p-2">
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <input
+                      value={st.question}
+                      placeholder="Pergunta"
+                      onChange={(e) => set({ steps: steps.map((s, i) => (i === si ? { ...s, question: e.target.value } : s)) })}
+                      className={inputCls}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => set({ steps: steps.filter((_, i) => i !== si) })}
+                      className="flex-none text-xs text-neutral-500 hover:text-red-400"
+                      title="Remover pergunta"
+                    >
+                      remover
+                    </button>
+                  </div>
+                  <textarea
+                    value={st.options.join('\n')}
+                    rows={Math.max(2, st.options.length)}
+                    placeholder="Uma opção por linha"
+                    onChange={(e) =>
+                      set({
+                        steps: steps.map((s, i) =>
+                          i === si ? { ...s, options: e.target.value.split('\n').map((o) => o.trim()).filter(Boolean) } : s,
+                        ),
+                      })
+                    }
+                    className={inputCls}
+                  />
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => set({ steps: [...steps, { question: 'Nova pergunta', options: ['Opção 1', 'Opção 2'] }] })}
+              className="mt-2 w-full rounded-lg border border-dashed border-neutral-700 py-2 text-xs font-medium text-neutral-300 hover:border-violet-500"
+            >
+              + pergunta
+            </button>
+          </div>
+
+          <div className="mt-2 rounded-lg border border-neutral-800 p-3">
             <p className="mb-1 text-xs font-semibold text-neutral-200">Qualificação do lead</p>
             <p className="mb-3 text-xs text-neutral-500">
               Dê pontos por resposta e marque as que desqualificam. Score abaixo da nota de corte = desqualificado.
