@@ -98,7 +98,7 @@ export default function LandingPublicPage() {
     if (!tenant || !slug) return;
     const base = import.meta.env.VITE_API_URL as string;
     const params = new URLSearchParams(window.location.search);
-    await fetch(`${base}/api/public/v1/landing/${encodeURIComponent(slug)}/leads`, {
+    const res = await fetch(`${base}/api/public/v1/landing/${encodeURIComponent(slug)}/leads`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
       body: JSON.stringify({
@@ -122,6 +122,13 @@ export default function LandingPublicPage() {
         },
       }),
     });
+    // Retorna a qualificação computada no backend pra a tela final ramificar.
+    try {
+      const json = (await res.json()) as { data?: { qualification?: 'qualified' | 'disqualified' } };
+      return { qualification: json?.data?.qualification };
+    } catch {
+      return {};
+    }
   };
 
   // noindex — nunca indexar landing de anúncio.
