@@ -109,9 +109,15 @@ export default function LandingsListPage() {
   const handleSaveAsTemplate = async (l: LandingPageDTO) => {
     const name = window.prompt('Nome do template:', `${l.title} (template)`)?.trim();
     if (!name) return;
+    // Na raiz (super-admin, sem tenant) dá pra marcar como GLOBAL (todos os clientes).
+    const isRoot = getTenantSlug() == null;
+    const scope: 'tenant' | 'global' =
+      isRoot && window.confirm('Disponibilizar para TODOS os clientes?\n\nOK = todos os clientes (global)\nCancelar = só esta conta')
+        ? 'global'
+        : 'tenant';
     try {
-      await landingTemplatesService.createFromPage(l.id, name);
-      toast.success('Template salvo — já aparece no assistente');
+      await landingTemplatesService.createFromPage(l.id, name, scope);
+      toast.success(scope === 'global' ? 'Template GLOBAL salvo (todos os clientes)' : 'Template salvo — já aparece no assistente');
     } catch {
       toast.error('Erro ao salvar o template');
     }
