@@ -259,6 +259,19 @@ function Fields({ block }: { block: BlockInstance }) {
           </div>
 
           <div className="mt-2 rounded-lg border border-neutral-800 p-3">
+            <p className="mb-1 text-xs font-semibold text-neutral-200">Páginas de resultado</p>
+            <p className="mb-3 text-xs text-neutral-500">Depois de enviar: mostrar na mesma página, ou abrir uma página própria (link separado — o Pixel mede um PageView só dela).</p>
+            <Field label="Modo">
+              <select className={inputCls} value={(c.resultMode as string) ?? 'inline'} onChange={(e) => set({ resultMode: e.target.value })}>
+                <option value="inline">Na mesma página</option>
+                <option value="url">Página própria (URL)</option>
+              </select>
+            </Field>
+            <Field label="Obrigado — título"><Text value={c.thankyouTitle as string} onChange={(v) => set({ thankyouTitle: v })} placeholder="Recebemos suas informações!" /></Field>
+            <Field label="Obrigado — mensagem"><Area value={c.thankyouMessage as string} rows={2} onChange={(v) => set({ thankyouMessage: v })} /></Field>
+          </div>
+
+          <div className="mt-2 rounded-lg border border-neutral-800 p-3">
             <p className="mb-1 text-xs font-semibold text-neutral-200">Tela do lead desqualificado</p>
             <p className="mb-3 text-xs text-neutral-500">O que aparece quando o lead cai como desqualificado (em vez da tela de "fura a fila").</p>
             <Field label="Título"><Text value={c.disqualifiedTitle as string} onChange={(v) => set({ disqualifiedTitle: v })} placeholder="Obrigado pelo seu interesse!" /></Field>
