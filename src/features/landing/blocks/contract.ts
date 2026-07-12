@@ -225,6 +225,14 @@ const leadFormConfig = z.object({
   disqualifyingAnswers: z.array(z.string()).default([]),
   /** Peso (pontos) por resposta, somado no score. Chave = texto da opção. */
   answerWeights: z.record(z.string(), z.number()).default({}),
+  /* --- Tela de resultado do lead desqualificado (Fatia 4a, variante in-page).
+     Se o lead cai como desqualificado, mostra estes textos em vez da tela de
+     "fura a fila". --- */
+  disqualifiedTitle: z.string().max(120).default('Obrigado pelo seu interesse!'),
+  disqualifiedMessage: z
+    .string()
+    .max(400)
+    .default('Recebemos seus dados. No momento este imóvel pode não ser o ideal pro seu perfil, mas vamos te avisar sobre outras oportunidades que combinam com você.'),
 });
 
 const stickyCtaConfig = z.object({

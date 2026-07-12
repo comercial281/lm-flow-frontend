@@ -210,6 +210,13 @@ function Fields({ block }: { block: BlockInstance }) {
               ))}
             </div>
           </div>
+
+          <div className="mt-2 rounded-lg border border-neutral-800 p-3">
+            <p className="mb-1 text-xs font-semibold text-neutral-200">Tela do lead desqualificado</p>
+            <p className="mb-3 text-xs text-neutral-500">O que aparece quando o lead cai como desqualificado (em vez da tela de "fura a fila").</p>
+            <Field label="Título"><Text value={c.disqualifiedTitle as string} onChange={(v) => set({ disqualifiedTitle: v })} placeholder="Obrigado pelo seu interesse!" /></Field>
+            <Field label="Mensagem"><Area value={c.disqualifiedMessage as string} rows={3} onChange={(v) => set({ disqualifiedMessage: v })} /></Field>
+          </div>
         </>
       );
     }

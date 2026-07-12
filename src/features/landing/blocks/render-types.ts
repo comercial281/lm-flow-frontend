@@ -182,12 +182,18 @@ export interface LeadSubmitPayload {
   answers: { question: string; answer: string }[];
 }
 
+/** Retorno do envio: a qualificação computada no backend, pra a tela final
+ *  ramificar (obrigado x desqualificado). */
+export interface LeadSubmitResult {
+  qualification?: 'qualified' | 'disqualified';
+}
+
 export interface BlockComponentProps<T extends BlockType = BlockType> {
   config: BlockConfig<T>;
   property?: LandingProperty | null;
   theme: LandingTheme;
   /** Fornecido pelo render público — o bloco de formulário usa pra gravar o lead. */
-  onSubmitLead?: (payload: LeadSubmitPayload) => Promise<void> | void;
+  onSubmitLead?: (payload: LeadSubmitPayload) => Promise<LeadSubmitResult | void> | LeadSubmitResult | void;
 }
 
 /** pt-BR currency. Coerces string decimals (Rails serializes decimal as string). */
