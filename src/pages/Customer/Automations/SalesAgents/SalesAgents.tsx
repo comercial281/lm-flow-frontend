@@ -374,16 +374,34 @@ function ConfigTab({
 // ---------------- Horário de atuação ----------------
 
 const SCHEDULE_OPTIONS: [ActiveHoursMode, string, string][] = [
-  ['always', 'Sempre (24 horas)', 'A IA responde a qualquer hora.'],
   ['outside_business', 'Fora do horário comercial (18h às 07h)', 'Só responde à noite/madrugada — quando não tem ninguém no time.'],
   ['custom', 'Horário personalizado', 'Você escolhe a janela em que ela responde.'],
 ];
 
+// Toggle liga/desliga reutilizável
+function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => onChange(!on)}
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${on ? 'bg-primary' : 'bg-muted-foreground/40'}`}
+    >
+      <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
+    </button>
+  );
+}
+
 function ScheduleSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
   const hours: ActiveHours = agent.active_hours ?? {};
   const mode: ActiveHoursMode = hours.mode ?? 'always';
+  const enabled = mode !== 'always';
   const win = hours.windows?.[0] ?? { start: '08:00', end: '18:00' };
 
+  const toggleEnabled = (on: boolean) => {
+    onSave({ active_hours: { ...hours, mode: on ? 'outside_business' : 'always', tz: hours.tz ?? 'America/Sao_Paulo' } });
+  };
   const setMode = (m: ActiveHoursMode) => {
     const next: ActiveHours = { ...hours, mode: m, tz: hours.tz ?? 'America/Sao_Paulo' };
     if (m === 'custom' && !next.windows?.length) next.windows = [{ start: '08:00', end: '18:00' }];
@@ -395,8 +413,15 @@ function ScheduleSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
 
   return (
     <div className="pt-2 border-t border-sidebar-border">
-      <Label>Horário de atuação</Label>
-      <div className="grid grid-cols-1 gap-2 mt-1">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <Label>Horário de atuação</Label>
+          <p className="text-xs text-muted-foreground">Desligado = a IA responde a qualquer hora (24h).</p>
+        </div>
+        <Toggle on={enabled} onChange={toggleEnabled} />
+      </div>
+      {enabled && (
+      <div className="grid grid-cols-1 gap-2 mt-2">
         {SCHEDULE_OPTIONS.map(([m, title, help]) => (
           <label
             key={m}
@@ -412,7 +437,8 @@ function ScheduleSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
           </label>
         ))}
       </div>
-      {mode === 'custom' && (
+      )}
+      {enabled && mode === 'custom' && (
         <div className="flex items-end gap-3 mt-2">
           <div>
             <Label htmlFor="win_start" className="text-xs">Das</Label>
@@ -443,15 +469,15 @@ function FollowupSection({
   const on = agent.followup_enabled;
   return (
     <div className="pt-2 border-t border-sidebar-border">
-      <label className="flex items-start gap-3 cursor-pointer">
-        <input type="checkbox" className="mt-1" checked={on} onChange={(e) => onSave({ followup_enabled: e.target.checked })} />
+      <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-sm font-medium">Follow-up automático</div>
           <div className="text-xs text-muted-foreground">
-            Se o lead sumir, a IA volta sozinha com uma mensagem personalizada (baseada em toda a conversa e no imóvel), na cadência que você definir. Infinito por padrão.
+            Se o lead sumir, a IA volta sozinha com uma mensagem personalizada (baseada em toda a conversa e no imóvel), na cadência que você definir. Infinito por padrão. Desligado = não dispara nada.
           </div>
         </div>
-      </label>
+        <Toggle on={!!on} onChange={(v) => onSave({ followup_enabled: v })} />
+      </div>
 
       {on && (
         <div className="mt-3 space-y-3 pl-7">
