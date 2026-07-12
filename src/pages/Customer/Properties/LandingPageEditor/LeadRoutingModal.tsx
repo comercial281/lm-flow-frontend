@@ -38,6 +38,15 @@ export default function LeadRoutingModal({
   const [disqPipelineId, setDisqPipelineId] = useState(disqInit.pipeline_id ?? '');
   const [disqStageId, setDisqStageId] = useState(disqInit.stage_id ?? '');
   const [disqLabelId, setDisqLabelId] = useState(disqInit.label_id ?? '');
+  // Rastreio (Pixel Meta) da landing — client-side.
+  const pixelInit = ((page.settings as { pixel?: { pixel_id?: string; events?: Record<string, boolean> } } | null)
+    ?.pixel) ?? {};
+  const pixelEv = pixelInit.events ?? {};
+  const [pixelId, setPixelId] = useState(pixelInit.pixel_id ?? '');
+  const [evPageView, setEvPageView] = useState(pixelEv.page_view ?? true);
+  const [evLead, setEvLead] = useState(pixelEv.lead ?? true);
+  const [evQualified, setEvQualified] = useState(pixelEv.qualified ?? true);
+  const [evDisqualified, setEvDisqualified] = useState(pixelEv.disqualified ?? false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -96,17 +105,26 @@ export default function LeadRoutingModal({
     setSaving(true);
     try {
       const hasDisq = disqPipelineId || disqStageId || disqLabelId;
-      const settings = hasDisq
-        ? {
-            routing: {
-              disqualified: {
+      const settings = {
+        routing: {
+          disqualified: hasDisq
+            ? {
                 pipeline_id: disqPipelineId || null,
                 stage_id: disqStageId || null,
                 label_id: disqLabelId || null,
-              },
-            },
-          }
-        : { routing: { disqualified: {} } };
+              }
+            : {},
+        },
+        pixel: {
+          pixel_id: pixelId.trim() || null,
+          events: {
+            page_view: evPageView,
+            lead: evLead,
+            qualified: evQualified,
+            disqualified: evDisqualified,
+          },
+        },
+      };
       await landingPageService.saveRouting(
         siteId,
         page.id,
@@ -141,7 +159,7 @@ export default function LeadRoutingModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-5">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
         <div className="mb-1 flex items-start justify-between">
           <h2 className="text-base font-semibold">Roteamento de lead</h2>
           <button type="button" aria-label="Fechar" onClick={onClose} className="text-muted-foreground"><X className="h-4 w-4" /></button>
@@ -167,6 +185,22 @@ export default function LeadRoutingModal({
                   <Field label="Coluna (estágio)" value={disqStageId} onChange={setDisqStageId} options={disqStages} placeholder="Escolha a coluna" />
                 )}
                 <Field label="Tag" value={disqLabelId} onChange={setDisqLabelId} options={labels} placeholder="Sem tag" />
+              </div>
+            </div>
+
+            <div className="mt-2 border-t border-border pt-3">
+              <p className="mb-0.5 text-sm font-medium">Rastreio (Pixel Meta)</p>
+              <p className="mb-2 text-xs text-muted-foreground">Dispara os eventos na landing pra otimizar o anúncio. Deixe o ID vazio pra desligar.</p>
+              <label className="block">
+                <span className="mb-1 block text-xs text-muted-foreground">ID do Pixel</span>
+                <input value={pixelId} onChange={(e) => setPixelId(e.target.value)} placeholder="Ex: 123456789012345"
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
+              </label>
+              <div className="mt-2 grid grid-cols-2 gap-1.5 text-xs text-muted-foreground">
+                <label className="flex items-center gap-1.5"><input type="checkbox" checked={evPageView} onChange={(e) => setEvPageView(e.target.checked)} /> PageView</label>
+                <label className="flex items-center gap-1.5"><input type="checkbox" checked={evLead} onChange={(e) => setEvLead(e.target.checked)} /> Lead (no envio)</label>
+                <label className="flex items-center gap-1.5"><input type="checkbox" checked={evQualified} onChange={(e) => setEvQualified(e.target.checked)} /> Lead Qualificado</label>
+                <label className="flex items-center gap-1.5"><input type="checkbox" checked={evDisqualified} onChange={(e) => setEvDisqualified(e.target.checked)} /> Lead Desqualificado</label>
               </div>
             </div>
 

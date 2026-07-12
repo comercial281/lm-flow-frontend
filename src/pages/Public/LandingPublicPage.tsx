@@ -9,10 +9,16 @@ import {
   type LeadSubmitPayload,
 } from '@/features/landing/blocks';
 
+interface LandingPixel {
+  pixel_id?: string | null;
+  events?: { page_view?: boolean; lead?: boolean; qualified?: boolean; disqualified?: boolean };
+}
+
 interface PublicLandingDTO {
   title: string;
   theme?: Partial<LandingTheme> | null;
   content_blocks: unknown[];
+  pixel?: LandingPixel | null;
   property?: {
     code: string;
     title: string;
@@ -73,6 +79,14 @@ export default function LandingPublicPage() {
   const [blocks, setBlocks] = useState<BlockInstance[]>([]);
   const [theme, setTheme] = useState<Partial<LandingTheme>>({});
   const [property, setProperty] = useState<LandingProperty | null>(null);
+  const [pixel, setPixel] = useState<LandingPixel | null>(null);
+
+  // Dispara um evento no Pixel Meta (se carregado). standard = track, custom = trackCustom.
+  const trackPixel = (event: string, custom = false) => {
+    const fbq = (window as unknown as { fbq?: (...a: unknown[]) => void }).fbq;
+    if (fbq) fbq(custom ? 'trackCustom' : 'track', event);
+  };
+
   const cookie = (name: string) =>
     document.cookie.split('; ').find((c) => c.startsWith(`${name}=`))?.split('=')[1];
 
@@ -125,7 +139,15 @@ export default function LandingPublicPage() {
     // Retorna a qualificação computada no backend pra a tela final ramificar.
     try {
       const json = (await res.json()) as { data?: { qualification?: 'qualified' | 'disqualified' } };
-      return { qualification: json?.data?.qualification };
+      const qualification = json?.data?.qualification;
+      // Eventos de conversão no Pixel.
+      const ev = pixel?.events ?? {};
+      if (pixel?.pixel_id) {
+        if (ev.lead !== false) trackPixel('Lead');
+        if (qualification === 'qualified' && ev.qualified !== false) trackPixel('LeadQualificado', true);
+        if (qualification === 'disqualified' && ev.disqualified) trackPixel('LeadDesqualificado', true);
+      }
+      return { qualification };
     } catch {
       return {};
     }
@@ -161,6 +183,7 @@ export default function LandingPublicPage() {
         setBlocks(safeParsePageBlocks(dto.content_blocks));
         setTheme(dto.theme ?? {});
         setProperty(toProperty(dto.property));
+        setPixel(dto.pixel ?? null);
         document.title = dto.title || 'Landing';
         setState('ok');
       } catch {
@@ -171,6 +194,31 @@ export default function LandingPublicPage() {
       active = false;
     };
   }, [tenant, slug]);
+
+  // Injeta o Pixel Meta e dispara PageView (client-side). Só se a landing tem pixel.
+  useEffect(() => {
+    const id = pixel?.pixel_id;
+    if (!id) return;
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const w = window as any;
+    if (!w.fbq) {
+      const n: any = (w.fbq = function (...args: unknown[]) {
+        n.callMethod ? n.callMethod.apply(n, args) : n.queue.push(args);
+      });
+      if (!w._fbq) w._fbq = n;
+      n.push = n;
+      n.loaded = true;
+      n.version = '2.0';
+      n.queue = [];
+      const t = document.createElement('script');
+      t.async = true;
+      t.src = 'https://connect.facebook.net/en_US/fbevents.js';
+      document.head.appendChild(t);
+    }
+    w.fbq('init', id);
+    if (pixel?.events?.page_view !== false) w.fbq('track', 'PageView');
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+  }, [pixel?.pixel_id, pixel?.events?.page_view]);
 
   if (state === 'loading') {
     return <div className="flex min-h-screen items-center justify-center bg-[#0F0520] text-neutral-400">Carregando…</div>;
