@@ -16,7 +16,7 @@ import {
   type TestHistoryItem,
 } from '@/services/salesAgents/salesAgentsService';
 import inboxesService from '@/services/channels/inboxesService';
-import pipelinesService from '@/services/pipelines/pipelinesService';
+import { pipelinesService } from '@/services/pipelines/pipelinesService';
 
 type Tab = 'config' | 'knowledge' | 'test';
 
@@ -615,8 +615,8 @@ function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
 
   useEffect(() => {
     pipelinesService.getPipelines()
-      .then((res) => {
-        const raw = (res as unknown as { data?: PipelineOpt[] }).data ?? (Array.isArray(res) ? (res as PipelineOpt[]) : []);
+      .then((res: unknown) => {
+        const raw = (res as { data?: PipelineOpt[] }).data ?? (Array.isArray(res) ? (res as PipelineOpt[]) : []);
         setPipelines(raw.map((p) => ({ id: String(p.id), name: p.name })));
       })
       .catch(() => setPipelines([]));
@@ -625,8 +625,8 @@ function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
   const loadStages = (pipelineId: string) => {
     if (!pipelineId || stagesByPipeline[pipelineId]) return;
     pipelinesService.getPipelineStages(pipelineId)
-      .then((res) => {
-        const raw = (res as unknown as { data?: StageOpt[] }).data ?? (Array.isArray(res) ? (res as StageOpt[]) : []);
+      .then((res: unknown) => {
+        const raw = (res as { data?: StageOpt[] }).data ?? (Array.isArray(res) ? (res as StageOpt[]) : []);
         setStagesByPipeline((prev) => ({ ...prev, [pipelineId]: raw.map((s) => ({ id: String(s.id), name: s.name })) }));
       })
       .catch(() => undefined);
