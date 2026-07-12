@@ -104,7 +104,10 @@ export default function CreateLandingWizard({
     return () => {
       active = false;
     };
-  }, [base, templates.length, templatesLoading]);
+    // templatesLoading NÃO entra nas deps: setá-lo dentro do effect re-dispararia
+    // o effect e cancelaria o próprio fetch (active=false), travando "Carregando".
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [base, templates.length]);
 
   // Carrega pipelines + tags ao entrar no passo 3 (uma vez).
   useEffect(() => {
