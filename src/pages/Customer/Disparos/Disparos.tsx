@@ -5,6 +5,7 @@ import {
   ShieldCheck,
   Layers,
   ListOrdered,
+  BarChart3,
   Plus,
   Loader2,
   Radio,
@@ -27,6 +28,7 @@ import {
   broadcastsService,
   BroadcastCampaign,
   CloudChannelOption,
+  CloudMetrics,
 } from '@/services/broadcasts/broadcastsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { messageFunnelsService } from '@/services/messageFunnels/messageFunnelsService';
@@ -35,7 +37,7 @@ import type { PipelineStage } from '@/types/analytics';
 import MessageTemplateForm from '@/components/channels/settings/MessageTemplateForm';
 import BulkDispatchModal from '@/components/pipelines/BulkDispatchModal';
 
-type Tab = 'disparos' | 'templates' | 'canais' | 'cadencias';
+type Tab = 'disparos' | 'templates' | 'canais' | 'cadencias' | 'metricas';
 
 const STATUS_META: Record<BroadcastCampaign['status'], { label: string; cls: string }> = {
   running: { label: 'Enviando', cls: 'bg-primary/15 text-primary border-primary/40' },
@@ -50,6 +52,7 @@ const TABS: { id: Tab; label: string; icon: typeof Megaphone }[] = [
   { id: 'templates', label: 'Templates', icon: ShieldCheck },
   { id: 'canais', label: 'Canais oficiais', icon: Layers },
   { id: 'cadencias', label: 'Cadências', icon: ListOrdered },
+  { id: 'metricas', label: 'Métricas', icon: BarChart3 },
 ];
 
 export default function Disparos() {
@@ -72,6 +75,24 @@ export default function Disparos() {
 
   // Aba Cadências
   const [funnels, setFunnels] = useState<MessageFunnel[]>([]);
+
+  // Aba Métricas
+  const [metrics, setMetrics] = useState<CloudMetrics | null>(null);
+  const [metricsDays, setMetricsDays] = useState(30);
+  const [loadingMetrics, setLoadingMetrics] = useState(false);
+
+  const loadMetrics = useCallback((days: number) => {
+    setLoadingMetrics(true);
+    broadcastsService
+      .whatsappCloudMetrics(days)
+      .then(setMetrics)
+      .catch(() => setMetrics(null))
+      .finally(() => setLoadingMetrics(false));
+  }, []);
+
+  useEffect(() => {
+    if (tab === 'metricas') loadMetrics(metricsDays);
+  }, [tab, metricsDays, loadMetrics]);
 
   useEffect(() => {
     broadcastsService
@@ -375,6 +396,114 @@ export default function Disparos() {
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* ===================== MÉTRICAS ===================== */}
+      {tab === 'metricas' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-sm text-muted-foreground max-w-xl">
+              Enviadas, entregues e <strong>custo real</strong> (dados da Meta) por número oficial. A fatura/cobrança
+              fica no billing da Meta Business — aqui é o acompanhamento.
+            </p>
+            <Select value={String(metricsDays)} onValueChange={v => setMetricsDays(Number(v))}>
+              <SelectTrigger className="w-32 h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">7 dias</SelectItem>
+                <SelectItem value="30">30 dias</SelectItem>
+                <SelectItem value="90">90 dias</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {loadingMetrics ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" /> Carregando métricas...
+            </div>
+          ) : !metrics || metrics.channels.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+              Nenhum número oficial conectado ainda, ou sem envios no período.
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="rounded-xl border border-border p-3">
+                  <div className="text-xs text-muted-foreground">Enviadas</div>
+                  <div className="text-2xl font-semibold">{metrics.totals.sent}</div>
+                </div>
+                <div className="rounded-xl border border-border p-3">
+                  <div className="text-xs text-muted-foreground">Entregues</div>
+                  <div className="text-2xl font-semibold">
+                    {metrics.totals.delivered}
+                    {metrics.totals.sent > 0 && (
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({Math.round((metrics.totals.delivered / metrics.totals.sent) * 100)}%)
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border p-3">
+                  <div className="text-xs text-muted-foreground">Custo (Meta, US$)</div>
+                  <div className="text-2xl font-semibold">
+                    {metrics.totals.cost.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {metrics.channels.map(c => {
+                  const q = c.quality_rating?.toLowerCase();
+                  const qClr =
+                    q === 'green' ? 'text-green-600' : q === 'yellow' ? 'text-amber-600' : q === 'red' ? 'text-red-600' : 'text-muted-foreground';
+                  return (
+                    <div key={c.inbox_id} className="border border-border rounded-xl p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">{c.name}</div>
+                          <div className="text-xs text-muted-foreground">{c.phone_number}</div>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs">
+                          <span className={qClr}>● {c.quality_rating || 'sem dado'}</span>
+                          {c.messaging_tier != null && <span className="text-muted-foreground">tier {c.messaging_tier}</span>}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground text-xs block">Enviadas</span>
+                          <strong>{c.totals.sent}</strong>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs block">Entregues</span>
+                          <strong>{c.totals.delivered}</strong>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs block">Custo</span>
+                          <strong>{c.totals.cost.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' })}</strong>
+                        </div>
+                      </div>
+                      {Object.keys(c.templates_by_category).length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {Object.entries(c.templates_by_category).map(([cat, n]) => (
+                            <Badge key={cat} className="text-[11px] border bg-muted text-muted-foreground">
+                              {cat}: {n}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Entregue/lido/<strong>respondido por disparo</strong> e custo por template vêm na próxima fase
+                (reconciliação dos webhooks de status da Meta).
+              </p>
+            </>
           )}
         </div>
       )}

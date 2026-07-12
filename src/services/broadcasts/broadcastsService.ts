@@ -84,6 +84,29 @@ export interface CloudChannelOption {
   templates: CloudTemplateOption[];
 }
 
+/** Métricas de um número oficial (WhatsApp Cloud) — Meta analytics + custo real. */
+export interface CloudMetricsDaily {
+  date: string;
+  sent: number;
+  delivered: number;
+  cost: number;
+}
+export interface CloudMetricsChannel {
+  inbox_id: string;
+  name: string;
+  phone_number: string;
+  quality_rating: string | null;
+  messaging_tier: string | number | null;
+  templates_by_category: Record<string, number>;
+  totals: { sent: number; delivered: number; cost: number };
+  daily: CloudMetricsDaily[];
+}
+export interface CloudMetrics {
+  range: { days: number };
+  channels: CloudMetricsChannel[];
+  totals: { sent: number; delivered: number; cost: number };
+}
+
 export interface CreateBroadcastPayload {
   name?: string;
   pipeline_id: string;
@@ -174,6 +197,12 @@ class BroadcastsService {
       channel_kind: 'whatsapp_cloud',
       template_config: tc,
     });
+  }
+
+  // Métricas dos números oficiais (Meta analytics + custo real). Fase 1.
+  async whatsappCloudMetrics(days = 30): Promise<CloudMetrics | null> {
+    const res = await api.get(`${this.base}/whatsapp_cloud_metrics`, { params: { days } });
+    return extractData<CloudMetrics>(res);
   }
 }
 
