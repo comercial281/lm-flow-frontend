@@ -425,6 +425,69 @@ export default function Disparos() {
             </Select>
           </div>
 
+          {/* ROI / funil por disparo (Fase 3): custo estimado x resposta real. */}
+          {(() => {
+            const rates: Record<string, number> = { marketing: 0.35, utility: 0.02, authentication: 0.16, service: 0 };
+            const rows = campaigns
+              .filter(c => (c.sent_count ?? 0) > 0)
+              .map(c => {
+                const cat = (c.template_category ?? '').toLowerCase();
+                const rate = c.channel_kind === 'whatsapp_cloud' ? (rates[cat] ?? rates.marketing) : 0;
+                const cost = (c.sent_count ?? 0) * rate;
+                const replied = c.replied_count ?? 0;
+                const delivered = c.delivered_count ?? 0;
+                return { c, cost, replied, delivered, cpr: replied > 0 ? cost / replied : null,
+                  rate: delivered > 0 ? Math.round((replied / delivered) * 100) : null };
+              });
+            if (rows.length === 0) return null;
+            const totCost = rows.reduce((s, r) => s + r.cost, 0);
+            const totReplied = rows.reduce((s, r) => s + r.replied, 0);
+            const brl = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`;
+            return (
+              <div className="rounded-xl border border-border p-3 space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="text-sm font-medium">Retorno por disparo (pipeline selecionado)</div>
+                  <div className="text-xs text-muted-foreground">
+                    Custo estimado {brl(totCost)} · {totReplied} respostas
+                    {totReplied > 0 && <> · <strong className="text-foreground">{brl(totCost / totReplied)}/resposta</strong></>}
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="text-muted-foreground">
+                      <tr className="text-left">
+                        <th className="py-1 pr-2 font-medium">Disparo</th>
+                        <th className="py-1 px-2 font-medium">Enviadas</th>
+                        <th className="py-1 px-2 font-medium">Entregues</th>
+                        <th className="py-1 px-2 font-medium">Responderam</th>
+                        <th className="py-1 px-2 font-medium">Taxa resp.</th>
+                        <th className="py-1 px-2 font-medium">Custo est.</th>
+                        <th className="py-1 pl-2 font-medium">Custo/resp.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(({ c, cost, replied, delivered, cpr, rate }) => (
+                        <tr key={c.id} className="border-t border-border">
+                          <td className="py-1.5 pr-2 max-w-[180px] truncate">{c.name}</td>
+                          <td className="py-1.5 px-2">{c.sent_count}</td>
+                          <td className="py-1.5 px-2">{delivered || '—'}</td>
+                          <td className="py-1.5 px-2 font-medium text-foreground">{replied || '—'}</td>
+                          <td className="py-1.5 px-2">{rate != null ? `${rate}%` : '—'}</td>
+                          <td className="py-1.5 px-2">{cost > 0 ? brl(cost) : '—'}</td>
+                          <td className="py-1.5 pl-2">{cpr != null ? brl(cpr) : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Custo é estimativa (nº enviadas × tarifa da categoria). Custo real por número está abaixo (dados da Meta).
+                  Respostas vêm da reconciliação dos webhooks de status.
+                </p>
+              </div>
+            );
+          })()}
+
           {loadingMetrics ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" /> Carregando métricas...
@@ -504,10 +567,6 @@ export default function Disparos() {
                 })}
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                Entregue/lido/<strong>respondido por disparo</strong> e custo por template vêm na próxima fase
-                (reconciliação dos webhooks de status da Meta).
-              </p>
             </>
           )}
         </div>
