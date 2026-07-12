@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Building2, Copy, ExternalLink, GitBranch, Loader2, Megaphone, Plus, Rocket, Trash2 } from 'lucide-react';
+import { Building2, Copy, ExternalLink, GitBranch, Loader2, Megaphone, Plus, Rocket, Sparkles, Trash2 } from 'lucide-react';
 import {
   landingPageService,
   type LandingPageDTO,
@@ -9,6 +9,7 @@ import {
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import { getTenantSlug } from '@/services/core/tenant';
 import LeadRoutingModal from './LeadRoutingModal';
+import CreateLandingWizard from '@/features/landing/wizard/CreateLandingWizard';
 
 function slugify(name: string): string {
   return name
@@ -32,6 +33,7 @@ export default function LandingsListPage() {
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [routingPage, setRoutingPage] = useState<LandingPageDTO | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
 
   const reload = async (sid: string) => setLandings(await landingPageService.listLandings(sid));
 
@@ -137,10 +139,19 @@ export default function LandingsListPage() {
           type="button"
           onClick={handleCreate}
           disabled={creating || !newName.trim()}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded-md border border-border px-4 py-2 text-sm font-semibold text-foreground hover:border-primary disabled:opacity-40"
         >
           {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           Nova landing do zero
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowWizard(true)}
+          disabled={!siteId}
+          className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40"
+        >
+          <Sparkles className="h-4 w-4" />
+          Criar com assistente
         </button>
       </div>
 
@@ -226,6 +237,10 @@ export default function LandingsListPage() {
             reload(siteId);
           }}
         />
+      )}
+
+      {showWizard && siteId && (
+        <CreateLandingWizard siteId={siteId} onClose={() => setShowWizard(false)} />
       )}
     </div>
   );
