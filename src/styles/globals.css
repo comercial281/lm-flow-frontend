@@ -130,17 +130,20 @@
 /* [redesign fase 2] Cards "flutuam" (sombra suave estilo kit CRM).
    Mira o contrato do design-system (data-slot=card). Mantém um anel violeta
    sutil pra definição + sombra de profundidade. Só visual. */
+/* !important porque o design-system aplica box-shadow INLINE (anel violeta)
+   no card — sem !important a folha de estilo perde pro inline. rgba (não oklch)
+   pra sombra renderizar consistente. Provado no app real (screenshot). */
 [data-slot="card"] {
   box-shadow:
-    0 0 0 1px oklch(0.55 0.22 295 / 0.10),
-    0 1px 2px oklch(0.2 0.05 295 / 0.05),
-    0 12px 26px -12px oklch(0.45 0.18 295 / 0.16);
+    0 0 0 1px rgba(124, 58, 237, 0.12),
+    0 1px 2px rgba(20, 12, 44, 0.05),
+    0 14px 28px -12px rgba(90, 40, 160, 0.20) !important;
 }
 .dark [data-slot="card"] {
   box-shadow:
-    0 0 0 1px oklch(0.62 0.24 295 / 0.14),
-    0 2px 6px -1px oklch(0 0 0 / 0.40),
-    0 18px 36px -16px oklch(0 0 0 / 0.55);
+    0 0 0 1px rgba(168, 85, 247, 0.16),
+    0 2px 6px -1px rgba(0, 0, 0, 0.40),
+    0 18px 36px -16px rgba(0, 0, 0, 0.55) !important;
 }
 
 /* Hover com CONTRASTE real no tema escuro.
