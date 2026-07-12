@@ -229,6 +229,11 @@ export default function Disparos() {
                         <div className="text-xs text-muted-foreground">
                           {c.sent_count} enviadas · {c.failed_count} falhas · {c.total_count} no total
                         </div>
+                        {(c.delivered_count != null || c.read_count != null || c.replied_count != null) && (
+                          <div className="text-xs text-muted-foreground">
+                            {c.delivered_count ?? 0} entregues · {c.read_count ?? 0} lidas · <span className="text-foreground font-medium">{c.replied_count ?? 0} responderam</span>
+                          </div>
+                        )}
                       </div>
                       <Badge className={`text-xs border ${meta.cls}`}>{meta.label}</Badge>
                     </div>

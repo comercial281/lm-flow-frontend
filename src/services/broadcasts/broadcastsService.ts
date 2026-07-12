@@ -40,6 +40,9 @@ export interface BroadcastCampaign {
   sent_count: number;
   failed_count: number;
   skipped_count: number;
+  delivered_count?: number;
+  read_count?: number;
+  replied_count?: number;
   next_run_at: string;
   completed_at: string | null;
   created_at: string;
