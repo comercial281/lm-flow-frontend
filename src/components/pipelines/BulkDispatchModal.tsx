@@ -170,6 +170,10 @@ export default function BulkDispatchModal({
   const [batchSize, setBatchSize] = useState(10);
   const [pauseS, setPauseS] = useState(60);
   const [businessHours, setBusinessHours] = useState(true);
+  // Fase 4/5: teto de gasto (R$), respeitar opt-out, frequency cap (dias).
+  const [maxSpend, setMaxSpend] = useState('');
+  const [respectOptOut, setRespectOptOut] = useState(true);
+  const [frequencyCapDays, setFrequencyCapDays] = useState(0);
 
   // Teste
   const [testPhone, setTestPhone] = useState('');
@@ -198,6 +202,9 @@ export default function BulkDispatchModal({
     setBatchSize(10);
     setPauseS(60);
     setBusinessHours(true);
+    setMaxSpend('');
+    setRespectOptOut(true);
+    setFrequencyCapDays(0);
     setTestPhone('');
   }, []);
 
@@ -344,6 +351,17 @@ export default function BulkDispatchModal({
     () => (selectedCloudTemplate?.variables ?? []).every(v => (cloudVars[v] ?? '').trim() !== ''),
     [selectedCloudTemplate, cloudVars],
   );
+  // Estimativa de custo do disparo oficial (Fase 4). Tarifas BRL de referência
+  // Brasil por categoria — o backend é a fonte de verdade pro budget cap.
+  const costEstimate = useMemo(() => {
+    if (channelKind !== 'whatsapp_cloud' || !recipientCount) return null;
+    const cat = (selectedCloudTemplate?.category ?? 'marketing').toLowerCase();
+    const rates: Record<string, number> = {
+      marketing: 0.35, utility: 0.02, authentication: 0.16, service: 0,
+    };
+    const rate = rates[cat] ?? rates.marketing;
+    return { cat, rate, total: recipientCount * rate };
+  }, [channelKind, recipientCount, selectedCloudTemplate]);
   const buildTemplateConfig = useCallback(
     (): BroadcastTemplateConfig => ({
       inbox_id: selectedCloudInbox?.inbox_id,
@@ -432,6 +450,9 @@ export default function BulkDispatchModal({
         batch_size: batchSize,
         batch_pause_seconds: pauseS,
         business_hours_only: businessHours,
+        respect_opt_out: respectOptOut,
+        frequency_cap_days: frequencyCapDays,
+        max_spend: maxSpend.trim() ? Number(maxSpend.replace(',', '.')) : undefined,
       });
       await refreshList();
       setStep('done');
@@ -916,6 +937,50 @@ export default function BulkDispatchModal({
                   />
                   Só enviar em horário comercial (seg-sex 08-20h, sáb 09-18h)
                 </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={respectOptOut}
+                    onChange={e => setRespectOptOut(e.target.checked)}
+                    className="rounded border-border"
+                  />
+                  Não enviar pra quem pediu PARAR (opt-out)
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Não reenviar nos últimos (dias)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={frequencyCapDays}
+                      onChange={e => setFrequencyCapDays(Math.max(0, Number(e.target.value) || 0))}
+                      className="h-9"
+                      placeholder="0 = sem limite"
+                    />
+                  </div>
+                  {channelKind === 'whatsapp_cloud' && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Teto de gasto (R$)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={maxSpend}
+                        onChange={e => setMaxSpend(e.target.value)}
+                        className="h-9"
+                        placeholder="opcional"
+                      />
+                    </div>
+                  )}
+                </div>
+                {costEstimate && (
+                  <p className="text-xs text-muted-foreground">
+                    Custo estimado: <strong className="text-foreground">
+                      R$ {costEstimate.total.toFixed(2).replace('.', ',')}
+                    </strong>{' '}
+                    ({recipientCount} msg × R$ {costEstimate.rate.toFixed(2).replace('.', ',')}, categoria {costEstimate.cat}). Estimativa — custo real vem da Meta.
+                  </p>
+                )}
                 {!step3Ok && (
                   <p className="text-xs text-amber-600">
                     Máximo deve ser ≥ mínimo (≥2s), lote entre 1 e 50, pausa ≥ 10s.

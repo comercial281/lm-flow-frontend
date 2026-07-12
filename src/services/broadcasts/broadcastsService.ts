@@ -43,6 +43,10 @@ export interface BroadcastCampaign {
   delivered_count?: number;
   read_count?: number;
   replied_count?: number;
+  max_spend_cents?: number | null;
+  frequency_cap_days?: number;
+  respect_opt_out?: boolean;
+  template_category?: string | null;
   next_run_at: string;
   completed_at: string | null;
   created_at: string;
@@ -129,6 +133,28 @@ export interface CreateBroadcastPayload {
   batch_size: number;
   batch_pause_seconds: number;
   business_hours_only: boolean;
+  /** Teto de gasto em REAIS (Fase 4); backend converte pra centavos. */
+  max_spend?: number;
+  /** Não reenviar pra quem recebeu disparo nos últimos N dias (0 = off, Fase 5). */
+  frequency_cap_days?: number;
+  /** Excluir contatos que pediram PARAR (opt-out). Default true (Fase 5). */
+  respect_opt_out?: boolean;
+}
+
+/** Estimativa de custo de um disparo oficial (Fase 4). */
+export interface CostEstimate {
+  count: number;
+  category: string;
+  rate: number;
+  currency: string;
+  total: number;
+  estimate: boolean;
+}
+
+/** Contatos removidos pelos filtros anti-spam no preview (Fase 5). */
+export interface AudienceExcluded {
+  opt_out: number;
+  frequency: number;
 }
 
 class BroadcastsService {
@@ -150,6 +176,34 @@ class BroadcastsService {
       audience,
     });
     return extractData<{ count: number }>(res)?.count ?? 0;
+  }
+
+  // Preview com detalhe dos excluídos por opt-out/frequency (Fase 5).
+  async audiencePreviewDetailed(
+    pipelineId: string,
+    audience: BroadcastAudience,
+    opts?: { respect_opt_out?: boolean; frequency_cap_days?: number },
+  ): Promise<{ count: number; excluded: AudienceExcluded }> {
+    const res = await api.post(`${this.base}/audience_preview`, {
+      pipeline_id: pipelineId,
+      audience,
+      ...opts,
+    });
+    const d = extractData<{ count: number; excluded: AudienceExcluded }>(res);
+    return { count: d?.count ?? 0, excluded: d?.excluded ?? { opt_out: 0, frequency: 0 } };
+  }
+
+  // Estimativa de custo do disparo oficial (Fase 4). Passa count OU audience.
+  async estimateCost(params: {
+    count?: number;
+    category?: string;
+    pipeline_id?: string;
+    audience?: BroadcastAudience;
+    respect_opt_out?: boolean;
+    frequency_cap_days?: number;
+  }): Promise<CostEstimate | null> {
+    const res = await api.post(`${this.base}/estimate_cost`, params);
+    return extractData<CostEstimate>(res);
   }
 
   async pause(id: string): Promise<BroadcastCampaign> {
