@@ -30,6 +30,7 @@ export interface BroadcastCampaign {
   name: string;
   pipeline_id: string | null;
   status: BroadcastStatus;
+  channel_kind?: BroadcastChannelKind;
   variations: BroadcastVariation[];
   min_interval_seconds: number;
   max_interval_seconds: number;
