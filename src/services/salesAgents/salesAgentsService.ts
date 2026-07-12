@@ -113,6 +113,16 @@ export interface TestHistoryItem {
   content: string;
 }
 
+export type SalesAgentLessonKind = 'rule' | 'good_example' | 'bad_example';
+export interface SalesAgentLesson {
+  id: string;
+  kind: SalesAgentLessonKind;
+  content: string;
+  context: string | null;
+  enabled: boolean;
+  created_at: string;
+}
+
 export interface SalesAgentPropertyLink {
   link: string;
   message: string;
@@ -203,6 +213,27 @@ export const salesAgentsService = {
   async reprocessDocument(agentId: string, docId: string): Promise<SalesAgentDocument> {
     const res = await api.post(`${BASE}/${agentId}/documents/${docId}/reprocess`);
     return (res.data as { data: SalesAgentDocument }).data;
+  },
+
+  // --- aprendizado (lições: feedback -> regra / exemplo) ---
+
+  async listLessons(agentId: string): Promise<SalesAgentLesson[]> {
+    const res = await api.get(`${BASE}/${agentId}/lessons`);
+    return (res.data as { data: SalesAgentLesson[] }).data ?? [];
+  },
+
+  async createLesson(
+    agentId: string,
+    kind: SalesAgentLessonKind,
+    content: string,
+    context?: string,
+  ): Promise<SalesAgentLesson> {
+    const res = await api.post(`${BASE}/${agentId}/lessons`, { kind, content, context: context || undefined });
+    return (res.data as { data: SalesAgentLesson }).data;
+  },
+
+  async destroyLesson(agentId: string, lessonId: string): Promise<void> {
+    await api.delete(`${BASE}/${agentId}/lessons/${lessonId}`);
   },
 };
 
