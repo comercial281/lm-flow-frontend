@@ -127,6 +127,22 @@
   --chart-5: oklch(0.7 0.14 305);
 }
 
+/* [redesign fase 2] Cards "flutuam" (sombra suave estilo kit CRM).
+   Mira o contrato do design-system (data-slot=card). Mantém um anel violeta
+   sutil pra definição + sombra de profundidade. Só visual. */
+[data-slot="card"] {
+  box-shadow:
+    0 0 0 1px oklch(0.55 0.22 295 / 0.10),
+    0 1px 2px oklch(0.2 0.05 295 / 0.05),
+    0 12px 26px -12px oklch(0.45 0.18 295 / 0.16);
+}
+.dark [data-slot="card"] {
+  box-shadow:
+    0 0 0 1px oklch(0.62 0.24 295 / 0.14),
+    0 2px 6px -1px oklch(0 0 0 / 0.40),
+    0 18px 36px -16px oklch(0 0 0 / 0.55);
+}
+
 /* Hover com CONTRASTE real no tema escuro.
    O design-system aplica `dark:hover:bg-input/50` em select-trigger, input,
    textarea e botão outline. Com --input escuro (0.18) o passo de alpha 30%→50%
