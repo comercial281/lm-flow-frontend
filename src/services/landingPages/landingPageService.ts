@@ -26,6 +26,8 @@ export interface LandingPageDTO {
   lead_label_id?: string | null;
   content_blocks: unknown[];
   theme?: Partial<LandingTheme> | null;
+  /** Config extra da landing (Fatia 2b+): roteamento por qualificação, etc. */
+  settings?: Record<string, unknown> | null;
   content_html?: string | null;
   created_at: string;
   updated_at: string;
@@ -98,13 +100,17 @@ export const landingPageService = {
     return unwrap<LandingPageDTO>(res);
   },
 
-  /** Salva o roteamento de lead da landing (pipeline/estagio/tag de destino). */
+  /** Salva o roteamento de lead da landing: pipeline/estagio/tag de destino
+   *  (ramo padrão = qualificado) + settings opcional (ramo desqualificado). */
   async saveRouting(
     siteId: string,
     pageId: string,
     routing: { lead_pipeline_id: string | null; lead_stage_id: string | null; lead_label_id: string | null },
+    settings?: Record<string, unknown>,
   ): Promise<LandingPageDTO> {
-    const res = await api.put(`/sites/${siteId}/pages/${pageId}`, { page: routing });
+    const res = await api.put(`/sites/${siteId}/pages/${pageId}`, {
+      page: settings ? { ...routing, settings } : routing,
+    });
     return unwrap<LandingPageDTO>(res);
   },
 
