@@ -1,18 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Building2, Check, Loader2, Megaphone, Search, X } from 'lucide-react';
+import { Building2, Check, LayoutTemplate, Loader2, Megaphone, Search, X } from 'lucide-react';
 import api from '@/services/core/api';
 import { landingPageService } from '@/services/landingPages/landingPageService';
+import { landingTemplatesService, type LandingTemplateDTO } from '@/services/landingPages/landingTemplatesService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
+import { safeParsePageBlocks } from '@/features/landing/blocks';
 
 interface Opt {
   id: string;
   label: string;
 }
 
-type Base = 'blank' | 'property';
+type Base = 'blank' | 'property' | 'template';
 
 function slugify(name: string): string {
   return name
@@ -48,6 +50,10 @@ export default function CreateLandingWizard({
   const [propResults, setPropResults] = useState<Property[]>([]);
   const [propLoading, setPropLoading] = useState(false);
   const [property, setProperty] = useState<Property | null>(null);
+  // base = template
+  const [templates, setTemplates] = useState<LandingTemplateDTO[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templateId, setTemplateId] = useState('');
 
   // Passo 2 — nome
   const [name, setName] = useState('');
@@ -81,6 +87,24 @@ export default function CreateLandingWizard({
       clearTimeout(t);
     };
   }, [base, propQuery]);
+
+  // Carrega os templates ao escolher "De um template" (uma vez).
+  useEffect(() => {
+    if (base !== 'template' || templates.length || templatesLoading) return;
+    let active = true;
+    setTemplatesLoading(true);
+    (async () => {
+      try {
+        const list = await landingTemplatesService.list();
+        if (active) setTemplates(list);
+      } finally {
+        if (active) setTemplatesLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [base, templates.length, templatesLoading]);
 
   // Carrega pipelines + tags ao entrar no passo 3 (uma vez).
   useEffect(() => {
@@ -120,20 +144,38 @@ export default function CreateLandingWizard({
   };
 
   const canNext =
-    step === 1 ? (base === 'blank' || !!property) : step === 2 ? !!name.trim() : true;
+    step === 1
+      ? base === 'blank' || (base === 'property' && !!property) || (base === 'template' && !!templateId)
+      : step === 2
+        ? !!name.trim()
+        : true;
 
   const handleCreate = async () => {
     if (!name.trim()) return;
     setCreating(true);
     try {
-      const lp =
-        base === 'property' && property
-          ? await landingPageService.getOrCreateForProperty(siteId, {
-              propertyId: property.id,
-              title: name.trim(),
-              brandMode: 'development',
-            })
-          : await landingPageService.createBlank(siteId, name.trim());
+      let lp;
+      if (base === 'property' && property) {
+        lp = await landingPageService.getOrCreateForProperty(siteId, {
+          propertyId: property.id,
+          title: name.trim(),
+          brandMode: 'development',
+        });
+      } else if (base === 'template' && templateId) {
+        // Cria em branco e aplica os blocos + tema do template.
+        lp = await landingPageService.createBlank(siteId, name.trim());
+        const tpl = templates.find((t) => t.id === templateId);
+        if (tpl) {
+          await landingPageService.saveBlocks(
+            siteId,
+            lp.dto.id,
+            safeParsePageBlocks(tpl.content_blocks),
+            tpl.theme ?? undefined,
+          );
+        }
+      } else {
+        lp = await landingPageService.createBlank(siteId, name.trim());
+      }
 
       if (pipelineId || labelId) {
         await landingPageService
@@ -190,7 +232,7 @@ export default function CreateLandingWizard({
           {step === 1 && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">Como você quer começar?</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => setBase('blank')}
@@ -198,7 +240,7 @@ export default function CreateLandingWizard({
                 >
                   <Megaphone className="h-5 w-5 text-primary" />
                   <span className="text-sm font-medium">Em branco</span>
-                  <span className="text-xs text-muted-foreground">Blocos padrão pra montar do zero.</span>
+                  <span className="text-xs text-muted-foreground">Blocos padrão.</span>
                 </button>
                 <button
                   type="button"
@@ -207,9 +249,47 @@ export default function CreateLandingWizard({
                 >
                   <Building2 className="h-5 w-5 text-primary" />
                   <span className="text-sm font-medium">De um imóvel</span>
-                  <span className="text-xs text-muted-foreground">Puxa os dados do imóvel cadastrado.</span>
+                  <span className="text-xs text-muted-foreground">Dados do imóvel.</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBase('template')}
+                  className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left ${base === 'template' ? 'border-primary bg-primary/5' : 'border-border'}`}
+                >
+                  <LayoutTemplate className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-medium">De um template</span>
+                  <span className="text-xs text-muted-foreground">Um modelo salvo.</span>
                 </button>
               </div>
+
+              {base === 'template' && (
+                <div className="max-h-56 space-y-1 overflow-y-auto">
+                  {templatesLoading ? (
+                    <div className="flex items-center gap-2 px-1 py-3 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Carregando templates…
+                    </div>
+                  ) : templates.length === 0 ? (
+                    <p className="px-1 py-3 text-sm text-muted-foreground">
+                      Nenhum template ainda. Salve uma landing como template pela lista (botão "Salvar como template").
+                    </p>
+                  ) : (
+                    templates.map((t) => {
+                      const active = templateId === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setTemplateId(t.id)}
+                          className={`flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left ${active ? 'border-primary bg-primary/5' : 'border-border'}`}
+                        >
+                          <span className="min-w-0 truncate text-sm">{t.name}</span>
+                          {active && <Check className="h-4 w-4 flex-none text-primary" />}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
 
               {base === 'property' && (
                 <div className="space-y-2">
