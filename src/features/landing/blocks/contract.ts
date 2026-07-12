@@ -182,6 +182,30 @@ const apartmentTypesConfig = z.object({
     .default([]),
 });
 
+/** Perguntas de qualificação padrão (as do VGV Elite). Exportado pra o editor
+ *  usar de fallback quando o bloco ainda não tem `steps` no config gravado. */
+export const DEFAULT_LEAD_FORM_STEPS: { question: string; options: string[] }[] = [
+  {
+    question: 'Quando você pretende comprar?',
+    options: [
+      'Quero fechar o quanto antes',
+      'Nos próximos 30 dias',
+      'Em até 3 meses',
+      'Em 6 meses ou mais',
+      'Ainda estou pesquisando',
+    ],
+  },
+  {
+    question: 'Como pretende pagar?',
+    options: [
+      'Já tenho financiamento aprovado',
+      'Vou pagar à vista',
+      'Estou em processo de aprovação',
+      'Ainda não sei',
+    ],
+  },
+];
+
 const leadFormConfig = z.object({
   title: z.string().max(160).default('Preencha o formulário para falar com o especialista'),
   /** Nome do corretor/especialista mostrado no header e na tela final. */
@@ -192,27 +216,15 @@ const leadFormConfig = z.object({
   /** Perguntas de qualificação (default = as do VGV Elite). */
   steps: z
     .array(z.object({ question: z.string(), options: z.array(z.string()) }))
-    .default([
-      {
-        question: 'Quando você pretende comprar?',
-        options: [
-          'Quero fechar o quanto antes',
-          'Nos próximos 30 dias',
-          'Em até 3 meses',
-          'Em 6 meses ou mais',
-          'Ainda estou pesquisando',
-        ],
-      },
-      {
-        question: 'Como pretende pagar?',
-        options: [
-          'Já tenho financiamento aprovado',
-          'Vou pagar à vista',
-          'Estou em processo de aprovação',
-          'Ainda não sei',
-        ],
-      },
-    ]),
+    .default(DEFAULT_LEAD_FORM_STEPS),
+  /* --- Qualificação (Fatia 2a). Design não-quebra: opções seguem strings; a
+     qualificação vem por mapas paralelos, casados pelo texto da resposta. --- */
+  /** Nota de corte: score abaixo disso = desqualificado. */
+  cutoff: z.number().int().default(0),
+  /** Respostas que, escolhidas, desqualificam o lead na hora. */
+  disqualifyingAnswers: z.array(z.string()).default([]),
+  /** Peso (pontos) por resposta, somado no score. Chave = texto da opção. */
+  answerWeights: z.record(z.string(), z.number()).default({}),
 });
 
 const stickyCtaConfig = z.object({
