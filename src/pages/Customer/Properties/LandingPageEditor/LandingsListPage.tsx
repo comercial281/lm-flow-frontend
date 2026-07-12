@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Building2, Copy, ExternalLink, GitBranch, Loader2, Megaphone, Plus, Rocket, Sparkles, Trash2 } from 'lucide-react';
+import { Building2, Copy, ExternalLink, GitBranch, LayoutTemplate, Loader2, Megaphone, Plus, Rocket, Sparkles, Trash2 } from 'lucide-react';
 import {
   landingPageService,
   type LandingPageDTO,
 } from '@/services/landingPages/landingPageService';
+import { landingTemplatesService } from '@/services/landingPages/landingTemplatesService';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import { getTenantSlug } from '@/services/core/tenant';
 import LeadRoutingModal from './LeadRoutingModal';
@@ -105,6 +106,17 @@ export default function LandingsListPage() {
     }
   };
 
+  const handleSaveAsTemplate = async (l: LandingPageDTO) => {
+    const name = window.prompt('Nome do template:', `${l.title} (template)`)?.trim();
+    if (!name) return;
+    try {
+      await landingTemplatesService.createFromPage(l.id, name);
+      toast.success('Template salvo — já aparece no assistente');
+    } catch {
+      toast.error('Erro ao salvar o template');
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!siteId) return;
     try {
@@ -178,6 +190,10 @@ export default function LandingsListPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => handleSaveAsTemplate(l)} title="Salvar como template"
+                      className="text-muted-foreground hover:text-primary">
+                      <LayoutTemplate className="h-4 w-4" />
+                    </button>
                     <button type="button" onClick={() => setRoutingPage(l)} title="Roteamento do lead (pipeline/coluna/tag)"
                       className="text-muted-foreground hover:text-primary">
                       <GitBranch className="h-4 w-4" />
