@@ -272,7 +272,7 @@ function ConfigTab({
       </div>
 
       <div>
-        <Label htmlFor="inbox">WhatsApp que ela atende</Label>
+        <Label htmlFor="inbox">Instância do WhatsApp que ela opera</Label>
         <select
           id="inbox"
           value={agent.inbox_id ?? ''}
@@ -284,7 +284,7 @@ function ConfigTab({
             <option key={i.id} value={String(i.id)}>{i.name}</option>
           ))}
         </select>
-        <p className="text-xs text-muted-foreground mt-1">A IA só responde os leads que chegam por esse canal.</p>
+        <p className="text-xs text-muted-foreground mt-1">Escolha a instância (número/canal do WhatsApp) onde a IA vai operar: ela recebe e responde os leads por essa instância.</p>
       </div>
 
       <div>
