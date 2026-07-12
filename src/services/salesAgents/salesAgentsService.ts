@@ -51,6 +51,9 @@ export interface SalesAgent {
   followup_min_days: number;
   followup_max_days: number;
   followup_max_attempts: number;
+  audio_enabled: boolean;
+  audio_mode: 'mirror' | 'always' | 'never';
+  audio_voice_id: string | null;
   documents_count: number;
   created_at: string;
   updated_at: string;
@@ -80,6 +83,9 @@ export interface SalesAgentPayload {
   followup_min_days?: number;
   followup_max_days?: number;
   followup_max_attempts?: number;
+  audio_enabled?: boolean;
+  audio_mode?: 'mirror' | 'always' | 'never';
+  audio_voice_id?: string | null;
 }
 
 export interface SalesAgentDocument {
