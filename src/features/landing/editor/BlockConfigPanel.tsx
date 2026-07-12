@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import api from '@/services/core/api';
 import { useLandingEditorStore } from './landingEditorStore';
-import { BLOCK_REGISTRY, type BlockInstance } from '@/features/landing/blocks';
+import { BLOCK_REGISTRY, DEFAULT_LEAD_FORM_STEPS, type BlockInstance } from '@/features/landing/blocks';
 
 /* ── upload genérico (ActiveStorage) → retorna file_url ──────────────── */
 async function uploadFile(file: File): Promise<string> {
@@ -161,14 +161,58 @@ function Fields({ block }: { block: BlockInstance }) {
           <Field label="Prazo (meses)"><Num value={c.prazoMeses as number} onChange={(v) => set({ prazoMeses: v ?? 1 })} /></Field>
         </>
       );
-    case 'lead_form':
+    case 'lead_form': {
+      const steps = (Array.isArray(c.steps) ? (c.steps as { question: string; options: string[] }[]) : DEFAULT_LEAD_FORM_STEPS);
+      const weights = (c.answerWeights as Record<string, number>) ?? {};
+      const disq = (c.disqualifyingAnswers as string[]) ?? [];
+      const setWeight = (opt: string, v: number | undefined) =>
+        set({ answerWeights: { ...weights, [opt]: v ?? 0 } });
+      const toggleDisq = (opt: string, on: boolean) =>
+        set({ disqualifyingAnswers: on ? [...disq.filter((o) => o !== opt), opt] : disq.filter((o) => o !== opt) });
       return (
         <>
           <Field label="Título do formulário"><Text value={c.title as string} onChange={(v) => set({ title: v })} /></Field>
           <Field label="Nome do especialista"><Text value={c.specialistName as string} onChange={(v) => set({ specialistName: v })} /></Field>
           <Field label="Texto do botão"><Text value={c.ctaLabel as string} onChange={(v) => set({ ctaLabel: v })} /></Field>
+
+          <div className="mt-2 rounded-lg border border-neutral-800 p-3">
+            <p className="mb-1 text-xs font-semibold text-neutral-200">Qualificação do lead</p>
+            <p className="mb-3 text-xs text-neutral-500">
+              Dê pontos por resposta e marque as que desqualificam. Score abaixo da nota de corte = desqualificado.
+            </p>
+            <Field label="Nota de corte (score mínimo p/ qualificar)">
+              <Num value={c.cutoff as number} onChange={(v) => set({ cutoff: v ?? 0 })} placeholder="0" />
+            </Field>
+            <div className="mt-2 space-y-3">
+              {steps.map((st, si) => (
+                <div key={si}>
+                  <p className="mb-1 text-xs font-medium text-neutral-300">{st.question}</p>
+                  <div className="space-y-1.5">
+                    {st.options.map((opt) => (
+                      <div key={opt} className="flex items-center gap-2">
+                        <span className="min-w-0 flex-1 truncate text-xs text-neutral-200">{opt}</span>
+                        <input
+                          type="number"
+                          value={weights[opt] ?? ''}
+                          placeholder="0"
+                          onChange={(e) => setWeight(opt, e.target.value === '' ? undefined : Number(e.target.value))}
+                          className="w-16 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 outline-none focus:border-violet-500"
+                          title="Pontos dessa resposta"
+                        />
+                        <label className="flex flex-none items-center gap-1 text-xs text-neutral-400" title="Escolher essa resposta desqualifica o lead">
+                          <input type="checkbox" checked={disq.includes(opt)} onChange={(e) => toggleDisq(opt, e.target.checked)} />
+                          desqualifica
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </>
       );
+    }
     case 'sticky_cta':
       return (
         <>
