@@ -31,6 +31,7 @@ import {
   FileText,
   TrendingUp,
   Library,
+  Megaphone,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -139,6 +140,12 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     resource: 'pipelines',
     action: 'read',
     featureKey: 'pipelines',
+  },
+  {
+    name: 'Disparos',
+    href: '/disparos',
+    icon: Megaphone,
+    featureKey: 'disparos',
   },
   {
     // IA Vendedora (pré-atendimento). Promovida de sub-item de Automações para

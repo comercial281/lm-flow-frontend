@@ -49,6 +49,7 @@ const NewChannel = lazyWithRetry(() => import('@/pages/Customer/Channels').then(
 const ChatPage = lazyWithRetry(() => import('@/pages/Customer/Chat/ChatPage'));
 
 const Pipelines = lazyWithRetry(() => import('@/pages/Customer/Pipelines/Pipelines'));
+const Disparos = lazyWithRetry(() => import('@/pages/Customer/Disparos/Disparos'));
 const TeamAccess = lazyWithRetry(() => import('@/pages/Customer/Team/TeamAccessPage'));
 const PipelineKanban = lazyWithRetry(() => import('@/pages/Customer/Pipelines/PipelineKanban'));
 const AccountSettings = lazyWithRetry(() => import('@/pages/Customer/Settings/Account').then(m => ({ default: m.AccountSettings })));
@@ -549,6 +550,19 @@ const AppRouter = () => {
                     <PermissionRoute resource="pipelines" action="read">
                       <PipelineKanban />
                     </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/disparos"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <Disparos />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>
