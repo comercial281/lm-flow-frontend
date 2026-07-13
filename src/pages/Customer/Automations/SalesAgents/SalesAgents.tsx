@@ -149,9 +149,15 @@ export default function SalesAgents() {
       {/* Lista */}
       <aside className="w-72 shrink-0 border-r border-sidebar-border p-4 overflow-auto">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold flex items-center gap-2">
-            <Bot className="h-4 w-4 text-primary" /> IA Vendedora
-          </h2>
+          <div className="flex items-center gap-2.5">
+            <div
+              className="w-1 h-6 rounded-full shrink-0"
+              style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
+            />
+            <h2 className="text-base font-bold flex items-center gap-2">
+              <Bot className="h-4 w-4 text-primary" /> IA Vendedora
+            </h2>
+          </div>
           <Button size="sm" onClick={createAgent}>
             <Plus className="h-4 w-4" />
           </Button>
