@@ -87,7 +87,7 @@ export default function Sidebar({
       >
         <TooltipProvider delayDuration={300}>
           {/* Navigation Menu */}
-          <nav className="space-y-1.5 flex-1 px-2 py-4">
+          <nav className="space-y-1.5 flex-1 min-h-0 overflow-y-auto px-2 py-4">
             {mainMenuItems.flatMap(item => {
               const group = GROUP_BY_HREF[item.href] || '';
               const showHeader = !!group && group !== lastSidebarGroup && !isCollapsed;
