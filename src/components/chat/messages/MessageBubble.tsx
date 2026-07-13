@@ -480,10 +480,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             )}
 
             <div className={isDeleted ? 'opacity-60' : ''}>{renderMessageContent()}</div>
+            {showTimestamp && (
+              <div className="wa-time flex justify-end mt-0.5 -mb-1">
+                <MessageStatus message={message} isOwn={isOwn} onRetry={onRetry} />
+              </div>
+            )}
           </div>,
         )}
-
-        {showTimestamp && <MessageStatus message={message} isOwn={isOwn} onRetry={onRetry} />}
       </div>
 
       {/* Alert Dialog para confirmação de exclusão */}

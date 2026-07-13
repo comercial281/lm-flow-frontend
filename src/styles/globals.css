@@ -563,3 +563,11 @@ button[role='switch'][data-state='unchecked'],
 .dark .wa-chat .wa-input-bar {
   border-top-color: rgba(255, 255, 255, 0.06) !important;
 }
+/* hora + visto dentro do balão (estilo WhatsApp) */
+.wa-chat .wa-time {
+  font-size: 10.5px;
+  line-height: 1;
+}
+.wa-chat .wa-time .text-primary {
+  color: #53bdeb !important; /* ✓✓ lido = azul do WhatsApp */
+}
