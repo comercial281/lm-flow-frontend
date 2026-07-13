@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Users, RefreshCw, ShieldCheck, MessageCircle, Search } from 'lucide-react';
+import { RefreshCw, ShieldCheck, MessageCircle, Search } from 'lucide-react';
 import { Button, Input, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, Label as UILabel } from '@/components/ui/ds';
 import { usersService } from '@/services/users';
 import InboxesService from '@/services/channels/inboxesService';
@@ -130,22 +130,26 @@ export default function TeamAccessPage() {
   const isAdmin = (u: User) => u.chave_role === 'admin';
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <Users className="h-6 w-6 text-primary" /> Equipe & Acessos
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Controle numa tela só quem faz parte do time, o cargo de cada um e quais instâncias vê.
-          </p>
+    <div className="mx-auto max-w-5xl p-6">
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div
+            className="w-1 h-9 rounded-full shrink-0"
+            style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
+          />
+          <div>
+            <h1 className="text-2xl font-bold text-foreground leading-tight">Equipe</h1>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {users.length} pessoa{users.length !== 1 ? 's' : ''} · cargo e instâncias de cada um numa tela só
+            </p>
+          </div>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-          <RefreshCw className={`mr-1.5 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Atualizar
+        <Button variant="outline" size="sm" onClick={load} disabled={loading} className="h-8 gap-1 text-xs">
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Atualizar
         </Button>
       </div>
 
-      <div className="relative mb-4">
+      <div className="relative mb-4 max-w-sm">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome ou e-mail" className="pl-9" />
       </div>
@@ -157,32 +161,59 @@ export default function TeamAccessPage() {
       ) : filtered.length === 0 ? (
         <div className="py-16 text-center text-sm text-muted-foreground">Nenhuma pessoa encontrada.</div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((u) => {
-            const seen = membership[String(u.id)]?.size ?? 0;
-            return (
-              <div key={u.id} className="flex items-center gap-4 rounded-xl border border-border bg-card p-4">
-                <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                  {initials(u.name)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium">{u.name}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cargoColor(u.chave_role)}`}>{cargoLabel(u.chave_role)}</span>
-                    {!u.confirmed && <Badge variant="outline" className="text-xs text-amber-600">Convite pendente</Badge>}
-                  </div>
-                  <p className="truncate text-xs text-muted-foreground">{u.email}</p>
-                </div>
-                <div className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  {isAdmin(u) ? 'Todas as instâncias' : `${seen} de ${inboxes.length} instância${inboxes.length !== 1 ? 's' : ''}`}
-                </div>
-                <Button variant="outline" size="sm" onClick={() => setEditing(u)} disabled={!canManage}>
-                  Gerenciar acesso
-                </Button>
-              </div>
-            );
-          })}
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="font-medium px-4 py-3">Membro</th>
+                  <th className="font-medium px-4 py-3">Cargo</th>
+                  <th className="font-medium px-4 py-3">Instâncias</th>
+                  <th className="font-medium px-4 py-3">Status</th>
+                  <th className="font-medium px-4 py-3 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((u) => {
+                  const seen = membership[String(u.id)]?.size ?? 0;
+                  return (
+                    <tr key={u.id} className="border-t border-border/60 hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                            {initials(u.name)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate font-medium">{u.name}</div>
+                            <div className="truncate text-xs text-muted-foreground">{u.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cargoColor(u.chave_role)}`}>{cargoLabel(u.chave_role)}</span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          {isAdmin(u) ? 'Todas' : `${seen} de ${inboxes.length}`}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {u.confirmed
+                          ? <Badge variant="outline" className="text-xs text-emerald-500">Ativo</Badge>
+                          : <Badge variant="outline" className="text-xs text-amber-600">Convite pendente</Badge>}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button variant="outline" size="sm" onClick={() => setEditing(u)} disabled={!canManage} className="h-8 text-xs">
+                          Gerenciar acesso
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
