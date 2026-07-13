@@ -49,6 +49,31 @@ export default function Sidebar({
   const mainMenuItems = menuItems.filter(item => item.href !== '/tutorials');
   const tutorialsItem = menuItems.find(item => item.href === '/tutorials');
 
+  // [redesign] grupos da sidebar (estética do protótipo). Só rótulo visual —
+  // não altera a ordem nem o menu customizável.
+  const GROUP_BY_HREF: Record<string, string> = {
+    '/dashboard': 'Principal',
+    '/conversations': 'Principal',
+    '/contacts': 'Principal',
+    '/pipelines': 'Principal',
+    '/disparos': 'Comercial',
+    '/ia-vendedora': 'Comercial',
+    '/equipe': 'Comercial',
+    '/properties': 'Imobiliário',
+    '/visits': 'Imobiliário',
+    '/proposals': 'Imobiliário',
+    '/contracts': 'Imobiliário',
+    '/property-capture-requests': 'Imobiliário',
+    '/property-interests': 'Imobiliário',
+    '/agents/list': 'Inteligência',
+    '/channels': 'Inteligência',
+    '/automations': 'Inteligência',
+    '/marketplace': 'Inteligência',
+    '/super-admin/pooled-clients': 'Gestão',
+    '/super-admin/automation-templates': 'Gestão',
+  };
+  let lastSidebarGroup = '';
+
   return (
     <>
       {/* Desktop Sidebar */}
@@ -63,16 +88,32 @@ export default function Sidebar({
         <TooltipProvider delayDuration={300}>
           {/* Navigation Menu */}
           <nav className="space-y-1.5 flex-1 px-2 py-4">
-            {mainMenuItems.map(item => (
-              <MenuItem
-                key={item.id || item.href}
-                item={item}
-                isCollapsed={isCollapsed}
-                isActive={isMenuWithSubItemsActive(item)}
-                activeMenu={activeMenu}
-                onClick={(e) => handleMenuClick(item, e)}
-              />
-            ))}
+            {mainMenuItems.flatMap(item => {
+              const group = GROUP_BY_HREF[item.href] || '';
+              const showHeader = !!group && group !== lastSidebarGroup && !isCollapsed;
+              if (group) lastSidebarGroup = group;
+              const menuNode = (
+                <MenuItem
+                  key={item.id || item.href}
+                  item={item}
+                  isCollapsed={isCollapsed}
+                  isActive={isMenuWithSubItemsActive(item)}
+                  activeMenu={activeMenu}
+                  onClick={(e) => handleMenuClick(item, e)}
+                />
+              );
+              return showHeader
+                ? [
+                    <div
+                      key={`group-${group}`}
+                      className="px-3 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40 select-none"
+                    >
+                      {group}
+                    </div>,
+                    menuNode,
+                  ]
+                : [menuNode];
+            })}
           </nav>
 
           {/* Personalizar menu */}
