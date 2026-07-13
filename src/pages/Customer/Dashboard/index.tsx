@@ -16,6 +16,7 @@ import CommercialKPISection from './components/CommercialKPISection';
 import DashboardMetricsSection from './components/DashboardMetricsSection';
 import DashboardTrendsSection from './components/DashboardTrendsSection';
 import DashboardPerformanceSection from './components/DashboardPerformanceSection';
+import DashboardUpcomingVisits from './components/DashboardUpcomingVisits';
 import type { DashboardFilterState, DashboardOption } from './components/types';
 import { DashboardTour } from '@/tours';
 
@@ -378,6 +379,7 @@ const CustomerDashboardPage = () => {
       <div data-tour="dashboard-trends">
         <DashboardTrendsSection data={data} t={t} channelShareData={channelShareData} />
       </div>
+      <DashboardUpcomingVisits />
       <div data-tour="dashboard-performance">
         <DashboardPerformanceSection data={data} t={t} />
       </div>
