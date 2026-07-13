@@ -190,15 +190,20 @@ export default function PropertyInterests() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <TrendingUp className="h-6 w-6 text-primary" />
-              Interesses
-            </h1>
-            <p className="text-sm text-muted-foreground">{total} interesse{total !== 1 ? 's' : ''} registrado{total !== 1 ? 's' : ''}</p>
+      {/* Cabeçalho estilo protótipo */}
+      <div className="border-b bg-background/95 backdrop-blur px-6 py-5">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-start gap-3">
+            <div
+              className="w-1 h-9 rounded-full shrink-0"
+              style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
+            />
+            <div>
+              <h1 className="text-2xl font-bold text-foreground leading-tight">Interesses</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Casa o lead com o imóvel certo — {total} interesse{total !== 1 ? 's' : ''} registrado{total !== 1 ? 's' : ''}
+              </p>
+            </div>
           </div>
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4 mr-2" />
@@ -239,95 +244,109 @@ export default function PropertyInterests() {
             </Button>
           </div>
         ) : (
-          <div className="grid gap-3">
-            {interests.map(interest => (
-              <div
-                key={interest.id}
-                className="flex items-start gap-4 rounded-xl border border-border bg-card p-4"
-              >
-                {/* Score */}
-                <div className="flex-shrink-0 text-center w-12">
-                  <div className={`text-xl font-bold ${SCORE_COLOR(interest.match_score)}`}>
-                    {interest.match_score}
-                  </div>
-                  <div className="text-xs text-muted-foreground">match</div>
-                </div>
-
-                {/* Main info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <Badge className={`text-xs ${INTEREST_STAGE_COLORS[interest.interest_stage]}`}>
-                      {INTEREST_STAGE_LABELS[interest.interest_stage]}
-                    </Badge>
-                  </div>
-
-                  {interest.property ? (
-                    <button
-                      className="flex items-center gap-1.5 text-sm font-medium hover:text-primary text-left"
-                      onClick={() => navigate('/properties')}
-                    >
-                      <Building2 className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{interest.property.title}</span>
-                      <span className="text-muted-foreground font-normal">·</span>
-                      <span className="text-muted-foreground font-normal">{interest.property.display_price}</span>
-                    </button>
-                  ) : (
-                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Building2 className="h-3 w-3" /> Imóvel ID {interest.property_id}
-                    </div>
-                  )}
-
-                  {interest.contact ? (
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                      <User className="h-3 w-3 shrink-0" />
-                      <span>{interest.contact.name}</span>
-                      {interest.contact.phone_number && (
-                        <span>· {interest.contact.phone_number}</span>
-                      )}
-                    </div>
-                  ) : null}
-
-                  {interest.notes && (
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1 italic">{interest.notes}</p>
-                  )}
-                  {interest.lost_reason && (
-                    <p className="text-xs text-red-500 mt-1">Motivo: {interest.lost_reason}</p>
-                  )}
-                </div>
-
-                {/* Actions */}
-                {!isClosed(interest.interest_stage) && (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      title="Avançar estágio"
-                      onClick={() => handleAdvance(interest)}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-emerald-600 hover:text-emerald-700"
-                      title="Fechar como Ganho"
-                      onClick={() => handleCloseWon(interest)}
-                    >
-                      <Trophy className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:text-destructive"
-                      title="Descartar"
-                      onClick={() => { setLostTarget(interest); setLostReason(''); }}
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="rounded-xl border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="font-medium px-4 py-3 w-20">Match</th>
+                    <th className="font-medium px-4 py-3">Lead</th>
+                    <th className="font-medium px-4 py-3">Imóvel</th>
+                    <th className="font-medium px-4 py-3">Estágio</th>
+                    <th className="font-medium px-4 py-3 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {interests.map(interest => (
+                    <tr key={interest.id} className="border-t border-border/60 hover:bg-muted/20 transition-colors align-top">
+                      <td className="px-4 py-3">
+                        <div className={`text-xl font-bold leading-none ${SCORE_COLOR(interest.match_score)}`}>
+                          {interest.match_score}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">match</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {interest.contact ? (
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 font-medium">
+                              <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <span className="truncate">{interest.contact.name}</span>
+                            </div>
+                            {interest.contact.phone_number && (
+                              <div className="text-xs text-muted-foreground mt-0.5">{interest.contact.phone_number}</div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {interest.property ? (
+                          <button
+                            className="flex items-center gap-1.5 font-medium hover:text-primary text-left max-w-[260px]"
+                            onClick={() => navigate('/properties')}
+                          >
+                            <Building2 className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{interest.property.title}</span>
+                          </button>
+                        ) : (
+                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Building2 className="h-3 w-3" /> Imóvel ID {interest.property_id}
+                          </div>
+                        )}
+                        {interest.property?.display_price && (
+                          <div className="text-xs text-muted-foreground mt-0.5">{interest.property.display_price}</div>
+                        )}
+                        {interest.notes && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1 italic max-w-[260px]">{interest.notes}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          <Badge className={`text-xs w-fit ${INTEREST_STAGE_COLORS[interest.interest_stage]}`}>
+                            {INTEREST_STAGE_LABELS[interest.interest_stage]}
+                          </Badge>
+                          {interest.lost_reason && (
+                            <span className="text-[11px] text-red-500 max-w-[160px] truncate" title={interest.lost_reason}>
+                              {interest.lost_reason}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {!isClosed(interest.interest_stage) ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button size="sm" variant="ghost" title="Avançar estágio" onClick={() => handleAdvance(interest)}>
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-emerald-600 hover:text-emerald-700"
+                              title="Fechar como Ganho"
+                              onClick={() => handleCloseWon(interest)}
+                            >
+                              <Trophy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              title="Descartar"
+                              onClick={() => { setLostTarget(interest); setLostReason(''); }}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="text-right text-xs text-muted-foreground">—</div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
