@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useId } from 'react';
 import { useDarkMode } from '../hooks/useDarkMode';
 
 interface AppLogoProps {
@@ -18,6 +19,7 @@ export function AppLogo({ className, alt = 'LM Flow', style, forceTheme }: AppLo
   const effectiveTheme = forceTheme ?? theme;
   const lmColor = effectiveTheme === 'dark' ? '#FFFFFF' : '#191233';
   const font = "'Poppins','Inter',system-ui,-apple-system,'Segoe UI',sans-serif";
+  const gradId = `lmf-grad-${useId().replace(/:/g, '')}`;
 
   return (
     <svg
@@ -29,14 +31,14 @@ export function AppLogo({ className, alt = 'LM Flow', style, forceTheme }: AppLo
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <linearGradient id="lmf-wordmark-grad" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="#7C3AED" />
           <stop offset="55%" stopColor="#9333EA" />
           <stop offset="100%" stopColor="#A855F7" />
         </linearGradient>
       </defs>
       <text x="0" y="26" fontFamily={font} fontSize="28" fontWeight="700" letterSpacing="0.3" fill={lmColor}>LM</text>
-      <text x="51" y="26" fontFamily={font} fontSize="28" fontWeight="700" letterSpacing="0.3" fill="url(#lmf-wordmark-grad)">FLOW</text>
+      <text x="51" y="26" fontFamily={font} fontSize="28" fontWeight="700" letterSpacing="0.3" fill={`url(#${gradId})`}>FLOW</text>
     </svg>
   );
 }
