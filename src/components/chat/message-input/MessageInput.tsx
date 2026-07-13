@@ -394,7 +394,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   }, [user?.ui_settings?.editor_message_key]);
 
   const cardClassNames = `
-    w-full border-t border-x-0 border-b-0 rounded-none shadow-lg py-0 gap-0 transition-all duration-200 bg-background
+    wa-input-bar w-full border-t border-x-0 border-b-0 rounded-none shadow-lg py-0 gap-0 transition-all duration-200 bg-background
   `;
 
   // Componente de preview da resposta
