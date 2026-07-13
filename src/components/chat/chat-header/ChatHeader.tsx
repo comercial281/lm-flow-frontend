@@ -274,7 +274,7 @@ const ChatHeader = ({
   };
 
   return (
-    <div className="flex-shrink-0 p-4 border-b bg-background/95 backdrop-blur-sm">
+    <div className="wa-header flex-shrink-0 p-4 border-b bg-background/95 backdrop-blur-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* Back button for mobile */}

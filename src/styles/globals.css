@@ -494,3 +494,60 @@ button[role='switch'][data-state='unchecked'],
   background-color: #ef4444 !important; /* vermelho */
   border-color: #ef4444 !important;
 }
+
+/* ═══ Conversas = espelho do WhatsApp (só reskin, lógica intacta) ═══ */
+.wa-chat {
+  --wa-bg: #e5ddd5;
+  --wa-in: #ffffff;
+  --wa-out: #dcf8c6;
+  --wa-in-tx: #111b21;
+  --wa-out-tx: #111b21;
+  background-color: var(--wa-bg) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='340' height='340' viewBox='0 0 340 340'%3E%3Cg fill='none' stroke='%230b141a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='0.05'%3E%3Cpath d='M40 60c-8-8-20-2-20 8 0 9 20 20 20 20s20-11 20-20c0-10-12-16-20-8z'/%3E%3Cpath d='M120 40h34a6 6 0 0 1 6 6v18a6 6 0 0 1-6 6h-20l-9 8v-8h-5a6 6 0 0 1-6-6V46a6 6 0 0 1 6-6z'/%3E%3Crect x='240' y='36' width='26' height='46' rx='5'/%3E%3Cline x1='248' y1='75' x2='258' y2='75'/%3E%3Ccircle cx='300' cy='150' r='20'/%3E%3Cpath d='M292 156a10 10 0 0 0 16 0'/%3E%3Crect x='30' y='150' width='44' height='32' rx='5'/%3E%3Ccircle cx='52' cy='166' r='9'/%3E%3Cpath d='M40 150l4-6h16l4 6'/%3E%3Cpath d='M210 118l6 13 14 2-10 10 2 14-12-7-12 7 2-14-10-10 14-2z'/%3E%3Cpath d='M40 250l60-22-22 60-10-24z'/%3E%3Ccircle cx='170' cy='262' r='20'/%3E%3Cpath d='M170 250v12l8 5'/%3E%3Cpath d='M270 250h34v14a12 12 0 0 1-12 12h-10a12 12 0 0 1-12-12z'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 360px;
+}
+.dark .wa-chat {
+  --wa-bg: #0b141a;
+  --wa-in: #202c33;
+  --wa-out: #005c4b;
+  --wa-in-tx: #e9edef;
+  --wa-out-tx: #e9edef;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='340' height='340' viewBox='0 0 340 340'%3E%3Cg fill='none' stroke='%23e9edef' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='0.04'%3E%3Cpath d='M40 60c-8-8-20-2-20 8 0 9 20 20 20 20s20-11 20-20c0-10-12-16-20-8z'/%3E%3Cpath d='M120 40h34a6 6 0 0 1 6 6v18a6 6 0 0 1-6 6h-20l-9 8v-8h-5a6 6 0 0 1-6-6V46a6 6 0 0 1 6-6z'/%3E%3Crect x='240' y='36' width='26' height='46' rx='5'/%3E%3Cline x1='248' y1='75' x2='258' y2='75'/%3E%3Ccircle cx='300' cy='150' r='20'/%3E%3Cpath d='M292 156a10 10 0 0 0 16 0'/%3E%3Crect x='30' y='150' width='44' height='32' rx='5'/%3E%3Ccircle cx='52' cy='166' r='9'/%3E%3Cpath d='M40 150l4-6h16l4 6'/%3E%3Cpath d='M210 118l6 13 14 2-10 10 2 14-12-7-12 7 2-14-10-10 14-2z'/%3E%3Cpath d='M40 250l60-22-22 60-10-24z'/%3E%3Ccircle cx='170' cy='262' r='20'/%3E%3Cpath d='M170 250v12l8 5'/%3E%3Cpath d='M270 250h34v14a12 12 0 0 1-12 12h-10a12 12 0 0 1-12-12z'/%3E%3C/g%3E%3C/svg%3E");
+}
+/* balões estilo WhatsApp — só mensagens normais (privadas/bot mantêm o estilo) */
+.wa-chat .wa-msg-bubble[data-own='1'][data-private='0'][data-bot='0'] {
+  background: var(--wa-out) !important;
+  color: var(--wa-out-tx) !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  border-top-right-radius: 2px !important;
+  box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13) !important;
+}
+.wa-chat .wa-msg-bubble[data-own='0'][data-private='0'] {
+  background: var(--wa-in) !important;
+  color: var(--wa-in-tx) !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  border-top-left-radius: 2px !important;
+  box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13) !important;
+}
+.wa-chat .wa-msg-bubble[data-private='0'] .text-muted-foreground {
+  color: inherit !important;
+  opacity: 0.6;
+}
+/* header verde estilo WhatsApp */
+.wa-header {
+  background: #075e54 !important;
+  color: #fff !important;
+  border-bottom-color: transparent !important;
+  backdrop-filter: none !important;
+}
+.dark .wa-header {
+  background: #202c33 !important;
+}
+.wa-header .text-muted-foreground {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+.wa-header svg {
+  color: #fff;
+}

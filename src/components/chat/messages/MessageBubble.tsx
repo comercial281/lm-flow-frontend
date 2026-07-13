@@ -425,7 +425,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {renderContextMenu(
           <div
-            className={`rounded-lg px-3 py-2 ${isDeleted ? 'cursor-default' : 'cursor-pointer'} ${isThreadReply
+            data-own={isOwn ? '1' : '0'}
+            data-private={isPrivate ? '1' : '0'}
+            data-bot={isFromBot ? '1' : '0'}
+            className={`wa-msg-bubble rounded-lg px-3 py-2 ${isDeleted ? 'cursor-default' : 'cursor-pointer'} ${isThreadReply
               ? 'rounded-tl-md' // Canto superior esquerdo mais suave para replies
               : ''
               } ${isPrivate
