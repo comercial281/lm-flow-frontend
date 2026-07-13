@@ -222,50 +222,96 @@ export default function Disparos() {
               Nenhum disparo neste pipeline ainda. Clique em "Novo disparo" pra criar o primeiro.
             </div>
           ) : (
-            <div className="space-y-3">
-              {campaigns.map(c => {
-                const meta = STATUS_META[c.status];
-                const done = c.sent_count + c.failed_count + c.skipped_count;
-                const pct = c.total_count ? Math.round((done / c.total_count) * 100) : 0;
+            <>
+              {/* KPIs — agregado real das campanhas */}
+              {(() => {
+                const agg = campaigns.reduce((a, c) => ({
+                  sent: a.sent + c.sent_count,
+                  delivered: a.delivered + (c.delivered_count ?? 0),
+                  replied: a.replied + (c.replied_count ?? 0),
+                }), { sent: 0, delivered: 0, replied: 0 });
+                const kpis = [
+                  { label: 'Campanhas', value: campaigns.length, color: 'text-violet-400', tint: 'rgba(124,58,237,0.14)' },
+                  { label: 'Enviadas', value: agg.sent, color: 'text-blue-400', tint: 'rgba(59,130,246,0.14)' },
+                  { label: 'Entregues', value: agg.delivered, color: 'text-emerald-400', tint: 'rgba(16,185,129,0.14)' },
+                  { label: 'Respostas', value: agg.replied, color: 'text-fuchsia-400', tint: 'rgba(217,70,239,0.14)' },
+                ];
                 return (
-                  <div key={c.id} className="border border-border rounded-xl p-3 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium truncate">{c.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {c.sent_count} enviadas · {c.failed_count} falhas · {c.total_count} no total
-                        </div>
-                        {(c.delivered_count != null || c.read_count != null || c.replied_count != null) && (
-                          <div className="text-xs text-muted-foreground">
-                            {c.delivered_count ?? 0} entregues · {c.read_count ?? 0} lidas · <span className="text-foreground font-medium">{c.replied_count ?? 0} responderam</span>
-                          </div>
-                        )}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {kpis.map(k => (
+                      <div key={k.label} className="relative overflow-hidden rounded-xl border bg-card/60 p-4" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                        <div aria-hidden className="pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full blur-2xl" style={{ background: k.tint }} />
+                        <p className="relative text-xs font-medium text-muted-foreground">{k.label}</p>
+                        <p className={`relative text-2xl font-bold tracking-tight mt-1 ${k.color}`}>{k.value.toLocaleString('pt-BR')}</p>
                       </div>
-                      <Badge className={`text-xs border ${meta.cls}`}>{meta.label}</Badge>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-primary h-1.5 transition-all" style={{ width: `${pct}%` }} />
-                    </div>
-                    {(c.status === 'running' || c.status === 'paused') && (
-                      <div className="flex items-center gap-2 pt-1">
-                        {c.status === 'running' ? (
-                          <Button variant="outline" size="sm" onClick={() => setStatus(c, 'pause')}>
-                            <Pause className="w-3.5 h-3.5 mr-1" /> Pausar
-                          </Button>
-                        ) : (
-                          <Button variant="outline" size="sm" onClick={() => setStatus(c, 'resume')}>
-                            <Play className="w-3.5 h-3.5 mr-1" /> Retomar
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setStatus(c, 'cancel')}>
-                          <Ban className="w-3.5 h-3.5 mr-1" /> Cancelar
-                        </Button>
-                      </div>
-                    )}
+                    ))}
                   </div>
                 );
-              })}
-            </div>
+              })()}
+
+              {/* Tabela de campanhas — estilo protótipo */}
+              <div className="rounded-xl border bg-card overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                        <th className="font-medium px-4 py-3">Campanha</th>
+                        <th className="font-medium px-4 py-3">Enviadas</th>
+                        <th className="font-medium px-4 py-3">Entregues</th>
+                        <th className="font-medium px-4 py-3">Respostas</th>
+                        <th className="font-medium px-4 py-3 min-w-[140px]">Progresso</th>
+                        <th className="font-medium px-4 py-3">Status</th>
+                        <th className="font-medium px-4 py-3 text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {campaigns.map(c => {
+                        const meta = STATUS_META[c.status];
+                        const done = c.sent_count + c.failed_count + c.skipped_count;
+                        const pct = c.total_count ? Math.round((done / c.total_count) * 100) : 0;
+                        return (
+                          <tr key={c.id} className="border-t border-border/60 hover:bg-muted/20 transition-colors">
+                            <td className="px-4 py-3 font-medium max-w-[220px] truncate" title={c.name}>{c.name}</td>
+                            <td className="px-4 py-3 tabular-nums">{c.sent_count}</td>
+                            <td className="px-4 py-3 tabular-nums text-muted-foreground">{c.delivered_count ?? 0}</td>
+                            <td className="px-4 py-3 tabular-nums font-medium">{c.replied_count ?? 0}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-full min-w-[70px] bg-muted rounded-full h-1.5 overflow-hidden">
+                                  <div className="bg-primary h-1.5 transition-all" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-[11px] text-muted-foreground tabular-nums">{pct}%</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3"><Badge className={`text-xs border ${meta.cls}`}>{meta.label}</Badge></td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {(c.status === 'running' || c.status === 'paused') && (
+                                  <>
+                                    {c.status === 'running' ? (
+                                      <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setStatus(c, 'pause')}>
+                                        <Pause className="w-3.5 h-3.5 mr-1" /> Pausar
+                                      </Button>
+                                    ) : (
+                                      <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setStatus(c, 'resume')}>
+                                        <Play className="w-3.5 h-3.5 mr-1" /> Retomar
+                                      </Button>
+                                    )}
+                                    <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive" onClick={() => setStatus(c, 'cancel')}>
+                                      <Ban className="w-3.5 h-3.5 mr-1" /> Cancelar
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
           )}
 
           {pipelineId && (
