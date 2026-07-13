@@ -553,12 +553,18 @@ export default function Properties() {
       {/* Header */}
       <div className="border-b bg-background/95 backdrop-blur px-6 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Building2 className="h-6 w-6 text-primary" />
-              Imóveis
-            </h1>
-            <p className="text-sm text-muted-foreground">{total} imóvel{total !== 1 ? 's' : ''} cadastrado{total !== 1 ? 's' : ''}</p>
+          <div className="flex items-start gap-3">
+            <div
+              className="w-1 h-9 rounded-full shrink-0"
+              style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
+            />
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2 leading-tight">
+                <Building2 className="h-6 w-6 text-primary" />
+                Imóveis
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{total} imóvel{total !== 1 ? 's' : ''} cadastrado{total !== 1 ? 's' : ''}</p>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={() => navigate('/properties/map')}>

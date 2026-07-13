@@ -156,13 +156,19 @@ export default function Disparos() {
 
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
-      <div className="flex items-center gap-2">
-        <Megaphone className="h-6 w-6 text-primary" />
-        <div>
-          <h1 className="text-xl font-semibold">Disparos</h1>
-          <p className="text-sm text-muted-foreground">
-            Disparo em massa por WhatsApp — Evolution ou oficial (Cloud API), templates e cadências.
-          </p>
+      <div className="flex items-start gap-3">
+        <div
+          className="w-1 h-9 rounded-full shrink-0"
+          style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
+        />
+        <div className="flex items-start gap-2">
+          <Megaphone className="h-6 w-6 text-primary shrink-0 mt-0.5" />
+          <div>
+            <h1 className="text-2xl font-bold leading-tight">Disparos</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Disparo em massa por WhatsApp — Evolution ou oficial (Cloud API), templates e cadências.
+            </p>
+          </div>
         </div>
       </div>
 
