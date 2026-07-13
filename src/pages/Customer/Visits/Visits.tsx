@@ -26,10 +26,11 @@ import {
   Star,
   Search,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CalendarDays,
   List,
 } from 'lucide-react';
-import type { View, SlotInfo } from 'react-big-calendar';
 import {
   visitsService,
   Visit,
@@ -42,7 +43,6 @@ import { propertiesService, Property } from '@/services/properties/propertiesSer
 import { usersService } from '@/services/users';
 import type { User } from '@/types/users';
 
-import { VisitsCalendar, CalendarEvent } from '@/components/visits/VisitsCalendar';
 import { LeadCombobox } from '@/components/visits/LeadCombobox';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 
@@ -93,6 +93,126 @@ function toLocalInput(d: Date): string {
 
 type ViewMode = 'calendar' | 'list';
 
+// Pill de evento por status — cores espelhando o protótipo (accent/info/warn/good).
+const PILL_STYLES: Record<string, string> = {
+  scheduled:   'text-violet-300 bg-violet-500/15 hover:bg-violet-500/25',
+  confirmed:   'text-blue-300 bg-blue-500/15 hover:bg-blue-500/25',
+  in_progress: 'text-orange-300 bg-orange-500/15 hover:bg-orange-500/25',
+  completed:   'text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25',
+  rescheduled: 'text-amber-300 bg-amber-500/15 hover:bg-amber-500/25',
+  cancelled:   'text-red-300 bg-red-500/15 hover:bg-red-500/25',
+  no_show:     'text-gray-400 bg-gray-500/15 hover:bg-gray-500/25',
+};
+const DOW = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+function dayKey(d: Date) {
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+/** Calendário de mês idêntico ao protótipo: grade 7 colunas, células com dia +
+ *  pills coloridos por status. Dados reais das visitas. */
+function MonthGrid({ date, visits, onNavigate, onDayClick, onVisitClick }: {
+  date: Date;
+  visits: Visit[];
+  onNavigate: (d: Date) => void;
+  onDayClick: (d: Date) => void;
+  onVisitClick: (v: Visit) => void;
+}) {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const today = new Date();
+
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const byDay = new Map<string, Visit[]>();
+  visits.forEach(v => {
+    const k = dayKey(new Date(v.scheduled_at));
+    if (!byDay.has(k)) byDay.set(k, []);
+    byDay.get(k)!.push(v);
+  });
+
+  const cells: Array<{ date: Date; out: boolean }> = [];
+  for (let i = 0; i < firstDow; i++) {
+    cells.push({ date: new Date(year, month, 1 - (firstDow - i)), out: true });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push({ date: new Date(year, month, d), out: false });
+  }
+  while (cells.length % 7 !== 0) {
+    const last = cells[cells.length - 1].date;
+    cells.push({ date: new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1), out: true });
+  }
+
+  return (
+    <div className="rounded-xl border bg-card p-4">
+      {/* Navegação do mês */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-1 h-6 rounded-full shrink-0" style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }} />
+          <h2 className="text-base font-bold">{MONTHS[month]} {year}</h2>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(new Date(year, month - 1, 1))}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => onNavigate(new Date())}>Hoje</Button>
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(new Date(year, month + 1, 1))}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Dias da semana */}
+      <div className="grid grid-cols-7 gap-2 mb-2">
+        {DOW.map(d => (
+          <div key={d} className="text-[10.5px] font-semibold uppercase text-muted-foreground text-center pb-0.5">{d}</div>
+        ))}
+      </div>
+
+      {/* Grade de dias */}
+      <div className="grid grid-cols-7 gap-2">
+        {cells.map((cell, i) => {
+          const dayVisits = (byDay.get(dayKey(cell.date)) || [])
+            .sort((a, b) => +new Date(a.scheduled_at) - +new Date(b.scheduled_at));
+          const isTodayCell = cell.date.toDateString() === today.toDateString();
+          return (
+            <div
+              key={i}
+              onClick={() => onDayClick(cell.date)}
+              className={`min-h-[96px] rounded-[10px] border p-2 flex flex-col gap-1 cursor-pointer transition-colors ${
+                cell.out ? 'opacity-40 bg-muted/20 border-border/50' : 'bg-muted/30 border-border hover:border-primary/40'
+              } ${isTodayCell ? '!border-primary !bg-primary/10' : ''}`}
+            >
+              <span className={`text-[12.5px] font-semibold ${isTodayCell ? 'text-primary' : 'text-muted-foreground'}`}>
+                {cell.date.getDate()}
+              </span>
+              {dayVisits.slice(0, 3).map(v => {
+                const time = new Date(v.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const who = v.contact?.name || v.property?.title || 'Visita';
+                return (
+                  <button
+                    key={v.id}
+                    onClick={e => { e.stopPropagation(); onVisitClick(v); }}
+                    className={`text-[10px] font-semibold px-1.5 py-[3px] rounded-md truncate text-left transition-colors ${PILL_STYLES[v.status] || PILL_STYLES.scheduled}`}
+                    title={`${time} · ${who}`}
+                  >
+                    {time} · {who}
+                  </button>
+                );
+              })}
+              {dayVisits.length > 3 && (
+                <span className="text-[10px] text-muted-foreground pl-1">+{dayVisits.length - 3} mais</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Visits() {
   const canCreate = useFeature('visits_create');
   const [visits, setVisits]         = useState<Visit[]>([]);
@@ -101,9 +221,6 @@ export default function Visits() {
   const [activeTab, setActiveTab]   = useState('');
   const [viewMode, setViewMode]     = useState<ViewMode>('calendar');
 
-  // No celular a grade de 7 colunas (semana) fica espremida → abre em "Dia".
-  const [calView, setCalView]       = useState<View>(() =>
-    (typeof window !== 'undefined' && window.innerWidth < 640) ? 'day' : 'week');
   const [calDate, setCalDate]       = useState<Date>(new Date());
 
   const [modalOpen, setModalOpen]   = useState(false);
@@ -269,29 +386,11 @@ export default function Visits() {
     }
   };
 
-  const handleSelectSlot = (slot: SlotInfo) => {
-    openScheduleModal({
-      scheduled_at: toLocalInput(slot.start as Date),
-      duration_minutes: Math.max(30, Math.round(((slot.end as Date).getTime() - (slot.start as Date).getTime()) / 60000)),
-    });
-  };
-
-  const handleSelectEvent = (event: CalendarEvent) => {
-    const visit = event.resource;
+  const handleVisitClick = (visit: Visit) => {
     if (visit.status === 'scheduled' || visit.status === 'confirmed' || visit.status === 'in_progress') {
       setActionModal({ visit, action: 'complete' });
     } else {
       toast.info(`Visita ${VISIT_STATUS_LABELS[visit.status] ?? visit.status}`);
-    }
-  };
-
-  const handleReschedule = async (visit: Visit, newStart: Date) => {
-    try {
-      const updated = await visitsService.reschedule(visit.id, newStart.toISOString());
-      setVisits(prev => prev.map(v => v.id === updated.id ? updated : v));
-      toast.success('Visita reagendada');
-    } catch {
-      toast.error('Erro ao reagendar');
     }
   };
 
@@ -369,15 +468,14 @@ export default function Visits() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
         {viewMode === 'calendar' ? (
-          <VisitsCalendar
-            visits={visits}
-            view={calView}
+          <MonthGrid
             date={calDate}
-            onView={setCalView}
+            visits={visits}
             onNavigate={setCalDate}
-            onSelectSlot={handleSelectSlot}
-            onSelectEvent={handleSelectEvent}
-            onReschedule={handleReschedule}
+            onDayClick={d => openScheduleModal({
+              scheduled_at: toLocalInput(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0)),
+            })}
+            onVisitClick={handleVisitClick}
           />
         ) : loading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
