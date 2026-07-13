@@ -302,12 +302,18 @@ export default function Visits() {
       {/* Header */}
       <div className="border-b bg-background/95 backdrop-blur px-6 py-4">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <CalendarClock className="h-6 w-6 text-primary" />
-              Agenda de Visitas
-            </h1>
-            <p className="text-sm text-muted-foreground">{total} visita{total !== 1 ? 's' : ''}</p>
+          <div className="flex items-start gap-3">
+            <div
+              className="w-1 h-9 rounded-full shrink-0"
+              style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
+            />
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2 leading-tight">
+                <CalendarClock className="h-6 w-6 text-primary" />
+                Agenda de Visitas
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{total} visita{total !== 1 ? 's' : ''}</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {/* View toggle */}
