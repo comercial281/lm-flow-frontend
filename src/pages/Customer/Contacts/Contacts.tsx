@@ -73,7 +73,7 @@ export default function Contacts() {
   const navigate = useNavigate();
   const { can, isReady: permissionsReady } = useUserPermissions();
   const [state, setState] = useState<ContactsState>(INITIAL_STATE);
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
