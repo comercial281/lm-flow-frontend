@@ -1219,11 +1219,26 @@ function PropertyCard({
     ?? formatCurrency(p.sale_price)
     ?? formatCurrency(p.rent_price);
 
+  // [redesign] placeholder da foto com gradiente da marca (varia por imóvel), estilo protótipo
+  const PROP_GRADS = [
+    'linear-gradient(135deg,#7C3AED,#4F46E5)',
+    'linear-gradient(135deg,#0EA5A4,#4F46E5)',
+    'linear-gradient(135deg,#D97706,#9333EA)',
+    'linear-gradient(135deg,#9333EA,#E11D48)',
+    'linear-gradient(135deg,#4F46E5,#7C3AED)',
+    'linear-gradient(135deg,#16A34A,#0EA5A4)',
+  ];
+  const propGradIdx =
+    Math.abs(String(p.id).split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % PROP_GRADS.length;
+
   return (
     <div className="group relative flex flex-col rounded-xl border border-border bg-card hover:shadow-md transition-shadow overflow-hidden">
       {/* Placeholder thumbnail */}
-      <div className="h-36 bg-muted flex items-center justify-center relative">
-        <Building2 className="h-10 w-10 text-muted-foreground/30" />
+      <div
+        className="h-36 flex items-center justify-center relative"
+        style={{ background: PROP_GRADS[propGradIdx] }}
+      >
+        <Building2 className="h-10 w-10 text-white/30" />
         <div className="absolute top-2 left-2 flex gap-1">
           <span className={`text-xs px-2 py-0.5 rounded font-medium ${STATUS_COLORS[p.status] ?? ''}`}>
             {STATUS_LABELS[p.status] ?? p.status}
