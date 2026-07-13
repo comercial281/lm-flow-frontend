@@ -20,6 +20,32 @@ function CountUp({ target }: { target: number }) {
   return <span ref={ref}>{v.toLocaleString('pt-BR')}</span>;
 }
 
+/** Sparkline com dado REAL (série diária). Sem dados => não renderiza nada. */
+function Sparkline({ values, color }: { values: number[]; color: string }) {
+  if (!values || values.length < 2) return null;
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+  const range = max - min || 1;
+  const w = 96;
+  const h = 34;
+  const step = w / (values.length - 1);
+  const pts = values
+    .map((v, i) => `${(i * step).toFixed(1)},${(h - ((v - min) / range) * h).toFixed(1)}`)
+    .join(' ');
+  return (
+    <svg
+      className="pointer-events-none absolute right-4 bottom-4 opacity-90"
+      width={w}
+      height={h}
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      <polyline points={pts} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 interface KpiDef {
   label: string;
   description: string;
@@ -28,8 +54,10 @@ interface KpiDef {
   iconColor: string;
   numColor: string;
   glowColor: string;
+  sparkColor: string;
   displayValue: string | null;
   countTarget: number | null;
+  spark?: number[];
 }
 
 function KpiCard({ kpi }: { kpi: KpiDef }) {
@@ -40,7 +68,7 @@ function KpiCard({ kpi }: { kpi: KpiDef }) {
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="relative flex flex-col gap-3 rounded-xl border bg-card/60 p-5 backdrop-blur-sm overflow-hidden"
+      className="relative flex flex-col gap-3 rounded-xl border bg-card/60 p-5 backdrop-blur-sm overflow-hidden min-h-[128px]"
       style={{
         borderColor: hovered ? kpi.glowColor.replace('0.16', '0.38') : 'rgba(255,255,255,0.06)',
         transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
@@ -56,14 +84,17 @@ function KpiCard({ kpi }: { kpi: KpiDef }) {
         style={{ background: kpi.glowColor, opacity: hovered ? 1 : 0 }}
       />
 
-      <div
-        className={`inline-flex items-center justify-center w-9 h-9 rounded-lg shrink-0 ${kpi.iconBg}`}
-        style={{
-          boxShadow: hovered ? `0 0 18px ${kpi.glowColor}` : 'none',
-          transition: 'box-shadow 0.22s ease',
-        }}
-      >
-        <Icon className={`h-4 w-4 ${kpi.iconColor}`} />
+      <div className="flex items-center gap-2.5">
+        <div
+          className={`inline-flex items-center justify-center w-9 h-9 rounded-lg shrink-0 ${kpi.iconBg}`}
+          style={{
+            boxShadow: hovered ? `0 0 18px ${kpi.glowColor}` : 'none',
+            transition: 'box-shadow 0.22s ease',
+          }}
+        >
+          <Icon className={`h-4 w-4 ${kpi.iconColor}`} />
+        </div>
+        <p className="text-sm font-medium text-muted-foreground leading-tight">{kpi.label}</p>
       </div>
 
       <div className="relative">
@@ -72,9 +103,10 @@ function KpiCard({ kpi }: { kpi: KpiDef }) {
             ? <CountUp target={kpi.countTarget} />
             : kpi.displayValue ?? '—'}
         </p>
-        <p className="text-sm font-medium text-foreground mt-2 leading-tight">{kpi.label}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{kpi.description}</p>
+        <p className="text-xs text-muted-foreground mt-1.5 leading-tight max-w-[70%]">{kpi.description}</p>
       </div>
+
+      {kpi.spark && <Sparkline values={kpi.spark} color={kpi.sparkColor} />}
     </div>
   );
 }
@@ -90,6 +122,14 @@ const CommercialKPISection = ({ data }: Props) => {
 
   const resolved = Math.max(0, data.stats.total_conversations - data.stats.open_conversations);
 
+  // Série REAL de conversas por dia -> sparkline (nada inventado)
+  const conversationsSpark = (data.trends?.conversations_daily || [])
+    .map((d: any) => Number(d?.value ?? d?.count ?? d?.total ?? 0))
+    .filter((n: number) => Number.isFinite(n));
+  const responseSpark = (data.trends?.response_time_daily || [])
+    .map((d: any) => Number(d?.value ?? d?.count ?? d?.total ?? 0))
+    .filter((n: number) => Number.isFinite(n));
+
   const kpis: KpiDef[] = [
     {
       label: 'Leads no pipeline',
@@ -99,6 +139,7 @@ const CommercialKPISection = ({ data }: Props) => {
       iconColor: 'text-violet-400',
       numColor: 'text-violet-400',
       glowColor: 'rgba(124,58,237,0.16)',
+      sparkColor: '#a78bfa',
       displayValue: null,
       countTarget: data.pipeline.total,
     },
@@ -110,6 +151,7 @@ const CommercialKPISection = ({ data }: Props) => {
       iconColor: 'text-emerald-400',
       numColor: 'text-emerald-400',
       glowColor: 'rgba(16,185,129,0.16)',
+      sparkColor: '#34d399',
       displayValue: formatCurrency(data.pipeline.total_value),
       countTarget: null,
     },
@@ -121,6 +163,7 @@ const CommercialKPISection = ({ data }: Props) => {
       iconColor: 'text-blue-400',
       numColor: 'text-blue-400',
       glowColor: 'rgba(59,130,246,0.16)',
+      sparkColor: '#60a5fa',
       displayValue: formatCurrency(avgTicket),
       countTarget: null,
     },
@@ -132,8 +175,10 @@ const CommercialKPISection = ({ data }: Props) => {
       iconColor: 'text-fuchsia-400',
       numColor: 'text-fuchsia-400',
       glowColor: 'rgba(217,70,239,0.16)',
+      sparkColor: '#e879f9',
       displayValue: null,
       countTarget: data.stats.total_conversations,
+      spark: conversationsSpark.length >= 2 ? conversationsSpark : undefined,
     },
     {
       label: 'Atendimentos concluídos',
@@ -143,6 +188,7 @@ const CommercialKPISection = ({ data }: Props) => {
       iconColor: 'text-teal-400',
       numColor: 'text-teal-400',
       glowColor: 'rgba(20,184,166,0.16)',
+      sparkColor: '#2dd4bf',
       displayValue: null,
       countTarget: resolved,
     },
@@ -154,8 +200,10 @@ const CommercialKPISection = ({ data }: Props) => {
       iconColor: 'text-sky-400',
       numColor: 'text-sky-400',
       glowColor: 'rgba(14,165,233,0.16)',
+      sparkColor: '#38bdf8',
       displayValue: formatSeconds(data.stats.avg_resolution_time_seconds),
       countTarget: null,
+      spark: responseSpark.length >= 2 ? responseSpark : undefined,
     },
   ];
 
@@ -170,11 +218,11 @@ const CommercialKPISection = ({ data }: Props) => {
           <h2 className="text-lg font-semibold">KPIs Comerciais</h2>
         </div>
         <p className="text-sm text-muted-foreground mt-1 ml-4">
-          Visao geral do desempenho comercial no periodo filtrado
+          Visão geral do desempenho comercial no período filtrado
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {kpis.map((kpi, i) => (
           <KpiCard key={i} kpi={kpi} />
         ))}
