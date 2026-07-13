@@ -65,6 +65,22 @@ const DashboardTrendsSection = ({ data, t, channelShareData }: DashboardTrendsSe
           />
         </div>
 
+        <div data-tour="dashboard-channel-participation" className="h-full">
+          <DonutChartCard
+            title={t('dashboard.charts.channelShare') || 'Participação por canal'}
+            description={t('dashboard.charts.channelShareDescription') || 'Distribuição percentual de conversas por canal'}
+            data={channelShareData}
+            icon={Layers}
+            gradientFrom="#ec4899"
+            gradientTo="#8b5cf6"
+            centerLabel={tx('dashboard.charts.channelsLabel', 'Canais')}
+            centerValue={tx('dashboard.charts.shareLabel', 'Participação')}
+            tooltip={{ title: tTours('dashboard.step11.title'), content: tTours('dashboard.step11.content') }}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <div data-tour="dashboard-trends-response" className="h-full">
           <BarChartCard
             title={t('dashboard.charts.sessionDuration') || 'Tempo de 1ª resposta por dia'}
@@ -77,22 +93,6 @@ const DashboardTrendsSection = ({ data, t, channelShareData }: DashboardTrendsSe
             valueFormatter={value => `${Math.round(value)}s`}
             highlightMax
             tooltip={{ title: tTours('dashboard.step10.title'), content: tTours('dashboard.step10.content') }}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div data-tour="dashboard-channel-participation" className="h-full">
-          <DonutChartCard
-            title={t('dashboard.charts.channelShare') || 'Participação por canal'}
-            description={t('dashboard.charts.channelShareDescription') || 'Distribuição percentual de conversas por canal'}
-            data={channelShareData}
-            icon={Layers}
-            gradientFrom="#ec4899"
-            gradientTo="#8b5cf6"
-            centerLabel={tx('dashboard.charts.channelsLabel', 'Canais')}
-            centerValue={tx('dashboard.charts.shareLabel', 'Participação')}
-            tooltip={{ title: tTours('dashboard.step11.title'), content: tTours('dashboard.step11.content') }}
           />
         </div>
 
