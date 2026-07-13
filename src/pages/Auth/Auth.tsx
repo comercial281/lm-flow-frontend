@@ -341,7 +341,7 @@ export const Auth: React.FC = () => {
                       <Input
                         id="login-email" type="email" placeholder={t('auth.login.email')} disabled={isLoading}
                         autoComplete="username"
-                        className="bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-violet-500/60 focus:ring-violet-500/20"
+                        className="bg-white/10 border-white/25 text-white placeholder:text-white/45 focus:border-violet-500/70 focus:ring-violet-500/25"
                         {...loginForm.register('email')}
                       />
                       {loginForm.formState.errors.email && (
@@ -363,7 +363,7 @@ export const Auth: React.FC = () => {
                               placeholder={t('auth.login.password')}
                               disabled={isLoading}
                               autoComplete="current-password"
-                              className="bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-violet-500/60 focus:ring-violet-500/20 pr-10"
+                              className="bg-white/10 border-white/25 text-white placeholder:text-white/45 focus:border-violet-500/70 focus:ring-violet-500/25 pr-10"
                               {...f}
                             />
                           )}
