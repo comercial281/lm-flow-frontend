@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Badge, Card, CardContent } from '@/components/ui/ds';
 import { BaseHeader } from '@/components/base';
+import { useAuthStore } from '@/store/authStore';
 import type { HeaderFilter } from '@/components/base';
 import { useLanguage } from '@/hooks/useLanguage';
 import { pipelinesService } from '@/services/pipelines';
@@ -91,6 +92,7 @@ const dashboardPayloadCache = new Map<string, CustomerDashboardResponse>();
 
 const CustomerDashboardPage = () => {
   const { t } = useLanguage('customerDashboard');
+  const currentUser = useAuthStore(s => s.currentUser);
   const [defaultFilters] = useState<DashboardFilterState>(() => getDefaultFilterState());
   const [data, setData] = useState<CustomerDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -315,6 +317,19 @@ const CustomerDashboardPage = () => {
     );
   }
 
+  const dashHour = new Date().getHours();
+  const dashGreeting =
+    dashHour < 12 ? 'Bom dia' : dashHour < 18 ? 'Boa tarde' : 'Boa noite';
+  const dashFirstName =
+    (currentUser as { firstName?: string; name?: string } | null)?.firstName ||
+    (currentUser as { firstName?: string; name?: string } | null)?.name?.split(' ')[0] ||
+    '';
+  const dashDate = new Date().toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
   return (
     <div
       className="h-full flex flex-col p-4 gap-6"
@@ -326,8 +341,8 @@ const CustomerDashboardPage = () => {
       <DashboardTour />
       <div data-tour="dashboard-header">
         <BaseHeader
-          title={t('dashboard.title')}
-          subtitle={t('dashboard.subtitle')}
+          title={dashFirstName ? `${dashGreeting}, ${dashFirstName}` : dashGreeting}
+          subtitle={`Resumo da operação — ${dashDate}`}
           filters={appliedHeaderFilters}
           onFilterClick={handleOpenFilter}
           showFilters
