@@ -88,10 +88,18 @@ export default function BaseHeader({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         {/* Title Section */}
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight leading-8 text-sidebar-foreground mb-2">{title}</h1>
-          {subtitle && (
-            <p className="text-sm leading-5 text-sidebar-foreground/70">{subtitle}</p>
-          )}
+          <div className="flex items-start gap-3">
+            <div
+              className="w-1 h-8 rounded-full shrink-0 mt-0.5"
+              style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
+            />
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight leading-8 text-sidebar-foreground">{title}</h1>
+              {subtitle && (
+                <p className="text-sm leading-5 text-sidebar-foreground/70 mt-1">{subtitle}</p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Primary Action */}
