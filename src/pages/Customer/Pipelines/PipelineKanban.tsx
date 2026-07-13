@@ -1472,11 +1472,16 @@ export default function PipelineKanban() {
               {/* Stage Columns */}
               {filteredStages.map((stage: PipelineStage) => (
                 <div key={stage.id} className="w-80 flex-shrink-0">
-                  <div className="bg-background rounded-xl shadow-sm border border-border h-full flex flex-col">
+                  <div className="bg-muted/40 rounded-xl shadow-sm border border-border h-full flex flex-col">
                     {/* Stage Header */}
                     <div
-                      className="flex-shrink-0 px-4 py-3 border-b border-border bg-muted/50 rounded-t-xl border-t-4"
-                      style={{ borderTopColor: stage.color }}
+                      className="flex-shrink-0 px-4 py-3 border-b border-border rounded-t-xl border-t-4"
+                      style={{
+                        borderTopColor: stage.color,
+                        backgroundColor: stage.color?.startsWith('#')
+                          ? `${stage.color}1f`
+                          : undefined,
+                      }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
