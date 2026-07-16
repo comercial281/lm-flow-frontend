@@ -98,6 +98,8 @@ const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClien
 
 // Área do Admin — shell próprio (AdminLayout), fora do menu do CRM.
 const AdminLayout = lazyWithRetry(() => import('@/components/layout/AdminLayout'));
+// Shell da área de membros (Academia do cliente) — sem o CRM em volta.
+const MembersLayout = lazyWithRetry(() => import('@/components/layout/MembersLayout'));
 const AdminOverview = lazyWithRetry(() => import('@/pages/Admin/Area/Overview'));
 const AdminAuditoria = lazyWithRetry(() => import('@/pages/Admin/Area/Auditoria'));
 const AdminUso = lazyWithRetry(() => import('@/pages/Admin/Area/Uso'));
@@ -1578,9 +1580,11 @@ const AppRouter = () => {
             element={
               <PrivateRoute>
                 <CustomerRoute>
-                  <MainLayout>
+                  {/* Área de membros: shell próprio, sem o CRM em volta. O cliente
+                      estuda numa tela limpa e volta pelo botão. */}
+                  <MembersLayout>
                     <Tutorials />
-                  </MainLayout>
+                  </MembersLayout>
                 </CustomerRoute>
               </PrivateRoute>
             }
