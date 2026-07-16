@@ -1,5 +1,5 @@
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { Zap, Rocket, Code, FileInput, Repeat, Bell, Shuffle, SlidersHorizontal, Target } from 'lucide-react';
+import { Zap, Rocket, Code, FileInput, Repeat, Bell, Shuffle, Target } from 'lucide-react';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { isRootTenantHost } from '@/components/layout/config/menuItems';
@@ -72,18 +72,14 @@ const SECTORS: Sector[] = [
     path: '/automations/whatsapp-reminders',
     icon: Bell,
   },
+  // Tela única de distribuição: modo (Rodízio/Leilão/Manual/Por disponibilidade)
+  // + quem participa + prazo + gestor. Antes eram 2 itens aqui ("Roleta de
+  // Corretores" e "Distribuição de Leads") pro mesmo conceito, com 2 motores.
   {
     key: 'roleta-config',
-    name: 'Roleta de Corretores',
+    name: 'Distribuição de Leads',
     path: '/automations/roleta-config',
     icon: Shuffle,
-    featureKey: 'lead_automations',
-  },
-  {
-    key: 'assignment-settings',
-    name: 'Distribuição de Leads',
-    path: '/automations/assignment-settings',
-    icon: SlidersHorizontal,
     featureKey: 'lead_automations',
   },
   {
