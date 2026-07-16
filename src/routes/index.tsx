@@ -95,6 +95,12 @@ function SuperAdminRoute({ children }: { children: ReactNode }) {
 const ClientInstances = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances'));
 const AutomationTemplatesPage = lazyWithRetry(() => import('@/pages/SuperAdmin/AutomationTemplates/AutomationTemplates'));
 const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients'));
+
+// Área do Admin — shell próprio (AdminLayout), fora do menu do CRM.
+const AdminLayout = lazyWithRetry(() => import('@/components/layout/AdminLayout'));
+const AdminOverview = lazyWithRetry(() => import('@/pages/Admin/Area/Overview'));
+const AdminAuditoria = lazyWithRetry(() => import('@/pages/Admin/Area/Auditoria'));
+const AdminUso = lazyWithRetry(() => import('@/pages/Admin/Area/Uso'));
 const RoletaConfigPage = lazyWithRetry(() => import('@/pages/Customer/Settings/RoletaConfig/RoletaConfig'));
 const AssignmentSettingsPage = lazyWithRetry(() => import('@/pages/Customer/Settings/AssignmentSettings/AssignmentSettings'));
 const AutomationsLayout = lazyWithRetry(() => import('@/pages/Customer/Automations/AutomationsLayout'));
@@ -1856,6 +1862,76 @@ const AppRouter = () => {
             }
           />
 
+          {/* ================= ÁREA DO ADMIN (Leal Mídia) =================
+              Shell próprio: o menu do CRM some e entra o menu do admin.
+              Gate: SuperAdminRoute (host raiz + super-admin), o mesmo das
+              rotas /super-admin/* — que continuam vivas e redirecionando pra cá.
+          */}
+          <Route
+            path="/admin"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminOverview />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/clientes"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <PooledClients />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/auditoria"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminAuditoria />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/uso"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminUso />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/biblioteca"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AutomationTemplatesPage />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+
+          {/* Rotas antigas: mantidas como redirect pra não quebrar link salvo/bookmark. */}
+          <Route path="/super-admin/pooled-clients" element={<Navigate to="/admin/clientes" replace />} />
+          <Route path="/super-admin/automation-templates" element={<Navigate to="/admin/biblioteca" replace />} />
+
           {/* Super Admin — gerenciamento de instâncias de clientes */}
           <Route path="/super-admin/clients" element={<Navigate to="/super-admin/clientes" replace />} />
           <Route
@@ -1871,33 +1947,8 @@ const AppRouter = () => {
             }
           />
 
-          {/* Super Admin — biblioteca de templates de automacao */}
-          <Route
-            path="/super-admin/automation-templates"
-            element={
-              <PrivateRoute>
-                <MainLayout>
-                  <SuperAdminRoute>
-                    <AutomationTemplatesPage />
-                  </SuperAdminRoute>
-                </MainLayout>
-              </PrivateRoute>
-            }
-          />
-
-          {/* Super Admin — painel SaaS pooled (Entrar 1-clique, membros, senhas) */}
-          <Route
-            path="/super-admin/pooled-clients"
-            element={
-              <PrivateRoute>
-                <MainLayout>
-                  <SuperAdminRoute>
-                    <PooledClients />
-                  </SuperAdminRoute>
-                </MainLayout>
-              </PrivateRoute>
-            }
-          />
+          {/* /super-admin/automation-templates e /super-admin/pooled-clients viraram
+              redirects pra /admin/* (declarados no bloco da Área do Admin, acima). */}
 
           {/* Settings — roleta de corretores */}
           <Route

@@ -30,7 +30,6 @@ import {
   Globe,
   FileText,
   TrendingUp,
-  Library,
   Megaphone,
 } from 'lucide-react';
 
@@ -259,23 +258,9 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     // DEFAULT_OFF_FEATURES no backend). Não faz sentido cliente ver isso.
     clientToggleKey: 'marketplace',
   },
-  {
-    // Página única de clientes SaaS (pooled): lista + membros corretos por schema,
-    // Dashboard, Logs e Métricas de Uso. Substitui a antiga /super-admin/clientes
-    // (ClientInstances legado), cujo "Membros" via proxy mostrava o tenant errado.
-    name: 'Clientes CRM',
-    href: '/super-admin/pooled-clients',
-    icon: Building2,
-    requiredEmail: 'comercial@lealmidia.com.br',
-    rootTenantOnly: true,
-  },
-  {
-    name: 'Biblioteca de Automacoes',
-    href: '/super-admin/automation-templates',
-    icon: Library,
-    requiredEmail: 'comercial@lealmidia.com.br',
-    rootTenantOnly: true,
-  },
+  // 'Clientes CRM' e 'Biblioteca de Automacoes' saíram daqui: agora moram na
+  // Área do Admin (/admin), num shell próprio. O menu do CRM só tem coisa que o
+  // cliente usa — era esse o ponto de separar. Entrada: AdminAreaButton, no Header.
   {
     name: t('menu.customer.tutorials'),
     href: '/tutorials',
