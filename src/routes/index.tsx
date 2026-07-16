@@ -101,6 +101,7 @@ const AdminLayout = lazyWithRetry(() => import('@/components/layout/AdminLayout'
 const AdminOverview = lazyWithRetry(() => import('@/pages/Admin/Area/Overview'));
 const AdminAuditoria = lazyWithRetry(() => import('@/pages/Admin/Area/Auditoria'));
 const AdminUso = lazyWithRetry(() => import('@/pages/Admin/Area/Uso'));
+const AdminAcademia = lazyWithRetry(() => import('@/pages/Admin/Area/Academia'));
 const RoletaConfigPage = lazyWithRetry(() => import('@/pages/Customer/Settings/RoletaConfig/RoletaConfig'));
 const AssignmentSettingsPage = lazyWithRetry(() => import('@/pages/Customer/Settings/AssignmentSettings/AssignmentSettings'));
 const AutomationsLayout = lazyWithRetry(() => import('@/pages/Customer/Automations/AutomationsLayout'));
@@ -1922,6 +1923,20 @@ const AppRouter = () => {
                 <SuperAdminRoute>
                   <AdminLayout>
                     <AutomationTemplatesPage />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          {/* Academia dentro do admin: mesma tela do /tutorials, mas no shell do
+              admin. /tutorials continua sendo por onde o CLIENTE assiste. */}
+          <Route
+            path="/admin/academia"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminAcademia />
                   </AdminLayout>
                 </SuperAdminRoute>
               </PrivateRoute>

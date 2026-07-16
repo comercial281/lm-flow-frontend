@@ -53,9 +53,11 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     description: 'Templates de automação aplicáveis nos clientes',
   },
   {
+    // Aponta pra DENTRO do admin, não pro /tutorials do CRM: o item era um
+    // atalho que chutava o Giovani de volta pro shell do cliente.
     name: 'Academia',
-    href: '/tutorials',
+    href: '/admin/academia',
     icon: GraduationCap,
-    description: 'Aulas e documentação dos clientes',
+    description: 'Publicar e gerenciar as aulas e a documentação',
   },
 ];
