@@ -30,6 +30,7 @@ import MenuItem from './MenuItem';
 import { MenuItem as MenuItemType } from '../config/menuItems';
 import { ThemeToggle } from '../../ThemeToggle';
 import { DemoModeToggle } from '../../DemoModeToggle';
+import AdminAreaButton from './AdminAreaButton';
 import { AppLogo } from '../../AppLogo';
 import { useAppDataStore } from '@/store/appDataStore';
 
@@ -314,6 +315,8 @@ export default function Header({
             </button>
           )}
           <TourFab />
+          {/* Área do Admin (só super-admin no host raiz) */}
+          <AdminAreaButton />
           {/* Theme Toggle */}
           <ThemeToggle />
           {/* Modo Demo (borra dados sensíveis p/ gravar tutoriais) */}

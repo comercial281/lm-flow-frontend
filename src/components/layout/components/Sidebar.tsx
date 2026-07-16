@@ -69,8 +69,6 @@ export default function Sidebar({
     '/channels': 'Inteligência',
     '/automations': 'Inteligência',
     '/marketplace': 'Inteligência',
-    '/super-admin/pooled-clients': 'Gestão',
-    '/super-admin/automation-templates': 'Gestão',
   };
   let lastSidebarGroup = '';
 
