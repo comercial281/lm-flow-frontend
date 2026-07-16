@@ -8,8 +8,9 @@ import {
 import {
   Shuffle, Plus, Trash2, GripVertical, Save, Phone,
   Clock, Bell, ToggleLeft, ToggleRight, Users, BarChart2,
+  Gavel, Hand, Wifi,
 } from 'lucide-react';
-import { roletaConfigService, RoletaConfig, RoletaMember, BrokerAssignment } from '@/services/roletaConfig/roletaConfigService';
+import { roletaConfigService, RoletaConfig, RoletaMember, BrokerAssignment, DistributionMode } from '@/services/roletaConfig/roletaConfigService';
 import usersService from '@/services/users/usersService';
 import type { User } from '@/types/users';
 
@@ -26,6 +27,37 @@ const STATUS_LABEL: Record<string, string> = {
   passed:   'Passado',
   expired:  'Expirado',
 };
+
+// Os 4 modos, com nome de gente e explicação do que cada um faz.
+// Esta tela é o ÚNICO lugar que configura distribuição de lead.
+const MODES: { value: DistributionMode; label: string; icon: typeof Shuffle; desc: string }[] = [
+  {
+    value: 'rodizio',
+    label: 'Rodízio',
+    icon: Shuffle,
+    desc: 'Oferece para um corretor por vez, na vez dele (respeita o peso). Se ele não assumir no prazo, passa para o próximo.',
+  },
+  {
+    value: 'leilao',
+    label: 'Leilão',
+    icon: Gavel,
+    desc: 'Oferece para todos ao mesmo tempo. O primeiro que assumir leva. Bom para lead quente e para acabar com quem senta em cima do lead.',
+  },
+  {
+    value: 'manual',
+    label: 'Manual',
+    icon: Hand,
+    desc: 'O lead chega sem dono e o gerente escolhe quem atende.',
+  },
+  {
+    value: 'disponibilidade',
+    label: 'Por disponibilidade',
+    icon: Wifi,
+    desc: 'Entrega para o corretor que está Online e tem menos conversas abertas.',
+  },
+];
+
+const MODE_LABEL: Record<string, string> = Object.fromEntries(MODES.map(m => [m.value, m.label]));
 
 interface MemberRow extends Omit<RoletaMember, 'id'> {
   localId: string;
@@ -56,6 +88,7 @@ export default function RoletaConfigPage() {
   // form state
   const [inboxId, setInboxId]               = useState('');
   const [isActive, setIsActive]             = useState(true);
+  const [mode, setMode]                     = useState<DistributionMode>('rodizio');
   const [timeoutMin, setTimeoutMin]         = useState(30);
   const [gestorNum, setGestorNum]           = useState('');
   const [notifInboxId, setNotifInboxId]     = useState('');
@@ -97,6 +130,7 @@ export default function RoletaConfigPage() {
     setEditing(null);
     setInboxId('');
     setIsActive(true);
+    setMode('rodizio');
     setTimeoutMin(30);
     setGestorNum('');
     setNotifInboxId('');
@@ -108,6 +142,7 @@ export default function RoletaConfigPage() {
     setEditing(c);
     setInboxId(c.inbox_id);
     setIsActive(c.is_active);
+    setMode(c.distribution_mode ?? 'rodizio');
     setTimeoutMin(c.timeout_minutes);
     setGestorNum(c.gestor_whatsapp_number ?? '');
     setNotifInboxId(c.notification_inbox_id ?? '');
@@ -119,13 +154,18 @@ export default function RoletaConfigPage() {
     if (!inboxId.trim()) { toast.error('Inbox ID obrigatorio'); return; }
     if (!gestorNum.trim()) { toast.error('Numero do gestor obrigatorio'); return; }
     const membersValid = members.filter(m => m.user_id && m.personal_whatsapp_number);
-    if (membersValid.length === 0) { toast.error('Adicione ao menos um corretor com numero de WhatsApp'); return; }
+    // No modo Manual o gerente distribui na mão, então não precisa de corretor cadastrado.
+    if (mode !== 'manual' && membersValid.length === 0) {
+      toast.error('Adicione ao menos um corretor com numero de WhatsApp');
+      return;
+    }
 
     setSaving(true);
     try {
       const payload = {
         inbox_id:               inboxId,
         is_active:              isActive,
+        distribution_mode:      mode,
         timeout_minutes:        timeoutMin,
         gestor_whatsapp_number: gestorNum,
         notification_inbox_id:  notifInboxId || null,
@@ -185,15 +225,15 @@ export default function RoletaConfigPage() {
         <div>
           <h1 className="text-xl font-semibold flex items-center gap-2">
             <Shuffle className="h-5 w-5 text-[#7c3aed]" />
-            Roleta de Corretores
+            Distribuição de Leads
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Distribua leads automaticamente entre corretores com pesos configurados por inbox.
+            O único lugar que decide quem atende cada lead: o modo, quem participa, o prazo e o aviso do gestor.
           </p>
         </div>
         <Button onClick={openCreate} className="bg-[#7c3aed] hover:bg-[#6d28d9] text-white gap-2">
           <Plus className="h-4 w-4" />
-          Nova roleta
+          Nova distribuição
         </Button>
       </div>
 
@@ -232,9 +272,18 @@ export default function RoletaConfigPage() {
                 <div className="flex items-center gap-3">
                   <div className={`h-2 w-2 rounded-full ${c.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`} />
                   <div>
-                    <p className="font-medium text-sm">Inbox: {c.inbox_id}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm">{c.inbox_name || `Inbox: ${c.inbox_id}`}</p>
+                      <Badge variant="outline" className="text-[10px]">
+                        {MODE_LABEL[c.distribution_mode] ?? 'Rodízio'}
+                      </Badge>
+                      {!c.is_active && <span className="text-xs text-muted-foreground">(desativada)</span>}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      Timeout: {c.timeout_minutes} min — Gestor: {c.gestor_whatsapp_number || '—'}
+                      {c.distribution_mode === 'manual'
+                        ? 'Gerente distribui na mão'
+                        : `Prazo: ${c.timeout_minutes} min`}
+                      {' — Gestor: '}{c.gestor_whatsapp_number || '—'}
                     </p>
                   </div>
                 </div>
@@ -330,24 +379,58 @@ export default function RoletaConfigPage() {
               </div>
             </div>
 
-            {/* Timeout */}
+            {/* Modo de distribuicao — o coracao da tela */}
             <div>
-              <UILabel className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4" />
-                Tempo limite para aceite (minutos) *
+              <UILabel className="flex items-center gap-1.5 mb-2">
+                <Shuffle className="h-4 w-4" />
+                Como o lead é distribuído *
               </UILabel>
-              <Input
-                type="number"
-                min={1}
-                max={1440}
-                value={timeoutMin}
-                onChange={e => setTimeoutMin(parseInt(e.target.value) || 30)}
-                className="mt-1 w-32"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Se o corretor nao enviar mensagem em {timeoutMin} min, o lead passa para o proximo.
-              </p>
+              <div className="space-y-2">
+                {MODES.map(opt => {
+                  const Icon = opt.icon;
+                  const active = mode === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setMode(opt.value)}
+                      className={`w-full flex items-start gap-3 p-3 rounded-lg border text-left transition-colors ${
+                        active ? 'border-[#7c3aed] bg-[#7c3aed]/5' : 'border-border hover:bg-muted/50'
+                      }`}
+                    >
+                      <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${active ? 'text-[#7c3aed]' : 'text-muted-foreground'}`} />
+                      <div>
+                        <div className="text-sm font-medium">{opt.label}</div>
+                        <div className="text-xs text-muted-foreground">{opt.desc}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
+            {/* Prazo — nao se aplica ao modo Manual */}
+            {mode !== 'manual' && (
+              <div>
+                <UILabel className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4" />
+                  {mode === 'leilao' ? 'Prazo do leilão (minutos) *' : 'Tempo limite para aceite (minutos) *'}
+                </UILabel>
+                <Input
+                  type="number"
+                  min={1}
+                  max={1440}
+                  value={timeoutMin}
+                  onChange={e => setTimeoutMin(parseInt(e.target.value) || 30)}
+                  className="mt-1 w-32"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {mode === 'leilao'
+                    ? `Se ninguém assumir em ${timeoutMin} min, o lead cai no rodízio para não ficar sem dono.`
+                    : `Se o corretor não assumir em ${timeoutMin} min, o lead passa para o próximo.`}
+                </p>
+              </div>
+            )}
 
             {/* Numero do gestor */}
             <div>

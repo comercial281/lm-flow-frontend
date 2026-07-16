@@ -9,6 +9,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 
 import { useLanguage } from '@/hooks/useLanguage';
 import { useConversationPresence } from '@/hooks/useConversationPresence';
+import ClaimLeadBanner from '@/components/chat/assignment/ClaimLeadBanner';
 
 // Hooks customizados
 import { useConversationHandlers } from '@/hooks/chat/useConversationHandlers';
@@ -718,6 +719,14 @@ const Chat = () => {
                 onDeleteConversation={handleDeleteConversation}
                 unreadCount={conversations.getUnreadCount(selectedConversation.id) || 0}
               />
+
+              {/* Leilão — lead sem dono, quem assumir primeiro leva */}
+              {!selectedConversation.assignee_id && (
+                <ClaimLeadBanner
+                  conversationId={String(selectedConversation.id)}
+                  onClaimed={() => conversations.loadSpecificConversation(String(selectedConversation.id))}
+                />
+              )}
 
               {/* Presença — outro agente está nessa conversa */}
               {othersPresent.length > 0 && (

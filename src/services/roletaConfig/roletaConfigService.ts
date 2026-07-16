@@ -11,11 +11,16 @@ export interface RoletaMember {
   personal_whatsapp_number: string;
 }
 
+// Modo de distribuição. A RoletaConfig é a FONTE ÚNICA: modo + quem + prazo + gestor.
+// Os nomes aqui são os mesmos que aparecem na tela, de propósito.
+export type DistributionMode = 'rodizio' | 'leilao' | 'manual' | 'disponibilidade';
+
 export interface RoletaConfig {
   id: string;
   inbox_id: string;
   inbox_name?: string | null;
   is_active: boolean;
+  distribution_mode: DistributionMode;
   timeout_minutes: number;
   gestor_whatsapp_number: string;
   notification_inbox_id: string | null;
@@ -28,6 +33,7 @@ export interface RoletaConfig {
 export interface RoletaConfigPayload {
   inbox_id: string;
   is_active: boolean;
+  distribution_mode: DistributionMode;
   timeout_minutes: number;
   gestor_whatsapp_number: string;
   notification_inbox_id?: string | null;
@@ -94,3 +100,9 @@ export const roletaConfigService = {
     return (res.data as { data: BrokerAssignment[] }).data ?? [];
   },
 };
+
+// Modo Leilão: o corretor assume o lead. Primeiro que assumir leva.
+// 409 = outro corretor assumiu primeiro (trava anti-empate no banco).
+export async function claimConversation(conversationId: string): Promise<void> {
+  await api.post(`/conversations/${conversationId}/claim`);
+}
