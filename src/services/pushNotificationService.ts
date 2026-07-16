@@ -26,6 +26,21 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
+/**
+ * Dispara um push de teste NESTE usuário (só nos aparelhos dele).
+ *
+ * Existe porque push que não chega é silencioso: quem liga o Modo Plantão não
+ * tinha como saber se funcionou — até 16/07/2026 o único jeito de testar era
+ * `rails runner` em produção.
+ *
+ * Devolve a quantidade de aparelhos que receberam. O backend responde 422
+ * (NO_SUBSCRIPTION) quando ninguém tem plantão ligado, em vez de fingir sucesso.
+ */
+export async function sendTestPush(): Promise<number> {
+  const res = await apiClient.post<{ data?: { devices?: number } }>('/push_subscriptions/test');
+  return res.data?.data?.devices ?? 0;
+}
+
 export async function subscribeToPush(): Promise<boolean> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
 

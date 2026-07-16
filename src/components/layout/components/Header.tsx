@@ -94,7 +94,7 @@ export default function Header({
       {/* Mobile Layout */}
       <div className="md:hidden flex items-center w-full px-4">
         {/* Left: Menu Button */}
-        <div className="flex-1 flex justify-start">
+        <div className="shrink-0 flex justify-start">
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="text-sidebar-foreground cursor-pointer">
@@ -195,8 +195,12 @@ export default function Header({
                 </nav>
               </ScrollArea>
 
-              <div className="p-4 border-t border-sidebar-border">
+              {/* Ações que saíram da barra do topo no mobile (ver comentário no
+                  bloco "Right" abaixo): não são urgentes, então moram aqui. */}
+              <div className="p-4 border-t border-sidebar-border flex items-center gap-2">
                 <ThemeToggle />
+                <TourFab />
+                <DemoModeToggle />
               </div>
 
               {/* Mobile User Menu */}
@@ -222,8 +226,15 @@ export default function Header({
           </div>
         </div>
 
-        {/* Right: Notifications and User Menu */}
-        <div className="flex-1 flex justify-end items-center gap-2">
+        {/* Right: Notifications and User Menu
+            NÃO usar flex-1 aqui. Os três blocos eram flex-1 (= 1/3 da tela cada),
+            mas 6 ícones não cabem em 1/3 de um celular: com justify-end o excesso
+            vazava PRA ESQUERDA, por cima do centro — a lupa montava em cima da
+            logo (print do iPhone, 16/07/2026). shrink-0 nas laterais + min-w-0 no
+            centro faz o centro ceder espaço em vez de ser invadido.
+            TourFab e DemoModeToggle saíram daqui pro menu hambúrguer: não são
+            ações urgentes e eram 2 dos 6 ícones brigando por espaço. */}
+        <div className="shrink-0 flex justify-end items-center gap-1">
           {onOpenSearch && (
             <Button
               variant="ghost"
@@ -235,8 +246,6 @@ export default function Header({
               <span className="sr-only">Buscar</span>
             </Button>
           )}
-          <TourFab />
-          <DemoModeToggle />
           <PlantaoToggle compact />
           <NotificationBell />
           <ProfileMenu
