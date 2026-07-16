@@ -31,7 +31,7 @@
   "shortcuts": [
     {
       "name": "Conversas",
-      "url": "/app/conversations",
+      "url": "/conversations",
       "description": "Abrir conversas WhatsApp"
     }
   ],
