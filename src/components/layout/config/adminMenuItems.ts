@@ -2,6 +2,7 @@ import { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
   Building2,
+  Bell,
   Activity,
   TrendingUp,
   Library,
@@ -33,6 +34,12 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     href: '/admin/clientes',
     icon: Building2,
     description: 'Criar, congelar, arquivar, entrar no CRM do cliente',
+  },
+  {
+    name: 'Central de Push',
+    href: '/admin/push',
+    icon: Bell,
+    description: 'Avisos no celular: regras, disparo manual e o que falhou',
   },
   {
     name: 'Auditoria',

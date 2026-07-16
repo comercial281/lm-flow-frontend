@@ -95,6 +95,7 @@ function SuperAdminRoute({ children }: { children: ReactNode }) {
 const ClientInstances = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances'));
 const AutomationTemplatesPage = lazyWithRetry(() => import('@/pages/SuperAdmin/AutomationTemplates/AutomationTemplates'));
 const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients'));
+const PushCentral = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral'));
 
 // Área do Admin — shell próprio (AdminLayout), fora do menu do CRM.
 const AdminLayout = lazyWithRetry(() => import('@/components/layout/AdminLayout'));
@@ -1887,6 +1888,18 @@ const AppRouter = () => {
                 <SuperAdminRoute>
                   <AdminLayout>
                     <PooledClients />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/push"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <PushCentral />
                   </AdminLayout>
                 </SuperAdminRoute>
               </PrivateRoute>
