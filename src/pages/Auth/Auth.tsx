@@ -51,15 +51,15 @@ const slideIn: any = {
 
 // ─── Left panel: brand + flow visual ─────────────────────────────────────
 const LeftPanel: React.FC = () => (
-  <div className="relative hidden lg:flex flex-col justify-between h-full px-12 py-10 overflow-hidden">
+  <div className="relative hidden lg:flex flex-col justify-between h-full pl-12 pr-8 xl:pr-4 py-10 overflow-hidden">
     <FlowBackground />
 
-    {/* Content above the background */}
-    <div className="relative z-10">
+    {/* Content above the background — alinhado à direita, perto do formulário */}
+    <div className="relative z-10 w-full max-w-md ml-auto">
       <AppLogo className="h-8" />
     </div>
 
-    <div className="relative z-10 space-y-6">
+    <div className="relative z-10 space-y-6 w-full max-w-md ml-auto">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -104,7 +104,7 @@ const LeftPanel: React.FC = () => (
       </motion.div>
     </div>
 
-    <div className="relative z-10">
+    <div className="relative z-10 w-full max-w-md ml-auto">
       <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
         Leal Midia &copy; {new Date().getFullYear()}
       </p>
@@ -277,7 +277,7 @@ export const Auth: React.FC = () => {
   return (
     <div className="min-h-screen flex" style={{ background: '#0F0520' }}>
       {/* Left — brand panel (desktop only) */}
-      <div className="relative lg:w-[55%] xl:w-[60%]">
+      <div className="relative lg:w-1/2 xl:w-[52%]">
         <LeftPanel />
       </div>
 
@@ -308,8 +308,8 @@ export const Auth: React.FC = () => {
           <AppLogo className="h-7" />
         </div>
 
-        {/* Form area — centered */}
-        <div className="flex-1 flex items-center justify-center px-8 py-12">
+        {/* Form area — encostado na divisória (esquerda), perto do texto hero */}
+        <div className="flex-1 flex items-center justify-center lg:justify-start px-8 lg:pl-16 xl:pl-20 py-12">
           <div className="w-full max-w-sm">
 
             <AnimatePresence mode="wait">
