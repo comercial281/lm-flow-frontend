@@ -7,12 +7,16 @@
 //
 // Casa com o TenantResolution do backend (header X-Tenant ou subdomínio).
 
+import { getClientModeSlug } from '@/store/clientModeStore';
+
 const PROD_DOMAIN = 'lmflow.com.br';
 const RESERVED = new Set([
   'www', 'app', 'api', 'admin', 'staging', 'production', 'localhost', 'lmflow',
 ]);
 
-export function getTenantSlug(): string | null {
+// Slug REAL do subdomínio (contexto do host). NÃO considera Modo Cliente.
+// Usado pelo fluxo de auth (login/refresh/validate), que sempre opera na raiz.
+export function getSubdomainSlug(): string | null {
   if (typeof window === 'undefined') return null;
   const host = window.location.hostname.toLowerCase();
 
@@ -34,4 +38,12 @@ export function getTenantSlug(): string | null {
     // localStorage indisponível — ignora
   }
   return null;
+}
+
+// Slug EFETIVO usado nas requisições do APP. Em Modo Cliente (super-admin),
+// vence o cliente selecionado; senão, cai no subdomínio real.
+export function getTenantSlug(): string | null {
+  const forced = getClientModeSlug();
+  if (forced) return forced;
+  return getSubdomainSlug();
 }

@@ -7,6 +7,7 @@ import {
   TrendingUp,
   Library,
   GraduationCap,
+  UserCog,
 } from 'lucide-react';
 
 /**
@@ -34,6 +35,12 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     href: '/admin/clientes',
     icon: Building2,
     description: 'Criar, congelar, arquivar, entrar no CRM do cliente',
+  },
+  {
+    name: 'Modo Cliente',
+    href: '/admin/modo-cliente',
+    icon: UserCog,
+    description: 'Editar follow-ups, agente de IA e automações de cada cliente daqui',
   },
   {
     name: 'Central de Push',

@@ -178,6 +178,8 @@ authApi.interceptors.response.use(
   }
 );
 
-applySetupInterceptor(authApi);
+// Escopo 'auth': login/refresh/validate SEMPRE na sessão raiz (subdomínio real),
+// nunca no cliente do Modo Cliente — senão o token raiz validaria no schema errado.
+applySetupInterceptor(authApi, { authScope: 'auth' });
 
 export default authApi;

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { applySetupInterceptor } from '@/services/core/setupInterceptor';
+import { getClientModeToken } from '@/store/clientModeStore';
 
 // Criar instância do axios específica para a API do Agent Processor
 const agentProcessorApi = axios.create({
@@ -12,10 +13,15 @@ const agentProcessorApi = axios.create({
 
 // Interceptador para adicionar headers específicos para o Agent Processor
 agentProcessorApi.interceptors.request.use(config => {
-  // Adicionar token de autenticação
-  const authHeader = useAuthStore.getState().getAuthHeader();
-  if (authHeader) {
-    config.headers.Authorization = authHeader.Authorization;
+  // Modo Cliente (super-admin): token cunhado dentro do cliente vence.
+  const clientToken = getClientModeToken();
+  if (clientToken) {
+    config.headers.Authorization = `Bearer ${clientToken}`;
+  } else {
+    const authHeader = useAuthStore.getState().getAuthHeader();
+    if (authHeader) {
+      config.headers.Authorization = authHeader.Authorization;
+    }
   }
 
   return config;

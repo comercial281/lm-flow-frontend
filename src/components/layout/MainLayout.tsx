@@ -27,6 +27,7 @@ import { injectDashboardAppsIntoMenu } from '@/utils/injectDashboardApps';
 import { applyMenuPrefs, MENU_PREFS_EVENT } from './config/menuPrefs';
 import MenuCustomizer from './components/MenuCustomizer';
 import InstallAppPrompt from './components/InstallAppPrompt';
+import ClientModeBar from './ClientModeBar';
 import { WelcomeTourModal } from '@/components/WelcomeTourModal';
 import GlobalCommandPalette from '@/components/command-palette/GlobalCommandPalette';
 
@@ -140,6 +141,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="flex flex-col h-screen bg-background transition-colors duration-150 ease-in-out">
+
+      {/* Barra do Modo Cliente (super-admin) — só aparece quando ativo */}
+      <ClientModeBar />
 
       {/* Header */}
       <Header

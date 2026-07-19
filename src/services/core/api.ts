@@ -3,6 +3,7 @@ import { useAuthStore } from '@/store/authStore';
 import { requestMonitor } from '@/utils/requestMonitor';
 import apiAuth from '@/services/core/apiAuth';
 import { applySetupInterceptor } from '@/services/core/setupInterceptor';
+import { getClientModeToken } from '@/store/clientModeStore';
 
 const api = axios.create({
   baseURL: `${import.meta.env.VITE_API_URL}/api/v1`,
@@ -52,9 +53,15 @@ api.interceptors.request.use(config => {
   (config as AxiosRequestConfig & { requestId?: string; requestStartTime?: number }).requestId = requestId;
   (config as AxiosRequestConfig & { requestId?: string; requestStartTime?: number }).requestStartTime = Date.now();
 
-  const authHeader = useAuthStore.getState().getAuthHeader();
-  if (authHeader) {
-    config.headers.Authorization = authHeader.Authorization;
+  // Modo Cliente (super-admin): usa o token cunhado dentro do cliente.
+  const clientToken = getClientModeToken();
+  if (clientToken) {
+    config.headers.Authorization = `Bearer ${clientToken}`;
+  } else {
+    const authHeader = useAuthStore.getState().getAuthHeader();
+    if (authHeader) {
+      config.headers.Authorization = authHeader.Authorization;
+    }
   }
 
   if (config.data instanceof FormData && config.headers['Content-Type'] === undefined) {
@@ -90,6 +97,12 @@ api.interceptors.response.use(
     }
 
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    // Em Modo Cliente, um 401 é do token do cliente — NÃO renova nem derruba a
+    // sessão raiz do super-admin. Apenas propaga o erro pra tela tratar.
+    if (getClientModeToken()) {
+      return Promise.reject(error);
+    }
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (isRefreshing) {

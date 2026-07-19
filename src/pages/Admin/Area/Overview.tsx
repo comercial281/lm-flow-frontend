@@ -119,6 +119,19 @@ export default function AdminOverview() {
             </Link>
 
             <Link
+              to="/admin/modo-cliente"
+              className="group flex items-center justify-between rounded-lg border border-sidebar-border bg-sidebar p-4 transition-colors hover:border-primary/40"
+            >
+              <div>
+                <p className="font-medium">Modo Cliente</p>
+                <p className="text-sm text-muted-foreground">
+                  Editar follow-ups, agente de IA e automações de cada cliente daqui.
+                </p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+            </Link>
+
+            <Link
               to="/admin/auditoria"
               className="group flex items-center justify-between rounded-lg border border-sidebar-border bg-sidebar p-4 transition-colors hover:border-primary/40"
             >
