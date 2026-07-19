@@ -54,9 +54,21 @@ export interface SalesAgent {
   audio_enabled: boolean;
   audio_mode: 'mirror' | 'always' | 'never';
   audio_voice_id: string | null;
+  sales_method: SalesMethod;
+  social_proof: string | null;
+  booking_enabled: boolean;
+  visit_duration_minutes: number;
+  example_conversations: SalesAgentExample[];
   documents_count: number;
   created_at: string;
   updated_at: string;
+}
+
+export type SalesMethod = 'consultative' | 'spin' | 'direct';
+
+export interface SalesAgentExample {
+  lead: string;
+  resposta: string;
 }
 
 export interface SalesAgentPayload {
@@ -86,6 +98,11 @@ export interface SalesAgentPayload {
   audio_enabled?: boolean;
   audio_mode?: 'mirror' | 'always' | 'never';
   audio_voice_id?: string | null;
+  sales_method?: SalesMethod;
+  social_proof?: string | null;
+  booking_enabled?: boolean;
+  visit_duration_minutes?: number;
+  example_conversations?: SalesAgentExample[];
 }
 
 export interface SalesAgentDocument {
@@ -112,6 +129,8 @@ export interface SalesAgentTestResult {
   transfer_reason: string | null;
   collected: Record<string, unknown>;
   lead_summary: string;
+  stage?: string | null;
+  book_visit?: { should_book: boolean; date: string | null; time: string | null; notes: string | null } | null;
 }
 
 export interface TestHistoryItem {
