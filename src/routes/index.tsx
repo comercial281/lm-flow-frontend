@@ -1,6 +1,6 @@
 import { Suspense, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { isRootTenantHost } from '@/components/layout/config/menuItems';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import PrivateRoute from './PrivateRoute';
@@ -83,12 +83,18 @@ const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => (
 const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
 const Contracts = lazyWithRetry(() => import('@/pages/Customer/Contracts').then(m => ({ default: m.Contracts })));
 const PropertyCaptureRequests = lazyWithRetry(() => import('@/pages/Customer/PropertyCapture').then(m => ({ default: m.PropertyCaptureRequests })));
-// Gate de rota super-admin: só renderiza no deploy raiz (app.lmflow.com.br) E
-// logado como super-admin. Em subdomínio de cliente (*.lmflow.com.br) ou usuário
-// comum, redireciona pra home — defesa extra além do bloqueio server-side (401/403).
+// Gate de rota da Área do Admin: só no deploy raiz (app.lmflow.com.br) E com
+// acesso de admin (o dono por e-mail OU a equipe cadastrada, via whoami). Em
+// subdomínio de cliente ou usuário comum, redireciona — defesa extra além do
+// bloqueio server-side (401/403). Enquanto o whoami resolve (só pra não-dono),
+// segura numa tela de carregando pra não chutar a equipe antes da hora.
 function SuperAdminRoute({ children }: { children: ReactNode }) {
-  const isSuper = useIsSuperAdmin();
-  if (!isRootTenantHost() || !isSuper) return <Navigate to="/" replace />;
+  const { loading, isAdmin } = useAdminAccess();
+  if (!isRootTenantHost()) return <Navigate to="/" replace />;
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center text-muted-foreground">Carregando...</div>;
+  }
+  if (!isAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -103,8 +109,9 @@ const AdminLayout = lazyWithRetry(() => import('@/components/layout/AdminLayout'
 // Shell da área de membros (Academia do cliente) — sem o CRM em volta.
 const MembersLayout = lazyWithRetry(() => import('@/components/layout/MembersLayout'));
 const AdminOverview = lazyWithRetry(() => import('@/pages/Admin/Area/Overview'));
-const AdminAuditoria = lazyWithRetry(() => import('@/pages/Admin/Area/Auditoria'));
+const AdminAtividade = lazyWithRetry(() => import('@/pages/Admin/Area/Auditoria'));
 const AdminUso = lazyWithRetry(() => import('@/pages/Admin/Area/Uso'));
+const AdminEquipe = lazyWithRetry(() => import('@/pages/Admin/Area/Equipe'));
 const AdminAcademia = lazyWithRetry(() => import('@/pages/Admin/Area/Academia'));
 const RoletaConfigPage = lazyWithRetry(() => import('@/pages/Customer/Settings/RoletaConfig/RoletaConfig'));
 const AssignmentSettingsPage = lazyWithRetry(() => import('@/pages/Customer/Settings/AssignmentSettings/AssignmentSettings'));
@@ -1923,12 +1930,26 @@ const AppRouter = () => {
             }
           />
           <Route
-            path="/admin/auditoria"
+            path="/admin/atividade"
             element={
               <PrivateRoute>
                 <SuperAdminRoute>
                   <AdminLayout>
-                    <AdminAuditoria />
+                    <AdminAtividade />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          {/* Rota antiga: Auditoria virou Atividade (juntou com Uso) */}
+          <Route path="/admin/auditoria" element={<Navigate to="/admin/atividade" replace />} />
+          <Route
+            path="/admin/equipe"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminEquipe />
                   </AdminLayout>
                 </SuperAdminRoute>
               </PrivateRoute>

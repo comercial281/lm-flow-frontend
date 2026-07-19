@@ -41,6 +41,25 @@ export interface ActivityParams {
   before?: string;
   limit?: number;
   include_raw?: boolean;
+  include_internal?: boolean;
+}
+
+export interface Whoami {
+  email?: string;
+  is_owner: boolean;
+  is_admin: boolean;
+  is_internal: boolean;
+}
+
+export interface TeamMember {
+  id: string;
+  email: string;
+  name?: string;
+  can_access_admin: boolean;
+  active: boolean;
+  owner: boolean;
+  added_by?: string;
+  created_at?: string;
 }
 
 export interface UserMetricRow {
@@ -83,10 +102,21 @@ export interface UserMetricDetail {
 const superLogsService = {
   logClients: () => apiClient.get<{ data: { clients: LogClient[] } }>('/super/log_clients'),
   activity: (params: ActivityParams) => apiClient.get<{ data: ActivityResponse }>('/super/activity', { params }),
-  userMetrics: (client: string) =>
-    apiClient.get<{ data: UserMetricsResponse }>('/super/user_metrics', { params: { client } }),
+  userMetrics: (client: string, includeInternal = false) =>
+    apiClient.get<{ data: UserMetricsResponse }>('/super/user_metrics', {
+      params: { client, include_internal: includeInternal || undefined },
+    }),
   userMetricDetail: (client: string, userId: string) =>
     apiClient.get<{ data: UserMetricDetail }>(`/super/user_metrics/${userId}`, { params: { client } }),
+
+  // Equipe Leal Mídia + quem sou eu (pro gate do admin)
+  whoami: () => apiClient.get<{ data: Whoami }>('/super/whoami'),
+  team: () => apiClient.get<{ data: { members: TeamMember[] } }>('/super/team'),
+  addMember: (payload: { email: string; name?: string; can_access_admin?: boolean }) =>
+    apiClient.post<{ data: { member: TeamMember } }>('/super/team', payload),
+  updateMember: (id: string, payload: Partial<Pick<TeamMember, 'name' | 'can_access_admin' | 'active'>>) =>
+    apiClient.patch<{ data: { member: TeamMember } }>(`/super/team/${id}`, payload),
+  removeMember: (id: string) => apiClient.delete(`/super/team/${id}`),
 };
 
 export default superLogsService;

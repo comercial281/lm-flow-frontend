@@ -1,18 +1,18 @@
 import { Link } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
-import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { isRootTenantHost } from '../config/menuItems';
 
 /**
  * Botão de entrada da Área do Admin.
  *
- * Espelha exatamente o gate do SuperAdminRoute (host raiz + super-admin). Se o
- * gate mudar, muda nos dois lugares — senão o botão aparece e a rota chuta pra
- * home, que é pior do que não ter botão.
+ * Espelha exatamente o gate do SuperAdminRoute (host raiz + acesso de admin:
+ * dono OU equipe cadastrada). Se o gate mudar, muda nos dois lugares — senão o
+ * botão aparece e a rota chuta pra home, que é pior do que não ter botão.
  */
 export default function AdminAreaButton() {
-  const isSuper = useIsSuperAdmin();
-  if (!isRootTenantHost() || !isSuper) return null;
+  const { isAdmin } = useAdminAccess();
+  if (!isRootTenantHost() || !isAdmin) return null;
 
   return (
     <Link

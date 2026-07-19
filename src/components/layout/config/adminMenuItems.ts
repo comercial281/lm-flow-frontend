@@ -4,10 +4,10 @@ import {
   Building2,
   Bell,
   Activity,
-  TrendingUp,
   Library,
   GraduationCap,
   UserCog,
+  UsersRound,
 } from 'lucide-react';
 
 /**
@@ -49,16 +49,12 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     description: 'Avisos no celular: regras, disparo manual e o que falhou',
   },
   {
-    name: 'Auditoria',
-    href: '/admin/auditoria',
+    // Juntou "Auditoria" + "Uso": presença (quem está online) em cima, feed de
+    // ações embaixo. Uso detalhado por usuário continua em /admin/uso (link).
+    name: 'Atividade',
+    href: '/admin/atividade',
     icon: Activity,
-    description: 'Tudo que aconteceu, por cliente',
-  },
-  {
-    name: 'Uso',
-    href: '/admin/uso',
-    icon: TrendingUp,
-    description: 'Quem usa, quanto tempo, em que tela',
+    description: 'Quem está online e tudo que os clientes fizeram',
   },
   {
     name: 'Biblioteca',
@@ -73,5 +69,11 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     href: '/admin/academia',
     icon: GraduationCap,
     description: 'Publicar e gerenciar as aulas e a documentação',
+  },
+  {
+    name: 'Equipe',
+    href: '/admin/equipe',
+    icon: UsersRound,
+    description: 'Adicionar pessoas da Leal Mídia (acesso ao admin e ocultas nos logs)',
   },
 ];
