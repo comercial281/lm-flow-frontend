@@ -16,8 +16,11 @@ export type PushTenantScope = 'all' | 'selected';
 export interface PushRule {
   id: string;
   name: string;
+  /** Compat: primeiro gatilho. Use `triggers` como fonte de verdade. */
   trigger: string;
   trigger_label: string;
+  triggers: string[];
+  triggers_labels: string[];
   tenant_scope: PushTenantScope;
   tenant_slugs: string[];
   audience: PushAudience;
@@ -74,7 +77,7 @@ export interface PushIndexData {
 
 export interface PushRulePayload {
   name: string;
-  trigger: string;
+  triggers: string[];
   tenant_scope: PushTenantScope;
   tenant_slugs: string[];
   audience: PushAudience;

@@ -37,7 +37,7 @@ type Tab = 'rules' | 'manual' | 'logs';
 
 const EMPTY_FORM: PushRulePayload = {
   name: '',
-  trigger: 'lead.novo',
+  triggers: ['lead.novo'],
   tenant_scope: 'all',
   tenant_slugs: [],
   audience: 'admin',
@@ -112,7 +112,7 @@ export default function PushCentral() {
     setEditing(rule);
     setForm({
       name: rule.name,
-      trigger: rule.trigger,
+      triggers: rule.triggers?.length ? rule.triggers : rule.trigger ? [rule.trigger] : [],
       tenant_scope: rule.tenant_scope,
       tenant_slugs: rule.tenant_slugs || [],
       audience: rule.audience,
@@ -126,6 +126,7 @@ export default function PushCentral() {
 
   const save = async () => {
     if (!form.name.trim()) return toast.error('Dê um nome pra regra');
+    if (form.triggers.length === 0) return toast.error('Escolha pelo menos um gatilho');
     if (!form.body.trim()) return toast.error('Escreva a mensagem');
     if (form.tenant_scope === 'selected' && form.tenant_slugs.length === 0) {
       return toast.error('Escolha pelo menos um cliente');
@@ -280,7 +281,13 @@ export default function PushCentral() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium truncate">{rule.name}</span>
-                    <Badge variant="outline">{rule.trigger_label}</Badge>
+                    {(rule.triggers_labels?.length ? rule.triggers_labels : [rule.trigger_label]).map(
+                      label => (
+                        <Badge key={label} variant="outline">
+                          {label}
+                        </Badge>
+                      ),
+                    )}
                     <Badge variant="outline">{rule.audience_label}</Badge>
                     <Badge variant="outline">
                       {rule.tenant_scope === 'all'
@@ -433,17 +440,28 @@ export default function PushCentral() {
 
             <div>
               <Label>Quando disparar</Label>
-              <select
-                className="mt-1 w-full h-9 rounded-md border bg-transparent px-3 text-sm"
-                value={form.trigger}
-                onChange={e => setForm(f => ({ ...f, trigger: e.target.value }))}
-              >
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Marque um ou mais. A regra dispara quando qualquer um acontecer.
+              </p>
+              <div className="mt-1 rounded-md border p-3 space-y-2 max-h-44 overflow-auto">
                 {options?.triggers.map(o => (
-                  <option key={o.value} value={o.value}>
+                  <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.triggers.includes(o.value)}
+                      onChange={e =>
+                        setForm(f => ({
+                          ...f,
+                          triggers: e.target.checked
+                            ? [...f.triggers, o.value]
+                            : f.triggers.filter(v => v !== o.value),
+                        }))
+                      }
+                    />
                     {o.label}
-                  </option>
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
 
             <div>
