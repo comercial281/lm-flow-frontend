@@ -21,7 +21,7 @@ interface WizardState {
   extra_users: ExtraUser[];
   notify_email: boolean;
   notify_whatsapp: boolean;
-  only_ad_leads: boolean;
+  pipe_entry_sources: string[];
   whatsapp_reminder_group_jid: string;
   whatsapp_logs_group_jid: string;
   max_whatsapp_channels: number;
@@ -45,7 +45,7 @@ export default function NewTenantWizard({ onClose, onCreated }: { onClose: () =>
   const [state, setState] = useState<WizardState>({
     name: '', admin_name: '', admin_email: '', phone: '', slug: '',
     extra_users: [], notify_email: true, notify_whatsapp: false,
-    only_ad_leads: false, whatsapp_reminder_group_jid: '', whatsapp_logs_group_jid: '',
+    pipe_entry_sources: ['ads', 'organic', 'form', 'manual'], whatsapp_reminder_group_jid: '', whatsapp_logs_group_jid: '',
     max_whatsapp_channels: 5,
     template_ids: [],
   });
@@ -73,7 +73,7 @@ export default function NewTenantWizard({ onClose, onCreated }: { onClose: () =>
         admin_email:                 state.admin_email,
         phone:                       state.phone,
         slug:                        state.slug || undefined,
-        only_ad_leads:               state.only_ad_leads,
+        pipe_entry_sources:          state.pipe_entry_sources,
         whatsapp_reminder_group_jid: state.whatsapp_reminder_group_jid || undefined,
         whatsapp_logs_group_jid:     state.whatsapp_logs_group_jid || undefined,
         max_whatsapp_channels:       state.max_whatsapp_channels,
@@ -257,12 +257,20 @@ function StepLeads({ state, set, groups, loading }: { state: WizardState; set: (
   return (
     <div className="space-y-5">
       <div className="space-y-3">
-        <p className="text-xs font-medium text-white/70">Entrada no pipeline CRM</p>
-        <Toggle checked={state.only_ad_leads} onChange={v => set('only_ad_leads', v)}
-          label="So leads de anuncio (Meta Ads) entram no pipeline" />
-        {!state.only_ad_leads && (
-          <p className="text-xs text-white/30">Todos os leads (anuncio e organico) entrarao automaticamente no pipeline.</p>
-        )}
+        <p className="text-xs font-medium text-white/70">O que entra no funil (por origem)</p>
+        <p className="text-xs text-white/30">So as origens ligadas entram no pipeline automaticamente. Todas ligadas = tudo entra.</p>
+        {[
+          { key: 'ads',     label: 'Anuncio (Meta) - Click-to-WhatsApp ou formulario de anuncio' },
+          { key: 'organic', label: 'WhatsApp organico - lead manda a 1a mensagem' },
+          { key: 'form',    label: 'Captacao / site - formulario ou landing page' },
+          { key: 'manual',  label: 'Manual no CRM - conversa aberta na mao (add na mao nunca bloqueia)' },
+        ].map(src => (
+          <Toggle key={src.key} checked={state.pipe_entry_sources.includes(src.key)}
+            onChange={v => set('pipe_entry_sources', v
+              ? [...state.pipe_entry_sources, src.key]
+              : state.pipe_entry_sources.filter(s => s !== src.key))}
+            label={src.label} />
+        ))}
       </div>
 
       <div className="space-y-2 pt-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>

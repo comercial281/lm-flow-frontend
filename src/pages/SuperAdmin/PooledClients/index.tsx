@@ -25,6 +25,16 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   suspended: { label: 'Suspenso',      cls: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/40' },
 };
 
+// Origens de lead que o cliente pode ligar/desligar pra entrar no funil.
+// As chaves batem 1:1 com LeadOrigin::PipeEntry::GROUPS no backend.
+const PIPE_SOURCE_KEYS = ['ads', 'organic', 'form', 'manual'] as const;
+const PIPE_SOURCES: { key: string; label: string; desc: string }[] = [
+  { key: 'ads',     label: 'Anúncio (Meta)',   desc: 'Lead de campanha: Click-to-WhatsApp ou formulário de anúncio.' },
+  { key: 'organic', label: 'WhatsApp orgânico', desc: 'Quem manda a 1ª mensagem no WhatsApp sem ser de anúncio.' },
+  { key: 'form',    label: 'Captação / site',   desc: 'Lead de formulário ou landing page do site.' },
+  { key: 'manual',  label: 'Manual no CRM',     desc: 'Conversa aberta na mão pelo corretor. Adicionar card na mão nunca é bloqueado.' },
+];
+
 function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () => void }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,27 +186,32 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
     } finally { setSavingKey(null); }
   };
 
-  // Regra de ENTRADA no pipe (tenant.settings.only_ad_leads): quando ligado, só
-  // entra no funil lead que veio de anúncio de verdade (ad_referral presente) —
-  // orgânico fica fora. Salva via update do pooled_tenants (preserva os group_jids).
-  const [onlyAds, setOnlyAds] = useState<boolean>(!!tenant.settings?.only_ad_leads);
-  const [savingAds, setSavingAds] = useState(false);
-  const toggleOnlyAds = async () => {
-    const next = !onlyAds;
-    setSavingAds(true);
-    setOnlyAds(next);
+  // Regra de ENTRADA no funil por ORIGEM (tenant.settings.pipe_entry_sources): o
+  // cliente escolhe quais origens de lead entram automático no pipeline. Fallback
+  // pro legado only_ad_leads (true => só 'ads'; senão todas). Salva via update do
+  // pooled_tenants (preserva os group_jids).
+  const initialSources: string[] = Array.isArray(tenant.settings?.pipe_entry_sources)
+    ? tenant.settings!.pipe_entry_sources
+    : (tenant.settings?.only_ad_leads ? ['ads'] : [...PIPE_SOURCE_KEYS]);
+  const [sources, setSources] = useState<string[]>(initialSources.filter(s => (PIPE_SOURCE_KEYS as readonly string[]).includes(s)));
+  const [savingSource, setSavingSource] = useState<string | null>(null);
+  const toggleSource = async (key: string) => {
+    const next = sources.includes(key) ? sources.filter(s => s !== key) : [...sources, key];
+    const prev = sources;
+    setSavingSource(key);
+    setSources(next);
     try {
       const s = tenant.settings || {};
       await api.patch(`/super/pooled_tenants/${tenant.id}`, {
         name: tenant.name,
-        only_ad_leads: next,
+        pipe_entry_sources: next,
         whatsapp_reminder_group_jid: s.whatsapp_reminder_group_jid || '',
         whatsapp_logs_group_jid: s.whatsapp_logs_group_jid || '',
       });
     } catch {
-      setOnlyAds(!next);
-      alert('Falha ao salvar a regra do pipe.');
-    } finally { setSavingAds(false); }
+      setSources(prev);
+      alert('Falha ao salvar a regra de entrada no funil.');
+    } finally { setSavingSource(null); }
   };
 
   // Limite de canais de WhatsApp que o cliente pode criar (0 = ilimitado).
@@ -231,18 +246,29 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
           <button onClick={onClose} className="text-white/40 hover:text-white/80"><X className="w-4 h-4" /></button>
         </div>
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1"
+          <div className="px-3 py-2.5 rounded-lg mb-1"
             style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.25)' }}>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-white/90">Pipe só com leads de anúncio (ADS)</div>
-              <div className="text-xs text-white/40">Só entra no funil o lead que veio de campanha (ad_referral). Orgânico fica fora.</div>
+            <div className="text-sm text-white/90">O que entra no funil (por origem)</div>
+            <div className="text-xs text-white/40 mb-2">Só as origens ligadas entram no pipeline automaticamente. Todas ligadas = tudo entra.</div>
+            <div className="space-y-1.5">
+              {PIPE_SOURCES.map(src => {
+                const on = sources.includes(src.key);
+                return (
+                  <div key={src.key} className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-white/90">{src.label}</div>
+                      <div className="text-xs text-white/40">{src.desc}</div>
+                    </div>
+                    <button onClick={() => toggleSource(src.key)} disabled={savingSource === src.key}
+                      className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${on ? 'bg-violet-600' : 'bg-white/15'}`}>
+                      {savingSource === src.key
+                        ? <Loader2 className="w-3 h-3 animate-spin text-white absolute top-1.5 left-3.5" />
+                        : <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${on ? 'left-5' : 'left-1'}`} />}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
-            <button onClick={toggleOnlyAds} disabled={savingAds}
-              className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${onlyAds ? 'bg-violet-600' : 'bg-white/15'}`}>
-              {savingAds
-                ? <Loader2 className="w-3 h-3 animate-spin text-white absolute top-1.5 left-3.5" />
-                : <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${onlyAds ? 'left-5' : 'left-1'}`} />}
-            </button>
           </div>
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1"
             style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.25)' }}>
