@@ -154,7 +154,9 @@ export default function EditPipelineModal({
         : undefined,
       // Só manda a regra de origem quando a pipeline tem regra própria. null =
       // herda o padrão do cliente, e o backend preserva o que já está.
-      ...(entrySources !== null ? { pipe_entry_sources: entrySources } : {}),
+      // Sempre manda: array = regra propria desta pipeline; null = limpa a regra e
+      // volta a herdar o padrao do cliente (sem isso nao havia como desfazer).
+      pipe_entry_sources: entrySources,
     };
 
     onSubmit(submitData);

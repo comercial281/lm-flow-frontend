@@ -162,7 +162,7 @@ export interface CreatePipelineData {
    * Origens de lead que entram AUTOMATICAMENTE nesta pipeline.
    * undefined = não configurado (herda o padrão do cliente); [] = nada entra automático.
    */
-  pipe_entry_sources?: string[];
+  pipe_entry_sources?: string[] | null;
 }
 
 export interface UpdatePipelineData extends Partial<CreatePipelineData> {
