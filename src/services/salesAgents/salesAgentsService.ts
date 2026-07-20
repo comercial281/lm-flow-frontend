@@ -69,6 +69,7 @@ export interface SalesAgent {
   google_review_link: string | null;
   cross_sell_enabled: boolean;
   rich_media_enabled: boolean;
+  visit_config: VisitConfig;
   documents_count: number;
   created_at: string;
   updated_at: string;
@@ -93,6 +94,25 @@ export interface CrmPolicy {
   cold?: boolean;
   capture?: boolean;
   invalid?: boolean;
+}
+
+export interface VisitConfig {
+  days?: number[]; // 0=dom .. 6=sáb
+  start?: string;
+  end?: string;
+  min_advance_hours?: number;
+  max_advance_days?: number;
+}
+
+// Config gerada pelo formulário (o dono responde perguntas e o Claude monta).
+export interface GeneratedAgentConfig {
+  persona_role: string;
+  persona_goal: string;
+  instructions: string;
+  greeting: string;
+  social_proof: string | null;
+  sales_method: SalesMethod;
+  qualification_questions: string[];
 }
 
 export interface SalesAgentPayload {
@@ -127,6 +147,7 @@ export interface SalesAgentPayload {
   booking_enabled?: boolean;
   visit_duration_minutes?: number;
   example_conversations?: SalesAgentExample[];
+  visit_config?: VisitConfig;
   locacao_enabled?: boolean;
   escalate_on_frustration?: boolean;
   escalate_on_human_request?: boolean;
@@ -214,6 +235,12 @@ export const salesAgentsService = {
 
   async destroy(id: string): Promise<void> {
     await api.delete(`${BASE}/${id}`);
+  },
+
+  // Formulário -> JSON: o dono responde perguntas e o Claude monta a config.
+  async generateConfig(answers: Record<string, string>): Promise<GeneratedAgentConfig> {
+    const res = await api.post(`${BASE}/generate_config`, { answers });
+    return (res.data as { data: GeneratedAgentConfig }).data;
   },
 
   async testRun(
