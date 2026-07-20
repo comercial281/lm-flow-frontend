@@ -127,6 +127,16 @@ export default function SalesAgents() {
         booking_enabled: patch.booking_enabled ?? selected.booking_enabled,
         visit_duration_minutes: patch.visit_duration_minutes ?? selected.visit_duration_minutes,
         example_conversations: patch.example_conversations ?? selected.example_conversations,
+        locacao_enabled: patch.locacao_enabled ?? selected.locacao_enabled,
+        escalate_on_frustration: patch.escalate_on_frustration ?? selected.escalate_on_frustration,
+        escalate_on_human_request: patch.escalate_on_human_request ?? selected.escalate_on_human_request,
+        escalate_on_ai_detected: patch.escalate_on_ai_detected ?? selected.escalate_on_ai_detected,
+        ai_limits: patch.ai_limits ?? selected.ai_limits,
+        crm_policy: patch.crm_policy ?? selected.crm_policy,
+        ask_google_review: patch.ask_google_review ?? selected.ask_google_review,
+        google_review_link: patch.google_review_link ?? selected.google_review_link,
+        cross_sell_enabled: patch.cross_sell_enabled ?? selected.cross_sell_enabled,
+        rich_media_enabled: patch.rich_media_enabled ?? selected.rich_media_enabled,
       });
       setSelected(updated);
       setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
@@ -381,6 +391,7 @@ function ConfigTab({
       </div>
 
       <VisitSection agent={agent} onChange={onChange} onSave={onSave} />
+      <IntelligenceSection agent={agent} onChange={onChange} onSave={onSave} />
       <ScheduleSection agent={agent} onSave={onSave} />
       <AudioSection agent={agent} onChange={onChange} onSave={onSave} />
       <FollowupSection agent={agent} onChange={onChange} onSave={onSave} />
@@ -655,6 +666,110 @@ function VisitSection({
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------- Inteligência, limites e escopo (Fase 3) ----------------
+
+function CheckRow({ checked, onChange, title, desc }: {
+  checked: boolean; onChange: (v: boolean) => void; title: string; desc?: string;
+}) {
+  return (
+    <label className="flex items-start gap-3 cursor-pointer py-1">
+      <input type="checkbox" className="mt-1" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <div>
+        <div className="text-sm font-medium">{title}</div>
+        {desc && <div className="text-xs text-muted-foreground">{desc}</div>}
+      </div>
+    </label>
+  );
+}
+
+function IntelligenceSection({
+  agent, onChange, onSave,
+}: {
+  agent: SalesAgent;
+  onChange: (a: SalesAgent) => void;
+  onSave: (patch: Partial<SalesAgent>) => void;
+}) {
+  const limits = agent.ai_limits ?? {};
+  const crm = agent.crm_policy ?? {};
+  const setLimit = (k: keyof typeof limits, v: boolean) => onSave({ ai_limits: { ...limits, [k]: v } });
+  const setCrm = (k: keyof typeof crm, v: boolean) => onSave({ crm_policy: { ...crm, [k]: v } });
+
+  return (
+    <div className="pt-2 border-t border-sidebar-border space-y-5">
+      {/* Escopo: locação */}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-medium">Trabalha com locação (aluguel)</div>
+          <div className="text-xs text-muted-foreground">
+            Desligue se a imobiliária só vende. A IA foca em venda e redireciona quem procura aluguel.
+          </div>
+        </div>
+        <Toggle on={agent.locacao_enabled !== false} onChange={(v) => onSave({ locacao_enabled: v })} />
+      </div>
+
+      {/* Escalação: passar pro humano */}
+      <div>
+        <div className="text-sm font-medium mb-1">Passar pro humano na hora quando…</div>
+        <CheckRow checked={agent.escalate_on_frustration !== false} onChange={(v) => onSave({ escalate_on_frustration: v })}
+          title="O lead se irritar" desc="Detecta frustração/reclamação e passa pro corretor com jeito." />
+        <CheckRow checked={agent.escalate_on_human_request !== false} onChange={(v) => onSave({ escalate_on_human_request: v })}
+          title="O lead pedir uma pessoa" desc="Quando pede pra falar com um corretor/humano." />
+        <CheckRow checked={agent.escalate_on_ai_detected !== false} onChange={(v) => onSave({ escalate_on_ai_detected: v })}
+          title="O lead perceber que é IA" desc={'Se perguntar "é um robô?", ela não mente e passa pra uma pessoa.'} />
+      </div>
+
+      {/* Limites da IA */}
+      <div>
+        <div className="text-sm font-medium mb-1">Limites da IA (o que ela NÃO faz)</div>
+        <div className="text-xs text-muted-foreground mb-1">Se perguntada, ela encaminha pro corretor com naturalidade.</div>
+        <CheckRow checked={!!limits.address} onChange={(v) => setLimit('address', v)} title="Não passar endereço exato do imóvel" />
+        <CheckRow checked={!!limits.discount} onChange={(v) => setLimit('discount', v)} title="Não negociar desconto" />
+        <CheckRow checked={!!limits.price} onChange={(v) => setLimit('price', v)} title="Não fechar preço final / proposta" />
+        <CheckRow checked={!!limits.iptu} onChange={(v) => setLimit('iptu', v)} title="Não informar IPTU" />
+      </div>
+
+      {/* Filtro de qualidade antes do CRM */}
+      <div>
+        <div className="text-sm font-medium mb-1">Quem vai pro CRM (filtro de qualidade)</div>
+        <div className="text-xs text-muted-foreground mb-1">Deixe desligado pra não sujar o CRM com lead ruim. Comprador quente sempre vai.</div>
+        <CheckRow checked={!!crm.cold} onChange={(v) => setCrm('cold', v)} title="Enviar leads frios ao CRM" />
+        <CheckRow checked={!!crm.capture} onChange={(v) => setCrm('capture', v)}
+          title="Enviar captação (quem quer vender) ao CRM de vendas" desc="Desligado: vira etiqueta de captação, não polui o funil de compradores." />
+        <CheckRow checked={crm.invalid !== false} onChange={(v) => setCrm('invalid', v)} title="Enviar leads sem contato válido ao CRM" />
+      </div>
+
+      {/* Extras */}
+      <div>
+        <div className="text-sm font-medium mb-1">Extras</div>
+        <CheckRow checked={agent.cross_sell_enabled !== false} onChange={(v) => onSave({ cross_sell_enabled: v })}
+          title="Oferecer outras opções" desc="Quando não tem o imóvel exato, sugere alternativas reais e não perde o lead." />
+        <CheckRow checked={agent.rich_media_enabled !== false} onChange={(v) => onSave({ rich_media_enabled: v })}
+          title="Mandar foto e link do imóvel" desc="Envia mídia do imóvel de interesse no WhatsApp." />
+      </div>
+
+      {/* Avaliação no Google */}
+      <div>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-medium">Pedir avaliação no Google</div>
+            <div className="text-xs text-muted-foreground">Após um bom atendimento, convida o lead a avaliar (reputação/SEO).</div>
+          </div>
+          <Toggle on={!!agent.ask_google_review} onChange={(v) => onSave({ ask_google_review: v })} />
+        </div>
+        {agent.ask_google_review && (
+          <div className="mt-2 pl-7">
+            <Label htmlFor="g_review" className="text-xs">Link de avaliação do Google</Label>
+            <Input id="g_review" placeholder="https://g.page/.../review" className="mt-1"
+              value={agent.google_review_link ?? ''}
+              onChange={(e) => onChange({ ...agent, google_review_link: e.target.value })}
+              onBlur={() => onSave({ google_review_link: (agent.google_review_link ?? '').trim() || null })} />
+          </div>
+        )}
       </div>
     </div>
   );

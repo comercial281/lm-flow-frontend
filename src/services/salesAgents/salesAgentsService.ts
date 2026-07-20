@@ -59,6 +59,16 @@ export interface SalesAgent {
   booking_enabled: boolean;
   visit_duration_minutes: number;
   example_conversations: SalesAgentExample[];
+  locacao_enabled: boolean;
+  escalate_on_frustration: boolean;
+  escalate_on_human_request: boolean;
+  escalate_on_ai_detected: boolean;
+  ai_limits: AiLimits;
+  crm_policy: CrmPolicy;
+  ask_google_review: boolean;
+  google_review_link: string | null;
+  cross_sell_enabled: boolean;
+  rich_media_enabled: boolean;
   documents_count: number;
   created_at: string;
   updated_at: string;
@@ -69,6 +79,20 @@ export type SalesMethod = 'consultative' | 'spin' | 'direct';
 export interface SalesAgentExample {
   lead: string;
   resposta: string;
+}
+
+export interface AiLimits {
+  address?: boolean;
+  discount?: boolean;
+  price?: boolean;
+  iptu?: boolean;
+  custom?: string[];
+}
+
+export interface CrmPolicy {
+  cold?: boolean;
+  capture?: boolean;
+  invalid?: boolean;
 }
 
 export interface SalesAgentPayload {
@@ -103,6 +127,16 @@ export interface SalesAgentPayload {
   booking_enabled?: boolean;
   visit_duration_minutes?: number;
   example_conversations?: SalesAgentExample[];
+  locacao_enabled?: boolean;
+  escalate_on_frustration?: boolean;
+  escalate_on_human_request?: boolean;
+  escalate_on_ai_detected?: boolean;
+  ai_limits?: AiLimits;
+  crm_policy?: CrmPolicy;
+  ask_google_review?: boolean;
+  google_review_link?: string | null;
+  cross_sell_enabled?: boolean;
+  rich_media_enabled?: boolean;
 }
 
 export interface SalesAgentDocument {
