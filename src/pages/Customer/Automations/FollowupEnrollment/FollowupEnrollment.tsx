@@ -184,7 +184,8 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
               ))}
             </select>
             <p className="text-xs text-muted-foreground">
-              Edite as mensagens e os tempos em <strong>Automações → Follow-ups</strong>.
+              Edite as mensagens e os tempos {embedded ? 'na lista abaixo' : 'em '}
+              {!embedded && <strong>Automações → Follow-up</strong>}.
             </p>
           </div>
 
