@@ -90,6 +90,7 @@ const EMPTY_FORM: PropertyFormData = {
   exclusive: false,
   featured: false,
   published_on_site: false,
+  ai_enabled: true,
   on_sign: false,
   responsible_id: null,
   captor_id: null,
@@ -248,6 +249,7 @@ export default function Properties() {
       exclusive: p.exclusive ?? false,
       featured: p.featured ?? false,
       published_on_site: p.published_on_site ?? false,
+      ai_enabled: p.ai_enabled ?? true,
       on_sign: p.on_sign ?? false,
       responsible_id: p.responsible?.id ?? p.responsible_id ?? null,
       captor_id: p.captor?.id ?? p.captor_id ?? null,
@@ -1060,6 +1062,10 @@ export default function Properties() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={f.published_on_site ?? false} onChange={e => setF({ published_on_site: e.target.checked })} className="rounded" />
                 <span className="text-sm">Publicar no site</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer" title="A IA Vendedora pode usar e oferecer este imóvel nas conversas">
+                <input type="checkbox" checked={f.ai_enabled ?? true} onChange={e => setF({ ai_enabled: e.target.checked })} className="rounded" />
+                <span className="text-sm">Encontrável pela IA</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={f.on_sign ?? false} onChange={e => setF({ on_sign: e.target.checked })} className="rounded" />

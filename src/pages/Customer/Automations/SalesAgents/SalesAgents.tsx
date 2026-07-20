@@ -139,6 +139,7 @@ export default function SalesAgents() {
         cross_sell_enabled: patch.cross_sell_enabled ?? selected.cross_sell_enabled,
         rich_media_enabled: patch.rich_media_enabled ?? selected.rich_media_enabled,
         visit_config: patch.visit_config ?? selected.visit_config,
+        default_property_code: patch.default_property_code ?? selected.default_property_code,
       });
       setSelected(updated);
       setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
@@ -485,6 +486,20 @@ function ConfigTab({
             onSave({ qualification_questions: (agent.qualification_questions ?? []).map((q) => q.trim()).filter(Boolean) })
           }
         />
+      </div>
+
+      <div>
+        <Label htmlFor="default_prop">Imóvel padrão (código da aba Imóveis)</Label>
+        <Input
+          id="default_prop"
+          placeholder="Ex: ALMA"
+          value={agent.default_property_code ?? ''}
+          onChange={(e) => onChange({ ...agent, default_property_code: e.target.value })}
+          onBlur={() => onSave({ default_property_code: (agent.default_property_code ?? '').trim().toUpperCase() || null })}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Pra agente de UM empreendimento: a IA sempre usa este imóvel da aba Imóveis (dados, preço, condições), mesmo sem código na mensagem. Deixe vazio pra ela detectar o imóvel por código/anúncio.
+        </p>
       </div>
 
       <VisitSection agent={agent} onChange={onChange} onSave={onSave} />

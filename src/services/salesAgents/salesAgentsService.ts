@@ -70,6 +70,7 @@ export interface SalesAgent {
   cross_sell_enabled: boolean;
   rich_media_enabled: boolean;
   visit_config: VisitConfig;
+  default_property_code: string | null;
   documents_count: number;
   created_at: string;
   updated_at: string;
@@ -148,6 +149,7 @@ export interface SalesAgentPayload {
   visit_duration_minutes?: number;
   example_conversations?: SalesAgentExample[];
   visit_config?: VisitConfig;
+  default_property_code?: string | null;
   locacao_enabled?: boolean;
   escalate_on_frustration?: boolean;
   escalate_on_human_request?: boolean;

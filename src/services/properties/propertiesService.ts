@@ -32,6 +32,7 @@ export interface Property {
   exclusive?: boolean;
   featured?: boolean;
   published_on_site?: boolean;
+  ai_enabled?: boolean;
   display_price?: string;
   full_address?: string;
   icon_summary?: {
@@ -83,6 +84,7 @@ export interface PropertyFormData {
   exclusive?: boolean;
   featured?: boolean;
   published_on_site?: boolean;
+  ai_enabled?: boolean;
   on_sign?: boolean;
   responsible_id?: string | null;
   captor_id?: string | null;
