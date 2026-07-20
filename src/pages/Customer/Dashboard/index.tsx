@@ -13,6 +13,7 @@ import { customerDashboardService } from '@/services/dashboard/customerDashboard
 import type { CustomerDashboardParams, CustomerDashboardResponse } from '@/types/analytics/dashboard';
 import DashboardFiltersDialog from './components/DashboardFiltersDialog';
 import CommercialKPISection from './components/CommercialKPISection';
+import AutomationsKPISection from './components/AutomationsKPISection';
 import DashboardMetricsSection from './components/DashboardMetricsSection';
 import DashboardTrendsSection from './components/DashboardTrendsSection';
 import DashboardPerformanceSection from './components/DashboardPerformanceSection';
@@ -372,6 +373,12 @@ const CustomerDashboardPage = () => {
       </div>
 
       <CommercialKPISection data={data} />
+
+      {/* Automações: usa os mesmos filtros do dashboard, mas busca sozinha —
+          se este endpoint demorar, o resto da tela já está renderizado. */}
+      <div data-tour="dashboard-automations">
+        <AutomationsKPISection params={buildDashboardParams(appliedFilters)} />
+      </div>
 
       <div data-tour="dashboard-metrics">
         <DashboardMetricsSection data={data} t={t} />
