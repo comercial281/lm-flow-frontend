@@ -68,6 +68,8 @@ export interface TenantTemplateVariable extends TemplateVariable {
   id: string;
   value_source: string;
   active: boolean;
+  /** true = criada sozinha a partir de um campo de formulário conectado ao CRM. */
+  auto_created?: boolean;
   created_at: string;
   updated_at: string;
 }
