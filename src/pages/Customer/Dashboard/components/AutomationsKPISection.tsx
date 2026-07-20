@@ -170,6 +170,12 @@ const AutomationsKPISection = ({ params = {} }: Props) => {
 
   const { followups, first_response: fr, recovery, rules, reminders } = data;
 
+  const excluded = fr.excluded_automated ?? 0;
+  const excludedNote =
+    excluded > 0
+      ? `${excluded} resposta(s) automática(s) fora da conta`
+      : null;
+
   const cards: Card[] = [
     {
       label: 'Primeiro atendimento',
@@ -179,16 +185,15 @@ const AutomationsKPISection = ({ params = {} }: Props) => {
       iconColor: 'text-blue-400',
       numColor: 'text-blue-400',
       value: fr.median_seconds !== null ? formatSeconds(fr.median_seconds) : '—',
-      // Mediana quase zero = eco do robô contado como atendimento humano. Isso foi
-      // corrigido, mas só vale para mensagens novas: os eventos já gravados seguem
-      // no histórico e apagá-los seria reescrever dado. Melhor avisar do que exibir
-      // "0s" como se o time atendesse instantaneamente.
+      // O backend já descarta o eco do robô da conta (inclusive o histórico anterior
+      // à correção). Aqui só damos transparência do que saiu, pra ninguém achar que
+      // o número mudou sozinho.
       footnote:
         fr.count === 0
-          ? 'Sem atendimento medido no período'
-          : fr.median_seconds !== null && fr.median_seconds < 5
-            ? `${fr.count} atendimento(s) · inclui respostas automáticas antigas; a medição foi corrigida e vale para as próximas`
-            : `${fr.count} atendimento(s)${fr.under_5min_rate !== null ? ` · ${fr.under_5min_rate}% em até 5min` : ''}`,
+          ? excludedNote ?? 'Sem atendimento medido no período'
+          : `${fr.count} atendimento(s)${
+              fr.under_5min_rate !== null ? ` · ${fr.under_5min_rate}% em até 5min` : ''
+            }${excludedNote ? ` · ${excludedNote}` : ''}`,
     },
     {
       label: 'Follow-ups enviados',

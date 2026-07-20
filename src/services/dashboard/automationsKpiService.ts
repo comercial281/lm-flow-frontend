@@ -17,6 +17,8 @@ export interface AutomationsKpiResponse {
     avg_seconds: number | null;
     median_seconds: number | null;
     under_5min_rate: number | null;
+    /** ecos automáticos antigos descartados da conta (histórico pré-correção) */
+    excluded_automated?: number;
   };
   recovery: {
     recovered: number;
