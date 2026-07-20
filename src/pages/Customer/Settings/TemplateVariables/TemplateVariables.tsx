@@ -113,6 +113,9 @@ export default function TemplateVariables() {
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<TenantTemplateVariable | null>(null);
 
+  // Quantas nasceram sozinhas de um campo de formulário conectado ao CRM.
+  const autoCount = custom.filter(v => v.auto_created).length;
+
   async function load() {
     setLoading(true);
     try {
@@ -273,7 +276,8 @@ export default function TemplateVariables() {
         <div className="flex items-center gap-2 mb-2">
           <Code size={14} className="text-muted-foreground" />
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Customizadas ({custom.length})
+            Customizadas ({custom.length}
+            {autoCount > 0 && `, ${autoCount} automática${autoCount > 1 ? 's' : ''}`})
           </h2>
         </div>
 
@@ -290,6 +294,10 @@ export default function TemplateVariables() {
               Crie variáveis específicas do seu tenant pra usar nos funis (ex:
               {' '}<code className="text-xs">{'{{empreendimento_atual}}'}</code>).
             </p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Você também não precisa criar na mão: ao conectar um formulário ao CRM, cada
+              campo respondido pelo lead vira uma variável aqui automaticamente.
+            </p>
             <Button variant="outline" onClick={openCreate}>
               <Plus size={14} className="mr-2" />
               Criar primeira
@@ -303,6 +311,14 @@ export default function TemplateVariables() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-sm truncate">{v.label}</span>
+                      {v.auto_created && (
+                        <span
+                          className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded"
+                          title="Criada sozinha a partir de um campo de formulário conectado ao CRM"
+                        >
+                          Automática
+                        </span>
+                      )}
                       {!v.active && (
                         <span className="text-xs px-1.5 py-0.5 bg-muted text-muted-foreground rounded">
                           Inativa
