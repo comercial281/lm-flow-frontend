@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { Button } from '@/components/ui/ds';
-import { Loader2, Repeat, CheckCircle2, Info } from 'lucide-react';
+import { Loader2, Repeat, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   followupEnrollmentService,
@@ -60,6 +60,7 @@ export function FollowupEnrollment() {
   }
 
   const noSequences = !config || config.sequences.length === 0;
+  const externalRules = config?.external_active_rules ?? [];
 
   return (
     <div className="max-w-2xl p-6 space-y-6">
@@ -72,6 +73,27 @@ export function FollowupEnrollment() {
           </p>
         </div>
       </div>
+
+      {externalRules.length > 0 && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
+          <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
+          <div className="space-y-1">
+            <p className="font-medium">
+              Existe outro follow-up ligado fora deste painel.
+            </p>
+            <p className="text-muted-foreground">
+              {externalRules.length === 1 ? 'A regra abaixo coloca' : 'As regras abaixo colocam'} lead
+              em funil de follow-up mesmo com o botão daqui desligado. Desligar aqui desliga
+              {externalRules.length === 1 ? '' : 'm'} {externalRules.length === 1 ? 'ela' : 'elas'} também.
+            </p>
+            <ul className="list-disc pl-4 text-muted-foreground">
+              {externalRules.map(r => (
+                <li key={r.id}>{r.name}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {noSequences ? (
         <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-4 text-sm">

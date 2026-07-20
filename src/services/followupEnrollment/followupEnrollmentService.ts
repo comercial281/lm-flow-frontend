@@ -15,6 +15,9 @@ export interface FollowupEnrollmentConfig {
   sequences: FollowupEnrollmentSequenceOption[];
   audiences: { value: FollowupAudience; label: string }[];
   managed_rule_id: string | null;
+  /** Regras de follow-up ativas criadas fora deste painel (seed/script). Se houver,
+   *  o follow-up dispara mesmo com o botão daqui desligado — a tela avisa. */
+  external_active_rules?: { id: string; name: string; trigger: string }[];
 }
 
 export interface FollowupEnrollmentUpdate {
