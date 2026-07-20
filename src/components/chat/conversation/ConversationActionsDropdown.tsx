@@ -26,10 +26,12 @@ import {
   Trash2,
   Archive,
   Pin,
+  Bot,
 } from 'lucide-react';
 import { Conversation } from '@/types/chat/api';
 import { useConversations } from '@/hooks/chat/useConversations';
 import { useLanguage } from '@/hooks/useLanguage';
+import ActivateAiDialog from './ActivateAiDialog';
 
 interface ConversationActionsDropdownProps {
   conversation: Conversation | null;
@@ -57,6 +59,7 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
   const [isUpdatingPin, setIsUpdatingPin] = useState(false);
   const [isUpdatingArchive, setIsUpdatingArchive] = useState(false);
   const [open, setOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const { t } = useLanguage('chat');
   const conversations = useConversations();
@@ -159,6 +162,20 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
           <Settings className="h-4 w-4" />
           {t('conversationActionsDropdown.title')}
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+
+        {/* IA Vendedora */}
+        <DropdownMenuItem
+          onClick={() => {
+            setOpen(false);
+            setAiOpen(true);
+          }}
+          className="flex items-center gap-2"
+        >
+          <Bot className="h-4 w-4" />
+          Ativar IA pra este lead
+        </DropdownMenuItem>
+
         <DropdownMenuSeparator />
 
         {/* Read/Unread Actions */}
@@ -388,6 +405,7 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
           {t('conversationActionsDropdown.deleteConversation')}
         </DropdownMenuItem>
       </DropdownMenuContent>
+      <ActivateAiDialog conversation={conversation} open={aiOpen} onOpenChange={setAiOpen} />
     </DropdownMenu>
   );
 };

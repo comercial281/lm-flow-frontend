@@ -13,6 +13,7 @@ import {
   type ActiveHoursMode,
   type SalesAgentTrigger,
   type SalesAgentTriggerType,
+  type SalesAgentOpening,
   type SalesAgentLesson,
   type SalesAgentLessonKind,
   type SalesAgentTestResult,
@@ -140,6 +141,11 @@ export default function SalesAgents() {
         rich_media_enabled: patch.rich_media_enabled ?? selected.rich_media_enabled,
         visit_config: patch.visit_config ?? selected.visit_config,
         default_property_code: patch.default_property_code ?? selected.default_property_code,
+        default_origin: patch.default_origin ?? selected.default_origin,
+        intent_question: patch.intent_question ?? selected.intent_question,
+        opening_image_url: patch.opening_image_url ?? selected.opening_image_url,
+        opening_audio_url: patch.opening_audio_url ?? selected.opening_audio_url,
+        openings: patch.openings ?? selected.openings,
       });
       setSelected(updated);
       setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
@@ -502,6 +508,7 @@ function ConfigTab({
         </p>
       </div>
 
+      <RecepcaoSection agent={agent} onChange={onChange} onSave={onSave} />
       <VisitSection agent={agent} onChange={onChange} onSave={onSave} />
       <IntelligenceSection agent={agent} onChange={onChange} onSave={onSave} />
       <ScheduleSection agent={agent} onSave={onSave} />
@@ -853,6 +860,181 @@ function CheckRow({ checked, onChange, title, desc }: {
         {desc && <div className="text-xs text-muted-foreground">{desc}</div>}
       </div>
     </label>
+  );
+}
+
+// ---------------- Recepção inicial (primeiro contato) ----------------
+
+function RecepcaoSection({
+  agent, onChange, onSave,
+}: {
+  agent: SalesAgent;
+  onChange: (a: SalesAgent) => void;
+  onSave: (patch: Partial<SalesAgent>) => void;
+}) {
+  const openings = agent.openings ?? [];
+
+  const patchOpening = (i: number, patch: Partial<SalesAgentOpening>) => {
+    const next = openings.map((o, idx) => (idx === i ? { ...o, ...patch } : o));
+    onChange({ ...agent, openings: next });
+  };
+  const commitOpenings = (next: SalesAgentOpening[]) => onSave({ openings: next });
+  const addOpening = () =>
+    commitOpenings([...openings, { label: 'Nova campanha', origins: [], form_ids: [], keywords: [] }]);
+  const removeOpening = (i: number) => commitOpenings(openings.filter((_, idx) => idx !== i));
+
+  const list = (arr?: string[]) => (arr ?? []).join(', ');
+  const toArr = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
+
+  return (
+    <div className="pt-2 border-t border-sidebar-border space-y-5">
+      <div>
+        <div className="text-sm font-medium">Recepção inicial (primeiro contato)</div>
+        <div className="text-xs text-muted-foreground">
+          A abertura padrão da IA: nome do lead, apresentação, de onde ele veio e a pergunta que segmenta a intenção.
+          Print e áudio são opcionais. Sem eles, a IA manda só os textos.
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="default_origin">De onde o lead veio (origem)</Label>
+        <Input
+          id="default_origin"
+          placeholder="Ex: nosso anúncio do Instagram"
+          value={agent.default_origin ?? ''}
+          onChange={(e) => onChange({ ...agent, default_origin: e.target.value })}
+          onBlur={() => onSave({ default_origin: (agent.default_origin ?? '').trim() || null })}
+        />
+        <p className="text-xs text-muted-foreground mt-1">A IA cita isso na abertura quando o lead não traz a origem do anúncio.</p>
+      </div>
+
+      <div>
+        <Label htmlFor="intent_question">Pergunta de intenção (fecha a abertura)</Label>
+        <Textarea
+          id="intent_question"
+          rows={2}
+          placeholder="Ex: seu foco é moradia, investimento ou ainda tá só sondando?"
+          value={agent.intent_question ?? ''}
+          onChange={(e) => onChange({ ...agent, intent_question: e.target.value })}
+          onBlur={() => onSave({ intent_question: (agent.intent_question ?? '').trim() || null })}
+        />
+        <p className="text-xs text-muted-foreground mt-1">É a pergunta que gera diálogo e segmenta o lead. A IA sempre fecha a abertura com ela.</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3">
+        <div>
+          <Label htmlFor="opening_image">Print de abertura (URL da imagem, opcional)</Label>
+          <Input
+            id="opening_image"
+            placeholder="https://...jpg"
+            value={agent.opening_image_url ?? ''}
+            onChange={(e) => onChange({ ...agent, opening_image_url: e.target.value })}
+            onBlur={() => onSave({ opening_image_url: (agent.opening_image_url ?? '').trim() || null })}
+          />
+        </div>
+        <div>
+          <Label htmlFor="opening_audio">Áudio de abertura (URL do áudio, opcional)</Label>
+          <Input
+            id="opening_audio"
+            placeholder="https://...ogg"
+            value={agent.opening_audio_url ?? ''}
+            onChange={(e) => onChange({ ...agent, opening_audio_url: e.target.value })}
+            onBlur={() => onSave({ opening_audio_url: (agent.opening_audio_url ?? '').trim() || null })}
+          />
+        </div>
+      </div>
+
+      {/* Recepções por campanha */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-sm font-medium">Recepções por campanha</div>
+          <Button variant="outline" size="sm" onClick={addOpening}>
+            <Plus className="w-4 h-4 mr-1" /> Adicionar
+          </Button>
+        </div>
+        <div className="text-xs text-muted-foreground mb-2">
+          Abertura, pergunta, print e áudio diferentes por origem, formulário do Meta ou palavra-chave. A IA usa a 1ª que combinar; senão, a recepção padrão acima.
+        </div>
+
+        {openings.length === 0 && (
+          <div className="text-xs text-muted-foreground italic">Nenhuma. A IA usa a recepção padrão pra todos.</div>
+        )}
+
+        <div className="space-y-4">
+          {openings.map((o, i) => (
+            <div key={i} className="rounded-lg border border-sidebar-border p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Input
+                  className="font-medium"
+                  placeholder="Nome (ex: Alma Panamby - Instagram)"
+                  value={o.label ?? ''}
+                  onChange={(e) => patchOpening(i, { label: e.target.value })}
+                  onBlur={() => commitOpenings(openings)}
+                />
+                <Button variant="ghost" size="sm" onClick={() => removeOpening(i)} title="Remover">
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div>
+                  <Label className="text-xs">Origens (vírgula)</Label>
+                  <Input placeholder="instagram, alma, campanha X"
+                    value={list(o.origins)}
+                    onChange={(e) => patchOpening(i, { origins: toArr(e.target.value) })}
+                    onBlur={() => commitOpenings(openings)} />
+                </div>
+                <div>
+                  <Label className="text-xs">IDs de formulário Meta (vírgula)</Label>
+                  <Input placeholder="123456789"
+                    value={list(o.form_ids)}
+                    onChange={(e) => patchOpening(i, { form_ids: toArr(e.target.value) })}
+                    onBlur={() => commitOpenings(openings)} />
+                </div>
+                <div>
+                  <Label className="text-xs">Palavras-chave (vírgula)</Label>
+                  <Input placeholder="alma, torre 2"
+                    value={list(o.keywords)}
+                    onChange={(e) => patchOpening(i, { keywords: toArr(e.target.value) })}
+                    onBlur={() => commitOpenings(openings)} />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Abertura desta campanha</Label>
+                <Textarea rows={2} placeholder="Deixe vazio pra usar a padrão"
+                  value={o.greeting ?? ''}
+                  onChange={(e) => patchOpening(i, { greeting: e.target.value })}
+                  onBlur={() => commitOpenings(openings)} />
+              </div>
+              <div>
+                <Label className="text-xs">Pergunta de intenção desta campanha</Label>
+                <Textarea rows={2} placeholder="Deixe vazio pra usar a padrão"
+                  value={o.intent_question ?? ''}
+                  onChange={(e) => patchOpening(i, { intent_question: e.target.value })}
+                  onBlur={() => commitOpenings(openings)} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Print (URL)</Label>
+                  <Input placeholder="https://...jpg"
+                    value={o.image_url ?? ''}
+                    onChange={(e) => patchOpening(i, { image_url: e.target.value })}
+                    onBlur={() => commitOpenings(openings)} />
+                </div>
+                <div>
+                  <Label className="text-xs">Áudio (URL)</Label>
+                  <Input placeholder="https://...ogg"
+                    value={o.audio_url ?? ''}
+                    onChange={(e) => patchOpening(i, { audio_url: e.target.value })}
+                    onBlur={() => commitOpenings(openings)} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 

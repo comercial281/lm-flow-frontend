@@ -71,9 +71,28 @@ export interface SalesAgent {
   rich_media_enabled: boolean;
   visit_config: VisitConfig;
   default_property_code: string | null;
+  default_origin: string | null;
+  intent_question: string | null;
+  opening_image_url: string | null;
+  opening_audio_url: string | null;
+  openings: SalesAgentOpening[];
   documents_count: number;
   created_at: string;
   updated_at: string;
+}
+
+// Recepção inicial por CAMPANHA: a IA escolhe a que casa com a origem/form/palavra
+// -chave do lead; senão usa o padrão do agente. Espelha a automação AUT (texto ->
+// print -> áudio -> pergunta de intenção).
+export interface SalesAgentOpening {
+  label?: string;
+  origins?: string[];   // casa se a origem do lead (campanha/anúncio/plataforma) contém algum
+  form_ids?: string[];  // casa pelo ID do formulário do Meta
+  keywords?: string[];  // casa se a 1ª mensagem do lead contém alguma
+  greeting?: string;
+  intent_question?: string;
+  image_url?: string;
+  audio_url?: string;
 }
 
 export type SalesMethod = 'consultative' | 'spin' | 'direct';
@@ -160,6 +179,11 @@ export interface SalesAgentPayload {
   google_review_link?: string | null;
   cross_sell_enabled?: boolean;
   rich_media_enabled?: boolean;
+  default_origin?: string | null;
+  intent_question?: string | null;
+  opening_image_url?: string | null;
+  opening_audio_url?: string | null;
+  openings?: SalesAgentOpening[];
 }
 
 export interface SalesAgentDocument {
@@ -259,6 +283,21 @@ export const salesAgentsService = {
       property_code: propertyCode || undefined,
     });
     return (res.data as { data: SalesAgentTestResult }).data;
+  },
+
+  // Ativa a IA pra atender um lead escolhido (proativo): inicia OU continua a
+  // conversa lendo todo o histórico. fresh=true reinicia do zero (abertura).
+  async engage(
+    id: string,
+    opts: { conversationId?: string; phone?: string; propertyCode?: string; fresh?: boolean },
+  ): Promise<{ conversation_id: string }> {
+    const res = await api.post(`${BASE}/${id}/engage`, {
+      conversation_id: opts.conversationId || undefined,
+      phone: opts.phone || undefined,
+      property_code: opts.propertyCode || undefined,
+      fresh: opts.fresh || undefined,
+    });
+    return (res.data as { data: { conversation_id: string } }).data;
   },
 
   // Gera o link wa.me pra colar no anúncio (código do imóvel + palavra-gatilho).
