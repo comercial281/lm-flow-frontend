@@ -192,7 +192,12 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
   // pooled_tenants (preserva os group_jids).
   const initialSources: string[] = Array.isArray(tenant.settings?.pipe_entry_sources)
     ? tenant.settings!.pipe_entry_sources
-    : (tenant.settings?.only_ad_leads ? ['ads'] : [...PIPE_SOURCE_KEYS]);
+    // Legado only_ad_leads=true barrava SÓ o WhatsApp orgânico (o gate antigo vivia
+    // só no caminho de conversa; contato de site/manual sempre entrava). Espelha
+    // LeadOrigin::PipeEntry::LEGACY_ONLY_ADS no backend.
+    : (tenant.settings?.only_ad_leads
+        ? PIPE_SOURCE_KEYS.filter(k => k !== 'organic')
+        : [...PIPE_SOURCE_KEYS]);
   const [sources, setSources] = useState<string[]>(initialSources.filter(s => (PIPE_SOURCE_KEYS as readonly string[]).includes(s)));
   const [savingSource, setSavingSource] = useState<string | null>(null);
   const toggleSource = async (key: string) => {
