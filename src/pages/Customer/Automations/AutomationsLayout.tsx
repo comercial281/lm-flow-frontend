@@ -52,17 +52,12 @@ const SECTORS: Sector[] = [
     featureKey: 'lead_automations',
     clientToggleKey: 'client_manage_automations',
   },
+  // "Follow-ups" e "Follow-up automático" eram dois setores; viraram um só. A config de
+  // disparo automático agora é uma seção dentro da própria tela do funil.
   {
     key: 'follow-ups',
-    name: 'Follow-ups',
+    name: 'Follow-up',
     path: '/automations/follow-ups',
-    icon: Repeat,
-    featureKey: 'follow_ups',
-  },
-  {
-    key: 'follow-up-auto',
-    name: 'Follow-up automático',
-    path: '/automations/follow-up-auto',
     icon: Repeat,
     featureKey: 'follow_ups',
   },

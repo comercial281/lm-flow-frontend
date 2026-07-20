@@ -18,6 +18,10 @@ export interface FollowupEnrollmentConfig {
   /** Regras de follow-up ativas criadas fora deste painel (seed/script). Se houver,
    *  o follow-up dispara mesmo com o botão daqui desligado — a tela avisa. */
   external_active_rules?: { id: string; name: string; trigger: string }[];
+  /** Disparos agendados cancelados no último desligamento. */
+  cancelled_jobs?: number;
+  /** Disparos ainda na fila. */
+  pending_jobs?: number;
 }
 
 export interface FollowupEnrollmentUpdate {

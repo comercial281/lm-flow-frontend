@@ -9,7 +9,13 @@ import {
   type FollowupAudience,
 } from '@/services/followupEnrollment/followupEnrollmentService';
 
-export function FollowupEnrollment() {
+interface FollowupEnrollmentProps {
+  /** Renderiza sem o cabeçalho e o padding de página, pra encaixar dentro da
+   *  tela de Follow-up (as duas telas viraram uma só). */
+  embedded?: boolean;
+}
+
+export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps = {}) {
   const [config, setConfig] = useState<FollowupEnrollmentConfig | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [audience, setAudience] = useState<FollowupAudience>('paid');
@@ -43,7 +49,18 @@ export function FollowupEnrollment() {
       setEnabled(c.enabled);
       setAudience(c.audience);
       setSequenceSlug(c.sequence_slug ?? '');
-      toast.success(enabled ? 'Follow-up automático ligado' : 'Follow-up automático desligado');
+      if (enabled) {
+        toast.success('Follow-up automático ligado');
+      } else {
+        // Avisa quantos disparos ja agendados foram cortados — o usuario precisa saber
+        // que o desligamento pegou a fila, nao so os leads novos.
+        const cut = c.cancelled_jobs ?? 0;
+        toast.success(
+          cut > 0
+            ? `Follow-up automático desligado. ${cut} disparo(s) agendado(s) cancelado(s).`
+            : 'Follow-up automático desligado',
+        );
+      }
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Erro ao salvar'));
     } finally {
@@ -63,16 +80,18 @@ export function FollowupEnrollment() {
   const externalRules = config?.external_active_rules ?? [];
 
   return (
-    <div className="max-w-2xl p-6 space-y-6">
-      <div className="flex items-center gap-2">
-        <Repeat className="h-5 w-5 text-primary" />
-        <div>
-          <h2 className="text-lg font-semibold">Follow-up automático</h2>
-          <p className="text-sm text-muted-foreground">
-            Coloca o lead no funil de follow-up sozinho. Se o lead responder, o sistema para a sequência automaticamente.
-          </p>
+    <div className={embedded ? 'space-y-6' : 'max-w-2xl p-6 space-y-6'}>
+      {!embedded && (
+        <div className="flex items-center gap-2">
+          <Repeat className="h-5 w-5 text-primary" />
+          <div>
+            <h2 className="text-lg font-semibold">Follow-up automático</h2>
+            <p className="text-sm text-muted-foreground">
+              Coloca o lead no funil de follow-up sozinho. Se o lead responder, o sistema para a sequência automaticamente.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {externalRules.length > 0 && (
         <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
@@ -98,7 +117,7 @@ export function FollowupEnrollment() {
       {noSequences ? (
         <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-4 text-sm">
           <Info className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
-          <span>Nenhum funil de follow-up ativo. Crie um em <strong>Automações → Follow-ups</strong> antes de configurar aqui.</span>
+          <span>Nenhum funil de follow-up ativo. Ative um funil na lista abaixo antes de configurar aqui.</span>
         </div>
       ) : (
         <>
@@ -107,7 +126,11 @@ export function FollowupEnrollment() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="text-sm font-medium">Ativar follow-up automático</h3>
-                <p className="text-xs text-muted-foreground">Quando ligado, novos leads entram no funil sozinhos.</p>
+                <p className="text-xs text-muted-foreground">
+                  Ligado: novos leads entram no funil sozinhos.<br />
+                  Desligado: o funil continua funcionando, mas só quando você mandar — pela tag{' '}
+                  <strong>follow-up</strong> ou pelo botão <strong>Ativar follow-up</strong> dentro do card do lead.
+                </p>
               </div>
               <button
                 type="button"

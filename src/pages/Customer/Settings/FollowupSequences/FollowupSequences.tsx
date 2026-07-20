@@ -30,6 +30,7 @@ import {
 } from '@/services/followupSequences/followupSequencesService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import type { Pipeline, PipelineStage } from '@/types/analytics';
+import { FollowupEnrollment } from '@/pages/Customer/Automations/FollowupEnrollment/FollowupEnrollment';
 
 // Backend (Followup::SendStep#move_stage_if_configured) deriva o slug a partir do
 // nome do stage assim: name.downcase.tr(' ', '-'). Mantemos exatamente o mesmo
@@ -405,12 +406,21 @@ export default function FollowupSequences() {
     <div className="flex flex-col gap-6 p-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Follow-ups</h1>
+          <h1 className="text-2xl font-semibold">Follow-up</h1>
           <p className="text-sm text-muted-foreground">
-            Sequências de mensagens disparadas quando o lead não responde. Edite cada passo abaixo.
+            Sequências de mensagens disparadas quando o lead não responde. Configure abaixo se o
+            sistema coloca o lead no funil sozinho e edite cada passo.
           </p>
         </div>
       </header>
+
+      {/* Config de enrolamento automático. Era uma aba separada ("Follow-up automático") e
+          virou seção daqui: separar as duas escondia que a chave e o funil eram a mesma
+          coisa — o usuário desligava numa aba achando que parava o que via na outra. */}
+      <section className="rounded-lg border bg-card p-4 shadow-sm">
+        <h2 className="mb-4 text-lg font-medium">Quando o funil dispara sozinho</h2>
+        <FollowupEnrollment embedded />
+      </section>
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Carregando...</p>
