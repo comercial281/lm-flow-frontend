@@ -179,10 +179,16 @@ const AutomationsKPISection = ({ params = {} }: Props) => {
       iconColor: 'text-blue-400',
       numColor: 'text-blue-400',
       value: fr.median_seconds !== null ? formatSeconds(fr.median_seconds) : '—',
+      // Mediana quase zero = eco do robô contado como atendimento humano. Isso foi
+      // corrigido, mas só vale para mensagens novas: os eventos já gravados seguem
+      // no histórico e apagá-los seria reescrever dado. Melhor avisar do que exibir
+      // "0s" como se o time atendesse instantaneamente.
       footnote:
-        fr.count > 0
-          ? `${fr.count} atendimento(s)${fr.under_5min_rate !== null ? ` · ${fr.under_5min_rate}% em até 5min` : ''}`
-          : 'Sem atendimento medido no período',
+        fr.count === 0
+          ? 'Sem atendimento medido no período'
+          : fr.median_seconds !== null && fr.median_seconds < 5
+            ? `${fr.count} atendimento(s) · inclui respostas automáticas antigas; a medição foi corrigida e vale para as próximas`
+            : `${fr.count} atendimento(s)${fr.under_5min_rate !== null ? ` · ${fr.under_5min_rate}% em até 5min` : ''}`,
     },
     {
       label: 'Follow-ups enviados',
