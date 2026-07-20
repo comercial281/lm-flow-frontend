@@ -101,6 +101,11 @@ export interface Pipeline {
   custom_fields?: Record<string, unknown> & {
     attributes?: string[]; // Array of attribute keys created at pipeline level
   };
+  /**
+   * Origens de lead que entram AUTOMATICAMENTE nesta pipeline.
+   * null/undefined = herda o padrão do cliente; [] = nada entra automático.
+   */
+  pipe_entry_sources?: string[] | null;
   created_at: string | number;
   updated_at: string | number;
   created_by?: {
@@ -153,6 +158,11 @@ export interface CreatePipelineData {
   is_active?: boolean;
   stages?: PipelineStage[];
   team_ids?: string[];
+  /**
+   * Origens de lead que entram AUTOMATICAMENTE nesta pipeline.
+   * undefined = não configurado (herda o padrão do cliente); [] = nada entra automático.
+   */
+  pipe_entry_sources?: string[];
 }
 
 export interface UpdatePipelineData extends Partial<CreatePipelineData> {

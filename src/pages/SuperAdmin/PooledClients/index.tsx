@@ -248,8 +248,11 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
           <div className="px-3 py-2.5 rounded-lg mb-1"
             style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.25)' }}>
-            <div className="text-sm text-white/90">O que entra no funil (por origem)</div>
-            <div className="text-xs text-white/40 mb-2">Só as origens ligadas entram no pipeline automaticamente. Todas ligadas = tudo entra.</div>
+            <div className="text-sm text-white/90">O que entra no funil (padrão do cliente)</div>
+            <div className="text-xs text-white/40 mb-2">
+              Padrão herdado pelas pipelines que não têm regra própria. Cada pipeline pode
+              sobrescrever isso em Pipelines &gt; editar &gt; Entrada de leads.
+            </div>
             <div className="space-y-1.5">
               {PIPE_SOURCES.map(src => {
                 const on = sources.includes(src.key);

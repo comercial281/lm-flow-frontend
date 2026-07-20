@@ -27,6 +27,7 @@ import TeamsService from '@/services/teams/teamsService';
 import { Team } from '@/types/users/teams';
 import { LocalAttributeDefinition, LocalAttributeDefinitionPayload } from '@/types/pipelines/localAttributeDefinition';
 import PipelineCustomAttributes from './PipelineCustomAttributes';
+import { PIPE_ENTRY_SOURCES } from '@/constants/pipeEntrySources';
 
 interface EditPipelineModalProps {
   open: boolean;
@@ -55,6 +56,11 @@ export default function EditPipelineModal({
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [customAttributes, setCustomAttributes] = useState<Record<string, unknown>>({});
+  // Origens que entram automaticamente NESTA pipeline.
+  // null = herda o padrão do cliente; array = regra própria ([] = nada entra).
+  const [entrySources, setEntrySources] = useState<string[] | null>(
+    Array.isArray(pipeline.pipe_entry_sources) ? pipeline.pipe_entry_sources : null,
+  );
 
   useEffect(() => {
     // Update form data when pipeline changes
@@ -66,6 +72,7 @@ export default function EditPipelineModal({
       is_active: pipeline.is_active,
     });
     setTeamIds(pipeline.team_ids || []);
+    setEntrySources(Array.isArray(pipeline.pipe_entry_sources) ? pipeline.pipe_entry_sources : null);
     // Load attributes array from custom_fields.attributes
     // Structure: custom_fields = { attributes: ["key1", "key2", ...] }
     const attributesArray = (pipeline.custom_fields?.attributes as string[]) || [];
@@ -145,6 +152,9 @@ export default function EditPipelineModal({
               : {}),
           }
         : undefined,
+      // Só manda a regra de origem quando a pipeline tem regra própria. null =
+      // herda o padrão do cliente, e o backend preserva o que já está.
+      ...(entrySources !== null ? { pipe_entry_sources: entrySources } : {}),
     };
 
     onSubmit(submitData);
@@ -162,8 +172,9 @@ export default function EditPipelineModal({
           </DialogHeader>
 
           <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="details">{t('editPipeline.details')}</TabsTrigger>
+              <TabsTrigger value="entry">Entrada de leads</TabsTrigger>
               <TabsTrigger value="attributes">{t('editPipeline.customAttributes')}</TabsTrigger>
             </TabsList>
 
@@ -309,6 +320,68 @@ export default function EditPipelineModal({
               </Label>
             </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="entry" className="py-4 overflow-y-auto flex-1">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold mb-1">Quais leads entram nesta pipeline</h3>
+                <p className="text-sm text-muted-foreground">
+                  Escolha as origens que entram aqui automaticamente. Assim dá pra ter uma pipeline
+                  que recebe todos os leads e outra que só recebe os de anúncio.
+                </p>
+              </div>
+
+              <label className="flex items-start gap-2 mb-4 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={entrySources === null}
+                  onChange={(e) => setEntrySources(e.target.checked ? null : [...PIPE_ENTRY_SOURCES.map(s => s.key)])}
+                />
+                <span>
+                  <span className="text-sm font-medium">Usar o padrão do cliente</span>
+                  <span className="block text-xs text-muted-foreground">
+                    Segue o que está configurado em Funções do cliente. Desmarque para esta pipeline
+                    ter regra própria.
+                  </span>
+                </span>
+              </label>
+
+              {entrySources !== null && (
+                <div className="space-y-2 pl-1">
+                  {PIPE_ENTRY_SOURCES.map((src) => (
+                    <label key={src.key} className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={entrySources.includes(src.key)}
+                        onChange={(e) =>
+                          setEntrySources(
+                            e.target.checked
+                              ? [...entrySources, src.key]
+                              : entrySources.filter((s) => s !== src.key),
+                          )
+                        }
+                      />
+                      <span>
+                        <span className="text-sm font-medium">{src.label}</span>
+                        <span className="block text-xs text-muted-foreground">{src.desc}</span>
+                      </span>
+                    </label>
+                  ))}
+                  {entrySources.length === 0 && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 pt-1">
+                      Nenhuma origem marcada: nada entra sozinho nesta pipeline. Você ainda pode
+                      adicionar cards na mão.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground pt-4">
+                Lead que já tem card aqui não vira card novo: se a pessoa preencheu um formulário e
+                depois mandou WhatsApp, a conversa é amarrada no card que já existe, na etapa em que ele está.
+              </p>
             </TabsContent>
 
             <TabsContent value="attributes" className="py-4 overflow-y-auto flex-1">
