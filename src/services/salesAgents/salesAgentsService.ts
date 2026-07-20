@@ -149,6 +149,7 @@ export interface SalesAgentPayload {
   model?: string;
   temperature?: number;
   max_context_tokens?: number;
+  reply_delay_seconds?: number;
   inbox_id?: string | null;
   pipeline_id?: string | null;
   stage_id?: string | null;

@@ -141,6 +141,7 @@ export default function SalesAgents() {
         rich_media_enabled: patch.rich_media_enabled ?? selected.rich_media_enabled,
         visit_config: patch.visit_config ?? selected.visit_config,
         default_property_code: patch.default_property_code ?? selected.default_property_code,
+        reply_delay_seconds: patch.reply_delay_seconds ?? selected.reply_delay_seconds,
         default_origin: patch.default_origin ?? selected.default_origin,
         intent_question: patch.intent_question ?? selected.intent_question,
         opening_image_url: patch.opening_image_url ?? selected.opening_image_url,
@@ -919,6 +920,23 @@ function RecepcaoSection({
           onBlur={() => onSave({ intent_question: (agent.intent_question ?? '').trim() || null })}
         />
         <p className="text-xs text-muted-foreground mt-1">É a pergunta que gera diálogo e segmenta o lead. A IA sempre fecha a abertura com ela.</p>
+      </div>
+
+      <div>
+        <Label htmlFor="reply_delay">Tempo de espera antes de responder (segundos)</Label>
+        <Input
+          id="reply_delay"
+          type="number"
+          min={0}
+          max={120}
+          placeholder="10"
+          value={agent.reply_delay_seconds ?? ''}
+          onChange={(e) => onChange({ ...agent, reply_delay_seconds: e.target.value === '' ? 0 : Number(e.target.value) })}
+          onBlur={() => onSave({ reply_delay_seconds: Math.max(0, Number(agent.reply_delay_seconds) || 0) })}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          A IA espera esse tempo pra juntar mensagens antes de responder. Se o lead manda 2-3 mensagens seguidas, ela lê todas e responde uma vez, com contexto. Vazio/0 = padrão de 10s.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
