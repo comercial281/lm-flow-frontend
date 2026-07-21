@@ -9,6 +9,7 @@ import {
   UserCog,
   UsersRound,
   Brain,
+  Bot,
 } from 'lucide-react';
 
 /**
@@ -48,6 +49,12 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     href: '/admin/cerebro',
     icon: Brain,
     description: 'Conhecimento e lições que todo agente de IA herda',
+  },
+  {
+    name: 'Agentes de IA',
+    href: '/admin/agentes',
+    icon: Bot,
+    description: 'Todos os agentes de todos os clientes: ligar, desligar e configurar',
   },
   {
     name: 'Central de Push',

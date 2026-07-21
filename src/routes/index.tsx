@@ -103,6 +103,7 @@ const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClien
 const PushCentral = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral'));
 const ClientMode = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientMode'));
 const CerebroUniversal = lazyWithRetry(() => import('@/pages/SuperAdmin/CerebroUniversal'));
+const SuperAgents = lazyWithRetry(() => import('@/pages/SuperAdmin/SuperAgents'));
 
 // Área do Admin — shell próprio (AdminLayout), fora do menu do CRM.
 const AdminLayout = lazyWithRetry(() => import('@/components/layout/AdminLayout'));
@@ -1923,6 +1924,18 @@ const AppRouter = () => {
                 <SuperAdminRoute>
                   <AdminLayout>
                     <CerebroUniversal />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/agentes"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <SuperAgents />
                   </AdminLayout>
                 </SuperAdminRoute>
               </PrivateRoute>
