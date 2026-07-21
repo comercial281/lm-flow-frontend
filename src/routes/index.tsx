@@ -121,7 +121,6 @@ const PropertyInterests = lazyWithRetry(() => import('@/pages/Customer/PropertyI
 const Macros = lazyWithRetry(() => import('@/pages/Customer/Settings/Macros').then(m => ({ default: m.Macros })));
 const WhatsappReminders = lazyWithRetry(() => import('@/pages/Customer/Settings/WhatsappReminders'));
 const Products = lazyWithRetry(() => import('@/pages/Customer/Settings/Products').then(m => ({ default: m.Products })));
-const Integrations = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations').then(m => ({ default: m.Integrations })));
 const EmailTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Settings/EmailTemplateEditor'));
 const WebhooksPage = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/WebhooksPage'));
 const OAuthAppsPage = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/OAuthAppsPage'));
@@ -987,7 +986,12 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <PermissionRoute resource="integrations" action="read">
-                      <Integrations />
+                      {/* Usa o Marketplace (endpoint /integrations, implementado no
+                          backend) em vez da página legada Integrations, que batia em
+                          /integrations/apps — rota inexistente no backend — e sempre
+                          caía em "erro para carregar". É por aqui que o Meta Ads e as
+                          demais integrações imobiliárias ficam acessíveis. */}
+                      <Marketplace />
                     </PermissionRoute>
                   </MainLayout>
                 </CustomerRoute>
