@@ -54,11 +54,11 @@ export const LeadsChart: React.FC<{ series: SeriesBlock }> = ({ series }) => {
             <stop offset="100%" stopColor="#7c3aed" stopOpacity={0.02} />
           </linearGradient>
         </defs>
-        <CartesianGrid stroke="#2a1b49" strokeDasharray="3 6" vertical={false} />
-        <XAxis dataKey="label" tick={{ fill: '#a394c7', fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={18} />
-        <YAxis tick={{ fill: '#a394c7', fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} width={44} />
+        <CartesianGrid stroke="var(--lmf-grid-line)" strokeDasharray="3 6" vertical={false} />
+        <XAxis dataKey="label" tick={{ fill: 'var(--lmf-muted)', fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={18} />
+        <YAxis tick={{ fill: 'var(--lmf-muted)', fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} width={44} />
         <Tooltip {...tooltipStyle} formatter={(v?: number, n?: string) => [formatNumber(v ?? 0), String(n ?? "")] as [string, string]} />
-        <Legend wrapperStyle={{ fontSize: 12, color: '#a394c7' }} />
+        <Legend wrapperStyle={{ fontSize: 12, color: 'var(--lmf-muted)' }} />
         <Area type="monotone" dataKey="leads" name="Leads" stroke="#7c3aed" strokeWidth={2} fill="url(#lmfLeads)" />
         <Line type="monotone" dataKey="conversas" name="Conversas" stroke="#38bdf8" strokeWidth={2} dot={false} />
         <Line type="monotone" dataKey="visitas" name="Visitas" stroke="#34d399" strokeWidth={2} dot={false} />
@@ -136,9 +136,9 @@ export const HistoryChart: React.FC<{ history: HistoryBlock }> = ({ history }) =
   return (
     <ResponsiveContainer width="100%" height={190}>
       <BarChart data={history.years} margin={{ top: 6, right: 8, left: -20, bottom: 0 }}>
-        <CartesianGrid stroke="#2a1b49" strokeDasharray="3 6" vertical={false} />
-        <XAxis dataKey="year" tick={{ fill: '#a394c7', fontSize: 11 }} tickLine={false} axisLine={false} />
-        <YAxis tick={{ fill: '#a394c7', fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} width={44} />
+        <CartesianGrid stroke="var(--lmf-grid-line)" strokeDasharray="3 6" vertical={false} />
+        <XAxis dataKey="year" tick={{ fill: 'var(--lmf-muted)', fontSize: 11 }} tickLine={false} axisLine={false} />
+        <YAxis tick={{ fill: 'var(--lmf-muted)', fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} width={44} />
         <Tooltip {...tooltipStyle} formatter={(v?: number) => [formatNumber(v ?? 0), "Leads"] as [string, string]} />
         <Bar dataKey="leads" fill="#7c3aed" radius={[6, 6, 0, 0]} />
       </BarChart>

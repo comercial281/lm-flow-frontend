@@ -88,14 +88,14 @@ export const formatDuration = (seconds: number) => {
 
 export const tooltipStyle = {
   contentStyle: {
-    background: 'rgba(12,5,26,0.96)',
-    border: '1px solid #2a1b49',
+    background: 'var(--lmf-tooltip-bg)',
+    border: '1px solid var(--lmf-border)',
     borderRadius: 10,
     fontSize: 12,
-    color: '#f2effa',
+    color: 'var(--lmf-text)',
   },
-  labelStyle: { color: '#a394c7', marginBottom: 4 },
-  itemStyle: { color: '#f2effa' },
+  labelStyle: { color: 'var(--lmf-muted)', marginBottom: 4 },
+  itemStyle: { color: 'var(--lmf-text)' },
 };
 
 export const CHART_COLORS = ['#7c3aed', '#34d399', '#38bdf8', '#fbbf24', '#fb7185', '#c4b5fd', '#f472b6', '#22d3ee'];

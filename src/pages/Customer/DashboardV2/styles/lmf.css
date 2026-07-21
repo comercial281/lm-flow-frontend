@@ -1,31 +1,49 @@
 /*
- * Design system do dashboard novo — namespaced `lmf-*`.
+ * Design system do dashboard — namespaced `lmf-*`.
  *
  * Recriado a partir do protótipo (dev/lm-flow-redesign/prototype.html), NÃO
- * derivado das telas antigas. Trocar variável de cor no shell existente nunca
- * vira outro design system: o DNA (layout, chrome, espaçamento) fica. Por isso
- * tudo aqui é próprio e o dashboard antigo segue intacto até a troca.
+ * derivado das telas antigas.
  *
- * Os tokens vêm do protótipo real, lidos do DOM renderizado (não chutados):
- * --bg #0A0416 · --surface #150A29 · --accent #7C3AED · --text #F2EFFA
- * --border #2A1B49 · --radius 16px · Inter
+ * TEMA: o app tem claro e escuro (classe `dark` no <html>, ver
+ * src/utils/themeUtils.ts) e o protótipo TAMBÉM define os dois conjuntos de
+ * token (`:root[data-theme=light]` e `[data-theme=dark]`). A primeira versão
+ * disto fixou só o escuro: no tema claro o dashboard virava um bloco preto
+ * dentro de um app branco. Por isso o padrão aqui é o CLARO e o escuro entra
+ * por `.dark`, com os valores copiados do protótipo, não inventados.
+ *
+ * Claro:  --bg #F4F2FB · --surface #FFFFFF · --border #EBE8F5 · --text #191233
+ * Escuro: --bg #0A0416 · --surface #150A29 · --border #2A1B49 · --text #F2EFFA
+ * Comum:  accent #7C3AED / #9333EA · Inter · raio 16px
  */
 
 .lmf {
-  --lmf-bg: #0a0416;
-  --lmf-surface: #150a29;
-  --lmf-surface-2: #1c0f36;
+  --lmf-bg: #f4f2fb;
+  --lmf-surface: #ffffff;
+  --lmf-surface-2: #faf9fe;
   --lmf-accent: #7c3aed;
   --lmf-accent-2: #9333ea;
-  --lmf-accent-soft: rgba(124, 58, 237, 0.16);
-  --lmf-text: #f2effa;
-  --lmf-muted: #a394c7;
-  --lmf-border: #2a1b49;
+  --lmf-accent-soft: rgba(124, 58, 237, 0.09);
+  --lmf-text: #191233;
+  --lmf-muted: #615c7c;
+  --lmf-faint: #9c97b2;
+  --lmf-border: #ebe8f5;
+  --lmf-border-strong: #ded9ee;
   --lmf-radius: 16px;
   --lmf-radius-sm: 10px;
-  --lmf-up: #34d399;
-  --lmf-down: #fb7185;
-  --lmf-warn: #fbbf24;
+  --lmf-up: #059669;
+  --lmf-down: #e11d48;
+  --lmf-warn: #b45309;
+
+  /* Vidro no claro: branco translúcido com véu violeta e sombra suave. No
+     claro o blur sozinho some — quem dá volume é a sombra. */
+  --lmf-glass-from: rgba(124, 58, 237, 0.05);
+  --lmf-glass-to: rgba(255, 255, 255, 0.9);
+  --lmf-glass-top: rgba(124, 58, 237, 0.22);
+  --lmf-shadow: 0 1px 2px rgba(16, 10, 40, 0.04), 0 8px 24px -12px rgba(16, 10, 40, 0.1);
+  --lmf-track: rgba(124, 58, 237, 0.12);
+  --lmf-control-bg: #ffffff;
+  --lmf-tooltip-bg: rgba(255, 255, 255, 0.98);
+  --lmf-grid-line: #e6e2f2;
 
   background: var(--lmf-bg);
   color: var(--lmf-text);
@@ -34,30 +52,52 @@
   padding: 24px;
 }
 
-/* Vidro: fundo translúcido + blur + borda clara de 1px no topo.
-   O blur sozinho não lê como vidro; é a borda superior que dá o brilho. */
+.dark .lmf {
+  --lmf-bg: #0a0416;
+  --lmf-surface: #150a29;
+  --lmf-surface-2: #1c0f36;
+  --lmf-accent-soft: rgba(168, 85, 247, 0.15);
+  --lmf-text: #f2effa;
+  --lmf-muted: #a79fc4;
+  --lmf-faint: #6e6690;
+  --lmf-border: #2a1b49;
+  --lmf-border-strong: #37255e;
+  --lmf-up: #34d399;
+  --lmf-down: #fb7185;
+  --lmf-warn: #fbbf24;
+
+  --lmf-glass-from: rgba(124, 58, 237, 0.08);
+  --lmf-glass-to: rgba(21, 10, 41, 0.72);
+  --lmf-glass-top: rgba(242, 239, 250, 0.28);
+  --lmf-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px -14px rgba(0, 0, 0, 0.55);
+  --lmf-track: rgba(42, 27, 73, 0.9);
+  --lmf-control-bg: rgba(21, 10, 41, 0.8);
+  --lmf-tooltip-bg: rgba(12, 5, 26, 0.96);
+  --lmf-grid-line: #2a1b49;
+}
+
 .lmf-glass {
   position: relative;
-  background: linear-gradient(180deg, rgba(124, 58, 237, 0.08), rgba(21, 10, 41, 0.72));
+  background: linear-gradient(180deg, var(--lmf-glass-from), var(--lmf-glass-to));
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border: 1px solid var(--lmf-border);
   border-radius: var(--lmf-radius);
+  box-shadow: var(--lmf-shadow);
   overflow: hidden;
 }
 
+/* Brilho de 1px no topo — é ele que faz ler como vidro, não o blur. */
 .lmf-glass::before {
   content: '';
   position: absolute;
   inset: 0 0 auto 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(242, 239, 250, 0.28), transparent);
+  background: linear-gradient(90deg, transparent, var(--lmf-glass-top), transparent);
   pointer-events: none;
 }
 
-.lmf-card {
-  padding: 20px;
-}
+.lmf-card { padding: 20px; }
 
 .lmf-card-title {
   font-size: 15px;
@@ -72,7 +112,6 @@
   margin: 4px 0 0;
 }
 
-/* KPI */
 .lmf-kpi-label {
   display: flex;
   align-items: center;
@@ -88,9 +127,11 @@
   height: 30px;
   border-radius: var(--lmf-radius-sm);
   background: var(--lmf-accent-soft);
-  color: #c4b5fd;
+  color: var(--lmf-accent);
   flex: none;
 }
+
+.dark .lmf-kpi-icon { color: #c4b5fd; }
 
 .lmf-kpi-value {
   font-size: 34px;
@@ -114,35 +155,21 @@
 .lmf-down { color: var(--lmf-down); }
 .lmf-flat { color: var(--lmf-muted); }
 
-/* Grid */
-.lmf-grid {
-  display: grid;
-  gap: 18px;
-}
-
-.lmf-grid-kpi {
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-}
-
-.lmf-grid-2 {
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-}
-
-.lmf-grid-half {
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-}
+.lmf-grid { display: grid; gap: 18px; }
+.lmf-grid-kpi { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.lmf-grid-2 { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+.lmf-grid-half { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
 
 @media (max-width: 1100px) {
   .lmf-grid-2 { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* Seletor de período */
 .lmf-segment {
   display: inline-flex;
   gap: 2px;
   padding: 4px;
   border-radius: 12px;
-  background: rgba(21, 10, 41, 0.8);
+  background: var(--lmf-control-bg);
   border: 1px solid var(--lmf-border);
   flex-wrap: wrap;
 }
@@ -168,7 +195,7 @@
 }
 
 .lmf-select {
-  background: rgba(21, 10, 41, 0.8);
+  background: var(--lmf-control-bg);
   border: 1px solid var(--lmf-border);
   color: var(--lmf-text);
   border-radius: 12px;
@@ -177,32 +204,34 @@
   cursor: pointer;
 }
 
+.lmf-select[data-active='true'] {
+  border-color: var(--lmf-accent);
+  color: var(--lmf-accent);
+}
+
 .lmf-date-input {
-  background: rgba(21, 10, 41, 0.8);
+  background: var(--lmf-control-bg);
   border: 1px solid var(--lmf-border);
   color: var(--lmf-text);
   border-radius: 10px;
   padding: 8px 11px;
   font-size: 12.5px;
-  color-scheme: dark;
 }
 
-/* Listas */
+.dark .lmf-date-input { color-scheme: dark; }
+
 .lmf-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(42, 27, 73, 0.7);
+  border-bottom: 1px solid var(--lmf-border);
 }
 
 .lmf-row:last-child { border-bottom: 0; }
 
-.lmf-row-title {
-  font-size: 13.5px;
-  font-weight: 550;
-}
+.lmf-row-title { font-size: 13.5px; font-weight: 550; }
 
 .lmf-row-sub {
   font-size: 12px;
@@ -216,25 +245,29 @@
   padding: 4px 10px;
   border-radius: 999px;
   background: var(--lmf-accent-soft);
-  color: #c4b5fd;
+  color: var(--lmf-accent);
   white-space: nowrap;
 }
 
+.dark .lmf-pill { color: #c4b5fd; }
+
 .lmf-pill[data-tone='warn'] {
-  background: rgba(251, 191, 36, 0.16);
-  color: #fcd34d;
+  background: rgba(180, 83, 9, 0.12);
+  color: var(--lmf-warn);
 }
 
 .lmf-pill[data-tone='ok'] {
-  background: rgba(52, 211, 153, 0.16);
-  color: #6ee7b7;
+  background: rgba(5, 150, 105, 0.12);
+  color: var(--lmf-up);
 }
 
-/* Barra de funil */
+.dark .lmf-pill[data-tone='warn'] { background: rgba(251, 191, 36, 0.16); }
+.dark .lmf-pill[data-tone='ok'] { background: rgba(52, 211, 153, 0.16); }
+
 .lmf-bar-track {
   height: 8px;
   border-radius: 999px;
-  background: rgba(42, 27, 73, 0.9);
+  background: var(--lmf-track);
   overflow: hidden;
 }
 
@@ -244,7 +277,6 @@
   background: linear-gradient(90deg, var(--lmf-accent), var(--lmf-accent-2));
 }
 
-/* Mapa de calor */
 .lmf-heat {
   display: grid;
   grid-template-columns: 34px repeat(24, minmax(0, 1fr));
@@ -252,10 +284,12 @@
   align-items: center;
 }
 
+/* Só a opacidade varia com o valor; a base é a mesma nos dois temas porque o
+   violeta translúcido funciona sobre branco e sobre obsidiana. */
 .lmf-heat-cell {
   aspect-ratio: 1;
   border-radius: 4px;
-  background: rgba(124, 58, 237, calc(var(--i) * 0.9 + 0.05));
+  background: rgba(124, 58, 237, calc(var(--i) * 0.85 + 0.06));
   cursor: default;
   transition: transform 0.12s ease, outline-color 0.12s ease;
   outline: 1px solid transparent;
@@ -263,7 +297,7 @@
 
 .lmf-heat-cell:hover {
   transform: scale(1.35);
-  outline-color: rgba(242, 239, 250, 0.55);
+  outline-color: var(--lmf-accent);
   position: relative;
   z-index: 2;
 }
@@ -275,8 +309,8 @@
   padding-right: 4px;
 }
 
-/* Estado vazio: bloco sem fonte de dado diz o porquê em vez de mostrar zero,
-   que o usuário leria como "não teve movimento". */
+/* Bloco sem fonte de dado diz o porquê em vez de mostrar zero, que o usuário
+   leria como "não teve movimento". */
 .lmf-empty {
   display: grid;
   place-items: center;
@@ -285,13 +319,13 @@
   padding: 28px 16px;
   color: var(--lmf-muted);
   font-size: 12.5px;
-  border: 1px dashed var(--lmf-border);
+  border: 1px dashed var(--lmf-border-strong);
   border-radius: var(--lmf-radius-sm);
 }
 
 .lmf-skeleton {
   border-radius: var(--lmf-radius);
-  background: linear-gradient(90deg, rgba(42, 27, 73, 0.35), rgba(42, 27, 73, 0.7), rgba(42, 27, 73, 0.35));
+  background: linear-gradient(90deg, var(--lmf-track), var(--lmf-accent-soft), var(--lmf-track));
   background-size: 200% 100%;
   animation: lmf-shimmer 1.4s linear infinite;
 }
@@ -304,19 +338,4 @@
 @media (prefers-reduced-motion: reduce) {
   .lmf-skeleton { animation: none; }
   .lmf-heat-cell:hover { transform: none; }
-}
-
-/* Tooltip do recharts precisa herdar o tema; o default é branco e estoura. */
-.lmf-tooltip {
-  background: rgba(12, 5, 26, 0.96);
-  border: 1px solid var(--lmf-border);
-  border-radius: 10px;
-  padding: 9px 11px;
-  font-size: 12px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
-}
-
-.lmf-tooltip-label {
-  color: var(--lmf-muted);
-  margin-bottom: 4px;
 }
