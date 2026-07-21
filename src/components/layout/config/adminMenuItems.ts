@@ -11,6 +11,7 @@ import {
   Brain,
   Bot,
   ClipboardList,
+  Wand2,
 } from 'lucide-react';
 
 /**
@@ -56,6 +57,12 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     href: '/admin/agentes',
     icon: Bot,
     description: 'Todos os agentes de todos os clientes: ligar, desligar e configurar',
+  },
+  {
+    name: 'Aperfeiçoamento',
+    href: '/admin/aperfeicoamento',
+    icon: Wand2,
+    description: 'Ensine a IA por descrição ou pelas conversas passadas; você aprova',
   },
   {
     name: 'Formulários',
