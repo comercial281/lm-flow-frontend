@@ -6,13 +6,12 @@ export interface CapiManualEvent {
   intent: string | null;
   sent_at: string | null;
   sent_by: string | null;
-  sent_to: string[];
 }
 
 export interface CapiManualStatus {
-  is_enabled: boolean;
-  client_ready: boolean;
-  contribute_to_lm: boolean;
+  can_send: boolean;      // tem algum destino pronto pra receber a conversão
+  is_enabled: boolean;    // pixel do próprio cliente ligado
+  client_ready: boolean;  // pixel do cliente com id + token válidos
   events: CapiManualEvent[];
 }
 
