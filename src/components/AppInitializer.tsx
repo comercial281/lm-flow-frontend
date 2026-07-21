@@ -160,7 +160,7 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   // "LM Flow" — o visitante do anúncio tem que ver a página na hora, não a marca
   // do CRM. Elas cuidam do próprio carregamento.
   const path = typeof window !== 'undefined' ? window.location.pathname : '';
-  const isPublicPath = ['/lp', '/imovel', '/portal', '/auth', '/login', '/register', '/widget', '/setup']
+  const isPublicPath = ['/lp', '/imovel', '/portal', '/auth', '/login', '/register', '/widget', '/setup', '/formulario']
     .some((p) => path.startsWith(p));
 
   if ((!isInitialized || initError) && !isPublicPath) {
