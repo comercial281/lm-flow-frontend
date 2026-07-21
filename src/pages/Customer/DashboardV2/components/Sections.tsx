@@ -1,5 +1,5 @@
 import React from 'react';
-import { EmptyBlock, formatDuration, formatNumber, GlassCard } from './primitives';
+import { EmptyBlock, formatCurrency, formatDuration, formatNumber, GlassCard } from './primitives';
 import { isAvailable } from '../types';
 import type {
   AgentBlock, AutomationsBlock, CapiBlock, PipelineBlock, ResponseBlock, UpcomingBlock,
@@ -15,7 +15,7 @@ export const PipelineFunnel: React.FC<{
   return (
     <GlassCard
       title="Funil do pipeline"
-      subtitle="Quantidade parada em cada etapa e quantos entraram no período"
+      subtitle={pipeline.spend ? 'Quantidade por etapa e quanto custou colocar um lead em cada uma' : 'Quantidade parada em cada etapa e quantos entraram no período'}
       action={
         pipeline.pipelines.length > 1 ? (
           <select className="lmf-select" value={pipeline.pipeline.id} onChange={e => onSelect(e.target.value)} aria-label="Pipeline">
@@ -40,6 +40,13 @@ export const PipelineFunnel: React.FC<{
                   <span className="truncate">{stage.name}</span>
                 </span>
                 <span className="flex items-center gap-3 flex-none">
+                  {/* Custo por entrada na etapa. Só aparece quando há gasto
+                      medido E alguém entrou: sem isso o número seria inventado. */}
+                  {stage.cost_per_entry != null && (
+                    <span className="lmf-pill" title="Investimento do período dividido por quantos entraram nesta etapa">
+                      {formatCurrency(stage.cost_per_entry)}
+                    </span>
+                  )}
                   <span style={{ fontSize: 11.5, color: 'var(--lmf-muted)' }}>+{formatNumber(stage.entered)} no período</span>
                   <strong style={{ fontSize: 14 }}>{formatNumber(stage.current)}</strong>
                 </span>

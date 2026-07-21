@@ -42,9 +42,10 @@ export interface KpiValue {
 
 export type KpiKey =
   | 'leads' | 'conversations' | 'proposals' | 'sales'
-  | 'vgv' | 'ticket' | 'visits_scheduled' | 'visits_done';
+  | 'vgv' | 'ticket' | 'visits_scheduled' | 'visits_done'
+  | 'spend' | 'cost_per_lead' | 'cost_per_visit' | 'cost_per_sale';
 
-export type Kpis = Record<KpiKey, KpiValue>;
+export type Kpis = Partial<Record<KpiKey, KpiValue>>;
 
 export interface SeriesBlock {
   granularity: Granularity;
@@ -65,9 +66,13 @@ export interface SourcesBlock {
 export interface PipelineBlock {
   pipeline: { id: string; name: string };
   pipelines: { id: string; name: string }[];
+  /** investimento de mídia no período, base do custo por etapa */
+  spend?: number;
   stages: {
     id: string; name: string; color: string; position: number;
     entered: number; current: number;
+    /** gasto do período / quantos entraram na etapa; null quando não há base */
+    cost_per_entry?: number | null;
   }[];
 }
 

@@ -1,8 +1,14 @@
 import React from 'react';
-import { Users, MessageSquare, CalendarCheck, DollarSign, FileText, Trophy, Receipt, CheckCircle2 } from 'lucide-react';
+import {
+  Users, MessageSquare, CalendarCheck, DollarSign, FileText, Trophy, Receipt, CheckCircle2,
+  Megaphone, Target, Footprints, BadgeDollarSign,
+} from 'lucide-react';
 import { Delta, formatCurrency, formatNumber, Skeleton } from './primitives';
 import type { KpiKey, Kpis } from '../types';
 
+// Os 4 últimos só aparecem quando há investimento medido no período: o backend
+// omite a chave, e card ausente é mais honesto que "Custo por lead R$ 0,00",
+// que afirmaria que o lead saiu de graça.
 const DEFS: { key: KpiKey; label: string; icon: React.ReactNode; money?: boolean }[] = [
   { key: 'leads', label: 'Leads captados', icon: <Users size={15} /> },
   { key: 'conversations', label: 'Conversas únicas', icon: <MessageSquare size={15} /> },
@@ -12,6 +18,10 @@ const DEFS: { key: KpiKey; label: string; icon: React.ReactNode; money?: boolean
   { key: 'sales', label: 'Vendas concretizadas', icon: <Trophy size={15} /> },
   { key: 'vgv', label: 'VGV', icon: <DollarSign size={15} />, money: true },
   { key: 'ticket', label: 'Ticket médio', icon: <Receipt size={15} />, money: true },
+  { key: 'spend', label: 'Investido em mídia', icon: <Megaphone size={15} />, money: true },
+  { key: 'cost_per_lead', label: 'Custo por lead', icon: <Target size={15} />, money: true },
+  { key: 'cost_per_visit', label: 'Custo por visita', icon: <Footprints size={15} />, money: true },
+  { key: 'cost_per_sale', label: 'Custo por venda', icon: <BadgeDollarSign size={15} />, money: true },
 ];
 
 export const KpiRow: React.FC<{ kpis?: Kpis; loading?: boolean }> = ({ kpis, loading }) => {
@@ -36,8 +46,20 @@ export const KpiRow: React.FC<{ kpis?: Kpis; loading?: boolean }> = ({ kpis, loa
               <span className="lmf-kpi-icon">{def.icon}</span>
               {def.label}
             </div>
-            <p className="lmf-kpi-value">{def.money ? formatCurrency(kpi.value) : formatNumber(kpi.value)}</p>
-            <Delta value={kpi.delta} />
+            {/* value null = denominador zero (ex: custo por venda sem venda).
+                Mostra travessão em vez de R$ 0,00, que seria uma afirmação. */}
+            <p className="lmf-kpi-value">
+              {kpi.value === null || kpi.value === undefined
+                ? '—'
+                : def.money
+                  ? formatCurrency(kpi.value)
+                  : formatNumber(kpi.value)}
+            </p>
+            {kpi.value === null || kpi.value === undefined ? (
+              <span className="lmf-kpi-delta lmf-flat">sem base no período</span>
+            ) : (
+              <Delta value={kpi.delta} />
+            )}
           </article>
         );
       })}
