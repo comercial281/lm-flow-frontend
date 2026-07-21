@@ -30,6 +30,21 @@ export interface SuperAgent {
   temperature?: number;
   sales_method?: string | null;
   booking_enabled?: boolean;
+  // Economia de tokens
+  model?: string | null;
+  test_model?: string | null;
+  max_output_tokens?: number | null;
+}
+
+// Catálogo vindo do backend (fonte única: preço real + mínimo de cache).
+export interface ModelOption {
+  id: string;
+  label: string;
+  input: number;   // USD por 1M tokens de entrada
+  output: number;  // USD por 1M tokens de saída
+  min_cache_tokens: number;
+  sampling: boolean;
+  use_for: string;
 }
 
 interface Envelope<T> {
@@ -39,7 +54,8 @@ interface Envelope<T> {
 }
 
 export type SuperAgentPatch = Partial<
-  Pick<SuperAgent, 'name' | 'enabled' | 'mode' | 'trigger_keyword' | 'inbox_id' | 'followup_enabled' | 'booking_enabled' | 'active_hours'>
+  Pick<SuperAgent, 'name' | 'enabled' | 'mode' | 'trigger_keyword' | 'inbox_id' | 'followup_enabled' | 'booking_enabled' | 'active_hours'
+  | 'model' | 'test_model' | 'max_output_tokens'>
 >;
 
 export const superAgentsService = {
@@ -61,6 +77,11 @@ export const superAgentsService = {
   async inboxes(tenantSlug: string | null): Promise<Array<{ id: string; name: string }>> {
     const res = await api.get('/super/sales_agents/inboxes', { params: { tenant: tenantSlug ?? '' } });
     return (res.data as Envelope<Array<{ id: string; name: string }>>).data;
+  },
+
+  async models(): Promise<ModelOption[]> {
+    const res = await api.get('/super/sales_agents/models');
+    return (res.data as Envelope<ModelOption[]>).data;
   },
 };
 

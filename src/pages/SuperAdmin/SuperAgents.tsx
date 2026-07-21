@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Input, Label } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Bot, ChevronDown, Power, Clock, MessageSquare, Loader2 } from 'lucide-react';
+import { Bot, ChevronDown, Power, Clock, MessageSquare, Loader2, Coins } from 'lucide-react';
 import {
   superAgentsService,
   MODE_LABELS,
   type SuperAgent,
   type SuperAgentPatch,
+  type ModelOption,
 } from '@/services/superAdmin/superAgentsService';
 
 /**
@@ -107,6 +108,11 @@ function AgentRow({
   const [hoursEnd, setHoursEnd] = useState('');
   const [inboxId, setInboxId] = useState(agent.inbox_id ?? '');
   const [inboxes, setInboxes] = useState<Array<{ id: string; name: string }>>([]);
+  // Economia de tokens
+  const [model, setModel] = useState(agent.model ?? '');
+  const [testModel, setTestModel] = useState(agent.test_model ?? '');
+  const [maxOut, setMaxOut] = useState(String(agent.max_output_tokens ?? ''));
+  const [catalog, setCatalog] = useState<ModelOption[]>([]);
 
   useEffect(() => {
     const w = agent.active_hours?.windows?.[0];
@@ -119,6 +125,12 @@ function AgentRow({
     if (!open || inboxes.length > 0) return;
     superAgentsService.inboxes(agent.tenant_slug).then(setInboxes).catch(() => setInboxes([]));
   }, [open, agent.tenant_slug, inboxes.length]);
+
+  // Catálogo de modelos (preço real + mínimo de cache) — só ao abrir.
+  useEffect(() => {
+    if (!open || catalog.length > 0) return;
+    superAgentsService.models().then(setCatalog).catch(() => setCatalog([]));
+  }, [open, catalog.length]);
 
   const save = async (patch: SuperAgentPatch, okMsg = 'Salvo.') => {
     setSaving(true);
@@ -133,11 +145,16 @@ function AgentRow({
     }
   };
 
+  const selectedModel = catalog.find(m => m.id === model);
+
   const toggleEnabled = () => void save({ enabled: !agent.enabled }, agent.enabled ? 'Agente desligado.' : 'Agente ligado.');
 
   const saveConfig = () => {
     const patch: SuperAgentPatch = { mode, trigger_keyword: keyword.trim() || null };
     if (inboxId && inboxId !== agent.inbox_id) patch.inbox_id = inboxId;
+    if (model !== (agent.model ?? '')) patch.model = model || null;
+    if (testModel !== (agent.test_model ?? '')) patch.test_model = testModel || null;
+    if (maxOut !== String(agent.max_output_tokens ?? '')) patch.max_output_tokens = maxOut ? Number(maxOut) : null;
     if (hoursStart && hoursEnd) {
       const existing = agent.active_hours ?? {};
       const days = existing.windows?.[0]?.days ?? [1, 2, 3, 4, 5];
@@ -209,6 +226,47 @@ function AgentRow({
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground">Dias úteis. Deixe em branco pra manter o atual.</p>
           </div>
+          {/* Custo & Modelo — economia de tokens */}
+          <div className="rounded-md border border-border bg-muted/30 p-3">
+            <Label className="flex items-center gap-1"><Coins className="h-3.5 w-3.5" /> Custo e modelo</Label>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label className="text-xs">Atendimento ao lead</Label>
+                <select value={model} onChange={e => setModel(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs">
+                  <option value="">Padrão do sistema</option>
+                  {catalog.map(m => <option key={m.id} value={m.id}>{m.label} — ${m.input}/${m.output} por 1M</option>)}
+                </select>
+                {selectedModel && (
+                  <p className="mt-1 text-[11px] text-muted-foreground">{selectedModel.use_for}</p>
+                )}
+              </div>
+              <div>
+                <Label className="text-xs">Painel Testar (você iterando)</Label>
+                <select value={testModel} onChange={e => setTestModel(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs">
+                  <option value="">Haiku (mais barato) — recomendado</option>
+                  {catalog.map(m => <option key={m.id} value={m.id}>{m.label} — ${m.input}/${m.output} por 1M</option>)}
+                </select>
+                <p className="mt-1 text-[11px] text-muted-foreground">Testar não precisa do modelo caro. Só afeta o painel, nunca o lead real.</p>
+              </div>
+            </div>
+            <div className="mt-3">
+              <Label htmlFor={`mo-${agent.id}`} className="text-xs">Teto de resposta (tokens de saída)</Label>
+              <Input id={`mo-${agent.id}`} type="number" value={maxOut} onChange={e => setMaxOut(e.target.value)} placeholder="1200 (padrão)" className="h-8 w-40 text-xs" />
+              <p className="mt-1 text-[11px] text-muted-foreground">Resposta de WhatsApp é curta. Menor = mais barato e sem textão.</p>
+            </div>
+            {selectedModel && selectedModel.min_cache_tokens >= 4096 && (
+              <p className="mt-2 rounded bg-amber-100 px-2 py-1.5 text-[11px] text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                Atenção: este modelo só usa cache com prompt acima de {selectedModel.min_cache_tokens.toLocaleString('pt-BR')} tokens.
+                Se o prompt deste agente for menor, o cache para de funcionar em silêncio e o custo sobe.
+              </p>
+            )}
+            {selectedModel && !selectedModel.sampling && (
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Este modelo ignora o ajuste de temperatura (o comportamento se guia pelo prompt).
+              </p>
+            )}
+          </div>
+
           <div className="flex justify-end">
             <Button onClick={saveConfig} disabled={saving}>Salvar configuração</Button>
           </div>
