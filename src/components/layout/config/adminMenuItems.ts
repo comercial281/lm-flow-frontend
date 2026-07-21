@@ -8,6 +8,7 @@ import {
   GraduationCap,
   UserCog,
   UsersRound,
+  Brain,
 } from 'lucide-react';
 
 /**
@@ -41,6 +42,12 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     href: '/admin/modo-cliente',
     icon: UserCog,
     description: 'Editar follow-ups, agente de IA e automações de cada cliente daqui',
+  },
+  {
+    name: 'Cérebro Universal',
+    href: '/admin/cerebro',
+    icon: Brain,
+    description: 'Conhecimento e lições que todo agente de IA herda',
   },
   {
     name: 'Central de Push',
