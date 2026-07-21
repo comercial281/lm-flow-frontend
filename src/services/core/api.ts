@@ -1,4 +1,5 @@
 import axios, { AxiosRequestConfig, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
 import { requestMonitor } from '@/utils/requestMonitor';
 import apiAuth from '@/services/core/apiAuth';
@@ -158,6 +159,16 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 403) {
+      // O backend agora valida o cargo (CustomRole) em toda a API, não só na
+      // tela. Sem este aviso um 403 vira "não aconteceu nada" e parece bug do
+      // sistema em vez de permissão faltando.
+      const required = error.response?.data?.required_permission;
+      toast.error(
+        required
+          ? `Seu cargo não permite esta ação (${required})`
+          : 'Seu cargo não permite esta ação',
+        { id: `rbac-403-${required ?? 'generic'}` },
+      );
       return Promise.reject(error);
     }
 
