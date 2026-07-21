@@ -57,6 +57,11 @@ export const superAgentsService = {
     const res = await api.put(`/super/sales_agents/${id}`, patch, { params: { tenant: tenantSlug ?? '' } });
     return (res.data as Envelope<SuperAgent>).data;
   },
+
+  async inboxes(tenantSlug: string | null): Promise<Array<{ id: string; name: string }>> {
+    const res = await api.get('/super/sales_agents/inboxes', { params: { tenant: tenantSlug ?? '' } });
+    return (res.data as Envelope<Array<{ id: string; name: string }>>).data;
+  },
 };
 
 export const MODE_LABELS: Record<string, string> = {

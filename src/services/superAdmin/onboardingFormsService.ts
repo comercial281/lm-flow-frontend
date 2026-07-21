@@ -54,6 +54,7 @@ export interface OnboardingSubmission {
   status: string;
   submitted_at?: string | null;
   created_at: string;
+  attachments?: Array<{ filename: string; url: string | null }>;
 }
 
 interface Env<T> { success: boolean; data: T; error?: string }
@@ -129,7 +130,14 @@ export const publicOnboardingService = {
     const res = await publicApi.get(`/onboarding_forms/${token}`);
     return (res.data as Env<{ id: string; name: string; description?: string; fields: OnboardingField[] }>).data;
   },
-  async submit(token: string, data: Record<string, unknown>): Promise<{ id: string }> {
+  async submit(token: string, data: Record<string, unknown>, files?: Record<string, File>): Promise<{ id: string }> {
+    if (files && Object.keys(files).length > 0) {
+      const fd = new FormData();
+      fd.append('data', JSON.stringify(data));
+      for (const [field, file] of Object.entries(files)) fd.append(`file_${field}`, file);
+      const res = await publicApi.post(`/onboarding_forms/${token}/submit`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      return (res.data as Env<{ id: string }>).data;
+    }
     const res = await publicApi.post(`/onboarding_forms/${token}/submit`, { data });
     return (res.data as Env<{ id: string }>).data;
   },

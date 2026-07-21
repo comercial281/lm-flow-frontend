@@ -105,12 +105,20 @@ function AgentRow({
   const [keyword, setKeyword] = useState(agent.trigger_keyword ?? '');
   const [hoursStart, setHoursStart] = useState('');
   const [hoursEnd, setHoursEnd] = useState('');
+  const [inboxId, setInboxId] = useState(agent.inbox_id ?? '');
+  const [inboxes, setInboxes] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
     const w = agent.active_hours?.windows?.[0];
     setHoursStart(w?.start ?? '');
     setHoursEnd(w?.end ?? '');
   }, [agent.active_hours]);
+
+  // Carrega as instâncias do tenant só quando o painel abre.
+  useEffect(() => {
+    if (!open || inboxes.length > 0) return;
+    superAgentsService.inboxes(agent.tenant_slug).then(setInboxes).catch(() => setInboxes([]));
+  }, [open, agent.tenant_slug, inboxes.length]);
 
   const save = async (patch: SuperAgentPatch, okMsg = 'Salvo.') => {
     setSaving(true);
@@ -129,6 +137,7 @@ function AgentRow({
 
   const saveConfig = () => {
     const patch: SuperAgentPatch = { mode, trigger_keyword: keyword.trim() || null };
+    if (inboxId && inboxId !== agent.inbox_id) patch.inbox_id = inboxId;
     if (hoursStart && hoursEnd) {
       const existing = agent.active_hours ?? {};
       const days = existing.windows?.[0]?.days ?? [1, 2, 3, 4, 5];
@@ -174,6 +183,17 @@ function AgentRow({
               {Object.entries(MODE_LABELS).map(([v, l]) => (
                 <option key={v} value={v}>{l}</option>
               ))}
+            </select>
+          </div>
+          <div>
+            <Label className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> Instância (com qual WhatsApp opera)</Label>
+            <select
+              value={inboxId}
+              onChange={e => setInboxId(e.target.value)}
+              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            >
+              <option value="">{agent.inbox_name ? `Atual: ${agent.inbox_name}` : 'Nenhuma'}</option>
+              {inboxes.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           </div>
           <div>

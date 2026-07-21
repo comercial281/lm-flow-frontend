@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Input, Label } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { FileText, Plus, Trash2, Copy, Link2, Files, Archive, Eye, X } from 'lucide-react';
+import { FileText, Plus, Trash2, Copy, Link2, Files, Archive, Eye, X, ArrowUp, ArrowDown, Pencil, Download } from 'lucide-react';
 import {
   onboardingFormsService,
   FIELD_TYPES,
@@ -111,11 +111,33 @@ function FormEditor({ formId, onChanged, onDeleted }: { formId: string; onChange
   const [tab, setTab] = useState<'campos' | 'respostas'>('campos');
   const [subs, setSubs] = useState<OnboardingSubmission[]>([]);
 
-  // novo campo
+  // novo campo / edição de campo
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [fLabel, setFLabel] = useState('');
   const [fType, setFType] = useState('text');
   const [fRequired, setFRequired] = useState(false);
   const [fOptions, setFOptions] = useState('');
+  // condicional: mostrar só se
+  const [cField, setCField] = useState('');
+  const [cOp, setCOp] = useState<'eq' | 'neq' | 'filled'>('eq');
+  const [cValue, setCValue] = useState('');
+
+  const resetFieldForm = () => {
+    setEditingId(null); setFLabel(''); setFType('text'); setFRequired(false); setFOptions('');
+    setCField(''); setCOp('eq'); setCValue('');
+  };
+
+  const editField = (field: OnboardingField) => {
+    setEditingId(field.id);
+    setFLabel(field.label);
+    setFType(field.field_type);
+    setFRequired(field.required);
+    setFOptions((field.options ?? []).join(', '));
+    const c = (field.conditional ?? {}) as { field?: string; op?: string; value?: string };
+    setCField(c.field ?? '');
+    setCOp((c.op as 'eq' | 'neq' | 'filled') ?? 'eq');
+    setCValue(c.value ?? '');
+  };
 
   const reload = useCallback(async () => {
     setForm(await onboardingFormsService.get(formId));
@@ -133,29 +155,72 @@ function FormEditor({ formId, onChanged, onDeleted }: { formId: string; onChange
     }
   };
 
-  const addField = async () => {
+  const slugify = (s: string) =>
+    s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 60) || `campo_${Date.now()}`;
+
+  const conditionalPayload = () =>
+    cField ? { field: cField, op: cOp, ...(cOp !== 'filled' ? { value: cValue } : {}) } : {};
+
+  const saveField = async () => {
     if (!fLabel.trim()) {
       toast.error('Dê um rótulo ao campo.');
       return;
     }
-    const name = fLabel.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 60) || `campo_${Date.now()}`;
     const needsOptions = fType === 'select' || fType === 'multiselect' || fType === 'checkbox';
+    const payload = {
+      label: fLabel.trim(), field_type: fType, required: fRequired,
+      options: needsOptions ? fOptions.split(',').map(o => o.trim()).filter(Boolean) : [],
+      conditional: conditionalPayload(),
+    };
     try {
-      await onboardingFormsService.addField(formId, {
-        name, label: fLabel.trim(), field_type: fType, required: fRequired,
-        options: needsOptions ? fOptions.split(',').map(o => o.trim()).filter(Boolean) : [],
-      });
-      setFLabel(''); setFRequired(false); setFOptions('');
+      if (editingId) {
+        await onboardingFormsService.updateField(formId, editingId, payload);
+      } else {
+        await onboardingFormsService.addField(formId, { ...payload, name: slugify(fLabel) });
+      }
+      resetFieldForm();
       await reload();
       onChanged();
     } catch {
-      toast.error('Não consegui adicionar o campo (rótulo duplicado?).');
+      toast.error('Não consegui salvar o campo (rótulo duplicado?).');
+    }
+  };
+
+  const duplicateField = async (field: OnboardingField) => {
+    try {
+      await onboardingFormsService.addField(formId, {
+        name: slugify(`${field.label} copia ${Date.now()}`),
+        label: `${field.label} (cópia)`, field_type: field.field_type,
+        required: field.required, options: field.options ?? [],
+        conditional: field.conditional ?? {},
+      });
+      await reload();
+      onChanged();
+    } catch {
+      toast.error('Não consegui duplicar o campo.');
+    }
+  };
+
+  const moveField = async (field: OnboardingField, dir: -1 | 1) => {
+    const list = [...(form?.fields ?? [])].sort((a, b) => a.position - b.position);
+    const idx = list.findIndex(f => f.id === field.id);
+    const swapWith = list[idx + dir];
+    if (!swapWith) return;
+    try {
+      await Promise.all([
+        onboardingFormsService.updateField(formId, field.id, { position: swapWith.position }),
+        onboardingFormsService.updateField(formId, swapWith.id, { position: field.position }),
+      ]);
+      await reload();
+    } catch {
+      toast.error('Não consegui mover.');
     }
   };
 
   const removeField = async (field: OnboardingField) => {
     try {
       await onboardingFormsService.removeField(formId, field.id);
+      if (editingId === field.id) resetFieldForm();
       await reload();
       onChanged();
     } catch {
@@ -251,26 +316,36 @@ function FormEditor({ formId, onChanged, onDeleted }: { formId: string; onChange
       {tab === 'campos' ? (
         <div className="p-4">
           <ul className="mb-4 space-y-2">
-            {(form.fields ?? []).map(field => (
-              <li key={field.id} className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2">
-                <div className="min-w-0">
-                  <span className="text-sm text-foreground">{field.label}</span>
-                  {field.required && <span className="ml-1 text-red-500">*</span>}
-                  <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
-                    {FIELD_TYPES.find(t => t.value === field.field_type)?.label ?? field.field_type}
-                  </span>
-                  {field.options && field.options.length > 0 && (
-                    <span className="ml-2 text-[11px] text-muted-foreground">{field.options.join(', ')}</span>
-                  )}
-                </div>
-                <button onClick={() => removeField(field)} className="rounded p-1 text-muted-foreground hover:text-red-600"><X className="h-4 w-4" /></button>
-              </li>
-            ))}
+            {(form.fields ?? []).map((field, i, arr) => {
+              const cond = (field.conditional ?? {}) as { field?: string };
+              return (
+                <li key={field.id} className={`flex items-center justify-between gap-2 rounded-md border px-3 py-2 ${editingId === field.id ? 'border-primary' : 'border-border'}`}>
+                  <div className="min-w-0">
+                    <span className="text-sm text-foreground">{field.label}</span>
+                    {field.required && <span className="ml-1 text-red-500">*</span>}
+                    <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                      {FIELD_TYPES.find(t => t.value === field.field_type)?.label ?? field.field_type}
+                    </span>
+                    {field.options && field.options.length > 0 && (
+                      <span className="ml-2 text-[11px] text-muted-foreground">{field.options.join(', ')}</span>
+                    )}
+                    {cond.field && <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] text-primary">condicional</span>}
+                  </div>
+                  <div className="flex flex-shrink-0 items-center gap-0.5">
+                    <button onClick={() => moveField(field, -1)} disabled={i === 0} title="Subir" className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button>
+                    <button onClick={() => moveField(field, 1)} disabled={i === arr.length - 1} title="Descer" className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"><ArrowDown className="h-4 w-4" /></button>
+                    <button onClick={() => editField(field)} title="Editar" className="rounded p-1 text-muted-foreground hover:text-foreground"><Pencil className="h-4 w-4" /></button>
+                    <button onClick={() => duplicateField(field)} title="Duplicar" className="rounded p-1 text-muted-foreground hover:text-foreground"><Files className="h-4 w-4" /></button>
+                    <button onClick={() => removeField(field)} title="Remover" className="rounded p-1 text-muted-foreground hover:text-red-600"><X className="h-4 w-4" /></button>
+                  </div>
+                </li>
+              );
+            })}
             {(form.fields ?? []).length === 0 && <li className="text-sm text-muted-foreground">Nenhum campo ainda.</li>}
           </ul>
 
           <div className="space-y-3 rounded-md border border-dashed border-border p-3">
-            <h3 className="text-xs font-medium text-foreground">Novo campo</h3>
+            <h3 className="text-xs font-medium text-foreground">{editingId ? 'Editar campo' : 'Novo campo'}</h3>
             <div className="grid gap-2 sm:grid-cols-2">
               <div>
                 <Label htmlFor="f-label">Rótulo (o que o cliente vê)</Label>
@@ -292,7 +367,32 @@ function FormEditor({ formId, onChanged, onDeleted }: { formId: string; onChange
             <label className="flex items-center gap-2 text-sm text-foreground">
               <input type="checkbox" checked={fRequired} onChange={e => setFRequired(e.target.checked)} /> Obrigatório
             </label>
-            <Button size="sm" onClick={addField}><Plus className="mr-1 h-4 w-4" /> Adicionar campo</Button>
+
+            {/* Lógica condicional */}
+            <div className="rounded-md bg-muted/40 p-2">
+              <Label className="text-xs">Mostrar só se (opcional)</Label>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <select value={cField} onChange={e => setCField(e.target.value)} className="rounded-md border border-border bg-background px-2 py-1.5 text-xs">
+                  <option value="">sempre mostrar</option>
+                  {(form.fields ?? []).filter(f => f.id !== editingId).map(f => <option key={f.id} value={f.name}>{f.label}</option>)}
+                </select>
+                {cField && (
+                  <>
+                    <select value={cOp} onChange={e => setCOp(e.target.value as 'eq' | 'neq' | 'filled')} className="rounded-md border border-border bg-background px-2 py-1.5 text-xs">
+                      <option value="eq">for igual a</option>
+                      <option value="neq">for diferente de</option>
+                      <option value="filled">estiver preenchido</option>
+                    </select>
+                    {cOp !== 'filled' && <Input value={cValue} onChange={e => setCValue(e.target.value)} placeholder="valor" className="h-8 w-32 text-xs" />}
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button size="sm" onClick={saveField}><Plus className="mr-1 h-4 w-4" /> {editingId ? 'Salvar campo' : 'Adicionar campo'}</Button>
+              {editingId && <Button size="sm" variant="outline" onClick={resetFieldForm}>Cancelar</Button>}
+            </div>
           </div>
         </div>
       ) : (
@@ -312,6 +412,17 @@ function FormEditor({ formId, onChanged, onDeleted }: { formId: string; onChange
                       </div>
                     ))}
                   </dl>
+                  {s.attachments && s.attachments.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {s.attachments.map((a, idx) => (
+                        a.url ? (
+                          <a key={idx} href={`${import.meta.env.VITE_API_URL}${a.url}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs text-primary hover:underline">
+                            <Download className="h-3 w-3" /> {a.filename}
+                          </a>
+                        ) : <span key={idx} className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">{a.filename}</span>
+                      ))}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

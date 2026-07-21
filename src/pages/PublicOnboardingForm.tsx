@@ -10,6 +10,7 @@ export default function PublicOnboardingForm() {
   const { token = '' } = useParams();
   const [form, setForm] = useState<{ id: string; name: string; description?: string; fields: OnboardingField[] } | null>(null);
   const [values, setValues] = useState<Record<string, unknown>>({});
+  const [files, setFiles] = useState<Record<string, File>>({});
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -33,11 +34,20 @@ export default function PublicOnboardingForm() {
   }, [form, values]);
 
   const setVal = (name: string, v: unknown) => setValues(prev => ({ ...prev, [name]: v }));
+  const setFile = (name: string, f: File | null) =>
+    setFiles(prev => {
+      const next = { ...prev };
+      if (f) next[name] = f; else delete next[name];
+      return next;
+    });
 
   const submit = async () => {
     // valida obrigatórios visíveis
     for (const f of visibleFields) {
-      if (f.required && (values[f.name] === undefined || values[f.name] === '' || (Array.isArray(values[f.name]) && (values[f.name] as unknown[]).length === 0))) {
+      const filled = f.field_type === 'file'
+        ? !!files[f.name]
+        : !(values[f.name] === undefined || values[f.name] === '' || (Array.isArray(values[f.name]) && (values[f.name] as unknown[]).length === 0));
+      if (f.required && !filled) {
         setError(`Preencha: ${f.label}`);
         return;
       }
@@ -46,8 +56,15 @@ export default function PublicOnboardingForm() {
     setSending(true);
     try {
       const payload: Record<string, unknown> = {};
-      for (const f of visibleFields) if (values[f.name] !== undefined) payload[f.name] = values[f.name];
-      await publicOnboardingService.submit(token, payload);
+      const visibleFiles: Record<string, File> = {};
+      for (const f of visibleFields) {
+        if (f.field_type === 'file') {
+          if (files[f.name]) visibleFiles[f.name] = files[f.name];
+        } else if (values[f.name] !== undefined) {
+          payload[f.name] = values[f.name];
+        }
+      }
+      await publicOnboardingService.submit(token, payload, visibleFiles);
       setSent(true);
     } catch {
       setError('Não consegui enviar. Tente de novo.');
@@ -74,7 +91,7 @@ export default function PublicOnboardingForm() {
       {form?.description && <p className="mt-1 text-sm text-slate-500">{form.description}</p>}
       <div className="mt-5 space-y-4">
         {visibleFields.map(f => (
-          <FieldInput key={f.id} field={f} value={values[f.name]} onChange={v => setVal(f.name, v)} />
+          <FieldInput key={f.id} field={f} value={values[f.name]} onChange={v => setVal(f.name, v)} fileName={files[f.name]?.name} onFile={file => setFile(f.name, file)} />
         ))}
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
@@ -97,7 +114,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function FieldInput({ field, value, onChange }: { field: OnboardingField; value: unknown; onChange: (v: unknown) => void }) {
+function FieldInput({ field, value, onChange, fileName, onFile }: { field: OnboardingField; value: unknown; onChange: (v: unknown) => void; fileName?: string; onFile?: (f: File | null) => void }) {
   const base = 'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-[#7C3AED] focus:outline-none';
   const label = (
     <label className="text-sm font-medium text-slate-700">
@@ -147,8 +164,12 @@ function FieldInput({ field, value, onChange }: { field: OnboardingField; value:
     case 'email':
       return <div>{label}<input type="email" className={base} value={(value as string) ?? ''} onChange={e => onChange(e.target.value)} placeholder={field.placeholder ?? ''} /></div>;
     case 'file':
-      // Upload real fica pra v2; por ora aceita nome/descrição do arquivo.
-      return <div>{label}<input type="text" className={base} value={(value as string) ?? ''} onChange={e => onChange(e.target.value)} placeholder="Descreva ou cole o link do arquivo" /></div>;
+      return (
+        <div>{label}
+          <input type="file" className={`${base} py-1.5`} onChange={e => onFile?.(e.target.files?.[0] ?? null)} />
+          {fileName && <p className="mt-1 text-xs text-slate-500">{fileName}</p>}
+        </div>
+      );
     default:
       return <div>{label}<input type="text" className={base} value={(value as string) ?? ''} onChange={e => onChange(e.target.value)} placeholder={field.placeholder ?? ''} /></div>;
   }
