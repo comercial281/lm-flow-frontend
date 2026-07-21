@@ -19,6 +19,7 @@ import ContactDetails from './ContactDetails';
 import EditableContactCustomAttributes from './EditableContactCustomAttributes';
 import ContactTagsManager from './ContactTagsManager';
 
+import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import ConversationPipelineItem from '@/components/pipelines/ConversationPipelineItem';
 import PipelineManagement from '@/components/chat/contact-sidebar/PipelineManagement';
 import { pipelinesService } from '@/services/pipelines';
@@ -242,6 +243,10 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
               </CardContent>
             )}
           </Card>
+
+          {/* 1.5. Conversao Meta (Pixel/CAPI) - marcacao manual do desfecho do lead.
+              O componente se esconde sozinho quando o cliente nao usa CAPI. */}
+          <CapiConversionPanel contactId={contact?.id ?? null} />
 
           {/* 2. Origem do Anuncio - so aparece quando tem externalAdReply */}
           {Boolean(conversation?.additional_attributes?.ad_referral) && (
