@@ -121,6 +121,23 @@ export interface HistoryBlock {
   years: { year: number; leads: number }[];
 }
 
+export interface AdsBlock {
+  account: { id: string; name: string | null };
+  last_synced_at: string | null;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  meta_leads: number;
+  messaging_starts: number;
+  /** null quando o denominador é zero — "R$ 0 por visita" com zero visita seria mentira */
+  cost_per_lead: number | null;
+  cost_per_visit: number | null;
+  cost_per_sale: number | null;
+  crm: { leads: number; visits: number; sales: number };
+  campaigns: { id: string; name: string | null; spend: number; leads: number; clicks: number }[];
+  series: number[];
+}
+
 export interface DashboardMetrics {
   period: PeriodInfo;
   kpis: Maybe<Kpis>;
@@ -134,5 +151,5 @@ export interface DashboardMetrics {
   heatmap: Maybe<HeatmapBlock>;
   upcoming: Maybe<UpcomingBlock>;
   history: Maybe<HistoryBlock>;
-  ads: Maybe<{ spend: number }>;
+  ads: Maybe<AdsBlock>;
 }

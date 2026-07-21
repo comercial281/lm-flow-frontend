@@ -10,6 +10,7 @@ import {
   AgentSection, AutomationsSection, CapiSection, PipelineFunnel, ResponseTimeCard, UpcomingVisits,
 } from './components/Sections';
 import { EmptyBlock, GlassCard, Skeleton } from './components/primitives';
+import { AdsSection } from './components/AdsSection';
 import { isAvailable, type PeriodPreset } from './types';
 import './styles/lmf.css';
 
@@ -160,9 +161,7 @@ const DashboardV2: React.FC = () => {
           {loading && !data ? <Skeleton height={190} /> : isAvailable(data?.history) ? <HistoryChart history={data.history} /> : <EmptyBlock block={data?.history} />}
         </GlassCard>
 
-        <GlassCard title="Marketing e anúncios" subtitle="Cruzamento entre investimento em mídia e visitas">
-          <EmptyBlock block={isAvailable(data?.ads) ? undefined : data?.ads} />
-        </GlassCard>
+        <AdsSection ads={data?.ads} onReload={reload} />
       </div>
     </div>
   );
