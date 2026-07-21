@@ -34,7 +34,10 @@ import SurveyResponse from '@/pages/Public/Survey/SurveyResponse';
 // Páginas customer — lazy (code-splitting): cada página vira um chunk próprio,
 // baixado só quando a rota é acessada. Reduz o bundle inicial (era ~7MB num arquivo).
 const SaasSignup = lazyWithRetry(() => import('@/pages/Auth/SaasSignup'));
-const Dashboard = lazyWithRetry(() => import('@/pages/Customer/Dashboard'));
+// Dashboard reconstruído do zero na identidade do protótipo (DashboardV2).
+// O antigo segue no repo, sem rota, até a nova tela rodar alguns dias em
+// produção — remover no mesmo passo da troca deixaria sem para onde voltar.
+const Dashboard = lazyWithRetry(() => import('@/pages/Customer/DashboardV2'));
 const Agents = lazyWithRetry(() => import('@/pages/Customer/Agents'));
 const AgentEditPage = lazyWithRetry(() => import('@/pages/Customer/Agents/Agent/AgentEditPage'));
 const MCPServers = lazyWithRetry(() => import('@/pages/Customer/Agents/MCPServers'));

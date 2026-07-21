@@ -44,3 +44,7 @@ yalc.lock
 # Vercel build env dump (nunca versionar)
 .vercel-master-env
 .vercel*.env
+
+# verificacao local (nao commitar)
+vite.verify.config.ts
+.env.local

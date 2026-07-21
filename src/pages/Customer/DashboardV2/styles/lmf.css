@@ -1,0 +1,322 @@
+/*
+ * Design system do dashboard novo — namespaced `lmf-*`.
+ *
+ * Recriado a partir do protótipo (dev/lm-flow-redesign/prototype.html), NÃO
+ * derivado das telas antigas. Trocar variável de cor no shell existente nunca
+ * vira outro design system: o DNA (layout, chrome, espaçamento) fica. Por isso
+ * tudo aqui é próprio e o dashboard antigo segue intacto até a troca.
+ *
+ * Os tokens vêm do protótipo real, lidos do DOM renderizado (não chutados):
+ * --bg #0A0416 · --surface #150A29 · --accent #7C3AED · --text #F2EFFA
+ * --border #2A1B49 · --radius 16px · Inter
+ */
+
+.lmf {
+  --lmf-bg: #0a0416;
+  --lmf-surface: #150a29;
+  --lmf-surface-2: #1c0f36;
+  --lmf-accent: #7c3aed;
+  --lmf-accent-2: #9333ea;
+  --lmf-accent-soft: rgba(124, 58, 237, 0.16);
+  --lmf-text: #f2effa;
+  --lmf-muted: #a394c7;
+  --lmf-border: #2a1b49;
+  --lmf-radius: 16px;
+  --lmf-radius-sm: 10px;
+  --lmf-up: #34d399;
+  --lmf-down: #fb7185;
+  --lmf-warn: #fbbf24;
+
+  background: var(--lmf-bg);
+  color: var(--lmf-text);
+  font-family: Inter, system-ui, sans-serif;
+  min-height: 100%;
+  padding: 24px;
+}
+
+/* Vidro: fundo translúcido + blur + borda clara de 1px no topo.
+   O blur sozinho não lê como vidro; é a borda superior que dá o brilho. */
+.lmf-glass {
+  position: relative;
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.08), rgba(21, 10, 41, 0.72));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--lmf-border);
+  border-radius: var(--lmf-radius);
+  overflow: hidden;
+}
+
+.lmf-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(242, 239, 250, 0.28), transparent);
+  pointer-events: none;
+}
+
+.lmf-card {
+  padding: 20px;
+}
+
+.lmf-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.lmf-card-sub {
+  font-size: 12.5px;
+  color: var(--lmf-muted);
+  margin: 4px 0 0;
+}
+
+/* KPI */
+.lmf-kpi-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--lmf-muted);
+}
+
+.lmf-kpi-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--lmf-radius-sm);
+  background: var(--lmf-accent-soft);
+  color: #c4b5fd;
+  flex: none;
+}
+
+.lmf-kpi-value {
+  font-size: 34px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 14px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.lmf-kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 500;
+  margin-top: 10px;
+}
+
+.lmf-up { color: var(--lmf-up); }
+.lmf-down { color: var(--lmf-down); }
+.lmf-flat { color: var(--lmf-muted); }
+
+/* Grid */
+.lmf-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.lmf-grid-kpi {
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.lmf-grid-2 {
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+}
+
+.lmf-grid-half {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .lmf-grid-2 { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Seletor de período */
+.lmf-segment {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(21, 10, 41, 0.8);
+  border: 1px solid var(--lmf-border);
+  flex-wrap: wrap;
+}
+
+.lmf-segment button {
+  border: 0;
+  background: transparent;
+  color: var(--lmf-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 7px 13px;
+  border-radius: 9px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.lmf-segment button:hover { color: var(--lmf-text); }
+
+.lmf-segment button[data-active='true'] {
+  background: var(--lmf-accent);
+  color: #fff;
+}
+
+.lmf-select {
+  background: rgba(21, 10, 41, 0.8);
+  border: 1px solid var(--lmf-border);
+  color: var(--lmf-text);
+  border-radius: 12px;
+  padding: 9px 13px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.lmf-date-input {
+  background: rgba(21, 10, 41, 0.8);
+  border: 1px solid var(--lmf-border);
+  color: var(--lmf-text);
+  border-radius: 10px;
+  padding: 8px 11px;
+  font-size: 12.5px;
+  color-scheme: dark;
+}
+
+/* Listas */
+.lmf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(42, 27, 73, 0.7);
+}
+
+.lmf-row:last-child { border-bottom: 0; }
+
+.lmf-row-title {
+  font-size: 13.5px;
+  font-weight: 550;
+}
+
+.lmf-row-sub {
+  font-size: 12px;
+  color: var(--lmf-muted);
+  margin-top: 2px;
+}
+
+.lmf-pill {
+  font-size: 11.5px;
+  font-weight: 550;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--lmf-accent-soft);
+  color: #c4b5fd;
+  white-space: nowrap;
+}
+
+.lmf-pill[data-tone='warn'] {
+  background: rgba(251, 191, 36, 0.16);
+  color: #fcd34d;
+}
+
+.lmf-pill[data-tone='ok'] {
+  background: rgba(52, 211, 153, 0.16);
+  color: #6ee7b7;
+}
+
+/* Barra de funil */
+.lmf-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(42, 27, 73, 0.9);
+  overflow: hidden;
+}
+
+.lmf-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--lmf-accent), var(--lmf-accent-2));
+}
+
+/* Mapa de calor */
+.lmf-heat {
+  display: grid;
+  grid-template-columns: 34px repeat(24, minmax(0, 1fr));
+  gap: 3px;
+  align-items: center;
+}
+
+.lmf-heat-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: rgba(124, 58, 237, calc(var(--i) * 0.9 + 0.05));
+  cursor: default;
+  transition: transform 0.12s ease, outline-color 0.12s ease;
+  outline: 1px solid transparent;
+}
+
+.lmf-heat-cell:hover {
+  transform: scale(1.35);
+  outline-color: rgba(242, 239, 250, 0.55);
+  position: relative;
+  z-index: 2;
+}
+
+.lmf-heat-axis {
+  font-size: 10px;
+  color: var(--lmf-muted);
+  text-align: right;
+  padding-right: 4px;
+}
+
+/* Estado vazio: bloco sem fonte de dado diz o porquê em vez de mostrar zero,
+   que o usuário leria como "não teve movimento". */
+.lmf-empty {
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  text-align: center;
+  padding: 28px 16px;
+  color: var(--lmf-muted);
+  font-size: 12.5px;
+  border: 1px dashed var(--lmf-border);
+  border-radius: var(--lmf-radius-sm);
+}
+
+.lmf-skeleton {
+  border-radius: var(--lmf-radius);
+  background: linear-gradient(90deg, rgba(42, 27, 73, 0.35), rgba(42, 27, 73, 0.7), rgba(42, 27, 73, 0.35));
+  background-size: 200% 100%;
+  animation: lmf-shimmer 1.4s linear infinite;
+}
+
+@keyframes lmf-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lmf-skeleton { animation: none; }
+  .lmf-heat-cell:hover { transform: none; }
+}
+
+/* Tooltip do recharts precisa herdar o tema; o default é branco e estoura. */
+.lmf-tooltip {
+  background: rgba(12, 5, 26, 0.96);
+  border: 1px solid var(--lmf-border);
+  border-radius: 10px;
+  padding: 9px 11px;
+  font-size: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.lmf-tooltip-label {
+  color: var(--lmf-muted);
+  margin-bottom: 4px;
+}
