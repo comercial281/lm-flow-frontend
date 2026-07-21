@@ -65,6 +65,7 @@ const WelcomeAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings
 const LeadAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadAutomations').then(m => ({ default: m.LeadAutomations })));
 const LeadAdsForms = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadAdsForms'));
 const FollowupSequences = lazyWithRetry(() => import('@/pages/Customer/Settings/FollowupSequences').then(m => ({ default: m.FollowupSequences })));
+const NoReplyRobot = lazyWithRetry(() => import('@/pages/Customer/Automations/NoReplyRobot/NoReplyRobot').then(m => ({ default: m.NoReplyRobot })));
 const SiteBuilder = lazyWithRetry(() => import('@/pages/Customer/Settings/SiteBuilder').then(m => ({ default: m.SiteBuilder })));
 const DynamicForms = lazyWithRetry(() => import('@/pages/Customer/Settings/DynamicForms').then(m => ({ default: m.DynamicForms })));
 const Properties = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.Properties })));
@@ -656,6 +657,14 @@ const AppRouter = () => {
             {/* A tela "Follow-up automático" virou seção dentro de follow-ups. Mantém a
                 rota antiga redirecionando pra não quebrar link salvo/favoritado. */}
             <Route path="follow-up-auto" element={<Navigate to="/automations/follow-ups" replace />} />
+            <Route
+              path="no-reply-robot"
+              element={
+                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
+                  <NoReplyRobot />
+                </Suspense>
+              }
+            />
             <Route
               path="whatsapp-reminders"
               element={
