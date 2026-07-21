@@ -104,6 +104,8 @@ const PushCentral = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral')
 const ClientMode = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientMode'));
 const CerebroUniversal = lazyWithRetry(() => import('@/pages/SuperAdmin/CerebroUniversal'));
 const SuperAgents = lazyWithRetry(() => import('@/pages/SuperAdmin/SuperAgents'));
+const OnboardingForms = lazyWithRetry(() => import('@/pages/SuperAdmin/OnboardingForms'));
+const PublicOnboardingForm = lazyWithRetry(() => import('@/pages/PublicOnboardingForm'));
 
 // Área do Admin — shell próprio (AdminLayout), fora do menu do CRM.
 const AdminLayout = lazyWithRetry(() => import('@/components/layout/AdminLayout'));
@@ -1783,6 +1785,9 @@ const AppRouter = () => {
           <Route path="/lp/:tenant/:slug" element={<LandingPublic />} />
           <Route path="/lp/:tenant/:slug/:result" element={<LandingResult />} />
 
+          {/* Público (sem login): formulário de onboarding por link (Épico E). */}
+          <Route path="/formulario/:token" element={<PublicOnboardingForm />} />
+
           {/* Público INDEXÁVEL — página de imóvel do portal (Produto A). */}
           <Route path="/imovel/:tenant/:code" element={<ImovelPublic />} />
 
@@ -1936,6 +1941,18 @@ const AppRouter = () => {
                 <SuperAdminRoute>
                   <AdminLayout>
                     <SuperAgents />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/formularios"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <OnboardingForms />
                   </AdminLayout>
                 </SuperAdminRoute>
               </PrivateRoute>

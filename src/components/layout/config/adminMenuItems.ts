@@ -10,6 +10,7 @@ import {
   UsersRound,
   Brain,
   Bot,
+  ClipboardList,
 } from 'lucide-react';
 
 /**
@@ -55,6 +56,12 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     href: '/admin/agentes',
     icon: Bot,
     description: 'Todos os agentes de todos os clientes: ligar, desligar e configurar',
+  },
+  {
+    name: 'Formulários',
+    href: '/admin/formularios',
+    icon: ClipboardList,
+    description: 'Monte formulários com link público; as respostas caem aqui',
   },
   {
     name: 'Central de Push',
