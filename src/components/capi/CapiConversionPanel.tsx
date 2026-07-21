@@ -88,8 +88,8 @@ export default function CapiConversionPanel({
   }
 
   if (!hasTarget || loading) return null;
-  // Cliente sem pixel configurado: a seção não polui a tela de quem não usa CAPI.
-  if (!status || !status.is_enabled) return null;
+  // Sem nenhum destino pronto pra receber a conversão, a seção não aparece.
+  if (!status || !status.can_send) return null;
 
   return (
     <div className={`rounded-lg border border-border p-3 space-y-3 ${className ?? ''}`}>
@@ -139,7 +139,6 @@ export default function CapiConversionPanel({
             {CAPI_MANUAL_LABELS[event.event_name] ?? event.event_name} enviado em{' '}
             {formatSentAt(event.sent_at as string)}
             {event.sent_by ? ` por ${event.sent_by}` : ''}
-            {event.sent_to?.includes('lm') ? ' (cliente + acervo LM)' : ''}
           </p>
         ))}
 

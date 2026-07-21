@@ -10,7 +10,7 @@ import {
 const VALUE_EVENTS = ['Purchase', 'UltraQualificado'];
 
 function emptyRule(): CapiStageRule {
-  return { event_name: '', enabled: false, to_client: true, to_lm: true, intent: 'none' };
+  return { event_name: '', enabled: false, to_client: true, intent: 'none' };
 }
 
 export default function PixelCapiConfig() {
@@ -24,7 +24,6 @@ export default function PixelCapiConfig() {
   const [isEnabled, setIsEnabled] = useState(false);
   const [pixelId, setPixelId] = useState('');
   const [accessToken, setAccessToken] = useState(''); // vazio = não altera
-  const [contributeToLm, setContributeToLm] = useState(false);
   const [testEventCode, setTestEventCode] = useState('');
   const [currency, setCurrency] = useState('BRL');
   const [stageMap, setStageMap] = useState<Record<string, CapiStageRule>>({});
@@ -38,7 +37,6 @@ export default function PixelCapiConfig() {
         setConfig(c);
         setIsEnabled(c.is_enabled);
         setPixelId(c.pixel_id ?? '');
-        setContributeToLm(c.contribute_to_lm);
         setTestEventCode(c.test_event_code ?? '');
         setCurrency(c.default_currency || 'BRL');
         setStageMap(c.stage_map || {});
@@ -78,7 +76,6 @@ export default function PixelCapiConfig() {
         is_enabled: isEnabled,
         pixel_id: pixelId.trim() || null,
         ...(accessToken.trim() ? { access_token: accessToken.trim() } : {}),
-        contribute_to_lm: contributeToLm,
         test_event_code: testEventCode.trim() || null,
         default_currency: currency,
         stage_map: cleanMap,
@@ -108,7 +105,6 @@ export default function PixelCapiConfig() {
         <h1 className="text-lg font-semibold text-foreground">Pixel / Conversões (CAPI)</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Conecte o pixel deste cliente e escolha qual coluna do CRM dispara qual evento para o Meta.
-          Cada evento alimenta o pixel do cliente e, opcionalmente, o acervo geral da Leal Mídia.
         </p>
       </header>
 
@@ -149,28 +145,6 @@ export default function PixelCapiConfig() {
             <input className={inputCls} value={testEventCode} onChange={(e) => setTestEventCode(e.target.value)} placeholder="TEST12345 (Events Manager)" />
           </div>
         </div>
-      </section>
-
-      {/* Acervo geral Leal Mídia */}
-      <section className="space-y-2 rounded-lg border border-border p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">Acervo geral Leal Mídia</h2>
-            <p className="text-xs text-muted-foreground">
-              Também enviar as conversões deste cliente para o dataset central da Leal Mídia
-              (inteligência e públicos semelhantes).
-            </p>
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={contributeToLm} onChange={(e) => setContributeToLm(e.target.checked)} />
-            Contribuir
-          </label>
-        </div>
-        {!config?.lm_pixel_configured && (
-          <p className="text-xs text-amber-600">
-            O pixel do acervo geral ainda não está configurado no sistema (LM_CAPI_PIXEL_ID / LM_CAPI_TOKEN).
-          </p>
-        )}
       </section>
 
       {/* Mapa coluna -> evento */}
@@ -227,11 +201,6 @@ export default function PixelCapiConfig() {
                           <input type="checkbox" checked={r.to_client} onChange={(e) => patchRule(stage.id, { to_client: e.target.checked })} />
                           Cliente
                         </label>
-                        <label className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <input type="checkbox" checked={r.to_lm} onChange={(e) => patchRule(stage.id, { to_lm: e.target.checked })} />
-                          Acervo LM
-                        </label>
-
                         <select
                           className={`${inputCls} w-52`}
                           value={r.intent ?? 'none'}

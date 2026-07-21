@@ -216,6 +216,13 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         action: 'read',
       },
       {
+        // Robô que joga quem não respondeu no follow-up. Mora em Automações (é lá que
+        // vivem os painéis do funil), mas aparece aqui também porque é um robô.
+        name: 'Robô Sem Resposta',
+        href: '/automations/no-reply-robot',
+        icon: Bot,
+      },
+      {
         name: t('menu.agents.customTools'),
         href: '/agents/custom-tools',
         icon: Wand,
