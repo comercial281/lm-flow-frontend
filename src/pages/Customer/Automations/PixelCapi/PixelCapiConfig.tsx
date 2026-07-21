@@ -178,7 +178,11 @@ export default function PixelCapiConfig() {
         <div>
           <h2 className="text-sm font-semibold text-foreground">Colunas do CRM → eventos</h2>
           <p className="text-xs text-muted-foreground">
-            Para cada coluna, escolha o evento que dispara quando o card entra nela.
+            Para cada coluna, escolha o evento que dispara quando o card entra nela. Desmarque
+            <strong className="mx-1 font-medium text-foreground">Automático</strong>
+            se quiser que aquele evento só conte quando alguém clicar no botão
+            <strong className="mx-1 font-medium text-foreground">Conversão Meta</strong>
+            dentro do card do lead.
           </p>
         </div>
 
@@ -210,6 +214,15 @@ export default function PixelCapiConfig() {
 
                     {r.event_name && (
                       <>
+                        {/* Liga/desliga o "metrificar por coluna". Desligado, a coluna
+                            continua mapeada mas só conta pelo botão dentro do card. */}
+                        <label
+                          className="flex items-center gap-1 text-xs text-muted-foreground"
+                          title="Ligado: envia sozinho quando o card entra nesta coluna. Desligado: só envia pelo botão Conversão Meta dentro do card."
+                        >
+                          <input type="checkbox" checked={r.enabled} onChange={(e) => patchRule(stage.id, { enabled: e.target.checked })} />
+                          Automático
+                        </label>
                         <label className="flex items-center gap-1 text-xs text-muted-foreground">
                           <input type="checkbox" checked={r.to_client} onChange={(e) => patchRule(stage.id, { to_client: e.target.checked })} />
                           Cliente

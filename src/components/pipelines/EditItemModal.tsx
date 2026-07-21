@@ -43,6 +43,7 @@ import CardActionsPanel from './CardActionsPanel';
 import CardNotesTab from './CardNotesTab';
 import CreateRoletaModal from './CreateRoletaModal';
 import CardPropertyInterests from './CardPropertyInterests';
+import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import { conversationAPI } from '@/services/conversations/conversationService';
@@ -539,6 +540,12 @@ export default function EditItemModal({
                     <Input readOnly value={item.contact?.email || (item.conversation as any)?.contact?.email || ''} placeholder="E-mail" className="bg-muted/40 cursor-default text-sm h-8" />
                   </div>
                 </div>
+
+                {/* Conversão Meta (Pixel/CAPI) — marcação manual do desfecho do lead */}
+                <CapiConversionPanel
+                  contactId={item.contact?.id ?? (item.conversation as any)?.contact?.id ?? null}
+                  pipelineItemId={item.id}
+                />
 
                 {/* Respostas do formulário (perguntas personalizadas da campanha) */}
                 {(() => {
