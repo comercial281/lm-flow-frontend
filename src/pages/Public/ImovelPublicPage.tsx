@@ -66,18 +66,19 @@ export default function ImovelPublicPage() {
       try {
         const [siteRes, imovelRes] = await Promise.all([
           fetch(`${API}/api/public/v1/site`, { headers: { 'X-Tenant': tenant } }),
-          fetch(`${API}/api/public/v1/site/imovel/${encodeURIComponent(code)}`, { headers: { 'X-Tenant': tenant } }),
+          fetch(`${API}/api/public/v1/site/properties/${encodeURIComponent(code)}`, { headers: { 'X-Tenant': tenant } }),
         ]);
         if (!alive) return;
         if (!imovelRes.ok) { setState('notfound'); return; }
-        const imovel = (await imovelRes.json()).data as { property: PropertyDTO; site?: { name?: string } };
+        // O back-end serializa o imóvel direto em `data` (objeto plano).
+        const property = (await imovelRes.json()).data as PropertyDTO;
         const siteInfo = siteRes.ok ? ((await siteRes.json()).data as SiteInfo) : {};
-        setSite({ ...siteInfo, name: siteInfo.name || imovel.site?.name });
-        setProp(imovel.property);
+        setSite(siteInfo);
+        setProp(property);
 
-        const siteName = siteInfo.name || imovel.site?.name || 'Imóveis';
-        document.title = `${imovel.property.title} · ${siteName}`;
-        const desc = (imovel.property.description || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+        const siteName = siteInfo.name || 'Imóveis';
+        document.title = `${property.title} · ${siteName}`;
+        const desc = (property.description || '').replace(/\s+/g, ' ').trim().slice(0, 160);
         if (desc) setMeta('description', desc);
         setMeta('robots', 'index,follow');
         setState('ok');
