@@ -290,7 +290,7 @@ export default function PortalHomePage() {
 
       {/* ── Hero + busca ──────────────────────────────────────────────── */}
       <section id="topo" className="relative overflow-hidden">
-        <div className="absolute inset-0">
+        <div className="absolute inset-0" style={{ background: '#17140f' }}>
           {site.hero?.video_url ? (
             <video
               src={site.hero.video_url}
@@ -298,8 +298,7 @@ export default function PortalHomePage() {
               muted
               loop
               playsInline
-              preload="metadata"
-              poster={items[0]?.cover_url || undefined}
+              preload="auto"
               className="h-full w-full object-cover"
             />
           ) : (
