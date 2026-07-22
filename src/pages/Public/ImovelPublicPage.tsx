@@ -88,7 +88,10 @@ export default function ImovelPublicPage() {
   }, [tenant, code]);
 
   const brand = site.branding?.primary_color || '#0E7C5A';
-  const font = site.branding?.font_family || 'Inter, system-ui, sans-serif';
+  const font = site.branding?.font_family || 'Inter';
+  const fontPrimary = font.split(',')[0].trim();
+  const fontStack = font.includes(',') ? font : `${font}, system-ui, sans-serif`;
+  const fontHref = `https://fonts.googleapis.com/css2?family=${fontPrimary.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
   const wa = site.contact?.whatsapp;
   const waHref = useMemo(() => {
     if (!wa || !prop) return null;
@@ -116,7 +119,7 @@ export default function ImovelPublicPage() {
   if (state === 'loading') return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   if (state === 'notfound' || !prop) return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Imóvel não encontrado.</div>;
 
-  const cssVars = { ['--brand' as string]: brand, ['--ink' as string]: '#17140F', ['--paper' as string]: '#FAF7F2', ['--display' as string]: 'Fraunces, Georgia, serif', fontFamily: font } as CSSProperties;
+  const cssVars = { ['--brand' as string]: brand, ['--ink' as string]: '#17140F', ['--paper' as string]: '#FAF7F2', ['--display' as string]: fontStack, fontFamily: fontStack } as CSSProperties;
   const photos = prop.photos ?? [];
   const cover = photos[active] || photos[0];
   const local = [prop.address_neighborhood, prop.address_city, prop.address_state].filter(Boolean).join(', ');
@@ -151,7 +154,7 @@ export default function ImovelPublicPage() {
   return (
     <div style={cssVars} className="min-h-screen bg-[var(--paper)] pb-24 text-[var(--ink)] antialiased lg:pb-0">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet" />
+      <link href={fontHref} rel="stylesheet" />
 
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-[var(--paper)]/85 backdrop-blur-md">
