@@ -269,10 +269,14 @@ export default function PropertyImportDialog({ open, onClose, onReview, onChange
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
+      {/* sm:max-w-* precisa do prefixo: o DialogContent do design system traz
+          sm:max-w-lg (512px) embutido, e a media query vence classe sem prefixo.
+          O style inline é o cinto de segurança. */}
       <DialogContent
         className={batch
-          ? 'w-[96vw] max-w-[1600px] h-[88vh] flex flex-col overflow-hidden'
-          : 'max-w-3xl max-h-[90vh] overflow-y-auto'}
+          ? 'w-[96vw] max-w-[96vw] sm:max-w-[1600px] h-[88vh] flex flex-col overflow-hidden'
+          : 'w-[92vw] max-w-[92vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto'}
+        style={batch ? { width: '96vw', maxWidth: 'min(1600px, 96vw)' } : { maxWidth: 'min(48rem, 92vw)' }}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
