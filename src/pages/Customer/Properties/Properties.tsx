@@ -59,6 +59,7 @@ import {
   MAX_UPLOAD_BYTES,
 } from '@/services/propertyPhotos/propertyPhotosService';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import PropertyImportDialog from './PropertyImportDialog';
 import { labelsService } from '@/services/contacts/labelsService';
 
 const EMPTY_FORM: PropertyFormData = {
@@ -119,6 +120,7 @@ export default function Properties() {
   const [filterTransaction, setFilterTransaction] = useState('');
 
   const [modalOpen, setModalOpen]       = useState(false);
+  const [importOpen, setImportOpen]     = useState(false);
   const [editing, setEditing]           = useState<Property | null>(null);
   const [form, setForm]                 = useState<PropertyFormData>(EMPTY_FORM);
 
@@ -594,6 +596,12 @@ export default function Properties() {
               <Button variant="outline" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
                 <Wand2 className="h-4 w-4 mr-2" />
                 IA em lote
+              </Button>
+            )}
+            {canCreate && (
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Importar em lote (IA)
               </Button>
             )}
             {canCreate && (
@@ -1150,6 +1158,22 @@ export default function Properties() {
           onClose={() => setPhotosProperty(null)}
         />
       )}
+
+      {/* Importação em lote com IA (books/URLs -> rascunhos) */}
+      <PropertyImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onReview={async id => {
+          try {
+            const p = await propertiesService.get(id);
+            openEdit(p);
+          } catch {
+            toast.error('Não consegui carregar o imóvel pra revisão');
+          }
+        }}
+        onChanged={() => load()}
+      />
+
 
       {/* Batch generate dialog */}
       <Dialog open={batchModalOpen} onOpenChange={open => { if (!batchRunning) setBatchModalOpen(open); }}>
