@@ -22,6 +22,7 @@ import {
   Upload, Loader2, Sparkles,
 } from 'lucide-react';
 import { getTenantSlug } from '@/services/core/tenant';
+import LeadRoutingFields from '@/components/pipelines/LeadRoutingFields';
 import { extractLogoColors } from '@/utils/logoColors';
 import {
   siteBuilderService,
@@ -67,6 +68,9 @@ const EMPTY_SITE_FORM: SiteFormData = {
   gtm_id: '',
   ga4_measurement_id: '',
   facebook_pixel_id: '',
+  lead_pipeline_id: null,
+  lead_stage_id: null,
+  lead_label_id: null,
 };
 
 const EMPTY_PAGE_FORM: PageFormData = {
@@ -155,6 +159,9 @@ export default function SiteBuilder() {
           gtm_id: s.tracking.gtm_id ?? '',
           ga4_measurement_id: s.tracking.ga4_measurement_id ?? '',
           facebook_pixel_id: s.tracking.facebook_pixel_id ?? '',
+          lead_pipeline_id: s.lead_pipeline_id ?? null,
+          lead_stage_id: s.lead_stage_id ?? null,
+          lead_label_id: s.lead_label_id ?? null,
         });
       }
     } catch {
@@ -757,6 +764,25 @@ export default function SiteBuilder() {
                   placeholder="Rua..." className="mt-1" />
               </div>
             </div>
+          </section>
+
+          {/* Roteamento de leads: pra onde vão os leads capturados nos formulários
+              do site. Sem pipeline = cai no pipeline padrão do tenant (comportamento
+              antigo). A tag do imóvel (cadastro do imóvel) é aplicada por cima desta. */}
+          <section className="rounded-xl border border-border bg-card p-5">
+            <h2 className="text-base font-semibold mb-1">Roteamento de leads</h2>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Escolha o pipeline, a coluna e a tag de destino dos leads que se cadastram
+              nos formulários do site. Deixe o pipeline vazio para usar o pipeline padrão.
+            </p>
+            <LeadRoutingFields
+              value={{
+                lead_pipeline_id: siteForm.lead_pipeline_id ?? null,
+                lead_stage_id: siteForm.lead_stage_id ?? null,
+                lead_label_id: siteForm.lead_label_id ?? null,
+              }}
+              onChange={patch => setF(patch)}
+            />
           </section>
 
           {/* SEO */}
