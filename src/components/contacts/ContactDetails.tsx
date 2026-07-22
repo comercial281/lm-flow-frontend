@@ -39,7 +39,6 @@ import {
   // CalendarClock,
   GitBranch,
   Merge,
-  Plus,
   TrendingUp,
   X,
 } from 'lucide-react';
@@ -55,6 +54,7 @@ import {
   INTEREST_STAGE_LABELS,
   INTEREST_STAGE_COLORS,
 } from '@/services/propertyInterests/propertyInterestsService';
+import { propertiesService, type Property } from '@/services/properties/propertiesService';
 
 interface ContactDetailsProps {
   open: boolean;
@@ -86,8 +86,11 @@ export default function ContactDetails({
   const [merging, setMerging] = useState(false);
   const [propertyInterests, setPropertyInterests] = useState<PropertyInterest[]>([]);
   const [interestsLoading, setInterestsLoading] = useState(false);
-  const [newInterestPropertyId, setNewInterestPropertyId] = useState('');
   const [addingInterest, setAddingInterest] = useState(false);
+  // Busca de imóvel por código/título pra adicionar interesse (em vez de colar UUID).
+  const [propSearch, setPropSearch] = useState('');
+  const [propResults, setPropResults] = useState<Property[]>([]);
+  const [searchingProps, setSearchingProps] = useState(false);
 
   const loadPropertyInterests = useCallback(async (contactId: string) => {
     setInterestsLoading(true);
@@ -116,17 +119,41 @@ export default function ContactDetails({
     }
   }, [contact?.id, activeTab, loadPropertyInterests]);
 
-  const handleAddInterest = async () => {
-    if (!contact || !newInterestPropertyId.trim()) return;
+  // Busca imóveis por código/título (debounce) pra adicionar como interesse.
+  useEffect(() => {
+    const q = propSearch.trim();
+    if (q.length < 2) { setPropResults([]); setSearchingProps(false); return; }
+    setSearchingProps(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await propertiesService.list({ q, per_page: 8 });
+        setPropResults(res.data ?? []);
+      } catch {
+        setPropResults([]);
+      } finally {
+        setSearchingProps(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [propSearch]);
+
+  const addInterestForProperty = async (propertyId: string) => {
+    if (!contact || !propertyId) return;
+    if (propertyInterests.some(pi => pi.property_id === propertyId)) {
+      toast.info('Esse imóvel já está nos interesses');
+      setPropSearch(''); setPropResults([]);
+      return;
+    }
     setAddingInterest(true);
     try {
       await propertyInterestsService.create({
         contact_id: contact.id,
-        property_id: newInterestPropertyId.trim(),
+        property_id: propertyId,
         interest_stage: 'interested',
       });
-      setNewInterestPropertyId('');
+      setPropSearch(''); setPropResults([]);
       loadPropertyInterests(contact.id);
+      toast.success('Imóvel adicionado aos interesses');
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Erro ao adicionar interesse'));
     } finally {
@@ -532,19 +559,41 @@ export default function ContactDetails({
                     <Badge variant="secondary">{propertyInterests.length} imóveis</Badge>
                   </div>
 
-                  {/* Add interest */}
-                  <div className="flex gap-2">
+                  {/* Add interest — busca por código/título (sem UUID). */}
+                  <div className="relative">
                     <Input
-                      placeholder="ID do imóvel (UUID)"
-                      value={newInterestPropertyId}
-                      onChange={e => setNewInterestPropertyId(e.target.value)}
-                      className="flex-1"
-                      onKeyDown={e => e.key === 'Enter' && handleAddInterest()}
+                      placeholder="Buscar imóvel por código (IM0001) ou título…"
+                      value={propSearch}
+                      onChange={e => setPropSearch(e.target.value)}
+                      className="w-full"
                     />
-                    <Button size="sm" onClick={handleAddInterest} disabled={addingInterest || !newInterestPropertyId.trim()}>
-                      <Plus className="h-4 w-4 mr-1" />
-                      Adicionar
-                    </Button>
+                    {propSearch.trim().length >= 2 && (
+                      <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-popover shadow-md max-h-64 overflow-auto">
+                        {searchingProps ? (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">Buscando…</div>
+                        ) : propResults.length === 0 ? (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum imóvel encontrado</div>
+                        ) : (
+                          propResults.map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              disabled={addingInterest}
+                              onClick={() => addInterestForProperty(p.id)}
+                              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-accent disabled:opacity-50"
+                            >
+                              <span className="min-w-0 truncate">
+                                <span className="font-medium">{p.code}</span>
+                                <span className="text-muted-foreground"> · {p.title}</span>
+                              </span>
+                              {p.display_price && (
+                                <span className="shrink-0 text-xs text-muted-foreground">{p.display_price}</span>
+                              )}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* List */}
