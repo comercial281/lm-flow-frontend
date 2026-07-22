@@ -9,7 +9,7 @@ import { Link, useParams } from 'react-router-dom';
 
 interface Photo { file_url: string; thumbnail_url?: string | null; caption?: string | null; alt_text?: string | null; is_cover?: boolean }
 interface PropertyDTO {
-  code: string; title: string; description?: string;
+  id?: string; code: string; title: string; description?: string;
   transaction_type?: string; property_type?: string;
   sale_price?: number | null;
   bedrooms?: number | null; bathrooms?: number | null; suites?: number | null; parking_spaces?: number | null;
@@ -106,7 +106,8 @@ export default function ImovelPublicPage() {
       await fetch(`${API}/api/public/v1/site/leads`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
         body: JSON.stringify({ lead: {
-          name, phone, source: 'portal', form_type: 'imovel', property_code: code,
+          name, phone, source: 'portal', form_type: 'imovel',
+          property_code: code, property_id: prop?.id,
           message: `Interesse no imóvel ${code}`,
           utm_source: params.get('utm_source') ?? undefined, utm_campaign: params.get('utm_campaign') ?? undefined,
           form_data: { page_url: window.location.href, referrer: document.referrer || null },
