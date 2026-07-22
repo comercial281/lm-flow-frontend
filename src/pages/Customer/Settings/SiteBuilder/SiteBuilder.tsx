@@ -46,6 +46,8 @@ const TABS = [
   { key: 'leads', label: 'Leads', icon: Users },
 ];
 
+const SITE_FONTS = ['Inter', 'Space Grotesk', 'Lato', 'Poppins', 'Montserrat', 'Roboto'];
+
 const EMPTY_SITE_FORM: SiteFormData = {
   name: '',
   slug: '',
@@ -55,6 +57,7 @@ const EMPTY_SITE_FORM: SiteFormData = {
   logo_url: '',
   primary_color: '#7C3AED',
   accent_color: '#9333EA',
+  font_family: 'Inter',
   contact_phone: '',
   contact_whatsapp: '',
   contact_email: '',
@@ -142,6 +145,7 @@ export default function SiteBuilder() {
           logo_url: s.branding.logo_url ?? '',
           primary_color: s.branding.primary_color ?? '#7C3AED',
           accent_color: s.branding.accent_color ?? '#9333EA',
+          font_family: s.branding.font_family ?? 'Inter',
           contact_phone: s.contact.phone ?? '',
           contact_whatsapp: s.contact.whatsapp ?? '',
           contact_email: s.contact.email ?? '',
@@ -707,6 +711,23 @@ export default function SiteBuilder() {
                   <Input value={siteForm.accent_color ?? ''} onChange={e => setF({ accent_color: e.target.value })}
                     placeholder="#9333EA" className="font-mono flex-1" />
                 </div>
+              </div>
+              <div className="col-span-2">
+                <UILabel htmlFor="site-font">Fonte</UILabel>
+                <select
+                  id="site-font"
+                  value={siteForm.font_family ?? 'Inter'}
+                  onChange={e => setF({ font_family: e.target.value })}
+                  className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  style={{ fontFamily: `${siteForm.font_family ?? 'Inter'}, system-ui, sans-serif` }}
+                >
+                  {SITE_FONTS.map(f => (
+                    <option key={f} value={f} style={{ fontFamily: `${f}, system-ui, sans-serif` }}>{f}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Aplica-se a textos e títulos do site público.
+                </p>
               </div>
             </div>
           </section>

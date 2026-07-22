@@ -172,7 +172,10 @@ export default function PortalHomePage() {
 
   const brand = site.branding?.primary_color || '#0E7C5A';
   const accent = site.branding?.accent_color || brand;
-  const font = site.branding?.font_family || 'Inter, system-ui, sans-serif';
+  const font = site.branding?.font_family || 'Inter';
+  const fontPrimary = font.split(',')[0].trim();
+  const fontStack = font.includes(',') ? font : `${font}, system-ui, sans-serif`;
+  const fontHref = `https://fonts.googleapis.com/css2?family=${fontPrimary.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
   const wa = site.contact?.whatsapp;
   const cities = useMemo(() => [...new Set(items.map(i => i.address?.city).filter(Boolean) as string[])].sort(), [items]);
   const hoods = useMemo(() => [...new Set(items.map(i => i.address?.neighborhood).filter(Boolean) as string[])].sort(), [items]);
@@ -223,8 +226,8 @@ export default function PortalHomePage() {
     ['--accent' as string]: accent,
     ['--ink' as string]: '#17140F',
     ['--paper' as string]: '#FAF7F2',
-    ['--display' as string]: 'Fraunces, Georgia, serif',
-    fontFamily: font,
+    ['--display' as string]: fontStack,
+    fontFamily: fontStack,
   } as CSSProperties;
 
   const nav = [
@@ -238,9 +241,9 @@ export default function PortalHomePage() {
 
   return (
     <div style={cssVars} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
-      {/* Fonte de display (portal público) */}
+      {/* Fonte do site (definida no Site Builder) */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet" />
+      <link href={fontHref} rel="stylesheet" />
 
       {/* ── Header sticky ─────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-[var(--paper)]/85 backdrop-blur-md">
