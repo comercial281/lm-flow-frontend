@@ -51,6 +51,8 @@ export interface Site {
   active: boolean;
   published: boolean;
   branding: SiteBranding;
+  /** Vídeo do banner da home do portal (armazenado em settings no backend). */
+  hero_video_url?: string | null;
   contact: SiteContact;
   social_links?: Record<string, string>;
   seo: SiteSeo;
@@ -111,6 +113,7 @@ export interface SiteFormData {
   primary_color?: string;
   accent_color?: string;
   font_family?: string;
+  hero_video_url?: string;
   contact_phone?: string;
   contact_whatsapp?: string;
   contact_email?: string;

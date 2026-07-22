@@ -56,6 +56,7 @@ const EMPTY_SITE_FORM: SiteFormData = {
   active: true,
   published: false,
   logo_url: '',
+  hero_video_url: '',
   primary_color: '#7C3AED',
   accent_color: '#9333EA',
   font_family: 'Inter',
@@ -108,6 +109,10 @@ export default function SiteBuilder() {
   const logoInputRef = useRef<HTMLInputElement | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
 
+  // Vídeo do banner da home (upload → URL pública)
+  const bannerVideoInputRef = useRef<HTMLInputElement | null>(null);
+  const [bannerVideoUploading, setBannerVideoUploading] = useState(false);
+
   // Preencher com IA (proposta — o usuário revisa e salva)
   const [aiText, setAiText] = useState('');
   const [aiRunning, setAiRunning] = useState(false);
@@ -147,6 +152,7 @@ export default function SiteBuilder() {
           active: s.active,
           published: s.published,
           logo_url: s.branding.logo_url ?? '',
+          hero_video_url: s.hero_video_url ?? '',
           primary_color: s.branding.primary_color ?? '#7C3AED',
           accent_color: s.branding.accent_color ?? '#9333EA',
           font_family: s.branding.font_family ?? 'Inter',
@@ -267,6 +273,26 @@ export default function SiteBuilder() {
       toast.error('Falha no upload da logo.');
     } finally {
       setLogoUploading(false);
+    }
+  };
+
+  // Sobe o vídeo do banner da home. Fica no form (hero_video_url) até o usuário salvar.
+  const handleBannerVideoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (bannerVideoInputRef.current) bannerVideoInputRef.current.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('video/')) { toast.error('Envie um arquivo de vídeo (MP4/WebM).'); return; }
+    if (file.size > 60 * 1024 * 1024) { toast.error('Vídeo muito grande (máx 60MB). Comprima antes de enviar.'); return; }
+
+    setBannerVideoUploading(true);
+    try {
+      const { url } = await siteBuilderService.uploadAsset(file);
+      setF({ hero_video_url: url });
+      toast.success('Vídeo no ar. Revise o preview e clique em Salvar.');
+    } catch {
+      toast.error('Falha no upload do vídeo.');
+    } finally {
+      setBannerVideoUploading(false);
     }
   };
 
@@ -737,6 +763,37 @@ export default function SiteBuilder() {
                 </p>
               </div>
             </div>
+          </section>
+
+          {/* Banner da home (vídeo) */}
+          <section className="rounded-xl border border-border bg-card p-5">
+            <h2 className="text-base font-semibold mb-1">Banner da home</h2>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Envie um vídeo (MP4/WebM, máx 60MB) para tocar como fundo do banner da home do portal —
+              sem som, em loop. Sem vídeo, o banner usa a foto do primeiro imóvel.
+            </p>
+            <div className="flex items-center gap-2">
+              <Input value={siteForm.hero_video_url ?? ''} onChange={e => setF({ hero_video_url: e.target.value })}
+                placeholder="https://... ou envie o arquivo" className="flex-1" />
+              <input ref={bannerVideoInputRef} type="file" accept="video/mp4,video/webm,video/*" className="hidden" onChange={handleBannerVideoFile} />
+              <Button type="button" variant="outline" onClick={() => bannerVideoInputRef.current?.click()}
+                disabled={bannerVideoUploading} className="flex-none">
+                {bannerVideoUploading
+                  ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Enviando...</>
+                  : <><Upload className="mr-1.5 h-4 w-4" /> Enviar vídeo</>}
+              </Button>
+              {siteForm.hero_video_url && (
+                <Button type="button" variant="ghost" size="icon" title="Remover vídeo"
+                  className="flex-none text-destructive hover:text-destructive"
+                  onClick={() => setF({ hero_video_url: '' })}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            {siteForm.hero_video_url && (
+              <video key={siteForm.hero_video_url} src={siteForm.hero_video_url} muted loop autoPlay playsInline
+                className="mt-3 aspect-video w-full max-w-md rounded-lg border border-border object-cover" />
+            )}
           </section>
 
           {/* Contact */}
