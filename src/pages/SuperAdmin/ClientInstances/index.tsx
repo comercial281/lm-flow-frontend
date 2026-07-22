@@ -51,6 +51,19 @@ function InstanceCard({ instance, onDelete, onArchive, onRefresh }: {
   const [featuresOpen, setFeaturesOpen] = useState(false);
   const [entering, setEntering]         = useState(false);
   const [syncing, setSyncing]           = useState(false);
+  const [provisioning, setProvisioning] = useState(false);
+
+  // "Provisionado de verdade" = tem infra real. NÃO confiar em status === 'active',
+  // que pode mentir (cliente antigo criado antes deste fluxo, cujo job automático
+  // morreu no meio, fica 'active' sem Railway/Vercel).
+  const isProvisioned = Boolean(instance.backend_url && instance.vercel_project_id);
+  const isProvisioning = instance.status === 'provisioning_railway';
+  // Qualquer ID/URL parcial (ou erro) significa que já começou → "Retomar".
+  const hasPartialInfra = Boolean(
+    instance.backend_url || instance.railway_project_id ||
+    instance.vercel_project_id || instance.status === 'error'
+  );
+  const provisionLabel = hasPartialInfra ? 'Retomar criacao' : 'Criar ambiente';
 
   const enterAsMaster = async () => {
     setEntering(true);
@@ -86,6 +99,21 @@ function InstanceCard({ instance, onDelete, onArchive, onRefresh }: {
     }
   };
 
+  const provisionEnv = async () => {
+    setProvisioning(true);
+    try {
+      // Idempotente no backend: se um provisionamento anterior morreu no meio,
+      // esta chamada retoma de onde parou (pula os passos cujo ID já foi gravado).
+      await clientInstancesService.provision(instance.id);
+      onRefresh?.();
+    } catch (e: any) {
+      const msg = e?.response?.data?.error ?? 'Erro ao iniciar provisionamento';
+      alert(`Falha: ${msg}`);
+    } finally {
+      setProvisioning(false);
+    }
+  };
+
   return (
     <div className="bg-card border rounded-lg p-4">
       <div className="flex items-start justify-between gap-4">
@@ -106,19 +134,32 @@ function InstanceCard({ instance, onDelete, onArchive, onRefresh }: {
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          {instance.status === 'active' && (
+          {!isProvisioned && (
+            <Button
+              size="sm"
+              className="h-7 text-xs gap-1"
+              disabled={provisioning || isProvisioning}
+              onClick={provisionEnv}
+              title="Cria (ou retoma) o ambiente isolado do cliente: Railway + banco + Vercel"
+            >
+              {(provisioning || isProvisioning)
+                ? <><Loader2 className="h-3 w-3 animate-spin" /> Criando servidor...</>
+                : <><Building2 className="h-3 w-3" /> {provisionLabel}</>}
+            </Button>
+          )}
+          {isProvisioned && (
             <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setMembersOpen(true)}>
               <Users className="h-3 w-3" />
               Membros
             </Button>
           )}
-          {instance.status === 'active' && (
+          {isProvisioned && (
             <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setFeaturesOpen(true)}>
               <ToggleLeft className="h-3 w-3" />
               Funcoes
             </Button>
           )}
-          {instance.status === 'active' && instance.frontend_link && (
+          {isProvisioned && instance.frontend_link && (
             <>
               <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={copyLink}>
                 <Copy className="h-3 w-3" />

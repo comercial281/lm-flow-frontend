@@ -61,7 +61,10 @@ export interface ClientInstance {
   status: InstanceStatus;
   archived_at: string | null;
   backend_url: string | null;
+  frontend_url: string | null;
   frontend_link: string | null;
+  railway_project_id: string | null;
+  vercel_project_id: string | null;
   error_message: string | null;
   provisioning_log: { time: string; message: string }[];
   enabled_features?: Record<string, boolean>;
@@ -185,6 +188,13 @@ const clientInstancesService = {
 
   delete: (id: number) =>
     apiClient.delete(`/client_instances/${id}`),
+
+  // Dispara (ou retoma) o provisionamento Railway + Vercel. Idempotente no
+  // backend: re-chamar retoma de onde parou, sem duplicar recursos.
+  provision: (id: number) =>
+    apiClient.post<{ message: string; data: ClientInstance }>(
+      `/client_instances/${id}/provision`, {}
+    ),
 
   // Master SSO: token do super-admin no tenant pra entrar sem senha
   sso: (id: number) =>
