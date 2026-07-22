@@ -189,9 +189,11 @@ export const siteBuilderService = {
   /** Upload genérico (logo, imagens do site) — POST /uploads, devolve URL pública. */
   async uploadAsset(file: File): Promise<{ url: string }> {
     const fd = new FormData();
-    fd.append('file', file);
+    // Api::V1::UploadController espera o campo `attachment` (não `file`).
+    fd.append('attachment', file);
     const res = await api.post('/uploads', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-    return (res.data as { data: { url: string } }).data;
+    // O controller devolve a URL em `data.file_url`.
+    return { url: (res.data as { data: { file_url: string } }).data.file_url };
   },
 
   /**
