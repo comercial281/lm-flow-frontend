@@ -16,6 +16,7 @@ import {
   AlertCircle,
   CheckCircle2,
   FileText,
+  ImagePlus,
   Loader2,
   RefreshCw,
   Sparkles,
@@ -32,6 +33,7 @@ import {
   MISSING_FIELD_LABELS,
 } from '@/services/propertyImports/propertyImportsService';
 import { propertiesService } from '@/services/properties/propertiesService';
+import { propertyPhotosService, ACCEPTED_MIME_TYPES as PHOTO_MIME_TYPES } from '@/services/propertyPhotos/propertyPhotosService';
 
 // Chave pra retomar o acompanhamento se o corretor fechar o modal/página no
 // meio do lote (o processamento continua no backend).
@@ -48,9 +50,12 @@ interface Props {
   onReview: (propertyId: string) => void;
   /** Recarrega a listagem quando o lote cria/ativa imóveis. */
   onChanged: () => void;
+  /** Incrementado pela tela quando um imóvel é salvo na revisão — re-busca o lote
+   *  pra atualizar chips de campos faltantes, preço e thumbnail. */
+  refreshSignal?: number;
 }
 
-export default function PropertyImportDialog({ open, onClose, onReview, onChanged }: Props) {
+export default function PropertyImportDialog({ open, onClose, onReview, onChanged, refreshSignal }: Props) {
   const [files, setFiles] = useState<File[]>([]);
   const [urlsText, setUrlsText] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -58,7 +63,10 @@ export default function PropertyImportDialog({ open, onClose, onReview, onChange
   const [batch, setBatch] = useState<PropertyImportBatch | null>(null);
   const [activating, setActivating] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const [uploadingPhotosFor, setUploadingPhotosFor] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const photoTargetRef = useRef<string | null>(null);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
@@ -96,6 +104,40 @@ export default function PropertyImportDialog({ open, onClose, onReview, onChange
     return stopPolling;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Revisou/salvou um imóvel na tela? Re-busca o lote pra atualizar chips/preço/capa.
+  useEffect(() => {
+    if (!open || !refreshSignal) return;
+    const id = batch?.id ?? sessionStorage.getItem(ACTIVE_BATCH_KEY);
+    if (id) poll(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshSignal]);
+
+  const openPhotoPicker = (propertyId: string) => {
+    photoTargetRef.current = propertyId;
+    photoInputRef.current?.click();
+  };
+
+  const handlePhotoFiles = async (fileList: FileList | null) => {
+    const propertyId = photoTargetRef.current;
+    const photos = Array.from(fileList ?? []);
+    if (photoInputRef.current) photoInputRef.current.value = '';
+    if (!propertyId || !photos.length) return;
+
+    setUploadingPhotosFor(propertyId);
+    try {
+      await propertyPhotosService.upload(propertyId, photos);
+      toast.success(`${photos.length} foto${photos.length > 1 ? 's' : ''} enviada${photos.length > 1 ? 's' : ''}`);
+      const id = batch?.id ?? sessionStorage.getItem(ACTIVE_BATCH_KEY);
+      if (id) await poll(id);
+      onChanged();
+    } catch (e) {
+      const err = e as { response?: { data?: { error?: { message?: string } } } };
+      toast.error(err?.response?.data?.error?.message || 'Falha no upload das fotos');
+    } finally {
+      setUploadingPhotosFor(null);
+    }
+  };
 
   const onDrop = useCallback((accepted: File[], rejected: FileRejection[]) => {
     if (rejected.length) {
@@ -146,10 +188,15 @@ export default function PropertyImportDialog({ open, onClose, onReview, onChange
     }
   };
 
+  const missingPrice = (item: PropertyImportItem) =>
+    item.property?.has_price != null
+      ? !item.property.has_price
+      : item.missing_fields.includes('sale_price') || item.missing_fields.includes('rent_price');
+
   const handleActivate = async (item: PropertyImportItem) => {
     if (!item.property) return;
-    if (item.missing_fields.includes('sale_price') && item.missing_fields.includes('rent_price')) {
-      toast.error('Sem preço extraído — revise o imóvel e informe o valor antes de ativar');
+    if (missingPrice(item)) {
+      toast.error('Sem preço — revise o imóvel e informe o valor antes de ativar');
       return;
     }
     setActivating(item.property.id);
@@ -168,8 +215,7 @@ export default function PropertyImportDialog({ open, onClose, onReview, onChange
 
   const handleActivateAll = async () => {
     const candidates = (batch?.items ?? []).filter(
-      i => i.status === 'created' && i.property?.status === 'draft' &&
-        !(i.missing_fields.includes('sale_price') && i.missing_fields.includes('rent_price')),
+      i => i.status === 'created' && i.property?.status === 'draft' && !missingPrice(i),
     );
     if (!candidates.length) { toast.info('Nenhum rascunho pronto pra ativar (verifique preços faltantes)'); return; }
     setActivating('all');
@@ -223,7 +269,11 @@ export default function PropertyImportDialog({ open, onClose, onReview, onChange
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className={batch
+          ? 'max-w-6xl w-[95vw] h-[92vh] flex flex-col overflow-hidden'
+          : 'max-w-3xl max-h-[90vh] overflow-y-auto'}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
@@ -296,8 +346,8 @@ export default function PropertyImportDialog({ open, onClose, onReview, onChange
         )}
 
         {batch && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between rounded-lg border p-3">
+          <div className="space-y-3 flex-1 min-h-0 flex flex-col">
+            <div className="flex items-center justify-between rounded-lg border p-3 shrink-0">
               <div className="flex items-center gap-2 text-sm">
                 {running
                   ? <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -312,67 +362,121 @@ export default function PropertyImportDialog({ open, onClose, onReview, onChange
                   {batch.error_items > 0 ? `, ${batch.error_items} erro${batch.error_items !== 1 ? 's' : ''}` : ''})
                 </span>
               </div>
-              <div className="h-2 w-32 bg-muted rounded overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{ width: `${batch.total_items ? Math.round((batch.processed_items * 100) / batch.total_items) : 0}%` }}
-                />
+              <div className="flex items-center gap-3">
+                <div className="h-2 w-32 bg-muted rounded overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${batch.total_items ? Math.round((batch.processed_items * 100) / batch.total_items) : 0}%` }}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  title="Atualizar"
+                  onClick={() => poll(batch.id)}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
               </div>
             </div>
 
-            <div className="max-h-[45vh] overflow-y-auto space-y-2">
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
               {(batch.items ?? []).map(item => (
-                <div key={item.id} className="rounded-lg border p-3 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="text-sm font-medium truncate flex-1">
-                      {item.file_name || item.source_url}
-                    </span>
-                    {itemStatusBadge(item)}
-                  </div>
-
-                  {item.status === 'created' && (
-                    <>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {item.property?.code} — {item.extracted_summary.title || item.property?.title}
-                        {item.property?.display_price ? ` · ${item.property.display_price}` : ''}
-                        {item.extracted_summary.address_city ? ` · ${item.extracted_summary.address_city}` : ''}
-                      </p>
-                      {item.missing_fields.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          <span className="text-xs text-orange-600 dark:text-orange-400">Faltou:</span>
-                          {item.missing_fields.map(f => (
-                            <Badge key={f} variant="outline" className="text-xs text-orange-600 border-orange-300">
-                              {MISSING_FIELD_LABELS[f] ?? f}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex gap-2 pt-1">
-                        <Button size="sm" variant="outline" onClick={() => item.property && onReview(item.property.id)}>
-                          Revisar
-                        </Button>
-                        {item.property?.status === 'draft' && (
-                          <Button
-                            size="sm"
-                            disabled={activating !== null}
-                            onClick={() => handleActivate(item)}
-                          >
-                            {activating === item.property?.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Ativar'}
-                          </Button>
+                <div key={item.id} className="rounded-lg border p-3">
+                  <div className="flex gap-3">
+                    {/* Thumbnail: capa do imóvel ou atalho pra subir fotos ali mesmo */}
+                    {item.status === 'created' && item.property && (
+                      <button
+                        type="button"
+                        title={item.property.cover_photo_url ? 'Adicionar mais fotos' : 'Subir fotos deste imóvel'}
+                        onClick={() => openPhotoPicker(item.property!.id)}
+                        disabled={uploadingPhotosFor !== null}
+                        className="relative h-16 w-16 shrink-0 rounded-md border overflow-hidden bg-muted/50 hover:border-primary transition-colors flex items-center justify-center"
+                      >
+                        {uploadingPhotosFor === item.property.id ? (
+                          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        ) : item.property.cover_photo_url ? (
+                          <>
+                            <img src={item.property.cover_photo_url} alt="" className="h-full w-full object-cover" />
+                            {(item.property.photos_count ?? 0) > 0 && (
+                              <span className="absolute bottom-0 right-0 bg-black/70 text-white text-[10px] px-1 rounded-tl">
+                                {item.property.photos_count}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <ImagePlus className="h-5 w-5 text-muted-foreground" />
                         )}
-                      </div>
-                    </>
-                  )}
+                      </button>
+                    )}
 
-                  {item.status === 'error' && (
-                    <p className="text-xs text-red-600 dark:text-red-400">{item.error_message}</p>
-                  )}
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <span className="text-sm font-medium truncate flex-1">
+                          {item.file_name || item.source_url}
+                        </span>
+                        {itemStatusBadge(item)}
+                      </div>
+
+                      {item.status === 'created' && (
+                        <>
+                          <p className="text-sm text-muted-foreground">
+                            {item.property?.code} — {item.extracted_summary.title || item.property?.title}
+                            {item.property?.display_price ? ` · ${item.property.display_price}` : ''}
+                            {item.extracted_summary.address_city ? ` · ${item.extracted_summary.address_city}` : ''}
+                          </p>
+                          {item.missing_fields.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 items-center">
+                              <span className="text-xs text-orange-600 dark:text-orange-400">Faltou:</span>
+                              {item.missing_fields.map(f => (
+                                <Badge key={f} variant="outline" className="text-xs text-orange-600 border-orange-300">
+                                  {MISSING_FIELD_LABELS[f] ?? f}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Dados completos
+                            </p>
+                          )}
+                          <div className="flex gap-2 pt-1">
+                            <Button size="sm" variant="outline" onClick={() => item.property && onReview(item.property.id)}>
+                              Revisar
+                            </Button>
+                            {item.property?.status === 'draft' && (
+                              <Button
+                                size="sm"
+                                disabled={activating !== null}
+                                onClick={() => handleActivate(item)}
+                              >
+                                {activating === item.property?.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Ativar'}
+                              </Button>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      {item.status === 'error' && (
+                        <p className="text-xs text-red-600 dark:text-red-400">{item.error_message}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
+
+        {/* Input escondido do upload de fotos por item */}
+        <input
+          ref={photoInputRef}
+          type="file"
+          multiple
+          accept={PHOTO_MIME_TYPES.join(',')}
+          className="hidden"
+          onChange={e => handlePhotoFiles(e.target.files)}
+        />
 
         <DialogFooter className="gap-2">
           {!batch && (
