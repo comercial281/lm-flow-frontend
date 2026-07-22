@@ -781,9 +781,9 @@ export default function Properties() {
         )}
       </div>
 
-      {/* Create/Edit Modal */}
+      {/* Create/Edit Modal — horizontal: usa a largura da tela em 3 colunas */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[94vw] max-w-[1400px] max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar imóvel' : 'Cadastrar imóvel'}</DialogTitle>
             <DialogDescription>Preencha as informações do imóvel</DialogDescription>
@@ -917,7 +917,11 @@ export default function Properties() {
             </div>
           )}
 
-          <div className="space-y-4 py-2">
+          {/* Layout horizontal: 3 colunas lado a lado (dados | valores/composição | endereço),
+              distribuindo o retângulo da tela em vez de uma coluna comprida. */}
+          <div className="py-2 grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-4 items-start">
+            <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dados do imóvel</p>
             {/* Basic */}
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
@@ -965,7 +969,10 @@ export default function Properties() {
                 </select>
               </div>
             </div>
+            </div>
 
+            <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Valores e composição</p>
             {/* Prices */}
             <div className="grid grid-cols-2 gap-4">
               {(f.transaction_type === 'sale' || f.transaction_type === 'sale_rent') && (
@@ -1011,7 +1018,10 @@ export default function Properties() {
                 </div>
               ))}
             </div>
+            </div>
 
+            <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Endereço</p>
             {/* Address */}
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
@@ -1077,9 +1087,12 @@ export default function Properties() {
                   placeholder="-46.6333" className="mt-1" />
               </div>
             </div>
+            </div>
 
+            {/* Faixa de largura total: atribuição/tag + descrição + flags */}
+            <div className="lg:col-span-3 space-y-4 border-t pt-4">
             {/* Atribuição: responsável + captador */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
               <div>
                 <UILabel>Corretor responsável</UILabel>
                 <select
@@ -1102,12 +1115,10 @@ export default function Properties() {
                   {tenantUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               </div>
-            </div>
-
-            {/* Tag do imóvel: o lead que entra pela página deste imóvel é etiquetado
-                com essa tag. Assim o pipeline fica geral e a tag identifica o imóvel. */}
-            <div>
-              <UILabel>Tag do imóvel</UILabel>
+              {/* Tag do imóvel: o lead que entra pela página deste imóvel é etiquetado
+                  com essa tag. Assim o pipeline fica geral e a tag identifica o imóvel. */}
+              <div>
+                <UILabel>Tag do imóvel</UILabel>
               <select
                 value={f.label_id ?? ''}
                 onChange={e => setF({ label_id: e.target.value || null })}
@@ -1132,6 +1143,7 @@ export default function Properties() {
                 Aplicada ao lead capturado na página deste imóvel. Vazio = cria uma tag
                 automática com o título do imóvel.
               </p>
+              </div>
             </div>
 
             {/* Description */}
@@ -1181,6 +1193,7 @@ export default function Properties() {
                 <input type="checkbox" checked={f.on_sign ?? false} onChange={e => setF({ on_sign: e.target.checked })} className="rounded" />
                 <span className="text-sm">Tem placa</span>
               </label>
+            </div>
             </div>
           </div>
 

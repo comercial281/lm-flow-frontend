@@ -271,7 +271,7 @@ export default function PropertyImportDialog({ open, onClose, onReview, onChange
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
       <DialogContent
         className={batch
-          ? 'max-w-6xl w-[95vw] h-[92vh] flex flex-col overflow-hidden'
+          ? 'w-[96vw] max-w-[1600px] h-[88vh] flex flex-col overflow-hidden'
           : 'max-w-3xl max-h-[90vh] overflow-y-auto'}
       >
         <DialogHeader>
@@ -380,18 +380,32 @@ export default function PropertyImportDialog({ open, onClose, onReview, onChange
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
+            {/* Tabela horizontal: uma LINHA por imóvel, informações distribuídas em colunas */}
+            <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border">
+              <div className="grid grid-cols-[72px_1fr_1.6fr_0.8fr_1fr_1.3fr_auto] gap-x-3 items-center px-3 py-2 text-xs font-medium text-muted-foreground border-b bg-muted/40 sticky top-0 z-10">
+                <span>Fotos</span>
+                <span>Arquivo</span>
+                <span>Imóvel</span>
+                <span>Preço</span>
+                <span>Localização</span>
+                <span>Pendências</span>
+                <span className="text-right pr-1">Ações</span>
+              </div>
+
               {(batch.items ?? []).map(item => (
-                <div key={item.id} className="rounded-lg border p-3">
-                  <div className="flex gap-3">
-                    {/* Thumbnail: capa do imóvel ou atalho pra subir fotos ali mesmo */}
-                    {item.status === 'created' && item.property && (
+                <div
+                  key={item.id}
+                  className="grid grid-cols-[72px_1fr_1.6fr_0.8fr_1fr_1.3fr_auto] gap-x-3 items-center px-3 py-2 border-b last:border-b-0 hover:bg-muted/20"
+                >
+                  {/* Fotos: capa do imóvel ou atalho pra subir ali mesmo */}
+                  <div>
+                    {item.status === 'created' && item.property ? (
                       <button
                         type="button"
                         title={item.property.cover_photo_url ? 'Adicionar mais fotos' : 'Subir fotos deste imóvel'}
                         onClick={() => openPhotoPicker(item.property!.id)}
                         disabled={uploadingPhotosFor !== null}
-                        className="relative h-16 w-16 shrink-0 rounded-md border overflow-hidden bg-muted/50 hover:border-primary transition-colors flex items-center justify-center"
+                        className="relative h-14 w-16 rounded-md border overflow-hidden bg-muted/50 hover:border-primary transition-colors flex items-center justify-center"
                       >
                         {uploadingPhotosFor === item.property.id ? (
                           <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -408,60 +422,79 @@ export default function PropertyImportDialog({ open, onClose, onReview, onChange
                           <ImagePlus className="h-5 w-5 text-muted-foreground" />
                         )}
                       </button>
+                    ) : (
+                      <div className="h-14 w-16 rounded-md border border-dashed bg-muted/20" />
                     )}
+                  </div>
 
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        <span className="text-sm font-medium truncate flex-1">
-                          {item.file_name || item.source_url}
-                        </span>
-                        {itemStatusBadge(item)}
+                  {/* Arquivo de origem + status */}
+                  <div className="min-w-0">
+                    <p className="text-sm truncate flex items-center gap-1.5" title={item.file_name || item.source_url || ''}>
+                      <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <span className="truncate">{item.file_name || item.source_url}</span>
+                    </p>
+                    <div className="mt-1">{itemStatusBadge(item)}</div>
+                  </div>
+
+                  {item.status === 'created' && item.property ? (
+                    <>
+                      {/* Imóvel */}
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground">{item.property.code}</p>
+                        <p className="text-sm font-medium leading-snug line-clamp-2" title={item.extracted_summary.title || item.property.title}>
+                          {item.extracted_summary.title || item.property.title}
+                        </p>
                       </div>
 
-                      {item.status === 'created' && (
-                        <>
-                          <p className="text-sm text-muted-foreground">
-                            {item.property?.code} — {item.extracted_summary.title || item.property?.title}
-                            {item.property?.display_price ? ` · ${item.property.display_price}` : ''}
-                            {item.extracted_summary.address_city ? ` · ${item.extracted_summary.address_city}` : ''}
-                          </p>
-                          {item.missing_fields.length > 0 ? (
-                            <div className="flex flex-wrap gap-1 items-center">
-                              <span className="text-xs text-orange-600 dark:text-orange-400">Faltou:</span>
-                              {item.missing_fields.map(f => (
-                                <Badge key={f} variant="outline" className="text-xs text-orange-600 border-orange-300">
-                                  {MISSING_FIELD_LABELS[f] ?? f}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                              <CheckCircle2 className="h-3.5 w-3.5" /> Dados completos
-                            </p>
-                          )}
-                          <div className="flex gap-2 pt-1">
-                            <Button size="sm" variant="outline" onClick={() => item.property && onReview(item.property.id)}>
-                              Revisar
-                            </Button>
-                            {item.property?.status === 'draft' && (
-                              <Button
-                                size="sm"
-                                disabled={activating !== null}
-                                onClick={() => handleActivate(item)}
-                              >
-                                {activating === item.property?.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Ativar'}
-                              </Button>
-                            )}
-                          </div>
-                        </>
-                      )}
+                      {/* Preço */}
+                      <div className="text-sm font-medium">
+                        {item.property.display_price || <span className="text-orange-500 text-xs">sem preço</span>}
+                      </div>
 
-                      {item.status === 'error' && (
-                        <p className="text-xs text-red-600 dark:text-red-400">{item.error_message}</p>
-                      )}
-                    </div>
-                  </div>
+                      {/* Localização */}
+                      <div className="text-sm text-muted-foreground min-w-0">
+                        <p className="truncate">{item.extracted_summary.address_neighborhood || '—'}</p>
+                        <p className="truncate text-xs">{item.extracted_summary.address_city || ''}</p>
+                      </div>
+
+                      {/* Pendências */}
+                      <div className="min-w-0">
+                        {item.missing_fields.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {item.missing_fields.map(f => (
+                              <Badge key={f} variant="outline" className="text-[11px] px-1.5 py-0 text-orange-600 border-orange-300">
+                                {MISSING_FIELD_LABELS[f] ?? f}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Completo
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Ações */}
+                      <div className="flex gap-1.5 justify-end">
+                        <Button size="sm" variant="outline" onClick={() => onReview(item.property!.id)}>
+                          Revisar
+                        </Button>
+                        {item.property.status === 'draft' ? (
+                          <Button size="sm" disabled={activating !== null} onClick={() => handleActivate(item)}>
+                            {activating === item.property.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Ativar'}
+                          </Button>
+                        ) : (
+                          <Badge className="self-center bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Ativo</Badge>
+                        )}
+                      </div>
+                    </>
+                  ) : item.status === 'error' ? (
+                    <p className="col-span-5 text-xs text-red-600 dark:text-red-400">{item.error_message}</p>
+                  ) : (
+                    <p className="col-span-5 text-xs text-muted-foreground">
+                      {item.status === 'processing' ? 'A IA está lendo o material…' : 'Aguardando na fila'}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
