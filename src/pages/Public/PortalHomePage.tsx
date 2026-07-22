@@ -17,6 +17,7 @@ interface Branding {
 interface SiteInfo {
   name?: string;
   branding?: Branding;
+  hero?: { video_url?: string | null };
   contact?: { whatsapp?: string | null; phone?: string | null };
   seo?: { title?: string | null; description?: string | null };
 }
@@ -286,7 +287,20 @@ export default function PortalHomePage() {
       {/* ── Hero + busca ──────────────────────────────────────────────── */}
       <section id="topo" className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <img src={items[0]?.cover_url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1600&q=80'} alt="" className="h-full w-full object-cover" />
+          {site.hero?.video_url ? (
+            <video
+              src={site.hero.video_url}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              poster={items[0]?.cover_url || undefined}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <img src={items[0]?.cover_url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1600&q=80'} alt="" className="h-full w-full object-cover" />
+          )}
           <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(23,20,15,0.35) 0%, rgba(23,20,15,0.55) 55%, var(--paper) 100%)' }} />
         </div>
 
