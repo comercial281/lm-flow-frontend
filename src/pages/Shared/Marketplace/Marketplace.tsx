@@ -85,6 +85,15 @@ const CATALOG: CatalogEntry[] = [
     logo: '🎯',
   },
   {
+    type: 'portal_zap',
+    name: 'Portais imobiliários',
+    description: 'Publique imóveis no Grupo ZAP, VivaReal, OLX, Imóvel Web, Chaves na Mão e regionais via feed, e receba os leads no funil.',
+    category: 'Imobiliário',
+    tags: ['portais', 'zap', 'vivareal', 'olx', 'feed', 'leads'],
+    configPath: '/settings/portals',
+    logo: '🏘️',
+  },
+  {
     type: 'orulo',
     name: 'Órulo',
     description: 'Portal de imóveis lançamentos. Sincronize empreendimentos e interesse de compradores.',

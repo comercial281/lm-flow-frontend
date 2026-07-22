@@ -170,6 +170,13 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     featureKey: 'properties',
   },
   {
+    // Portais imobiliários (ZAP, Imóvel Web…) — feed + leads
+    name: 'Portais',
+    href: '/settings/portals',
+    icon: Globe,
+    featureKey: 'properties',
+  },
+  {
     name: 'Agenda de Visitas',
     href: '/visits',
     icon: CalendarClock,

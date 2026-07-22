@@ -148,6 +148,8 @@ const RdStationPage = lazyWithRetry(() => import('../pages/Customer/Settings/Int
 const Studio360Page = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/RealEstate/Studio360Page'));
 const LeadloversPage = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/RealEstate/LeadloversPage'));
 const OruloPage = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/RealEstate/OruloPage'));
+const PortalsList = lazyWithRetry(() => import('../pages/Customer/Settings/Portals/PortalsList'));
+const PortalDetailPage = lazyWithRetry(() => import('../pages/Customer/Settings/Portals/PortalDetailPage'));
 // import { Overview, Conversations } from '../pages/Customer/Reports';
 // import * as Reports from '../pages/Customer/Reports';
 
@@ -1236,6 +1238,34 @@ const AppRouter = () => {
                   <MainLayout>
                     <PermissionRoute resource="integrations" action="read">
                       <OruloPage />
+                    </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/settings/portals"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PermissionRoute resource="integrations" action="read">
+                      <PortalsList />
+                    </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/settings/portals/:portalKey"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PermissionRoute resource="integrations" action="read">
+                      <PortalDetailPage />
                     </PermissionRoute>
                   </MainLayout>
                 </CustomerRoute>
