@@ -163,6 +163,8 @@ export default function Properties() {
   const [tenantUsers, setTenantUsers] = useState<Array<{ id: string; name: string }>>([]);
   // Tags (labels) do tenant, pro seletor "Tag do imóvel". Toleram falha (fica vazio).
   const [labels, setLabels] = useState<Array<{ id: string; title: string }>>([]);
+  const [newTagName, setNewTagName] = useState('');
+  const [creatingTag, setCreatingTag] = useState(false);
 
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -406,6 +408,37 @@ export default function Properties() {
 
   const f = form;
   const setF = (patch: Partial<PropertyFormData>) => setForm(prev => ({ ...prev, ...patch }));
+
+  // Cria uma nova tag (Label) direto do cadastro do imóvel e já a seleciona.
+  // O backend só aceita título com letras/números/espaço/hífen/underscore, então
+  // sanitiza aqui (troca inválidos por espaço, colapsa, tira separador das pontas).
+  const createTag = async () => {
+    const cleaned = newTagName
+      .replace(/[^\p{L}\p{N} _-]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^[ _-]+|[ _-]+$/g, '')
+      .slice(0, 60);
+    if (!cleaned) { toast.error('Digite um nome válido para a tag'); return; }
+    // Se já existe (case-insensitive), só seleciona.
+    const existing = labels.find(l => l.title.toLowerCase() === cleaned.toLowerCase());
+    if (existing) { setF({ label_id: existing.id }); setNewTagName(''); return; }
+    setCreatingTag(true);
+    try {
+      // createLabel desembrulha pro Label no runtime (o backend normaliza o título
+      // pra minúsculo) — o tipo diz LabelResponse, por isso o cast.
+      const created = await labelsService.createLabel({ title: cleaned, color: '#34d399', show_on_sidebar: true }) as unknown as { id: string; title: string };
+      const item = { id: String(created.id), title: created.title };
+      setLabels(prev => (prev.some(l => l.id === item.id) ? prev : [...prev, item]));
+      setF({ label_id: item.id });
+      setNewTagName('');
+      toast.success('Tag criada e selecionada');
+    } catch {
+      toast.error('Não consegui criar a tag');
+    } finally {
+      setCreatingTag(false);
+    }
+  };
 
   // IA lê o texto colado / book (PDF) / link do anúncio e preenche o form (sem salvar).
   const doAiExtract = async (text: string, url: string) => {
@@ -1053,6 +1086,18 @@ export default function Properties() {
                 <option value="">Gerar automaticamente pelo título</option>
                 {labels.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
               </select>
+              <div className="mt-2 flex gap-2">
+                <Input
+                  value={newTagName}
+                  onChange={e => setNewTagName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); createTag(); } }}
+                  placeholder="Criar nova tag…"
+                  className="flex-1"
+                />
+                <Button type="button" variant="outline" onClick={createTag} disabled={creatingTag || !newTagName.trim()}>
+                  {creatingTag ? 'Criando…' : 'Criar e usar'}
+                </Button>
+              </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 Aplicada ao lead capturado na página deste imóvel. Vazio = cria uma tag
                 automática com o título do imóvel.
