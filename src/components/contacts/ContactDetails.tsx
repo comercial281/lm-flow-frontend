@@ -41,7 +41,6 @@ import {
   Merge,
   Plus,
   TrendingUp,
-  ChevronRight,
   X,
 } from 'lucide-react';
 // import { ScheduledActionsList } from '@/components/scheduledActions';
@@ -135,12 +134,12 @@ export default function ContactDetails({
     }
   };
 
-  const handleAdvanceInterest = async (id: string) => {
+  const handleChangeInterestStage = async (id: string, stage: string) => {
     try {
-      await propertyInterestsService.advance(id);
+      await propertyInterestsService.update(id, { interest_stage: stage });
       if (contact) loadPropertyInterests(contact.id);
     } catch (e) {
-      toast.error(apiErrorMessage(e, 'Não foi possível avançar o estágio'));
+      toast.error(apiErrorMessage(e, 'Não foi possível mudar o estágio'));
     }
   };
 
@@ -560,8 +559,6 @@ export default function ContactDetails({
                     <div className="space-y-3">
                       {propertyInterests.map(pi => {
                         const stageColor = INTEREST_STAGE_COLORS[pi.interest_stage] ?? '';
-                        const stageLabel = INTEREST_STAGE_LABELS[pi.interest_stage] ?? pi.interest_stage;
-                        const isClosed = pi.interest_stage === 'closed_won' || pi.interest_stage === 'closed_lost';
                         return (
                           <div key={pi.id} className="border rounded-lg p-3 flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
@@ -574,7 +571,18 @@ export default function ContactDetails({
                                 )}
                               </div>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <Badge className={`text-xs ${stageColor}`}>{stageLabel}</Badge>
+                                {/* Status do interesse NESTE imóvel — dropdown pra mudar direto.
+                                    Um lead pode ter vários imóveis, cada um com seu status. */}
+                                <select
+                                  value={pi.interest_stage}
+                                  onChange={e => handleChangeInterestStage(pi.id, e.target.value)}
+                                  className={`text-xs rounded-md border border-input px-2 py-1 font-medium ${stageColor}`}
+                                  title="Status do interesse neste imóvel"
+                                >
+                                  {Object.entries(INTEREST_STAGE_LABELS).map(([value, label]) => (
+                                    <option key={value} value={value}>{label}</option>
+                                  ))}
+                                </select>
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                   <TrendingUp className="h-3 w-3" />
                                   {pi.match_score}% match
@@ -590,17 +598,6 @@ export default function ContactDetails({
                               )}
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
-                              {!isClosed && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 px-2 text-xs"
-                                  onClick={() => handleAdvanceInterest(pi.id)}
-                                  title="Avançar estágio"
-                                >
-                                  <ChevronRight className="h-3 w-3" />
-                                </Button>
-                              )}
                               <Button
                                 variant="ghost"
                                 size="sm"
