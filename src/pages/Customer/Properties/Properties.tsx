@@ -13,6 +13,10 @@ import {
   DialogTitle,
   Label as UILabel,
   Textarea,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
 } from '@/components/ui/ds';
 import {
   Plus,
@@ -41,6 +45,8 @@ import {
   Film,
   Megaphone,
   LayoutTemplate,
+  Check,
+  ChevronDown,
 } from 'lucide-react';
 import {
   propertiesService,
@@ -185,9 +191,14 @@ export default function Properties() {
     }
   }, [search, filterStatus, filterType, filterTransaction]);
 
+  // Recarrega os contadores da barra de status (ativos/reservados/…). Tolerante a falha.
+  const loadStats = useCallback(() => {
+    propertiesService.stats().then(setStats).catch(() => {});
+  }, []);
+
   useEffect(() => {
     load();
-    propertiesService.stats().then(setStats).catch(() => {});
+    loadStats();
     // Carrega usuários do tenant pra select de responsável/captador.
     // Tolerante a falha: se endpoint retornar erro, mantém array vazio (UI cai pro "Nenhum").
     import('@/services/users/usersService').then(({ default: svc }) => {
@@ -313,6 +324,21 @@ export default function Properties() {
       toast.error(msg);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Mudança rápida de status direto no card (sem abrir o modal de edição).
+  const handleStatusChange = async (p: Property, newStatus: string) => {
+    if (newStatus === p.status) return;
+    try {
+      const updated = await propertiesService.update(p.id, { status: newStatus });
+      setProperties(prev => prev.map(x => x.id === updated.id ? updated : x));
+      loadStats(); // atualiza a barra de contadores no topo
+      toast.success(`Status alterado para ${STATUS_LABELS[newStatus] ?? newStatus}`);
+    } catch (e) {
+      const err = e as { response?: { data?: { error?: { message?: string }; message?: string } } };
+      const msg = err?.response?.data?.error?.message || err?.response?.data?.message || 'Erro ao alterar status';
+      toast.error(msg);
     }
   };
 
@@ -706,6 +732,7 @@ export default function Properties() {
                 key={property.id}
                 property={property}
                 onEdit={openEdit}
+                onStatusChange={handleStatusChange}
                 onDelete={p => { setToDelete(p); setDeleteDialogOpen(true); }}
                 onManagePhotos={p => setPhotosProperty(p)}
                 onLanding={p => navigate(`/properties/${p.id}/landing`)}
@@ -1262,6 +1289,7 @@ export default function Properties() {
 function PropertyCard({
   property: p,
   onEdit,
+  onStatusChange,
   onDelete,
   onManagePhotos,
   onLanding,
@@ -1271,6 +1299,7 @@ function PropertyCard({
 }: {
   property: Property;
   onEdit: (p: Property) => void;
+  onStatusChange: (p: Property, status: string) => void;
   onDelete: (p: Property) => void;
   onManagePhotos: (p: Property) => void;
   onLanding: (p: Property) => void;
@@ -1302,10 +1331,32 @@ function PropertyCard({
         style={{ background: PROP_GRADS[propGradIdx] }}
       >
         <Building2 className="h-10 w-10 text-white/30" />
-        <div className="absolute top-2 left-2 flex gap-1">
-          <span className={`text-xs px-2 py-0.5 rounded font-medium ${STATUS_COLORS[p.status] ?? ''}`}>
-            {STATUS_LABELS[p.status] ?? p.status}
-          </span>
+        <div className="absolute top-2 left-2 flex gap-1 z-10">
+          {/* Badge de status vira um menu: muda o status direto no card, sem abrir o modal.
+              z-10 mantém clicável por cima do overlay de ações que aparece no hover. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+              <button
+                type="button"
+                title="Alterar status"
+                className={`text-xs px-2 py-0.5 rounded font-medium inline-flex items-center gap-1 cursor-pointer ${STATUS_COLORS[p.status] ?? ''}`}
+              >
+                {STATUS_LABELS[p.status] ?? p.status}
+                <ChevronDown className="h-3 w-3 opacity-70" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                <DropdownMenuItem
+                  key={value}
+                  onClick={e => { e.stopPropagation(); onStatusChange(p, value); }}
+                >
+                  <Check className={`h-3.5 w-3.5 mr-2 ${p.status === value ? 'opacity-100' : 'opacity-0'}`} />
+                  {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           {p.exclusive && (
             <span className="text-xs px-2 py-0.5 rounded font-medium bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 flex items-center gap-1">
               <Lock className="h-2.5 w-2.5" />
