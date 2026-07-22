@@ -121,6 +121,7 @@ export default function Properties() {
 
   const [modalOpen, setModalOpen]       = useState(false);
   const [importOpen, setImportOpen]     = useState(false);
+  const [importRefresh, setImportRefresh] = useState(0);
   const [editing, setEditing]           = useState<Property | null>(null);
   const [form, setForm]                 = useState<PropertyFormData>(EMPTY_FORM);
 
@@ -286,6 +287,8 @@ export default function Properties() {
         setProperties(prev => prev.map(p => p.id === updated.id ? updated : p));
         toast.success('Imóvel atualizado');
         setModalOpen(false);
+        // Avisa o modal de importação em lote (se aberto) pra re-buscar os chips/preço
+        setImportRefresh(n => n + 1);
       } else {
         const created = await propertiesService.create(form);
         setProperties(prev => [created, ...prev]);
@@ -1207,6 +1210,7 @@ export default function Properties() {
       {/* Importação em lote com IA (books/URLs -> rascunhos) */}
       <PropertyImportDialog
         open={importOpen}
+        refreshSignal={importRefresh}
         onClose={() => setImportOpen(false)}
         onReview={async id => {
           try {

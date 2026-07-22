@@ -21,6 +21,9 @@ export interface ImportItemProperty {
   title: string;
   status: string;
   display_price?: string | null;
+  has_price?: boolean;
+  photos_count?: number;
+  cover_photo_url?: string | null;
 }
 
 export interface PropertyImportItem {
