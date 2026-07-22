@@ -199,6 +199,14 @@ export default function Properties() {
     propertiesService.stats().then(setStats).catch(() => {});
   }, []);
 
+  // Carrega/atualiza a lista de tags. Chamado no mount e ao abrir o modal, pra o
+  // seletor refletir tags novas (inclusive a tag automática do código do imóvel).
+  const loadLabels = useCallback(() => {
+    labelsService.getLabels()
+      .then(res => setLabels((res.data ?? []).map(l => ({ id: String(l.id), title: l.title }))))
+      .catch(() => setLabels([]));
+  }, []);
+
   useEffect(() => {
     load();
     loadStats();
@@ -214,9 +222,7 @@ export default function Properties() {
         .catch(() => setTenantUsers([]));
     }).catch(() => setTenantUsers([]));
     // Tags do tenant pro seletor "Tag do imóvel".
-    labelsService.getLabels()
-      .then(res => setLabels((res.data ?? []).map(l => ({ id: String(l.id), title: l.title }))))
-      .catch(() => setLabels([]));
+    loadLabels();
   }, []);
 
   const handleSearch = (val: string) => {
@@ -238,11 +244,13 @@ export default function Properties() {
     setMediaFiles([]);
     setAiText('');
     setAiUrl('');
+    loadLabels();
     setModalOpen(true);
   };
 
   const openEdit = (p: Property) => {
     setEditing(p);
+    loadLabels();
     setForm({
       title: p.title,
       description: p.description ?? '',

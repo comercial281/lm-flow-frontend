@@ -40,6 +40,7 @@ import {
   GitBranch,
   Merge,
   TrendingUp,
+  ChevronDown,
   X,
 } from 'lucide-react';
 // import { ScheduledActionsList } from '@/components/scheduledActions';
@@ -285,7 +286,7 @@ export default function ContactDetails({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="!w-[95vw] !max-w-[95vw] sm:!w-[75vw] sm:!max-w-[75vw] max-h-[90vh] p-0 gap-0 flex flex-col"
+        className="!w-[96vw] !max-w-[96vw] sm:!w-[90vw] sm:!max-w-[1400px] max-h-[92vh] p-0 gap-0 flex flex-col"
       >
         <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <DialogTitle>{t('details.title')}</DialogTitle>
@@ -621,17 +622,21 @@ export default function ContactDetails({
                               </div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 {/* Status do interesse NESTE imóvel — dropdown pra mudar direto.
-                                    Um lead pode ter vários imóveis, cada um com seu status. */}
-                                <select
-                                  value={pi.interest_stage}
-                                  onChange={e => handleChangeInterestStage(pi.id, e.target.value)}
-                                  className={`text-xs rounded-md border border-input px-2 py-1 font-medium ${stageColor}`}
-                                  title="Status do interesse neste imóvel"
-                                >
-                                  {Object.entries(INTEREST_STAGE_LABELS).map(([value, label]) => (
-                                    <option key={value} value={value}>{label}</option>
-                                  ))}
-                                </select>
+                                    Um lead pode ter vários imóveis, cada um com seu status.
+                                    Chevron explícito porque a seta nativa some no modo escuro. */}
+                                <div className="relative inline-flex items-center">
+                                  <select
+                                    value={pi.interest_stage}
+                                    onChange={e => handleChangeInterestStage(pi.id, e.target.value)}
+                                    className={`appearance-none cursor-pointer text-xs rounded-md border border-input pl-2 pr-6 py-1 font-medium ${stageColor}`}
+                                    title="Status do interesse neste imóvel"
+                                  >
+                                    {Object.entries(INTEREST_STAGE_LABELS).map(([value, label]) => (
+                                      <option key={value} value={value}>{label}</option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="pointer-events-none absolute right-1.5 h-3.5 w-3.5 opacity-70" />
+                                </div>
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                   <TrendingUp className="h-3 w-3" />
                                   {pi.match_score}% match
