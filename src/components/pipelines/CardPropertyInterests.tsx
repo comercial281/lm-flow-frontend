@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
-import { Button, Input, Badge } from '@/components/ui/ds';
-import { Plus, Trash2, Loader2, Search, Home, X } from 'lucide-react';
+import { Button, Input } from '@/components/ui/ds';
+import { Plus, Trash2, Loader2, Search, Home, X, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   propertyInterestsService,
@@ -95,6 +95,15 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
       setAdding(null);
     }
   }, [contactId, load]);
+
+  const handleChangeStage = useCallback(async (interestId: string, stage: string) => {
+    try {
+      await propertyInterestsService.update(interestId, { interest_stage: stage });
+      await load();
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não foi possível mudar o status'));
+    }
+  }, [load]);
 
   const handleRemove = useCallback(async (interestId: string) => {
     setRemoving(interestId);
@@ -229,9 +238,21 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
                       {interest.property.display_price}
                     </span>
                   )}
-                  <Badge className={`text-[10px] h-4 px-1.5 ${INTEREST_STAGE_COLORS[interest.interest_stage] ?? ''}`}>
-                    {INTEREST_STAGE_LABELS[interest.interest_stage] ?? interest.interest_stage}
-                  </Badge>
+                  {/* Status do interesse — dropdown pra mudar direto (chevron
+                      explícito porque a seta nativa some no modo escuro). */}
+                  <div className="relative inline-flex items-center">
+                    <select
+                      value={interest.interest_stage}
+                      onChange={e => handleChangeStage(interest.id, e.target.value)}
+                      className={`appearance-none cursor-pointer text-[10px] rounded-md border border-input pl-1.5 pr-5 py-0.5 font-medium ${INTEREST_STAGE_COLORS[interest.interest_stage] ?? ''}`}
+                      title="Status do interesse neste imóvel"
+                    >
+                      {Object.entries(INTEREST_STAGE_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-1 h-3 w-3 opacity-70" />
+                  </div>
                 </div>
               </div>
               <Button
