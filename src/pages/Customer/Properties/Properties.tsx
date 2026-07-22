@@ -59,6 +59,7 @@ import {
   MAX_UPLOAD_BYTES,
 } from '@/services/propertyPhotos/propertyPhotosService';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { labelsService } from '@/services/contacts/labelsService';
 
 const EMPTY_FORM: PropertyFormData = {
   title: '',
@@ -94,6 +95,7 @@ const EMPTY_FORM: PropertyFormData = {
   on_sign: false,
   responsible_id: null,
   captor_id: null,
+  label_id: null,
 };
 
 const formatCurrency = (v?: number | null) =>
@@ -157,6 +159,8 @@ export default function Properties() {
 
   // Sprint 2: usuários do tenant (responsável/captador)
   const [tenantUsers, setTenantUsers] = useState<Array<{ id: string; name: string }>>([]);
+  // Tags (labels) do tenant, pro seletor "Tag do imóvel". Toleram falha (fica vazio).
+  const [labels, setLabels] = useState<Array<{ id: string; title: string }>>([]);
 
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -193,6 +197,10 @@ export default function Properties() {
         })
         .catch(() => setTenantUsers([]));
     }).catch(() => setTenantUsers([]));
+    // Tags do tenant pro seletor "Tag do imóvel".
+    labelsService.getLabels()
+      .then(res => setLabels((res.data ?? []).map(l => ({ id: String(l.id), title: l.title }))))
+      .catch(() => setLabels([]));
   }, []);
 
   const handleSearch = (val: string) => {
@@ -254,6 +262,7 @@ export default function Properties() {
       responsible_id: p.responsible?.id ?? p.responsible_id ?? null,
       captor_id: p.captor?.id ?? p.captor_id ?? null,
       owner_contact_id: p.owner_contact_id ?? null,
+      label_id: p.label_id ?? null,
     });
     setModalOpen(true);
   };
@@ -1022,6 +1031,24 @@ export default function Properties() {
                   {tenantUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               </div>
+            </div>
+
+            {/* Tag do imóvel: o lead que entra pela página deste imóvel é etiquetado
+                com essa tag. Assim o pipeline fica geral e a tag identifica o imóvel. */}
+            <div>
+              <UILabel>Tag do imóvel</UILabel>
+              <select
+                value={f.label_id ?? ''}
+                onChange={e => setF({ label_id: e.target.value || null })}
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Gerar automaticamente pelo título</option>
+                {labels.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Aplicada ao lead capturado na página deste imóvel. Vazio = cria uma tag
+                automática com o título do imóvel.
+              </p>
             </div>
 
             {/* Description */}

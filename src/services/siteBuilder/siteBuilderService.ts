@@ -58,6 +58,10 @@ export interface Site {
   pages_count?: number;
   articles_count?: number;
   leads_count?: number;
+  /** Roteamento default dos leads do site: pipeline/etapa/tag de destino. */
+  lead_pipeline_id?: string | null;
+  lead_stage_id?: string | null;
+  lead_label_id?: string | null;
   /** Template único da página de imóvel (portal Produto A). Só vem no show (deep). */
   property_page_template?: BlockInstance[];
   created_at: string;
@@ -118,6 +122,9 @@ export interface SiteFormData {
   gtm_id?: string;
   ga4_measurement_id?: string;
   facebook_pixel_id?: string;
+  lead_pipeline_id?: string | null;
+  lead_stage_id?: string | null;
+  lead_label_id?: string | null;
 }
 
 export interface PageFormData {

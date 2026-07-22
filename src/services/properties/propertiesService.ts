@@ -47,6 +47,8 @@ export interface Property {
   responsible_id?: string | null;
   captor_id?: string | null;
   owner_contact_id?: string | null;
+  /** Tag do imóvel: aplicada ao lead que entra pela página deste imóvel. */
+  label_id?: string | null;
   responsible?: { id: string; name: string } | null;
   captor?: { id: string; name: string } | null;
   created_at: string;
@@ -89,6 +91,7 @@ export interface PropertyFormData {
   responsible_id?: string | null;
   captor_id?: string | null;
   owner_contact_id?: string | null;
+  label_id?: string | null;
 }
 
 export interface PropertyMapMarker {
