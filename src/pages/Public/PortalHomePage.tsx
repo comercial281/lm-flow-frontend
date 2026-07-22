@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { BrPhoneInput } from '@/components/shared';
+import { isValidBrPhone } from '@/lib/brPhone';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — HOME (Produto A do LM Flow)
@@ -142,6 +144,7 @@ export default function PortalHomePage() {
   // lead capture
   const [leadName, setLeadName] = useState('');
   const [leadPhone, setLeadPhone] = useState('');
+  const [leadPhoneErr, setLeadPhoneErr] = useState(false);
   const [leadSent, setLeadSent] = useState(false);
 
   useEffect(() => {
@@ -204,7 +207,8 @@ export default function PortalHomePage() {
 
   const submitLead = async (e: FormEvent) => {
     e.preventDefault();
-    if (!tenant || !leadName.trim() || !leadPhone.trim()) return;
+    if (!tenant || !leadName.trim()) return;
+    if (!isValidBrPhone(leadPhone)) { setLeadPhoneErr(true); return; }
     try {
       await fetch(`${API}/api/public/v1/site/leads`, {
         method: 'POST',
@@ -396,7 +400,16 @@ export default function PortalHomePage() {
                 <label className="mb-1 block text-[12px] font-semibold uppercase tracking-wide text-neutral-500">Seu nome</label>
                 <input value={leadName} onChange={e => setLeadName(e.target.value)} required placeholder="Como podemos te chamar?" className="mb-3 w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)]" />
                 <label className="mb-1 block text-[12px] font-semibold uppercase tracking-wide text-neutral-500">WhatsApp</label>
-                <input value={leadPhone} onChange={e => setLeadPhone(e.target.value)} required inputMode="tel" placeholder="(11) 99999-9999" className="mb-4 w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)]" />
+                <BrPhoneInput
+                  value={leadPhone}
+                  onChange={v => { setLeadPhone(v); if (leadPhoneErr) setLeadPhoneErr(false); }}
+                  required
+                  aria-invalid={leadPhoneErr}
+                  className={`w-full rounded-xl border px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)] ${leadPhoneErr ? 'border-red-400' : 'border-black/10'}`}
+                />
+                {leadPhoneErr
+                  ? <p className="mt-1 mb-4 text-[13px] text-red-500">Digite um telefone válido com DDD.</p>
+                  : <div className="mb-4" />}
                 <button type="submit" className="w-full rounded-xl py-3.5 text-[15px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--brand)' }}>Quero ajuda pra encontrar</button>
               </form>
             )}

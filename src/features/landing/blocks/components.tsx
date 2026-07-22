@@ -12,6 +12,8 @@ import {
   TrendingUp,
   UserRound,
 } from 'lucide-react';
+import { BrPhoneInput } from '@/components/shared';
+import { isValidBrPhone } from '@/lib/brPhone';
 import type { BlockType } from './contract';
 import {
   type BlockComponentProps,
@@ -568,6 +570,7 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
   const [answers, setAnswers] = useState<{ question: string; answer: string }[]>([]);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneErr, setPhoneErr] = useState(false);
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
@@ -581,10 +584,11 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
   };
 
   const submit = async () => {
-    if (!name.trim() || !phone.trim()) return;
+    if (!name.trim()) return;
+    if (!isValidBrPhone(phone)) { setPhoneErr(true); return; }
     setSending(true);
     try {
-      const res = await onSubmitLead?.({ name: name.trim(), phone: phone.trim(), email: email.trim() || undefined, answers });
+      const res = await onSubmitLead?.({ name: name.trim(), phone, email: email.trim() || undefined, answers });
       setResultQual(res?.qualification);
       setDone(true);
     } finally {
@@ -675,9 +679,11 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
                   <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome *"
                     className="w-full rounded-xl border bg-transparent px-4 py-3 text-sm outline-none focus:border-amber-400"
                     style={{ borderColor: 'var(--lp-border)', color: 'var(--lp-text)' }} />
-                  <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" inputMode="tel"
+                  <BrPhoneInput value={phone} onChange={(v) => { setPhone(v); if (phoneErr) setPhoneErr(false); }}
+                    aria-invalid={phoneErr}
                     className="w-full rounded-xl border bg-transparent px-4 py-3 text-sm outline-none focus:border-amber-400"
-                    style={{ borderColor: 'var(--lp-border)', color: 'var(--lp-text)' }} />
+                    style={{ borderColor: phoneErr ? '#f87171' : 'var(--lp-border)', color: 'var(--lp-text)' }} />
+                  {phoneErr && <p className="text-xs text-red-500">Digite um telefone válido com DDD.</p>}
                   <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" inputMode="email"
                     className="w-full rounded-xl border bg-transparent px-4 py-3 text-sm outline-none focus:border-amber-400"
                     style={{ borderColor: 'var(--lp-border)', color: 'var(--lp-text)' }} />

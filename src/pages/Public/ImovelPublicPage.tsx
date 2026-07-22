@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { BrPhoneInput } from '@/components/shared';
+import { isValidBrPhone } from '@/lib/brPhone';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — PÁGINA DO IMÓVEL (Produto A). Mesma pegada "Editorial
@@ -57,6 +59,7 @@ export default function ImovelPublicPage() {
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneErr, setPhoneErr] = useState(false);
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
@@ -100,7 +103,8 @@ export default function ImovelPublicPage() {
 
   const submitLead = async (e: FormEvent) => {
     e.preventDefault();
-    if (!tenant || !code || !name.trim() || !phone.trim()) return;
+    if (!tenant || !code || !name.trim()) return;
+    if (!isValidBrPhone(phone)) { setPhoneErr(true); return; }
     const params = new URLSearchParams(window.location.search);
     try {
       await fetch(`${API}/api/public/v1/site/leads`, {
@@ -145,7 +149,15 @@ export default function ImovelPublicPage() {
     ) : (
       <form onSubmit={submitLead} className="space-y-3">
         <input value={name} onChange={e => setName(e.target.value)} required placeholder="Seu nome" className="w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)]" />
-        <input value={phone} onChange={e => setPhone(e.target.value)} required inputMode="tel" placeholder="Seu WhatsApp" className="w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)]" />
+        <BrPhoneInput
+          value={phone}
+          onChange={v => { setPhone(v); if (phoneErr) setPhoneErr(false); }}
+          required
+          placeholder="Seu WhatsApp"
+          aria-invalid={phoneErr}
+          className={`w-full rounded-xl border px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)] ${phoneErr ? 'border-red-400' : 'border-black/10'}`}
+        />
+        {phoneErr && <p className="-mt-1 text-[13px] text-red-500">Digite um telefone válido com DDD.</p>}
         <button type="submit" className="w-full rounded-xl py-3.5 text-[15px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--brand)' }}>Tenho interesse</button>
         {waHref && <a href={waHref} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={18} /> Chamar no WhatsApp</a>}
       </form>
