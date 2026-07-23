@@ -1,7 +1,7 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  Ic, I, PortalFooter, PortalHeader, fetchArticle, onlyDigits, usePortalData,
+  Ic, I, PortalFooter, PortalHeader, PropertyCard, fetchArticle, onlyDigits, usePortalData,
   type PortalArticleFull,
 } from './portalShared';
 
@@ -27,7 +27,13 @@ function setMetaDescription(content: string) {
 
 export default function PortalArticlePage() {
   const { tenant, slug } = useParams<{ tenant: string; slug: string }>();
-  const { state, site, fontHref, cssVars } = usePortalData(tenant);
+  const { state, site, items, fontHref, cssVars } = usePortalData(tenant);
+
+  // Vitrine de imóveis ao fim do artigo (destaques, com fallback pros primeiros).
+  const featured = useMemo(() => {
+    const f = items.filter(p => p.featured || p.exclusive);
+    return (f.length ? f : items).slice(0, 3);
+  }, [items]);
 
   const [article, setArticle] = useState<PortalArticleFull | null>(null);
   const [loading, setLoading] = useState(true);
@@ -120,6 +126,33 @@ export default function PortalArticlePage() {
           </article>
         )}
       </main>
+
+      {/* ── Imóveis em destaque (só quando o artigo abriu e há imóveis) ──── */}
+      {article && featured.length > 0 && (
+        <section className="border-t border-black/[0.06] bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+            <div className="mb-7 flex items-end justify-between gap-4">
+              <div>
+                <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">Selecionados a dedo</span>
+                <h2 className="mt-1 font-[var(--display)] text-3xl font-semibold sm:text-4xl">Imóveis em destaque</h2>
+              </div>
+              <Link to={`/portal/${tenant}/imoveis`} className="hidden shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 sm:inline-flex" style={{ background: 'var(--ink)' }}>
+                Ver todos os imóveis <Ic d={I.arrow} s={16} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {featured.map(p => <PropertyCard key={p.id} tenant={tenant!} p={p} wa={wa} />)}
+            </div>
+
+            <div className="mt-8 text-center sm:hidden">
+              <Link to={`/portal/${tenant}/imoveis`} className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--ink)' }}>
+                Ver todos os imóveis <Ic d={I.arrow} s={16} />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       <PortalFooter site={site} tenant={tenant!} />
 
