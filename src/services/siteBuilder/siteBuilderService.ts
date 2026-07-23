@@ -99,7 +99,7 @@ export interface SiteArticle {
   site_id: string;
   title: string;
   slug: string;
-  content?: string | null;
+  body_html?: string | null;
   excerpt?: string | null;
   cover_image_url?: string | null;
   status: 'draft' | 'published' | 'archived';
@@ -153,7 +153,7 @@ export interface PageFormData {
 
 export interface ArticleFormData {
   title: string;
-  content?: string;
+  body_html?: string;
   excerpt?: string;
   cover_image_url?: string;
   meta_title?: string;
@@ -273,6 +273,12 @@ export const siteBuilderService = {
   async listArticles(siteId: string): Promise<SiteArticle[]> {
     const res = await api.get(`/sites/${siteId}/articles`);
     return (res.data as { data: SiteArticle[] }).data;
+  },
+
+  /** Busca 1 artigo COM o corpo (`body_html`) — a listagem não inclui o corpo. */
+  async getArticle(siteId: string, articleId: string): Promise<SiteArticle> {
+    const res = await api.get(`/sites/${siteId}/articles/${articleId}`);
+    return (res.data as { data: SiteArticle }).data;
   },
 
   async createArticle(siteId: string, data: ArticleFormData): Promise<SiteArticle> {
