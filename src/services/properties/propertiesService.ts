@@ -51,6 +51,9 @@ export interface Property {
   label_id?: string | null;
   responsible?: { id: string; name: string } | null;
   captor?: { id: string; name: string } | null;
+  /** Características do imóvel e comodidades do condomínio (slugs do catálogo). */
+  features?: string[];
+  condo_features?: string[];
   created_at: string;
   updated_at: string;
 }
@@ -92,6 +95,8 @@ export interface PropertyFormData {
   captor_id?: string | null;
   owner_contact_id?: string | null;
   label_id?: string | null;
+  features?: string[];
+  condo_features?: string[];
 }
 
 export interface PropertyMapMarker {
@@ -148,6 +153,8 @@ export interface AiExtractResult {
   address_state?: string | null;
   address_cep?: string | null;
   address_street?: string | null;
+  features?: string[] | null;
+  condo_features?: string[] | null;
   description?: string | null;
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from
 import { Link, useParams } from 'react-router-dom';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
+import { labelsFor } from '@/features/properties/amenities';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — PÁGINA DO IMÓVEL (Produto A). Mesma pegada "Editorial
@@ -18,8 +19,7 @@ interface PropertyDTO {
   bedrooms?: number | null; bathrooms?: number | null; suites?: number | null; parking_spaces?: number | null;
   useful_area_m2?: number | null; total_area_m2?: number | null;
   address_neighborhood?: string; address_city?: string; address_state?: string;
-  address_full?: string;
-  latitude?: number | null; longitude?: number | null;
+  features?: string[] | null; condo_features?: string[] | null;
   responsible_name?: string; photos?: Photo[];
 }
 interface SiteInfo {
@@ -51,6 +51,7 @@ const I = {
   home: 'M3 10.5 12 3l9 7.5M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5M9.5 21v-6h5v6',
   coin: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v10M9.5 9.5a2.5 2 0 0 1 2.5-1.5c1.4 0 2.5.8 2.5 1.8s-1.1 1.7-2.5 1.7-2.5.8-2.5 1.8 1.1 1.8 2.5 1.8a2.5 2 0 0 0 2.5-1.5',
   wa: 'M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.3A10 10 0 1 0 12 2Zm5.5 14.2c-.2.6-1.2 1.2-1.7 1.2-.9.1-1 .4-3.6-.9-2.6-1.4-4.1-4.1-4.2-4.3-.1-.2-1-1.3-1-2.5s.6-1.8.9-2c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6c-.2.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2 1.3 2.3 1.5.2.1.4.1.5-.1l.7-.8c.2-.2.4-.2.6-.1l1.9.9c.3.1.4.2.5.3.1.2.1.7-.1 1.3Z',
+  check: 'M20 6 9 17l-5-5',
   back: 'M15 18l-6-6 6-6',
   next: 'M9 18l6-6-6-6',
   close: 'M18 6 6 18M6 6l12 12',
@@ -156,7 +157,6 @@ export default function ImovelPublicPage() {
   const cssVars = { ['--brand' as string]: brand, ['--ink' as string]: '#17140F', ['--paper' as string]: '#FAF7F2', ['--display' as string]: fontStack, fontFamily: fontStack } as CSSProperties;
   const photos = prop.photos ?? [];
   const cover = photos[active] || photos[0];
-  const local = [prop.address_neighborhood, prop.address_city, prop.address_state].filter(Boolean).join(', ');
   const typeLabel = TYPE_LABEL[prop.property_type || ''] || prop.property_type || 'Imóvel';
 
   // Preço principal segue o tipo de transação (aluguel mostra "/mês"; venda, o
@@ -168,11 +168,27 @@ export default function ImovelPublicPage() {
   const areaForM2 = prop.useful_area_m2 || prop.total_area_m2 || 0;
   const pricePerM2 = !isRent && prop.sale_price && areaForM2 ? brl(prop.sale_price / areaForM2) : null;
   // Linha de valores recorrentes (condomínio / IPTU / m²), como nos portais.
+  // Monta a linha a partir do RESULTADO do brl() (não do campo cru): se o valor
+  // não formatar como número, a linha nem aparece — nunca renderiza "null".
+  const feeRow = (label: string, n?: number | null, suffix = ''): { label: string; value: string } | null => {
+    const v = brl(n);
+    return v ? { label, value: `${v}${suffix}` } : null;
+  };
   const money = [
-    prop.condo_fee ? { label: 'Condomínio', value: `${brl(prop.condo_fee)}/mês` } : null,
-    prop.iptu ? { label: 'IPTU', value: `${brl(prop.iptu)}/ano` } : null,
+    feeRow('Condomínio', prop.condo_fee, '/mês'),
+    feeRow('IPTU', prop.iptu, '/ano'),
     pricePerM2 ? { label: 'Valor do m²', value: pricePerM2 } : null,
   ].filter(Boolean) as { label: string; value: string }[];
+
+  // Características/comodidades → rótulos (via catálogo compartilhado).
+  const featureLabels = labelsFor(prop.features);
+  const condoLabels = labelsFor(prop.condo_features);
+
+  // Localização: só bairro (privacidade — sem rua/número). O mapa mostra a REGIÃO
+  // de forma aproximada, buscando pelo nome do bairro/cidade — sem pino no
+  // endereço exato.
+  const regionText = [prop.address_neighborhood, prop.address_city, prop.address_state].filter(Boolean).join(', ');
+  const mapQuery = regionText ? encodeURIComponent(regionText) : null;
 
   const specs = [
     prop.bedrooms ? { d: I.bed, label: `${prop.bedrooms} ${prop.bedrooms > 1 ? 'quartos' : 'quarto'}` } : null,
@@ -182,22 +198,6 @@ export default function ImovelPublicPage() {
     prop.useful_area_m2 ? { d: I.ruler, label: `${prop.useful_area_m2} m² úteis` } : null,
     prop.total_area_m2 ? { d: I.land, label: `${prop.total_area_m2} m² total` } : null,
   ].filter(Boolean) as { d: string; label: string }[];
-
-  // Ficha técnica — pares rótulo/valor com tudo que o imóvel tem cadastrado.
-  const sheet = [
-    { label: 'Código', value: prop.code },
-    { label: 'Tipo', value: typeLabel },
-    { label: 'Transação', value: isRent ? 'Locação' : 'Venda' },
-    prop.bedrooms ? { label: 'Quartos', value: String(prop.bedrooms) } : null,
-    prop.suites ? { label: 'Suítes', value: String(prop.suites) } : null,
-    prop.bathrooms ? { label: 'Banheiros', value: String(prop.bathrooms) } : null,
-    prop.parking_spaces ? { label: 'Vagas', value: String(prop.parking_spaces) } : null,
-    prop.useful_area_m2 ? { label: 'Área útil', value: `${prop.useful_area_m2} m²` } : null,
-    prop.total_area_m2 ? { label: 'Área total', value: `${prop.total_area_m2} m²` } : null,
-    prop.condo_fee ? { label: 'Condomínio', value: `${brl(prop.condo_fee)}/mês` } : null,
-    prop.iptu ? { label: 'IPTU', value: `${brl(prop.iptu)}/ano` } : null,
-    prop.address_full ? { label: 'Endereço', value: prop.address_full } : (local ? { label: 'Localização', value: local } : null),
-  ].filter(Boolean) as { label: string; value: string }[];
 
   const ContactForm = (
     sent ? (
@@ -309,7 +309,7 @@ export default function ImovelPublicPage() {
           <div>
             <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">{typeLabel}</span>
             <h1 className="mt-1.5 font-[var(--display)] text-3xl font-semibold leading-tight sm:text-4xl">{prop.title}</h1>
-            {local && <p className="mt-2 flex items-center gap-1.5 text-[15px] text-neutral-500"><Ic d={I.pin} s={16} /> {local}</p>}
+            {regionText && <p className="mt-2 flex items-center gap-1.5 text-[15px] text-neutral-500"><Ic d={I.pin} s={16} /> {regionText}</p>}
 
             {specs.length > 0 && (
               <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -341,30 +341,43 @@ export default function ImovelPublicPage() {
               </section>
             )}
 
-            {sheet.length > 0 && (
+            {featureLabels.length > 0 && (
               <section className="mt-9">
-                <h2 className="font-[var(--display)] text-2xl font-semibold">Ficha técnica</h2>
-                <dl className="mt-3 overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.06]">
-                  {sheet.map((row, i) => (
-                    <div key={i} className={`flex items-start justify-between gap-6 px-5 py-3.5 ${i > 0 ? 'border-t border-black/[0.06]' : ''}`}>
-                      <dt className="flex items-center gap-2 text-[14px] text-neutral-500">
-                        <span className="text-[var(--brand)]"><Ic d={row.label === 'Código' ? I.tag : row.label === 'Tipo' ? I.home : row.label === 'Endereço' || row.label === 'Localização' ? I.pin : I.ruler} s={15} /></span>
-                        {row.label}
-                      </dt>
-                      <dd className="text-right text-[14px] font-semibold text-[var(--ink)]">{row.value}</dd>
-                    </div>
+                <h2 className="font-[var(--display)] text-2xl font-semibold">Características</h2>
+                <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2.5 sm:grid-cols-3">
+                  {featureLabels.map((label, i) => (
+                    <li key={i} className="flex items-center gap-2 text-[15px] text-neutral-700">
+                      <span className="text-[var(--brand)]"><Ic d={I.check} s={17} /></span>
+                      {label}
+                    </li>
                   ))}
-                </dl>
+                </ul>
               </section>
             )}
 
-            {typeof prop.latitude === 'number' && typeof prop.longitude === 'number' && (
+            {condoLabels.length > 0 && (
+              <section className="mt-9">
+                <h2 className="font-[var(--display)] text-2xl font-semibold">Comodidades do condomínio</h2>
+                <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2.5 sm:grid-cols-3">
+                  {condoLabels.map((label, i) => (
+                    <li key={i} className="flex items-center gap-2 text-[15px] text-neutral-700">
+                      <span className="text-[var(--brand)]"><Ic d={I.check} s={17} /></span>
+                      {label}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {mapQuery && (
               <section className="mt-9">
                 <h2 className="font-[var(--display)] text-2xl font-semibold">Localização</h2>
-                {local && <p className="mt-1 text-[14px] text-neutral-500">{local}</p>}
+                <p className="mt-1 text-[14px] text-neutral-500">{regionText}</p>
+                {/* Mapa aproximado da região (busca por bairro/cidade), sem pino no
+                    endereço exato — privacidade do imóvel. */}
                 <div className="mt-3 overflow-hidden rounded-[20px] ring-1 ring-black/[0.06]">
-                  <iframe title="Mapa" width="100%" height="300" loading="lazy" style={{ border: 0 }}
-                    src={`https://www.google.com/maps?q=${prop.latitude},${prop.longitude}&z=15&output=embed`} />
+                  <iframe title="Mapa da região" width="100%" height="300" loading="lazy" style={{ border: 0 }}
+                    src={`https://www.google.com/maps?q=${mapQuery}&z=14&output=embed`} />
                 </div>
               </section>
             )}
