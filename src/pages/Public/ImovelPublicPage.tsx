@@ -45,6 +45,7 @@ const I = {
   pin: 'M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11ZM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z',
   wa: 'M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.3A10 10 0 1 0 12 2Zm5.5 14.2c-.2.6-1.2 1.2-1.7 1.2-.9.1-1 .4-3.6-.9-2.6-1.4-4.1-4.1-4.2-4.3-.1-.2-1-1.3-1-2.5s.6-1.8.9-2c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6c-.2.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2 1.3 2.3 1.5.2.1.4.1.5-.1l.7-.8c.2-.2.4-.2.6-.1l1.9.9c.3.1.4.2.5.3.1.2.1.7-.1 1.3Z',
   back: 'M15 18l-6-6 6-6',
+  next: 'M9 18l6-6-6-6',
 };
 function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: string }) {
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className={cls}><path d={d} /></svg>;
@@ -193,12 +194,35 @@ export default function ImovelPublicPage() {
         {/* Galeria */}
         {cover && (
           <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-            <div className="overflow-hidden rounded-[20px] bg-neutral-100">
+            <div className="group relative overflow-hidden rounded-[20px] bg-neutral-100">
               <img src={cover.file_url} alt={cover.alt_text || prop.title} className="h-[280px] w-full object-cover sm:h-[440px]" />
+              {photos.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Foto anterior"
+                    onClick={() => setActive(a => (a - 1 + photos.length) % photos.length)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-[var(--ink)] shadow-sm ring-1 ring-black/[0.06] backdrop-blur transition hover:bg-white"
+                  >
+                    <Ic d={I.back} s={20} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Próxima foto"
+                    onClick={() => setActive(a => (a + 1) % photos.length)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-[var(--ink)] shadow-sm ring-1 ring-black/[0.06] backdrop-blur transition hover:bg-white"
+                  >
+                    <Ic d={I.next} s={20} />
+                  </button>
+                  <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-[12px] font-medium text-white backdrop-blur">
+                    {active + 1} / {photos.length}
+                  </span>
+                </>
+              )}
             </div>
             {photos.length > 1 && (
               <div className="flex gap-2 overflow-x-auto sm:max-h-[440px] sm:w-24 sm:flex-col sm:overflow-y-auto">
-                {photos.slice(0, 8).map((ph, i) => (
+                {photos.map((ph, i) => (
                   <button key={i} type="button" onClick={() => setActive(i)}
                     className={`h-16 w-24 shrink-0 overflow-hidden rounded-xl sm:h-16 sm:w-full ${i === active ? 'ring-2 ring-[var(--brand)]' : 'ring-1 ring-black/[0.06] opacity-80'}`}>
                     <img src={ph.thumbnail_url || ph.file_url} alt="" className="h-full w-full object-cover" loading="lazy" />

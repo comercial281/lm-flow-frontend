@@ -20,6 +20,7 @@ export interface SiteInfo {
   name?: string;
   branding?: Branding;
   hero?: { video_url?: string | null };
+  sections?: { stats?: boolean; lead_capture?: boolean };
   contact?: { whatsapp?: string | null; phone?: string | null };
   seo?: { title?: string | null; description?: string | null };
 }
@@ -260,6 +261,12 @@ export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo;
   const wa = site.contact?.whatsapp;
   const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
 
+  // Seções liga/desliga (Site Builder). Ausência da flag = visível (retrocompat).
+  const showStats = site.sections?.stats !== false;
+  const showLeadCapture = site.sections?.lead_capture !== false;
+  const nav = NAV.filter(n =>
+    n.value === 'sobre' ? showStats : n.value === 'contato' ? showLeadCapture : true);
+
   const sectionHref = (id: string) => (onHome ? `#${id}` : `/portal/${tenant}#${id}`);
 
   const renderLink = (n: NavItem, onClick?: () => void, cls?: string) => {
@@ -286,7 +293,7 @@ export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo;
         </Link>
 
         <nav className="hidden items-center gap-7 md:flex">
-          {NAV.map(n => renderLink(n, undefined, desktopCls))}
+          {nav.map(n => renderLink(n, undefined, desktopCls))}
         </nav>
 
         <div className="flex items-center gap-2">
@@ -302,7 +309,7 @@ export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo;
       </div>
       {menuOpen && (
         <nav className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 md:hidden">
-          {NAV.map(n => renderLink(n, () => setMenuOpen(false), mobileCls))}
+          {nav.map(n => renderLink(n, () => setMenuOpen(false), mobileCls))}
           {waHref && <a href={waHref} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-2 rounded-full px-4 py-2 text-[14px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={16} /> Falar no WhatsApp</a>}
         </nav>
       )}
@@ -324,6 +331,8 @@ const footerLinkCls = 'text-[13px] text-neutral-600 hover:text-[var(--brand)]';
 export function PortalFooter({ site, tenant, onHome = false }: { site: SiteInfo; tenant: string; onHome?: boolean }) {
   const wa = site.contact?.whatsapp;
   const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
+  const showStats = site.sections?.stats !== false;
+  const showLeadCapture = site.sections?.lead_capture !== false;
   const sectionHref = (id: string) => (onHome ? `#${id}` : `/portal/${tenant}#${id}`);
 
   return (
@@ -341,9 +350,9 @@ export function PortalFooter({ site, tenant, onHome = false }: { site: SiteInfo;
           <li><Link to={`/portal/${tenant}/imoveis?tab=launch`} className={footerLinkCls}>Lançamentos</Link></li>
         </FooterCol>
         <FooterCol title="Institucional">
-          <li><a href={sectionHref('sobre')} className={footerLinkCls}>Sobre nós</a></li>
-          <li><a href={sectionHref('contato')} className={footerLinkCls}>Contato</a></li>
-          <li><a href={sectionHref('contato')} className={footerLinkCls}>Anuncie</a></li>
+          {showStats && <li><a href={sectionHref('sobre')} className={footerLinkCls}>Sobre nós</a></li>}
+          {showLeadCapture && <li><a href={sectionHref('contato')} className={footerLinkCls}>Contato</a></li>}
+          {showLeadCapture && <li><a href={sectionHref('contato')} className={footerLinkCls}>Anuncie</a></li>}
         </FooterCol>
         <div>
           <h4 className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-neutral-500">Contato</h4>

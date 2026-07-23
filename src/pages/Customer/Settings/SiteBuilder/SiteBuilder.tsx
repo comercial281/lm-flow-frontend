@@ -14,6 +14,7 @@ import {
   Label as UILabel,
   Textarea,
   Badge,
+  Switch,
 } from '@/components/ui/ds';
 import {
   Globe, Plus, Edit, Trash2, FileText, Newspaper,
@@ -57,6 +58,7 @@ const EMPTY_SITE_FORM: SiteFormData = {
   published: false,
   logo_url: '',
   hero_video_url: '',
+  sections: { stats: true, lead_capture: true },
   primary_color: '#7C3AED',
   accent_color: '#9333EA',
   font_family: 'Inter',
@@ -153,6 +155,10 @@ export default function SiteBuilder() {
           published: s.published,
           logo_url: s.branding.logo_url ?? '',
           hero_video_url: s.hero_video_url ?? '',
+          sections: {
+            stats: s.sections?.stats ?? true,
+            lead_capture: s.sections?.lead_capture ?? true,
+          },
           primary_color: s.branding.primary_color ?? '#7C3AED',
           accent_color: s.branding.accent_color ?? '#9333EA',
           font_family: s.branding.font_family ?? 'Inter',
@@ -794,6 +800,42 @@ export default function SiteBuilder() {
               <video key={siteForm.hero_video_url} src={siteForm.hero_video_url} muted loop autoPlay playsInline
                 className="mt-3 aspect-video w-full max-w-md rounded-lg border border-border object-cover" />
             )}
+          </section>
+
+          {/* Seções da home — liga/desliga blocos do portal. Nem toda imobiliária
+              tem imóveis/cidades suficientes pra faixa de números fazer sentido. */}
+          <section className="rounded-xl border border-border bg-card p-5">
+            <h2 className="text-base font-semibold mb-1">Seções da home</h2>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Ligue ou desligue blocos do portal. Desligado, o bloco some da home pública.
+            </p>
+            <div className="divide-y divide-border">
+              {[
+                {
+                  key: 'stats' as const,
+                  title: 'Faixa de números',
+                  desc: 'Ex.: "5 imóveis disponíveis", "2 cidades atendidas", "24h no WhatsApp".',
+                },
+                {
+                  key: 'lead_capture' as const,
+                  title: 'Captura de lead',
+                  desc: 'Bloco "Não achou? A gente encontra pra você" com formulário de contato.',
+                },
+              ].map(s => (
+                <div key={s.key} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">{s.title}</div>
+                    <p className="text-xs text-muted-foreground">{s.desc}</p>
+                  </div>
+                  <Switch
+                    checked={siteForm.sections?.[s.key] ?? true}
+                    onCheckedChange={checked =>
+                      setF({ sections: { ...siteForm.sections, [s.key]: checked } })
+                    }
+                  />
+                </div>
+              ))}
+            </div>
           </section>
 
           {/* Contact */}
