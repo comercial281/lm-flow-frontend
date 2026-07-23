@@ -516,6 +516,14 @@ export default function Properties() {
       put('address_zip', r.address_cep);       // backend usa cep, form usa zip
       put('address_street', r.address_street);
       put('description', r.description);
+      // Características/comodidades: só aplica quando a IA achou algo (não apaga
+      // o que o corretor já marcou) e mantém só slugs válidos do catálogo.
+      const featSet = new Set(PROPERTY_FEATURES.map(a => a.slug));
+      const condoSet = new Set(CONDO_FEATURES.map(a => a.slug));
+      const feats = (r.features ?? []).filter(s => featSet.has(s));
+      const condos = (r.condo_features ?? []).filter(s => condoSet.has(s));
+      if (feats.length) patch.features = feats;
+      if (condos.length) patch.condo_features = condos;
       const filled = Object.keys(patch).length;
       if (!filled) { toast.error('A IA não achou dados no material. Revise o texto/link.'); return; }
       setF(patch);

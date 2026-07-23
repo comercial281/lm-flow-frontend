@@ -153,6 +153,8 @@ export interface AiExtractResult {
   address_state?: string | null;
   address_cep?: string | null;
   address_street?: string | null;
+  features?: string[] | null;
+  condo_features?: string[] | null;
   description?: string | null;
 }
 
