@@ -144,7 +144,6 @@ export default function Properties() {
   // Preencher com IA (cola texto / book / link do anúncio -> preenche o form)
   const [aiOpen, setAiOpen]       = useState(false);
   const [aiText, setAiText]       = useState('');
-  const [aiUrl, setAiUrl]         = useState('');
   const [aiRunning, setAiRunning] = useState(false);
   const [pdfReading, setPdfReading] = useState(false);
   const pdfInputRef = useRef<HTMLInputElement>(null);
@@ -246,7 +245,6 @@ export default function Properties() {
     setForm(EMPTY_FORM);
     setMediaFiles([]);
     setAiText('');
-    setAiUrl('');
     loadLabels();
     setModalOpen(true);
   };
@@ -396,13 +394,18 @@ export default function Properties() {
     }
   };
 
+  // Único ponto que usa IA (consome tokens) — e SÓ quando o corretor clica.
+  // Gera a descrição a partir dos campos atuais do form (funciona em cadastro novo
+  // ou edição), opcionalmente usando o texto colado como material.
   const handleGenerateDescription = async () => {
-    if (!editing) return;
     setGeneratingDesc(true);
     try {
-      const result = await propertiesService.generateDescription(editing.id, { apply: true });
-      setForm(prev => ({ ...prev, description: result.description }));
-      if (result.headline) setForm(prev => ({ ...prev, title: result.headline || prev.title }));
+      const result = await propertiesService.generateDescriptionPreview(form, { text: aiText.trim() || undefined });
+      setForm(prev => ({
+        ...prev,
+        description: result.description,
+        title: (!prev.title && result.headline) ? result.headline : prev.title,
+      }));
       toast.success('Descrição gerada com IA');
     } catch {
       toast.error('Erro ao gerar descrição. Verifique se a chave de IA está configurada.');
@@ -488,16 +491,17 @@ export default function Properties() {
   };
 
   // IA lê o texto colado / book (PDF) / link do anúncio e preenche o form (sem salvar).
-  const doAiExtract = async (text: string, url: string) => {
-    if (!text && !url) { toast.error('Cole um texto, envie um PDF ou um link do imóvel'); return; }
+  // Preenche o formulário a partir de um texto/TXT — 100% LOCAL (sem IA/API).
+  // A descrição NÃO é preenchida aqui: é opcional, por botão (handleGenerateDescription).
+  const doParseText = async (text: string) => {
+    if (!text.trim()) { toast.error('Cole um texto ou envie um .txt do imóvel'); return; }
     setAiRunning(true);
     try {
-      const r = await propertiesService.aiExtract({ text: text || undefined, url: url || undefined });
+      const r = await propertiesService.parseText(text);
       const patch: Partial<PropertyFormData> = {};
       const put = <K extends keyof PropertyFormData>(k: K, v: PropertyFormData[K] | null | undefined) => {
         if (v !== null && v !== undefined && v !== '') patch[k] = v;
       };
-      put('title', r.title);
       put('transaction_type', r.transaction_type);
       put('property_type', r.property_type);
       put('sale_price', r.sale_price);
@@ -513,11 +517,8 @@ export default function Properties() {
       put('address_neighborhood', r.address_neighborhood);
       put('address_city', r.address_city);
       put('address_state', r.address_state);
-      put('address_zip', r.address_cep);       // backend usa cep, form usa zip
-      put('address_street', r.address_street);
-      put('description', r.description);
-      // Características/comodidades: só aplica quando a IA achou algo (não apaga
-      // o que o corretor já marcou) e mantém só slugs válidos do catálogo.
+      // Características/comodidades: só aplica quando achou algo (não apaga o que o
+      // corretor já marcou) e mantém só slugs válidos do catálogo.
       const featSet = new Set(PROPERTY_FEATURES.map(a => a.slug));
       const condoSet = new Set(CONDO_FEATURES.map(a => a.slug));
       const feats = (r.features ?? []).filter(s => featSet.has(s));
@@ -525,18 +526,18 @@ export default function Properties() {
       if (feats.length) patch.features = feats;
       if (condos.length) patch.condo_features = condos;
       const filled = Object.keys(patch).length;
-      if (!filled) { toast.error('A IA não achou dados no material. Revise o texto/link.'); return; }
+      if (!filled) { toast.error('Não achei dados reconhecíveis no texto. Revise e preencha manualmente.'); return; }
       setF(patch);
-      toast.success(`IA preencheu ${filled} campo${filled > 1 ? 's' : ''}. Revise e ajuste antes de salvar.`);
+      toast.success(`Preenchi ${filled} campo${filled > 1 ? 's' : ''} do texto. Revise antes de salvar.`);
     } catch (err) {
       const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
-      toast.error(msg || 'Não consegui ler o material. Tente colar o texto direto.');
+      toast.error(msg || 'Não consegui ler o texto.');
     } finally {
       setAiRunning(false);
     }
   };
 
-  const runAiExtract = () => doAiExtract(aiText.trim(), aiUrl.trim());
+  const runParseText = () => doParseText(aiText.trim());
 
   // Carrega um script UMD do CDN uma vez (usado pelo mammoth pra ler .docx).
   const loadScriptOnce = (src: string) =>
@@ -609,21 +610,25 @@ export default function Properties() {
     return text.trim();
   };
 
-  // Book em PDF, Word ou FOTO: extrai o texto no navegador e manda pra IA.
-  // PDF sem texto (escaneado) e imagens passam por OCR. Sem dependência nova no projeto.
+  // TXT, book em PDF, Word ou FOTO: extrai o texto no navegador e preenche os
+  // campos LOCALMENTE (sem IA). PDF sem texto (escaneado) e imagens passam por OCR.
   const onPickBook = async (file: File | undefined) => {
     if (!file) return;
+    const isTxt = file.type === 'text/plain' || /\.txt$/i.test(file.name);
     const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
     const isDocx = /officedocument\.wordprocessingml|\.docx$/i.test(`${file.type} ${file.name}`);
     const isImage = /^image\//i.test(file.type) || /\.(png|jpe?g|webp|gif|bmp|tiff?)$/i.test(file.name);
-    if (!isPdf && !isDocx && !isImage) {
-      toast.error('Envie o book em PDF, Word (.docx) ou foto (imagem).');
+    if (!isTxt && !isPdf && !isDocx && !isImage) {
+      toast.error('Envie um .txt, ou o book em PDF, Word (.docx) ou foto (imagem).');
       return;
     }
     setPdfReading(true);
     try {
       let text = '';
-      if (isDocx) {
+      if (isTxt) {
+        text = await file.text();
+        if (!text.trim()) { toast.error('Esse .txt está vazio.'); return; }
+      } else if (isDocx) {
         text = await extractDocxText(await file.arrayBuffer());
         if (!text) { toast.error('Não achei texto nesse Word.'); return; }
       } else if (isImage) {
@@ -640,10 +645,9 @@ export default function Properties() {
         if (!text) { toast.error('Não consegui extrair texto desse PDF.'); return; }
       }
       setAiText(prev => (prev ? `${prev}\n\n${text}` : text));
-      toast.success('Book lido. Enviando pra IA...');
-      await doAiExtract(text, '');
+      await doParseText(text);
     } catch {
-      toast.error('Não consegui ler o arquivo. Tente colar o texto do book.');
+      toast.error('Não consegui ler o arquivo. Tente colar o texto.');
     } finally {
       setPdfReading(false);
     }
@@ -820,7 +824,7 @@ export default function Properties() {
             <DialogDescription>Preencha as informações do imóvel</DialogDescription>
           </DialogHeader>
 
-          {/* Preencher com IA — cola texto / book / link do anúncio e a IA distribui nos campos */}
+          {/* Preencher a partir de um texto/TXT — 100% local (sem IA/tokens) */}
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
             <button
               type="button"
@@ -828,9 +832,9 @@ export default function Properties() {
               className="flex w-full items-center gap-2 text-sm font-medium text-primary"
             >
               <Wand2 className="h-4 w-4" />
-              Preencher com IA
+              Preencher a partir de um texto
               <span className="ml-auto text-xs font-normal text-muted-foreground">
-                {aiOpen ? 'ocultar' : 'texto, book (PDF/Word/foto) ou link'}
+                {aiOpen ? 'ocultar' : 'cole o texto ou suba um .txt / book'}
               </span>
             </button>
 
@@ -839,23 +843,15 @@ export default function Properties() {
                 <Textarea
                   value={aiText}
                   onChange={e => setAiText(e.target.value)}
-                  placeholder="Cole aqui todas as informações do imóvel (texto do book, anúncio, descrição...). A IA lê e distribui em cada campo, e escreve a descrição no tom certo. Nada é obrigatório."
+                  placeholder="Cole aqui as informações do imóvel (texto do book, anúncio...). Preenche os campos e as características automaticamente, no seu servidor, sem IA. Nada é obrigatório."
                   className="min-h-[100px]"
                 />
-                <div className="flex items-center gap-2">
-                  <LinkIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                  <Input
-                    value={aiUrl}
-                    onChange={e => setAiUrl(e.target.value)}
-                    placeholder="Ou cole o link de um anúncio (ex: portal, site do imóvel)"
-                  />
-                </div>
 
-                {/* Book em PDF ou Word: input escondido + botão que lê no navegador */}
+                {/* TXT / book: input escondido + botão que lê no navegador */}
                 <input
                   ref={pdfInputRef}
                   type="file"
-                  accept="application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
+                  accept="text/plain,.txt,application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
                   className="hidden"
                   onChange={e => { onPickBook(e.target.files?.[0]); e.target.value = ''; }}
                 />
@@ -868,15 +864,15 @@ export default function Properties() {
                   disabled={pdfReading || aiRunning}
                 >
                   {pdfReading
-                    ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Lendo o book...</>
-                    : <><Upload className="mr-1 h-4 w-4" /> Subir book (PDF, Word ou foto)</>}
+                    ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Lendo o arquivo...</>
+                    : <><Upload className="mr-1 h-4 w-4" /> Subir .txt, book (PDF, Word ou foto)</>}
                 </Button>
 
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs text-muted-foreground">
-                    A IA só preenche o que estiver no material. Você revisa antes de salvar.
+                    Preenche os campos localmente (sem IA). A descrição é gerada à parte, no botão.
                   </p>
-                  <Button type="button" size="sm" onClick={runAiExtract} disabled={aiRunning || pdfReading}>
+                  <Button type="button" size="sm" onClick={runParseText} disabled={aiRunning || pdfReading}>
                     {aiRunning
                       ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Lendo...</>
                       : <><Wand2 className="mr-1 h-4 w-4" /> Preencher</>}
@@ -1181,7 +1177,7 @@ export default function Properties() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <UILabel>Descrição</UILabel>
-                {editing && canAiDesc && (
+                {canAiDesc && (
                   <Button
                     type="button"
                     variant="outline"
