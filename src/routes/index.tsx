@@ -83,6 +83,8 @@ const LandingResult = lazyWithRetry(() => import('@/pages/Public/LandingResultPa
 const ImovelPublic = lazyWithRetry(() => import('@/pages/Public/ImovelPublicPage'));
 const PortalHome = lazyWithRetry(() => import('@/pages/Public/PortalHomePage'));
 const PortalSearch = lazyWithRetry(() => import('@/pages/Public/PortalSearchPage'));
+const PortalBlog = lazyWithRetry(() => import('@/pages/Public/PortalBlogPage'));
+const PortalArticle = lazyWithRetry(() => import('@/pages/Public/PortalArticlePage'));
 const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => ({ default: m.Visits })));
 const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
 const Contracts = lazyWithRetry(() => import('@/pages/Customer/Contracts').then(m => ({ default: m.Contracts })));
@@ -1840,6 +1842,10 @@ const AppRouter = () => {
 
           {/* Público — página dedicada de busca/filtros de imóveis do portal. */}
           <Route path="/portal/:tenant/imoveis" element={<PortalSearch />} />
+
+          {/* Público INDEXÁVEL — blog do portal (listagem + artigo). */}
+          <Route path="/portal/:tenant/blog" element={<PortalBlog />} />
+          <Route path="/portal/:tenant/blog/:slug" element={<PortalArticle />} />
 
           <Route
             path="/visits"

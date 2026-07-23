@@ -38,6 +38,21 @@ export interface PortalProperty {
   exclusive?: boolean;
 }
 
+/* Artigo do blog público (item da listagem). */
+export interface PortalArticleSummary {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  cover_image_url?: string | null;
+  published_at?: string | null;
+  reading_time_minutes?: number | null;
+  views_count?: number | null;
+  category_id?: number | null;
+}
+/* Artigo completo (detalhe) — inclui o corpo em HTML já renderizado. */
+export type PortalArticleFull = PortalArticleSummary & { body_html?: string | null };
+
 /* Aba de transação usada na busca. `launch` = lançamentos. */
 export type PortalTab = 'sale' | 'rent' | 'launch';
 
@@ -150,6 +165,46 @@ export function usePortalData(tenant?: string) {
   return { state, site, items, brand, accent, font, fontStack, fontHref, wa, cities, hoods, types, cssVars };
 }
 
+/* ── Blog: fetch de artigos (mesmo padrão público, header X-Tenant) ───────── */
+export async function fetchArticles(
+  tenant: string, page = 1, perPage = 12,
+): Promise<{ data: PortalArticleSummary[]; total: number }> {
+  const res = await fetch(
+    `${API}/api/public/v1/site/articles?page=${page}&per_page=${perPage}`,
+    { headers: { 'X-Tenant': tenant } },
+  );
+  if (!res.ok) return { data: [], total: 0 };
+  const json = await res.json();
+  return { data: (json.data as PortalArticleSummary[]) || [], total: json.meta?.total ?? 0 };
+}
+
+export async function fetchArticle(tenant: string, slug: string): Promise<PortalArticleFull | null> {
+  const res = await fetch(
+    `${API}/api/public/v1/site/articles/${encodeURIComponent(slug)}`,
+    { headers: { 'X-Tenant': tenant } },
+  );
+  if (!res.ok) return null;
+  const json = await res.json();
+  return (json.data as PortalArticleFull) || null;
+}
+
+/**
+ * Checagem leve p/ decidir se o link "Blog" aparece no menu: só há blog se
+ * existe ao menos um artigo publicado. Uma requisição por montagem do header.
+ */
+export function usePublishedArticlesExist(tenant?: string): boolean {
+  const [exists, setExists] = useState(false);
+  useEffect(() => {
+    let active = true;
+    if (!tenant) return;
+    fetchArticles(tenant, 1, 1)
+      .then(r => { if (active) setExists(r.total > 0); })
+      .catch(() => { /* silencioso: na dúvida, não mostra o link */ });
+    return () => { active = false; };
+  }, [tenant]);
+  return exists;
+}
+
 /* ── Card de imóvel ──────────────────────────────────────────────────────── */
 export function PropertyCard({ tenant, p, wa }: { tenant: string; p: PortalProperty; wa?: string | null }) {
   const s = p.icon_summary ?? {};
@@ -260,6 +315,7 @@ export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo;
   const [menuOpen, setMenuOpen] = useState(false);
   const wa = site.contact?.whatsapp;
   const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
+  const hasBlog = usePublishedArticlesExist(tenant);
 
   // Seções liga/desliga (Site Builder). Ausência da flag = visível (retrocompat).
   const showStats = site.sections?.stats !== false;
@@ -294,6 +350,7 @@ export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo;
 
         <nav className="hidden items-center gap-7 md:flex">
           {nav.map(n => renderLink(n, undefined, desktopCls))}
+          {hasBlog && <Link to={`/portal/${tenant}/blog`} className={desktopCls}>Blog</Link>}
         </nav>
 
         <div className="flex items-center gap-2">
@@ -310,6 +367,7 @@ export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo;
       {menuOpen && (
         <nav className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 md:hidden">
           {nav.map(n => renderLink(n, () => setMenuOpen(false), mobileCls))}
+          {hasBlog && <Link to={`/portal/${tenant}/blog`} onClick={() => setMenuOpen(false)} className={mobileCls}>Blog</Link>}
           {waHref && <a href={waHref} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-2 rounded-full px-4 py-2 text-[14px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={16} /> Falar no WhatsApp</a>}
         </nav>
       )}
@@ -333,6 +391,7 @@ export function PortalFooter({ site, tenant, onHome = false }: { site: SiteInfo;
   const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
   const showStats = site.sections?.stats !== false;
   const showLeadCapture = site.sections?.lead_capture !== false;
+  const hasBlog = usePublishedArticlesExist(tenant);
   const sectionHref = (id: string) => (onHome ? `#${id}` : `/portal/${tenant}#${id}`);
 
   return (
@@ -351,6 +410,7 @@ export function PortalFooter({ site, tenant, onHome = false }: { site: SiteInfo;
         </FooterCol>
         <FooterCol title="Institucional">
           {showStats && <li><a href={sectionHref('sobre')} className={footerLinkCls}>Sobre nós</a></li>}
+          {hasBlog && <li><Link to={`/portal/${tenant}/blog`} className={footerLinkCls}>Blog</Link></li>}
           {showLeadCapture && <li><a href={sectionHref('contato')} className={footerLinkCls}>Contato</a></li>}
           {showLeadCapture && <li><a href={sectionHref('contato')} className={footerLinkCls}>Anuncie</a></li>}
         </FooterCol>
