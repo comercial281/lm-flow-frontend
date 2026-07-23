@@ -1,146 +1,36 @@
-import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useMemo, useState, type FormEvent } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
+import {
+  API, I, Ic, PROPERTY_TYPE_LABEL, PortalFooter, PortalHeader, PropertyCard, Select, Stat,
+  usePortalData, type PortalTab,
+} from './portalShared';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — HOME (Produto A do LM Flow)
    Template "Editorial Estate": moderno, mobile-first, focado na conversão do
    lead. TUDO é dirigido pelos tokens de marca do cliente (logo, cores, fonte,
    WhatsApp), vindos do registro do Site. Zero marca hardcoded.
+
+   A busca desta home é o ponto de ENTRADA: o formulário do hero leva à página
+   dedicada de busca/filtros (`/portal/:tenant/imoveis`), assim como os botões
+   do menu do topo (em PortalHeader). Aqui a listagem é apenas uma vitrine de
+   destaques.
 ──────────────────────────────────────────────────────────────────────────── */
 
-interface Branding {
-  logo_url?: string | null;
-  primary_color?: string | null;
-  accent_color?: string | null;
-  font_family?: string | null;
-}
-interface SiteInfo {
-  name?: string;
-  branding?: Branding;
-  hero?: { video_url?: string | null };
-  sections?: { stats?: boolean; lead_capture?: boolean };
-  contact?: { whatsapp?: string | null; phone?: string | null };
-  seo?: { title?: string | null; description?: string | null };
-}
-interface PortalProperty {
-  id: string;
-  code: string;
-  title: string;
-  transaction_type: string;
-  property_type: string;
-  display_price?: string;
-  icon_summary?: { bedrooms?: number; bathrooms?: number; suites?: number; parking?: number; useful_area_m2?: number };
-  address?: { city?: string; neighborhood?: string };
-  cover_url?: string | null;
-  featured?: boolean;
-  exclusive?: boolean;
-}
-
-const API = import.meta.env.VITE_API_URL as string;
-
-const PROPERTY_TYPE_LABEL: Record<string, string> = {
-  apartment: 'Apartamento', house: 'Casa', condo: 'Casa em condomínio',
-  land: 'Terreno', commercial: 'Comercial', studio: 'Studio', farm: 'Chácara',
-};
-function onlyDigits(s?: string | null) { return (s || '').replace(/\D/g, ''); }
-
-/* ── SVG icons (inline, sem dependência) ─────────────────────────────────── */
-const I = {
-  bed: 'M2 17v-5a2 2 0 0 1 2-2h11a3 3 0 0 1 3 3v4M2 21v-4M22 21v-6M2 12V7m4 3V8a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v2',
-  bath: 'M4 12V5a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2M4 12h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-3ZM6 21l-1 1M18 21l1 1',
-  car: 'M5 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM17 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM5 15h12M3 15l1.5-5A2 2 0 0 1 6.4 8.6h9.2a2 2 0 0 1 1.9 1.4L19 15',
-  ruler: 'M3 3h4v4M3 3l7 7M21 21h-4v-4M21 21l-7-7M3 21v-4M3 21h4M21 3h-4M21 3v4',
-  search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM21 21l-4.3-4.3',
-  pin: 'M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11ZM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z',
-  wa: 'M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.3A10 10 0 1 0 12 2Zm5.5 14.2c-.2.6-1.2 1.2-1.7 1.2-.9.1-1 .4-3.6-.9-2.6-1.4-4.1-4.1-4.2-4.3-.1-.2-1-1.3-1-2.5s.6-1.8.9-2c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6c-.2.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2 1.3 2.3 1.5.2.1.4.1.5-.1l.7-.8c.2-.2.4-.2.6-.1l1.9.9c.3.1.4.2.5.3.1.2.1.7-.1 1.3Z',
-  menu: 'M3 6h18M3 12h18M3 18h18', close: 'M6 6l12 12M18 6L6 18',
-};
-function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: string }) {
-  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className={cls}><path d={d} /></svg>;
-}
-
-/* ── Card de imóvel ──────────────────────────────────────────────────────── */
-function PropertyCard({ tenant, p, wa }: { tenant: string; p: PortalProperty; wa?: string | null }) {
-  const s = p.icon_summary ?? {};
-  const badge = p.exclusive ? 'Exclusivo' : (p.featured ? 'Destaque' : null);
-  const typeLabel = PROPERTY_TYPE_LABEL[p.property_type] || p.property_type;
-  const local = [p.address?.neighborhood, p.address?.city].filter(Boolean).join(', ');
-  const waLink = wa ? `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent(`Olá! Tenho interesse no imóvel ${p.code} (${p.title}).`)}` : null;
-
-  return (
-    <article className="group relative flex flex-col overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_-16px_rgba(0,0,0,0.25)]">
-      <Link to={`/imovel/${tenant}/${p.code}`} className="relative block aspect-[4/3] overflow-hidden bg-neutral-100">
-        {p.cover_url ? (
-          <img src={p.cover_url} alt={p.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-neutral-300">
-            <Ic d={I.pin} s={40} />
-          </div>
-        )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-        {badge && (
-          <span className="absolute left-3 top-3 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white" style={{ background: 'var(--brand)' }}>
-            {badge}
-          </span>
-        )}
-        {p.display_price && (
-          <span className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3.5 py-1.5 text-[15px] font-bold text-[var(--ink)] shadow-sm backdrop-blur">
-            {p.display_price}
-          </span>
-        )}
-      </Link>
-
-      <div className="flex flex-1 flex-col p-4">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand)]">{typeLabel}</span>
-        <Link to={`/imovel/${tenant}/${p.code}`} className="mt-1">
-          <h3 className="font-[var(--display)] text-[17px] leading-snug text-[var(--ink)] line-clamp-2 transition-colors group-hover:text-[var(--brand)]">{p.title}</h3>
-        </Link>
-        {local && (
-          <p className="mt-1 flex items-center gap-1 text-[13px] text-neutral-500">
-            <Ic d={I.pin} s={13} /> {local}
-          </p>
-        )}
-
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[13px] text-neutral-600">
-          {!!s.bedrooms && <span className="inline-flex items-center gap-1.5"><Ic d={I.bed} s={15} /> {s.bedrooms}</span>}
-          {!!s.suites && <span className="inline-flex items-center gap-1.5"><Ic d={I.bath} s={15} /> {s.suites} suíte{s.suites > 1 ? 's' : ''}</span>}
-          {!!s.parking && <span className="inline-flex items-center gap-1.5"><Ic d={I.car} s={15} /> {s.parking}</span>}
-          {!!s.useful_area_m2 && <span className="inline-flex items-center gap-1.5"><Ic d={I.ruler} s={15} /> {s.useful_area_m2} m²</span>}
-        </div>
-
-        <div className="mt-4 flex items-center gap-2 border-t border-black/[0.06] pt-3">
-          <Link to={`/imovel/${tenant}/${p.code}`} className="flex-1 rounded-full px-3 py-2 text-center text-[13px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--ink)' }}>
-            Ver detalhes
-          </Link>
-          {waLink && (
-            <a href={waLink} target="_blank" rel="noreferrer" aria-label="Falar no WhatsApp" className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#25D366] text-white transition-transform hover:scale-105">
-              <Ic d={I.wa} s={18} />
-            </a>
-          )}
-        </div>
-      </div>
-    </article>
-  );
-}
-
-/* ── Página ──────────────────────────────────────────────────────────────── */
 export default function PortalHomePage() {
   const { tenant } = useParams<{ tenant: string }>();
-  const [state, setState] = useState<'loading' | 'ok' | 'error'>('loading');
-  const [site, setSite] = useState<SiteInfo>({});
-  const [items, setItems] = useState<PortalProperty[]>([]);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const { state, site, items, fontHref, wa, cities, hoods, types, cssVars } = usePortalData(tenant);
 
-  // filtros de busca
-  const [tab, setTab] = useState<'sale' | 'rent' | 'launch'>('sale');
+  // filtros do formulário do hero (entrada da busca)
+  const [tab, setTab] = useState<PortalTab>('sale');
   const [fType, setFType] = useState('');
   const [fCity, setFCity] = useState('');
   const [fNeighborhood, setFNeighborhood] = useState('');
   const [fBedrooms, setFBedrooms] = useState('');
   const [fCode, setFCode] = useState('');
-  const [applied, setApplied] = useState(0);
 
   // lead capture
   const [leadName, setLeadName] = useState('');
@@ -148,62 +38,23 @@ export default function PortalHomePage() {
   const [leadPhoneErr, setLeadPhoneErr] = useState(false);
   const [leadSent, setLeadSent] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      if (!tenant) return;
-      try {
-        const [siteRes, propsRes] = await Promise.all([
-          fetch(`${API}/api/public/v1/site`, { headers: { 'X-Tenant': tenant } }),
-          fetch(`${API}/api/public/v1/site/properties?per_page=60`, { headers: { 'X-Tenant': tenant } }),
-        ]);
-        if (!active) return;
-        const siteJson = siteRes.ok ? ((await siteRes.json()).data as SiteInfo) : {};
-        const propsJson = propsRes.ok ? ((await propsRes.json()).data as PortalProperty[]) : [];
-        setSite(siteJson || {});
-        setItems(propsJson || []);
-        document.title = siteJson?.seo?.title || `${siteJson?.name || 'Imóveis'} — Encontre seu imóvel`;
-        const meta = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]') || (() => {
-          const m = document.createElement('meta'); m.name = 'robots'; document.head.appendChild(m); return m;
-        })();
-        meta.content = 'index,follow';
-        setState('ok');
-      } catch {
-        if (active) setState('error');
-      }
-    })();
-    return () => { active = false; };
-  }, [tenant]);
-
-  const brand = site.branding?.primary_color || '#0E7C5A';
-  const accent = site.branding?.accent_color || brand;
-  const font = site.branding?.font_family || 'Inter';
-  const fontPrimary = font.split(',')[0].trim();
-  const fontStack = font.includes(',') ? font : `${font}, system-ui, sans-serif`;
-  const fontHref = `https://fonts.googleapis.com/css2?family=${fontPrimary.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
-  const wa = site.contact?.whatsapp;
-  const cities = useMemo(() => [...new Set(items.map(i => i.address?.city).filter(Boolean) as string[])].sort(), [items]);
-  const hoods = useMemo(() => [...new Set(items.map(i => i.address?.neighborhood).filter(Boolean) as string[])].sort(), [items]);
-  const types = useMemo(() => [...new Set(items.map(i => i.property_type).filter(Boolean))], [items]);
-
-  const filtered = useMemo(() => {
-    if (!applied) return items;
-    return items.filter(p => {
-      if (tab === 'rent' && p.transaction_type !== 'rent') return false;
-      if (tab === 'sale' && p.transaction_type === 'rent') return false;
-      if (fType && p.property_type !== fType) return false;
-      if (fCity && p.address?.city !== fCity) return false;
-      if (fNeighborhood && p.address?.neighborhood !== fNeighborhood) return false;
-      if (fBedrooms && (p.icon_summary?.bedrooms ?? 0) < Number(fBedrooms)) return false;
-      if (fCode && !p.code.toLowerCase().includes(fCode.toLowerCase())) return false;
-      return true;
-    });
-  }, [items, applied, tab, fType, fCity, fNeighborhood, fBedrooms, fCode]);
+  // Vitrine de destaques (com fallback para os primeiros imóveis).
+  const featured = useMemo(() => {
+    const f = items.filter(p => p.featured || p.exclusive);
+    return (f.length ? f : items).slice(0, 6);
+  }, [items]);
 
   const runSearch = (e: FormEvent) => {
     e.preventDefault();
-    setApplied(a => a + 1);
-    document.getElementById('resultados')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const params = new URLSearchParams();
+    if (tab !== 'sale') params.set('tab', tab);
+    if (fType) params.set('type', fType);
+    if (fCity) params.set('city', fCity);
+    if (fNeighborhood) params.set('neighborhood', fNeighborhood);
+    if (fBedrooms) params.set('bedrooms', fBedrooms);
+    if (fCode) params.set('code', fCode);
+    const qs = params.toString();
+    navigate(`/portal/${tenant}/imoveis${qs ? `?${qs}` : ''}`);
   };
 
   const submitLead = async (e: FormEvent) => {
@@ -227,27 +78,9 @@ export default function PortalHomePage() {
     return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Portal indisponível.</div>;
   }
 
-  const cssVars = {
-    ['--brand' as string]: brand,
-    ['--accent' as string]: accent,
-    ['--ink' as string]: '#17140F',
-    ['--paper' as string]: '#FAF7F2',
-    ['--display' as string]: fontStack,
-    fontFamily: fontStack,
-  } as CSSProperties;
-
   // Seções liga/desliga (Site Builder). Ausência da flag = visível (retrocompat).
   const showStats = site.sections?.stats !== false;
   const showLeadCapture = site.sections?.lead_capture !== false;
-
-  const nav = [
-    { label: 'Comprar', href: '#resultados' },
-    { label: 'Alugar', href: '#resultados' },
-    { label: 'Lançamentos', href: '#resultados' },
-    ...(showStats ? [{ label: 'Sobre', href: '#sobre' }] : []),
-    ...(showLeadCapture ? [{ label: 'Contato', href: '#contato' }] : []),
-  ];
-  const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
 
   return (
     <div style={cssVars} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
@@ -255,43 +88,7 @@ export default function PortalHomePage() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href={fontHref} rel="stylesheet" />
 
-      {/* ── Header sticky ─────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-[var(--paper)]/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <a href="#topo" className="flex items-center gap-2.5">
-            {site.branding?.logo_url ? (
-              <img src={site.branding.logo_url} alt={site.name || 'Portal'} className="h-9 w-auto max-w-[160px] object-contain" />
-            ) : (
-              <span className="font-[var(--display)] text-xl font-semibold tracking-tight">{site.name || 'Imóveis'}</span>
-            )}
-          </a>
-
-          <nav className="hidden items-center gap-7 md:flex">
-            {nav.map(n => (
-              <a key={n.label} href={n.href} className="text-[14px] font-medium text-neutral-600 transition-colors hover:text-[var(--brand)]">{n.label}</a>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            {waHref && (
-              <a href={waHref} target="_blank" rel="noreferrer" className="hidden items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold text-white sm:inline-flex" style={{ background: '#25D366' }}>
-                <Ic d={I.wa} s={16} /> WhatsApp
-              </a>
-            )}
-            <button type="button" aria-label="Menu" onClick={() => setMenuOpen(o => !o)} className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--ink)] md:hidden">
-              <Ic d={menuOpen ? I.close : I.menu} s={22} />
-            </button>
-          </div>
-        </div>
-        {menuOpen && (
-          <nav className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 md:hidden">
-            {nav.map(n => (
-              <a key={n.label} href={n.href} onClick={() => setMenuOpen(false)} className="block py-2.5 text-[15px] font-medium text-neutral-700">{n.label}</a>
-            ))}
-            {waHref && <a href={waHref} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-2 rounded-full px-4 py-2 text-[14px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={16} /> Falar no WhatsApp</a>}
-          </nav>
-        )}
-      </header>
+      <PortalHeader site={site} tenant={tenant!} onHome />
 
       {/* ── Hero + busca ──────────────────────────────────────────────── */}
       <section id="topo" className="relative overflow-hidden">
@@ -321,7 +118,7 @@ export default function PortalHomePage() {
             {site.seo?.description || 'Apartamentos, casas e lançamentos com curadoria, fotos reais e atendimento humano de verdade.'}
           </p>
 
-          {/* Busca */}
+          {/* Busca (entrada → página dedicada de filtros) */}
           <form onSubmit={runSearch} className="mt-8 rounded-[24px] bg-white/95 p-3 shadow-[0_30px_60px_-25px_rgba(0,0,0,0.5)] backdrop-blur sm:p-4">
             <div className="mb-3 flex gap-1.5">
               {([['sale', 'Comprar'], ['rent', 'Alugar'], ['launch', 'Lançamentos']] as const).map(([k, l]) => (
@@ -354,23 +151,33 @@ export default function PortalHomePage() {
         </div>
       </section>
 
-      {/* ── Resultados / destaques ────────────────────────────────────── */}
+      {/* ── Destaques ─────────────────────────────────────────────────── */}
       <section id="resultados" className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
         <div className="mb-7 flex items-end justify-between gap-4">
           <div>
-            <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">{applied ? 'Resultados' : 'Selecionados a dedo'}</span>
-            <h2 className="mt-1 font-[var(--display)] text-3xl font-semibold sm:text-4xl">{applied ? `${filtered.length} imóvel${filtered.length !== 1 ? 'is' : ''} encontrado${filtered.length !== 1 ? 's' : ''}` : 'Imóveis em destaque'}</h2>
+            <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">Selecionados a dedo</span>
+            <h2 className="mt-1 font-[var(--display)] text-3xl font-semibold sm:text-4xl">Imóveis em destaque</h2>
           </div>
+          <Link to={`/portal/${tenant}/imoveis`} className="hidden shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 sm:inline-flex" style={{ background: 'var(--ink)' }}>
+            Ver todos os imóveis <Ic d={I.arrow} s={16} />
+          </Link>
         </div>
 
-        {filtered.length === 0 ? (
+        {featured.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-black/10 py-16 text-center text-neutral-500">
-            Nenhum imóvel com esses filtros. <button type="button" onClick={() => { setApplied(0); setFType(''); setFCity(''); setFNeighborhood(''); setFBedrooms(''); setFCode(''); }} className="font-semibold text-[var(--brand)] underline">Limpar busca</button>
+            Nenhum imóvel disponível no momento.
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map(p => <PropertyCard key={p.id} tenant={tenant!} p={p} wa={wa} />)}
-          </div>
+          <>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {featured.map(p => <PropertyCard key={p.id} tenant={tenant!} p={p} wa={wa} />)}
+            </div>
+            <div className="mt-8 text-center sm:hidden">
+              <Link to={`/portal/${tenant}/imoveis`} className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--ink)' }}>
+                Ver todos os imóveis <Ic d={I.arrow} s={16} />
+              </Link>
+            </div>
+          </>
         )}
       </section>
 
@@ -425,60 +232,7 @@ export default function PortalHomePage() {
       </section>
       )}
 
-      {/* ── Footer ────────────────────────────────────────────────────── */}
-      <footer className="border-t border-black/[0.06] bg-white">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8 px-4 py-12 sm:grid-cols-4 sm:px-6">
-          <div className="col-span-2 sm:col-span-1">
-            {site.branding?.logo_url
-              ? <img src={site.branding.logo_url} alt={site.name || ''} className="h-9 w-auto max-w-[150px] object-contain" />
-              : <span className="font-[var(--display)] text-lg font-semibold">{site.name || 'Imóveis'}</span>}
-            <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-neutral-500">Seu portal de imóveis com atendimento de verdade.</p>
-          </div>
-          <FooterCol title="Imóveis" links={['Comprar', 'Alugar', 'Lançamentos']} />
-          <FooterCol title="Institucional" links={['Sobre nós', 'Contato', 'Anuncie']} />
-          <div>
-            <h4 className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-neutral-500">Contato</h4>
-            {wa && <a href={waHref!} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={15} /> WhatsApp</a>}
-          </div>
-        </div>
-        <div className="border-t border-black/[0.06] py-5 text-center text-[12px] text-neutral-400">
-          © {site.name || 'Portal'} — feito com LM Flow.
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-/* ── Auxiliares ─────────────────────────────────────────────────────────── */
-function Select({ value, onChange, label, options }: { value: string; onChange: (v: string) => void; label: string; options: [string, string][] }) {
-  return (
-    <div className="relative">
-      <select value={value} onChange={e => onChange(e.target.value)}
-        className="w-full appearance-none rounded-xl border border-black/[0.08] bg-white px-3.5 py-3 text-[14px] text-[var(--ink)] outline-none focus:border-[var(--brand)]">
-        <option value="">{label}</option>
-        {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-      </select>
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-      </span>
-    </div>
-  );
-}
-function Stat({ n, label }: { n: string; label: string }) {
-  return (
-    <div>
-      <div className="font-[var(--display)] text-3xl font-semibold text-[var(--brand)] sm:text-4xl">{n}</div>
-      <div className="mt-1 text-[13px] text-neutral-500">{label}</div>
-    </div>
-  );
-}
-function FooterCol({ title, links }: { title: string; links: string[] }) {
-  return (
-    <div>
-      <h4 className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-neutral-500">{title}</h4>
-      <ul className="space-y-2">
-        {links.map(l => <li key={l}><a href="#resultados" className="text-[13px] text-neutral-600 hover:text-[var(--brand)]">{l}</a></li>)}
-      </ul>
+      <PortalFooter site={site} tenant={tenant!} onHome />
     </div>
   );
 }
