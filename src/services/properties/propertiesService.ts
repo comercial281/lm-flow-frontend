@@ -198,6 +198,23 @@ export const propertiesService = {
     return (res.data as { data: AiExtractResult }).data;
   },
 
+  /** Preenche os campos a partir de um TXT/texto — 100% LOCAL, sem IA/API (regex
+   *  + palavras-chave). Não gera descrição. */
+  async parseText(text: string): Promise<AiExtractResult> {
+    const res = await api.post('/properties/parse_text', { text });
+    return (res.data as { data: AiExtractResult }).data;
+  },
+
+  /** Gera SÓ a descrição (IA) a partir dos campos do formulário — sem precisar de
+   *  imóvel salvo. Usado pelo botão opt-in "Gerar descrição". */
+  async generateDescriptionPreview(
+    property: Partial<PropertyFormData>,
+    opts: { text?: string; tone?: string; audience?: string; focus?: string } = {}
+  ): Promise<{ headline: string; description: string }> {
+    const res = await api.post('/properties/generate_description_preview', { property, ...opts });
+    return (res.data as { data: { headline: string; description: string } }).data;
+  },
+
   async calculateScore(id: string): Promise<{ score: number; label: string; breakdown: Record<string, number> }> {
     const res = await api.post(`/properties/${id}/calculate_score`);
     return (res.data as { data: { score: number; label: string; breakdown: Record<string, number> } }).data;
