@@ -13,10 +13,12 @@ interface Photo { file_url: string; thumbnail_url?: string | null; caption?: str
 interface PropertyDTO {
   id?: string; code: string; title: string; description?: string;
   transaction_type?: string; property_type?: string;
-  sale_price?: number | null;
+  sale_price?: number | null; rent_price?: number | null;
+  condo_fee?: number | null; iptu?: number | null;
   bedrooms?: number | null; bathrooms?: number | null; suites?: number | null; parking_spaces?: number | null;
   useful_area_m2?: number | null; total_area_m2?: number | null;
   address_neighborhood?: string; address_city?: string; address_state?: string;
+  address_full?: string;
   latitude?: number | null; longitude?: number | null;
   responsible_name?: string; photos?: Photo[];
 }
@@ -39,10 +41,15 @@ function setMeta(name: string, content: string) {
 
 const I = {
   bed: 'M2 17v-5a2 2 0 0 1 2-2h11a3 3 0 0 1 3 3v4M2 21v-4M22 21v-6M2 12V7m4 3V8a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v2',
+  suite: 'M3 18v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5M3 18v2M21 18v2M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3M17 4l1.5 1.5L20 4',
   bath: 'M4 12V5a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2M4 12h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-3ZM6 21l-1 1M18 21l1 1',
   car: 'M5 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM17 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM5 15h12M3 15l1.5-5A2 2 0 0 1 6.4 8.6h9.2a2 2 0 0 1 1.9 1.4L19 15',
   ruler: 'M3 3h4v4M3 3l7 7M21 21h-4v-4M21 21l-7-7M3 21v-4M3 21h4M21 3h-4M21 3v4',
+  land: 'M3 4h18v16H3zM3 9h18M9 4v16',
   pin: 'M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11ZM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z',
+  tag: 'M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h8l8.6 8.6a1 1 0 0 1 0 1.4ZM7.5 8.5h.01',
+  home: 'M3 10.5 12 3l9 7.5M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5M9.5 21v-6h5v6',
+  coin: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v10M9.5 9.5a2.5 2 0 0 1 2.5-1.5c1.4 0 2.5.8 2.5 1.8s-1.1 1.7-2.5 1.7-2.5.8-2.5 1.8 1.1 1.8 2.5 1.8a2.5 2 0 0 0 2.5-1.5',
   wa: 'M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.3A10 10 0 1 0 12 2Zm5.5 14.2c-.2.6-1.2 1.2-1.7 1.2-.9.1-1 .4-3.6-.9-2.6-1.4-4.1-4.1-4.2-4.3-.1-.2-1-1.3-1-2.5s.6-1.8.9-2c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6c-.2.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2 1.3 2.3 1.5.2.1.4.1.5-.1l.7-.8c.2-.2.4-.2.6-.1l1.9.9c.3.1.4.2.5.3.1.2.1.7-.1 1.3Z',
   back: 'M15 18l-6-6 6-6',
   next: 'M9 18l6-6-6-6',
@@ -130,13 +137,46 @@ export default function ImovelPublicPage() {
   const cover = photos[active] || photos[0];
   const local = [prop.address_neighborhood, prop.address_city, prop.address_state].filter(Boolean).join(', ');
   const typeLabel = TYPE_LABEL[prop.property_type || ''] || prop.property_type || 'Imóvel';
-  const price = brl(prop.sale_price);
+
+  // Preço principal segue o tipo de transação (aluguel mostra "/mês"; venda, o
+  // valor cheio). Locação sem venda cai no aluguel; senão, venda.
+  const isRent = prop.transaction_type === 'rent' || prop.transaction_type === 'season';
+  const price = brl(isRent ? prop.rent_price : prop.sale_price);
+  const priceSuffix = isRent ? '/mês' : '';
+  // Valor do m²: base de venda sobre a área útil (ou total como fallback).
+  const areaForM2 = prop.useful_area_m2 || prop.total_area_m2 || 0;
+  const pricePerM2 = !isRent && prop.sale_price && areaForM2 ? brl(prop.sale_price / areaForM2) : null;
+  // Linha de valores recorrentes (condomínio / IPTU / m²), como nos portais.
+  const money = [
+    prop.condo_fee ? { label: 'Condomínio', value: `${brl(prop.condo_fee)}/mês` } : null,
+    prop.iptu ? { label: 'IPTU', value: `${brl(prop.iptu)}/ano` } : null,
+    pricePerM2 ? { label: 'Valor do m²', value: pricePerM2 } : null,
+  ].filter(Boolean) as { label: string; value: string }[];
+
   const specs = [
     prop.bedrooms ? { d: I.bed, label: `${prop.bedrooms} ${prop.bedrooms > 1 ? 'quartos' : 'quarto'}` } : null,
-    prop.suites ? { d: I.bath, label: `${prop.suites} ${prop.suites > 1 ? 'suítes' : 'suíte'}` } : null,
+    prop.suites ? { d: I.suite, label: `${prop.suites} ${prop.suites > 1 ? 'suítes' : 'suíte'}` } : null,
+    prop.bathrooms ? { d: I.bath, label: `${prop.bathrooms} ${prop.bathrooms > 1 ? 'banheiros' : 'banheiro'}` } : null,
     prop.parking_spaces ? { d: I.car, label: `${prop.parking_spaces} ${prop.parking_spaces > 1 ? 'vagas' : 'vaga'}` } : null,
-    prop.useful_area_m2 ? { d: I.ruler, label: `${prop.useful_area_m2} m²` } : null,
+    prop.useful_area_m2 ? { d: I.ruler, label: `${prop.useful_area_m2} m² úteis` } : null,
+    prop.total_area_m2 ? { d: I.land, label: `${prop.total_area_m2} m² total` } : null,
   ].filter(Boolean) as { d: string; label: string }[];
+
+  // Ficha técnica — pares rótulo/valor com tudo que o imóvel tem cadastrado.
+  const sheet = [
+    { label: 'Código', value: prop.code },
+    { label: 'Tipo', value: typeLabel },
+    { label: 'Transação', value: isRent ? 'Locação' : 'Venda' },
+    prop.bedrooms ? { label: 'Quartos', value: String(prop.bedrooms) } : null,
+    prop.suites ? { label: 'Suítes', value: String(prop.suites) } : null,
+    prop.bathrooms ? { label: 'Banheiros', value: String(prop.bathrooms) } : null,
+    prop.parking_spaces ? { label: 'Vagas', value: String(prop.parking_spaces) } : null,
+    prop.useful_area_m2 ? { label: 'Área útil', value: `${prop.useful_area_m2} m²` } : null,
+    prop.total_area_m2 ? { label: 'Área total', value: `${prop.total_area_m2} m²` } : null,
+    prop.condo_fee ? { label: 'Condomínio', value: `${brl(prop.condo_fee)}/mês` } : null,
+    prop.iptu ? { label: 'IPTU', value: `${brl(prop.iptu)}/ano` } : null,
+    prop.address_full ? { label: 'Endereço', value: prop.address_full } : (local ? { label: 'Localização', value: local } : null),
+  ].filter(Boolean) as { label: string; value: string }[];
 
   const ContactForm = (
     sent ? (
@@ -241,7 +281,7 @@ export default function ImovelPublicPage() {
             {local && <p className="mt-2 flex items-center gap-1.5 text-[15px] text-neutral-500"><Ic d={I.pin} s={16} /> {local}</p>}
 
             {specs.length > 0 && (
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {specs.map((s, i) => (
                   <div key={i} className="rounded-2xl bg-white p-4 ring-1 ring-black/[0.06]">
                     <span className="text-[var(--brand)]"><Ic d={s.d} s={20} /></span>
@@ -251,10 +291,39 @@ export default function ImovelPublicPage() {
               </div>
             )}
 
+            {money.length > 0 && (
+              <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl bg-white px-5 py-4 ring-1 ring-black/[0.06]">
+                {money.map((m, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-[var(--brand)]"><Ic d={I.coin} s={17} /></span>
+                    <span className="text-[13px] text-neutral-500">{m.label}</span>
+                    <span className="text-[14px] font-semibold text-[var(--ink)]">{m.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {prop.description && (
               <section className="mt-9">
                 <h2 className="font-[var(--display)] text-2xl font-semibold">Sobre o imóvel</h2>
                 <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-neutral-700">{prop.description}</p>
+              </section>
+            )}
+
+            {sheet.length > 0 && (
+              <section className="mt-9">
+                <h2 className="font-[var(--display)] text-2xl font-semibold">Ficha técnica</h2>
+                <dl className="mt-3 overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.06]">
+                  {sheet.map((row, i) => (
+                    <div key={i} className={`flex items-start justify-between gap-6 px-5 py-3.5 ${i > 0 ? 'border-t border-black/[0.06]' : ''}`}>
+                      <dt className="flex items-center gap-2 text-[14px] text-neutral-500">
+                        <span className="text-[var(--brand)]"><Ic d={row.label === 'Código' ? I.tag : row.label === 'Tipo' ? I.home : row.label === 'Endereço' || row.label === 'Localização' ? I.pin : I.ruler} s={15} /></span>
+                        {row.label}
+                      </dt>
+                      <dd className="text-right text-[14px] font-semibold text-[var(--ink)]">{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
               </section>
             )}
 
@@ -273,8 +342,22 @@ export default function ImovelPublicPage() {
           {/* Card de contato (sticky no desktop) */}
           <aside className="hidden lg:block">
             <div className="sticky top-24 rounded-[22px] bg-white p-6 shadow-[0_20px_45px_-25px_rgba(0,0,0,0.35)] ring-1 ring-black/[0.06]">
-              {price && <div className="font-[var(--display)] text-3xl font-semibold text-[var(--ink)]">{price}</div>}
+              {price && (
+                <div className="font-[var(--display)] text-3xl font-semibold text-[var(--ink)]">
+                  {price}{priceSuffix && <span className="text-base font-medium text-neutral-400">{priceSuffix}</span>}
+                </div>
+              )}
               <div className="mt-1 text-[13px] text-neutral-500">Código {prop.code}</div>
+              {money.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  {money.map((m, i) => (
+                    <div key={i} className="flex items-center justify-between text-[13px]">
+                      <span className="text-neutral-500">{m.label}</span>
+                      <span className="font-medium text-[var(--ink)]">{m.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="my-4 border-t border-black/[0.06]" />
               <p className="mb-3 text-[14px] font-medium text-neutral-600">Fale com um especialista sobre este imóvel</p>
               {ContactForm}
@@ -285,15 +368,24 @@ export default function ImovelPublicPage() {
 
         {/* Form no fluxo (mobile) */}
         <section id="contato" className="mt-10 rounded-[22px] bg-white p-6 ring-1 ring-black/[0.06] lg:hidden">
-          {price && <div className="font-[var(--display)] text-2xl font-semibold">{price}</div>}
-          <p className="mb-3 mt-1 text-[14px] text-neutral-500">Fale com um especialista sobre este imóvel</p>
+          {price && (
+            <div className="font-[var(--display)] text-2xl font-semibold">
+              {price}{priceSuffix && <span className="text-sm font-medium text-neutral-400">{priceSuffix}</span>}
+            </div>
+          )}
+          {money.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-neutral-500">
+              {money.map((m, i) => <span key={i}>{m.label} <span className="font-medium text-[var(--ink)]">{m.value}</span></span>)}
+            </div>
+          )}
+          <p className="mb-3 mt-2 text-[14px] text-neutral-500">Fale com um especialista sobre este imóvel</p>
           {ContactForm}
         </section>
       </main>
 
       {/* Barra fixa (mobile) */}
       <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-black/[0.06] bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
-        {price && <div className="flex-1"><div className="text-[11px] text-neutral-400">a partir de</div><div className="font-[var(--display)] text-lg font-semibold leading-none">{price}</div></div>}
+        {price && <div className="flex-1"><div className="text-[11px] text-neutral-400">{isRent ? 'aluguel' : 'a partir de'}</div><div className="font-[var(--display)] text-lg font-semibold leading-none">{price}{priceSuffix && <span className="text-[11px] font-medium text-neutral-400">{priceSuffix}</span>}</div></div>}
         {waHref
           ? <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={17} /> WhatsApp</a>
           : <a href="#contato" className="rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--brand)' }}>Tenho interesse</a>}
