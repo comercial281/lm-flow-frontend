@@ -1257,7 +1257,7 @@ export default function SiteBuilder() {
 
       {/* Article modal */}
       <Dialog open={articleModal} onOpenChange={setArticleModal}>
-        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-[95vw] sm:max-w-5xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingArticle ? 'Editar artigo' : 'Novo artigo'}</DialogTitle>
             <DialogDescription>Escreva o conteúdo do artigo para o blog do site</DialogDescription>
