@@ -46,6 +46,8 @@ const I = {
   wa: 'M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.3A10 10 0 1 0 12 2Zm5.5 14.2c-.2.6-1.2 1.2-1.7 1.2-.9.1-1 .4-3.6-.9-2.6-1.4-4.1-4.1-4.2-4.3-.1-.2-1-1.3-1-2.5s.6-1.8.9-2c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6c-.2.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2 1.3 2.3 1.5.2.1.4.1.5-.1l.7-.8c.2-.2.4-.2.6-.1l1.9.9c.3.1.4.2.5.3.1.2.1.7-.1 1.3Z',
   back: 'M15 18l-6-6 6-6',
   next: 'M9 18l6-6-6-6',
+  close: 'M18 6 6 18M6 6l12 12',
+  expand: 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7',
 };
 function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: string }) {
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className={cls}><path d={d} /></svg>;
@@ -57,6 +59,7 @@ export default function ImovelPublicPage() {
   const [site, setSite] = useState<SiteInfo>({});
   const [prop, setProp] = useState<PropertyDTO | null>(null);
   const [active, setActive] = useState(0);
+  const [lightbox, setLightbox] = useState(false);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -90,6 +93,24 @@ export default function ImovelPublicPage() {
     })();
     return () => { alive = false; };
   }, [tenant, code]);
+
+  // Navegação por teclado + trava do scroll enquanto o lightbox está aberto
+  useEffect(() => {
+    if (!lightbox) return;
+    const total = prop?.photos?.length ?? 0;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightbox(false);
+      else if (e.key === 'ArrowLeft' && total > 1) setActive(a => (a - 1 + total) % total);
+      else if (e.key === 'ArrowRight' && total > 1) setActive(a => (a + 1) % total);
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [lightbox, prop]);
 
   const brand = site.branding?.primary_color || '#0E7C5A';
   const font = site.branding?.font_family || 'Inter';
@@ -195,13 +216,23 @@ export default function ImovelPublicPage() {
         {cover && (
           <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
             <div className="group relative overflow-hidden rounded-[20px] bg-neutral-100">
-              <img src={cover.file_url} alt={cover.alt_text || prop.title} className="h-[280px] w-full object-cover sm:h-[440px]" />
+              <button
+                type="button"
+                aria-label="Ampliar foto"
+                onClick={() => setLightbox(true)}
+                className="block w-full cursor-zoom-in"
+              >
+                <img src={cover.file_url} alt={cover.alt_text || prop.title} className="h-[280px] w-full object-cover sm:h-[440px]" />
+              </button>
+              <span className="pointer-events-none absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100">
+                <Ic d={I.expand} s={16} />
+              </span>
               {photos.length > 1 && (
                 <>
                   <button
                     type="button"
                     aria-label="Foto anterior"
-                    onClick={() => setActive(a => (a - 1 + photos.length) % photos.length)}
+                    onClick={e => { e.stopPropagation(); setActive(a => (a - 1 + photos.length) % photos.length); }}
                     className="absolute left-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-[var(--ink)] shadow-sm ring-1 ring-black/[0.06] backdrop-blur transition hover:bg-white"
                   >
                     <Ic d={I.back} s={20} />
@@ -209,12 +240,12 @@ export default function ImovelPublicPage() {
                   <button
                     type="button"
                     aria-label="Próxima foto"
-                    onClick={() => setActive(a => (a + 1) % photos.length)}
+                    onClick={e => { e.stopPropagation(); setActive(a => (a + 1) % photos.length); }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-[var(--ink)] shadow-sm ring-1 ring-black/[0.06] backdrop-blur transition hover:bg-white"
                   >
                     <Ic d={I.next} s={20} />
                   </button>
-                  <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-[12px] font-medium text-white backdrop-blur">
+                  <span className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-[12px] font-medium text-white backdrop-blur">
                     {active + 1} / {photos.length}
                   </span>
                 </>
@@ -302,6 +333,57 @@ export default function ImovelPublicPage() {
       <footer className="border-t border-black/[0.06] bg-white py-6 text-center text-[12px] text-neutral-400">
         © {site.name || 'Portal'} — feito com LM Flow.
       </footer>
+
+      {/* Lightbox — foto em tela cheia */}
+      {lightbox && cover && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          onClick={() => setLightbox(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Galeria de fotos"
+        >
+          <button
+            type="button"
+            aria-label="Fechar"
+            onClick={() => setLightbox(false)}
+            className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
+          >
+            <Ic d={I.close} s={22} />
+          </button>
+
+          <img
+            src={cover.file_url}
+            alt={cover.alt_text || prop.title}
+            onClick={e => e.stopPropagation()}
+            className="max-h-[85vh] max-w-[92vw] rounded-lg object-contain"
+          />
+
+          {photos.length > 1 && (
+            <>
+              <button
+                type="button"
+                aria-label="Foto anterior"
+                onClick={e => { e.stopPropagation(); setActive(a => (a - 1 + photos.length) % photos.length); }}
+                className="absolute left-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:left-6"
+              >
+                <Ic d={I.back} s={24} />
+              </button>
+              <button
+                type="button"
+                aria-label="Próxima foto"
+                onClick={e => { e.stopPropagation(); setActive(a => (a + 1) % photos.length); }}
+                className="absolute right-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:right-6"
+              >
+                <Ic d={I.next} s={24} />
+              </button>
+              <span className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full bg-white/15 px-3.5 py-1.5 text-[13px] font-medium text-white">
+                {active + 1} / {photos.length}
+              </span>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
