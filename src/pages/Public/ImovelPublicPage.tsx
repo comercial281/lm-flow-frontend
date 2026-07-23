@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import { labelsFor } from '@/features/properties/amenities';
+import { PropertyCard, type PortalProperty } from './portalShared';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — PÁGINA DO IMÓVEL (Produto A). Mesma pegada "Editorial
@@ -68,6 +69,7 @@ export default function ImovelPublicPage() {
   const [prop, setProp] = useState<PropertyDTO | null>(null);
   const [active, setActive] = useState(0);
   const [lightbox, setLightbox] = useState(false);
+  const [suggestions, setSuggestions] = useState<PortalProperty[]>([]);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -119,6 +121,33 @@ export default function ImovelPublicPage() {
       document.body.style.overflow = prevOverflow;
     };
   }, [lightbox, prop]);
+
+  // Imóveis recomendados (fim da página): outros publicados da MESMA cidade,
+  // excluindo o atual. Sem endpoint novo — usa a listagem pública do portal.
+  useEffect(() => {
+    if (!tenant || !code || !prop) return;
+    let alive = true;
+    const fetchList = async (city?: string): Promise<PortalProperty[]> => {
+      const qs = new URLSearchParams({ per_page: '8' });
+      if (city) qs.set('city', city);
+      try {
+        const res = await fetch(`${API}/api/public/v1/site/properties?${qs.toString()}`, { headers: { 'X-Tenant': tenant } });
+        if (!res.ok) return [];
+        return ((await res.json()).data as PortalProperty[]).filter(p => p.code !== code);
+      } catch { return []; }
+    };
+    (async () => {
+      let list = await fetchList(prop.address_city);
+      // Fallback: se a cidade tiver poucos imóveis, completa com outros quaisquer.
+      if (list.length < 3) {
+        const extra = await fetchList();
+        const seen = new Set(list.map(p => p.code));
+        list = [...list, ...extra.filter(p => !seen.has(p.code))];
+      }
+      if (alive) setSuggestions(list.slice(0, 3));
+    })();
+    return () => { alive = false; };
+  }, [tenant, code, prop]);
 
   const brand = site.branding?.primary_color || '#0E7C5A';
   const font = site.branding?.font_family || 'Inter';
@@ -425,6 +454,16 @@ export default function ImovelPublicPage() {
           <p className="mb-3 mt-2 text-[14px] text-neutral-500">Fale com um especialista sobre este imóvel</p>
           {ContactForm}
         </section>
+
+        {/* Imóveis recomendados */}
+        {suggestions.length > 0 && (
+          <section className="mt-14">
+            <h2 className="font-[var(--display)] text-2xl font-semibold sm:text-3xl">Você também pode gostar</h2>
+            <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {suggestions.map(s => <PropertyCard key={s.id} tenant={tenant!} p={s} wa={wa} />)}
+            </div>
+          </section>
+        )}
       </main>
 
       {/* Barra fixa (mobile) */}
