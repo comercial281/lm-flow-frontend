@@ -57,6 +57,7 @@ import {
   STATUS_LABELS,
   STATUS_COLORS,
 } from '@/services/properties/propertiesService';
+import { PROPERTY_FEATURES, CONDO_FEATURES } from '@/features/properties/amenities';
 import {
   propertyPhotosService,
   PropertyPhoto,
@@ -103,6 +104,8 @@ const EMPTY_FORM: PropertyFormData = {
   responsible_id: null,
   captor_id: null,
   label_id: null,
+  features: [],
+  condo_features: [],
 };
 
 const formatCurrency = (v?: number | null) =>
@@ -287,6 +290,8 @@ export default function Properties() {
       captor_id: p.captor?.id ?? p.captor_id ?? null,
       owner_contact_id: p.owner_contact_id ?? null,
       label_id: p.label_id ?? null,
+      features: p.features ?? [],
+      condo_features: p.condo_features ?? [],
     });
     setModalOpen(true);
   };
@@ -445,6 +450,11 @@ export default function Properties() {
 
   const f = form;
   const setF = (patch: Partial<PropertyFormData>) => setForm(prev => ({ ...prev, ...patch }));
+  const toggleAmenity = (key: 'features' | 'condo_features', slug: string) =>
+    setForm(prev => {
+      const cur = prev[key] ?? [];
+      return { ...prev, [key]: cur.includes(slug) ? cur.filter(s => s !== slug) : [...cur, slug] };
+    });
 
   // Cria uma nova tag (Label) direto do cadastro do imóvel e já a seleciona.
   // O backend só aceita título com letras/números/espaço/hífen/underscore, então
@@ -1206,6 +1216,46 @@ export default function Properties() {
                 <input type="checkbox" checked={f.on_sign ?? false} onChange={e => setF({ on_sign: e.target.checked })} className="rounded" />
                 <span className="text-sm">Tem placa</span>
               </label>
+            </div>
+
+            {/* Características do imóvel + comodidades do condomínio (aparecem na página pública) */}
+            <div className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium">Características do imóvel</label>
+                <div className="flex flex-wrap gap-2">
+                  {PROPERTY_FEATURES.map(a => {
+                    const on = (f.features ?? []).includes(a.slug);
+                    return (
+                      <button
+                        key={a.slug}
+                        type="button"
+                        onClick={() => toggleAmenity('features', a.slug)}
+                        className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${on ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border text-muted-foreground hover:bg-muted'}`}
+                      >
+                        {a.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium">Comodidades do condomínio</label>
+                <div className="flex flex-wrap gap-2">
+                  {CONDO_FEATURES.map(a => {
+                    const on = (f.condo_features ?? []).includes(a.slug);
+                    return (
+                      <button
+                        key={a.slug}
+                        type="button"
+                        onClick={() => toggleAmenity('condo_features', a.slug)}
+                        className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${on ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border text-muted-foreground hover:bg-muted'}`}
+                      >
+                        {a.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
             </div>
           </div>
