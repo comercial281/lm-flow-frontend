@@ -97,7 +97,7 @@ export default function PortalSearchPage() {
           <div>
             <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">Resultados</span>
             <h2 className="mt-1 font-[var(--display)] text-2xl font-semibold sm:text-3xl">
-              {filtered.length} imóvel{filtered.length !== 1 ? 'is' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
+              {filtered.length} {filtered.length !== 1 ? 'imóveis' : 'imóvel'} encontrado{filtered.length !== 1 ? 's' : ''}
             </h2>
           </div>
           {hasActiveFilters && (
