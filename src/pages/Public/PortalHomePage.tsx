@@ -20,6 +20,7 @@ interface SiteInfo {
   name?: string;
   branding?: Branding;
   hero?: { video_url?: string | null };
+  sections?: { stats?: boolean; lead_capture?: boolean };
   contact?: { whatsapp?: string | null; phone?: string | null };
   seo?: { title?: string | null; description?: string | null };
 }
@@ -235,12 +236,16 @@ export default function PortalHomePage() {
     fontFamily: fontStack,
   } as CSSProperties;
 
+  // Seções liga/desliga (Site Builder). Ausência da flag = visível (retrocompat).
+  const showStats = site.sections?.stats !== false;
+  const showLeadCapture = site.sections?.lead_capture !== false;
+
   const nav = [
     { label: 'Comprar', href: '#resultados' },
     { label: 'Alugar', href: '#resultados' },
     { label: 'Lançamentos', href: '#resultados' },
-    { label: 'Sobre', href: '#sobre' },
-    { label: 'Contato', href: '#contato' },
+    ...(showStats ? [{ label: 'Sobre', href: '#sobre' }] : []),
+    ...(showLeadCapture ? [{ label: 'Contato', href: '#contato' }] : []),
   ];
   const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
 
@@ -370,6 +375,7 @@ export default function PortalHomePage() {
       </section>
 
       {/* ── Trust band ────────────────────────────────────────────────── */}
+      {showStats && (
       <section id="sobre" className="border-y border-black/[0.06] bg-white">
         <div className="mx-auto grid max-w-6xl grid-cols-3 gap-6 px-4 py-10 text-center sm:px-6">
           <Stat n={String(items.length)} label="imóveis disponíveis" />
@@ -377,8 +383,10 @@ export default function PortalHomePage() {
           <Stat n="24h" label="resposta no WhatsApp" />
         </div>
       </section>
+      )}
 
       {/* ── Lead capture ──────────────────────────────────────────────── */}
+      {showLeadCapture && (
       <section id="contato" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="overflow-hidden rounded-[28px] px-6 py-10 sm:px-12 sm:py-14" style={{ background: 'var(--ink)' }}>
           <div className="grid items-center gap-8 md:grid-cols-2">
@@ -415,6 +423,7 @@ export default function PortalHomePage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── Footer ────────────────────────────────────────────────────── */}
       <footer className="border-t border-black/[0.06] bg-white">

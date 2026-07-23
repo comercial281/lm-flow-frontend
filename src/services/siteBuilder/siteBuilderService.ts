@@ -29,6 +29,12 @@ export interface SiteTracking {
   facebook_pixel_id?: string | null;
 }
 
+/** Seções liga/desliga da home do portal. Ausência de chave = visível. */
+export interface SiteSections {
+  stats?: boolean;        // faixa de números (imóveis disponíveis, cidades atendidas…)
+  lead_capture?: boolean; // bloco "Não achou? A gente encontra pra você"
+}
+
 /** Proposta da IA (ai_setup): só o que estava no material; campo sem base = null. */
 export interface AiSetupProposal {
   name?: string | null;
@@ -53,6 +59,8 @@ export interface Site {
   branding: SiteBranding;
   /** Vídeo do banner da home do portal (armazenado em settings no backend). */
   hero_video_url?: string | null;
+  /** Seções liga/desliga da home (armazenado em settings no backend). */
+  sections?: SiteSections;
   contact: SiteContact;
   social_links?: Record<string, string>;
   seo: SiteSeo;
@@ -114,6 +122,7 @@ export interface SiteFormData {
   accent_color?: string;
   font_family?: string;
   hero_video_url?: string;
+  sections?: SiteSections;
   contact_phone?: string;
   contact_whatsapp?: string;
   contact_email?: string;
