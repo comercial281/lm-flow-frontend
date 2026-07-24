@@ -113,6 +113,7 @@ const CerebroUniversal = lazyWithRetry(() => import('@/pages/SuperAdmin/CerebroU
 const SuperAgents = lazyWithRetry(() => import('@/pages/SuperAdmin/SuperAgents'));
 const OnboardingForms = lazyWithRetry(() => import('@/pages/SuperAdmin/OnboardingForms'));
 const SdrRefinement = lazyWithRetry(() => import('@/pages/SuperAdmin/SdrRefinement'));
+const CustomerFeedbacks = lazyWithRetry(() => import('@/pages/SuperAdmin/CustomerFeedbacks'));
 const PublicOnboardingForm = lazyWithRetry(() => import('@/pages/PublicOnboardingForm'));
 
 // Área do Admin — shell próprio (AdminLayout), fora do menu do CRM.
@@ -2018,6 +2019,18 @@ const AppRouter = () => {
                 <SuperAdminRoute>
                   <AdminLayout>
                     <OnboardingForms />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/sugestoes-bugs"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <CustomerFeedbacks />
                   </AdminLayout>
                 </SuperAdminRoute>
               </PrivateRoute>
