@@ -53,7 +53,7 @@ export const KIND_LABELS: Record<FeedbackKind, string> = {
 };
 
 export const STATUS_LABELS: Record<FeedbackStatus, string> = {
-  new: 'Novo',
+  new: 'Aberto',
   in_review: 'Em análise',
   resolved: 'Resolvido',
 };
