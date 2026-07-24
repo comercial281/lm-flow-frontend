@@ -12,6 +12,7 @@ import {
   Bot,
   ClipboardList,
   Wand2,
+  MessageSquarePlus,
 } from 'lucide-react';
 
 /**
@@ -69,6 +70,12 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     href: '/admin/formularios',
     icon: ClipboardList,
     description: 'Monte formulários com link público; as respostas caem aqui',
+  },
+  {
+    name: 'Sugestões/Bugs',
+    href: '/admin/sugestoes-bugs',
+    icon: MessageSquarePlus,
+    description: 'Sugestões e bugs que os clientes enviam de dentro do CRM',
   },
   {
     name: 'Central de Push',

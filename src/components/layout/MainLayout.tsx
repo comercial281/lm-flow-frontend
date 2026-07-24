@@ -30,6 +30,7 @@ import InstallAppPrompt from './components/InstallAppPrompt';
 import ClientModeBar from './ClientModeBar';
 import { WelcomeTourModal } from '@/components/WelcomeTourModal';
 import GlobalCommandPalette from '@/components/command-palette/GlobalCommandPalette';
+import FeedbackWidget from '@/components/feedback/FeedbackWidget';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -195,6 +196,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       {/* Instalar app (PWA) na tela inicial */}
       <InstallAppPrompt />
+
+      {/* Botão flutuante de Sugestões/Bugs (cai na aba do admin) */}
+      <FeedbackWidget />
 
       {/* Logout Dialog */}
       <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
