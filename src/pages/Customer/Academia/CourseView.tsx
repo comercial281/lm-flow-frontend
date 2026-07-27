@@ -64,8 +64,9 @@ export default function CourseView({ onBack }: Props) {
     return map;
   }, [allLessons]);
 
+  // Admin (super-admin) fura o cadeado: vê e gerencia tudo, com selo "Restrito".
   const moduleLocked = (m: KnowledgeModule) =>
-    computeLocked(m, 'module', m.id, entitlements, TENANT_SLUG, userRef);
+    !canEdit && computeLocked(m, 'module', m.id, entitlements, TENANT_SLUG, userRef);
 
   // Aulas "abertas" (de módulos desbloqueados), em ordem — pra prev/next e continue.
   const openLessons = useMemo(() => {
@@ -106,8 +107,8 @@ export default function CourseView({ onBack }: Props) {
   const [moduleForm, setModuleForm] = useState<{ editing: KnowledgeModule | null } | null>(null);
   const deleteModule = useDeleteModule();
 
-  // Curso bloqueado (guarda extra) — não deveria acontecer via navegação normal.
-  if (course && computeLocked(course, 'course', course.id, entitlements, TENANT_SLUG, userRef)) {
+  // Curso bloqueado (guarda extra) — admin fura o cadeado.
+  if (course && !canEdit && computeLocked(course, 'course', course.id, entitlements, TENANT_SLUG, userRef)) {
     return (
       <div className="flex-1 flex flex-col min-h-0">
         <TopBar title={course.titulo} onBack={onBack} />
@@ -259,6 +260,11 @@ function ModuleSection({
         <button onClick={() => setOpen((v) => !v)} className="flex-1 min-w-0 flex items-center gap-2 text-left" type="button">
           {locked ? <Lock size={13} className="text-muted-foreground shrink-0" /> : open ? <ChevronDown size={13} className="shrink-0" /> : <ChevronRight size={13} className="shrink-0" />}
           <span className="text-xs font-semibold truncate">{m.titulo}</span>
+          {!locked && m.access === 'restricted' && (
+            <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-semibold rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <Lock size={8} /> Restrito
+            </span>
+          )}
         </button>
         <span className="text-[10px] text-muted-foreground shrink-0">
           {locked ? 'bloqueado' : `${done}/${lessons.length}`}

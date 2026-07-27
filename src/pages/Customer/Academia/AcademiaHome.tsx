@@ -69,8 +69,9 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
     return { total, done };
   }
 
+  // Admin (super-admin) fura o cadeado: abre e gerencia tudo, com selo "Restrito".
   function courseLocked(c: KnowledgeCourse) {
-    return computeLocked(c, 'course', c.id, entitlements, TENANT_SLUG, userRef);
+    return !canEdit && computeLocked(c, 'course', c.id, entitlements, TENANT_SLUG, userRef);
   }
 
   // "Continue assistindo": 1ª aula não concluída num curso/módulo desbloqueado.
@@ -178,6 +179,7 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
                     descricao={c.descricao}
                     capaUrl={c.capa_url}
                     locked={locked}
+                    restricted={c.access === 'restricted'}
                     lock={c}
                     progress={courseProgress(c.id)}
                     onOpen={() => (locked ? undefined : openCourse(c.id))}

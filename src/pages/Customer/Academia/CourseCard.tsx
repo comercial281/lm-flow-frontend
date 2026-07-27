@@ -9,6 +9,7 @@ interface Props {
   descricao?: string | null;
   capaUrl?: string | null;
   locked: boolean;
+  restricted?: boolean; // é restrito (mostra selo mesmo quando admin fura o cadeado)
   lock: { titulo: string; lock_cta_type: LockCtaType; lock_cta_label: string | null; lock_cta_value: string | null; lock_message: string | null };
   progress?: { done: number; total: number };
   onOpen: () => void;
@@ -21,6 +22,7 @@ export default function CourseCard({
   descricao,
   capaUrl,
   locked,
+  restricted,
   lock,
   progress,
   onOpen,
@@ -45,6 +47,11 @@ export default function CourseCard({
               </div>
               <LockCta lock={lock} />
             </div>
+          )}
+          {!locked && restricted && (
+            <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-semibold rounded-full bg-black/55 text-amber-300 backdrop-blur">
+              <Lock size={9} /> Restrito
+            </span>
           )}
         </div>
         <div className="p-4">
