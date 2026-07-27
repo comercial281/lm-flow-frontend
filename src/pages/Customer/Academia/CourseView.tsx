@@ -164,8 +164,8 @@ export default function CourseView({ onBack }: Props) {
       )}
 
       <div className="flex-1 flex flex-col md:flex-row min-h-0">
-        {/* Player + conteúdo */}
-        <div className="flex-1 overflow-y-auto min-w-0 order-2 md:order-1">
+        {/* Player + conteúdo — sempre no topo no mobile, à esquerda no desktop */}
+        <div className="flex-1 overflow-y-auto min-w-0 order-1">
           {selected ? (
             <LessonPanel
               key={selected.id}
@@ -189,7 +189,7 @@ export default function CourseView({ onBack }: Props) {
         </div>
 
         {/* Sidebar de módulos/aulas */}
-        <aside className="w-full md:w-80 shrink-0 border-t md:border-t-0 md:border-l border-border bg-card/40 overflow-y-auto order-1 md:order-2 max-h-[45vh] md:max-h-none">
+        <aside className="w-full md:w-80 shrink-0 border-t md:border-t-0 md:border-l border-border bg-card/40 overflow-y-auto order-2 max-h-[55vh] md:max-h-none">
           <div className="px-4 py-3 border-b border-border">
             <p className="text-xs font-semibold text-muted-foreground">
               {modules.length} módulo{modules.length === 1 ? '' : 's'}
