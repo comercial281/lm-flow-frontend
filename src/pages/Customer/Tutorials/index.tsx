@@ -17,8 +17,8 @@ import AulasTab from './tabs/AulasTab';
 type Tab = 'docs' | 'aulas';
 
 const TABS: { key: Tab; label: string; icon: typeof FileText }[] = [
-  { key: 'docs', label: 'Docs', icon: FileText },
   { key: 'aulas', label: 'Aulas', icon: GraduationCap },
+  { key: 'docs', label: 'Docs', icon: FileText },
 ];
 
 const Tutorials = () => {
@@ -28,9 +28,9 @@ const Tutorials = () => {
   const canEdit = useIsSuperAdmin();
 
   const [categoryId, setCategoryId] = useState<string | null>(params.get('cat'));
-  const tabParam = (params.get('tab') as Tab) ?? 'docs';
+  const tabParam = (params.get('tab') as Tab) ?? 'aulas';
   const [tab, setTab] = useState<Tab>(
-    TABS.some((x) => x.key === tabParam) ? tabParam : 'docs',
+    TABS.some((x) => x.key === tabParam) ? tabParam : 'aulas',
   );
 
   // Default: primeira categoria quando carrega
