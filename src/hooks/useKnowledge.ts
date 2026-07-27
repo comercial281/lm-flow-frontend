@@ -175,6 +175,11 @@ function errMsg(e: unknown): string {
 // Slug do tenant atual (deploy). null/'' = só conteúdo global.
 export const TENANT_SLUG = ((import.meta.env.VITE_TENANT_SLUG as string | undefined) ?? '').trim();
 
+// Escopo pras ações do aluno (progresso/avaliação/comentários), que exigem um
+// tenant não-vazio. No deploy raiz (admin, sem tenant) cai pra 'root' — assim o
+// super-admin consegue testar/usar sem erro. Em deploy de cliente, = TENANT_SLUG.
+export const SCOPE_SLUG = TENANT_SLUG || 'root';
+
 // Identidade do usuário logado (auth Rails) — usada pra filtrar progresso e
 // marcar autoria de comentários no lado da leitura. A escrita real é carimbada
 // pela Edge Function a partir do JWT, nunca confiando no client.
@@ -667,13 +672,13 @@ export function useUploadModuleCover() {
 export function useProgress() {
   const ref = getCurrentUserRef();
   return useQuery<Record<string, boolean>>(
-    `knowledge_progress:${TENANT_SLUG}:${ref}`,
+    `knowledge_progress:${SCOPE_SLUG}:${ref}`,
     async () => {
       if (!ref) return {};
       const { data, error } = await supabaseLmHub
         .from('knowledge_lesson_progress_flow')
         .select('lesson_id')
-        .eq('tenant_slug', TENANT_SLUG)
+        .eq('tenant_slug', SCOPE_SLUG)
         .eq('user_ref', ref);
       if (error) throw error;
       const map: Record<string, boolean> = {};
@@ -689,7 +694,7 @@ export function useToggleProgress() {
   return useMutation<{ lesson_id: string; done: boolean }, void>(
     async ({ lesson_id, done }) => {
       await callAdmin('progress', done ? 'set' : 'unset', {
-        tenant_slug: TENANT_SLUG,
+        tenant_slug: SCOPE_SLUG,
         lesson_id,
       });
     },
@@ -706,7 +711,7 @@ export function useComments(lessonId: string | null) {
       const { data, error } = await supabaseLmHub
         .from('knowledge_lesson_comments')
         .select('*')
-        .eq('tenant_slug', TENANT_SLUG)
+        .eq('tenant_slug', SCOPE_SLUG)
         .eq('lesson_id', lessonId!)
         .order('created_at', { ascending: true });
       if (error) throw error;
@@ -720,7 +725,7 @@ export function useCreateComment() {
   return useMutation<{ lesson_id: string; body: string }, void>(
     async (input) => {
       await callAdmin('comments', 'create', {
-        tenant_slug: TENANT_SLUG,
+        tenant_slug: SCOPE_SLUG,
         lesson_id: input.lesson_id,
         body: input.body,
       });
@@ -930,12 +935,12 @@ export function useDeleteAttachment() {
 export function useRatings(lessonId: string | null) {
   const ref = getCurrentUserRef();
   return useQuery<{ avg: number; count: number; mine: number | null }>(
-    `knowledge_ratings:${TENANT_SLUG}:${lessonId ?? 'null'}:${ref}`,
+    `knowledge_ratings:${SCOPE_SLUG}:${lessonId ?? 'null'}:${ref}`,
     async () => {
       const { data, error } = await supabaseLmHub
         .from('knowledge_lesson_ratings')
         .select('user_ref, stars')
-        .eq('tenant_slug', TENANT_SLUG)
+        .eq('tenant_slug', SCOPE_SLUG)
         .eq('lesson_id', lessonId!);
       if (error) throw error;
       const rows = (data ?? []) as { user_ref: string; stars: number }[];
@@ -951,7 +956,7 @@ export function useRatings(lessonId: string | null) {
 export function useSetRating() {
   return useMutation<{ lesson_id: string; stars: number }, void>(
     async ({ lesson_id, stars }) => {
-      await callAdmin('ratings', 'set', { tenant_slug: TENANT_SLUG, lesson_id, stars });
+      await callAdmin('ratings', 'set', { tenant_slug: SCOPE_SLUG, lesson_id, stars });
     },
     { invalidateKeys: ['knowledge_ratings'] },
   );
