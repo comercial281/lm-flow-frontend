@@ -171,6 +171,10 @@ const FrontendRuntimeConfig = lazyWithRetry(() => import('@/pages/Admin/Settings
 // Página de tutoriais
 const Tutorials = lazyWithRetry(() => import('@/pages/Customer/Tutorials'));
 
+// Área de membros (Academia) — experiência em tela cheia, sem o menu do app.
+const AcademiaHomePage = lazyWithRetry(() => import('@/pages/Customer/Academia'));
+const AcademiaCoursePage = lazyWithRetry(() => import('@/pages/Customer/Academia/CoursePage'));
+
 // Páginas compartilhadas
 const Documentation = lazyWithRetry(() => import('@/pages/Shared/Documentation'));
 const Marketplace = lazyWithRetry(() => import('@/pages/Shared/Marketplace'));
@@ -1643,6 +1647,28 @@ const AppRouter = () => {
                   <MembersLayout>
                     <Tutorials />
                   </MembersLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          {/* Área de membros (Academia) — experiência de curso em tela cheia */}
+          <Route
+            path="/academia"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <AcademiaHomePage />
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/academia/curso/:courseId"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <AcademiaCoursePage />
                 </CustomerRoute>
               </PrivateRoute>
             }

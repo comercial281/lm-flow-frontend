@@ -40,13 +40,72 @@ export interface KnowledgeDoc {
   updated_at: string;
 }
 
+// Tipo de acesso: 'free' = todos abrem · 'restricted' = só quem tem entitlement
+// (por tenant ou por usuário); os demais veem bloqueado com cadeado + CTA.
+export type KnowledgeAccess = 'free' | 'restricted';
+export type LockCtaType = 'whatsapp' | 'link' | 'text' | 'none';
+
+export interface KnowledgeCourse {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  capa_url: string | null;
+  icone: string | null;
+  tenant_slug: string | null; // null = todos veem; slug = só aquele cliente vê
+  ordem: number;
+  access: KnowledgeAccess;
+  lock_cta_type: LockCtaType;
+  lock_cta_label: string | null;
+  lock_cta_value: string | null;
+  lock_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface KnowledgeModule {
   id: string;
+  course_id: string | null;
   titulo: string;
   descricao: string | null;
   capa_url: string | null;
   tenant_slug: string | null; // null = global (todos os tenants); slug = só aquele cliente
   ordem: number;
+  access: KnowledgeAccess;
+  lock_cta_type: LockCtaType;
+  lock_cta_label: string | null;
+  lock_cta_value: string | null;
+  lock_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KnowledgeEntitlement {
+  id: string;
+  target_type: 'course' | 'module';
+  target_id: string;
+  subject_type: 'tenant' | 'user';
+  subject_value: string;
+  created_at: string;
+}
+
+export interface KnowledgeAttachment {
+  id: string;
+  lesson_id: string;
+  name: string;
+  url: string;
+  storage_path: string | null;
+  mime_type: string;
+  size_bytes: number;
+  ordem: number;
+  created_at: string;
+}
+
+export interface KnowledgeRating {
+  id: string;
+  tenant_slug: string;
+  lesson_id: string;
+  user_ref: string;
+  stars: number;
   created_at: string;
   updated_at: string;
 }
@@ -134,7 +193,10 @@ function tenantApiUrl(): string {
 }
 
 async function callAdmin(
-  resource: 'categories' | 'docs' | 'modules' | 'lessons' | 'links' | 'progress' | 'comments' | 'upload',
+  resource:
+    | 'categories' | 'docs' | 'modules' | 'lessons' | 'links'
+    | 'courses' | 'attachments' | 'entitlements'
+    | 'progress' | 'comments' | 'ratings' | 'upload',
   op: 'create' | 'update' | 'delete' | 'set' | 'unset' | 'sign',
   payload: Record<string, unknown>,
 ): Promise<unknown> {
@@ -365,17 +427,33 @@ export function useModules() {
   });
 }
 
+export interface ModuleInput {
+  titulo: string;
+  descricao?: string | null;
+  capa_url?: string | null;
+  tenant_slug?: string | null;
+  course_id?: string | null;
+  access?: KnowledgeAccess;
+  lock_cta_type?: LockCtaType;
+  lock_cta_label?: string | null;
+  lock_cta_value?: string | null;
+  lock_message?: string | null;
+}
+
 export function useCreateModule() {
-  return useMutation<
-    { titulo: string; descricao?: string; capa_url?: string; tenant_slug?: string | null },
-    KnowledgeModule
-  >(
+  return useMutation<ModuleInput, KnowledgeModule>(
     async (input) => {
       const res = (await callAdmin('modules', 'create', {
         titulo: input.titulo,
         descricao: input.descricao ?? null,
         capa_url: input.capa_url ?? null,
         tenant_slug: input.tenant_slug ?? null,
+        course_id: input.course_id ?? null,
+        access: input.access ?? 'free',
+        lock_cta_type: input.lock_cta_type ?? 'whatsapp',
+        lock_cta_label: input.lock_cta_label ?? null,
+        lock_cta_value: input.lock_cta_value ?? null,
+        lock_message: input.lock_message ?? null,
       })) as { data: KnowledgeModule };
       return res.data;
     },
@@ -384,10 +462,7 @@ export function useCreateModule() {
 }
 
 export function useUpdateModule() {
-  return useMutation<
-    { id: string; titulo?: string; descricao?: string | null; capa_url?: string | null; tenant_slug?: string | null; ordem?: number },
-    void
-  >(
+  return useMutation<{ id: string; ordem?: number } & Partial<ModuleInput>, void>(
     async (input) => {
       await callAdmin('modules', 'update', input);
     },
@@ -660,5 +735,224 @@ export function useDeleteComment() {
       await callAdmin('comments', 'delete', { id });
     },
     { successMessage: 'Comentário removido', invalidateKeys: ['knowledge_comments'] },
+  );
+}
+
+// ── CURSOS (nível acima de módulo — cards da home) ──────────────────────────
+
+export function useCourses() {
+  return useQuery<KnowledgeCourse[]>(`knowledge_courses:${TENANT_SLUG || 'global'}`, async () => {
+    let query = supabaseLmHub.from('knowledge_courses').select('*');
+    query = TENANT_SLUG
+      ? query.or(`tenant_slug.is.null,tenant_slug.eq.${TENANT_SLUG}`)
+      : query.is('tenant_slug', null);
+    const { data, error } = await query
+      .order('ordem', { ascending: true })
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as KnowledgeCourse[];
+  });
+}
+
+export interface CourseInput {
+  titulo: string;
+  descricao?: string | null;
+  capa_url?: string | null;
+  icone?: string | null;
+  tenant_slug?: string | null;
+  access?: KnowledgeAccess;
+  lock_cta_type?: LockCtaType;
+  lock_cta_label?: string | null;
+  lock_cta_value?: string | null;
+  lock_message?: string | null;
+  ordem?: number;
+}
+
+export function useCreateCourse() {
+  return useMutation<CourseInput, KnowledgeCourse>(
+    async (input) => {
+      const res = (await callAdmin('courses', 'create', {
+        titulo: input.titulo,
+        descricao: input.descricao ?? null,
+        capa_url: input.capa_url ?? null,
+        icone: input.icone ?? null,
+        tenant_slug: input.tenant_slug ?? null,
+        access: input.access ?? 'free',
+        lock_cta_type: input.lock_cta_type ?? 'whatsapp',
+        lock_cta_label: input.lock_cta_label ?? null,
+        lock_cta_value: input.lock_cta_value ?? null,
+        lock_message: input.lock_message ?? null,
+      })) as { data: KnowledgeCourse };
+      return res.data;
+    },
+    { successMessage: 'Curso criado', invalidateKeys: ['knowledge_courses'] },
+  );
+}
+
+export function useUpdateCourse() {
+  return useMutation<{ id: string } & Partial<CourseInput>, void>(
+    async (input) => {
+      await callAdmin('courses', 'update', input);
+    },
+    { invalidateKeys: ['knowledge_courses'] },
+  );
+}
+
+export function useDeleteCourse() {
+  return useMutation<string, void>(
+    async (id) => {
+      await callAdmin('courses', 'delete', { id });
+    },
+    { successMessage: 'Curso excluído', invalidateKeys: ['knowledge_courses', 'knowledge_modules'] },
+  );
+}
+
+// ── ENTITLEMENTS (quem tem acesso a curso/módulo restrito) ──────────────────
+
+// Busca TODOS os entitlements (tabela pequena) — usado pra computar bloqueio.
+export function useEntitlements() {
+  return useQuery<KnowledgeEntitlement[]>('knowledge_entitlements', async () => {
+    const { data, error } = await supabaseLmHub
+      .from('knowledge_entitlements')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as KnowledgeEntitlement[];
+  });
+}
+
+export function useSetEntitlement() {
+  return useMutation<
+    { target_type: 'course' | 'module'; target_id: string; subject_type: 'tenant' | 'user'; subject_value: string },
+    void
+  >(
+    async (input) => {
+      await callAdmin('entitlements', 'create', {
+        target_type: input.target_type,
+        target_id: input.target_id,
+        subject_type: input.subject_type,
+        subject_value: input.subject_value.toLowerCase().trim(),
+      });
+    },
+    { successMessage: 'Acesso liberado', invalidateKeys: ['knowledge_entitlements'] },
+  );
+}
+
+export function useUnsetEntitlement() {
+  return useMutation<string, void>(
+    async (id) => {
+      await callAdmin('entitlements', 'delete', { id });
+    },
+    { successMessage: 'Acesso removido', invalidateKeys: ['knowledge_entitlements'] },
+  );
+}
+
+// Retorna true se o alvo está BLOQUEADO para o usuário/tenant atual.
+// restricted + sem entitlement (por tenant OU por usuário) = bloqueado.
+export function computeLocked(
+  target: { access: KnowledgeAccess },
+  targetType: 'course' | 'module',
+  targetId: string,
+  entitlements: KnowledgeEntitlement[],
+  tenantSlug: string,
+  userRef: string,
+): boolean {
+  if (target.access !== 'restricted') return false;
+  const t = tenantSlug.toLowerCase().trim();
+  const u = userRef.toLowerCase().trim();
+  return !entitlements.some(
+    (e) =>
+      e.target_type === targetType &&
+      e.target_id === targetId &&
+      ((e.subject_type === 'tenant' && t && e.subject_value === t) ||
+        (e.subject_type === 'user' && u && e.subject_value === u)),
+  );
+}
+
+// ── ANEXOS POR AULA ─────────────────────────────────────────────────────────
+
+export function useAttachments(lessonId: string | null) {
+  return useQuery<KnowledgeAttachment[]>(
+    `knowledge_attachments:${lessonId ?? 'null'}`,
+    async () => {
+      const { data, error } = await supabaseLmHub
+        .from('knowledge_lesson_attachments')
+        .select('*')
+        .eq('lesson_id', lessonId!)
+        .order('ordem', { ascending: true })
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as KnowledgeAttachment[];
+    },
+    lessonId !== null,
+  );
+}
+
+export function useUploadAttachment() {
+  return useMutation<{ lesson_id: string; file: File }, void>(
+    async (input) => {
+      const signed = (await callAdmin('upload', 'sign', {
+        filename: input.file.name,
+        tenant_slug: TENANT_SLUG || 'global',
+      })) as { data: { path: string; token: string; publicUrl: string } };
+      const { path, token, publicUrl } = signed.data;
+
+      const { error: upErr } = await supabaseLmHub.storage
+        .from('knowledge-videos')
+        .uploadToSignedUrl(path, token, input.file);
+      if (upErr) throw upErr;
+
+      await callAdmin('attachments', 'create', {
+        lesson_id: input.lesson_id,
+        name: input.file.name,
+        url: publicUrl,
+        storage_path: path,
+        mime_type: input.file.type || 'application/octet-stream',
+        size_bytes: input.file.size,
+      });
+    },
+    { successMessage: 'Anexo enviado', invalidateKeys: ['knowledge_attachments'] },
+  );
+}
+
+export function useDeleteAttachment() {
+  return useMutation<string, void>(
+    async (id) => {
+      await callAdmin('attachments', 'delete', { id });
+    },
+    { successMessage: 'Anexo removido', invalidateKeys: ['knowledge_attachments'] },
+  );
+}
+
+// ── AVALIAÇÃO POR ESTRELAS ──────────────────────────────────────────────────
+
+// Todas as notas de uma aula (do tenant) — média + a nota do usuário atual.
+export function useRatings(lessonId: string | null) {
+  const ref = getCurrentUserRef();
+  return useQuery<{ avg: number; count: number; mine: number | null }>(
+    `knowledge_ratings:${TENANT_SLUG}:${lessonId ?? 'null'}:${ref}`,
+    async () => {
+      const { data, error } = await supabaseLmHub
+        .from('knowledge_lesson_ratings')
+        .select('user_ref, stars')
+        .eq('tenant_slug', TENANT_SLUG)
+        .eq('lesson_id', lessonId!);
+      if (error) throw error;
+      const rows = (data ?? []) as { user_ref: string; stars: number }[];
+      const count = rows.length;
+      const avg = count ? rows.reduce((s, r) => s + r.stars, 0) / count : 0;
+      const mine = rows.find((r) => r.user_ref === ref)?.stars ?? null;
+      return { avg, count, mine };
+    },
+    lessonId !== null,
+  );
+}
+
+export function useSetRating() {
+  return useMutation<{ lesson_id: string; stars: number }, void>(
+    async ({ lesson_id, stars }) => {
+      await callAdmin('ratings', 'set', { tenant_slug: TENANT_SLUG, lesson_id, stars });
+    },
+    { invalidateKeys: ['knowledge_ratings'] },
   );
 }
