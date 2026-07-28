@@ -126,6 +126,7 @@ const AdminUso = lazyWithRetry(() => import('@/pages/Admin/Area/Uso'));
 const AdminEquipe = lazyWithRetry(() => import('@/pages/Admin/Area/Equipe'));
 const AdminAcademia = lazyWithRetry(() => import('@/pages/Admin/Area/Academia'));
 const RoletaConfigPage = lazyWithRetry(() => import('@/pages/Customer/Settings/RoletaConfig/RoletaConfig'));
+const AcceptLeadPage = lazyWithRetry(() => import('@/pages/Customer/Roleta/AcceptLeadPage'));
 const AssignmentSettingsPage = lazyWithRetry(() => import('@/pages/Customer/Settings/AssignmentSettings/AssignmentSettings'));
 const AutomationsLayout = lazyWithRetry(() => import('@/pages/Customer/Automations/AutomationsLayout'));
 const PixelCapiConfig = lazyWithRetry(() => import('@/pages/Customer/Automations/PixelCapi/PixelCapiConfig'));
@@ -1635,6 +1636,18 @@ const AppRouter = () => {
           <Route path="/conversations" element={ChatRouteElement} />
 
           <Route path="/conversations/:conversationId" element={ChatRouteElement} />
+
+          {/* Fluxo de aceite da roleta — tela cheia (link que o corretor recebe) */}
+          <Route
+            path="/roleta/aceite/:assignmentId"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <AcceptLeadPage />
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
 
           {/* Tutoriais */}
           <Route
