@@ -249,6 +249,22 @@ export default function RoletaConfigPage() {
     setMembers(prev => prev.map(m => m.localId === localId ? { ...m, [key]: value } : m));
   }
 
+  // Ao escolher o corretor, puxa o WhatsApp cadastrado dele (se tiver e o campo
+  // estiver vazio). Sem cadastro, deixa em branco pra preencher na mão.
+  function selectCorretor(localId: string, userId: string) {
+    const u = users.find(x => x.id === userId) as
+      (User & { whatsapp_number?: string; custom_attributes?: { whatsapp_number?: string } }) | undefined;
+    const registered = String(u?.whatsapp_number ?? u?.custom_attributes?.whatsapp_number ?? '').trim();
+    setMembers(prev => prev.map(m => {
+      if (m.localId !== localId) return m;
+      const next: MemberRow = { ...m, user_id: userId };
+      if (registered && !String(m.personal_whatsapp_number ?? '').trim()) {
+        next.personal_whatsapp_number = registered;
+      }
+      return next;
+    }));
+  }
+
   function removeMember(localId: string) {
     setMembers(prev => prev.filter(m => m.localId !== localId));
   }
@@ -605,7 +621,7 @@ export default function RoletaConfigPage() {
                         <UILabel className="text-xs">Corretor *</UILabel>
                         <select
                           value={m.user_id}
-                          onChange={e => updateMember(m.localId, 'user_id', e.target.value)}
+                          onChange={e => selectCorretor(m.localId, e.target.value)}
                           className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         >
                           <option value="">Selecione...</option>
