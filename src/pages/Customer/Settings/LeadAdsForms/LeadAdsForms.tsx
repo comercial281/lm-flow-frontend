@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/ds';
 import {
   FileInput, RefreshCw, Edit, ToggleLeft, ToggleRight, AlertTriangle, ArrowRight, Download,
-  Stethoscope, Check, X, Copy, Eye, EyeOff,
+  Stethoscope, Check, X, Copy, Eye, EyeOff, Trash2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import EmptyState from '@/components/base/EmptyState';
@@ -81,6 +81,7 @@ export default function LeadAdsForms() {
   const [metaError, setMetaError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncedOnce, setSyncedOnce] = useState(false);
+  const [cleanupBusy, setCleanupBusy] = useState(false);
 
   // Diagnóstico do token da Meta (super-admin): app, permissões, página e o token salvo.
   const [debugOpen, setDebugOpen] = useState(false);
@@ -181,6 +182,33 @@ export default function LeadAdsForms() {
       toast.error('Erro ao sincronizar formulários');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  // Limpeza das etiquetas de imóvel criadas pela derivação automática antiga.
+  // Pré-visualiza (dry-run), confirma a lista com o usuário e então apaga.
+  const handleCleanupLabels = async () => {
+    setCleanupBusy(true);
+    try {
+      const preview = await leadAdsFormsService.cleanupFormLabels(false);
+      if (preview.count === 0) {
+        toast.success('Nenhuma etiqueta antiga pra limpar 🎉');
+        return;
+      }
+      const names = preview.labels.map(l => `• ${l.title}`).join('\n');
+      const ok = window.confirm(
+        `Vão ser apagadas ${preview.count} etiqueta(s) criadas automaticamente:\n\n${names}\n\nConfirmar? Esta ação não pode ser desfeita.`,
+      );
+      if (!ok) return;
+
+      const result = await leadAdsFormsService.cleanupFormLabels(true);
+      resources.reloadLabels();
+      await load();
+      toast.success(`${result.count} etiqueta(s) removida(s)`);
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao limpar etiquetas'));
+    } finally {
+      setCleanupBusy(false);
     }
   };
 
@@ -313,6 +341,10 @@ export default function LeadAdsForms() {
           <Button variant="outline" onClick={() => { setBackfillPreview(null); setBackfillOpen(true); }}>
             <Download className="h-4 w-4 mr-2" />
             Importar leads recentes
+          </Button>
+          <Button variant="outline" onClick={handleCleanupLabels} disabled={cleanupBusy} title="Remove as etiquetas antigas criadas automaticamente pelo nome do formulário">
+            <Trash2 className="h-4 w-4 mr-2" />
+            {cleanupBusy ? 'Limpando...' : 'Limpar etiquetas antigas'}
           </Button>
           <Button onClick={handleSync} disabled={syncing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
