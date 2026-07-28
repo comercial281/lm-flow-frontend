@@ -60,6 +60,8 @@ export interface MetaTokenDebug {
   page_token_error?: string;      // o que fazer se não conseguiu (atribuir página ao System User)
   webhook_subscribed?: boolean;   // página inscrita no app p/ leadgen? (recebimento em tempo real)
   webhook_error?: string;         // o que fazer se não está inscrita
+  webhook_callback_url?: string;  // URL exata pra colar no App Meta → Webhooks
+  webhook_verify_token?: string;  // verify token REAL que o endpoint valida (não o FB_VERIFY_TOKEN)
   page_id?: string;
   page_ok?: boolean;              // o token enxerga a página configurada?
   page_name?: string;
