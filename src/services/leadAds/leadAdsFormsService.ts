@@ -56,6 +56,8 @@ export interface MetaTokenDebug {
   missing_scopes: string[];       // das exigidas p/ Lead Ads que faltam
   token_error?: string;           // motivo se o Facebook recusou o token (190 etc.)
   token_length?: number;          // tamanho do token salvo (pega truncamento/espaço)
+  page_token_ok?: boolean;        // conseguiu derivar o token de página? (sinal real do bug)
+  page_token_error?: string;      // o que fazer se não conseguiu (atribuir página ao System User)
   page_id?: string;
   page_ok?: boolean;              // o token enxerga a página configurada?
   page_name?: string;
