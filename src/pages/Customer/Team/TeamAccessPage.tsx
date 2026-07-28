@@ -37,6 +37,44 @@ export default function TeamAccessPage() {
   const [editing, setEditing] = useState<User | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Enviar acesso por WhatsApp (1 clique por pessoa)
+  const [sending, setSending] = useState<User | null>(null);
+  const [sendPhone, setSendPhone] = useState('');
+  const [sendPwd, setSendPwd] = useState('');
+  const [sendBusy, setSendBusy] = useState(false);
+
+  const openSend = (u: User) => {
+    setSending(u);
+    setSendPhone(u.whatsapp_number ?? '');
+    setSendPwd(u.plain_password ?? '');
+  };
+
+  const doSend = async () => {
+    if (!sending) return;
+    if (sendPhone.replace(/\D/g, '').length < 10) { toast.error('Informe o WhatsApp com DDD.'); return; }
+    if (sendPwd.trim().length < 6) { toast.error('Defina uma senha de ao menos 6 caracteres.'); return; }
+    setSendBusy(true);
+    try {
+      const res = await usersService.sendAccess(String(sending.id), { whatsapp_number: sendPhone, password: sendPwd.trim() });
+      const wa = res.whatsapp;
+      const who = sending.name;
+      // reflete telefone/senha salvos na lista
+      setUsers((prev) => prev.map((u) => (u.id === sending.id ? { ...u, whatsapp_number: sendPhone, plain_password: sendPwd.trim() } : u)));
+      if (wa?.sent) {
+        toast.success(`Acesso enviado no WhatsApp de ${who}${wa.instance ? ` (${wa.instance})` : ''}.`);
+        setSending(null);
+      } else if (wa?.error) {
+        toast.error(`Acesso salvo, mas o WhatsApp falhou: ${wa.error}`);
+      } else {
+        toast.error(`Não enviou: ${wa?.skipped ?? 'motivo desconhecido'}`);
+      }
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error?.message ?? 'Erro ao enviar o acesso.');
+    } finally {
+      setSendBusy(false);
+    }
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -204,9 +242,21 @@ export default function TeamAccessPage() {
                           : <Badge variant="outline" className="text-xs text-amber-600">Convite pendente</Badge>}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button variant="outline" size="sm" onClick={() => setEditing(u)} disabled={!canManage} className="h-8 text-xs">
-                          Gerenciar acesso
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openSend(u)}
+                            disabled={!canManage}
+                            className="h-8 gap-1 text-xs text-emerald-600 hover:text-emerald-700"
+                            title="Enviar o acesso (link+login+senha) no WhatsApp da pessoa"
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" /> Enviar acesso
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => setEditing(u)} disabled={!canManage} className="h-8 text-xs">
+                            Gerenciar acesso
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -294,6 +344,48 @@ export default function TeamAccessPage() {
                   Remover do time
                 </Button>
                 <Button onClick={() => setEditing(null)} disabled={saving}>Concluir</Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Enviar acesso por WhatsApp */}
+      <Dialog open={!!sending} onOpenChange={(o) => !o && setSending(null)}>
+        <DialogContent className="max-w-md">
+          {sending && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-emerald-500" /> Enviar acesso no WhatsApp
+                </DialogTitle>
+                <DialogDescription>{sending.name} · {sending.email}</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3 py-1">
+                <div>
+                  <UILabel className="text-xs">WhatsApp (com DDD)</UILabel>
+                  <Input value={sendPhone} onChange={(e) => setSendPhone(e.target.value)} placeholder="Ex: 11 94087 1974" className="mt-1" />
+                </div>
+                <div>
+                  <UILabel className="text-xs">Senha que vai na mensagem</UILabel>
+                  <Input value={sendPwd} onChange={(e) => setSendPwd(e.target.value)} placeholder="defina uma senha (min. 6)" className="mt-1" />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {sending.plain_password
+                      ? 'Vem a senha atual. Se você mudar aqui, a senha de acesso da pessoa é trocada.'
+                      : 'Sem senha salva — defina uma. Ela vira a senha de acesso da pessoa.'}
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Envia link + login + senha pela instância operacional da Leal Mídia.
+                </p>
+              </div>
+
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setSending(null)} disabled={sendBusy}>Cancelar</Button>
+                <Button onClick={doSend} disabled={sendBusy} className="gap-1">
+                  {sendBusy ? <RefreshCw className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />} Enviar acesso
+                </Button>
               </DialogFooter>
             </>
           )}

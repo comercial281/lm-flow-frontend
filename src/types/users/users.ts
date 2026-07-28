@@ -18,6 +18,7 @@ export interface User {
   role?: Role;
   chave_role?: CRole; // LM Flow role: agent | manager | admin
   whatsapp_number?: string | null; // WhatsApp p/ receber lembretes de automação
+  plain_password?: string | null; // senha guardada (super-admin/gestor), quando houver
   confirmed: boolean;
   created_at: string;
   updated_at: string;
