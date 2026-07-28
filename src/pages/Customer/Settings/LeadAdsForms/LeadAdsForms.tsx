@@ -135,7 +135,7 @@ export default function LeadAdsForms() {
       setMetaError(result.error ?? null);
       setSyncedOnce(true);
       if (result.error) {
-        toast.error('Não foi possível buscar os formulários da Meta');
+        toast.error(result.error);
       } else {
         toast.success(`${result.data.length} formulário(s) encontrado(s)`);
       }
@@ -325,18 +325,21 @@ export default function LeadAdsForms() {
         </DialogContent>
       </Dialog>
 
-      {/* Aviso Meta não conectada */}
+      {/* Aviso: mostra o MOTIVO real que o backend devolveu (token expirado, sem
+          permissão de leadgen, page_id que não bate...) em vez de um texto fixo,
+          pra dar pro cliente o que corrigir na conexão da página. */}
       {metaError && (
         <div className="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div className="text-sm">
-            <p className="font-medium text-foreground">Meta Ads não conectada</p>
-            <p className="text-muted-foreground mt-0.5">
-              Não foi possível buscar os formulários do Facebook. Conecte a página em{' '}
+            <p className="font-medium text-foreground">Não foi possível carregar os formulários da Meta</p>
+            <p className="text-muted-foreground mt-0.5">{metaError}</p>
+            <p className="text-muted-foreground mt-2">
+              Revise a conexão da página em{' '}
               <Link to="/settings/integrations/meta-ads" className="text-primary underline">
                 Integrações → Meta Ads
               </Link>{' '}
-              e tente sincronizar de novo.
+              e sincronize de novo.
             </p>
           </div>
         </div>
