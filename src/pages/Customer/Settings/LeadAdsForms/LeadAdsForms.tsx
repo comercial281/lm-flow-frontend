@@ -115,6 +115,16 @@ export default function LeadAdsForms() {
     }
   };
 
+  const copyText = async (value: string | undefined, label: string) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copiado`);
+    } catch {
+      toast.error('Não foi possível copiar');
+    }
+  };
+
   const [subscribing, setSubscribing] = useState(false);
   const subscribeWebhook = async () => {
     setSubscribing(true);
@@ -544,6 +554,43 @@ export default function LeadAdsForms() {
                       </>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Configuração do webhook no App Meta — fonte ÚNICA de verdade. Mostra a
+                  URL de callback e o verify token que o SERVIDOR realmente valida, pra
+                  copiar direto no painel do App (Developers → Webhooks → Page). Acaba com
+                  a confusão de copiar o valor de outro campo que o handshake não usa. */}
+              {(debug.webhook_callback_url || debug.webhook_verify_token) && (
+                <div className="rounded-lg border border-border p-3">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                    Configuração do webhook (App Meta → Webhooks → Página)
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Cole EXATAMENTE estes valores no painel do App em developers.facebook.com. É o que o servidor valida — ignore outros campos de "verify token".
+                  </p>
+                  {debug.webhook_callback_url && (
+                    <div className="mb-2">
+                      <UILabel className="text-xs">URL de callback</UILabel>
+                      <div className="flex items-center gap-2 mt-1">
+                        <code className="flex-1 text-xs break-all bg-muted rounded px-2 py-1">{debug.webhook_callback_url}</code>
+                        <Button size="sm" variant="outline" onClick={() => copyText(debug.webhook_callback_url, 'URL')}>
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  {debug.webhook_verify_token && (
+                    <div>
+                      <UILabel className="text-xs">Verify Token</UILabel>
+                      <div className="flex items-center gap-2 mt-1">
+                        <code className="flex-1 text-xs break-all bg-muted rounded px-2 py-1">{debug.webhook_verify_token}</code>
+                        <Button size="sm" variant="outline" onClick={() => copyText(debug.webhook_verify_token, 'Verify Token')}>
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
