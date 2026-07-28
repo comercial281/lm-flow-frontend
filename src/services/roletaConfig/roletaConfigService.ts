@@ -23,6 +23,7 @@ export interface RoletaConfig {
   distribution_mode: DistributionMode;
   timeout_minutes: number;
   gestor_whatsapp_number: string;
+  gestor_group_jid: string | null;
   notification_inbox_id: string | null;
   business_hours_config: Record<string, unknown>;
   members: RoletaMember[];
@@ -36,6 +37,7 @@ export interface RoletaConfigPayload {
   distribution_mode: DistributionMode;
   timeout_minutes: number;
   gestor_whatsapp_number: string;
+  gestor_group_jid?: string | null;
   notification_inbox_id?: string | null;
   members: Omit<RoletaMember, 'id' | 'user_name' | 'user_avatar'>[];
 }

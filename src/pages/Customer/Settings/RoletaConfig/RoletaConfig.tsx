@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { roletaConfigService, RoletaConfig, RoletaMember, BrokerAssignment, DistributionMode } from '@/services/roletaConfig/roletaConfigService';
 import usersService from '@/services/users/usersService';
+import { whatsappRemindersService } from '@/services/whatsappReminders/whatsappRemindersService';
+import type { WhatsappReminderGroup } from '@/types/automation/whatsappReminders';
 import type { User } from '@/types/users';
 
 const STATUS_COLOR: Record<string, string> = {
@@ -91,8 +93,11 @@ export default function RoletaConfigPage() {
   const [mode, setMode]                     = useState<DistributionMode>('rodizio');
   const [timeoutMin, setTimeoutMin]         = useState(30);
   const [gestorNum, setGestorNum]           = useState('');
+  const [gestorGroupJid, setGestorGroupJid] = useState('');
   const [notifInboxId, setNotifInboxId]     = useState('');
   const [members, setMembers]               = useState<MemberRow[]>([]);
+  const [groups, setGroups]                 = useState<WhatsappReminderGroup[]>([]);
+  const [loadingGroups, setLoadingGroups]   = useState(false);
 
   const loadConfigs = useCallback(async () => {
     setLoading(true);
@@ -133,8 +138,10 @@ export default function RoletaConfigPage() {
     setMode('rodizio');
     setTimeoutMin(30);
     setGestorNum('');
+    setGestorGroupJid('');
     setNotifInboxId('');
     setMembers([mkLocal()]);
+    setGroups([]);
     setModalOpen(true);
   }
 
@@ -145,10 +152,23 @@ export default function RoletaConfigPage() {
     setMode(c.distribution_mode ?? 'rodizio');
     setTimeoutMin(c.timeout_minutes);
     setGestorNum(c.gestor_whatsapp_number ?? '');
+    setGestorGroupJid(c.gestor_group_jid ?? '');
     setNotifInboxId(c.notification_inbox_id ?? '');
     setMembers(c.members.length ? c.members.map(m => mkLocal(m)) : [mkLocal()]);
     setModalOpen(true);
   }
+
+  // Busca os grupos de WhatsApp do inbox da roleta (pra escolher o grupo de avisos).
+  useEffect(() => {
+    if (!modalOpen || !inboxId.trim()) { setGroups([]); return; }
+    let cancelled = false;
+    setLoadingGroups(true);
+    whatsappRemindersService.listGroups(inboxId)
+      .then(g => { if (!cancelled) setGroups(g); })
+      .catch(() => { if (!cancelled) setGroups([]); })
+      .finally(() => { if (!cancelled) setLoadingGroups(false); });
+    return () => { cancelled = true; };
+  }, [modalOpen, inboxId]);
 
   async function save() {
     if (!inboxId.trim()) { toast.error('Inbox ID obrigatorio'); return; }
@@ -168,6 +188,7 @@ export default function RoletaConfigPage() {
         distribution_mode:      mode,
         timeout_minutes:        timeoutMin,
         gestor_whatsapp_number: gestorNum,
+        gestor_group_jid:       gestorGroupJid || null,
         notification_inbox_id:  notifInboxId || null,
         members:                membersValid.map((m, i) => ({
           user_id:                  m.user_id,
@@ -446,6 +467,37 @@ export default function RoletaConfigPage() {
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Recebera alertas de atribuicao, timeout e relatorios diarios/semanais.
+              </p>
+            </div>
+
+            {/* Grupo de avisos (opcional) */}
+            <div>
+              <UILabel className="flex items-center gap-1.5">
+                <Users className="h-4 w-4" />
+                Grupo de avisos (opcional)
+              </UILabel>
+              <select
+                value={gestorGroupJid}
+                onChange={e => setGestorGroupJid(e.target.value)}
+                disabled={loadingGroups || !inboxId.trim()}
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
+              >
+                <option value="">Nenhum</option>
+                {gestorGroupJid && !groups.some(g => g.id === gestorGroupJid) && (
+                  <option value={gestorGroupJid}>{gestorGroupJid}</option>
+                )}
+                {groups.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {!inboxId.trim()
+                  ? 'Preencha o Inbox ID acima para listar os grupos.'
+                  : loadingGroups
+                    ? 'Carregando grupos do WhatsApp...'
+                    : groups.length === 0
+                      ? 'Nenhum grupo encontrado nesta instancia.'
+                      : 'Quando um lead for distribuido, este grupo tambem recebe um aviso no WhatsApp.'}
               </p>
             </div>
 
