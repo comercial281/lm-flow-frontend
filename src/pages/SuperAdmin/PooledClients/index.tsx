@@ -1,9 +1,10 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
-import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, Eye, EyeOff } from 'lucide-react';
+import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, Eye, EyeOff, MessageCircle, XCircle } from 'lucide-react';
 import api from '@/services/core/api';
 import NewTenantWizard from './NewTenantWizard';
 import ClientBroadcastModal from './ClientBroadcastModal';
-import clientInstancesService, { DashboardData } from '@/services/clientInstances/clientInstancesService';
+import MemberAccessConfigModal from '../ClientInstances/MemberAccessConfigModal';
+import clientInstancesService, { DashboardData, CentralInstance, WhatsappSendResult } from '@/services/clientInstances/clientInstancesService';
 import DashboardView from '../ClientInstances/DashboardView';
 import LogsView from '../ClientInstances/LogsView';
 import UserMetricsView from '../ClientInstances/UserMetricsView';
@@ -43,6 +44,11 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
   const [newPwd, setNewPwd] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [sendWa, setSendWa] = useState(true);
+  const [instances, setInstances] = useState<CentralInstance[]>([]);
+  const [instance, setInstance] = useState('');
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [visiblePwds, setVisiblePwds] = useState<Set<string>>(new Set());
   const togglePwd = (id: string) => setVisiblePwds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
 
@@ -53,15 +59,43 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
 
   useEffect(() => { loadMembers(); }, [tenant.id]);
 
+  // Instancias remetentes (centrais da Leal Midia). Pre-seleciona a Operacional conectada.
+  useEffect(() => {
+    clientInstancesService.centralInstances()
+      .then(r => {
+        const list = r.data.data ?? [];
+        setInstances(list);
+        const op = list.find(i => i.name.startsWith('Operacional') && i.connected);
+        setInstance(prev => prev || op?.name || list.find(i => i.connected)?.name || list[0]?.name || '');
+      })
+      .catch(() => setInstances([]));
+  }, []);
+
+  const phone = newPhone.trim();
+  const willSend = !!phone && sendWa;
+
   const addMember = async () => {
-    if (!newEmail.trim() || newPwd.length < 8) { alert('Informe e-mail e senha de ao menos 8 caracteres.'); return; }
-    setAdding(true);
+    if (!newEmail.trim() || newPwd.length < 8) { setNotice({ ok: false, text: 'Informe e-mail e senha de ao menos 8 caracteres.' }); return; }
+    setAdding(true); setNotice(null);
     try {
-      await api.post(`/super/pooled_tenants/${tenant.id}/add_member`, { email: newEmail.trim(), name: newName.trim(), password: newPwd });
-      alert(`Acesso criado para ${newEmail.trim()} em ${tenant.slug}.lmflow.com.br`);
-      setNewEmail(''); setNewName(''); setNewPwd('');
+      const r = await api.post(`/super/pooled_tenants/${tenant.id}/add_member`, {
+        email: newEmail.trim(), name: newName.trim(), password: newPwd,
+        whatsapp_number: phone || undefined, send_whatsapp: sendWa, instance: instance || undefined,
+      });
+      const wa: WhatsappSendResult | undefined = r.data?.whatsapp;
+      const who = newName.trim() || newEmail.trim();
+      if (!wa || wa.skipped === 'sem telefone') {
+        setNotice({ ok: true, text: `Acesso de ${who} criado em ${tenant.slug}.lmflow.com.br` });
+      } else if (wa.sent) {
+        setNotice({ ok: true, text: `Acesso de ${who} criado e enviado no WhatsApp${wa.instance ? ` (${wa.instance})` : ''}.` });
+      } else if (wa.skipped) {
+        setNotice({ ok: true, text: `Acesso de ${who} criado. WhatsApp não enviado: ${wa.skipped}.` });
+      } else {
+        setNotice({ ok: false, text: `Acesso criado, mas o WhatsApp falhou: ${wa.error ?? `HTTP ${wa.http}`}.` });
+      }
+      setNewEmail(''); setNewName(''); setNewPwd(''); setNewPhone('');
       setLoading(true); await loadMembers();
-    } catch (e: any) { alert(e?.response?.data?.error || 'Falha ao criar acesso.'); }
+    } catch (e: any) { setNotice({ ok: false, text: e?.response?.data?.error || 'Falha ao criar acesso.' }); }
     finally { setAdding(false); }
   };
 
@@ -135,6 +169,14 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
         </div>
         <div className="px-4 py-3 border-t space-y-2" style={{ borderColor: 'rgba(124,58,237,0.18)' }}>
           <p className="text-xs font-medium text-white/70">Adicionar acesso (e-mail real do cliente)</p>
+          {notice && (
+            <div className="flex items-start gap-2 rounded-md px-2.5 py-2 text-xs"
+              style={{ background: notice.ok ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', border: `1px solid ${notice.ok ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)'}`, color: notice.ok ? '#6ee7b7' : '#fca5a5' }}>
+              {notice.ok ? <MessageCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> : <XCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />}
+              <span className="flex-1">{notice.text}</span>
+              <button onClick={() => setNotice(null)} className="text-white/40 hover:text-white/80">✕</button>
+            </div>
+          )}
           <div className="flex gap-2">
             <input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="email@cliente.com"
               className="flex-1 px-2 py-1.5 rounded text-xs text-white placeholder-white/25 outline-none"
@@ -147,10 +189,40 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
             <input value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="senha (min. 8)"
               className="flex-1 px-2 py-1.5 rounded text-xs text-white placeholder-white/25 outline-none"
               style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(124,58,237,0.2)' }} />
+            <input value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="WhatsApp c/ DDD (opcional)"
+              className="flex-1 px-2 py-1.5 rounded text-xs text-white placeholder-white/25 outline-none"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(124,58,237,0.2)' }} />
+          </div>
+          {phone && (
+            <div className="rounded-md px-2.5 py-2 space-y-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(124,58,237,0.15)' }}>
+              <label className="flex items-center gap-2 text-xs text-white/80 cursor-pointer">
+                <input type="checkbox" checked={sendWa} onChange={e => setSendWa(e.target.checked)} />
+                <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                Enviar o acesso por WhatsApp (link + login + senha)
+              </label>
+              {willSend && (
+                <div className="flex items-center gap-2 pl-6">
+                  <span className="text-xs text-white/40">Enviar por:</span>
+                  <select value={instance} onChange={e => setInstance(e.target.value)}
+                    className="flex-1 px-2 py-1 rounded text-xs text-white outline-none"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(124,58,237,0.2)' }}>
+                    {instances.length === 0 && <option value="">padrão (Operacional LM01)</option>}
+                    {instances.map(i => (
+                      <option key={i.name} value={i.name} style={{ background: '#150a26' }}>
+                        {i.name}{i.connected ? '' : ' (desconectada)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+          <div className="flex justify-end">
             <button onClick={addMember} disabled={adding}
               className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-semibold text-white disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}>
-              {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Criar acesso
+              {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : willSend ? <MessageCircle className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+              {willSend ? 'Criar e enviar' : 'Criar acesso'}
             </button>
           </div>
         </div>
@@ -328,6 +400,7 @@ export default function PooledClients() {
   const [featuresOf, setFeaturesOf] = useState<PooledTenant | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [showBroadcast, setShowBroadcast] = useState(false);
+  const [showAccessCfg, setShowAccessCfg] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<PooledTenant | null>(null);
@@ -445,6 +518,11 @@ export default function PooledClients() {
                 <button onClick={() => setShowBroadcast(true)} disabled={tenants.length === 0}
                   className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md border border-violet-500/40 text-violet-700 dark:text-violet-300 hover:bg-violet-500/10 disabled:opacity-40">
                   <Megaphone className="w-4 h-4" /> Comunicado
+                </button>
+                <button onClick={() => setShowAccessCfg(true)}
+                  title="Editar a mensagem de acesso enviada no WhatsApp ao criar um membro"
+                  className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10">
+                  <MessageCircle className="w-4 h-4" /> Msg de acesso
                 </button>
                 <button onClick={() => setShowWizard(true)}
                   className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md font-semibold text-white"
@@ -574,6 +652,7 @@ export default function PooledClients() {
       {featuresOf && <FeaturesModal tenant={featuresOf} onClose={() => setFeaturesOf(null)} />}
       {showWizard && <NewTenantWizard onClose={() => setShowWizard(false)} onCreated={load} />}
       {showBroadcast && <ClientBroadcastModal tenants={tenants} onClose={() => setShowBroadcast(false)} />}
+      {showAccessCfg && <MemberAccessConfigModal open={showAccessCfg} onClose={() => setShowAccessCfg(false)} />}
       {confirmDelete && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={() => setConfirmDelete(null)}>
           <div className="w-full max-w-md rounded-xl overflow-hidden" style={{ background: '#150a26', border: '1px solid rgba(239,68,68,0.4)' }} onClick={e => e.stopPropagation()}>
