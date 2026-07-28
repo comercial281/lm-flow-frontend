@@ -433,7 +433,7 @@ export default function LeadAdsForms() {
 
       {/* Modal: diagnóstico do token da Meta (app, permissões, página e o token salvo) */}
       <Dialog open={debugOpen} onOpenChange={setDebugOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Diagnóstico do token da Meta</DialogTitle>
             <DialogDescription>
