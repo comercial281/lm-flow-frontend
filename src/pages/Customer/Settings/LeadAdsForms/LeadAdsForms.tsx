@@ -29,6 +29,10 @@ import {
 import { useAutomationResources } from '../LeadAutomations/LeadAutomationsEditors';
 import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
+import LabelMultiSelect from '@/components/labels/LabelMultiSelect';
+
+// Etiqueta de marketing padrão de todo lead de formulário (igual ao backend).
+const PAID_TAG = 'tráfego pago';
 
 const baseSelectClass =
   'mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
@@ -184,7 +188,10 @@ export default function LeadAdsForms() {
 
   const openCreate = (mf: MetaForm) => {
     setEditing(null);
-    setForm(emptyFormState(mf.id, mf.name));
+    // Todo form já entra com "tráfego pago" por padrão (o backend garante isso na
+    // entrada do lead de qualquer forma); a etiqueta do imóvel é adicionada à mão.
+    const paid = resources.labels.find(l => l.title?.toLowerCase() === PAID_TAG);
+    setForm({ ...emptyFormState(mf.id, mf.name), label_ids: paid ? [paid.id] : [] });
     setModalOpen(true);
   };
 
@@ -258,14 +265,6 @@ export default function LeadAdsForms() {
       toast.error('Erro ao alterar status');
     }
   };
-
-  const toggleLabel = (labelId: string) =>
-    setForm(f => ({
-      ...f,
-      label_ids: f.label_ids.includes(labelId)
-        ? f.label_ids.filter(id => id !== labelId)
-        : [...f.label_ids, labelId],
-    }));
 
   // Resumo do destino (pipeline -> etapa) de uma config salva.
   const destinationSummary = (cfg: LeadAdsFormConfig): string => {
@@ -705,31 +704,16 @@ export default function LeadAdsForms() {
 
             <div>
               <UILabel>Etiquetas</UILabel>
-              {resources.labels.length === 0 ? (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Nenhuma etiqueta cadastrada. Crie em Configurações &rarr; Etiquetas.
-                </p>
-              ) : (
-                <div className="mt-1 flex flex-wrap gap-2">
-                  {resources.labels.map(l => {
-                    const selected = form.label_ids.includes(l.id);
-                    return (
-                      <button
-                        key={l.id}
-                        type="button"
-                        onClick={() => toggleLabel(l.id)}
-                        className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-                          selected
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-background text-muted-foreground border-input hover:text-foreground'
-                        }`}
-                      >
-                        {l.title}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <LabelMultiSelect
+                labels={resources.labels}
+                selectedIds={form.label_ids}
+                onChange={ids => setForm(f => ({ ...f, label_ids: ids }))}
+                onLabelCreated={() => resources.reloadLabels()}
+                disabled={saving}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Já vem com <strong>tráfego pago</strong> por padrão. Busque ou crie a etiqueta do imóvel deste formulário.
+              </p>
             </div>
 
             {/* Quem assume o lead na entrada: responsável fixo OU roleta */}

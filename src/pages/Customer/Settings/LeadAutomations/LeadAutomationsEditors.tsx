@@ -81,6 +81,7 @@ export interface AutomationResources {
   messageFunnels: MessageFunnel[];
   evolutionInstances: EvolutionInstance[];
   reloadFunnels: () => void;
+  reloadLabels: () => void;
   loading: boolean;
 }
 
@@ -103,6 +104,13 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     messageFunnelsService.list({ activeOnly: false })
       .then(list => setMessageFunnels(list ?? []))
       .catch(() => { /* funis são opcionais — não trava a tela */ });
+  };
+
+  // Recarrega o catálogo de etiquetas (usado após criar uma etiqueta nova inline).
+  const reloadLabels = () => {
+    labelsService.getLabels()
+      .then(res => setLabels(res.data ?? []))
+      .catch(() => { /* catálogo é enriquecimento — não trava a tela */ });
   };
 
   useEffect(() => {
@@ -155,7 +163,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     return () => { cancelled = true; };
   }, [enabled]);
 
-  return { labels, sequences, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, evolutionInstances, reloadFunnels, loading };
+  return { labels, sequences, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, evolutionInstances, reloadFunnels, reloadLabels, loading };
 }
 
 // ============================================================================
