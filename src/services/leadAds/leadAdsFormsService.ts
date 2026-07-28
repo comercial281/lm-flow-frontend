@@ -105,7 +105,20 @@ export const leadAdsFormsService = {
     const res = await api.post(`${BASE}/backfill`, { since_days: sinceDays, dry_run: dryRun });
     return (res.data as { data: BackfillResult }).data;
   },
+
+  // Limpeza (super-admin) das etiquetas de imóvel criadas pela derivação automática
+  // (revertida). confirm=false só lista; confirm=true apaga. Roda no tenant atual.
+  async cleanupFormLabels(confirm: boolean): Promise<CleanupFormLabelsResult> {
+    const res = await api.post(`${BASE}/cleanup_form_labels`, { confirm });
+    return (res.data as { data: CleanupFormLabelsResult }).data;
+  },
 };
+
+export interface CleanupFormLabelsResult {
+  count: number;
+  labels: { id: string; title: string }[];
+  deleted: boolean;
+}
 
 export interface BackfillResult {
   since_days: number;

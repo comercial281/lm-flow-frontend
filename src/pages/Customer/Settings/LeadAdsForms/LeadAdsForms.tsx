@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/ds';
 import {
   FileInput, RefreshCw, Edit, ToggleLeft, ToggleRight, AlertTriangle, ArrowRight, Download,
-  Stethoscope, Check, X, Copy, Eye, EyeOff,
+  Stethoscope, Check, X, Copy, Eye, EyeOff, Trash2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import EmptyState from '@/components/base/EmptyState';
@@ -29,6 +29,10 @@ import {
 import { useAutomationResources } from '../LeadAutomations/LeadAutomationsEditors';
 import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
+import LabelMultiSelect from '@/components/labels/LabelMultiSelect';
+
+// Etiqueta de marketing padrão de todo lead de formulário (igual ao backend).
+const PAID_TAG = 'tráfego pago';
 
 const baseSelectClass =
   'mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
@@ -77,6 +81,7 @@ export default function LeadAdsForms() {
   const [metaError, setMetaError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncedOnce, setSyncedOnce] = useState(false);
+  const [cleanupBusy, setCleanupBusy] = useState(false);
 
   // Diagnóstico do token da Meta (super-admin): app, permissões, página e o token salvo.
   const [debugOpen, setDebugOpen] = useState(false);
@@ -180,11 +185,41 @@ export default function LeadAdsForms() {
     }
   };
 
+  // Limpeza das etiquetas de imóvel criadas pela derivação automática antiga.
+  // Pré-visualiza (dry-run), confirma a lista com o usuário e então apaga.
+  const handleCleanupLabels = async () => {
+    setCleanupBusy(true);
+    try {
+      const preview = await leadAdsFormsService.cleanupFormLabels(false);
+      if (preview.count === 0) {
+        toast.success('Nenhuma etiqueta antiga pra limpar 🎉');
+        return;
+      }
+      const names = preview.labels.map(l => `• ${l.title}`).join('\n');
+      const ok = window.confirm(
+        `Vão ser apagadas ${preview.count} etiqueta(s) criadas automaticamente:\n\n${names}\n\nConfirmar? Esta ação não pode ser desfeita.`,
+      );
+      if (!ok) return;
+
+      const result = await leadAdsFormsService.cleanupFormLabels(true);
+      resources.reloadLabels();
+      await load();
+      toast.success(`${result.count} etiqueta(s) removida(s)`);
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao limpar etiquetas'));
+    } finally {
+      setCleanupBusy(false);
+    }
+  };
+
   const configByFormId = (formId: string) => configs.find(c => c.form_id === formId);
 
   const openCreate = (mf: MetaForm) => {
     setEditing(null);
-    setForm(emptyFormState(mf.id, mf.name));
+    // Todo form já entra com "tráfego pago" por padrão (o backend garante isso na
+    // entrada do lead de qualquer forma); a etiqueta do imóvel é adicionada à mão.
+    const paid = resources.labels.find(l => l.title?.toLowerCase() === PAID_TAG);
+    setForm({ ...emptyFormState(mf.id, mf.name), label_ids: paid ? [paid.id] : [] });
     setModalOpen(true);
   };
 
@@ -259,14 +294,6 @@ export default function LeadAdsForms() {
     }
   };
 
-  const toggleLabel = (labelId: string) =>
-    setForm(f => ({
-      ...f,
-      label_ids: f.label_ids.includes(labelId)
-        ? f.label_ids.filter(id => id !== labelId)
-        : [...f.label_ids, labelId],
-    }));
-
   // Resumo do destino (pipeline -> etapa) de uma config salva.
   const destinationSummary = (cfg: LeadAdsFormConfig): string => {
     const pipeline = resources.pipelines.find(p => p.id === cfg.pipeline_id);
@@ -314,6 +341,10 @@ export default function LeadAdsForms() {
           <Button variant="outline" onClick={() => { setBackfillPreview(null); setBackfillOpen(true); }}>
             <Download className="h-4 w-4 mr-2" />
             Importar leads recentes
+          </Button>
+          <Button variant="outline" onClick={handleCleanupLabels} disabled={cleanupBusy} title="Remove as etiquetas antigas criadas automaticamente pelo nome do formulário">
+            <Trash2 className="h-4 w-4 mr-2" />
+            {cleanupBusy ? 'Limpando...' : 'Limpar etiquetas antigas'}
           </Button>
           <Button onClick={handleSync} disabled={syncing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
@@ -705,31 +736,16 @@ export default function LeadAdsForms() {
 
             <div>
               <UILabel>Etiquetas</UILabel>
-              {resources.labels.length === 0 ? (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Nenhuma etiqueta cadastrada. Crie em Configurações &rarr; Etiquetas.
-                </p>
-              ) : (
-                <div className="mt-1 flex flex-wrap gap-2">
-                  {resources.labels.map(l => {
-                    const selected = form.label_ids.includes(l.id);
-                    return (
-                      <button
-                        key={l.id}
-                        type="button"
-                        onClick={() => toggleLabel(l.id)}
-                        className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-                          selected
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-background text-muted-foreground border-input hover:text-foreground'
-                        }`}
-                      >
-                        {l.title}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <LabelMultiSelect
+                labels={resources.labels}
+                selectedIds={form.label_ids}
+                onChange={ids => setForm(f => ({ ...f, label_ids: ids }))}
+                onLabelCreated={() => resources.reloadLabels()}
+                disabled={saving}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Já vem com <strong>tráfego pago</strong> por padrão. Busque ou crie a etiqueta do imóvel deste formulário.
+              </p>
             </div>
 
             {/* Quem assume o lead na entrada: responsável fixo OU roleta */}
