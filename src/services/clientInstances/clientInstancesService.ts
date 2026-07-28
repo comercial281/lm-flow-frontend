@@ -154,6 +154,30 @@ export interface CreateTenantUserPayload {
   password?: string;
   chave_role?: 'admin' | 'manager' | 'agent';
   remember_password?: boolean;
+  whatsapp_number?: string;
+  send_whatsapp?: boolean;
+  instance?: string;
+}
+
+export interface WhatsappSendResult {
+  sent: boolean;
+  skipped?: string;
+  http?: string | number;
+  jid?: string;
+  instance?: string;
+  error?: string;
+}
+
+export interface CentralInstance {
+  name: string;
+  connected: boolean;
+}
+
+export interface MemberAccessConfig {
+  template: string;
+  instance: string;
+  enabled: boolean;
+  default_template: string;
 }
 
 const clientInstancesService = {
@@ -198,9 +222,20 @@ const clientInstancesService = {
     apiClient.get<{ success: boolean; data: TenantUser[] }>(`/client_instances/${id}/users`),
 
   addMember: (id: number, payload: CreateTenantUserPayload) =>
-    apiClient.post<{ success: boolean; data: TenantUser }>(
+    apiClient.post<{ success: boolean; data: TenantUser; whatsapp?: WhatsappSendResult }>(
       `/client_instances/${id}/users`, payload
     ),
+
+  // Instancias Evolution centrais da Leal Midia (remetentes) — reusa o endpoint dos comunicados.
+  centralInstances: () =>
+    apiClient.get<{ data: CentralInstance[] }>('/super/pooled_tenants/instances'),
+
+  // Config global do "acesso por WhatsApp" (template + instancia padrao + on/off)
+  getMemberAccessConfig: () =>
+    apiClient.get<{ data: MemberAccessConfig }>('/super/member_access_config'),
+
+  saveMemberAccessConfig: (payload: Partial<Pick<MemberAccessConfig, 'template' | 'instance' | 'enabled'>>) =>
+    apiClient.put<{ data: MemberAccessConfig }>('/super/member_access_config', payload),
 
   updateMember: (id: number, userId: string, patch: Partial<{ name: string; email: string; chave_role: string }>) =>
     apiClient.patch<{ success: boolean; data: TenantUser }>(
