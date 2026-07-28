@@ -15,6 +15,13 @@ import usersService from '@/services/users/usersService';
 import { leadAutomationService, WaGroup } from '@/services/leadAutomation/leadAutomationService';
 import inboxesService from '@/services/channels/inboxesService';
 import type { Inbox } from '@/types/channels/inbox';
+import { accountService } from '@/services/account';
+
+// Normaliza pra comparar nome de grupo x nome do CRM (ignora acento/pontuação/caixa).
+function normalizeName(s: string): string {
+  // NFD decompõe os acentos; o strip de não-alfanumérico remove marcas/pontuação/espaço.
+  return (s || '').normalize('NFD').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
 
 // Instância central da Leal Mídia que está em todos os grupos de cliente.
 // Os grupos de aviso (grupo interno com o nome do CRM) são listados e enviados por ela.
@@ -103,6 +110,7 @@ export default function RoletaConfigPage() {
   const [members, setMembers]               = useState<MemberRow[]>([]);
   const [groups, setGroups]                 = useState<WaGroup[]>([]);
   const [loadingGroups, setLoadingGroups]   = useState(false);
+  const [crmName, setCrmName]               = useState('');
   const [inboxes, setInboxes]               = useState<Inbox[]>([]);
 
   const loadConfigs = useCallback(async () => {
@@ -130,6 +138,13 @@ export default function RoletaConfigPage() {
     } catch { /* silencioso */ }
   }, []);
 
+  const loadAccount = useCallback(async () => {
+    try {
+      const acc = await accountService.getAccount();
+      setCrmName(acc?.name ?? '');
+    } catch { /* silencioso */ }
+  }, []);
+
   const loadAssignments = useCallback(async () => {
     setLoadingAssign(true);
     try {
@@ -141,7 +156,7 @@ export default function RoletaConfigPage() {
     }
   }, []);
 
-  useEffect(() => { loadConfigs(); loadUsers(); loadInboxes(); }, [loadConfigs, loadUsers, loadInboxes]);
+  useEffect(() => { loadConfigs(); loadUsers(); loadInboxes(); loadAccount(); }, [loadConfigs, loadUsers, loadInboxes, loadAccount]);
   useEffect(() => { if (tab === 'assignments') loadAssignments(); }, [tab, loadAssignments]);
 
   function openCreate() {
@@ -177,12 +192,29 @@ export default function RoletaConfigPage() {
     if (!modalOpen) { setGroups([]); return; }
     let cancelled = false;
     setLoadingGroups(true);
-    leadAutomationService.getGroups(CENTRAL_GROUP_INSTANCE)
-      .then(g => { if (!cancelled) setGroups(g); })
+    // all=true: TODOS os grupos da Operacional. O(s) com nome parecido ao do CRM
+    // sobem pro topo como sugeridos.
+    leadAutomationService.getGroups(CENTRAL_GROUP_INSTANCE, true)
+      .then(g => {
+        if (cancelled) return;
+        const crm = normalizeName(crmName);
+        const suggested = (x: WaGroup) => {
+          if (!crm) return false;
+          const n = normalizeName(x.name);
+          return n.includes(crm) || crm.includes(n);
+        };
+        const sorted = [...g].sort((a, b) => {
+          const sa = suggested(a) ? 0 : 1;
+          const sb = suggested(b) ? 0 : 1;
+          if (sa !== sb) return sa - sb;
+          return a.name.localeCompare(b.name);
+        });
+        setGroups(sorted);
+      })
       .catch(() => { if (!cancelled) setGroups([]); })
       .finally(() => { if (!cancelled) setLoadingGroups(false); });
     return () => { cancelled = true; };
-  }, [modalOpen]);
+  }, [modalOpen, crmName]);
 
   async function save() {
     if (!inboxId.trim()) { toast.error('Inbox ID obrigatorio'); return; }
@@ -524,16 +556,21 @@ export default function RoletaConfigPage() {
                 {gestorGroupJid && !groups.some(g => g.id === gestorGroupJid) && (
                   <option value={gestorGroupJid}>{gestorGroupJid}</option>
                 )}
-                {groups.map(g => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
+                {groups.map(g => {
+                  const crm = normalizeName(crmName);
+                  const n = normalizeName(g.name);
+                  const suggested = !!crm && (n.includes(crm) || crm.includes(n));
+                  return (
+                    <option key={g.id} value={g.id}>{g.name}{suggested ? '  ⭐ (sugerido)' : ''}</option>
+                  );
+                })}
               </select>
               <p className="text-xs text-muted-foreground mt-1">
                 {loadingGroups
                   ? 'Carregando grupos...'
                   : groups.length === 0
-                    ? 'Nenhum grupo encontrado (verifique o nome do grupo = nome do CRM).'
-                    : 'Grupo interno (central Operacional). Recebe um aviso quando um lead for distribuido.'}
+                    ? 'Nenhum grupo encontrado na central Operacional.'
+                    : 'Todos os grupos da central Operacional. O do CRM aparece no topo como ⭐ sugerido. O aviso é enviado por ela.'}
               </p>
             </div>
 

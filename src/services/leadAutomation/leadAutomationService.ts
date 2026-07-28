@@ -91,8 +91,11 @@ export const leadAutomationService = {
   },
 
   // Grupos de WhatsApp (por nome) de uma instância, pro dropdown do "Notificar grupo".
-  async getGroups(instance?: string): Promise<WaGroup[]> {
-    const res = await api.get(`${BASE}/groups`, { params: instance ? { instance } : {} });
+  async getGroups(instance?: string, all?: boolean): Promise<WaGroup[]> {
+    const params: Record<string, string | boolean> = {};
+    if (instance) params.instance = instance;
+    if (all) params.all = true;
+    const res = await api.get(`${BASE}/groups`, { params });
     return (res.data as { data: { groups: WaGroup[] } }).data?.groups ?? [];
   },
 
