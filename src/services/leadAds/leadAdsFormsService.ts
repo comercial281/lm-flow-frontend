@@ -43,6 +43,24 @@ export interface MetaFormsResult {
   error?: string;
 }
 
+// Diagnóstico do token da Meta conectado (super-admin). Mostra app/permissões/
+// página e o próprio token salvo (a UI normal esconde), sem o usuário manuseá-lo.
+export interface MetaTokenDebug {
+  app_id?: string;
+  app_name?: string;
+  token_type?: string;            // PAGE | USER | SYSTEM_USER...
+  is_valid?: boolean;
+  expires_at?: number;            // 0 = nunca expira (permanente)
+  data_access_expires_at?: number;
+  scopes: string[];
+  missing_scopes: string[];       // das exigidas p/ Lead Ads que faltam
+  page_id?: string;
+  page_ok?: boolean;              // o token enxerga a página configurada?
+  page_name?: string;
+  page_error?: string;
+  access_token?: string;
+}
+
 const BASE = '/lead_ads_form_configs';
 
 export const leadAdsFormsService = {
@@ -69,6 +87,12 @@ export const leadAdsFormsService = {
     const res = await api.get(`${BASE}/meta_forms`);
     const body = res.data as { data?: MetaForm[]; error?: string };
     return { data: body.data ?? [], error: body.error };
+  },
+
+  // Diagnostica o token da Meta conectado (super-admin). Lança em erro/403.
+  async debugMetaToken(): Promise<MetaTokenDebug> {
+    const res = await api.get(`${BASE}/meta_token_debug`);
+    return (res.data as { data: MetaTokenDebug }).data;
   },
 
   // Importa retroativamente os leads dos últimos N dias que ainda não entraram.
