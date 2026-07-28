@@ -419,12 +419,29 @@ export default function LeadAdsForms() {
             </p>
           </div>
 
+          {/* Passo 1 (Conferir) libera o passo 2 (Importar). Sem esse aviso o botão
+              roxo "Importar" nasce desabilitado e parece quebrado — o cliente não
+              descobre que precisa conferir antes. */}
+          {!backfillPreview && !backfillBusy && (
+            <p className="text-xs text-primary">
+              Passo 1: clique em <strong>Conferir</strong> para ver quantos leads faltam.
+              Isso libera o botão <strong>Importar</strong>.
+            </p>
+          )}
+
           <DialogFooter>
             <Button variant="outline" onClick={() => runBackfill(true)} disabled={backfillBusy}>
-              {backfillBusy ? 'Conferindo...' : 'Conferir'}
+              {backfillBusy ? 'Conferindo...' : backfillPreview ? 'Conferir de novo' : 'Conferir'}
             </Button>
             <Button onClick={() => runBackfill(false)}
-              disabled={backfillBusy || !backfillPreview || backfillPreview.faltavam === 0}>
+              disabled={backfillBusy || !backfillPreview || backfillPreview.faltavam === 0}
+              title={
+                !backfillPreview
+                  ? 'Clique em "Conferir" primeiro para ver quantos leads faltam entrar'
+                  : backfillPreview.faltavam === 0
+                    ? 'Nenhum lead novo para importar — está tudo no CRM'
+                    : undefined
+              }>
               {backfillBusy ? 'Importando...' : `Importar${backfillPreview ? ` ${backfillPreview.faltavam}` : ''}`}
             </Button>
           </DialogFooter>
