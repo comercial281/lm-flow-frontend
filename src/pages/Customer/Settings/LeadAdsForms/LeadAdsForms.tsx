@@ -449,7 +449,10 @@ export default function LeadAdsForms() {
               {debugError}
             </div>
           ) : debug ? (
-            <div className="space-y-3 text-sm">
+            // Cap explícito de altura no CORPO (não no DialogContent): o componente
+            // base do design-system sobrescreve o max-h externo, então garantimos o
+            // scroll aqui dentro. Footer (Fechar/Atualizar) fica fixo fora deste div.
+            <div className="space-y-3 text-sm max-h-[65vh] overflow-y-auto pr-1">
               {debug.token_error && (
                 <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-400">
                   <p className="font-medium">O Facebook recusou este token</p>
