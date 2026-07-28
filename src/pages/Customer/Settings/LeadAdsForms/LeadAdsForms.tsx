@@ -243,6 +243,19 @@ export default function LeadAdsForms() {
     return `${pipeline.name} → ${stage?.name ?? '(etapa)'}`;
   };
 
+  // Nome exibido de uma config salva. Quando o Facebook devolve o formulário SEM
+  // `name` (token da página sem permissão de Lead Ads / leads_retrieval), o config
+  // era salvo com form_name vazio e o card ficava sem título nenhum. Aqui caímos
+  // pro nome ao vivo do Facebook (casando pelo form_id, caso um novo sync já tenha
+  // trazido o nome) e, em último caso, mostramos o próprio ID — nunca card em branco.
+  const configDisplayName = (cfg: LeadAdsFormConfig): string => {
+    const saved = cfg.form_name?.trim();
+    if (saved) return saved;
+    const live = metaForms.find(m => m.id === cfg.form_id)?.name?.trim();
+    if (live) return live;
+    return `Formulário ${cfg.form_id}`;
+  };
+
   // Forms do Meta que ainda não têm config salva.
   const unconfiguredForms = metaForms.filter(mf => !configByFormId(mf.id));
 
@@ -374,7 +387,12 @@ export default function LeadAdsForms() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium truncate">{cfg.form_name}</span>
+                      <span className="font-medium truncate">{configDisplayName(cfg)}</span>
+                      {!cfg.form_name?.trim() && (
+                        <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/40">
+                          Sem nome no Facebook
+                        </Badge>
+                      )}
                       {!cfg.is_active && (
                         <Badge variant="outline" className="text-xs text-muted-foreground">
                           Inativo
@@ -428,8 +446,13 @@ export default function LeadAdsForms() {
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium truncate">{mf.name}</span>
+                      <span className="font-medium truncate">{mf.name?.trim() || `Formulário ${mf.id}`}</span>
                       <Badge variant="outline" className="text-xs">{mf.status}</Badge>
+                      {!mf.name?.trim() && (
+                        <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/40">
+                          Sem nome no Facebook
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       {mf.leads_count} {mf.leads_count === 1 ? 'lead' : 'leads'}
