@@ -447,6 +447,29 @@ export default function LeadAdsForms() {
                 </div>
               </div>
 
+              {/* Token de página derivável = a página está atribuída ao System User
+                  para Leads. É o sinal REAL: sem isso, os formulários não carregam
+                  mesmo com token válido e página "vista". */}
+              {typeof debug.page_token_ok === 'boolean' && (
+                <div className={`rounded-lg border p-3 flex items-start gap-2 ${
+                  debug.page_token_ok ? 'border-green-500/40 bg-green-500/10' : 'border-amber-500/40 bg-amber-500/10'
+                }`}>
+                  {debug.page_token_ok
+                    ? <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                    : <X className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />}
+                  <div>
+                    {debug.page_token_ok ? (
+                      <p>Página <strong>atribuída ao Usuário do Sistema</strong> para Leads (token de página OK) — os formulários devem carregar.</p>
+                    ) : (
+                      <>
+                        <p className="font-medium">A página não está atribuída ao Usuário do Sistema para Leads</p>
+                        {debug.page_token_error && <p className="text-muted-foreground mt-0.5">{debug.page_token_error}</p>}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Permissões exigidas para Lead Ads */}
               <div className="rounded-lg border border-border p-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
