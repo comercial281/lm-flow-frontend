@@ -4,7 +4,10 @@ import { LabelsResponse, LabelResponse, LabelDeleteResponse, Label } from '@/typ
 
 class LabelsService {
   async getLabels(): Promise<LabelsResponse> {
-    const response = await api.get('/labels');
+    // per_page alto pra trazer o catálogo COMPLETO: /labels pagina em 20 por padrão,
+    // e um catálogo truncado quebra a busca/seleção e a detecção de duplicata (criar
+    // uma etiqueta que já existe fora da 1ª página dava "Validation failed").
+    const response = await api.get('/labels', { params: { per_page: 1000 } });
     return extractResponse<Label>(response) as LabelsResponse;
   }
 
