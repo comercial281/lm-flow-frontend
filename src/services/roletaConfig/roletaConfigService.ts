@@ -25,6 +25,9 @@ export interface RoletaConfig {
   gestor_whatsapp_number: string;
   gestor_group_jid: string | null;
   gestor_group_instance: string | null;
+  msg_corretor_template: string | null;
+  msg_gestor_template: string | null;
+  msg_grupo_template: string | null;
   notification_inbox_id: string | null;
   business_hours_config: Record<string, unknown>;
   members: RoletaMember[];
@@ -40,6 +43,9 @@ export interface RoletaConfigPayload {
   gestor_whatsapp_number: string;
   gestor_group_jid?: string | null;
   gestor_group_instance?: string | null;
+  msg_corretor_template?: string | null;
+  msg_gestor_template?: string | null;
+  msg_grupo_template?: string | null;
   notification_inbox_id?: string | null;
   members: Omit<RoletaMember, 'id' | 'user_name' | 'user_avatar'>[];
 }

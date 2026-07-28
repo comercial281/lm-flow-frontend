@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { formatDateTimeBR } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 import {
@@ -26,6 +26,17 @@ function normalizeName(s: string): string {
 // Instância central da Leal Mídia que está em todos os grupos de cliente.
 // Os grupos de aviso (grupo interno com o nome do CRM) são listados e enviados por ela.
 const CENTRAL_GROUP_INSTANCE = 'Operacional (LM01)';
+
+// Variáveis disponíveis nos avisos editáveis (1 clique joga no texto).
+const ROLETA_VARS: { v: string; label: string }[] = [
+  { v: 'nome', label: 'Nome do lead' },
+  { v: 'telefone', label: 'Telefone' },
+  { v: 'corretor', label: 'Corretor' },
+  { v: 'prazo', label: 'Prazo (min)' },
+  { v: 'prazo_hora', label: 'Horário limite' },
+  { v: 'data', label: 'Data de chegada' },
+  { v: 'link_aceite', label: 'Link de aceite' },
+];
 import type { User } from '@/types/users';
 
 const STATUS_COLOR: Record<string, string> = {
@@ -111,6 +122,14 @@ export default function RoletaConfigPage() {
   const [groups, setGroups]                 = useState<WaGroup[]>([]);
   const [loadingGroups, setLoadingGroups]   = useState(false);
   const [crmName, setCrmName]               = useState('');
+  // Avisos editáveis (templates). Vazio = usa o texto padrão.
+  const [msgCorretor, setMsgCorretor]       = useState('');
+  const [msgGestor, setMsgGestor]           = useState('');
+  const [msgGrupo, setMsgGrupo]             = useState('');
+  const corretorRef = useRef<HTMLTextAreaElement>(null);
+  const gestorRef   = useRef<HTMLTextAreaElement>(null);
+  const grupoRef    = useRef<HTMLTextAreaElement>(null);
+  const [activeMsg, setActiveMsg]           = useState<'corretor' | 'gestor' | 'grupo'>('corretor');
   const [inboxes, setInboxes]               = useState<Inbox[]>([]);
 
   const loadConfigs = useCallback(async () => {
@@ -168,6 +187,7 @@ export default function RoletaConfigPage() {
     setGestorNum('');
     setGestorGroupJid('');
     setNotifInboxId('');
+    setMsgCorretor(''); setMsgGestor(''); setMsgGrupo('');
     setMembers([mkLocal()]);
     setGroups([]);
     setModalOpen(true);
@@ -182,6 +202,9 @@ export default function RoletaConfigPage() {
     setGestorNum(c.gestor_whatsapp_number ?? '');
     setGestorGroupJid(c.gestor_group_jid ?? '');
     setNotifInboxId(c.notification_inbox_id ?? '');
+    setMsgCorretor(c.msg_corretor_template ?? '');
+    setMsgGestor(c.msg_gestor_template ?? '');
+    setMsgGrupo(c.msg_grupo_template ?? '');
     setMembers(c.members.length ? c.members.map(m => mkLocal(m)) : [mkLocal()]);
     setModalOpen(true);
   }
@@ -236,6 +259,9 @@ export default function RoletaConfigPage() {
         gestor_whatsapp_number: gestorNum,
         gestor_group_jid:       gestorGroupJid || null,
         gestor_group_instance:  gestorGroupJid ? CENTRAL_GROUP_INSTANCE : null,
+        msg_corretor_template:  msgCorretor.trim() || null,
+        msg_gestor_template:    msgGestor.trim() || null,
+        msg_grupo_template:     msgGrupo.trim() || null,
         notification_inbox_id:  notifInboxId || null,
         members:                membersValid.map((m, i) => ({
           user_id:                  m.user_id,
@@ -299,6 +325,27 @@ export default function RoletaConfigPage() {
 
   function removeMember(localId: string) {
     setMembers(prev => prev.filter(m => m.localId !== localId));
+  }
+
+  // 1 clique joga a variável no texto do aviso focado (na posição do cursor).
+  function insertVar(v: string) {
+    const token = `{{${v}}}`;
+    const map = {
+      corretor: { ref: corretorRef, val: msgCorretor, set: setMsgCorretor },
+      gestor:   { ref: gestorRef,   val: msgGestor,   set: setMsgGestor },
+      grupo:    { ref: grupoRef,    val: msgGrupo,    set: setMsgGrupo },
+    } as const;
+    const t = map[activeMsg];
+    const el = t.ref.current;
+    if (!el) { t.set(t.val + token); return; }
+    const start = el.selectionStart ?? t.val.length;
+    const end = el.selectionEnd ?? t.val.length;
+    t.set(t.val.slice(0, start) + token + t.val.slice(end));
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + token.length;
+      el.setSelectionRange(pos, pos);
+    });
   }
 
   const totalWeight = members.reduce((s, m) => s + (m.is_active ? m.weight : 0), 0);
@@ -596,6 +643,66 @@ export default function RoletaConfigPage() {
               <p className="text-xs text-muted-foreground mt-1">
                 Instância que ENVIA os alertas. Se vazio, usa a mesma da roleta.
               </p>
+            </div>
+
+            {/* Mensagens dos avisos (editáveis) */}
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <UILabel className="flex items-center gap-1.5">
+                <Bell className="h-4 w-4" />
+                Mensagens dos avisos (opcional)
+              </UILabel>
+              <p className="text-xs text-muted-foreground">
+                Em branco = usa o texto padrão. Clique numa variável pra jogar no texto do aviso focado:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {ROLETA_VARS.map(x => (
+                  <button
+                    key={x.v}
+                    type="button"
+                    onClick={() => insertVar(x.v)}
+                    title={x.label}
+                    className="text-xs rounded-full border border-[#7c3aed]/40 bg-[#7c3aed]/10 px-2 py-0.5 text-[#9333EA] hover:bg-[#7c3aed]/20"
+                  >
+                    {`{{${x.v}}}`}
+                  </button>
+                ))}
+              </div>
+              <div>
+                <UILabel className="text-xs">Aviso do corretor</UILabel>
+                <textarea
+                  ref={corretorRef}
+                  value={msgCorretor}
+                  onFocus={() => setActiveMsg('corretor')}
+                  onChange={e => setMsgCorretor(e.target.value)}
+                  rows={3}
+                  placeholder="Padrão: 🔔 Novo lead na sua fila... + link de aceite"
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <UILabel className="text-xs">Aviso do gestor</UILabel>
+                <textarea
+                  ref={gestorRef}
+                  value={msgGestor}
+                  onFocus={() => setActiveMsg('gestor')}
+                  onChange={e => setMsgGestor(e.target.value)}
+                  rows={3}
+                  placeholder="Padrão: 🚨 Lead Novo na Roleta — Aguardando Aceite..."
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <UILabel className="text-xs">Aviso do grupo</UILabel>
+                <textarea
+                  ref={grupoRef}
+                  value={msgGrupo}
+                  onFocus={() => setActiveMsg('grupo')}
+                  onChange={e => setMsgGrupo(e.target.value)}
+                  rows={3}
+                  placeholder="Padrão: 🎯 Lead distribuído pela roleta..."
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
             </div>
 
             {/* Corretores */}
