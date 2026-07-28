@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/ds';
 import {
   FileInput, RefreshCw, Edit, ToggleLeft, ToggleRight, AlertTriangle, ArrowRight, Download,
+  Stethoscope, Check, X, Copy, Eye, EyeOff,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import EmptyState from '@/components/base/EmptyState';
@@ -23,6 +24,7 @@ import {
   LeadAdsFormConfigFormData,
   MetaForm,
   BackfillResult,
+  MetaTokenDebug,
 } from '@/services/leadAds/leadAdsFormsService';
 import { useAutomationResources } from '../LeadAutomations/LeadAutomationsEditors';
 import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
@@ -75,6 +77,38 @@ export default function LeadAdsForms() {
   const [metaError, setMetaError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncedOnce, setSyncedOnce] = useState(false);
+
+  // Diagnóstico do token da Meta (super-admin): app, permissões, página e o token salvo.
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [debugBusy, setDebugBusy] = useState(false);
+  const [debug, setDebug] = useState<MetaTokenDebug | null>(null);
+  const [debugError, setDebugError] = useState<string | null>(null);
+  const [showToken, setShowToken] = useState(false);
+
+  const runTokenDebug = async () => {
+    setDebugOpen(true);
+    setDebugBusy(true);
+    setDebug(null);
+    setDebugError(null);
+    setShowToken(false);
+    try {
+      setDebug(await leadAdsFormsService.debugMetaToken());
+    } catch (e) {
+      setDebugError(apiErrorMessage(e, 'Não foi possível diagnosticar o token'));
+    } finally {
+      setDebugBusy(false);
+    }
+  };
+
+  const copyToken = async () => {
+    if (!debug?.access_token) return;
+    try {
+      await navigator.clipboard.writeText(debug.access_token);
+      toast.success('Token copiado');
+    } catch {
+      toast.error('Não foi possível copiar');
+    }
+  };
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<LeadAdsFormConfig | null>(null);
@@ -273,6 +307,10 @@ export default function LeadAdsForms() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={runTokenDebug}>
+            <Stethoscope className="h-4 w-4 mr-2" />
+            Diagnosticar token
+          </Button>
           <Button variant="outline" onClick={() => { setBackfillPreview(null); setBackfillOpen(true); }}>
             <Download className="h-4 w-4 mr-2" />
             Importar leads recentes
@@ -333,6 +371,137 @@ export default function LeadAdsForms() {
             <Button onClick={() => runBackfill(false)}
               disabled={backfillBusy || !backfillPreview || backfillPreview.faltavam === 0}>
               {backfillBusy ? 'Importando...' : `Importar${backfillPreview ? ` ${backfillPreview.faltavam}` : ''}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: diagnóstico do token da Meta (app, permissões, página e o token salvo) */}
+      <Dialog open={debugOpen} onOpenChange={setDebugOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Diagnóstico do token da Meta</DialogTitle>
+            <DialogDescription>
+              O que o Facebook diz sobre o token conectado deste cliente — app, permissões
+              e se ele enxerga a página.
+            </DialogDescription>
+          </DialogHeader>
+
+          {debugBusy ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">Consultando o Facebook...</div>
+          ) : debugError ? (
+            <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-400">
+              {debugError}
+            </div>
+          ) : debug ? (
+            <div className="space-y-3 text-sm">
+              {debug.token_error && (
+                <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-400">
+                  <p className="font-medium">O Facebook recusou este token</p>
+                  <p className="mt-0.5">{debug.token_error}</p>
+                </div>
+              )}
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5">
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">App</span>
+                  <span className="font-medium text-right truncate">
+                    {debug.app_name || '—'}{debug.app_id ? ` (${debug.app_id})` : ''}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Tipo do token</span>
+                  <span className="font-medium">{debug.token_type || '—'}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Válido</span>
+                  <span className={debug.is_valid ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                    {debug.is_valid ? 'Sim' : 'Não'}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">Expira</span>
+                  <span className="font-medium">
+                    {debug.expires_at === 0 ? 'Nunca (permanente)'
+                      : debug.expires_at ? new Date(debug.expires_at * 1000).toLocaleString('pt-BR')
+                      : '—'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Página: o teste que revela o #100 (token não enxerga a página) */}
+              <div className={`rounded-lg border p-3 flex items-start gap-2 ${
+                debug.page_ok ? 'border-green-500/40 bg-green-500/10' : 'border-amber-500/40 bg-amber-500/10'
+              }`}>
+                {debug.page_ok
+                  ? <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                  : <X className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />}
+                <div>
+                  {debug.page_ok ? (
+                    <p>O token <strong>enxerga a página</strong>: {debug.page_name} ({debug.page_id})</p>
+                  ) : (
+                    <>
+                      <p className="font-medium">O token NÃO enxerga a página {debug.page_id}</p>
+                      {debug.page_error && <p className="text-muted-foreground mt-0.5">{debug.page_error}</p>}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Permissões exigidas para Lead Ads */}
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                  Permissões de Lead Ads
+                </p>
+                <div className="space-y-1">
+                  {['leads_retrieval', 'pages_show_list', 'pages_read_engagement'].map(scope => {
+                    const has = !debug.missing_scopes.includes(scope);
+                    return (
+                      <div key={scope} className="flex items-center gap-2">
+                        {has
+                          ? <Check className="h-4 w-4 text-green-600" />
+                          : <X className="h-4 w-4 text-red-600" />}
+                        <code className="text-xs">{scope}</code>
+                      </div>
+                    );
+                  })}
+                </div>
+                {debug.missing_scopes.length > 0 && (
+                  <p className="text-xs text-amber-600 mt-2">
+                    Faltam permissões — gere um token novo com elas e reconecte.
+                  </p>
+                )}
+              </div>
+
+              {/* Token salvo (super-admin): ver/copiar o que já está gerado */}
+              {debug.access_token && (
+                <div className="rounded-lg border border-border p-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Access Token salvo{typeof debug.token_length === 'number' ? ` (${debug.token_length} caracteres)` : ''}
+                    </p>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowToken(s => !s)}
+                        title={showToken ? 'Ocultar' : 'Mostrar'}>
+                        {showToken ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={copyToken} title="Copiar">
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <code className="block text-xs break-all bg-muted/50 rounded p-2">
+                    {showToken ? debug.access_token : `${debug.access_token.slice(0, 12)}${'•'.repeat(16)}`}
+                  </code>
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDebugOpen(false)}>Fechar</Button>
+            <Button onClick={runTokenDebug} disabled={debugBusy}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${debugBusy ? 'animate-spin' : ''}`} />
+              Atualizar
             </Button>
           </DialogFooter>
         </DialogContent>
