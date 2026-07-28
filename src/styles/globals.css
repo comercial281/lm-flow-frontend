@@ -587,3 +587,72 @@ button.bg-primary:hover, [data-slot='button'].bg-primary:hover {
   background-image: linear-gradient(135deg, #7c3aed 0%, #9333ea 55%, #a855f7 100%) !important;
   border-color: transparent !important;
 }
+
+/* ============================================================================
+   MÓDULO ESPAÇO (Notion por tenant) — tokens lm-* portados do LM Hub.
+   Os componentes portados usam classes utilitárias lm-* (bg-lm-card,
+   text-lm-subtle, rounded-lm-lg, shadow-lm-md, bg-lm-neon/20, etc.). O LM Flow
+   não tinha esses tokens; definimos aqui como cores/raios/sombras do tema v4.
+   @theme (não-inline) => as utilities referenciam var(--color-lm-*), então as
+   overrides de dark abaixo trocam o valor em runtime dentro de `.dark`.
+   Valores light = DS v1.0 do LM Hub; dark = identidade obsidiana/violeta.
+   ============================================================================ */
+@theme {
+  /* superfícies */
+  --color-lm-deep: #f6f4fb;
+  --color-lm-bg: #ffffff;
+  --color-lm-dark: #ffffff;
+  --color-lm-card: #ffffff;
+  --color-lm-card2: #faf9fc;
+  --color-lm-border: #d6d0e0;
+  --color-lm-border2: #bfb6cd;
+  /* accent */
+  --color-lm-mid: #5b21b6;
+  --color-lm-neon: #6d28d9;
+  --color-lm-glow: #a78bfa;
+  /* texto */
+  --color-lm-primary: #17112e;
+  --color-lm-muted: #5f5875;
+  --color-lm-subtle: #787190;
+  --color-lm-disabled: #a9a3b5;
+  --color-lm-inverse: #ffffff;
+  /* semânticos / decorativos */
+  --color-lm-success: #0f7a52;
+  --color-lm-danger: #c92040;
+  --color-lm-star: #b54708;
+  /* raios */
+  --radius-lm-sm: 6px;
+  --radius-lm-md: 10px;
+  --radius-lm-lg: 14px;
+  --radius-lm-xl: 18px;
+  /* sombras */
+  --shadow-lm-sm: 0 1px 2px rgb(15 5 32 / 0.06);
+  --shadow-lm-md: 0 2px 8px rgb(15 5 32 / 0.08);
+  --shadow-lm-lg: 0 8px 24px rgb(15 5 32 / 0.12);
+  --shadow-lm-modal: 0 20px 60px rgb(15 5 32 / 0.28);
+}
+
+.dark {
+  --color-lm-deep: #0f0520;
+  --color-lm-bg: #1a0a2e;
+  --color-lm-dark: #150826;
+  --color-lm-card: #1a0a2e;
+  --color-lm-card2: #241238;
+  --color-lm-border: #2e1d45;
+  --color-lm-border2: #3b2a55;
+  --color-lm-mid: #7c3aed;
+  --color-lm-neon: #9333ea;
+  --color-lm-glow: #c084fc;
+  --color-lm-primary: #f3eefa;
+  --color-lm-muted: #b9aed0;
+  --color-lm-subtle: #8e82ac;
+  --color-lm-disabled: #5e5478;
+  --color-lm-inverse: #ffffff;
+  --color-lm-success: #34d399;
+  --color-lm-danger: #fb7185;
+  --color-lm-star: #fbbf24;
+  --shadow-lm-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-lm-md: 0 2px 8px rgb(0 0 0 / 0.5);
+  --shadow-lm-lg: 0 8px 24px rgb(0 0 0 / 0.55);
+  --shadow-lm-modal: 0 20px 60px rgb(0 0 0 / 0.7);
+}

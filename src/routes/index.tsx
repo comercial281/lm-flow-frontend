@@ -1,5 +1,5 @@
 import { Suspense, type ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { isRootTenantHost } from '@/components/layout/config/menuItems';
 import { lazyWithRetry } from '@/utils/chunkReload';
@@ -89,6 +89,9 @@ const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => (
 const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
 const Contracts = lazyWithRetry(() => import('@/pages/Customer/Contracts').then(m => ({ default: m.Contracts })));
 const PropertyCaptureRequests = lazyWithRetry(() => import('@/pages/Customer/PropertyCapture').then(m => ({ default: m.PropertyCaptureRequests })));
+// Espaço — módulo "Notion por tenant" (portado do LM Hub). Modo auth (usuário
+// logado) e modo público por token. Lazy: vira um chunk próprio (BlockNote é pesado).
+const Espaco = lazyWithRetry(() => import('@/features/espaco/Espaco'));
 // Gate de rota da Área do Admin: só no deploy raiz (app.lmflow.com.br) E com
 // acesso de admin (o dono por e-mail OU a equipe cadastrada, via whoami). Em
 // subdomínio de cliente ou usuário comum, redireciona — defesa extra além do
@@ -102,6 +105,23 @@ function SuperAdminRoute({ children }: { children: ReactNode }) {
   }
   if (!isAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
+}
+
+// Wrapper da rota pública do Espaço: lê o :token da URL e monta o módulo em
+// modo público. Suspense próprio porque Espaco é lazy.
+function EspacoPublicRoute() {
+  const { token } = useParams<{ token: string }>();
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen w-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      }
+    >
+      <Espaco mode="public" token={token} />
+    </Suspense>
+  );
 }
 
 const ClientInstances = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances'));
@@ -1633,6 +1653,23 @@ const AppRouter = () => {
             }
           />
 
+          {/* Espaço — Notion por tenant (usuário logado). Gate por permissão
+              "espaco.read" (super-admin sempre passa). */}
+          <Route
+            path="/espaco"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PermissionRoute resource="espaco" action="read">
+                      <Espaco mode="auth" />
+                    </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
           <Route path="/conversations" element={ChatRouteElement} />
 
           <Route path="/conversations/:conversationId" element={ChatRouteElement} />
@@ -1873,6 +1910,11 @@ const AppRouter = () => {
 
           {/* Público (sem login): formulário de onboarding por link (Épico E). */}
           <Route path="/formulario/:token" element={<PublicOnboardingForm />} />
+
+          {/* Público (sem login): Espaço compartilhado por link/token. Rota nua
+              (sem PublicRoute) igual às outras rotas de token — pra não bounce
+              um usuário logado que abrir o link. */}
+          <Route path="/espaco/:token" element={<EspacoPublicRoute />} />
 
           {/* Público INDEXÁVEL — página de imóvel do portal (Produto A). */}
           <Route path="/imovel/:tenant/:code" element={<ImovelPublic />} />

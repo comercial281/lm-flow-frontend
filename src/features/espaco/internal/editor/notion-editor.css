@@ -1,0 +1,182 @@
+/* LM Notion — tema do BlockNote plugado nos tokens do design system do Hub.
+   Segue claro/escuro automaticamente porque le as CSS vars --lm-*-rgb.
+   Escopo em .lm-notion-editor pra nao vazar pro resto do app.
+   Menus do BlockNote sao portais (renderizam fora do escopo), por isso alguns
+   seletores abaixo sao globais e usam as mesmas vars. */
+
+.lm-notion-editor {
+  --bn-fg:      rgb(var(--lm-fg1-rgb));
+  --bn-subtle:  rgb(var(--lm-fg3-rgb));
+  --bn-accent:  rgb(var(--lm-accent-rgb));
+  --bn-border:  rgb(var(--lm-border1-rgb));
+  --bn-hover:   rgb(var(--lm-accent-rgb) / 0.12);
+  --bn-code-bg: rgb(var(--lm-accent-rgb) / 0.14);
+  --bn-pre-bg:  rgb(var(--lm-subtle-rgb));
+}
+
+.lm-notion-editor .bn-container,
+.lm-notion-editor .bn-editor {
+  background: transparent;
+  color: var(--bn-fg);
+  font-family: var(--lm-font-sans), Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* O padding lateral do BlockNote briga com o layout da pagina; zeramos e
+   deixamos o container da pagina mandar na largura. */
+.lm-notion-editor .bn-editor {
+  padding-inline: 0;
+}
+
+.lm-notion-editor .bn-block-content[data-content-type='heading'] {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-heading, var(--bn-fg));
+}
+.lm-notion-editor .bn-block-content[data-level='1'] { font-size: 1.85rem; margin-top: 1.6rem; }
+.lm-notion-editor .bn-block-content[data-level='2'] { font-size: 1.45rem; margin-top: 1.3rem; }
+.lm-notion-editor .bn-block-content[data-level='3'] { font-size: 1.18rem; margin-top: 1rem; }
+
+.lm-notion-editor .bn-inline-content code,
+.lm-notion-editor code {
+  background: var(--bn-code-bg);
+  color: rgb(var(--lm-accent-rgb));
+  padding: 0.12em 0.36em;
+  border-radius: 4px;
+  font-size: 0.88em;
+}
+
+.lm-notion-editor blockquote,
+.lm-notion-editor .bn-block-content[data-content-type='quote'] {
+  border-left: 3px solid var(--bn-accent);
+  padding-left: 0.9rem;
+  color: var(--bn-subtle);
+}
+
+.lm-notion-editor a {
+  color: rgb(var(--lm-accent-rgb));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.lm-notion-editor [data-placeholder]::before {
+  color: var(--bn-subtle);
+  opacity: 0.6;
+}
+
+/* ── Menus flutuantes (portais: seletor global) ───────────────────────────── */
+.bn-suggestion-menu,
+.bn-formatting-toolbar,
+.bn-link-toolbar,
+.bn-drag-handle-menu,
+.mantine-Menu-dropdown,
+.mantine-Popover-dropdown {
+  background: rgb(var(--lm-surface-rgb)) !important;
+  border: 1px solid rgb(var(--lm-border1-rgb)) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--lm-shadow-lg) !important;
+  color: rgb(var(--lm-fg1-rgb)) !important;
+}
+
+.bn-suggestion-menu-item[aria-selected='true'],
+.bn-suggestion-menu-item:hover,
+.mantine-Menu-item:hover {
+  background: rgb(var(--lm-accent-rgb) / 0.16) !important;
+}
+
+.bn-suggestion-menu-item-section,
+.bn-suggestion-menu-label {
+  color: rgb(var(--lm-fg3-rgb)) !important;
+  font-size: 11px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bn-formatting-toolbar button:hover,
+.bn-link-toolbar button:hover {
+  background: rgb(var(--lm-accent-rgb) / 0.16) !important;
+}
+
+/* ── Painel de arquivo/imagem (portal: seletor global) ─────────────────────
+   Sem isto ele herda o tema escuro proprio do BlockNote e aparece um bloco
+   preto no meio da pagina clara. */
+.bn-panel,
+.bn-file-panel,
+[class*='bn-panel'] {
+  background: rgb(var(--lm-surface-rgb)) !important;
+  border: 1px solid rgb(var(--lm-border1-rgb)) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--lm-shadow-lg) !important;
+  color: rgb(var(--lm-fg1-rgb)) !important;
+}
+.bn-panel button,
+.bn-file-panel button,
+[class*='bn-panel'] button {
+  color: rgb(var(--lm-fg1-rgb)) !important;
+}
+.bn-panel input,
+.bn-file-panel input,
+[class*='bn-panel'] input {
+  background: rgb(var(--lm-bg1-rgb)) !important;
+  border: 1px solid rgb(var(--lm-border1-rgb)) !important;
+  color: rgb(var(--lm-fg1-rgb)) !important;
+}
+
+/* Bloco de arquivo vazio ("Adicionar imagem"): tambem vinha escuro. */
+.lm-notion-editor .bn-add-file-button,
+.lm-notion-editor [class*='add-file'] {
+  background: rgb(var(--lm-subtle-rgb)) !important;
+  color: rgb(var(--lm-fg2-rgb)) !important;
+  border-radius: 8px;
+}
+
+/* ── Handles laterais (+ e arrastar) ──────────────────────────────────────── */
+/* Alcas + e arrastar: e por ELAS que se apaga um bloco (arrastar > Remover).
+   Estavam apagadas demais e o usuario nao achava como excluir a imagem. */
+.lm-notion-editor .bn-side-menu button {
+  color: rgb(var(--lm-fg2-rgb));
+  opacity: 1;
+}
+.lm-notion-editor .bn-side-menu button:hover {
+  background: var(--bn-hover);
+  color: rgb(var(--lm-fg1-rgb));
+  border-radius: 5px;
+}
+
+/* ── Selecao ──────────────────────────────────────────────────────────────── */
+.lm-notion-editor .ProseMirror-selectednode,
+.lm-notion-editor .bn-block-outer.ProseMirror-selectednode > .bn-block {
+  outline: 2px solid rgb(var(--lm-accent-rgb) / 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.lm-notion-editor .ProseMirror ::selection {
+  background: rgb(var(--lm-focus-rgb) / 0.32);
+}
+
+/* ── Tabela dentro da pagina ──────────────────────────────────────────────── */
+.lm-notion-editor table td,
+.lm-notion-editor table th {
+  border: 1px solid var(--bn-border);
+  padding: 6px 10px;
+}
+.lm-notion-editor table th {
+  background: rgb(var(--lm-subtle-rgb));
+  font-weight: 600;
+}
+
+.lm-notion-editor input[type='checkbox'] {
+  accent-color: var(--bn-accent);
+}
+
+.lm-notion-editor pre {
+  background: var(--bn-pre-bg);
+  border: 1px solid var(--bn-border);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+}
+
+/* Modo texto pequeno da pagina */
+.lm-notion-small .bn-editor {
+  font-size: 0.9rem;
+}

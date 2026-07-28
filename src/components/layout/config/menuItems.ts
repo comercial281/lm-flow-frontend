@@ -31,6 +31,7 @@ import {
   FileText,
   TrendingUp,
   Megaphone,
+  NotebookPen,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -154,6 +155,15 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     href: '/ia-vendedora',
     icon: Bot,
     clientToggleKey: 'client_manage_automations',
+  },
+  {
+    // Espaço — Notion por tenant (docs/bases colaborativas). Feature gerenciada
+    // pela Leal Mídia: super-admin SEMPRE vê; o cliente só vê se a Leal Mídia
+    // ligar o toggle "espaco" nas Funções do CRM (default OFF, como clientToggleKey).
+    name: 'Espaço',
+    href: '/espaco',
+    icon: NotebookPen,
+    clientToggleKey: 'espaco',
   },
   {
     // Painel "Equipe & Acessos" — só admins (gate resource users/update).
