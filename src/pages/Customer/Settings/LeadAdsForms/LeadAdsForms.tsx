@@ -115,6 +115,20 @@ export default function LeadAdsForms() {
     }
   };
 
+  const [subscribing, setSubscribing] = useState(false);
+  const subscribeWebhook = async () => {
+    setSubscribing(true);
+    try {
+      await leadAdsFormsService.subscribeWebhook();
+      toast.success('Recebimento em tempo real ativado');
+      setDebug(await leadAdsFormsService.debugMetaToken()); // recarrega o diagnóstico
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não foi possível ativar o recebimento em tempo real'));
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<LeadAdsFormConfig | null>(null);
   const [form, setForm] = useState<FormState>(emptyFormState());
@@ -495,6 +509,38 @@ export default function LeadAdsForms() {
                       <>
                         <p className="font-medium">A página não está atribuída ao Usuário do Sistema para Leads</p>
                         {debug.page_token_error && <p className="text-muted-foreground mt-0.5">{debug.page_token_error}</p>}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Recebimento em tempo real: a página está inscrita no app p/ leadgen?
+                  É isso que faz o Facebook ENVIAR os leads pro webhook — sem isso, o
+                  lead cai no Gerenciador de Leads mas nunca chega no LM Flow. */}
+              {typeof debug.webhook_subscribed === 'boolean' && (
+                <div className={`rounded-lg border p-3 flex items-start gap-2 ${
+                  debug.webhook_subscribed ? 'border-green-500/40 bg-green-500/10' : 'border-amber-500/40 bg-amber-500/10'
+                }`}>
+                  {debug.webhook_subscribed
+                    ? <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                    : <X className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />}
+                  <div className="flex-1">
+                    {debug.webhook_subscribed ? (
+                      <p><strong>Recebimento em tempo real ativo</strong> — a página está inscrita no app para leads. Novos leads caem sozinhos.</p>
+                    ) : (
+                      <>
+                        <p className="font-medium">Recebimento em tempo real NÃO está ativo</p>
+                        {debug.webhook_error && <p className="text-muted-foreground mt-0.5">{debug.webhook_error}</p>}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-2"
+                          onClick={subscribeWebhook}
+                          disabled={subscribing}
+                        >
+                          {subscribing ? 'Ativando…' : 'Ativar recebimento em tempo real'}
+                        </Button>
                       </>
                     )}
                   </div>

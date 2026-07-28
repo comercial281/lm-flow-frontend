@@ -58,6 +58,8 @@ export interface MetaTokenDebug {
   token_length?: number;          // tamanho do token salvo (pega truncamento/espaço)
   page_token_ok?: boolean;        // conseguiu derivar o token de página? (sinal real do bug)
   page_token_error?: string;      // o que fazer se não conseguiu (atribuir página ao System User)
+  webhook_subscribed?: boolean;   // página inscrita no app p/ leadgen? (recebimento em tempo real)
+  webhook_error?: string;         // o que fazer se não está inscrita
   page_id?: string;
   page_ok?: boolean;              // o token enxerga a página configurada?
   page_name?: string;
@@ -97,6 +99,13 @@ export const leadAdsFormsService = {
   async debugMetaToken(): Promise<MetaTokenDebug> {
     const res = await api.get(`${BASE}/meta_token_debug`);
     return (res.data as { data: MetaTokenDebug }).data;
+  },
+
+  // Inscreve (ou reinscreve) a página no app p/ leadgen — ativa o recebimento em
+  // tempo real dos leads. Super-admin. Lança em erro/403.
+  async subscribeWebhook(): Promise<{ webhook_subscribed: boolean }> {
+    const res = await api.post(`${BASE}/subscribe_webhook`);
+    return (res.data as { data: { webhook_subscribed: boolean } }).data;
   },
 
   // Importa retroativamente os leads dos últimos N dias que ainda não entraram.
