@@ -395,6 +395,12 @@ export default function LeadAdsForms() {
             </div>
           ) : debug ? (
             <div className="space-y-3 text-sm">
+              {debug.token_error && (
+                <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-400">
+                  <p className="font-medium">O Facebook recusou este token</p>
+                  <p className="mt-0.5">{debug.token_error}</p>
+                </div>
+              )}
               <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5">
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">App</span>
@@ -471,7 +477,7 @@ export default function LeadAdsForms() {
                 <div className="rounded-lg border border-border p-3">
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Access Token salvo
+                      Access Token salvo{typeof debug.token_length === 'number' ? ` (${debug.token_length} caracteres)` : ''}
                     </p>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowToken(s => !s)}
