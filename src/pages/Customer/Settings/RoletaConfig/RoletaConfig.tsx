@@ -16,6 +16,7 @@ import { leadAutomationService, WaGroup } from '@/services/leadAutomation/leadAu
 import inboxesService from '@/services/channels/inboxesService';
 import type { Inbox } from '@/types/channels/inbox';
 import { accountService } from '@/services/account';
+import { leadAdsFormsService, MetaForm, LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
 
 // Normaliza pra comparar nome de grupo x nome do CRM (ignora acento/pontuação/caixa).
 function normalizeName(s: string): string {
@@ -130,6 +131,11 @@ export default function RoletaConfigPage() {
   const gestorRef   = useRef<HTMLTextAreaElement>(null);
   const grupoRef    = useRef<HTMLTextAreaElement>(null);
   const [activeMsg, setActiveMsg]           = useState<'corretor' | 'gestor' | 'grupo'>('corretor');
+  // Fontes: formulários do FB roteados pra esta roleta.
+  const [metaForms, setMetaForms]           = useState<MetaForm[]>([]);
+  const [formConfigs, setFormConfigs]       = useState<LeadAdsFormConfig[]>([]);
+  const [loadingForms, setLoadingForms]     = useState(false);
+  const [formsError, setFormsError]         = useState<string | null>(null);
   const [inboxes, setInboxes]               = useState<Inbox[]>([]);
 
   const loadConfigs = useCallback(async () => {
@@ -238,6 +244,49 @@ export default function RoletaConfigPage() {
       .finally(() => { if (!cancelled) setLoadingGroups(false); });
     return () => { cancelled = true; };
   }, [modalOpen, crmName]);
+
+  // Fontes: carrega os formulários do FB + as configs (só faz sentido editando roleta salva).
+  useEffect(() => {
+    if (!modalOpen || !editing) { setMetaForms([]); setFormConfigs([]); setFormsError(null); return; }
+    let cancelled = false;
+    setLoadingForms(true);
+    Promise.all([leadAdsFormsService.syncMetaForms(), leadAdsFormsService.getAll()])
+      .then(([res, cfgs]) => {
+        if (cancelled) return;
+        setMetaForms(res.data ?? []);
+        setFormsError(res.error ?? null);
+        setFormConfigs(cfgs ?? []);
+      })
+      .catch(() => { if (!cancelled) { setMetaForms([]); setFormConfigs([]); } })
+      .finally(() => { if (!cancelled) setLoadingForms(false); });
+    return () => { cancelled = true; };
+  }, [modalOpen, editing]);
+
+  async function toggleFormRoleta(form: MetaForm) {
+    if (!editing) return;
+    const existing = formConfigs.find(c => c.form_id === form.id);
+    const routedHere = existing?.roleta_config_id === editing.id;
+    try {
+      if (existing) {
+        await leadAdsFormsService.update(existing.id, {
+          form_id: existing.form_id, form_name: existing.form_name || form.name,
+          pipeline_id: existing.pipeline_id, pipeline_stage_id: existing.pipeline_stage_id,
+          is_active: true, label_ids: existing.label_ids ?? [],
+          roleta_config_id: routedHere ? null : editing.id,
+        });
+      } else {
+        await leadAdsFormsService.create({
+          form_id: form.id, form_name: form.name,
+          pipeline_id: null, pipeline_stage_id: null, is_active: true, label_ids: [],
+          roleta_config_id: editing.id,
+        });
+      }
+      setFormConfigs(await leadAdsFormsService.getAll());
+      toast.success(routedHere ? 'Formulário desvinculado desta roleta' : 'Formulário vinculado a esta roleta');
+    } catch {
+      toast.error('Não foi possível atualizar a fonte');
+    }
+  }
 
   async function save() {
     if (!inboxId.trim()) { toast.error('Inbox ID obrigatorio'); return; }
@@ -703,6 +752,47 @@ export default function RoletaConfigPage() {
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
               </div>
+            </div>
+
+            {/* Fontes de leads (gatilhos por formulário) */}
+            <div className="rounded-lg border border-border p-3 space-y-2">
+              <UILabel className="flex items-center gap-1.5">
+                <Shuffle className="h-4 w-4" />
+                Fontes de leads (gatilhos)
+              </UILabel>
+              <p className="text-xs text-muted-foreground">
+                Por padrão, <b>todo lead de campanha</b> (WhatsApp + formulários) cai nesta roleta.
+                Pra rotear formulários específicos do Facebook só pra ela, marque abaixo:
+              </p>
+              {!editing ? (
+                <p className="text-xs text-amber-500">Salve a roleta primeiro pra poder vincular formulários.</p>
+              ) : loadingForms ? (
+                <p className="text-xs text-muted-foreground">Carregando formulários do Facebook...</p>
+              ) : formsError ? (
+                <p className="text-xs text-red-400">{formsError}</p>
+              ) : metaForms.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Nenhum formulário do Facebook (conecte a página em Configurações &rarr; Formulários (Meta)).</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {metaForms.map(f => {
+                    const cfg = formConfigs.find(c => c.form_id === f.id);
+                    const routedHere = cfg?.roleta_config_id === editing.id;
+                    const routedOther = !!cfg?.roleta_config_id && !routedHere;
+                    return (
+                      <label key={f.id} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={routedHere}
+                          disabled={routedOther}
+                          onChange={() => toggleFormRoleta(f)}
+                        />
+                        <span className={routedOther ? 'text-muted-foreground line-through' : ''}>{f.name}</span>
+                        {routedOther && <span className="text-xs text-amber-500">(já em outra roleta)</span>}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Corretores */}
