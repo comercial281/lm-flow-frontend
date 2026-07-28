@@ -88,6 +88,10 @@ export interface KnowledgeEntitlement {
   created_at: string;
 }
 
+// kind: 'file' = arquivo no bucket (PDF/img) · 'link' = URL externa ·
+// 'text' = nota de texto (markdown em `content`, sem arquivo/URL).
+export type AttachmentKind = 'file' | 'link' | 'text';
+
 export interface KnowledgeAttachment {
   id: string;
   lesson_id: string;
@@ -96,6 +100,8 @@ export interface KnowledgeAttachment {
   storage_path: string | null;
   mime_type: string;
   size_bytes: number;
+  kind: AttachmentKind;
+  content: string | null;
   ordem: number;
   created_at: string;
 }
@@ -119,6 +125,7 @@ export interface KnowledgeLesson {
   video_provider: 'youtube' | 'vimeo' | 'upload';
   video_id: string;
   storage_path: string | null;
+  capa_url: string | null;
   duracao_min: number | null;
   ordem: number;
   created_at: string;
@@ -559,6 +566,7 @@ export function useUpdateLesson() {
       titulo?: string;
       descricao_md?: string;
       duracao_min?: number | null;
+      capa_url?: string | null;
       ordem?: number;
       // Troca de vídeo por embed (YouTube/Vimeo).
       video_url?: string;
@@ -914,9 +922,48 @@ export function useUploadAttachment() {
         storage_path: path,
         mime_type: input.file.type || 'application/octet-stream',
         size_bytes: input.file.size,
+        kind: 'file',
       });
     },
     { successMessage: 'Anexo enviado', invalidateKeys: ['knowledge_attachments'] },
+  );
+}
+
+// Anexo por LINK: guarda só a URL externa (sem arquivo no bucket).
+export function useAddLinkAttachment() {
+  return useMutation<{ lesson_id: string; name: string; url: string }, void>(
+    async (input) => {
+      const url = /^https?:\/\//i.test(input.url.trim()) ? input.url.trim() : `https://${input.url.trim()}`;
+      await callAdmin('attachments', 'create', {
+        lesson_id: input.lesson_id,
+        name: input.name.trim() || url,
+        url,
+        storage_path: null,
+        mime_type: 'link',
+        size_bytes: 0,
+        kind: 'link',
+      });
+    },
+    { successMessage: 'Link adicionado', invalidateKeys: ['knowledge_attachments'] },
+  );
+}
+
+// Anexo por TEXTO: nota em markdown guardada em `content` (sem arquivo/URL).
+export function useAddTextAttachment() {
+  return useMutation<{ lesson_id: string; name: string; content: string }, void>(
+    async (input) => {
+      await callAdmin('attachments', 'create', {
+        lesson_id: input.lesson_id,
+        name: input.name.trim() || 'Texto',
+        url: '',
+        storage_path: null,
+        mime_type: 'text',
+        size_bytes: 0,
+        kind: 'text',
+        content: input.content,
+      });
+    },
+    { successMessage: 'Texto adicionado', invalidateKeys: ['knowledge_attachments'] },
   );
 }
 
