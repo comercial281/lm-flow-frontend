@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import BaseHeader from '@/components/base/BaseHeader';
 import { accountService } from '@/services/account/accountService';
+import { useAppDataStore } from '@/store/appDataStore';
 import type { Account, FormDataOptions } from '@/types/settings';
 import { Copy } from 'lucide-react';
 
@@ -201,6 +202,8 @@ export default function AccountSettings() {
 
       toast.success(t('messages.success.generalUpdated'));
       await loadAccountData(); // Recarregar dados
+      // Atualiza o store global pra o nome no topo (Header) refletir na hora, sem recarregar
+      await useAppDataStore.getState().fetchAccount(true);
     } catch (error: unknown) {
       console.error('Erro ao salvar:', error);
       toast.error((error as Error).message || t('messages.error.saveFailed'));
