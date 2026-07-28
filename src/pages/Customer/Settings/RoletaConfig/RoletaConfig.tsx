@@ -14,6 +14,8 @@ import { roletaConfigService, RoletaConfig, RoletaMember, BrokerAssignment, Dist
 import usersService from '@/services/users/usersService';
 import { whatsappRemindersService } from '@/services/whatsappReminders/whatsappRemindersService';
 import type { WhatsappReminderGroup } from '@/types/automation/whatsappReminders';
+import inboxesService from '@/services/channels/inboxesService';
+import type { Inbox } from '@/types/channels/inbox';
 import type { User } from '@/types/users';
 
 const STATUS_COLOR: Record<string, string> = {
@@ -98,6 +100,7 @@ export default function RoletaConfigPage() {
   const [members, setMembers]               = useState<MemberRow[]>([]);
   const [groups, setGroups]                 = useState<WhatsappReminderGroup[]>([]);
   const [loadingGroups, setLoadingGroups]   = useState(false);
+  const [inboxes, setInboxes]               = useState<Inbox[]>([]);
 
   const loadConfigs = useCallback(async () => {
     setLoading(true);
@@ -117,6 +120,13 @@ export default function RoletaConfigPage() {
     } catch { /* silencioso */ }
   }, []);
 
+  const loadInboxes = useCallback(async () => {
+    try {
+      const res = await inboxesService.list();
+      setInboxes(res.data ?? []);
+    } catch { /* silencioso */ }
+  }, []);
+
   const loadAssignments = useCallback(async () => {
     setLoadingAssign(true);
     try {
@@ -128,7 +138,7 @@ export default function RoletaConfigPage() {
     }
   }, []);
 
-  useEffect(() => { loadConfigs(); loadUsers(); }, [loadConfigs, loadUsers]);
+  useEffect(() => { loadConfigs(); loadUsers(); loadInboxes(); }, [loadConfigs, loadUsers, loadInboxes]);
   useEffect(() => { if (tab === 'assignments') loadAssignments(); }, [tab, loadAssignments]);
 
   function openCreate() {
@@ -372,18 +382,25 @@ export default function RoletaConfigPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            {/* Inbox ID */}
+            {/* Instância (inbox) */}
             <div>
-              <UILabel>Inbox ID *</UILabel>
-              <Input
+              <UILabel>Instância (WhatsApp) *</UILabel>
+              <select
                 value={inboxId}
                 onChange={e => setInboxId(e.target.value)}
-                placeholder="ID numerico do inbox"
-                className="mt-1"
                 disabled={!!editing}
-              />
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
+              >
+                <option value="">Selecione a instância...</option>
+                {inboxId && !inboxes.some(i => i.id === inboxId) && (
+                  <option value={inboxId}>{inboxId}</option>
+                )}
+                {inboxes.map(i => (
+                  <option key={i.id} value={i.id}>{i.name}</option>
+                ))}
+              </select>
               <p className="text-xs text-muted-foreground mt-1">
-                Encontre em Configuracoes &rarr; Inboxes &rarr; ID da caixa de entrada.
+                A caixa de entrada (número de WhatsApp) que essa roleta distribui.
               </p>
             </div>
 
@@ -507,14 +524,21 @@ export default function RoletaConfigPage() {
                 <Phone className="h-4 w-4" />
                 Inbox para notificacoes (opcional)
               </UILabel>
-              <Input
+              <select
                 value={notifInboxId}
                 onChange={e => setNotifInboxId(e.target.value)}
-                placeholder="ID do inbox de saida para alertas"
-                className="mt-1"
-              />
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Mesma instância da roleta</option>
+                {notifInboxId && !inboxes.some(i => i.id === notifInboxId) && (
+                  <option value={notifInboxId}>{notifInboxId}</option>
+                )}
+                {inboxes.map(i => (
+                  <option key={i.id} value={i.id}>{i.name}</option>
+                ))}
+              </select>
               <p className="text-xs text-muted-foreground mt-1">
-                Se vazio, usa o mesmo inbox da roleta.
+                Instância que ENVIA os alertas. Se vazio, usa a mesma da roleta.
               </p>
             </div>
 
