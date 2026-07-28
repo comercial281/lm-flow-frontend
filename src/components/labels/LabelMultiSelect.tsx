@@ -38,23 +38,35 @@ export default function LabelMultiSelect({
 }: LabelMultiSelectProps) {
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
+  // Etiquetas criadas inline nesta sessão. O catálogo do pai (labels) só recarrega
+  // de forma assíncrona, então guardamos a recém-criada aqui pra o chip aparecer NA
+  // HORA — senão o id selecionado não resolve pra nenhum nome/cor e a etiqueta
+  // "some" da tela até o catálogo voltar.
+  const [extra, setExtra] = useState<Label[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const byId = useMemo(() => new Map(labels.map(l => [l.id, l])), [labels]);
+  // Catálogo efetivo = o do pai + as criadas inline (dedup por id, o pai vence).
+  const catalog = useMemo(() => {
+    const map = new Map<string, Label>();
+    [...extra, ...labels].forEach(l => map.set(l.id, l));
+    return Array.from(map.values());
+  }, [labels, extra]);
+
+  const byId = useMemo(() => new Map(catalog.map(l => [l.id, l])), [catalog]);
   const selected = selectedIds.map(id => byId.get(id)).filter(Boolean) as Label[];
 
   const q = query.trim().toLowerCase();
   const suggestions = useMemo(
     () =>
-      labels
+      catalog
         .filter(l => !selectedIds.includes(l.id))
         .filter(l => (q ? l.title?.toLowerCase().includes(q) : true))
         .slice(0, 30),
-    [labels, selectedIds, q],
+    [catalog, selectedIds, q],
   );
 
   // Só oferece "criar" quando o texto digitado não bate exatamente com nenhuma etiqueta.
-  const exactMatch = q.length > 0 && labels.some(l => l.title?.toLowerCase() === q);
+  const exactMatch = q.length > 0 && catalog.some(l => l.title?.toLowerCase() === q);
   const canCreate = q.length > 0 && !exactMatch;
 
   const add = (id: string) => {
@@ -70,7 +82,7 @@ export default function LabelMultiSelect({
     if (!title || creating) return;
 
     // Se já existe (case-insensitive), só seleciona — não duplica.
-    const existing = labels.find(l => l.title?.toLowerCase() === title.toLowerCase());
+    const existing = catalog.find(l => l.title?.toLowerCase() === title.toLowerCase());
     if (existing) {
       add(existing.id);
       return;
@@ -81,6 +93,7 @@ export default function LabelMultiSelect({
       const created = await labelsService.createLabel({ title, color: colorForName(title), show_on_sidebar: true });
       const lbl = (created as { data?: Label })?.data ?? (created as unknown as Label);
       if (lbl?.id) {
+        setExtra(prev => [...prev, lbl]); // aparece na hora, sem esperar o catálogo recarregar
         onLabelCreated?.(lbl);
         onChange([...selectedIds, lbl.id]);
       }
