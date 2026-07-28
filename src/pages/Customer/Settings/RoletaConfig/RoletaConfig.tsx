@@ -12,10 +12,13 @@ import {
 } from 'lucide-react';
 import { roletaConfigService, RoletaConfig, RoletaMember, BrokerAssignment, DistributionMode } from '@/services/roletaConfig/roletaConfigService';
 import usersService from '@/services/users/usersService';
-import { whatsappRemindersService } from '@/services/whatsappReminders/whatsappRemindersService';
-import type { WhatsappReminderGroup } from '@/types/automation/whatsappReminders';
+import { leadAutomationService, WaGroup } from '@/services/leadAutomation/leadAutomationService';
 import inboxesService from '@/services/channels/inboxesService';
 import type { Inbox } from '@/types/channels/inbox';
+
+// Instância central da Leal Mídia que está em todos os grupos de cliente.
+// Os grupos de aviso (grupo interno com o nome do CRM) são listados e enviados por ela.
+const CENTRAL_GROUP_INSTANCE = 'Operacional (LM01)';
 import type { User } from '@/types/users';
 
 const STATUS_COLOR: Record<string, string> = {
@@ -98,7 +101,7 @@ export default function RoletaConfigPage() {
   const [gestorGroupJid, setGestorGroupJid] = useState('');
   const [notifInboxId, setNotifInboxId]     = useState('');
   const [members, setMembers]               = useState<MemberRow[]>([]);
-  const [groups, setGroups]                 = useState<WhatsappReminderGroup[]>([]);
+  const [groups, setGroups]                 = useState<WaGroup[]>([]);
   const [loadingGroups, setLoadingGroups]   = useState(false);
   const [inboxes, setInboxes]               = useState<Inbox[]>([]);
 
@@ -168,17 +171,18 @@ export default function RoletaConfigPage() {
     setModalOpen(true);
   }
 
-  // Busca os grupos de WhatsApp do inbox da roleta (pra escolher o grupo de avisos).
+  // Busca os grupos da central Operacional (onde vive o grupo interno do cliente,
+  // com o nome do CRM). Independe do inbox da roleta.
   useEffect(() => {
-    if (!modalOpen || !inboxId.trim()) { setGroups([]); return; }
+    if (!modalOpen) { setGroups([]); return; }
     let cancelled = false;
     setLoadingGroups(true);
-    whatsappRemindersService.listGroups(inboxId)
+    leadAutomationService.getGroups(CENTRAL_GROUP_INSTANCE)
       .then(g => { if (!cancelled) setGroups(g); })
       .catch(() => { if (!cancelled) setGroups([]); })
       .finally(() => { if (!cancelled) setLoadingGroups(false); });
     return () => { cancelled = true; };
-  }, [modalOpen, inboxId]);
+  }, [modalOpen]);
 
   async function save() {
     if (!inboxId.trim()) { toast.error('Inbox ID obrigatorio'); return; }
@@ -199,6 +203,7 @@ export default function RoletaConfigPage() {
         timeout_minutes:        timeoutMin,
         gestor_whatsapp_number: gestorNum,
         gestor_group_jid:       gestorGroupJid || null,
+        gestor_group_instance:  gestorGroupJid ? CENTRAL_GROUP_INSTANCE : null,
         notification_inbox_id:  notifInboxId || null,
         members:                membersValid.map((m, i) => ({
           user_id:                  m.user_id,
@@ -496,7 +501,7 @@ export default function RoletaConfigPage() {
               <select
                 value={gestorGroupJid}
                 onChange={e => setGestorGroupJid(e.target.value)}
-                disabled={loadingGroups || !inboxId.trim()}
+                disabled={loadingGroups}
                 className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
               >
                 <option value="">Nenhum</option>
@@ -508,13 +513,11 @@ export default function RoletaConfigPage() {
                 ))}
               </select>
               <p className="text-xs text-muted-foreground mt-1">
-                {!inboxId.trim()
-                  ? 'Preencha o Inbox ID acima para listar os grupos.'
-                  : loadingGroups
-                    ? 'Carregando grupos do WhatsApp...'
-                    : groups.length === 0
-                      ? 'Nenhum grupo encontrado nesta instancia.'
-                      : 'Quando um lead for distribuido, este grupo tambem recebe um aviso no WhatsApp.'}
+                {loadingGroups
+                  ? 'Carregando grupos...'
+                  : groups.length === 0
+                    ? 'Nenhum grupo encontrado (verifique o nome do grupo = nome do CRM).'
+                    : 'Grupo interno (central Operacional). Recebe um aviso quando um lead for distribuido.'}
               </p>
             </div>
 
