@@ -34,6 +34,8 @@
         "separator": " - "
       },
       "types": {
+        "roleta_lead_accepted": "Lead aceito",
+        "roleta_lead_passed": "Lead não assumido",
         "conversation_assignment": "Atribuição",
         "conversation_mention": "Menção",
         "conversation_creation": "Nova Conversa",
