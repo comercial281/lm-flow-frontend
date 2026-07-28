@@ -22,6 +22,16 @@ const PALETTE = ['#7c3aed', '#9333ea', '#2563eb', '#0891b2', '#16a34a', '#d97706
 const colorForName = (name: string) =>
   PALETTE[[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % PALETTE.length];
 
+// O backend só aceita título com letras/números/espaço/hífen/underscore, começando
+// e terminando em letra/número (mesma regra do Label). Saneia aqui pra evitar o
+// "Validation failed" quando o nome tem ".", "/", "º" etc.
+const sanitizeTitle = (raw: string) =>
+  raw
+    .replace(/[^\p{L}\p{N} _-]/gu, ' ') // troca inválidos por espaço
+    .replace(/\s+/g, ' ')               // colapsa espaços
+    .replace(/^[ _-]+|[ _-]+$/g, '')    // tira separador das pontas
+    .trim();
+
 /**
  * Seletor de etiquetas com busca + criação inline. Trabalha por IDs (pra casar
  * com o label_ids da config), sem persistir sozinho — quem salva é o formulário
@@ -65,9 +75,11 @@ export default function LabelMultiSelect({
     [catalog, selectedIds, q],
   );
 
-  // Só oferece "criar" quando o texto digitado não bate exatamente com nenhuma etiqueta.
-  const exactMatch = q.length > 0 && catalog.some(l => l.title?.toLowerCase() === q);
-  const canCreate = q.length > 0 && !exactMatch;
+  // Título saneado que será de fato criado (o que o backend aceita).
+  const cleanTitle = sanitizeTitle(query);
+  // Só oferece "criar" quando o nome saneado não bate exatamente com nenhuma etiqueta.
+  const exactMatch = cleanTitle.length > 0 && catalog.some(l => l.title?.toLowerCase() === cleanTitle.toLowerCase());
+  const canCreate = cleanTitle.length > 0 && !exactMatch;
 
   const add = (id: string) => {
     if (!selectedIds.includes(id)) onChange([...selectedIds, id]);
@@ -78,8 +90,12 @@ export default function LabelMultiSelect({
   const remove = (id: string) => onChange(selectedIds.filter(x => x !== id));
 
   const createAndAdd = async () => {
-    const title = query.trim();
-    if (!title || creating) return;
+    const title = sanitizeTitle(query);
+    if (creating) return;
+    if (!title) {
+      toast.error('Use letras ou números no nome da etiqueta.');
+      return;
+    }
 
     // Se já existe (case-insensitive), só seleciona — não duplica.
     const existing = catalog.find(l => l.title?.toLowerCase() === title.toLowerCase());
@@ -156,7 +172,7 @@ export default function LabelMultiSelect({
             disabled={disabled || creating}
             className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-primary px-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
-            <Plus className="h-3 w-3" /> {creating ? 'Criando...' : `Criar "${query.trim()}"`}
+            <Plus className="h-3 w-3" /> {creating ? 'Criando...' : `Criar "${cleanTitle}"`}
           </button>
         )}
       </div>
