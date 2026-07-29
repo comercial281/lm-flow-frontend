@@ -46,6 +46,8 @@ import CardPropertyInterests from './CardPropertyInterests';
 import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
+import { ManualOriginInput } from '@/components/shared/ManualOriginInput';
+import { MANUAL_ORIGIN_KEY, readManualOrigin } from '@/constants/manualLeadOrigin';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { contactEventsService } from '@/services/contacts/contactEventsService';
 import { labelsService } from '@/services/contacts/labelsService';
@@ -128,6 +130,12 @@ export default function EditItemModal({
   const [historyEvents, setHistoryEvents] = useState<ContactEvent[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  // Origem escrita à mão ("Indicação", "Cliente de carteira"...). É o ÚNICO campo
+  // da aba Origem que pode ser corrigido depois — anúncio/campanha é write-once.
+  const [manualOrigin, setManualOrigin] = useState('');
+  const [savedManualOrigin, setSavedManualOrigin] = useState('');
+  const [savingManualOrigin, setSavingManualOrigin] = useState(false);
+
   // Task modals state
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
@@ -166,6 +174,16 @@ export default function EditItemModal({
       // Responsável
       const currentAssigneeId = item.conversation?.assignee?.id;
       setSelectedAssigneeId(currentAssigneeId ? String(currentAssigneeId) : null);
+
+      // Origem escrita: o card já traz o espelho, mas leads antigos podem só ter
+      // no contato — por isso os fallbacks.
+      const contactAdditional = (item.contact ?? item.conversation?.contact) as
+        { additional_attributes?: { lead_origin?: unknown } } | undefined;
+      const writtenOrigin =
+        readManualOrigin(item.lead_origin)
+        || readManualOrigin(contactAdditional?.additional_attributes?.lead_origin);
+      setManualOrigin(writtenOrigin);
+      setSavedManualOrigin(writtenOrigin);
 
       // Roletas reais cadastradas (só as ativas) pra escolher no select.
       roletaConfigService.getAll()
@@ -393,6 +411,32 @@ export default function EditItemModal({
     item.contact?.phone_number || (item.conversation as any)?.contact?.phone_number || '';
   const whatsappDigits = rawPhone.replace(/\D/g, '');
   const whatsappUrl = whatsappDigits ? `https://wa.me/${whatsappDigits}` : null;
+
+  // A origem escrita mora no contato, não no card — o card só espelha.
+  const handleSaveManualOrigin = async () => {
+    const contactId = contactObj?.id ? String(contactObj.id) : null;
+    if (!contactId) {
+      toast.error('Este card não tem contato — não dá pra gravar a origem.');
+      return;
+    }
+
+    const text = manualOrigin.trim();
+    setSavingManualOrigin(true);
+    try {
+      await contactsService.updateContact(contactId, { lead_origin_note: text });
+      setManualOrigin(text);
+      setSavedManualOrigin(text);
+      // O board só recarrega no submit do card. Sem espelhar aqui, fechar e
+      // reabrir o modal mostraria o valor antigo do item em memória.
+      item.lead_origin = { ...(item.lead_origin ?? {}), manual_origin: text };
+      toast.success(text ? 'Origem do lead salva.' : 'Origem do lead limpa.');
+    } catch (error) {
+      console.error('Error saving lead origin:', error);
+      toast.error('Não consegui salvar a origem do lead.');
+    } finally {
+      setSavingManualOrigin(false);
+    }
+  };
 
   const handleCreateTask = async (data: CreateTaskData) => {
     if (!tasksListRef.current) return;
@@ -850,7 +894,8 @@ export default function EditItemModal({
                 // Origem universal (manual / orgânico / tracking interno)
                 inbox_name: 'Caixa de entrada', added_by_name: 'Adicionado por',
               };
-              const HIDDEN = new Set(['thumbnail_url', 'source', 'entered_via', 'added_by_id', 'channel_type']);
+              // manual_origin sai da lista genérica: tem campo editável próprio no topo.
+              const HIDDEN = new Set(['thumbnail_url', 'source', 'entered_via', 'added_by_id', 'channel_type', MANUAL_ORIGIN_KEY]);
               // Rótulo + cor por origem. Todo lead tem origem (nunca "sem dados"):
               // anúncio, formulário, landing, UTM, WhatsApp orgânico, manual ou não identificada.
               const SOURCE_META: Record<string, { label: string; cls: string }> = {
@@ -875,9 +920,7 @@ export default function EditItemModal({
                 ?? (item.conversation as any)?.additional_attributes?.form_answers;
               const extra = ((ar as any).extra_fields && typeof (ar as any).extra_fields === 'object' ? (ar as any).extra_fields : null)
                 ?? (formAnswers && typeof formAnswers === 'object' && Object.keys(formAnswers).length ? formAnswers : null);
-              if (entries.length === 0 && !extra && !meta) {
-                return <div className="text-sm text-muted-foreground py-12 text-center border border-dashed border-border rounded-lg">Sem dados de origem para este lead.</div>;
-              }
+              const hasTrackedData = entries.length > 0 || !!extra || !!meta;
               return (
                 <div className="space-y-4">
                   {meta && (
@@ -885,6 +928,40 @@ export default function EditItemModal({
                       <span>{meta.label}</span>
                     </div>
                   )}
+
+                  {/* Origem por escrito — o rastreamento automático só sabe de
+                      anúncio/campanha; "veio por indicação" quem informa é o time. */}
+                  <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-3">
+                    <ManualOriginInput
+                      id={`manual-origin-${item.id}`}
+                      value={manualOrigin}
+                      onChange={setManualOrigin}
+                      disabled={savingManualOrigin}
+                    />
+                    <div className="flex items-center justify-end gap-2">
+                      {manualOrigin.trim() !== savedManualOrigin && (
+                        <span className="text-xs text-muted-foreground">Alteração não salva</span>
+                      )}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7"
+                        disabled={savingManualOrigin || manualOrigin.trim() === savedManualOrigin}
+                        onClick={handleSaveManualOrigin}
+                      >
+                        {savingManualOrigin && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                        Salvar origem
+                      </Button>
+                    </div>
+                  </div>
+
+                  {!hasTrackedData && (
+                    <div className="text-sm text-muted-foreground py-6 text-center border border-dashed border-border rounded-lg">
+                      Sem dados de rastreamento automático para este lead.
+                    </div>
+                  )}
+
                   <div className="grid gap-2">
                     {entries.map(([k, v]) => (
                       <div key={k} className="flex items-start justify-between gap-3 text-sm border-b border-border/50 pb-1.5">

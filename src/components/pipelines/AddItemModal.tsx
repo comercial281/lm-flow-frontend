@@ -23,6 +23,7 @@ import { pipelinesService } from '@/services/pipelines';
 import { contactsService } from '@/services/contacts';
 import { toast } from 'sonner';
 import { Contact, ContactFormData } from '@/types/contacts';
+import { ManualOriginInput } from '@/components/shared';
 
 // Normaliza telefone para E.164 (backend exige). Limpa tudo que não é dígito e prefixa "+".
 function normalizePhoneE164(raw: string): string {
@@ -121,7 +122,7 @@ export default function AddItemModal({
 
   // Modo: pegar item existente ou criar um lead novo do zero.
   const [mode, setMode] = useState<'existing' | 'new'>('existing');
-  const [newLead, setNewLead] = useState({ name: '', phone: '', email: '' });
+  const [newLead, setNewLead] = useState({ name: '', phone: '', email: '', origin: '' });
   const [isCreating, setIsCreating] = useState(false);
 
   // Initialize modal
@@ -133,7 +134,7 @@ export default function AddItemModal({
       setNotes('');
       setItemType('conversation');
       setMode('existing');
-      setNewLead({ name: '', phone: '', email: '' });
+      setNewLead({ name: '', phone: '', email: '', origin: '' });
 
       // Pre-select stage
       if (preselectedStage) {
@@ -236,6 +237,8 @@ export default function AddItemModal({
       if (phone) payload.phone_number = phone;
       const email = newLead.email.trim();
       if (email) payload.email = email;
+      const origin = newLead.origin.trim();
+      if (origin) payload.lead_origin_note = origin;
 
       // Cria o contato. Se telefone/e-mail já existir (contato único por conta →
       // 422), reaproveita o contato existente em vez de quebrar.
@@ -255,6 +258,16 @@ export default function AddItemModal({
         reused = true;
       }
       if (!contactId) throw new Error('Contato criado sem id.');
+
+      // Contato reaproveitado não passou pelo POST — a origem escrita precisa ir
+      // num PATCH. Falhar aqui não invalida o lead, então só avisa.
+      if (reused && origin) {
+        try {
+          await contactsService.updateContact(contactId, { lead_origin_note: origin });
+        } catch (originErr) {
+          console.error('Error saving lead origin:', originErr);
+        }
+      }
 
       try {
         await pipelinesService.addItemToPipeline(pipelineId, {
@@ -406,6 +419,14 @@ export default function AddItemModal({
                   onChange={e => setNewLead(p => ({ ...p, email: e.target.value }))}
                 />
               </div>
+              {/* Lead cadastrado na mão não tem anúncio pra rastrear — quem sabe
+                  de onde ele veio é quem está cadastrando. */}
+              <ManualOriginInput
+                id="new-lead-origin"
+                value={newLead.origin}
+                onChange={origin => setNewLead(p => ({ ...p, origin }))}
+                disabled={isCreating}
+              />
             </div>
           )}
 

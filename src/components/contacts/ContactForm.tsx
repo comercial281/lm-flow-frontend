@@ -37,6 +37,8 @@ import { Label as LabelType } from '@/types/settings';
 
 import { PhoneInput } from '@/components/shared/PhoneInput';
 import { TaxIdInput } from '@/components/shared/TaxIdInput';
+import { ManualOriginInput } from '@/components/shared/ManualOriginInput';
+import { readManualOrigin } from '@/constants/manualLeadOrigin';
 import { validateTaxId, getTaxIdLabel } from '@/utils/validation';
 import '@/components/shared/PhoneInput.css';
 import { parsePhoneNumber, type Country } from 'react-phone-number-input';
@@ -78,6 +80,8 @@ interface FormData {
   company_ids: string[];
   avatar?: File;
   removeAvatar?: boolean;
+  /** Origem escrita à mão — vai pro backend como `lead_origin_note`. */
+  leadOriginNote: string;
 }
 
 const initialFormData: FormData = {
@@ -107,6 +111,7 @@ const initialFormData: FormData = {
   labels: [],
   custom_attributes: {},
   company_ids: [],
+  leadOriginNote: '',
 };
 
 // countryOptions moved inside component to access t()
@@ -182,6 +187,7 @@ export default function ContactForm({
         labels: contact.labels || [],
         custom_attributes: {},
         company_ids: contact.companies?.map(c => c.id) || [],
+        leadOriginNote: readManualOrigin(contact.additional_attributes?.lead_origin),
       });
 
       setCustomAttributes(contact.custom_attributes || {});
@@ -336,6 +342,8 @@ export default function ContactForm({
       custom_attributes: customAttributes,
       company_ids: formData.company_ids,
       avatar: formData.avatar,
+      // Só pessoa tem origem de lead; empresa não passa pelo funil.
+      lead_origin_note: formData.type === 'person' ? formData.leadOriginNote.trim() : undefined,
     };
 
     onSubmit(submitData);
@@ -573,6 +581,17 @@ export default function ContactForm({
             {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber}</p>}
           </div>
         </div>
+
+        {/* Origem escrita — lead cadastrado na mão não tem anúncio pra rastrear,
+            quem sabe de onde ele veio é quem está cadastrando. */}
+        {isPerson && (
+          <ManualOriginInput
+            id="lead_origin_note"
+            value={formData.leadOriginNote}
+            onChange={value => setFormData(prev => ({ ...prev, leadOriginNote: value }))}
+            disabled={loading}
+          />
+        )}
       </div>
 
       <Separator />
