@@ -33,6 +33,49 @@ interface TreeDatabase {
 interface SpaceResp {
   role: 'admin' | 'client'; author_name: string
   pages: TreePage[]; databases: TreeDatabase[]
+  // Estado da aba Gerir (só o backend admin popula): pausa global + config por seção.
+  dash_paused?: boolean
+  section_config?: SectionConfigRow[]
+}
+
+// ── GERIR (admin) ────────────────────────────────────────────────────────────
+// Seções que o admin liga/desliga e decide se o cliente vê. Espelha VALID_SECTIONS
+// do backend (Espaco::Api::VALID_SECTIONS). Linha ausente = ligada e visível.
+export type DashSectionId =
+  | 'visao' | 'campanhas' | 'criativos' | 'detalhamento'
+  | 'historico' | 'projeto' | 'metas' | 'documentos' | 'notion'
+
+export const SECTION_LABEL: Record<DashSectionId, string> = {
+  visao: 'Visão Geral',
+  campanhas: 'Campanhas',
+  criativos: 'Criativos',
+  detalhamento: 'Detalhamento',
+  historico: 'Histórico',
+  projeto: 'Projeto',
+  metas: 'Metas',
+  documentos: 'Documentos',
+  notion: 'Espaço',
+}
+
+export const ALL_SECTIONS = Object.keys(SECTION_LABEL) as DashSectionId[]
+
+export interface SectionConfigRow {
+  section: DashSectionId
+  enabled: boolean
+  client_visible: boolean
+}
+
+export interface EspacoAccess {
+  id: string
+  token: string
+  label: string | null
+  role: 'admin' | 'client'
+  member_name: string | null
+  allowed_sections: DashSectionId[] | null
+  access_count: number
+  last_accessed_at: string | null
+  created_at: string
+  expires_at: string | null
 }
 
 export interface DashMember {
@@ -1019,6 +1062,114 @@ export function useUploadFile() {
     })
     return r.url
   }
+}
+
+// ── GERIR: pausa global + visibilidade por seção (admin) ─────────────────────
+
+/** Pausa/reativa o Espaço inteiro. Pausado, o cliente para de ver; admin continua. */
+export function useSetDashPaused() {
+  const { call } = useDashCtx()
+  const inval = useInval()
+  return useMutation({
+    mutationFn: async (paused: boolean) => {
+      await call('dash_set_paused', { paused })
+      return paused
+    },
+    onSuccess: (paused) => {
+      inval.space()
+      toast.success(paused ? 'Espaço pausado' : 'Espaço reativado')
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  })
+}
+
+/** Liga/desliga uma seção no dash inteiro e/ou alterna "cliente vê / só interna". */
+export function useSaveSectionConfig() {
+  const { call } = useDashCtx()
+  const inval = useInval()
+  return useMutation({
+    mutationFn: async (input: {
+      section: DashSectionId
+      enabled?: boolean
+      client_visible?: boolean
+    }) => {
+      await call('section_config_save', input)
+      return input
+    },
+    onSuccess: () => inval.space(),
+    onError: (e) => toast.error(errorMessage(e)),
+  })
+}
+
+// ── GERIR: acessos (links compartilháveis) ───────────────────────────────────
+
+const kAccess = (t: string) => ['dash_notion', 'accesses', t] as const
+
+export function useEspacoAccesses() {
+  const { token, call } = useDashCtx()
+  return useQuery({
+    queryKey: kAccess(token),
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { accesses } = await call<{ accesses: EspacoAccess[] }>('access_list')
+      return accesses ?? []
+    },
+  })
+}
+
+export function useCreateAccess() {
+  const { call } = useDashCtx()
+  const { qc, token } = useInval()
+  return useMutation({
+    mutationFn: async (input: {
+      label?: string | null
+      role: 'admin' | 'client'
+      member_name?: string | null
+      expires_at?: string | null
+    }) => {
+      const r = await call<{ ok: boolean; token: string }>('access_create', input)
+      return r.token
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: kAccess(token) })
+      toast.success('Link gerado')
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  })
+}
+
+export function useRevokeAccess() {
+  const { call } = useDashCtx()
+  const { qc, token } = useInval()
+  return useMutation({
+    mutationFn: async (access_id: string) => {
+      await call('access_revoke', { access_id })
+      return access_id
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: kAccess(token) })
+      toast.success('Acesso revogado')
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  })
+}
+
+export function useUpdateAccess() {
+  const { call } = useDashCtx()
+  const { qc, token } = useInval()
+  return useMutation({
+    mutationFn: async (input: {
+      access_id: string
+      allowed_sections?: DashSectionId[] | null
+      expires_at?: string | null
+      label?: string
+    }) => {
+      await call('access_update', input)
+      return input
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: kAccess(token) }),
+    onError: (e) => toast.error(errorMessage(e)),
+  })
 }
 
 function fileToBase64(file: File): Promise<string> {

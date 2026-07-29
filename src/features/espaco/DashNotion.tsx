@@ -8,7 +8,7 @@
 //   <DashNotion token={token} role={role} authorName={name} />
 
 import { useCallback, useEffect, useState } from 'react'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Settings2 } from 'lucide-react'
 import { DashNotionProvider } from './dashContext'
 import type { EspacoMode } from './espacoClient'
 import { useSpace } from './useDashNotion'
@@ -16,6 +16,7 @@ import DashSidebar from './DashSidebar'
 import DashDatabaseView from './views/DashDatabaseView'
 import PageView from './page/PageView'
 import PagePeekModal from './page/PagePeekModal'
+import EspacoGerir from './EspacoGerir'
 
 interface DashNotionProps {
   mode: EspacoMode
@@ -40,6 +41,9 @@ function DashNotionInner() {
   const [databaseId, setDatabaseId] = useState<string | null>(null)
   const [fullPageId, setFullPageId] = useState<string | null>(null)
   const [peekId, setPeekId] = useState<string | null>(null)
+  // Painel Gerir (gestao) — so admin. O role vem do backend (op tree/provision).
+  const [showGerir, setShowGerir] = useState(false)
+  const isAdmin = space?.role === 'admin'
 
   // Ao carregar, abre a primeira base (se houver) e nenhuma pagina.
   useEffect(() => {
@@ -74,7 +78,27 @@ function DashNotionInner() {
       />
 
       <main className="flex-1 min-w-0 flex flex-col min-h-0 overflow-hidden">
-        {fullPageId ? (
+        {isAdmin && (
+          <div className="shrink-0 flex items-center justify-end px-4 pt-3">
+            <button
+              onClick={() => setShowGerir(v => !v)}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lm-sm border transition-colors ${
+                showGerir
+                  ? 'bg-lm-neon/15 border-lm-neon/40 text-lm-neon'
+                  : 'bg-lm-card2 border-lm-border text-lm-muted hover:text-lm-primary'
+              }`}
+              title="Gerir o Espaço (admin)"
+            >
+              <Settings2 size={13} />
+              Gerir
+            </button>
+          </div>
+        )}
+        {showGerir ? (
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+            <EspacoGerir />
+          </div>
+        ) : fullPageId ? (
           <>
             <div className="shrink-0 px-6 pt-4">
               <button

@@ -1653,17 +1653,17 @@ const AppRouter = () => {
             }
           />
 
-          {/* Espaço — Notion por tenant (usuário logado). Gate por permissão
-              "espaco.read" (super-admin sempre passa). */}
+          {/* Espaço — Notion por tenant (usuário logado). Sem gate de permissão:
+              QUALQUER staff logado do tenant acessa (decisão do Giovani). O
+              controle fino (pausar / visibilidade por seção / links) fica na aba
+              Gerir, que só aparece pra admin (role do backend). */}
           <Route
             path="/espaco"
             element={
               <PrivateRoute>
                 <CustomerRoute>
                   <MainLayout>
-                    <PermissionRoute resource="espaco" action="read">
-                      <Espaco mode="auth" />
-                    </PermissionRoute>
+                    <Espaco mode="auth" />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>
