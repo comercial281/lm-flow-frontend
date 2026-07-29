@@ -63,6 +63,12 @@ export interface ContactAdditionalAttributes {
   campaign_medium?: string;
   campaign_name?: string;
   credit_check?: CreditCheckResult;
+  /**
+   * Espelho da origem do lead gravado pelo backend (LeadOrigin::Recorder).
+   * Chaves variam por origem (anúncio, formulário, landing, manual...), por isso
+   * o índice aberto. `manual_origin` é a origem escrita à mão.
+   */
+  lead_origin?: { source?: string; manual_origin?: string; [key: string]: unknown };
 }
 
 export type CreditCheckStatus = 'clean' | 'restricted' | 'unknown';
@@ -266,6 +272,12 @@ export interface ContactCreateData {
   inbox_id?: string;
   labels?: string[];
   company_ids?: string[];
+  /**
+   * Origem escrita à mão ("Indicação", "Cliente de carteira"...). Não é coluna do
+   * contato: o backend manda pro rastreamento de origem e espelha em
+   * additional_attributes.lead_origin.manual_origin. String vazia limpa.
+   */
+  lead_origin_note?: string;
 }
 
 export interface ContactUpdateData {
@@ -283,6 +295,8 @@ export interface ContactUpdateData {
   labels?: string[];
   company_ids?: string[];
   default_assignee_id?: string | null;
+  /** Ver ContactCreateData.lead_origin_note. */
+  lead_origin_note?: string;
 }
 
 export interface ContactsResponse extends PaginatedResponse<Contact> {}

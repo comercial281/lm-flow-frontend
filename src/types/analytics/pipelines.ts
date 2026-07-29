@@ -231,6 +231,10 @@ export interface PipelineItem {
     title?: string | null;
     code?: string | null;
   } | null;
+  // Espelho da origem do lead (backend: LeadOrigin::Recorder). As chaves variam
+  // por origem — anúncio, formulário, landing, manual — daí o índice aberto.
+  // `manual_origin` é a origem escrita à mão ("Indicação", "Cliente de carteira").
+  lead_origin?: { source?: string; manual_origin?: string; [key: string]: unknown } | null;
   position?: number; // ordem manual no kanban (epoch da chegada por padrão)
   entered_at?: number;
   completed_at?: number | null;
