@@ -54,6 +54,10 @@ export interface Property {
   /** Características do imóvel e comodidades do condomínio (slugs do catálogo). */
   features?: string[];
   condo_features?: string[];
+  /** Book (PDF do cadastro via importação) salvo no imóvel, para reenviar no chat. */
+  has_book?: boolean;
+  book_url?: string | null;
+  book_file_name?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -124,6 +128,8 @@ export interface PropertiesListParams {
   transaction_type?: string;
   property_type?: string;
   city?: string;
+  /** Só imóveis que têm book salvo (?has_book=1). */
+  has_book?: boolean;
   page?: number;
   per_page?: number;
 }

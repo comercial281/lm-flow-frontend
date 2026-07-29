@@ -19,6 +19,7 @@ import {
   Reply,
   PenLine,
   Rocket,
+  Building2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -36,6 +37,7 @@ import AudioRecorder from '../audio';
 
 import { AIAssistanceButton } from '../ai-assistance';
 import { MessageFunnelPopover } from '../message-funnels';
+import { PropertyBookPopover } from '../property-book';
 import { RichTextEditor, RichTextEditorRef } from '../rich-text-editor';
 
 import { ReplyMode, Message, Conversation } from '@/types/chat/api';
@@ -127,6 +129,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   // 🎯 FUNIS DE MENSAGEM (substitui Canned Responses + Quick Replies)
   const [showFunnels, setShowFunnels] = useState(false);
+
+  // 🏠 ENVIO DE BOOK DE IMÓVEL: buscar imóvel do acervo e mandar o PDF do book.
+  const [showBookPicker, setShowBookPicker] = useState(false);
+  const isWhatsApp = channelType === 'Channel::Whatsapp';
 
   // Forçar modo de nota privada quando a conversa está pendente
   useEffect(() => {
@@ -475,6 +481,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
             />
           )}
 
+          {/* 🏠 BOOK DE IMÓVEL: buscar no acervo e enviar o PDF direto na conversa */}
+          {isWhatsApp && canSendAttachment && (
+            <PropertyBookPopover
+              isOpen={showBookPicker}
+              onClose={() => setShowBookPicker(false)}
+              onSendMessage={onSendMessage}
+            />
+          )}
+
           {/* Primeira linha: Reply Mode Toggle + Botões de ação rápida */}
           <div className="flex items-center justify-between mb-3 gap-3">
             {/* Reply Mode Toggle */}
@@ -576,6 +591,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   title="Funis de Mensagem"
                 >
                   <Rocket className="h-4 w-4" />
+                </Button>
+              )}
+
+              {/* 🏠 Enviar book de imóvel */}
+              {isWhatsApp && canSendAttachment && (
+                <Button
+                  variant={showBookPicker ? 'default' : 'ghost'}
+                  size="icon"
+                  disabled={isDisabled || isSending || isPendingConversation}
+                  className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
+                  onClick={() => setShowBookPicker(v => !v)}
+                  title="Enviar book de imóvel"
+                >
+                  <Building2 className="h-4 w-4" />
                 </Button>
               )}
 
