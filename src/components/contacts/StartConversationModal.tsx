@@ -18,6 +18,7 @@ import {
   AvatarFallback,
   Badge,
 } from '@/components/ui/ds';
+import { toast } from 'sonner';
 import { MessageSquare, Phone, Mail, Send, Loader2 } from 'lucide-react';
 import { Contact, ContactableInboxes } from '@/types/contacts';
 import { contactsService } from '@/services/contacts';
@@ -25,6 +26,7 @@ import { conversationAPI } from '@/services/conversations';
 import MessageTemplateService from '@/services/channels/messageTemplatesService';
 import { MessageTemplate } from '@/types/channels/inbox';
 import { ConversationCreateData } from '@/types/chat/api';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 
 interface StartConversationModalProps {
   open: boolean;
@@ -37,6 +39,7 @@ export default function StartConversationModal({
   open,
   onOpenChange,
   contact,
+  onConversationCreated,
 }: StartConversationModalProps) {
   const { t } = useLanguage('contacts');
   const [selectedInboxId, setSelectedInboxId] = useState<string>('');
@@ -272,6 +275,7 @@ export default function StartConversationModal({
 
       // Close modal and redirect to conversation
       if (data && data.id) {
+        onConversationCreated?.(data.id);
         onOpenChange(false);
 
         // Redirect to conversation like the Vue frontend does
@@ -283,9 +287,15 @@ export default function StartConversationModal({
         setUseTemplate(false);
         setSelectedTemplate(null);
         setTemplateParams({});
+      } else {
+        // Backend answered without a conversation id — don't fail silently.
+        toast.error(t('startConversation.errors.createFailed'));
       }
     } catch (error) {
+      // Surface the REAL backend message (validation / authorization) instead of
+      // swallowing it — otherwise the user just sees "nothing happened".
       console.error('Error creating conversation:', error);
+      toast.error(apiErrorMessage(error, t('startConversation.errors.createFailed')));
     } finally {
       setLoading(false);
     }
@@ -372,8 +382,12 @@ export default function StartConversationModal({
                 </span>
               </div>
             ) : availableInboxes.length === 0 ? (
-              <div className="p-3 rounded-md border border-orange-200 bg-orange-50">
-                <p className="text-sm text-orange-700">{t('startConversation.empty.noChannels')}</p>
+              <div className="p-3 rounded-md border border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800">
+                <p className="text-sm text-orange-700 dark:text-orange-400">
+                  {contact.phone_number?.trim()
+                    ? t('startConversation.empty.noChannelAccess')
+                    : t('startConversation.empty.noPhone')}
+                </p>
               </div>
             ) : (
               <Select value={selectedInboxId} onValueChange={setSelectedInboxId} required>

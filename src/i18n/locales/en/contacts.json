@@ -642,13 +642,18 @@
       "channels": "Loading channels..."
     },
     "empty": {
-      "noChannels": "No channels available for this contact"
+      "noChannels": "No channels available for this contact",
+      "noPhone": "Add a phone number to this contact to start a WhatsApp conversation.",
+      "noChannelAccess": "You don't have access to a WhatsApp channel for this contact. Ask an administrator to assign you to the channel."
     },
     "unavailable": "Unavailable",
     "actions": {
       "cancel": "Cancel",
       "send": "Start Conversation",
       "sending": "Sending..."
+    },
+    "errors": {
+      "createFailed": "Could not start the conversation. Please try again."
     }
   },
   "scheduledActions": {

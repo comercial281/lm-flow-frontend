@@ -634,13 +634,18 @@
       "channels": "Cargando canales..."
     },
     "empty": {
-      "noChannels": "Ningún canal disponible para este contacto"
+      "noChannels": "Ningún canal disponible para este contacto",
+      "noPhone": "Agrega un número de teléfono a este contacto para iniciar una conversación de WhatsApp.",
+      "noChannelAccess": "No tienes acceso a un canal de WhatsApp para este contacto. Pide a un administrador que te asigne al canal."
     },
     "unavailable": "No disponible",
     "actions": {
       "cancel": "Cancelar",
       "send": "Iniciar Conversación",
       "sending": "Enviando..."
+    },
+    "errors": {
+      "createFailed": "No se pudo iniciar la conversación. Inténtalo de nuevo."
     }
   },
   "scheduledActions": {
