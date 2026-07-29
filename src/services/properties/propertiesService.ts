@@ -189,6 +189,25 @@ export const propertiesService = {
     await api.delete(`/properties/${id}`);
   },
 
+  // Aba Books: sobe/troca o book (PDF) de um imóvel já existente. Devolve o imóvel atualizado.
+  async uploadBook(id: string, file: File, onProgress?: (pct: number) => void): Promise<Property> {
+    const fd = new FormData();
+    fd.append('file', file, file.name);
+    const res = await api.post(`/properties/${id}/book`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: e => {
+        if (onProgress && e.total) onProgress(Math.round((e.loaded * 100) / e.total));
+      },
+    });
+    return (res.data as { data: Property }).data;
+  },
+
+  // Aba Books: remove o book do imóvel.
+  async removeBook(id: string): Promise<Property> {
+    const res = await api.delete(`/properties/${id}/book`);
+    return (res.data as { data: Property }).data;
+  },
+
   async generateDescription(
     id: string,
     opts: { tone?: string; audience?: string; focus?: string; apply?: boolean } = {}

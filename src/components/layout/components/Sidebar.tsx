@@ -60,6 +60,7 @@ export default function Sidebar({
     '/ia-vendedora': 'Comercial',
     '/equipe': 'Comercial',
     '/properties': 'Imobiliário',
+    '/books': 'Imobiliário',
     '/visits': 'Imobiliário',
     '/proposals': 'Imobiliário',
     '/contracts': 'Imobiliário',
