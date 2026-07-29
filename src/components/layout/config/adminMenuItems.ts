@@ -13,6 +13,7 @@ import {
   ClipboardList,
   Wand2,
   MessageSquarePlus,
+  Radio,
 } from 'lucide-react';
 
 /**
@@ -40,6 +41,14 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     href: '/admin/clientes',
     icon: Building2,
     description: 'Criar, congelar, arquivar, entrar no CRM do cliente',
+  },
+  {
+    // Mural pra deixar aberto num segundo monitor: substitui o "ficar olhando
+    // o grupo do WhatsApp" pra saber se lead está caindo (e se parou).
+    name: 'Leads ao Vivo',
+    href: '/admin/leads-ao-vivo',
+    icon: Radio,
+    description: 'Mural dos leads caindo agora em todos os clientes',
   },
   {
     name: 'Modo Cliente',
