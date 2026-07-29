@@ -695,15 +695,9 @@ export default function Properties() {
               </Button>
             )}
             {canCreate && (
-              <Button variant="outline" onClick={() => setImportOpen(true)}>
-                <Upload className="h-4 w-4 mr-2" />
-                Importar em lote (IA)
-              </Button>
-            )}
-            {canCreate && (
-              <Button onClick={openCreate}>
+              <Button onClick={() => setImportOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Cadastrar imóvel
+                Cadastrar imóveis
               </Button>
             )}
           </div>
@@ -789,9 +783,9 @@ export default function Properties() {
             <p className="text-sm font-medium">Nenhum imóvel encontrado</p>
             <p className="text-xs mt-1">Cadastre o primeiro imóvel do seu portfólio</p>
             {canCreate && (
-              <Button className="mt-4" onClick={openCreate}>
+              <Button className="mt-4" onClick={() => setImportOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Cadastrar imóvel
+                Cadastrar imóveis
               </Button>
             )}
           </div>
@@ -1332,6 +1326,7 @@ export default function Properties() {
         open={importOpen}
         refreshSignal={importRefresh}
         onClose={() => setImportOpen(false)}
+        onManual={() => { setImportOpen(false); openCreate(); }}
         onReview={async id => {
           try {
             const p = await propertiesService.get(id);
