@@ -12,6 +12,7 @@ export interface LeadAdsFormConfig {
   default_assignee_id: string | null;
   roleta_config_id: string | null;
   property_id: string | null;
+  match_keyword: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -35,6 +36,7 @@ export interface LeadAdsFormConfigFormData {
   default_assignee_id?: string | null;
   roleta_config_id?: string | null;
   property_id?: string | null;
+  match_keyword?: string | null;
 }
 
 // Resposta de meta_forms — pode vir { data, error } se a Meta não estiver conectada.

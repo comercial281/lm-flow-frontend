@@ -46,8 +46,21 @@ interface FormState {
   // "Quem assume" combinado: '' | 'user:<id>' | 'roleta:<id>'. Derivado no save.
   assign_to: string;
   property_id: string;
+  match_keyword: string;
   is_active: boolean;
 }
+
+// Palavra-chave padrão pro casamento: o nome do formulário sem a data (começo/fim).
+// O usuário pode encurtar pro nome do imóvel (ex.: "capri") pra pegar todas as
+// variações de campanha ("CAPRI 2.0 INT COND", "CAPRI INT COND"...).
+const defaultKeyword = (formName = ''): string =>
+  formName
+    .replace(/[[(][^\])]*\d[^\])]*[)\]]/g, ' ')          // [08/07], (jun/25)
+    .replace(/^\s*\d{1,4}([/.-]\d{1,4}){1,2}\b\s*/, ' ') // data no começo
+    .replace(/[\s–—/.-]+\d{1,4}([\s–—/.-]+\d{1,4})+\s*$/, ' ') // data no fim
+    .replace(/[[\]()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 const emptyFormState = (form_id = '', form_name = ''): FormState => ({
   form_id,
@@ -57,6 +70,7 @@ const emptyFormState = (form_id = '', form_name = ''): FormState => ({
   label_ids: [],
   assign_to: '',
   property_id: '',
+  match_keyword: defaultKeyword(form_name),
   is_active: true,
 });
 
@@ -257,6 +271,7 @@ export default function LeadAdsForms() {
       label_ids:         cfg.label_ids ?? [],
       assign_to:         encodeAssignTo(cfg),
       property_id:       cfg.property_id ?? '',
+      match_keyword:     cfg.match_keyword ?? defaultKeyword(cfg.form_name),
       is_active:         cfg.is_active,
     });
     setModalOpen(true);
@@ -277,6 +292,7 @@ export default function LeadAdsForms() {
       default_assignee_id: assign.default_assignee_id,
       roleta_config_id:    assign.roleta_config_id,
       property_id:         form.property_id || null,
+      match_keyword:       form.match_keyword.trim() || null,
     };
 
     setSaving(true);
@@ -904,6 +920,24 @@ export default function LeadAdsForms() {
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Já vem com <strong>tráfego pago</strong> por padrão. Busque ou crie a etiqueta do imóvel deste formulário.
+              </p>
+            </div>
+
+            {/* Palavra-chave do imóvel: casa TODAS as campanhas desse imóvel. O Meta
+                cria um formulário novo por campanha (nome com data/versão diferente),
+                então casar pelo nome do imóvel evita reconfigurar toda campanha. */}
+            <div>
+              <UILabel htmlFor="match_keyword">Nome do imóvel pra casar os formulários</UILabel>
+              <input
+                id="match_keyword"
+                type="text"
+                className={baseSelectClass}
+                placeholder="ex.: capri, torres dos topázios"
+                value={form.match_keyword}
+                onChange={e => setForm(f => ({ ...f, match_keyword: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Todo formulário cujo nome <strong>contiver</strong> isto entra com esta config — cobre <strong>todas as campanhas</strong> do imóvel (datas/versões diferentes), sem reconfigurar. Deixe curto (só o nome do imóvel).
               </p>
             </div>
 
