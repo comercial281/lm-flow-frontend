@@ -67,6 +67,10 @@ export interface MetaTokenDebug {
   page_name?: string;
   page_error?: string;
   access_token?: string;
+  // Diagnóstico de roteamento: form_ids configurados x form_ids dos últimos leads
+  // recebidos de fato pelo webhook (matched=false => lead veio de form não configurado).
+  configured_forms?: { form_id: string; form_name?: string; is_active: boolean; labels: string[] }[];
+  recent_webhook_leads?: { created_at: string; form_id: string; leadgen_id?: string; matched: boolean; matched_form_name?: string | null }[];
 }
 
 const BASE = '/lead_ads_form_configs';

@@ -577,6 +577,61 @@ export default function LeadAdsForms() {
                 </div>
               )}
 
+              {/* Diagnóstico de ROTEAMENTO: por que um lead que caiu pelo webhook não
+                  pegou a etiqueta do formulário. Compara os form_ids dos últimos leads
+                  recebidos de fato com os formulários configurados. matched=false = o
+                  lead veio de um formulário que NÃO está configurado (causa típica de
+                  "veio só com tráfego pago"). */}
+              {Array.isArray(debug.recent_webhook_leads) && (
+                <div className="rounded-lg border border-border p-3">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                    Últimos leads recebidos (webhook) × formulários configurados
+                  </p>
+                  {debug.recent_webhook_leads.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Nenhum lead recebido pelo webhook ainda (ou nenhum desta página).
+                    </p>
+                  ) : (
+                    <div className="space-y-1">
+                      {debug.recent_webhook_leads.map((l, i) => (
+                        <div key={i} className="flex items-center justify-between gap-2 text-xs">
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            {l.matched
+                              ? <Check className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                              : <X className="h-3.5 w-3.5 text-red-600 flex-shrink-0" />}
+                            <code className="bg-muted rounded px-1.5 py-0.5">{l.form_id || '—'}</code>
+                            {l.matched
+                              ? <span className="text-green-700 truncate">{l.matched_form_name || 'configurado'}</span>
+                              : <span className="text-red-600 font-medium">sem config → só "tráfego pago"</span>}
+                          </span>
+                          <span className="text-muted-foreground flex-shrink-0">
+                            {new Date(l.created_at).toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {Array.isArray(debug.configured_forms) && debug.configured_forms.length > 0 && (
+                    <div className="mt-3 pt-2 border-t border-border">
+                      <p className="text-xs text-muted-foreground mb-1">Formulários configurados neste cliente:</p>
+                      <div className="space-y-0.5">
+                        {debug.configured_forms.map((f, i) => (
+                          <div key={i} className="text-xs flex items-center gap-1.5">
+                            <code className="bg-muted rounded px-1.5 py-0.5">{f.form_id}</code>
+                            <span className="truncate">{f.form_name || '(sem nome)'}</span>
+                            {!f.is_active && <span className="text-amber-600">(inativo)</span>}
+                            {f.labels.length > 0 && <span className="text-muted-foreground truncate">— {f.labels.join(', ')}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-muted-foreground mt-2">
+                    Se um lead aparece com <strong className="text-red-600">✕</strong>, ele veio de um formulário cujo <code>form_id</code> não está na lista de baixo — normalmente outro formulário do mesmo imóvel (campanha/data diferente). Configure esse <code>form_id</code> também.
+                  </p>
+                </div>
+              )}
+
               {/* Configuração do webhook no App Meta — fonte ÚNICA de verdade. Mostra a
                   URL de callback e o verify token que o SERVIDOR realmente valida, pra
                   copiar direto no painel do App (Developers → Webhooks → Page). Acaba com
