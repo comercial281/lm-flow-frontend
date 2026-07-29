@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Button,
@@ -13,6 +13,10 @@ import {
 import { toast } from 'sonner';
 import { MessageSquarePlus, Lightbulb, Bug } from 'lucide-react';
 import { feedbackService, type FeedbackKind } from '@/services/feedback/feedbackService';
+import { FEEDBACK_OPEN_EVENT } from './openFeedback';
+
+/** Rotas do chat (/conversations e /conversations/:id). */
+const CHAT_ROUTE = /^\/conversations(\/|$)/;
 
 /**
  * Botão flutuante de "Sugestões/Bugs" para o cliente.
@@ -20,6 +24,13 @@ import { feedbackService, type FeedbackKind } from '@/services/feedback/feedback
  * Aparece em todas as telas do CRM (montado no MainLayout). O cliente escolhe
  * Sugestão ou Bug, escreve a mensagem e envia — cai na aba "Sugestões/Bugs" do
  * admin (Leal Mídia) e dispara um e-mail de aviso. Sem anexo nesta versão.
+ *
+ * Exceção: na aba de Conversas o botão flutuante não é renderizado. Ele é
+ * `fixed bottom-4 right-4` e caía exatamente em cima do botão de enviar do
+ * MessageInput, bloqueando o envio da mensagem. Qualquer reposicionamento ali
+ * cobriria outra coisa (a última mensagem ou a lista de conversas), porque o
+ * chat ocupa a tela inteira. Nessa tela o acesso continua pelo menu do perfil,
+ * que dispara FEEDBACK_OPEN_EVENT e abre o mesmo diálogo.
  */
 export default function FeedbackWidget() {
   const location = useLocation();
@@ -27,6 +38,15 @@ export default function FeedbackWidget() {
   const [kind, setKind] = useState<FeedbackKind>('suggestion');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Abre o diálogo quando alguém chama openFeedbackDialog() (menu do perfil).
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener(FEEDBACK_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(FEEDBACK_OPEN_EVENT, onOpen);
+  }, []);
+
+  const hideFloatingButton = CHAT_ROUTE.test(location.pathname);
 
   const reset = () => {
     setKind('suggestion');
@@ -81,14 +101,16 @@ export default function FeedbackWidget() {
 
   return (
     <>
-      <Button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-40 gap-2 rounded-full shadow-lg"
-        aria-label="Enviar sugestão ou reportar bug"
-      >
-        <MessageSquarePlus className="h-4 w-4" />
-        <span className="hidden sm:inline">Sugestões/Bugs</span>
-      </Button>
+      {!hideFloatingButton && (
+        <Button
+          onClick={() => setOpen(true)}
+          className="fixed bottom-4 right-4 z-40 gap-2 rounded-full shadow-lg"
+          aria-label="Enviar sugestão ou reportar bug"
+        >
+          <MessageSquarePlus className="h-4 w-4" />
+          <span className="hidden sm:inline">Sugestões/Bugs</span>
+        </Button>
+      )}
 
       <Dialog
         open={open}

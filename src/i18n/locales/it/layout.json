@@ -2,6 +2,7 @@
   "profile": {
     "language": "Lingua",
     "myProfile": "Il Mio Profilo",
+    "feedback": "Suggerimenti/Bug",
     "logout": "Esci",
     "userInitial": "U",
     "defaultUser": "Agente"

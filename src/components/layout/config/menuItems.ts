@@ -32,7 +32,9 @@ import {
   TrendingUp,
   Megaphone,
   NotebookPen,
+  MessageSquarePlus,
 } from 'lucide-react';
+import { openFeedbackDialog } from '@/components/feedback/openFeedback';
 
 export interface MenuItem {
   id?: string;
@@ -417,6 +419,14 @@ export const getProfileMenuItems = (
       href: '/profile',
       icon: User,
       onClick: () => navigate('/profile'),
+    },
+    // Entrada fixa para o diálogo de feedback. Necessária porque na aba de
+    // Conversas o botão flutuante é escondido (cobria o botão de enviar).
+    {
+      name: t('profile.feedback'),
+      href: '#',
+      icon: MessageSquarePlus,
+      onClick: () => openFeedbackDialog(),
     },
     {
       name: t('profile.logout'),

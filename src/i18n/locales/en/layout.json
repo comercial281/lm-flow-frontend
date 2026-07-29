@@ -2,6 +2,7 @@
   "profile": {
     "language": "Language",
     "myProfile": "My Profile",
+    "feedback": "Suggestions/Bugs",
     "logout": "Sign Out",
     "userInitial": "U",
     "defaultUser": "User"
