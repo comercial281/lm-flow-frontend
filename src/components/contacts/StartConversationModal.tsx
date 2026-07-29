@@ -65,12 +65,18 @@ export default function StartConversationModal({
     return selectedInbox?.channel_type === 'Channel::Whatsapp';
   }, [selectedInbox]);
 
-  // Check if it's WhatsApp Cloud (requires template)
+  // Check if it's WhatsApp Cloud (requires an approved template to start a conversation).
+  // Only the official APIs (whatsapp_cloud / default / unknown) enforce the template +
+  // 24h-window rules. Unofficial providers (baileys, evolution, evolution_go, zapi,
+  // notificame) support free text and must NOT be treated as Cloud — otherwise the modal
+  // wrongly demands a template and the user cannot start the conversation.
   const isWhatsAppCloud = useMemo(() => {
     if (!isWhatsAppInbox) return false;
-    const provider = (selectedInbox?.channel.provider as string)?.toLowerCase();
-    // WhatsApp Cloud providers (not baileys, evolution, evolution_go)
-    return !provider || !['baileys', 'evolution', 'evolution_go'].includes(provider);
+    const provider = (
+      (selectedInbox?.channel?.provider as string) ||
+      ((selectedInbox as unknown as { provider?: string })?.provider ?? '')
+    ).toLowerCase();
+    return !provider || provider === 'whatsapp_cloud' || provider === 'default';
   }, [isWhatsAppInbox, selectedInbox]);
 
   const loadAvailableInboxes = useCallback(async () => {

@@ -216,10 +216,14 @@ const ChatArea = ({
     fetchInboxes,
   ]);
 
+  // Providers não-oficiais (baileys, evolution, evolution_go, zapi, notificame) enviam
+  // texto livre e não têm a restrição de janela de 24h / template do WhatsApp Cloud.
   const isWhatsAppFreeTextChannel =
     isWhatsAppChannel &&
     channelProvider &&
-    ['baileys', 'evolution', 'evolution_go'].includes(channelProvider.toLowerCase());
+    ['baileys', 'evolution', 'evolution_go', 'zapi', 'notificame'].includes(
+      channelProvider.toLowerCase(),
+    );
 
   // Verificar status de conexão do Z-API e Evolution
   // Buscar provider_connection do meta ou inbox
