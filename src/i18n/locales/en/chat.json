@@ -268,6 +268,8 @@
       "assignAgent": "Assign Team Member",
       "assignTeam": "Assign Team",
       "assignTag": "Assign Label",
+      "unassignAgent": "Unassign agent",
+      "unassignTeam": "Unassign team",
       "deleteConversation": "Delete conversation"
     },
     "contactNoName": "Contact without name",

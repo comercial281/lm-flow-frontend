@@ -785,9 +785,14 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
   const assignTeam = useCallback(
     async (conversationId: string, teamId: string | null) => {
       try {
+        // Importante: mandar `undefined` (não `null`) como assignee_id. O
+        // JSON.stringify remove chaves undefined, então o body vai só com
+        // `team_id` e cai no ramo `set_team` do backend. Se mandasse
+        // `assignee_id: null`, o backend prioriza a chave `assignee_id` e
+        // mexeria no agente (des)atribuindo-o em vez de tratar a equipe.
         const updatedConversation = await conversationAPI.assignConversation(
           conversationId,
-          null,
+          undefined,
           teamId,
         );
 

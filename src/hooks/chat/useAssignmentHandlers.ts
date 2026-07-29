@@ -87,6 +87,30 @@ export const useAssignmentHandlers = () => {
     [can, loadAssignmentData],
   );
 
+  // Desvincular corretor (assignee) da conversa — manda assignee_id: null.
+  const handleUnassignAgent = useCallback(
+    async (conversation: Conversation) => {
+      if (!can('conversations', 'update')) {
+        toast.error('Você não tem permissão para desvincular conversas');
+        return;
+      }
+      await conversations.assignAgent(String(conversation.id), null);
+    },
+    [can, conversations],
+  );
+
+  // Desvincular equipe da conversa — manda team_id: null.
+  const handleUnassignTeam = useCallback(
+    async (conversation: Conversation) => {
+      if (!can('conversations', 'update')) {
+        toast.error('Você não tem permissão para desvincular conversas');
+        return;
+      }
+      await conversations.assignTeam(String(conversation.id), null);
+    },
+    [can, conversations],
+  );
+
   const handleAssignmentConfirm = useCallback(
     async (conversation: Conversation, type: AssignmentType, selectedIds: string[]) => {
       const conversationId = String(conversation.id);
@@ -121,6 +145,8 @@ export const useAssignmentHandlers = () => {
     handleAssignAgent,
     handleAssignTeam,
     handleAssignTag,
+    handleUnassignAgent,
+    handleUnassignTeam,
     handleAssignmentConfirm,
   };
 };

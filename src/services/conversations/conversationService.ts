@@ -111,15 +111,22 @@ export const conversationAPI = {
   },
 
   // Assign conversation
+  // O backend (assignments_controller#create) decide entre agente e equipe pela
+  // PRESENÇA da chave: se `assignee_id` vier no body → mexe no agente; senão, se
+  // `team_id` vier → mexe na equipe. Por isso montamos o body só com a chave da
+  // operação: passe `undefined` no argumento que NÃO faz parte da operação.
+  //   - Atribuir/desvincular agente: assignConversation(id, agentIdOuNull)
+  //   - Atribuir/desvincular equipe:  assignConversation(id, undefined, teamIdOuNull)
   async assignConversation(
     conversationId: string,
-    assigneeId: string | null,
+    assigneeId?: string | null,
     teamId?: string | null,
   ): Promise<Conversation> {
-    const response = await api.post(`/conversations/${conversationId}/assignments`, {
-      assignee_id: assigneeId,
-      team_id: teamId,
-    });
+    const body: Record<string, string | null> = {};
+    if (assigneeId !== undefined) body.assignee_id = assigneeId;
+    if (teamId !== undefined) body.team_id = teamId;
+
+    const response = await api.post(`/conversations/${conversationId}/assignments`, body);
     return extractData<any>(response);
   },
 

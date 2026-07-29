@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   User as UserIcon,
   Users,
+  UserMinus,
   Tag,
   Trash2,
   Mail,
@@ -55,6 +56,8 @@ interface ChatHeaderProps {
   onAssignAgent: (conversation: Conversation) => void;
   onAssignTeam: (conversation: Conversation) => void;
   onAssignTag: (conversation: Conversation) => void;
+  onUnassignAgent: (conversation: Conversation) => void;
+  onUnassignTeam: (conversation: Conversation) => void;
   onDeleteConversation: (conversation: Conversation) => void;
   unreadCount: number;
 }
@@ -78,6 +81,8 @@ const ChatHeader = ({
   onAssignAgent,
   onAssignTeam,
   onAssignTag,
+  onUnassignAgent,
+  onUnassignTeam,
   onDeleteConversation,
   unreadCount,
 }: ChatHeaderProps) => {
@@ -258,6 +263,27 @@ const ChatHeader = ({
             <Tag className="h-4 w-4" />
             {t('chatHeader.actions.assignTag')}
           </DropdownMenuItem>
+
+          {/* Desvincular corretor/equipe — só aparece quando há vínculo */}
+          {conversation.assignee_id && (
+            <DropdownMenuItem
+              onClick={() => onUnassignAgent(conversation)}
+              className="flex items-center gap-2"
+            >
+              <UserMinus className="h-4 w-4" />
+              {t('chatHeader.actions.unassignAgent')}
+            </DropdownMenuItem>
+          )}
+
+          {conversation.team_id && (
+            <DropdownMenuItem
+              onClick={() => onUnassignTeam(conversation)}
+              className="flex items-center gap-2"
+            >
+              <UserMinus className="h-4 w-4" />
+              {t('chatHeader.actions.unassignTeam')}
+            </DropdownMenuItem>
+          )}
 
           <DropdownMenuSeparator />
 
