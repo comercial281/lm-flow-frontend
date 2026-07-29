@@ -180,6 +180,13 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     featureKey: 'properties',
   },
   {
+    // Books (PDF) salvos nos imóveis — visualizar e baixar
+    name: 'Books',
+    href: '/books',
+    icon: FileText,
+    featureKey: 'properties',
+  },
+  {
     // Portais imobiliários (ZAP, Imóvel Web…) — feed + leads
     name: 'Portais',
     href: '/settings/portals',
