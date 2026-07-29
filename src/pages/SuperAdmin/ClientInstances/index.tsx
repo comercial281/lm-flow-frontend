@@ -7,6 +7,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Input, Label } from '@/components/ui/ds';
+import IconActionButton from '@/components/base/IconActionButton';
 import clientInstancesService, {
   ClientInstance, CreateClientInstancePayload, DashboardData,
 } from '@/services/clientInstances/clientInstancesService';
@@ -407,33 +408,23 @@ export default function ClientInstances() {
             </h1>
             <p className="text-sm text-muted-foreground">Gerencie as instancias LM Flow de cada cliente</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRefresh}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Atualizar
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
+          <div className="flex flex-wrap items-center gap-2">
+            <IconActionButton
+              label="Atualizar"
+              icon={<RefreshCw className="h-4 w-4" />}
+              onClick={handleRefresh}
+            />
+            <IconActionButton
+              label="Msg de acesso — editar a mensagem enviada no WhatsApp ao criar um membro"
+              icon={<MessageCircle className="h-4 w-4" />}
               onClick={() => setAccessCfgOpen(true)}
-              title="Editar a mensagem de acesso enviada no WhatsApp ao criar um membro"
-            >
-              <MessageCircle className="h-4 w-4 mr-2" />
-              Msg de acesso
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
+            />
+            <IconActionButton
+              label="Sync Todos — redeploy Vercel de todos os tenants (atualiza todos com o codigo da raiz)"
+              icon={syncingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
               onClick={handleSyncAll}
               disabled={syncingAll}
-              title="Redeploy Vercel de todos os tenants (atualiza todos com o codigo da raiz)"
-            >
-              {syncingAll
-                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                : <UploadCloud className="h-4 w-4 mr-2" />
-              }
-              {syncingAll ? 'Sincronizando...' : 'Sync Todos'}
-            </Button>
+            />
             <Button size="sm" onClick={() => setModalOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Cliente

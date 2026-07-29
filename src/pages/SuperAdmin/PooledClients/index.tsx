@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, Eye, EyeOff, MessageCircle, XCircle } from 'lucide-react';
 import api from '@/services/core/api';
+import IconActionButton from '@/components/base/IconActionButton';
 import NewTenantWizard from './NewTenantWizard';
 import ClientBroadcastModal from './ClientBroadcastModal';
 import MemberAccessConfigModal from '../ClientInstances/MemberAccessConfigModal';
@@ -498,32 +499,37 @@ export default function PooledClients() {
             </h1>
             <p className="text-sm text-muted-foreground">Entre, gerencie membros, métricas e logs de cada CRM.</p>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => (tab === 'dashboard' ? loadDashboard() : load())}
-              className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-md border border-border text-muted-foreground hover:text-foreground">
-              <RefreshCw className={`w-4 h-4 ${loading || loadingDash ? 'animate-spin' : ''}`} /> Atualizar
-            </button>
-            <button onClick={handleSyncAll} disabled={syncingAll}
-              title="Redeploy Vercel de todos os tenants (atualiza todos com o código da raiz)"
-              className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-md border border-border text-muted-foreground hover:text-foreground disabled:opacity-50">
-              {syncingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
-              {syncingAll ? 'Sincronizando...' : 'Sync Todos'}
-            </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <IconActionButton
+              label="Atualizar"
+              icon={<RefreshCw className={`h-4 w-4 ${loading || loadingDash ? 'animate-spin' : ''}`} />}
+              onClick={() => (tab === 'dashboard' ? loadDashboard() : load())}
+            />
+            <IconActionButton
+              label="Sync Todos — redeploy Vercel de todos os tenants (atualiza todos com o código da raiz)"
+              icon={syncingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
+              onClick={handleSyncAll}
+              disabled={syncingAll}
+            />
             {tab === 'clients' && (
               <>
-                <button onClick={() => setShowArchived(v => !v)}
-                  className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-md border ${showArchived ? 'border-violet-500/50 text-violet-700 dark:text-violet-300 bg-violet-500/10' : 'border-border text-muted-foreground hover:text-foreground'}`}>
-                  <Archive className="w-4 h-4" /> {showArchived ? 'Ativos' : 'Arquivados'}
-                </button>
-                <button onClick={() => setShowBroadcast(true)} disabled={tenants.length === 0}
-                  className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md border border-violet-500/40 text-violet-700 dark:text-violet-300 hover:bg-violet-500/10 disabled:opacity-40">
-                  <Megaphone className="w-4 h-4" /> Comunicado
-                </button>
-                <button onClick={() => setShowAccessCfg(true)}
-                  title="Editar a mensagem de acesso enviada no WhatsApp ao criar um membro"
-                  className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10">
-                  <MessageCircle className="w-4 h-4" /> Msg de acesso
-                </button>
+                <IconActionButton
+                  label={showArchived ? 'Mostrar ativos' : 'Mostrar arquivados'}
+                  icon={showArchived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                  onClick={() => setShowArchived(v => !v)}
+                  className={showArchived ? 'border-violet-500/50 text-violet-700 dark:text-violet-300 bg-violet-500/10' : ''}
+                />
+                <IconActionButton
+                  label="Comunicado — enviar aviso para os clientes"
+                  icon={<Megaphone className="h-4 w-4" />}
+                  onClick={() => setShowBroadcast(true)}
+                  disabled={tenants.length === 0}
+                />
+                <IconActionButton
+                  label="Msg de acesso — editar a mensagem enviada no WhatsApp ao criar um membro"
+                  icon={<MessageCircle className="h-4 w-4" />}
+                  onClick={() => setShowAccessCfg(true)}
+                />
                 <button onClick={() => setShowWizard(true)}
                   className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md font-semibold text-white"
                   style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { RefreshCw, ShieldCheck, MessageCircle, Search } from 'lucide-react';
 import { Button, Input, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, Label as UILabel } from '@/components/ui/ds';
+import IconActionButton from '@/components/base/IconActionButton';
 import { usersService } from '@/services/users';
 import InboxesService from '@/services/channels/inboxesService';
 import InboxMembersService from '@/services/channels/inboxMembersService';
@@ -182,9 +183,12 @@ export default function TeamAccessPage() {
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading} className="h-8 gap-1 text-xs">
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Atualizar
-        </Button>
+        <IconActionButton
+          label="Atualizar"
+          icon={<RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />}
+          onClick={load}
+          disabled={loading}
+        />
       </div>
 
       <div className="relative mb-4 max-w-sm">

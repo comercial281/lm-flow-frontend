@@ -50,12 +50,14 @@ export default function UsersHeader({
       icon: <Mail className="h-4 w-4" />,
       onClick: onBulkInvite,
       variant: 'outline' as const,
+      iconOnly: true,
     }] : []),
     {
       label: t('header.export'),
       icon: <Download className="h-4 w-4" />,
       onClick: () => {}, // TODO: Implement export
       variant: 'outline',
+      iconOnly: true,
     },
   ];
 

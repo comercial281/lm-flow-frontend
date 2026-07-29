@@ -66,12 +66,14 @@ export default function ContactsHeader({
       icon: <Download className="h-4 w-4" />,
       onClick: onExport,
       variant: 'outline' as const,
+      iconOnly: true,
     }] : []),
     ...(ff.import && isReady && can('contacts', 'create') ? [{
       label: t('header.import'),
       icon: <Upload className="h-4 w-4" />,
       onClick: onImport,
       variant: 'outline' as const,
+      iconOnly: true,
     }] : []),
   ];
 

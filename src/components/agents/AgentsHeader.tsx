@@ -54,12 +54,14 @@ export default function AgentsHeader({
       onClick: onManageApiKeys,
       variant: 'outline' as const,
       dataTour: 'agents-api-keys',
+      iconOnly: true,
     },
     {
       label: t('export.all'),
       icon: <Download className="h-4 w-4" />,
       onClick: onExport,
       variant: 'outline' as const,
+      iconOnly: true,
     },
   ];
 

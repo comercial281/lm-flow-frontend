@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/ds';
 import { Grid3X3, List, GitBranch, Sparkles } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
+import IconActionButton from '@/components/base/IconActionButton';
 import { followupAdminService } from '@/services/followupSequences/followupSequencesService';
 
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -393,14 +394,11 @@ export default function Pipelines() {
 
       {/* View Mode Toggle */}
       <div className="flex items-center justify-between mb-3" data-tour="pipelines-view-toggle">
-        <Button
-          variant="outline"
-          size="sm"
+        <IconActionButton
+          label="Aplicar template Leads (Marketing)"
+          icon={<Sparkles className="h-4 w-4" />}
           onClick={() => setApplyTemplateOpen(true)}
-        >
-          <Sparkles className="mr-2 h-4 w-4" />
-          Aplicar template Leads (Marketing)
-        </Button>
+        />
         <div className="flex items-center border rounded-lg">
           <Button
             variant={viewMode === 'cards' ? 'default' : 'ghost'}
