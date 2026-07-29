@@ -118,6 +118,13 @@ export default function LeadsFeed() {
   const [showStage, setShowStage] = usePersisted('showStage', false);
 
   const cursorRef = useRef<string | null>(null);
+  // Uma resposta do mural varre TODOS os clientes. Se ela demorar mais que o
+  // poll, sem estas duas travas os ticks empilham requisição em cima de
+  // requisição — e o cursor passa a depender de qual delas responde primeiro.
+  // Enquanto uma está no ar, a próxima fica só anotada e roda quando a atual
+  // termina (mudar o limiar de silêncio não pode ser engolido).
+  const inFlightRef = useRef(false);
+  const pendingRef = useRef(false);
   // Lidos dentro do poll: em refs pra não recriar o `load` (e com ele o
   // intervalo) a cada toggle de preferência.
   const soundRef = useRef(soundOn);
@@ -128,6 +135,11 @@ export default function LeadsFeed() {
   useEffect(() => { silenceRef.current = silenceMinutes; }, [silenceMinutes]);
 
   const load = useCallback(async (mode: 'initial' | 'tail') => {
+    if (inFlightRef.current) {
+      pendingRef.current = true;
+      return;
+    }
+    inFlightRef.current = true;
     setLoading(true);
     try {
       const since = mode === 'tail' ? cursorRef.current ?? undefined : undefined;
@@ -174,10 +186,21 @@ export default function LeadsFeed() {
         ? 'Acesso restrito ao super-admin.'
         : 'Não foi possível carregar o mural de leads.');
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
       setFirstLoadDone(true);
+      if (pendingRef.current) {
+        pendingRef.current = false;
+        // Sempre tail: a carga inicial já aconteceu e o cursor está em dia.
+        loadRef.current('tail');
+      }
     }
   }, []);
+
+  // O `load` se auto-chama pra rodar a requisição que ficou pendente; via ref
+  // pra não se referenciar antes de existir.
+  const loadRef = useRef(load);
+  useEffect(() => { loadRef.current = load; }, [load]);
 
   // Carga inicial.
   useEffect(() => {
