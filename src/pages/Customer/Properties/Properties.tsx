@@ -676,16 +676,14 @@ export default function Properties() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="icon" disabled title="Landings (em breve)" aria-label="Landings (em breve)">
+              <Megaphone className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" disabled title="Página de imóvel (em breve)" aria-label="Página de imóvel (em breve)">
+              <LayoutTemplate className="h-4 w-4" />
+            </Button>
             <Button variant="outline" size="icon" title="Ver no mapa" aria-label="Ver no mapa" onClick={() => navigate('/properties/map')}>
               <MapPin className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" disabled title="Em breve">
-              <Megaphone className="h-4 w-4 mr-2" />
-              Landings (em breve)
-            </Button>
-            <Button variant="outline" disabled title="Em breve">
-              <LayoutTemplate className="h-4 w-4 mr-2" />
-              Página de imóvel (em breve)
             </Button>
             {canAiBatch && (
               <Button variant="outline" size="icon" title="IA em lote" aria-label="IA em lote" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
