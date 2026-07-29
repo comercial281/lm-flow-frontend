@@ -8,7 +8,7 @@ import {
 import {
   Shuffle, Plus, Trash2, GripVertical, Save, Phone,
   Clock, Bell, ToggleLeft, ToggleRight, Users, BarChart2,
-  Gavel, Hand, Wifi,
+  Gavel, Hand, Wifi, Send, Loader2,
 } from 'lucide-react';
 import { roletaConfigService, RoletaConfig, RoletaMember, BrokerAssignment, DistributionMode } from '@/services/roletaConfig/roletaConfigService';
 import usersService from '@/services/users/usersService';
@@ -131,6 +131,8 @@ export default function RoletaConfigPage() {
   const gestorRef   = useRef<HTMLTextAreaElement>(null);
   const grupoRef    = useRef<HTMLTextAreaElement>(null);
   const [activeMsg, setActiveMsg]           = useState<'corretor' | 'gestor' | 'grupo'>('corretor');
+  // Qual aviso está sendo testado agora (envio de teste com dados fictícios).
+  const [testingMsg, setTestingMsg]         = useState<'corretor' | 'gestor' | 'grupo' | null>(null);
   // Fontes: formulários do FB roteados pra esta roleta.
   const [metaForms, setMetaForms]           = useState<MetaForm[]>([]);
   const [formConfigs, setFormConfigs]       = useState<LeadAdsFormConfig[]>([]);
@@ -395,6 +397,38 @@ export default function RoletaConfigPage() {
       const pos = start + token.length;
       el.setSelectionRange(pos, pos);
     });
+  }
+
+  // Envia um aviso de TESTE com dados fictícios, usando o que está no formulário
+  // (não precisa salvar antes). Corretor/gestor vão pro número do gestor (quem
+  // configura vê no próprio zap); grupo vai pro grupo de avisos escolhido.
+  async function sendTest(target: 'corretor' | 'gestor' | 'grupo') {
+    if (!inboxId.trim()) { toast.error('Selecione a instância da roleta antes de testar'); return; }
+    if (target !== 'grupo' && !gestorNum.trim()) { toast.error('Preencha o número do gestor antes de testar'); return; }
+    if (target === 'grupo' && !gestorGroupJid) { toast.error('Selecione o grupo de avisos antes de testar'); return; }
+
+    setTestingMsg(target);
+    try {
+      const template = { corretor: msgCorretor, gestor: msgGestor, grupo: msgGrupo }[target];
+      await roletaConfigService.testNotification({
+        target,
+        inbox_id:               inboxId,
+        notification_inbox_id:  notifInboxId || null,
+        gestor_whatsapp_number: gestorNum,
+        gestor_group_jid:       gestorGroupJid || null,
+        gestor_group_instance:  gestorGroupJid ? CENTRAL_GROUP_INSTANCE : null,
+        timeout_minutes:        timeoutMin,
+        template:               template.trim() || null,
+      });
+      toast.success(target === 'grupo'
+        ? 'Teste enviado pro grupo de avisos'
+        : 'Teste enviado pro número do gestor');
+    } catch (e) {
+      const err = e as { response?: { data?: { error?: { message?: string } } } };
+      toast.error(err.response?.data?.error?.message ?? 'Falha ao enviar o teste');
+    } finally {
+      setTestingMsg(null);
+    }
   }
 
   const totalWeight = members.reduce((s, m) => s + (m.is_active ? m.weight : 0), 0);
@@ -701,7 +735,8 @@ export default function RoletaConfigPage() {
                 Mensagens dos avisos (opcional)
               </UILabel>
               <p className="text-xs text-muted-foreground">
-                Em branco = usa o texto padrão. Clique numa variável pra jogar no texto do aviso focado:
+                Em branco = usa o texto padrão. Clique numa variável pra jogar no texto do aviso focado.
+                Use o <Send className="inline h-3 w-3" /> <b>Testar</b> pra receber o aviso com dados fictícios (não precisa salvar antes):
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {ROLETA_VARS.map(x => (
@@ -717,7 +752,21 @@ export default function RoletaConfigPage() {
                 ))}
               </div>
               <div>
-                <UILabel className="text-xs">Aviso do corretor</UILabel>
+                <div className="flex items-center justify-between">
+                  <UILabel className="text-xs">Aviso do corretor</UILabel>
+                  <button
+                    type="button"
+                    onClick={() => sendTest('corretor')}
+                    disabled={testingMsg !== null}
+                    title="Enviar um teste deste aviso (vai pro número do gestor)"
+                    className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
+                  >
+                    {testingMsg === 'corretor'
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <Send className="h-3.5 w-3.5" />}
+                    Testar
+                  </button>
+                </div>
                 <textarea
                   ref={corretorRef}
                   value={msgCorretor}
@@ -729,7 +778,21 @@ export default function RoletaConfigPage() {
                 />
               </div>
               <div>
-                <UILabel className="text-xs">Aviso do gestor</UILabel>
+                <div className="flex items-center justify-between">
+                  <UILabel className="text-xs">Aviso do gestor</UILabel>
+                  <button
+                    type="button"
+                    onClick={() => sendTest('gestor')}
+                    disabled={testingMsg !== null}
+                    title="Enviar um teste deste aviso (vai pro número do gestor)"
+                    className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
+                  >
+                    {testingMsg === 'gestor'
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <Send className="h-3.5 w-3.5" />}
+                    Testar
+                  </button>
+                </div>
                 <textarea
                   ref={gestorRef}
                   value={msgGestor}
@@ -741,7 +804,21 @@ export default function RoletaConfigPage() {
                 />
               </div>
               <div>
-                <UILabel className="text-xs">Aviso do grupo</UILabel>
+                <div className="flex items-center justify-between">
+                  <UILabel className="text-xs">Aviso do grupo</UILabel>
+                  <button
+                    type="button"
+                    onClick={() => sendTest('grupo')}
+                    disabled={testingMsg !== null}
+                    title="Enviar um teste deste aviso (vai pro grupo de avisos)"
+                    className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
+                  >
+                    {testingMsg === 'grupo'
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <Send className="h-3.5 w-3.5" />}
+                    Testar
+                  </button>
+                </div>
                 <textarea
                   ref={grupoRef}
                   value={msgGrupo}
