@@ -5,6 +5,10 @@ export interface LeadAdsFormConfig {
   id: string;
   form_id: string;
   form_name: string;
+  // De qual PÁGINA do Facebook é o formulário. Nulo = vale pra qualquer página
+  // (comportamento de quando só existia uma conexão).
+  meta_page_id: string | null;
+  page_name: string | null;
   pipeline_id: string | null;
   pipeline_stage_id: string | null;
   label_ids: string[];
@@ -18,17 +22,23 @@ export interface LeadAdsFormConfig {
 }
 
 // Formulário vindo do Facebook (GET meta_forms). `id` = form_id.
+// page_id/page_name/meta_page_id dizem de qual página conectada ele veio — a
+// listagem agora agrega todas as páginas.
 export interface MetaForm {
   id: string;
   name: string;
   status: string;
   leads_count: number;
+  page_id?: string;
+  page_name?: string;
+  meta_page_id?: string | null;
 }
 
 // Payload de create/update (sempre dentro de lead_ads_form_config).
 export interface LeadAdsFormConfigFormData {
   form_id: string;
   form_name: string;
+  meta_page_id?: string | null;
   pipeline_id: string | null;
   pipeline_stage_id: string | null;
   is_active: boolean;
@@ -39,15 +49,26 @@ export interface LeadAdsFormConfigFormData {
   match_keyword?: string | null;
 }
 
-// Resposta de meta_forms — pode vir { data, error } se a Meta não estiver conectada.
+// Erro de UMA página na listagem de formulários. Antes havia só um `error` no
+// topo e uma página com token ruim escondia os formulários de todas as outras.
+export interface MetaFormsPageError {
+  page_id?: string;
+  page_name?: string;
+  meta_page_id?: string | null;
+  error: string;
+}
+
+// Resposta de meta_forms — pode vir { data, errors } se alguma página falhar.
 export interface MetaFormsResult {
   data: MetaForm[];
+  errors: MetaFormsPageError[];
   error?: string;
 }
 
 // Diagnóstico do token da Meta conectado (super-admin). Mostra app/permissões/
 // página e o próprio token salvo (a UI normal esconde), sem o usuário manuseá-lo.
 export interface MetaTokenDebug {
+  meta_page_id?: string | null;
   app_id?: string;
   app_name?: string;
   token_type?: string;            // PAGE | USER | SYSTEM_USER...
@@ -78,6 +99,11 @@ export interface MetaTokenDebug {
   unmatched_forms?: { name: string; lead_count: number }[];
 }
 
+export interface MetaTokenDebugResult {
+  data: MetaTokenDebug;
+  pages: MetaTokenDebug[];
+}
+
 const BASE = '/lead_ads_form_configs';
 
 export const leadAdsFormsService = {
@@ -102,20 +128,23 @@ export const leadAdsFormsService = {
 
   async syncMetaForms(): Promise<MetaFormsResult> {
     const res = await api.get(`${BASE}/meta_forms`);
-    const body = res.data as { data?: MetaForm[]; error?: string };
-    return { data: body.data ?? [], error: body.error };
+    const body = res.data as { data?: MetaForm[]; errors?: MetaFormsPageError[]; error?: string };
+    return { data: body.data ?? [], errors: body.errors ?? [], error: body.error };
   },
 
   // Diagnostica o token da Meta conectado (super-admin). Lança em erro/403.
-  async debugMetaToken(): Promise<MetaTokenDebug> {
-    const res = await api.get(`${BASE}/meta_token_debug`);
-    return (res.data as { data: MetaTokenDebug }).data;
+  // Sem pageId diagnostica TODAS as páginas conectadas (`pages`); `data` continua
+  // trazendo a primeira, mantendo o contrato antigo.
+  async debugMetaToken(pageId?: string): Promise<MetaTokenDebugResult> {
+    const res = await api.get(`${BASE}/meta_token_debug`, pageId ? { params: { page_id: pageId } } : undefined);
+    const body = res.data as { data: MetaTokenDebug; pages?: MetaTokenDebug[] };
+    return { data: body.data, pages: body.pages ?? (body.data ? [body.data] : []) };
   },
 
   // Inscreve (ou reinscreve) a página no app p/ leadgen — ativa o recebimento em
   // tempo real dos leads. Super-admin. Lança em erro/403.
-  async subscribeWebhook(): Promise<{ webhook_subscribed: boolean }> {
-    const res = await api.post(`${BASE}/subscribe_webhook`);
+  async subscribeWebhook(pageId?: string): Promise<{ webhook_subscribed: boolean }> {
+    const res = await api.post(`${BASE}/subscribe_webhook`, pageId ? { page_id: pageId } : {});
     return (res.data as { data: { webhook_subscribed: boolean } }).data;
   },
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Input, Badge, Button } from '@/components/ui/ds';
-import { Search, CheckCircle2, XCircle, Link, ExternalLink } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ExternalLink, Link, Search, Settings, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/services/core/api';
 
@@ -154,8 +155,10 @@ const CATEGORIES = ['Todos', ...Array.from(new Set(CATALOG.map(c => c.category))
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function Marketplace() {
+  const navigate = useNavigate();
   const [records, setRecords] = useState<IntegrationRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('Todos');
   const [connecting, setConnecting] = useState<string | null>(null);
@@ -164,9 +167,13 @@ export default function Marketplace() {
     try {
       const res = await api.get('/integrations');
       setRecords((res.data as { data: IntegrationRecord[] }).data ?? []);
+      setLoadFailed(false);
     } catch {
-      // If no integrations exist yet, that's fine — show catalog with all disconnected
+      // Sem integrações ainda é normal (catálogo todo desconectado). Falha de rede
+      // NÃO é: sem distinguir as duas, um GET que falha pinta tudo como
+      // desconectado e o card mostra "Configurar" como se nada estivesse ligado.
       setRecords([]);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -176,9 +183,13 @@ export default function Marketplace() {
 
   const getRecord = (type: string) => records.find(r => r.integration_type === type);
 
+  const openConfig = (entry: CatalogEntry) => {
+    if (entry.configPath) navigate(entry.configPath);
+  };
+
   const handleConnect = async (entry: CatalogEntry) => {
     if (entry.configPath) {
-      window.location.href = entry.configPath;
+      openConfig(entry);
       return;
     }
 
@@ -254,6 +265,16 @@ export default function Marketplace() {
         </p>
       </div>
 
+      {loadFailed && (
+        <div className="mx-6 mt-4 flex items-start gap-2 rounded-lg border border-orange-200 bg-orange-50 p-3 text-xs text-orange-800 dark:border-orange-900 dark:bg-orange-950/30 dark:text-orange-300">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>
+            Não foi possível carregar o estado das integrações. O que aparece abaixo pode não refletir o
+            que está conectado — recarregue a página antes de conectar ou desconectar algo.
+          </span>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="px-6 py-4 border-b flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <div className="relative flex-1 max-w-sm">
@@ -312,8 +333,18 @@ export default function Marketplace() {
                         {entry.logo}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-sm">{entry.name}</h3>
-                        <span className="text-xs text-muted-foreground">{entry.category}</span>
+                        {entry.configPath ? (
+                          <button
+                            type="button"
+                            onClick={() => openConfig(entry)}
+                            className="font-semibold text-sm text-left hover:underline"
+                          >
+                            {entry.name}
+                          </button>
+                        ) : (
+                          <h3 className="font-semibold text-sm">{entry.name}</h3>
+                        )}
+                        <span className="block text-xs text-muted-foreground">{entry.category}</span>
                       </div>
                     </div>
                     <StatusBadge type={entry.type} />
@@ -332,18 +363,34 @@ export default function Marketplace() {
                   </div>
 
                   {/* Actions */}
+                  {/* Conectado precisa manter a porta de entrada aberta: antes o
+                      único botão aqui era "Desconectar", então depois de conectar
+                      não havia como voltar para a tela da integração — só
+                      desconectando. Mesmo par de botões do IntegrationCard. */}
                   <div className="flex gap-2">
                     {isConnected ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-xs"
-                        disabled={isLoading}
-                        onClick={() => handleDisconnect(entry)}
-                      >
-                        <XCircle className="h-3.5 w-3.5 mr-1" />
-                        {isLoading ? 'Desconectando...' : 'Desconectar'}
-                      </Button>
+                      <>
+                        {entry.configPath && (
+                          <Button
+                            size="sm"
+                            className="flex-1 text-xs"
+                            onClick={() => openConfig(entry)}
+                          >
+                            <Settings className="h-3.5 w-3.5 mr-1" />
+                            Gerenciar
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-xs"
+                          disabled={isLoading}
+                          onClick={() => handleDisconnect(entry)}
+                        >
+                          <XCircle className="h-3.5 w-3.5 mr-1" />
+                          {isLoading ? 'Desconectando...' : 'Desconectar'}
+                        </Button>
+                      </>
                     ) : (
                       <Button
                         size="sm"
