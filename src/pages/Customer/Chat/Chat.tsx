@@ -536,6 +536,10 @@ const Chat = () => {
         assignmentType,
         selectedIds,
       );
+      // Recarrega a lista pra refletir o novo vínculo na hora (assignee_id/team_id).
+      // O endpoint de atribuição não devolve a conversa completa, então sem esse
+      // reload o item "Desvincular" só apareceria depois de atualizar a página.
+      await reloadCurrentFilters();
     } catch (error) {
       console.error('Error in assignment:', error);
       throw error; // Re-throw to let modal handle it
