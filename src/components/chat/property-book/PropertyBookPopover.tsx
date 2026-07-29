@@ -1,9 +1,9 @@
 // PropertyBookPopover — busca imóveis do acervo que têm book salvo (PDF do
 // cadastro via importação) e envia o book direto na conversa de WhatsApp.
 //
-// Reaproveita a MESMA pipeline de envio do funil de mensagens: baixa o book_url
-// como File e chama onSendMessage({ files: [file] }) — que vira um anexo de
-// Message entregue como documento pelo provider (ZapiService#send_document etc).
+// O envio é feito pelo SERVIDOR (chatService.sendPropertyBook): o backend baixa o
+// PDF da book_url e anexa à mensagem. Assim não passa pelo upload do navegador
+// (nem pelo limite de 10MB), que impedia o envio de books grandes.
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@evoapi/design-system/card';
 import { Button } from '@evoapi/design-system/button';
@@ -11,31 +11,16 @@ import { Building2, Search, X, Loader2, FileText, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
-
-interface SendMessageOptions {
-  content: string;
-  files?: File[];
-  isPrivate?: boolean;
-}
+import { chatService } from '@/services/chat/chatService';
 
 interface PropertyBookPopoverProps {
   isOpen: boolean;
   onClose: () => void;
-  onSendMessage: (opts: SendMessageOptions) => Promise<void>;
-}
-
-// Baixa o book como File. SEM credentials: a URL pública (Supabase ou blob
-// ActiveStorage assinado) responde Access-Control-Allow-Origin: * e wildcard +
-// credentials = CORS error — mesma armadilha resolvida no funil (MessageFunnelPopover).
-async function fetchBookAsFile(url: string, filename: string): Promise<File> {
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`Falha ao baixar book (${resp.status})`);
-  const blob = await resp.blob();
-  return new File([blob], filename, { type: blob.type || 'application/pdf' });
+  conversationId?: string | number;
 }
 
 export default function PropertyBookPopover({
-  isOpen, onClose, onSendMessage,
+  isOpen, onClose, conversationId,
 }: PropertyBookPopoverProps) {
   const [results, setResults] = useState<Property[]>([]);
   const [loading, setLoading] = useState(false);
@@ -72,18 +57,19 @@ export default function PropertyBookPopover({
 
   async function handleSend(property: Property) {
     if (sendingId) return;
-    if (!property.book_url) {
+    if (!property.has_book) {
       toast.error('Este imóvel não tem book salvo');
       return;
     }
+    if (!conversationId) {
+      toast.error('Nenhuma conversa selecionada');
+      return;
+    }
     setSendingId(property.id);
-    const filename = property.book_file_name || `book-${property.code}.pdf`;
     const toastId = toast.loading(`Enviando book de "${property.title}"...`);
     try {
-      const file = await fetchBookAsFile(property.book_url, filename);
-      // Fecha antes do await de envio pra não travar a UI (mesmo motivo do funil).
+      await chatService.sendPropertyBook(String(conversationId), property.id);
       onClose();
-      await onSendMessage({ content: '', files: [file], isPrivate: false });
       toast.success(`Book de "${property.title}" enviado`, { id: toastId });
     } catch (err) {
       const msg = (err as Error)?.message ?? 'Falha no envio';

@@ -486,7 +486,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             <PropertyBookPopover
               isOpen={showBookPicker}
               onClose={() => setShowBookPicker(false)}
-              onSendMessage={onSendMessage}
+              conversationId={conversationId}
             />
           )}
 
