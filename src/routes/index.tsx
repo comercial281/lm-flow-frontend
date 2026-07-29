@@ -135,6 +135,7 @@ const SuperAgents = lazyWithRetry(() => import('@/pages/SuperAdmin/SuperAgents')
 const OnboardingForms = lazyWithRetry(() => import('@/pages/SuperAdmin/OnboardingForms'));
 const SdrRefinement = lazyWithRetry(() => import('@/pages/SuperAdmin/SdrRefinement'));
 const CustomerFeedbacks = lazyWithRetry(() => import('@/pages/SuperAdmin/CustomerFeedbacks'));
+const LeadsFeed = lazyWithRetry(() => import('@/pages/SuperAdmin/LeadsFeed'));
 const PublicOnboardingForm = lazyWithRetry(() => import('@/pages/PublicOnboardingForm'));
 
 // Área do Admin — shell próprio (AdminLayout), fora do menu do CRM.
@@ -2054,6 +2055,18 @@ const AppRouter = () => {
                 <SuperAdminRoute>
                   <AdminLayout>
                     <PooledClients />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/leads-ao-vivo"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <LeadsFeed />
                   </AdminLayout>
                 </SuperAdminRoute>
               </PrivateRoute>
