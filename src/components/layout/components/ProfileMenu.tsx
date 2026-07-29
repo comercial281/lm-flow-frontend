@@ -114,7 +114,7 @@ export default function ProfileMenu({ user, mobile = false, setLogoutDialogOpen,
         </div>
         <div className="mt-2 space-y-1">
           {profileMenuItems.filter(item => item.name !== t('profile.myProfile')).map(item => (
-            <CustomLink key={item.href} href={item.href} onClick={() => { if (item.onClick) item.onClick(); if (setIsMobileMenuOpen) setIsMobileMenuOpen(false); }}
+            <CustomLink key={item.name} href={item.href} onClick={() => { if (item.onClick) item.onClick(); if (setIsMobileMenuOpen) setIsMobileMenuOpen(false); }}
               className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors">
               <item.icon className="h-4 w-4" />
               <span>{item.name}</span>
@@ -147,7 +147,7 @@ export default function ProfileMenu({ user, mobile = false, setLogoutDialogOpen,
         <AvailabilityPicker />
         <DropdownMenuSeparator />
         {profileMenuItems.map(item => (
-          <DropdownMenuItem key={item.href} onClick={() => { if (item.onClick) item.onClick(); else if (item.href !== '#') navigate(item.href); }} className="cursor-pointer">
+          <DropdownMenuItem key={item.name} onClick={() => { if (item.onClick) item.onClick(); else if (item.href !== '#') navigate(item.href); }} className="cursor-pointer">
             <item.icon className="h-4 w-4" />
             <span>{item.name}</span>
           </DropdownMenuItem>
