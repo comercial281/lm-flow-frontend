@@ -109,6 +109,22 @@ export const roletaConfigService = {
     const res = await api.get(`${BASE}/assignments`, { params });
     return (res.data as { data: BrokerAssignment[] }).data ?? [];
   },
+
+  // Dispara um aviso de TESTE (corretor/gestor/grupo) com dados fictícios,
+  // usando os valores atuais do formulário — não precisa salvar antes.
+  async testNotification(payload: {
+    target: 'corretor' | 'gestor' | 'grupo';
+    inbox_id: string;
+    notification_inbox_id?: string | null;
+    gestor_whatsapp_number?: string | null;
+    gestor_group_jid?: string | null;
+    gestor_group_instance?: string | null;
+    timeout_minutes?: number;
+    template?: string | null;
+  }): Promise<{ sent_to: string }> {
+    const res = await api.post(`${BASE}/test_notification`, payload);
+    return (res.data as { data: { sent_to: string } }).data;
+  },
 };
 
 // Modo Leilão: o corretor assume o lead. Primeiro que assumir leva.
