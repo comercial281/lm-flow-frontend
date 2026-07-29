@@ -141,7 +141,7 @@ export default function PropertyImportDialog({ open, onClose, onReview, onChange
 
   const onDrop = useCallback((accepted: File[], rejected: FileRejection[]) => {
     if (rejected.length) {
-      toast.error(`${rejected.length} arquivo(s) recusado(s) — use PDF, imagem, Word ou TXT de até 20MB`);
+      toast.error(`${rejected.length} arquivo(s) recusado(s) — use PDF, imagem, Word ou TXT de até ${IMPORT_MAX_FILE_BYTES / 1024 / 1024}MB`);
     }
     setFiles(prev => {
       const merged = [...prev, ...accepted].slice(0, IMPORT_MAX_FILES);

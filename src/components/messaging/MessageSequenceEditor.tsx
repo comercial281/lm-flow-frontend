@@ -183,8 +183,10 @@ function ItemEditor({
   async function selectFile(file: File) {
     if (uploadMedia) {
       // Modo Disparo: sobe na hora e guarda a URL pública.
-      if (file.size > 16 * 1024 * 1024) {
-        toast.error('Arquivo muito grande (máx. 16MB).');
+      // 200MB: WhatsApp entrega documento grande (book de imóvel passa de 16MB).
+      const MAX_UPLOAD_MB = 200;
+      if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+        toast.error(`Arquivo muito grande (máx. ${MAX_UPLOAD_MB}MB).`);
         return;
       }
       setUploading(true);
