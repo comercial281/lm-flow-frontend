@@ -577,59 +577,50 @@ export default function LeadAdsForms() {
                 </div>
               )}
 
-              {/* Diagnóstico de ROTEAMENTO: por que um lead que caiu pelo webhook não
-                  pegou a etiqueta do formulário. Compara os form_ids dos últimos leads
-                  recebidos de fato com os formulários configurados. matched=false = o
-                  lead veio de um formulário que NÃO está configurado (causa típica de
-                  "veio só com tráfego pago"). */}
-              {Array.isArray(debug.recent_webhook_leads) && (
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                    Últimos leads recebidos (webhook) × formulários configurados
-                  </p>
-                  {debug.recent_webhook_leads.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      Nenhum lead recebido pelo webhook ainda (ou nenhum desta página).
+              {/* Diagnóstico de roteamento em linguagem simples: os leads recentes
+                  estão pegando a etiqueta do formulário? Se algum entrou sem, diz de
+                  qual formulário (pelo nome) e o que fazer. Sem ids/números. */}
+              {typeof debug.total_recent_leads === 'number' && (
+                debug.total_recent_leads === 0 ? (
+                  <div className="rounded-lg border border-border p-3 text-xs text-muted-foreground">
+                    Nenhum lead recebido por esta página ainda — quando chegar, este quadro mostra se ele entrou com a etiqueta certa.
+                  </div>
+                ) : debug.routing_ok ? (
+                  <div className="rounded-lg border border-green-500/40 bg-green-500/10 p-3 flex items-start gap-2">
+                    <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm">
+                      <strong>Tudo certo.</strong> Os últimos leads entraram com as etiquetas dos formulários configurados.
                     </p>
-                  ) : (
-                    <div className="space-y-1">
-                      {debug.recent_webhook_leads.map((l, i) => (
-                        <div key={i} className="flex items-center justify-between gap-2 text-xs">
-                          <span className="flex items-center gap-1.5 min-w-0">
-                            {l.matched
-                              ? <Check className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
-                              : <X className="h-3.5 w-3.5 text-red-600 flex-shrink-0" />}
-                            <code className="bg-muted rounded px-1.5 py-0.5">{l.form_id || '—'}</code>
-                            {l.matched
-                              ? <span className="text-green-700 truncate">{l.matched_form_name || 'configurado'}</span>
-                              : <span className="text-red-600 font-medium">sem config → só "tráfego pago"</span>}
-                          </span>
-                          <span className="text-muted-foreground flex-shrink-0">
-                            {new Date(l.created_at).toLocaleString('pt-BR')}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {Array.isArray(debug.configured_forms) && debug.configured_forms.length > 0 && (
-                    <div className="mt-3 pt-2 border-t border-border">
-                      <p className="text-xs text-muted-foreground mb-1">Formulários configurados neste cliente:</p>
-                      <div className="space-y-0.5">
-                        {debug.configured_forms.map((f, i) => (
-                          <div key={i} className="text-xs flex items-center gap-1.5">
-                            <code className="bg-muted rounded px-1.5 py-0.5">{f.form_id}</code>
-                            <span className="truncate">{f.form_name || '(sem nome)'}</span>
-                            {!f.is_active && <span className="text-amber-600">(inativo)</span>}
-                            {f.labels.length > 0 && <span className="text-muted-foreground truncate">— {f.labels.join(', ')}</span>}
-                          </div>
-                        ))}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">
+                          {debug.unmatched_leads} lead{(debug.unmatched_leads ?? 0) > 1 ? 's' : ''} entr{(debug.unmatched_leads ?? 0) > 1 ? 'aram' : 'ou'} sem a etiqueta do imóvel
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Vieram de formulário{(debug.unmatched_forms?.length ?? 0) > 1 ? 's' : ''} que ainda <strong>não</strong> {(debug.unmatched_forms?.length ?? 0) > 1 ? 'estão' : 'está'} configurado{(debug.unmatched_forms?.length ?? 0) > 1 ? 's' : ''} aqui:
+                        </p>
                       </div>
                     </div>
-                  )}
-                  <p className="text-[11px] text-muted-foreground mt-2">
-                    Se um lead aparece com <strong className="text-red-600">✕</strong>, ele veio de um formulário cujo <code>form_id</code> não está na lista de baixo — normalmente outro formulário do mesmo imóvel (campanha/data diferente). Configure esse <code>form_id</code> também.
-                  </p>
-                </div>
+                    <ul className="mt-2 space-y-1">
+                      {(debug.unmatched_forms ?? []).map((f, i) => (
+                        <li key={i} className="text-sm flex items-center gap-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+                          <span className="font-medium">{f.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({f.lead_count} lead{f.lead_count > 1 ? 's' : ''})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      👉 Clique em <strong>Sincronizar formulários</strong>, ache {(debug.unmatched_forms?.length ?? 0) > 1 ? 'esses formulários' : 'esse formulário'} na lista e configure a etiqueta do imóvel. A partir daí os leads dele entram certos.
+                    </p>
+                  </div>
+                )
               )}
 
               {/* Configuração do webhook no App Meta — fonte ÚNICA de verdade. Mostra a
