@@ -71,7 +71,9 @@ export const IMPORT_ACCEPTED_MIME_TYPES = [
 ];
 
 export const IMPORT_MAX_FILES = 100;
-export const IMPORT_MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB (limite de PDF da IA)
+// 200 MB: books de imóvel são grandes por causa das fotos. O backend comprime
+// o PDF antes de mandar pra IA (que aceita no máx 32MB/100 páginas por PDF).
+export const IMPORT_MAX_FILE_BYTES = 200 * 1024 * 1024;
 
 export const MISSING_FIELD_LABELS: Record<string, string> = {
   title: 'Título',
