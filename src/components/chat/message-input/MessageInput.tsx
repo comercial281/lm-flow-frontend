@@ -20,6 +20,7 @@ import {
   PenLine,
   Rocket,
   Building2,
+  Type,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -120,6 +121,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   // 🎯 EMOJI PICKER: Estado
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  // ✍️ FORMATAÇÃO: barra de formatação (negrito/itálico/etc.) fica escondida por
+  // padrão pra deixar a barra enxuta (estilo WhatsApp); o botão "Aa" mostra/esconde.
+  const [showFormatting, setShowFormatting] = useState(false);
 
   // 🎯 MESSAGE SIGNATURE: Hook para gerenciar assinatura
   const { isSignatureEnabled, toggleSignature, hasSignature, appendSignatureIfEnabled } =
@@ -470,7 +475,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         )}
 
         {/* Input Area */}
-        <CardContent className="p-4 px-4 py-4 relative">
+        <CardContent className="px-3 py-2 relative">
           {/* 🚀 FUNIS DE MENSAGEM (substitui Canned Responses + Quick Replies) */}
           {canMessageFunnel && (
             <MessageFunnelPopover
@@ -491,7 +496,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           )}
 
           {/* Primeira linha: Reply Mode Toggle + Botões de ação rápida */}
-          <div className="flex items-center justify-between mb-3 gap-3">
+          <div className="flex items-center justify-between mb-2 gap-3">
             {/* Reply Mode Toggle */}
             <ReplyModeToggle
               currentMode={isPendingConversation ? ReplyMode.NOTE : replyMode}
@@ -549,7 +554,21 @@ const MessageInput: React.FC<MessageInputProps> = ({
           {/* Segunda linha: Botões de formatação + Input + Botões de envio */}
           <div className="flex items-end gap-2 w-full overflow-visible">
             {/* Botões de formatação à esquerda */}
-            <div className="flex-shrink-0 flex items-center gap-1.5 pb-1">
+            <div className="flex-shrink-0 flex items-center gap-1 pb-1">
+              {/* Botão de formatação (Aa): mostra/esconde a barra de negrito/itálico/etc. */}
+              {!isPendingConversation && (
+                <Button
+                  variant={showFormatting ? 'default' : 'ghost'}
+                  size="icon"
+                  disabled={isDisabled || isSending}
+                  className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
+                  onClick={() => setShowFormatting(v => !v)}
+                  title={t('messageInput.formatting.toggle', 'Formatação')}
+                >
+                  <Type className="h-4 w-4" />
+                </Button>
+              )}
+
               {/* File Upload Button */}
               {canSendAttachment && (
                 <FileUpload
@@ -675,8 +694,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   return false;
                 }}
                 disabled={isDisabled || isSending || (isPendingConversation && replyMode !== ReplyMode.NOTE)}
-                className="min-h-[100px]"
-                showToolbar={!isPendingConversation}
+                className="min-h-[44px]"
+                editorMinHeightClass="min-h-[44px]"
+                showToolbar={showFormatting && !isPendingConversation}
               />
             </div>
 

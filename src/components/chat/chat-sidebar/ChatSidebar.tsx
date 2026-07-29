@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   User as UserIcon,
   Users,
+  UserMinus,
   Tag,
   Trash2,
   X,
@@ -78,6 +79,8 @@ interface ChatSidebarProps {
   onAssignAgent: (conversation: Conversation) => void;
   onAssignTeam: (conversation: Conversation) => void;
   onAssignTag: (conversation: Conversation) => void;
+  onUnassignAgent: (conversation: Conversation) => void;
+  onUnassignTeam: (conversation: Conversation) => void;
   onDeleteConversation: (conversation: Conversation) => void;
 }
 
@@ -112,6 +115,8 @@ const ChatSidebar = ({
   onAssignAgent,
   onAssignTeam,
   onAssignTag,
+  onUnassignAgent,
+  onUnassignTeam,
   onDeleteConversation,
 }: ChatSidebarProps) => {
   const { t } = useLanguage('chat');
@@ -546,6 +551,27 @@ const ChatSidebar = ({
             <Tag className="h-4 w-4" />
             {t('chatHeader.actions.assignTag')}
           </ContextMenuItem>
+
+          {/* Desvincular corretor/equipe — só aparece quando há vínculo */}
+          {conversation.assignee_id && (
+            <ContextMenuItem
+              onClick={e => { e.stopPropagation(); onUnassignAgent(conversation); }}
+              className="flex items-center gap-2"
+            >
+              <UserMinus className="h-4 w-4" />
+              {t('chatHeader.actions.unassignAgent')}
+            </ContextMenuItem>
+          )}
+
+          {conversation.team_id && (
+            <ContextMenuItem
+              onClick={e => { e.stopPropagation(); onUnassignTeam(conversation); }}
+              className="flex items-center gap-2"
+            >
+              <UserMinus className="h-4 w-4" />
+              {t('chatHeader.actions.unassignTeam')}
+            </ContextMenuItem>
+          )}
 
           <ContextMenuSeparator />
 

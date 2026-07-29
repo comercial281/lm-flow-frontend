@@ -272,6 +272,8 @@
       "assignAgent": "Atribuir Atendente",
       "assignTeam": "Atribuir time",
       "assignTag": "Atribuir etiqueta",
+      "unassignAgent": "Desvincular corretor",
+      "unassignTeam": "Desvincular equipe",
       "deleteConversation": "Deletar conversa"
     },
     "contactNoName": "Contato sem nome",

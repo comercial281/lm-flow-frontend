@@ -263,6 +263,8 @@
       "assignAgent": "Assegna Agente",
       "assignTeam": "Assegna Team",
       "assignTag": "Assegna Etichetta",
+      "unassignAgent": "Rimuovi agente",
+      "unassignTeam": "Rimuovi team",
       "deleteConversation": "Elimina conversazione"
     },
     "contactNoName": "Contatto senza nome",

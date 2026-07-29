@@ -478,6 +478,22 @@ const Chat = () => {
     [assignmentHandlers],
   );
 
+  const handleUnassignAgent = useCallback(
+    async (conversation: Conversation) => {
+      await assignmentHandlers.handleUnassignAgent(conversation);
+      await reloadCurrentFilters();
+    },
+    [assignmentHandlers, reloadCurrentFilters],
+  );
+
+  const handleUnassignTeam = useCallback(
+    async (conversation: Conversation) => {
+      await assignmentHandlers.handleUnassignTeam(conversation);
+      await reloadCurrentFilters();
+    },
+    [assignmentHandlers, reloadCurrentFilters],
+  );
+
   const handleDeleteConversation = useCallback(
     (conversation: Conversation) => {
       const result = conversationHandlers.handleDeleteConversation(conversation);
@@ -684,6 +700,8 @@ const Chat = () => {
           onAssignAgent={handleAssignAgent}
           onAssignTeam={handleAssignTeam}
           onAssignTag={handleAssignTag}
+          onUnassignAgent={handleUnassignAgent}
+          onUnassignTeam={handleUnassignTeam}
           onDeleteConversation={handleDeleteConversation}
         />
 
@@ -717,6 +735,8 @@ const Chat = () => {
                 onAssignAgent={handleAssignAgent}
                 onAssignTeam={handleAssignTeam}
                 onAssignTag={handleAssignTag}
+                onUnassignAgent={handleUnassignAgent}
+                onUnassignTeam={handleUnassignTeam}
                 onDeleteConversation={handleDeleteConversation}
                 unreadCount={conversations.getUnreadCount(selectedConversation.id) || 0}
               />
