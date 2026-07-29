@@ -23,6 +23,7 @@ import {
   LeadAdsFormConfig,
   LeadAdsFormConfigFormData,
   MetaForm,
+  MetaFormsPageError,
   BackfillResult,
   MetaTokenDebug,
 } from '@/services/leadAds/leadAdsFormsService';
@@ -40,6 +41,9 @@ const baseSelectClass =
 interface FormState {
   form_id: string;
   form_name: string;
+  // De qual página do Facebook é o formulário. Vem do próprio formulário
+  // sincronizado; '' = vale pra qualquer página (comportamento antigo).
+  meta_page_id: string;
   pipeline_id: string;
   pipeline_stage_id: string;
   label_ids: string[];
@@ -62,9 +66,10 @@ const defaultKeyword = (formName = ''): string =>
     .replace(/\s+/g, ' ')
     .trim();
 
-const emptyFormState = (form_id = '', form_name = ''): FormState => ({
+const emptyFormState = (form_id = '', form_name = '', meta_page_id = ''): FormState => ({
   form_id,
   form_name,
+  meta_page_id,
   pipeline_id: '',
   pipeline_stage_id: '',
   label_ids: [],
@@ -93,6 +98,11 @@ export default function LeadAdsForms() {
 
   const [metaForms, setMetaForms] = useState<MetaForm[]>([]);
   const [metaError, setMetaError] = useState<string | null>(null);
+  // Erro POR PÁGINA: com várias páginas conectadas, uma com token ruim não pode
+  // esconder os formulários das outras (era o comportamento do `error` único).
+  const [metaPageErrors, setMetaPageErrors] = useState<MetaFormsPageError[]>([]);
+  // Filtro por página, só aparece quando há mais de uma.
+  const [pageFilter, setPageFilter] = useState<string>('');
   const [syncing, setSyncing] = useState(false);
   const [syncedOnce, setSyncedOnce] = useState(false);
   const [cleanupBusy, setCleanupBusy] = useState(false);
@@ -101,6 +111,8 @@ export default function LeadAdsForms() {
   const [debugOpen, setDebugOpen] = useState(false);
   const [debugBusy, setDebugBusy] = useState(false);
   const [debug, setDebug] = useState<MetaTokenDebug | null>(null);
+  // Diagnóstico de TODAS as páginas conectadas; `debug` é a que está na tela.
+  const [debugPages, setDebugPages] = useState<MetaTokenDebug[]>([]);
   const [debugError, setDebugError] = useState<string | null>(null);
   const [showToken, setShowToken] = useState(false);
 
@@ -108,10 +120,13 @@ export default function LeadAdsForms() {
     setDebugOpen(true);
     setDebugBusy(true);
     setDebug(null);
+    setDebugPages([]);
     setDebugError(null);
     setShowToken(false);
     try {
-      setDebug(await leadAdsFormsService.debugMetaToken());
+      const result = await leadAdsFormsService.debugMetaToken();
+      setDebugPages(result.pages);
+      setDebug(result.data ?? result.pages[0] ?? null);
     } catch (e) {
       setDebugError(apiErrorMessage(e, 'Não foi possível diagnosticar o token'));
     } finally {
@@ -140,12 +155,21 @@ export default function LeadAdsForms() {
   };
 
   const [subscribing, setSubscribing] = useState(false);
+  // Ativa o recebimento da página que está sendo diagnosticada — com várias
+  // conectadas, inscrever "a conexão" sem dizer qual não faria sentido.
   const subscribeWebhook = async () => {
     setSubscribing(true);
+    const pageId = debug?.page_id;
     try {
-      await leadAdsFormsService.subscribeWebhook();
+      await leadAdsFormsService.subscribeWebhook(pageId);
       toast.success('Recebimento em tempo real ativado');
-      setDebug(await leadAdsFormsService.debugMetaToken()); // recarrega o diagnóstico
+      // Recarrega o diagnóstico, mantendo a página em foco.
+      const result = await leadAdsFormsService.debugMetaToken(pageId);
+      setDebugPages(prev => {
+        if (!pageId || prev.length <= 1) return result.pages;
+        return prev.map(p => (p.page_id === pageId ? result.data : p));
+      });
+      setDebug(result.data ?? result.pages[0] ?? null);
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Não foi possível ativar o recebimento em tempo real'));
     } finally {
@@ -209,12 +233,15 @@ export default function LeadAdsForms() {
     try {
       const result = await leadAdsFormsService.syncMetaForms();
       setMetaForms(result.data);
-      setMetaError(result.error ?? null);
+      setMetaPageErrors(result.errors);
+      setMetaError(result.data.length === 0 ? (result.error ?? null) : null);
       setSyncedOnce(true);
-      if (result.error) {
+      if (result.data.length === 0 && result.error) {
         toast.error(result.error);
       } else {
-        toast.success(`${result.data.length} formulário(s) encontrado(s)`);
+        const pages = new Set(result.data.map(f => f.page_id).filter(Boolean));
+        const sufixo = pages.size > 1 ? ` em ${pages.size} páginas` : '';
+        toast.success(`${result.data.length} formulário(s) encontrado(s)${sufixo}`);
       }
     } catch {
       toast.error('Erro ao sincronizar formulários');
@@ -257,7 +284,10 @@ export default function LeadAdsForms() {
     // Todo form já entra com "tráfego pago" por padrão (o backend garante isso na
     // entrada do lead de qualquer forma); a etiqueta do imóvel é adicionada à mão.
     const paid = resources.labels.find(l => l.title?.toLowerCase() === PAID_TAG);
-    setForm({ ...emptyFormState(mf.id, mf.name), label_ids: paid ? [paid.id] : [] });
+    setForm({
+      ...emptyFormState(mf.id, mf.name, mf.meta_page_id ?? ''),
+      label_ids: paid ? [paid.id] : [],
+    });
     setModalOpen(true);
   };
 
@@ -266,6 +296,7 @@ export default function LeadAdsForms() {
     setForm({
       form_id:           cfg.form_id,
       form_name:         cfg.form_name,
+      meta_page_id:      cfg.meta_page_id ?? '',
       pipeline_id:       cfg.pipeline_id ?? '',
       pipeline_stage_id: cfg.pipeline_stage_id ?? '',
       label_ids:         cfg.label_ids ?? [],
@@ -285,6 +316,7 @@ export default function LeadAdsForms() {
     const payload: LeadAdsFormConfigFormData = {
       form_id:             form.form_id,
       form_name:           form.form_name,
+      meta_page_id:        form.meta_page_id || null,
       pipeline_id:         form.pipeline_id,
       pipeline_stage_id:   form.pipeline_stage_id,
       is_active:           form.is_active,
@@ -357,8 +389,31 @@ export default function LeadAdsForms() {
     return `Formulário ${cfg.form_id}`;
   };
 
+  // Páginas presentes nos formulários sincronizados — a base do filtro.
+  const syncedPages = Array.from(
+    new Map(
+      metaForms
+        .filter(mf => mf.meta_page_id)
+        .map(mf => [mf.meta_page_id as string, mf.page_name || mf.page_id || 'Página']),
+    ).entries(),
+  ).map(([id, name]) => ({ id, name }));
+
+  const matchesPageFilter = (mf: MetaForm) => !pageFilter || mf.meta_page_id === pageFilter;
+
+  // Config sem página definida vale pra qualquer uma, então continua visível em
+  // qualquer filtro — é o comportamento que ela tem no roteamento.
+  const visibleConfigs = configs.filter(
+    c => !pageFilter || !c.meta_page_id || c.meta_page_id === pageFilter,
+  );
+
   // Forms do Meta que ainda não têm config salva.
-  const unconfiguredForms = metaForms.filter(mf => !configByFormId(mf.id));
+  const unconfiguredForms = metaForms.filter(mf => !configByFormId(mf.id) && matchesPageFilter(mf));
+
+  // Nome da página de um formulário/config, quando há mais de uma conectada.
+  const pageNameOf = (metaPageId?: string | null, fallback?: string | null): string | null => {
+    if (!metaPageId) return fallback ?? null;
+    return syncedPages.find(p => p.id === metaPageId)?.name ?? fallback ?? null;
+  };
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -486,6 +541,31 @@ export default function LeadAdsForms() {
             // base do design-system sobrescreve o max-h externo, então garantimos o
             // scroll aqui dentro. Footer (Fechar/Atualizar) fica fixo fora deste div.
             <div className="space-y-3 text-sm max-h-[65vh] overflow-y-auto pr-1">
+              {/* Seletor de página: com mais de uma conectada, o diagnóstico de
+                  uma não diz nada sobre as outras. */}
+              {debugPages.length > 1 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {debugPages.map((d, i) => {
+                    const active = d === debug;
+                    const label = d.page_name || d.page_id || `Página ${i + 1}`;
+                    const bad = !!d.token_error || d.page_token_ok === false;
+                    return (
+                      <button
+                        key={`${d.page_id ?? i}`}
+                        type="button"
+                        onClick={() => { setDebug(d); setShowToken(false); }}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                          active
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        {bad ? '⚠ ' : ''}{label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               {debug.token_error && (
                 <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-400">
                   <p className="font-medium">O Facebook recusou este token</p>
@@ -736,6 +816,27 @@ export default function LeadAdsForms() {
         </DialogContent>
       </Dialog>
 
+      {/* Uma linha por PÁGINA com problema. Antes vinha um erro único: com duas
+          páginas conectadas, a que estava boa ficava sem aparecer. */}
+      {metaPageErrors.length > 0 && metaForms.length > 0 && (
+        <div className="mb-6 space-y-2">
+          {metaPageErrors.map((pe, i) => (
+            <div
+              key={`${pe.page_id ?? 'page'}-${i}`}
+              className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 flex items-start gap-3"
+            >
+              <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-foreground">
+                  {pe.page_name || pe.page_id || 'Página'}: não foi possível carregar os formulários
+                </p>
+                <p className="text-muted-foreground mt-0.5">{pe.error}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Aviso: mostra o MOTIVO real que o backend devolveu (token expirado, sem
           permissão de leadgen, page_id que não bate...) em vez de um texto fixo,
           pra dar pro cliente o que corrigir na conexão da página. */}
@@ -756,6 +857,38 @@ export default function LeadAdsForms() {
         </div>
       )}
 
+      {/* Filtro por página — só faz sentido com mais de uma conectada. */}
+      {syncedPages.length > 1 && (
+        <div className="mb-6 flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-muted-foreground mr-1">Página:</span>
+          <button
+            type="button"
+            onClick={() => setPageFilter('')}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+              pageFilter === ''
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+            }`}
+          >
+            Todas
+          </button>
+          {syncedPages.map(p => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setPageFilter(p.id)}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                pageFilter === p.id
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Configurações salvas */}
       <div className="mb-8">
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
@@ -763,14 +896,18 @@ export default function LeadAdsForms() {
         </h2>
         {loading ? (
           <div className="text-center py-12 text-muted-foreground text-sm">Carregando...</div>
-        ) : configs.length === 0 ? (
+        ) : visibleConfigs.length === 0 ? (
           <EmptyState
-            title="Nenhum formulário configurado"
-            description="Sincronize os formulários da Meta e defina pra onde cada lead vai"
+            title={configs.length === 0 ? 'Nenhum formulário configurado' : 'Nenhum formulário desta página'}
+            description={
+              configs.length === 0
+                ? 'Sincronize os formulários da Meta e defina pra onde cada lead vai'
+                : 'Nenhuma configuração salva para a página selecionada'
+            }
           />
         ) : (
           <div className="space-y-3">
-            {configs.map(cfg => (
+            {visibleConfigs.map(cfg => (
               <div key={cfg.id} className="border border-border rounded-xl bg-card overflow-hidden">
                 <div className="flex items-center gap-4 px-5 py-4">
                   <button
@@ -786,6 +923,11 @@ export default function LeadAdsForms() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium truncate">{configDisplayName(cfg)}</span>
+                      {syncedPages.length > 1 && pageNameOf(cfg.meta_page_id, cfg.page_name) && (
+                        <Badge variant="secondary" className="text-xs">
+                          📘 {pageNameOf(cfg.meta_page_id, cfg.page_name)}
+                        </Badge>
+                      )}
                       {!cfg.form_name?.trim() && (
                         <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/40">
                           Sem nome no Facebook
@@ -846,6 +988,9 @@ export default function LeadAdsForms() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium truncate">{mf.name?.trim() || `Formulário ${mf.id}`}</span>
                       <Badge variant="outline" className="text-xs">{mf.status}</Badge>
+                      {syncedPages.length > 1 && mf.page_name && (
+                        <Badge variant="secondary" className="text-xs">📘 {mf.page_name}</Badge>
+                      )}
                       {!mf.name?.trim() && (
                         <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/40">
                           Sem nome no Facebook
