@@ -675,34 +675,24 @@ export default function Properties() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={() => navigate('/properties/map')}>
-              <MapPin className="h-4 w-4 mr-2" />
-              Ver no mapa
+            <Button variant="outline" size="icon" disabled title="Landings (em breve)" aria-label="Landings (em breve)">
+              <Megaphone className="h-4 w-4" />
             </Button>
-            <Button variant="outline" onClick={() => navigate('/landings')}>
-              <Megaphone className="h-4 w-4 mr-2" />
-              Landings
+            <Button variant="outline" size="icon" disabled title="Página de imóvel (em breve)" aria-label="Página de imóvel (em breve)">
+              <LayoutTemplate className="h-4 w-4" />
             </Button>
-            <Button variant="outline" onClick={() => navigate('/properties/template-imovel')}>
-              <LayoutTemplate className="h-4 w-4 mr-2" />
-              Página de imóvel
+            <Button variant="outline" size="icon" title="Ver no mapa" aria-label="Ver no mapa" onClick={() => navigate('/properties/map')}>
+              <MapPin className="h-4 w-4" />
             </Button>
             {canAiBatch && (
-              <Button variant="outline" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
-                <Wand2 className="h-4 w-4 mr-2" />
-                IA em lote
+              <Button variant="outline" size="icon" title="IA em lote" aria-label="IA em lote" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
+                <Wand2 className="h-4 w-4" />
               </Button>
             )}
             {canCreate && (
-              <Button variant="outline" onClick={() => setImportOpen(true)}>
-                <Upload className="h-4 w-4 mr-2" />
-                Importar em lote (IA)
-              </Button>
-            )}
-            {canCreate && (
-              <Button onClick={openCreate}>
+              <Button onClick={() => setImportOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Cadastrar imóvel
+                Cadastrar imóveis
               </Button>
             )}
           </div>
@@ -788,9 +778,9 @@ export default function Properties() {
             <p className="text-sm font-medium">Nenhum imóvel encontrado</p>
             <p className="text-xs mt-1">Cadastre o primeiro imóvel do seu portfólio</p>
             {canCreate && (
-              <Button className="mt-4" onClick={openCreate}>
+              <Button className="mt-4" onClick={() => setImportOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Cadastrar imóvel
+                Cadastrar imóveis
               </Button>
             )}
           </div>
@@ -1331,6 +1321,7 @@ export default function Properties() {
         open={importOpen}
         refreshSignal={importRefresh}
         onClose={() => setImportOpen(false)}
+        onManual={() => { setImportOpen(false); openCreate(); }}
         onReview={async id => {
           try {
             const p = await propertiesService.get(id);

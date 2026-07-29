@@ -18,6 +18,7 @@ import {
   FileText,
   ImagePlus,
   Loader2,
+  Pencil,
   RefreshCw,
   Sparkles,
   Upload,
@@ -46,6 +47,8 @@ const TERMINAL_STATUSES = ['completed', 'completed_with_errors', 'failed', 'canc
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** Abre o modal de cadastro manual (escrever à mão) a partir do fluxo de IA. */
+  onManual: () => void;
   /** Abre o modal de edição existente pro corretor revisar o imóvel criado. */
   onReview: (propertyId: string) => void;
   /** Recarrega a listagem quando o lote cria/ativa imóveis. */
@@ -55,7 +58,7 @@ interface Props {
   refreshSignal?: number;
 }
 
-export default function PropertyImportDialog({ open, onClose, onReview, onChanged, refreshSignal }: Props) {
+export default function PropertyImportDialog({ open, onClose, onManual, onReview, onChanged, refreshSignal }: Props) {
   const [files, setFiles] = useState<File[]>([]);
   const [urlsText, setUrlsText] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -346,6 +349,21 @@ export default function PropertyImportDialog({ open, onClose, onReview, onChange
                 <p className="text-xs text-muted-foreground text-center">Enviando arquivos… {uploadProgress}%</p>
               </div>
             )}
+
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+              <div className="relative flex justify-center">
+                <span className="bg-background px-2 text-xs text-muted-foreground">ou</span>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground mb-2">Prefere escrever à mão?</p>
+              <Button variant="outline" onClick={onManual} disabled={uploading}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Cadastrar manualmente
+              </Button>
+            </div>
           </div>
         )}
 
