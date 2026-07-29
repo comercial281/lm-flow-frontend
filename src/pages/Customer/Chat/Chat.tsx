@@ -249,10 +249,11 @@ const Chat = () => {
             return;
           }
 
-          // 🔒 AGUARDAR: Aguardar carregamento inicial das conversas (pelo menos uma tentativa)
-          if (conversationsCount === 0 && !conversations.state.conversationsError) {
-            return;
-          }
+          // NÃO retornar aqui quando a lista vem vazia: o carregamento já terminou
+          // (conversationsLoading foi checado acima) e uma conversa alvo na URL pode
+          // simplesmente não estar na lista — ex.: recém-criada com status fora do
+          // filtro padrão (status=open), ou lista filtrada. Nesse caso seguimos para
+          // o fallback loadSpecificConversation, que a carrega direto por ID.
 
           // 🔍 VERIFICAR: Se conversa UUID existe na lista carregada
           let targetConversation = conversations.getConversation(conversationIdStr);

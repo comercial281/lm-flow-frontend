@@ -249,6 +249,12 @@ export default function StartConversationModal({
         contact_id: contact.id,
         inbox_id: selectedInboxId,
         source_id: selectedInbox?.source_id || '',
+        // Conversa iniciada manualmente por um humano é ATIVA (open), não 'pending'.
+        // Sem isso, inboxes com bot/IA ativa criam a conversa como 'pending'
+        // (Inbox#default_conversation_status_value) e ela some da lista, cujo
+        // filtro padrão é status=open — a conversa é criada e a mensagem enviada,
+        // mas nunca aparece em "Conversas".
+        status: 'open',
       };
 
       // Add message or template params
