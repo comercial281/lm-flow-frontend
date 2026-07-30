@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { formatDateTimeBR } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 import {
@@ -17,6 +17,7 @@ import {
 import usersService from '@/services/users/usersService';
 import { leadAutomationService, WaGroup } from '@/services/leadAutomation/leadAutomationService';
 import inboxesService from '@/services/channels/inboxesService';
+import inboxMembersService from '@/services/channels/inboxMembersService';
 import type { Inbox } from '@/types/channels/inbox';
 import { accountService } from '@/services/account';
 import { leadAdsFormsService, MetaForm, LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
@@ -163,6 +164,13 @@ export default function RoletaConfigPage() {
   const [gestorGroupJid, setGestorGroupJid] = useState('');
   const [notifInboxId, setNotifInboxId]     = useState('');
   const [members, setMembers]               = useState<MemberRow[]>([]);
+  // Só corretor com acesso à instância pode receber lead da roleta — a lista de
+  // escolha vem dos membros do inbox, não de todos os usuários do CRM. Sortear
+  // quem não tem acesso deixa o lead num limbo: o card aparece no funil dele,
+  // mas a conversa é invisível na caixa. O backend agora recusa; a tela deixa de
+  // oferecer.
+  const [inboxMembers, setInboxMembers]         = useState<User[]>([]);
+  const [loadingMembers, setLoadingMembers]     = useState(false);
   const [groups, setGroups]                 = useState<WaGroup[]>([]);
   const [loadingGroups, setLoadingGroups]   = useState(false);
   const [crmName, setCrmName]               = useState('');
@@ -226,7 +234,19 @@ export default function RoletaConfigPage() {
     }
   }, []);
 
+  const loadInboxMembers = useCallback(async (id: string) => {
+    if (!id) { setInboxMembers([]); return; }
+    setLoadingMembers(true);
+    try {
+      const list = await inboxMembersService.get(id);
+      setInboxMembers((list ?? []) as unknown as User[]);
+    } finally {
+      setLoadingMembers(false);
+    }
+  }, []);
+
   useEffect(() => { loadConfigs(); loadUsers(); loadInboxes(); loadAccount(); }, [loadConfigs, loadUsers, loadInboxes, loadAccount]);
+  useEffect(() => { loadInboxMembers(inboxId); }, [inboxId, loadInboxMembers]);
   useEffect(() => { if (tab === 'assignments') loadAssignments(); }, [tab, loadAssignments]);
 
   function openCreate() {
@@ -403,8 +423,24 @@ export default function RoletaConfigPage() {
 
   // Ao escolher o corretor, puxa o WhatsApp cadastrado dele (se tiver e o campo
   // estiver vazio). Sem cadastro, deixa em branco pra preencher na mão.
+  // Opções do seletor de corretor: os membros da instância escolhida. Quem já
+  // está salvo mas perdeu o acesso continua aparecendo, marcado — some-lo faria
+  // a linha ficar em branco sem explicar por quê, e é justamente o caso que
+  // precisa ser visto e corrigido.
+  const corretorOptions = useMemo(() => {
+    const opts = inboxMembers.map(u => ({ id: u.id, name: u.name, hasAccess: true }));
+    const memberIds = new Set(opts.map(o => o.id));
+    members.forEach(m => {
+      if (!m.user_id || memberIds.has(m.user_id)) return;
+      memberIds.add(m.user_id);
+      const known = users.find(u => u.id === m.user_id);
+      opts.push({ id: m.user_id, name: known?.name ?? m.user_id, hasAccess: false });
+    });
+    return opts;
+  }, [inboxMembers, members, users]);
+
   function selectCorretor(localId: string, userId: string) {
-    const u = users.find(x => x.id === userId) as
+    const u = (inboxMembers.find(x => x.id === userId) ?? users.find(x => x.id === userId)) as
       (User & { whatsapp_number?: string; custom_attributes?: { whatsapp_number?: string } }) | undefined;
     const registered = String(u?.whatsapp_number ?? u?.custom_attributes?.whatsapp_number ?? '').trim();
     setMembers(prev => prev.map(m => {
@@ -1065,11 +1101,21 @@ export default function RoletaConfigPage() {
                           onChange={e => selectCorretor(m.localId, e.target.value)}
                           className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         >
-                          <option value="">Selecione...</option>
-                          {users.map(u => (
-                            <option key={u.id} value={u.id}>{u.name}</option>
+                          <option value="">
+                            {!inboxId ? 'Escolha a instância primeiro...' : 'Selecione...'}
+                          </option>
+                          {corretorOptions.map(o => (
+                            <option key={o.id} value={o.id}>
+                              {o.hasAccess ? o.name : `${o.name} — sem acesso à instância`}
+                            </option>
                           ))}
                         </select>
+                        {inboxId && !loadingMembers && inboxMembers.length === 0 && (
+                          <p className="mt-1 text-xs text-destructive">
+                            Nenhum corretor tem acesso a esta instância. Libere o acesso na equipe do
+                            inbox — só quem tem acesso pode receber lead da roleta.
+                          </p>
+                        )}
                       </div>
                       <div>
                         <UILabel className="text-xs">Peso (probabilidade relativa)</UILabel>
