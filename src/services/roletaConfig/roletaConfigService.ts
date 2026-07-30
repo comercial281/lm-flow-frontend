@@ -64,6 +64,52 @@ export interface BrokerAssignment {
   round: number;
 }
 
+// Uma tentativa de distribuição, com o veredito em português. Alimenta o painel
+// "Por que este lead não entrou na roleta?" — que existe porque cada portão do
+// caminho formulário → roleta falhava calado num log do servidor.
+export type RoletaOutcome =
+  | 'sem_config'
+  | 'config_sem_roleta'
+  | 'roleta_inexistente'
+  | 'roleta_inativa'
+  | 'modo_manual'
+  | 'sem_membros'
+  | 'dono_gravado'
+  | 'dono_falhou'
+  | 'erro';
+
+export interface RoletaDiagnostic {
+  id: string;
+  created_at: string;
+  outcome: RoletaOutcome;
+  ok: boolean;
+  explicacao: string;
+  formulario: string | null;
+  lead: string | null;
+  contact_id: string | null;
+  corretor: string | null;
+  // Dono do contato AGORA — diferencia "ficou órfão" de "ficou órfão e alguém
+  // já resolveu na mão".
+  dono_atual: string | null;
+  // Só vem pro super-admin: a exceção crua que o rescue mudo escondia.
+  erro_tecnico?: string | null;
+}
+
+export interface RepairOwnersResult {
+  dry_run: boolean;
+  total: number;
+  corrigidos: number;
+  falharam: number;
+  leads: {
+    contact_id: string;
+    lead: string | null;
+    corretor: string | null;
+    assigned_at: string;
+    acao: string;
+    motivo?: string | null;
+  }[];
+}
+
 const BASE = '/roleta_configs';
 
 export const roletaConfigService = {
@@ -102,6 +148,22 @@ export const roletaConfigService = {
   ): Promise<BrokerAssignment> {
     const res = await api.post(`${BASE}/${id}/assign`, payload);
     return (res.data as { data: BrokerAssignment }).data;
+  },
+
+  // "Por que este lead não entrou na roleta?" — últimas tentativas de
+  // distribuição com o veredito de cada portão do caminho.
+  async getDiagnostics(opts: { limit?: number; onlyFailures?: boolean } = {}): Promise<RoletaDiagnostic[]> {
+    const res = await api.get(`${BASE}/diagnostics`, {
+      params: { limit: opts.limit ?? 50, only_failures: opts.onlyFailures ? 'true' : undefined },
+    });
+    return (res.data as { data: RoletaDiagnostic[] }).data ?? [];
+  },
+
+  // Conserta os leads que a roleta sorteou mas ficaram sem responsável no card.
+  // dryRun=true (padrão do backend) só lista — e já traz o motivo de cada falha.
+  async repairOwners(dryRun: boolean): Promise<RepairOwnersResult> {
+    const res = await api.post(`${BASE}/repair_owners`, { dry_run: dryRun });
+    return (res.data as { data: RepairOwnersResult }).data;
   },
 
   async getAssignments(status?: string): Promise<BrokerAssignment[]> {

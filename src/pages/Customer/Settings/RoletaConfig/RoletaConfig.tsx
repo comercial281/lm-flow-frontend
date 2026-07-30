@@ -10,7 +10,10 @@ import {
   Clock, Bell, ToggleLeft, ToggleRight, Users, BarChart2,
   Gavel, Hand, Wifi, Send, Loader2,
 } from 'lucide-react';
-import { roletaConfigService, RoletaConfig, RoletaMember, BrokerAssignment, DistributionMode } from '@/services/roletaConfig/roletaConfigService';
+import {
+  roletaConfigService, RoletaConfig, RoletaMember, BrokerAssignment, DistributionMode,
+  RoletaDiagnostic, RepairOwnersResult,
+} from '@/services/roletaConfig/roletaConfigService';
 import usersService from '@/services/users/usersService';
 import { leadAutomationService, WaGroup } from '@/services/leadAutomation/leadAutomationService';
 import inboxesService from '@/services/channels/inboxesService';
@@ -107,7 +110,47 @@ export default function RoletaConfigPage() {
   const [saving, setSaving]           = useState(false);
   const [modalOpen, setModalOpen]     = useState(false);
   const [editing, setEditing]         = useState<RoletaConfig | null>(null);
-  const [tab, setTab]                 = useState<'configs' | 'assignments'>('configs');
+  const [tab, setTab]                 = useState<'configs' | 'assignments' | 'diagnostico'>('configs');
+
+  // Painel "Por que este lead não entrou na roleta?". Existe porque cada portão
+  // do caminho formulário → roleta falhava calado num log do servidor: o gestor
+  // via o aviso cair no grupo e o card sem responsável, sem nenhuma pista.
+  const [diagnostics, setDiagnostics]   = useState<RoletaDiagnostic[]>([]);
+  const [loadingDiag, setLoadingDiag]   = useState(false);
+  const [onlyFailures, setOnlyFailures] = useState(true);
+  const [repairBusy, setRepairBusy]     = useState(false);
+  const [repairPreview, setRepairPreview] = useState<RepairOwnersResult | null>(null);
+
+  const loadDiagnostics = useCallback(async () => {
+    setLoadingDiag(true);
+    try {
+      setDiagnostics(await roletaConfigService.getDiagnostics({ onlyFailures }));
+    } catch {
+      toast.error('Erro ao carregar o diagnóstico');
+    } finally {
+      setLoadingDiag(false);
+    }
+  }, [onlyFailures]);
+
+  useEffect(() => { if (tab === 'diagnostico') loadDiagnostics(); }, [tab, loadDiagnostics]);
+
+  // Primeiro em pré-visualização; só aplica depois que o gestor confirma —
+  // mesmo padrão do backfill/cleanup da tela de Formulários Lead Ads.
+  const runRepair = async (dryRun: boolean) => {
+    setRepairBusy(true);
+    try {
+      const r = await roletaConfigService.repairOwners(dryRun);
+      setRepairPreview(r);
+      if (!dryRun) {
+        toast.success(`${r.corrigidos} lead(s) com responsável restaurado`);
+        loadDiagnostics();
+      }
+    } catch {
+      toast.error('Erro ao corrigir os leads sem responsável');
+    } finally {
+      setRepairBusy(false);
+    }
+  };
   const [assignments, setAssignments] = useState<BrokerAssignment[]>([]);
   const [loadingAssign, setLoadingAssign] = useState(false);
 
@@ -453,7 +496,7 @@ export default function RoletaConfigPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b">
-        {(['configs', 'assignments'] as const).map(t => (
+        {(['configs', 'assignments', 'diagnostico'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -463,7 +506,7 @@ export default function RoletaConfigPage() {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            {t === 'configs' ? 'Configuracoes' : 'Atribuicoes Recentes'}
+            {t === 'configs' ? 'Configuracoes' : t === 'assignments' ? 'Atribuicoes Recentes' : 'Diagnóstico'}
           </button>
         ))}
       </div>
@@ -551,6 +594,93 @@ export default function RoletaConfigPage() {
                 <p className="text-xs text-muted-foreground mt-1">
                   {formatDateTimeBR(a.assigned_at)}
                 </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'diagnostico' && (
+        <div className="space-y-3">
+          <div className="border rounded-lg p-4 bg-muted/40">
+            <p className="text-sm font-medium">Por que este lead não entrou na roleta?</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Cada lead que passou pela distribuição, com o que aconteceu em cada etapa:
+              o formulário casou → achou a roleta → sorteou o corretor → gravou o responsável no card.
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-3">
+              <Button variant="outline" size="sm" onClick={() => setOnlyFailures(v => !v)}>
+                {onlyFailures ? 'Mostrando só os problemas' : 'Mostrando todos'}
+              </Button>
+              <Button variant="outline" size="sm" onClick={loadDiagnostics} disabled={loadingDiag}>
+                {loadingDiag ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Atualizar'}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => runRepair(true)} disabled={repairBusy}>
+                {repairBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ver leads sem responsável'}
+              </Button>
+            </div>
+          </div>
+
+          {repairPreview && (
+            <div className="border rounded-lg p-4">
+              <p className="text-sm font-medium">
+                {repairPreview.dry_run
+                  ? `${repairPreview.total} lead(s) foram sorteados mas estão sem responsável no card`
+                  : `${repairPreview.corrigidos} corrigido(s), ${repairPreview.falharam} falharam`}
+              </p>
+              <div className="mt-2 space-y-1 max-h-56 overflow-y-auto">
+                {repairPreview.leads.map(l => (
+                  <div key={l.contact_id} className="text-xs text-muted-foreground flex flex-wrap gap-x-2">
+                    <span className="font-medium text-foreground">{l.lead ?? l.contact_id}</span>
+                    <span>→ {l.corretor ?? 'sem corretor'}</span>
+                    <span>({l.acao})</span>
+                    {l.motivo && <span className="text-red-600">{l.motivo}</span>}
+                  </div>
+                ))}
+              </div>
+              {repairPreview.dry_run && repairPreview.total > 0 && (
+                <Button
+                  size="sm"
+                  className="mt-3 bg-[#7c3aed] hover:bg-[#6d28d9] text-white"
+                  disabled={repairBusy}
+                  onClick={() => runRepair(false)}
+                >
+                  Corrigir os {repairPreview.total} lead(s)
+                </Button>
+              )}
+            </div>
+          )}
+
+          {loadingDiag && <p className="text-sm text-muted-foreground">Carregando...</p>}
+          {!loadingDiag && diagnostics.length === 0 && (
+            <div className="border rounded-lg p-12 text-center text-muted-foreground">
+              <Shuffle className="h-8 w-8 mx-auto mb-3 opacity-40" />
+              <p>{onlyFailures ? 'Nenhum problema registrado' : 'Nenhuma distribuição registrada ainda'}</p>
+            </div>
+          )}
+          {diagnostics.map(d => (
+            <div key={d.id} className="border rounded-lg p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-sm">{d.lead ?? d.contact_id ?? 'Lead'}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{d.explicacao}</p>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+                    {d.formulario && <span>Formulário: {d.formulario}</span>}
+                    {d.corretor && <span>Sorteado: {d.corretor}</span>}
+                    <span>Responsável no card: {d.dono_atual ?? 'nenhum'}</span>
+                  </div>
+                  {d.erro_tecnico && (
+                    <p className="text-[11px] text-red-600 mt-1 break-all">{d.erro_tecnico}</p>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    d.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {d.ok ? 'OK' : 'Falhou'}
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-1">{formatDateTimeBR(d.created_at)}</p>
+                </div>
               </div>
             </div>
           ))}
