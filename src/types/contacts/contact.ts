@@ -165,6 +165,13 @@ export interface Contact {
     last_activity_at: string;
   };
   pipelines?: ContactPipelineInfo[];
+  /** Responsável pelo contato — herda pras conversas dele. */
+  default_assignee_id?: string | null;
+  default_assignee?: {
+    id: string;
+    name: string;
+    avatar_url?: string | null;
+  } | null;
 }
 
 export interface ContactNote {
@@ -272,6 +279,11 @@ export interface ContactCreateData {
   inbox_id?: string;
   labels?: string[];
   company_ids?: string[];
+  /**
+   * Responsável pelo contato (contacts.default_assignee_id). As conversas que o
+   * contato abrir nascem atribuídas a esse usuário.
+   */
+  default_assignee_id?: string | null;
   /**
    * Origem escrita à mão ("Indicação", "Cliente de carteira"...). Não é coluna do
    * contato: o backend manda pro rastreamento de origem e espelha em
