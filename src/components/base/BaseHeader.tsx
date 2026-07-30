@@ -8,6 +8,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Badge,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from '@/components/ui/ds';
 import {
   Search,
@@ -16,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import PrimaryActionButton from './PrimaryActionButton';
+import IconActionButton from './IconActionButton';
 
 export interface HeaderAction {
   label: string;
@@ -27,6 +32,8 @@ export interface HeaderAction {
   disabled?: boolean;
   tooltip?: string;
   dataTour?: string;
+  /** Renderiza só o ícone; o label vira tooltip + aria-label. */
+  iconOnly?: boolean;
 }
 
 export interface HeaderFilter {
@@ -162,27 +169,43 @@ export default function BaseHeader({
         {/* Secondary Actions */}
         <div className="flex items-center gap-2">
           {visibleSecondaryActions.map((action, index) => {
-            const renderIcon = () => {
+            const renderIcon = (withMargin = true) => {
               if (!action.icon) return null;
+              const marginClass = withMargin ? 'mr-2' : '';
               // Check if it's a React component (function or object with $$typeof)
               if (typeof action.icon === 'function') {
                 const IconComponent = action.icon as React.ComponentType<{ className?: string }>;
-                return <IconComponent className="h-4 w-4 mr-2" />;
+                return <IconComponent className={`h-4 w-4 ${marginClass}`.trim()} />;
               }
               // If it's already a React element, render it directly
               if (React.isValidElement(action.icon)) {
-                return <span className="mr-2">{action.icon}</span>;
+                return <span className={marginClass}>{action.icon}</span>;
               }
               // Otherwise render as is
-              return <span className="mr-2">{action.icon}</span>;
+              return <span className={marginClass}>{action.icon}</span>;
             };
 
-            return (
+            if (action.iconOnly) {
+              return (
+                <IconActionButton
+                  key={index}
+                  label={action.tooltip || action.label}
+                  icon={renderIcon(false)}
+                  onClick={action.onClick}
+                  disabled={action.disabled}
+                  variant={action.variant || 'outline'}
+                  className={`bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent h-9 w-9 ${action.className || ''}`.trim()}
+                  dataTour={action.dataTour}
+                />
+              );
+            }
+
+            const textButton = (
               <Button
-                key={index}
                 variant={action.variant || 'outline'}
                 size="sm"
                 onClick={action.onClick}
+                disabled={action.disabled}
                 className="bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
                 data-tour={action.dataTour}
               >
@@ -190,6 +213,23 @@ export default function BaseHeader({
                 {action.label}
               </Button>
             );
+
+            if (action.tooltip) {
+              return (
+                <TooltipProvider key={index} delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      {action.disabled ? <span tabIndex={0} className="inline-flex">{textButton}</span> : textButton}
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>{action.tooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              );
+            }
+
+            return <React.Fragment key={index}>{textButton}</React.Fragment>;
           })}
 
           {/* More Actions Dropdown */}
@@ -262,27 +302,65 @@ export default function BaseHeader({
           </div>
           {bulkActions.length > 0 && (
             <div className="flex items-center gap-2">
-              {bulkActions.map((action, index) => (
-                <Button
-                  key={index}
-                  variant={action.variant || 'outline'}
-                  size="sm"
-                  onClick={action.onClick}
-                  className="h-7 bg-sidebar-accent border-sidebar-border text-sidebar-foreground hover:bg-sidebar"
-                >
-                  {action.icon && (typeof action.icon === 'function' ? (
-                    (() => {
-                      const IconComponent = action.icon as React.ComponentType<{ className?: string }>;
-                      return <IconComponent className="h-4 w-4 mr-1.5" />;
-                    })()
-                  ) : React.isValidElement(action.icon) ? (
-                    <span className="mr-1.5">{action.icon}</span>
-                  ) : (
-                    <span className="mr-1.5">{action.icon}</span>
-                  ))}
-                  {action.label}
-                </Button>
-              ))}
+              {bulkActions.map((action, index) => {
+                const renderBulkIcon = (withMargin = true) => {
+                  if (!action.icon) return null;
+                  const marginClass = withMargin ? 'mr-1.5' : '';
+                  if (typeof action.icon === 'function') {
+                    const IconComponent = action.icon as React.ComponentType<{ className?: string }>;
+                    return <IconComponent className={`h-4 w-4 ${marginClass}`.trim()} />;
+                  }
+                  if (React.isValidElement(action.icon)) {
+                    return <span className={marginClass}>{action.icon}</span>;
+                  }
+                  return <span className={marginClass}>{action.icon}</span>;
+                };
+
+                if (action.iconOnly) {
+                  return (
+                    <IconActionButton
+                      key={index}
+                      label={action.tooltip || action.label}
+                      icon={renderBulkIcon(false)}
+                      onClick={action.onClick}
+                      disabled={action.disabled}
+                      variant={action.variant || 'outline'}
+                      className={`h-7 w-7 bg-sidebar-accent border-sidebar-border text-sidebar-foreground hover:bg-sidebar ${action.className || ''}`.trim()}
+                      dataTour={action.dataTour}
+                    />
+                  );
+                }
+
+                const bulkButton = (
+                  <Button
+                    variant={action.variant || 'outline'}
+                    size="sm"
+                    onClick={action.onClick}
+                    disabled={action.disabled}
+                    className="h-7 bg-sidebar-accent border-sidebar-border text-sidebar-foreground hover:bg-sidebar"
+                  >
+                    {renderBulkIcon()}
+                    {action.label}
+                  </Button>
+                );
+
+                if (action.tooltip) {
+                  return (
+                    <TooltipProvider key={index} delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          {action.disabled ? <span tabIndex={0} className="inline-flex">{bulkButton}</span> : bulkButton}
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>{action.tooltip}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                }
+
+                return <React.Fragment key={index}>{bulkButton}</React.Fragment>;
+              })}
             </div>
           )}
         </div>

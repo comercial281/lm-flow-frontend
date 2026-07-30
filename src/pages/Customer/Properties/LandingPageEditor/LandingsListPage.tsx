@@ -9,6 +9,7 @@ import {
 import { landingTemplatesService } from '@/services/landingPages/landingTemplatesService';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import { getTenantSlug } from '@/services/core/tenant';
+import IconActionButton from '@/components/base/IconActionButton';
 import LeadRoutingModal from './LeadRoutingModal';
 import CreateLandingWizard from '@/features/landing/wizard/CreateLandingWizard';
 
@@ -153,15 +154,12 @@ export default function LandingsListPage() {
           placeholder="Nome da nova landing (ex: Campanha Lançamento Setembro)"
           className="min-w-[260px] flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
         />
-        <button
-          type="button"
+        <IconActionButton
+          label="Nova landing do zero (digite o nome ao lado)"
+          icon={creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           onClick={handleCreate}
           disabled={creating || !newName.trim()}
-          className="flex items-center gap-1.5 rounded-md border border-border px-4 py-2 text-sm font-semibold text-foreground hover:border-primary disabled:opacity-40"
-        >
-          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          Nova landing do zero
-        </button>
+        />
         <button
           type="button"
           onClick={() => setShowWizard(true)}

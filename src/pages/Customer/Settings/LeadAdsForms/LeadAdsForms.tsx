@@ -14,10 +14,11 @@ import {
 } from '@/components/ui/ds';
 import {
   FileInput, RefreshCw, Edit, ToggleLeft, ToggleRight, AlertTriangle, ArrowRight, Download,
-  Stethoscope, Check, X, Copy, Eye, EyeOff, Trash2,
+  Stethoscope, Check, X, Copy, Eye, EyeOff, Trash2, Loader2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import EmptyState from '@/components/base/EmptyState';
+import IconActionButton from '@/components/base/IconActionButton';
 import {
   leadAdsFormsService,
   LeadAdsFormConfig,
@@ -418,29 +419,39 @@ export default function LeadAdsForms() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <FileInput className="h-6 w-6 text-primary" />
-            Formulários (Meta)
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Defina pra onde cada formulário de Lead Ads envia os leads no CRM
-          </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="flex items-start gap-3">
+          <div
+            className="w-1 h-9 rounded-full shrink-0"
+            style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
+          />
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2 leading-tight">
+              <FileInput className="h-6 w-6 text-primary" />
+              Formulários (Meta)
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Defina pra onde cada formulário de Lead Ads envia os leads no CRM
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={runTokenDebug}>
-            <Stethoscope className="h-4 w-4 mr-2" />
-            Diagnosticar token
-          </Button>
-          <Button variant="outline" onClick={() => { setBackfillPreview(null); setBackfillOpen(true); }}>
-            <Download className="h-4 w-4 mr-2" />
-            Importar leads recentes
-          </Button>
-          <Button variant="outline" onClick={handleCleanupLabels} disabled={cleanupBusy} title="Remove as etiquetas antigas criadas automaticamente pelo nome do formulário">
-            <Trash2 className="h-4 w-4 mr-2" />
-            {cleanupBusy ? 'Limpando...' : 'Limpar etiquetas antigas'}
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <IconActionButton
+            label="Diagnosticar token"
+            icon={<Stethoscope className="h-4 w-4" />}
+            onClick={runTokenDebug}
+          />
+          <IconActionButton
+            label="Importar leads recentes"
+            icon={<Download className="h-4 w-4" />}
+            onClick={() => { setBackfillPreview(null); setBackfillOpen(true); }}
+          />
+          <IconActionButton
+            label="Limpar etiquetas antigas — remove as etiquetas criadas automaticamente pelo nome do formulário"
+            icon={cleanupBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            onClick={handleCleanupLabels}
+            disabled={cleanupBusy}
+          />
           <Button onClick={handleSync} disabled={syncing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
             {syncing ? 'Sincronizando...' : 'Sincronizar formulários'}

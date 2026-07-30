@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { formatDateBR } from '@/utils/dateUtils';
+import IconActionButton from '@/components/base/IconActionButton';
 import {
   Search, RefreshCw, CheckCircle, XCircle, ClipboardList,
   Clock, ThumbsUp, Ban,
@@ -135,10 +136,11 @@ export default function PropertyCaptureRequests() {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={load} className="h-8 gap-1 text-xs">
-            <RefreshCw className="h-3.5 w-3.5" />
-            Atualizar
-          </Button>
+          <IconActionButton
+            label="Atualizar"
+            icon={<RefreshCw className="h-4 w-4" />}
+            onClick={load}
+          />
         </div>
 
         {/* KPIs estilo dark card do protótipo */}
