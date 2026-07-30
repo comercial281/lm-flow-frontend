@@ -171,8 +171,10 @@ export default function EditItemModal({
       setCustomAttributes(customAttrs);
       setActiveTab('overview');
 
-      // Responsável
-      const currentAssigneeId = item.conversation?.assignee?.id;
+      // Responsável: `item.assignee` (topo) já vem resolvido pelo backend —
+      // assignee da conversa OU default_assignee do contato. Lendo só da
+      // conversa, lead de formulário/anúncio abria sempre "sem responsável".
+      const currentAssigneeId = item.assignee?.id ?? item.conversation?.assignee?.id;
       setSelectedAssigneeId(currentAssigneeId ? String(currentAssigneeId) : null);
 
       // Origem escrita: o card já traz o espelho, mas leads antigos podem só ter
@@ -257,13 +259,29 @@ export default function EditItemModal({
     }
   }, [item]);
 
+  // Atribuir responsável NÃO depende mais de existir conversa. Lead de
+  // formulário/anúncio entra no funil sem conversa nenhuma, e antes o campo
+  // simplesmente não aparecia — não havia como dar dono a ele pela tela.
+  //
+  // Com conversa: atribui a conversa (o backend espelha em
+  // contacts.default_assignee_id). Sem conversa: grava direto no contato, que é
+  // a fonte de verdade do dono do lead e o que uma conversa futura herda.
   const handleAssigneeChange = useCallback(async (userId: string) => {
-    if (!item?.conversation?.id) return;
-    setSelectedAssigneeId(userId === 'unassigned' ? null : userId);
+    const nextId = userId === 'unassigned' ? null : userId;
+    const contactId = item?.contact?.id ?? item?.conversation?.contact?.id;
+    if (!item?.conversation?.id && !contactId) return;
+
+    setSelectedAssigneeId(nextId);
     setAssigningUser(true);
     try {
-      await conversationAPI.assignConversation(item.conversation.id, userId === 'unassigned' ? null : userId);
-    } catch { /* silent */ } finally {
+      if (item?.conversation?.id) {
+        await conversationAPI.assignConversation(item.conversation.id, nextId);
+      } else {
+        await contactsService.updateContact(String(contactId), { default_assignee_id: nextId });
+      }
+    } catch {
+      toast.error('Erro ao definir o responsável');
+    } finally {
       setAssigningUser(false);
     }
   }, [item]);
@@ -681,8 +699,9 @@ export default function EditItemModal({
                   )}
                 </div>
 
-                {/* Responsável */}
-                {item.conversation?.id && (
+                {/* Responsável — sem gate de conversa: lead de formulário/anúncio
+                    não tem conversa e mesmo assim precisa de dono. */}
+                {(item.conversation?.id || item.contact?.id) && (
                   <div className="grid gap-1.5">
                     <Label className="flex items-center gap-1 text-xs">
                       Responsável
