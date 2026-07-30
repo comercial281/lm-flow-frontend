@@ -1961,12 +1961,15 @@ export default function PipelineKanban() {
                               </span>
                             </div>
 
-                            {/* Assignee */}
-                            {item.conversation?.assignee && (
+                            {/* Responsável: `item.assignee` (topo) já vem do
+                                backend com o dono certo — assignee da conversa
+                                OU default_assignee do contato. Lead sem conversa
+                                aparecia sempre sem responsável. */}
+                            {(item.assignee ?? item.conversation?.assignee) && (
                               <div className="flex items-center space-x-1 text-muted-foreground">
                                 <User className="w-3 h-3" />
                                 <span className="truncate max-w-20">
-                                  {item.conversation.assignee.name}
+                                  {(item.assignee ?? item.conversation?.assignee)?.name}
                                 </span>
                               </div>
                             )}

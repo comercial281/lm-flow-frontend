@@ -436,12 +436,16 @@ export default function PipelineItemCard({
           </span>
         </div>
 
-        {/* Assignee */}
-        {item.conversation?.assignee && (
+        {/* Responsável. `item.assignee` (topo) é a fonte certa: o backend já o
+            preenche do assignee da conversa OU do default_assignee do contato.
+            Lendo só de item.conversation.assignee, lead de formulário/anúncio
+            — que não tem conversa — aparecia SEMPRE sem responsável, mesmo com
+            a roleta tendo gravado o dono direitinho. */}
+        {(item.assignee ?? item.conversation?.assignee) && (
           <div className="flex items-center space-x-1 text-muted-foreground">
             <User className="w-3 h-3" />
             <span className="truncate max-w-20">
-              {item.conversation.assignee.name}
+              {(item.assignee ?? item.conversation?.assignee)?.name}
             </span>
           </div>
         )}
