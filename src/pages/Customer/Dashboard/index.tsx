@@ -8,6 +8,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { pipelinesService } from '@/services/pipelines';
 import TeamsService from '@/services/teams/teamsService';
 import InboxesService from '@/services/channels/inboxesService';
+import { mayRead } from '@/store/appDataStore';
 import { usersService } from '@/services/users';
 import { customerDashboardService } from '@/services/dashboard/customerDashboardService';
 import type { CustomerDashboardParams, CustomerDashboardResponse } from '@/types/analytics/dashboard';
@@ -170,17 +171,37 @@ const CustomerDashboardPage = () => {
   useEffect(() => {
     const loadFilterOptions = async () => {
       try {
-        const [pipelinesResponse, teamsResponse, inboxesResponse, usersResponse] = await Promise.all([
+        // Instâncias e equipes só para quem lê — o corretor levava erro vermelho
+        // ao abrir o próprio dashboard.
+        const [podeInboxes, podeTeams] = await Promise.all([
+          mayRead('inboxes.read'),
+          mayRead('teams.read'),
+        ]);
+
+        // allSettled e não all: com `all`, UMA recusa rejeitava o bloco inteiro e
+        // esvaziava os filtros de pipeline, times, instâncias E usuários de uma
+        // vez. Cada filtro agora sobrevive por conta própria.
+        const [pipelinesResponse, teamsResponse, inboxesResponse, usersResponse] = await Promise.allSettled([
           pipelinesService.getPipelines({ page: 1, per_page: 100, sort: 'name', order: 'asc' }),
-          TeamsService.getTeams({ page: 1, per_page: 100, sort: 'name', order: 'asc' }),
-          InboxesService.list(),
+          podeTeams
+            ? TeamsService.getTeams({ page: 1, per_page: 100, sort: 'name', order: 'asc' })
+            : Promise.reject(new Error('sem permissão')),
+          podeInboxes ? InboxesService.list() : Promise.reject(new Error('sem permissão')),
           usersService.getUsers({ page: 1, per_page: 100, sort: 'name', order: 'asc' }),
         ]);
 
-        setPipelines((pipelinesResponse.data || []).map(item => ({ id: item.id, name: item.name })));
-        setTeams((teamsResponse.data || []).map(item => ({ id: item.id, name: item.name })));
-        setInboxes((inboxesResponse.data || []).map(item => ({ id: item.id, name: item.name })));
-        setUsers((usersResponse.data || []).map(item => ({ id: item.id, name: item.available_name || item.name })));
+        if (pipelinesResponse.status === 'fulfilled') {
+          setPipelines((pipelinesResponse.value.data || []).map(item => ({ id: item.id, name: item.name })));
+        }
+        if (teamsResponse.status === 'fulfilled') {
+          setTeams((teamsResponse.value.data || []).map(item => ({ id: item.id, name: item.name })));
+        }
+        if (inboxesResponse.status === 'fulfilled') {
+          setInboxes((inboxesResponse.value.data || []).map(item => ({ id: item.id, name: item.name })));
+        }
+        if (usersResponse.status === 'fulfilled') {
+          setUsers((usersResponse.value.data || []).map(item => ({ id: item.id, name: item.available_name || item.name })));
+        }
       } catch (err) {
         console.error('Error loading dashboard filter options:', err);
       }

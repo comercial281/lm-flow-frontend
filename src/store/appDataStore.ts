@@ -5,6 +5,7 @@ import usersService from '@/services/users/usersService';
 import InboxesService from '@/services/channels/inboxesService';
 import { labelsService } from '@/services/contacts/labelsService';
 import TeamsService from '@/services/teams/teamsService';
+import { permissionsService } from '@/services/permissions';
 import type { Account } from '@/types/settings';
 import type { User } from '@/types/users';
 import type { Inbox } from '@/types/channels/inbox';
@@ -65,6 +66,28 @@ type ResourceKey = 'account' | 'agents' | 'inboxes' | 'labels' | 'teams';
 // Dedupe de requests em voo: componentes que montam juntos compartilham a
 // mesma Promise em vez de disparar chamadas idênticas em paralelo.
 const inflight: Partial<Record<ResourceKey, Promise<void>>> = {};
+
+// "O cargo pode ler isto?" — para não pedir o que vai voltar 403 e virar erro
+// vermelho na tela de quem não fez nada.
+//
+// Falha ABERTA de propósito: só recusa quando a lista de permissões chegou e a
+// chave não está nela. Lista vazia (ainda carregando, ou a chamada falhou) segue
+// buscando como antes — perder funcionalidade por causa de uma checagem que não
+// respondeu seria pior que o toast. O `silentForbidden` cobre o ruído nesse caso.
+//
+// Aqui e não no `usePermissions`: aquele hook é contexto React, inacessível de um
+// store zustand, e seus efeitos correm concorrentes com o boot — sem garantia de
+// ordem. Este service é singleton, tem cache com dedupe e usa `apiAuth`, que não
+// passa pelo interceptor de 403.
+export async function mayRead(permission: string): Promise<boolean> {
+  try {
+    const perms = await permissionsService.getAccountPermissions();
+    if (!perms?.length) return true;
+    return perms.includes(permission);
+  } catch {
+    return true;
+  }
+}
 
 function dedupe(key: ResourceKey, run: () => Promise<void>): Promise<void> {
   const existing = inflight[key];
@@ -223,12 +246,22 @@ export const useAppDataStore = create<AppDataState>()(persist((set, get) => {
       const shouldLoadLabels = options.labels ?? true;
       const shouldLoadTeams = options.teams ?? true;
 
+      // Este boot roda para TODO usuário logado, em qualquer rota. O cargo
+      // Corretor não lê instâncias nem equipes, então essas duas chamadas
+      // voltavam 403 e ele levava dois erros vermelhos na cara sem ter feito
+      // nada. Perguntar antes é de graça: o permissionsService tem cache e o
+      // PermissionsContext reaproveita a mesma resposta.
+      const [podeInboxes, podeTeams] = await Promise.all([
+        shouldLoadInboxes ? mayRead('inboxes.read') : Promise.resolve(false),
+        shouldLoadTeams ? mayRead('teams.read') : Promise.resolve(false),
+      ]);
+
       const tasks: Promise<void>[] = [];
       tasks.push(get().fetchAccount(forceRefresh));
       if (shouldLoadAgents) tasks.push(get().fetchAgents(forceRefresh));
-      if (shouldLoadInboxes) tasks.push(get().fetchInboxes(forceRefresh));
+      if (podeInboxes) tasks.push(get().fetchInboxes(forceRefresh));
       if (shouldLoadLabels) tasks.push(get().fetchLabels(forceRefresh));
-      if (shouldLoadTeams) tasks.push(get().fetchTeams(forceRefresh));
+      if (podeTeams) tasks.push(get().fetchTeams(forceRefresh));
 
       await Promise.allSettled(tasks);
     },

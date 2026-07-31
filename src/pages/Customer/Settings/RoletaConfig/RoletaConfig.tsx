@@ -41,6 +41,8 @@ const ROLETA_VARS: { v: string; label: string }[] = [
   { v: 'prazo_hora', label: 'Horário limite' },
   { v: 'data', label: 'Data de chegada' },
   { v: 'link_aceite', label: 'Link de aceite' },
+  // Vazio quando é lead novo; explica o repasse quando o prazo de alguém estourou.
+  { v: 'motivo', label: 'Motivo do repasse' },
 ];
 import type { User } from '@/types/users';
 

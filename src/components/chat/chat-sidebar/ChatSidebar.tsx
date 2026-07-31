@@ -45,6 +45,7 @@ import ConversationsFilter from '../conversation/ConversationsFilter';
 import GlobalSearchPanel from '../search/GlobalSearchPanel';
 import { BaseFilter } from '@/types/core';
 import InboxesService from '@/services/channels/inboxesService';
+import { mayRead } from '@/store/appDataStore';
 import type { Inbox } from '@/types/channels/inbox';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -144,9 +145,13 @@ const ChatSidebar = ({
   const [inboxOptions, setInboxOptions] = useState<Array<{ id: string; label: string }>>([]);
   useEffect(() => {
     let alive = true;
-    InboxesService.list()
+    // Só pede se o cargo lê instâncias: sem a guarda, quem não lê levava um erro
+    // vermelho ao abrir a caixa. O seletor já some sozinho quando a lista vem
+    // vazia (precisa de mais de uma instância para aparecer).
+    mayRead('inboxes.read')
+      .then((pode) => (pode ? InboxesService.list() : null))
       .then((res) => {
-        if (!alive) return;
+        if (!alive || !res) return;
         setInboxOptions(
           (res.data ?? []).map((i: Inbox) => {
             const ch = i.channel_type?.split('::')[1] || '';
