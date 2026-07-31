@@ -705,8 +705,7 @@ export default function Contacts() {
   // Handle conversation creation
   const handleConversationCreated = (conversationId: string) => {
     toast.success(t('messages.conversationStarted'));
-    // TODO: Navigate to conversation
-    console.log('Navigate to conversation:', conversationId);
+    navigate(`/conversations/${conversationId}`);
   };
 
   // Handle modal close

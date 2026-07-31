@@ -70,11 +70,17 @@ import { ScheduleActionModal } from '@/components/scheduledActions';
 import { NotesHistoryModal } from '@/components/pipelines/NotesHistoryModal';
 import ArchivedLeadsModal from '@/components/pipelines/ArchivedLeadsModal';
 import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
+import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 
 export default function PipelineKanban() {
   const { t } = useLanguage('pipelines');
   const { pipelineId } = useParams<{ pipelineId: string }>();
   const navigate = useNavigate();
+  const {
+    openLeadConversation,
+    startConversationModal,
+    opening: openingConversation,
+  } = useOpenLeadConversation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(true);
@@ -1762,29 +1768,31 @@ export default function PipelineKanban() {
                               <a
                                 href={`tel:${item.contact.phone_number.replace(/[^\d+]/g, '')}`}
                                 className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-                                title="Ligar"
+                                title={t('kanban.item.call', 'Ligar')}
                               >
                                 <Phone className="w-3.5 h-3.5" />
-                                Ligar
+                                {t('kanban.item.call', 'Ligar')}
                               </a>
-                              <a
-                                href={`https://wa.me/${(item.contact.phone_number.match(/\d/g) || []).join('')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-400 transition-colors"
-                                title="WhatsApp"
+                              {/* Abre a conversa DENTRO do LM Flow. Era um link wa.me,
+                                  que levava o corretor para fora do CRM. */}
+                              <button
+                                type="button"
+                                onClick={() => openLeadConversation(item)}
+                                disabled={openingConversation}
+                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-400 transition-colors"
+                                title={t('kanban.item.openChat', 'Abrir conversa')}
                               >
                                 <MessageCircle className="w-3.5 h-3.5" />
-                                WhatsApp
-                              </a>
+                                {t('kanban.item.whatsapp', 'WhatsApp')}
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleEditItem(item)}
                                 className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-                                title="Agendar"
+                                title={t('kanban.item.schedule', 'Agendar')}
                               >
                                 <CalendarClock className="w-3.5 h-3.5" />
-                                Agendar
+                                {t('kanban.item.schedule', 'Agendar')}
                               </button>
                             </div>
                           )}
@@ -2103,6 +2111,9 @@ export default function PipelineKanban() {
           loading={isEditingItem}
         />
       )}
+
+      {/* Iniciar conversa — só monta para lead que ainda não tem conversa */}
+      {startConversationModal}
 
       {/* Edit Stage Modal */}
       <EditStageModal

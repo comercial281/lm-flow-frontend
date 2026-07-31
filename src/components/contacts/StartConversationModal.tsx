@@ -281,11 +281,18 @@ export default function StartConversationModal({
 
       // Close modal and redirect to conversation
       if (data && data.id) {
-        onConversationCreated?.(data.id);
         onOpenChange(false);
 
-        // Redirect to conversation like the Vue frontend does
-        window.location.href = `/conversations/${data.id}`;
+        // Quem passou onConversationCreated navega por conta própria (client-side).
+        // O window.location.href continua como padrão para quem não passou, mas ele
+        // recarrega a página inteira e joga fora o estado do app — por isso deixou
+        // de ser incondicional: antes ele rodava SEMPRE, inclusive por cima do
+        // callback, e a navegação de quem passava o callback acontecia por acidente.
+        if (onConversationCreated) {
+          onConversationCreated(data.id);
+        } else {
+          window.location.href = `/conversations/${data.id}`;
+        }
 
         // Reset form
         setMessage('');
