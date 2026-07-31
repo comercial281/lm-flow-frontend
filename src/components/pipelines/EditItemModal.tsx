@@ -80,6 +80,17 @@ interface EditItemModalProps {
   loading: boolean;
 }
 
+// Os eventos da roleta são o motivo de o gestor abrir o histórico: quem aceitou o
+// lead e por que ele trocou de corretor. Sem cor, essas linhas ficam idênticas a
+// "Etiqueta adicionada" no meio de dezenas de mensagens. O prefixo do id vem do
+// backend (Leads::RoletaTimeline); o resto do histórico segue com a cor padrão.
+const historyDotColor = (id: string): string => {
+  if (id.startsWith('roleta-aceite-')) return 'bg-emerald-500';
+  if (id.startsWith('roleta-repasse-') || id.startsWith('roleta-prazo-')) return 'bg-amber-500';
+  if (id.startsWith('roleta-diag-')) return 'bg-red-500';
+  return 'bg-primary';
+};
+
 export default function EditItemModal({
   open,
   onOpenChange,
@@ -250,7 +261,10 @@ export default function EditItemModal({
     if (!contactId) return;
     setHistoryLoading(true);
     try {
-      const res = await contactEventsService.getContactEvents(String(contactId), { limit: 50 });
+      // Sem paginação neste painel: o que não vier aqui não tem como ser buscado
+      // depois. Um lead de roleta gasta duas linhas por oferta, então 50 acabava
+      // rápido num lead com histórico de conversa.
+      const res = await contactEventsService.getContactEvents(String(contactId), { limit: 100 });
       setHistoryEvents(Array.isArray(res.data) ? res.data : []);
     } catch {
       setHistoryEvents([]);
@@ -815,7 +829,7 @@ export default function EditItemModal({
                     ) : (
                       historyEvents.map(ev => (
                         <div key={ev.id} className="flex gap-2 text-xs">
-                          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                          <div className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${historyDotColor(ev.id)}`} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-1">
                               <span className="font-medium truncate">{ev.eventName}</span>
@@ -825,7 +839,7 @@ export default function EditItemModal({
                             </div>
                             {ev.properties && Object.keys(ev.properties).length > 0 && (
                               <p className="text-muted-foreground truncate">
-                                {Object.entries(ev.properties).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                                {Object.entries(ev.properties).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(' · ')}
                               </p>
                             )}
                           </div>
