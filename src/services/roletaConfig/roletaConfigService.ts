@@ -28,6 +28,9 @@ export interface RoletaConfig {
   msg_corretor_template: string | null;
   msg_gestor_template: string | null;
   msg_grupo_template: string | null;
+  // Texto do prazo estourado. Separado do de cima porque nenhum serve para as
+  // duas situações — o de lead novo mentia no repasse.
+  msg_grupo_repasse_template: string | null;
   notification_inbox_id: string | null;
   business_hours_config: Record<string, unknown>;
   members: RoletaMember[];
@@ -46,6 +49,7 @@ export interface RoletaConfigPayload {
   msg_corretor_template?: string | null;
   msg_gestor_template?: string | null;
   msg_grupo_template?: string | null;
+  msg_grupo_repasse_template?: string | null;
   notification_inbox_id?: string | null;
   members: Omit<RoletaMember, 'id' | 'user_name' | 'user_avatar'>[];
 }
