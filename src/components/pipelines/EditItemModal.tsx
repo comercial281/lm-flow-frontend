@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useAccountUsers } from '@/hooks/useAccountUsers';
 import {
@@ -31,7 +30,7 @@ import {
   PopoverTrigger,
   Badge,
 } from '@/components/ui/ds';
-import { Plus, Trash2, ChevronsUpDown, Check, User, Phone, Mail, History, Loader2, Tag, Shuffle, X, RefreshCw, Home, Settings2, Link, MessageSquare, Megaphone, MessageCircle } from 'lucide-react';
+import { Plus, Trash2, ChevronsUpDown, Check, User, Phone, Mail, History, Loader2, Tag, Shuffle, X, RefreshCw, Home, Settings2, Link, MessageSquare, Megaphone } from 'lucide-react';
 import { PipelineItem, PipelineStage, Pipeline, PipelineTask, CreateTaskData, UpdateTaskData, PipelineServiceDefinition } from '@/types/analytics';
 import pipelineServiceDefinitionsService from '@/services/pipelines/pipelineServiceDefinitionsService';
 import PipelineItemCustomAttributes from './PipelineItemCustomAttributes';
@@ -45,6 +44,7 @@ import CreateRoletaModal from './CreateRoletaModal';
 import CardPropertyInterests from './CardPropertyInterests';
 import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import { ManualOriginInput } from '@/components/shared/ManualOriginInput';
 import { MANUAL_ORIGIN_KEY, readManualOrigin } from '@/constants/manualLeadOrigin';
@@ -91,8 +91,12 @@ export default function EditItemModal({
   loading,
 }: EditItemModalProps) {
   const { t } = useLanguage('pipelines');
-  const navigate = useNavigate();
   const { users } = useAccountUsers();
+  const {
+    openLeadConversation,
+    startConversationModal,
+    opening: openingConversation,
+  } = useOpenLeadConversation();
 
   // Feature flags do tenant (ausente/ligada = true → preserva comportamento atual).
   const canNotes = useFeature('card_notes');
@@ -424,12 +428,6 @@ export default function EditItemModal({
       }
     : null;
 
-  // Link direto pra conversa no WhatsApp (Web no desktop, app no celular)
-  const rawPhone: string =
-    item.contact?.phone_number || (item.conversation as any)?.contact?.phone_number || '';
-  const whatsappDigits = rawPhone.replace(/\D/g, '');
-  const whatsappUrl = whatsappDigits ? `https://wa.me/${whatsappDigits}` : null;
-
   // A origem escrita mora no contato, não no card — o card só espelha.
   const handleSaveManualOrigin = async () => {
     const contactId = contactObj?.id ? String(contactObj.id) : null;
@@ -512,30 +510,21 @@ export default function EditItemModal({
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0 mt-0.5">
-            {whatsappUrl && (
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Abrir conversa no WhatsApp"
-                className="p-1.5 rounded-md text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
-              >
-                <MessageCircle className="h-3.5 w-3.5" />
-              </a>
-            )}
-            {item.conversation?.id && (
-              <button
-                type="button"
-                title="Ir para conversa no CRM"
-                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                onClick={() => {
-                  onOpenChange(false);
-                  navigate(`/conversations/${item.conversation!.id}`);
-                }}
-              >
-                <MessageSquare className="h-3.5 w-3.5" />
-              </button>
-            )}
+            {/* Um botão só. Havia dois ícones verdes de chat colados aqui — um
+                abria o wa.me (saía do CRM e perdia o histórico) e o outro a
+                conversa interna. Cara-ou-coroa para o usuário, e o lado errado
+                era o que levava embora. Ficou o interno, agora pelo hook, que
+                também atende lead ainda sem conversa (antes o botão nem
+                aparecia para lead de formulário/anúncio). */}
+            <button
+              type="button"
+              title="Abrir conversa no CRM"
+              disabled={openingConversation}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-60 dark:hover:bg-emerald-950/30 transition-colors"
+              onClick={() => openLeadConversation(item)}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+            </button>
             <button
               type="button"
               title="Copiar link do card"
@@ -1120,6 +1109,9 @@ export default function EditItemModal({
         users={users}
         onCreated={(roleta) => setRoletas(prev => [...prev, roleta])}
       />
+
+      {/* Iniciar conversa — só monta para lead que ainda não tem conversa */}
+      {startConversationModal}
     </Dialog>
   );
 }
