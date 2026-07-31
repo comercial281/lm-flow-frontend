@@ -197,6 +197,12 @@ export default function RoletaConfigPage() {
   // Aviso de repasse: campo próprio porque nenhum texto serve para lead novo e
   // para repasse ao mesmo tempo.
   const [msgRepasse, setMsgRepasse]         = useState('');
+  // Liga/desliga de cada aviso. Deixar o texto em branco NÃO desliga nada (vazio
+  // = usa o padrão) — quem não quer enviar um dos avisos precisa destas chaves.
+  const [msgCorretorOn, setMsgCorretorOn]   = useState(true);
+  const [msgGestorOn, setMsgGestorOn]       = useState(true);
+  const [msgGrupoOn, setMsgGrupoOn]         = useState(true);
+  const [msgRepasseOn, setMsgRepasseOn]     = useState(true);
   const corretorRef = useRef<HTMLTextAreaElement>(null);
   const gestorRef   = useRef<HTMLTextAreaElement>(null);
   const grupoRef    = useRef<HTMLTextAreaElement>(null);
@@ -278,7 +284,10 @@ export default function RoletaConfigPage() {
     setGestorNum('');
     setGestorGroupJid('');
     setNotifInboxId('');
-    setMsgCorretor(''); setMsgGestor(''); setMsgGrupo('');
+    // setMsgRepasse junto: sem ele o texto de repasse da roleta que acabou de ser
+    // editada vazava para a "Nova distribuição".
+    setMsgCorretor(''); setMsgGestor(''); setMsgGrupo(''); setMsgRepasse('');
+    setMsgCorretorOn(true); setMsgGestorOn(true); setMsgGrupoOn(true); setMsgRepasseOn(true);
     setMembers([mkLocal()]);
     setGroups([]);
     setModalOpen(true);
@@ -297,6 +306,12 @@ export default function RoletaConfigPage() {
     setMsgGestor(c.msg_gestor_template ?? '');
     setMsgGrupo(c.msg_grupo_template ?? '');
     setMsgRepasse(c.msg_grupo_repasse_template ?? '');
+    // `!== false` e não `?? true`: config salva antes das chaves existirem volta
+    // sem o campo, e o estado real dela é LIGADO.
+    setMsgCorretorOn(c.msg_corretor_enabled !== false);
+    setMsgGestorOn(c.msg_gestor_enabled !== false);
+    setMsgGrupoOn(c.msg_grupo_enabled !== false);
+    setMsgRepasseOn(c.msg_grupo_repasse_enabled !== false);
     setMembers(c.members.length ? c.members.map(m => mkLocal(m)) : [mkLocal()]);
     setModalOpen(true);
   }
@@ -398,6 +413,10 @@ export default function RoletaConfigPage() {
         msg_gestor_template:    msgGestor.trim() || null,
         msg_grupo_template:     msgGrupo.trim() || null,
         msg_grupo_repasse_template: msgRepasse.trim() || null,
+        msg_corretor_enabled:   msgCorretorOn,
+        msg_gestor_enabled:     msgGestorOn,
+        msg_grupo_enabled:      msgGrupoOn,
+        msg_grupo_repasse_enabled: msgRepasseOn,
         notification_inbox_id:  notifInboxId || null,
         members:                membersValid.map((m, i) => ({
           user_id:                  m.user_id,
@@ -933,7 +952,8 @@ export default function RoletaConfigPage() {
                 Mensagens dos avisos (opcional)
               </UILabel>
               <p className="text-xs text-muted-foreground">
-                Em branco = usa o texto padrão. Clique numa variável pra jogar no texto do aviso focado.
+                Em branco = usa o texto padrão (não desliga o aviso — pra isso use a chavinha ao lado de cada um).
+                Clique numa variável pra jogar no texto do aviso focado.
                 Use o <Send className="inline h-3 w-3" /> <b>Testar</b> pra receber o aviso com dados fictícios (não precisa salvar antes):
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -952,83 +972,139 @@ export default function RoletaConfigPage() {
               <div>
                 <div className="flex items-center justify-between">
                   <UILabel className="text-xs">Aviso do corretor</UILabel>
-                  <button
-                    type="button"
-                    onClick={() => sendTest('corretor')}
-                    disabled={testingMsg !== null}
-                    title="Enviar um teste deste aviso (vai pro número do gestor)"
-                    className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
-                  >
-                    {testingMsg === 'corretor'
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : <Send className="h-3.5 w-3.5" />}
-                    Testar
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMsgCorretorOn(!msgCorretorOn)}
+                      title={msgCorretorOn ? 'Ligado — clique para NÃO enviar este aviso' : 'Desligado — clique para voltar a enviar'}
+                      className="text-[#7c3aed]"
+                    >
+                      {msgCorretorOn
+                        ? <ToggleRight className="h-5 w-5 text-green-500" />
+                        : <ToggleLeft className="h-5 w-5 text-red-500" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => sendTest('corretor')}
+                      disabled={testingMsg !== null || !msgCorretorOn}
+                      title="Enviar um teste deste aviso (vai pro número do gestor)"
+                      className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
+                    >
+                      {testingMsg === 'corretor'
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Send className="h-3.5 w-3.5" />}
+                      Testar
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   ref={corretorRef}
                   value={msgCorretor}
                   onFocus={() => setActiveMsg('corretor')}
                   onChange={e => setMsgCorretor(e.target.value)}
+                  disabled={!msgCorretorOn}
                   rows={3}
                   placeholder="Padrão: 🔔 Novo lead na sua fila... + link de aceite"
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
                 />
+                {/* É este aviso que leva o {{link_aceite}}. Sem ele o corretor não
+                    fica sabendo do lead, não aceita, e o prazo estoura sempre. */}
+                {!msgCorretorOn && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    Sem este aviso o corretor não recebe o link de aceite: ele não vai
+                    saber do lead, o prazo estoura e o lead segue para o próximo.
+                  </p>
+                )}
               </div>
               <div>
                 <div className="flex items-center justify-between">
                   <UILabel className="text-xs">Aviso do gestor</UILabel>
-                  <button
-                    type="button"
-                    onClick={() => sendTest('gestor')}
-                    disabled={testingMsg !== null}
-                    title="Enviar um teste deste aviso (vai pro número do gestor)"
-                    className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
-                  >
-                    {testingMsg === 'gestor'
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : <Send className="h-3.5 w-3.5" />}
-                    Testar
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMsgGestorOn(!msgGestorOn)}
+                      title={msgGestorOn ? 'Ligado — clique para NÃO enviar este aviso' : 'Desligado — clique para voltar a enviar'}
+                      className="text-[#7c3aed]"
+                    >
+                      {msgGestorOn
+                        ? <ToggleRight className="h-5 w-5 text-green-500" />
+                        : <ToggleLeft className="h-5 w-5 text-red-500" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => sendTest('gestor')}
+                      disabled={testingMsg !== null || !msgGestorOn}
+                      title="Enviar um teste deste aviso (vai pro número do gestor)"
+                      className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
+                    >
+                      {testingMsg === 'gestor'
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Send className="h-3.5 w-3.5" />}
+                      Testar
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   ref={gestorRef}
                   value={msgGestor}
                   onFocus={() => setActiveMsg('gestor')}
                   onChange={e => setMsgGestor(e.target.value)}
+                  disabled={!msgGestorOn}
                   rows={3}
                   placeholder="Padrão: 🚨 Lead Novo na Roleta — Aguardando Aceite..."
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
                 />
+                {/* O gestor também recebe o texto de repasse por este mesmo caminho —
+                    a chave de repasse abaixo é só do grupo. */}
+                {!msgGestorOn && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    O gestor não recebe nada no zap dele — nem lead novo, nem repasse.
+                    Os alertas de falha (lead sem responsável, ninguém assumiu) continuam saindo.
+                  </p>
+                )}
               </div>
               <div>
                 <div className="flex items-center justify-between">
                   <UILabel className="text-xs">Aviso do grupo</UILabel>
-                  <button
-                    type="button"
-                    onClick={() => sendTest('grupo')}
-                    disabled={testingMsg !== null}
-                    title="Enviar um teste deste aviso (vai pro grupo de avisos)"
-                    className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
-                  >
-                    {testingMsg === 'grupo'
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : <Send className="h-3.5 w-3.5" />}
-                    Testar
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMsgGrupoOn(!msgGrupoOn)}
+                      title={msgGrupoOn ? 'Ligado — clique para NÃO enviar este aviso' : 'Desligado — clique para voltar a enviar'}
+                      className="text-[#7c3aed]"
+                    >
+                      {msgGrupoOn
+                        ? <ToggleRight className="h-5 w-5 text-green-500" />
+                        : <ToggleLeft className="h-5 w-5 text-red-500" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => sendTest('grupo')}
+                      disabled={testingMsg !== null || !msgGrupoOn}
+                      title="Enviar um teste deste aviso (vai pro grupo de avisos)"
+                      className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
+                    >
+                      {testingMsg === 'grupo'
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Send className="h-3.5 w-3.5" />}
+                      Testar
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   ref={grupoRef}
                   value={msgGrupo}
                   onFocus={() => setActiveMsg('grupo')}
                   onChange={e => setMsgGrupo(e.target.value)}
+                  disabled={!msgGrupoOn}
                   rows={3}
                   placeholder="Padrão: 🎯 Lead distribuído pela roleta..."
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
                   Usado quando o lead <b>chega</b>. Quando o prazo estoura e o lead
                   passa para outro corretor, sai o aviso de repasse abaixo.
+                  {' '}Desligar este <b>não</b> desliga o de repasse — são chaves separadas.
                 </p>
               </div>
 
@@ -1038,27 +1114,40 @@ export default function RoletaConfigPage() {
               <div>
                 <div className="flex items-center justify-between">
                   <UILabel className="text-xs">Aviso de repasse (grupo)</UILabel>
-                  <button
-                    type="button"
-                    onClick={() => sendTest('repasse')}
-                    disabled={testingMsg !== null}
-                    title="Enviar um teste deste aviso (vai pro grupo de avisos)"
-                    className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
-                  >
-                    {testingMsg === 'repasse'
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : <Send className="h-3.5 w-3.5" />}
-                    Testar
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMsgRepasseOn(!msgRepasseOn)}
+                      title={msgRepasseOn ? 'Ligado — clique para NÃO enviar este aviso' : 'Desligado — clique para voltar a enviar'}
+                      className="text-[#7c3aed]"
+                    >
+                      {msgRepasseOn
+                        ? <ToggleRight className="h-5 w-5 text-green-500" />
+                        : <ToggleLeft className="h-5 w-5 text-red-500" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => sendTest('repasse')}
+                      disabled={testingMsg !== null || !msgRepasseOn}
+                      title="Enviar um teste deste aviso (vai pro grupo de avisos)"
+                      className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
+                    >
+                      {testingMsg === 'repasse'
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Send className="h-3.5 w-3.5" />}
+                      Testar
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   ref={repasseRef}
                   value={msgRepasse}
                   onFocus={() => setActiveMsg('repasse')}
                   onChange={e => setMsgRepasse(e.target.value)}
+                  disabled={!msgRepasseOn}
                   rows={3}
                   placeholder="Padrão: 🔁 Lead repassado pela roleta..."
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
                   Sai quando o prazo estoura e o lead vai para o próximo corretor.

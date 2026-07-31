@@ -31,6 +31,13 @@ export interface RoletaConfig {
   // Texto do prazo estourado. Separado do de cima porque nenhum serve para as
   // duas situações — o de lead novo mentia no repasse.
   msg_grupo_repasse_template: string | null;
+  // Liga/desliga de cada aviso. Texto em branco = usa o padrão; isto aqui é o
+  // "não envia". Opcional porque config antiga pode responder sem os campos —
+  // ausente vale como LIGADO.
+  msg_corretor_enabled?: boolean;
+  msg_gestor_enabled?: boolean;
+  msg_grupo_enabled?: boolean;
+  msg_grupo_repasse_enabled?: boolean;
   notification_inbox_id: string | null;
   business_hours_config: Record<string, unknown>;
   members: RoletaMember[];
@@ -50,6 +57,10 @@ export interface RoletaConfigPayload {
   msg_gestor_template?: string | null;
   msg_grupo_template?: string | null;
   msg_grupo_repasse_template?: string | null;
+  msg_corretor_enabled?: boolean;
+  msg_gestor_enabled?: boolean;
+  msg_grupo_enabled?: boolean;
+  msg_grupo_repasse_enabled?: boolean;
   notification_inbox_id?: string | null;
   members: Omit<RoletaMember, 'id' | 'user_name' | 'user_avatar'>[];
 }
