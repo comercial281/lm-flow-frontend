@@ -44,6 +44,17 @@ const ROLETA_VARS: { v: string; label: string }[] = [
   // Vazio quando é lead novo; explica o repasse quando o prazo de alguém estourou.
   { v: 'motivo', label: 'Motivo do repasse' },
 ];
+
+// Os avisos editáveis. `repasse` é o do prazo estourado — destino é o grupo, igual
+// ao `grupo`, mas com texto próprio.
+type MsgTarget = 'corretor' | 'gestor' | 'grupo' | 'repasse';
+
+// O backend não tem alvo 'repasse' no teste (o destino é o grupo), então o teste
+// com campo vazio manda este espelho do texto embutido — senão sairia o de lead
+// novo e o teste mentiria justamente sobre o que veio consertar.
+const DEFAULT_REPASSE_PREVIEW =
+  '🔁 Lead repassado pela roleta\n\n{{motivo}}\nAgora com: {{corretor}}\n' +
+  'Lead: {{nome}}\nTelefone: {{telefone}}\n\nPrazo de aceite: {{prazo}} min.';
 import type { User } from '@/types/users';
 
 const STATUS_COLOR: Record<string, string> = {
@@ -183,12 +194,16 @@ export default function RoletaConfigPage() {
   const [msgCorretor, setMsgCorretor]       = useState('');
   const [msgGestor, setMsgGestor]           = useState('');
   const [msgGrupo, setMsgGrupo]             = useState('');
+  // Aviso de repasse: campo próprio porque nenhum texto serve para lead novo e
+  // para repasse ao mesmo tempo.
+  const [msgRepasse, setMsgRepasse]         = useState('');
   const corretorRef = useRef<HTMLTextAreaElement>(null);
   const gestorRef   = useRef<HTMLTextAreaElement>(null);
   const grupoRef    = useRef<HTMLTextAreaElement>(null);
-  const [activeMsg, setActiveMsg]           = useState<'corretor' | 'gestor' | 'grupo'>('corretor');
+  const repasseRef  = useRef<HTMLTextAreaElement>(null);
+  const [activeMsg, setActiveMsg]           = useState<MsgTarget>('corretor');
   // Qual aviso está sendo testado agora (envio de teste com dados fictícios).
-  const [testingMsg, setTestingMsg]         = useState<'corretor' | 'gestor' | 'grupo' | null>(null);
+  const [testingMsg, setTestingMsg]         = useState<MsgTarget | null>(null);
   // Fontes: formulários do FB roteados pra esta roleta.
   const [metaForms, setMetaForms]           = useState<MetaForm[]>([]);
   const [formConfigs, setFormConfigs]       = useState<LeadAdsFormConfig[]>([]);
@@ -281,6 +296,7 @@ export default function RoletaConfigPage() {
     setMsgCorretor(c.msg_corretor_template ?? '');
     setMsgGestor(c.msg_gestor_template ?? '');
     setMsgGrupo(c.msg_grupo_template ?? '');
+    setMsgRepasse(c.msg_grupo_repasse_template ?? '');
     setMembers(c.members.length ? c.members.map(m => mkLocal(m)) : [mkLocal()]);
     setModalOpen(true);
   }
@@ -381,6 +397,7 @@ export default function RoletaConfigPage() {
         msg_corretor_template:  msgCorretor.trim() || null,
         msg_gestor_template:    msgGestor.trim() || null,
         msg_grupo_template:     msgGrupo.trim() || null,
+        msg_grupo_repasse_template: msgRepasse.trim() || null,
         notification_inbox_id:  notifInboxId || null,
         members:                membersValid.map((m, i) => ({
           user_id:                  m.user_id,
@@ -469,6 +486,7 @@ export default function RoletaConfigPage() {
       corretor: { ref: corretorRef, val: msgCorretor, set: setMsgCorretor },
       gestor:   { ref: gestorRef,   val: msgGestor,   set: setMsgGestor },
       grupo:    { ref: grupoRef,    val: msgGrupo,    set: setMsgGrupo },
+      repasse:  { ref: repasseRef,  val: msgRepasse,  set: setMsgRepasse },
     } as const;
     const t = map[activeMsg];
     const el = t.ref.current;
@@ -486,16 +504,25 @@ export default function RoletaConfigPage() {
   // Envia um aviso de TESTE com dados fictícios, usando o que está no formulário
   // (não precisa salvar antes). Corretor/gestor vão pro número do gestor (quem
   // configura vê no próprio zap); grupo vai pro grupo de avisos escolhido.
-  async function sendTest(target: 'corretor' | 'gestor' | 'grupo') {
+  async function sendTest(target: MsgTarget) {
+    // O repasse vai pro mesmo destino do aviso de grupo — só o texto é outro.
+    const destino = target === 'repasse' ? 'grupo' : target;
+
     if (!inboxId.trim()) { toast.error('Selecione a instância da roleta antes de testar'); return; }
-    if (target !== 'grupo' && !gestorNum.trim()) { toast.error('Preencha o número do gestor antes de testar'); return; }
-    if (target === 'grupo' && !gestorGroupJid) { toast.error('Selecione o grupo de avisos antes de testar'); return; }
+    if (destino !== 'grupo' && !gestorNum.trim()) { toast.error('Preencha o número do gestor antes de testar'); return; }
+    if (destino === 'grupo' && !gestorGroupJid) { toast.error('Selecione o grupo de avisos antes de testar'); return; }
 
     setTestingMsg(target);
     try {
-      const template = { corretor: msgCorretor, gestor: msgGestor, grupo: msgGrupo }[target];
+      const template = {
+        corretor: msgCorretor,
+        gestor:   msgGestor,
+        grupo:    msgGrupo,
+        // Vazio cai no padrão do backend, que é o texto de repasse embutido.
+        repasse:  msgRepasse || DEFAULT_REPASSE_PREVIEW,
+      }[target];
       await roletaConfigService.testNotification({
-        target,
+        target: destino,
         inbox_id:               inboxId,
         notification_inbox_id:  notifInboxId || null,
         gestor_whatsapp_number: gestorNum,
@@ -504,7 +531,7 @@ export default function RoletaConfigPage() {
         timeout_minutes:        timeoutMin,
         template:               template.trim() || null,
       });
-      toast.success(target === 'grupo'
+      toast.success(destino === 'grupo'
         ? 'Teste enviado pro grupo de avisos'
         : 'Teste enviado pro número do gestor');
     } catch (e) {
@@ -999,6 +1026,44 @@ export default function RoletaConfigPage() {
                   placeholder="Padrão: 🎯 Lead distribuído pela roleta..."
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Usado quando o lead <b>chega</b>. Quando o prazo estoura e o lead
+                  passa para outro corretor, sai o aviso de repasse abaixo.
+                </p>
+              </div>
+
+              {/* Campo separado porque nenhum texto serve para as duas situações:
+                  antes o repasse reusava o aviso acima, e quem o personalizava
+                  anunciava "lead novo" num lead que já era de outra pessoa. */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <UILabel className="text-xs">Aviso de repasse (grupo)</UILabel>
+                  <button
+                    type="button"
+                    onClick={() => sendTest('repasse')}
+                    disabled={testingMsg !== null}
+                    title="Enviar um teste deste aviso (vai pro grupo de avisos)"
+                    className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
+                  >
+                    {testingMsg === 'repasse'
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <Send className="h-3.5 w-3.5" />}
+                    Testar
+                  </button>
+                </div>
+                <textarea
+                  ref={repasseRef}
+                  value={msgRepasse}
+                  onFocus={() => setActiveMsg('repasse')}
+                  onChange={e => setMsgRepasse(e.target.value)}
+                  rows={3}
+                  placeholder="Padrão: 🔁 Lead repassado pela roleta..."
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Sai quando o prazo estoura e o lead vai para o próximo corretor.
+                  Use <code>{'{{motivo}}'}</code> para mostrar quem não assumiu.
+                </p>
               </div>
             </div>
 
