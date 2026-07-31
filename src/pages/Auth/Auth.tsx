@@ -33,6 +33,15 @@ import { useGlobalConfig } from '@/contexts/GlobalConfigContext';
 import { AppLogo } from '@/components/AppLogo';
 import FlowBackground from './FlowBackground';
 
+// Só aceita caminho interno. O `returnUrl` sempre existiu aqui, mas nada o
+// preenchia; agora o PrivateRoute o preenche a cada redirect para o login, então
+// um link com `?returnUrl=https://…` viraria redirect aberto logo depois de
+// autenticar. `//host` também é absoluto (protocol-relative) e fica de fora.
+const safeReturnUrl = (value: string | null): string | null => {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
+  return value;
+};
+
 // ─── Animation variants ───────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const fadeUpVariant: any = {
@@ -200,7 +209,7 @@ export const Auth: React.FC = () => {
       await authLogin(result.response.data.user, { access_token: result.response.data.token?.access_token || result.response.data.token?.token?.access_token });
       const { validityCheck } = useAuthStore.getState();
       await validityCheck();
-      const returnUrl = new URLSearchParams(location.search).get('returnUrl');
+      const returnUrl = safeReturnUrl(new URLSearchParams(location.search).get('returnUrl'));
       if (returnUrl) window.location.href = returnUrl;
       else navigate('/', { replace: true });
     } catch (error) {
@@ -246,7 +255,7 @@ export const Auth: React.FC = () => {
 
   const handleMfaVerification = async (code: string) => {
     await verifyMfaCode(code);
-    const returnUrl = new URLSearchParams(location.search).get('returnUrl');
+    const returnUrl = safeReturnUrl(new URLSearchParams(location.search).get('returnUrl'));
     if (returnUrl) window.location.href = returnUrl;
     else navigate('/', { replace: true });
   };
