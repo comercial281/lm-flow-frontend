@@ -20,6 +20,7 @@ export default function AcceptLeadPage() {
   const [error, setError] = useState<string | null>(null);
   const [secsLeft, setSecsLeft] = useState<number>(0);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const expiredRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!assignmentId) return;
@@ -43,6 +44,17 @@ export default function AcceptLeadPage() {
     tickRef.current = setInterval(() => setSecsLeft(s => Math.max(0, s - 1)), 1000);
     return () => { if (tickRef.current) clearInterval(tickRef.current); };
   }, [data]);
+
+  // Prazo zerado: relê o estado real UMA vez. O contador é local — compara o
+  // relógio do aparelho com o deadline do servidor —, então zerar aqui não quer
+  // dizer que o backend já passou o lead adiante. Quem decide é ele; sem esta
+  // releitura os botões seguiam clicáveis contra um prazo vencido. O ref evita o
+  // laço: se o backend ainda devolver `pending`, o efeito re-dispararia sozinho.
+  useEffect(() => {
+    if (secsLeft > 0 || !data || data.status !== 'pending' || expiredRef.current) return;
+    expiredRef.current = true;
+    load();
+  }, [secsLeft, data, load]);
 
   const goToConversation = useCallback((d: BrokerAssignmentDetail) => {
     const cid = d.conversation_display_id ?? d.conversation_id;

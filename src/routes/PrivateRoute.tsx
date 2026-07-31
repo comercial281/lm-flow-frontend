@@ -22,9 +22,20 @@ const PrivateRoute = ({ children }: PrivateRouteProps) => {
     );
   }
 
-  // Redirecionar para login se não estiver autenticado
+  // Redirecionar para login se não estiver autenticado, preservando o destino.
+  // O `state.from` sozinho não bastava: quem lê o destino depois do login é o
+  // `returnUrl` da query (Auth.tsx, inclusive no fluxo de MFA), e ninguém o
+  // alimentava. Na prática o corretor clicava no link de aceite que recebe no
+  // WhatsApp, logava e caía no dashboard, com o prazo do lead correndo.
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    const destino = `${location.pathname}${location.search}`;
+    return (
+      <Navigate
+        to={`/login?returnUrl=${encodeURIComponent(destino)}`}
+        state={{ from: location }}
+        replace
+      />
+    );
   }
 
   return <>{children}</>;

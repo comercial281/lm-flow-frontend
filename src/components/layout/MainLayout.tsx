@@ -28,6 +28,7 @@ import { applyMenuPrefs, MENU_PREFS_EVENT } from './config/menuPrefs';
 import MenuCustomizer from './components/MenuCustomizer';
 import InstallAppPrompt from './components/InstallAppPrompt';
 import ClientModeBar from './ClientModeBar';
+import PendingOffersBanner from '@/components/roleta/PendingOffersBanner';
 import { WelcomeTourModal } from '@/components/WelcomeTourModal';
 import GlobalCommandPalette from '@/components/command-palette/GlobalCommandPalette';
 import FeedbackWidget from '@/components/feedback/FeedbackWidget';
@@ -145,6 +146,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       {/* Barra do Modo Cliente (super-admin) — só aparece quando ativo */}
       <ClientModeBar />
+
+      {/* Ofertas da roleta esperando aceite — só aparece quando há alguma */}
+      <PendingOffersBanner />
 
       {/* Header */}
       <Header

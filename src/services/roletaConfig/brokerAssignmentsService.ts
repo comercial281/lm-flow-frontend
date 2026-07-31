@@ -18,6 +18,12 @@ export interface BrokerAssignmentDetail {
 const BASE = '/broker_assignments';
 
 export const brokerAssignmentsService = {
+  // As ofertas que esperam ESTE corretor. Sem isto, a única porta de entrada era o
+  // link que vai no WhatsApp — perdeu o link, perdeu o lead.
+  async listMine(): Promise<BrokerAssignmentDetail[]> {
+    const res = await api.get(BASE);
+    return (res.data as { data: BrokerAssignmentDetail[] }).data ?? [];
+  },
   async get(id: string): Promise<BrokerAssignmentDetail> {
     const res = await api.get(`${BASE}/${id}`);
     return (res.data as { data: BrokerAssignmentDetail }).data;
