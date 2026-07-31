@@ -87,3 +87,46 @@ export async function isPushSubscribed(): Promise<boolean> {
   const sub = await registration.pushManager.getSubscription();
   return !!sub;
 }
+
+/**
+ * Reenvia ao backend a inscrição que o navegador já tem.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * O BUG QUE ISTO CONSERTA (2026-07-31)
+ * ─────────────────────────────────────────────────────────────────────────
+ * O toggle do Modo Plantão decide "ligado" só olhando o navegador
+ * (isPushSubscribed acima) — nunca pergunta ao servidor. E o servidor APAGA a
+ * inscrição sozinho quando o serviço de push responde 410/inválido: ver
+ * PushCentral::Sender#blast e Notification::PushNotificationService, os dois
+ * fazem `destroy` no rescue. Isso está certo em si (endereço morto tem de sair),
+ * mas endereços morrem por motivo banal: navegador atualizou, aparelho ficou
+ * tempo demais sem abrir o app, sistema rotacionou a chave.
+ *
+ * Sem re-registro, o resultado era permanente e invisível: o servidor apagava, o
+ * navegador mantinha a cópia local, o toggle continuava verde e a pessoa nunca
+ * mais recebia push — sem erro em lugar nenhum. Era a queixa "está com as
+ * notificações ativas e não chega".
+ *
+ * É seguro chamar sempre: o backend faz find_or_initialize_by(endpoint), então
+ * reenviar é idempotente. E não ressuscita quem desligou o plantão de propósito:
+ * unsubscribeFromPush também chama subscription.unsubscribe(), então o navegador
+ * fica sem inscrição e aqui não há nada a enviar.
+ */
+export async function syncPushSubscription(): Promise<boolean> {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    if (!subscription) return false;
+
+    await apiClient.post('/push_subscriptions', {
+      push_subscription: subscription.toJSON(),
+    });
+    return true;
+  } catch (err) {
+    // Não crítico: tenta de novo no próximo carregamento do app.
+    console.warn('[Push] não consegui ressincronizar a inscrição:', err);
+    return false;
+  }
+}

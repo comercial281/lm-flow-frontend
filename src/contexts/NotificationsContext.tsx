@@ -285,7 +285,13 @@ const NotificationsProviderInner: React.FC<NotificationsProviderProps> = ({ chil
       dispatch({ type: 'SET_UI_FLAGS', payload: { isUpdating: true } });
 
       try {
-        await notificationsService.markAsRead('Conversation', notification.primary_actor_id);
+        // O tipo do ator vinha fixo como 'Conversation'. Notificação de lead
+        // aponta para um Contact, e mandar o tipo errado fazia o backend não
+        // achar nada para marcar como lida.
+        await notificationsService.markAsRead(
+          notification.primary_actor_type || 'Conversation',
+          notification.primary_actor_id,
+        );
         dispatch({
           type: 'MARK_AS_READ',
           payload: { id: notification.id, read_at: new Date().toISOString() },

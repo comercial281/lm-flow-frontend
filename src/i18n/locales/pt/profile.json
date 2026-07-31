@@ -125,16 +125,7 @@
       },
       "push": {
         "title": "Notificações Push",
-        "types": {
-          "conversation_creation": "Nova conversa criada",
-          "conversation_assignment": "Conversa atribuída a mim",
-          "assigned_conversation_new_message": "Nova mensagem em conversa atribuída",
-          "conversation_mention": "Mencionado em conversa",
-          "participating_conversation_new_message": "Nova mensagem em conversa participante",
-          "sla_missed_first_response": "SLA de primeira resposta perdido",
-          "sla_missed_next_response": "SLA de próxima resposta perdido",
-          "sla_missed_resolution": "SLA de resolução perdido"
-        }
+        "alwaysOn": "As notificações no aparelho são enviadas sempre que o Modo Plantão estiver ligado nele. Ligue ou desligue o plantão pelo ícone no topo da tela."
       },
       "loading": "Carregando preferências de notificação...",
       "updated": "Configuração de notificação atualizada",
