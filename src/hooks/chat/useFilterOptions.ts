@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import InboxesService from '@/services/channels/inboxesService';
+import { mayRead } from '@/store/appDataStore';
 import chatService from '@/services/chat/chatService';
 import { pipelinesService } from '@/services/pipelines';
 import { Inbox } from '@/types/channels/inbox';
@@ -45,12 +46,20 @@ export const useFilterOptions = (params: UseFilterOptionsParams = {}): FilterOpt
 
       try {
         // ✅ Carregar inboxes, pipelines, labels, teams e etapas
+        // Instâncias e equipes só são pedidas para quem lê: sem a guarda, abrir o
+        // modal de filtros dava erro vermelho para o corretor. Os dropdowns já
+        // ficam vazios de qualquer forma quando ele não tem acesso.
+        const [podeInboxes, podeTeams] = await Promise.all([
+          mayRead('inboxes.read'),
+          mayRead('teams.read'),
+        ]);
+
         const [inboxesResponse, pipelinesResponse, labelsResponse, teamsResponse, stagesResponse] =
           await Promise.allSettled([
-            InboxesService.list(),
+            podeInboxes ? InboxesService.list() : Promise.reject(new Error('sem permissão')),
             chatService.getAvailablePipelines(),
             chatService.getAvailableLabels(),
-            chatService.getAvailableTeams(),
+            podeTeams ? chatService.getAvailableTeams() : Promise.reject(new Error('sem permissão')),
             pipelinesService.getPipelines({ include_items: false }),
           ]);
 

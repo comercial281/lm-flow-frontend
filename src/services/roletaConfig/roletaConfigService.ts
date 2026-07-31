@@ -56,7 +56,7 @@ export interface BrokerAssignment {
   contact_name: string | null;
   contact_phone: string | null;
   assigned_user: { id: string; name: string | null };
-  status: 'pending' | 'accepted' | 'passed' | 'expired';
+  status: 'pending' | 'accepted' | 'passed' | 'expired' | 'cancelled';
   assigned_at: string;
   accepted_at: string | null;
   passed_at: string | null;

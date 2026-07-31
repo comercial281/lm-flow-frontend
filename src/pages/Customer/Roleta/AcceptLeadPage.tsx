@@ -113,8 +113,11 @@ export default function AcceptLeadPage() {
         ) : data.status !== 'pending' ? (
           <div className="py-6 text-center space-y-3">
             <p className="text-white/90">
-              {data.status === 'accepted' ? 'Este lead já foi aceito.' :
-               data.status === 'passed'   ? 'Este lead já passou para outro corretor.' :
+              {data.status === 'accepted'  ? 'Este lead já foi aceito.' :
+               data.status === 'passed'    ? 'Este lead já passou para outro corretor.' :
+               // Sem este caso o corretor via "o prazo expirou" — mentira: o prazo
+               // parou porque a gestão atribuiu o lead a outra pessoa.
+               data.status === 'cancelled' ? 'Este lead foi atribuído a outro corretor pela gestão.' :
                'O prazo deste lead expirou.'}
             </p>
             {data.status === 'accepted' && (

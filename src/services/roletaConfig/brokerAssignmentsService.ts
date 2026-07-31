@@ -2,7 +2,7 @@ import api from '@/services/core/api';
 
 export interface BrokerAssignmentDetail {
   id: string;
-  status: 'pending' | 'accepted' | 'passed' | 'expired';
+  status: 'pending' | 'accepted' | 'passed' | 'expired' | 'cancelled';
   lead_name: string;
   lead_phone: string | null;
   assigned_at: string;

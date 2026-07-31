@@ -159,6 +159,14 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 403) {
+      // Chamada de fundo não grita. O aviso existe para o clique do usuário —
+      // quando é o app que busca sozinho algo que o cargo não lê (lista de
+      // instâncias, de equipes), o corretor levava um erro vermelho na cara sem
+      // ter feito nada, e às vezes por cima de uma tela que funcionava.
+      if ((error.config as { silentForbidden?: boolean } | undefined)?.silentForbidden) {
+        return Promise.reject(error);
+      }
+
       // O backend agora valida o cargo (CustomRole) em toda a API, não só na
       // tela. Sem este aviso um 403 vira "não aconteceu nada" e parece bug do
       // sistema em vez de permissão faltando.
