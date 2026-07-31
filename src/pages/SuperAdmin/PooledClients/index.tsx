@@ -292,6 +292,25 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
     } finally { setSavingSource(null); }
   };
 
+  // Isolamento por corretor: cada corretor só vê os leads dele na caixa e em
+  // Contatos. Ligado por padrão no backend (Tenant#broker_isolation? trata chave
+  // ausente como true), então aqui `!== false` reflete o mesmo default. Existe
+  // para o caso legítimo de caixa compartilhada de propósito — SDR triando,
+  // atendimento central.
+  const [brokerIsolation, setBrokerIsolation] = useState<boolean>(tenant.settings?.broker_isolation !== false);
+  const [savingIsolation, setSavingIsolation] = useState(false);
+  const saveBrokerIsolation = async (next: boolean) => {
+    const prev = brokerIsolation;
+    setBrokerIsolation(next);
+    setSavingIsolation(true);
+    try {
+      await api.patch(`/super/pooled_tenants/${tenant.id}`, { name: tenant.name, broker_isolation: next });
+    } catch {
+      setBrokerIsolation(prev);
+      alert('Falha ao salvar o isolamento por corretor.');
+    } finally { setSavingIsolation(false); }
+  };
+
   // Limite de canais de WhatsApp que o cliente pode criar (0 = ilimitado).
   const [maxWa, setMaxWa] = useState<number>(Number(tenant.max_whatsapp_channels ?? tenant.settings?.max_whatsapp_channels ?? 5) || 0);
   const [savingMax, setSavingMax] = useState(false);
@@ -366,6 +385,24 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
             <button onClick={saveMaxWa} disabled={savingMax}
               className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-600 text-white flex-shrink-0 disabled:opacity-50">
               {savingMax ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvar'}
+            </button>
+          </div>
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1"
+            style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.25)' }}>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-white/90">Isolamento por corretor</div>
+              <div className="text-xs text-white/40">
+                Cada corretor só vê os leads dele na caixa e em Contatos, mesmo dividindo um
+                número. Gerente e admin continuam vendo tudo. Desligue só se o time atende a
+                caixa em conjunto de propósito.
+              </div>
+            </div>
+            <button onClick={() => saveBrokerIsolation(!brokerIsolation)} disabled={savingIsolation}
+              className="relative w-11 h-6 rounded-full flex-shrink-0 transition-colors disabled:opacity-50"
+              style={{ background: brokerIsolation ? '#7c3aed' : 'rgba(255,255,255,0.15)' }}
+              aria-pressed={brokerIsolation} aria-label="Isolamento por corretor">
+              <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                style={{ left: brokerIsolation ? '1.375rem' : '0.125rem' }} />
             </button>
           </div>
           {loading ? (
