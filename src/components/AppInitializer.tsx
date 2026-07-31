@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAppDataStore } from '@/store/appDataStore';
 import { useAuthStore } from '@/store/authStore';
 import { tourService } from '@/services/tours/tourService';
+import { syncPushSubscription } from '@/services/pushNotificationService';
 import i18n from '@/i18n/config';
 import LoadingScreen from '@/components/LoadingScreen';
 interface AppInitializerProps {
@@ -102,6 +103,19 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
         // Non-critical: tours default to empty (all tours will show)
       });
   }, [user?.id, setTours]);
+
+  // Ressincroniza a inscrição de push a cada login. O servidor apaga a inscrição
+  // sozinho quando o serviço de push responde 410, e nada a reenviava: o
+  // aparelho ficava com o Modo Plantão "verde" e sem receber nada, para sempre.
+  // Fica num efeito próprio keyed em user?.id pelo mesmo motivo dos tours acima
+  // — o initializeApp principal trava em `isInitialized` e não re-roda no
+  // segundo login da mesma aba.
+  useEffect(() => {
+    if (!user?.id) return;
+    syncPushSubscription().catch(() => {
+      // Não crítico: nova tentativa no próximo carregamento.
+    });
+  }, [user?.id]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

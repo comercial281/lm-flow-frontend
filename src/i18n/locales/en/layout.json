@@ -23,7 +23,9 @@
     "item": {
       "someTimeAgo": "Some time ago",
       "noAssignee": "NA",
-      "noContent": "No content"
+      "noContent": "No content",
+      "markAsRead": "Mark as read",
+      "open": "Open"
     },
     "panel": {
       "title": "Unread notifications",
@@ -35,6 +37,10 @@
         "separator": " - "
       },
       "types": {
+        "lead_created": "New lead",
+        "lead_assigned": "Lead assigned to you",
+        "roleta_lead_accepted": "Lead accepted",
+        "roleta_lead_passed": "Lead not taken",
         "conversation_assignment": "Assignment",
         "conversation_mention": "Mention",
         "conversation_creation": "New Conversation",

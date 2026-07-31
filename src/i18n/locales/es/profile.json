@@ -125,16 +125,7 @@
       },
       "push": {
         "title": "Notificaciones Push",
-        "types": {
-          "conversation_creation": "Nueva conversación creada",
-          "conversation_assignment": "Conversación asignada a mí",
-          "assigned_conversation_new_message": "Nuevo mensaje en conversación asignada",
-          "conversation_mention": "Mencionado en conversación",
-          "participating_conversation_new_message": "Nuevo mensaje en conversación participante",
-          "sla_missed_first_response": "SLA de primera respuesta perdido",
-          "sla_missed_next_response": "SLA de próxima respuesta perdido",
-          "sla_missed_resolution": "SLA de resolución perdido"
-        }
+        "alwaysOn": "Las notificaciones en el dispositivo se envían siempre que el Modo Plantão esté activo en él. Actívalo o desactívalo desde el icono en la parte superior de la pantalla."
       },
       "loading": "Cargando preferencias de notificación...",
       "updated": "Configuración de notificación actualizada",

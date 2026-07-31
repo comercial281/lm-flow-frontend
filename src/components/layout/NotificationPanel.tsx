@@ -55,14 +55,29 @@ export default function NotificationPanel({
     actions.fetchNotifications({ page: newPage });
   };
 
+  // Destino do clique. O backend manda `url` calculado (Notification#target_url):
+  // conversa quando existe, ficha do contato quando o lead ainda não gerou uma.
+  // Antes daqui era sempre /conversations/<primary_actor.id>, então notificação
+  // de lead sem conversa abria uma conversa inexistente.
+  const resolveTarget = (notification: Notification): string | null => {
+    if (notification.url) return notification.url;
+
+    const actorId = notification.primary_actor?.id || notification.primary_actor_id;
+    if (!actorId) return null;
+
+    return notification.primary_actor_type === 'Contact'
+      ? `/contacts/${actorId}`
+      : `/conversations/${actorId}`;
+  };
+
   const handleOpenNotification = async (notification: Notification) => {
     try {
       // Mark as read
       await actions.markAsRead(notification);
 
-      // Navigate to conversation
-      if (notification.primary_actor?.id) {
-        navigate(`/conversations/${notification.primary_actor.id}`);
+      const target = resolveTarget(notification);
+      if (target) {
+        navigate(target);
         onClose();
       }
     } catch (error) {

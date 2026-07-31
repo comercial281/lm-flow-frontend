@@ -23,7 +23,9 @@
     "item": {
       "someTimeAgo": "Hace algún tiempo",
       "noAssignee": "NA",
-      "noContent": "Sin contenido"
+      "noContent": "Sin contenido",
+      "markAsRead": "Marcar como leído",
+      "open": "Abrir"
     },
     "panel": {
       "title": "Notificaciones no leídas",
@@ -35,6 +37,10 @@
         "separator": " - "
       },
       "types": {
+        "lead_created": "Lead nuevo",
+        "lead_assigned": "Lead asignado a ti",
+        "roleta_lead_accepted": "Lead aceptado",
+        "roleta_lead_passed": "Lead no asumido",
         "conversation_assignment": "Asignación",
         "conversation_mention": "Mención",
         "conversation_creation": "Nueva Conversación",

@@ -125,16 +125,7 @@
       },
       "push": {
         "title": "Push Notifications",
-        "types": {
-          "conversation_creation": "New conversation created",
-          "conversation_assignment": "Conversation assigned to me",
-          "assigned_conversation_new_message": "New message in assigned conversation",
-          "conversation_mention": "Mentioned in conversation",
-          "participating_conversation_new_message": "New message in participating conversation",
-          "sla_missed_first_response": "First response SLA missed",
-          "sla_missed_next_response": "Next response SLA missed",
-          "sla_missed_resolution": "Resolution SLA missed"
-        }
+        "alwaysOn": "Device notifications are always sent while Modo Plantão is on for that device. Turn it on or off from the icon at the top of the screen."
       },
       "loading": "Loading notification preferences...",
       "updated": "Notification configuration updated",

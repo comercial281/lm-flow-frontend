@@ -23,7 +23,9 @@
     "item": {
       "someTimeAgo": "Qualche tempo fa",
       "noAssignee": "NA",
-      "noContent": "Nessun contenuto"
+      "noContent": "Nessun contenuto",
+      "markAsRead": "Segna come letto",
+      "open": "Apri"
     },
     "panel": {
       "title": "Notifiche non lette",
@@ -35,6 +37,10 @@
         "separator": " - "
       },
       "types": {
+        "lead_created": "Nuovo lead",
+        "lead_assigned": "Lead assegnato a te",
+        "roleta_lead_accepted": "Lead accettato",
+        "roleta_lead_passed": "Lead non preso",
         "conversation_assignment": "Assegnazione",
         "conversation_mention": "Menzione",
         "conversation_creation": "Nuova Conversazione",
