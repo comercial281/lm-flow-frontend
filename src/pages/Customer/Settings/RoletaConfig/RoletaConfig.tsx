@@ -8,12 +8,13 @@ import {
 import {
   Shuffle, Plus, Trash2, GripVertical, Save, Phone,
   Clock, Bell, ToggleLeft, ToggleRight, Users, BarChart2,
-  Gavel, Hand, Wifi, Send, Loader2,
+  Gavel, Hand, Wifi, Send, Loader2, ListOrdered, AlertTriangle, RefreshCw,
 } from 'lucide-react';
 import {
   roletaConfigService, RoletaConfig, RoletaMember, BrokerAssignment, DistributionMode,
-  RoletaDiagnostic, RepairOwnersResult,
+  RoletaDiagnostic, RepairOwnersResult, RoletaQueue,
 } from '@/services/roletaConfig/roletaConfigService';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import usersService from '@/services/users/usersService';
 import { leadAutomationService, WaGroup } from '@/services/leadAutomation/leadAutomationService';
 import inboxesService from '@/services/channels/inboxesService';
@@ -127,7 +128,12 @@ export default function RoletaConfigPage() {
   const [saving, setSaving]           = useState(false);
   const [modalOpen, setModalOpen]     = useState(false);
   const [editing, setEditing]         = useState<RoletaConfig | null>(null);
-  const [tab, setTab]                 = useState<'configs' | 'assignments' | 'diagnostico'>('configs');
+  const { can, isReady: permsReady } = usePermissions();
+  // A fila é tela de GESTÃO: gerente e administrador veem as ofertas em aberto de
+  // todo mundo. O corretor segue com a faixa das ofertas dele (PendingOffersBanner)
+  // — mostrar a aba pra ele só renderia 403 na cara.
+  const podeVerFila = can('roleta_configs', 'queue');
+  const [tab, setTab]                 = useState<'fila' | 'configs' | 'assignments' | 'diagnostico'>('fila');
 
   // Painel "Por que este lead não entrou na roleta?". Existe porque cada portão
   // do caminho formulário → roleta falhava calado num log do servidor: o gestor
@@ -170,6 +176,11 @@ export default function RoletaConfigPage() {
   };
   const [assignments, setAssignments] = useState<BrokerAssignment[]>([]);
   const [loadingAssign, setLoadingAssign] = useState(false);
+
+  // Fila ao vivo. O prazo corre em minutos, então recarregar de minuto em minuto
+  // é o suficiente pro cronômetro não mentir.
+  const [queue, setQueue]             = useState<RoletaQueue | null>(null);
+  const [loadingQueue, setLoadingQueue] = useState(false);
 
   // form state
   const [inboxId, setInboxId]               = useState('');
@@ -260,6 +271,17 @@ export default function RoletaConfigPage() {
     }
   }, []);
 
+  const loadQueue = useCallback(async () => {
+    setLoadingQueue(true);
+    try {
+      setQueue(await roletaConfigService.getQueue());
+    } catch {
+      toast.error('Erro ao carregar a fila da roleta');
+    } finally {
+      setLoadingQueue(false);
+    }
+  }, []);
+
   const loadInboxMembers = useCallback(async (id: string) => {
     if (!id) { setInboxMembers([]); return; }
     setLoadingMembers(true);
@@ -274,6 +296,20 @@ export default function RoletaConfigPage() {
   useEffect(() => { loadConfigs(); loadUsers(); loadInboxes(); loadAccount(); }, [loadConfigs, loadUsers, loadInboxes, loadAccount]);
   useEffect(() => { loadInboxMembers(inboxId); }, [inboxId, loadInboxMembers]);
   useEffect(() => { if (tab === 'assignments') loadAssignments(); }, [tab, loadAssignments]);
+
+  // As permissões chegam depois do primeiro render: só quando elas terminam de
+  // carregar dá pra saber se a aba Fila é deste usuário. Sem isso o corretor
+  // abriria a tela na aba que ele não pode ver.
+  useEffect(() => {
+    if (permsReady && !podeVerFila && tab === 'fila') setTab('configs');
+  }, [permsReady, podeVerFila, tab]);
+
+  useEffect(() => {
+    if (tab !== 'fila' || !podeVerFila) return;
+    loadQueue();
+    const id = setInterval(loadQueue, 60_000);
+    return () => clearInterval(id);
+  }, [tab, podeVerFila, loadQueue]);
 
   function openCreate() {
     setEditing(null);
@@ -581,9 +617,9 @@ export default function RoletaConfigPage() {
         </Button>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — "Fila" só para quem gerencia (cargo roleta_configs.queue). */}
       <div className="flex gap-1 border-b">
-        {(['configs', 'assignments', 'diagnostico'] as const).map(t => (
+        {([...(podeVerFila ? (['fila'] as const) : []), 'configs', 'assignments', 'diagnostico'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -593,10 +629,141 @@ export default function RoletaConfigPage() {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            {t === 'configs' ? 'Configuracoes' : t === 'assignments' ? 'Atribuicoes Recentes' : 'Diagnóstico'}
+            {t === 'fila'
+              ? `Fila${queue && queue.resumo.aguardando > 0 ? ` (${queue.resumo.aguardando})` : ''}`
+              : t === 'configs' ? 'Configuracoes'
+              : t === 'assignments' ? 'Atribuicoes Recentes'
+              : 'Diagnóstico'}
           </button>
         ))}
       </div>
+
+      {tab === 'fila' && podeVerFila && (
+        <div className="space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium">Ofertas em aberto agora</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Todo lead que a roleta já ofereceu e ainda espera aceite — de qualquer corretor.
+                Atualiza sozinho a cada minuto.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={loadQueue} disabled={loadingQueue} className="gap-2 shrink-0">
+              {loadingQueue ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Atualizar
+            </Button>
+          </div>
+
+          {queue && (
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline" className="gap-1">
+                <Clock className="h-3 w-3" />
+                {queue.resumo.aguardando} aguardando
+              </Badge>
+              {queue.resumo.atrasadas > 0 && (
+                <Badge className="gap-1 bg-red-100 text-red-700 hover:bg-red-100">
+                  <AlertTriangle className="h-3 w-3" />
+                  {queue.resumo.atrasadas} com prazo estourado
+                </Badge>
+              )}
+              <Badge variant="outline">{queue.resumo.roletas_ativas} roleta(s) ativa(s)</Badge>
+            </div>
+          )}
+
+          {loadingQueue && !queue && <p className="text-sm text-muted-foreground">Carregando...</p>}
+
+          {queue?.aguardando.length === 0 && (
+            <div className="border rounded-lg p-12 text-center text-muted-foreground">
+              <ListOrdered className="h-8 w-8 mx-auto mb-3 opacity-40" />
+              <p className="font-medium">Nenhum lead esperando aceite</p>
+              <p className="text-sm mt-1">Quando a roleta oferecer um lead, ele aparece aqui até alguém assumir.</p>
+            </div>
+          )}
+
+          {queue?.aguardando.map(item => (
+            <div
+              key={item.id}
+              className={`border rounded-lg p-3 ${item.estourou ? 'border-red-300 bg-red-50 dark:bg-red-950/20' : ''}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-sm truncate">{item.lead}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Com <strong>{item.corretor.nome ?? 'corretor removido'}</strong>
+                    {item.instancia && ` — ${item.instancia}`}
+                    {' — rodada '}{item.rodada}
+                  </p>
+                  {item.ja_passaram.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Antes: {item.ja_passaram.join(' → ')}
+                    </p>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  {item.estourou ? (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                      Prazo estourado
+                    </span>
+                  ) : (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                      {item.minutos_restantes} min restantes
+                    </span>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Oferecido {formatDateTimeBR(item.atribuido_em)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Quem está na roleta. No rodízio o sorteio é PONDERADO (não fila fixa),
+              então o que informa de verdade é a chance de cada um — não uma
+              "posição". Nos outros modos nem chance existe: quem decide é o
+              leilão / a disponibilidade / o gestor. */}
+          {queue && queue.roletas.length > 0 && (
+            <div className="space-y-3 pt-2">
+              <p className="text-sm font-medium">Quem está na roleta</p>
+              {queue.roletas.map(r => (
+                <div key={r.id} className="border rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`h-2 w-2 rounded-full ${r.ativa ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                    <p className="text-sm font-medium">{r.instancia ?? r.id}</p>
+                    <Badge variant="outline" className="text-[10px]">{MODE_LABEL[r.modo] ?? r.modo}</Badge>
+                    {!r.ativa && <span className="text-xs text-muted-foreground">(desativada)</span>}
+                  </div>
+                  {r.membros.length === 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">Nenhum corretor nesta roleta.</p>
+                  )}
+                  <div className="mt-2 space-y-1">
+                    {r.membros.map(m => (
+                      <div key={m.user_id} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          <Users className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{m.nome ?? m.user_id}</span>
+                          {!m.ativo && <span className="text-muted-foreground">(inativo)</span>}
+                          {m.sem_acesso_a_instancia && (
+                            <span className="text-red-600 whitespace-nowrap">sem acesso à instância</span>
+                          )}
+                        </span>
+                        <span className="flex items-center gap-2 text-muted-foreground shrink-0">
+                          {m.chance_pct != null && <span>{m.chance_pct}% de chance</span>}
+                          {m.segurando_agora > 0 && (
+                            <span className="text-orange-600">segurando {m.segurando_agora}</span>
+                          )}
+                          <span>
+                            {m.ultimo_lead_em ? `último: ${formatDateTimeBR(m.ultimo_lead_em)}` : 'nenhum lead ainda'}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {tab === 'configs' && (
         <div className="space-y-3">
