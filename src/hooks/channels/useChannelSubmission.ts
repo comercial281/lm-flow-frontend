@@ -531,11 +531,16 @@ export const useChannelSubmission = (form?: FormData) => {
               verifyPayload.adminToken = getStr(form, 'admin_token');
             }
 
-            await EvolutionService.verifyConnection(verifyPayload);
+            const verify = await EvolutionService.verifyConnection(verifyPayload);
 
             // Build final payload
             const providerConfig: any = {
-              instance_name: getStr(form, 'name'),
+              // O nome REAL vem do backend (prefixado pelo cliente:
+              // lmf_<slug>_<rótulo>), porque o servidor da Evolution é um só
+              // para todos e o nome é a chave dele. Gravar o slug do front
+              // aqui faria QR, settings e logout apontarem para uma instância
+              // que não existe — o retorno é ignorado antes desta linha.
+              instance_name: verify?.instance_name || getStr(form, 'name'),
               proxy_settings: form.proxy_enabled
                 ? {
                     enabled: true,
@@ -701,8 +706,18 @@ export const useChannelSubmission = (form?: FormData) => {
         addInbox(data as Inbox);
       }
 
-      toast.success('Canal criado com sucesso');
-      navigate(`/channels/${createdId}/settings`);
+      // Criar o canal NÃO conecta o WhatsApp: falta escanear o QR. Antes, o
+      // usuário caía na tela de settings numa aba que nem é a do QR, sem nada
+      // avisando que o número ainda não estava pareado — e saía achando que
+      // tinha terminado.
+      const precisaParear = selectedProvider?.id === 'evolution' || selectedProvider?.id === 'evolution_go';
+      if (precisaParear) {
+        toast.success('Canal criado. Agora escaneie o QR code para conectar o WhatsApp.');
+        navigate(`/channels/${createdId}/settings?tab=configuration&connect=1`);
+      } else {
+        toast.success('Canal criado com sucesso');
+        navigate(`/channels/${createdId}/settings`);
+      }
     } catch (e: unknown) {
       const err = e as Error;
       toast.error(err?.message || 'Falha ao criar canal');
