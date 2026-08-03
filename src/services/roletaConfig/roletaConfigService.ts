@@ -1,5 +1,26 @@
 import api from '@/services/core/api';
 
+// Um número de WhatsApp dentro da roleta.
+//
+// A roleta deixou de ser presa a um número: ela tem N instâncias, cada uma com
+// peso próprio, e o sorteio acontece em dois níveis — primeiro a instância,
+// depois o corretor DAQUELA instância. A roleta de número compartilhado é o caso
+// particular de UMA instância, e é o que todo cliente existente tem.
+//
+// `inbox_id` é a chave natural (é único no backend), e é por ele que o membro
+// diz em qual número atende.
+export interface RoletaInstance {
+  id?: string;
+  inbox_id: string;
+  inbox_name?: string | null;
+  // Apelido do gestor ("WhatsApp do João"). Cai no nome da instância quando vazio.
+  label?: string | null;
+  display_name?: string;
+  weight: number;
+  is_active: boolean;
+  position: number;
+}
+
 export interface RoletaMember {
   id?: string;
   user_id: string;
@@ -9,6 +30,10 @@ export interface RoletaMember {
   is_active: boolean;
   position: number;
   personal_whatsapp_number: string;
+  // Por qual número ESTE corretor atende. O backend devolve os dois; no envio
+  // só `inbox_id` importa (é o que ele usa para amarrar a instância).
+  roleta_instance_id?: string | null;
+  inbox_id?: string | null;
 }
 
 // Modo de distribuição. A RoletaConfig é a FONTE ÚNICA: modo + quem + prazo + gestor.
@@ -33,6 +58,14 @@ export interface RoletaConfig {
   msg_grupo_repasse_template: string | null;
   notification_inbox_id: string | null;
   business_hours_config: Record<string, unknown>;
+  instances?: RoletaInstance[];
+  // A FLAG do cliente: pode adicionar um segundo número? Liberada por cliente
+  // pela Leal Mídia (nasce desligada).
+  multi_instance_enabled?: boolean;
+  // O estado REAL, derivado do dado: já tem mais de um número ativo? Os dois são
+  // necessários — um decide se aparece o botão de adicionar, o outro decide se
+  // aparecem os pesos por instância.
+  multi_instancia?: boolean;
   members: RoletaMember[];
   created_at: string;
   updated_at: string;
@@ -51,7 +84,14 @@ export interface RoletaConfigPayload {
   msg_grupo_template?: string | null;
   msg_grupo_repasse_template?: string | null;
   notification_inbox_id?: string | null;
-  members: Omit<RoletaMember, 'id' | 'user_name' | 'user_avatar'>[];
+  // Sincronizadas DENTRO de create/update, não numa rota própria: o RBAC deriva
+  // a permissão pelo nome da action, então uma action nova exigiria uma
+  // permissão que nenhum cargo tem e a tela tomaria 403 sem pista nenhuma.
+  //
+  // Lista vazia = "não mexe nas instâncias". O backend nunca deixa a roleta sem
+  // nenhuma, porque sem instância o sorteio morre calado.
+  instances?: Omit<RoletaInstance, 'id' | 'inbox_name' | 'display_name'>[];
+  members: Omit<RoletaMember, 'id' | 'user_name' | 'user_avatar' | 'roleta_instance_id'>[];
 }
 
 export interface BrokerAssignment {
@@ -71,6 +111,9 @@ export interface BrokerAssignment {
 // Uma tentativa de distribuição, com o veredito em português. Alimenta o painel
 // "Por que este lead não entrou na roleta?" — que existe porque cada portão do
 // caminho formulário → roleta falhava calado num log do servidor.
+// Espelha RoletaEvent::OUTCOMES no backend. Estava desatualizado: faltavam seis
+// vereditos que o backend já gravava, e um deles chegando aqui caía no `default`
+// da tela como se fosse desconhecido.
 export type RoletaOutcome =
   | 'sem_config'
   | 'config_sem_roleta'
@@ -78,7 +121,14 @@ export type RoletaOutcome =
   | 'roleta_inativa'
   | 'modo_manual'
   | 'sem_membros'
+  | 'sem_acesso_ao_inbox'
+  | 'roleta_esgotada'
   | 'dono_gravado'
+  | 'corretor_sem_whatsapp'
+  | 'oferta_cancelada'
+  // O lead TEM dono; o que falhou foi abrir o atendimento no número sorteado.
+  | 'canal_nao_aberto'
+  | 'instancia_divergente'
   | 'dono_falhou'
   | 'erro';
 
