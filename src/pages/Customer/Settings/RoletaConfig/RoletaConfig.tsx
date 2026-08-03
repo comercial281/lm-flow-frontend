@@ -14,7 +14,6 @@ import {
   roletaConfigService, RoletaConfig, RoletaMember, BrokerAssignment, DistributionMode,
   RoletaDiagnostic, RepairOwnersResult, RoletaQueue,
 } from '@/services/roletaConfig/roletaConfigService';
-import { usePermissions } from '@/contexts/PermissionsContext';
 import usersService from '@/services/users/usersService';
 import { leadAutomationService, WaGroup } from '@/services/leadAutomation/leadAutomationService';
 import inboxesService from '@/services/channels/inboxesService';
@@ -132,11 +131,6 @@ export default function RoletaConfigPage() {
   const [saving, setSaving]           = useState(false);
   const [modalOpen, setModalOpen]     = useState(false);
   const [editing, setEditing]         = useState<RoletaConfig | null>(null);
-  const { can } = usePermissions();
-  // Quem está de fato concorrendo no sorteio é dado de GESTÃO (cargo
-  // roleta_configs.queue: Gerente e Administrador). Sem a chave, o Diagnóstico
-  // mostra só a trilha dos leads.
-  const podeVerParticipantes = can('roleta_configs', 'queue');
   const [tab, setTab]                 = useState<'configs' | 'assignments' | 'diagnostico'>('configs');
 
   // Painel "Por que este lead não entrou na roleta?". Existe porque cada portão
@@ -177,6 +171,23 @@ export default function RoletaConfigPage() {
       try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(next)); } catch { /* idem */ }
       return next;
     });
+  }, []);
+
+  // Limpar a lista de uma vez, em vez de clicar card a card. Some só o que está
+  // CARREGADO agora: o que chegar depois é registro novo e aparece normalmente.
+  const hideAll = useCallback((ids: string[]) => {
+    setHiddenIds(prev => {
+      const next = Array.from(new Set([...prev, ...ids]));
+      try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(next)); } catch { /* idem */ }
+      return next;
+    });
+    setShowHidden(false);
+  }, []);
+
+  const unhideAll = useCallback(() => {
+    setHiddenIds([]);
+    try { localStorage.removeItem(HIDDEN_KEY); } catch { /* idem */ }
+    setShowHidden(false);
   }, []);
 
   const loadDiagnostics = useCallback(async () => {
@@ -337,8 +348,12 @@ export default function RoletaConfigPage() {
   // Quem está concorrendo no sorteio agora — abre junto com o Diagnóstico, que é
   // onde o gestor confere se a roleta está com as pessoas certas.
   useEffect(() => {
-    if (tab === 'diagnostico' && podeVerParticipantes) loadQueue();
-  }, [tab, podeVerParticipantes, loadQueue]);
+    // Sem checar cargo no cliente: quem manda é a resposta da API. O `can()` lê um
+    // catálogo de permissões cacheado por 30 min no navegador, então uma chave
+    // recém-criada volta como "não tem" e a tela nem chegava a pedir os dados —
+    // era isso que sumia o bloco para quem tinha acesso de verdade.
+    if (tab === 'diagnostico') loadQueue();
+  }, [tab, loadQueue]);
 
   function openCreate() {
     setEditing(null);
@@ -764,7 +779,7 @@ export default function RoletaConfigPage() {
               tela de configuração mostra quem foi ESCOLHIDO, e aqui aparece quem
               o sorteio realmente alcança — a diferença entre os dois é a causa
               silenciosa de "por que fulano nunca recebe lead?". */}
-          {podeVerParticipantes && queue && queue.roletas.length > 0 && (
+          {queue && queue.roletas.length > 0 && (
             <div className="border rounded-lg p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -850,10 +865,29 @@ export default function RoletaConfigPage() {
               <Button variant="outline" size="sm" onClick={() => runRepair(true)} disabled={repairBusy}>
                 {repairBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ver leads sem responsável'}
               </Button>
+              {/* Ocultar em massa: limpa a lista inteira de uma vez. Some só o que
+                  está carregado — registro novo continua aparecendo. */}
+              {diagnosticosVisiveis.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => hideAll(diagnosticosVisiveis.map(d => d.id))}
+                  className="gap-1.5"
+                >
+                  <EyeOff className="h-3.5 w-3.5" />
+                  Ocultar todos ({diagnosticosVisiveis.length})
+                </Button>
+              )}
               {ocultosNaLista > 0 && (
                 <Button variant="outline" size="sm" onClick={() => setShowHidden(v => !v)} className="gap-1.5">
                   {showHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   {showHidden ? 'Esconder de novo' : `Ver ${ocultosNaLista} oculto(s)`}
+                </Button>
+              )}
+              {hiddenIds.length > 0 && (
+                <Button variant="outline" size="sm" onClick={unhideAll} className="gap-1.5">
+                  <Eye className="h-3.5 w-3.5" />
+                  Mostrar todos de novo
                 </Button>
               )}
             </div>
