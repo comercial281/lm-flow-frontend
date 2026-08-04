@@ -401,7 +401,7 @@
   },
   "empty": {
     "title": "Aucun contact trouvé",
-    "description": "Créez un nouveau contact pour commencer à gérer vos conversations avec les clients.",
+    "description": "Cet onglet n'affiche que les leads portant l'étiquette de trafic payant. Les contacts créés manuellement ou provenant d'autres sources n'apparaissent pas ici.",
     "action": "Nouveau Contact"
   },
   "loading": {
@@ -600,7 +600,7 @@
   },
   "header": {
     "title": "Contacts",
-    "subtitle": "Gérez tous vos contacts en un seul endroit",
+    "subtitle": "Leads issus de vos annonces",
     "searchPlaceholder": "Rechercher des contacts...",
     "newContact": "Nouveau Contact",
     "import": "Importer",
