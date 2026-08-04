@@ -14,6 +14,7 @@ import {
   roletaConfigService, RoletaConfig, RoletaMember, RoletaInstance, BrokerAssignment, DistributionMode,
   RoletaDiagnostic, RepairOwnersResult, RoletaQueue,
 } from '@/services/roletaConfig/roletaConfigService';
+import { useFeature } from '@/contexts/TenantFeaturesContext';
 import usersService from '@/services/users/usersService';
 import { leadAutomationService, WaGroup } from '@/services/leadAutomation/leadAutomationService';
 import inboxesService from '@/services/channels/inboxesService';
@@ -270,7 +271,15 @@ export default function RoletaConfigPage() {
   // Os números desta roleta. Sempre pelo menos um — a instância de entrada.
   const [instances, setInstances]               = useState<InstanceRow[]>([]);
   // A flag do cliente (nasce desligada). Sem ela a tela é exatamente a de antes.
-  const [multiEnabled, setMultiEnabled]         = useState(false);
+  // A flag do cliente vem das features do tenant — a MESMA fonte que o resto do
+  // app usa. Antes ela só chegava pelo payload da config, e `openCreate` a
+  // zerava: criar uma roleta nova nunca mostrava o bloco de números, só editar
+  // uma existente mostrava.
+  const multiFeature = useFeature('roleta_multi_instancia');
+  // O payload continua valendo como reforço: é a verdade do backend, e cobre o
+  // super-admin no domínio raiz, onde não há slug de tenant para resolver.
+  const [multiFromConfig, setMultiFromConfig]   = useState(false);
+  const multiEnabled = multiFeature || multiFromConfig;
   const [groups, setGroups]                 = useState<WaGroup[]>([]);
   const [loadingGroups, setLoadingGroups]   = useState(false);
   const [crmName, setCrmName]               = useState('');
@@ -391,6 +400,19 @@ export default function RoletaConfigPage() {
   useEffect(() => {
     loadInboxMembers(instanceInboxKey ? instanceInboxKey.split(',') : []);
   }, [instanceInboxKey, loadInboxMembers]);
+  // Ao CRIAR, a lista de números nasce vazia: o gestor ainda não escolheu nada.
+  // Assim que ele escolhe o número de entrada, ele vira a primeira linha — é o
+  // que o backend faz de qualquer jeito (`after_create` cria a instância
+  // primária), e ver a linha ali é o que deixa claro onde clicar para somar o
+  // segundo número.
+  //
+  // Só semeia quando a lista está VAZIA: mexer depois disso apagaria o que o
+  // gestor já configurou a cada tecla no formulário.
+  useEffect(() => {
+    if (!modalOpen || !inboxId || instances.length > 0) return;
+    setInstances([mkInstance({ inbox_id: inboxId, weight: 10, position: 0 })]);
+  }, [modalOpen, inboxId, instances.length]);
+
   useEffect(() => { if (tab === 'assignments') loadAssignments(); }, [tab, loadAssignments]);
 
   // Quem está concorrendo no sorteio agora — abre junto com o Diagnóstico, que é
@@ -418,7 +440,7 @@ export default function RoletaConfigPage() {
     setMsgCorretorOn(true); setMsgGestorOn(true); setMsgGrupoOn(true); setMsgRepasseOn(true);
     setMembers([mkLocal()]);
     setInstances([]);
-    setMultiEnabled(false);
+    setMultiFromConfig(false);
     setGroups([]);
     setModalOpen(true);
   }
@@ -450,7 +472,7 @@ export default function RoletaConfigPage() {
         ? c.instances.map(i => mkInstance(i))
         : [mkInstance({ inbox_id: c.inbox_id, weight: 10, position: 0 })],
     );
-    setMultiEnabled(!!c.multi_instance_enabled);
+    setMultiFromConfig(!!c.multi_instance_enabled);
     setModalOpen(true);
   }
 
