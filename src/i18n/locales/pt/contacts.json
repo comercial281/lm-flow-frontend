@@ -409,7 +409,7 @@
   },
   "empty": {
     "title": "Nenhum contato encontrado",
-    "description": "Crie um novo contato para começar a gerenciar suas conversas com clientes.",
+    "description": "Esta aba mostra apenas os leads com a etiqueta \"tráfego pago\". Contactos criados manualmente ou vindos de outras origens não aparecem aqui.",
     "action": "Novo Contato"
   },
   "loading": {
@@ -608,7 +608,7 @@
   },
   "header": {
     "title": "Contatos",
-    "subtitle": "Gerencie todos os seus contatos em um só lugar",
+    "subtitle": "Leads que chegaram pelos seus anúncios",
     "searchPlaceholder": "Buscar contatos...",
     "newContact": "Novo Contato",
     "import": "Importar",

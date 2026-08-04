@@ -829,6 +829,13 @@
           "statusDisconnected": "Desconectado",
           "statusConnecting": "Conectando",
           "connectDevice": "Conectar Dispositivo",
+          "qrSteps": {
+            "title": "Como escanear no seu celular",
+            "step1": "Abra o WhatsApp no seu celular (o mesmo número que vai atender).",
+            "step2": "No Android, toque nos três pontinhos (⋮) no canto superior direito. No iPhone, toque em Configurações no menu de baixo.",
+            "step3": "Toque em \"Dispositivos conectados\" e depois em \"Conectar dispositivo\".",
+            "step4": "Aponte a câmera do celular para o QR Code desta tela e aguarde a confirmação."
+          },
           "qrCodeInstructions": "Escaneie este QR Code com seu WhatsApp",
           "settingsTitle": "Configurações da Instância",
           "settingsDescription": "Configure o comportamento da sua instância do WhatsApp",

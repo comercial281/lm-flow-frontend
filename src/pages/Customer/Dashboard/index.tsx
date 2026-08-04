@@ -18,7 +18,6 @@ import AutomationsKPISection from './components/AutomationsKPISection';
 import DashboardMetricsSection from './components/DashboardMetricsSection';
 import DashboardTrendsSection from './components/DashboardTrendsSection';
 import DashboardPerformanceSection from './components/DashboardPerformanceSection';
-import DashboardRoletaSection from './components/DashboardRoletaSection';
 import DashboardUpcomingVisits from './components/DashboardUpcomingVisits';
 import type { DashboardFilterState, DashboardOption } from './components/types';
 import { DashboardTour } from '@/tours';
@@ -409,9 +408,6 @@ const CustomerDashboardPage = () => {
         <DashboardTrendsSection data={data} t={t} channelShareData={channelShareData} />
       </div>
       <DashboardUpcomingVisits />
-      {/* Some sozinho para quem não lê o diagnóstico (corretor) e para quem ainda
-          não distribuiu nada — ver DashboardRoletaSection. */}
-      <DashboardRoletaSection />
       <div data-tour="dashboard-performance">
         <DashboardPerformanceSection data={data} t={t} />
       </div>

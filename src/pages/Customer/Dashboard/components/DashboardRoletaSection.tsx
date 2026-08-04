@@ -1,123 +1,152 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shuffle, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ui/ds';
+import { Shuffle } from 'lucide-react';
+import { Badge, Card, CardContent } from '@/components/ui/ds';
 import { mayRead } from '@/store/appDataStore';
-import { roletaConfigService, RoletaDiagnostic } from '@/services/roletaConfig/roletaConfigService';
+import { roletaConfigService, RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 
 /**
- * "Roleta" no dashboard — o mesmo diagnóstico da tela de Distribuição de Leads,
- * resumido, para admin, gestor e gerente.
+ * Cartão "Roleta" na fileira de KPIs — quem está recebendo lead agora.
  *
- * Por que aqui e não só na tela da roleta: quando um lead não entra, ninguém vai
- * conferir uma tela de configuração — o gestor descobre pelo corretor
- * reclamando, horas depois. O dashboard é onde ele já olha todo dia, e é o único
- * lugar em que a falha aparece antes de alguém procurar por ela.
+ * Fica junto do Ticket médio de propósito: a pergunta "a roleta está girando e
+ * pra quem?" é do mesmo tipo das outras daquela fileira, e é a que o gestor faz
+ * todo dia. Escondida numa tela de configuração, ninguém abre.
  *
- * Mostra as FALHAS primeiro de propósito: sucesso é o esperado e não precisa de
- * espaço. Quando não há nenhuma, o cartão vira uma linha verde de "está rodando"
- * — que também é informação, porque distingue "sem problema" de "sem roleta".
+ * Ocupa duas colunas (`sm:col-span-2`) porque o conteúdo é uma LISTA de pessoas,
+ * não um número — no espaço de um KPI normal os nomes truncariam e o cartão
+ * viraria enfeite.
+ *
+ * Mostra o percentual EFETIVO de cada corretor: com mais de um número, a chance
+ * dele é (peso do número ÷ soma dos números) × (peso dele ÷ soma da instância
+ * dele). Mostrar só `peso/soma` faria o gestor ler números que não acontecem —
+ * é a mesma conta da tela de configuração, e as duas precisam concordar.
  */
+
+interface Linha {
+  nome: string;
+  corretores: { nome: string; pct: number | null }[];
+  ativa: boolean;
+  multi: boolean;
+}
+
+function montarLinha(c: RoletaConfig): Linha {
+  const membrosAtivos = (c.members ?? []).filter(m => m.is_active && m.user_id);
+  const instancias = (c.instances ?? []).filter(i => i.is_active !== false);
+  const somaInstancias = instancias.reduce((s, i) => s + (i.weight ?? 0), 0);
+
+  // Sem instâncias (roleta legada de número único) a fatia do número é 1 — a
+  // conta degrada para o peso simples, que era o comportamento de antes.
+  const pctDe = (m: (typeof membrosAtivos)[number]): number | null => {
+    const doMembro = m.weight ?? 0;
+    const irmaos = membrosAtivos.filter(o =>
+      instancias.length > 1 ? o.inbox_id === m.inbox_id : true,
+    );
+    const somaIrmaos = irmaos.reduce((s, o) => s + (o.weight ?? 0), 0);
+    if (somaIrmaos <= 0) return null;
+
+    if (instancias.length <= 1 || somaInstancias <= 0) {
+      return (doMembro / somaIrmaos) * 100;
+    }
+    const inst = instancias.find(i => i.inbox_id === m.inbox_id);
+    const fatiaNumero = (inst?.weight ?? 0) / somaInstancias;
+    return fatiaNumero * (doMembro / somaIrmaos) * 100;
+  };
+
+  return {
+    nome: c.display_name || c.inbox_name || 'Roleta',
+    ativa: c.is_active,
+    multi: instancias.length > 1,
+    corretores: membrosAtivos
+      .map(m => ({ nome: m.user_name || 'Sem nome', pct: pctDe(m) }))
+      .sort((a, b) => (b.pct ?? 0) - (a.pct ?? 0)),
+  };
+}
+
 export default function DashboardRoletaSection() {
   const navigate = useNavigate();
-  const [permitido, setPermitido] = useState<boolean | null>(null);
-  const [falhas, setFalhas] = useState<RoletaDiagnostic[] | null>(null);
-  const [total, setTotal] = useState(0);
+  const [linhas, setLinhas] = useState<Linha[] | null>(null);
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      // A permissão já existe para admin e gerente (role_seeder_service). O
-      // corretor não tem, e sem esta guarda ele levaria um 403 vermelho ao abrir
-      // o PRÓPRIO dashboard — o mesmo tropeço que os filtros de instância/equipe
-      // já tiveram nesta página.
-      const pode = await mayRead('roleta_configs.diagnostics').catch(() => false);
+      // O corretor não lê roletas, e sem esta guarda ele levaria um 403 vermelho
+      // ao abrir o PRÓPRIO dashboard — o mesmo tropeço que os filtros de
+      // instância/equipe desta página já tiveram.
+      const pode = await mayRead('roleta_configs.read').catch(() => false);
       if (!alive) return;
-      setPermitido(pode);
-      if (!pode) return;
+      if (!pode) return setLinhas([]);
 
       try {
-        const res = await roletaConfigService.getDiagnostics({ limit: 60 });
+        const configs = await roletaConfigService.getAll();
         if (!alive) return;
-        const linhas = res ?? [];
-        setTotal(linhas.length);
-        setFalhas(linhas.filter(l => !l.ok).slice(0, 5));
+        setLinhas(configs.map(montarLinha));
       } catch {
         // Silencioso: o dashboard inteiro não pode ficar vermelho porque a
-        // trilha da roleta não respondeu.
-        if (alive) setFalhas([]);
+        // roleta não respondeu.
+        if (alive) setLinhas([]);
       }
     })();
     return () => { alive = false; };
   }, []);
 
-  // Sem permissão, o cartão não existe — nem esqueleto, nem "acesso negado".
-  if (permitido === false) return null;
-  if (permitido === null || falhas === null) return null;
-
-  // Nunca houve distribuição: mostrar "tudo certo" aqui seria mentira, e mostrar
-  // um cartão vazio seria ruído. Some.
-  if (total === 0) return null;
+  // Sem permissão, sem roleta ou ainda carregando: o cartão não existe. Um
+  // esqueleto aqui roubaria uma coluna da fileira de KPIs por nada.
+  if (!linhas?.length) return null;
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Shuffle className="h-4 w-4" />
-          Roleta
-        </CardTitle>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/settings/roleta-config')}
-        >
-          Ver tudo
-        </Button>
-      </CardHeader>
+    <Card
+      className="sm:col-span-2 cursor-pointer transition-colors hover:bg-muted/40"
+      onClick={() => navigate('/settings/roleta-config')}
+    >
+      <CardContent className="p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <div className="rounded-lg bg-violet-500/15 p-2">
+            <Shuffle className="h-4 w-4 text-violet-400" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">Roleta</p>
+            <p className="text-xs text-muted-foreground">Quem está recebendo lead</p>
+          </div>
+        </div>
 
-      <CardContent>
-        {falhas.length === 0 ? (
-          <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            Os últimos {total} leads entraram na roleta sem falha.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">
-              {falhas.length === 1
-                ? '1 lead não entrou na roleta:'
-                : `${falhas.length} leads não entraram na roleta:`}
-            </p>
-            {falhas.map(f => (
-              <div
-                key={f.id}
-                className="flex items-start gap-2 rounded-md border border-border p-2 text-xs"
-              >
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-medium">{f.lead || 'Lead sem nome'}</span>
-                    {/* Com várias roletas, "não entrou" sem dizer ONDE não é
-                        diagnóstico — e é justamente aqui, fora da tela de uma
-                        roleta específica, que a etiqueta faz falta. */}
-                    {f.roleta && (
-                      <Badge variant="outline" className="text-[10px]">{f.roleta}</Badge>
-                    )}
-                  </div>
-                  <p className="mt-0.5 text-muted-foreground">{f.explicacao}</p>
-                  {/* Alguém já resolveu na mão: continua sendo falha da roleta,
-                      mas não é mais lead abandonado — e essa diferença muda o
-                      que o gestor faz agora. */}
-                  {f.dono_atual && (
-                    <p className="mt-0.5 text-emerald-600 dark:text-emerald-400">
-                      Hoje é de {f.dono_atual}
-                    </p>
-                  )}
-                </div>
+        <div className="space-y-3">
+          {linhas.map(l => (
+            <div key={l.nome}>
+              <div className="mb-1 flex items-center gap-2">
+                <span className="truncate text-xs font-medium">{l.nome}</span>
+                {l.multi && (
+                  <Badge variant="outline" className="text-[10px]">multinúmero</Badge>
+                )}
+                {/* Roleta desativada continua na lista de propósito: sumir faria
+                    o gestor achar que ela não existe, quando o problema é que
+                    alguém a desligou. */}
+                {!l.ativa && (
+                  <span className="text-[10px] text-muted-foreground">(desativada)</span>
+                )}
               </div>
-            ))}
-          </div>
-        )}
+
+              {l.corretores.length === 0 ? (
+                <p className="text-xs text-destructive">
+                  Nenhum corretor ativo — esta roleta não distribui nada.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {l.corretores.map(c => (
+                    <span
+                      key={c.nome}
+                      className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[11px]"
+                    >
+                      {c.nome}
+                      {c.pct !== null && (
+                        <span className="text-muted-foreground">{c.pct.toFixed(0)}%</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

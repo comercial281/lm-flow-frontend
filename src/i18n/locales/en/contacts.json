@@ -409,7 +409,7 @@
   },
   "empty": {
     "title": "No contacts found",
-    "description": "Create a new contact to start managing your customer conversations.",
+    "description": "This tab only shows leads tagged as paid traffic. Contacts created manually or coming from other sources do not appear here.",
     "action": "New Contact"
   },
   "loading": {
@@ -608,7 +608,7 @@
   },
   "header": {
     "title": "Contacts",
-    "subtitle": "Manage all your contacts in one place",
+    "subtitle": "Leads that came from your paid campaigns",
     "searchPlaceholder": "Search contacts...",
     "newContact": "New Contact",
     "import": "Import",
