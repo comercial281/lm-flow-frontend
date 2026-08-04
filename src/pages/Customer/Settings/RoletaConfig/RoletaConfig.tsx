@@ -251,6 +251,7 @@ export default function RoletaConfigPage() {
   const [loadingQueue, setLoadingQueue] = useState(false);
 
   // form state
+  const [nome, setNome]                     = useState('');
   const [inboxId, setInboxId]               = useState('');
   const [isActive, setIsActive]             = useState(true);
   const [mode, setMode]                     = useState<DistributionMode>('rodizio');
@@ -449,6 +450,7 @@ export default function RoletaConfigPage() {
 
   function openCreate() {
     setEditing(null);
+    setNome('');
     setInboxId('');
     setIsActive(true);
     setMode('rodizio');
@@ -469,6 +471,10 @@ export default function RoletaConfigPage() {
 
   function openEdit(c: RoletaConfig) {
     setEditing(c);
+    // `name` e não `display_name`: o campo tem que abrir VAZIO quando ninguém
+    // batizou, senão o gestor salva sem querer o nome da instância como apelido
+    // e a roleta para de acompanhar a instância se ela for renomeada.
+    setNome(c.name ?? '');
     setInboxId(c.inbox_id);
     setIsActive(c.is_active);
     setMode(c.distribution_mode ?? 'rodizio');
@@ -592,6 +598,10 @@ export default function RoletaConfigPage() {
     setSaving(true);
     try {
       const payload = {
+        // `|| null` e não a string vazia: apagar o campo tem que voltar a roleta
+        // para o nome da instância, e '' gravado como apelido faria a listagem
+        // cair no fallback errado ("Roleta").
+        name:                   nome.trim() || null,
         inbox_id:               inboxId,
         is_active:              isActive,
         distribution_mode:      mode,
@@ -893,7 +903,7 @@ export default function RoletaConfigPage() {
                   <div className={`h-2 w-2 rounded-full ${c.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`} />
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm">{c.inbox_name || `Inbox: ${c.inbox_id}`}</p>
+                      <p className="font-medium text-sm">{c.display_name || c.inbox_name || `Inbox: ${c.inbox_id}`}</p>
                       <Badge variant="outline" className="text-[10px]">
                         {MODE_LABEL[c.distribution_mode] ?? 'Rodízio'}
                       </Badge>
@@ -1178,6 +1188,25 @@ export default function RoletaConfigPage() {
           </DialogHeader>
 
           <div className="grid gap-4 py-2 lg:grid-cols-2 lg:items-start">
+            {/* Nome da roleta.
+                Antes a roleta era identificada pelo nome da INSTÂNCIA de entrada
+                ("apto-premium-bernardo-numero-principal"). Com um número por
+                corretor a mesma roleta abrange vários, e chamar o conjunto pelo
+                nome de um deles passou a mentir. Em branco continua caindo no
+                nome da instância — nenhuma roleta existente muda de nome. */}
+            <div className="lg:col-span-2">
+              <UILabel>Nome da roleta</UILabel>
+              <Input
+                value={nome}
+                onChange={e => setNome(e.target.value)}
+                placeholder={instanceName(inboxId) || 'Ex.: Plantão do fim de semana'}
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Como ela aparece na lista e no diagnóstico. Em branco, usa o nome do número de entrada.
+              </p>
+            </div>
+
             {/* Instância de entrada.
                 Escondida quando o bloco de números aparece: ali a PRIMEIRA linha
                 já É a entrada, e pedir o mesmo número em dois seletores só faz o
