@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
   CardContent,
@@ -286,6 +286,7 @@ export default function ChannelSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('inbox_settings');
+  const [searchParams] = useSearchParams();
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [emailSignature, setEmailSignature] = useState('');
   const [isSavingSignature, setIsSavingSignature] = useState(false);
@@ -363,6 +364,17 @@ export default function ChannelSettings() {
 
     return baseTabs;
   }, [inboxHook, inbox?.provider, t]);
+
+  // Abre a aba pedida pela URL (?tab=configuration), usada pelo fluxo de criar
+  // canal → parear o WhatsApp. Precisa ser efeito e não estado inicial porque
+  // `tabs` só existe depois que o inbox carrega — antes disso a aba pedida
+  // ainda não está na lista e a troca seria descartada.
+  useEffect(() => {
+    const pedida = searchParams.get('tab');
+    if (!pedida || pedida === activeTab) return;
+    if (!tabs.some(tab => tab.key === pedida)) return;
+    setActiveTab(pedida);
+  }, [searchParams, tabs, activeTab]);
 
   // Inbox name with channel info
   const inboxName = useMemo(() => {

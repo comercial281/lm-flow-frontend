@@ -564,6 +564,14 @@ export interface EvolutionConnectionParams {
 
 export interface EvolutionAuthorizationResponse {
   success: boolean;
+  // O nome REAL da instância no servidor da Evolution, decidido pelo backend
+  // (prefixado pelo cliente: lmf_<slug>_<rótulo>). O nome que o front manda é
+  // só um rótulo — gravar o do front em provider_config faria todo QR,
+  // settings e logout apontarem para uma instância que não existe.
+  instance_name?: string;
+  // true quando o backend reaproveitou a instância que o "Testar Conexão"
+  // deixou, em vez de criar outra.
+  reused?: boolean;
   instance_uuid?: string;
   instance_token?: string;
   qrcode?: string;
