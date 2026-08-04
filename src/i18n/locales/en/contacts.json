@@ -657,6 +657,7 @@
       "noChannelAccess": "You don't have access to a WhatsApp channel for this contact. Ask an administrator to assign you to the channel."
     },
     "unavailable": "Unavailable",
+    "recommended": "Lead's number",
     "actions": {
       "cancel": "Cancel",
       "send": "Start Conversation",

@@ -649,6 +649,7 @@
       "noChannelAccess": "Non hai accesso a un canale WhatsApp per questo contatto. Chiedi a un amministratore di assegnarti al canale."
     },
     "unavailable": "Non disponibile",
+    "recommended": "Numero del lead",
     "actions": {
       "cancel": "Annulla",
       "send": "Avvia Conversazione",

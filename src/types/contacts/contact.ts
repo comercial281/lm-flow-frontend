@@ -23,6 +23,11 @@ export interface ContactableInboxes {
   updated_at: number;
   available?: boolean;
   can_create_conversation?: boolean;
+  // O número que DEVERIA atender este lead: a conversa que ele já tem, o canal
+  // que ele já tocou, ou a instância da roleta do dono dele. Vem do backend
+  // porque é a mesma conta que campanha, follow-up e automação fazem — a tela
+  // não pode discordar de quem dispara sozinho.
+  recommended?: boolean;
   source_id: string;
   channel: Channel;
 }
