@@ -5,7 +5,9 @@ import {
   Upload,
   Trash2,
   Merge,
+  CheckCheck,
 } from 'lucide-react';
+import { Button } from '@/components/ui/ds';
 import { BaseHeader, HeaderAction, HeaderFilter } from '@/components/base';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
@@ -22,6 +24,9 @@ interface ContactsHeaderProps {
   onBulkDelete: () => void;
   onMergeContacts: () => void;
   onClearSelection: () => void;
+  /** true quando a seleção alcança todos os contatos da consulta, não só a página. */
+  allMatchingSelected?: boolean;
+  onSelectAllMatching?: () => void;
   activeFilters?: HeaderFilter[];
   showFilters?: boolean;
 }
@@ -38,6 +43,8 @@ export default function ContactsHeader({
   onBulkDelete,
   onMergeContacts,
   onClearSelection,
+  allMatchingSelected = false,
+  onSelectAllMatching,
   activeFilters = [],
   showFilters = true,
 }: ContactsHeaderProps) {
@@ -78,7 +85,9 @@ export default function ContactsHeader({
   ];
 
   const bulkActions: HeaderAction[] = [
-    ...(ff.merge && selectedCount >= 2 && isReady && can('contacts', 'update')
+    // Mesclar exige escolher quem fica e quem some, contato a contato — não faz
+    // sentido com a base inteira marcada, então some no modo "todos".
+    ...(ff.merge && !allMatchingSelected && selectedCount >= 2 && isReady && can('contacts', 'update')
       ? [
           {
             label: t('header.mergeContacts'),
@@ -89,19 +98,45 @@ export default function ContactsHeader({
         ]
       : []),
     ...(ff.delete && isReady && can('contacts', 'delete') ? [{
-      label: t('header.bulkDelete'),
+      label: allMatchingSelected ? t('header.bulkDeleteAll', { count: totalCount }) : t('header.bulkDelete'),
       icon: <Trash2 className="h-4 w-4" />,
       onClick: onBulkDelete,
       variant: 'destructive' as const,
     }] : []),
   ];
 
+  // Ponte entre "marquei a página" e "quero a base toda": o convite só aparece
+  // quando há mais contatos fora da página do que dentro dela.
+  const canOfferSelectAll =
+    !!onSelectAllMatching && !allMatchingSelected && selectedCount > 0 && totalCount > selectedCount;
+
+  const selectionExtra = (
+    <>
+      {canOfferSelectAll && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onSelectAllMatching}
+          className="h-7 px-2 text-primary hover:text-primary hover:bg-sidebar-accent"
+        >
+          <CheckCheck className="h-3.5 w-3.5 mr-1" />
+          {t('header.selectAllMatching', { count: totalCount })}
+        </Button>
+      )}
+      {allMatchingSelected && (
+        <span className="text-xs text-sidebar-foreground/70">{t('header.allMatchingSelected')}</span>
+      )}
+    </>
+  );
+
   return (
     <BaseHeader
       title={t('header.title')}
       subtitle={t('header.subtitle')}
       totalCount={totalCount}
-      selectedCount={selectedCount}
+      // No modo "todos", o número que importa é o do conjunto inteiro — mostrar
+      // os 20 da página faria o usuário achar que o delete só pega a página.
+      selectedCount={allMatchingSelected ? totalCount : selectedCount}
       searchValue={searchValue}
       onSearchChange={onSearchChange}
       searchPlaceholder={t('header.searchPlaceholder')}
@@ -113,6 +148,7 @@ export default function ContactsHeader({
       showFilters={showFilters}
       filterButtonDataTour="contacts-filter-button"
       onClearSelection={onClearSelection}
+      selectionExtra={selectionExtra}
     />
   );
 }

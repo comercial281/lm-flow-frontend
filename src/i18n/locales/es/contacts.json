@@ -442,7 +442,9 @@
     "exportQueued": "Exportación iniciada. Recibirás un correo electrónico con el enlace de descarga en breve.",
     "exportError": "Error al exportar contactos",
     "filterError": "Error al aplicar filtros",
-    "conversationStarted": "Conversación iniciada con éxito"
+    "conversationStarted": "Conversación iniciada con éxito",
+    "bulkDeleteAllQueued": "Se inició la eliminación de {{count}} contacto(s). Se ejecuta en segundo plano y la lista puede tardar unos minutos en reflejarlo.",
+    "mergeNeedsExplicitSelection": "Para fusionar, selecciona los contactos uno a uno: no funciona con \"todos seleccionados\"."
   },
   "errors": {
     "loadContact": "Error al cargar detalles del contacto"
@@ -460,7 +462,8 @@
       "description": "¿Está seguro de que desea eliminar {{count}} contacto(s) seleccionado(s)? Esta acción no se puede deshacer.",
       "confirm": "Eliminar Todos",
       "cancel": "Cancelar",
-      "deleting": "Eliminando..."
+      "deleting": "Eliminando...",
+      "descriptionAll": "¿Seguro que quieres eliminar TODOS los {{count}} contactos que coinciden con el filtro actual? La eliminación se ejecuta en segundo plano y no se puede deshacer."
     },
     "mergeContacts": {
       "title": "Fusionar Contactos",
@@ -526,7 +529,11 @@
     },
     "quick": {
       "allTags": "Todas las etiquetas",
-      "clear": "Limpar"
+      "clear": "Limpar",
+      "withoutTagsPlaceholder": "Sin la etiqueta...",
+      "withoutTagsSummary": "Sin {{count}} etiqueta(s)",
+      "withoutTagsHint": "Los contactos con las etiquetas marcadas NO aparecen en la lista.",
+      "withoutTagBadge": "sin: {{tag}}"
     }
   },
   "import": {
@@ -603,7 +610,10 @@
     "mergeContacts": "Fusionar Contactos",
     "clearSelection": "Limpiar Selección",
     "selected": "{{count}} seleccionado",
-    "selected_other": "{{count}} seleccionados"
+    "selected_other": "{{count}} seleccionados",
+    "selectAllMatching": "Seleccionar los {{count}} contactos",
+    "allMatchingSelected": "todos los contactos del filtro actual",
+    "bulkDeleteAll": "Eliminar los {{count}}"
   },
   "startConversation": {
     "title": "Iniciar Conversación",
