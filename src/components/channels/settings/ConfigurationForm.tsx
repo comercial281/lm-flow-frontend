@@ -41,6 +41,17 @@ interface ConfigurationFormProps {
   onUpdate: (data: any) => Promise<void>;
 }
 
+// Passo a passo de onde clicar no app do WhatsApp para ler o QR Code
+const QR_CODE_STEP_KEYS = ['step1', 'step2', 'step3', 'step4'] as const;
+
+// Mesma sequência para o modal da Z-API, que não usa i18n
+const ZAPI_QR_CODE_STEPS = [
+  'Abra o WhatsApp no seu celular (o mesmo número que vai atender).',
+  'No Android, toque nos três pontinhos (⋮) no canto superior direito. No iPhone, toque em Configurações no menu de baixo.',
+  'Toque em "Dispositivos conectados" e depois em "Conectar dispositivo".',
+  'Aponte a câmera do celular para o QR Code desta tela e aguarde a confirmação.',
+] as const;
+
 // API Channel Configuration
 const APIChannelConfig: React.FC<{
   inbox: any;
@@ -953,7 +964,7 @@ const EvolutionWhatsAppConfig: React.FC<{
 
       {/* QR Code Modal */}
       <Dialog open={showQrModal} onOpenChange={setShowQrModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('settings.configuration.whatsapp.instance.qrCodeTitle')}</DialogTitle>
             <DialogDescription className="sr-only">
@@ -969,6 +980,26 @@ const EvolutionWhatsAppConfig: React.FC<{
                 <p className="text-center text-sm text-slate-600 dark:text-slate-400 mt-4">
                   {t('settings.configuration.whatsapp.instance.qrCodeInstructions')}
                 </p>
+
+                {/* Passo a passo de onde clicar no app do WhatsApp */}
+                <div className="w-full mt-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {t('settings.configuration.whatsapp.instance.qrSteps.title')}
+                  </p>
+                  <ol className="mt-3 space-y-2.5">
+                    {QR_CODE_STEP_KEYS.map((stepKey, index) => (
+                      <li key={stepKey} className="flex items-start gap-3">
+                        <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 mt-0.5 rounded-full bg-blue-600 text-white text-[11px] font-semibold">
+                          {index + 1}
+                        </span>
+                        <span className="text-sm text-slate-600 dark:text-slate-400 leading-snug">
+                          {t(`settings.configuration.whatsapp.instance.qrSteps.${stepKey}`)}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
                 <div className="flex items-center gap-2 mt-4 text-sm text-slate-500">
                   <div className="animate-pulse w-2 h-2 bg-blue-500 rounded-full"></div>
                   <span>{t('settings.configuration.whatsapp.instance.waitingConnection')}</span>
@@ -2159,7 +2190,7 @@ const ZapiWhatsAppConfig: React.FC<{
 
       {/* QR Code Modal */}
       <Dialog open={showQrModal} onOpenChange={setShowQrModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>QR Code para Conexão</DialogTitle>
           </DialogHeader>
@@ -2185,6 +2216,25 @@ const ZapiWhatsAppConfig: React.FC<{
                 <p className="text-sm text-center text-slate-600 dark:text-slate-400">
                   Escaneie este QR code com seu WhatsApp para conectar a instância
                 </p>
+
+                {/* Passo a passo de onde clicar no app do WhatsApp */}
+                <div className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    Como escanear no seu celular
+                  </p>
+                  <ol className="mt-3 space-y-2.5">
+                    {ZAPI_QR_CODE_STEPS.map((step, index) => (
+                      <li key={step} className="flex items-start gap-3">
+                        <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 mt-0.5 rounded-full bg-blue-600 text-white text-[11px] font-semibold">
+                          {index + 1}
+                        </span>
+                        <span className="text-sm text-slate-600 dark:text-slate-400 leading-snug">
+                          {step}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
               </>
             ) : (
               <div className="flex flex-col items-center gap-2">

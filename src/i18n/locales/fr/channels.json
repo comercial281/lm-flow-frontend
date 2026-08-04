@@ -773,6 +773,13 @@
           "statusDisconnected": "Déconnecté",
           "statusConnecting": "Connexion en cours",
           "connectDevice": "Connecter l'Appareil",
+          "qrSteps": {
+            "title": "Comment scanner sur votre téléphone",
+            "step1": "Ouvrez WhatsApp sur votre téléphone (le même numéro que vous allez utiliser).",
+            "step2": "Sur Android, appuyez sur les trois points (⋮) en haut à droite. Sur iPhone, appuyez sur Réglages dans le menu du bas.",
+            "step3": "Appuyez sur « Appareils connectés » puis sur « Connecter un appareil ».",
+            "step4": "Dirigez la caméra du téléphone vers le QR Code de cet écran et attendez la confirmation."
+          },
           "qrCodeInstructions": "Scannez ce QR Code avec votre WhatsApp",
           "settingsTitle": "Paramètres de l'Instance",
           "settingsDescription": "Configurez le comportement de votre instance WhatsApp",

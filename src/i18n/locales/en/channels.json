@@ -830,6 +830,13 @@
           "statusDisconnected": "Disconnected",
           "statusConnecting": "Connecting",
           "connectDevice": "Connect Device",
+          "qrSteps": {
+            "title": "How to scan on your phone",
+            "step1": "Open WhatsApp on your phone (the same number you will use to chat).",
+            "step2": "On Android, tap the three dots (⋮) in the top right corner. On iPhone, tap Settings in the bottom menu.",
+            "step3": "Tap \"Linked devices\" and then \"Link a device\".",
+            "step4": "Point your phone camera at the QR Code on this screen and wait for confirmation."
+          },
           "qrCodeInstructions": "Scan this QR Code with your WhatsApp",
           "settingsTitle": "Instance Settings",
           "settingsDescription": "Configure your WhatsApp instance behavior",
