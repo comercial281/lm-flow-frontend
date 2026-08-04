@@ -442,7 +442,9 @@
     "filterError": "Errore durante l'applicazione dei filtri",
     "conversationStarted": "Conversazione avviata con successo",
     "mergeSuccess": "Contatti uniti con successo",
-    "mergeError": "Errore durante l'unione dei contatti"
+    "mergeError": "Errore durante l'unione dei contatti",
+    "bulkDeleteAllQueued": "Eliminazione di {{count}} contatto/i avviata. Viene eseguita in background e l'elenco potrebbe impiegare qualche minuto ad aggiornarsi.",
+    "mergeNeedsExplicitSelection": "Per unire, seleziona i contatti uno a uno: non funziona con \"tutti selezionati\"."
   },
   "errors": {
     "loadContact": "Errore durante il caricamento dei dettagli del contatto"
@@ -460,7 +462,8 @@
       "description": "Sei sicuro di voler eliminare {{count}} contatto/i selezionato/i? Questa azione non può essere annullata.",
       "confirm": "Elimina Tutti",
       "cancel": "Annulla",
-      "deleting": "Eliminazione..."
+      "deleting": "Eliminazione...",
+      "descriptionAll": "Vuoi davvero eliminare TUTTI i {{count}} contatti che corrispondono al filtro attuale? L'eliminazione viene eseguita in background e non può essere annullata."
     },
     "mergeContacts": {
       "title": "Unisci Contatti",
@@ -526,7 +529,11 @@
     },
     "quick": {
       "allTags": "Tutte le etichette",
-      "clear": "Pulisci"
+      "clear": "Pulisci",
+      "withoutTagsPlaceholder": "Senza l'etichetta...",
+      "withoutTagsSummary": "Senza {{count}} etichetta/e",
+      "withoutTagsHint": "I contatti con le etichette selezionate NON compaiono nell'elenco.",
+      "withoutTagBadge": "senza: {{tag}}"
     }
   },
   "import": {
@@ -603,7 +610,10 @@
     "mergeContacts": "Unisci Contatti",
     "clearSelection": "Cancella Selezione",
     "selected": "{{count}} selezionato",
-    "selected_other": "{{count}} selezionati"
+    "selected_other": "{{count}} selezionati",
+    "selectAllMatching": "Seleziona tutti i {{count}} contatti",
+    "allMatchingSelected": "tutti i contatti del filtro attuale",
+    "bulkDeleteAll": "Elimina tutti i {{count}}"
   },
   "startConversation": {
     "title": "Avvia Conversazione",

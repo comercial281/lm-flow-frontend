@@ -264,6 +264,27 @@ export interface ContactsFilterParams {
   payload: ContactFilter[];
 }
 
+/**
+ * Consulta que montou a lista atual — busca livre, filtro avançado ou listagem
+ * simples. É o que o backend usa para resolver o "selecionar todos os N" sem
+ * precisar receber milhares de ids (e sem depender de o usuário ter paginado
+ * até o fim da base).
+ */
+export interface ContactsBulkQuery {
+  q?: string;
+  payload?: ContactFilter[];
+  type?: 'person' | 'company';
+  company_id?: string;
+  labels?: string[];
+}
+
+export interface ContactsBulkResult {
+  message?: string;
+  affected_count?: number;
+  /** true quando o lote foi grande demais para o ciclo da requisição e foi para a fila. */
+  async?: boolean;
+}
+
 export interface ContactCreateData {
   name: string;
   type: 'person' | 'company';
