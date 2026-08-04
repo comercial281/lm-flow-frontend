@@ -408,10 +408,31 @@ export default function RoletaConfigPage() {
   //
   // Só semeia quando a lista está VAZIA: mexer depois disso apagaria o que o
   // gestor já configurou a cada tecla no formulário.
+  //
+  // Com o bloco visível a lista NUNCA pode ficar vazia: o seletor separado de
+  // instância some, então sem nenhuma linha o gestor não teria onde escolher o
+  // número de entrada.
   useEffect(() => {
-    if (!modalOpen || !inboxId || instances.length > 0) return;
+    if (!modalOpen || instances.length > 0) return;
+    if (multiEnabled) {
+      setInstances([mkInstance({ inbox_id: inboxId, weight: 10, position: 0 })]);
+      return;
+    }
+    if (!inboxId) return;
     setInstances([mkInstance({ inbox_id: inboxId, weight: 10, position: 0 })]);
-  }, [modalOpen, inboxId, instances.length]);
+  }, [modalOpen, inboxId, instances.length, multiEnabled]);
+
+  // Com o bloco de números visível, o seletor separado de instância some — então
+  // a ENTRADA passa a ser a primeira linha do bloco, e é dela que sai o
+  // `inbox_id` da roleta (a chave que o `for_inbox` procura primeiro).
+  //
+  // Só ao CRIAR: numa roleta que já existe, trocar o inbox mudaria a chave, e o
+  // seletor da primeira linha fica travado justamente por isso.
+  useEffect(() => {
+    if (!modalOpen || editing || !multiEnabled) return;
+    const entrada = instances[0]?.inbox_id;
+    if (entrada && entrada !== inboxId) setInboxId(entrada);
+  }, [modalOpen, editing, multiEnabled, instances, inboxId]);
 
   useEffect(() => { if (tab === 'assignments') loadAssignments(); }, [tab, loadAssignments]);
 
@@ -550,7 +571,15 @@ export default function RoletaConfigPage() {
   }
 
   async function save() {
-    if (!inboxId.trim()) { toast.error('Inbox ID obrigatorio'); return; }
+    // A mensagem aponta o campo que o gestor está VENDO: com o bloco de números
+    // visível o seletor separado não existe, e mandar procurar "a instância"
+    // levaria a um campo que não está na tela.
+    if (!inboxId.trim()) {
+      toast.error(multiEnabled
+        ? 'Escolha o número de entrada na primeira linha de "Números que atendem"'
+        : 'Selecione a instância (WhatsApp) da roleta');
+      return;
+    }
     if (!gestorNum.trim()) { toast.error('Numero do gestor obrigatorio'); return; }
     const membersValid = members.filter(m => m.user_id && m.personal_whatsapp_number);
     // No modo Manual o gerente distribui na mão, então não precisa de corretor cadastrado.
@@ -1143,7 +1172,14 @@ export default function RoletaConfigPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            {/* Instância (inbox) */}
+            {/* Instância de entrada.
+                Escondida quando o bloco de números aparece: ali a PRIMEIRA linha
+                já É a entrada, e pedir o mesmo número em dois seletores só faz o
+                gestor escolher duas vezes a mesma coisa. O campo continua
+                existindo no dado — `roleta_configs.inbox_id` é a chave da roleta
+                (o `for_inbox` procura por ele antes das secundárias) — só deixa
+                de ser perguntado em separado. */}
+            {!multiEnabled && (
             <div>
               <UILabel>Instância (WhatsApp) *</UILabel>
               <select
@@ -1164,6 +1200,7 @@ export default function RoletaConfigPage() {
                 A caixa de entrada (número de WhatsApp) que essa roleta distribui.
               </p>
             </div>
+            )}
 
             {/* Números da roleta.
                 Com a flag desligada isto não aparece e a tela é exatamente a de
@@ -1190,13 +1227,22 @@ export default function RoletaConfigPage() {
                 </p>
 
                 <div className="space-y-2">
-                  {instances.map(inst => (
+                  {instances.map((inst, idx) => (
                     <div key={inst.localId} className="grid grid-cols-12 gap-2 items-start">
                       <div className="col-span-5">
+                        {/* A primeira linha é a instância de ENTRADA — a que vira
+                            `roleta_configs.inbox_id`. Marcada porque, ao editar,
+                            ela não pode mudar: trocá-la mudaria a chave da roleta. */}
+                        {idx === 0 && (
+                          <span className="mb-1 inline-block text-[10px] font-medium uppercase tracking-wide text-[#7c3aed]">
+                            Entrada
+                          </span>
+                        )}
                         <select
                           value={inst.inbox_id}
                           onChange={e => updateInstance(inst.localId, 'inbox_id', e.target.value)}
-                          className="w-full rounded-md border border-input bg-background px-2 py-2 text-sm"
+                          disabled={idx === 0 && !!editing}
+                          className="w-full rounded-md border border-input bg-background px-2 py-2 text-sm disabled:opacity-50"
                         >
                           <option value="">Selecione o número...</option>
                           {inboxes.map(i => (
