@@ -401,7 +401,7 @@
   },
   "empty": {
     "title": "Nessun contatto trovato",
-    "description": "Crea un nuovo contatto per iniziare a gestire le tue conversazioni con i clienti.",
+    "description": "Questa scheda mostra solo i lead con l'etichetta di traffico a pagamento. I contatti creati manualmente o provenienti da altre origini non compaiono qui.",
     "action": "Nuovo Contatto"
   },
   "loading": {
@@ -600,7 +600,7 @@
   },
   "header": {
     "title": "Contatti",
-    "subtitle": "Gestisci tutti i tuoi contatti in un unico posto",
+    "subtitle": "Lead arrivati dai tuoi annunci",
     "searchPlaceholder": "Cerca contatti...",
     "newContact": "Nuovo Contatto",
     "import": "Importa",
