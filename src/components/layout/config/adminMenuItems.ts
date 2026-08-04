@@ -14,6 +14,7 @@ import {
   Wand2,
   MessageSquarePlus,
   Radio,
+  DollarSign,
 } from 'lucide-react';
 
 /**
@@ -67,6 +68,12 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     href: '/admin/agentes',
     icon: Bot,
     description: 'Todos os agentes de todos os clientes: ligar, desligar e configurar',
+  },
+  {
+    name: 'Custo da IA',
+    href: '/admin/custo-ia',
+    icon: DollarSign,
+    description: 'Quanto cada cliente consumiu de IA: a chave da Anthropic é uma só para todos',
   },
   {
     name: 'Aperfeiçoamento',
