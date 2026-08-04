@@ -1,4 +1,7 @@
 import api from '@/services/core/api';
+import type { PropertyTypology, TypologySummary } from '@/features/properties/typologies';
+
+export type { PropertyTypology, TypologySummary };
 
 export interface Property {
   id: string;
@@ -54,6 +57,10 @@ export interface Property {
   /** Características do imóvel e comodidades do condomínio (slugs do catálogo). */
   features?: string[];
   condo_features?: string[];
+  /** Tipologias (plantas) do empreendimento — vazio quando o imóvel tem uma só. */
+  typologies?: PropertyTypology[];
+  /** Faixas prontas (min/max de dorms, área e preço) calculadas pelo backend. */
+  typology_summary?: TypologySummary | null;
   /** Book (PDF do cadastro via importação) salvo no imóvel, para reenviar no chat. */
   has_book?: boolean;
   book_url?: string | null;
@@ -101,6 +108,8 @@ export interface PropertyFormData {
   label_id?: string | null;
   features?: string[];
   condo_features?: string[];
+  /** Tipologias (plantas) do empreendimento. Linha em branco é descartada no save. */
+  typologies?: PropertyTypology[];
 }
 
 export interface PropertyMapMarker {
@@ -161,6 +170,8 @@ export interface AiExtractResult {
   address_street?: string | null;
   features?: string[] | null;
   condo_features?: string[] | null;
+  /** Plantas que a IA/o parser acharam no book (vazio quando é unidade única). */
+  typologies?: PropertyTypology[] | null;
   description?: string | null;
 }
 
