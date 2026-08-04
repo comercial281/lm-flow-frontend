@@ -3,6 +3,7 @@ import { TrendingUp, Banknote, Receipt, MessagesSquare, CheckCircle2, Clock } fr
 import { animate, useInView } from 'framer-motion';
 import { formatCurrency, formatSeconds } from './dashboardUtils';
 import type { CustomerDashboardResponse } from '@/types/analytics/dashboard';
+import DashboardRoletaSection from './DashboardRoletaSection';
 
 function CountUp({ target }: { target: number }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -226,6 +227,12 @@ const CommercialKPISection = ({ data }: Props) => {
         {kpis.map((kpi, i) => (
           <KpiCard key={i} kpi={kpi} />
         ))}
+        {/* Dentro da MESMA grade dos KPIs, não numa seção própria: a pergunta
+            "a roleta está girando e pra quem?" é do mesmo tipo das outras desta
+            fileira. Ocupa duas colunas porque o conteúdo é uma lista de pessoas,
+            não um número. Some sozinho para quem não lê roletas e para quem não
+            tem nenhuma — ver DashboardRoletaSection. */}
+        <DashboardRoletaSection />
       </div>
     </section>
   );
