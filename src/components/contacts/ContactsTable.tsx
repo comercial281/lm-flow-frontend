@@ -91,12 +91,15 @@ export default function ContactsTable({
       ),
     },
     {
-      // De qual NÚMERO o contato veio. Com um WhatsApp por corretor a pergunta
-      // "de quem é este contato" deixou de ter resposta óbvia — e quem entrou
-      // pela importação da agenda de um aparelho chegava sem marca nenhuma.
+      // Por qual NÚMERO o contato é atendido. Com um WhatsApp por corretor a
+      // pergunta "de quem é este contato" deixou de ter resposta óbvia — e quem
+      // entrou pela importação da agenda de um aparelho chegava sem marca.
       //
-      // O dado sempre existiu (contact_inboxes liga contato → inbox); o que
-      // faltava era a lista pedir e a tabela mostrar.
+      // O backend manda os vínculos do MAIS RECENTE para o mais antigo, na
+      // mesma ordem que o OutboundInboxResolver usa para escolher por onde a
+      // mensagem sai. Então o primeiro item não é "por onde entrou", é "por
+      // onde fala hoje" — que é o que muda quando a roleta abre o atendimento
+      // noutro número.
       key: 'origem',
       label: 'Número',
       sortable: false,
@@ -106,13 +109,19 @@ export default function ContactsTable({
           new Set(vinculos.map(v => v?.inbox?.name).filter((n): n is string => !!n)),
         );
         if (nomes.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+        // O tooltip separa o atual dos anteriores: sem isso, "+1" não diz se o
+        // outro número é um histórico ou um segundo canal ativo.
+        const titulo =
+          nomes.length > 1
+            ? `Atende por ${nomes[0]} — também passou por ${nomes.slice(1).join(', ')}`
+            : `Atende por ${nomes[0]}`;
         return (
           <div className="flex items-center gap-1 text-xs">
             <Smartphone className="h-3 w-3 text-muted-foreground shrink-0" />
-            <span className="truncate" title={nomes.join(', ')}>
+            <span className="truncate" title={titulo}>
               {nomes[0]}
-              {/* Contato que fala por mais de um número: mostra o primeiro e
-                  conta o resto, senão a coluna estoura a largura. */}
+              {/* Contato que fala por mais de um número: mostra o atual e conta
+                  o resto, senão a coluna estoura a largura. */}
               {nomes.length > 1 && (
                 <span className="text-muted-foreground"> +{nomes.length - 1}</span>
               )}

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@evoapi/design-system/button';
 import { Input } from '@evoapi/design-system/input';
 import { Badge } from '@evoapi/design-system/badge';
+import { NativeSelect } from '@/components/ui/native-select';
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -656,17 +657,21 @@ const ChatSidebar = ({
         {inboxOptions.length > 1 && (
           <div className="flex items-center gap-2">
             <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">Instância</span>
-            <select
-              value={selectedInboxId}
-              onChange={(e) => applyInstanceFilter(e.target.value)}
-              className="h-8 flex-1 cursor-pointer rounded-md border border-border bg-background px-2 text-sm outline-none focus:border-primary"
-              aria-label="Filtrar por instância"
-            >
-              <option value="">Todas as instâncias</option>
-              {inboxOptions.map((i) => (
-                <option key={i.id} value={i.id}>{i.label}</option>
-              ))}
-            </select>
+            {/* `min-w-0` para o nome comprido da instância truncar em vez de
+                empurrar o rótulo para fora da barra lateral. */}
+            <div className="min-w-0 flex-1">
+              <NativeSelect
+                value={selectedInboxId}
+                onChange={(e) => applyInstanceFilter(e.target.value)}
+                className="h-8 cursor-pointer"
+                aria-label="Filtrar por instância"
+              >
+                <option value="">Todas as instâncias</option>
+                {inboxOptions.map((i) => (
+                  <option key={i.id} value={i.id}>{i.label}</option>
+                ))}
+              </NativeSelect>
+            </div>
           </div>
         )}
 

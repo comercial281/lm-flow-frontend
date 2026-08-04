@@ -89,12 +89,22 @@ export default function StartConversationModal({
 
       setAvailableInboxes(inboxes);
 
-      // Auto-select first available inbox
-      const firstAvailable = inboxes.find(
-        (inbox: ContactableInboxes) => inbox.available && inbox.can_create_conversation,
-      );
-      if (firstAvailable) {
-        setSelectedInboxId(firstAvailable.id.toString());
+      // Pré-seleciona o número que o backend marcou como o DESTE lead — a
+      // conversa que ele já tem, o canal que ele já tocou, ou a instância da
+      // roleta do dono dele.
+      //
+      // Antes pegava o primeiro item da lista, que não tinha relação nenhuma
+      // com o sorteio (e vinha sem ordem definida do banco). Com um número por
+      // corretor isso fazia o lead sorteado para uma corretora abrir no número
+      // principal da imobiliária, e era por ele que ela respondia — o oposto do
+      // que a roleta multinúmero promete.
+      const usable = (inbox: ContactableInboxes) =>
+        inbox.available && inbox.can_create_conversation;
+      const preferred = inboxes.find((inbox: ContactableInboxes) => inbox.recommended && usable(inbox));
+      const fallback = inboxes.find(usable);
+      const chosen = preferred ?? fallback;
+      if (chosen) {
+        setSelectedInboxId(chosen.id.toString());
       }
     } catch (error) {
       console.error('Error loading contactable inboxes:', error);
@@ -418,6 +428,13 @@ export default function StartConversationModal({
                         <div className="flex items-center gap-2">
                           {getChannelIcon(inbox.channel_type)}
                           <span>{inbox.name}</span>
+                          {/* Sem esta marca o corretor não tem como saber que
+                              trocar o número aqui tira o lead do WhatsApp dele. */}
+                          {inbox.recommended && (
+                            <Badge variant="outline" className="border-[#7c3aed] text-[#7c3aed]">
+                              {t('startConversation.recommended')}
+                            </Badge>
+                          )}
                           <Badge
                             variant={inbox.available ? 'default' : 'secondary'}
                             className="ml-auto"
