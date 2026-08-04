@@ -8,11 +8,11 @@ import {
 import {
   Shuffle, Plus, Trash2, GripVertical, Save, Phone,
   Clock, Bell, ToggleLeft, ToggleRight, Users, BarChart2,
-  Gavel, Hand, Wifi, Send, Loader2,
+  Gavel, Hand, Wifi, Send, Loader2, Eye, EyeOff,
 } from 'lucide-react';
 import {
   roletaConfigService, RoletaConfig, RoletaMember, RoletaInstance, BrokerAssignment, DistributionMode,
-  RoletaDiagnostic, RepairOwnersResult,
+  RoletaDiagnostic, RepairOwnersResult, RoletaQueue,
 } from '@/services/roletaConfig/roletaConfigService';
 import usersService from '@/services/users/usersService';
 import { leadAutomationService, WaGroup } from '@/services/leadAutomation/leadAutomationService';
@@ -108,6 +108,10 @@ const MODES: { value: DistributionMode; label: string; icon: typeof Shuffle; des
 
 const MODE_LABEL: Record<string, string> = Object.fromEntries(MODES.map(m => [m.value, m.label]));
 
+// Ocultar lead do Diagnóstico é preferência de quem olha, não estado do lead:
+// mora no navegador de propósito.
+const HIDDEN_KEY = 'roleta:diagnostico:ocultos';
+
 interface MemberRow extends Omit<RoletaMember, 'id'> {
   localId: string;
 }
@@ -158,6 +162,54 @@ export default function RoletaConfigPage() {
   const [repairBusy, setRepairBusy]     = useState(false);
   const [repairPreview, setRepairPreview] = useState<RepairOwnersResult | null>(null);
 
+  // Leads que o gestor já resolveu e não quer mais ver na lista. Fica no
+  // navegador: é preferência de quem está olhando, não estado do lead — esconder
+  // pra todo mundo apagaria a trilha que este painel existe para preservar.
+  const [hiddenIds, setHiddenIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(HIDDEN_KEY);
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  // Quando ligado, os ocultos voltam a aparecer (com botão de restaurar) — é o
+  // "ver" do par ocultar/ver. Não desfaz nada sozinho.
+  const [showHidden, setShowHidden] = useState(false);
+
+  const hide = useCallback((id: string) => {
+    setHiddenIds(prev => {
+      const next = prev.includes(id) ? prev : [...prev, id];
+      try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(next)); } catch { /* cota cheia: só não persiste */ }
+      return next;
+    });
+  }, []);
+
+  const unhide = useCallback((id: string) => {
+    setHiddenIds(prev => {
+      const next = prev.filter(x => x !== id);
+      try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(next)); } catch { /* idem */ }
+      return next;
+    });
+  }, []);
+
+  // Limpar a lista de uma vez, em vez de clicar card a card. Some só o que está
+  // CARREGADO agora: o que chegar depois é registro novo e aparece normalmente.
+  const hideAll = useCallback((ids: string[]) => {
+    setHiddenIds(prev => {
+      const next = Array.from(new Set([...prev, ...ids]));
+      try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(next)); } catch { /* idem */ }
+      return next;
+    });
+    setShowHidden(false);
+  }, []);
+
+  const unhideAll = useCallback(() => {
+    setHiddenIds([]);
+    try { localStorage.removeItem(HIDDEN_KEY); } catch { /* idem */ }
+    setShowHidden(false);
+  }, []);
+
   const loadDiagnostics = useCallback(async () => {
     setLoadingDiag(true);
     try {
@@ -190,6 +242,11 @@ export default function RoletaConfigPage() {
   };
   const [assignments, setAssignments] = useState<BrokerAssignment[]>([]);
   const [loadingAssign, setLoadingAssign] = useState(false);
+
+  // Fila ao vivo. O prazo corre em minutos, então recarregar de minuto em minuto
+  // é o suficiente pro cronômetro não mentir.
+  const [queue, setQueue]             = useState<RoletaQueue | null>(null);
+  const [loadingQueue, setLoadingQueue] = useState(false);
 
   // form state
   const [inboxId, setInboxId]               = useState('');
@@ -224,6 +281,12 @@ export default function RoletaConfigPage() {
   // Aviso de repasse: campo próprio porque nenhum texto serve para lead novo e
   // para repasse ao mesmo tempo.
   const [msgRepasse, setMsgRepasse]         = useState('');
+  // Liga/desliga de cada aviso. Deixar o texto em branco NÃO desliga nada (vazio
+  // = usa o padrão) — quem não quer enviar um dos avisos precisa destas chaves.
+  const [msgCorretorOn, setMsgCorretorOn]   = useState(true);
+  const [msgGestorOn, setMsgGestorOn]       = useState(true);
+  const [msgGrupoOn, setMsgGrupoOn]         = useState(true);
+  const [msgRepasseOn, setMsgRepasseOn]     = useState(true);
   const corretorRef = useRef<HTMLTextAreaElement>(null);
   const gestorRef   = useRef<HTMLTextAreaElement>(null);
   const grupoRef    = useRef<HTMLTextAreaElement>(null);
@@ -281,6 +344,19 @@ export default function RoletaConfigPage() {
     }
   }, []);
 
+  const loadQueue = useCallback(async () => {
+    setLoadingQueue(true);
+    try {
+      setQueue(await roletaConfigService.getQueue());
+    } catch {
+      // Bloco secundário do Diagnóstico: se o cargo não alcança, some em silêncio
+      // em vez de jogar um erro na cara de quem veio ver a trilha dos leads.
+      setQueue(null);
+    } finally {
+      setLoadingQueue(false);
+    }
+  }, []);
+
   // Carrega a equipe de CADA instância da roleta, em paralelo. Uma instância que
   // falhar vira lista vazia — que a tela já sabe explicar ("ninguém tem acesso")
   // — em vez de derrubar o carregamento das outras.
@@ -317,6 +393,16 @@ export default function RoletaConfigPage() {
   }, [instanceInboxKey, loadInboxMembers]);
   useEffect(() => { if (tab === 'assignments') loadAssignments(); }, [tab, loadAssignments]);
 
+  // Quem está concorrendo no sorteio agora — abre junto com o Diagnóstico, que é
+  // onde o gestor confere se a roleta está com as pessoas certas.
+  useEffect(() => {
+    // Sem checar cargo no cliente: quem manda é a resposta da API. O `can()` lê um
+    // catálogo de permissões cacheado por 30 min no navegador, então uma chave
+    // recém-criada volta como "não tem" e a tela nem chegava a pedir os dados —
+    // era isso que sumia o bloco para quem tinha acesso de verdade.
+    if (tab === 'diagnostico') loadQueue();
+  }, [tab, loadQueue]);
+
   function openCreate() {
     setEditing(null);
     setInboxId('');
@@ -326,7 +412,10 @@ export default function RoletaConfigPage() {
     setGestorNum('');
     setGestorGroupJid('');
     setNotifInboxId('');
-    setMsgCorretor(''); setMsgGestor(''); setMsgGrupo('');
+    // setMsgRepasse junto: sem ele o texto de repasse da roleta que acabou de ser
+    // editada vazava para a "Nova distribuição".
+    setMsgCorretor(''); setMsgGestor(''); setMsgGrupo(''); setMsgRepasse('');
+    setMsgCorretorOn(true); setMsgGestorOn(true); setMsgGrupoOn(true); setMsgRepasseOn(true);
     setMembers([mkLocal()]);
     setInstances([]);
     setMultiEnabled(false);
@@ -347,6 +436,12 @@ export default function RoletaConfigPage() {
     setMsgGestor(c.msg_gestor_template ?? '');
     setMsgGrupo(c.msg_grupo_template ?? '');
     setMsgRepasse(c.msg_grupo_repasse_template ?? '');
+    // `!== false` e não `?? true`: config salva antes das chaves existirem volta
+    // sem o campo, e o estado real dela é LIGADO.
+    setMsgCorretorOn(c.msg_corretor_enabled !== false);
+    setMsgGestorOn(c.msg_gestor_enabled !== false);
+    setMsgGrupoOn(c.msg_grupo_enabled !== false);
+    setMsgRepasseOn(c.msg_grupo_repasse_enabled !== false);
     setMembers(c.members.length ? c.members.map(m => mkLocal(m)) : [mkLocal()]);
     // Roleta antiga (antes das instâncias) chega sem `instances`: monta a de
     // entrada a partir do próprio inbox dela, que é o que o backfill fez no banco.
@@ -456,6 +551,10 @@ export default function RoletaConfigPage() {
         msg_gestor_template:    msgGestor.trim() || null,
         msg_grupo_template:     msgGrupo.trim() || null,
         msg_grupo_repasse_template: msgRepasse.trim() || null,
+        msg_corretor_enabled:   msgCorretorOn,
+        msg_gestor_enabled:     msgGestorOn,
+        msg_grupo_enabled:      msgGrupoOn,
+        msg_grupo_repasse_enabled: msgRepasseOn,
         notification_inbox_id:  notifInboxId || null,
         // Só as que têm inbox escolhido. Lista vazia = "não mexe nas
         // instâncias", e o backend nunca deixa a roleta sem nenhuma.
@@ -682,6 +781,12 @@ export default function RoletaConfigPage() {
     return fatiaInstancia * fatiaCorretor * 100;
   }, [members, memberInbox, isMulti, activeInstances, totalInstanceWeight]);
 
+  // Quantos dos registros CARREGADOS estão ocultos — não o tamanho do localStorage,
+  // que acumula ids de leads que já saíram da janela do diagnóstico e faria o botão
+  // "Ver N oculto(s)" prometer linhas que não existem mais.
+  const ocultosNaLista = diagnostics.filter(d => hiddenIds.includes(d.id)).length;
+  const diagnosticosVisiveis = showHidden ? diagnostics : diagnostics.filter(d => !hiddenIds.includes(d.id));
+
   return (
     <div className="p-6 space-y-6 max-w-4xl">
       <div className="flex items-center justify-between">
@@ -808,6 +913,80 @@ export default function RoletaConfigPage() {
 
       {tab === 'diagnostico' && (
         <div className="space-y-3">
+          {/* Quem está de fato concorrendo. Vem do backend, não do formulário: a
+              tela de configuração mostra quem foi ESCOLHIDO, e aqui aparece quem
+              o sorteio realmente alcança — a diferença entre os dois é a causa
+              silenciosa de "por que fulano nunca recebe lead?". */}
+          {queue && queue.roletas.length > 0 && (
+            <div className="border rounded-lg p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">Quem está recebendo lead hoje</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Confira se são as pessoas certas. Quem aparece riscado está na lista mas
+                    <strong> não entra no sorteio</strong>.
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={loadQueue} disabled={loadingQueue} className="shrink-0">
+                  {loadingQueue ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Atualizar'}
+                </Button>
+              </div>
+
+              <div className="mt-3 space-y-3">
+                {queue.roletas.map(r => {
+                  const dentro = r.membros.filter(m => m.ativo && !m.sem_acesso_a_instancia);
+                  const fora   = r.membros.filter(m => !m.ativo || m.sem_acesso_a_instancia);
+                  return (
+                    <div key={r.id}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className={`h-2 w-2 rounded-full ${r.ativa ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                        <span className="text-sm font-medium">{r.instancia ?? r.id}</span>
+                        <Badge variant="outline" className="text-[10px]">{MODE_LABEL[r.modo] ?? r.modo}</Badge>
+                        {!r.ativa && <span className="text-xs text-red-600">desativada — não distribui nada</span>}
+                      </div>
+
+                      {dentro.length === 0 ? (
+                        <p className="text-xs text-red-600 mt-1.5 ml-4">
+                          Nenhum corretor no sorteio — todo lead desta instância cai sem dono.
+                        </p>
+                      ) : (
+                        <div className="mt-1.5 ml-4 flex flex-wrap gap-1.5">
+                          {dentro.map(m => (
+                            <span
+                              key={m.user_id}
+                              className="inline-flex items-center gap-1 text-xs bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 rounded px-2 py-1"
+                            >
+                              {m.nome ?? m.user_id}
+                              {m.chance_pct != null && (
+                                <span className="opacity-70">{m.chance_pct}%</span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {fora.length > 0 && (
+                        <div className="mt-1.5 ml-4 flex flex-wrap gap-1.5">
+                          {fora.map(m => (
+                            <span
+                              key={m.user_id}
+                              className="inline-flex items-center gap-1 text-xs bg-muted text-muted-foreground rounded px-2 py-1"
+                            >
+                              <span className="line-through">{m.nome ?? m.user_id}</span>
+                              <span className="text-red-600">
+                                {m.sem_acesso_a_instancia ? 'sem acesso à instância' : 'desligado da roleta'}
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="border rounded-lg p-4 bg-muted/40">
             <p className="text-sm font-medium">Por que este lead não entrou na roleta?</p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -816,7 +995,7 @@ export default function RoletaConfigPage() {
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-3">
               <Button variant="outline" size="sm" onClick={() => setOnlyFailures(v => !v)}>
-                {onlyFailures ? 'Mostrando só os problemas' : 'Mostrando todos'}
+                {onlyFailures ? 'Só os que falharam' : 'Todos os leads'}
               </Button>
               <Button variant="outline" size="sm" onClick={loadDiagnostics} disabled={loadingDiag}>
                 {loadingDiag ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Atualizar'}
@@ -824,6 +1003,31 @@ export default function RoletaConfigPage() {
               <Button variant="outline" size="sm" onClick={() => runRepair(true)} disabled={repairBusy}>
                 {repairBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ver leads sem responsável'}
               </Button>
+              {/* Ocultar em massa: limpa a lista inteira de uma vez. Some só o que
+                  está carregado — registro novo continua aparecendo. */}
+              {diagnosticosVisiveis.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => hideAll(diagnosticosVisiveis.map(d => d.id))}
+                  className="gap-1.5"
+                >
+                  <EyeOff className="h-3.5 w-3.5" />
+                  Ocultar todos ({diagnosticosVisiveis.length})
+                </Button>
+              )}
+              {ocultosNaLista > 0 && (
+                <Button variant="outline" size="sm" onClick={() => setShowHidden(v => !v)} className="gap-1.5">
+                  {showHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  {showHidden ? 'Esconder de novo' : `Ver ${ocultosNaLista} oculto(s)`}
+                </Button>
+              )}
+              {hiddenIds.length > 0 && (
+                <Button variant="outline" size="sm" onClick={unhideAll} className="gap-1.5">
+                  <Eye className="h-3.5 w-3.5" />
+                  Mostrar todos de novo
+                </Button>
+              )}
             </div>
           </div>
 
@@ -858,38 +1062,54 @@ export default function RoletaConfigPage() {
           )}
 
           {loadingDiag && <p className="text-sm text-muted-foreground">Carregando...</p>}
-          {!loadingDiag && diagnostics.length === 0 && (
+          {!loadingDiag && diagnosticosVisiveis.length === 0 && (
             <div className="border rounded-lg p-12 text-center text-muted-foreground">
               <Shuffle className="h-8 w-8 mx-auto mb-3 opacity-40" />
-              <p>{onlyFailures ? 'Nenhum problema registrado' : 'Nenhuma distribuição registrada ainda'}</p>
+              <p>
+                {diagnostics.length > 0
+                  ? 'Todos os registros estão ocultos'
+                  : onlyFailures ? 'Nenhum problema registrado' : 'Nenhuma distribuição registrada ainda'}
+              </p>
             </div>
           )}
-          {diagnostics.map(d => (
-            <div key={d.id} className="border rounded-lg p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm">{d.lead ?? d.contact_id ?? 'Lead'}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{d.explicacao}</p>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-xs text-muted-foreground">
-                    {d.formulario && <span>Formulário: {d.formulario}</span>}
-                    {d.corretor && <span>Sorteado: {d.corretor}</span>}
-                    <span>Responsável no card: {d.dono_atual ?? 'nenhum'}</span>
+          {diagnosticosVisiveis.map(d => {
+            const oculto = hiddenIds.includes(d.id);
+            return (
+              <div key={d.id} className={`border rounded-lg p-3 ${oculto ? 'opacity-50' : ''}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm">{d.lead ?? d.contact_id ?? 'Lead'}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{d.explicacao}</p>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+                      {d.formulario && <span>Formulário: {d.formulario}</span>}
+                      {d.corretor && <span>Sorteado: {d.corretor}</span>}
+                      <span>Responsável no card: {d.dono_atual ?? 'nenhum'}</span>
+                    </div>
+                    {d.erro_tecnico && (
+                      <p className="text-[11px] text-red-600 mt-1 break-all">{d.erro_tecnico}</p>
+                    )}
                   </div>
-                  {d.erro_tecnico && (
-                    <p className="text-[11px] text-red-600 mt-1 break-all">{d.erro_tecnico}</p>
-                  )}
-                </div>
-                <div className="text-right shrink-0">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    d.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                  }`}>
-                    {d.ok ? 'OK' : 'Falhou'}
-                  </span>
-                  <p className="text-xs text-muted-foreground mt-1">{formatDateTimeBR(d.created_at)}</p>
+                  <div className="text-right shrink-0">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      d.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {d.ok ? 'OK' : 'Falhou'}
+                    </span>
+                    <p className="text-xs text-muted-foreground mt-1">{formatDateTimeBR(d.created_at)}</p>
+                    {/* Some da lista sem apagar nada: a trilha continua no servidor,
+                        e o botão "Ver ocultos" traz de volta. */}
+                    <button
+                      type="button"
+                      onClick={() => (oculto ? unhide(d.id) : hide(d.id))}
+                      className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      {oculto ? <><Eye className="h-3 w-3" />Restaurar</> : <><EyeOff className="h-3 w-3" />Ocultar</>}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -1180,7 +1400,8 @@ export default function RoletaConfigPage() {
                 Mensagens dos avisos (opcional)
               </UILabel>
               <p className="text-xs text-muted-foreground">
-                Em branco = usa o texto padrão. Clique numa variável pra jogar no texto do aviso focado.
+                Em branco = usa o texto padrão (não desliga o aviso — pra isso use a chavinha ao lado de cada um).
+                Clique numa variável pra jogar no texto do aviso focado.
                 Use o <Send className="inline h-3 w-3" /> <b>Testar</b> pra receber o aviso com dados fictícios (não precisa salvar antes):
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -1199,83 +1420,139 @@ export default function RoletaConfigPage() {
               <div>
                 <div className="flex items-center justify-between">
                   <UILabel className="text-xs">Aviso do corretor</UILabel>
-                  <button
-                    type="button"
-                    onClick={() => sendTest('corretor')}
-                    disabled={testingMsg !== null}
-                    title="Enviar um teste deste aviso (vai pro número do gestor)"
-                    className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
-                  >
-                    {testingMsg === 'corretor'
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : <Send className="h-3.5 w-3.5" />}
-                    Testar
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMsgCorretorOn(!msgCorretorOn)}
+                      title={msgCorretorOn ? 'Ligado — clique para NÃO enviar este aviso' : 'Desligado — clique para voltar a enviar'}
+                      className="text-[#7c3aed]"
+                    >
+                      {msgCorretorOn
+                        ? <ToggleRight className="h-5 w-5 text-green-500" />
+                        : <ToggleLeft className="h-5 w-5 text-red-500" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => sendTest('corretor')}
+                      disabled={testingMsg !== null || !msgCorretorOn}
+                      title="Enviar um teste deste aviso (vai pro número do gestor)"
+                      className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
+                    >
+                      {testingMsg === 'corretor'
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Send className="h-3.5 w-3.5" />}
+                      Testar
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   ref={corretorRef}
                   value={msgCorretor}
                   onFocus={() => setActiveMsg('corretor')}
                   onChange={e => setMsgCorretor(e.target.value)}
+                  disabled={!msgCorretorOn}
                   rows={3}
                   placeholder="Padrão: 🔔 Novo lead na sua fila... + link de aceite"
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
                 />
+                {/* É este aviso que leva o {{link_aceite}}. Sem ele o corretor não
+                    fica sabendo do lead, não aceita, e o prazo estoura sempre. */}
+                {!msgCorretorOn && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    Sem este aviso o corretor não recebe o link de aceite: ele não vai
+                    saber do lead, o prazo estoura e o lead segue para o próximo.
+                  </p>
+                )}
               </div>
               <div>
                 <div className="flex items-center justify-between">
                   <UILabel className="text-xs">Aviso do gestor</UILabel>
-                  <button
-                    type="button"
-                    onClick={() => sendTest('gestor')}
-                    disabled={testingMsg !== null}
-                    title="Enviar um teste deste aviso (vai pro número do gestor)"
-                    className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
-                  >
-                    {testingMsg === 'gestor'
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : <Send className="h-3.5 w-3.5" />}
-                    Testar
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMsgGestorOn(!msgGestorOn)}
+                      title={msgGestorOn ? 'Ligado — clique para NÃO enviar este aviso' : 'Desligado — clique para voltar a enviar'}
+                      className="text-[#7c3aed]"
+                    >
+                      {msgGestorOn
+                        ? <ToggleRight className="h-5 w-5 text-green-500" />
+                        : <ToggleLeft className="h-5 w-5 text-red-500" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => sendTest('gestor')}
+                      disabled={testingMsg !== null || !msgGestorOn}
+                      title="Enviar um teste deste aviso (vai pro número do gestor)"
+                      className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
+                    >
+                      {testingMsg === 'gestor'
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Send className="h-3.5 w-3.5" />}
+                      Testar
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   ref={gestorRef}
                   value={msgGestor}
                   onFocus={() => setActiveMsg('gestor')}
                   onChange={e => setMsgGestor(e.target.value)}
+                  disabled={!msgGestorOn}
                   rows={3}
                   placeholder="Padrão: 🚨 Lead Novo na Roleta — Aguardando Aceite..."
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
                 />
+                {/* O gestor também recebe o texto de repasse por este mesmo caminho —
+                    a chave de repasse abaixo é só do grupo. */}
+                {!msgGestorOn && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    O gestor não recebe nada no zap dele — nem lead novo, nem repasse.
+                    Os alertas de falha (lead sem responsável, ninguém assumiu) continuam saindo.
+                  </p>
+                )}
               </div>
               <div>
                 <div className="flex items-center justify-between">
                   <UILabel className="text-xs">Aviso do grupo</UILabel>
-                  <button
-                    type="button"
-                    onClick={() => sendTest('grupo')}
-                    disabled={testingMsg !== null}
-                    title="Enviar um teste deste aviso (vai pro grupo de avisos)"
-                    className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
-                  >
-                    {testingMsg === 'grupo'
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : <Send className="h-3.5 w-3.5" />}
-                    Testar
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMsgGrupoOn(!msgGrupoOn)}
+                      title={msgGrupoOn ? 'Ligado — clique para NÃO enviar este aviso' : 'Desligado — clique para voltar a enviar'}
+                      className="text-[#7c3aed]"
+                    >
+                      {msgGrupoOn
+                        ? <ToggleRight className="h-5 w-5 text-green-500" />
+                        : <ToggleLeft className="h-5 w-5 text-red-500" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => sendTest('grupo')}
+                      disabled={testingMsg !== null || !msgGrupoOn}
+                      title="Enviar um teste deste aviso (vai pro grupo de avisos)"
+                      className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
+                    >
+                      {testingMsg === 'grupo'
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Send className="h-3.5 w-3.5" />}
+                      Testar
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   ref={grupoRef}
                   value={msgGrupo}
                   onFocus={() => setActiveMsg('grupo')}
                   onChange={e => setMsgGrupo(e.target.value)}
+                  disabled={!msgGrupoOn}
                   rows={3}
                   placeholder="Padrão: 🎯 Lead distribuído pela roleta..."
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
                   Usado quando o lead <b>chega</b>. Quando o prazo estoura e o lead
                   passa para outro corretor, sai o aviso de repasse abaixo.
+                  {' '}Desligar este <b>não</b> desliga o de repasse — são chaves separadas.
                 </p>
               </div>
 
@@ -1285,27 +1562,40 @@ export default function RoletaConfigPage() {
               <div>
                 <div className="flex items-center justify-between">
                   <UILabel className="text-xs">Aviso de repasse (grupo)</UILabel>
-                  <button
-                    type="button"
-                    onClick={() => sendTest('repasse')}
-                    disabled={testingMsg !== null}
-                    title="Enviar um teste deste aviso (vai pro grupo de avisos)"
-                    className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
-                  >
-                    {testingMsg === 'repasse'
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : <Send className="h-3.5 w-3.5" />}
-                    Testar
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMsgRepasseOn(!msgRepasseOn)}
+                      title={msgRepasseOn ? 'Ligado — clique para NÃO enviar este aviso' : 'Desligado — clique para voltar a enviar'}
+                      className="text-[#7c3aed]"
+                    >
+                      {msgRepasseOn
+                        ? <ToggleRight className="h-5 w-5 text-green-500" />
+                        : <ToggleLeft className="h-5 w-5 text-red-500" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => sendTest('repasse')}
+                      disabled={testingMsg !== null || !msgRepasseOn}
+                      title="Enviar um teste deste aviso (vai pro grupo de avisos)"
+                      className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline disabled:opacity-50"
+                    >
+                      {testingMsg === 'repasse'
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Send className="h-3.5 w-3.5" />}
+                      Testar
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   ref={repasseRef}
                   value={msgRepasse}
                   onFocus={() => setActiveMsg('repasse')}
                   onChange={e => setMsgRepasse(e.target.value)}
+                  disabled={!msgRepasseOn}
                   rows={3}
                   placeholder="Padrão: 🔁 Lead repassado pela roleta..."
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
                   Sai quando o prazo estoura e o lead vai para o próximo corretor.

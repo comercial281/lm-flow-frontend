@@ -56,6 +56,13 @@ export interface RoletaConfig {
   // Texto do prazo estourado. Separado do de cima porque nenhum serve para as
   // duas situações — o de lead novo mentia no repasse.
   msg_grupo_repasse_template: string | null;
+  // Liga/desliga de cada aviso. Texto em branco = usa o padrão; isto aqui é o
+  // "não envia". Opcional porque config antiga pode responder sem os campos —
+  // ausente vale como LIGADO.
+  msg_corretor_enabled?: boolean;
+  msg_gestor_enabled?: boolean;
+  msg_grupo_enabled?: boolean;
+  msg_grupo_repasse_enabled?: boolean;
   notification_inbox_id: string | null;
   business_hours_config: Record<string, unknown>;
   instances?: RoletaInstance[];
@@ -83,6 +90,10 @@ export interface RoletaConfigPayload {
   msg_gestor_template?: string | null;
   msg_grupo_template?: string | null;
   msg_grupo_repasse_template?: string | null;
+  msg_corretor_enabled?: boolean;
+  msg_gestor_enabled?: boolean;
+  msg_grupo_enabled?: boolean;
+  msg_grupo_repasse_enabled?: boolean;
   notification_inbox_id?: string | null;
   // Sincronizadas DENTRO de create/update, não numa rota própria: o RBAC deriva
   // a permissão pelo nome da action, então uma action nova exigiria uma
@@ -147,6 +158,59 @@ export interface RoletaDiagnostic {
   dono_atual: string | null;
   // Só vem pro super-admin: a exceção crua que o rescue mudo escondia.
   erro_tecnico?: string | null;
+}
+
+// A FILA da roleta, vista por quem gerencia: as ofertas em aberto AGORA, de todo
+// mundo. Não confundir com a fila pessoal (brokerAssignmentsService.listMine),
+// que é sempre a de quem pergunta — inclusive para admin.
+export interface RoletaQueueItem {
+  id: string;
+  lead: string;
+  lead_telefone: string | null;
+  contact_id: string;
+  conversation_id: string | null;
+  conversation_display_id: number | null;
+  corretor: { id: string; nome: string | null };
+  instancia: string | null;
+  modo: DistributionMode | null;
+  atribuido_em: string;
+  prazo_minutos: number;
+  minutos_restantes: number;
+  // Prazo vencido mas o status ainda é `pending`: o repasse só acontece quando o
+  // CheckTimeoutJob roda. É essa janela que o gestor precisa enxergar.
+  estourou: boolean;
+  rodada: number;
+  // Quem já deixou passar antes, na ordem: ["Ana (recusou)", "Bruno (prazo estourou)"].
+  ja_passaram: string[];
+}
+
+export interface RoletaQueueMember {
+  user_id: string;
+  nome: string | null;
+  peso: number;
+  ativo: boolean;
+  // Continua na lista da tela mas NUNCA é sorteado (perdeu acesso à instância).
+  sem_acesso_a_instancia: boolean;
+  // Só no rodízio — nos outros modos quem decide é o leilão/disponibilidade/gestor.
+  chance_pct: number | null;
+  segurando_agora: number;
+  ultimo_lead_em: string | null;
+}
+
+export interface RoletaQueueConfig {
+  id: string;
+  instancia: string | null;
+  modo: DistributionMode;
+  ativa: boolean;
+  prazo_minutos: number;
+  membros: RoletaQueueMember[];
+}
+
+export interface RoletaQueue {
+  gerado_em: string;
+  resumo: { aguardando: number; atrasadas: number; roletas_ativas: number };
+  aguardando: RoletaQueueItem[];
+  roletas: RoletaQueueConfig[];
 }
 
 export interface RepairOwnersResult {
@@ -218,6 +282,13 @@ export const roletaConfigService = {
   async repairOwners(dryRun: boolean): Promise<RepairOwnersResult> {
     const res = await api.post(`${BASE}/repair_owners`, { dry_run: dryRun });
     return (res.data as { data: RepairOwnersResult }).data;
+  },
+
+  // Fila ao vivo (gestão): ofertas em aberto de todos + quem está na roleta.
+  // Cargo `roleta_configs.queue` — Gerente e Administrador têm; Corretor não.
+  async getQueue(): Promise<RoletaQueue> {
+    const res = await api.get(`${BASE}/queue`);
+    return (res.data as { data: RoletaQueue }).data;
   },
 
   async getAssignments(status?: string): Promise<BrokerAssignment[]> {
