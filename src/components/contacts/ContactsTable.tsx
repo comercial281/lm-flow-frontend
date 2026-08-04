@@ -1,5 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
-import { MessageSquare, Edit, Trash2, Users, Activity } from 'lucide-react';
+import { MessageSquare, Edit, Trash2, Users, Activity, Smartphone } from 'lucide-react';
 import { Contact } from '@/types/contacts';
 import { BaseTable, TableColumn, TableAction } from '@/components/base';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
@@ -89,6 +89,37 @@ export default function ContactsTable({
       render: contact => (
         <ContactTypeBadge type={contact.type || 'person'} className="justify-center" />
       ),
+    },
+    {
+      // De qual NÚMERO o contato veio. Com um WhatsApp por corretor a pergunta
+      // "de quem é este contato" deixou de ter resposta óbvia — e quem entrou
+      // pela importação da agenda de um aparelho chegava sem marca nenhuma.
+      //
+      // O dado sempre existiu (contact_inboxes liga contato → inbox); o que
+      // faltava era a lista pedir e a tabela mostrar.
+      key: 'origem',
+      label: 'Número',
+      sortable: false,
+      render: contact => {
+        const vinculos = (contact.contact_inboxes ?? []) as Array<{ inbox?: { name?: string } }>;
+        const nomes = Array.from(
+          new Set(vinculos.map(v => v?.inbox?.name).filter((n): n is string => !!n)),
+        );
+        if (nomes.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+        return (
+          <div className="flex items-center gap-1 text-xs">
+            <Smartphone className="h-3 w-3 text-muted-foreground shrink-0" />
+            <span className="truncate" title={nomes.join(', ')}>
+              {nomes[0]}
+              {/* Contato que fala por mais de um número: mostra o primeiro e
+                  conta o resto, senão a coluna estoura a largura. */}
+              {nomes.length > 1 && (
+                <span className="text-muted-foreground"> +{nomes.length - 1}</span>
+              )}
+            </span>
+          </div>
+        );
+      },
     },
     {
       key: 'labels',

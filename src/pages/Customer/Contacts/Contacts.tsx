@@ -101,6 +101,10 @@ export default function Contacts() {
         per_page: DEFAULT_PAGE_SIZE,
         sort: 'name',
         order: 'asc',
+        // Traz de qual NÚMERO cada contato veio. Com um WhatsApp por corretor,
+        // "de quem é este contato" deixou de ser óbvio — e quem foi importado
+        // pela agenda de um aparelho chegava sem nenhuma marca de origem.
+        include_contact_inboxes: true,
         ...params,
       };
 
