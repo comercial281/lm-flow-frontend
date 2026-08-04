@@ -135,6 +135,9 @@ export type RoletaOutcome =
   | 'sem_acesso_ao_inbox'
   | 'roleta_esgotada'
   | 'dono_gravado'
+  // Não houve sorteio porque não havia o que sortear: a pessoa escreveu direto
+  // para um número atendido por um corretor só, e já escolheu o corretor.
+  | 'atendimento_direto'
   | 'corretor_sem_whatsapp'
   | 'oferta_cancelada'
   // O lead TEM dono; o que falhou foi abrir o atendimento no número sorteado.
