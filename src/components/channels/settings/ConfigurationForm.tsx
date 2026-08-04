@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
@@ -512,6 +513,11 @@ const EvolutionWhatsAppConfig: React.FC<{
   const [instanceStatus, setInstanceStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
+  // Chegou pelo fluxo "criar canal → parear" (?connect=1): abre o QR sozinho.
+  // Lido aqui e não repassado por prop porque o ConfigurationForm só entrega
+  // `inbox` e `onUpdate` a este componente.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const autoConnectRef = useRef(false);
   const getIdentifier = () => {
     const providerConfig = inbox?.provider_config || {};
     if (inbox?.provider === 'evolution_go') {
@@ -680,6 +686,24 @@ const EvolutionWhatsAppConfig: React.FC<{
       setIsLoading(false);
     }
   };
+
+  // Dispara UMA vez. O guard de ref importa porque o efeito depende de
+  // instanceStatus, que muda a cada poll — sem ele, cada atualização de status
+  // pediria um QR novo e invalidaria o que está na tela.
+  useEffect(() => {
+    if (searchParams.get('connect') !== '1') return;
+    if (autoConnectRef.current) return;
+    // Espera o primeiro status chegar: já conectado não precisa de QR.
+    if (instanceStatus === null) return;
+
+    autoConnectRef.current = true;
+    const params = new URLSearchParams(searchParams);
+    params.delete('connect');
+    setSearchParams(params, { replace: true });
+
+    if (instanceStatus !== 'open') handleGenerateQR();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, instanceStatus]);
 
   const handleUpdateInstanceSettings = async () => {
     setIsLoading(true);

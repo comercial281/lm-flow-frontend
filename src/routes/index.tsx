@@ -710,12 +710,18 @@ const AppRouter = () => {
                 </Suspense>
               }
             />
+            {/* A API já exige `roleta_configs.read` (PermissionRegistry deriva a
+                permissão por convenção). Sem o guard aqui o corretor abre a tela
+                e toma 403 em cada chamada, o que parece bug em vez de acesso
+                negado. */}
             <Route
               path="roleta-config"
               element={
-                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <RoletaConfigPage />
-                </Suspense>
+                <PermissionRoute resource="roleta_configs" action="read">
+                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
+                    <RoletaConfigPage />
+                  </Suspense>
+                </PermissionRoute>
               }
             />
             <Route
@@ -2258,14 +2264,20 @@ const AppRouter = () => {
           {/* /super-admin/automation-templates e /super-admin/pooled-clients viraram
               redirects pra /admin/* (declarados no bloco da Área do Admin, acima). */}
 
-          {/* Settings — roleta de corretores */}
+          {/* Settings — roleta de corretores. Montagem antiga da mesma tela de
+              /automations/roleta-config; faltava CustomerRoute e PermissionRoute,
+              então dava para chegar nela digitando a URL. */}
           <Route
             path="/settings/roleta-config"
             element={
               <PrivateRoute>
-                <MainLayout>
-                  <RoletaConfigPage />
-                </MainLayout>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PermissionRoute resource="roleta_configs" action="read">
+                      <RoletaConfigPage />
+                    </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
               </PrivateRoute>
             }
           />

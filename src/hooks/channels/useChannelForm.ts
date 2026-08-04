@@ -98,7 +98,12 @@ export const useChannelForm = () => {
           readMessages: prev.readMessages ?? false,
           syncFullHistory: prev.syncFullHistory ?? false,
           readStatus: prev.readStatus ?? false,
-          enable_sync_features: prev.enable_sync_features ?? true,
+          // DESMARCADA por padrão. Ligada, a Evolution despeja a agenda inteira
+          // do aparelho no CRM no ato da conexão — com um número por corretor
+          // isso vira a agenda pessoal de cada um virando base do cliente.
+          // Quem quiser importar marca; o backend só pede os eventos de contato
+          // quando esta flag vem ligada.
+          enable_sync_features: prev.enable_sync_features ?? false,
         }));
         break;
 

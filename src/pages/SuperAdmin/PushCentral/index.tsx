@@ -22,18 +22,24 @@ import pushCentralService, {
   type PushRulePayload,
   type PushTenantScope,
 } from '@/services/push/pushCentralService';
+import NotificationsTab from './NotificationsTab';
 
 /**
  * Central de Push (Área do Admin).
  *
  * Tudo que liga/desliga push nasce AQUI, na tela, com nome em PT-BR — nada de
- * regra escondida em código ou ENV. Três abas:
- *   Regras         -> CRUD do que dispara sozinho
+ * regra escondida em código ou ENV. Quatro abas:
+ *   Regras         -> CRUD do que dispara sozinho (push do SUPER-ADMIN)
+ *   Notificações   -> o que cada CLIENTE recebe, evento a evento, canal a canal
  *   Disparo manual -> escrever e mandar agora
  *   Histórico      -> o que saiu, pra quem, e o que FALHOU
+ *
+ * As duas primeiras respondem perguntas diferentes e por isso não se misturam:
+ * "Regras" é o push que chega no MEU celular sobre qualquer cliente; "Notificações"
+ * é o que a equipe do cliente recebe dentro do CRM dele.
  */
 
-type Tab = 'rules' | 'manual' | 'logs';
+type Tab = 'rules' | 'notifications' | 'manual' | 'logs';
 
 const EMPTY_FORM: PushRulePayload = {
   name: '',
@@ -240,6 +246,7 @@ export default function PushCentral() {
         <div className="flex gap-6 border-b mt-4">
           {([
             ['rules', 'Regras'],
+            ['notifications', 'Notificações do cliente'],
             ['manual', 'Disparo manual'],
             ['logs', 'Histórico'],
           ] as [Tab, string][]).map(([key, label]) => (
@@ -312,6 +319,9 @@ export default function PushCentral() {
             ))}
           </div>
         )}
+
+        {/* ── NOTIFICAÇÕES DO CLIENTE ── */}
+        {!loading && tab === 'notifications' && <NotificationsTab />}
 
         {/* ── DISPARO MANUAL ── */}
         {!loading && tab === 'manual' && (

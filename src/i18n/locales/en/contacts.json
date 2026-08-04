@@ -450,7 +450,9 @@
     "exportQueued": "Export started. You will receive an email with the download link shortly.",
     "exportError": "Error exporting contacts",
     "filterError": "Error applying filters",
-    "conversationStarted": "Conversation started successfully"
+    "conversationStarted": "Conversation started successfully",
+    "bulkDeleteAllQueued": "Deletion of {{count}} contact(s) started. It runs in the background and the list may take a few minutes to reflect it.",
+    "mergeNeedsExplicitSelection": "To merge, pick the contacts one by one — merging does not work with \"all selected\"."
   },
   "errors": {
     "loadContact": "Error loading contact details"
@@ -468,7 +470,8 @@
       "description": "Are you sure you want to delete {{count}} selected contact(s)? This action cannot be undone.",
       "confirm": "Delete All",
       "cancel": "Cancel",
-      "deleting": "Deleting..."
+      "deleting": "Deleting...",
+      "descriptionAll": "Are you sure you want to delete ALL {{count}} contacts matching the current filter? Deletion runs in the background and cannot be undone."
     },
     "mergeContacts": {
       "title": "Merge Contacts",
@@ -534,7 +537,11 @@
     },
     "quick": {
       "allTags": "All tags",
-      "clear": "Clear"
+      "clear": "Clear",
+      "withoutTagsPlaceholder": "Without tag...",
+      "withoutTagsSummary": "Without {{count}} tag(s)",
+      "withoutTagsHint": "Contacts carrying the checked tags will NOT be listed.",
+      "withoutTagBadge": "without: {{tag}}"
     }
   },
   "import": {
@@ -611,7 +618,10 @@
     "mergeContacts": "Merge Contacts",
     "clearSelection": "Clear Selection",
     "selected": "{{count}} selected",
-    "selected_other": "{{count}} selected"
+    "selected_other": "{{count}} selected",
+    "selectAllMatching": "Select all {{count}} contacts",
+    "allMatchingSelected": "all contacts matching the current filter",
+    "bulkDeleteAll": "Delete all {{count}}"
   },
   "startConversation": {
     "title": "Start Conversation",

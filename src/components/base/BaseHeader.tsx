@@ -59,6 +59,8 @@ export interface BaseHeaderProps {
   totalCount?: number;
   selectedCount?: number;
   onClearSelection?: () => void;
+  /** Conteúdo extra dentro da barra de seleção (ex.: "selecionar todos os N"). */
+  selectionExtra?: ReactNode;
   bulkActions?: HeaderAction[];
   className?: string;
   children?: ReactNode;
@@ -80,6 +82,7 @@ export default function BaseHeader({
   searchDataTour,
   selectedCount = 0,
   onClearSelection,
+  selectionExtra,
   bulkActions = [],
   className = '',
   children,
@@ -283,11 +286,12 @@ export default function BaseHeader({
 
       {/* Selection Bar */}
       {hasSelection && (
-        <div className="flex items-center justify-between rounded-lg bg-sidebar-accent/50 border border-sidebar-border px-4 py-2">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-sidebar-accent/50 border border-sidebar-border px-4 py-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-medium text-sidebar-foreground">
               {t('base.header.selected', { count: selectedCount })}
             </span>
+            {selectionExtra}
             {onClearSelection && (
               <Button
                 variant="ghost"
