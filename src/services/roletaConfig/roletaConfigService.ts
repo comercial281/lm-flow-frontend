@@ -242,6 +242,29 @@ export interface RepairOwnersResult {
   }[];
 }
 
+// Acesso do corretor à INSTÂNCIA do lead dele — as duas pontas na mesma chamada:
+// `corretores` é quem precisa ganhar acesso, `revogacoes` é quem carrega vínculo
+// automático que já não se justifica (o dono antigo de um lead repassado, que
+// aparecia na tela da Instância como atendente do número do colega).
+export interface RepairInboxAccessRow {
+  user_id: string;
+  corretor: string | null;
+  instancias: string[];
+  total_instancias: number;
+  acao: string;
+  motivo?: string | null;
+}
+
+export interface RepairInboxAccessResult {
+  dry_run: boolean;
+  total: number;
+  liberados: number;
+  falharam: number;
+  corretores: RepairInboxAccessRow[];
+  total_revogar: number;
+  revogacoes: RepairInboxAccessRow[];
+}
+
 const BASE = '/roleta_configs';
 
 export const roletaConfigService = {
@@ -296,6 +319,13 @@ export const roletaConfigService = {
   async repairOwners(dryRun: boolean): Promise<RepairOwnersResult> {
     const res = await api.post(`${BASE}/repair_owners`, { dry_run: dryRun });
     return (res.data as { data: RepairOwnersResult }).data;
+  },
+
+  // Libera quem precisa e RETIRA o vínculo automático de quem não tem mais lead
+  // no número. dryRun=true (padrão do backend) só lista as duas listas.
+  async repairInboxAccess(dryRun: boolean): Promise<RepairInboxAccessResult> {
+    const res = await api.post(`${BASE}/repair_inbox_access`, { dry_run: dryRun });
+    return (res.data as { data: RepairInboxAccessResult }).data;
   },
 
   // Fila ao vivo (gestão): ofertas em aberto de todos + quem está na roleta.
