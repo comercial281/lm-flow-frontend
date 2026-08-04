@@ -42,6 +42,12 @@ export type DistributionMode = 'rodizio' | 'leilao' | 'manual' | 'disponibilidad
 
 export interface RoletaConfig {
   id: string;
+  // `name` é o que o gestor digitou e pode ser nulo; `display_name` é o que a
+  // tela mostra, já caindo no nome da instância quando ninguém batizou. Os dois
+  // vêm juntos de propósito: o formulário precisa do campo VAZIO para o
+  // placeholder aparecer, a listagem precisa do resolvido.
+  name?: string | null;
+  display_name?: string | null;
   inbox_id: string;
   inbox_name?: string | null;
   is_active: boolean;
@@ -79,6 +85,8 @@ export interface RoletaConfig {
 }
 
 export interface RoletaConfigPayload {
+  // Vazio = sem apelido; a roleta volta a se chamar pelo nome da instância.
+  name?: string | null;
   inbox_id: string;
   is_active: boolean;
   distribution_mode: DistributionMode;
@@ -152,6 +160,9 @@ export interface RoletaDiagnostic {
   outcome: RoletaOutcome;
   ok: boolean;
   explicacao: string;
+  // De QUAL roleta é esta linha. Com uma roleta por cliente a pergunta não
+  // existia; com várias, "o lead não entrou" sem dizer onde não é diagnóstico.
+  roleta: string | null;
   formulario: string | null;
   lead: string | null;
   contact_id: string | null;
