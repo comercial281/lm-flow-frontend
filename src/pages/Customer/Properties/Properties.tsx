@@ -60,6 +60,13 @@ import {
 } from '@/services/properties/propertiesService';
 import { PROPERTY_FEATURES, CONDO_FEATURES } from '@/features/properties/amenities';
 import {
+  EMPTY_TYPOLOGY,
+  cleanTypologies,
+  typologyHeadline,
+  typologyName,
+  type PropertyTypology,
+} from '@/features/properties/typologies';
+import {
   propertyPhotosService,
   PropertyPhoto,
   PHOTO_TYPE_LABELS,
@@ -108,6 +115,7 @@ const EMPTY_FORM: PropertyFormData = {
   label_id: null,
   features: [],
   condo_features: [],
+  typologies: [],
 };
 
 const formatCurrency = (v?: number | null) =>
@@ -293,6 +301,7 @@ export default function Properties() {
       label_id: p.label_id ?? null,
       features: p.features ?? [],
       condo_features: p.condo_features ?? [],
+      typologies: p.typologies ?? [],
     });
     setModalOpen(true);
   };
@@ -306,16 +315,19 @@ export default function Properties() {
       return;
     }
     setSaving(true);
+    // Linha de tipologia que o corretor adicionou e não preencheu não vai pro
+    // backend (ele descartaria de qualquer jeito) — evita gravar planta fantasma.
+    const payload: PropertyFormData = { ...form, typologies: cleanTypologies(form.typologies) };
     try {
       if (editing) {
-        const updated = await propertiesService.update(editing.id, form);
+        const updated = await propertiesService.update(editing.id, payload);
         setProperties(prev => prev.map(p => p.id === updated.id ? updated : p));
         toast.success('Imóvel atualizado');
         setModalOpen(false);
         // Avisa o modal de importação em lote (se aberto) pra re-buscar os chips/preço
         setImportRefresh(n => n + 1);
       } else {
-        const created = await propertiesService.create(form);
+        const created = await propertiesService.create(payload);
         setProperties(prev => [created, ...prev]);
         setTotal(t => t + 1);
         // Sobe as mídias que o usuário anexou no próprio modal (fotos/vídeos/áudios).
@@ -462,6 +474,20 @@ export default function Properties() {
       return { ...prev, [key]: cur.includes(slug) ? cur.filter(s => s !== slug) : [...cur, slug] };
     });
 
+  // ── Tipologias (plantas) do empreendimento ─────────────────────────────────
+  // Lista repetível: cada linha é uma planta com números próprios. Sempre por
+  // atualização funcional (prev) — o corretor mexe em várias linhas seguidas e
+  // um patch em cima de `form` capturado perderia a edição anterior.
+  const addTypology = () =>
+    setForm(prev => ({ ...prev, typologies: [...(prev.typologies ?? []), { ...EMPTY_TYPOLOGY }] }));
+  const removeTypology = (index: number) =>
+    setForm(prev => ({ ...prev, typologies: (prev.typologies ?? []).filter((_, i) => i !== index) }));
+  const setTypology = (index: number, patch: Partial<PropertyTypology>) =>
+    setForm(prev => ({
+      ...prev,
+      typologies: (prev.typologies ?? []).map((t, i) => (i === index ? { ...t, ...patch } : t)),
+    }));
+
   // Cria uma nova tag (Label) direto do cadastro do imóvel e já a seleciona.
   // O backend só aceita título com letras/números/espaço/hífen/underscore, então
   // sanitiza aqui (troca inválidos por espaço, colapsa, tira separador das pontas).
@@ -528,6 +554,10 @@ export default function Properties() {
       const condos = (r.condo_features ?? []).filter(s => condoSet.has(s));
       if (feats.length) patch.features = feats;
       if (condos.length) patch.condo_features = condos;
+      // Tipologias achadas no book: só aplica quando veio alguma (não apaga as
+      // que o corretor já digitou) e mantém as dele na frente.
+      const found = cleanTypologies(r.typologies);
+      if (found.length) patch.typologies = [...cleanTypologies(f.typologies), ...found];
       const filled = Object.keys(patch).length;
       if (!filled) { toast.error('Não achei dados reconhecíveis no texto. Revise e preencha manualmente.'); return; }
       setF(patch);
@@ -1216,6 +1246,106 @@ export default function Properties() {
               </label>
             </div>
 
+            {/* Tipologias: as várias plantas de um mesmo empreendimento. Os campos
+                soltos acima (dorms/área/preço) seguem valendo como o RESUMO que
+                alimenta busca, filtro e card — normalmente o da planta de entrada. */}
+            <div className="rounded-lg border p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <label className="block text-sm font-medium">Tipologias do empreendimento</label>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Tem mais de uma planta (2 dorms, 3 dorms, cobertura…)? Cadastre cada uma aqui.
+                    Deixe vazio quando o imóvel é uma unidade só.
+                  </p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addTypology} className="gap-1">
+                  <Plus className="h-3.5 w-3.5" />
+                  Adicionar tipologia
+                </Button>
+              </div>
+
+              {(f.typologies ?? []).length > 0 && (
+                <div className="mt-3 space-y-3">
+                  {(f.typologies ?? []).map((t, i) => (
+                    <div key={i} className="rounded-md border bg-muted/30 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {typologyName(t, i)}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          title="Remover tipologia"
+                          aria-label={`Remover ${typologyName(t, i)}`}
+                          onClick={() => removeTypology(i)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                        <div className="col-span-2 sm:col-span-3 lg:col-span-2">
+                          <UILabel className="text-xs text-muted-foreground">Nome da planta</UILabel>
+                          <Input
+                            value={t.name ?? ''}
+                            onChange={e => setTypology(i, { name: e.target.value })}
+                            placeholder="Tipo A / Final 3"
+                            className="mt-1"
+                          />
+                        </div>
+                        {([
+                          ['bedrooms', 'Dorms'],
+                          ['suites', 'Suítes'],
+                          ['bathrooms', 'Banheiros'],
+                          ['parking_spaces', 'Vagas'],
+                          ['units_available', 'Unid. disp.'],
+                        ] as Array<[keyof PropertyTypology, string]>).map(([key, label]) => (
+                          <div key={key}>
+                            <UILabel className="text-xs text-muted-foreground">{label}</UILabel>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={(t[key] as number | null | undefined) ?? ''}
+                              onChange={e => setTypology(i, { [key]: e.target.value ? parseInt(e.target.value, 10) : null })}
+                              className="mt-1"
+                            />
+                          </div>
+                        ))}
+                        {([
+                          ['useful_area_m2', 'Área útil (m²)'],
+                          ['total_area_m2', 'Área total (m²)'],
+                          ['sale_price', 'Valor de venda (R$)'],
+                          ['rent_price', 'Aluguel (R$)'],
+                        ] as Array<[keyof PropertyTypology, string]>).map(([key, label]) => (
+                          <div key={key} className="col-span-1 sm:col-span-1 lg:col-span-1">
+                            <UILabel className="text-xs text-muted-foreground">{label}</UILabel>
+                            <Input
+                              type="number"
+                              min={0}
+                              step="any"
+                              value={(t[key] as number | null | undefined) ?? ''}
+                              onChange={e => setTypology(i, { [key]: e.target.value ? parseFloat(e.target.value) : null })}
+                              className="mt-1"
+                            />
+                          </div>
+                        ))}
+                        <div className="col-span-2 sm:col-span-3 lg:col-span-6">
+                          <UILabel className="text-xs text-muted-foreground">Observação (opcional)</UILabel>
+                          <Input
+                            value={t.notes ?? ''}
+                            onChange={e => setTypology(i, { notes: e.target.value })}
+                            placeholder="Ex.: última unidade, vista para o parque…"
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Características do imóvel + comodidades do condomínio (aparecem na página pública) */}
             <div className="space-y-4">
               <div>
@@ -1557,6 +1687,15 @@ function PropertyCard({
               <span className="flex items-center gap-1"><Ruler className="h-3.5 w-3.5" />{p.icon_summary.useful_area_m2}m²</span>
             )}
           </div>
+        )}
+
+        {/* Empreendimento com várias plantas: mostra a faixa no card, senão o
+            card do lançamento fingiria ser de uma unidade só. */}
+        {(p.typologies?.length ?? 0) > 1 && (
+          <p className="mb-2 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">{p.typologies!.length} tipologias</span>
+            {typologyHeadline(p.typologies) ? ` · ${typologyHeadline(p.typologies)}` : ''}
+          </p>
         )}
 
         {p.address_city && (

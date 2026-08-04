@@ -23,6 +23,8 @@ export interface ImportItemProperty {
   display_price?: string | null;
   has_price?: boolean;
   photos_count?: number;
+  /** Quantas plantas a IA achou no book (0 = unidade única). */
+  typologies_count?: number;
   cover_photo_url?: string | null;
 }
 

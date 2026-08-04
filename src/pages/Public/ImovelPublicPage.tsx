@@ -3,6 +3,13 @@ import { Link, useParams } from 'react-router-dom';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import { labelsFor } from '@/features/properties/amenities';
+import {
+  typologyHeadline,
+  typologyName,
+  typologyPrice,
+  typologySpecs,
+  type PropertyTypology,
+} from '@/features/properties/typologies';
 import { PropertyCard, type PortalProperty } from './portalShared';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -21,6 +28,7 @@ interface PropertyDTO {
   useful_area_m2?: number | null; total_area_m2?: number | null;
   address_neighborhood?: string; address_city?: string; address_state?: string;
   features?: string[] | null; condo_features?: string[] | null;
+  typologies?: PropertyTypology[] | null;
   responsible_name?: string; photos?: Photo[];
 }
 interface SiteInfo {
@@ -212,6 +220,9 @@ export default function ImovelPublicPage() {
   // Características/comodidades → rótulos (via catálogo compartilhado).
   const featureLabels = labelsFor(prop.features);
   const condoLabels = labelsFor(prop.condo_features);
+  // Tipologias (plantas) do empreendimento — [] quando o imóvel tem uma só ou
+  // quando o tenant ainda não recebeu a coluna (backend devolve [] nesse caso).
+  const typologies = prop.typologies ?? [];
 
   // Localização: só bairro (privacidade — sem rua/número). O mapa mostra a REGIÃO
   // de forma aproximada, buscando pelo nome do bairro/cidade — sem pino no
@@ -367,6 +378,40 @@ export default function ImovelPublicPage() {
               <section className="mt-9">
                 <h2 className="font-[var(--display)] text-2xl font-semibold">Sobre o imóvel</h2>
                 <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-neutral-700">{prop.description}</p>
+              </section>
+            )}
+
+            {/* Tipologias: a tabela de plantas do empreendimento. Sem ela, um
+                lançamento com 3 plantas aparecia como se tivesse uma unidade só
+                (a do resumo) e o lead perguntava no WhatsApp o que já estava no book. */}
+            {typologies.length > 0 && (
+              <section className="mt-9">
+                <h2 className="font-[var(--display)] text-2xl font-semibold">Tipologias disponíveis</h2>
+                {typologyHeadline(typologies) && (
+                  <p className="mt-1 text-[14px] text-neutral-500">{typologyHeadline(typologies)}</p>
+                )}
+                <div className="mt-3 overflow-x-auto">
+                  <ul className="min-w-full space-y-2">
+                    {typologies.map((t, i) => {
+                      const price = typologyPrice(t);
+                      return (
+                        <li
+                          key={i}
+                          className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-2xl bg-white px-5 py-4 ring-1 ring-black/[0.06]"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-[15px] font-semibold text-[var(--ink)]">{typologyName(t, i)}</p>
+                            <p className="mt-0.5 text-[13px] text-neutral-500">{typologySpecs(t).join(' · ')}</p>
+                            {t.notes && <p className="mt-0.5 text-[13px] text-neutral-500">{t.notes}</p>}
+                          </div>
+                          {price && (
+                            <span className="whitespace-nowrap text-[15px] font-semibold text-[var(--brand)]">{price}</span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               </section>
             )}
 
