@@ -43,7 +43,17 @@ type Tab = 'rules' | 'notifications' | 'manual' | 'logs';
 
 const EMPTY_FORM: PushRulePayload = {
   name: '',
-  triggers: ['lead.novo'],
+  // Campanha e formulário, não "qualquer origem".
+  //
+  // `lead.novo` pega TODA chegada, inclusive `lead.whatsapp_direto` — e com um
+  // WhatsApp por corretor isso vira push a cada estranho que escreve no número
+  // pessoal dele: fornecedor, família, engano. Foi o que aconteceu em produção
+  // com a APTO PREMIUM em 04/08/2026.
+  //
+  // Os dois gatilhos abaixo são o lead que o cliente pagou para receber, e é
+  // esse que merece tocar o celular de alguém. Quem quiser "qualquer origem"
+  // ainda marca na tela — o que muda é só o ponto de partida.
+  triggers: ['lead.campanha', 'lead.formulario'],
   tenant_scope: 'all',
   tenant_slugs: [],
   audience: 'admin',
