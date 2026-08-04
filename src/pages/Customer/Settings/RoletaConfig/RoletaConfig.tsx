@@ -5,6 +5,7 @@ import {
   Button, Input, Label as UILabel, Badge,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/ds';
+import { NativeSelect } from '@/components/ui/native-select';
 import {
   Shuffle, Plus, Trash2, GripVertical, Save, Phone,
   Clock, Bell, ToggleLeft, ToggleRight, Users, BarChart2,
@@ -1164,14 +1165,19 @@ export default function RoletaConfigPage() {
         </div>
       )}
 
-      {/* Modal de criacao/edicao */}
+      {/* Modal de criação/edição.
+
+          Largura: os campos são curtos e os blocos são muitos, então em coluna
+          única a tela virava uma tira comprida que só rolava. Em `lg` o corpo
+          abre em DUAS colunas — os campos curtos emparelham e os blocos grandes
+          (números, modo, mensagens, corretores) ocupam a linha inteira. */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl lg:max-w-5xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar roleta' : 'Nova roleta'}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="grid gap-4 py-2 lg:grid-cols-2 lg:items-start">
             {/* Instância de entrada.
                 Escondida quando o bloco de números aparece: ali a PRIMEIRA linha
                 já É a entrada, e pedir o mesmo número em dois seletores só faz o
@@ -1180,22 +1186,23 @@ export default function RoletaConfigPage() {
                 (o `for_inbox` procura por ele antes das secundárias) — só deixa
                 de ser perguntado em separado. */}
             {!multiEnabled && (
-            <div>
+            <div className="lg:col-span-2">
               <UILabel>Instância (WhatsApp) *</UILabel>
-              <select
-                value={inboxId}
-                onChange={e => setInboxId(e.target.value)}
-                disabled={!!editing}
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
-              >
-                <option value="">Selecione a instância...</option>
-                {inboxId && !inboxes.some(i => i.id === inboxId) && (
-                  <option value={inboxId}>{inboxId}</option>
-                )}
-                {inboxes.map(i => (
-                  <option key={i.id} value={i.id}>{i.name}</option>
-                ))}
-              </select>
+              <div className="mt-1">
+                <NativeSelect
+                  value={inboxId}
+                  onChange={e => setInboxId(e.target.value)}
+                  disabled={!!editing}
+                >
+                  <option value="">Selecione a instância...</option>
+                  {inboxId && !inboxes.some(i => i.id === inboxId) && (
+                    <option value={inboxId}>{inboxId}</option>
+                  )}
+                  {inboxes.map(i => (
+                    <option key={i.id} value={i.id}>{i.name}</option>
+                  ))}
+                </NativeSelect>
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
                 A caixa de entrada (número de WhatsApp) que essa roleta distribui.
               </p>
@@ -1206,7 +1213,7 @@ export default function RoletaConfigPage() {
                 Com a flag desligada isto não aparece e a tela é exatamente a de
                 antes — o cliente de número compartilhado não vê nada novo. */}
             {multiEnabled && (
-              <div className="border rounded-lg p-3">
+              <div className="border rounded-lg p-3 lg:col-span-2">
                 <div className="flex items-center justify-between mb-2">
                   <UILabel className="flex items-center gap-2">
                     <Phone className="h-4 w-4" />
@@ -1226,23 +1233,31 @@ export default function RoletaConfigPage() {
                   daquele número — o lead é atendido pelo WhatsApp de quem ganhou.
                 </p>
 
-                <div className="space-y-2">
+                {/* Uma linha por número. No celular os campos empilham (as 12
+                    colunas só entram a partir de `sm`); os rótulos ficam em
+                    cima porque, empilhado, não dá pra adivinhar o que é cada
+                    caixa pela posição. */}
+                <div className="space-y-3 sm:space-y-2">
                   {instances.map((inst, idx) => (
-                    <div key={inst.localId} className="grid grid-cols-12 gap-2 items-start">
-                      <div className="col-span-5">
+                    <div
+                      key={inst.localId}
+                      className="grid grid-cols-1 items-start gap-2 rounded-md border border-border p-3 sm:grid-cols-12 sm:border-0 sm:p-0"
+                    >
+                      <div className="sm:col-span-5">
                         {/* A primeira linha é a instância de ENTRADA — a que vira
                             `roleta_configs.inbox_id`. Marcada porque, ao editar,
                             ela não pode mudar: trocá-la mudaria a chave da roleta. */}
-                        {idx === 0 && (
-                          <span className="mb-1 inline-block text-[10px] font-medium uppercase tracking-wide text-[#7c3aed]">
-                            Entrada
-                          </span>
-                        )}
-                        <select
+                        <span
+                          className={`mb-1 inline-block text-[10px] font-medium uppercase tracking-wide ${
+                            idx === 0 ? 'text-[#7c3aed]' : 'text-muted-foreground sm:invisible'
+                          }`}
+                        >
+                          {idx === 0 ? 'Entrada' : 'Número'}
+                        </span>
+                        <NativeSelect
                           value={inst.inbox_id}
                           onChange={e => updateInstance(inst.localId, 'inbox_id', e.target.value)}
                           disabled={idx === 0 && !!editing}
-                          className="w-full rounded-md border border-input bg-background px-2 py-2 text-sm disabled:opacity-50"
                         >
                           <option value="">Selecione o número...</option>
                           {inboxes.map(i => (
@@ -1256,9 +1271,9 @@ export default function RoletaConfigPage() {
                               {i.name}
                             </option>
                           ))}
-                        </select>
+                        </NativeSelect>
                       </div>
-                      <div className="col-span-4">
+                      <div className="sm:col-span-4 sm:pt-[22px]">
                         <Input
                           value={inst.label ?? ''}
                           onChange={e => updateInstance(inst.localId, 'label', e.target.value)}
@@ -1266,34 +1281,41 @@ export default function RoletaConfigPage() {
                         />
                       </div>
                       {showInstanceWeights && (
-                        <div className="col-span-2">
+                        <div className="sm:col-span-2 sm:pt-[22px]">
                           <Input
                             type="number"
                             min={0}
                             value={inst.weight}
                             onChange={e => updateInstance(inst.localId, 'weight', parseInt(e.target.value) || 0)}
                             placeholder="Peso"
+                            aria-label="Peso do número"
                           />
                         </div>
                       )}
-                      <div className={`${showInstanceWeights ? 'col-span-1' : 'col-span-3'} flex items-center gap-1 pt-2`}>
+                      <div
+                        className={`flex items-center gap-3 sm:gap-1 sm:pt-[26px] ${
+                          showInstanceWeights ? 'sm:col-span-1' : 'sm:col-span-3'
+                        }`}
+                      >
                         <button
                           type="button"
                           onClick={() => updateInstance(inst.localId, 'is_active', !inst.is_active)}
-                          className={inst.is_active ? 'text-green-500' : 'text-red-500'}
+                          className={`flex items-center gap-1.5 text-xs ${inst.is_active ? 'text-green-500' : 'text-red-500'}`}
                           title={inst.is_active ? 'Número ativo' : 'Número desativado'}
                         >
                           {inst.is_active
                             ? <ToggleRight className="h-5 w-5" />
                             : <ToggleLeft className="h-5 w-5" />}
+                          <span className="sm:hidden">{inst.is_active ? 'Ativo' : 'Desativado'}</span>
                         </button>
                         {instances.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeInstance(inst.localId)}
-                            className="text-red-500 hover:text-red-700"
+                            className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700"
                           >
                             <Trash2 className="h-4 w-4" />
+                            <span className="sm:hidden">Remover</span>
                           </button>
                         )}
                       </div>
@@ -1302,7 +1324,7 @@ export default function RoletaConfigPage() {
                           de 30/07/2026 repetido por número — e sem este aviso ele
                           voltaria a ser silencioso. */}
                       {inst.inbox_id && !loadingMembers && (membersByInbox[inst.inbox_id]?.length ?? 0) === 0 && (
-                        <p className="col-span-12 -mt-1 text-xs text-destructive">
+                        <p className="text-xs text-destructive sm:col-span-12 sm:-mt-1">
                           Ninguém tem acesso a {instanceName(inst.inbox_id)}. Libere o acesso na equipe
                           desse inbox, senão este número fica fora do sorteio.
                         </p>
@@ -1321,7 +1343,7 @@ export default function RoletaConfigPage() {
             )}
 
             {/* Ativo */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 lg:col-span-2">
               <button type="button" onClick={() => setIsActive(!isActive)} className="text-[#7c3aed]">
                 {isActive
                   ? <ToggleRight className="h-7 w-7 text-green-500" />
@@ -1329,17 +1351,19 @@ export default function RoletaConfigPage() {
               </button>
               <div>
                 <p className="text-sm font-medium">Roleta {isActive ? 'ativa' : 'desativada'}</p>
-                <p className="text-xs text-muted-foreground">Desativar para nao distribuir leads neste inbox.</p>
+                <p className="text-xs text-muted-foreground">Desativar para não distribuir leads neste inbox.</p>
               </div>
             </div>
 
-            {/* Modo de distribuicao — o coracao da tela */}
-            <div>
+            {/* Modo de distribuição — o coração da tela.
+                Os quatro cartões em 2×2 a partir de `sm`: empilhados eles
+                sozinhos ocupavam mais de uma tela de altura. */}
+            <div className="lg:col-span-2">
               <UILabel className="flex items-center gap-1.5 mb-2">
                 <Shuffle className="h-4 w-4" />
                 Como o lead é distribuído *
               </UILabel>
-              <div className="space-y-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 {MODES.map(opt => {
                   const Icon = opt.icon;
                   const active = mode === opt.value;
@@ -1348,7 +1372,7 @@ export default function RoletaConfigPage() {
                       key={opt.value}
                       type="button"
                       onClick={() => setMode(opt.value)}
-                      className={`w-full flex items-start gap-3 p-3 rounded-lg border text-left transition-colors ${
+                      className={`h-full w-full flex items-start gap-3 p-3 rounded-lg border text-left transition-colors ${
                         active ? 'border-[#7c3aed] bg-[#7c3aed]/5' : 'border-border hover:bg-muted/50'
                       }`}
                     >
@@ -1386,11 +1410,11 @@ export default function RoletaConfigPage() {
               </div>
             )}
 
-            {/* Numero do gestor */}
+            {/* Número do gestor */}
             <div>
               <UILabel className="flex items-center gap-1.5">
                 <Bell className="h-4 w-4" />
-                Numero do gestor (WhatsApp) *
+                Número do gestor (WhatsApp) *
               </UILabel>
               <Input
                 value={gestorNum}
@@ -1399,7 +1423,7 @@ export default function RoletaConfigPage() {
                 className="mt-1"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Recebera alertas de atribuicao, timeout e relatorios diarios/semanais.
+                Receberá alertas de atribuição, timeout e relatórios diários/semanais.
               </p>
             </div>
 
@@ -1409,25 +1433,26 @@ export default function RoletaConfigPage() {
                 <Users className="h-4 w-4" />
                 Grupo de avisos (opcional)
               </UILabel>
-              <select
-                value={gestorGroupJid}
-                onChange={e => setGestorGroupJid(e.target.value)}
-                disabled={loadingGroups}
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
-              >
-                <option value="">Nenhum</option>
-                {gestorGroupJid && !groups.some(g => g.id === gestorGroupJid) && (
-                  <option value={gestorGroupJid}>{gestorGroupJid}</option>
-                )}
-                {groups.map(g => {
-                  const crm = normalizeName(crmName);
-                  const n = normalizeName(g.name);
-                  const suggested = !!crm && (n.includes(crm) || crm.includes(n));
-                  return (
-                    <option key={g.id} value={g.id}>{g.name}{suggested ? '  ⭐ (sugerido)' : ''}</option>
-                  );
-                })}
-              </select>
+              <div className="mt-1">
+                <NativeSelect
+                  value={gestorGroupJid}
+                  onChange={e => setGestorGroupJid(e.target.value)}
+                  disabled={loadingGroups}
+                >
+                  <option value="">Nenhum</option>
+                  {gestorGroupJid && !groups.some(g => g.id === gestorGroupJid) && (
+                    <option value={gestorGroupJid}>{gestorGroupJid}</option>
+                  )}
+                  {groups.map(g => {
+                    const crm = normalizeName(crmName);
+                    const n = normalizeName(g.name);
+                    const suggested = !!crm && (n.includes(crm) || crm.includes(n));
+                    return (
+                      <option key={g.id} value={g.id}>{g.name}{suggested ? '  ⭐ (sugerido)' : ''}</option>
+                    );
+                  })}
+                </NativeSelect>
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {loadingGroups
                   ? 'Carregando grupos...'
@@ -1437,32 +1462,33 @@ export default function RoletaConfigPage() {
               </p>
             </div>
 
-            {/* Inbox de notificacao */}
+            {/* Número que envia os avisos */}
             <div>
               <UILabel className="flex items-center gap-1.5">
                 <Phone className="h-4 w-4" />
-                Inbox para notificacoes (opcional)
+                Número que envia os avisos (opcional)
               </UILabel>
-              <select
-                value={notifInboxId}
-                onChange={e => setNotifInboxId(e.target.value)}
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="">Mesma instância da roleta</option>
-                {notifInboxId && !inboxes.some(i => i.id === notifInboxId) && (
-                  <option value={notifInboxId}>{notifInboxId}</option>
-                )}
-                {inboxes.map(i => (
-                  <option key={i.id} value={i.id}>{i.name}</option>
-                ))}
-              </select>
+              <div className="mt-1">
+                <NativeSelect
+                  value={notifInboxId}
+                  onChange={e => setNotifInboxId(e.target.value)}
+                >
+                  <option value="">Mesma instância da roleta</option>
+                  {notifInboxId && !inboxes.some(i => i.id === notifInboxId) && (
+                    <option value={notifInboxId}>{notifInboxId}</option>
+                  )}
+                  {inboxes.map(i => (
+                    <option key={i.id} value={i.id}>{i.name}</option>
+                  ))}
+                </NativeSelect>
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Instância que ENVIA os alertas. Se vazio, usa a mesma da roleta.
               </p>
             </div>
 
             {/* Mensagens dos avisos (editáveis) */}
-            <div className="rounded-lg border border-border p-3 space-y-3">
+            <div className="rounded-lg border border-border p-3 space-y-3 lg:col-span-2">
               <UILabel className="flex items-center gap-1.5">
                 <Bell className="h-4 w-4" />
                 Mensagens dos avisos (opcional)
@@ -1673,7 +1699,7 @@ export default function RoletaConfigPage() {
             </div>
 
             {/* Fontes de leads (gatilhos por formulário) */}
-            <div className="rounded-lg border border-border p-3 space-y-2">
+            <div className="rounded-lg border border-border p-3 space-y-2 lg:col-span-2">
               <UILabel className="flex items-center gap-1.5">
                 <Shuffle className="h-4 w-4" />
                 Fontes de leads (gatilhos)
@@ -1714,7 +1740,7 @@ export default function RoletaConfigPage() {
             </div>
 
             {/* Corretores */}
-            <div>
+            <div className="lg:col-span-2">
               <div className="flex items-center justify-between mb-2">
                 <UILabel className="flex items-center gap-1.5">
                   <Users className="h-4 w-4" />
@@ -1734,7 +1760,7 @@ export default function RoletaConfigPage() {
                   {/* Percentual EFETIVO: com dois números ele é o produto das
                       duas fatias. Mostrar só peso/soma faria o gestor ler
                       números que não acontecem. */}
-                  {isMulti ? 'Distribuição real (número × corretor):' : 'Distribuicao real (peso / soma):'}
+                  {isMulti ? 'Distribuição real (número × corretor):' : 'Distribuição real (peso / soma):'}
                   {members.filter(m => m.is_active && m.user_id).map(m => {
                     const pct = effectivePct(m);
                     const u = users.find(u => u.id === m.user_id);
@@ -1775,23 +1801,28 @@ export default function RoletaConfigPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    {/* Os campos do corretor numa grade só: empilhados no
+                        celular, lado a lado no monitor. Sem `isMulti` são três
+                        campos, então a grade fecha em 3 colunas para não sobrar
+                        um buraco na linha. */}
+                    <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${isMulti ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
                       <div>
                         <UILabel className="text-xs">Corretor *</UILabel>
-                        <select
-                          value={m.user_id}
-                          onChange={e => selectCorretor(m.localId, e.target.value)}
-                          className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        >
-                          <option value="">
-                            {!inboxId ? 'Escolha a instância primeiro...' : 'Selecione...'}
-                          </option>
-                          {corretorOptionsFor(memberInbox(m)).map(o => (
-                            <option key={o.id} value={o.id}>
-                              {o.hasAccess ? o.name : `${o.name} — sem acesso à instância`}
+                        <div className="mt-1">
+                          <NativeSelect
+                            value={m.user_id}
+                            onChange={e => selectCorretor(m.localId, e.target.value)}
+                          >
+                            <option value="">
+                              {!inboxId ? 'Escolha a instância primeiro...' : 'Selecione...'}
                             </option>
-                          ))}
-                        </select>
+                            {corretorOptionsFor(memberInbox(m)).map(o => (
+                              <option key={o.id} value={o.id}>
+                                {o.hasAccess ? o.name : `${o.name} — sem acesso à instância`}
+                              </option>
+                            ))}
+                          </NativeSelect>
+                        </div>
                         {/* A mensagem é POR INSTÂNCIA: com números diferentes,
                             "ninguém tem acesso" precisa dizer a QUAL número, senão
                             manda o gestor liberar acesso no inbox errado. */}
@@ -1803,6 +1834,28 @@ export default function RoletaConfigPage() {
                           </p>
                         )}
                       </div>
+                      {/* Em qual número ELE atende. Só aparece quando há mais de
+                          um: com uma instância só a pergunta não existe. Trocar o
+                          número limpa o corretor, porque a lista de quem pode ser
+                          escolhido é outra — manter o antigo selecionado deixaria
+                          um corretor sem acesso gravado sem ninguém perceber. */}
+                      {isMulti && (
+                        <div>
+                          <UILabel className="text-xs">Atende pelo número</UILabel>
+                          <div className="mt-1">
+                            <NativeSelect
+                              value={memberInbox(m)}
+                              onChange={e => setMembers(prev => prev.map(x => (
+                                x.localId === m.localId ? { ...x, inbox_id: e.target.value, user_id: '' } : x
+                              )))}
+                            >
+                              {activeInstances.map(i => (
+                                <option key={i.inbox_id} value={i.inbox_id}>{instanceName(i.inbox_id)}</option>
+                              ))}
+                            </NativeSelect>
+                          </div>
+                        </div>
+                      )}
                       <div>
                         <UILabel className="text-xs">Peso (probabilidade relativa)</UILabel>
                         <Input
@@ -1813,36 +1866,15 @@ export default function RoletaConfigPage() {
                           className="mt-1"
                         />
                       </div>
-                    </div>
-                    {/* Em qual número ELE atende. Só aparece quando há mais de
-                        um: com uma instância só a pergunta não existe. Trocar o
-                        número limpa o corretor, porque a lista de quem pode ser
-                        escolhido é outra — manter o antigo selecionado deixaria
-                        um corretor sem acesso gravado sem ninguém perceber. */}
-                    {isMulti && (
                       <div>
-                        <UILabel className="text-xs">Atende pelo número</UILabel>
-                        <select
-                          value={memberInbox(m)}
-                          onChange={e => setMembers(prev => prev.map(x => (
-                            x.localId === m.localId ? { ...x, inbox_id: e.target.value, user_id: '' } : x
-                          )))}
-                          className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        >
-                          {activeInstances.map(i => (
-                            <option key={i.inbox_id} value={i.inbox_id}>{instanceName(i.inbox_id)}</option>
-                          ))}
-                        </select>
+                        <UILabel className="text-xs">WhatsApp pessoal * (com DDI)</UILabel>
+                        <Input
+                          value={m.personal_whatsapp_number}
+                          onChange={e => updateMember(m.localId, 'personal_whatsapp_number', e.target.value)}
+                          placeholder="5511999990000"
+                          className="mt-1"
+                        />
                       </div>
-                    )}
-                    <div>
-                      <UILabel className="text-xs">WhatsApp pessoal * (com DDI)</UILabel>
-                      <Input
-                        value={m.personal_whatsapp_number}
-                        onChange={e => updateMember(m.localId, 'personal_whatsapp_number', e.target.value)}
-                        placeholder="5511999990000"
-                        className="mt-1"
-                      />
                     </div>
                   </div>
                 ))}
