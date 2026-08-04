@@ -466,6 +466,13 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
                         <p className="text-sm font-medium leading-snug line-clamp-2" title={item.extracted_summary.title || item.property.title}>
                           {item.extracted_summary.title || item.property.title}
                         </p>
+                        {/* Book de empreendimento: avisa que a IA achou várias
+                            plantas, senão o corretor revisa achando que é uma só. */}
+                        {(item.property.typologies_count ?? 0) > 1 && (
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {item.property.typologies_count} tipologias
+                          </p>
+                        )}
                       </div>
 
                       {/* Preço */}
