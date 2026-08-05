@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Button, Input, Label, Textarea } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal } from 'lucide-react';
+import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon } from 'lucide-react';
 import {
   salesAgentsService,
   type SalesAgent,
@@ -24,6 +24,7 @@ import {
   type SalesAgentTestResult,
   type SalesAgentPropertyLink,
   type TestHistoryItem,
+  type TestMediaItem,
 } from '@/services/salesAgents/salesAgentsService';
 import inboxesService from '@/services/channels/inboxesService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
@@ -1915,23 +1916,35 @@ function PropertyLinkBox({
 
 // ---------------- Test ----------------
 
+// Turno da conversa de teste. `media` é só de exibição — a API recebe apenas
+// role/content, igual antes.
+type TestTurn = TestHistoryItem & { media?: TestMediaItem[] };
+
 function TestTab({ agent }: { agent: SalesAgent }) {
-  const [history, setHistory] = useState<TestHistoryItem[]>([]);
+  const [history, setHistory] = useState<TestTurn[]>([]);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<SalesAgentTestResult | null>(null);
   const [propertyCode, setPropertyCode] = useState('');
+  // O runner real manda a mídia UMA vez por imóvel, não a cada mensagem. Sem isto
+  // o teste repetiria a foto em todo turno e daria uma impressão errada.
+  const [mediaShownFor, setMediaShownFor] = useState<string | null>(null);
 
   const send = async () => {
     if (!message.trim()) return;
     const userMsg = message.trim();
+    const code = propertyCode.trim();
     setMessage('');
     setBusy(true);
-    const newHistory: TestHistoryItem[] = [...history, { role: 'user', content: userMsg }];
+    const apiHistory: TestHistoryItem[] = history.map(({ role, content }) => ({ role, content }));
+    const newHistory: TestTurn[] = [...history, { role: 'user', content: userMsg }];
     setHistory(newHistory);
     try {
-      const result = await salesAgentsService.testRun(agent.id, userMsg, history, 'Lead Teste', propertyCode.trim() || undefined);
-      setHistory([...newHistory, { role: 'assistant', content: result.reply }]);
+      const result = await salesAgentsService.testRun(agent.id, userMsg, apiHistory, 'Lead Teste', code || undefined);
+      const firstTimeForThisProperty = mediaShownFor !== code;
+      const media = firstTimeForThisProperty ? result.media ?? [] : [];
+      if (media.length > 0) setMediaShownFor(code);
+      setHistory([...newHistory, { role: 'assistant', content: result.reply, media }]);
       setLast(result);
     } catch {
       toast.error('Erro no teste (verifique se a chave da IA está configurada)');
@@ -1951,10 +1964,17 @@ function TestTab({ agent }: { agent: SalesAgent }) {
           <p className="text-sm text-muted-foreground text-center py-8">Mande uma mensagem pra ver a IA responder.</p>
         ) : (
           history.map((h, i) => (
-            <div key={i} className={`flex ${h.role === 'user' ? 'justify-start' : 'justify-end'}`}>
-              <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${h.role === 'user' ? 'bg-background border' : 'bg-primary/10 text-foreground'}`}>
-                {h.content}
+            <div key={i} className="space-y-1">
+              <div className={`flex ${h.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${h.role === 'user' ? 'bg-background border' : 'bg-primary/10 text-foreground'}`}>
+                  {h.content}
+                </div>
               </div>
+              {(h.media ?? []).map((m, j) => (
+                <div key={j} className="flex justify-end">
+                  <TestMediaBubble item={m} />
+                </div>
+              ))}
             </div>
           ))
         )}
@@ -1978,6 +1998,36 @@ function TestTab({ agent }: { agent: SalesAgent }) {
           {last.lead_summary && <div>Resumo: {last.lead_summary}</div>}
         </div>
       )}
+    </div>
+  );
+}
+
+// A foto/link que o lead REAL receberia. Aqui não há canal pra enviar, então em
+// vez de a mídia sumir — deixando a IA parecer que prometeu "te mando as fotos"
+// e não cumpriu — mostramos o que teria ido, com a foto de verdade.
+function TestMediaBubble({ item }: { item: TestMediaItem }) {
+  if (item.type === 'image') {
+    return (
+      <div className="max-w-[80%] rounded-lg border border-primary/30 bg-primary/5 overflow-hidden">
+        <img src={item.url} alt="Foto do imóvel" className="w-full max-h-48 object-cover" />
+        <div className="px-3 py-2 space-y-1">
+          <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium">
+            <ImageIcon className="h-3 w-3" /> Foto enviada no WhatsApp
+          </div>
+          {item.caption && <p className="text-xs text-muted-foreground whitespace-pre-line">{item.caption}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-[80%] rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+      <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium mb-0.5">
+        <Link2 className="h-3 w-3" /> Link enviado no WhatsApp
+      </div>
+      <a href={item.url} target="_blank" rel="noreferrer" className="text-xs underline break-all">
+        {item.url}
+      </a>
     </div>
   );
 }

@@ -278,8 +278,20 @@ export interface SalesAgentDocument {
   updated_at: string;
 }
 
+/**
+ * Foto e link que o lead REAL receberia junto do texto. No teste não existe canal
+ * pra enviar, então em vez de a mídia sumir (e a IA parecer que prometeu e não
+ * cumpriu) a tela mostra o que teria ido.
+ */
+export interface TestMediaItem {
+  type: 'image' | 'link';
+  url: string;
+  caption?: string;
+}
+
 export interface SalesAgentTestResult {
   reply: string;
+  media?: TestMediaItem[];
   temperature: 'hot' | 'warm' | 'cold' | 'unknown';
   should_transfer: boolean;
   transfer_reason: string | null;
