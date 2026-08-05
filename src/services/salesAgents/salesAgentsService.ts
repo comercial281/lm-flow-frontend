@@ -306,6 +306,32 @@ export interface TestHistoryItem {
   content: string;
 }
 
+/**
+ * O que o lead real traz junto da primeira mensagem e o teste digitado à mão não
+ * tem como reproduzir.
+ */
+export interface TestLeadContext {
+  contactName?: string;
+  /** De onde veio: campanha, anúncio, plataforma. */
+  source?: string;
+  /** Interesse inicial declarado (ex.: veio de um formulário perguntando isso). */
+  interest?: string;
+  /** Respostas do formulário do Meta — a IA usa pra não perguntar de novo. */
+  formAnswers?: Record<string, string>;
+  propertyCode?: string;
+}
+
+/** Contexto lido de uma conversa real, pra carregar no painel de teste. */
+export interface LoadedConversationContext {
+  conversation_id: string;
+  history: TestHistoryItem[];
+  contact_name: string | null;
+  source: string | null;
+  interest: string | null;
+  form_answers: Record<string, string>;
+  property_code: string | null;
+}
+
 export type SalesAgentLessonKind = 'rule' | 'good_example' | 'bad_example';
 export interface SalesAgentLesson {
   id: string;
@@ -356,20 +382,43 @@ export const salesAgentsService = {
     return (res.data as { data: GeneratedAgentConfig }).data;
   },
 
+  /**
+   * O `context` é o que separa o teste da conversa real: o lead de verdade chega
+   * com nome, origem de campanha e respostas do formulário do Meta, e é isso que
+   * faz a IA saber do que está falando em vez de perguntar de novo. O backend
+   * sempre aceitou esses campos — a tela é que mandava só o nome, chumbado.
+   */
   async testRun(
     id: string,
     message: string,
     history: TestHistoryItem[] = [],
-    contactName?: string,
-    propertyCode?: string,
+    context: TestLeadContext = {},
   ): Promise<SalesAgentTestResult> {
     const res = await api.post(`${BASE}/${id}/test_run`, {
       message,
       history,
-      contact_name: contactName,
-      property_code: propertyCode || undefined,
+      contact_name: context.contactName || undefined,
+      source: context.source || undefined,
+      interest: context.interest || undefined,
+      form_answers: Object.keys(context.formAnswers ?? {}).length ? context.formAnswers : undefined,
+      property_code: context.propertyCode || undefined,
     });
     return (res.data as { data: SalesAgentTestResult }).data;
+  },
+
+  /**
+   * Carrega uma conversa REAL no painel de teste (histórico + contexto do lead).
+   * Só leitura: não chama o Claude, não grava e não envia mensagem, então dá pra
+   * apontar pra um lead ativo sem risco.
+   */
+  async conversationContext(
+    id: string,
+    opts: { conversationId?: string; phone?: string },
+  ): Promise<LoadedConversationContext> {
+    const res = await api.get(`${BASE}/${id}/conversation_context`, {
+      params: { conversation_id: opts.conversationId || undefined, phone: opts.phone || undefined },
+    });
+    return (res.data as { data: LoadedConversationContext }).data;
   },
 
   // Ativa a IA pra atender um lead escolhido (proativo): inicia OU continua a
