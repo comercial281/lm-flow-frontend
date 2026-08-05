@@ -27,7 +27,10 @@ import {
   Archive,
   Pin,
   Bot,
+  BotOff,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { chatService } from '@/services/chat/chatService';
 import { Conversation } from '@/types/chat/api';
 import { useConversations } from '@/hooks/chat/useConversations';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -60,6 +63,26 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
   const [isUpdatingArchive, setIsUpdatingArchive] = useState(false);
   const [open, setOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [togglingAi, setTogglingAi] = useState(false);
+  const [aiPausedOverride, setAiPausedOverride] = useState<boolean | null>(null);
+
+  // Uma flag só, não a regra inteira: quem decide o estado final é o backend.
+  const aiPaused =
+    aiPausedOverride ?? conversation?.additional_attributes?.sales_agent_paused === true;
+
+  const toggleAi = async (enable: boolean) => {
+    if (!conversation?.id) return;
+    setTogglingAi(true);
+    try {
+      const state = await chatService.toggleSalesAgent(String(conversation.id), enable);
+      setAiPausedOverride(state.status === 'paused');
+      toast.success(state.label);
+    } catch {
+      toast.error('Não consegui mudar a IA neste lead.');
+    } finally {
+      setTogglingAi(false);
+    }
+  };
 
   const { t } = useLanguage('chat');
   const conversations = useConversations();
@@ -174,6 +197,22 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
         >
           <Bot className="h-4 w-4" />
           Ativar IA pra este lead
+        </DropdownMenuItem>
+
+        {/* O caminho de volta, que não existia: só dava pra LIGAR, e pra fazer a
+            IA parar restava esperar o handoff — que é decisão dela, não do
+            corretor. Lê só a flag de pausa; a precedência entre pausa, handoff e
+            ativação é do backend, e duplicá-la aqui daria divergência. */}
+        <DropdownMenuItem
+          onClick={() => {
+            setOpen(false);
+            void toggleAi(aiPaused);
+          }}
+          disabled={togglingAi}
+          className="flex items-center gap-2"
+        >
+          <BotOff className="h-4 w-4" />
+          {aiPaused ? 'Religar IA neste lead' : 'Desligar IA neste lead'}
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />

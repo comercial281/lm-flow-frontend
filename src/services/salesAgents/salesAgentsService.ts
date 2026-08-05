@@ -6,6 +6,15 @@ export type ActiveHoursMode = 'always' | 'outside_business' | 'custom';
 export interface ActiveHoursWindow {
   start: string; // "HH:MM"
   end: string;   // "HH:MM"
+  /**
+   * Dias da semana em que ESTA janela vale (0=domingo … 6=sábado).
+   * Ausente ou vazio = todos os dias.
+   *
+   * O campo existia no banco havia meses e não fazia nada: o backend descartava
+   * o array no strong params e o gate de horário nem lia. Agora vale de verdade
+   * — janela que atravessa a meia-noite conta pelo dia de INÍCIO.
+   */
+  days?: number[];
 }
 export interface ActiveHours {
   mode?: ActiveHoursMode;
@@ -76,9 +85,69 @@ export interface SalesAgent {
   opening_image_url: string | null;
   opening_audio_url: string | null;
   openings: SalesAgentOpening[];
+  /** Desempate quando o mesmo canal tem mais de um agente (maior ganha). */
+  priority: number;
+  /** Follow-up respeita TAMBÉM o horário de atuação, além da janela diurna fixa. */
+  followup_respect_active_hours: boolean;
+  /** Avisar o lead que estamos fora do horário (uma vez por conversa por dia). */
+  out_of_hours_reply: boolean;
+  out_of_hours_message: string | null;
+  /** Deixa a IA consultar o catálogo real de imóveis pra oferecer alternativa. */
+  catalog_search_enabled: boolean;
   documents_count: number;
   created_at: string;
   updated_at: string;
+}
+
+/** Um item do checklist de "essa IA está mesmo no ar?". */
+export interface HealthItem {
+  key: string;
+  label: string;
+  status: 'ok' | 'warning' | 'error';
+  detail: string;
+}
+
+export interface HealthReport {
+  status: 'ok' | 'warning' | 'error';
+  items: HealthItem[];
+}
+
+/** Um turno da IA: respondeu, pulou (com motivo) ou falhou (com o erro real). */
+export interface SalesAgentRun {
+  id: string;
+  kind: 'live' | 'followup' | 'engage' | 'test';
+  status: 'replied' | 'skipped' | 'failed';
+  delivered: boolean;
+  skip_reason: string | null;
+  reason_label: string;
+  model: string | null;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+  latency_ms: number | null;
+  error_class: string | null;
+  error_message: string | null;
+  conversation_id: string | null;
+  created_at: string;
+}
+
+export interface SalesAgentRunTotals {
+  runs: number;
+  replied: number;
+  skipped: number;
+  failed: number;
+  cost_usd: number;
+  input_tokens: number;
+  output_tokens: number;
+}
+
+/** Prova de que as camadas de conhecimento chegaram ao prompt, sem gastar crédito. */
+export interface PromptPreview {
+  prompt: string;
+  length: number;
+  has_global_knowledge: boolean;
+  has_client_knowledge: boolean;
+  has_lessons: boolean;
 }
 
 // Recepção inicial por CAMPANHA: a IA escolhe a que casa com a origem/form/palavra
@@ -185,6 +254,11 @@ export interface SalesAgentPayload {
   opening_image_url?: string | null;
   opening_audio_url?: string | null;
   openings?: SalesAgentOpening[];
+  priority?: number;
+  followup_respect_active_hours?: boolean;
+  out_of_hours_reply?: boolean;
+  out_of_hours_message?: string | null;
+  catalog_search_enabled?: boolean;
 }
 
 export interface SalesAgentDocument {
@@ -204,8 +278,20 @@ export interface SalesAgentDocument {
   updated_at: string;
 }
 
+/**
+ * Foto e link que o lead REAL receberia junto do texto. No teste não existe canal
+ * pra enviar, então em vez de a mídia sumir (e a IA parecer que prometeu e não
+ * cumpriu) a tela mostra o que teria ido.
+ */
+export interface TestMediaItem {
+  type: 'image' | 'link';
+  url: string;
+  caption?: string;
+}
+
 export interface SalesAgentTestResult {
   reply: string;
+  media?: TestMediaItem[];
   temperature: 'hot' | 'warm' | 'cold' | 'unknown';
   should_transfer: boolean;
   transfer_reason: string | null;
@@ -218,6 +304,32 @@ export interface SalesAgentTestResult {
 export interface TestHistoryItem {
   role: 'user' | 'assistant';
   content: string;
+}
+
+/**
+ * O que o lead real traz junto da primeira mensagem e o teste digitado à mão não
+ * tem como reproduzir.
+ */
+export interface TestLeadContext {
+  contactName?: string;
+  /** De onde veio: campanha, anúncio, plataforma. */
+  source?: string;
+  /** Interesse inicial declarado (ex.: veio de um formulário perguntando isso). */
+  interest?: string;
+  /** Respostas do formulário do Meta — a IA usa pra não perguntar de novo. */
+  formAnswers?: Record<string, string>;
+  propertyCode?: string;
+}
+
+/** Contexto lido de uma conversa real, pra carregar no painel de teste. */
+export interface LoadedConversationContext {
+  conversation_id: string;
+  history: TestHistoryItem[];
+  contact_name: string | null;
+  source: string | null;
+  interest: string | null;
+  form_answers: Record<string, string>;
+  property_code: string | null;
 }
 
 export type SalesAgentLessonKind = 'rule' | 'good_example' | 'bad_example';
@@ -270,20 +382,43 @@ export const salesAgentsService = {
     return (res.data as { data: GeneratedAgentConfig }).data;
   },
 
+  /**
+   * O `context` é o que separa o teste da conversa real: o lead de verdade chega
+   * com nome, origem de campanha e respostas do formulário do Meta, e é isso que
+   * faz a IA saber do que está falando em vez de perguntar de novo. O backend
+   * sempre aceitou esses campos — a tela é que mandava só o nome, chumbado.
+   */
   async testRun(
     id: string,
     message: string,
     history: TestHistoryItem[] = [],
-    contactName?: string,
-    propertyCode?: string,
+    context: TestLeadContext = {},
   ): Promise<SalesAgentTestResult> {
     const res = await api.post(`${BASE}/${id}/test_run`, {
       message,
       history,
-      contact_name: contactName,
-      property_code: propertyCode || undefined,
+      contact_name: context.contactName || undefined,
+      source: context.source || undefined,
+      interest: context.interest || undefined,
+      form_answers: Object.keys(context.formAnswers ?? {}).length ? context.formAnswers : undefined,
+      property_code: context.propertyCode || undefined,
     });
     return (res.data as { data: SalesAgentTestResult }).data;
+  },
+
+  /**
+   * Carrega uma conversa REAL no painel de teste (histórico + contexto do lead).
+   * Só leitura: não chama o Claude, não grava e não envia mensagem, então dá pra
+   * apontar pra um lead ativo sem risco.
+   */
+  async conversationContext(
+    id: string,
+    opts: { conversationId?: string; phone?: string },
+  ): Promise<LoadedConversationContext> {
+    const res = await api.get(`${BASE}/${id}/conversation_context`, {
+      params: { conversation_id: opts.conversationId || undefined, phone: opts.phone || undefined },
+    });
+    return (res.data as { data: LoadedConversationContext }).data;
   },
 
   // Ativa a IA pra atender um lead escolhido (proativo): inicia OU continua a
@@ -307,6 +442,35 @@ export const salesAgentsService = {
       params: { property_code: propertyCode || undefined },
     });
     return (res.data as { data: SalesAgentPropertyLink }).data;
+  },
+
+  // --- diagnóstico e caixa-preta ---
+
+  // Checklist de "essa IA está mesmo no ar?": canal, credenciais da Evolution,
+  // chave da IA, base de conhecimento, horário, gatilhos e disputa de agentes.
+  async diagnostics(id: string): Promise<HealthReport> {
+    const res = await api.get(`${BASE}/${id}/diagnostics`);
+    return (res.data as { data: HealthReport }).data;
+  },
+
+  // Últimos turnos: o que respondeu, o que pulou (com o motivo) e o que falhou
+  // (com o erro real). Antes isso só existia no log do Railway.
+  async runs(
+    id: string,
+    opts: { status?: string; days?: number; limit?: number } = {},
+  ): Promise<{ runs: SalesAgentRun[]; totals: SalesAgentRunTotals }> {
+    const res = await api.get(`${BASE}/${id}/runs`, {
+      params: { status: opts.status || undefined, days: opts.days ?? 30, limit: opts.limit ?? 50 },
+    });
+    return (res.data as { data: { runs: SalesAgentRun[]; totals: SalesAgentRunTotals } }).data;
+  },
+
+  // Monta o system prompt SEM chamar o Claude (custo zero) e confirma se o
+  // cérebro universal, a base do cliente e as lições chegaram. Existia na API
+  // desde sempre e não tinha botão em lugar nenhum.
+  async testPrompt(id: string, message?: string): Promise<PromptPreview> {
+    const res = await api.post(`${BASE}/${id}/test_prompt`, { message: message || undefined });
+    return (res.data as { data: PromptPreview }).data;
   },
 
   // --- base de conhecimento ---

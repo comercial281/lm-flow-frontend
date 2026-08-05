@@ -40,6 +40,40 @@ export interface RoletaMember {
 // Os nomes aqui são os mesmos que aparecem na tela, de propósito.
 export type DistributionMode = 'rodizio' | 'leilao' | 'manual' | 'disponibilidade';
 
+/**
+ * Horário de funcionamento da roleta.
+ *
+ * ⚠️ O campo `business_hours_config` existe no banco desde que a tabela nasceu,
+ * era aceito pela API e devolvido no JSON — e NÃO FAZIA NADA: nenhum motor lia a
+ * coluna, e esta tela nunca enviou o campo (ele nem estava no Payload). Quem
+ * configurasse horário por fora achava que tinha configurado.
+ *
+ * Mesmo formato do `active_hours` da IA Vendedora, mais os dois campos do
+ * plantão. `always` (ou vazio) = 24h, que é o valor de toda roleta existente.
+ */
+export type RoletaHoursMode = 'always' | 'custom';
+
+export interface RoletaHoursWindow {
+  start: string; // "HH:MM"
+  end: string;   // "HH:MM"
+  /** 0=domingo … 6=sábado. Ausente ou vazio = todos os dias. */
+  days?: number[];
+}
+
+export interface RoletaBusinessHours {
+  mode?: RoletaHoursMode;
+  tz?: string;
+  windows?: RoletaHoursWindow[];
+  /**
+   * O número de PLANTÃO: quem atende o lead que chega com a roleta fechada.
+   * Qualquer inbox da conta — não precisa ser um dos números da roleta.
+   * Nulo/ausente = ninguém atende, o lead fica sem dono no funil.
+   */
+  after_hours_inbox_id?: string | null;
+  /** Quando o horário reabre, o lead parado no plantão volta pro sorteio sozinho. */
+  auto_distribute_on_open?: boolean;
+}
+
 export interface RoletaConfig {
   id: string;
   // `name` é o que o gestor digitou e pode ser nulo; `display_name` é o que a
@@ -70,7 +104,7 @@ export interface RoletaConfig {
   msg_grupo_enabled?: boolean;
   msg_grupo_repasse_enabled?: boolean;
   notification_inbox_id: string | null;
-  business_hours_config: Record<string, unknown>;
+  business_hours_config: RoletaBusinessHours;
   instances?: RoletaInstance[];
   // A FLAG do cliente: pode adicionar um segundo número? Liberada por cliente
   // pela Leal Mídia (nasce desligada).
@@ -103,6 +137,10 @@ export interface RoletaConfigPayload {
   msg_grupo_enabled?: boolean;
   msg_grupo_repasse_enabled?: boolean;
   notification_inbox_id?: string | null;
+  // ⚠️ Faltava aqui, e era por isso que o horário nunca chegava ao backend: a
+  // tela recebia o campo no GET e o descartava no save. Opcional porque roleta
+  // sem horário (24h) não manda nada — que é o estado de todas elas hoje.
+  business_hours_config?: RoletaBusinessHours;
   // Sincronizadas DENTRO de create/update, não numa rota própria: o RBAC deriva
   // a permissão pelo nome da action, então uma action nova exigiria uma
   // permissão que nenhum cargo tem e a tela tomaria 403 sem pista nenhuma.
@@ -139,6 +177,10 @@ export type RoletaOutcome =
   | 'roleta_inexistente'
   | 'roleta_inativa'
   | 'modo_manual'
+  // Chegou com a roleta fechada: ninguém foi sorteado e quem atende é o número
+  // de plantão. E o par dele, quando o horário reabre e o lead entra no sorteio.
+  | 'fora_do_horario'
+  | 'distribuido_na_abertura'
   | 'sem_membros'
   | 'sem_acesso_ao_inbox'
   | 'roleta_esgotada'

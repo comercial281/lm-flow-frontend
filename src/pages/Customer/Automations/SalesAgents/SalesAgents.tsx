@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Button, Input, Label, Textarea } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal } from 'lucide-react';
+import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon } from 'lucide-react';
 import {
   salesAgentsService,
   type SalesAgent,
@@ -11,6 +11,11 @@ import {
   type GeneratedAgentConfig,
   type ActiveHours,
   type ActiveHoursMode,
+  type ActiveHoursWindow,
+  type HealthReport,
+  type SalesAgentRun,
+  type SalesAgentRunTotals,
+  type PromptPreview,
   type SalesAgentTrigger,
   type SalesAgentTriggerType,
   type SalesAgentOpening,
@@ -19,11 +24,14 @@ import {
   type SalesAgentTestResult,
   type SalesAgentPropertyLink,
   type TestHistoryItem,
+  type TestMediaItem,
 } from '@/services/salesAgents/salesAgentsService';
+import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
+import { WEEKDAYS } from '@/components/schedule/scheduleWindows';
 import inboxesService from '@/services/channels/inboxesService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 
-type Tab = 'config' | 'knowledge' | 'learning' | 'test';
+type Tab = 'config' | 'knowledge' | 'learning' | 'test' | 'diagnostico';
 
 interface InboxOption {
   id: string | number;
@@ -147,6 +155,14 @@ export default function SalesAgents() {
         opening_image_url: patch.opening_image_url ?? selected.opening_image_url,
         opening_audio_url: patch.opening_audio_url ?? selected.opening_audio_url,
         openings: patch.openings ?? selected.openings,
+        priority: patch.priority ?? selected.priority,
+        followup_respect_active_hours: patch.followup_respect_active_hours ?? selected.followup_respect_active_hours,
+        out_of_hours_reply: patch.out_of_hours_reply ?? selected.out_of_hours_reply,
+        catalog_search_enabled: patch.catalog_search_enabled ?? selected.catalog_search_enabled,
+        // `in` e não `??`: aqui null quer dizer "apagar o texto e voltar pro
+        // automático", e `??` trataria isso como "não mexeu", tornando o campo
+        // impossível de limpar depois de preenchido uma vez.
+        out_of_hours_message: 'out_of_hours_message' in patch ? patch.out_of_hours_message : selected.out_of_hours_message,
       });
       setSelected(updated);
       setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
@@ -246,7 +262,7 @@ export default function SalesAgents() {
 
             {/* Abas */}
             <div className="flex gap-1 border-b border-sidebar-border mb-4">
-              {([['config', 'Configuração'], ['knowledge', 'Base de Conhecimento'], ['learning', 'Aprendizado'], ['test', 'Testar']] as [Tab, string][]).map(
+              {([['config', 'Configuração'], ['knowledge', 'Base de Conhecimento'], ['learning', 'Aprendizado'], ['test', 'Testar'], ['diagnostico', 'Diagnóstico']] as [Tab, string][]).map(
                 ([key, label]) => (
                   <button
                     key={key}
@@ -267,6 +283,7 @@ export default function SalesAgents() {
             {tab === 'knowledge' && <KnowledgeTab agent={selected} onCountChange={loadAgents} />}
             {tab === 'learning' && <LearningTab agent={selected} />}
             {tab === 'test' && <TestTab agent={selected} />}
+            {tab === 'diagnostico' && <DiagnosticsTab agent={selected} />}
           </div>
         )}
       </main>
@@ -418,6 +435,25 @@ function ConfigTab({
           ))}
         </select>
         <p className="text-xs text-muted-foreground mt-1">Escolha a instância (número/canal do WhatsApp) onde a IA vai operar: ela recebe e responde os leads por essa instância.</p>
+      </div>
+
+      {/* Mais de um agente no mesmo canal é permitido (ex: um só pro lançamento X,
+          outro pro resto). Antes disso a escolha era aleatória e podia trocar de
+          agente no meio da conversa; agora quem tem gatilho específico ganha, e a
+          prioridade desempata. */}
+      <div>
+        <Label htmlFor="priority">Prioridade neste canal</Label>
+        <Input
+          id="priority"
+          type="number"
+          className="mt-1 w-32"
+          value={agent.priority ?? 0}
+          onChange={(e) => onChange({ ...agent, priority: Number(e.target.value) })}
+          onBlur={() => onSave({ priority: Number(agent.priority) || 0 })}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Só importa se houver mais de uma IA no mesmo canal: quem tem gatilho específico atende primeiro e, em caso de empate, o número maior ganha. Uma vez que uma IA assume a conversa, ela continua até a transferência.
+        </p>
       </div>
 
       <div>
@@ -600,23 +636,20 @@ function AudioSection({ agent, onChange, onSave }: {
   );
 }
 
+const DEFAULT_WINDOW: ActiveHoursWindow = { start: '08:00', end: '18:00', days: [1, 2, 3, 4, 5] };
+
 function ScheduleSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
   const hours: ActiveHours = agent.active_hours ?? {};
   const mode: ActiveHoursMode = hours.mode ?? 'always';
   const enabled = mode !== 'always';
-  const win = hours.windows?.[0] ?? { start: '08:00', end: '18:00' };
+  const windows: ActiveHoursWindow[] = hours.windows?.length ? hours.windows : [DEFAULT_WINDOW];
 
-  const toggleEnabled = (on: boolean) => {
-    onSave({ active_hours: { ...hours, mode: on ? 'outside_business' : 'always', tz: hours.tz ?? 'America/Sao_Paulo' } });
-  };
-  const setMode = (m: ActiveHoursMode) => {
-    const next: ActiveHours = { ...hours, mode: m, tz: hours.tz ?? 'America/Sao_Paulo' };
-    if (m === 'custom' && !next.windows?.length) next.windows = [{ start: '08:00', end: '18:00' }];
-    onSave({ active_hours: next });
-  };
-  const setWindow = (start: string, end: string) => {
-    onSave({ active_hours: { ...hours, mode: 'custom', tz: hours.tz ?? 'America/Sao_Paulo', windows: [{ start, end }] } });
-  };
+  const commit = (patch: Partial<ActiveHours>) =>
+    onSave({ active_hours: { ...hours, tz: hours.tz ?? 'America/Sao_Paulo', ...patch } });
+
+  const toggleEnabled = (on: boolean) => commit({ mode: on ? 'custom' : 'always', windows: on ? windows : hours.windows });
+  const setMode = (m: ActiveHoursMode) =>
+    commit({ mode: m, windows: m === 'custom' && !hours.windows?.length ? [DEFAULT_WINDOW] : hours.windows });
 
   return (
     <div className="pt-2 border-t border-sidebar-border">
@@ -627,37 +660,78 @@ function ScheduleSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
         </div>
         <Toggle on={enabled} onChange={toggleEnabled} />
       </div>
+
       {enabled && (
-      <div className="grid grid-cols-1 gap-2 mt-2">
-        {SCHEDULE_OPTIONS.map(([m, title, help]) => (
-          <label
-            key={m}
-            className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer ${
-              mode === m ? 'border-primary bg-primary/5' : 'border-sidebar-border'
-            }`}
-          >
-            <input type="radio" name="schedule_mode" className="mt-1" checked={mode === m} onChange={() => setMode(m)} />
-            <div>
-              <div className="text-sm font-medium">{title}</div>
-              <div className="text-xs text-muted-foreground">{help}</div>
-            </div>
-          </label>
-        ))}
-      </div>
+        <div className="grid grid-cols-1 gap-2 mt-2">
+          {SCHEDULE_OPTIONS.map(([m, title, help]) => (
+            <label
+              key={m}
+              className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer ${
+                mode === m ? 'border-primary bg-primary/5' : 'border-sidebar-border'
+              }`}
+            >
+              <input type="radio" name="schedule_mode" className="mt-1" checked={mode === m} onChange={() => setMode(m)} />
+              <div>
+                <div className="text-sm font-medium">{title}</div>
+                <div className="text-xs text-muted-foreground">{help}</div>
+              </div>
+            </label>
+          ))}
+        </div>
       )}
+
+      {/* Várias janelas, cada uma com seus dias. Antes só existia UMA janela e os
+          dias nem apareciam: "segunda a sexta das 8h às 18h, fechado no almoço"
+          era impossível de configurar.
+
+          O editor mora em components/schedule desde que a roleta passou a ter
+          horário também — duas cópias da regra de dias/meia-noite divergiriam. */}
       {enabled && mode === 'custom' && (
-        <div className="flex items-end gap-3 mt-2">
-          <div>
-            <Label htmlFor="win_start" className="text-xs">Das</Label>
-            <Input id="win_start" type="time" value={win.start} className="mt-1 w-32"
-              onChange={(e) => setWindow(e.target.value, win.end)} />
+        <WeeklyWindowsEditor
+          value={windows}
+          idPrefix="ia_win"
+          onChange={(next) => commit({ mode: 'custom', windows: next })}
+        />
+      )}
+
+      {enabled && <OutOfHoursSection agent={agent} onSave={onSave} />}
+    </div>
+  );
+}
+
+// Fora do horário o lead recebia SILÊNCIO: o sistema só parava de responder e
+// ninguém retomava depois. Aqui o dono liga um aviso automático, que não passa
+// pelo Claude (custo zero) e sai no máximo uma vez por conversa por dia.
+function OutOfHoursSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
+  const on = !!agent.out_of_hours_reply;
+  const [draft, setDraft] = useState(agent.out_of_hours_message ?? '');
+
+  useEffect(() => { setDraft(agent.out_of_hours_message ?? ''); }, [agent.id, agent.out_of_hours_message]);
+
+  return (
+    <div className="mt-4 pt-3 border-t border-sidebar-border">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-medium">Avisar quem escrever fora do horário</div>
+          <div className="text-xs text-muted-foreground">
+            Sem isso, o lead que manda mensagem de madrugada não recebe absolutamente nada.
           </div>
-          <div>
-            <Label htmlFor="win_end" className="text-xs">Até</Label>
-            <Input id="win_end" type="time" value={win.end} className="mt-1 w-32"
-              onChange={(e) => setWindow(win.start, e.target.value)} />
-          </div>
-          <p className="text-xs text-muted-foreground pb-2">Se o fim for menor que o início, vira a madrugada (ex: 20h às 06h).</p>
+        </div>
+        <Toggle on={on} onChange={(v) => onSave({ out_of_hours_reply: v })} />
+      </div>
+
+      {on && (
+        <div className="mt-2">
+          <Label htmlFor="ooh_msg" className="text-xs">Mensagem (opcional)</Label>
+          <Textarea
+            id="ooh_msg"
+            rows={2}
+            className="mt-1"
+            placeholder="Vazio = a IA escreve sozinha e já diz quando volta (ex: “te respondo amanhã às 8h”)."
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => onSave({ out_of_hours_message: draft.trim() || null })}
+          />
         </div>
       )}
     </div>
@@ -795,10 +869,6 @@ function VisitSection({
 }
 
 // ---------------- Janelas de disponibilidade da visita ----------------
-
-const WEEKDAYS: [number, string][] = [
-  [1, 'Seg'], [2, 'Ter'], [3, 'Qua'], [4, 'Qui'], [5, 'Sex'], [6, 'Sáb'], [0, 'Dom'],
-];
 
 function VisitWindows({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
   const c = agent.visit_config ?? {};
@@ -1119,6 +1189,11 @@ function IntelligenceSection({
           title="Oferecer outras opções" desc="Quando não tem o imóvel exato, sugere alternativas reais e não perde o lead." />
         <CheckRow checked={agent.rich_media_enabled !== false} onChange={(v) => onSave({ rich_media_enabled: v })}
           title="Mandar foto e link do imóvel" desc="Envia mídia do imóvel de interesse no WhatsApp." />
+        {/* Sem isto, "Oferecer outras opções" era promessa vazia: a IA só
+            enxergava o imóvel do anúncio e não tinha como consultar o cadastro. */}
+        <CheckRow checked={agent.catalog_search_enabled !== false} onChange={(v) => onSave({ catalog_search_enabled: v })}
+          title="Consultar o cadastro de imóveis"
+          desc="Deixa a IA buscar imóveis reais do seu cadastro (bairro, quartos, faixa de preço) pra sugerir alternativa. Sem isso ela só conhece o imóvel do anúncio." />
       </div>
 
       {/* Avaliação no Google */}
@@ -1190,6 +1265,16 @@ function FollowupSection({
               onChange={(e) => onChange({ ...agent, followup_max_attempts: Number(e.target.value) })}
               onBlur={() => onSave({ followup_max_attempts: Math.max(0, Number(agent.followup_max_attempts) || 0) })} />
           </div>
+
+          {/* O follow-up nunca olhou o horário de atuação: um agente configurado
+              pra atender "só fora do comercial" cutucava lead às 14h. Virou
+              escolha — desligado é como sempre funcionou. */}
+          <CheckRow
+            checked={!!agent.followup_respect_active_hours}
+            onChange={(v) => onSave({ followup_respect_active_hours: v })}
+            title="Seguir também o horário de atuação"
+            desc="Desligado, o follow-up sai em qualquer dia entre 9h e 20h. Ligado, respeita os dias e as janelas que você configurou acima."
+          />
 
           <label className="flex items-start gap-3 cursor-pointer">
             <input type="checkbox" className="mt-1" checked={agent.followup_only} onChange={(e) => onSave({ followup_only: e.target.checked })} />
@@ -1640,9 +1725,25 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
 
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">
-        Suba a tabela de imóveis, condições, FAQ e argumentário. A IA responde <strong>só</strong> com base nisto — não inventa preço nem imóvel.
-      </p>
+      {/* O texto antigo mandava "suba a tabela de imóveis" e dizia que a IA
+          respondia SÓ com base nisto. Deixou de ser verdade quando a busca no
+          catálogo entrou: ela consulta os imóveis cadastrados a cada mensagem.
+          Pior que desatualizado, o conselho era ruim — uma tabela colada aqui
+          envelhece e passa a contradizer o preço real do cadastro. */}
+      <div className="text-sm text-muted-foreground space-y-2">
+        <p>
+          Os <strong>imóveis já estão conectados</strong>: a IA consulta o cadastro do cliente a cada mensagem e
+          usa preço e características de lá, sempre atualizados. Não precisa subir tabela de imóveis aqui.
+        </p>
+        <p>
+          Use esta base para o que <strong>não</strong> está no cadastro: condições de pagamento, documentação,
+          FAQ, argumentário, política da imobiliária, diferenciais do bairro.
+        </p>
+        <p className="text-amber-600 dark:text-amber-500">
+          Evite colar tabela de preços: ela não se atualiza junto com o cadastro e vira uma segunda versão da
+          verdade — a IA passa a ter duas respostas diferentes para o mesmo imóvel.
+        </p>
+      </div>
 
       <div className="border border-sidebar-border rounded-md p-4 space-y-3">
         <div className="flex items-center gap-2 text-sm font-medium"><FileText className="h-4 w-4" /> Colar texto</div>
@@ -1772,25 +1873,83 @@ function PropertyLinkBox({
   );
 }
 
+// Par chave/valor do formulário do Meta. Estado local pra os dois campos não
+// remontarem a lista inteira a cada tecla.
+function FormAnswerAdder({ onAdd }: { onAdd: (key: string, value: string) => void }) {
+  const [key, setKey] = useState('');
+  const [value, setValue] = useState('');
+
+  const add = () => {
+    if (!key.trim() || !value.trim()) return;
+    onAdd(key.trim(), value.trim());
+    setKey('');
+    setValue('');
+  };
+
+  return (
+    <div className="flex gap-2">
+      <Input placeholder="Pergunta (ex: Quando pretende comprar?)" value={key} onChange={(e) => setKey(e.target.value)} />
+      <Input
+        placeholder="Resposta (ex: Nos próximos 3 meses)"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
+      />
+      <Button variant="outline" size="sm" onClick={add} disabled={!key.trim() || !value.trim()}>
+        <Plus className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
 // ---------------- Test ----------------
 
+// Turno da conversa de teste. `media` é só de exibição — a API recebe apenas
+// role/content, igual antes.
+type TestTurn = TestHistoryItem & { media?: TestMediaItem[] };
+
 function TestTab({ agent }: { agent: SalesAgent }) {
-  const [history, setHistory] = useState<TestHistoryItem[]>([]);
+  const [history, setHistory] = useState<TestTurn[]>([]);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<SalesAgentTestResult | null>(null);
   const [propertyCode, setPropertyCode] = useState('');
+  // O runner real manda a mídia UMA vez por imóvel, não a cada mensagem. Sem isto
+  // o teste repetiria a foto em todo turno e daria uma impressão errada.
+  const [mediaShownFor, setMediaShownFor] = useState<string | null>(null);
+
+  // Contexto do lead. O nome era chumbado como "Lead Teste" e origem, interesse e
+  // respostas do formulário nunca eram enviados — o backend sempre aceitou os
+  // quatro. Sem eles a IA não sabe que o lead veio de um anúncio nem o que ele já
+  // respondeu, e a conversa de teste sai mais fria e mais genérica que a real.
+  const [contactName, setContactName] = useState('Lead Teste');
+  const [source, setSource] = useState('');
+  const [interest, setInterest] = useState('');
+  const [formAnswers, setFormAnswers] = useState<Record<string, string>>({});
+  const [loadRef, setLoadRef] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const send = async () => {
     if (!message.trim()) return;
     const userMsg = message.trim();
+    const code = propertyCode.trim();
     setMessage('');
     setBusy(true);
-    const newHistory: TestHistoryItem[] = [...history, { role: 'user', content: userMsg }];
+    const apiHistory: TestHistoryItem[] = history.map(({ role, content }) => ({ role, content }));
+    const newHistory: TestTurn[] = [...history, { role: 'user', content: userMsg }];
     setHistory(newHistory);
     try {
-      const result = await salesAgentsService.testRun(agent.id, userMsg, history, 'Lead Teste', propertyCode.trim() || undefined);
-      setHistory([...newHistory, { role: 'assistant', content: result.reply }]);
+      const result = await salesAgentsService.testRun(agent.id, userMsg, apiHistory, {
+        contactName: contactName.trim() || 'Lead Teste',
+        source: source.trim(),
+        interest: interest.trim(),
+        formAnswers,
+        propertyCode: code,
+      });
+      const firstTimeForThisProperty = mediaShownFor !== code;
+      const media = firstTimeForThisProperty ? result.media ?? [] : [];
+      if (media.length > 0) setMediaShownFor(code);
+      setHistory([...newHistory, { role: 'assistant', content: result.reply, media }]);
       setLast(result);
     } catch {
       toast.error('Erro no teste (verifique se a chave da IA está configurada)');
@@ -1799,9 +1958,137 @@ function TestTab({ agent }: { agent: SalesAgent }) {
     }
   };
 
+  const loadRealConversation = async () => {
+    const ref = loadRef.trim();
+    if (!ref) return;
+    setLoading(true);
+    try {
+      // Aceita ID de conversa ou telefone: quem está testando quase sempre tem o
+      // telefone à mão, não o UUID.
+      const isPhone = /^[\d\s()+-]+$/.test(ref);
+      const ctx = await salesAgentsService.conversationContext(
+        agent.id,
+        isPhone ? { phone: ref } : { conversationId: ref },
+      );
+      setHistory(ctx.history);
+      setContactName(ctx.contact_name ?? 'Lead Teste');
+      setSource(ctx.source ?? '');
+      setInterest(ctx.interest ?? '');
+      setFormAnswers(ctx.form_answers ?? {});
+      if (ctx.property_code) setPropertyCode(ctx.property_code);
+      setMediaShownFor(null);
+      setLast(null);
+      toast.success(`Conversa carregada — ${ctx.history.length} mensagens`);
+    } catch {
+      toast.error('Não achei essa conversa (tente o telefone com DDD ou o ID).');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearAll = () => {
+    setHistory([]);
+    setLast(null);
+    setMediaShownFor(null);
+    setFormAnswers({});
+    setSource('');
+    setInterest('');
+    setContactName('Lead Teste');
+  };
+
+  const formAnswerEntries = Object.entries(formAnswers);
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Converse como se fosse o lead. Não envia nada no WhatsApp — é só teste.</p>
+
+      {/* Carregar conversa real: o teste digitado à mão não reproduz o que o lead
+          traz (nome, campanha, formulário, imóvel resolvido), e é justamente isso
+          que faz a IA saber do que está falando. Só leitura — nada é enviado. */}
+      <div className="border border-sidebar-border rounded-md p-3 space-y-2">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Bot className="h-4 w-4" /> Carregar uma conversa real
+        </div>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Telefone com DDD ou ID da conversa"
+            value={loadRef}
+            onChange={(e) => setLoadRef(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void loadRealConversation(); }}
+          />
+          <Button variant="outline" onClick={() => void loadRealConversation()} disabled={loading || !loadRef.trim()}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Carregar'}
+          </Button>
+          {history.length > 0 && (
+            <Button variant="ghost" onClick={clearAll}>Limpar</Button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Traz o histórico e o contexto de um lead de verdade pra você continuar a conversa daqui.
+          Não envia mensagem nem grava nada — pode apontar pra um lead ativo.
+        </p>
+      </div>
+
+      {/* Contexto do lead. O backend sempre aceitou estes campos; a tela mandava
+          só o nome, chumbado como "Lead Teste". */}
+      <div className="border border-sidebar-border rounded-md p-3 space-y-3">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <SlidersHorizontal className="h-4 w-4" /> Contexto do lead
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div>
+            <Label htmlFor="test_name" className="text-xs">Nome</Label>
+            <Input id="test_name" value={contactName} onChange={(e) => setContactName(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="test_source" className="text-xs">Origem</Label>
+            <Input
+              id="test_source"
+              placeholder="Anúncio Instagram — Vivaz Mooca"
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="test_interest" className="text-xs">Interesse inicial</Label>
+            <Input
+              id="test_interest"
+              placeholder="2 quartos até 400 mil"
+              value={interest}
+              onChange={(e) => setInterest(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label className="text-xs">Respostas do formulário do Meta</Label>
+          {formAnswerEntries.length > 0 && (
+            <div className="space-y-1 mt-1 mb-2">
+              {formAnswerEntries.map(([k, v]) => (
+                <div key={k} className="flex items-center gap-2 text-xs">
+                  <span className="font-medium">{k}:</span>
+                  <span className="flex-1 truncate text-muted-foreground">{v}</span>
+                  <button
+                    type="button"
+                    className="text-red-500 hover:underline"
+                    onClick={() => setFormAnswers((prev) => {
+                      const next = { ...prev };
+                      delete next[k];
+                      return next;
+                    })}
+                  >
+                    remover
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <FormAnswerAdder onAdd={(k, v) => setFormAnswers((prev) => ({ ...prev, [k]: v }))} />
+          <p className="text-xs text-muted-foreground mt-1">
+            A IA usa pra não perguntar de novo o que o lead já respondeu no anúncio.
+          </p>
+        </div>
+      </div>
 
       <PropertyLinkBox agent={agent} propertyCode={propertyCode} onCodeChange={setPropertyCode} />
 
@@ -1810,10 +2097,17 @@ function TestTab({ agent }: { agent: SalesAgent }) {
           <p className="text-sm text-muted-foreground text-center py-8">Mande uma mensagem pra ver a IA responder.</p>
         ) : (
           history.map((h, i) => (
-            <div key={i} className={`flex ${h.role === 'user' ? 'justify-start' : 'justify-end'}`}>
-              <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${h.role === 'user' ? 'bg-background border' : 'bg-primary/10 text-foreground'}`}>
-                {h.content}
+            <div key={i} className="space-y-1">
+              <div className={`flex ${h.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${h.role === 'user' ? 'bg-background border' : 'bg-primary/10 text-foreground'}`}>
+                  {h.content}
+                </div>
               </div>
+              {(h.media ?? []).map((m, j) => (
+                <div key={j} className="flex justify-end">
+                  <TestMediaBubble item={m} />
+                </div>
+              ))}
             </div>
           ))
         )}
@@ -1837,6 +2131,226 @@ function TestTab({ agent }: { agent: SalesAgent }) {
           {last.lead_summary && <div>Resumo: {last.lead_summary}</div>}
         </div>
       )}
+    </div>
+  );
+}
+
+// A foto/link que o lead REAL receberia. Aqui não há canal pra enviar, então em
+// vez de a mídia sumir — deixando a IA parecer que prometeu "te mando as fotos"
+// e não cumpriu — mostramos o que teria ido, com a foto de verdade.
+function TestMediaBubble({ item }: { item: TestMediaItem }) {
+  if (item.type === 'image') {
+    return (
+      <div className="max-w-[80%] rounded-lg border border-primary/30 bg-primary/5 overflow-hidden">
+        <img src={item.url} alt="Foto do imóvel" className="w-full max-h-48 object-cover" />
+        <div className="px-3 py-2 space-y-1">
+          <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium">
+            <ImageIcon className="h-3 w-3" /> Foto enviada no WhatsApp
+          </div>
+          {item.caption && <p className="text-xs text-muted-foreground whitespace-pre-line">{item.caption}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-[80%] rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+      <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium mb-0.5">
+        <Link2 className="h-3 w-3" /> Link enviado no WhatsApp
+      </div>
+      <a href={item.url} target="_blank" rel="noreferrer" className="text-xs underline break-all">
+        {item.url}
+      </a>
+    </div>
+  );
+}
+
+// ---------------- Diagnóstico ----------------
+//
+// Responde as duas perguntas que antes só o log do Railway respondia: "essa IA
+// está mesmo no ar?" e "por que ela não atendeu esse lead?". Cada item do
+// checklist é uma falha real que já deixou agente mudo sem erro na tela — a
+// campeã é o canal sem credencial da Evolution, em que a IA pensava a resposta,
+// pagava o token e não enviava nada.
+
+const HEALTH_STYLE: Record<string, { dot: string; text: string }> = {
+  ok: { dot: 'bg-emerald-500', text: 'text-emerald-600' },
+  warning: { dot: 'bg-amber-500', text: 'text-amber-600' },
+  error: { dot: 'bg-red-500', text: 'text-red-600' },
+};
+
+const RUN_STATUS_LABEL: Record<string, string> = {
+  replied: 'Respondeu',
+  skipped: 'Não respondeu',
+  failed: 'Falhou',
+};
+
+const RUN_KIND_LABEL: Record<string, string> = {
+  live: 'Conversa',
+  followup: 'Follow-up',
+  engage: 'Acionada pelo corretor',
+  test: 'Teste',
+};
+
+function DiagnosticsTab({ agent }: { agent: SalesAgent }) {
+  const [health, setHealth] = useState<HealthReport | null>(null);
+  const [runs, setRuns] = useState<SalesAgentRun[]>([]);
+  const [totals, setTotals] = useState<SalesAgentRunTotals | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [prompt, setPrompt] = useState<PromptPreview | null>(null);
+  const [checkingPrompt, setCheckingPrompt] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [h, r] = await Promise.all([
+        salesAgentsService.diagnostics(agent.id),
+        salesAgentsService.runs(agent.id, { days: 30, limit: 50 }),
+      ]);
+      setHealth(h);
+      setRuns(r.runs);
+      setTotals(r.totals);
+    } catch {
+      toast.error('Não consegui carregar o diagnóstico.');
+    } finally {
+      setLoading(false);
+    }
+  }, [agent.id]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const checkPrompt = async () => {
+    setCheckingPrompt(true);
+    try {
+      setPrompt(await salesAgentsService.testPrompt(agent.id));
+    } catch {
+      toast.error('Não consegui montar o prompt.');
+    } finally {
+      setCheckingPrompt(false);
+    }
+  };
+
+  if (loading) {
+    return <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-medium">Situação da IA</h3>
+          <p className="text-xs text-muted-foreground">Os passos necessários para ela atender, verificados agora.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => void load()}>
+          <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
+        </Button>
+      </div>
+
+      <div className="space-y-2">
+        {(health?.items ?? []).map((item) => {
+          const style = HEALTH_STYLE[item.status] ?? HEALTH_STYLE.warning;
+          return (
+            <div key={item.key} className="flex items-start gap-3 rounded-md border border-sidebar-border p-3">
+              <span className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${style.dot}`} />
+              <div className="min-w-0">
+                <div className="text-sm font-medium">{item.label}</div>
+                <div className={`text-xs ${item.status === 'ok' ? 'text-muted-foreground' : style.text}`}>{item.detail}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Prova de que o cérebro geral chegou neste cliente. Não gasta crédito:
+          monta o prompt e não chama o modelo. Existia na API desde sempre e não
+          tinha botão em lugar nenhum. */}
+      <div className="rounded-md border border-sidebar-border p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-medium">Conferir o que a IA está lendo</div>
+            <div className="text-xs text-muted-foreground">Monta o cérebro dela sem gastar crédito nenhum.</div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => void checkPrompt()} disabled={checkingPrompt}>
+            {checkingPrompt ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Conferir'}
+          </Button>
+        </div>
+        {prompt && (
+          <div className="mt-3 space-y-1 text-xs">
+            <PromptFlag ok={prompt.has_global_knowledge} label="Cérebro geral da agência" />
+            <PromptFlag ok={prompt.has_client_knowledge} label="Base de conhecimento deste cliente" />
+            <PromptFlag ok={prompt.has_lessons} label="Aprendizados ensinados" />
+            <p className="text-muted-foreground pt-1">Tamanho do cérebro: {prompt.length.toLocaleString('pt-BR')} caracteres.</p>
+          </div>
+        )}
+      </div>
+
+      {totals && (
+        <div>
+          <h3 className="text-sm font-medium mb-2">Últimos 30 dias</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <Stat label="Respondeu" value={String(totals.replied)} />
+            <Stat label="Não respondeu" value={String(totals.skipped)} />
+            <Stat label="Falhou" value={String(totals.failed)} />
+            <Stat label="Custo" value={`US$ ${totals.cost_usd.toFixed(2)}`} />
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h3 className="text-sm font-medium mb-2">Últimos atendimentos</h3>
+        {runs.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Nenhum registro ainda. Cada mensagem que chegar vai aparecer aqui, inclusive as que a IA decidir não responder.
+          </p>
+        ) : (
+          <div className="space-y-1">
+            {runs.map((run) => (
+              <div key={run.id} className="flex items-start gap-3 rounded-md border border-sidebar-border px-3 py-2 text-xs">
+                <span className={`mt-1 h-2 w-2 flex-shrink-0 rounded-full ${
+                  run.status === 'replied' ? 'bg-emerald-500' : run.status === 'failed' ? 'bg-red-500' : 'bg-amber-500'
+                }`} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2">
+                    <span className="font-medium">{RUN_STATUS_LABEL[run.status] ?? run.status}</span>
+                    <span className="text-muted-foreground">· {RUN_KIND_LABEL[run.kind] ?? run.kind}</span>
+                    <span className="text-muted-foreground">· {new Date(run.created_at).toLocaleString('pt-BR')}</span>
+                  </div>
+                  {run.status !== 'replied' && run.reason_label && (
+                    <div className="text-muted-foreground">{run.reason_label}</div>
+                  )}
+                  {run.error_message && (
+                    <div className="text-red-600 break-words">{run.error_class}: {run.error_message}</div>
+                  )}
+                  {run.status === 'replied' && !run.delivered && (
+                    <div className="text-amber-600">A resposta foi gerada mas o WhatsApp não aceitou o envio.</div>
+                  )}
+                </div>
+                {run.cost_usd > 0 && (
+                  <span className="text-muted-foreground whitespace-nowrap">US$ {run.cost_usd.toFixed(4)}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PromptFlag({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      {ok ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <span className="h-3.5 w-3.5 text-amber-600">—</span>}
+      <span className={ok ? '' : 'text-muted-foreground'}>{label}</span>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-sidebar-border p-3">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-lg font-semibold">{value}</div>
     </div>
   );
 }
