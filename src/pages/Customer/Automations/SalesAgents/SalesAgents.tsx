@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Button, Input, Label, Textarea } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon } from 'lucide-react';
+import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon, Zap } from 'lucide-react';
 import {
   salesAgentsService,
   type SalesAgent,
@@ -1908,6 +1908,104 @@ function FormAnswerAdder({ onAdd }: { onAdd: (key: string, value: string) => voi
 // role/content, igual antes.
 type TestTurn = TestHistoryItem & { media?: TestMediaItem[] };
 
+// Cenário de teste: o contexto do lead + a primeira mensagem dele.
+//
+// Preencher nome, origem, interesse e formulário na mão a cada teste dá
+// preguiça, e a preguiça leva a testar sempre o mesmo caso fácil — justamente
+// o que não revela problema. Um clique monta o cenário inteiro.
+interface TestScenario {
+  id: string;
+  label: string;
+  hint: string;
+  contactName: string;
+  source: string;
+  interest: string;
+  formAnswers: Record<string, string>;
+  /** Primeira mensagem do lead, já no campo — é só apertar enviar. */
+  firstMessage: string;
+}
+
+// Os cinco casos que separam uma IA que funciona de uma que parece funcionar.
+// Cada um existe pra checar um comportamento específico, descrito no `hint`.
+const TEST_SCENARIOS: TestScenario[] = [
+  {
+    id: 'ctwa',
+    label: 'Veio do anúncio',
+    hint: 'O caso mais comum. Confere se ela abre citando o empreendimento e faz a pergunta de intenção — sem despejar preço.',
+    contactName: 'Camila',
+    source: 'Anúncio Instagram — clique para WhatsApp',
+    interest: '',
+    formAnswers: {},
+    firstMessage: 'oi, vi o anúncio',
+  },
+  {
+    id: 'form',
+    label: 'Formulário do Meta',
+    hint: 'O lead já respondeu no anúncio. Ela NÃO pode perguntar de novo o que está aqui embaixo.',
+    contactName: 'Rodrigo',
+    source: 'Formulário Meta Lead Ads',
+    interest: '',
+    formAnswers: {
+      'Quando pretende comprar?': 'Nos próximos 3 meses',
+      'Faixa de investimento': 'Até 450 mil',
+      'É para morar ou investir?': 'Morar',
+    },
+    firstMessage: 'oi',
+  },
+  {
+    id: 'visitou',
+    label: 'Já visitou',
+    hint: 'Lead adiantado. Ela tem que continuar de onde parou, não recomeçar a qualificação do zero.',
+    contactName: 'Patrícia',
+    source: 'Anúncio Instagram',
+    interest: 'Já visitou o decorado',
+    formAnswers: {},
+    firstMessage: 'eu já visitei semana passada, queria as plantas e o lazer',
+  },
+  {
+    id: 'fora-do-perfil',
+    label: 'Fora do perfil',
+    hint: 'Pede algo que o imóvel do anúncio não é. Confere se ela oferece alternativa REAL do catálogo, com preço, em vez de empurrar pro corretor.',
+    contactName: 'Marcos',
+    source: 'Anúncio Facebook',
+    interest: '',
+    formAnswers: {},
+    firstMessage: 'esse é muito pequeno, tem de 3 quartos em outro bairro?',
+  },
+  {
+    id: 'sondando',
+    label: 'Só sondando',
+    hint: 'Sem intenção definida. Ela tem que nutrir com leveza, sem pressão e sem insistir na pergunta de intenção.',
+    contactName: 'Bruno',
+    source: 'Anúncio Instagram',
+    interest: '',
+    formAnswers: {},
+    firstMessage: 'to só dando uma olhada por enquanto',
+  },
+];
+
+// Cenários que o próprio usuário salva. localStorage e não banco: é ferramenta
+// de bancada, some se trocar de navegador, e não vale poluir a config do agente
+// (que é dado de produção) com material de teste.
+const SCENARIOS_KEY = 'lmflow:sales-agent-test-scenarios';
+
+function loadSavedScenarios(): TestScenario[] {
+  try {
+    const raw = localStorage.getItem(SCENARIOS_KEY);
+    return raw ? (JSON.parse(raw) as TestScenario[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistScenarios(list: TestScenario[]) {
+  try {
+    localStorage.setItem(SCENARIOS_KEY, JSON.stringify(list));
+  } catch {
+    // Cota cheia ou storage bloqueado: o cenário se perde, mas o teste continua.
+  }
+}
+
 function TestTab({ agent }: { agent: SalesAgent }) {
   const [history, setHistory] = useState<TestTurn[]>([]);
   const [message, setMessage] = useState('');
@@ -1928,6 +2026,47 @@ function TestTab({ agent }: { agent: SalesAgent }) {
   const [formAnswers, setFormAnswers] = useState<Record<string, string>>({});
   const [loadRef, setLoadRef] = useState('');
   const [loading, setLoading] = useState(false);
+  const [savedScenarios, setSavedScenarios] = useState<TestScenario[]>(() => loadSavedScenarios());
+
+  // Aplicar um cenário LIMPA a conversa: continuar um histórico de "já visitou"
+  // depois de trocar pra "só sondando" testaria uma quimera que não existe.
+  const applyScenario = (s: TestScenario) => {
+    setContactName(s.contactName);
+    setSource(s.source);
+    setInterest(s.interest);
+    setFormAnswers({ ...s.formAnswers });
+    setMessage(s.firstMessage);
+    setHistory([]);
+    setLast(null);
+    setMediaShownFor(null);
+  };
+
+  const saveCurrentScenario = () => {
+    const label = window.prompt('Nome do cenário:')?.trim();
+    if (!label) return;
+
+    const scenario: TestScenario = {
+      id: `custom-${label.toLowerCase().replace(/\s+/g, '-')}`,
+      label,
+      hint: 'Cenário salvo por você.',
+      contactName,
+      source,
+      interest,
+      formAnswers: { ...formAnswers },
+      firstMessage: message.trim(),
+    };
+    // Mesmo nome sobrescreve, em vez de duplicar na lista.
+    const next = [...savedScenarios.filter((s) => s.id !== scenario.id), scenario];
+    setSavedScenarios(next);
+    persistScenarios(next);
+    toast.success(`Cenário "${label}" salvo`);
+  };
+
+  const removeScenario = (id: string) => {
+    const next = savedScenarios.filter((s) => s.id !== id);
+    setSavedScenarios(next);
+    persistScenarios(next);
+  };
 
   const send = async () => {
     if (!message.trim()) return;
@@ -2026,6 +2165,61 @@ function TestTab({ agent }: { agent: SalesAgent }) {
         <p className="text-xs text-muted-foreground">
           Traz o histórico e o contexto de um lead de verdade pra você continuar a conversa daqui.
           Não envia mensagem nem grava nada — pode apontar pra um lead ativo.
+        </p>
+      </div>
+
+      {/* Cenários prontos. Cada um monta o contexto inteiro e já deixa a primeira
+          mensagem no campo — é só apertar enviar. Sem isto, digitar tudo de novo
+          a cada teste leva a testar sempre o mesmo caso fácil, que é o que menos
+          revela problema. */}
+      <div className="border border-sidebar-border rounded-md p-3 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Zap className="h-4 w-4" /> Cenários
+          </div>
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={saveCurrentScenario}>
+            Salvar o atual
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {TEST_SCENARIOS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              title={s.hint}
+              onClick={() => applyScenario(s)}
+              className="rounded-md border border-sidebar-border px-2.5 py-1 text-xs hover:bg-muted transition-colors"
+            >
+              {s.label}
+            </button>
+          ))}
+          {savedScenarios.map((s) => (
+            <span
+              key={s.id}
+              className="inline-flex items-center rounded-md border border-primary/40 bg-primary/5 text-xs"
+            >
+              <button
+                type="button"
+                title={s.hint}
+                onClick={() => applyScenario(s)}
+                className="px-2.5 py-1 hover:bg-primary/10 rounded-l-md transition-colors"
+              >
+                {s.label}
+              </button>
+              <button
+                type="button"
+                title="Remover cenário"
+                onClick={() => removeScenario(s.id)}
+                className="px-1.5 py-1 text-muted-foreground hover:text-red-500"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Passe o mouse pra ver o que cada um testa. Aplicar um cenário limpa a conversa atual.
+          Os que você salvar ficam neste navegador.
         </p>
       </div>
 
