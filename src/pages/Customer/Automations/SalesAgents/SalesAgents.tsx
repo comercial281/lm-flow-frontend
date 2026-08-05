@@ -1725,9 +1725,25 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
 
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">
-        Suba a tabela de imóveis, condições, FAQ e argumentário. A IA responde <strong>só</strong> com base nisto — não inventa preço nem imóvel.
-      </p>
+      {/* O texto antigo mandava "suba a tabela de imóveis" e dizia que a IA
+          respondia SÓ com base nisto. Deixou de ser verdade quando a busca no
+          catálogo entrou: ela consulta os imóveis cadastrados a cada mensagem.
+          Pior que desatualizado, o conselho era ruim — uma tabela colada aqui
+          envelhece e passa a contradizer o preço real do cadastro. */}
+      <div className="text-sm text-muted-foreground space-y-2">
+        <p>
+          Os <strong>imóveis já estão conectados</strong>: a IA consulta o cadastro do cliente a cada mensagem e
+          usa preço e características de lá, sempre atualizados. Não precisa subir tabela de imóveis aqui.
+        </p>
+        <p>
+          Use esta base para o que <strong>não</strong> está no cadastro: condições de pagamento, documentação,
+          FAQ, argumentário, política da imobiliária, diferenciais do bairro.
+        </p>
+        <p className="text-amber-600 dark:text-amber-500">
+          Evite colar tabela de preços: ela não se atualiza junto com o cadastro e vira uma segunda versão da
+          verdade — a IA passa a ter duas respostas diferentes para o mesmo imóvel.
+        </p>
+      </div>
 
       <div className="border border-sidebar-border rounded-md p-4 space-y-3">
         <div className="flex items-center gap-2 text-sm font-medium"><FileText className="h-4 w-4" /> Colar texto</div>
