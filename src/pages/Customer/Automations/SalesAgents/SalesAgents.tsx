@@ -26,6 +26,8 @@ import {
   type TestHistoryItem,
   type TestMediaItem,
 } from '@/services/salesAgents/salesAgentsService';
+import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
+import { WEEKDAYS } from '@/components/schedule/scheduleWindows';
 import inboxesService from '@/services/channels/inboxesService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 
@@ -649,18 +651,6 @@ function ScheduleSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
   const setMode = (m: ActiveHoursMode) =>
     commit({ mode: m, windows: m === 'custom' && !hours.windows?.length ? [DEFAULT_WINDOW] : hours.windows });
 
-  const patchWindow = (i: number, p: Partial<ActiveHoursWindow>) =>
-    commit({ mode: 'custom', windows: windows.map((w, idx) => (idx === i ? { ...w, ...p } : w)) });
-  const addWindow = () =>
-    commit({ mode: 'custom', windows: [...windows, { start: '14:00', end: '18:00', days: [1, 2, 3, 4, 5] }] });
-  const removeWindow = (i: number) =>
-    commit({ mode: 'custom', windows: windows.filter((_, idx) => idx !== i) });
-
-  const toggleDay = (i: number, d: number) => {
-    const current = windows[i].days ?? [];
-    patchWindow(i, { days: current.includes(d) ? current.filter((x) => x !== d) : [...current, d] });
-  };
-
   return (
     <div className="pt-2 border-t border-sidebar-border">
       <div className="flex items-center justify-between gap-3">
@@ -692,59 +682,16 @@ function ScheduleSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
 
       {/* Várias janelas, cada uma com seus dias. Antes só existia UMA janela e os
           dias nem apareciam: "segunda a sexta das 8h às 18h, fechado no almoço"
-          era impossível de configurar. */}
+          era impossível de configurar.
+
+          O editor mora em components/schedule desde que a roleta passou a ter
+          horário também — duas cópias da regra de dias/meia-noite divergiriam. */}
       {enabled && mode === 'custom' && (
-        <div className="mt-3 space-y-3">
-          {windows.map((w, i) => (
-            <div key={i} className="rounded-md border border-sidebar-border p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">Janela {i + 1}</Label>
-                {windows.length > 1 && (
-                  <button type="button" onClick={() => removeWindow(i)}
-                    className="text-xs text-destructive hover:underline">
-                    remover
-                  </button>
-                )}
-              </div>
-
-              <div className="flex flex-wrap gap-1">
-                {WEEKDAYS.map(([d, label]) => {
-                  const active = (w.days ?? []).includes(d);
-                  return (
-                    <button key={d} type="button" onClick={() => toggleDay(i, d)}
-                      className={`px-2 py-1 rounded text-xs border ${active ? 'bg-primary/10 text-primary border-primary/40' : 'border-sidebar-border text-muted-foreground'}`}>
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-              {(w.days ?? []).length === 0 && (
-                <p className="text-xs text-muted-foreground">Nenhum dia marcado = vale todos os dias.</p>
-              )}
-
-              <div className="flex items-end gap-3 flex-wrap">
-                <div>
-                  <Label htmlFor={`win_start_${i}`} className="text-xs">Das</Label>
-                  <Input id={`win_start_${i}`} type="time" value={w.start} className="mt-1 w-32"
-                    onChange={(e) => patchWindow(i, { start: e.target.value })} />
-                </div>
-                <div>
-                  <Label htmlFor={`win_end_${i}`} className="text-xs">Até</Label>
-                  <Input id={`win_end_${i}`} type="time" value={w.end} className="mt-1 w-32"
-                    onChange={(e) => patchWindow(i, { end: e.target.value })} />
-                </div>
-              </div>
-            </div>
-          ))}
-
-          <button type="button" onClick={addWindow}
-            className="text-xs text-primary hover:underline">
-            + Adicionar outra janela (ex: fechar no almoço)
-          </button>
-          <p className="text-xs text-muted-foreground">
-            Se o fim for menor que o início, a janela vira a madrugada (ex: 22h às 06h) e conta pelo dia em que ela começa.
-          </p>
-        </div>
+        <WeeklyWindowsEditor
+          value={windows}
+          idPrefix="ia_win"
+          onChange={(next) => commit({ mode: 'custom', windows: next })}
+        />
       )}
 
       {enabled && <OutOfHoursSection agent={agent} onSave={onSave} />}
@@ -922,10 +869,6 @@ function VisitSection({
 }
 
 // ---------------- Janelas de disponibilidade da visita ----------------
-
-const WEEKDAYS: [number, string][] = [
-  [1, 'Seg'], [2, 'Ter'], [3, 'Qua'], [4, 'Qui'], [5, 'Sex'], [6, 'Sáb'], [0, 'Dom'],
-];
 
 function VisitWindows({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
   const c = agent.visit_config ?? {};

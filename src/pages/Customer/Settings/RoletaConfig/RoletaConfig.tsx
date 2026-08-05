@@ -13,8 +13,10 @@ import {
 } from 'lucide-react';
 import {
   roletaConfigService, RoletaConfig, RoletaMember, RoletaInstance, BrokerAssignment, DistributionMode,
-  RoletaDiagnostic, RepairOwnersResult, RoletaQueue,
+  RoletaDiagnostic, RepairOwnersResult, RoletaQueue, RoletaHoursWindow, RoletaBusinessHours,
 } from '@/services/roletaConfig/roletaConfigService';
+import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
+import { DEFAULT_WINDOW } from '@/components/schedule/scheduleWindows';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import usersService from '@/services/users/usersService';
 import { leadAutomationService, WaGroup } from '@/services/leadAutomation/leadAutomationService';
@@ -259,6 +261,12 @@ export default function RoletaConfigPage() {
   const [gestorNum, setGestorNum]           = useState('');
   const [gestorGroupJid, setGestorGroupJid] = useState('');
   const [notifInboxId, setNotifInboxId]     = useState('');
+  // Horário de funcionamento. Desligado (o default e o estado de TODA roleta
+  // existente) = 24h, e o campo nem é enviado no payload.
+  const [horarioOn, setHorarioOn]           = useState(false);
+  const [janelas, setJanelas]               = useState<RoletaHoursWindow[]>([DEFAULT_WINDOW]);
+  const [plantaoInboxId, setPlantaoInboxId] = useState('');
+  const [autoNaAbertura, setAutoNaAbertura] = useState(false);
   const [members, setMembers]               = useState<MemberRow[]>([]);
   // Só corretor com acesso à instância pode receber lead da roleta — a lista de
   // escolha vem dos membros do inbox, não de todos os usuários do CRM. Sortear
@@ -462,6 +470,8 @@ export default function RoletaConfigPage() {
     // editada vazava para a "Nova distribuição".
     setMsgCorretor(''); setMsgGestor(''); setMsgGrupo(''); setMsgRepasse('');
     setMsgCorretorOn(true); setMsgGestorOn(true); setMsgGrupoOn(true); setMsgRepasseOn(true);
+    // Roleta nova nasce 24h — o campo nem vai no payload.
+    setHorarioOn(false); setJanelas([DEFAULT_WINDOW]); setPlantaoInboxId(''); setAutoNaAbertura(false);
     setMembers([mkLocal()]);
     setInstances([]);
     setMultiFromConfig(false);
@@ -492,6 +502,14 @@ export default function RoletaConfigPage() {
     setMsgGestorOn(c.msg_gestor_enabled !== false);
     setMsgGrupoOn(c.msg_grupo_enabled !== false);
     setMsgRepasseOn(c.msg_grupo_repasse_enabled !== false);
+    // Horário. `mode === 'custom'` e não "tem janela": o modo é quem manda, e é
+    // o que o backend lê. Roleta sem horário (todas as de hoje) abre desligada,
+    // com a janela padrão já preenchida caso o gestor ligue.
+    const bh: RoletaBusinessHours = c.business_hours_config ?? {};
+    setHorarioOn(bh.mode === 'custom');
+    setJanelas(bh.windows?.length ? bh.windows : [DEFAULT_WINDOW]);
+    setPlantaoInboxId(bh.after_hours_inbox_id ?? '');
+    setAutoNaAbertura(!!bh.auto_distribute_on_open);
     setMembers(c.members.length ? c.members.map(m => mkLocal(m)) : [mkLocal()]);
     // Roleta antiga (antes das instâncias) chega sem `instances`: monta a de
     // entrada a partir do próprio inbox dela, que é o que o backfill fez no banco.
@@ -618,6 +636,18 @@ export default function RoletaConfigPage() {
         msg_grupo_enabled:      msgGrupoOn,
         msg_grupo_repasse_enabled: msgRepasseOn,
         notification_inbox_id:  notifInboxId || null,
+        // Horário de funcionamento. Desligado manda `{ mode: 'always' }` em vez
+        // de omitir: omitir num PATCH deixaria o horário antigo gravado, e
+        // desligar a chave na tela não desligaria nada — a falha muda de novo.
+        business_hours_config:  horarioOn
+          ? {
+              mode: 'custom' as const,
+              tz: 'America/Sao_Paulo',
+              windows: janelas,
+              after_hours_inbox_id: plantaoInboxId || null,
+              auto_distribute_on_open: autoNaAbertura,
+            }
+          : { mode: 'always' as const },
         // Só as que têm inbox escolhido. Lista vazia = "não mexe nas
         // instâncias", e o backend nunca deixa a roleta sem nenhuma.
         instances:              instances.filter(i => i.inbox_id).map((i, idx) => ({
@@ -1436,6 +1466,89 @@ export default function RoletaConfigPage() {
                     ? `Se ninguém assumir em ${timeoutMin} min, o lead cai no rodízio para não ficar sem dono.`
                     : `Se o corretor não assumir em ${timeoutMin} min, o lead passa para o próximo.`}
                 </p>
+              </div>
+            )}
+
+            {/* Horário de funcionamento.
+                Fica junto do prazo, e não junto dos avisos, porque é regra de
+                DISTRIBUIÇÃO: decide se haverá sorteio, não como o time é avisado.
+
+                Não aparece no modo Manual — lá ninguém é sorteado em hora nenhuma,
+                então um horário de funcionamento não teria o que governar. */}
+            {mode !== 'manual' && (
+              <div className="rounded-lg border border-border p-3 space-y-3 lg:col-span-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <UILabel className="flex items-center gap-1.5">
+                      <Clock className="h-4 w-4" />
+                      Horário de funcionamento
+                    </UILabel>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Desligado = a roleta distribui 24h, a qualquer dia e hora.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setHorarioOn(!horarioOn)}
+                    className="flex items-center gap-2 text-sm"
+                    aria-pressed={horarioOn}
+                  >
+                    {horarioOn
+                      ? <ToggleRight className="h-6 w-6 text-primary" />
+                      : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
+                    <span className={horarioOn ? 'text-primary' : 'text-muted-foreground'}>
+                      {horarioOn ? 'Com horário' : '24 horas'}
+                    </span>
+                  </button>
+                </div>
+
+                {horarioOn && (
+                  <>
+                    <WeeklyWindowsEditor value={janelas} onChange={setJanelas} idPrefix="roleta_win" />
+
+                    <div>
+                      <UILabel className="flex items-center gap-1.5">
+                        <Phone className="h-4 w-4" />
+                        Fora do horário, atender por
+                      </UILabel>
+                      <div className="mt-1">
+                        <NativeSelect
+                          value={plantaoInboxId}
+                          onChange={e => setPlantaoInboxId(e.target.value)}
+                        >
+                          <option value="">Ninguém — o lead fica sem responsável</option>
+                          {plantaoInboxId && !inboxes.some(i => i.id === plantaoInboxId) && (
+                            <option value={plantaoInboxId}>{plantaoInboxId}</option>
+                          )}
+                          {inboxes.map(i => (
+                            <option key={i.id} value={i.id}>{i.name}</option>
+                          ))}
+                        </NativeSelect>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Fora do horário a roleta não sorteia corretor. O lead vai para o número escolhido,
+                        onde a pessoa de plantão ou a IA daquele número atende. Pode ser um número que não
+                        participa da roleta.
+                      </p>
+                    </div>
+
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={autoNaAbertura}
+                        onChange={e => setAutoNaAbertura(e.target.checked)}
+                      />
+                      <span className="text-sm">
+                        Distribuir automaticamente quando o horário abrir
+                        <span className="block text-xs text-muted-foreground">
+                          O lead que passou a noite no plantão entra no sorteio assim que a roleta reabre.
+                          Quem já ganhou dono durante o plantão não é mexido.
+                        </span>
+                      </span>
+                    </label>
+                  </>
+                )}
               </div>
             )}
 
