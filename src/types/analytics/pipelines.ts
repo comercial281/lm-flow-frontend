@@ -16,6 +16,25 @@ export interface AvailableConversationsResponse extends StandardResponse<Convers
 export interface AvailableContactsResponse extends StandardResponse<Contact[]> {}
 
 // For conversations used in pipeline modals
+/**
+ * Situação da IA Vendedora num lead. Os cinco estados são exclusivos e o backend
+ * já resolve a precedência (transferida vence pausada, que vence ativa) — a tela
+ * só pinta o que recebe.
+ *
+ * - active  = atendendo agora
+ * - paused  = o corretor desligou NESTE lead
+ * - handoff = a IA passou pro humano (decisão dela)
+ * - idle    = tem IA no canal, mas o gatilho ainda não bateu
+ * - none    = não há IA neste canal
+ */
+export type SalesAgentCardStatus = 'active' | 'paused' | 'handoff' | 'idle' | 'none';
+
+export interface SalesAgentCardState {
+  status: SalesAgentCardStatus;
+  label: string;
+  agent_id: string | null;
+}
+
 export interface ConversationForModal {
   id: string;
   display_id?: string;
@@ -235,6 +254,13 @@ export interface PipelineItem {
   // por origem — anúncio, formulário, landing, manual — daí o índice aberto.
   // `manual_origin` é a origem escrita à mão ("Indicação", "Cliente de carteira").
   lead_origin?: { source?: string; manual_origin?: string; [key: string]: unknown } | null;
+  /**
+   * A IA Vendedora está cuidando deste lead? Vem pré-calculado pelo backend
+   * (SalesAgents::ConversationState) — mesma fonte que o runner usa pra decidir
+   * se responde, pra a bolinha do card não contar uma história diferente do que
+   * acontece no WhatsApp.
+   */
+  sales_agent?: SalesAgentCardState | null;
   position?: number; // ordem manual no kanban (epoch da chegada por padrão)
   entered_at?: number;
   completed_at?: number | null;

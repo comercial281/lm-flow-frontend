@@ -17,6 +17,7 @@ import {
   Inbox,
   Pipeline,
 } from '@/types/chat/api';
+import type { SalesAgentCardState } from '@/types/analytics/pipelines';
 import { extractData } from '@/utils/apiHelpers';
 
 class ChatService {
@@ -100,6 +101,21 @@ class ChatService {
   }
 
   // ===== CONVERSATION ACTIONS =====
+
+  /**
+   * Liga/desliga a IA Vendedora NESTE lead.
+   *
+   * Desligar grava uma pausa própria, não um handoff: os dois calam a IA, mas
+   * handoff significa "a IA decidiu passar pro humano" e alimenta etiqueta,
+   * atribuição e métrica. Ligar de volta também limpa o handoff no backend.
+   */
+  async toggleSalesAgent(
+    conversationId: string,
+    enabled: boolean,
+  ): Promise<SalesAgentCardState> {
+    const response = await api.post(`/conversations/${conversationId}/sales_agent`, { enabled });
+    return (response.data as { data: SalesAgentCardState }).data;
+  }
 
   async toggleStatus(conversationId: string): Promise<ConversationResponse> {
     const response = await api.post(`/conversations/${conversationId}/toggle_status`);

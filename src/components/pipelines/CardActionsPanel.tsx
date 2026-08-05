@@ -13,6 +13,9 @@ import { ScheduleActionModal } from '@/components/scheduledActions/ScheduleActio
 import FollowupTimeline from './FollowupTimeline';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
+import type { SalesAgentCardState } from '@/types/analytics/pipelines';
+import { chatService } from '@/services/chat/chatService';
+import SalesAgentBadge from '@/components/salesAgents/SalesAgentBadge';
 
 const VISIT_SCHEDULED_LABEL = 'visita-agendada';
 
@@ -59,6 +62,26 @@ export default function CardActionsPanel({
 
   const [togglingFollowUp, setTogglingFollowUp] = useState(false);
   const [togglingBot, setTogglingBot] = useState(false);
+
+  // Estado da IA Vendedora neste lead. Chega pronto do backend no card; guardamos
+  // local só pra refletir o toggle na hora, sem recarregar o board inteiro.
+  const [aiState, setAiState] = useState<SalesAgentCardState | null>(item.sales_agent ?? null);
+  const [togglingAi, setTogglingAi] = useState(false);
+  const aiOn = aiState?.status === 'active';
+
+  const toggleSalesAgent = useCallback(async () => {
+    if (!convId) return;
+    setTogglingAi(true);
+    try {
+      const next = await chatService.toggleSalesAgent(convId, !aiOn);
+      setAiState(next);
+      toast.success(next.label);
+    } catch {
+      toast.error('Não consegui mudar a IA neste lead.');
+    } finally {
+      setTogglingAi(false);
+    }
+  }, [convId, aiOn]);
   const [movingStage, setMovingStage] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -247,6 +270,47 @@ export default function CardActionsPanel({
           <FollowupTimeline contactId={contactId ? String(contactId) : null} conversationId={convId} />
         </div>
       </div>
+
+      {/* IA Vendedora — separada do "Chatbot" logo abaixo, que é o bot de fluxo
+          (n8n/Dify) e usa etiqueta. São coisas diferentes e pausar uma não pausa
+          a outra. */}
+      {aiState && aiState.status !== 'none' && (
+        <div className="rounded-lg border border-border p-3 space-y-2">
+          <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">IA Vendedora</h5>
+          <div className="flex items-center gap-2 flex-wrap">
+            <SalesAgentBadge state={aiState} size="md" />
+            <Button
+              size="sm"
+              variant={aiOn ? 'outline' : 'default'}
+              className="h-7 text-xs gap-1.5"
+              onClick={toggleSalesAgent}
+              disabled={togglingAi || !convId}
+            >
+              {togglingAi ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : aiOn ? (
+                <BotOff className="h-3.5 w-3.5" />
+              ) : (
+                <Bot className="h-3.5 w-3.5" />
+              )}
+              {aiOn ? 'Desligar neste lead' : 'Ligar neste lead'}
+            </Button>
+          </div>
+          {aiState.status === 'idle' && (
+            <p className="text-[10px] text-muted-foreground">
+              A IA atende este canal, mas o gatilho ainda não bateu neste lead. Ligar aqui força o atendimento.
+            </p>
+          )}
+          {aiState.status === 'handoff' && (
+            <p className="text-[10px] text-muted-foreground">
+              A IA passou este lead pra um corretor. Ligar de volta desfaz a transferência.
+            </p>
+          )}
+          {!convId && (
+            <p className="text-[10px] text-muted-foreground">Disponível apenas para leads com conversa WhatsApp.</p>
+          )}
+        </div>
+      )}
 
       {/* Chatbot */}
       <div className="rounded-lg border border-border p-3 space-y-2">

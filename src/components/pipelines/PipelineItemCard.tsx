@@ -5,6 +5,7 @@ import { Edit, Trash2, MoreVertical, Phone, Mail, MessageSquare, User, Clock, Al
 import { PipelineItem, Pipeline, PipelineStage } from '@/types/analytics';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
+import SalesAgentBadge from '@/components/salesAgents/SalesAgentBadge';
 
 interface PipelineItemCardProps {
   item: PipelineItem;
@@ -120,6 +121,9 @@ export default function PipelineItemCard({
                 #{item.conversation.display_id}
               </span>
             )}
+            {/* Junto do nome de propósito: é o primeiro lugar onde o olho bate, e
+                a pergunta "a IA já falou com esse?" vem antes de qualquer outra. */}
+            <SalesAgentBadge state={item.sales_agent} />
           </div>
           {/* Contact details */}
           <div className="flex items-center space-x-2 text-xs text-muted-foreground">
