@@ -1873,6 +1873,35 @@ function PropertyLinkBox({
   );
 }
 
+// Par chave/valor do formulário do Meta. Estado local pra os dois campos não
+// remontarem a lista inteira a cada tecla.
+function FormAnswerAdder({ onAdd }: { onAdd: (key: string, value: string) => void }) {
+  const [key, setKey] = useState('');
+  const [value, setValue] = useState('');
+
+  const add = () => {
+    if (!key.trim() || !value.trim()) return;
+    onAdd(key.trim(), value.trim());
+    setKey('');
+    setValue('');
+  };
+
+  return (
+    <div className="flex gap-2">
+      <Input placeholder="Pergunta (ex: Quando pretende comprar?)" value={key} onChange={(e) => setKey(e.target.value)} />
+      <Input
+        placeholder="Resposta (ex: Nos próximos 3 meses)"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
+      />
+      <Button variant="outline" size="sm" onClick={add} disabled={!key.trim() || !value.trim()}>
+        <Plus className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
 // ---------------- Test ----------------
 
 // Turno da conversa de teste. `media` é só de exibição — a API recebe apenas
@@ -1889,6 +1918,17 @@ function TestTab({ agent }: { agent: SalesAgent }) {
   // o teste repetiria a foto em todo turno e daria uma impressão errada.
   const [mediaShownFor, setMediaShownFor] = useState<string | null>(null);
 
+  // Contexto do lead. O nome era chumbado como "Lead Teste" e origem, interesse e
+  // respostas do formulário nunca eram enviados — o backend sempre aceitou os
+  // quatro. Sem eles a IA não sabe que o lead veio de um anúncio nem o que ele já
+  // respondeu, e a conversa de teste sai mais fria e mais genérica que a real.
+  const [contactName, setContactName] = useState('Lead Teste');
+  const [source, setSource] = useState('');
+  const [interest, setInterest] = useState('');
+  const [formAnswers, setFormAnswers] = useState<Record<string, string>>({});
+  const [loadRef, setLoadRef] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const send = async () => {
     if (!message.trim()) return;
     const userMsg = message.trim();
@@ -1899,7 +1939,13 @@ function TestTab({ agent }: { agent: SalesAgent }) {
     const newHistory: TestTurn[] = [...history, { role: 'user', content: userMsg }];
     setHistory(newHistory);
     try {
-      const result = await salesAgentsService.testRun(agent.id, userMsg, apiHistory, 'Lead Teste', code || undefined);
+      const result = await salesAgentsService.testRun(agent.id, userMsg, apiHistory, {
+        contactName: contactName.trim() || 'Lead Teste',
+        source: source.trim(),
+        interest: interest.trim(),
+        formAnswers,
+        propertyCode: code,
+      });
       const firstTimeForThisProperty = mediaShownFor !== code;
       const media = firstTimeForThisProperty ? result.media ?? [] : [];
       if (media.length > 0) setMediaShownFor(code);
@@ -1912,9 +1958,137 @@ function TestTab({ agent }: { agent: SalesAgent }) {
     }
   };
 
+  const loadRealConversation = async () => {
+    const ref = loadRef.trim();
+    if (!ref) return;
+    setLoading(true);
+    try {
+      // Aceita ID de conversa ou telefone: quem está testando quase sempre tem o
+      // telefone à mão, não o UUID.
+      const isPhone = /^[\d\s()+-]+$/.test(ref);
+      const ctx = await salesAgentsService.conversationContext(
+        agent.id,
+        isPhone ? { phone: ref } : { conversationId: ref },
+      );
+      setHistory(ctx.history);
+      setContactName(ctx.contact_name ?? 'Lead Teste');
+      setSource(ctx.source ?? '');
+      setInterest(ctx.interest ?? '');
+      setFormAnswers(ctx.form_answers ?? {});
+      if (ctx.property_code) setPropertyCode(ctx.property_code);
+      setMediaShownFor(null);
+      setLast(null);
+      toast.success(`Conversa carregada — ${ctx.history.length} mensagens`);
+    } catch {
+      toast.error('Não achei essa conversa (tente o telefone com DDD ou o ID).');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearAll = () => {
+    setHistory([]);
+    setLast(null);
+    setMediaShownFor(null);
+    setFormAnswers({});
+    setSource('');
+    setInterest('');
+    setContactName('Lead Teste');
+  };
+
+  const formAnswerEntries = Object.entries(formAnswers);
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Converse como se fosse o lead. Não envia nada no WhatsApp — é só teste.</p>
+
+      {/* Carregar conversa real: o teste digitado à mão não reproduz o que o lead
+          traz (nome, campanha, formulário, imóvel resolvido), e é justamente isso
+          que faz a IA saber do que está falando. Só leitura — nada é enviado. */}
+      <div className="border border-sidebar-border rounded-md p-3 space-y-2">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Bot className="h-4 w-4" /> Carregar uma conversa real
+        </div>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Telefone com DDD ou ID da conversa"
+            value={loadRef}
+            onChange={(e) => setLoadRef(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void loadRealConversation(); }}
+          />
+          <Button variant="outline" onClick={() => void loadRealConversation()} disabled={loading || !loadRef.trim()}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Carregar'}
+          </Button>
+          {history.length > 0 && (
+            <Button variant="ghost" onClick={clearAll}>Limpar</Button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Traz o histórico e o contexto de um lead de verdade pra você continuar a conversa daqui.
+          Não envia mensagem nem grava nada — pode apontar pra um lead ativo.
+        </p>
+      </div>
+
+      {/* Contexto do lead. O backend sempre aceitou estes campos; a tela mandava
+          só o nome, chumbado como "Lead Teste". */}
+      <div className="border border-sidebar-border rounded-md p-3 space-y-3">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <SlidersHorizontal className="h-4 w-4" /> Contexto do lead
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div>
+            <Label htmlFor="test_name" className="text-xs">Nome</Label>
+            <Input id="test_name" value={contactName} onChange={(e) => setContactName(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="test_source" className="text-xs">Origem</Label>
+            <Input
+              id="test_source"
+              placeholder="Anúncio Instagram — Vivaz Mooca"
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="test_interest" className="text-xs">Interesse inicial</Label>
+            <Input
+              id="test_interest"
+              placeholder="2 quartos até 400 mil"
+              value={interest}
+              onChange={(e) => setInterest(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label className="text-xs">Respostas do formulário do Meta</Label>
+          {formAnswerEntries.length > 0 && (
+            <div className="space-y-1 mt-1 mb-2">
+              {formAnswerEntries.map(([k, v]) => (
+                <div key={k} className="flex items-center gap-2 text-xs">
+                  <span className="font-medium">{k}:</span>
+                  <span className="flex-1 truncate text-muted-foreground">{v}</span>
+                  <button
+                    type="button"
+                    className="text-red-500 hover:underline"
+                    onClick={() => setFormAnswers((prev) => {
+                      const next = { ...prev };
+                      delete next[k];
+                      return next;
+                    })}
+                  >
+                    remover
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <FormAnswerAdder onAdd={(k, v) => setFormAnswers((prev) => ({ ...prev, [k]: v }))} />
+          <p className="text-xs text-muted-foreground mt-1">
+            A IA usa pra não perguntar de novo o que o lead já respondeu no anúncio.
+          </p>
+        </div>
+      </div>
 
       <PropertyLinkBox agent={agent} propertyCode={propertyCode} onCodeChange={setPropertyCode} />
 
