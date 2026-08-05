@@ -11,6 +11,11 @@ import {
   type GeneratedAgentConfig,
   type ActiveHours,
   type ActiveHoursMode,
+  type ActiveHoursWindow,
+  type HealthReport,
+  type SalesAgentRun,
+  type SalesAgentRunTotals,
+  type PromptPreview,
   type SalesAgentTrigger,
   type SalesAgentTriggerType,
   type SalesAgentOpening,
@@ -23,7 +28,7 @@ import {
 import inboxesService from '@/services/channels/inboxesService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 
-type Tab = 'config' | 'knowledge' | 'learning' | 'test';
+type Tab = 'config' | 'knowledge' | 'learning' | 'test' | 'diagnostico';
 
 interface InboxOption {
   id: string | number;
@@ -147,6 +152,14 @@ export default function SalesAgents() {
         opening_image_url: patch.opening_image_url ?? selected.opening_image_url,
         opening_audio_url: patch.opening_audio_url ?? selected.opening_audio_url,
         openings: patch.openings ?? selected.openings,
+        priority: patch.priority ?? selected.priority,
+        followup_respect_active_hours: patch.followup_respect_active_hours ?? selected.followup_respect_active_hours,
+        out_of_hours_reply: patch.out_of_hours_reply ?? selected.out_of_hours_reply,
+        catalog_search_enabled: patch.catalog_search_enabled ?? selected.catalog_search_enabled,
+        // `in` e não `??`: aqui null quer dizer "apagar o texto e voltar pro
+        // automático", e `??` trataria isso como "não mexeu", tornando o campo
+        // impossível de limpar depois de preenchido uma vez.
+        out_of_hours_message: 'out_of_hours_message' in patch ? patch.out_of_hours_message : selected.out_of_hours_message,
       });
       setSelected(updated);
       setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
@@ -246,7 +259,7 @@ export default function SalesAgents() {
 
             {/* Abas */}
             <div className="flex gap-1 border-b border-sidebar-border mb-4">
-              {([['config', 'Configuração'], ['knowledge', 'Base de Conhecimento'], ['learning', 'Aprendizado'], ['test', 'Testar']] as [Tab, string][]).map(
+              {([['config', 'Configuração'], ['knowledge', 'Base de Conhecimento'], ['learning', 'Aprendizado'], ['test', 'Testar'], ['diagnostico', 'Diagnóstico']] as [Tab, string][]).map(
                 ([key, label]) => (
                   <button
                     key={key}
@@ -267,6 +280,7 @@ export default function SalesAgents() {
             {tab === 'knowledge' && <KnowledgeTab agent={selected} onCountChange={loadAgents} />}
             {tab === 'learning' && <LearningTab agent={selected} />}
             {tab === 'test' && <TestTab agent={selected} />}
+            {tab === 'diagnostico' && <DiagnosticsTab agent={selected} />}
           </div>
         )}
       </main>
@@ -418,6 +432,25 @@ function ConfigTab({
           ))}
         </select>
         <p className="text-xs text-muted-foreground mt-1">Escolha a instância (número/canal do WhatsApp) onde a IA vai operar: ela recebe e responde os leads por essa instância.</p>
+      </div>
+
+      {/* Mais de um agente no mesmo canal é permitido (ex: um só pro lançamento X,
+          outro pro resto). Antes disso a escolha era aleatória e podia trocar de
+          agente no meio da conversa; agora quem tem gatilho específico ganha, e a
+          prioridade desempata. */}
+      <div>
+        <Label htmlFor="priority">Prioridade neste canal</Label>
+        <Input
+          id="priority"
+          type="number"
+          className="mt-1 w-32"
+          value={agent.priority ?? 0}
+          onChange={(e) => onChange({ ...agent, priority: Number(e.target.value) })}
+          onBlur={() => onSave({ priority: Number(agent.priority) || 0 })}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Só importa se houver mais de uma IA no mesmo canal: quem tem gatilho específico atende primeiro e, em caso de empate, o número maior ganha. Uma vez que uma IA assume a conversa, ela continua até a transferência.
+        </p>
       </div>
 
       <div>
@@ -600,22 +633,31 @@ function AudioSection({ agent, onChange, onSave }: {
   );
 }
 
+const DEFAULT_WINDOW: ActiveHoursWindow = { start: '08:00', end: '18:00', days: [1, 2, 3, 4, 5] };
+
 function ScheduleSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
   const hours: ActiveHours = agent.active_hours ?? {};
   const mode: ActiveHoursMode = hours.mode ?? 'always';
   const enabled = mode !== 'always';
-  const win = hours.windows?.[0] ?? { start: '08:00', end: '18:00' };
+  const windows: ActiveHoursWindow[] = hours.windows?.length ? hours.windows : [DEFAULT_WINDOW];
 
-  const toggleEnabled = (on: boolean) => {
-    onSave({ active_hours: { ...hours, mode: on ? 'outside_business' : 'always', tz: hours.tz ?? 'America/Sao_Paulo' } });
-  };
-  const setMode = (m: ActiveHoursMode) => {
-    const next: ActiveHours = { ...hours, mode: m, tz: hours.tz ?? 'America/Sao_Paulo' };
-    if (m === 'custom' && !next.windows?.length) next.windows = [{ start: '08:00', end: '18:00' }];
-    onSave({ active_hours: next });
-  };
-  const setWindow = (start: string, end: string) => {
-    onSave({ active_hours: { ...hours, mode: 'custom', tz: hours.tz ?? 'America/Sao_Paulo', windows: [{ start, end }] } });
+  const commit = (patch: Partial<ActiveHours>) =>
+    onSave({ active_hours: { ...hours, tz: hours.tz ?? 'America/Sao_Paulo', ...patch } });
+
+  const toggleEnabled = (on: boolean) => commit({ mode: on ? 'custom' : 'always', windows: on ? windows : hours.windows });
+  const setMode = (m: ActiveHoursMode) =>
+    commit({ mode: m, windows: m === 'custom' && !hours.windows?.length ? [DEFAULT_WINDOW] : hours.windows });
+
+  const patchWindow = (i: number, p: Partial<ActiveHoursWindow>) =>
+    commit({ mode: 'custom', windows: windows.map((w, idx) => (idx === i ? { ...w, ...p } : w)) });
+  const addWindow = () =>
+    commit({ mode: 'custom', windows: [...windows, { start: '14:00', end: '18:00', days: [1, 2, 3, 4, 5] }] });
+  const removeWindow = (i: number) =>
+    commit({ mode: 'custom', windows: windows.filter((_, idx) => idx !== i) });
+
+  const toggleDay = (i: number, d: number) => {
+    const current = windows[i].days ?? [];
+    patchWindow(i, { days: current.includes(d) ? current.filter((x) => x !== d) : [...current, d] });
   };
 
   return (
@@ -627,37 +669,121 @@ function ScheduleSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
         </div>
         <Toggle on={enabled} onChange={toggleEnabled} />
       </div>
+
       {enabled && (
-      <div className="grid grid-cols-1 gap-2 mt-2">
-        {SCHEDULE_OPTIONS.map(([m, title, help]) => (
-          <label
-            key={m}
-            className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer ${
-              mode === m ? 'border-primary bg-primary/5' : 'border-sidebar-border'
-            }`}
-          >
-            <input type="radio" name="schedule_mode" className="mt-1" checked={mode === m} onChange={() => setMode(m)} />
-            <div>
-              <div className="text-sm font-medium">{title}</div>
-              <div className="text-xs text-muted-foreground">{help}</div>
-            </div>
-          </label>
-        ))}
-      </div>
+        <div className="grid grid-cols-1 gap-2 mt-2">
+          {SCHEDULE_OPTIONS.map(([m, title, help]) => (
+            <label
+              key={m}
+              className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer ${
+                mode === m ? 'border-primary bg-primary/5' : 'border-sidebar-border'
+              }`}
+            >
+              <input type="radio" name="schedule_mode" className="mt-1" checked={mode === m} onChange={() => setMode(m)} />
+              <div>
+                <div className="text-sm font-medium">{title}</div>
+                <div className="text-xs text-muted-foreground">{help}</div>
+              </div>
+            </label>
+          ))}
+        </div>
       )}
+
+      {/* Várias janelas, cada uma com seus dias. Antes só existia UMA janela e os
+          dias nem apareciam: "segunda a sexta das 8h às 18h, fechado no almoço"
+          era impossível de configurar. */}
       {enabled && mode === 'custom' && (
-        <div className="flex items-end gap-3 mt-2">
-          <div>
-            <Label htmlFor="win_start" className="text-xs">Das</Label>
-            <Input id="win_start" type="time" value={win.start} className="mt-1 w-32"
-              onChange={(e) => setWindow(e.target.value, win.end)} />
+        <div className="mt-3 space-y-3">
+          {windows.map((w, i) => (
+            <div key={i} className="rounded-md border border-sidebar-border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Janela {i + 1}</Label>
+                {windows.length > 1 && (
+                  <button type="button" onClick={() => removeWindow(i)}
+                    className="text-xs text-destructive hover:underline">
+                    remover
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-1">
+                {WEEKDAYS.map(([d, label]) => {
+                  const active = (w.days ?? []).includes(d);
+                  return (
+                    <button key={d} type="button" onClick={() => toggleDay(i, d)}
+                      className={`px-2 py-1 rounded text-xs border ${active ? 'bg-primary/10 text-primary border-primary/40' : 'border-sidebar-border text-muted-foreground'}`}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              {(w.days ?? []).length === 0 && (
+                <p className="text-xs text-muted-foreground">Nenhum dia marcado = vale todos os dias.</p>
+              )}
+
+              <div className="flex items-end gap-3 flex-wrap">
+                <div>
+                  <Label htmlFor={`win_start_${i}`} className="text-xs">Das</Label>
+                  <Input id={`win_start_${i}`} type="time" value={w.start} className="mt-1 w-32"
+                    onChange={(e) => patchWindow(i, { start: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor={`win_end_${i}`} className="text-xs">Até</Label>
+                  <Input id={`win_end_${i}`} type="time" value={w.end} className="mt-1 w-32"
+                    onChange={(e) => patchWindow(i, { end: e.target.value })} />
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <button type="button" onClick={addWindow}
+            className="text-xs text-primary hover:underline">
+            + Adicionar outra janela (ex: fechar no almoço)
+          </button>
+          <p className="text-xs text-muted-foreground">
+            Se o fim for menor que o início, a janela vira a madrugada (ex: 22h às 06h) e conta pelo dia em que ela começa.
+          </p>
+        </div>
+      )}
+
+      {enabled && <OutOfHoursSection agent={agent} onSave={onSave} />}
+    </div>
+  );
+}
+
+// Fora do horário o lead recebia SILÊNCIO: o sistema só parava de responder e
+// ninguém retomava depois. Aqui o dono liga um aviso automático, que não passa
+// pelo Claude (custo zero) e sai no máximo uma vez por conversa por dia.
+function OutOfHoursSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
+  const on = !!agent.out_of_hours_reply;
+  const [draft, setDraft] = useState(agent.out_of_hours_message ?? '');
+
+  useEffect(() => { setDraft(agent.out_of_hours_message ?? ''); }, [agent.id, agent.out_of_hours_message]);
+
+  return (
+    <div className="mt-4 pt-3 border-t border-sidebar-border">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-medium">Avisar quem escrever fora do horário</div>
+          <div className="text-xs text-muted-foreground">
+            Sem isso, o lead que manda mensagem de madrugada não recebe absolutamente nada.
           </div>
-          <div>
-            <Label htmlFor="win_end" className="text-xs">Até</Label>
-            <Input id="win_end" type="time" value={win.end} className="mt-1 w-32"
-              onChange={(e) => setWindow(win.start, e.target.value)} />
-          </div>
-          <p className="text-xs text-muted-foreground pb-2">Se o fim for menor que o início, vira a madrugada (ex: 20h às 06h).</p>
+        </div>
+        <Toggle on={on} onChange={(v) => onSave({ out_of_hours_reply: v })} />
+      </div>
+
+      {on && (
+        <div className="mt-2">
+          <Label htmlFor="ooh_msg" className="text-xs">Mensagem (opcional)</Label>
+          <Textarea
+            id="ooh_msg"
+            rows={2}
+            className="mt-1"
+            placeholder="Vazio = a IA escreve sozinha e já diz quando volta (ex: “te respondo amanhã às 8h”)."
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => onSave({ out_of_hours_message: draft.trim() || null })}
+          />
         </div>
       )}
     </div>
@@ -1119,6 +1245,11 @@ function IntelligenceSection({
           title="Oferecer outras opções" desc="Quando não tem o imóvel exato, sugere alternativas reais e não perde o lead." />
         <CheckRow checked={agent.rich_media_enabled !== false} onChange={(v) => onSave({ rich_media_enabled: v })}
           title="Mandar foto e link do imóvel" desc="Envia mídia do imóvel de interesse no WhatsApp." />
+        {/* Sem isto, "Oferecer outras opções" era promessa vazia: a IA só
+            enxergava o imóvel do anúncio e não tinha como consultar o cadastro. */}
+        <CheckRow checked={agent.catalog_search_enabled !== false} onChange={(v) => onSave({ catalog_search_enabled: v })}
+          title="Consultar o cadastro de imóveis"
+          desc="Deixa a IA buscar imóveis reais do seu cadastro (bairro, quartos, faixa de preço) pra sugerir alternativa. Sem isso ela só conhece o imóvel do anúncio." />
       </div>
 
       {/* Avaliação no Google */}
@@ -1190,6 +1321,16 @@ function FollowupSection({
               onChange={(e) => onChange({ ...agent, followup_max_attempts: Number(e.target.value) })}
               onBlur={() => onSave({ followup_max_attempts: Math.max(0, Number(agent.followup_max_attempts) || 0) })} />
           </div>
+
+          {/* O follow-up nunca olhou o horário de atuação: um agente configurado
+              pra atender "só fora do comercial" cutucava lead às 14h. Virou
+              escolha — desligado é como sempre funcionou. */}
+          <CheckRow
+            checked={!!agent.followup_respect_active_hours}
+            onChange={(v) => onSave({ followup_respect_active_hours: v })}
+            title="Seguir também o horário de atuação"
+            desc="Desligado, o follow-up sai em qualquer dia entre 9h e 20h. Ligado, respeita os dias e as janelas que você configurou acima."
+          />
 
           <label className="flex items-start gap-3 cursor-pointer">
             <input type="checkbox" className="mt-1" checked={agent.followup_only} onChange={(e) => onSave({ followup_only: e.target.checked })} />
@@ -1837,6 +1978,196 @@ function TestTab({ agent }: { agent: SalesAgent }) {
           {last.lead_summary && <div>Resumo: {last.lead_summary}</div>}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------- Diagnóstico ----------------
+//
+// Responde as duas perguntas que antes só o log do Railway respondia: "essa IA
+// está mesmo no ar?" e "por que ela não atendeu esse lead?". Cada item do
+// checklist é uma falha real que já deixou agente mudo sem erro na tela — a
+// campeã é o canal sem credencial da Evolution, em que a IA pensava a resposta,
+// pagava o token e não enviava nada.
+
+const HEALTH_STYLE: Record<string, { dot: string; text: string }> = {
+  ok: { dot: 'bg-emerald-500', text: 'text-emerald-600' },
+  warning: { dot: 'bg-amber-500', text: 'text-amber-600' },
+  error: { dot: 'bg-red-500', text: 'text-red-600' },
+};
+
+const RUN_STATUS_LABEL: Record<string, string> = {
+  replied: 'Respondeu',
+  skipped: 'Não respondeu',
+  failed: 'Falhou',
+};
+
+const RUN_KIND_LABEL: Record<string, string> = {
+  live: 'Conversa',
+  followup: 'Follow-up',
+  engage: 'Acionada pelo corretor',
+  test: 'Teste',
+};
+
+function DiagnosticsTab({ agent }: { agent: SalesAgent }) {
+  const [health, setHealth] = useState<HealthReport | null>(null);
+  const [runs, setRuns] = useState<SalesAgentRun[]>([]);
+  const [totals, setTotals] = useState<SalesAgentRunTotals | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [prompt, setPrompt] = useState<PromptPreview | null>(null);
+  const [checkingPrompt, setCheckingPrompt] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [h, r] = await Promise.all([
+        salesAgentsService.diagnostics(agent.id),
+        salesAgentsService.runs(agent.id, { days: 30, limit: 50 }),
+      ]);
+      setHealth(h);
+      setRuns(r.runs);
+      setTotals(r.totals);
+    } catch {
+      toast.error('Não consegui carregar o diagnóstico.');
+    } finally {
+      setLoading(false);
+    }
+  }, [agent.id]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const checkPrompt = async () => {
+    setCheckingPrompt(true);
+    try {
+      setPrompt(await salesAgentsService.testPrompt(agent.id));
+    } catch {
+      toast.error('Não consegui montar o prompt.');
+    } finally {
+      setCheckingPrompt(false);
+    }
+  };
+
+  if (loading) {
+    return <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-medium">Situação da IA</h3>
+          <p className="text-xs text-muted-foreground">Os passos necessários para ela atender, verificados agora.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => void load()}>
+          <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
+        </Button>
+      </div>
+
+      <div className="space-y-2">
+        {(health?.items ?? []).map((item) => {
+          const style = HEALTH_STYLE[item.status] ?? HEALTH_STYLE.warning;
+          return (
+            <div key={item.key} className="flex items-start gap-3 rounded-md border border-sidebar-border p-3">
+              <span className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${style.dot}`} />
+              <div className="min-w-0">
+                <div className="text-sm font-medium">{item.label}</div>
+                <div className={`text-xs ${item.status === 'ok' ? 'text-muted-foreground' : style.text}`}>{item.detail}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Prova de que o cérebro geral chegou neste cliente. Não gasta crédito:
+          monta o prompt e não chama o modelo. Existia na API desde sempre e não
+          tinha botão em lugar nenhum. */}
+      <div className="rounded-md border border-sidebar-border p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-medium">Conferir o que a IA está lendo</div>
+            <div className="text-xs text-muted-foreground">Monta o cérebro dela sem gastar crédito nenhum.</div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => void checkPrompt()} disabled={checkingPrompt}>
+            {checkingPrompt ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Conferir'}
+          </Button>
+        </div>
+        {prompt && (
+          <div className="mt-3 space-y-1 text-xs">
+            <PromptFlag ok={prompt.has_global_knowledge} label="Cérebro geral da agência" />
+            <PromptFlag ok={prompt.has_client_knowledge} label="Base de conhecimento deste cliente" />
+            <PromptFlag ok={prompt.has_lessons} label="Aprendizados ensinados" />
+            <p className="text-muted-foreground pt-1">Tamanho do cérebro: {prompt.length.toLocaleString('pt-BR')} caracteres.</p>
+          </div>
+        )}
+      </div>
+
+      {totals && (
+        <div>
+          <h3 className="text-sm font-medium mb-2">Últimos 30 dias</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <Stat label="Respondeu" value={String(totals.replied)} />
+            <Stat label="Não respondeu" value={String(totals.skipped)} />
+            <Stat label="Falhou" value={String(totals.failed)} />
+            <Stat label="Custo" value={`US$ ${totals.cost_usd.toFixed(2)}`} />
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h3 className="text-sm font-medium mb-2">Últimos atendimentos</h3>
+        {runs.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Nenhum registro ainda. Cada mensagem que chegar vai aparecer aqui, inclusive as que a IA decidir não responder.
+          </p>
+        ) : (
+          <div className="space-y-1">
+            {runs.map((run) => (
+              <div key={run.id} className="flex items-start gap-3 rounded-md border border-sidebar-border px-3 py-2 text-xs">
+                <span className={`mt-1 h-2 w-2 flex-shrink-0 rounded-full ${
+                  run.status === 'replied' ? 'bg-emerald-500' : run.status === 'failed' ? 'bg-red-500' : 'bg-amber-500'
+                }`} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2">
+                    <span className="font-medium">{RUN_STATUS_LABEL[run.status] ?? run.status}</span>
+                    <span className="text-muted-foreground">· {RUN_KIND_LABEL[run.kind] ?? run.kind}</span>
+                    <span className="text-muted-foreground">· {new Date(run.created_at).toLocaleString('pt-BR')}</span>
+                  </div>
+                  {run.status !== 'replied' && run.reason_label && (
+                    <div className="text-muted-foreground">{run.reason_label}</div>
+                  )}
+                  {run.error_message && (
+                    <div className="text-red-600 break-words">{run.error_class}: {run.error_message}</div>
+                  )}
+                  {run.status === 'replied' && !run.delivered && (
+                    <div className="text-amber-600">A resposta foi gerada mas o WhatsApp não aceitou o envio.</div>
+                  )}
+                </div>
+                {run.cost_usd > 0 && (
+                  <span className="text-muted-foreground whitespace-nowrap">US$ {run.cost_usd.toFixed(4)}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PromptFlag({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      {ok ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <span className="h-3.5 w-3.5 text-amber-600">—</span>}
+      <span className={ok ? '' : 'text-muted-foreground'}>{label}</span>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-sidebar-border p-3">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-lg font-semibold">{value}</div>
     </div>
   );
 }

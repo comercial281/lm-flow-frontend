@@ -131,6 +131,7 @@ const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClien
 const PushCentral = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral'));
 const ClientMode = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientMode'));
 const CerebroUniversal = lazyWithRetry(() => import('@/pages/SuperAdmin/CerebroUniversal'));
+const CustoIA = lazyWithRetry(() => import('@/pages/SuperAdmin/CustoIA'));
 const SuperAgents = lazyWithRetry(() => import('@/pages/SuperAdmin/SuperAgents'));
 const OnboardingForms = lazyWithRetry(() => import('@/pages/SuperAdmin/OnboardingForms'));
 const SdrRefinement = lazyWithRetry(() => import('@/pages/SuperAdmin/SdrRefinement'));
@@ -2109,6 +2110,20 @@ const AppRouter = () => {
                 <SuperAdminRoute>
                   <AdminLayout>
                     <SuperAgents />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          {/* Rateio do consumo da Anthropic por cliente: a chave é uma só pra
+              todos os tenants, então sem esta tela a fatura não tem dono. */}
+          <Route
+            path="/admin/custo-ia"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <CustoIA />
                   </AdminLayout>
                 </SuperAdminRoute>
               </PrivateRoute>

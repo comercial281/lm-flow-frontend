@@ -83,7 +83,44 @@ export const superAgentsService = {
     const res = await api.get('/super/sales_agents/models');
     return (res.data as Envelope<ModelOption[]>).data;
   },
+
+  // Gasto com a Anthropic por cliente e por agente. Existe porque uma ÚNICA
+  // chave paga o consumo de todos os tenants: não havia teto, contador nem
+  // alerta, e a fatura chegava sem dono.
+  async costs(days = 30): Promise<CostReport> {
+    const res = await api.get('/super/sales_agents/costs', { params: { days } });
+    return (res.data as Envelope<CostReport>).data;
+  },
 };
+
+export interface CostTotals {
+  cost_usd: number;
+  runs: number;
+  replied: number;
+  skipped: number;
+  failed: number;
+  input_tokens: number;
+  output_tokens: number;
+}
+
+export interface AgentCost extends CostTotals {
+  id: string;
+  name: string;
+  enabled: boolean;
+}
+
+export interface TenantCost extends CostTotals {
+  tenant_slug: string | null;
+  tenant_name: string;
+  agents: AgentCost[];
+}
+
+export interface CostReport {
+  days: number;
+  since: string;
+  tenants: TenantCost[];
+  totals: CostTotals;
+}
 
 export const MODE_LABELS: Record<string, string> = {
   seller: 'Vendedor(a)',
