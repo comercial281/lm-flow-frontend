@@ -11,6 +11,7 @@ import {
 } from './components/Sections';
 import { EmptyBlock, GlassCard, Skeleton } from './components/primitives';
 import { AdsSection } from './components/AdsSection';
+import { RoletaSection } from './components/RoletaSection';
 import { isAvailable, type PeriodPreset } from './types';
 import './styles/lmf.css';
 
@@ -78,6 +79,10 @@ const DashboardV2: React.FC = () => {
       )}
 
       <KpiRow kpis={isAvailable(data?.kpis) ? data?.kpis : undefined} loading={loading && !data} />
+
+      {/* Some sozinho para quem não lê roletas (corretor) — por isso fica fora
+          da grade, sem reservar coluna vazia na tela dele. */}
+      <RoletaSection />
 
       <div className="lmf-grid lmf-grid-2" style={{ marginTop: 18 }}>
         <GlassCard title="Movimento no período" subtitle="Leads, conversas e visitas, com o período anterior sobreposto">

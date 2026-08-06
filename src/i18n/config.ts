@@ -44,7 +44,6 @@ import ptBRSms from './locales/pt-BR/sms.json';
 import ptBRApi from './locales/pt-BR/api.json';
 import ptBRInstagram from './locales/pt-BR/instagram.json';
 import ptBRMessenger from './locales/pt-BR/messenger.json';
-import ptBRCustomerDashboard from './locales/pt-BR/customerDashboard.json';
 import ptBRAdminSettings from './locales/pt-BR/adminSettings.json';
 import ptBRTutorials from './locales/pt-BR/tutorials.json';
 import ptAuth from './locales/pt/auth.json';
@@ -89,7 +88,6 @@ import ptSms from './locales/pt/sms.json';
 import ptApi from './locales/pt/api.json';
 import ptInstagram from './locales/pt/instagram.json';
 import ptMessenger from './locales/pt/messenger.json';
-import ptCustomerDashboard from './locales/pt/customerDashboard.json';
 import ptAdminSettings from './locales/pt/adminSettings.json';
 import ptTutorials from './locales/pt/tutorials.json';
 import enAuth from './locales/en/auth.json';
@@ -135,7 +133,6 @@ import enSms from './locales/en/sms.json';
 import enApi from './locales/en/api.json';
 import enInstagram from './locales/en/instagram.json';
 import enMessenger from './locales/en/messenger.json';
-import enCustomerDashboard from './locales/en/customerDashboard.json';
 import enAdminSettings from './locales/en/adminSettings.json';
 import enTutorials from './locales/en/tutorials.json';
 import esAuth from './locales/es/auth.json';
@@ -180,7 +177,6 @@ import esSms from './locales/es/sms.json';
 import esApi from './locales/es/api.json';
 import esInstagram from './locales/es/instagram.json';
 import esMessenger from './locales/es/messenger.json';
-import esCustomerDashboard from './locales/es/customerDashboard.json';
 import esAdminSettings from './locales/es/adminSettings.json';
 import esTutorials from './locales/es/tutorials.json';
 import frAuth from './locales/fr/auth.json';
@@ -225,7 +221,6 @@ import frSms from './locales/fr/sms.json';
 import frApi from './locales/fr/api.json';
 import frInstagram from './locales/fr/instagram.json';
 import frMessenger from './locales/fr/messenger.json';
-import frCustomerDashboard from './locales/fr/customerDashboard.json';
 import frAdminSettings from './locales/fr/adminSettings.json';
 import frTutorials from './locales/fr/tutorials.json';
 import itAuth from './locales/it/auth.json';
@@ -270,7 +265,6 @@ import itSms from './locales/it/sms.json';
 import itApi from './locales/it/api.json';
 import itInstagram from './locales/it/instagram.json';
 import itMessenger from './locales/it/messenger.json';
-import itCustomerDashboard from './locales/it/customerDashboard.json';
 import itAdminSettings from './locales/it/adminSettings.json';
 import ptBRTours from './locales/pt-BR/tours.json';
 import ptTours from './locales/pt/tours.json';
@@ -358,7 +352,6 @@ const resources = {
     api: ptBRApi,
     instagram: ptBRInstagram,
     messenger: ptBRMessenger,
-    customerDashboard: ptBRCustomerDashboard,
     adminSettings: ptBRAdminSettings,
     tours: ptBRTours,
     tutorials: ptBRTutorials,
@@ -406,7 +399,6 @@ const resources = {
     api: ptApi,
     instagram: ptInstagram,
     messenger: ptMessenger,
-    customerDashboard: ptCustomerDashboard,
     adminSettings: ptAdminSettings,
     tours: ptTours,
     tutorials: ptTutorials,
@@ -455,7 +447,6 @@ const resources = {
     api: enApi,
     instagram: enInstagram,
     messenger: enMessenger,
-    customerDashboard: enCustomerDashboard,
     adminSettings: enAdminSettings,
     tours: enTours,
     tutorials: enTutorials,
@@ -503,7 +494,6 @@ const resources = {
     api: esApi,
     instagram: esInstagram,
     messenger: esMessenger,
-    customerDashboard: esCustomerDashboard,
     adminSettings: esAdminSettings,
     tours: esTours,
     tutorials: esTutorials,
@@ -551,7 +541,6 @@ const resources = {
     api: frApi,
     instagram: frInstagram,
     messenger: frMessenger,
-    customerDashboard: frCustomerDashboard,
     adminSettings: frAdminSettings,
     tours: frTours,
     tutorials: frTutorials,
@@ -599,7 +588,6 @@ const resources = {
     api: itApi,
     instagram: itInstagram,
     messenger: itMessenger,
-    customerDashboard: itCustomerDashboard,
     adminSettings: itAdminSettings,
     tours: itTours,
     tutorials: itTutorials,
