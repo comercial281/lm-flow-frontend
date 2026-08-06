@@ -123,10 +123,19 @@ export interface CapiBlock {
   series: number[];
 }
 
+/**
+ * Tempo até a PRIMEIRA resposta de cada conversa.
+ *
+ * O topo é o tempo do TIME (mensagens de `User`). A IA vem à parte porque onde
+ * a IA Vendedora atende ela responde em segundos, e misturar as duas fazia o
+ * gestor ler "meu time responde em 12s" olhando o robô. Ausente quando o tenant
+ * não tem IA respondendo — card de IA zerado seria ruído.
+ */
 export interface ResponseBlock {
   samples: number;
   avg_seconds: number;
   median_seconds: number;
+  ai?: { samples: number; avg_seconds: number; median_seconds: number };
 }
 
 export interface HeatmapBlock {
