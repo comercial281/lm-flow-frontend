@@ -427,6 +427,7 @@
     "searchError": "Erreur lors de la recherche des contacts",
     "createSuccess": "Contact créé avec succès",
     "createError": "Erreur lors de la création du contact",
+    "openExisting": "Ouvrir le contact existant",
     "updateSuccess": "Contact mis à jour avec succès",
     "updateError": "Erreur lors de la mise à jour du contact",
     "deleteSuccess": "Contact supprimé avec succès",
