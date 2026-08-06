@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchDashboardMetrics } from '@/services/dashboard/dashboardMetricsService';
-import type { DashboardMetrics, PeriodPreset } from '../types';
+import type { DashboardMetrics, PeriodPreset, ScopeMode } from '../types';
 
 export interface DashboardFilters {
   preset: PeriodPreset;
   since?: string;
   until?: string;
   pipelineId?: string;
+  /** Preferência de recorte; o servidor decide o que vale. */
+  scope?: ScopeMode;
 }
 
 /**
@@ -24,7 +26,7 @@ export function useDashboardMetrics(filters: DashboardFilters) {
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const { preset, since, until, pipelineId } = filters;
+  const { preset, since, until, pipelineId, scope } = filters;
 
   const load = useCallback(async () => {
     abortRef.current?.abort();
@@ -40,6 +42,7 @@ export function useDashboardMetrics(filters: DashboardFilters) {
           ...(preset === 'custom' && since ? { since } : {}),
           ...(preset === 'custom' && until ? { until } : {}),
           ...(pipelineId ? { pipeline_id: pipelineId } : {}),
+          ...(scope ? { scope } : {}),
         },
         controller.signal,
       );
@@ -53,7 +56,7 @@ export function useDashboardMetrics(filters: DashboardFilters) {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [preset, since, until, pipelineId]);
+  }, [preset, since, until, pipelineId, scope]);
 
   useEffect(() => {
     load();
