@@ -1,6 +1,6 @@
 import api from '@/services/core/api';
 import { extractData } from '@/utils/apiHelpers';
-import type { DashboardMetrics, Granularity, PeriodPreset } from '@/pages/Customer/DashboardV2/types';
+import type { DashboardMetrics, Granularity, PeriodPreset, ScopeMode } from '@/pages/Customer/DashboardV2/types';
 
 export interface DashboardMetricsParams {
   preset?: PeriodPreset;
@@ -9,6 +9,12 @@ export interface DashboardMetricsParams {
   until?: string;
   granularity?: Granularity;
   pipeline_id?: string;
+  /**
+   * PREFERÊNCIA de recorte, não ordem: quem decide é o servidor. Corretor
+   * mandando `all` recebe os números dele do mesmo jeito, e o `scope.mode` da
+   * resposta diz o que valeu de verdade.
+   */
+  scope?: ScopeMode;
 }
 
 /**

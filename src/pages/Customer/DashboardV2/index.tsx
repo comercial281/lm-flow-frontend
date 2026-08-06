@@ -1,17 +1,20 @@
 import React, { useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardMetrics } from './hooks/useDashboardMetrics';
 import { PeriodPicker } from './components/PeriodPicker';
+import { ScopePicker } from './components/ScopePicker';
 import { KpiRow } from './components/KpiRow';
 import { HistoryChart, LeadsChart, SourcesDonut } from './components/Charts';
 import { Heatmap } from './components/Heatmap';
 import {
-  AgentSection, AutomationsSection, CapiSection, PipelineFunnel, ResponseTimeCard, UpcomingVisits,
+  AgentSection, AutomationsSection, CapiSection, PipelineFunnel, QueueCard, ResponseTimeCard, UpcomingVisits,
 } from './components/Sections';
 import { EmptyBlock, GlassCard, Skeleton } from './components/primitives';
 import { AdsSection } from './components/AdsSection';
-import { isAvailable, type PeriodPreset } from './types';
+import { RoletaSection } from './components/RoletaSection';
+import { isAvailable, type PeriodPreset, type ScopeMode } from './types';
 import './styles/lmf.css';
 
 /**
@@ -32,21 +35,38 @@ const greeting = () => {
   return 'Boa noite';
 };
 
+const SCOPE_SUBTITLE: Record<ScopeMode, string> = {
+  mine: 'seus números',
+  team: 'sua equipe',
+  all: 'toda a imobiliária',
+};
+
 const DashboardV2: React.FC = () => {
   const { user } = useAuth();
-  const [filters, setFilters] = useState<{ preset: PeriodPreset; since?: string; until?: string; pipelineId?: string }>({
-    preset: 'this_month',
-  });
+  const navigate = useNavigate();
+  const [filters, setFilters] = useState<{
+    preset: PeriodPreset; since?: string; until?: string; pipelineId?: string; scope?: ScopeMode;
+  }>({ preset: 'this_month' });
 
   const { data, loading, error, reload } = useDashboardMetrics(filters);
 
   const subtitle = useMemo(() => {
     if (!data?.period) return 'Carregando período…';
     const fmt = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-    return `${fmt(data.period.since)} até ${fmt(data.period.until)} · comparado com o período anterior de mesmo tamanho`;
-  }, [data?.period]);
+    const periodo = `${fmt(data.period.since)} até ${fmt(data.period.until)}`;
+    // Dizer de quem são os números em texto, e não só no seletor: sem isso o
+    // gestor lê "180 leads" sem saber se é a casa ou a equipe dele.
+    const dono = data.scope ? ` · ${SCOPE_SUBTITLE[data.scope.mode]}` : '';
+    return `${periodo}${dono} · comparado com o período anterior de mesmo tamanho`;
+  }, [data?.period, data?.scope]);
 
   const firstName = (user?.name || '').trim().split(' ')[0];
+
+  // Blocos sem dono: o backend informa quais mandou. Enquanto o payload não
+  // chegou os dois ficam falsos, para o corretor não ver o card aparecer e
+  // sumir — o que se lê como "tirou alguma coisa de mim".
+  const showOperations = data?.scope?.blocks?.operations ?? false;
+  const showAds = data?.scope?.blocks?.media_spend ?? false;
 
   return (
     <div className="lmf">
@@ -59,6 +79,8 @@ const DashboardV2: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Some sozinho pra quem não tem escolha de escopo (corretor). */}
+          <ScopePicker scope={data?.scope} onChange={scope => setFilters(prev => ({ ...prev, scope }))} />
           <PeriodPicker
             preset={filters.preset}
             since={filters.since}
@@ -78,6 +100,19 @@ const DashboardV2: React.FC = () => {
       )}
 
       <KpiRow kpis={isAvailable(data?.kpis) ? data?.kpis : undefined} loading={loading && !data} />
+
+      {/* Lead sem dono fica FORA dos KPIs: se entrasse, dois corretores
+          contariam o mesmo lead e a soma das partes passaria o total do gestor.
+          Aqui ele aparece sem contaminar número nenhum. */}
+      {isAvailable(data?.queue) && (
+        <div style={{ marginTop: 18 }}>
+          <QueueCard queue={data.queue} onOpen={() => navigate('/conversations')} />
+        </div>
+      )}
+
+      {/* Some sozinho para quem não lê roletas (corretor) — por isso fica fora
+          da grade, sem reservar coluna vazia na tela dele. */}
+      <RoletaSection />
 
       <div className="lmf-grid lmf-grid-2" style={{ marginTop: 18 }}>
         <GlassCard title="Movimento no período" subtitle="Leads, conversas e visitas, com o período anterior sobreposto">
@@ -114,23 +149,30 @@ const DashboardV2: React.FC = () => {
         )}
       </div>
 
-      <div className="lmf-grid lmf-grid-half" style={{ marginTop: 18 }}>
-        {isAvailable(data?.automations) ? (
-          <AutomationsSection automations={data.automations} />
-        ) : (
-          <GlassCard title="Automações">
-            {loading && !data ? <Skeleton height={200} /> : <EmptyBlock block={data?.automations} />}
-          </GlassCard>
-        )}
+      {/* Automações e CAPI não têm dono pra recortar: são números de plataforma.
+          O backend OMITE as chaves pra quem não tem dashboard.operations — daí o
+          teste ser por `!== undefined` e não pelo isAvailable, que só distingue
+          bloco vazio de bloco cheio. Renderiza só depois que o payload chega,
+          senão o corretor veria os dois cards piscarem antes de sumir. */}
+      {showOperations && (
+        <div className="lmf-grid lmf-grid-half" style={{ marginTop: 18 }}>
+          {isAvailable(data?.automations) ? (
+            <AutomationsSection automations={data.automations} />
+          ) : (
+            <GlassCard title="Automações">
+              <EmptyBlock block={data?.automations} />
+            </GlassCard>
+          )}
 
-        {isAvailable(data?.capi) ? (
-          <CapiSection capi={data.capi} />
-        ) : (
-          <GlassCard title="Conversões CAPI">
-            {loading && !data ? <Skeleton height={200} /> : <EmptyBlock block={data?.capi} />}
-          </GlassCard>
-        )}
-      </div>
+          {isAvailable(data?.capi) ? (
+            <CapiSection capi={data.capi} />
+          ) : (
+            <GlassCard title="Conversões CAPI">
+              <EmptyBlock block={data?.capi} />
+            </GlassCard>
+          )}
+        </div>
+      )}
 
       <div className="lmf-grid lmf-grid-half" style={{ marginTop: 18 }}>
         {isAvailable(data?.upcoming) ? (
@@ -161,7 +203,9 @@ const DashboardV2: React.FC = () => {
           {loading && !data ? <Skeleton height={190} /> : isAvailable(data?.history) ? <HistoryChart history={data.history} /> : <EmptyBlock block={data?.history} />}
         </GlassCard>
 
-        <AdsSection ads={data?.ads} onReload={reload} />
+        {/* Gasto de mídia é dinheiro da empresa, não tem dono pra recortar: a
+            chave `ads` só vem pra quem tem dashboard.media_spend. */}
+        {showAds && <AdsSection ads={data?.ads} onReload={reload} />}
       </div>
     </div>
   );

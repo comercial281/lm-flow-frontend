@@ -25,6 +25,29 @@ export function isAvailable<T>(block: Maybe<T> | undefined): block is T & { avai
   return !!block && (block as Unavailable).available !== false;
 }
 
+/**
+ * De quem são os números que este payload traz.
+ *
+ * `mode` é o que o servidor RESOLVEU, não o que o front pediu: corretor pedindo
+ * `all` recebe `mine` de volta. `locked` diz que ele nem pode pedir outro, e é
+ * o que faz o seletor não aparecer pra quem não tem escolha.
+ *
+ * `blocks` diz quais blocos sem dono vieram no payload. Quando é `false`, a
+ * chave correspondente NÃO existe em DashboardMetrics — o backend omite em vez
+ * de mandar e esconder, senão o número viajaria no JSON.
+ */
+export type ScopeMode = 'mine' | 'team' | 'all';
+
+export interface ScopeInfo {
+  mode: ScopeMode;
+  locked: boolean;
+  available_modes: ScopeMode[];
+  blocks: {
+    media_spend: boolean;
+    operations: boolean;
+  };
+}
+
 export interface PeriodInfo {
   preset: PeriodPreset;
   since: string;
@@ -82,7 +105,8 @@ export interface AgentBlock {
   visits_completed: number;
   visits_cancelled: number;
   leads_in_followup: number;
-  ai: Maybe<{ executions: number; sessions: number; tokens: number }>;
+  /** Ausente sem `dashboard.operations`: uso de IA é métrica de plataforma. */
+  ai?: Maybe<{ executions: number; sessions: number; tokens: number }>;
 }
 
 export interface AutomationsBlock {
@@ -143,18 +167,35 @@ export interface AdsBlock {
   series: number[];
 }
 
+/**
+ * Leads que entraram sem dono no período.
+ *
+ * Fica FORA dos KPIs de propósito: se entrasse na conta de cada corretor, dois
+ * deles contariam o mesmo lead e a soma das partes passaria o total do gestor.
+ * Mas também não pode sumir — no modo Leilão a roleta deixa o lead sem dono de
+ * propósito, e o corretor precisa saber que tem lead esperando pra assumir.
+ */
+export interface QueueBlock {
+  leads: number;
+  conversations: number;
+}
+
 export interface DashboardMetrics {
   period: PeriodInfo;
+  scope: ScopeInfo;
   kpis: Maybe<Kpis>;
   series: Maybe<SeriesBlock>;
   sources: Maybe<SourcesBlock>;
   pipeline: Maybe<PipelineBlock>;
   agent: Maybe<AgentBlock>;
-  automations: Maybe<AutomationsBlock>;
-  capi: Maybe<CapiBlock>;
   response: Maybe<ResponseBlock>;
   heatmap: Maybe<HeatmapBlock>;
   upcoming: Maybe<UpcomingBlock>;
   history: Maybe<HistoryBlock>;
-  ads: Maybe<AdsBlock>;
+  queue: Maybe<QueueBlock>;
+  /** Ausentes sem `dashboard.operations` — a chave nem vem no payload. */
+  automations?: Maybe<AutomationsBlock>;
+  capi?: Maybe<CapiBlock>;
+  /** Ausente sem `dashboard.media_spend`. */
+  ads?: Maybe<AdsBlock>;
 }

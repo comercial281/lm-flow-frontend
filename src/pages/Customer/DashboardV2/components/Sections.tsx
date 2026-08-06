@@ -2,8 +2,53 @@ import React from 'react';
 import { EmptyBlock, formatCurrency, formatDuration, formatNumber, GlassCard } from './primitives';
 import { isAvailable } from '../types';
 import type {
-  AgentBlock, AutomationsBlock, CapiBlock, PipelineBlock, ResponseBlock, UpcomingBlock,
+  AgentBlock, AutomationsBlock, CapiBlock, PipelineBlock, QueueBlock, ResponseBlock, UpcomingBlock,
 } from '../types';
+
+/**
+ * Leads que chegaram sem dono no período.
+ *
+ * Não entra na conta de ninguém — se entrasse, dois corretores contariam o
+ * mesmo lead e a soma das partes passaria o total do gestor. Mas fica visível
+ * porque no modo Leilão a roleta deixa o lead sem dono DE PROPÓSITO, e quem
+ * chegar primeiro assume: o corretor precisa saber que tem lead esperando.
+ *
+ * Some quando não há nenhum — um "0 na fila" permanente vira ruído.
+ */
+export const QueueCard: React.FC<{ queue: QueueBlock; onOpen: () => void }> = ({ queue, onOpen }) => {
+  if (!queue.leads && !queue.conversations) return null;
+
+  return (
+    <GlassCard
+      title="Na fila, sem dono"
+      subtitle="Chegaram no período e ainda não têm responsável"
+      className="cursor-pointer"
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onOpen}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') onOpen();
+        }}
+        className="flex items-end gap-8"
+      >
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--lmf-muted)' }}>Leads</div>
+          <div style={{ fontSize: 30, fontWeight: 650, letterSpacing: '-0.02em' }}>
+            {formatNumber(queue.leads)}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--lmf-muted)' }}>Conversas</div>
+          <div style={{ fontSize: 20, fontWeight: 550, color: 'var(--lmf-muted)' }}>
+            {formatNumber(queue.conversations)}
+          </div>
+        </div>
+      </div>
+    </GlassCard>
+  );
+};
 
 /** Funil do pipeline: quantidade por etapa, na ordem real do board. */
 export const PipelineFunnel: React.FC<{
@@ -84,7 +129,9 @@ export const AgentSection: React.FC<{ agent: AgentBlock }> = ({ agent }) => {
         ))}
       </div>
 
-      {isAvailable(agent.ai) ? (
+      {/* Uso de IA é métrica de plataforma, sem dono pra recortar: o backend
+          omite a chave inteira pra quem não tem dashboard.operations. */}
+      {agent.ai && isAvailable(agent.ai) ? (
         <div className="lmf-row" style={{ marginTop: 14, borderTop: '1px solid rgba(42,27,73,0.7)', borderBottom: 0, paddingTop: 14 }}>
           <span className="lmf-row-sub">IA: {formatNumber(agent.ai.sessions)} sessões · {formatNumber(agent.ai.executions)} execuções</span>
           <span className="lmf-pill">{formatNumber(agent.ai.tokens)} tokens</span>
