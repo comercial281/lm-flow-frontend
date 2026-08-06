@@ -27,6 +27,7 @@ import { BaseFilter, AppliedFilter } from '@/types/core';
 import { ContactCard } from '@/components/contacts';
 import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 import { extractError } from '@/utils/apiHelpers';
+import { contactSaveError } from '@/utils/contactErrors';
 
 import ContactsHeader from '@/components/contacts/ContactsHeader';
 import ContactsTable from '@/components/contacts/ContactsTable';
@@ -753,7 +754,27 @@ export default function Contacts() {
       }
     } catch (error) {
       console.error('Error saving contact:', error);
-      toast.error(editingContact ? t('messages.updateError') : t('messages.createError'));
+
+      // Telefone/e-mail já cadastrado é o erro mais comum de quem cadastra
+      // cliente de carteira — a pessoa já está na base, mas fora do recorte de
+      // lead da aba, então ele não a encontra na busca. O toast genérico não
+      // dizia nada disso; agora diz quem é e leva até o contato.
+      const failure = contactSaveError(
+        error,
+        editingContact ? t('messages.updateError') : t('messages.createError'),
+      );
+
+      toast.error(
+        failure.message,
+        failure.existing?.id
+          ? {
+              action: {
+                label: t('messages.openExisting'),
+                onClick: () => navigate(`/contacts/${failure.existing!.id}`),
+              },
+            }
+          : undefined,
+      );
     } finally {
       setState(prev => ({
         ...prev,

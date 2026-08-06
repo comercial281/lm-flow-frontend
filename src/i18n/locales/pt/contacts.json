@@ -435,6 +435,7 @@
     "searchError": "Erro ao buscar contatos",
     "createSuccess": "Contato criado com sucesso",
     "createError": "Erro ao criar contato",
+    "openExisting": "Abrir contato existente",
     "updateSuccess": "Contato atualizado com sucesso",
     "updateError": "Erro ao atualizar contato",
     "deleteSuccess": "Contato deletado com sucesso",
