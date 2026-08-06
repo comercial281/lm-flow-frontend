@@ -1921,12 +1921,27 @@ interface TestScenario {
   source: string;
   interest: string;
   formAnswers: Record<string, string>;
-  /** Primeira mensagem do lead, já no campo — é só apertar enviar. */
+  /**
+   * Conversa que JÁ aconteceu antes deste turno. Vazio = primeiro contato.
+   *
+   * Muda o comportamento na raiz, não só o clima: o prompt escolhe entre três
+   * aberturas conforme o histórico. Com mensagem da IA no histórico ele entra em
+   * CONTINUIDADE ("você JÁ conversou com este lead, NÃO recomece"); sem nada, roda
+   * o roteiro de abertura inteiro, terminando na pergunta de intenção. Testar
+   * "lead que já visitou" digitando uma frase num chat vazio testa o caso errado.
+   */
+  history?: TestHistoryItem[];
+  /** Próxima mensagem do lead, já no campo — é só apertar enviar. */
   firstMessage: string;
 }
 
-// Os cinco casos que separam uma IA que funciona de uma que parece funcionar.
-// Cada um existe pra checar um comportamento específico, descrito no `hint`.
+// Os casos que separam uma IA que funciona de uma que parece funcionar. Cada um
+// checa um comportamento específico, descrito no `hint`.
+//
+// Metade tem conversa já semeada, e não é enfeite: o prompt escolhe a abertura
+// pelo histórico. Um lead "que já visitou" digitado num chat VAZIO é, pro
+// sistema, um primeiro contato — ele roda o roteiro de abertura e a pergunta de
+// intenção, e o teste acaba medindo o caso errado.
 const TEST_SCENARIOS: TestScenario[] = [
   {
     id: 'ctwa',
@@ -1953,14 +1968,61 @@ const TEST_SCENARIOS: TestScenario[] = [
     firstMessage: 'oi',
   },
   {
-    id: 'visitou',
-    label: 'Já visitou',
-    hint: 'Lead adiantado. Ela tem que continuar de onde parou, não recomeçar a qualificação do zero.',
+    id: 'visitou-primeiro-contato',
+    label: 'Visitou, 1º contato',
+    hint: 'Visitou o plantão no fim de semana e manda a PRIMEIRA mensagem. Sem histórico, o prompt roda o roteiro de abertura — confira se ela insiste na pergunta de intenção mesmo o lead já tendo visitado.',
     contactName: 'Patrícia',
     source: 'Anúncio Instagram',
     interest: 'Já visitou o decorado',
     formAnswers: {},
     firstMessage: 'eu já visitei semana passada, queria as plantas e o lazer',
+  },
+  {
+    id: 'conversa-andando',
+    label: 'Conversa em andamento',
+    hint: 'A IA já falou antes. Tem que CONTINUAR de onde parou: nada de se reapresentar, repetir a saudação ou refazer a pergunta de intenção.',
+    contactName: 'Patrícia',
+    source: 'Anúncio Instagram',
+    interest: '',
+    formAnswers: {},
+    history: [
+      { role: 'user', content: 'oi, vi o anúncio' },
+      {
+        role: 'assistant',
+        content:
+          'Patrícia, olá, tudo bem? Sou o Eduardo, consultor imobiliário. Vi que você se cadastrou agorinha no nosso anúncio. Queria entender de fato o que você está buscando: seu foco é moradia, investimento, ou ainda não sabe e tá só sondando?',
+      },
+      { role: 'user', content: 'é pra morar, eu e meu marido' },
+      {
+        role: 'assistant',
+        content: 'Que bom, Patrícia. Vocês estão pensando em quantos quartos? E tem alguma região que faz mais sentido pro dia a dia de vocês?',
+      },
+      { role: 'user', content: '2 quartos, de preferência perto do metrô' },
+    ],
+    firstMessage: 'consegue me mandar as plantas?',
+  },
+  {
+    id: 'voltou',
+    label: 'Sumiu e voltou',
+    hint: 'Conversa parada há dias e o lead reaparece. Ela tem que retomar o assunto, não abrir de novo como se fosse um lead novo.',
+    contactName: 'Thiago',
+    source: 'Anúncio Facebook',
+    interest: '',
+    formAnswers: {},
+    history: [
+      { role: 'user', content: 'quanto tá o de 2 quartos?' },
+      {
+        role: 'assistant',
+        content:
+          'Thiago, tudo bem? Sou o Eduardo. Antes de falar de valor, queria entender: é pra morar ou pra investir?',
+      },
+      { role: 'user', content: 'investir' },
+      {
+        role: 'assistant',
+        content: 'Show. Qual faixa de investimento você tá confortável pra esse tipo de projeto?',
+      },
+    ],
+    firstMessage: 'desculpa a demora, sumi aqui. ainda dá pra ver esse apê?',
   },
   {
     id: 'fora-do-perfil',
@@ -2028,15 +2090,17 @@ function TestTab({ agent }: { agent: SalesAgent }) {
   const [loading, setLoading] = useState(false);
   const [savedScenarios, setSavedScenarios] = useState<TestScenario[]>(() => loadSavedScenarios());
 
-  // Aplicar um cenário LIMPA a conversa: continuar um histórico de "já visitou"
-  // depois de trocar pra "só sondando" testaria uma quimera que não existe.
+  // Aplicar um cenário SUBSTITUI a conversa pela do cenário (vazia, quando ele
+  // não tem histórico). Mesclar com o que estava na tela criaria uma conversa que
+  // não existe em lugar nenhum — e o histórico é justamente o que decide se o
+  // prompt abre do zero ou continua de onde parou.
   const applyScenario = (s: TestScenario) => {
     setContactName(s.contactName);
     setSource(s.source);
     setInterest(s.interest);
     setFormAnswers({ ...s.formAnswers });
     setMessage(s.firstMessage);
-    setHistory([]);
+    setHistory((s.history ?? []).map((m) => ({ ...m })));
     setLast(null);
     setMediaShownFor(null);
   };
@@ -2053,6 +2117,10 @@ function TestTab({ agent }: { agent: SalesAgent }) {
       source,
       interest,
       formAnswers: { ...formAnswers },
+      // A conversa da tela vira o histórico do cenário — inclusive a que você
+      // acabou de rodar. É assim que se guarda "aquele caso que deu errado" pra
+      // conferir depois se a mudança no prompt resolveu.
+      history: history.map(({ role, content }) => ({ role, content })),
       firstMessage: message.trim(),
     };
     // Mesmo nome sobrescreve, em vez de duplicar na lista.
@@ -2188,9 +2256,16 @@ function TestTab({ agent }: { agent: SalesAgent }) {
               type="button"
               title={s.hint}
               onClick={() => applyScenario(s)}
-              className="rounded-md border border-sidebar-border px-2.5 py-1 text-xs hover:bg-muted transition-colors"
+              className="inline-flex items-center gap-1 rounded-md border border-sidebar-border px-2.5 py-1 text-xs hover:bg-muted transition-colors"
             >
               {s.label}
+              {/* Marca quem já vem com conversa: é a diferença entre testar a
+                  abertura e testar a continuidade, e não dá pra adivinhar pelo nome. */}
+              {(s.history?.length ?? 0) > 0 && (
+                <span className="text-[10px] text-muted-foreground" title="Já vem com conversa">
+                  💬
+                </span>
+              )}
             </button>
           ))}
           {savedScenarios.map((s) => (
@@ -2218,8 +2293,10 @@ function TestTab({ agent }: { agent: SalesAgent }) {
           ))}
         </div>
         <p className="text-xs text-muted-foreground">
-          Passe o mouse pra ver o que cada um testa. Aplicar um cenário limpa a conversa atual.
-          Os que você salvar ficam neste navegador.
+          Passe o mouse pra ver o que cada um testa. Os marcados com 💬 já vêm com uma conversa
+          anterior — e isso muda a resposta: sem histórico ela abre do zero, com histórico ela
+          continua de onde parou. Aplicar um cenário substitui a conversa da tela.
+          Ao salvar o seu, a conversa atual vai junto.
         </p>
       </div>
 
