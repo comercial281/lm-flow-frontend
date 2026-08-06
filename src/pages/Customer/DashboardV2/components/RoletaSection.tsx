@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shuffle } from 'lucide-react';
 import { mayRead } from '@/store/appDataStore';
@@ -19,8 +19,21 @@ import { EmptyBlock, GlassCard } from './primitives';
  *
  * Este bloco NÃO vem do payload de /dashboard/metrics: a roleta tem endpoint
  * próprio e permissão própria (`roleta_configs.read`), que o corretor não tem.
- * Sem dado, o cartão não existe — nunca desenha vazio.
  */
+
+/**
+ * Os quatro desfechos, separados de propósito.
+ *
+ * Antes os quatro colapsavam em "não renderiza nada", e o cartão sumia sem
+ * dizer se era falta de permissão, erro na chamada ou nenhuma roleta cadastrada
+ * — três causas com conserto diferente, e nenhuma pista de qual era. Só a
+ * primeira justifica sumir de verdade.
+ */
+type Estado =
+  | { tipo: 'carregando' }
+  | { tipo: 'sem_permissao' }
+  | { tipo: 'erro' }
+  | { tipo: 'ok'; linhas: Linha[] };
 
 interface Linha {
   nome: string;
@@ -64,36 +77,75 @@ function montarLinha(c: RoletaConfig): Linha {
 
 export const RoletaSection: React.FC = () => {
   const navigate = useNavigate();
-  const [linhas, setLinhas] = useState<Linha[] | null>(null);
+  const [estado, setEstado] = useState<Estado>({ tipo: 'carregando' });
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      // O corretor não lê roletas, e sem esta guarda ele levaria um 403 vermelho
-      // ao abrir o PRÓPRIO dashboard — o mesmo tropeço que os filtros de
-      // instância/equipe do dashboard antigo já tiveram.
-      const pode = await mayRead('roleta_configs.read').catch(() => false);
-      if (!alive) return;
-      if (!pode) return setLinhas([]);
+  const carregar = useCallback(async () => {
+    // O corretor não lê roletas, e sem esta guarda ele levaria um 403 vermelho
+    // ao abrir o PRÓPRIO dashboard — o mesmo tropeço que os filtros de
+    // instância/equipe do dashboard antigo já tiveram.
+    const pode = await mayRead('roleta_configs.read').catch(() => false);
+    if (!pode) return setEstado({ tipo: 'sem_permissao' });
 
-      try {
-        const configs = await roletaConfigService.getAll();
-        if (!alive) return;
-        setLinhas(configs.map(montarLinha));
-      } catch {
-        // Silencioso: o dashboard inteiro não pode ficar vermelho porque a
-        // roleta não respondeu.
-        if (alive) setLinhas([]);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
+    try {
+      const configs = await roletaConfigService.getAll();
+      setEstado({ tipo: 'ok', linhas: configs.map(montarLinha) });
+    } catch {
+      // O dashboard inteiro não pode ficar vermelho porque a roleta não
+      // respondeu — mas o cartão precisa dizer que tentou e não conseguiu, em
+      // vez de se comportar igual a "não existe roleta".
+      setEstado({ tipo: 'erro' });
+    }
   }, []);
 
-  // Sem permissão, sem roleta ou ainda carregando: o cartão não existe. Um
-  // esqueleto aqui roubaria uma faixa da tela por nada.
-  if (!linhas?.length) return null;
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  // Sem permissão o cartão realmente não existe: é bloco de gestão e o corretor
+  // não tem o que fazer com ele. Carregando também não desenha, pra não piscar.
+  if (estado.tipo === 'sem_permissao' || estado.tipo === 'carregando') return null;
+
+  const abrirConfig = () => navigate('/settings/roleta-config');
+
+  if (estado.tipo === 'erro') {
+    return (
+      <div style={{ marginTop: 18 }}>
+        <GlassCard
+          title="Roleta"
+          action={
+            <button type="button" className="lmf-select" onClick={() => void carregar()}>
+              Tentar de novo
+            </button>
+          }
+        >
+          <EmptyBlock text="Não foi possível carregar as roletas agora." />
+        </GlassCard>
+      </div>
+    );
+  }
+
+  // Zero roletas é informação, não ausência dela: sem nenhuma, os leads não
+  // estão sendo distribuídos automaticamente para ninguém. Sumir calado deixaria
+  // isso invisível justamente para quem pode resolver.
+  if (estado.linhas.length === 0) {
+    return (
+      <div style={{ marginTop: 18 }}>
+        <GlassCard
+          title="Roleta"
+          subtitle="Nenhuma roleta configurada — os leads não estão sendo distribuídos automaticamente"
+          action={
+            <button type="button" className="lmf-select" onClick={abrirConfig}>
+              Configurar
+            </button>
+          }
+        >
+          <EmptyBlock text="Cadastre uma roleta para sortear os leads entre os corretores." />
+        </GlassCard>
+      </div>
+    );
+  }
+
+  const linhas = estado.linhas;
 
   // A margem mora aqui, e não no pai: quando o cartão não existe (corretor), o
   // pai não pode deixar um vão de 18px sobrando no lugar dele.
