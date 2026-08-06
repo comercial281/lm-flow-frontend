@@ -209,29 +209,62 @@ export const CapiSection: React.FC<{ capi: CapiBlock }> = ({ capi }) => (
   </GlassCard>
 );
 
-/** Tempo de resposta. Mediana em destaque: a média mente com conversa esquecida. */
-export const ResponseTimeCard: React.FC<{ response: ResponseBlock }> = ({ response }) => (
-  <GlassCard title="Tempo de resposta" subtitle={`${formatNumber(response.samples)} conversas medidas`}>
-    {response.samples === 0 ? (
-      <EmptyBlock text="Sem conversas respondidas no período." />
-    ) : (
-      <div className="flex items-end gap-8">
-        <div>
-          <div style={{ fontSize: 12, color: 'var(--lmf-muted)' }}>Mediana</div>
-          <div style={{ fontSize: 30, fontWeight: 650, letterSpacing: '-0.02em' }}>
-            {formatDuration(response.median_seconds)}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 12, color: 'var(--lmf-muted)' }}>Média</div>
-          <div style={{ fontSize: 20, fontWeight: 550, color: 'var(--lmf-muted)' }}>
-            {formatDuration(response.avg_seconds)}
-          </div>
-        </div>
-      </div>
-    )}
-  </GlassCard>
-);
+/**
+ * Tempo até a primeira resposta. Mediana em destaque: a média mente com
+ * conversa esquecida.
+ *
+ * O número grande é o do TIME. A IA aparece embaixo, rotulada, porque ela
+ * responde em segundos e somar as duas fazia o card dizer que o time é rápido
+ * quando quem era rápido é o robô.
+ */
+export const ResponseTimeCard: React.FC<{ response: ResponseBlock }> = ({ response }) => {
+  const semNada = response.samples === 0 && !response.ai;
+
+  return (
+    <GlassCard
+      title="Tempo de resposta"
+      subtitle={`${formatNumber(response.samples)} conversas respondidas pelo time`}
+    >
+      {semNada ? (
+        <EmptyBlock text="Sem conversas respondidas no período." />
+      ) : (
+        <>
+          {response.samples === 0 ? (
+            // Só a IA respondeu no período. Dizer isso é o ponto do card.
+            <EmptyBlock text="Nenhuma conversa respondida por uma pessoa no período." />
+          ) : (
+            <div className="flex items-end gap-8">
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--lmf-muted)' }}>Mediana</div>
+                <div style={{ fontSize: 30, fontWeight: 650, letterSpacing: '-0.02em' }}>
+                  {formatDuration(response.median_seconds)}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--lmf-muted)' }}>Média</div>
+                <div style={{ fontSize: 20, fontWeight: 550, color: 'var(--lmf-muted)' }}>
+                  {formatDuration(response.avg_seconds)}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {response.ai && (
+            <div
+              className="lmf-row"
+              style={{ marginTop: 14, borderTop: '1px solid rgba(42,27,73,0.7)', borderBottom: 0, paddingTop: 14 }}
+            >
+              <span className="lmf-row-sub">
+                IA respondeu {formatNumber(response.ai.samples)} conversas
+              </span>
+              <span className="lmf-pill">mediana {formatDuration(response.ai.median_seconds)}</span>
+            </div>
+          )}
+        </>
+      )}
+    </GlassCard>
+  );
+};
 
 /** Próximas visitas: olha pra frente a partir de agora, não pro filtro. */
 export const UpcomingVisits: React.FC<{ upcoming: UpcomingBlock }> = ({ upcoming }) => (
