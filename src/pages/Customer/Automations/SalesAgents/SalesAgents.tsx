@@ -1388,6 +1388,10 @@ function AdvancedSection({
 // ---------------- Gatilhos de ativação (multi) ----------------
 
 const TRIGGER_TYPES: { value: SalesAgentTriggerType; label: string }[] = [
+  // Primeiro da lista porque é o que quase todo mundo quer: contato e lead não
+  // são a mesma coisa — toda mensagem de número desconhecido vira contato, mas
+  // só quem entra no funil é lead. É a definição que o resto do sistema já usa.
+  { value: 'pipeline', label: 'É lead (tem card no funil)' },
   { value: 'keyword', label: 'Contém palavra' },
   { value: 'origin', label: 'Origem do lead' },
   { value: 'property', label: 'Imóvel (código / form)' },
@@ -1403,6 +1407,8 @@ function newTrigger(type: SalesAgentTriggerType): SalesAgentTrigger {
     case 'origin': return { type, mode: 'ads' };
     case 'property': return { type, mode: 'any' };
     case 'pipeline_stage': return { type, pipeline_id: '', stage_id: '' };
+    // pipeline_id vazio = qualquer funil, que é o caso normal.
+    case 'pipeline': return { type, mode: 'any', pipeline_id: '' };
   }
 }
 
@@ -1485,6 +1491,22 @@ function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
                   <Input className="w-32" placeholder="código" value={t.code ?? ''}
                     onChange={(e) => update(i, { code: e.target.value })} onBlur={() => commit(triggers)} />
                 )}
+              </>
+            )}
+
+            {t.type === 'pipeline' && (
+              <>
+                <select
+                  value={t.pipeline_id ?? ''}
+                  onChange={(e) => update(i, { pipeline_id: e.target.value })}
+                  className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
+                >
+                  <option value="">Qualquer funil</option>
+                  {pipelines.map((p) => <option key={p.id} value={p.id}>{`Só o funil ${p.name}`}</option>)}
+                </select>
+                <span className="text-xs text-muted-foreground">
+                  Card arquivado não conta — lead que saiu do funil e volta a escrever fica pro humano.
+                </span>
               </>
             )}
 
