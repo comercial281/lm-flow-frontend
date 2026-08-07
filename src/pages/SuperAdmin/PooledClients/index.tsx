@@ -17,6 +17,7 @@ interface PooledTenant {
   members: number | null; login_url: string; admin_email?: string;
   settings?: Record<string, any>; archived?: boolean; created_at?: string;
   max_whatsapp_channels?: number; whatsapp_channels_used?: number | null;
+  campaign_only_inbox?: boolean;
 }
 interface Member { id: string; email: string; name?: string; plain_password?: string; }
 
@@ -311,6 +312,27 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
     } finally { setSavingIsolation(false); }
   };
 
+  // Inbox só-campanha: a lista de conversas passa a mostrar SÓ quem entrou em
+  // algum funil (lead de campanha) ou conversa iniciada na mão pelo painel. Quem
+  // o gate de origem barrou — WhatsApp orgânico, form de site — some da caixa
+  // também, não só do funil. Par natural do seletor de origens acima: lá se
+  // decide o que vira card, aqui se decide se o que não virou card ainda aparece.
+  // Default OFF no backend (Tenant#campaign_only_inbox?), então `?? false` aqui
+  // reflete o mesmo default para tenant que ainda não tem a chave.
+  const [campaignOnly, setCampaignOnly] = useState<boolean>(tenant.campaign_only_inbox ?? false);
+  const [savingCampaignOnly, setSavingCampaignOnly] = useState(false);
+  const saveCampaignOnly = async (next: boolean) => {
+    const prev = campaignOnly;
+    setCampaignOnly(next);
+    setSavingCampaignOnly(true);
+    try {
+      await api.patch(`/super/pooled_tenants/${tenant.id}`, { name: tenant.name, campaign_only_inbox: next });
+    } catch {
+      setCampaignOnly(prev);
+      alert('Falha ao salvar o inbox só-campanha.');
+    } finally { setSavingCampaignOnly(false); }
+  };
+
   // Limite de canais de WhatsApp que o cliente pode criar (0 = ilimitado).
   const [maxWa, setMaxWa] = useState<number>(Number(tenant.max_whatsapp_channels ?? tenant.settings?.max_whatsapp_channels ?? 5) || 0);
   const [savingMax, setSavingMax] = useState(false);
@@ -403,6 +425,25 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
               aria-pressed={brokerIsolation} aria-label="Isolamento por corretor">
               <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
                 style={{ left: brokerIsolation ? '1.375rem' : '0.125rem' }} />
+            </button>
+          </div>
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1"
+            style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.25)' }}>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-white/90">Inbox só-campanha</div>
+              <div className="text-xs text-white/40">
+                A caixa mostra só conversas que entraram em algum funil ou iniciadas na mão
+                pelo painel. Quem foi barrado pelas origens acima (WhatsApp orgânico, form do
+                site) some da caixa também, não só do funil. Ligue para o corretor não ver
+                mensagem de conhecido; deixe desligado para ele ver tudo e só o funil filtrar.
+              </div>
+            </div>
+            <button onClick={() => saveCampaignOnly(!campaignOnly)} disabled={savingCampaignOnly}
+              className="relative w-11 h-6 rounded-full flex-shrink-0 transition-colors disabled:opacity-50"
+              style={{ background: campaignOnly ? '#7c3aed' : 'rgba(255,255,255,0.15)' }}
+              aria-pressed={campaignOnly} aria-label="Inbox só-campanha">
+              <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                style={{ left: campaignOnly ? '1.375rem' : '0.125rem' }} />
             </button>
           </div>
           {loading ? (
