@@ -9,8 +9,10 @@ import { NativeSelect } from '@/components/ui/native-select';
 import {
   Shuffle, Plus, Trash2, GripVertical, Save, Phone,
   Clock, Bell, ToggleLeft, ToggleRight, Users, BarChart2,
-  Gavel, Hand, Wifi, Send, Loader2, Eye, EyeOff,
+  Gavel, Hand, Wifi, Send, Loader2, Eye, EyeOff, AlertTriangle,
 } from 'lucide-react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
+import { roletaFormProblems, splitBackendProblems } from './roletaFormChecks';
 import {
   roletaConfigService, RoletaConfig, RoletaMember, RoletaInstance, BrokerAssignment, DistributionMode,
   RoletaDiagnostic, RepairOwnersResult, RepairInboxAccessResult, RoletaQueue,
@@ -342,6 +344,13 @@ export default function RoletaConfigPage() {
   const [loadingForms, setLoadingForms]     = useState(false);
   const [formsError, setFormsError]         = useState<string | null>(null);
   const [inboxes, setInboxes]               = useState<Inbox[]>([]);
+  // POR QUE A ROLETA NÃO SALVOU — a lista fica na tela até o gestor resolver.
+  //
+  // Antes toda recusa virava um toast que sumia em segundos, e a do servidor nem
+  // isso: o `catch` lia a mensagem do axios ("Request failed with status code
+  // 422") em vez do motivo que o backend mandava junto. Criar roleta podia
+  // falhar duas vezes seguidas sem que a tela dissesse uma palavra sobre o quê.
+  const [saveErrors, setSaveErrors]         = useState<string[]>([]);
 
   const loadConfigs = useCallback(async () => {
     setLoading(true);
@@ -499,6 +508,7 @@ export default function RoletaConfigPage() {
     setInstances([]);
     setMultiFromConfig(false);
     setGroups([]);
+    setSaveErrors([]);
     setModalOpen(true);
   }
 
@@ -542,6 +552,7 @@ export default function RoletaConfigPage() {
         : [mkInstance({ inbox_id: c.inbox_id, weight: 10, position: 0 })],
     );
     setMultiFromConfig(!!c.multi_instance_enabled);
+    setSaveErrors([]);
     setModalOpen(true);
   }
 
@@ -619,22 +630,14 @@ export default function RoletaConfigPage() {
   }
 
   async function save() {
-    // A mensagem aponta o campo que o gestor está VENDO: com o bloco de números
-    // visível o seletor separado não existe, e mandar procurar "a instância"
-    // levaria a um campo que não está na tela.
-    if (!inboxId.trim()) {
-      toast.error(multiEnabled
-        ? 'Escolha o número de entrada na primeira linha de "Números que atendem"'
-        : 'Selecione a instância (WhatsApp) da roleta');
+    const problemas = problemasDoFormulario();
+    if (problemas.length > 0) {
+      setSaveErrors(problemas);
+      toast.error(problemas.length === 1 ? problemas[0] : `${problemas.length} coisas impedem o salvamento — veja no fim do formulário`);
       return;
     }
-    if (!gestorNum.trim()) { toast.error('Numero do gestor obrigatorio'); return; }
+    setSaveErrors([]);
     const membersValid = members.filter(m => m.user_id && m.personal_whatsapp_number);
-    // No modo Manual o gerente distribui na mão, então não precisa de corretor cadastrado.
-    if (mode !== 'manual' && membersValid.length === 0) {
-      toast.error('Adicione ao menos um corretor com numero de WhatsApp');
-      return;
-    }
 
     setSaving(true);
     try {
@@ -699,11 +702,19 @@ export default function RoletaConfigPage() {
         await roletaConfigService.create(payload);
         toast.success('Roleta criada');
       }
+      setSaveErrors([]);
       setModalOpen(false);
       loadConfigs();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Erro ao salvar';
-      toast.error(msg);
+      // ⚠️ NÃO usar `e.message`: um erro do axios É um Error, e a mensagem dele
+      // é sempre "Request failed with status code 422" — o motivo real, que o
+      // backend manda no corpo da resposta, ia para o lixo. Era por isso que
+      // criar roleta falhava sem dizer nada: o servidor explicava, a tela
+      // trocava a explicação por um código HTTP.
+      const msg = apiErrorMessage(e, 'Não foi possível salvar a roleta. Tente de novo.');
+      const linhas = splitBackendProblems(msg);
+      setSaveErrors(linhas);
+      toast.error(linhas[0]);
     } finally {
       setSaving(false);
     }
@@ -796,6 +807,19 @@ export default function RoletaConfigPage() {
     const inst = instances.find(i => i.inbox_id === id);
     return inst?.label?.trim() || inboxes.find(x => x.id === id)?.name || id;
   }, [instances, inboxes]);
+
+  // TUDO que impede o salvamento, de uma vez só — a lista inteira vai para o
+  // painel vermelho no fim do formulário, e fica lá até o gestor resolver.
+  // As conferências em si moram fora do componente (roletaFormChecks), porque
+  // são o miolo da resposta "o que falta preencher?" e precisam ser testáveis
+  // sem montar o formulário inteiro.
+  const problemasDoFormulario = useCallback((): string[] => roletaFormProblems({
+    inboxId, multiEnabled, configs, editingId: editing?.id ?? null,
+    instances, members, mode, gestorNum, horarioOn, janelas,
+    instanceLabel: instanceName,
+    userName: id => users.find(u => u.id === id)?.name ?? 'o corretor escolhido',
+  }), [inboxId, multiEnabled, configs, editing, instances, members, mode,
+       gestorNum, horarioOn, janelas, instanceName, users]);
 
   // 1 clique joga a variável no texto do aviso focado (na posição do cursor).
   function insertVar(v: string) {
@@ -2107,6 +2131,28 @@ export default function RoletaConfigPage() {
               </div>
             </div>
           </div>
+
+          {/* POR QUE NÃO SALVOU. Fica acima dos botões — é o último lugar por
+              onde o olho passa antes de clicar em Salvar — e permanece na tela
+              até o gestor resolver, ao contrário do toast que sumia sozinho.
+              Vale tanto para o que a tela já sabe conferir quanto para o que só
+              o servidor sabe (número já usado, corretor sem acesso ao número). */}
+          {saveErrors.length > 0 && (
+            <div
+              role="alert"
+              className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm"
+            >
+              <div className="flex items-center gap-2 font-medium text-red-300">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                {saveErrors.length === 1
+                  ? 'A roleta não foi salva'
+                  : `A roleta não foi salva — ${saveErrors.length} coisas precisam de ajuste`}
+              </div>
+              <ul className="mt-2 space-y-1 pl-6 text-red-200/90 list-disc">
+                {saveErrors.map((erro, i) => <li key={i}>{erro}</li>)}
+              </ul>
+            </div>
+          )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
