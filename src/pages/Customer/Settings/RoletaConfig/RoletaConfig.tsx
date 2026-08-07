@@ -148,6 +148,11 @@ function mkInstance(i?: Partial<RoletaInstance>): InstanceRow {
     weight: i?.weight ?? 10,
     is_active: i?.is_active ?? true,
     position: i?.position ?? 0,
+    // Número novo nasce SEM a marcação: quem já atende os leads que escrevem
+    // direto naquele número não pode ser trocado por um efeito colateral de
+    // adicionar uma linha. O backend recusa a segunda marcação de qualquer jeito.
+    answers_direct_inbound: i?.answers_direct_inbound ?? false,
+    shared_with: i?.shared_with ?? [],
   };
 }
 
@@ -682,6 +687,9 @@ export default function RoletaConfigPage() {
           weight:    i.weight,
           is_active: i.is_active,
           position:  idx,
+          // Quem atende quem escreve DIRETO neste número. Só faz diferença
+          // quando o número está em mais de uma roleta.
+          answers_direct_inbound: i.answers_direct_inbound ?? false,
         })),
         members:                membersValid.map((m, i) => ({
           user_id:                  m.user_id,
@@ -1490,6 +1498,40 @@ export default function RoletaConfigPage() {
                           </button>
                         )}
                       </div>
+
+                      {/* NÚMERO DIVIDIDO COM OUTRA ROLETA.
+                          Só aparece quando o número está mesmo em mais de uma
+                          roleta — numa roleta só ela responde de qualquer jeito,
+                          e a chave seria uma pergunta sem consequência.
+                          Lead que chega por formulário ou portal não depende
+                          disto: a fonte já diz a qual roleta pertence. */}
+                      {inst.inbox_id && (inst.shared_with?.length ?? 0) > 0 && (
+                        <div className="sm:col-span-6 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5">
+                          <p className="text-xs text-amber-200/90">
+                            Este número também está {inst.shared_with!.length === 1 ? 'na roleta' : 'nas roletas'}{' '}
+                            <strong>{inst.shared_with!.join(', ')}</strong>. Os leads que chegam por formulário ou
+                            portal já sabem a qual roleta pertencem — a escolha abaixo vale só para quem manda
+                            mensagem direto para este WhatsApp.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => updateInstance(inst.localId, 'answers_direct_inbound', !inst.answers_direct_inbound)}
+                            className={`mt-2 flex items-center gap-1.5 text-xs ${
+                              inst.answers_direct_inbound ? 'text-green-500' : 'text-gray-400'
+                            }`}
+                          >
+                            {inst.answers_direct_inbound
+                              ? <ToggleRight className="h-5 w-5" />
+                              : <ToggleLeft className="h-5 w-5" />}
+                            Esta roleta atende quem escreve direto para este número
+                          </button>
+                          {!inst.answers_direct_inbound && (
+                            <p className="mt-1 pl-[26px] text-[11px] text-gray-400">
+                              Desmarcado, quem escrever direto para este número não entra nesta roleta.
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       {/* Número sem ninguém liberado nunca recebe lead. É o erro
                           de 30/07/2026 repetido por número — e sem este aviso ele

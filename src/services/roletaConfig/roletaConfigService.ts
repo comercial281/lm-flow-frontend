@@ -19,6 +19,20 @@ export interface RoletaInstance {
   weight: number;
   is_active: boolean;
   position: number;
+  /**
+   * Esta roleta atende quem escreve DIRETO para este número?
+   *
+   * O mesmo WhatsApp pode estar em várias roletas (campanhas diferentes, cada
+   * uma alimentada por sua fonte). Nas fontes não há ambiguidade: o formulário
+   * ou portal já aponta a roleta. Ela só existe quando alguém escreve direto
+   * para o número — e é isto que decide quem responde nesse caso.
+   *
+   * Com o número numa roleta só, ela responde de qualquer jeito. Sem ninguém
+   * marcado num número compartilhado, quem escreve direto não entra em roleta.
+   */
+  answers_direct_inbound?: boolean;
+  /** Nome das OUTRAS roletas que atendem por este mesmo número (só leitura). */
+  shared_with?: string[];
 }
 
 export interface RoletaMember {
@@ -147,7 +161,7 @@ export interface RoletaConfigPayload {
   //
   // Lista vazia = "não mexe nas instâncias". O backend nunca deixa a roleta sem
   // nenhuma, porque sem instância o sorteio morre calado.
-  instances?: Omit<RoletaInstance, 'id' | 'inbox_name' | 'display_name'>[];
+  instances?: Omit<RoletaInstance, 'id' | 'inbox_name' | 'display_name' | 'shared_with'>[];
   members: Omit<RoletaMember, 'id' | 'user_name' | 'user_avatar' | 'roleta_instance_id'>[];
 }
 

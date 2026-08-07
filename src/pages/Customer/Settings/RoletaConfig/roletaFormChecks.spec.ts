@@ -34,38 +34,51 @@ describe('roletaFormProblems', () => {
     expect(roletaFormProblems(form())).toEqual([]);
   });
 
-  // O candidato mais provável do 422 que ninguém conseguiu ler.
-  it('avisa que o número já pertence a outra roleta, e diz qual', () => {
+  // ⚠️ Compartilhar o número entre roletas é PERMITIDO desde 07/08/2026 (duas
+  // campanhas, fontes diferentes, mesmo WhatsApp). Este exemplo trava a
+  // permissão: se voltar a acusar erro aqui, a funcionalidade regrediu.
+  it('NÃO reclama de um número que também está em outra roleta', () => {
     const p = roletaFormProblems(form({
-      configs: [{ id: 'r1', inbox_id: INBOX_A, display_name: 'Roleta do Centro' }],
+      configs: [{
+        id: 'r1', inbox_id: INBOX_A, display_name: 'Roleta do Centro',
+        instances: [{ inbox_id: INBOX_A }],
+      }],
     }));
-    expect(p).toHaveLength(1);
-    expect(p[0]).toContain('Roleta do Centro');
-    expect(p[0]).toContain('só pode estar em uma roleta');
+    expect(p).toEqual([]);
   });
 
-  // O pior dos dois casos: o número escapava da validação de entrada, estourava
-  // só na gravação — com a roleta JÁ criada — e voltava como "Validation failed".
-  it('pega o número que é apenas número SECUNDÁRIO de outra roleta', () => {
+  // O que continua exclusivo: quem atende quem escreve direto para o número.
+  it('acusa quando outra roleta já atende quem escreve direto naquele número', () => {
     const p = roletaFormProblems(form({
-      multiEnabled: true,
-      instances: [{ inbox_id: INBOX_A, is_active: true }, { inbox_id: INBOX_B, is_active: true }],
+      instances: [{ inbox_id: INBOX_A, is_active: true, answers_direct_inbound: true }],
       configs: [{
-        id: 'r1', inbox_id: 'inbox-z', display_name: 'Roleta do Litoral',
-        instances: [{ inbox_id: 'inbox-z' }, { inbox_id: INBOX_B }],
+        id: 'r1', inbox_id: INBOX_A, display_name: 'Roleta do Centro',
+        instances: [{ inbox_id: INBOX_A, answers_direct_inbound: true }],
       }],
     }));
     expect(p).toHaveLength(1);
-    expect(p[0]).toContain('Vendas 02');
-    expect(p[0]).toContain('Roleta do Litoral');
+    expect(p[0]).toContain('Roleta do Centro');
+    expect(p[0]).toContain('escreve');
+  });
+
+  it('deixa marcar quando nenhuma outra roleta reivindica o número', () => {
+    const p = roletaFormProblems(form({
+      instances: [{ inbox_id: INBOX_A, is_active: true, answers_direct_inbound: true }],
+      configs: [{
+        id: 'r1', inbox_id: INBOX_A, display_name: 'Roleta do Centro',
+        instances: [{ inbox_id: INBOX_A, answers_direct_inbound: false }],
+      }],
+    }));
+    expect(p).toEqual([]);
   });
 
   it('não acusa conflito da roleta consigo mesma ao editar', () => {
     const p = roletaFormProblems(form({
       editingId: 'r1',
+      instances: [{ inbox_id: INBOX_A, is_active: true, answers_direct_inbound: true }],
       configs: [{
         id: 'r1', inbox_id: INBOX_A, display_name: 'Roleta do Centro',
-        instances: [{ inbox_id: INBOX_A }],
+        instances: [{ inbox_id: INBOX_A, answers_direct_inbound: true }],
       }],
     }));
     expect(p).toEqual([]);
@@ -192,7 +205,7 @@ describe('backendProblems', () => {
   it('não fica mudo quando nem a mensagem nem o details ajudam', () => {
     const p = backendProblems('Validation failed', []);
     expect(p).toHaveLength(1);
-    expect(p[0]).toContain('já pertence a outra');
+    expect(p[0]).toContain('sem detalhar o motivo');
   });
 
   it('prefere a mensagem quando ela é específica', () => {

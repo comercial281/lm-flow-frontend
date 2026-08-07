@@ -32,11 +32,11 @@ export interface RoletaFormCheckInput {
     display_name?: string | null;
     inbox_name?: string | null;
     /** TODOS os números da roleta, não só o de entrada. */
-    instances?: { inbox_id: string }[];
+    instances?: { inbox_id: string; answers_direct_inbound?: boolean }[];
   }[];
   /** Nulo ao criar; o id da roleta ao editar (ela não conflita consigo mesma). */
   editingId: string | null;
-  instances: { inbox_id: string; is_active: boolean }[];
+  instances: { inbox_id: string; is_active: boolean; answers_direct_inbound?: boolean }[];
   members: { user_id: string; personal_whatsapp_number: string }[];
   mode: DistributionMode;
   gestorNum: string;
@@ -63,30 +63,21 @@ export function roletaFormProblems(f: RoletaFormCheckInput): string[] {
       : 'Selecione a instância (WhatsApp) da roleta.');
   }
 
-  // Cada WhatsApp só pode estar em UMA roleta — em QUALQUER posição dela, não só
-  // como número de entrada. É o que torna determinístico "qual roleta manda
-  // neste número?" quando um lead escreve para ele.
-  //
-  // A conferência olha os números de TODAS as roletas (entrada + secundários),
-  // porque o conflito no número secundário era o pior dos dois: ele escapava da
-  // validação de entrada, estourava só na gravação das instâncias — depois de a
-  // roleta já ter sido criada — e voltava como "Validation failed", sem dizer
-  // nada. A lista de roletas já está carregada na tela, então dá para avisar
-  // antes da viagem, dizendo QUAL roleta ocupa o número.
-  const donoDoNumero = (inboxId: string) => f.configs.find(c =>
-    c.id !== f.editingId
-    && (c.inbox_id === inboxId || (c.instances ?? []).some(i => i.inbox_id === inboxId)));
-
-  const pedidos = Array.from(new Set([
-    ...(f.inboxId.trim() ? [f.inboxId] : []),
-    ...f.instances.filter(i => i.inbox_id).map(i => i.inbox_id),
-  ]));
-  pedidos.forEach(inboxId => {
-    const dono = donoDoNumero(inboxId);
-    if (!dono) return;
-    p.push(`O número "${f.instanceLabel(inboxId)}" já pertence à roleta "${dono.display_name || dono.inbox_name || 'sem nome'}". `
-      + 'Cada WhatsApp só pode estar em uma roleta — escolha outro número, ou tire esse número da outra roleta primeiro.');
-  });
+  // ⚠️ Compartilhar o mesmo WhatsApp entre roletas é PERMITIDO — foi o pedido de
+  // 07/08/2026 (duas campanhas, fontes diferentes, mesmo número). O que continua
+  // sendo exclusivo é a marcação "atende quem escreve direto": só uma roleta por
+  // número pode tê-la, senão o lead que escrevesse para o número cairia numa ou
+  // noutra conforme a ordem das linhas no banco.
+  f.instances
+    .filter(i => i.inbox_id && i.answers_direct_inbound)
+    .forEach(i => {
+      const outra = f.configs.find(c => c.id !== f.editingId
+        && (c.instances ?? []).some(x => x.inbox_id === i.inbox_id && x.answers_direct_inbound));
+      if (!outra) return;
+      p.push(`A roleta "${outra.display_name || outra.inbox_name || 'sem nome'}" já é quem atende quem escreve `
+        + `direto para o número "${f.instanceLabel(i.inbox_id)}". Só uma roleta por número pode ter essa `
+        + 'marcação — desmarque lá antes de marcar aqui.');
+    });
 
   // Duas linhas no mesmo número: o backend guarda uma instância por número, e a
   // segunda sobrescreveria a primeira sem avisar.
@@ -194,7 +185,7 @@ export function backendProblems(message: string, details?: BackendErrorDetail[] 
   if (MENSAGENS_VAZIAS.includes(message.trim().toLowerCase())) {
     return linhas.length > 0 ? linhas : [
       'O servidor recusou o salvamento sem detalhar o motivo. '
-      + 'Confira se algum número desta roleta já pertence a outra.',
+      + 'Confira os números e os corretores desta roleta.',
     ];
   }
   return splitBackendProblems(message);
