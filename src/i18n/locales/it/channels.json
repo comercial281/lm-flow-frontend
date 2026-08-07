@@ -279,7 +279,6 @@
       "preChatForm": "Modulo Pre-Chat",
       "widgetBuilder": "Builder del Widget",
       "configuration": "Configurazione",
-      "botConfiguration": "Configurazione Agente IA",
       "moderation": "Moderazione",
       "messageTemplates": "Modelli di Messaggio"
     },
@@ -1203,47 +1202,6 @@
         "placeholder": "Inserisci il placeholder del campo"
       }
     },
-    "agentBot": {
-      "providers": {
-        "webhook": {
-          "label": "Webhook",
-          "description": "Integrazione tramite webhook personalizzato"
-        },
-        "dialogflow": {
-          "label": "Dialogflow",
-          "description": "Integrazione con Google Dialogflow"
-        },
-        "rasa": {
-          "label": "Rasa",
-          "description": "Integrazione con Rasa Open Source"
-        }
-      },
-      "types": {
-        "webhook": {
-          "label": "Webhook",
-          "description": "Agente IA tramite webhook"
-        },
-        "csml": {
-          "label": "CSML",
-          "description": "Agente IA CSML"
-        }
-      },
-      "status": {
-        "connected": "Connesso",
-        "disconnected": "Disconnesso"
-      },
-      "validation": {
-        "nameRequired": "Il nome è obbligatorio",
-        "descriptionRequired": "La descrizione è obbligatoria",
-        "webhookUrlRequired": "L'URL del webhook è obbligatorio",
-        "webhookUrlInvalid": "URL del webhook non valido",
-        "segmentationLimitMinimum": "Il limite di segmentazione deve essere maggiore di 0",
-        "segmentationMinSizeMinimum": "La dimensione minima di segmentazione deve essere maggiore di 0",
-        "segmentationMinSizeSmallerThanLimit": "La dimensione minima deve essere inferiore al limite",
-        "delayPerCharacterNonNegative": "Il ritardo per carattere deve essere non negativo",
-        "debounceTimeNonNegative": "Il tempo di debounce deve essere non negativo"
-      }
-    },
     "widgetBuilder": {
       "title": "Builder del Widget",
       "description": "Personalizza l'aspetto e il comportamento del tuo widget di chat",
@@ -1322,135 +1280,6 @@
     },
     "timestamp": {
       "unavailable": "Non disponibile"
-    },
-    "agentBotConfiguration": {
-      "title": "Configurazione Agente IA",
-      "description": "Configura gli Agenti IA di assistenza per automatizzare le risposte",
-      "fields": {
-        "selectBot": "Seleziona Agente IA",
-        "provider": "Fornitore",
-        "type": "Tipo"
-      },
-      "placeholders": {
-        "selectBot": "Seleziona un Agente IA"
-      },
-      "status": {
-        "disconnected": "Disconnesso",
-        "connected": "Connesso",
-        "active": "Attivo"
-      },
-      "noBots": {
-        "title": "Nessun Agente IA Disponibile",
-        "description": "Non hai ancora Agenti IA configurati per questo canale."
-      },
-      "buttons": {
-        "manageBots": "Gestisci Agenti IA",
-        "configure": "Configura Agente IA",
-        "configuring": "Configurazione...",
-        "disconnect": "Disconnetti Agente IA",
-        "disconnecting": "Disconnessione...",
-        "advancedSettings": "Impostazioni Avanzate"
-      },
-      "info": {
-        "title": "Come Funziona:",
-        "point1": "Gli Agenti IA possono rispondere automaticamente ai messaggi dei clienti",
-        "point2": "Configura parole chiave e risposte automatiche",
-        "point3": "Gli Agenti IA possono trasferire le conversazioni ad Agenti umani",
-        "point4": "Le statistiche sulle prestazioni degli Agenti IA sono disponibili"
-      },
-      "advanced": {
-        "title": "Configurazione Avanzata",
-        "description": "Configura comportamenti e impostazioni avanzate dell'Agente IA",
-        "conversationStatus": {
-          "title": "Stato della Conversazione",
-          "description": "Seleziona quali stati della conversazione consentono all'Agente IA di eseguirsi. Se nessuno è selezionato, l'Agente IA si eseguirà per tutti gli stati.",
-          "emptyHint": "Se nessuno stato è selezionato, l'Agente IA si eseguirà per tutti gli stati della conversazione."
-        },
-        "labels": {
-          "title": "Etichette",
-          "description": "Seleziona quali etichette consentono all'Agente IA di eseguirsi. Se nessuna è selezionata, l'Agente IA si eseguirà per tutte le conversazioni indipendentemente dalle etichette.",
-          "emptyHint": "Se nessuna etichetta è selezionata, l'Agente IA si eseguirà per tutte le conversazioni indipendentemente dalle etichette.",
-          "noLabels": "Nessuna etichetta disponibile. Crea etichette nella sezione Etichette per utilizzare questa funzionalità.",
-          "addLabel": "Aggiungi Etichetta"
-        },
-        "ignoredLabels": {
-          "title": "Etichette Ignorate",
-          "description": "Seleziona le etichette che impediranno all'Agente IA di rispondere. Le conversazioni con queste etichette saranno ignorate dall'Agente IA.",
-          "addLabel": "Aggiungi Etichetta Ignorata",
-          "noAvailableLabels": "Nessuna etichetta disponibile da ignorare. Tutte le etichette sono già ignorate o nell'elenco consentito."
-        },
-        "facebookMessenger": {
-          "title": "Configurazione di Facebook Messenger",
-          "description": "Configura come l'Agente IA interagisce con messaggi diretti e commenti su Facebook",
-          "interactionType": "Tipo di Interazione",
-          "interactionTypes": {
-            "both": "Commenti e Messaggi Diretti",
-            "commentsOnly": "Solo Commenti",
-            "messagesOnly": "Solo Messaggi Diretti"
-          },
-          "enableCommentReplies": "Abilita Risposte ai Commenti",
-          "enableCommentRepliesDescription": "Quando abilitato, l'Agente IA risponderà ai commenti sui post di Facebook",
-          "commentAgentBot": "Agente IA per Commenti",
-          "commentAgentBotDescription": "Seleziona quale Agente IA deve gestire le risposte ai commenti. Scegli 'Usa Stesso Agente' per usare l'Agente IA principale, o seleziona un Agente IA diverso specificamente per i commenti.",
-          "useSameAgent": "Usa Stesso Agente (Agente IA Principale)",
-          "noOtherBots": "Nessun altro Agente IA disponibile. L'Agente IA principale verrà utilizzato per i commenti.",
-          "postSelection": "Selezione Post",
-          "postSelectionDescription": "Scegli se l'Agente IA deve rispondere a tutti i post o solo a post specifici",
-          "allPosts": "Tutti i Post",
-          "specificPosts": "Post Specifici",
-          "postIdPlaceholder": "Inserisci l'ID del post (es: 123456789_987654321)",
-          "addPostId": "Aggiungi",
-          "selectedPosts": "Post Selezionati",
-          "noPostsFound": "Nessun post trovato. Verifica che la pagina Facebook sia collegata correttamente.",
-          "viewOnFacebook": "Vedi su Facebook"
-        },
-        "moderation": {
-          "title": "Moderazione dei Messaggi",
-          "description": "Configura la moderazione automatica per i messaggi ricevuti",
-          "enableModeration": "Abilita Moderazione",
-          "enableModerationDescription": "Quando abilitata, i messaggi verranno filtrati e moderati automaticamente prima che le risposte vengano inviate",
-          "explicitWords": {
-            "title": "Filtro Parole Esplicite",
-            "description": "Inserisci parole o pattern regex (uno per riga) per filtrare contenuti espliciti. I messaggi contenenti queste parole saranno segnalati per moderazione.",
-            "placeholder": "Inserisci parole o pattern regex, uno per riga\nesempio:\nparolaccia\n\\bprofanità\\b\n^spam"
-          },
-          "sentimentAnalysis": {
-            "title": "Analisi del Sentimento",
-            "description": "Usa l'IA per rilevare messaggi offensivi o inappropriati. I messaggi segnalati come offensivi saranno inviati alla moderazione."
-          },
-          "autoApproveResponses": {
-            "title": "Approvazione Automatica delle Risposte",
-            "description": "Quando abilitata, le risposte generate dall'IA verranno inviate automaticamente senza richiedere approvazione. Quando disabilitata, tutte le risposte devono essere approvate prima di essere inviate."
-          },
-          "autoRejectExplicitWords": {
-            "title": "Rifiuto Automatico - Parole Esplicite",
-            "description": "Quando abilitato, i messaggi contenenti parole esplicite saranno automaticamente rifiutati ed eliminati senza richiedere approvazione manuale."
-          },
-          "autoRejectOffensiveSentiment": {
-            "title": "Rifiuto Automatico - Sentimento Offensivo",
-            "description": "Quando abilitato, i messaggi rilevati come offensivi dall'analisi del sentimento saranno automaticamente rifiutati ed eliminati senza richiedere approvazione manuale."
-          }
-        }
-      },
-      "statusOptions": {
-        "open": "Aperto",
-        "resolved": "Risolto",
-        "pending": "In attesa",
-        "snoozed": "Rinviato"
-      },
-      "errors": {
-        "loadError": "Errore durante il caricamento dei dati degli Agenti IA",
-        "configureError": "Errore durante la configurazione dell'Agente IA",
-        "disconnectError": "Errore durante la disconnessione dell'Agente IA",
-        "loadPostsError": "Errore durante il caricamento dei post di Facebook"
-      },
-      "success": {
-        "configured": "Agente IA configurato con successo!",
-        "disconnected": "Agente IA disconnesso con successo!"
-      },
-      "validation": {
-        "selectBot": "Seleziona un Agente IA prima di continuare"
-      }
     },
     "lockToSingleConversation": {
       "title": "Blocca a Conversazione Singola",

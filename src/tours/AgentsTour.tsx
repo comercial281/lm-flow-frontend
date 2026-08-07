@@ -85,7 +85,7 @@ export function AgentsCustomToolsTour() {
         {
           target: '[data-tour="agents-custom-tools-page"]',
           title: 'Custom Tools',
-          content: 'Crie e gerencie ferramentas personalizadas que seus Agentes de IA podem utilizar durante o atendimento.',
+          content: 'Crie e gerencie ferramentas personalizadas que seus Robôs Externos podem utilizar durante o atendimento.',
           placement: 'auto',
           disableBeacon: true,
           disableScrolling: true,
@@ -142,7 +142,7 @@ export function AgentsCustomMCPsTour() {
         {
           target: '[data-tour="agents-custom-mcps-page"]',
           title: 'Custom MCP Servers',
-          content: 'Configure servidores MCP personalizados para expandir as capacidades dos seus Agentes de IA com contextos e ferramentas externas.',
+          content: 'Configure servidores MCP personalizados para expandir as capacidades dos seus Robôs Externos com contextos e ferramentas externas.',
           placement: 'auto',
           disableBeacon: true,
           disableScrolling: true,

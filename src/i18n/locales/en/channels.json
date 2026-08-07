@@ -281,7 +281,6 @@
       "preChatForm": "Pre-Chat Form",
       "widgetBuilder": "Widget Builder",
       "configuration": "Configuration",
-      "botConfiguration": "AI Agent Configuration",
       "moderation": "Moderation",
       "messageTemplates": "Message Templates"
     },
@@ -1263,47 +1262,6 @@
         "placeholder": "Enter field placeholder"
       }
     },
-    "agentBot": {
-      "providers": {
-        "webhook": {
-          "label": "Webhook",
-          "description": "Custom webhook integration"
-        },
-        "dialogflow": {
-          "label": "Dialogflow",
-          "description": "Google Dialogflow integration"
-        },
-        "rasa": {
-          "label": "Rasa",
-          "description": "Rasa Open Source integration"
-        }
-      },
-      "types": {
-        "webhook": {
-          "label": "Webhook",
-          "description": "Bot via webhook"
-        },
-        "csml": {
-          "label": "CSML",
-          "description": "CSML Bot"
-        }
-      },
-      "status": {
-        "connected": "Connected",
-        "disconnected": "Disconnected"
-      },
-      "validation": {
-        "nameRequired": "Name is required",
-        "descriptionRequired": "Description is required",
-        "webhookUrlRequired": "Webhook URL is required",
-        "webhookUrlInvalid": "Invalid webhook URL",
-        "segmentationLimitMinimum": "Segmentation limit must be greater than 0",
-        "segmentationMinSizeMinimum": "Minimum segmentation size must be greater than 0",
-        "segmentationMinSizeSmallerThanLimit": "Minimum size must be smaller than limit",
-        "delayPerCharacterNonNegative": "Delay per character must be non-negative",
-        "debounceTimeNonNegative": "Debounce time must be non-negative"
-      }
-    },
     "widgetBuilder": {
       "title": "Widget Builder",
       "description": "Customize the appearance and behavior of your chat widget",
@@ -1382,135 +1340,6 @@
     },
     "timestamp": {
       "unavailable": "Unavailable"
-    },
-    "agentBotConfiguration": {
-      "title": "AI Agent Configuration",
-      "description": "Configure AI agents to automate responses",
-      "fields": {
-        "selectBot": "Select AI Agent",
-        "provider": "Provider",
-        "type": "Type"
-      },
-      "placeholders": {
-        "selectBot": "Select an AI agent"
-      },
-      "status": {
-        "disconnected": "Disconnected",
-        "connected": "Connected",
-        "active": "Active"
-      },
-      "noBots": {
-        "title": "No AI Agents Available",
-        "description": "You don't have any AI agents configured for this channel yet."
-      },
-      "buttons": {
-        "manageBots": "Manage AI Agents",
-        "configure": "Configure AI Agent",
-        "configuring": "Configuring...",
-        "disconnect": "Disconnect AI Agent",
-        "disconnecting": "Disconnecting...",
-        "advancedSettings": "Advanced Settings"
-      },
-      "info": {
-        "title": "How It Works:",
-        "point1": "AI agents can automatically respond to customer messages",
-        "point2": "Configure keywords and automatic responses",
-        "point3": "AI agents can transfer conversations to human agents",
-        "point4": "AI agent performance statistics are available"
-      },
-      "advanced": {
-        "title": "Advanced Configuration",
-        "description": "Configure advanced AI agent settings and behaviors",
-        "conversationStatus": {
-          "title": "Conversation Status",
-          "description": "Select which conversation statuses allow the AI agent to execute. If none are selected, the AI agent will execute for all statuses.",
-          "emptyHint": "If no status is selected, the AI agent will execute for all conversation statuses."
-        },
-        "labels": {
-          "title": "Labels",
-          "description": "Select which labels allow the AI agent to execute. If none are selected, the AI agent will execute for all conversations regardless of labels.",
-          "emptyHint": "If no labels are selected, the AI agent will execute for all conversations regardless of labels.",
-          "noLabels": "No labels available. Create labels in the Labels section to use this feature.",
-          "addLabel": "Add Label"
-        },
-        "ignoredLabels": {
-          "title": "Ignored Labels",
-          "description": "Select labels that will prevent the AI agent from responding. Conversations with these labels will be skipped by the AI agent.",
-          "addLabel": "Add Ignored Label",
-          "noAvailableLabels": "No available labels to ignore. All labels are either already ignored or in the allowed list."
-        },
-        "facebookMessenger": {
-          "title": "Facebook Messenger Configuration",
-          "description": "Configure how the AI agent interacts with direct messages and comments on Facebook",
-          "interactionType": "Interaction Type",
-          "interactionTypes": {
-            "both": "Comments and Direct Messages",
-            "commentsOnly": "Comments Only",
-            "messagesOnly": "Direct Messages Only"
-          },
-          "enableCommentReplies": "Enable Comment Replies",
-          "enableCommentRepliesDescription": "When enabled, the AI agent will respond to comments on Facebook posts",
-          "commentAgentBot": "Comment AI Agent",
-          "commentAgentBotDescription": "Select which AI agent should handle comment replies. Choose 'Use Same Agent' to use the main AI agent, or select a different agent specifically for comments.",
-          "useSameAgent": "Use Same Agent (Main AI Agent)",
-          "noOtherBots": "No other AI agents available. The main AI agent will be used for comments.",
-          "postSelection": "Post Selection",
-          "postSelectionDescription": "Choose whether the AI agent should respond to all posts or only specific posts",
-          "allPosts": "All Posts",
-          "specificPosts": "Specific Posts",
-          "postIdPlaceholder": "Enter post ID (e.g., 123456789_987654321)",
-          "addPostId": "Add",
-          "selectedPosts": "Selected Posts",
-          "noPostsFound": "No posts found. Please check if the Facebook page is properly connected.",
-          "viewOnFacebook": "View on Facebook"
-        },
-        "moderation": {
-          "title": "Message Moderation",
-          "description": "Configure automatic moderation for incoming messages",
-          "enableModeration": "Enable Moderation",
-          "enableModerationDescription": "When enabled, messages will be automatically filtered and moderated before responses are sent",
-          "explicitWords": {
-            "title": "Explicit Words Filter",
-            "description": "Enter words or regex patterns (one per line) to filter explicit content. Messages containing these words will be flagged for moderation.",
-            "placeholder": "Enter words or regex patterns, one per line\ne.g.:\nbadword\n\\bprofanity\\b\n^spam"
-          },
-          "sentimentAnalysis": {
-            "title": "Sentiment Analysis",
-            "description": "Use AI to detect offensive or inappropriate messages. Messages flagged as offensive will be sent to moderation."
-          },
-          "autoApproveResponses": {
-            "title": "Auto-Approve Responses",
-            "description": "When enabled, AI-generated responses will be sent automatically without requiring approval. When disabled, all responses must be approved before being sent."
-          },
-          "autoRejectExplicitWords": {
-            "title": "Auto-Reject - Explicit Words",
-            "description": "When enabled, messages containing explicit words will be automatically rejected and deleted without requiring manual approval."
-          },
-          "autoRejectOffensiveSentiment": {
-            "title": "Auto-Reject - Offensive Sentiment",
-            "description": "When enabled, messages detected as offensive by sentiment analysis will be automatically rejected and deleted without requiring manual approval."
-          }
-        }
-      },
-      "statusOptions": {
-        "open": "Open",
-        "resolved": "Resolved",
-        "pending": "Pending",
-        "snoozed": "Snoozed"
-      },
-      "errors": {
-        "loadError": "Error loading AI agents data",
-        "configureError": "Error configuring AI agent",
-        "disconnectError": "Error disconnecting AI agent",
-        "loadPostsError": "Error loading Facebook posts"
-      },
-      "success": {
-        "configured": "AI agent configured successfully!",
-        "disconnected": "AI agent disconnected successfully!"
-      },
-      "validation": {
-        "selectBot": "Select an AI agent before continuing"
-      }
     },
     "lockToSingleConversation": {
       "title": "Lock to Single Conversation",

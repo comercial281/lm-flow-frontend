@@ -226,37 +226,48 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     featureKey: 'property_interests',
   },
   {
+    // Antes se chamava "Agentes de IA" — o MESMO nome do que a IA Vendedora é,
+    // uma linha acima. Enquanto os dois se chamassem "agente de IA", a confusão
+    // voltava sozinha: quem procurava a IA que atende o lead caía aqui, que é
+    // outra plataforma (Evo AI) e não tem noção nenhuma de canal.
+    //
+    // Agora: a IA Vendedora é a ÚNICA IA do produto. Isto aqui é conexão de robô
+    // de FORA (n8n, webhook, ferramentas, MCP), e passa a vir desligado pro
+    // cliente — clientToggleKey em vez de featureKey, mesmo tratamento da IA
+    // Vendedora: super-admin sempre vê, cliente só se a Leal Mídia liberar.
+    //
+    // A chave continua sendo `ai_agents` (liberador PRÓPRIO, não o das
+    // Automações): quem libera automação de lead não ganha robô externo junto.
+    // O que muda é o default — `ai_agents` entrou em DEFAULT_OFF_FEATURES no
+    // backend, senão o tenant sem valor gravado receberia `true` e o item
+    // continuaria aparecendo pra todo mundo.
     id: 'customer-agents',
-    name: t('menu.customer.agents'),
+    name: 'Robôs e Integrações',
     href: '/agents/list',
     icon: Bot,
     resource: 'ai_agents',
     action: 'read',
-    featureKey: 'ai_agents',
+    clientToggleKey: 'ai_agents',
     subItems: [
       {
-        name: t('menu.agents.list'),
+        name: 'Robôs Externos',
         href: '/agents/list',
         icon: List,
         resource: 'ai_agents',
         action: 'read',
       },
+      // "Robô Sem Resposta" saiu daqui: não é IA e não é robô externo — é o motor
+      // que enrola no follow-up quem não respondeu. Vive em Automações, junto dos
+      // funis de mensagem que ele dispara, e continua acessível por lá.
       {
-        // Robô que joga quem não respondeu no follow-up. Mora em Automações (é lá que
-        // vivem os painéis do funil), mas aparece aqui também porque é um robô.
-        name: 'Robô Sem Resposta',
-        href: '/automations/no-reply-robot',
-        icon: Bot,
-      },
-      {
-        name: t('menu.agents.customTools'),
+        name: 'Ferramentas',
         href: '/agents/custom-tools',
         icon: Wand,
         resource: 'ai_custom_tools',
         action: 'read',
       },
       {
-        name: t('menu.agents.customMcps'),
+        name: 'Servidores MCP',
         href: '/agents/custom-mcp-servers',
         icon: TestTube,
         resource: 'ai_custom_mcp_servers',

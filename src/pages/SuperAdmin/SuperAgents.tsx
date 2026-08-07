@@ -11,7 +11,7 @@ import {
 } from '@/services/superAdmin/superAgentsService';
 
 /**
- * Épico B — Agentes de IA (todos os clientes) na Área do Admin.
+ * Épico B — IA Vendedora (todos os clientes) na Área do Admin.
  *
  * Lista os agentes de pré-atendimento de TODOS os tenants e deixa o Giovani
  * configurar cada um (ligar/desligar, modo, gatilho, horário) sem entrar no CRM
@@ -54,9 +54,9 @@ export default function SuperAgents() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
       <header className="mb-5">
-        <h1 className="text-xl font-semibold text-foreground">Agentes de IA</h1>
+        <h1 className="text-xl font-semibold text-foreground">IA Vendedora</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Todos os agentes de pré-atendimento, de todos os clientes. Configure cada um daqui, sem entrar no CRM.
+          Todas as IAs Vendedoras, de todos os clientes. Configure cada uma daqui, sem entrar no CRM.
         </p>
       </header>
 

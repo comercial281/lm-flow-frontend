@@ -87,7 +87,6 @@
       "conversations": "Conversas",
       "contacts": "Contatos",
       "pipelines": "Pipelines",
-      "agents": "Agentes de IA",
       "channels": "Canais",
       "tutorials": "Tutoriais",
       "settings": "Configurações"
@@ -95,11 +94,6 @@
     "contacts": {
       "list": "Contatos",
       "scheduledActions": "Ações Agendadas"
-    },
-    "agents": {
-      "list": "Agentes de IA",
-      "customTools": "Custom Tools",
-      "customMcps": "Custom MCPs"
     },
     "settings": {
       "account": "Conta",
