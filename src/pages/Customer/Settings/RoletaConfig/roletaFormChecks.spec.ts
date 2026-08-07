@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { roletaFormProblems, splitBackendProblems, type RoletaFormCheckInput } from './roletaFormChecks';
+import { roletaFormProblems, splitBackendProblems, backendProblems, type RoletaFormCheckInput } from './roletaFormChecks';
 
 // "Preenchi tudo direitinho e deu erro" — 07/08/2026.
 //
@@ -41,13 +41,32 @@ describe('roletaFormProblems', () => {
     }));
     expect(p).toHaveLength(1);
     expect(p[0]).toContain('Roleta do Centro');
-    expect(p[0]).toContain('já é o número de entrada');
+    expect(p[0]).toContain('só pode estar em uma roleta');
+  });
+
+  // O pior dos dois casos: o número escapava da validação de entrada, estourava
+  // só na gravação — com a roleta JÁ criada — e voltava como "Validation failed".
+  it('pega o número que é apenas número SECUNDÁRIO de outra roleta', () => {
+    const p = roletaFormProblems(form({
+      multiEnabled: true,
+      instances: [{ inbox_id: INBOX_A, is_active: true }, { inbox_id: INBOX_B, is_active: true }],
+      configs: [{
+        id: 'r1', inbox_id: 'inbox-z', display_name: 'Roleta do Litoral',
+        instances: [{ inbox_id: 'inbox-z' }, { inbox_id: INBOX_B }],
+      }],
+    }));
+    expect(p).toHaveLength(1);
+    expect(p[0]).toContain('Vendas 02');
+    expect(p[0]).toContain('Roleta do Litoral');
   });
 
   it('não acusa conflito da roleta consigo mesma ao editar', () => {
     const p = roletaFormProblems(form({
       editingId: 'r1',
-      configs: [{ id: 'r1', inbox_id: INBOX_A, display_name: 'Roleta do Centro' }],
+      configs: [{
+        id: 'r1', inbox_id: INBOX_A, display_name: 'Roleta do Centro',
+        instances: [{ inbox_id: INBOX_A }],
+      }],
     }));
     expect(p).toEqual([]);
   });
@@ -156,5 +175,28 @@ describe('splitBackendProblems', () => {
   it('devolve a mensagem inteira quando não há separador', () => {
     expect(splitBackendProblems('Sem acesso à instância: Maria (Vendas 02).'))
       .toEqual(['Sem acesso à instância: Maria (Vendas 02).']);
+  });
+});
+
+describe('backendProblems', () => {
+  // O caso que deixava o painel dizendo "Validation failed" e nada mais: o
+  // estouro sobe pelo tratador global, cuja mensagem é uma string fixa em
+  // inglês, e o motivo real fica só no `details`.
+  it('usa o details quando a mensagem é o "Validation failed" genérico', () => {
+    const p = backendProblems('Validation failed', [
+      { field: 'inbox_id', label: 'Instância (WhatsApp)', full_messages: ['Inbox has already been taken'] },
+    ]);
+    expect(p).toEqual(['Instância (WhatsApp): Inbox has already been taken']);
+  });
+
+  it('não fica mudo quando nem a mensagem nem o details ajudam', () => {
+    const p = backendProblems('Validation failed', []);
+    expect(p).toHaveLength(1);
+    expect(p[0]).toContain('já pertence a outra');
+  });
+
+  it('prefere a mensagem quando ela é específica', () => {
+    const p = backendProblems('Prazo de aceite: maior que zero', [{ field: 'timeout_minutes' }]);
+    expect(p).toEqual(['Prazo de aceite: maior que zero']);
   });
 });

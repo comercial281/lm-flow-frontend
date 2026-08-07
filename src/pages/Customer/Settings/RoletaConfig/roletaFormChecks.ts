@@ -26,7 +26,14 @@ export interface RoletaFormCheckInput {
   /** O cliente pode ter roleta com mais de um número? */
   multiEnabled: boolean;
   /** As roletas que já existem — é como sabemos que um número já está ocupado. */
-  configs: { id: string; inbox_id: string; display_name?: string | null; inbox_name?: string | null }[];
+  configs: {
+    id: string;
+    inbox_id: string;
+    display_name?: string | null;
+    inbox_name?: string | null;
+    /** TODOS os números da roleta, não só o de entrada. */
+    instances?: { inbox_id: string }[];
+  }[];
   /** Nulo ao criar; o id da roleta ao editar (ela não conflita consigo mesma). */
   editingId: string | null;
   instances: { inbox_id: string; is_active: boolean }[];
@@ -54,16 +61,32 @@ export function roletaFormProblems(f: RoletaFormCheckInput): string[] {
     p.push(f.multiEnabled
       ? 'Escolha o número de entrada na primeira linha de "Números que atendem".'
       : 'Selecione a instância (WhatsApp) da roleta.');
-  } else {
-    // A recusa mais provável, e a que menos se explicava: cada WhatsApp só pode
-    // estar em UMA roleta. A lista de roletas já está carregada na tela, então
-    // dá para dizer isso antes de mandar — e dizer QUAL roleta ocupa o número.
-    const jaUsado = f.configs.find(c => c.inbox_id === f.inboxId && c.id !== f.editingId);
-    if (jaUsado) {
-      p.push(`O WhatsApp escolhido já é o número de entrada da roleta "${jaUsado.display_name || jaUsado.inbox_name || 'sem nome'}". `
-        + 'Cada número só pode estar em uma roleta — edite a que já existe ou escolha outro.');
-    }
   }
+
+  // Cada WhatsApp só pode estar em UMA roleta — em QUALQUER posição dela, não só
+  // como número de entrada. É o que torna determinístico "qual roleta manda
+  // neste número?" quando um lead escreve para ele.
+  //
+  // A conferência olha os números de TODAS as roletas (entrada + secundários),
+  // porque o conflito no número secundário era o pior dos dois: ele escapava da
+  // validação de entrada, estourava só na gravação das instâncias — depois de a
+  // roleta já ter sido criada — e voltava como "Validation failed", sem dizer
+  // nada. A lista de roletas já está carregada na tela, então dá para avisar
+  // antes da viagem, dizendo QUAL roleta ocupa o número.
+  const donoDoNumero = (inboxId: string) => f.configs.find(c =>
+    c.id !== f.editingId
+    && (c.inbox_id === inboxId || (c.instances ?? []).some(i => i.inbox_id === inboxId)));
+
+  const pedidos = Array.from(new Set([
+    ...(f.inboxId.trim() ? [f.inboxId] : []),
+    ...f.instances.filter(i => i.inbox_id).map(i => i.inbox_id),
+  ]));
+  pedidos.forEach(inboxId => {
+    const dono = donoDoNumero(inboxId);
+    if (!dono) return;
+    p.push(`O número "${f.instanceLabel(inboxId)}" já pertence à roleta "${dono.display_name || dono.inbox_name || 'sem nome'}". `
+      + 'Cada WhatsApp só pode estar em uma roleta — escolha outro número, ou tire esse número da outra roleta primeiro.');
+  });
 
   // Duas linhas no mesmo número: o backend guarda uma instância por número, e a
   // segunda sobrescreveria a primeira sem avisar.
@@ -135,4 +158,44 @@ export function roletaFormProblems(f: RoletaFormCheckInput): string[] {
 export function splitBackendProblems(message: string): string[] {
   const linhas = message.split(' | ').map(s => s.trim()).filter(Boolean);
   return linhas.length > 0 ? linhas : [message];
+}
+
+// Mensagens que o tratador global do backend emite sem dizer nada de útil. O
+// motivo real, nesses casos, está só no `details`.
+const MENSAGENS_VAZIAS = ['validation failed', 'record invalid', 'bad request'];
+
+interface BackendErrorDetail {
+  field?: string;
+  label?: string;
+  message?: string;
+  messages?: string[];
+  full_messages?: string[];
+}
+
+/**
+ * Os motivos da recusa, preferindo o `details` quando a mensagem não diz nada.
+ *
+ * ⚠️ Quando o estouro sobe pelo tratador global (e não pelas recusas nomeadas do
+ * controlador da roleta), a mensagem é a string fixa "Validation failed" — em
+ * inglês e sem nenhuma informação. Foi o que aconteceu ao tentar pôr o mesmo
+ * número em duas roletas: o único texto útil estava no `details`, que a tela
+ * nem olhava. Sem isto, o painel mostraria "Validation failed" e o gestor
+ * continuaria sem saber o que houve.
+ */
+export function backendProblems(message: string, details?: BackendErrorDetail[] | null): string[] {
+  const linhas = (details ?? []).flatMap(d => {
+    const textos = d.full_messages?.length ? d.full_messages
+      : d.messages?.length ? d.messages
+      : d.message ? [d.message]
+      : [];
+    return textos.map(t => (d.label ? `${d.label}: ${t}` : t));
+  }).filter(Boolean);
+
+  if (MENSAGENS_VAZIAS.includes(message.trim().toLowerCase())) {
+    return linhas.length > 0 ? linhas : [
+      'O servidor recusou o salvamento sem detalhar o motivo. '
+      + 'Confira se algum número desta roleta já pertence a outra.',
+    ];
+  }
+  return splitBackendProblems(message);
 }

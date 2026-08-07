@@ -12,7 +12,7 @@ import {
   Gavel, Hand, Wifi, Send, Loader2, Eye, EyeOff, AlertTriangle,
 } from 'lucide-react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
-import { roletaFormProblems, splitBackendProblems } from './roletaFormChecks';
+import { roletaFormProblems, backendProblems } from './roletaFormChecks';
 import {
   roletaConfigService, RoletaConfig, RoletaMember, RoletaInstance, BrokerAssignment, DistributionMode,
   RoletaDiagnostic, RepairOwnersResult, RepairInboxAccessResult, RoletaQueue,
@@ -712,7 +712,11 @@ export default function RoletaConfigPage() {
       // criar roleta falhava sem dizer nada: o servidor explicava, a tela
       // trocava a explicação por um código HTTP.
       const msg = apiErrorMessage(e, 'Não foi possível salvar a roleta. Tente de novo.');
-      const linhas = splitBackendProblems(msg);
+      // `details` junto: quando o estouro sobe pelo tratador global do backend a
+      // mensagem é a string fixa "Validation failed", e o motivo real só existe ali.
+      const details = (e as { response?: { data?: { error?: { details?: [] } } } })
+        ?.response?.data?.error?.details;
+      const linhas = backendProblems(msg, details);
       setSaveErrors(linhas);
       toast.error(linhas[0]);
     } finally {
