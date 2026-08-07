@@ -193,6 +193,9 @@ export type RoletaOutcome =
   // O lead TEM dono; o que falhou foi abrir o atendimento no número sorteado.
   | 'canal_nao_aberto'
   | 'instancia_divergente'
+  // A gestão trocou o responsável na mão e o atendimento foi levado para o
+  // número do novo corretor — as próximas mensagens saem por ele.
+  | 'instancia_movida'
   | 'dono_falhou'
   | 'erro';
 
