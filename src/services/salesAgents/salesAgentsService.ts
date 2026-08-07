@@ -22,7 +22,7 @@ export interface ActiveHours {
   windows?: ActiveHoursWindow[];
 }
 
-export type SalesAgentTriggerType = 'keyword' | 'origin' | 'property' | 'pipeline_stage';
+export type SalesAgentTriggerType = 'keyword' | 'origin' | 'property' | 'pipeline_stage' | 'pipeline';
 export interface SalesAgentTrigger {
   type: SalesAgentTriggerType;
   value?: string;        // keyword: a palavra
