@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import {
   roletaConfigService, RoletaConfig, RoletaMember, RoletaInstance, BrokerAssignment, DistributionMode,
-  RoletaDiagnostic, RepairOwnersResult, RoletaQueue, RoletaHoursWindow, RoletaBusinessHours,
+  RoletaDiagnostic, RepairOwnersResult, RepairInboxAccessResult, RoletaQueue,
+  RoletaHoursWindow, RoletaBusinessHours,
 } from '@/services/roletaConfig/roletaConfigService';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { DEFAULT_WINDOW } from '@/components/schedule/scheduleWindows';
@@ -165,6 +166,8 @@ export default function RoletaConfigPage() {
   const [onlyFailures, setOnlyFailures] = useState(true);
   const [repairBusy, setRepairBusy]     = useState(false);
   const [repairPreview, setRepairPreview] = useState<RepairOwnersResult | null>(null);
+  const [acessoBusy, setAcessoBusy]       = useState(false);
+  const [acessoPreview, setAcessoPreview] = useState<RepairInboxAccessResult | null>(null);
 
   // Leads que o gestor já resolveu e não quer mais ver na lista. Fica no
   // navegador: é preferência de quem está olhando, não estado do lead — esconder
@@ -242,6 +245,26 @@ export default function RoletaConfigPage() {
       toast.error('Erro ao corrigir os leads sem responsável');
     } finally {
       setRepairBusy(false);
+    }
+  };
+
+  // Acesso à instância, nas duas pontas: liberar quem precisa e RETIRAR o vínculo
+  // automático de quem não tem mais lead naquele número. Mesmo padrão de
+  // pré-visualização do reparo acima — a lista é conferida antes de aplicar,
+  // porque tirar acesso de alguém é o tipo de coisa que ninguém quer descobrir
+  // depois.
+  const runAcesso = async (dryRun: boolean) => {
+    setAcessoBusy(true);
+    try {
+      const r = await roletaConfigService.repairInboxAccess(dryRun);
+      setAcessoPreview(r);
+      if (!dryRun) {
+        toast.success(`${r.liberados} corretor(es) liberado(s), ${r.total_revogar} vínculo(s) removido(s)`);
+      }
+    } catch {
+      toast.error('Erro ao ajustar o acesso às instâncias');
+    } finally {
+      setAcessoBusy(false);
     }
   };
   const [assignments, setAssignments] = useState<BrokerAssignment[]>([]);
@@ -1095,6 +1118,9 @@ export default function RoletaConfigPage() {
               <Button variant="outline" size="sm" onClick={() => runRepair(true)} disabled={repairBusy}>
                 {repairBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ver leads sem responsável'}
               </Button>
+              <Button variant="outline" size="sm" onClick={() => runAcesso(true)} disabled={acessoBusy}>
+                {acessoBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Conferir acesso às instâncias'}
+              </Button>
               {/* Ocultar em massa: limpa a lista inteira de uma vez. Some só o que
                   está carregado — registro novo continua aparecendo. */}
               {diagnosticosVisiveis.length > 0 && (
@@ -1148,6 +1174,64 @@ export default function RoletaConfigPage() {
                   onClick={() => runRepair(false)}
                 >
                   Corrigir os {repairPreview.total} lead(s)
+                </Button>
+              )}
+            </div>
+          )}
+
+          {acessoPreview && (
+            <div className="border rounded-lg p-4">
+              <p className="text-sm font-medium">
+                {acessoPreview.dry_run
+                  ? `${acessoPreview.total} corretor(es) a liberar e ${acessoPreview.total_revogar} vínculo(s) automático(s) a remover`
+                  : `${acessoPreview.liberados} liberado(s), ${acessoPreview.total_revogar} removido(s), ${acessoPreview.falharam} falharam`}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                O vínculo automático dá ao corretor acesso ao número do lead dele — nunca o coloca
+                na fila de distribuição. Quem você adicionou na mão como atendente da instância não
+                é tocado.
+              </p>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs font-medium">Vão ganhar acesso</p>
+                  <div className="mt-1 space-y-1 max-h-40 overflow-y-auto">
+                    {acessoPreview.corretores.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Ninguém — está tudo liberado.</p>
+                    ) : acessoPreview.corretores.map(c => (
+                      <div key={`grant-${c.user_id}`} className="text-xs text-muted-foreground flex flex-wrap gap-x-2">
+                        <span className="font-medium text-foreground">{c.corretor ?? c.user_id}</span>
+                        <span>→ {c.instancias.join(', ') || `${c.total_instancias} instância(s)`}</span>
+                        {c.motivo && <span className="text-red-600">{c.motivo}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium">Vão perder o acesso automático</p>
+                  <div className="mt-1 space-y-1 max-h-40 overflow-y-auto">
+                    {acessoPreview.revogacoes.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Ninguém — não há vínculo sobrando.</p>
+                    ) : acessoPreview.revogacoes.map(c => (
+                      <div key={`revoke-${c.user_id}`} className="text-xs text-muted-foreground flex flex-wrap gap-x-2">
+                        <span className="font-medium text-foreground">{c.corretor ?? c.user_id}</span>
+                        <span>→ {c.instancias.join(', ') || `${c.total_instancias} instância(s)`}</span>
+                        {c.motivo && <span className="text-red-600">{c.motivo}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {acessoPreview.dry_run && (acessoPreview.total > 0 || acessoPreview.total_revogar > 0) && (
+                <Button
+                  size="sm"
+                  className="mt-3 bg-[#7c3aed] hover:bg-[#6d28d9] text-white"
+                  disabled={acessoBusy}
+                  onClick={() => runAcesso(false)}
+                >
+                  Aplicar os ajustes
                 </Button>
               )}
             </div>
