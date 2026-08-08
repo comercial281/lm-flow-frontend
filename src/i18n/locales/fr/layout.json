@@ -87,7 +87,6 @@
       "conversations": "Conversations",
       "contacts": "Contacts",
       "pipelines": "Pipelines",
-      "agents": "Agents",
       "channels": "Canaux",
       "tutorials": "Tutoriels",
       "settings": "Paramètres"
@@ -95,11 +94,6 @@
     "contacts": {
       "list": "Contacts",
       "scheduledActions": "Actions Programmées"
-    },
-    "agents": {
-      "list": "Agents",
-      "customTools": "Outils Personnalisés",
-      "customMcps": "MCPs Personnalisés"
     },
     "settings": {
       "account": "Compte",

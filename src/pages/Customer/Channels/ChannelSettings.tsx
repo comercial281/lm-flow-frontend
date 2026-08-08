@@ -19,7 +19,6 @@ import {
   Clock,
   Star,
   MessageSquare,
-  Bot,
   Shield,
   Mail,
 } from 'lucide-react';
@@ -41,7 +40,6 @@ import {
   CSATForm,
   PreChatForm,
   WidgetBuilderForm,
-  AgentBotConfigurationForm,
   ConfigurationForm,
   MessageTemplateForm,
   ModerationDashboard,
@@ -348,12 +346,15 @@ export default function ChannelSettings() {
       });
     }
 
-    // Agent bots tab (available for most channel types)
-    baseTabs.push({
-      key: 'botConfiguration',
-      name: t('settings.tabs.botConfiguration'),
-      icon: Bot,
-    });
+    // A aba "Configuração de Agente de IA" saiu daqui (2026-08-07). Ela listava
+    // agent_bots (bot externo por webhook) e nunca teve tela de CRIAÇÃO em lugar
+    // nenhum do app — só listar/conectar/desconectar. Resultado: lista sempre
+    // vazia, e o único botão do estado vazio ("Gerenciar Agentes de IA") não
+    // tinha onClick. Quem conectava uma instância vinha procurar a IA Vendedora
+    // aqui e caía num beco sem saída.
+    //
+    // A IA Vendedora é a única IA do produto e se configura na tela dela, onde
+    // já existe o campo "Instância do WhatsApp que ela opera".
 
     // Moderation tab (available for all channel types)
     baseTabs.push({
@@ -865,19 +866,6 @@ export default function ChannelSettings() {
                     await InboxesService.update(inboxId, data);
                   }
                   await loadChannelData();
-                }}
-              />}
-            </TabsContent>
-
-            {/* Agent Bot Configuration Tab */}
-            <TabsContent value="botConfiguration">
-              {activeTab === 'botConfiguration' && <AgentBotConfigurationForm
-                inboxId={inboxId}
-                onUpdate={success => {
-                  if (success) {
-                    // Optionally refresh inbox data or show success feedback
-                    console.log('Agent bot configuration updated successfully');
-                  }
                 }}
               />}
             </TabsContent>

@@ -1,5 +1,4 @@
 import type { Role } from '@/types/auth';
-import type { AgentBot } from '@/components/channels/settings/helpers/agentBotHelpers';
 import type { PaginatedResponse, PaginationMeta, StandardResponse } from '@/types/core';
 
 // ============================================
@@ -383,6 +382,33 @@ export interface AgentsResponse {
 // ============================================
 // Agent Bots Types
 // ============================================
+
+// Bot externo (webhook/n8n) conectado a um inbox. NÃO é a IA Vendedora — esta
+// família nunca teve tela de criação no app, e a aba que a exibia dentro do
+// canal saiu em 2026-08-07. Os tipos ficam porque o serviço ainda existe para
+// leitura/desconexão fora da UI.
+export interface AgentBot {
+  id: string;
+  name: string;
+  description: string;
+  outgoing_url: string;
+  api_key?: string;
+  bot_type: string;
+  bot_provider: string;
+  thumbnail?: string;
+  message_signature?: string;
+  text_segmentation_enabled: boolean;
+  text_segmentation_limit: number;
+  text_segmentation_min_size: number;
+  delay_per_character: number;
+  debounce_time: number;
+  access_token?: string;
+  bot_config?: {
+    webhook_url?: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
 
 export interface AgentBotsResponse {
   data: AgentBot[];

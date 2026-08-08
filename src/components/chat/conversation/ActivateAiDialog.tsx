@@ -88,7 +88,9 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
           </div>
         ) : !agent ? (
           <div className="text-sm text-muted-foreground py-4">
-            Nenhuma IA Vendedora ativa neste canal. Crie/ative uma em Automações → IA Vendedora.
+            Nenhuma IA Vendedora ativa neste canal. Abra <strong>IA Vendedora</strong> no menu,
+            crie ou ative uma, e escolha este canal no campo{' '}
+            <em>Instância do WhatsApp que ela opera</em>.
           </div>
         ) : (
           <div className="space-y-4 py-2">

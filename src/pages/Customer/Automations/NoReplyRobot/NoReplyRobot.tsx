@@ -93,6 +93,13 @@ export function NoReplyRobot() {
             Coloca no follow-up quem recebeu mensagem e não respondeu. Com ele desligado, o
             follow-up só entra na mão: pela tag ou pelo botão "Ativar follow-up" no card.
           </p>
+          {/* Contraparte do aviso na tela da IA Vendedora. Os dois follow-ups cobrem
+              metades opostas: aqui, quem nunca respondeu (lead_replied? descarta);
+              lá, quem respondeu e sumiu (sem mensagem do lead o planner não pega). */}
+          <p className="text-sm text-muted-foreground mt-1">
+            Pega <strong>quem nunca respondeu nenhuma vez</strong>. Quem já respondeu e
+            depois sumiu é do follow-up da <em>IA Vendedora</em>, configurado na tela dela.
+          </p>
         </div>
       </div>
 

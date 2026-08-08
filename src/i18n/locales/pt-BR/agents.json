@@ -1,20 +1,20 @@
 {
-  "title": "Agentes de IA",
-  "subtitle": "Gerencie seus agentes de IA",
+  "title": "Robôs Externos",
+  "subtitle": "Robôs de fora do LM Flow (n8n, webhook) conectados ao sistema. A IA que atende o lead é a IA Vendedora.",
   "loading": {
-    "agent": "Carregando agente de IA...",
-    "creating": "Criando agente de IA...",
-    "updating": "Atualizando agente de IA..."
+    "agent": "Carregando robô externo...",
+    "creating": "Criando robô externo...",
+    "updating": "Atualizando robô externo..."
   },
   "messages": {
-    "loadError": "Erro ao carregar agente de IA",
-    "loadErrorDescription": "Não foi possível carregar os dados do agente de IA para edição.",
-    "createSuccess": "Agente de IA criado com sucesso!",
-    "updateSuccess": "Agente de IA atualizado com sucesso!",
-    "saveError": "Erro ao salvar agente de IA",
+    "loadError": "Erro ao carregar robô externo",
+    "loadErrorDescription": "Não foi possível carregar os dados do robô externo para edição.",
+    "createSuccess": "Robô Externo criado com sucesso!",
+    "updateSuccess": "Robô Externo atualizado com sucesso!",
+    "saveError": "Erro ao salvar robô externo",
     "confirmCancel": "Você tem alterações não salvas. Deseja realmente cancelar?",
     "apiKeysError": "Erro ao carregar chaves API:",
-    "agentToolsError": "Erro ao carregar dados dos agentes de IA:"
+    "agentToolsError": "Erro ao carregar dados dos robôs externos:"
   },
   "header": {
     "back": "Voltar",
@@ -77,31 +77,31 @@
     "task": "Tarefa"
   },
   "actions": {
-    "create": "Criar Agente de IA",
-    "update": "Atualizar Agente de IA",
-    "delete": "Excluir Agente de IA",
-    "duplicate": "Duplicar Agente de IA",
+    "create": "Criar Robô Externo",
+    "update": "Atualizar Robô Externo",
+    "delete": "Excluir Robô Externo",
+    "duplicate": "Duplicar Robô Externo",
     "save": "Salvar",
     "cancel": "Cancelar",
     "edit": "Editar",
     "view": "Visualizar"
   },
   "permissions": {
-    "viewDenied": "Você não tem permissão para visualizar agentes de IA",
-    "createDenied": "Você não tem permissão para criar agentes de IA",
-    "editDenied": "Você não tem permissão para editar agentes de IA",
-    "deleteDenied": "Você não tem permissão para excluir agentes de IA"
+    "viewDenied": "Você não tem permissão para visualizar robôs externos",
+    "createDenied": "Você não tem permissão para criar robôs externos",
+    "editDenied": "Você não tem permissão para editar robôs externos",
+    "deleteDenied": "Você não tem permissão para excluir robôs externos"
   },
-  "loadError": "Erro ao carregar agentes de IA",
-  "createAgent": "Novo Agente de IA",
+  "loadError": "Erro ao carregar robôs externos",
+  "createAgent": "Novo Robô Externo",
   "emptyState": {
-    "title": "Nenhum agente de IA criado",
-    "description": "Crie agentes de IA para começar a automatizar tarefas.",
-    "noResults": "Nenhum agente de IA encontrado"
+    "title": "Nenhum robô externo criado",
+    "description": "Crie robôs externos para começar a automatizar tarefas.",
+    "noResults": "Nenhum robô externo encontrado"
   },
   "search": {
-    "placeholder": "Buscar agentes de IA...",
-    "noResults": "Nenhum agente de IA corresponde à sua busca",
+    "placeholder": "Buscar robôs externos...",
+    "noResults": "Nenhum robô externo corresponde à sua busca",
     "clearSearch": "Limpar busca"
   },
   "fields": {
@@ -120,8 +120,8 @@
   },
   "table": {
     "actions": "Ações",
-    "emptyMessage": "Nenhum agente de IA encontrado",
-    "clickToView": "💡 Clique em um agente de IA para visualizar detalhes ou abrir o Agent Card"
+    "emptyMessage": "Nenhum robô externo encontrado",
+    "clickToView": "💡 Clique em um robô externo para visualizar detalhes ou abrir o Agent Card"
   },
   "dropdown": {
     "testA2A": "Testar A2A",
@@ -138,24 +138,24 @@
   },
   "export": {
     "all": "Exportar Todos",
-    "success": "Agentes de IA exportados com sucesso",
-    "successDesc": "{{count}} agentes de IA foram exportados",
-    "error": "Erro ao exportar agentes de IA",
-    "errorDesc": "Não foi possível exportar os agentes de IA"
+    "success": "Robôs Externos exportados com sucesso",
+    "successDesc": "{{count}} robôs externos foram exportados",
+    "error": "Erro ao exportar robôs externos",
+    "errorDesc": "Não foi possível exportar os robôs externos"
   },
   "deleteDialog": {
-    "title": "Deletar Agente de IA",
-    "description": "Tem certeza de que deseja deletar o agente de IA \"{{name}}\"? Esta ação não pode ser desfeita.",
+    "title": "Deletar Robô Externo",
+    "description": "Tem certeza de que deseja deletar o robô externo \"{{name}}\"? Esta ação não pode ser desfeita.",
     "cancel": "Cancelar",
     "confirm": "Deletar",
     "deleting": "Deletando...",
-    "success": "Agente de IA \"{{name}}\" deletado com sucesso!"
+    "success": "Robô Externo \"{{name}}\" deletado com sucesso!"
   },
   "bulkDelete": "Funcionalidade de exclusão em massa em desenvolvimento",
   "testA2A": "Funcionalidade de teste A2A em desenvolvimento",
   "moveToFolder": "Funcionalidade de mover para pasta em desenvolvimento",
   "exportJSON": "Funcionalidade de exportar JSON em desenvolvimento",
-  "share": "Funcionalidade de compartilhar agente de IA em desenvolvimento",
+  "share": "Funcionalidade de compartilhar robô externo em desenvolvimento",
   "edit": {
     "integrations": {
       "github": {

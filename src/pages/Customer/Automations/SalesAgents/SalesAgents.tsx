@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Button, Input, Label, Textarea } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon, Zap } from 'lucide-react';
+import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon, Zap, AlertTriangle } from 'lucide-react';
 import {
   salesAgentsService,
   type SalesAgent,
@@ -223,6 +223,14 @@ export default function SalesAgents() {
                     <span className={`ml-2 h-2 w-2 rounded-full shrink-0 ${a.enabled ? 'bg-green-500' : 'bg-gray-300'}`} />
                   </div>
                   <span className="text-xs text-muted-foreground">{MODE_LABELS[a.mode]}</span>
+                  {/* Ligada e sem canal = nunca responde. A seleção do agente filtra
+                      por inbox, então agente sem inbox_id não é candidato a nada.
+                      Antes isso era silencioso: a IA parecia configurada e não era. */}
+                  {a.enabled && !a.inbox_id && (
+                    <span className="mt-1 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
+                      <AlertTriangle className="h-3 w-3 shrink-0" /> sem canal
+                    </span>
+                  )}
                 </button>
               </li>
             ))}
@@ -435,6 +443,17 @@ function ConfigTab({
           ))}
         </select>
         <p className="text-xs text-muted-foreground mt-1">Escolha a instância (número/canal do WhatsApp) onde a IA vai operar: ela recebe e responde os leads por essa instância.</p>
+        {/* Sem canal a IA não é candidata a conversa nenhuma — a seleção filtra por
+            inbox. Ligada e sem canal é o pior estado possível: parece pronta e não é. */}
+        {agent.enabled && !agent.inbox_id && (
+          <div className="mt-2 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+            <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
+            <span>
+              Esta IA está <strong>ligada, mas sem canal</strong> — ela não vai responder
+              ninguém. Escolha a instância acima para ela começar a atender.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Mais de um agente no mesmo canal é permitido (ex: um só pro lançamento X,
@@ -1236,6 +1255,14 @@ function FollowupSection({
           <div className="text-sm font-medium">Follow-up automático</div>
           <div className="text-xs text-muted-foreground">
             Se o lead sumir, a IA volta sozinha com uma mensagem personalizada (baseada em toda a conversa e no imóvel), na cadência que você definir. Infinito por padrão. Desligado = não dispara nada.
+          </div>
+          {/* Os dois follow-ups do produto NÃO se sobrepõem, e a diferença nunca
+              esteve escrita em lugar nenhum: aqui só entra quem já respondeu
+              alguma vez (sem mensagem do lead não há o que reengajar); quem nunca
+              respondeu é do Robô Sem Resposta, em Automações. */}
+          <div className="text-xs text-muted-foreground mt-1">
+            Pega <strong>quem já respondeu alguma vez e depois sumiu</strong>. Quem nunca
+            respondeu nenhuma vez é do <em>Robô Sem Resposta</em>, em Automações.
           </div>
         </div>
         <Toggle on={!!on} onChange={(v) => onSave({ followup_enabled: v })} />

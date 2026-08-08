@@ -279,7 +279,6 @@
       "preChatForm": "Formulario Pre-Chat",
       "widgetBuilder": "Constructor del Widget",
       "configuration": "Configuración",
-      "botConfiguration": "Configuración de Bot",
       "moderation": "Moderación",
       "messageTemplates": "Plantillas de Mensaje"
     },
@@ -1245,47 +1244,6 @@
         "placeholder": "Ingrese el marcador de posición del campo"
       }
     },
-    "agentBot": {
-      "providers": {
-        "webhook": {
-          "label": "Webhook",
-          "description": "Integración vía webhook personalizado"
-        },
-        "dialogflow": {
-          "label": "Dialogflow",
-          "description": "Integración con Google Dialogflow"
-        },
-        "rasa": {
-          "label": "Rasa",
-          "description": "Integración con Rasa Open Source"
-        }
-      },
-      "types": {
-        "webhook": {
-          "label": "Webhook",
-          "description": "Bot vía webhook"
-        },
-        "csml": {
-          "label": "CSML",
-          "description": "Bot CSML"
-        }
-      },
-      "status": {
-        "connected": "Conectado",
-        "disconnected": "Desconectado"
-      },
-      "validation": {
-        "nameRequired": "El nombre es obligatorio",
-        "descriptionRequired": "La descripción es obligatoria",
-        "webhookUrlRequired": "La URL del webhook es obligatoria",
-        "webhookUrlInvalid": "URL del webhook inválida",
-        "segmentationLimitMinimum": "El límite de segmentación debe ser mayor que 0",
-        "segmentationMinSizeMinimum": "El tamaño mínimo de segmentación debe ser mayor que 0",
-        "segmentationMinSizeSmallerThanLimit": "El tamaño mínimo debe ser menor que el límite",
-        "delayPerCharacterNonNegative": "El retraso por carácter debe ser no negativo",
-        "debounceTimeNonNegative": "El tiempo de rebote debe ser no negativo"
-      }
-    },
     "widgetBuilder": {
       "title": "Constructor del Widget",
       "description": "Personalice la apariencia y comportamiento de su widget de chat",
@@ -1364,135 +1322,6 @@
     },
     "timestamp": {
       "unavailable": "No disponible"
-    },
-    "agentBotConfiguration": {
-      "title": "Configuración de Bot",
-      "description": "Configure bots de atención para automatizar respuestas",
-      "fields": {
-        "selectBot": "Seleccionar Bot",
-        "provider": "Proveedor",
-        "type": "Tipo"
-      },
-      "placeholders": {
-        "selectBot": "Seleccione un bot"
-      },
-      "status": {
-        "disconnected": "Desconectado",
-        "connected": "Conectado",
-        "active": "Activo"
-      },
-      "noBots": {
-        "title": "Ningún Bot Disponible",
-        "description": "Aún no tiene bots configurados para este canal."
-      },
-      "buttons": {
-        "manageBots": "Gestionar Bots",
-        "configure": "Configurar Bot",
-        "configuring": "Configurando...",
-        "disconnect": "Desconectar Bot",
-        "disconnecting": "Desconectando...",
-        "advancedSettings": "Configuración Avanzada"
-      },
-      "info": {
-        "title": "Cómo Funciona:",
-        "point1": "Los bots pueden responder automáticamente a los mensajes de los clientes",
-        "point2": "Configure palabras clave y respuestas automáticas",
-        "point3": "Los bots pueden transferir conversaciones a Agentes humanos",
-        "point4": "Las estadísticas de rendimiento de los bots están disponibles"
-      },
-      "advanced": {
-        "title": "Configuración Avanzada",
-        "description": "Configure comportamientos y ajustes avanzados del bot",
-        "conversationStatus": {
-          "title": "Estado de Conversación",
-          "description": "Seleccione qué estados de conversación permiten que el bot se ejecute. Si no se selecciona ninguno, el bot se ejecutará para todos los estados.",
-          "emptyHint": "Si no se selecciona ningún estado, el bot se ejecutará para todos los estados de conversación."
-        },
-        "labels": {
-          "title": "Etiquetas",
-          "description": "Seleccione qué etiquetas permiten que el bot se ejecute. Si no se selecciona ninguna, el bot se ejecutará para todas las conversaciones independientemente de las etiquetas.",
-          "emptyHint": "Si no se selecciona ninguna etiqueta, el bot se ejecutará para todas las conversaciones independientemente de las etiquetas.",
-          "noLabels": "No hay etiquetas disponibles. Cree etiquetas en la sección de Etiquetas para usar esta función.",
-          "addLabel": "Agregar Etiqueta"
-        },
-        "ignoredLabels": {
-          "title": "Etiquetas Ignoradas",
-          "description": "Seleccione etiquetas que impedirán que el bot responda. Las conversaciones con estas etiquetas serán ignoradas por el bot.",
-          "addLabel": "Agregar Etiqueta Ignorada",
-          "noAvailableLabels": "No hay etiquetas disponibles para ignorar. Todas las etiquetas ya están ignoradas o en la lista de permitidas."
-        },
-        "facebookMessenger": {
-          "title": "Configuración de Facebook Messenger",
-          "description": "Configure cómo el bot interactúa con mensajes directos y comentarios de Facebook",
-          "interactionType": "Tipo de Interacción",
-          "interactionTypes": {
-            "both": "Comentarios y Mensajes Directos",
-            "commentsOnly": "Solo Comentarios",
-            "messagesOnly": "Solo Mensajes Directos"
-          },
-          "enableCommentReplies": "Habilitar Respuestas a Comentarios",
-          "enableCommentRepliesDescription": "Cuando está habilitado, el bot responderá a los comentarios en las publicaciones de Facebook",
-          "commentAgentBot": "Bot Agente para Comentarios",
-          "commentAgentBotDescription": "Seleccione qué bot agente debe manejar las respuestas a comentarios. Elija 'Usar Mismo Agente' para usar el bot principal, o seleccione un bot diferente específicamente para comentarios.",
-          "useSameAgent": "Usar Mismo Agente (Bot Principal)",
-          "noOtherBots": "No hay otros bots disponibles. El bot principal se usará para comentarios.",
-          "postSelection": "Selección de Publicaciones",
-          "postSelectionDescription": "Elija si el bot debe responder a todas las publicaciones o solo a publicaciones específicas",
-          "allPosts": "Todas las Publicaciones",
-          "specificPosts": "Publicaciones Específicas",
-          "postIdPlaceholder": "Ingrese el ID de la publicación (ej: 123456789_987654321)",
-          "addPostId": "Agregar",
-          "selectedPosts": "Publicaciones Seleccionadas",
-          "noPostsFound": "No se encontraron publicaciones. Verifique si la página de Facebook está conectada correctamente.",
-          "viewOnFacebook": "Ver en Facebook"
-        },
-        "moderation": {
-          "title": "Moderación de Mensajes",
-          "description": "Configure la moderación automática para mensajes recibidos",
-          "enableModeration": "Habilitar Moderación",
-          "enableModerationDescription": "Cuando está habilitado, los mensajes se filtrarán y moderarán automáticamente antes de que se envíen las respuestas",
-          "explicitWords": {
-            "title": "Filtro de Palabras Explícitas",
-            "description": "Ingrese palabras o patrones regex (uno por línea) para filtrar contenido explícito. Los mensajes que contengan estas palabras serán marcados para moderación.",
-            "placeholder": "Ingrese palabras o patrones regex, uno por línea\nejemplo:\npalabrota\n\\bprofanidad\\b\n^spam"
-          },
-          "sentimentAnalysis": {
-            "title": "Análisis de Sentimiento",
-            "description": "Use IA para detectar mensajes ofensivos o inapropiados. Los mensajes marcados como ofensivos se enviarán a moderación."
-          },
-          "autoApproveResponses": {
-            "title": "Aprobación Automática de Respuestas",
-            "description": "Cuando está habilitado, las respuestas generadas por IA se enviarán automáticamente sin requerir aprobación. Cuando está deshabilitado, todas las respuestas deben ser aprobadas antes de ser enviadas."
-          },
-          "autoRejectExplicitWords": {
-            "title": "Rechazo Automático - Palabras Explícitas",
-            "description": "Cuando está habilitado, los mensajes que contengan palabras explícitas serán automáticamente rechazados y eliminados sin requerir aprobación manual."
-          },
-          "autoRejectOffensiveSentiment": {
-            "title": "Rechazo Automático - Sentimiento Ofensivo",
-            "description": "Cuando está habilitado, los mensajes detectados como ofensivos por el análisis de sentimiento serán automáticamente rechazados y eliminados sin requerir aprobación manual."
-          }
-        }
-      },
-      "statusOptions": {
-        "open": "Abierto",
-        "resolved": "Resuelto",
-        "pending": "Pendiente",
-        "snoozed": "Pospuesto"
-      },
-      "errors": {
-        "loadError": "Error al cargar datos de los bots",
-        "configureError": "Error al configurar bot",
-        "disconnectError": "Error al desconectar bot",
-        "loadPostsError": "Error al cargar publicaciones de Facebook"
-      },
-      "success": {
-        "configured": "¡Bot configurado con éxito!",
-        "disconnected": "¡Bot desconectado con éxito!"
-      },
-      "validation": {
-        "selectBot": "Seleccione un bot antes de continuar"
-      }
     },
     "lockToSingleConversation": {
       "title": "Bloquear a Conversación Única",

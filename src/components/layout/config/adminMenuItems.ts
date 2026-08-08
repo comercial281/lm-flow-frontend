@@ -61,13 +61,16 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     name: 'Cérebro Universal',
     href: '/admin/cerebro',
     icon: Brain,
-    description: 'Conhecimento e lições que todo agente de IA herda',
+    description: 'Conhecimento e lições que toda IA Vendedora herda',
   },
   {
-    name: 'Agentes de IA',
+    // Esta tela lista as IAs de PRÉ-ATENDIMENTO (sales_agents) de todos os
+    // clientes — é a IA Vendedora vista de fora. Chamava-se "Agentes de IA",
+    // colidindo com o grupo de robô externo; agora usa o nome que o cliente vê.
+    name: 'IA Vendedora',
     href: '/admin/agentes',
     icon: Bot,
-    description: 'Todos os agentes de todos os clientes: ligar, desligar e configurar',
+    description: 'A IA Vendedora de todos os clientes: ligar, desligar e configurar',
   },
   {
     name: 'Custo da IA',
