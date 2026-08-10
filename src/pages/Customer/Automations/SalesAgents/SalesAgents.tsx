@@ -2647,8 +2647,13 @@ function DiagnosticsTab({ agent }: { agent: SalesAgent }) {
                   {run.status !== 'replied' && run.reason_label && (
                     <div className="text-muted-foreground">{run.reason_label}</div>
                   )}
+                  {/* Turno PULADO carrega o detalhe concreto do bloqueio (qual mensagem
+                      barrou, de quando) — é informação, não falha, então vai em cinza.
+                      Vermelho fica reservado pra erro de verdade. */}
                   {run.error_message && (
-                    <div className="text-red-600 break-words">{run.error_class}: {run.error_message}</div>
+                    <div className={`break-words ${run.status === 'failed' ? 'text-red-600' : 'text-muted-foreground'}`}>
+                      {run.error_class === 'Detalhe' ? run.error_message : `${run.error_class}: ${run.error_message}`}
+                    </div>
                   )}
                   {run.status === 'replied' && !run.delivered && (
                     <div className="text-amber-600">A resposta foi gerada mas o WhatsApp não aceitou o envio.</div>
