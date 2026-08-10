@@ -487,6 +487,15 @@ function ConfigTab({
         <p className="text-xs text-muted-foreground mt-1">
           Se preenchido, a IA só entra na conversa quando o lead mandar essa palavra. Vazio = atende todo lead do canal. Ótimo pra testar sem afetar todos os leads.
         </p>
+        {/* Este campo é um gatilho que mora FORA da lista de gatilhos abaixo.
+            Quem apaga a lista inteira achando que liberou a IA pra todo mundo
+            continua preso na palavra, sem nada na tela dizendo isso. */}
+        {(agent.trigger_keyword ?? '').trim() !== '' && (
+          <p className="text-xs text-amber-600 mt-1">
+            Atenção: enquanto este campo estiver preenchido, a IA <strong>não</strong> atende todo lead do canal, mesmo que
+            você apague todos os gatilhos da lista abaixo. Deixe o campo vazio para ela atender todo mundo.
+          </p>
+        )}
       </div>
 
       <TriggersSection agent={agent} onSave={onSave} />
