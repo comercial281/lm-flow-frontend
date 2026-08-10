@@ -834,7 +834,8 @@
           "errors": {
             "nameNotFound": "Nombre de la instancia no encontrado",
             "qrCodeError": "Error al generar código QR",
-            "updateError": "Error al actualizar configuraciones de la instancia"
+            "updateError": "Error al actualizar configuraciones de la instancia",
+            "qrImageError": "No se pudo mostrar el código QR. Genera uno nuevo."
           },
           "success": {
             "qrCodeGenerated": "¡Código QR generado con éxito!",
@@ -900,12 +901,21 @@
             "disconnect": "Desconectar Instancia",
             "confirmDisconnect": "¿Está seguro de que desea desconectar la instancia?",
             "success": {
-              "disconnected": "¡Instancia desconectada con éxito!"
+              "disconnected": "¡Instancia desconectada con éxito!",
+              "reconnected": "Conexión reconstruida. Escanea el código nuevo."
             },
             "errors": {
-              "disconnectError": "Error al desconectar instancia"
-            }
-          }
+              "disconnectError": "Error al desconectar instancia",
+              "reconnectError": "Error al reconectar la instancia"
+            },
+            "reconnect": "Reconectar",
+            "confirmReconnect": "Reconectar reconstruye la conexión desde cero y genera un código nuevo. Úsalo cuando el código QR no vincule. ¿Continuar?"
+          },
+          "qrExpiresIn": "Este código caduca en {{seconds}}s",
+          "qrExpired": "El código ha caducado",
+          "qrRefreshing": "Generando un código nuevo...",
+          "refreshQrCode": "Generar código nuevo",
+          "closeQrModal": "Cerrar"
         },
         "zapi": {
           "privacy": {

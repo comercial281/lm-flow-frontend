@@ -794,7 +794,8 @@
           "errors": {
             "nameNotFound": "Nome dell'istanza non trovato",
             "qrCodeError": "Errore durante la generazione del codice QR",
-            "updateError": "Errore durante l'aggiornamento delle impostazioni dell'istanza"
+            "updateError": "Errore durante l'aggiornamento delle impostazioni dell'istanza",
+            "qrImageError": "Impossibile mostrare il codice QR. Generane uno nuovo."
           },
           "success": {
             "qrCodeGenerated": "Codice QR generato con successo!",
@@ -860,12 +861,22 @@
             "disconnect": "Disconnetti Istanza",
             "confirmDisconnect": "Sei sicuro di voler disconnettere l'istanza?",
             "success": {
-              "disconnected": "Istanza disconnessa con successo!"
+              "disconnected": "Istanza disconnessa con successo!",
+              "reconnected": "Connessione ricostruita. Scansiona il nuovo codice."
             },
             "errors": {
-              "disconnectError": "Errore durante la disconnessione dell'istanza"
-            }
-          }
+              "disconnectError": "Errore durante la disconnessione dell'istanza",
+              "reconnectError": "Impossibile riconnettere l’istanza"
+            },
+            "reconnect": "Riconnetti",
+            "confirmReconnect": "La riconnessione ricostruisce la connessione da zero e genera un nuovo codice. Usala quando il codice QR non si associa. Continuare?"
+          },
+          "qrExpiresIn": "Questo codice scade tra {{seconds}}s",
+          "qrExpired": "Il codice è scaduto",
+          "qrRefreshing": "Generazione di un nuovo codice...",
+          "refreshQrCode": "Genera nuovo codice",
+          "closeQrModal": "Chiudi",
+          "ignoreStatus": "Ignora stato"
         },
         "zapi": {
           "privacy": {

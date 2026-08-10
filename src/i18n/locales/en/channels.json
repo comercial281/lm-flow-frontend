@@ -852,7 +852,8 @@
           "errors": {
             "nameNotFound": "Instance name not found",
             "qrCodeError": "Error generating QR Code",
-            "updateError": "Error updating instance settings"
+            "updateError": "Error updating instance settings",
+            "qrImageError": "Could not display the QR code. Generate a new one."
           },
           "success": {
             "qrCodeGenerated": "QR Code generated successfully!",
@@ -918,12 +919,21 @@
             "disconnect": "Disconnect Instance",
             "confirmDisconnect": "Are you sure you want to disconnect the instance?",
             "success": {
-              "disconnected": "Instance disconnected successfully!"
+              "disconnected": "Instance disconnected successfully!",
+              "reconnected": "Connection rebuilt. Scan the new code."
             },
             "errors": {
-              "disconnectError": "Error disconnecting instance"
-            }
-          }
+              "disconnectError": "Error disconnecting instance",
+              "reconnectError": "Could not reconnect the instance"
+            },
+            "reconnect": "Reconnect",
+            "confirmReconnect": "Reconnecting rebuilds the connection from scratch and generates a new code. Use it when the QR code will not pair. Continue?"
+          },
+          "qrExpiresIn": "This code expires in {{seconds}}s",
+          "qrExpired": "The code has expired",
+          "qrRefreshing": "Generating a new code...",
+          "refreshQrCode": "Generate new code",
+          "closeQrModal": "Close"
         },
         "zapi": {
           "privacy": {

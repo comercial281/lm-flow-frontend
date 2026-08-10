@@ -57,18 +57,8 @@ const EvolutionService = {
     return extractData<EvolutionAuthorizationResponse>(response);
   },
 
-  async refreshQrCode(
-    params: { apiUrl: string; apiHash: string; instanceName: string },
-  ) {
-    const requestData = {
-      api_url: params.apiUrl,
-      api_hash: params.apiHash,
-      instance_name: params.instanceName,
-    };
-
-    const response = await api.post('/evolution/qrcodes', requestData);
-    return extractData<any>(response);
-  },
+  // ⚠️ `refreshQrCode` foi removida daqui também: era a SEGUNDA cópia do mesmo
+  // endpoint, igualmente nunca chamada. Renovar o código é `getQRCode` de novo.
 
   async setProxy(
     params: { apiUrl: string; apiHash: string; instanceName: string; proxySettings: object },
