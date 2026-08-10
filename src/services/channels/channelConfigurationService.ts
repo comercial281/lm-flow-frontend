@@ -118,22 +118,41 @@ export const EvolutionApiService = {
   },
 
   /**
-   * Refresh QR Code for Evolution instance
+   * ⚠️ Aqui morava `refreshQRCode`, que nunca foi chamada por ninguém e mandava
+   * `api_url`/`api_hash` no corpo — ignorados pelo backend desde a checagem de
+   * dono. Renovar o código é chamar `getQRCode` de novo: cada GET abre uma
+   * chamada nova ao `/instance/connect` do servidor e volta com o código do
+   * momento. Duas implementações do mesmo endpoint é como uma delas fica para
+   * trás quando a regra muda.
    */
-  async refreshQRCode(config: {
-    apiUrl: string;
-    apiHash: string;
-    instanceName: string;
-  }): Promise<any> {
+
+  /**
+   * Reinicia a instância. Destrava socket preso em "conectando".
+   */
+  async restartInstance(instanceName: string): Promise<any> {
     try {
-      const { data } = await api.post(`/evolution/qrcodes`, {
-        api_url: config.apiUrl,
-        api_hash: config.apiHash,
-        instance_name: config.instanceName,
-      });
+      const { data } = await api.post(`/evolution/instances/${instanceName}/restart`);
       return data;
     } catch (error) {
-      console.error('EvolutionApiService.refreshQRCode error:', error);
+      console.error('EvolutionApiService.restartInstance error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Reconstrói a instância do zero, com o mesmo nome.
+   *
+   * É o "Reconectar" da tela. Necessário para os canais criados antes da
+   * correção do pareamento: eles nasceram amarrados ao número digitado, e essa
+   * amarração fica gravada na instância — reiniciar ou desconectar não a
+   * desfaz, só recriar.
+   */
+  async recreateInstance(instanceName: string): Promise<any> {
+    try {
+      const { data } = await api.post(`/evolution/instances/${instanceName}/recreate`);
+      return data;
+    } catch (error) {
+      console.error('EvolutionApiService.recreateInstance error:', error);
       throw error;
     }
   },

@@ -44,6 +44,80 @@ interface ConfigurationFormProps {
 // Passo a passo de onde clicar no app do WhatsApp para ler o QR Code
 const QR_CODE_STEP_KEYS = ['step1', 'step2', 'step3', 'step4'] as const;
 
+// A Evolution troca o QR Code a cada ~20-30s. O modal buscava o código UMA vez
+// e nunca mais: quem lia o passo a passo antes de escanear já apontava a câmera
+// para um código morto, e o WhatsApp respondia "Não foi possível conectar".
+// 20s peca por antecipação — o custo é uma requisição a mais, contra uma
+// leitura falhada.
+const QR_TTL_SECONDS = 20;
+
+// Teto de renovações automáticas (~3,5 min). O servidor da Evolution é
+// compartilhado por todos os clientes: uma aba esquecida aberta não pode ficar
+// pedindo código para sempre.
+const QR_MAX_AUTO_REFRESHES = 10;
+
+// As formas em que o backend já devolveu QR e estado da conexão. Frouxo de
+// propósito: são três envelopes diferentes para os mesmos dois campos.
+type EvolutionQrPayload = {
+  base64?: string;
+  qr_code?: string;
+  connected?: boolean;
+  state?: string;
+  status?: string;
+  instance?: { state?: string; status?: string };
+  data?: EvolutionQrPayload;
+  qrcode?: EvolutionQrPayload;
+};
+
+// Lê o QR de qualquer um dos formatos que o backend já devolveu.
+//
+// O GET devolve `{success, data:{base64, pairingCode}}` e o POST devolve
+// `{success, qrcode:{...}}` — chaves diferentes para a mesma coisa. `qr_code` é
+// o formato antigo. Um leitor só, para as três formas, em vez da escada de ifs
+// que existia aqui (e que silenciava quando nenhuma casava).
+const extractQrBase64 = (response?: EvolutionQrPayload | null): string | null => {
+  const node = response?.data ?? response?.qrcode ?? response;
+  return node?.base64 || node?.qr_code || response?.qr_code || null;
+};
+
+// A instância já está conectada? O próprio endpoint do QR responde isso.
+const extractQrConnected = (response?: EvolutionQrPayload | null): boolean => {
+  const node = response?.data ?? response?.qrcode ?? response;
+  return node?.connected === true || node?.state === 'open';
+};
+
+// Lê o estado da conexão de qualquer formato.
+//
+// ⚠️ A tela lia SÓ `data.instance.state`. Quando o backend respondia em outro
+// formato — o que acontecia em qualquer falha de leitura, porque os ramos de
+// erro devolviam `status:` em vez de `state:` — o estado ficava nulo para
+// sempre: o selo travava em "Desconectado", o modal nunca fechava sozinho e o
+// código nem chegava a abrir depois de criar o canal.
+const extractInstanceState = (response?: EvolutionQrPayload | null): string | null => {
+  const node = response?.data ?? response;
+  const raw =
+    node?.instance?.state ??
+    node?.instance?.status ??
+    node?.state ??
+    node?.status ??
+    response?.instance?.state ??
+    null;
+
+  if (!raw || typeof raw !== 'string') return null;
+  // 'unknown' é "não consegui ler", não "desconectado" — devolver null preserva
+  // o último estado bom em vez de sobrescrevê-lo com uma leitura falhada.
+  if (raw === 'unknown') return null;
+  return raw === 'connected' ? 'open' : raw;
+};
+
+// A imagem só carrega com o prefixo de data URI. A Evolution v2 já devolve o
+// base64 prefixado, mas o formato antigo (e o `qr_code`) vem cru — e aí o
+// `<img>` virava um ícone de imagem quebrada, sem aviso nenhum, com o
+// "Aguardando conexão..." piscando para sempre. O modal da Z-API já fazia essa
+// guarda; este não fazia.
+const asImageSource = (value: string): string =>
+  value.startsWith('data:') ? value : `data:image/png;base64,${value}`;
+
 // Mesma sequência para o modal da Z-API, que não usa i18n
 const ZAPI_QR_CODE_STEPS = [
   'Abra o WhatsApp no seu celular (o mesmo número que vai atender).',
@@ -524,11 +598,21 @@ const EvolutionWhatsAppConfig: React.FC<{
   const [instanceStatus, setInstanceStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
+  // Renovação do QR: separado de `isLoading` de propósito, senão renovar o
+  // código desabilita o cartão inteiro a cada 20 segundos.
+  const [isRefreshingQr, setIsRefreshingQr] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(QR_TTL_SECONDS);
+  const [qrExpired, setQrExpired] = useState(false);
+  const [qrImageFailed, setQrImageFailed] = useState(false);
+  const [isRecreating, setIsRecreating] = useState(false);
+  // Muda a cada código novo recebido e é o que reinicia a contagem regressiva.
+  const [qrNonce, setQrNonce] = useState(0);
+  const autoRefreshCountRef = useRef(0);
+  const autoConnectRef = useRef(false);
   // Chegou pelo fluxo "criar canal → parear" (?connect=1): abre o QR sozinho.
   // Lido aqui e não repassado por prop porque o ConfigurationForm só entrega
   // `inbox` e `onUpdate` a este componente.
   const [searchParams, setSearchParams] = useSearchParams();
-  const autoConnectRef = useRef(false);
   const getIdentifier = () => {
     const providerConfig = inbox?.provider_config || {};
     if (inbox?.provider === 'evolution_go') {
@@ -633,14 +717,13 @@ const EvolutionWhatsAppConfig: React.FC<{
         if (!identifier) return;
 
         const response = await EvolutionApiService.getInstances(identifier, provider);
-        if (response?.data?.instance?.state) {
-          const newStatus = response.data.instance.state;
+        const newStatus = extractInstanceState(response);
+        if (newStatus) {
           setInstanceStatus(newStatus);
 
           // Close modal and show success if connected
           if (newStatus === 'open' && showQrModal) {
-            setShowQrModal(false);
-            setQrCode(null);
+            closeQrModal();
             toast.success(t('settings.configuration.whatsapp.instance.success.connected'));
           }
         }
@@ -662,59 +745,146 @@ const EvolutionWhatsAppConfig: React.FC<{
     };
   }, [inbox.provider, inbox.provider_config, inbox.name, showQrModal, t]);
 
-  const handleGenerateQR = async () => {
-    setIsLoading(true);
+  const closeQrModal = () => {
+    setShowQrModal(false);
+    setQrCode(null);
+    setQrExpired(false);
+    setQrImageFailed(false);
+    autoRefreshCountRef.current = 0;
+  };
+
+  // Busca (ou rebusca) o código. Cada chamada abre uma conexão nova no servidor
+  // e volta com o código do momento — é isso que a renovação usa.
+  //
+  // `silent` é a renovação automática: ela não deve encher a tela de avisos de
+  // sucesso a cada 20 segundos.
+  const fetchQrCode = async ({ silent = false }: { silent?: boolean } = {}) => {
+    const provider = inbox.provider;
+    const identifier = getIdentifier();
+
+    if (!identifier) {
+      toast.error(t('settings.configuration.whatsapp.instance.errors.nameNotFound'));
+      return false;
+    }
+
+    if (silent) setIsRefreshingQr(true);
+    else setIsLoading(true);
+
     try {
-      const provider = inbox.provider;
-      const identifier = getIdentifier();
-
-      if (!identifier) {
-        toast.error(t('settings.configuration.whatsapp.instance.errors.nameNotFound'));
-        return;
-      }
-
       const response = await EvolutionApiService.getQRCode(identifier, provider);
-      if (response?.base64) {
-        setQrCode(response.base64);
-        setShowQrModal(true);
-        toast.success(t('settings.configuration.whatsapp.instance.success.qrCodeGenerated'));
-      } else if (response?.data?.base64) {
-        setQrCode(response.data.base64);
-        setShowQrModal(true);
-        toast.success(t('settings.configuration.whatsapp.instance.success.qrCodeGenerated'));
-      } else if (response?.qr_code) {
-        // Fallback para formato antigo
-        setQrCode(response.qr_code);
-        setShowQrModal(true);
-        toast.success(t('settings.configuration.whatsapp.instance.success.qrCodeGenerated'));
-      } else {
-        toast.error(t('settings.configuration.whatsapp.instance.errors.qrCodeError'));
+
+      // O próprio endpoint do QR avisa quando a instância já está conectada.
+      // Aproveitar isso é o que permite abrir o modal sem depender do status.
+      if (extractQrConnected(response)) {
+        setInstanceStatus('open');
+        closeQrModal();
+        if (!silent) toast.success(t('settings.configuration.whatsapp.instance.success.connected'));
+        return true;
       }
+
+      const base64 = extractQrBase64(response);
+      if (!base64) {
+        toast.error(t('settings.configuration.whatsapp.instance.errors.qrCodeError'));
+        return false;
+      }
+
+      setQrCode(base64);
+      setQrImageFailed(false);
+      setQrExpired(false);
+      setSecondsLeft(QR_TTL_SECONDS);
+      setQrNonce(n => n + 1);
+      setShowQrModal(true);
+      if (!silent) toast.success(t('settings.configuration.whatsapp.instance.success.qrCodeGenerated'));
+      return true;
     } catch (error) {
       console.error('Erro ao gerar QR Code:', error);
       toast.error(t('settings.configuration.whatsapp.instance.errors.qrCodeError'));
+      return false;
     } finally {
-      setIsLoading(false);
+      if (silent) setIsRefreshingQr(false);
+      else setIsLoading(false);
     }
   };
 
-  // Dispara UMA vez. O guard de ref importa porque o efeito depende de
-  // instanceStatus, que muda a cada poll — sem ele, cada atualização de status
-  // pediria um QR novo e invalidaria o que está na tela.
+  const handleGenerateQR = async () => {
+    autoRefreshCountRef.current = 0;
+    await fetchQrCode();
+  };
+
+  // Renovação manual ("Gerar novo código"). Zera o teto: se a pessoa está ali
+  // clicando, ela não é uma aba esquecida aberta.
+  const handleRefreshQR = async () => {
+    autoRefreshCountRef.current = 0;
+    await fetchQrCode({ silent: true });
+  };
+
+  // Contagem regressiva e renovação automática, só com o modal aberto.
+  //
+  // ⚠️ O código morre no servidor em ~20-30s. Sem isto, o modal mostrava para
+  // sempre um código vencido e toda leitura terminava em "Não foi possível
+  // conectar" — o sintoma que parecia "erro de leitura do QR".
+  //
+  // O prazo é calculado por relógio (`Date.now()`), não somando ticks: aba em
+  // segundo plano tem o `setInterval` estrangulado pelo navegador, e a soma de
+  // ticks acharia que ainda restam 15s num código que já morreu há um minuto.
+  //
+  // `qrNonce` é a dependência que reinicia a contagem. Não dá para depender de
+  // `qrCode`: se o servidor devolvesse duas vezes a mesma imagem, o estado não
+  // mudaria, o efeito não reiniciaria e a contagem morreria em zero.
+  useEffect(() => {
+    if (!showQrModal || !qrCode || qrExpired) return;
+
+    const deadline = Date.now() + QR_TTL_SECONDS * 1000;
+
+    const tick = setInterval(() => {
+      const left = Math.ceil((deadline - Date.now()) / 1000);
+      if (left > 0) {
+        setSecondsLeft(left);
+        return;
+      }
+
+      clearInterval(tick);
+      setSecondsLeft(0);
+
+      if (autoRefreshCountRef.current >= QR_MAX_AUTO_REFRESHES) {
+        setQrExpired(true);
+        return;
+      }
+
+      autoRefreshCountRef.current += 1;
+      // Renovação que falha vira "expirou" em vez de deixar na tela um código
+      // morto com contagem parada.
+      void fetchQrCode({ silent: true }).then(ok => {
+        if (!ok) setQrExpired(true);
+      });
+    }, 1000);
+
+    return () => clearInterval(tick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showQrModal, qrNonce, qrExpired]);
+
+  // Abre o código sozinho quando o canal acabou de ser criado (?connect=1).
+  //
+  // ⚠️ Não espera mais pelo status. Antes havia um `if (instanceStatus === null)
+  // return` que travava de vez: qualquer falha de leitura do status deixava o
+  // estado nulo e o código NUNCA abria depois de criar o canal. Quem detecta
+  // "já conectado" agora é o próprio `fetchQrCode`, que não depende do status.
+  //
+  // O ref continua, mas só como guarda de "já tratei este ?connect=1" — o React
+  // em modo estrito monta o efeito duas vezes, e sem ele o desenvolvimento
+  // pediria dois códigos, invalidando o primeiro.
   useEffect(() => {
     if (searchParams.get('connect') !== '1') return;
     if (autoConnectRef.current) return;
-    // Espera o primeiro status chegar: já conectado não precisa de QR.
-    if (instanceStatus === null) return;
 
     autoConnectRef.current = true;
     const params = new URLSearchParams(searchParams);
     params.delete('connect');
     setSearchParams(params, { replace: true });
 
-    if (instanceStatus !== 'open') handleGenerateQR();
+    void handleGenerateQR();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, instanceStatus]);
+  }, [searchParams]);
 
   const handleUpdateInstanceSettings = async () => {
     setIsLoading(true);
@@ -892,6 +1062,43 @@ const EvolutionWhatsAppConfig: React.FC<{
     }
   };
 
+  // "Reconectar": reconstrói a conexão do zero e já abre um código válido.
+  //
+  // É o conserto dos canais criados antes da correção do pareamento — eles
+  // nasceram amarrados ao número digitado, e essa amarração fica gravada na
+  // conexão: desconectar ou reiniciar não a desfaz, só recriar.
+  //
+  // Pede confirmação e só aparece com o canal desconectado: num canal saudável
+  // isto derrubaria a sessão.
+  const handleRecreate = async () => {
+    // Endpoint só existe na Evolution (o botão também só aparece lá).
+    if (inbox.provider === 'evolution_go') return;
+    if (!confirm(t('settings.configuration.whatsapp.instance.actions.confirmReconnect'))) return;
+
+    const identifier = getIdentifier();
+    if (!identifier) {
+      toast.error(t('settings.configuration.whatsapp.instance.errors.nameNotFound'));
+      return;
+    }
+
+    setIsRecreating(true);
+    try {
+      await EvolutionApiService.recreateInstance(identifier);
+      setInstanceStatus('close');
+      toast.success(t('settings.configuration.whatsapp.instance.actions.success.reconnected'));
+      await handleGenerateQR();
+    } catch (error) {
+      console.error('Erro ao reconectar instância:', error);
+      const apiMessage = (error as { response?: { data?: { error?: string } } })?.response?.data
+        ?.error;
+      toast.error(
+        apiMessage || t('settings.configuration.whatsapp.instance.actions.errors.reconnectError'),
+      );
+    } finally {
+      setIsRecreating(false);
+    }
+  };
+
   const handleLogout = async () => {
     if (!confirm(t('settings.configuration.whatsapp.instance.actions.confirmDisconnect'))) return;
 
@@ -951,10 +1158,26 @@ const EvolutionWhatsAppConfig: React.FC<{
                     : t('settings.configuration.whatsapp.instance.statusDisconnected')}
                 </Badge>
                 {instanceStatus !== 'open' && (
-                  <Button onClick={handleGenerateQR} disabled={isLoading} size="sm">
-                    <QrCode className="w-4 h-4 mr-2" />
-                    {t('settings.configuration.whatsapp.instance.connectDevice')}
-                  </Button>
+                  <>
+                    <Button onClick={handleGenerateQR} disabled={isLoading} size="sm">
+                      <QrCode className="w-4 h-4 mr-2" />
+                      {t('settings.configuration.whatsapp.instance.connectDevice')}
+                    </Button>
+                    {/* Só com o canal desconectado (num canal saudável isto
+                        derrubaria a sessão) e só na Evolution: o Evolution Go
+                        não tem esse endpoint, e o botão prometeria o que não
+                        entrega. */}
+                    {inbox.provider !== 'evolution_go' && (
+                      <Button
+                        onClick={handleRecreate}
+                        disabled={isRecreating || isLoading}
+                        size="sm"
+                        variant="outline"
+                      >
+                        {t('settings.configuration.whatsapp.instance.actions.reconnect')}
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -963,7 +1186,7 @@ const EvolutionWhatsAppConfig: React.FC<{
       </Card>
 
       {/* QR Code Modal */}
-      <Dialog open={showQrModal} onOpenChange={setShowQrModal}>
+      <Dialog open={showQrModal} onOpenChange={open => (open ? setShowQrModal(true) : closeQrModal())}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('settings.configuration.whatsapp.instance.qrCodeTitle')}</DialogTitle>
@@ -974,18 +1197,67 @@ const EvolutionWhatsAppConfig: React.FC<{
           <div className="flex flex-col items-center justify-center p-6">
             {qrCode ? (
               <>
-                <div className="bg-white p-4 rounded-lg border">
-                  <img src={qrCode} alt="QR Code" className="w-64 h-64" />
+                <div className="bg-white p-4 rounded-lg border relative">
+                  {/* `max-w-full` para o código não estourar a largura em tela
+                      estreita — o modal só rola na vertical. */}
+                  <img
+                    src={asImageSource(qrCode)}
+                    alt="QR Code"
+                    className={`w-64 h-64 max-w-full ${qrExpired ? 'opacity-20' : ''}`}
+                    onError={() => {
+                      // Sem isto a imagem quebrada ficava muda, com o
+                      // "Aguardando conexão..." piscando para sempre.
+                      setQrImageFailed(true);
+                      toast.error(t('settings.configuration.whatsapp.instance.errors.qrImageError'));
+                    }}
+                  />
+                  {qrExpired && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-sm font-semibold text-slate-700 text-center px-4">
+                        {t('settings.configuration.whatsapp.instance.qrExpired')}
+                      </span>
+                    </div>
+                  )}
                 </div>
+
+                {qrImageFailed && (
+                  <p className="text-center text-sm text-red-600 mt-3">
+                    {t('settings.configuration.whatsapp.instance.errors.qrImageError')}
+                  </p>
+                )}
+
                 <p className="text-center text-sm text-slate-600 dark:text-slate-400 mt-4">
                   {t('settings.configuration.whatsapp.instance.qrCodeInstructions')}
                 </p>
 
-                {/* Passo a passo de onde clicar no app do WhatsApp */}
-                <div className="w-full mt-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    {t('settings.configuration.whatsapp.instance.qrSteps.title')}
+                {/* O código morre em ~20s. A contagem fica logo abaixo dele,
+                    antes do passo a passo, para não competir com o relógio. */}
+                {!qrExpired && (
+                  <p className="text-center text-xs text-slate-500 mt-1">
+                    {isRefreshingQr
+                      ? t('settings.configuration.whatsapp.instance.qrRefreshing')
+                      : t('settings.configuration.whatsapp.instance.qrExpiresIn', {
+                          seconds: secondsLeft,
+                        })}
                   </p>
+                )}
+
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+                  <Button onClick={handleRefreshQR} disabled={isRefreshingQr} size="sm" variant="outline">
+                    <QrCode className="w-4 h-4 mr-2" />
+                    {t('settings.configuration.whatsapp.instance.refreshQrCode')}
+                  </Button>
+                  <Button onClick={closeQrModal} size="sm" variant="ghost">
+                    {t('settings.configuration.whatsapp.instance.closeQrModal')}
+                  </Button>
+                </div>
+
+                {/* Passo a passo recolhido: ele continua a um clique, mas parou
+                    de consumir a validade do código enquanto é lido. */}
+                <details className="w-full mt-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4">
+                  <summary className="text-sm font-semibold text-slate-900 dark:text-slate-100 cursor-pointer">
+                    {t('settings.configuration.whatsapp.instance.qrSteps.title')}
+                  </summary>
                   <ol className="mt-3 space-y-2.5">
                     {QR_CODE_STEP_KEYS.map((stepKey, index) => (
                       <li key={stepKey} className="flex items-start gap-3">
@@ -998,7 +1270,7 @@ const EvolutionWhatsAppConfig: React.FC<{
                       </li>
                     ))}
                   </ol>
-                </div>
+                </details>
 
                 <div className="flex items-center gap-2 mt-4 text-sm text-slate-500">
                   <div className="animate-pulse w-2 h-2 bg-blue-500 rounded-full"></div>

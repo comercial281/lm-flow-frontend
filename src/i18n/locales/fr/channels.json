@@ -794,7 +794,8 @@
           "errors": {
             "nameNotFound": "Nom de l'instance non trouvé",
             "qrCodeError": "Erreur lors de la génération du QR Code",
-            "updateError": "Erreur lors de la mise à jour des paramètres de l'instance"
+            "updateError": "Erreur lors de la mise à jour des paramètres de l'instance",
+            "qrImageError": "Impossible d’afficher le QR code. Générez-en un nouveau."
           },
           "success": {
             "qrCodeGenerated": "QR Code généré avec succès !",
@@ -860,12 +861,22 @@
             "disconnect": "Déconnecter l'Instance",
             "confirmDisconnect": "Êtes-vous sûr de vouloir déconnecter l'instance ?",
             "success": {
-              "disconnected": "Instance déconnectée avec succès !"
+              "disconnected": "Instance déconnectée avec succès !",
+              "reconnected": "Connexion reconstruite. Scannez le nouveau code."
             },
             "errors": {
-              "disconnectError": "Erreur lors de la déconnexion de l'instance"
-            }
-          }
+              "disconnectError": "Erreur lors de la déconnexion de l'instance",
+              "reconnectError": "Impossible de reconnecter l’instance"
+            },
+            "reconnect": "Reconnecter",
+            "confirmReconnect": "La reconnexion reconstruit la connexion de zéro et génère un nouveau code. À utiliser quand le QR code n’associe pas. Continuer ?"
+          },
+          "qrExpiresIn": "Ce code expire dans {{seconds}} s",
+          "qrExpired": "Le code a expiré",
+          "qrRefreshing": "Génération d’un nouveau code...",
+          "refreshQrCode": "Générer un nouveau code",
+          "closeQrModal": "Fermer",
+          "ignoreStatus": "Ignorer le statut"
         },
         "zapi": {
           "privacy": {

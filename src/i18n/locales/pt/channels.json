@@ -851,7 +851,8 @@
           "errors": {
             "nameNotFound": "Nome da instância não encontrado",
             "qrCodeError": "Erro ao gerar QR Code",
-            "updateError": "Erro ao atualizar configurações da instância"
+            "updateError": "Erro ao atualizar configurações da instância",
+            "qrImageError": "Não foi possível mostrar o QR Code. Gere um novo."
           },
           "success": {
             "qrCodeGenerated": "QR Code gerado com sucesso!",
@@ -917,12 +918,21 @@
             "disconnect": "Desconectar Instância",
             "confirmDisconnect": "Tem certeza que deseja desconectar a instância?",
             "success": {
-              "disconnected": "Instância desconectada com sucesso!"
+              "disconnected": "Instância desconectada com sucesso!",
+              "reconnected": "Ligação reconstruída. Leia o novo código."
             },
             "errors": {
-              "disconnectError": "Erro ao desconectar instância"
-            }
-          }
+              "disconnectError": "Erro ao desconectar instância",
+              "reconnectError": "Erro ao reconectar a instância"
+            },
+            "reconnect": "Reconectar",
+            "confirmReconnect": "Reconectar reconstrói a ligação de raiz e gera um código novo. Use quando o QR Code não estiver a emparelhar. Deseja continuar?"
+          },
+          "qrExpiresIn": "Este código expira em {{seconds}}s",
+          "qrExpired": "O código expirou",
+          "qrRefreshing": "A gerar um código novo...",
+          "refreshQrCode": "Gerar novo código",
+          "closeQrModal": "Fechar"
         },
         "zapi": {
           "privacy": {
