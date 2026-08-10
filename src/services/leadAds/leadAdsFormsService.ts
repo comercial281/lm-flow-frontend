@@ -17,6 +17,9 @@ export interface LeadAdsFormConfig {
   roleta_config_id: string | null;
   property_id: string | null;
   match_keyword: string | null;
+  // Mensagem inicial disparada pelo número de plantão quando o lead chega FORA
+  // do horário da roleta. Vazio = não manda nada (o comportamento de sempre).
+  after_hours_message: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -47,6 +50,7 @@ export interface LeadAdsFormConfigFormData {
   roleta_config_id?: string | null;
   property_id?: string | null;
   match_keyword?: string | null;
+  after_hours_message?: string | null;
 }
 
 // Erro de UMA página na listagem de formulários. Antes havia só um `error` no
