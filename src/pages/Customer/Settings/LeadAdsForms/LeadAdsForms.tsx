@@ -52,6 +52,9 @@ interface FormState {
   assign_to: string;
   property_id: string;
   match_keyword: string;
+  // Mensagem inicial que o número de plantão manda quando o lead chega fora do
+  // horário da roleta. Vazio = ninguém fala com ele até a roleta abrir.
+  after_hours_message: string;
   is_active: boolean;
 }
 
@@ -77,6 +80,7 @@ const emptyFormState = (form_id = '', form_name = '', meta_page_id = ''): FormSt
   assign_to: '',
   property_id: '',
   match_keyword: defaultKeyword(form_name),
+  after_hours_message: '',
   is_active: true,
 });
 
@@ -304,6 +308,7 @@ export default function LeadAdsForms() {
       assign_to:         encodeAssignTo(cfg),
       property_id:       cfg.property_id ?? '',
       match_keyword:     cfg.match_keyword ?? defaultKeyword(cfg.form_name),
+      after_hours_message: cfg.after_hours_message ?? '',
       is_active:         cfg.is_active,
     });
     setModalOpen(true);
@@ -326,6 +331,9 @@ export default function LeadAdsForms() {
       roleta_config_id:    assign.roleta_config_id,
       property_id:         form.property_id || null,
       match_keyword:       form.match_keyword.trim() || null,
+      // Só vai junto quando o lead entra por roleta: fora dela não existe
+      // horário nem número de plantão, e o campo nem aparece na tela.
+      after_hours_message: assign.roleta_config_id ? (form.after_hours_message.trim() || null) : null,
     };
 
     setSaving(true);
@@ -949,6 +957,15 @@ export default function LeadAdsForms() {
                           Inativo
                         </Badge>
                       )}
+                      {/* Quem chega de madrugada por este formulário já é abordado.
+                          Na lista porque é a diferença entre o lead da noite ser
+                          atendido ou passar horas em silêncio — e isso não pode
+                          exigir abrir a configuração de cada formulário. */}
+                      {!!cfg.after_hours_message?.trim() && (
+                        <Badge variant="secondary" className="text-xs">
+                          🌙 Fala com o lead fora do horário
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                       <ArrowRight className="h-3 w-3 flex-shrink-0" />
@@ -1126,6 +1143,40 @@ export default function LeadAdsForms() {
                 Fixo manda pro mesmo corretor; roleta distribui automático entre os corretores.
               </p>
             </div>
+
+            {/* Primeiro contato fora do horário.
+                Só aparece na roleta porque é ela que tem horário de funcionamento
+                e número de plantão — sem os dois, este texto não teria de onde
+                sair nem quando sair. Quem preenche formulário nunca manda
+                mensagem, então sem este campo o lead da madrugada fica em
+                silêncio absoluto até a roleta abrir. */}
+            {form.assign_to.startsWith('roleta:') && (
+              <div>
+                <UILabel htmlFor="after_hours_message">Mensagem inicial fora do horário</UILabel>
+                <textarea
+                  id="after_hours_message"
+                  rows={4}
+                  className={`${baseSelectClass} disabled:opacity-50`}
+                  placeholder={'Oi {{nome}}! Recebi seu contato pelo anúncio. Já já um corretor te chama — posso adiantar alguma dúvida?'}
+                  value={form.after_hours_message}
+                  onChange={e => setForm(f => ({ ...f, after_hours_message: e.target.value }))}
+                  disabled={saving}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enviada <strong>na hora</strong>, pelo <strong>número de plantão</strong> da roleta, para quem preenche
+                  este formulário <strong>fora do horário de funcionamento</strong>. É ela que abre a conversa — a partir
+                  daí a IA daquele número assume. Dentro do horário nada muda: o corretor sorteado faz o primeiro contato.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Vazio = não manda nada. Variáveis: <code>{'{{nome}}'}</code>, <code>{'{{nome_completo}}'}</code>,{' '}
+                  <code>{'{{telefone}}'}</code>, <code>{'{{email}}'}</code> e as respostas do formulário.
+                </p>
+                <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                  Precisa da roleta com <strong>horário de funcionamento</strong> e <strong>número de plantão</strong>{' '}
+                  configurados em Distribuição de Leads — sem isso, nada é enviado.
+                </p>
+              </div>
+            )}
 
             {/* Imóvel vinculado a todo lead desse formulário */}
             <div>
