@@ -82,6 +82,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     (moderation.moderation_action === 'delete_comment' || moderation.moderation_action === 'block_user');
   const isPendingResponse = moderation?.moderation_action === 'response_approval' && hasPendingModeration;
 
+  // Mensagem NOSSA nunca é assinada pelo lead.
+  //
+  // Houve um período em que toda mensagem automática (IA Vendedora, boas-vindas,
+  // follow-up, disparo agendado) era gravada com o CONTATO como autor. Na tela
+  // isso aparecia como o nome do próprio cliente ao lado do selo "Atendente" —
+  // como se ele estivesse respondendo a si mesmo. A gravação foi corrigida no
+  // servidor, mas o histórico já gravado continua apontando para o contato: por
+  // isso o descarte é aqui na exibição, e não só no que chega novo.
+  const senderIsContact = String(message.sender?.type || '').toLowerCase() === 'contact';
+  const agentDisplayName = senderIsContact ? '' : message.sender?.name;
+
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // 🔧 REPLY TO: Buscar mensagem original quando content_attributes.in_reply_to ou in_reply_to_external_id existe
@@ -409,7 +420,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             <Badge variant="outline" className="h-4 px-1 text-[10px] font-medium bg-primary/10 text-primary border border-primary/30 dark:bg-primary/20 dark:text-primary dark:border-primary/50">
               {t('messages.messageBubble.agent.badge')}
             </Badge>
-            {message.sender?.name || t('messages.messageBubble.agent.fallback')}
+            {agentDisplayName || t('messages.messageBubble.agent.fallback')}
           </div>
         )}
 
