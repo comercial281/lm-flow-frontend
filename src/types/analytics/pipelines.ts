@@ -35,6 +35,24 @@ export interface SalesAgentCardState {
   agent_id: string | null;
 }
 
+/** Um turno da IA neste lead: respondeu, pulou (com motivo) ou falhou. */
+export interface SalesAgentLeadRun {
+  status: 'replied' | 'skipped' | 'failed';
+  delivered: boolean | null;
+  reason: string | null;
+  reason_label: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+/** "Por que a IA não respondeu ESTE lead?" — resposta pronta pra tela. */
+export interface SalesAgentLeadReport {
+  state: SalesAgentCardState;
+  why: string;
+  next_step: string | null;
+  runs: SalesAgentLeadRun[];
+}
+
 export interface ConversationForModal {
   id: string;
   display_id?: string;

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/ds';
 import {
   Loader2, Calendar, Trash2, Move, CheckSquare, Square,
   PauseCircle, PlayCircle, BotOff, Bot, AlertCircle,
-  Trophy, XCircle, CalendarPlus,
+  Trophy, XCircle, CalendarPlus, HelpCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { conversationAPI } from '@/services/conversations/conversationService';
@@ -13,7 +13,7 @@ import { ScheduleActionModal } from '@/components/scheduledActions/ScheduleActio
 import FollowupTimeline from './FollowupTimeline';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
-import type { SalesAgentCardState } from '@/types/analytics/pipelines';
+import type { SalesAgentCardState, SalesAgentLeadReport } from '@/types/analytics/pipelines';
 import { chatService } from '@/services/chat/chatService';
 import SalesAgentBadge from '@/components/salesAgents/SalesAgentBadge';
 
@@ -69,12 +69,34 @@ export default function CardActionsPanel({
   const [togglingAi, setTogglingAi] = useState(false);
   const aiOn = aiState?.status === 'active';
 
+  // Por que a IA não respondeu ESTE lead. O selo diz o estado ("Transferido para
+  // um corretor"), que não é a mesma pergunta: fora do horário, gatilho que não
+  // bateu e canal sem conexão dão o mesmo silêncio e exigiam abrir o log pra
+  // distinguir. Carrega sob demanda, num clique, pra não pesar o board.
+  const [aiReport, setAiReport] = useState<SalesAgentLeadReport | null>(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+
+  const loadAiReport = useCallback(async () => {
+    if (!convId) return;
+    setLoadingReport(true);
+    try {
+      const report = await chatService.getSalesAgentStatus(convId);
+      setAiReport(report);
+      setAiState(report.state);
+    } catch {
+      toast.error('Não consegui carregar a situação da IA neste lead.');
+    } finally {
+      setLoadingReport(false);
+    }
+  }, [convId]);
+
   const toggleSalesAgent = useCallback(async () => {
     if (!convId) return;
     setTogglingAi(true);
     try {
       const next = await chatService.toggleSalesAgent(convId, !aiOn);
       setAiState(next);
+      setAiReport(null);
       toast.success(next.label);
     } catch {
       toast.error('Não consegui mudar a IA neste lead.');
@@ -295,7 +317,41 @@ export default function CardActionsPanel({
               )}
               {aiOn ? 'Desligar neste lead' : 'Ligar neste lead'}
             </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs gap-1.5"
+              onClick={loadAiReport}
+              disabled={loadingReport || !convId}
+            >
+              {loadingReport ? <Loader2 className="h-3 w-3 animate-spin" /> : <HelpCircle className="h-3.5 w-3.5" />}
+              Por que não respondeu?
+            </Button>
           </div>
+          {aiReport && (
+            <div className="rounded-md bg-muted/50 p-2 space-y-1">
+              <p className="text-[11px] text-foreground">{aiReport.why}</p>
+              {aiReport.next_step && (
+                <p className="text-[10px] text-muted-foreground">{aiReport.next_step}</p>
+              )}
+              {aiReport.runs.length > 0 && (
+                <ul className="pt-1 space-y-0.5">
+                  {aiReport.runs.map((run, i) => (
+                    <li key={i} className="text-[10px] text-muted-foreground">
+                      {new Date(run.created_at).toLocaleString('pt-BR')} ·{' '}
+                      {run.status === 'replied'
+                        ? run.delivered
+                          ? 'respondeu o lead'
+                          : 'gerou resposta, mas não conseguiu enviar'
+                        : run.status === 'failed'
+                          ? `falhou: ${run.error_message ?? 'erro no servidor'}`
+                          : (run.reason_label ?? 'não respondeu')}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
           {aiState.status === 'idle' && (
             <p className="text-[10px] text-muted-foreground">
               A IA atende este canal, mas o gatilho ainda não bateu neste lead. Ligar aqui força o atendimento.
