@@ -295,18 +295,26 @@ export default function CardActionsPanel({
 
       {/* IA Vendedora — separada do "Chatbot" logo abaixo, que é o bot de fluxo
           (n8n/Dify) e usa etiqueta. São coisas diferentes e pausar uma não pausa
-          a outra. */}
-      {aiState && aiState.status !== 'none' && (
+          a outra.
+
+          O bloco aparece SEMPRE que o lead tem conversa de WhatsApp, inclusive
+          quando não há IA no canal dele. Esconder nesse caso era o pior dos
+          mundos: é justamente quando a IA não atende o lead e não deixa rastro
+          nenhum, e a tela vazia dava a entender que estava tudo normal. */}
+      {convId && (
         <div className="rounded-lg border border-border p-3 space-y-2">
           <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">IA Vendedora</h5>
           <div className="flex items-center gap-2 flex-wrap">
             <SalesAgentBadge state={aiState} size="md" />
+            {(!aiState || aiState.status === 'none') && (
+              <span className="text-xs text-muted-foreground">Nenhuma IA ligada no canal deste lead</span>
+            )}
             <Button
               size="sm"
               variant={aiOn ? 'outline' : 'default'}
               className="h-7 text-xs gap-1.5"
               onClick={toggleSalesAgent}
-              disabled={togglingAi || !convId}
+              disabled={togglingAi || !convId || !aiState || aiState.status === 'none'}
             >
               {togglingAi ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -352,12 +360,12 @@ export default function CardActionsPanel({
               )}
             </div>
           )}
-          {aiState.status === 'idle' && (
+          {aiState?.status === 'idle' && (
             <p className="text-[10px] text-muted-foreground">
               A IA atende este canal, mas o gatilho ainda não bateu neste lead. Ligar aqui força o atendimento.
             </p>
           )}
-          {aiState.status === 'handoff' && (
+          {aiState?.status === 'handoff' && (
             <p className="text-[10px] text-muted-foreground">
               A IA passou este lead pra um corretor. Ligar de volta desfaz a transferência.
             </p>

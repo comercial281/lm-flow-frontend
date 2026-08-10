@@ -17,6 +17,8 @@ import { toast } from 'sonner';
 
 import { Conversation } from '@/types/chat/api';
 import { salesAgentsService, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
+import { chatService } from '@/services/chat/chatService';
+import type { SalesAgentLeadReport } from '@/types/analytics/pipelines';
 
 interface Props {
   conversation: Conversation | null;
@@ -33,11 +35,21 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
   const [agent, setAgent] = useState<SalesAgent | null>(null);
   const [propertyCode, setPropertyCode] = useState('');
   const [fresh, setFresh] = useState(false);
+  // Situação da IA NESTE lead, carregada junto: é a pergunta que se faz ao abrir
+  // esta janela ("por que ela não respondeu?"), e a resposta não existia em tela
+  // nenhuma. Vale principalmente quando não há IA no canal: aí ela não é sequer
+  // acionada e não sobra turno, erro nem log pra investigar depois.
+  const [report, setReport] = useState<SalesAgentLeadReport | null>(null);
 
   useEffect(() => {
     if (!open || !conversation) return;
     setLoading(true);
     setFresh(false);
+    setReport(null);
+    chatService
+      .getSalesAgentStatus(conversation.id)
+      .then(setReport)
+      .catch(() => setReport(null));
     salesAgentsService
       .list()
       .then((agents) => {
@@ -87,16 +99,44 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
             <Loader2 className="h-4 w-4 animate-spin" /> Procurando a IA deste canal…
           </div>
         ) : !agent ? (
-          <div className="text-sm text-muted-foreground py-4">
-            Nenhuma IA Vendedora ativa neste canal. Abra <strong>IA Vendedora</strong> no menu,
-            crie ou ative uma, e escolha este canal no campo{' '}
-            <em>Instância do WhatsApp que ela opera</em>.
+          <div className="text-sm text-muted-foreground py-4 space-y-2">
+            <p>
+              Nenhuma IA Vendedora ativa neste canal. Abra <strong>IA Vendedora</strong> no menu,
+              crie ou ative uma, e escolha este canal no campo{' '}
+              <em>Instância do WhatsApp que ela opera</em>.
+            </p>
+            {report && <p className="text-foreground">{report.why}</p>}
+            {report?.next_step && <p>{report.next_step}</p>}
           </div>
         ) : (
           <div className="space-y-4 py-2">
             <div className="text-sm">
               IA: <span className="font-medium">{agent.name}</span>
             </div>
+
+            {report && (
+              <div className="rounded-md bg-muted/50 p-2 space-y-1">
+                <p className="text-xs font-medium">Situação neste lead</p>
+                <p className="text-xs">{report.why}</p>
+                {report.next_step && <p className="text-xs text-muted-foreground">{report.next_step}</p>}
+                {report.runs.length > 0 && (
+                  <ul className="pt-1 space-y-0.5">
+                    {report.runs.map((run, i) => (
+                      <li key={i} className="text-[11px] text-muted-foreground">
+                        {new Date(run.created_at).toLocaleString('pt-BR')} ·{' '}
+                        {run.status === 'replied'
+                          ? run.delivered
+                            ? 'respondeu o lead'
+                            : 'gerou resposta, mas não conseguiu enviar'
+                          : run.status === 'failed'
+                            ? `falhou: ${run.error_message ?? 'erro no servidor'}`
+                            : (run.reason_label ?? 'não respondeu')}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             <div>
               <Label htmlFor="ai_prop">Imóvel (código, opcional)</Label>
