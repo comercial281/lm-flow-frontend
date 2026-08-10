@@ -18,6 +18,7 @@ import ContactDetails from './ContactDetails';
 
 import EditableContactCustomAttributes from './EditableContactCustomAttributes';
 import ContactTagsManager from './ContactTagsManager';
+import AiUnderstandingPanel from './AiUnderstandingPanel';
 
 import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import ConversationPipelineItem from '@/components/pipelines/ConversationPipelineItem';
@@ -307,6 +308,11 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
               )}
             </Card>
           )}
+
+          {/* 2.5. O que a IA entendeu — temperatura, resumo e o que ela já
+              perguntou. Fica logo depois da origem porque é a mesma pergunta
+              ("quem é essa pessoa?") e some sozinho em conversa sem IA. */}
+          <AiUnderstandingPanel conversation={conversation} />
 
           {/* 3. Pipeline - Gerenciar funil */}
           {(conversation || contact) && (
