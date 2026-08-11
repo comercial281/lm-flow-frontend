@@ -116,6 +116,13 @@ export default function EditItemModal({
 
   const [notes, setNotes] = useState('');
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+
+  // Dados do contato editáveis direto no card (antes eram readOnly: dava pra
+  // focar o campo mas não digitar — parecia bug de "não salva o e-mail").
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [savingContact, setSavingContact] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [currency, setCurrency] = useState('BRL');
   const [customAttributes, setCustomAttributes] = useState<Record<string, unknown>>({});
@@ -185,6 +192,12 @@ export default function EditItemModal({
       const { services: _s, currency: _c, ...customAttrs } = item.custom_fields || {};
       setCustomAttributes(customAttrs);
       setActiveTab('overview');
+
+      // Contato (card pode ter contact direto ou via conversa)
+      const c = (item.contact || (item.conversation as any)?.contact) as any;
+      setContactName(c?.name || '');
+      setContactPhone(c?.phone_number || '');
+      setContactEmail(c?.email || '');
 
       // Responsável: `item.assignee` (topo) já vem resolvido pelo backend —
       // assignee da conversa OU default_assignee do contato. Lendo só da
@@ -385,8 +398,49 @@ export default function EditItemModal({
     }
   }, [activeLabels, persistLabels, labelTargetConvId, labelTargetContactId]);
 
-  const handleSubmit = () => {
+  // Salva nome/telefone/e-mail no CONTATO (endpoint separado do item do funil).
+  // Só manda o que mudou; telefone vai em E.164 porque o backend recusa outro formato.
+  const saveContactFields = useCallback(async (): Promise<boolean> => {
+    const contactId = item?.contact?.id ?? (item?.conversation as any)?.contact?.id;
+    if (!contactId) return true;
+    const current = (item?.contact || (item?.conversation as any)?.contact) as any;
+
+    const name = contactName.trim();
+    const email = contactEmail.trim();
+    const digits = contactPhone.trim().replace(/\D/g, '');
+    const phone = digits ? `+${digits}` : '';
+
+    const payload: Record<string, string> = {};
+    if (name !== (current?.name || '')) payload.name = name;
+    if (email !== (current?.email || '')) payload.email = email;
+    if (phone !== (current?.phone_number || '')) payload.phone_number = phone;
+    if (Object.keys(payload).length === 0) return true;
+
+    if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+      toast.error('E-mail inválido');
+      return false;
+    }
+
+    setSavingContact(true);
+    try {
+      await contactsService.updateContact(String(contactId), payload);
+      return true;
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        'Erro ao salvar os dados do contato';
+      toast.error(String(msg));
+      return false;
+    } finally {
+      setSavingContact(false);
+    }
+  }, [item, contactName, contactEmail, contactPhone]);
+
+  const handleSubmit = async () => {
     if (!selectedStageId) return;
+    const ok = await saveContactFields();
+    if (!ok) return;
     onSubmit({ notes, stage_id: selectedStageId, services, currency, custom_attributes: customAttributes });
   };
 
@@ -497,6 +551,30 @@ export default function EditItemModal({
   );
   const canCreateLabel = trimmedLabelSearch.length > 0 && !exactLabelExists;
 
+  // Cor de cada tag: prioriza a lista de labels da conta e cai nos labels crus do
+  // contato/conversa (que já trazem color). Sem isso as tags do modal saíam todas
+  // cinzas, diferentes das do card no board.
+  const labelColorMap: Record<string, string> = {};
+  [
+    ...(Array.isArray((item.contact as any)?.labels) ? (item.contact as any).labels : []),
+    ...(Array.isArray((item.conversation as any)?.labels) ? (item.conversation as any).labels : []),
+  ].forEach((l: any) => {
+    const key = typeof l === 'string' ? l : (l?.title ?? l?.name);
+    if (key && l?.color) labelColorMap[String(key).toLowerCase()] = l.color;
+  });
+  availableLabels.forEach(l => {
+    if (l.color) labelColorMap[l.title.toLowerCase()] = l.color;
+  });
+  const labelColor = (title: string) => labelColorMap[title.toLowerCase()] || '#7c3aed';
+  // Fundo suave só quando a cor é hex #rrggbb (sufixo de alpha). Caso contrário
+  // usa a própria cor com texto branco, pra nunca virar "#abc22" inválido.
+  const labelStyle = (title: string) => {
+    const color = labelColor(title);
+    return /^#[0-9a-f]{6}$/i.test(color)
+      ? { backgroundColor: `${color}22`, color }
+      : { backgroundColor: color, color: '#fff' };
+  };
+
   // Conta as abas visíveis pra ajustar o grid e não deixar buraco quando uma feature está off.
   // Fixas: Detalhes, Conversa, Origem. Opcionais: Imóveis, Retorno.
   // Observações saiu da barra de abas — agora vive no painel direito do Detalhes,
@@ -594,15 +672,34 @@ export default function EditItemModal({
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <Input readOnly value={item.contact?.name || (item.conversation as any)?.contact?.name || ''} placeholder="Nome" className="bg-muted/40 cursor-default text-sm h-8" />
+                    <Input
+                      value={contactName}
+                      onChange={e => setContactName(e.target.value)}
+                      disabled={savingContact}
+                      placeholder="Nome"
+                      className="text-sm h-8"
+                    />
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <Input readOnly value={item.contact?.phone_number || (item.conversation as any)?.contact?.phone_number || ''} placeholder="Telefone" className="bg-muted/40 cursor-default text-sm h-8" />
+                    <Input
+                      value={contactPhone}
+                      onChange={e => setContactPhone(e.target.value)}
+                      disabled={savingContact}
+                      placeholder="Telefone (+5511999999999)"
+                      className="text-sm h-8"
+                    />
                   </div>
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <Input readOnly value={item.contact?.email || (item.conversation as any)?.contact?.email || ''} placeholder="E-mail" className="bg-muted/40 cursor-default text-sm h-8" />
+                    <Input
+                      type="email"
+                      value={contactEmail}
+                      onChange={e => setContactEmail(e.target.value)}
+                      disabled={savingContact}
+                      placeholder="E-mail"
+                      className="text-sm h-8"
+                    />
                   </div>
                 </div>
 
@@ -645,9 +742,14 @@ export default function EditItemModal({
                   </Label>
                   <div className="flex flex-wrap gap-1 mb-1">
                     {activeLabels.map(l => (
-                      <Badge key={l} variant="secondary" className="gap-1 text-xs h-5 px-1.5">
+                      <Badge
+                        key={l}
+                        variant="secondary"
+                        className="gap-1 text-xs h-5 px-1.5 border-0 font-medium"
+                        style={labelStyle(l)}
+                      >
                         {l}
-                        <button onClick={() => toggleLabel(l)} className="hover:text-destructive">
+                        <button onClick={() => toggleLabel(l)} className="hover:opacity-60">
                           <X className="h-2.5 w-2.5" />
                         </button>
                       </Badge>
@@ -1089,8 +1191,8 @@ export default function EditItemModal({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             {t('editItem.cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit || loading}>
-            {loading ? t('editItem.saving') : t('editItem.save')}
+          <Button onClick={handleSubmit} disabled={!canSubmit || loading || savingContact}>
+            {loading || savingContact ? t('editItem.saving') : t('editItem.save')}
           </Button>
         </DialogFooter>
       </DialogContent>
