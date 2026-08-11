@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Button } from '@evoapi/design-system/button';
 import {
   ArrowLeft,
@@ -6,6 +7,7 @@ import {
   CheckCircle,
   Clock,
   Pause,
+  Bot,
   MoreVertical,
   ArrowUp,
   ArrowDown,
@@ -31,6 +33,7 @@ import {
 } from '@evoapi/design-system/dropdown-menu';
 import { Conversation } from '@/types/chat/api';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
+import ActivateAiDialog from '@/components/chat/conversation/ActivateAiDialog';
 import { getStatusLabel, isPendingStatus } from '@/utils/chat/conversationStatus';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -87,6 +90,11 @@ const ChatHeader = ({
   unreadCount,
 }: ChatHeaderProps) => {
   const { t } = useLanguage('chat');
+  // O menu é controlado por causa da janela da IA: o item precisa FECHAR o menu
+  // e só então abrir a janela. Menu e janela disputando o foco no mesmo instante
+  // é o jeito clássico de a janela abrir e fechar sozinha.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const currentStatus = conversation.status;
   const hasUnreadMessages = unreadCount > 0;
   const isPinned = Boolean(conversation.custom_attributes?.pinned);
@@ -96,13 +104,31 @@ const ChatHeader = ({
 
   const renderConversationStatusDropdown = () => {
     return (
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
+          {/* IA Vendedora — primeiro item de propósito.
+              É a ação que resgata o lead que ficou no vácuo (ex.: escreveu fora
+              do horário de atuação e não teve resposta): a IA lê a conversa
+              inteira e continua de onde parou, sem se reapresentar. Ela existia
+              só na API e numa janela que nenhuma tela abria. */}
+          <DropdownMenuItem
+            onClick={() => {
+              setMenuOpen(false);
+              setAiOpen(true);
+            }}
+            className="flex items-center gap-2"
+          >
+            <Bot className="h-4 w-4" />
+            Ativar IA pra este lead
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
           {/* Read/Unread Actions */}
           {hasUnreadMessages ? (
             <DropdownMenuItem
@@ -364,6 +390,9 @@ const ChatHeader = ({
           </Button>
         </div>
       </div>
+
+      {/* Fora do menu de propósito: montada aqui, ela sobrevive ao menu fechar. */}
+      <ActivateAiDialog conversation={conversation} open={aiOpen} onOpenChange={setAiOpen} />
     </div>
   );
 };
