@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { Button } from '@/components/ui/ds';
 import { Loader2, Repeat, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
@@ -7,6 +7,7 @@ import {
   followupEnrollmentService,
   type FollowupEnrollmentConfig,
   type FollowupAudience,
+  type FollowupStageOption,
 } from '@/services/followupEnrollment/followupEnrollmentService';
 
 interface FollowupEnrollmentProps {
@@ -19,6 +20,7 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
   const [config, setConfig] = useState<FollowupEnrollmentConfig | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [audience, setAudience] = useState<FollowupAudience>('paid');
+  const [stageId, setStageId] = useState<string>('');
   const [sequenceSlug, setSequenceSlug] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -30,6 +32,7 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
       setConfig(c);
       setEnabled(c.enabled);
       setAudience(c.audience);
+      setStageId(c.stage_id ?? '');
       setSequenceSlug(c.sequence_slug ?? c.sequences[0]?.slug ?? '');
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Erro ao carregar a configuração'));
@@ -40,14 +43,40 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
 
   useEffect(() => { load(); }, [load]);
 
+  // Colunas agrupadas por pipeline. Num CRM com 3 pipelines de 6 colunas, a lista
+  // crua vira 18 nomes sem contexto — e nomes como "Contato" existem em quase
+  // todos, então sem o agrupamento não dá pra saber qual coluna se está escolhendo.
+  const stageGroups = useMemo(() => {
+    const groups = new Map<string, { id: string; pipeline: string; stages: FollowupStageOption[] }>();
+    (config?.stages ?? []).forEach(s => {
+      const group = groups.get(s.pipeline_id)
+        ?? { id: s.pipeline_id, pipeline: s.pipeline_name || 'Pipeline sem nome', stages: [] };
+      group.stages.push(s);
+      groups.set(s.pipeline_id, group);
+    });
+    return [...groups.values()];
+  }, [config]);
+
   const handleSave = useCallback(async () => {
     if (!sequenceSlug) { toast.error('Escolha um funil de follow-up'); return; }
+    // Só exige a coluna ao LIGAR — desligar não pode depender de configuração
+    // completa, senão quem deixou a escolha pela metade fica sem conseguir parar.
+    if (enabled && audience === 'stage' && !stageId) {
+      toast.error('Escolha a coluna que deve iniciar o funil');
+      return;
+    }
     setSaving(true);
     try {
-      const c = await followupEnrollmentService.update({ enabled, audience, sequence_slug: sequenceSlug });
+      const c = await followupEnrollmentService.update({
+        enabled,
+        audience,
+        sequence_slug: sequenceSlug,
+        stage_id: audience === 'stage' ? stageId : undefined,
+      });
       setConfig(c);
       setEnabled(c.enabled);
       setAudience(c.audience);
+      setStageId(c.stage_id ?? '');
       setSequenceSlug(c.sequence_slug ?? '');
       if (enabled) {
         toast.success('Follow-up automático ligado');
@@ -66,7 +95,7 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
     } finally {
       setSaving(false);
     }
-  }, [enabled, audience, sequenceSlug]);
+  }, [enabled, audience, stageId, sequenceSlug]);
 
   if (loading) {
     return (
@@ -163,10 +192,42 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
               ))}
             </div>
             <p className="text-xs text-muted-foreground">
-              {audience === 'paid'
-                ? 'Só leads marcados como tráfego pago (vindos de anúncio) entram no funil.'
-                : 'Todo lead que iniciar conversa entra no funil.'}
+              {audience === 'paid' && 'Só leads marcados como tráfego pago (vindos de anúncio) entram no funil.'}
+              {audience === 'all' && 'Todo lead que iniciar conversa entra no funil.'}
+              {audience === 'stage' && 'O funil começa no momento em que o card do lead entra na coluna escolhida — arrastado à mão ou movido por outra automação.'}
             </p>
+
+            {audience === 'stage' && (
+              <div className="space-y-2 pt-1">
+                {stageGroups.length === 0 ? (
+                  <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
+                    <span>Este CRM ainda não tem nenhuma coluna. Crie um pipeline antes de usar esta opção.</span>
+                  </div>
+                ) : (
+                  <>
+                    <label htmlFor="followup-stage" className="text-xs font-medium">
+                      Coluna que inicia o funil
+                    </label>
+                    <select
+                      id="followup-stage"
+                      value={stageId}
+                      onChange={e => setStageId(e.target.value)}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Escolha uma coluna...</option>
+                      {stageGroups.map(g => (
+                        <optgroup key={g.id} label={g.pipeline}>
+                          {g.stages.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Funil */}
