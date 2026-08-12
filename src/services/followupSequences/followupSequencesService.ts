@@ -31,12 +31,51 @@ export interface FollowupSequence {
 
 export interface FollowupSequenceFormData {
   name: string;
-  slug: string;
+  /** Opcional na criação: o backend deriva do nome e desempata duplicatas. */
+  slug?: string;
   description?: string;
   is_active?: boolean;
   stop_on_reply?: boolean;
   business_hours_only?: boolean;
   followup_steps_attributes?: FollowupStep[];
+}
+
+/** Um funil pronto do catálogo. Vem com o texto dos passos pra tela mostrar a
+ *  prévia ANTES de o usuário escolher — escolher às cegas foi o problema que
+ *  derrubou o modelo de marketing no CRM de um cliente. */
+export interface FollowupTemplate {
+  key: string;
+  name: string;
+  description: string;
+  business_hours_only: boolean;
+  steps_count: number;
+  steps: { position: number; delay_minutes: number; content: string }[];
+}
+
+export interface FollowupHistoryEntry {
+  id: string;
+  status: 'pending' | 'sent' | 'cancelled' | 'failed';
+  /** epoch em segundos */
+  run_at: number | null;
+  executed_at: number | null;
+  last_error: string | null;
+  contact: { id: string | null; name: string | null };
+  step: { position: number; message_type: FollowupMessageType; content: string } | null;
+}
+
+export interface FollowupHistory {
+  sequence: { id: string; name: string; slug: string };
+  summary: {
+    leads: number;
+    pending: number;
+    sent: number;
+    cancelled: number;
+    failed: number;
+    /** Cancelados porque o lead respondeu — o único cancelamento que é sucesso. */
+    stopped_by_reply: number;
+    last_sent_at: number | null;
+  };
+  recent: FollowupHistoryEntry[];
 }
 
 const BASE = '/followup_sequences';
@@ -80,6 +119,23 @@ export const followupSequencesService = {
       params: { phone, name },
     });
     return (res.data as { data: { contact_id: string; sequence_slug: string; pending_jobs: number } }).data;
+  },
+
+  async getTemplates(): Promise<FollowupTemplate[]> {
+    const res = await api.get(`${BASE}/templates`);
+    return (res.data as { data: FollowupTemplate[] }).data ?? [];
+  },
+
+  /** Cria UM funil a partir do catálogo. Diferente de `reseedTemplate`, não toca
+   *  em pipeline, coluna, etiqueta nem regra — só nasce a sequência. */
+  async createFromTemplate(templateKey: string, name?: string): Promise<FollowupSequence> {
+    const res = await api.post(`${BASE}/create_from_template`, { template_key: templateKey, name });
+    return (res.data as { data: FollowupSequence }).data;
+  },
+
+  async getHistory(id: string): Promise<FollowupHistory> {
+    const res = await api.get(`${BASE}/${id}/history`);
+    return (res.data as { data: FollowupHistory }).data;
   },
 
   async uploadMedia(file: File): Promise<{

@@ -19,12 +19,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/ds';
-import { Clock, Edit, Send, ToggleLeft, ToggleRight, Trash2, Plus, GripVertical, Upload, Loader2, Mic, Square } from 'lucide-react';
+import { Clock, Edit, Send, ToggleLeft, ToggleRight, Trash2, Plus, GripVertical, Upload, Loader2, Mic, Square, Sparkles, History, LayoutGrid, MessageSquare } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import {
   followupSequencesService,
+  followupAdminService,
   FollowupSequence,
   FollowupStep,
+  FollowupTemplate,
+  FollowupHistory,
   MESSAGE_TYPE_LABELS,
   formatDelay,
 } from '@/services/followupSequences/followupSequencesService';
@@ -33,9 +36,16 @@ import type { Pipeline, PipelineStage } from '@/types/analytics';
 import { FollowupEnrollment } from '@/pages/Customer/Automations/FollowupEnrollment/FollowupEnrollment';
 
 // Backend (Followup::SendStep#move_stage_if_configured) deriva o slug a partir do
-// nome do stage assim: name.downcase.tr(' ', '-'). Mantemos exatamente o mesmo
-// shape em JS pra que os 2 selects gerem um slug compativel ao salvar.
-const slugifyStageName = (name: string): string => name.toLowerCase().replace(/ /g, '-');
+// nome do stage e NORMALIZA os dois lados: transliterate + downcase + strip + '-'.
+// Espelhamos exatamente isso aqui — com acento, 'follow-up-automatico' nao casava
+// com a coluna "Follow-up Automático" e o passo nao movia o card, em silencio.
+const slugifyStageName = (name: string): string =>
+  name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/ /g, '-');
 
 // Variáveis interpoladas pelo backend (Followup::SendStep#interpolate) — mesmos
 // tokens da automação de lead.
@@ -282,8 +292,47 @@ const EMPTY_STEP = (position: number): FollowupStep => ({
   media_url: '',
   media_caption: '',
   tag_on_send: `follow-up${position}`,
-  move_to_stage_slug: position <= 2 ? 'follow-up-curto' : 'follow-up-longo',
+  move_to_stage_slug: position <= 2 ? 'follow-up-automatico' : 'follow-up-longo',
 });
+
+// Funil em branco. `id` vazio é o que distingue "criando" de "editando" — o editor
+// e o salvar decidem por ele. Nasce com 3 passos (e não 6, como o modelo pronto):
+// tela de criação com 6 blocos vazios é um paredão pra quem só quer começar.
+const NEW_SEQUENCE = (): FollowupSequence => ({
+  id: '',
+  name: '',
+  slug: '',
+  description: '',
+  is_active: true,
+  stop_on_reply: true,
+  business_hours_only: false,
+  steps_count: 0,
+  steps: [],
+  created_at: '',
+  updated_at: '',
+});
+
+const formatMoment = (epochSeconds: number | null): string => {
+  if (!epochSeconds) return '—';
+  return new Date(epochSeconds * 1000).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+  });
+};
+
+// Um cancelamento por resposta do lead é SUCESSO — a sequência parou porque
+// funcionou. Os outros cancelamentos (funil desligado, lead sem telefone, fila
+// substituída) são outra história, e misturar os dois numa etiqueta só faria o
+// histórico parecer cheio de erro. O backend grava a mesma frase nos dois
+// caminhos que cancelam por resposta.
+const repliedStop = (lastError: string | null): boolean =>
+  (lastError ?? '').includes('lead replied');
+
+const STATUS_STYLE: Record<string, { label: string; className: string }> = {
+  sent:      { label: 'Enviada',   className: 'border-green-500/40 text-green-600 dark:text-green-400' },
+  pending:   { label: 'Agendada',  className: 'border-border text-muted-foreground' },
+  failed:    { label: 'Falhou',    className: 'border-red-500/40 text-red-600 dark:text-red-400' },
+  cancelled: { label: 'Cancelada', className: 'border-amber-500/40 text-amber-600 dark:text-amber-400' },
+};
 
 export default function FollowupSequences() {
   const [sequences, setSequences] = useState<FollowupSequence[]>([]);
@@ -299,6 +348,21 @@ export default function FollowupSequences() {
 
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [stagesByPipeline, setStagesByPipeline] = useState<Record<string, PipelineStage[]>>({});
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
+
+  // Escolher modelo. Antes o botão aplicava o pacote de marketing direto, sem
+  // mostrar o que ia acontecer — e quando falhava não dava pra saber o que teria
+  // sido criado. Agora a escolha é explícita e a prévia vem junto.
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [templates, setTemplates] = useState<FollowupTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [creatingTemplate, setCreatingTemplate] = useState<string | null>(null);
+  const [previewKey, setPreviewKey] = useState<string | null>(null);
+
+  // Histórico do funil.
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<FollowupHistory | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -328,6 +392,80 @@ export default function FollowupSequences() {
       .then(res => setStagesByPipeline(prev => ({ ...prev, [pipelineId]: res.data ?? [] })))
       .catch(() => toast.error('Erro ao carregar colunas do pipeline'));
   }, []);
+
+  // Criar do zero. Até aqui a tela só sabia LISTAR e EDITAR: num CRM sem nenhum
+  // funil não havia caminho nenhum pela interface, e o único jeito era o botão de
+  // modelo pronto escondido na tela de Pipelines.
+  const openCreate = () => {
+    setEditing(NEW_SEQUENCE());
+    setSteps(Array.from({ length: 3 }, (_, i) => EMPTY_STEP(i + 1)));
+    setEditorOpen(true);
+    pipelines.forEach(p => {
+      if (!stagesByPipeline[p.id]) loadStages(p.id);
+    });
+  };
+
+  const openTemplates = async () => {
+    setTemplateDialogOpen(true);
+    setPreviewKey(null);
+    if (templates.length > 0) return;
+    setTemplatesLoading(true);
+    try {
+      setTemplates(await followupSequencesService.getTemplates());
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Falha ao carregar os modelos.'));
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  const createFromTemplate = async (tpl: FollowupTemplate) => {
+    setCreatingTemplate(tpl.key);
+    try {
+      const seq = await followupSequencesService.createFromTemplate(tpl.key);
+      toast.success(`Funil "${seq.name}" criado com ${seq.steps_count} mensagens. Revise os textos e os tempos.`);
+      setTemplateDialogOpen(false);
+      load();
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Falha ao criar o funil a partir do modelo.'));
+    } finally {
+      setCreatingTemplate(null);
+    }
+  };
+
+  // O pacote de marketing continua disponível, mas agora como escolha declarada:
+  // ele cria pipeline, colunas, etiquetas e regras além dos funis, e é a única
+  // opção daqui que pode esbarrar em permissão.
+  const applyTemplate = async () => {
+    setApplyingTemplate(true);
+    try {
+      const out = await followupAdminService.reseedTemplate();
+      toast.success(`Pacote aplicado: ${out.sequences.length} funis, ${out.stages_count} colunas.`);
+      setTemplateDialogOpen(false);
+      load();
+    } catch (e) {
+      // Mensagem REAL do servidor: a recusa mais comum é de cargo, e a frase fixa
+      // que existia antes ("verifique se o tenant tem usuário admin") mandava
+      // procurar no lugar errado.
+      toast.error(apiErrorMessage(e, 'Falha ao aplicar o pacote.'));
+    } finally {
+      setApplyingTemplate(false);
+    }
+  };
+
+  const openHistory = async (seq: FollowupSequence) => {
+    setHistoryOpen(true);
+    setHistory(null);
+    setHistoryLoading(true);
+    try {
+      setHistory(await followupSequencesService.getHistory(seq.id));
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Falha ao carregar o histórico.'));
+      setHistoryOpen(false);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   const openEdit = (seq: FollowupSequence) => {
     setEditing(seq);
@@ -360,21 +498,33 @@ export default function FollowupSequences() {
 
   const saveSequence = async () => {
     if (!editing) return;
+    if (!editing.name.trim()) { toast.error('Dê um nome ao funil.'); return; }
+
+    // `id` vazio = funil novo. O slug NÃO vai no corpo: quem cria só dá o nome, e o
+    // backend deriva e desempata o slug (é ele que as regras referenciam por dentro).
+    const isNew = !editing.id;
+    const payload = {
+      name: editing.name.trim(),
+      description: editing.description ?? undefined,
+      is_active: editing.is_active,
+      stop_on_reply: editing.stop_on_reply,
+      business_hours_only: editing.business_hours_only,
+      followup_steps_attributes: steps.map((s, i) => ({ ...s, position: i + 1 })),
+    };
+
     setSaving(true);
     try {
-      await followupSequencesService.update(editing.id, {
-        name: editing.name,
-        description: editing.description ?? undefined,
-        is_active: editing.is_active,
-        stop_on_reply: editing.stop_on_reply,
-        business_hours_only: editing.business_hours_only,
-        followup_steps_attributes: steps.map((s, i) => ({ ...s, position: i + 1 })),
-      });
-      toast.success('Sequência salva.');
+      if (isNew) {
+        await followupSequencesService.create(payload);
+        toast.success('Funil criado.');
+      } else {
+        await followupSequencesService.update(editing.id, payload);
+        toast.success('Sequência salva.');
+      }
       closeEditor();
       load();
     } catch (e) {
-      toast.error(apiErrorMessage(e, 'Falha ao salvar.'));
+      toast.error(apiErrorMessage(e, isNew ? 'Falha ao criar o funil.' : 'Falha ao salvar.'));
     } finally {
       setSaving(false);
     }
@@ -404,13 +554,22 @@ export default function FollowupSequences() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <header className="flex items-center justify-between">
+      <header className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Follow-up</h1>
           <p className="text-sm text-muted-foreground">
             Sequências de mensagens disparadas quando o lead não responde. Configure abaixo se o
             sistema coloca o lead no funil sozinho e edite cada passo.
           </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button variant="outline" onClick={openTemplates}>
+            <Sparkles className="mr-1 h-4 w-4" />
+            Usar modelo pronto
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus className="mr-1 h-4 w-4" /> Novo funil
+          </Button>
         </div>
       </header>
 
@@ -419,7 +578,11 @@ export default function FollowupSequences() {
           coisa — o usuário desligava numa aba achando que parava o que via na outra. */}
       <section className="rounded-lg border bg-card p-4 shadow-sm">
         <h2 className="mb-4 text-lg font-medium">Quando o funil dispara sozinho</h2>
-        <FollowupEnrollment embedded />
+        {/* A `key` remonta esta seção quando o CONJUNTO de funis muda (criou, apagou,
+            ligou/desligou). Sem isso, quem acabava de criar o primeiro funil continuava
+            lendo "Nenhum funil de follow-up ativo" aqui em cima até dar F5 — e a tela
+            recém-desbloqueada parecia quebrada de novo. */}
+        <FollowupEnrollment embedded key={sequences.map(s => `${s.id}:${s.is_active}`).join(',')} />
       </section>
 
       {loading ? (
@@ -427,8 +590,9 @@ export default function FollowupSequences() {
       ) : sequences.length === 0 ? (
         <EmptyState
           icon={Clock}
-          title="Nenhuma sequência cadastrada"
-          description="As sequências aparecem aqui após o primeiro deploy."
+          title="Nenhum funil de follow-up ainda"
+          description="Crie o seu do zero, escrevendo as mensagens e os tempos. Ou escolha um modelo pronto ali em cima: são funis já escritos, e você ajusta o texto depois."
+          action={{ label: 'Criar meu primeiro funil', onClick: openCreate }}
         />
       ) : (
         <div className="grid gap-4">
@@ -453,6 +617,9 @@ export default function FollowupSequences() {
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="sm" onClick={() => toggle(seq)}>
                     {seq.is_active ? <ToggleRight className="h-4 w-4 text-green-500" /> : <ToggleLeft className="h-4 w-4 text-red-500" />}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => openHistory(seq)}>
+                    <History className="mr-1 h-3 w-3" /> Histórico
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => openTest(seq.id)}>
                     <Send className="mr-1 h-3 w-3" /> Testar
@@ -483,7 +650,9 @@ export default function FollowupSequences() {
       <Dialog open={editorOpen} onOpenChange={(o) => !o && closeEditor()}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar sequência: {editing?.name}</DialogTitle>
+            <DialogTitle>
+              {editing && !editing.id ? 'Novo funil de follow-up' : `Editar sequência: ${editing?.name}`}
+            </DialogTitle>
             <DialogDescription>
               Tempos são cumulativos desde o início. Toque nas variáveis abaixo de cada mensagem pra inserir dados do lead.
             </DialogDescription>
@@ -494,12 +663,51 @@ export default function FollowupSequences() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <UILabel>Nome</UILabel>
-                  <Input value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />
+                  <Input
+                    value={editing.name}
+                    autoFocus={!editing.id}
+                    placeholder="Ex.: Follow-up de lead de anúncio"
+                    onChange={e => setEditing({ ...editing, name: e.target.value })}
+                  />
                 </div>
-                <div>
-                  <UILabel>Slug (não editar)</UILabel>
-                  <Input value={editing.slug} disabled />
-                </div>
+                {/* No funil novo o slug ainda não existe (o backend deriva do nome ao
+                    salvar), então mostrar um campo vazio e travado só confundiria. */}
+                {editing.id ? (
+                  <div>
+                    <UILabel>Slug (não editar)</UILabel>
+                    <Input value={editing.slug} disabled />
+                  </div>
+                ) : (
+                  <div>
+                    <UILabel>Descrição</UILabel>
+                    <Input
+                      value={editing.description ?? ''}
+                      placeholder="Pra que serve este funil"
+                      onChange={e => setEditing({ ...editing, description: e.target.value })}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Antes só dava pra mexer nisto pela API — e são as duas regras que
+                  mais mudam o comportamento do funil na vida do lead. */}
+              <div className="flex flex-wrap items-center gap-6 rounded-lg border bg-muted/20 p-3">
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={editing.stop_on_reply}
+                    onChange={e => setEditing({ ...editing, stop_on_reply: e.target.checked })}
+                  />
+                  Parar quando o lead responder
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={editing.business_hours_only}
+                    onChange={e => setEditing({ ...editing, business_hours_only: e.target.checked })}
+                  />
+                  Só enviar em horário comercial
+                </label>
               </div>
 
               <div className="space-y-3">
@@ -599,7 +807,9 @@ export default function FollowupSequences() {
 
           <DialogFooter>
             <Button variant="outline" onClick={closeEditor}>Cancelar</Button>
-            <Button onClick={saveSequence} disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
+            <Button onClick={saveSequence} disabled={saving}>
+              {saving ? 'Salvando...' : editing && !editing.id ? 'Criar funil' : 'Salvar'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -621,6 +831,212 @@ export default function FollowupSequences() {
             <Button variant="outline" onClick={() => setTestDialogOpen(false)}>Cancelar</Button>
             <Button onClick={fireTest} disabled={!testPhone}>Disparar</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Escolher modelo pronto */}
+      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Modelos prontos</DialogTitle>
+            <DialogDescription>
+              Cada modelo cria um funil já escrito, pra você editar. Ele não entra em ação sozinho:
+              só manda mensagem depois que você apontar o disparo automático pra ele, ali em cima,
+              ou usar o botão Testar.
+            </DialogDescription>
+          </DialogHeader>
+
+          {templatesLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {templates.map(tpl => (
+                <div key={tpl.key} className="rounded-lg border bg-card p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4 text-primary" />
+                        <h3 className="font-medium">{tpl.name}</h3>
+                        <Badge variant="outline">{tpl.steps_count} mensagens</Badge>
+                        {tpl.business_hours_only && (
+                          <Badge variant="outline" className="text-xs">só em horário comercial</Badge>
+                        )}
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">{tpl.description}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-col gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => createFromTemplate(tpl)}
+                        disabled={creatingTemplate !== null}
+                      >
+                        {creatingTemplate === tpl.key
+                          ? <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          : <Plus className="mr-1 h-3 w-3" />}
+                        Usar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setPreviewKey(previewKey === tpl.key ? null : tpl.key)}
+                      >
+                        {previewKey === tpl.key ? 'Ocultar' : 'Ver mensagens'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {previewKey === tpl.key && (
+                    <div className="mt-3 grid gap-2 border-t pt-3">
+                      {tpl.steps.map(s => (
+                        <div key={s.position} className="flex items-start gap-3 rounded border bg-background p-2 text-sm">
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-mono">#{s.position}</span>
+                          <span className="shrink-0 text-muted-foreground">{formatDelay(s.delay_minutes)}</span>
+                          <span className="flex-1">{s.content}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* O pacote de marketing é outra categoria de coisa: mexe no CRM inteiro.
+                  Fica separado e avisado, pra ninguém aplicar achando que é só um funil. */}
+              <div className="rounded-lg border border-dashed bg-muted/30 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+                      <h3 className="font-medium">Pacote completo de marketing</h3>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Além de dois funis, cria um pipeline novo com suas colunas, as etiquetas de
+                      origem e as regras que ligam tudo. Use num CRM que está começando do zero —
+                      num CRM já em uso, prefira um modelo de funil acima.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={applyTemplate}
+                    disabled={applyingTemplate}
+                  >
+                    {applyingTemplate
+                      ? <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      : <Sparkles className="mr-1 h-3 w-3" />}
+                    Aplicar pacote
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Histórico do funil */}
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{history ? `Histórico: ${history.sequence.name}` : 'Histórico do funil'}</DialogTitle>
+            <DialogDescription>
+              O que este funil já fez. Para ver a linha do tempo de um lead específico, abra o card dele.
+            </DialogDescription>
+          </DialogHeader>
+
+          {historyLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : history && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border bg-card p-3">
+                  <p className="text-xs text-muted-foreground">Leads no funil</p>
+                  <p className="text-2xl font-semibold">{history.summary.leads}</p>
+                </div>
+                <div className="rounded-lg border bg-card p-3">
+                  <p className="text-xs text-muted-foreground">Mensagens enviadas</p>
+                  <p className="text-2xl font-semibold">{history.summary.sent}</p>
+                </div>
+                <div className="rounded-lg border bg-card p-3">
+                  <p className="text-xs text-muted-foreground">Pararam porque responderam</p>
+                  <p className="text-2xl font-semibold text-green-600 dark:text-green-400">
+                    {history.summary.stopped_by_reply}
+                  </p>
+                </div>
+                <div className="rounded-lg border bg-card p-3">
+                  <p className="text-xs text-muted-foreground">Ainda agendadas</p>
+                  <p className="text-2xl font-semibold">{history.summary.pending}</p>
+                </div>
+                <div className="rounded-lg border bg-card p-3">
+                  <p className="text-xs text-muted-foreground">Falharam</p>
+                  <p className={`text-2xl font-semibold ${history.summary.failed > 0 ? 'text-red-600 dark:text-red-400' : ''}`}>
+                    {history.summary.failed}
+                  </p>
+                </div>
+                <div className="rounded-lg border bg-card p-3">
+                  <p className="text-xs text-muted-foreground">Último envio</p>
+                  <p className="text-sm font-medium pt-2">{formatMoment(history.summary.last_sent_at)}</p>
+                </div>
+              </div>
+
+              {history.recent.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  Este funil ainda não entrou em ação. Nenhum lead foi colocado nele até agora — nem
+                  pelo disparo automático, nem pelo botão de teste.
+                </div>
+              ) : (
+                <div>
+                  <h3 className="mb-2 text-sm font-medium">Últimos disparos</h3>
+                  <div className="grid gap-2">
+                    {history.recent.map(entry => {
+                      const style = STATUS_STYLE[entry.status] ?? STATUS_STYLE.pending;
+                      const byReply = entry.status === 'cancelled' && repliedStop(entry.last_error);
+                      return (
+                        <div
+                          key={entry.id}
+                          // O motivo cru do servidor ('lead replied', 'contact has no
+                          // phone_number', o erro da Evolution) não cabe na linha e não
+                          // é linguagem de usuário — mas é o que resolve o chamado.
+                          title={entry.last_error ?? undefined}
+                          className="flex items-start gap-3 rounded border bg-background p-2 text-sm"
+                        >
+                          <Badge
+                            variant="outline"
+                            className={`shrink-0 text-xs ${byReply ? 'border-green-500/40 text-green-600 dark:text-green-400' : style.className}`}
+                          >
+                            {byReply ? 'Lead respondeu' : style.label}
+                          </Badge>
+                          <span className="shrink-0 font-medium">
+                            {entry.contact.name || 'Sem nome'}
+                          </span>
+                          {entry.step && (
+                            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-mono">
+                              #{entry.step.position}
+                            </span>
+                          )}
+                          <span className="flex-1 truncate text-muted-foreground">
+                            {entry.step?.content || '—'}
+                          </span>
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {formatMoment(entry.executed_at ?? entry.run_at)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Falha some no meio da lista se não for dita em voz alta. */}
+                  {history.summary.failed > 0 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Passe o mouse sobre uma linha para ver o motivo registrado pelo servidor.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -1,6 +1,7 @@
 import api from '@/services/core/api';
 
-export type FollowupAudience = 'all' | 'paid';
+/** 'stage' = o funil começa quando o card entra numa coluna escolhida. */
+export type FollowupAudience = 'all' | 'paid' | 'stage';
 
 export interface FollowupEnrollmentSequenceOption {
   slug: string;
@@ -8,9 +9,20 @@ export interface FollowupEnrollmentSequenceOption {
   steps_count: number;
 }
 
+export interface FollowupStageOption {
+  id: string;
+  name: string;
+  pipeline_id: string;
+  pipeline_name: string | null;
+}
+
 export interface FollowupEnrollmentConfig {
   enabled: boolean;
   audience: FollowupAudience;
+  /** Coluna escolhida quando a audiência é 'stage'. */
+  stage_id: string | null;
+  /** Todas as colunas do CRM, com o nome do pipeline pra agrupar na tela. */
+  stages: FollowupStageOption[];
   sequence_slug: string | null;
   sequences: FollowupEnrollmentSequenceOption[];
   audiences: { value: FollowupAudience; label: string }[];
@@ -28,6 +40,8 @@ export interface FollowupEnrollmentUpdate {
   enabled: boolean;
   audience: FollowupAudience;
   sequence_slug: string;
+  /** Obrigatório só quando a audiência é 'stage' e está LIGANDO. */
+  stage_id?: string | null;
 }
 
 const BASE = '/followup_enrollment';

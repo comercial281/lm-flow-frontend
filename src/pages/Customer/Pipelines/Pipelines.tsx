@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Button,
   Dialog,
@@ -104,7 +105,10 @@ export default function Pipelines() {
       loadPipelines();
     } catch (err) {
       console.error(err);
-      toast.error('Falha ao aplicar template. Verifique se o tenant tem usuário admin.');
+      // A frase fixa daqui mandava procurar no lugar errado: a recusa mais comum é
+      // de CARGO de quem clicou, não de o CRM não ter admin. O backend agora diz
+      // qual etapa falhou / qual permissão falta — repassamos isso ao usuário.
+      toast.error(apiErrorMessage(err, 'Falha ao aplicar template.'));
     } finally {
       setApplyingTemplate(false);
     }
