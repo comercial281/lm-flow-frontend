@@ -573,7 +573,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
               {canSendAttachment && (
                 <FileUpload
                   onFilesSelected={handleFilesSelected}
-                  maxFileSize={10}
                   multiple={true}
                   disabled={isDisabled || isSending || isPendingConversation}
                 />

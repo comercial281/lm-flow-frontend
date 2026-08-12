@@ -635,7 +635,7 @@
       },
       "errors": {
         "fileTooLarge": "Fichier trop volumineux",
-        "fileTooLargeDescription": "{{fileName}} dépasse la limite de {{maxSize}}MB",
+        "fileTooLargeDescription": "{{fileName}} fait {{fileSize}} — la limite est de {{maxSize}}MB",
         "fileTypeNotAllowed": "Type de fichier non autorisé",
         "fileTypeNotAllowedDescription": "{{fileName}} n'est pas un type de fichier pris en charge"
       },

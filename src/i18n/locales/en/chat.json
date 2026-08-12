@@ -672,7 +672,7 @@
       },
       "errors": {
         "fileTooLarge": "File too large",
-        "fileTooLargeDescription": "{{fileName}} exceeds the limit of {{maxSize}}MB",
+        "fileTooLargeDescription": "{{fileName}} is {{fileSize}} — the limit is {{maxSize}}MB",
         "fileTypeNotAllowed": "File type not allowed",
         "fileTypeNotAllowedDescription": "{{fileName}} is not a supported file type"
       },
