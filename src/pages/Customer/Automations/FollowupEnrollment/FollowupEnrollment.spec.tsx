@@ -5,11 +5,13 @@ import { FollowupEnrollment } from './FollowupEnrollment';
 
 const get = vi.fn();
 const update = vi.fn();
+const updateRouting = vi.fn();
 
 vi.mock('@/services/followupEnrollment/followupEnrollmentService', () => ({
   followupEnrollmentService: {
     get: (...args: unknown[]) => get(...args),
     update: (...args: unknown[]) => update(...args),
+    updateRouting: (...args: unknown[]) => updateRouting(...args),
   },
 }));
 
@@ -18,6 +20,7 @@ vi.mock('sonner', () => ({
   toast: {
     error: (...args: unknown[]) => toastError(...args),
     success: vi.fn(),
+    warning: vi.fn(),
   },
 }));
 
@@ -25,6 +28,7 @@ const config = (over: Record<string, unknown> = {}) => ({
   enabled: false,
   audience: 'paid',
   stage_id: null,
+  routing: [],
   stages: [
     { id: 'stage-1', name: 'Contato', pipeline_id: 'p1', pipeline_name: 'Vendas' },
     { id: 'stage-2', name: 'Visita agendada', pipeline_id: 'p1', pipeline_name: 'Vendas' },
@@ -134,5 +138,54 @@ describe('FollowupEnrollment — disparo por coluna', () => {
     await waitFor(() => expect(update).toHaveBeenCalledWith(
       expect.objectContaining({ enabled: false, audience: 'stage' }),
     ));
+  });
+});
+
+describe('FollowupEnrollment — destino por origem', () => {
+  const withRouting = (over: Record<string, unknown> = {}) => config({
+    routing: [
+      { key: 'paid', label: 'Veio de anúncio (tráfego pago)', sequence_slug: 'funil-a', enabled: true, exists: true },
+      { key: 'organic', label: 'Veio do orgânico ou de palavra-chave', sequence_slug: null, enabled: false, exists: false },
+    ],
+    sequences: [
+      { slug: 'funil-a', name: 'Funil A', steps_count: 3 },
+      { slug: 'funil-b', name: 'Funil B', steps_count: 2 },
+    ],
+    ...over,
+  });
+
+  beforeEach(() => {
+    get.mockReset();
+    updateRouting.mockReset();
+    toastError.mockReset();
+    get.mockResolvedValue(withRouting());
+    updateRouting.mockImplementation(() => Promise.resolve({ config: withRouting(), missingRules: [] }));
+  });
+
+  it('mostra o funil já escolhido para cada origem', async () => {
+    render(<FollowupEnrollment />);
+    await waitFor(() => expect(get).toHaveBeenCalled());
+
+    expect(await screen.findByLabelText('Veio de anúncio (tráfego pago)')).toHaveValue('funil-a');
+  });
+
+  // Sem a regra não há onde gravar a escolha; oferecer o campo seria mentir.
+  it('desabilita a origem cuja regra não existe neste CRM', async () => {
+    render(<FollowupEnrollment />);
+    await waitFor(() => expect(get).toHaveBeenCalled());
+
+    expect(await screen.findByLabelText(/orgânico/i)).toBeDisabled();
+    expect(screen.getByText(/não tem a regra de origem/i)).toBeInTheDocument();
+  });
+
+  it('manda só a origem alterada', async () => {
+    const user = userEvent.setup();
+    render(<FollowupEnrollment />);
+    await waitFor(() => expect(get).toHaveBeenCalled());
+
+    await user.selectOptions(await screen.findByLabelText('Veio de anúncio (tráfego pago)'), 'funil-b');
+    await user.click(screen.getByRole('button', { name: /destino por origem/i }));
+
+    await waitFor(() => expect(updateRouting).toHaveBeenCalledWith({ paid: 'funil-b' }));
   });
 });

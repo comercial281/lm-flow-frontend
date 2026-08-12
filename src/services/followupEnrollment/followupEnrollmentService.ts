@@ -9,6 +9,16 @@ export interface FollowupEnrollmentSequenceOption {
   steps_count: number;
 }
 
+/** Roteamento por origem: pra qual funil vai o lead de anúncio e o do orgânico. */
+export interface FollowupRoutingOption {
+  key: 'paid' | 'organic';
+  label: string;
+  sequence_slug: string | null;
+  /** A regra existe e está ativa. Desativada, a escolha está gravada e não vale nada. */
+  enabled: boolean;
+  exists: boolean;
+}
+
 export interface FollowupStageOption {
   id: string;
   name: string;
@@ -19,6 +29,8 @@ export interface FollowupStageOption {
 export interface FollowupEnrollmentConfig {
   enabled: boolean;
   audience: FollowupAudience;
+  /** Pra qual funil vai cada origem de lead. */
+  routing: FollowupRoutingOption[];
   /** Coluna escolhida quando a audiência é 'stage'. */
   stage_id: string | null;
   /** Todas as colunas do CRM, com o nome do pipeline pra agrupar na tela. */
@@ -55,5 +67,16 @@ export const followupEnrollmentService = {
   async update(data: FollowupEnrollmentUpdate): Promise<FollowupEnrollmentConfig> {
     const res = await api.put(BASE, data);
     return (res.data as { data: FollowupEnrollmentConfig }).data;
+  },
+
+  /** Troca o funil de destino por origem. Manda só o que mudou.
+   *  `missing_rules` lista as origens cuja regra não existe neste CRM. */
+  async updateRouting(data: { paid?: string; organic?: string }): Promise<{
+    config: FollowupEnrollmentConfig;
+    missingRules: string[];
+  }> {
+    const res = await api.put(`${BASE}/routing`, data);
+    const body = res.data as { data: FollowupEnrollmentConfig; missing_rules?: string[] };
+    return { config: body.data, missingRules: body.missing_rules ?? [] };
   },
 };
