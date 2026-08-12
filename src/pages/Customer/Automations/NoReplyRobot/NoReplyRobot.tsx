@@ -9,12 +9,20 @@ import {
   type NoReplyAudience,
 } from '@/services/noReplyRobot/noReplyRobotService';
 
+interface NoReplyRobotProps {
+  /** Renderiza sem o cabeçalho e o padding de página, pra encaixar dentro da tela de
+   *  Follow-up. Era uma aba separada no menu: separar as duas escondia que "quem entra
+   *  sozinho" e "o que ele recebe" são a mesma decisão, e a chave de uma desligava a
+   *  regra da outra sem avisar. */
+  embedded?: boolean;
+}
+
 /**
  * Robô "Sem resposta → follow-up": o que roda sozinho e joga quem não respondeu dentro
  * da régua. Antes não tinha tela nenhuma e não filtrava lead — pegava até conversa
  * pessoal do corretor. Aqui fica tudo dele: liga/desliga e todos os critérios.
  */
-export function NoReplyRobot() {
+export function NoReplyRobot({ embedded = false }: NoReplyRobotProps = {}) {
   const [config, setConfig] = useState<NoReplyRobotConfig | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [minutes, setMinutes] = useState(30);
@@ -84,11 +92,13 @@ export function NoReplyRobot() {
   const disabledCls = enabled ? '' : 'opacity-50 pointer-events-none';
 
   return (
-    <div className="max-w-2xl p-6 space-y-6">
+    <div className={embedded ? 'space-y-6' : 'max-w-2xl p-6 space-y-6'}>
       <div className="flex items-center gap-2">
         <Bot className="h-5 w-5 text-primary" />
         <div>
-          <h2 className="text-lg font-semibold">Robô Sem Resposta</h2>
+          <h2 className={embedded ? 'text-sm font-medium' : 'text-lg font-semibold'}>
+            {embedded ? 'Quem não respondeu' : 'Robô Sem Resposta'}
+          </h2>
           <p className="text-sm text-muted-foreground">
             Coloca no follow-up quem recebeu mensagem e não respondeu. Com ele desligado, o
             follow-up só entra na mão: pela tag ou pelo botão "Ativar follow-up" no card.
@@ -128,7 +138,9 @@ export function NoReplyRobot() {
       {noSequences && (
         <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-4 text-sm">
           <Info className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
-          <span>Nenhum funil de follow-up ativo. Crie um em <strong>Automações → Follow-ups</strong> antes de ligar o robô.</span>
+          <span>
+            Nenhum funil de follow-up ativo. Crie um {embedded ? 'na lista abaixo' : <>em <strong>Automações → Follow-up</strong></>} antes de ligar o robô.
+          </span>
         </div>
       )}
 
@@ -239,7 +251,7 @@ export function NoReplyRobot() {
           ))}
         </select>
         <p className="text-xs text-muted-foreground">
-          Edite as mensagens e os tempos de cada passo em <strong>Automações → Follow-ups</strong>.
+          Edite as mensagens e os tempos de cada passo {embedded ? 'na lista abaixo' : <>em <strong>Automações → Follow-up</strong></>}.
         </p>
       </div>
 

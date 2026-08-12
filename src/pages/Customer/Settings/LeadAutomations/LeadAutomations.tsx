@@ -43,7 +43,6 @@ import {
 } from './LeadAutomationsEditors';
 import AutomationLibraryModal from './AutomationLibraryModal';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
-import NotificationCenter from './NotificationCenter';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 
 const TRIGGERS = Object.entries(TRIGGER_LABELS).map(([value, label]) => ({ value, label }));
@@ -71,6 +70,19 @@ const EMPTY_FORM: LeadAutomationRuleFormData = {
 };
 
 type Tab = 'active' | 'archived';
+
+// Regras que NASCERAM de uma tela amigável (as chaves de Follow-up e as da Central de
+// Notificações). Elas aparecem aqui porque são regras de verdade, mas editar à mão
+// desalinha da tela que as criou: a chave continua mostrando o estado antigo e o
+// usuário fica sem entender por que "está ligado e não acontece".
+//
+// Por isso ganham selo e perdem o botão de editar. Ligar/desligar e arquivar seguem
+// disponíveis — é a saída de emergência de quem precisa parar algo agora.
+function managedBy(rule: LeadAutomationRule): string | null {
+  if (rule.name?.startsWith('[Sistema] ')) return 'Follow-up';
+  if (rule.description?.includes('central:notif:')) return 'Notificações';
+  return null;
+}
 
 // Favoritos no topo, depois priority, depois criação. O backend NÃO ordena por
 // favorite (coluna pode faltar em schema de tenant pooled), então a ordem final é
@@ -362,7 +374,6 @@ export default function LeadAutomations() {
       </div>
 
       {/* Central de Notificações — presets de push em toggle */}
-      <NotificationCenter />
 
       {/* Tabs Ativas / Arquivadas */}
       <div className="flex gap-1 mb-4 border-b border-border">
@@ -450,6 +461,15 @@ export default function LeadAutomations() {
                     <Badge variant="secondary" className="text-xs">
                       {TRIGGER_LABELS[rule.trigger] ?? rule.trigger}
                     </Badge>
+                    {managedBy(rule) && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-primary/40 text-primary"
+                        title={`Criada e mantida pela tela de ${managedBy(rule)}. Edite por lá — mexer aqui desalinha os dois.`}
+                      >
+                        gerenciada por {managedBy(rule)}
+                      </Badge>
+                    )}
                     {!archivedTab && !rule.is_active && (
                       <Badge variant="outline" className="text-xs text-muted-foreground">
                         Inativa
@@ -509,9 +529,11 @@ export default function LeadAutomations() {
                     </Button>
                   ) : (
                     <>
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(rule)} title="Editar">
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      {!managedBy(rule) && (
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(rule)} title="Editar">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"

@@ -34,6 +34,7 @@ import {
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import type { Pipeline, PipelineStage } from '@/types/analytics';
 import { FollowupEnrollment } from '@/pages/Customer/Automations/FollowupEnrollment/FollowupEnrollment';
+import { NoReplyRobot } from '@/pages/Customer/Automations/NoReplyRobot/NoReplyRobot';
 
 // Backend (Followup::SendStep#move_stage_if_configured) deriva o slug a partir do
 // nome do stage e NORMALIZA os dois lados: transliterate + downcase + strip + '-'.
@@ -577,12 +578,23 @@ export default function FollowupSequences() {
           virou seção daqui: separar as duas escondia que a chave e o funil eram a mesma
           coisa — o usuário desligava numa aba achando que parava o que via na outra. */}
       <section className="rounded-lg border bg-card p-4 shadow-sm">
-        <h2 className="mb-4 text-lg font-medium">Quando o funil dispara sozinho</h2>
+        <h2 className="mb-1 text-lg font-medium">Quem entra sozinho</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Duas portas de entrada, cada uma com sua chave. Elas convivem: ligar ou desligar
+          uma não mexe na outra.
+        </p>
         {/* A `key` remonta esta seção quando o CONJUNTO de funis muda (criou, apagou,
             ligou/desligou). Sem isso, quem acabava de criar o primeiro funil continuava
             lendo "Nenhum funil de follow-up ativo" aqui em cima até dar F5 — e a tela
             recém-desbloqueada parecia quebrada de novo. */}
         <FollowupEnrollment embedded key={sequences.map(s => `${s.id}:${s.is_active}`).join(',')} />
+
+        {/* O Robô Sem Resposta era uma aba separada no menu. Separado, escondia que ele e
+            a chave acima decidem a MESMA coisa (quem entra no funil) — e a chave acima
+            desligava a regra dele em silêncio, com a tela dele seguindo em "ligado". */}
+        <div className="mt-6 border-t pt-6">
+          <NoReplyRobot embedded key={`nrr-${sequences.map(s => `${s.id}:${s.is_active}`).join(',')}`} />
+        </div>
       </section>
 
       {loading ? (

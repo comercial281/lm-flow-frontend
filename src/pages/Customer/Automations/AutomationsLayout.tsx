@@ -1,5 +1,5 @@
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { Zap, Rocket, Code, FileInput, Repeat, Bell, Shuffle, Target, Bot } from 'lucide-react';
+import { Zap, Rocket, Code, FileInput, Repeat, Bell, Shuffle, Target } from 'lucide-react';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { isRootTenantHost } from '@/components/layout/config/menuItems';
@@ -61,13 +61,10 @@ const SECTORS: Sector[] = [
     icon: Repeat,
     featureKey: 'follow_ups',
   },
-  {
-    key: 'no-reply-robot',
-    name: 'Robô Sem Resposta',
-    path: '/automations/no-reply-robot',
-    icon: Bot,
-    featureKey: 'follow_ups',
-  },
+  // "Robô Sem Resposta" saiu do menu: ele decide a MESMA coisa que a chave de disparo
+  // do Follow-up (quem entra no funil) e agora é uma seção dentro daquela tela. Como
+  // abas separadas, uma desligava a regra da outra sem avisar. A rota antiga
+  // redireciona, pra não quebrar link salvo.
   {
     key: 'whatsapp-reminders',
     name: 'Lembretes',

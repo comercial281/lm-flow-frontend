@@ -22,6 +22,9 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
   const [audience, setAudience] = useState<FollowupAudience>('paid');
   const [stageId, setStageId] = useState<string>('');
   const [sequenceSlug, setSequenceSlug] = useState<string>('');
+  // Funil de destino por origem do lead. Chave -> slug escolhido na tela.
+  const [routing, setRouting] = useState<Record<string, string>>({});
+  const [savingRouting, setSavingRouting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -34,6 +37,7 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
       setAudience(c.audience);
       setStageId(c.stage_id ?? '');
       setSequenceSlug(c.sequence_slug ?? c.sequences[0]?.slug ?? '');
+      setRouting(Object.fromEntries((c.routing ?? []).map(r => [r.key, r.sequence_slug ?? ''])));
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Erro ao carregar a configuração'));
     } finally {
@@ -96,6 +100,31 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
       setSaving(false);
     }
   }, [enabled, audience, stageId, sequenceSlug]);
+
+  const handleSaveRouting = useCallback(async () => {
+    setSavingRouting(true);
+    try {
+      const payload: { paid?: string; organic?: string } = {};
+      if (routing.paid) payload.paid = routing.paid;
+      if (routing.organic) payload.organic = routing.organic;
+
+      const { config: c, missingRules } = await followupEnrollmentService.updateRouting(payload);
+      setConfig(c);
+      setRouting(Object.fromEntries((c.routing ?? []).map(r => [r.key, r.sequence_slug ?? ''])));
+
+      if (missingRules.length > 0) {
+        // Sem a regra, a escolha não tem onde ser gravada. Dizer isso é melhor do que
+        // um "salvo" que não muda nada.
+        toast.warning(`Salvo, mas este CRM não tem a regra de origem para: ${missingRules.join(', ')}.`);
+      } else {
+        toast.success('Destino por origem salvo');
+      }
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao salvar o destino por origem'));
+    } finally {
+      setSavingRouting(false);
+    }
+  }, [routing]);
 
   if (loading) {
     return (
@@ -249,6 +278,57 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
               {!embedded && <strong>Automações → Follow-up</strong>}.
             </p>
           </div>
+
+          {/* Roteamento por origem. Não depende da chave acima: vale para QUALQUER
+              entrada no follow-up, inclusive a manual pelo card — é a etiqueta
+              'follow-up' que aciona, e a origem do lead decide o destino. */}
+          {(config?.routing?.length ?? 0) > 0 && (
+            <div className="rounded-lg border border-border p-4 space-y-3">
+              <div>
+                <h3 className="text-sm font-medium">Pra qual funil cada um vai</h3>
+                <p className="text-xs text-muted-foreground">
+                  Quando o lead entra no follow-up, a origem dele decide qual funil recebe.
+                  Vale também pro que o corretor inicia à mão no card.
+                </p>
+              </div>
+
+              {config!.routing.map(r => (
+                <div key={r.key} className="space-y-1">
+                  <label htmlFor={`routing-${r.key}`} className="text-sm">{r.label}</label>
+                  <select
+                    id={`routing-${r.key}`}
+                    value={routing[r.key] ?? ''}
+                    disabled={!r.exists}
+                    onChange={e => setRouting(prev => ({ ...prev, [r.key]: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm disabled:opacity-50"
+                  >
+                    <option value="">Escolha um funil...</option>
+                    {config!.sequences.map(s => (
+                      <option key={s.slug} value={s.slug}>
+                        {s.name} ({s.steps_count} {s.steps_count === 1 ? 'passo' : 'passos'})
+                      </option>
+                    ))}
+                  </select>
+                  {!r.exists && (
+                    <p className="text-xs text-amber-500">
+                      Este CRM não tem a regra de origem para este caso — não há o que configurar aqui.
+                    </p>
+                  )}
+                  {r.exists && !r.enabled && (
+                    <p className="text-xs text-amber-500">
+                      A regra desta origem está desativada: a escolha fica gravada, mas não vale até
+                      alguém reativá-la em Automações de Lead.
+                    </p>
+                  )}
+                </div>
+              ))}
+
+              <Button variant="outline" onClick={handleSaveRouting} disabled={savingRouting} className="gap-2">
+                {savingRouting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                Salvar destino por origem
+              </Button>
+            </div>
+          )}
 
           <div className="flex items-center gap-3">
             <Button onClick={handleSave} disabled={saving} className="gap-2">

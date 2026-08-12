@@ -12,6 +12,7 @@ import {
   Button,
   Switch,
 } from '@/components/ui/ds';
+import NotificationCenter from './NotificationCenter';
 import { toast } from 'sonner';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import BaseHeader from '@/components/base/BaseHeader';
@@ -527,6 +528,14 @@ export default function AccountSettings() {
               </Button>
             </div>
           </SectionLayout>
+          </div>
+
+          {/* Central de Notificações. Morava dentro de "Automações de Lead", onde ninguém
+              procura os próprios avisos — e pior: cada chave dela cria uma regra que
+              aparecia logo abaixo, na mesma tela, como se fosse outra coisa. Aqui é onde
+              se procura "quem recebe o quê". */}
+          <div className="mt-6">
+            <NotificationCenter />
           </div>
 
           {/* Informações de Build */}
