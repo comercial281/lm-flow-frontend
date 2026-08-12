@@ -94,6 +94,13 @@ export interface SalesAgent {
   out_of_hours_message: string | null;
   /** Deixa a IA consultar o catálogo real de imóveis pra oferecer alternativa. */
   catalog_search_enabled: boolean;
+  /**
+   * A IA pode mandar sozinha o book que já está cadastrado no imóvel — sem precisar
+   * subir o mesmo PDF de novo na aba de arquivos, e valendo pros imóveis futuros.
+   */
+  send_property_book_enabled?: boolean;
+  /** Regra escrita uma vez, valendo pro book de QUALQUER imóvel. */
+  book_send_rule?: string | null;
   documents_count: number;
   created_at: string;
   updated_at: string;
@@ -148,6 +155,8 @@ export interface PromptPreview {
   has_global_knowledge: boolean;
   has_client_knowledge: boolean;
   has_lessons: boolean;
+  /** A lista de arquivos que ela pode mandar chegou no cérebro dela. */
+  has_sendable_files?: boolean;
 }
 
 // Recepção inicial por CAMPANHA: a IA escolhe a que casa com a origem/form/palavra
@@ -259,6 +268,10 @@ export interface SalesAgentPayload {
   out_of_hours_reply?: boolean;
   out_of_hours_message?: string | null;
   catalog_search_enabled?: boolean;
+  /** A IA pode mandar sozinha o book cadastrado no imóvel. */
+  send_property_book_enabled?: boolean;
+  /** Regra escrita uma vez, valendo pro book de QUALQUER imóvel. */
+  book_send_rule?: string | null;
 }
 
 export interface SalesAgentDocument {
@@ -269,13 +282,49 @@ export interface SalesAgentDocument {
   source_url: string | null;
   char_count: number;
   tags: string[];
-  status: 'pending' | 'ready' | 'failed';
+  /**
+   * `no_text` = arquivo íntegro, sem camada de texto (PDF escaneado, imagem). Não é
+   * falha: ele serve pro envio, só não entra na base de conhecimento.
+   */
+  status: 'pending' | 'ready' | 'no_text' | 'failed';
   error_message: string | null;
   has_file: boolean;
   filename: string | null;
   preview: string;
+  // --- envio pro lead ---
+  sendable: boolean;
+  learnable: boolean;
+  send_once: boolean;
+  send_when: string | null;
+  send_when_not: string | null;
+  send_caption: string | null;
+  send_topics: string[];
+  property_codes: string[];
+  media_kind: 'document' | 'image' | 'audio';
+  file_url: string | null;
+  byte_size: number;
+  size_label: string | null;
+  /**
+   * Como o arquivo SAI hoje, calculado no servidor pra a tela não duplicar (e
+   * divergir da) regra de tamanho: 'file' viaja inteiro, 'link' é grande demais e vai
+   * como endereço, 'blocked' não tem como sair.
+   */
+  send_mode: 'file' | 'link' | 'blocked' | null;
   created_at: string;
   updated_at: string;
+}
+
+/** O que a ficha "Como a IA deve usar este arquivo" salva. */
+export interface SalesAgentDocumentConfig {
+  title?: string;
+  sendable?: boolean;
+  learnable?: boolean;
+  send_once?: boolean;
+  send_when?: string;
+  send_when_not?: string;
+  send_caption?: string;
+  send_topics?: string[];
+  property_codes?: string[];
 }
 
 /**
@@ -284,9 +333,15 @@ export interface SalesAgentDocument {
  * cumpriu) a tela mostra o que teria ido.
  */
 export interface TestMediaItem {
-  type: 'image' | 'link';
-  url: string;
+  type: 'image' | 'link' | 'file';
+  /** Só em foto e link — arquivo não tem endereço no painel, ele só é anunciado. */
+  url?: string;
   caption?: string;
+  // --- só em 'file' ---
+  kind?: 'document' | 'image' | 'audio';
+  title?: string;
+  /** Por que ela escolheu mandar agora. Serve pra calibrar a regra. */
+  reason?: string | null;
 }
 
 export interface SalesAgentTestResult {
@@ -489,17 +544,65 @@ export const salesAgentsService = {
     return (res.data as { data: SalesAgentDocument }).data;
   },
 
-  async uploadFileDocument(agentId: string, file: File, title?: string): Promise<SalesAgentDocument> {
+  async uploadFileDocument(
+    agentId: string,
+    file: File,
+    title?: string,
+    onProgress?: (percent: number) => void,
+  ): Promise<SalesAgentDocument> {
     const form = new FormData();
     form.append('source_type', 'file');
     form.append('file', file);
     if (title) form.append('title', title);
-    const res = await api.post(`${BASE}/${agentId}/documents`, form);
+    const res = await api.post(`${BASE}/${agentId}/documents`, form, {
+      onUploadProgress: (e) => {
+        if (!onProgress || !e.total) return;
+        onProgress(Math.round((e.loaded * 100) / e.total));
+      },
+    });
+    return (res.data as { data: SalesAgentDocument }).data;
+  },
+
+  /**
+   * Salva as regras de uso do arquivo (quando enviar, quando não, legenda). Separado
+   * do upload de propósito: as perguntas são respondidas DEPOIS que o arquivo sobe, e
+   * sem este caminho o dono teria que apagar e subir de novo a cada ajuste de regra.
+   */
+  async updateDocument(
+    agentId: string,
+    docId: string,
+    config: SalesAgentDocumentConfig,
+  ): Promise<SalesAgentDocument> {
+    const res = await api.patch(`${BASE}/${agentId}/documents/${docId}`, config);
     return (res.data as { data: SalesAgentDocument }).data;
   },
 
   async destroyDocument(agentId: string, docId: string): Promise<void> {
     await api.delete(`${BASE}/${agentId}/documents/${docId}`);
+  },
+
+  /**
+   * Sobe o print/áudio de abertura e devolve a URL pronta. O formato do dado no banco
+   * continua sendo URL — o que muda é só de onde ela vem: antes era preciso hospedar
+   * a imagem em algum lugar e colar o endereço, o que na prática significava não usar
+   * o recurso.
+   */
+  async uploadMedia(
+    agentId: string,
+    file: File,
+    kind: 'image' | 'audio',
+    onProgress?: (percent: number) => void,
+  ): Promise<{ url: string; content_type: string; byte_size: number }> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('kind', kind);
+    const res = await api.post(`${BASE}/${agentId}/upload_media`, form, {
+      onUploadProgress: (e) => {
+        if (!onProgress || !e.total) return;
+        onProgress(Math.round((e.loaded * 100) / e.total));
+      },
+    });
+    return (res.data as { data: { url: string; content_type: string; byte_size: number } }).data;
   },
 
   async reprocessDocument(agentId: string, docId: string): Promise<SalesAgentDocument> {
