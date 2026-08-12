@@ -1,5 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Button, Input, Label, Textarea } from '@/components/ui/ds';
+import {
+  Button, Input, Label, Textarea,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon, Zap, AlertTriangle } from 'lucide-react';
 import {
@@ -26,6 +29,7 @@ import {
   type TestHistoryItem,
   type TestMediaItem,
 } from '@/services/salesAgents/salesAgentsService';
+import { DOCUMENT_TOPICS } from '@/features/salesAgents/documentTopics';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { WEEKDAYS } from '@/components/schedule/scheduleWindows';
 import inboxesService from '@/services/channels/inboxesService';
@@ -962,6 +966,93 @@ function CheckRow({ checked, onChange, title, desc }: {
   );
 }
 
+// ---------------- Print / áudio: subir arquivo ou colar link ----------------
+
+/**
+ * O campo continua guardando uma URL — o que muda é de onde ela vem. Antes só dava
+ * pra colar link, o que na prática significava ter que hospedar a imagem em algum
+ * lugar antes; quem tinha o print no computador ficava sem saída e não usava o
+ * recurso. O campo de colar link segue disponível pra quem já usa.
+ */
+function MediaField({
+  agentId, kind, label, value, onChange, onSave,
+}: {
+  agentId: string;
+  kind: 'image' | 'audio';
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  onSave: (v: string) => void;
+}) {
+  const [progress, setProgress] = useState<number | null>(null);
+  const [showUrl, setShowUrl] = useState(false);
+
+  const accept = kind === 'image' ? '.jpg,.jpeg,.png,.webp' : '.mp3,.ogg,.m4a,.wav';
+  const hint = kind === 'image' ? 'JPG, PNG ou WebP' : 'MP3, OGG, M4A ou WAV';
+
+  const upload = async (file: File) => {
+    setProgress(0);
+    try {
+      const { url } = await salesAgentsService.uploadMedia(agentId, file, kind, setProgress);
+      onChange(url);
+      onSave(url);
+      toast.success('Arquivo enviado');
+    } catch {
+      toast.error('Não consegui enviar o arquivo');
+    } finally {
+      setProgress(null);
+    }
+  };
+
+  return (
+    <div>
+      <Label>{label}</Label>
+      <div className="mt-1 flex items-center gap-3">
+        {value && kind === 'image' && (
+          <img src={value} alt="" className="h-14 w-14 rounded object-cover border border-sidebar-border" />
+        )}
+        {value && kind === 'audio' && (
+          <audio src={value} controls className="h-9 max-w-[220px]" />
+        )}
+        <div className="flex items-center gap-2">
+          <label className="text-xs px-2 py-1 rounded border border-sidebar-border cursor-pointer hover:border-primary/50">
+            {value ? 'Trocar' : 'Escolher arquivo'}
+            <input
+              type="file" className="hidden" accept={accept}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ''; }}
+            />
+          </label>
+          {value && (
+            <button type="button" className="text-xs text-red-500 hover:underline"
+                    onClick={() => { onChange(''); onSave(''); }}>
+              Remover
+            </button>
+          )}
+          <button type="button" className="text-xs text-muted-foreground hover:underline"
+                  onClick={() => setShowUrl((v) => !v)}>
+            ou colar um link
+          </button>
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">{hint}, até 25 MB.</p>
+      {progress !== null && (
+        <div className="mt-2 h-1.5 bg-sidebar-border rounded overflow-hidden">
+          <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+        </div>
+      )}
+      {showUrl && (
+        <Input
+          className="mt-2"
+          placeholder={kind === 'image' ? 'https://...jpg' : 'https://...ogg'}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={() => onSave(value.trim())}
+        />
+      )}
+    </div>
+  );
+}
+
 // ---------------- Recepção inicial (primeiro contato) ----------------
 
 function RecepcaoSection({
@@ -1038,26 +1129,18 @@ function RecepcaoSection({
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        <div>
-          <Label htmlFor="opening_image">Print de abertura (URL da imagem, opcional)</Label>
-          <Input
-            id="opening_image"
-            placeholder="https://...jpg"
-            value={agent.opening_image_url ?? ''}
-            onChange={(e) => onChange({ ...agent, opening_image_url: e.target.value })}
-            onBlur={() => onSave({ opening_image_url: (agent.opening_image_url ?? '').trim() || null })}
-          />
-        </div>
-        <div>
-          <Label htmlFor="opening_audio">Áudio de abertura (URL do áudio, opcional)</Label>
-          <Input
-            id="opening_audio"
-            placeholder="https://...ogg"
-            value={agent.opening_audio_url ?? ''}
-            onChange={(e) => onChange({ ...agent, opening_audio_url: e.target.value })}
-            onBlur={() => onSave({ opening_audio_url: (agent.opening_audio_url ?? '').trim() || null })}
-          />
-        </div>
+        <MediaField
+          agentId={agent.id} kind="image" label="Print de abertura (opcional)"
+          value={agent.opening_image_url ?? ''}
+          onChange={(v) => onChange({ ...agent, opening_image_url: v })}
+          onSave={(v) => onSave({ opening_image_url: v || null })}
+        />
+        <MediaField
+          agentId={agent.id} kind="audio" label="Áudio de abertura (opcional)"
+          value={agent.opening_audio_url ?? ''}
+          onChange={(v) => onChange({ ...agent, opening_audio_url: v })}
+          onSave={(v) => onSave({ opening_audio_url: v || null })}
+        />
       </div>
 
       {/* Recepções por campanha */}
@@ -1131,20 +1214,18 @@ function RecepcaoSection({
                   onBlur={() => commitOpenings(openings)} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs">Print (URL)</Label>
-                  <Input placeholder="https://...jpg"
-                    value={o.image_url ?? ''}
-                    onChange={(e) => patchOpening(i, { image_url: e.target.value })}
-                    onBlur={() => commitOpenings(openings)} />
-                </div>
-                <div>
-                  <Label className="text-xs">Áudio (URL)</Label>
-                  <Input placeholder="https://...ogg"
-                    value={o.audio_url ?? ''}
-                    onChange={(e) => patchOpening(i, { audio_url: e.target.value })}
-                    onBlur={() => commitOpenings(openings)} />
-                </div>
+                <MediaField
+                  agentId={agent.id} kind="image" label="Print desta campanha"
+                  value={o.image_url ?? ''}
+                  onChange={(v) => patchOpening(i, { image_url: v })}
+                  onSave={(v) => commitOpenings(openings.map((op, idx) => (idx === i ? { ...op, image_url: v } : op)))}
+                />
+                <MediaField
+                  agentId={agent.id} kind="audio" label="Áudio desta campanha"
+                  value={o.audio_url ?? ''}
+                  onChange={(v) => patchOpening(i, { audio_url: v })}
+                  onSave={(v) => commitOpenings(openings.map((op, idx) => (idx === i ? { ...op, audio_url: v } : op)))}
+                />
               </div>
             </div>
           ))}
@@ -1222,6 +1303,26 @@ function IntelligenceSection({
         <CheckRow checked={agent.catalog_search_enabled !== false} onChange={(v) => onSave({ catalog_search_enabled: v })}
           title="Consultar o cadastro de imóveis"
           desc="Deixa a IA buscar imóveis reais do seu cadastro (bairro, quartos, faixa de preço) pra sugerir alternativa. Sem isso ela só conhece o imóvel do anúncio." />
+        {/* O book já está no cadastro do imóvel — não precisa ser subido de novo na
+            aba de arquivos. Vale pra todo imóvel que tenha book salvo, inclusive os
+            que forem cadastrados depois. */}
+        <CheckRow checked={agent.send_property_book_enabled !== false} onChange={(v) => onSave({ send_property_book_enabled: v })}
+          title="Mandar o book do imóvel"
+          desc="O PDF que já está cadastrado no imóvel. Não precisa subir de novo aqui." />
+        {agent.send_property_book_enabled !== false && (
+          <div className="mt-2 pl-7">
+            <Label htmlFor="book_rule" className="text-xs">Quando ela pode mandar o book</Label>
+            <Textarea
+              id="book_rule" rows={2} className="mt-1"
+              placeholder="Ex: só quando o lead pedir o book, o material completo ou a apresentação do empreendimento"
+              defaultValue={agent.book_send_rule ?? ''}
+              onBlur={(e) => onSave({ book_send_rule: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Vale pro book de qualquer imóvel. Em branco, ela só manda quando o lead pedir.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Avaliação no Google */}
@@ -1724,12 +1825,21 @@ function LearningTab({ agent }: { agent: SalesAgent }) {
   );
 }
 
+// Aceitos no upload de arquivo. PDF entrou junto com o envio: é o formato em que a
+// imobiliária tem TODO o material dela (book, planta, memorial) e a base recusava.
+const DOC_ACCEPT = '.pdf,.txt,.md,.csv,.docx,.xlsx,.jpg,.jpeg,.png,.webp';
+const DOC_MAX_BYTES = 25 * 1024 * 1024;
+
 function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChange: () => void }) {
   const [docs, setDocs] = useState<SalesAgentDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [dragging, setDragging] = useState(false);
+  // Arquivo em edição na ficha "Como a IA deve usar este arquivo".
+  const [editing, setEditing] = useState<SalesAgentDocument | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1760,16 +1870,29 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
   };
 
   const upload = async (file: File) => {
-    setBusy(true);
+    if (file.size > DOC_MAX_BYTES) {
+      toast.error(`"${file.name}" tem mais de 25 MB. Reduza o arquivo antes de subir.`);
+      return;
+    }
+    setBusy(true); setProgress(0);
     try {
-      await salesAgentsService.uploadFileDocument(agent.id, file);
-      toast.success('Arquivo enviado. Extraindo texto...');
+      const doc = await salesAgentsService.uploadFileDocument(agent.id, file, undefined, setProgress);
+      toast.success('Arquivo enviado. Diga agora como a IA deve usar ele.');
       await load(); onCountChange();
+      // Abre a ficha na sequência: subir sem responder "quando enviar" deixa o
+      // arquivo mudo, e ninguém volta depois pra preencher.
+      setEditing(doc);
     } catch {
       toast.error('Erro no upload');
     } finally {
-      setBusy(false);
+      setBusy(false); setProgress(null);
     }
+  };
+
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault(); setDragging(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) upload(f);
   };
 
   const remove = async (doc: SalesAgentDocument) => {
@@ -1789,6 +1912,10 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
           Pior que desatualizado, o conselho era ruim — uma tabela colada aqui
           envelhece e passa a contradizer o preço real do cadastro. */}
       <div className="text-sm text-muted-foreground space-y-2">
+        <p>
+          O mesmo arquivo serve pras <strong>duas coisas</strong>: a IA aprende com ele e, se você deixar,
+          manda ele pro lead no WhatsApp. Sobe uma vez só.
+        </p>
         <p>
           Os <strong>imóveis já estão conectados</strong>: a IA consulta o cadastro do cliente a cada mensagem e
           usa preço e características de lá, sempre atualizados. Não precisa subir tabela de imóveis aqui.
@@ -1810,41 +1937,78 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
         <Button size="sm" onClick={addText} disabled={busy || !text.trim()}>Adicionar</Button>
       </div>
 
-      <div className="border border-sidebar-border rounded-md p-4">
-        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-          <Upload className="h-4 w-4" /> Enviar arquivo (TXT, CSV, DOCX, XLSX)
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        className={`border-2 border-dashed rounded-md p-6 text-center transition-colors ${
+          dragging ? 'border-primary bg-primary/5' : 'border-sidebar-border'
+        }`}
+      >
+        <label className="flex flex-col items-center gap-1 cursor-pointer">
+          <Upload className="h-5 w-5 text-muted-foreground" />
+          <span className="text-sm font-medium">Arraste um arquivo aqui ou clique para escolher</span>
+          <span className="text-xs text-muted-foreground">PDF, DOCX, XLSX, CSV, TXT, JPG, PNG — até 25 MB</span>
           <input
             type="file"
             className="hidden"
-            accept=".txt,.md,.csv,.docx,.xlsx"
+            accept={DOC_ACCEPT}
             onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ''; }}
           />
         </label>
+        {progress !== null && (
+          <div className="mt-3 h-1.5 bg-sidebar-border rounded overflow-hidden">
+            <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+          </div>
+        )}
       </div>
 
       {loading ? (
         <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
       ) : docs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum documento ainda.</p>
+        <p className="text-sm text-muted-foreground">Nenhum arquivo ainda.</p>
       ) : (
         <ul className="space-y-2">
           {docs.map((d) => (
-            <li key={d.id} className="flex items-center justify-between border border-sidebar-border rounded-md px-3 py-2">
+            <li key={d.id} className="flex items-center justify-between border border-sidebar-border rounded-md px-3 py-2 gap-2">
               <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{d.title}</div>
-                <div className="text-xs text-muted-foreground">
-                  {d.status === 'ready' && `${d.char_count} caracteres`}
-                  {d.status === 'pending' && 'Processando...'}
+                <div className="text-sm font-medium truncate flex items-center gap-2">
+                  {d.media_kind === 'image' ? <ImageIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    : <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                  <span className="truncate">{d.title}</span>
+                </div>
+                <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
+                  {d.sendable && <span className="px-1.5 py-0.5 rounded bg-green-500/10 text-green-600">Envia</span>}
+                  {d.learnable && d.status === 'ready' && (
+                    <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary">Aprende</span>
+                  )}
+                  {d.send_mode === 'link' && (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">Vai como link</span>
+                  )}
+                  {d.send_mode === 'blocked' && (
+                    <span className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-500">Grande demais</span>
+                  )}
+                  {d.size_label && <span>{d.size_label}</span>}
+                  {d.status === 'ready' && <span>{d.char_count} caracteres</span>}
+                  {d.status === 'pending' && <span>Processando...</span>}
+                  {/* Arquivo íntegro, só sem texto: o envio funciona. Pintar de
+                      vermelho aqui fazia o dono apagar e subir de novo. */}
+                  {d.status === 'no_text' && (
+                    <span className="text-amber-600 dark:text-amber-500">Sem texto pra aprender</span>
+                  )}
                   {d.status === 'failed' && <span className="text-red-500">Falhou: {d.error_message}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {d.status === 'failed' && (
-                  <Button variant="ghost" size="sm" onClick={() => salesAgentsService.reprocessDocument(agent.id, d.id).then(load)}>
+                  <Button variant="ghost" size="sm" title="Tentar de novo" onClick={() => salesAgentsService.reprocessDocument(agent.id, d.id).then(load)}>
                     <RefreshCw className="h-4 w-4" />
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" onClick={() => remove(d)}>
+                <Button variant="ghost" size="sm" title="Como a IA usa este arquivo" onClick={() => setEditing(d)}>
+                  <SlidersHorizontal className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" title="Remover" onClick={() => remove(d)}>
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
               </div>
@@ -1852,7 +2016,176 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
           ))}
         </ul>
       )}
+
+      {editing && (
+        <FileConfigDialog
+          agentId={agent.id}
+          doc={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); load(); }}
+        />
+      )}
     </div>
+  );
+}
+
+// ---------------- Ficha "Como a IA deve usar este arquivo" ----------------
+
+/**
+ * As perguntas de uso do arquivo. Escritas em português, elas são o que ensina a IA
+ * a hora certa de mandar — não existe lista de palavra-chave por trás.
+ */
+function FileConfigDialog({
+  agentId, doc, onClose, onSaved,
+}: {
+  agentId: string; doc: SalesAgentDocument; onClose: () => void; onSaved: () => void;
+}) {
+  const [title, setTitle] = useState(doc.title);
+  const [sendable, setSendable] = useState(doc.sendable);
+  const [learnable, setLearnable] = useState(doc.learnable);
+  const [sendOnce, setSendOnce] = useState(doc.send_once);
+  const [when, setWhen] = useState(doc.send_when ?? '');
+  const [whenNot, setWhenNot] = useState(doc.send_when_not ?? '');
+  const [caption, setCaption] = useState(doc.send_caption ?? '');
+  const [topics, setTopics] = useState<string[]>(doc.send_topics ?? []);
+  const [codes, setCodes] = useState((doc.property_codes ?? []).join(', '));
+  const [saving, setSaving] = useState(false);
+
+  const toggleTopic = (slug: string) =>
+    setTopics((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await salesAgentsService.updateDocument(agentId, doc.id, {
+        title: title.trim() || doc.title,
+        sendable, learnable, send_once: sendOnce,
+        send_when: when.trim(),
+        send_when_not: whenNot.trim(),
+        send_caption: caption.trim(),
+        send_topics: topics,
+        property_codes: codes.split(',').map((c) => c.trim()).filter(Boolean),
+      });
+      toast.success('Salvo');
+      onSaved();
+    } catch {
+      toast.error('Erro ao salvar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Como a IA deve usar este arquivo</DialogTitle>
+          <DialogDescription>
+            O que você escrever aqui é o que ela lê na hora de decidir. Escreva como explicaria pra um corretor novo.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="doc_title">Nome do arquivo</Label>
+            <Input id="doc_title" value={title} onChange={(e) => setTitle(e.target.value)}
+                   placeholder="Ex: Planta do 2 dormitórios - Alma Panamby" />
+            <p className="text-xs text-muted-foreground mt-1">É por este nome que ela se refere ao arquivo.</p>
+          </div>
+
+          <div className="border-t border-sidebar-border pt-3 space-y-2">
+            <CheckRow
+              checked={sendable} onChange={setSendable}
+              title="A IA pode enviar este arquivo pro lead"
+              desc="Desligado, ele serve só pra ela aprender."
+            />
+            {sendable && doc.send_mode === 'link' && (
+              <p className="text-xs text-amber-600 dark:text-amber-500">
+                Arquivo grande ({doc.size_label}). A IA manda o link em vez do arquivo.
+              </p>
+            )}
+            {sendable && doc.send_mode === 'blocked' && (
+              <p className="text-xs text-red-500">
+                Arquivo grande demais ({doc.size_label}) e sem endereço público pra oferecer. Reduza o arquivo.
+              </p>
+            )}
+          </div>
+
+          {sendable && (
+            <div className="space-y-4 border-l-2 border-primary/30 pl-3">
+              <div>
+                <Label>Assunto do arquivo</Label>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {DOCUMENT_TOPICS.map((t) => (
+                    <button
+                      key={t.slug} type="button" onClick={() => toggleTopic(t.slug)}
+                      className={`text-xs px-2 py-1 rounded-full border transition-colors ${
+                        topics.includes(t.slug)
+                          ? 'border-primary bg-primary/10 text-primary font-medium'
+                          : 'border-sidebar-border text-muted-foreground hover:border-primary/50'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="doc_when">Quando enviar</Label>
+                <Textarea id="doc_when" rows={2} value={when} onChange={(e) => setWhen(e.target.value)}
+                          placeholder="Ex: quando o lead pedir a planta ou perguntar como são divididos os cômodos" />
+              </div>
+
+              <div>
+                <Label htmlFor="doc_when_not">Quando NÃO enviar</Label>
+                <Textarea id="doc_when_not" rows={2} value={whenNot} onChange={(e) => setWhenNot(e.target.value)}
+                          placeholder="Ex: antes de o lead dizer o que procura; se ele só quer alugar" />
+              </div>
+
+              <div>
+                <Label htmlFor="doc_caption">Mensagem que vai junto</Label>
+                <Input id="doc_caption" value={caption} onChange={(e) => setCaption(e.target.value)}
+                       placeholder="Ex: segue a planta do 2 dormitórios, qualquer dúvida me chama" />
+              </div>
+
+              <div>
+                <Label htmlFor="doc_codes">Vale para quais imóveis</Label>
+                <Input id="doc_codes" value={codes} onChange={(e) => setCodes(e.target.value)}
+                       placeholder="Ex: AP123, AP124" />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Códigos separados por vírgula. Em branco, vale pra qualquer conversa.
+                </p>
+              </div>
+
+              <CheckRow
+                checked={sendOnce} onChange={setSendOnce}
+                title="Enviar no máximo uma vez por conversa"
+                desc="Evita repetir o mesmo arquivo pro lead."
+              />
+            </div>
+          )}
+
+          <div className="border-t border-sidebar-border pt-3">
+            <CheckRow
+              checked={learnable} onChange={setLearnable}
+              title="Usar o conteúdo deste arquivo na base de conhecimento"
+              desc="Desligue em arquivo que é só pra enviar."
+            />
+            {doc.status === 'no_text' && (
+              <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                Este arquivo não tem texto pra aprender (parece escaneado ou é imagem). O envio funciona normalmente.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button onClick={save} disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -2482,6 +2815,21 @@ function TestMediaBubble({ item }: { item: TestMediaItem }) {
     );
   }
 
+  // Arquivo que ela MANDARIA. O painel não envia nada — é aqui que dá pra calibrar
+  // as regras de "quando enviar" sem gastar mensagem com lead de verdade.
+  if (item.type === 'file') {
+    return (
+      <div className="max-w-[80%] rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+        <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium mb-0.5">
+          <FileText className="h-3 w-3" /> Arquivo enviado no WhatsApp
+        </div>
+        <div className="text-xs font-medium break-words">{item.title}</div>
+        {item.caption && <p className="text-xs text-muted-foreground whitespace-pre-line">{item.caption}</p>}
+        {item.reason && <p className="text-[11px] text-muted-foreground mt-1 italic">Por quê: {item.reason}</p>}
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-[80%] rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
       <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium mb-0.5">
@@ -2608,6 +2956,7 @@ function DiagnosticsTab({ agent }: { agent: SalesAgent }) {
             <PromptFlag ok={prompt.has_global_knowledge} label="Cérebro geral da agência" />
             <PromptFlag ok={prompt.has_client_knowledge} label="Base de conhecimento deste cliente" />
             <PromptFlag ok={prompt.has_lessons} label="Aprendizados ensinados" />
+            <PromptFlag ok={!!prompt.has_sendable_files} label="Arquivos que ela pode enviar" />
             <p className="text-muted-foreground pt-1">Tamanho do cérebro: {prompt.length.toLocaleString('pt-BR')} caracteres.</p>
           </div>
         )}
