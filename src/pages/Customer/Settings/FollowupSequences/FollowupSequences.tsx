@@ -19,10 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/ds';
-import { Clock, Edit, Send, ToggleLeft, ToggleRight, Trash2, Plus, GripVertical, Upload, Loader2, Mic, Square } from 'lucide-react';
+import { Clock, Edit, Send, ToggleLeft, ToggleRight, Trash2, Plus, GripVertical, Upload, Loader2, Mic, Square, Sparkles } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import {
   followupSequencesService,
+  followupAdminService,
   FollowupSequence,
   FollowupStep,
   MESSAGE_TYPE_LABELS,
@@ -33,9 +34,16 @@ import type { Pipeline, PipelineStage } from '@/types/analytics';
 import { FollowupEnrollment } from '@/pages/Customer/Automations/FollowupEnrollment/FollowupEnrollment';
 
 // Backend (Followup::SendStep#move_stage_if_configured) deriva o slug a partir do
-// nome do stage assim: name.downcase.tr(' ', '-'). Mantemos exatamente o mesmo
-// shape em JS pra que os 2 selects gerem um slug compativel ao salvar.
-const slugifyStageName = (name: string): string => name.toLowerCase().replace(/ /g, '-');
+// nome do stage e NORMALIZA os dois lados: transliterate + downcase + strip + '-'.
+// Espelhamos exatamente isso aqui — com acento, 'follow-up-automatico' nao casava
+// com a coluna "Follow-up Automático" e o passo nao movia o card, em silencio.
+const slugifyStageName = (name: string): string =>
+  name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/ /g, '-');
 
 // Variáveis interpoladas pelo backend (Followup::SendStep#interpolate) — mesmos
 // tokens da automação de lead.
@@ -282,7 +290,24 @@ const EMPTY_STEP = (position: number): FollowupStep => ({
   media_url: '',
   media_caption: '',
   tag_on_send: `follow-up${position}`,
-  move_to_stage_slug: position <= 2 ? 'follow-up-curto' : 'follow-up-longo',
+  move_to_stage_slug: position <= 2 ? 'follow-up-automatico' : 'follow-up-longo',
+});
+
+// Funil em branco. `id` vazio é o que distingue "criando" de "editando" — o editor
+// e o salvar decidem por ele. Nasce com 3 passos (e não 6, como o modelo pronto):
+// tela de criação com 6 blocos vazios é um paredão pra quem só quer começar.
+const NEW_SEQUENCE = (): FollowupSequence => ({
+  id: '',
+  name: '',
+  slug: '',
+  description: '',
+  is_active: true,
+  stop_on_reply: true,
+  business_hours_only: false,
+  steps_count: 0,
+  steps: [],
+  created_at: '',
+  updated_at: '',
 });
 
 export default function FollowupSequences() {
@@ -299,6 +324,7 @@ export default function FollowupSequences() {
 
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [stagesByPipeline, setStagesByPipeline] = useState<Record<string, PipelineStage[]>>({});
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -328,6 +354,34 @@ export default function FollowupSequences() {
       .then(res => setStagesByPipeline(prev => ({ ...prev, [pipelineId]: res.data ?? [] })))
       .catch(() => toast.error('Erro ao carregar colunas do pipeline'));
   }, []);
+
+  // Criar do zero. Até aqui a tela só sabia LISTAR e EDITAR: num CRM sem nenhum
+  // funil não havia caminho nenhum pela interface, e o único jeito era o botão de
+  // modelo pronto escondido na tela de Pipelines.
+  const openCreate = () => {
+    setEditing(NEW_SEQUENCE());
+    setSteps(Array.from({ length: 3 }, (_, i) => EMPTY_STEP(i + 1)));
+    setEditorOpen(true);
+    pipelines.forEach(p => {
+      if (!stagesByPipeline[p.id]) loadStages(p.id);
+    });
+  };
+
+  const applyTemplate = async () => {
+    setApplyingTemplate(true);
+    try {
+      const out = await followupAdminService.reseedTemplate();
+      toast.success(`Modelo aplicado: ${out.sequences.length} funis criados.`);
+      load();
+    } catch (e) {
+      // Mensagem REAL do servidor: a recusa mais comum é de cargo, e a frase fixa
+      // que existia antes ("verifique se o tenant tem usuário admin") mandava
+      // procurar no lugar errado.
+      toast.error(apiErrorMessage(e, 'Falha ao aplicar o modelo.'));
+    } finally {
+      setApplyingTemplate(false);
+    }
+  };
 
   const openEdit = (seq: FollowupSequence) => {
     setEditing(seq);
@@ -360,21 +414,33 @@ export default function FollowupSequences() {
 
   const saveSequence = async () => {
     if (!editing) return;
+    if (!editing.name.trim()) { toast.error('Dê um nome ao funil.'); return; }
+
+    // `id` vazio = funil novo. O slug NÃO vai no corpo: quem cria só dá o nome, e o
+    // backend deriva e desempata o slug (é ele que as regras referenciam por dentro).
+    const isNew = !editing.id;
+    const payload = {
+      name: editing.name.trim(),
+      description: editing.description ?? undefined,
+      is_active: editing.is_active,
+      stop_on_reply: editing.stop_on_reply,
+      business_hours_only: editing.business_hours_only,
+      followup_steps_attributes: steps.map((s, i) => ({ ...s, position: i + 1 })),
+    };
+
     setSaving(true);
     try {
-      await followupSequencesService.update(editing.id, {
-        name: editing.name,
-        description: editing.description ?? undefined,
-        is_active: editing.is_active,
-        stop_on_reply: editing.stop_on_reply,
-        business_hours_only: editing.business_hours_only,
-        followup_steps_attributes: steps.map((s, i) => ({ ...s, position: i + 1 })),
-      });
-      toast.success('Sequência salva.');
+      if (isNew) {
+        await followupSequencesService.create(payload);
+        toast.success('Funil criado.');
+      } else {
+        await followupSequencesService.update(editing.id, payload);
+        toast.success('Sequência salva.');
+      }
       closeEditor();
       load();
     } catch (e) {
-      toast.error(apiErrorMessage(e, 'Falha ao salvar.'));
+      toast.error(apiErrorMessage(e, isNew ? 'Falha ao criar o funil.' : 'Falha ao salvar.'));
     } finally {
       setSaving(false);
     }
@@ -404,13 +470,22 @@ export default function FollowupSequences() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <header className="flex items-center justify-between">
+      <header className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Follow-up</h1>
           <p className="text-sm text-muted-foreground">
             Sequências de mensagens disparadas quando o lead não responde. Configure abaixo se o
             sistema coloca o lead no funil sozinho e edite cada passo.
           </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button variant="outline" onClick={applyTemplate} disabled={applyingTemplate}>
+            {applyingTemplate ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1 h-4 w-4" />}
+            Usar modelo pronto
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus className="mr-1 h-4 w-4" /> Novo funil
+          </Button>
         </div>
       </header>
 
@@ -419,7 +494,11 @@ export default function FollowupSequences() {
           coisa — o usuário desligava numa aba achando que parava o que via na outra. */}
       <section className="rounded-lg border bg-card p-4 shadow-sm">
         <h2 className="mb-4 text-lg font-medium">Quando o funil dispara sozinho</h2>
-        <FollowupEnrollment embedded />
+        {/* A `key` remonta esta seção quando o CONJUNTO de funis muda (criou, apagou,
+            ligou/desligou). Sem isso, quem acabava de criar o primeiro funil continuava
+            lendo "Nenhum funil de follow-up ativo" aqui em cima até dar F5 — e a tela
+            recém-desbloqueada parecia quebrada de novo. */}
+        <FollowupEnrollment embedded key={sequences.map(s => `${s.id}:${s.is_active}`).join(',')} />
       </section>
 
       {loading ? (
@@ -427,8 +506,9 @@ export default function FollowupSequences() {
       ) : sequences.length === 0 ? (
         <EmptyState
           icon={Clock}
-          title="Nenhuma sequência cadastrada"
-          description="As sequências aparecem aqui após o primeiro deploy."
+          title="Nenhum funil de follow-up ainda"
+          description="Crie o seu do zero, escrevendo as mensagens e os tempos. Ou use o modelo pronto ali em cima, que já vem com dois funis de seis mensagens pra você editar."
+          action={{ label: 'Criar meu primeiro funil', onClick: openCreate }}
         />
       ) : (
         <div className="grid gap-4">
@@ -483,7 +563,9 @@ export default function FollowupSequences() {
       <Dialog open={editorOpen} onOpenChange={(o) => !o && closeEditor()}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar sequência: {editing?.name}</DialogTitle>
+            <DialogTitle>
+              {editing && !editing.id ? 'Novo funil de follow-up' : `Editar sequência: ${editing?.name}`}
+            </DialogTitle>
             <DialogDescription>
               Tempos são cumulativos desde o início. Toque nas variáveis abaixo de cada mensagem pra inserir dados do lead.
             </DialogDescription>
@@ -494,12 +576,51 @@ export default function FollowupSequences() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <UILabel>Nome</UILabel>
-                  <Input value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />
+                  <Input
+                    value={editing.name}
+                    autoFocus={!editing.id}
+                    placeholder="Ex.: Follow-up de lead de anúncio"
+                    onChange={e => setEditing({ ...editing, name: e.target.value })}
+                  />
                 </div>
-                <div>
-                  <UILabel>Slug (não editar)</UILabel>
-                  <Input value={editing.slug} disabled />
-                </div>
+                {/* No funil novo o slug ainda não existe (o backend deriva do nome ao
+                    salvar), então mostrar um campo vazio e travado só confundiria. */}
+                {editing.id ? (
+                  <div>
+                    <UILabel>Slug (não editar)</UILabel>
+                    <Input value={editing.slug} disabled />
+                  </div>
+                ) : (
+                  <div>
+                    <UILabel>Descrição</UILabel>
+                    <Input
+                      value={editing.description ?? ''}
+                      placeholder="Pra que serve este funil"
+                      onChange={e => setEditing({ ...editing, description: e.target.value })}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Antes só dava pra mexer nisto pela API — e são as duas regras que
+                  mais mudam o comportamento do funil na vida do lead. */}
+              <div className="flex flex-wrap items-center gap-6 rounded-lg border bg-muted/20 p-3">
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={editing.stop_on_reply}
+                    onChange={e => setEditing({ ...editing, stop_on_reply: e.target.checked })}
+                  />
+                  Parar quando o lead responder
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={editing.business_hours_only}
+                    onChange={e => setEditing({ ...editing, business_hours_only: e.target.checked })}
+                  />
+                  Só enviar em horário comercial
+                </label>
               </div>
 
               <div className="space-y-3">
@@ -599,7 +720,9 @@ export default function FollowupSequences() {
 
           <DialogFooter>
             <Button variant="outline" onClick={closeEditor}>Cancelar</Button>
-            <Button onClick={saveSequence} disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
+            <Button onClick={saveSequence} disabled={saving}>
+              {saving ? 'Salvando...' : editing && !editing.id ? 'Criar funil' : 'Salvar'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

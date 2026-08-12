@@ -31,7 +31,8 @@ export interface FollowupSequence {
 
 export interface FollowupSequenceFormData {
   name: string;
-  slug: string;
+  /** Opcional na criação: o backend deriva do nome e desempata duplicatas. */
+  slug?: string;
   description?: string;
   is_active?: boolean;
   stop_on_reply?: boolean;
