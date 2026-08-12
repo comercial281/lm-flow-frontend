@@ -23,6 +23,11 @@ export interface FollowupSequence {
   is_active: boolean;
   stop_on_reply: boolean;
   business_hours_only: boolean;
+  /** Marca no card em que mensagem o lead parou (uma etiqueta por vez) e permite
+   *  retomar dali quando ele volta pro funil, em vez de recomeçar da primeira. */
+  progress_tagging: boolean;
+  /** Exemplo da etiqueta que o funil vai aplicar, vindo do backend. */
+  progress_tag_sample?: string | null;
   steps_count: number;
   steps: FollowupStep[];
   created_at: string;
@@ -37,6 +42,7 @@ export interface FollowupSequenceFormData {
   is_active?: boolean;
   stop_on_reply?: boolean;
   business_hours_only?: boolean;
+  progress_tagging?: boolean;
   followup_steps_attributes?: FollowupStep[];
 }
 
