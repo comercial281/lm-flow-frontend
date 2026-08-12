@@ -3,6 +3,7 @@ import { Button } from '@evoapi/design-system/button';
 import { Paperclip, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
+import { CHAT_MAX_ATTACHMENT_MB, formatFileSize } from '@/types/core/attachments';
 
 interface FileUploadProps {
   onFilesSelected: (files: File[]) => void;
@@ -14,7 +15,7 @@ interface FileUploadProps {
 
 const FileUpload: React.FC<FileUploadProps> = ({
   onFilesSelected,
-  maxFileSize = 10,
+  maxFileSize = CHAT_MAX_ATTACHMENT_MB,
   allowedTypes = [
     'image/*',
     'application/pdf',
@@ -37,6 +38,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         toast.error(t('messageInput.fileUpload.errors.fileTooLarge'), {
           description: t('messageInput.fileUpload.errors.fileTooLargeDescription', {
             fileName: file.name,
+            fileSize: formatFileSize(file.size),
             maxSize: maxFileSize,
           }),
         });

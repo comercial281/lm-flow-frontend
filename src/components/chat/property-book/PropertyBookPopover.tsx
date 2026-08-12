@@ -2,8 +2,9 @@
 // cadastro via importação) e envia o book direto na conversa de WhatsApp.
 //
 // O envio é feito pelo SERVIDOR (chatService.sendPropertyBook): o backend baixa o
-// PDF da book_url e anexa à mensagem. Assim não passa pelo upload do navegador
-// (nem pelo limite de 10MB), que impedia o envio de books grandes.
+// PDF da book_url e anexa à mensagem, sem passar pelo upload do navegador. Nasceu
+// para contornar o antigo teto de 10MB do anexo; segue valendo porque o book pode
+// ter até 200MB no cadastro — acima do teto do anexo arrastado à mão.
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@evoapi/design-system/card';
 import { Button } from '@evoapi/design-system/button';

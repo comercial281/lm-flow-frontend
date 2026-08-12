@@ -3,6 +3,7 @@ import { Button, Textarea } from '@/components/ui/ds';
 import { Send, Paperclip, X, Image, FileText, File, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { formatFileSize, isImageFile, type FileData } from '@/utils/fileUtils';
+import { CHAT_MAX_ATTACHMENT_BYTES } from '@/types/core/attachments';
 import { toast } from 'sonner';
 
 interface AgentMessageInputProps {
@@ -44,7 +45,7 @@ export function AgentMessageInput({
     if (!e.target.files || e.target.files.length === 0) return;
 
     const newFiles = Array.from(e.target.files);
-    const maxFileSize = 10 * 1024 * 1024; // 10MB
+    const maxFileSize = CHAT_MAX_ATTACHMENT_BYTES;
 
     if (selectedFiles.length + newFiles.length > 5) {
       toast.error('Você pode anexar no máximo 5 arquivos');
@@ -55,7 +56,7 @@ export function AgentMessageInput({
 
     for (const file of newFiles) {
       if (file.size > maxFileSize) {
-        toast.error(`Arquivo ${file.name} excede o tamanho máximo de ${formatFileSize(maxFileSize)}`);
+        toast.error(`Arquivo ${file.name} tem ${formatFileSize(file.size)} — o máximo é ${formatFileSize(maxFileSize)}`);
         continue;
       }
 
