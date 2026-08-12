@@ -1434,7 +1434,9 @@ export default function Properties() {
       {photosProperty && (
         <PropertyPhotosDialog
           property={photosProperty}
-          onClose={() => setPhotosProperty(null)}
+          // Recarrega a lista ao fechar: trocar a capa (ou subir/apagar foto) tem
+          // que refletir na miniatura do card, que já foi renderizada com a capa antiga.
+          onClose={() => { setPhotosProperty(null); load(); }}
         />
       )}
 
@@ -1587,14 +1589,34 @@ function PropertyCard({
   const propGradIdx =
     Math.abs(String(p.id).split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % PROP_GRADS.length;
 
+  // Foto de capa: a mesma que aparece no site (o backend aplica a regra "capa
+  // marcada > primeira foto"). O gradiente deixa de ser o único desenho possível
+  // e passa a ser só o vazio: imóvel sem foto, ou foto que não carregou.
+  // Guarda a URL que falhou, não um booleano: o card é reaproveitado (a key é o
+  // id do imóvel), então um booleano deixaria a capa nova bloqueada para sempre
+  // depois de uma única falha de carregamento.
+  const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
+  const rawCoverUrl = p.cover_photo_url || null;
+  const coverUrl = rawCoverUrl && rawCoverUrl !== failedCoverUrl ? rawCoverUrl : null;
+
   return (
     <div className="group relative flex flex-col rounded-xl border border-border bg-card hover:shadow-md transition-shadow overflow-hidden">
-      {/* Placeholder thumbnail */}
+      {/* Capa do imóvel — cai no gradiente da marca quando não há foto */}
       <div
         className="h-36 flex items-center justify-center relative"
         style={{ background: PROP_GRADS[propGradIdx] }}
       >
-        <Building2 className="h-10 w-10 text-white/30" />
+        {coverUrl ? (
+          <img
+            src={coverUrl}
+            alt={p.title}
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover"
+            onError={() => setFailedCoverUrl(coverUrl)}
+          />
+        ) : (
+          <Building2 className="h-10 w-10 text-white/30" />
+        )}
         <div className="absolute top-2 left-2 flex gap-1 z-10">
           {/* Badge de status vira um menu: muda o status direto no card, sem abrir o modal.
               z-10 mantém clicável por cima do overlay de ações que aparece no hover. */}

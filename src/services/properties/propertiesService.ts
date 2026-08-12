@@ -61,6 +61,12 @@ export interface Property {
   typologies?: PropertyTypology[];
   /** Faixas prontas (min/max de dorms, área e preço) calculadas pelo backend. */
   typology_summary?: TypologySummary | null;
+  /**
+   * Foto de capa resolvida pelo backend (mesma regra do site: capa marcada >
+   * primeira foto). Miniatura quando existe. `null` = imóvel sem foto.
+   */
+  cover_photo_url?: string | null;
+  photos_count?: number | null;
   /** Book (PDF do cadastro via importação) salvo no imóvel, para reenviar no chat. */
   has_book?: boolean;
   book_url?: string | null;
