@@ -21,6 +21,21 @@ backend (ex.: deletar contato, endpoints, jobs) vai nesse outro repo, com base
 | Frontend (telas, site builder) | `lm-flow-frontend` | Vercel | **`main`** |
 | Backend (API, lógica) | `lm-flow` | Railway | **`saas-multitenant`** |
 
+## Follow-up: decisões já tomadas (não reabrir sem o dono pedir)
+
+- **Uma tela só manda no follow-up** (*Automações → Follow-up*): os funis, quem entra
+  sozinho e o histórico. O antigo item **Robô Sem Resposta** saiu do menu e virou a
+  seção *"Quem não respondeu"* dentro dela; `/automations/no-reply-robot` redireciona.
+- **A Central de Notificações** saiu de *Automações de Lead* e vive em
+  **Configurações → Conta**, que é onde alguém procura os próprios avisos.
+- **Automações de Lead continua existindo** — é o motor. As telas amigáveis são
+  atalhos que escrevem regras nele. Regras gerenciadas (`[Sistema] *` e as da Central)
+  aparecem com selo **"gerenciada por"** e **sem botão de editar**: editar à mão
+  desalinha da chave que as criou, e a chave passa a mentir.
+
+Ao mexer aqui, lembrar que o backend tem as travas correspondentes — uma chave não
+desliga a regra da outra, e o estado exibido vem da regra, não do config gravado.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
