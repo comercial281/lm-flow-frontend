@@ -423,7 +423,7 @@ export default function FollowupSequences() {
     setCreatingTemplate(tpl.key);
     try {
       const seq = await followupSequencesService.createFromTemplate(tpl.key);
-      toast.success(`Funil "${seq.name}" criado com ${seq.steps_count} mensagens. Revise os textos antes de ligar.`);
+      toast.success(`Funil "${seq.name}" criado com ${seq.steps_count} mensagens. Revise os textos e os tempos.`);
       setTemplateDialogOpen(false);
       load();
     } catch (e) {
@@ -840,8 +840,9 @@ export default function FollowupSequences() {
           <DialogHeader>
             <DialogTitle>Modelos prontos</DialogTitle>
             <DialogDescription>
-              Cada modelo cria um funil já escrito, desligado do disparo automático. Você edita os
-              textos e os tempos depois — nada é enviado até você ligar o funil.
+              Cada modelo cria um funil já escrito, pra você editar. Ele não entra em ação sozinho:
+              só manda mensagem depois que você apontar o disparo automático pra ele, ali em cima,
+              ou usar o botão Testar.
             </DialogDescription>
           </DialogHeader>
 
