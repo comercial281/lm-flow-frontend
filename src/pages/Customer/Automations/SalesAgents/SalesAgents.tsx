@@ -1829,6 +1829,9 @@ function LearningTab({ agent }: { agent: SalesAgent }) {
 // imobiliária tem TODO o material dela (book, planta, memorial) e a base recusava.
 const DOC_ACCEPT = '.pdf,.txt,.md,.csv,.docx,.xlsx,.jpg,.jpeg,.png,.webp';
 const DOC_MAX_BYTES = 25 * 1024 * 1024;
+// De quanto em quanto tempo re-buscar a lista enquanto algum arquivo estiver
+// "Processando". A extração leva segundos; 4s é o mesmo ritmo da importação de imóveis.
+const DOC_POLL_MS = 4000;
 
 function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChange: () => void }) {
   const [docs, setDocs] = useState<SalesAgentDocument[]>([]);
@@ -1853,6 +1856,20 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
   }, [agent.id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Enquanto houver arquivo em "Processando", re-busca sozinha. Sem isto a lista era
+  // carregada uma vez e nunca mais: o upload chama load() milissegundos após criar o
+  // item, quando ele AINDA está pendente por definição — então ficava escrito
+  // "Processando..." para sempre na tela, mesmo com o servidor já tendo terminado.
+  // Mesmo padrão da importação de imóveis (PropertyImportDialog).
+  const temPendente = docs.some(d => d.status === 'pending');
+  useEffect(() => {
+    if (!temPendente) return;
+    const id = setInterval(() => {
+      salesAgentsService.listDocuments(agent.id).then(setDocs).catch(() => { /* silencioso: é atualização de fundo */ });
+    }, DOC_POLL_MS);
+    return () => clearInterval(id);
+  }, [temPendente, agent.id]);
 
   const addText = async () => {
     if (!text.trim()) return;
@@ -2000,7 +2017,10 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                {d.status === 'failed' && (
+                {/* Também em "Processando", não só em falha: um arquivo cujo
+                    processamento se perdeu num deploy fica pendente sem nenhuma
+                    alavanca — era preciso apagar e subir de novo pra destravar. */}
+                {(d.status === 'failed' || d.status === 'pending') && (
                   <Button variant="ghost" size="sm" title="Tentar de novo" onClick={() => salesAgentsService.reprocessDocument(agent.id, d.id).then(load)}>
                     <RefreshCw className="h-4 w-4" />
                   </Button>
