@@ -285,6 +285,19 @@ function MediaUploadButton({
   );
 }
 
+// Passo novo nasce SEM etiqueta e SEM mover o card.
+//
+// Antes vinha com `follow-up<N>` e com a coluna preenchidas. As duas eram armadilha:
+//
+// - a etiqueta por passo ACUMULA (uma por mensagem enviada, nunca removida) e é
+//   exatamente o que o marcador de progresso do funil veio substituir. Com as duas
+//   ligadas o card recebia as duas marcações, e a promessa de "uma etiqueta só"
+//   virava mentira já no funil recém-criado.
+// - a coluna vinha apontando pra "follow-up-longo" a partir do passo 3, então o
+//   card SAÍA da coluna do funil no meio do fluxo sem ninguém ter pedido.
+//
+// Quem quiser qualquer uma das duas escolhe no passo — a diferença é que agora é
+// escolha, não default silencioso.
 const EMPTY_STEP = (position: number): FollowupStep => ({
   position,
   delay_minutes: position * 60,
@@ -292,8 +305,8 @@ const EMPTY_STEP = (position: number): FollowupStep => ({
   content: '',
   media_url: '',
   media_caption: '',
-  tag_on_send: `follow-up${position}`,
-  move_to_stage_slug: position <= 2 ? 'follow-up-automatico' : 'follow-up-longo',
+  tag_on_send: '',
+  move_to_stage_slug: '',
 });
 
 // Funil em branco. `id` vazio é o que distingue "criando" de "editando" — o editor
@@ -782,10 +795,22 @@ export default function FollowupSequences() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div>
-                        <UILabel className="text-xs">Tag ao enviar</UILabel>
-                        <Input value={s.tag_on_send ?? ''} onChange={e => updateStep(idx, { tag_on_send: e.target.value })} />
-                      </div>
+                      {/* Com o marcador ligado, quem marca é o FUNIL. Deixar o campo por
+                          passo aberto aqui convidaria a criar uma segunda marcação que
+                          acumula no card — as duas juntas quebram o "uma etiqueta só". */}
+                      {editing.progress_tagging ? (
+                        <div>
+                          <UILabel className="text-xs">Etiqueta</UILabel>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            O funil marca sozinho em que mensagem o lead parou.
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <UILabel className="text-xs">Tag ao enviar</UILabel>
+                          <Input value={s.tag_on_send ?? ''} onChange={e => updateStep(idx, { tag_on_send: e.target.value })} />
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-2">
