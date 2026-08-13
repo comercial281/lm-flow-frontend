@@ -4,13 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { FollowupEnrollment } from './FollowupEnrollment';
 
 const get = vi.fn();
-const update = vi.fn();
 const updateRouting = vi.fn();
 
 vi.mock('@/services/followupEnrollment/followupEnrollmentService', () => ({
   followupEnrollmentService: {
     get: (...args: unknown[]) => get(...args),
-    update: (...args: unknown[]) => update(...args),
     updateRouting: (...args: unknown[]) => updateRouting(...args),
   },
 }));
@@ -25,119 +23,36 @@ vi.mock('sonner', () => ({
 }));
 
 const config = (over: Record<string, unknown> = {}) => ({
-  enabled: false,
-  audience: 'paid',
-  stage_id: null,
   routing: [],
-  stages: [
-    { id: 'stage-1', name: 'Contato', pipeline_id: 'p1', pipeline_name: 'Vendas' },
-    { id: 'stage-2', name: 'Visita agendada', pipeline_id: 'p1', pipeline_name: 'Vendas' },
-    { id: 'stage-3', name: 'Contato', pipeline_id: 'p2', pipeline_name: 'Locação' },
-  ],
-  sequence_slug: 'funil-a',
   sequences: [{ slug: 'funil-a', name: 'Funil A', steps_count: 3 }],
-  audiences: [
-    { value: 'paid', label: 'Só tráfego pago (anúncio)' },
-    { value: 'all', label: 'Todos os leads' },
-    { value: 'stage', label: 'Quando o card entra numa coluna' },
-  ],
-  managed_rule_id: null,
   external_active_rules: [],
   ...over,
 });
 
-describe('FollowupEnrollment — disparo por coluna', () => {
+// O painel global de disparo (chave "Ativar follow-up automático" + "Quais leads
+// entram" + escolha de coluna) SAIU: cada funil passou a ter as próprias portas
+// de entrada, em "Quando este funil começa". Estes exemplos travam a remoção —
+// se o painel voltar, voltam também os dois donos brigando pelo mesmo disparo.
+describe('FollowupEnrollment — o painel global saiu', () => {
   beforeEach(() => {
     get.mockReset();
-    update.mockReset();
     toastError.mockReset();
     get.mockResolvedValue(config());
-    update.mockImplementation((payload) => Promise.resolve(config(payload as object)));
   });
 
-  const turnOn = async (user: ReturnType<typeof userEvent.setup>) => {
-    // A escolha de audiência fica sob `pointer-events-none` enquanto o painel está
-    // desligado, então ligar vem primeiro — como na tela de verdade.
-    await user.click(screen.getByRole('switch'));
-  };
+  it('não mostra mais a chave de ligar follow-up automático', async () => {
+    render(<FollowupEnrollment />);
+    await waitFor(() => expect(get).toHaveBeenCalled());
 
-  it('só mostra a escolha de coluna quando a audiência é por coluna', async () => {
-    const user = userEvent.setup();
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+  });
+
+  it('não mostra mais a escolha de coluna nem a de audiência', async () => {
     render(<FollowupEnrollment />);
     await waitFor(() => expect(get).toHaveBeenCalled());
 
     expect(screen.queryByLabelText('Coluna que inicia o funil')).not.toBeInTheDocument();
-
-    await turnOn(user);
-    await user.click(screen.getByRole('radio', { name: /entra numa coluna/i }));
-
-    expect(await screen.findByLabelText('Coluna que inicia o funil')).toBeInTheDocument();
-  });
-
-  it('agrupa as colunas por pipeline — o mesmo nome existe em mais de um', async () => {
-    const user = userEvent.setup();
-    render(<FollowupEnrollment />);
-    await waitFor(() => expect(get).toHaveBeenCalled());
-
-    await turnOn(user);
-    await user.click(screen.getByRole('radio', { name: /entra numa coluna/i }));
-
-    const select = await screen.findByLabelText('Coluna que inicia o funil');
-    const groups = select.querySelectorAll('optgroup');
-
-    expect([...groups].map(g => g.getAttribute('label'))).toEqual(['Vendas', 'Locação']);
-    // Duas colunas "Contato" (uma por pipeline) precisam continuar distinguíveis.
-    expect(select.querySelectorAll('option[value="stage-1"]')).toHaveLength(1);
-    expect(select.querySelectorAll('option[value="stage-3"]')).toHaveLength(1);
-  });
-
-  it('recusa LIGAR sem escolher a coluna, e não chama o servidor', async () => {
-    const user = userEvent.setup();
-    render(<FollowupEnrollment />);
-    await waitFor(() => expect(get).toHaveBeenCalled());
-
-    await turnOn(user);
-    await user.click(screen.getByRole('radio', { name: /entra numa coluna/i }));
-    await user.click(screen.getByRole('button', { name: /salvar/i }));
-
-    expect(toastError).toHaveBeenCalledWith('Escolha a coluna que deve iniciar o funil');
-    expect(update).not.toHaveBeenCalled();
-  });
-
-  it('manda a coluna escolhida ao ligar', async () => {
-    const user = userEvent.setup();
-    render(<FollowupEnrollment />);
-    await waitFor(() => expect(get).toHaveBeenCalled());
-
-    await turnOn(user);
-    await user.click(screen.getByRole('radio', { name: /entra numa coluna/i }));
-    await user.selectOptions(await screen.findByLabelText('Coluna que inicia o funil'), 'stage-2');
-    await user.click(screen.getByRole('button', { name: /salvar/i }));
-
-    await waitFor(() => expect(update).toHaveBeenCalledWith({
-      enabled: true,
-      audience: 'stage',
-      sequence_slug: 'funil-a',
-      stage_id: 'stage-2',
-    }));
-  });
-
-  // O ponto do teste: DESLIGAR não pode depender de a configuração estar completa.
-  // Um painel que chegou meio preenchido (regra criada por fora, coluna apagada)
-  // deixaria o usuário preso com o follow-up ligado e sem botão que obedeça.
-  it('deixa DESLIGAR mesmo sem coluna escolhida', async () => {
-    get.mockResolvedValue(config({ enabled: true, audience: 'stage', stage_id: null }));
-    const user = userEvent.setup();
-    render(<FollowupEnrollment />);
-    await waitFor(() => expect(get).toHaveBeenCalled());
-
-    await user.click(screen.getByRole('switch')); // liga -> desliga
-    await user.click(screen.getByRole('button', { name: /salvar/i }));
-
-    expect(toastError).not.toHaveBeenCalled();
-    await waitFor(() => expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({ enabled: false, audience: 'stage' }),
-    ));
+    expect(screen.queryByText('Quais leads entram')).not.toBeInTheDocument();
   });
 });
 
@@ -187,5 +102,14 @@ describe('FollowupEnrollment — destino por origem', () => {
     await user.click(screen.getByRole('button', { name: /destino por origem/i }));
 
     await waitFor(() => expect(updateRouting).toHaveBeenCalledWith({ paid: 'funil-b' }));
+  });
+
+  // O texto precisa dizer que isto vale só pra entrada manual — senão volta a
+  // dúvida de qual lugar manda no disparo, que é o problema que a mudança resolve.
+  it('diz que o disparo automático mora dentro de cada funil', async () => {
+    render(<FollowupEnrollment />);
+    await waitFor(() => expect(get).toHaveBeenCalled());
+
+    expect(await screen.findByText(/Quando este funil começa/i)).toBeInTheDocument();
   });
 });

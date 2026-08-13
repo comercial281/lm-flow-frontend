@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { Button } from '@/components/ui/ds';
 import { Loader2, Repeat, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
@@ -6,9 +6,19 @@ import { toast } from 'sonner';
 import {
   followupEnrollmentService,
   type FollowupEnrollmentConfig,
-  type FollowupAudience,
-  type FollowupStageOption,
 } from '@/services/followupEnrollment/followupEnrollmentService';
+
+/**
+ * Destino do follow-up por ORIGEM do lead.
+ *
+ * Esta tela já foi o painel global de disparo — uma chave, uma coluna, um funil,
+ * pra conta inteira. Esse painel saiu: o disparo automático passou a ser do FUNIL,
+ * em "Quando este funil começa", onde cada funil tem as portas de entrada dele.
+ *
+ * O que sobrou aqui é o único pedaço que NÃO é por funil: quando o lead entra no
+ * follow-up pela mão do corretor (botão dentro do card ou etiqueta `follow-up`),
+ * não há gatilho pra dizer qual funil usar — quem decide é a origem do lead.
+ */
 
 interface FollowupEnrollmentProps {
   /** Renderiza sem o cabeçalho e o padding de página, pra encaixar dentro da
@@ -18,25 +28,16 @@ interface FollowupEnrollmentProps {
 
 export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps = {}) {
   const [config, setConfig] = useState<FollowupEnrollmentConfig | null>(null);
-  const [enabled, setEnabled] = useState(false);
-  const [audience, setAudience] = useState<FollowupAudience>('paid');
-  const [stageId, setStageId] = useState<string>('');
-  const [sequenceSlug, setSequenceSlug] = useState<string>('');
   // Funil de destino por origem do lead. Chave -> slug escolhido na tela.
   const [routing, setRouting] = useState<Record<string, string>>({});
   const [savingRouting, setSavingRouting] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const c = await followupEnrollmentService.get();
       setConfig(c);
-      setEnabled(c.enabled);
-      setAudience(c.audience);
-      setStageId(c.stage_id ?? '');
-      setSequenceSlug(c.sequence_slug ?? c.sequences[0]?.slug ?? '');
       setRouting(Object.fromEntries((c.routing ?? []).map(r => [r.key, r.sequence_slug ?? ''])));
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Erro ao carregar a configuração'));
@@ -46,60 +47,6 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
   }, []);
 
   useEffect(() => { load(); }, [load]);
-
-  // Colunas agrupadas por pipeline. Num CRM com 3 pipelines de 6 colunas, a lista
-  // crua vira 18 nomes sem contexto — e nomes como "Contato" existem em quase
-  // todos, então sem o agrupamento não dá pra saber qual coluna se está escolhendo.
-  const stageGroups = useMemo(() => {
-    const groups = new Map<string, { id: string; pipeline: string; stages: FollowupStageOption[] }>();
-    (config?.stages ?? []).forEach(s => {
-      const group = groups.get(s.pipeline_id)
-        ?? { id: s.pipeline_id, pipeline: s.pipeline_name || 'Pipeline sem nome', stages: [] };
-      group.stages.push(s);
-      groups.set(s.pipeline_id, group);
-    });
-    return [...groups.values()];
-  }, [config]);
-
-  const handleSave = useCallback(async () => {
-    if (!sequenceSlug) { toast.error('Escolha um funil de follow-up'); return; }
-    // Só exige a coluna ao LIGAR — desligar não pode depender de configuração
-    // completa, senão quem deixou a escolha pela metade fica sem conseguir parar.
-    if (enabled && audience === 'stage' && !stageId) {
-      toast.error('Escolha a coluna que deve iniciar o funil');
-      return;
-    }
-    setSaving(true);
-    try {
-      const c = await followupEnrollmentService.update({
-        enabled,
-        audience,
-        sequence_slug: sequenceSlug,
-        stage_id: audience === 'stage' ? stageId : undefined,
-      });
-      setConfig(c);
-      setEnabled(c.enabled);
-      setAudience(c.audience);
-      setStageId(c.stage_id ?? '');
-      setSequenceSlug(c.sequence_slug ?? '');
-      if (enabled) {
-        toast.success('Follow-up automático ligado');
-      } else {
-        // Avisa quantos disparos ja agendados foram cortados — o usuario precisa saber
-        // que o desligamento pegou a fila, nao so os leads novos.
-        const cut = c.cancelled_jobs ?? 0;
-        toast.success(
-          cut > 0
-            ? `Follow-up automático desligado. ${cut} disparo(s) agendado(s) cancelado(s).`
-            : 'Follow-up automático desligado',
-        );
-      }
-    } catch (e) {
-      toast.error(apiErrorMessage(e, 'Erro ao salvar'));
-    } finally {
-      setSaving(false);
-    }
-  }, [enabled, audience, stageId, sequenceSlug]);
 
   const handleSaveRouting = useCallback(async () => {
     setSavingRouting(true);
@@ -136,6 +83,7 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
 
   const noSequences = !config || config.sequences.length === 0;
   const externalRules = config?.external_active_rules ?? [];
+  const routes = config?.routing ?? [];
 
   return (
     <div className={embedded ? 'space-y-6' : 'max-w-2xl p-6 space-y-6'}>
@@ -143,9 +91,10 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
         <div className="flex items-center gap-2">
           <Repeat className="h-5 w-5 text-primary" />
           <div>
-            <h2 className="text-lg font-semibold">Follow-up automático</h2>
+            <h2 className="text-lg font-semibold">Destino do follow-up por origem</h2>
             <p className="text-sm text-muted-foreground">
-              Coloca o lead no funil de follow-up sozinho. Se o lead responder, o sistema para a sequência automaticamente.
+              Quando o corretor inicia o follow-up pelo card, a origem do lead decide qual
+              funil ele recebe.
             </p>
           </div>
         </div>
@@ -156,12 +105,12 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
           <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
           <div className="space-y-1">
             <p className="font-medium">
-              Existe outro follow-up ligado fora deste painel.
+              Existe follow-up sendo iniciado por regra criada à mão.
             </p>
             <p className="text-muted-foreground">
               {externalRules.length === 1 ? 'A regra abaixo coloca' : 'As regras abaixo colocam'} lead
-              em funil de follow-up mesmo com o botão daqui desligado. Desligar aqui desliga
-              {externalRules.length === 1 ? '' : 'm'} {externalRules.length === 1 ? 'ela' : 'elas'} também.
+              em funil de follow-up por fora das entradas configuradas nos funis. Se não for
+              proposital, desative {externalRules.length === 1 ? 'ela' : 'elas'} em Automações de Lead.
             </p>
             <ul className="list-disc pl-4 text-muted-foreground">
               {externalRules.map(r => (
@@ -177,171 +126,58 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
           <Info className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
           <span>Nenhum funil de follow-up ativo. Ative um funil na lista abaixo antes de configurar aqui.</span>
         </div>
+      ) : routes.length === 0 ? (
+        <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-4 text-sm">
+          <Info className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>Este CRM não separa o follow-up por origem do lead — não há o que configurar aqui.</span>
+        </div>
       ) : (
-        <>
-          {/* Ligar/desligar */}
-          <div className="rounded-lg border border-border p-4 space-y-3">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h3 className="text-sm font-medium">Ativar follow-up automático</h3>
-                <p className="text-xs text-muted-foreground">
-                  Ligado: novos leads entram no funil sozinhos.<br />
-                  Desligado: o funil continua funcionando, mas só quando você mandar — pela tag{' '}
-                  <strong>follow-up</strong> ou pelo botão <strong>Ativar follow-up</strong> dentro do card do lead.
-                </p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={enabled}
-                onClick={() => setEnabled(v => !v)}
-                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${enabled ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+        <div className="rounded-lg border border-border p-4 space-y-3">
+          <div>
+            <h3 className="text-sm font-medium">Pra qual funil cada um vai</h3>
+            <p className="text-xs text-muted-foreground">
+              Vale só pro follow-up que o corretor inicia à mão, pelo botão dentro do card.
+              O disparo automático agora é de cada funil, em <strong>Quando este funil começa</strong>,
+              dentro do próprio funil.
+            </p>
+          </div>
+
+          {routes.map(r => (
+            <div key={r.key} className="space-y-1">
+              <label htmlFor={`routing-${r.key}`} className="text-sm">{r.label}</label>
+              <select
+                id={`routing-${r.key}`}
+                value={routing[r.key] ?? ''}
+                disabled={!r.exists}
+                onChange={e => setRouting(prev => ({ ...prev, [r.key]: e.target.value }))}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm disabled:opacity-50"
               >
-                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
-              </button>
-            </div>
-          </div>
-
-          {/* Audiência */}
-          <div className={`rounded-lg border border-border p-4 space-y-3 ${enabled ? '' : 'opacity-50 pointer-events-none'}`}>
-            <h3 className="text-sm font-medium">Quais leads entram</h3>
-            <div className="space-y-2">
-              {config!.audiences.map(opt => (
-                <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-sm">
-                  <input
-                    type="radio"
-                    name="audience"
-                    value={opt.value}
-                    checked={audience === opt.value}
-                    onChange={() => setAudience(opt.value)}
-                    className="accent-[var(--primary)]"
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {audience === 'paid' && 'Só leads marcados como tráfego pago (vindos de anúncio) entram no funil.'}
-              {audience === 'all' && 'Todo lead que iniciar conversa entra no funil.'}
-              {audience === 'stage' && 'O funil começa no momento em que o card do lead entra na coluna escolhida — arrastado à mão ou movido por outra automação.'}
-            </p>
-
-            {audience === 'stage' && (
-              <div className="space-y-2 pt-1">
-                {stageGroups.length === 0 ? (
-                  <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
-                    <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
-                    <span>Este CRM ainda não tem nenhuma coluna. Crie um pipeline antes de usar esta opção.</span>
-                  </div>
-                ) : (
-                  <>
-                    <label htmlFor="followup-stage" className="text-xs font-medium">
-                      Coluna que inicia o funil
-                    </label>
-                    <select
-                      id="followup-stage"
-                      value={stageId}
-                      onChange={e => setStageId(e.target.value)}
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="">Escolha uma coluna...</option>
-                      {stageGroups.map(g => (
-                        <optgroup key={g.id} label={g.pipeline}>
-                          {g.stages.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Funil */}
-          <div className={`rounded-lg border border-border p-4 space-y-3 ${enabled ? '' : 'opacity-50 pointer-events-none'}`}>
-            <h3 className="text-sm font-medium">Funil de follow-up</h3>
-            <select
-              value={sequenceSlug}
-              onChange={e => setSequenceSlug(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-            >
-              {config!.sequences.map(s => (
-                <option key={s.slug} value={s.slug}>
-                  {s.name} ({s.steps_count} {s.steps_count === 1 ? 'passo' : 'passos'})
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-muted-foreground">
-              Edite as mensagens e os tempos {embedded ? 'na lista abaixo' : 'em '}
-              {!embedded && <strong>Automações → Follow-up</strong>}.
-            </p>
-          </div>
-
-          {/* Roteamento por origem. Não depende da chave acima: vale para QUALQUER
-              entrada no follow-up, inclusive a manual pelo card — é a etiqueta
-              'follow-up' que aciona, e a origem do lead decide o destino. */}
-          {(config?.routing?.length ?? 0) > 0 && (
-            <div className="rounded-lg border border-border p-4 space-y-3">
-              <div>
-                <h3 className="text-sm font-medium">Pra qual funil cada um vai</h3>
-                <p className="text-xs text-muted-foreground">
-                  Quando o lead entra no follow-up, a origem dele decide qual funil recebe.
-                  Vale também pro que o corretor inicia à mão no card.
+                <option value="">Escolha um funil...</option>
+                {config!.sequences.map(s => (
+                  <option key={s.slug} value={s.slug}>
+                    {s.name} ({s.steps_count} {s.steps_count === 1 ? 'passo' : 'passos'})
+                  </option>
+                ))}
+              </select>
+              {!r.exists && (
+                <p className="text-xs text-amber-500">
+                  Este CRM não tem a regra de origem para este caso — não há o que configurar aqui.
                 </p>
-              </div>
-
-              {config!.routing.map(r => (
-                <div key={r.key} className="space-y-1">
-                  <label htmlFor={`routing-${r.key}`} className="text-sm">{r.label}</label>
-                  <select
-                    id={`routing-${r.key}`}
-                    value={routing[r.key] ?? ''}
-                    disabled={!r.exists}
-                    onChange={e => setRouting(prev => ({ ...prev, [r.key]: e.target.value }))}
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm disabled:opacity-50"
-                  >
-                    <option value="">Escolha um funil...</option>
-                    {config!.sequences.map(s => (
-                      <option key={s.slug} value={s.slug}>
-                        {s.name} ({s.steps_count} {s.steps_count === 1 ? 'passo' : 'passos'})
-                      </option>
-                    ))}
-                  </select>
-                  {!r.exists && (
-                    <p className="text-xs text-amber-500">
-                      Este CRM não tem a regra de origem para este caso — não há o que configurar aqui.
-                    </p>
-                  )}
-                  {r.exists && !r.enabled && (
-                    <p className="text-xs text-amber-500">
-                      A regra desta origem está desativada: a escolha fica gravada, mas não vale até
-                      alguém reativá-la em Automações de Lead.
-                    </p>
-                  )}
-                </div>
-              ))}
-
-              <Button variant="outline" onClick={handleSaveRouting} disabled={savingRouting} className="gap-2">
-                {savingRouting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                Salvar destino por origem
-              </Button>
+              )}
+              {r.exists && !r.enabled && (
+                <p className="text-xs text-amber-500">
+                  A regra desta origem está desativada: a escolha fica gravada, mas não vale até
+                  alguém reativá-la em Automações de Lead.
+                </p>
+              )}
             </div>
-          )}
+          ))}
 
-          <div className="flex items-center gap-3">
-            <Button onClick={handleSave} disabled={saving} className="gap-2">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-              Salvar
-            </Button>
-            {config?.managed_rule_id && (
-              <span className="text-xs text-muted-foreground">
-                {config.enabled ? 'Ativo agora.' : 'Desligado.'}
-              </span>
-            )}
-          </div>
-        </>
+          <Button variant="outline" onClick={handleSaveRouting} disabled={savingRouting} className="gap-2">
+            {savingRouting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            Salvar destino por origem
+          </Button>
+        </div>
       )}
     </div>
   );
