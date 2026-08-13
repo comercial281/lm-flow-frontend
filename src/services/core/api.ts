@@ -65,7 +65,24 @@ api.interceptors.request.use(config => {
     }
   }
 
-  if (config.data instanceof FormData && config.headers['Content-Type'] === undefined) {
+  // Upload de arquivo: o Content-Type TEM que sair, sempre.
+  //
+  // Esta guarda existia, mas com a condição invertida: ela só apagava o cabeçalho
+  // quando ele já estava ausente — e ele NUNCA está, porque o `axios.create` acima
+  // define 'application/json' como padrão do cliente. Ou seja, era um no-op.
+  //
+  // O estrago: com Content-Type application/json e corpo FormData, o axios SERIALIZA
+  // o FormData como JSON (`formDataToJSON`). O arquivo vira `{}` e o servidor recebe
+  // uma requisição SEM arquivo nenhum — sem erro, sem pista. Foi o que fez o upload da
+  // Base de Conhecimento da IA Vendedora falhar com "o arquivo não passou pelo passo
+  // de guardar", e o que levou três consertos no backend a não mudarem nada: lá o
+  // arquivo nunca chegava.
+  //
+  // Apagar sempre (e não só quando é JSON) é o correto: multipart precisa do boundary,
+  // que só o navegador sabe gerar. Cabeçalho escrito à mão fica sem boundary; o adapter
+  // do axios já o remove nesse caso, então quem sobrescreve com 'multipart/form-data'
+  // não regride.
+  if (config.data instanceof FormData) {
     delete config.headers['Content-Type'];
     delete config.headers['content-type'];
   }
