@@ -72,6 +72,23 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
 
   const needsOf = (kind: FollowupEntryKind) => kinds.find(k => k.value === kind)?.needs ?? null;
 
+  // O que falta preencher pra entrada poder ser salva. Vira texto na tela e trava o
+  // botão: antes dava pra clicar em salvar com o formulário recém-aberto e receber
+  // um erro vermelho dizendo o que faltava — o que se lê como defeito, não como
+  // "falta um campo".
+  const missing = (f: FollowupEntryFormData): string | null => {
+    switch (needsOf(f.kind)) {
+      case 'stage_id':
+        return f.stage_id ? null : 'Escolha a coluna que inicia o funil.';
+      case 'label':
+        return f.label?.trim() ? null : 'Escolha a etiqueta que inicia o funil.';
+      case 'no_reply_minutes':
+        return Number(f.no_reply_minutes) > 0 ? null : 'Diga em quantos minutos sem resposta o funil começa.';
+      default:
+        return null;
+    }
+  };
+
   const describe = (entry: FollowupEntry): string => {
     switch (entry.kind) {
       case 'stage': {
@@ -288,14 +305,33 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
                 placeholder="Ex.: 60"
                 onChange={e => setForm({ ...form, no_reply_minutes: Number(e.target.value) })}
               />
+              {/* Quem procura leads sem resposta é a varredura da seção "Quem não
+                  respondeu", e ela só roda com aquela chave ligada. Sem este aviso a
+                  entrada fica configurada, com cara de pronta, e nunca dispara. */}
+              <p className="mt-1 flex items-start gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+                <span>
+                  Esta entrada depende da seção <strong>Quem não respondeu</strong>, no topo da
+                  tela: é ela que procura os leads calados. Com aquela chave desligada, esta
+                  entrada não dispara — e o tempo que vale é o de lá.
+                </span>
+              </p>
             </div>
           )}
 
-          <div className="flex justify-end gap-2">
+          <div className="flex items-center justify-end gap-2">
+            {missing(form) && (
+              <span className="mr-auto text-xs text-muted-foreground">{missing(form)}</span>
+            )}
             <Button type="button" variant="ghost" size="sm" onClick={() => setForm(null)}>
               Cancelar
             </Button>
-            <Button type="button" size="sm" disabled={saving} onClick={() => void save()}>
+            <Button
+              type="button"
+              size="sm"
+              disabled={saving || Boolean(missing(form))}
+              onClick={() => void save()}
+            >
               {saving && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
               Salvar entrada
             </Button>

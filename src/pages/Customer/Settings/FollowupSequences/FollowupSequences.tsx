@@ -539,13 +539,19 @@ export default function FollowupSequences() {
     setSaving(true);
     try {
       if (isNew) {
-        await followupSequencesService.create(payload);
-        toast.success('Funil criado.');
+        // NÃO fechar o editor aqui. As entradas ("Quando este funil começa") só
+        // existem depois que o funil tem identidade, então fechar deixava a pessoa
+        // num beco: a seção pedia pra salvar, e salvar tirava a seção da frente.
+        // Religar o editor ao funil recém-criado deixa escolher a entrada na hora.
+        const created = await followupSequencesService.create(payload);
+        setEditing(created);
+        setSteps(created.steps?.length ? [...created.steps] : []);
+        toast.success('Funil criado. Agora escolha, logo abaixo, o que faz ele começar.');
       } else {
         await followupSequencesService.update(editing.id, payload);
         toast.success('Sequência salva.');
+        closeEditor();
       }
-      closeEditor();
       load();
     } catch (e) {
       toast.error(apiErrorMessage(e, isNew ? 'Falha ao criar o funil.' : 'Falha ao salvar.'));
