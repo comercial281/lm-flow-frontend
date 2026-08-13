@@ -359,6 +359,37 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
     } finally { setSavingDemo(false); }
   };
 
+  // Semear a demo: cria a imobiliária fictícia inteira (equipe, carteira, leads,
+  // conversas e funil) com datas relativas ao momento em que roda. O backend
+  // recusa se o modo demonstração estiver desligado — dado fictício e trava de
+  // saída andam juntos. Idempotente: apertar de novo reaproveita o que existe.
+  const [seeding, setSeeding] = useState(false);
+  const [seedInfo, setSeedInfo] = useState<string | null>(null);
+  const seedDemo = async () => {
+    if (!window.confirm(
+      `Semear a imobiliária fictícia em "${tenant.name}"?\n\n` +
+      'Cria equipe, carteira de imóveis, leads, conversas e funil, com datas de hoje. ' +
+      'Se o WhatsApp já estiver conectado, o histórico nasce dentro do número real.',
+    )) return;
+
+    setSeeding(true);
+    setSeedInfo(null);
+    try {
+      const r = await api.post(`/super/pooled_tenants/${tenant.id}/demo_seed`, { dry_run: false });
+      const d = r.data?.data || {};
+      setSeedInfo(
+        `Pronto: ${d.equipe} pessoas, ${d.imoveis} imóveis, ${d.leads} leads, ${d.cards} cards` +
+        (d.caixa?.whatsapp_real ? ' — dentro do número de WhatsApp conectado.' : ' — numa caixa própria (conecte o chip e semeie de novo para o histórico ficar no número real).'),
+      );
+    } catch (e) {
+      // O backend recusa em cliente sem o modo demonstração e devolve o motivo
+      // em português — mostrar a mensagem dele é mais útil que um erro genérico.
+      const motivo = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setSeedInfo(null);
+      alert(motivo || 'Falha ao semear a demonstração.');
+    } finally { setSeeding(false); }
+  };
+
   // Limite de canais de WhatsApp que o cliente pode criar (0 = ilimitado).
   const [maxWa, setMaxWa] = useState<number>(Number(tenant.max_whatsapp_channels ?? tenant.settings?.max_whatsapp_channels ?? 5) || 0);
   const [savingMax, setSavingMax] = useState(false);
@@ -494,6 +525,28 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
                 style={{ left: demoMode ? '1.375rem' : '0.125rem' }} />
             </button>
           </div>
+          {/* Só aparece com a chave ligada: semear é uma ação que só faz sentido
+              no CRM de demonstração, e o backend recusa em qualquer outro. */}
+          {demoMode && (
+            <div className="px-3 py-2.5 rounded-lg mb-1"
+              style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.35)' }}>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-white/90">Semear demonstração</div>
+                  <div className="text-xs text-white/40">
+                    Cria a imobiliária fictícia inteira — equipe, carteira, leads, conversas e
+                    funil — com datas de hoje. Conecte o WhatsApp antes, para o histórico nascer
+                    dentro do número real.
+                  </div>
+                </div>
+                <button onClick={seedDemo} disabled={seeding}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500 text-white flex-shrink-0 disabled:opacity-50">
+                  {seeding ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Semear'}
+                </button>
+              </div>
+              {seedInfo && <div className="mt-2 text-xs text-emerald-300">{seedInfo}</div>}
+            </div>
+          )}
           {loading ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-violet-400" /></div>
           ) : catalog.map(f => {
