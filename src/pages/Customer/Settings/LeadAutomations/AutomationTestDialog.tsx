@@ -116,23 +116,40 @@ export default function AutomationTestDialog({ rule, open, onOpenChange }: Props
           <div className="space-y-5 text-sm">
             <section>
               <h4 className="font-medium mb-1">Lead usado no teste</h4>
-              <p className="text-muted-foreground">
-                {result.lead.name || 'Lead sem nome'}
-                {result.lead.phone ? ` · ${result.lead.phone}` : ''}
-              </p>
-              <p className="text-muted-foreground mt-1">
-                Origem que o sistema enxergou:{' '}
-                <strong className="text-foreground">
-                  {ORIGIN_LABELS[result.origem.source ?? ''] ?? result.origem.source ?? '—'}
-                </strong>
-                {result.origem.form_name ? ` · formulário: ${result.origem.form_name}` : ''}
-                {result.origem.campaign_name ? ` · campanha: ${result.origem.campaign_name}` : ''}
-              </p>
+              {result.lead_de_exemplo ? (
+                <p className="text-muted-foreground">
+                  Este CRM ainda não tem nenhum lead, então o teste usou um{' '}
+                  <strong className="text-foreground">lead de exemplo</strong> (Maria, telefone
+                  fictício). O aviso foi enviado de verdade — só os dados dentro dele é que são
+                  inventados.
+                </p>
+              ) : (
+                <>
+                  <p className="text-muted-foreground">
+                    {result.lead.name || 'Lead sem nome'}
+                    {result.lead.phone ? ` · ${result.lead.phone}` : ''}
+                  </p>
+                  <p className="text-muted-foreground mt-1">
+                    Origem que o sistema enxergou:{' '}
+                    <strong className="text-foreground">
+                      {ORIGIN_LABELS[result.origem.source ?? ''] ?? result.origem.source ?? '—'}
+                    </strong>
+                    {result.origem.form_name ? ` · formulário: ${result.origem.form_name}` : ''}
+                    {result.origem.campaign_name ? ` · campanha: ${result.origem.campaign_name}` : ''}
+                  </p>
+                </>
+              )}
             </section>
 
             <section>
               <h4 className="font-medium mb-1">Um lead assim dispararia a regra sozinho?</h4>
-              {result.dispararia_sozinho ? (
+              {result.lead_de_exemplo ? (
+                <p className="text-muted-foreground flex items-start gap-1.5">
+                  <MinusCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  Não dá para conferir sem um lead real — o lead de exemplo não tem origem, campanha
+                  nem formulário. Quando o primeiro lead entrar, teste de novo para conferir os filtros.
+                </p>
+              ) : result.dispararia_sozinho ? (
                 <p className="text-green-600 flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4" /> Sim — os filtros desta regra batem com este lead.
                 </p>
