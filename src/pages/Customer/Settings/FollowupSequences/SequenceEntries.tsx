@@ -82,8 +82,6 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
         return f.stage_id ? null : 'Escolha a coluna que inicia o funil.';
       case 'label':
         return f.label?.trim() ? null : 'Escolha a etiqueta que inicia o funil.';
-      case 'no_reply_minutes':
-        return Number(f.no_reply_minutes) > 0 ? null : 'Diga em quantos minutos sem resposta o funil começa.';
       default:
         return null;
     }
@@ -99,8 +97,6 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
         return `etiqueta "${entry.tag}"`;
       case 'new_lead':
         return entry.paid_only ? 'só leads de anúncio' : 'qualquer lead novo';
-      case 'no_reply':
-        return `${entry.no_reply_minutes} min sem responder`;
       default:
         return '';
     }
@@ -132,7 +128,6 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
         stage_id: entry.stage_id ?? undefined,
         label: entry.tag ?? undefined,
         paid_only: entry.paid_only,
-        no_reply_minutes: entry.no_reply_minutes ?? undefined,
       });
       await load();
       onChanged?.();
@@ -292,31 +287,6 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
               />
               Só leads de anúncio (tráfego pago)
             </label>
-          )}
-
-          {needsOf(form.kind) === 'no_reply_minutes' && (
-            <div>
-              <UILabel className="text-xs" htmlFor="followup-entry-minutes">Minutos sem responder</UILabel>
-              <Input
-                id="followup-entry-minutes"
-                type="number"
-                min={1}
-                value={form.no_reply_minutes ?? ''}
-                placeholder="Ex.: 60"
-                onChange={e => setForm({ ...form, no_reply_minutes: Number(e.target.value) })}
-              />
-              {/* Quem procura leads sem resposta é a varredura da seção "Quem não
-                  respondeu", e ela só roda com aquela chave ligada. Sem este aviso a
-                  entrada fica configurada, com cara de pronta, e nunca dispara. */}
-              <p className="mt-1 flex items-start gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
-                <span>
-                  Esta entrada depende da seção <strong>Quem não respondeu</strong>, no topo da
-                  tela: é ela que procura os leads calados. Com aquela chave desligada, esta
-                  entrada não dispara — e o tempo que vale é o de lá.
-                </span>
-              </p>
-            </div>
           )}
 
           <div className="flex items-center justify-end gap-2">
