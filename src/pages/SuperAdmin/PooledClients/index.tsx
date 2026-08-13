@@ -21,7 +21,11 @@ interface AiUsage {
   ai_leads: number;          // leads ÚNICOS atendidos no mês (unidade de cobrança)
   replied: number;           // turnos respondidos (um lead tem vários)
   runs: number;
-  cost_usd: number;          // custo real com a Anthropic
+  cost_usd: number;          // custo real com a Anthropic (ela cobra em dólar)
+  cost_brl: number;          // o mesmo custo convertido pela cotação do dia
+  usd_brl_rate: number;
+  usd_brl_source: 'api' | 'config' | 'fallback';
+  usd_brl_at: string | null;
   ai_leads_included: number | null;
   overage_leads: number;
   overage_price_brl: number;
@@ -67,10 +71,24 @@ const FRANCHISE_BAR: Record<string, string> = {
   sem_franquia: 'bg-violet-500',
 };
 
+const brl = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// De onde veio a cotação, para o texto que aparece ao passar o mouse no custo.
+// Número de dinheiro em tela sem dizer de onde veio e de quando é vira discussão
+// na hora de faturar.
+function rateNote(u: AiUsage): string {
+  const base = `US$ ${u.cost_usd.toFixed(2)} · dólar a R$ ${brl(u.usd_brl_rate)}`;
+  if (u.usd_brl_source === 'fallback') return `${base} (cotação indisponível, valor de referência)`;
+  if (u.usd_brl_source === 'config') return `${base} (cotação fixada na configuração)`;
+  const at = u.usd_brl_at ? new Date(u.usd_brl_at).toLocaleString('pt-BR') : null;
+  return at ? `${base} (cotação de ${at})` : base;
+}
+
 // Linha de consumo de IA no cartão do cliente: quanto ele usou, quanto tem
 // direito, quanto custou e quanto isso vira de excedente a cobrar.
-// Custo em dólar (é o que a Anthropic cobra) e excedente em real (é o que se
-// fatura) — misturar as duas moedas num número só esconde a margem.
+// Tudo em real, que é a moeda em que se decide preço aqui. O dólar (que é como a
+// Anthropic cobra) e a cotação usada ficam no texto ao passar o mouse: some da
+// leitura do dia a dia sem sumir de quem precisa conferir a conta.
 function AiUsageLine({ u }: { u?: AiUsage }) {
   if (!u) return null;
   const pct = u.usage_pct;
@@ -83,10 +101,13 @@ function AiUsageLine({ u }: { u?: AiUsage }) {
           {u.ai_leads_included ? ` de ${u.ai_leads_included}` : ''}
         </span>
         {!u.ai_leads_included && <span className="opacity-60">sem franquia</span>}
-        <span className="opacity-60">custo US$ {u.cost_usd.toFixed(2)}</span>
+        <span className="opacity-60 cursor-help" title={rateNote(u)}>
+          custo R$ {brl(u.cost_brl)}
+          {u.usd_brl_source === 'fallback' && '*'}
+        </span>
         {u.overage_leads > 0 && (
           <span className="text-amber-600 dark:text-amber-400 font-medium">
-            excedente {u.overage_leads} = R$ {u.overage_amount_brl.toFixed(2)}
+            excedente {u.overage_leads} = R$ {brl(u.overage_amount_brl)}
           </span>
         )}
       </div>
