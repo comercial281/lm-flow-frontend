@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
-import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, Eye, EyeOff, MessageCircle, XCircle } from 'lucide-react';
+import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, Eye, EyeOff, MessageCircle, XCircle, Bot } from 'lucide-react';
 import api from '@/services/core/api';
 import IconActionButton from '@/components/base/IconActionButton';
 import NewTenantWizard from './NewTenantWizard';
@@ -12,12 +12,32 @@ import UserMetricsView from '../ClientInstances/UserMetricsView';
 
 type ViewTab = 'clients' | 'dashboard' | 'logs' | 'metrics';
 
+// Consumo de IA do mês corrente, já cruzado com a franquia contratada.
+// Vem pronto do backend (SalesAgents::UsageReport) de propósito: a conta do
+// excedente é a mesma que vai virar fatura, e ter a regra em dois lugares é
+// como o número da tela e o número cobrado passam a divergir.
+interface AiUsage {
+  period: string;
+  ai_leads: number;          // leads ÚNICOS atendidos no mês (unidade de cobrança)
+  replied: number;           // turnos respondidos (um lead tem vários)
+  runs: number;
+  cost_usd: number;          // custo real com a Anthropic
+  ai_leads_included: number | null;
+  overage_leads: number;
+  overage_price_brl: number;
+  overage_amount_brl: number;
+  usage_pct: number | null;
+  franchise_status: 'sem_franquia' | 'ok' | 'atencao' | 'estourado';
+}
 interface PooledTenant {
   id: string; name: string; slug: string; status: string;
   members: number | null; login_url: string; admin_email?: string;
   settings?: Record<string, any>; archived?: boolean; created_at?: string;
   max_whatsapp_channels?: number; whatsapp_channels_used?: number | null;
   campaign_only_inbox?: boolean;
+  ai_usage?: AiUsage;
+  ai_leads_included?: number | null;
+  ai_lead_overage_price_brl?: number;
 }
 interface Member { id: string; email: string; name?: string; plain_password?: string; }
 
@@ -37,6 +57,48 @@ const PIPE_SOURCES: { key: string; label: string; desc: string }[] = [
   { key: 'form',    label: 'Captação / site',   desc: 'Lead de formulário ou landing page do site.' },
   { key: 'manual',  label: 'Manual no CRM',     desc: 'Conversa aberta na mão pelo corretor. Adicionar card na mão nunca é bloqueado.' },
 ];
+
+// Cor da barra por situação da franquia. Verde/âmbar/vermelho só quando existe
+// franquia contratada; sem franquia a barra não aparece, porque não há de quê.
+const FRANCHISE_BAR: Record<string, string> = {
+  ok: 'bg-emerald-500',
+  atencao: 'bg-amber-500',
+  estourado: 'bg-red-500',
+  sem_franquia: 'bg-violet-500',
+};
+
+// Linha de consumo de IA no cartão do cliente: quanto ele usou, quanto tem
+// direito, quanto custou e quanto isso vira de excedente a cobrar.
+// Custo em dólar (é o que a Anthropic cobra) e excedente em real (é o que se
+// fatura) — misturar as duas moedas num número só esconde a margem.
+function AiUsageLine({ u }: { u?: AiUsage }) {
+  if (!u) return null;
+  const pct = u.usage_pct;
+  return (
+    <div className="mt-2">
+      <div className="text-xs text-muted-foreground flex items-center gap-x-1.5 gap-y-0.5 flex-wrap">
+        <Bot className="w-3.5 h-3.5 flex-shrink-0" />
+        <span>
+          {u.ai_leads} lead{u.ai_leads === 1 ? '' : 's'} na IA
+          {u.ai_leads_included ? ` de ${u.ai_leads_included}` : ''}
+        </span>
+        {!u.ai_leads_included && <span className="opacity-60">sem franquia</span>}
+        <span className="opacity-60">custo US$ {u.cost_usd.toFixed(2)}</span>
+        {u.overage_leads > 0 && (
+          <span className="text-amber-600 dark:text-amber-400 font-medium">
+            excedente {u.overage_leads} = R$ {u.overage_amount_brl.toFixed(2)}
+          </span>
+        )}
+      </div>
+      {typeof pct === 'number' && (
+        <div className="h-1 mt-1.5 rounded-full bg-border overflow-hidden">
+          <div className={`h-full rounded-full ${FRANCHISE_BAR[u.franchise_status] || 'bg-violet-500'}`}
+            style={{ width: `${Math.min(pct, 100)}%` }} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () => void }) {
   const [members, setMembers] = useState<Member[]>([]);
@@ -469,6 +531,33 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
     } finally { setSavingMax(false); }
   };
 
+  // Franquia de leads de IA do plano + preço do lead excedente.
+  // Vazio = sem franquia contratada: o painel segue mostrando o consumo, mas
+  // não calcula excedente (não se cobra por um limite que ninguém combinou).
+  const [aiLeads, setAiLeads] = useState<string>(
+    tenant.ai_leads_included != null ? String(tenant.ai_leads_included) : ''
+  );
+  const [aiPrice, setAiPrice] = useState<string>(String(tenant.ai_lead_overage_price_brl ?? 2.49));
+  const [savingAi, setSavingAi] = useState(false);
+  const saveAiFranchise = async () => {
+    setSavingAi(true);
+    try {
+      const s = tenant.settings || {};
+      await api.patch(`/super/pooled_tenants/${tenant.id}`, {
+        name: tenant.name,
+        // Reenviados junto pelo mesmo motivo do bloco de canais: PATCH parcial
+        // aqui já apagou grupo de WhatsApp de cliente antes.
+        only_ad_leads: !!s.only_ad_leads,
+        whatsapp_reminder_group_jid: s.whatsapp_reminder_group_jid || '',
+        whatsapp_logs_group_jid: s.whatsapp_logs_group_jid || '',
+        ai_leads_included: aiLeads.trim() === '' ? null : Math.max(0, parseInt(aiLeads, 10) || 0),
+        ai_lead_overage_price_brl: aiPrice.trim() === '' ? null : Math.max(0, parseFloat(aiPrice.replace(',', '.')) || 0),
+      });
+    } catch {
+      alert('Falha ao salvar a franquia de IA.');
+    } finally { setSavingAi(false); }
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
       <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-xl overflow-hidden"
@@ -524,6 +613,29 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
               className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-600 text-white flex-shrink-0 disabled:opacity-50">
               {savingMax ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvar'}
             </button>
+          </div>
+          <div className="px-3 py-2.5 rounded-lg mb-1"
+            style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.25)' }}>
+            <div className="text-sm text-white/90">Franquia de leads na IA</div>
+            <div className="text-xs text-white/40 mt-0.5">
+              Quantos leads a IA atende por mês dentro do plano, e quanto custa cada lead acima disso.
+              Em branco = sem franquia (mostra o consumo, não cobra excedente).
+              Estourar a franquia nunca desliga a IA: o excedente entra na fatura.
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <label className="text-xs text-white/50 flex-shrink-0">Leads/mês</label>
+              <input type="number" min={0} value={aiLeads} placeholder="—"
+                onChange={e => setAiLeads(e.target.value)}
+                className="w-20 px-2 py-1 rounded bg-white/10 text-white text-sm text-center outline-none flex-shrink-0" />
+              <label className="text-xs text-white/50 flex-shrink-0 ml-1">Excedente R$</label>
+              <input type="text" inputMode="decimal" value={aiPrice}
+                onChange={e => setAiPrice(e.target.value)}
+                className="w-20 px-2 py-1 rounded bg-white/10 text-white text-sm text-center outline-none flex-shrink-0" />
+              <button onClick={saveAiFranchise} disabled={savingAi}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-600 text-white flex-shrink-0 disabled:opacity-50 ml-auto">
+                {savingAi ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvar'}
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1"
             style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.25)' }}>
@@ -885,9 +997,12 @@ export default function PooledClients() {
                     <Clock className="w-3 h-3" /> Criando schema e configurando... aguarde.
                   </p>
                 ) : (
-                  <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5" /> {t.members ?? '?'} membro(s)
-                  </div>
+                  <>
+                    <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                      <Users className="w-3.5 h-3.5" /> {t.members ?? '?'} membro(s)
+                    </div>
+                    <AiUsageLine u={t.ai_usage} />
+                  </>
                 )}
                 <div className="flex gap-2 mt-3">
                   <button onClick={() => enter(t)} disabled={entering === t.id || isProvisioning}
