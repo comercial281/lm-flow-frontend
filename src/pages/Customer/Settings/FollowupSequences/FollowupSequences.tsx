@@ -35,7 +35,6 @@ import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import type { Pipeline, PipelineStage } from '@/types/analytics';
 import { SequenceEntries } from './SequenceEntries';
 import { FollowupEnrollment } from '@/pages/Customer/Automations/FollowupEnrollment/FollowupEnrollment';
-import { NoReplyRobot } from '@/pages/Customer/Automations/NoReplyRobot/NoReplyRobot';
 
 // Backend (Followup::SendStep#move_stage_if_configured) deriva o slug a partir do
 // nome do stage e NORMALIZA os dois lados: transliterate + downcase + strip + '-'.
@@ -539,13 +538,19 @@ export default function FollowupSequences() {
     setSaving(true);
     try {
       if (isNew) {
-        await followupSequencesService.create(payload);
-        toast.success('Funil criado.');
+        // NÃO fechar o editor aqui. As entradas ("Quando este funil começa") só
+        // existem depois que o funil tem identidade, então fechar deixava a pessoa
+        // num beco: a seção pedia pra salvar, e salvar tirava a seção da frente.
+        // Religar o editor ao funil recém-criado deixa escolher a entrada na hora.
+        const created = await followupSequencesService.create(payload);
+        setEditing(created);
+        setSteps(created.steps?.length ? [...created.steps] : []);
+        toast.success('Funil criado. Agora escolha, logo abaixo, o que faz ele começar.');
       } else {
         await followupSequencesService.update(editing.id, payload);
         toast.success('Sequência salva.');
+        closeEditor();
       }
-      closeEditor();
       load();
     } catch (e) {
       toast.error(apiErrorMessage(e, isNew ? 'Falha ao criar o funil.' : 'Falha ao salvar.'));
@@ -601,12 +606,12 @@ export default function FollowupSequences() {
           virou seção daqui: separar as duas escondia que a chave e o funil eram a mesma
           coisa — o usuário desligava numa aba achando que parava o que via na outra. */}
       <section className="rounded-lg border bg-card p-4 shadow-sm">
-        <h2 className="mb-1 text-lg font-medium">Entrada manual e sem resposta</h2>
+        <h2 className="mb-1 text-lg font-medium">Follow-up iniciado à mão</h2>
         <p className="mb-4 text-sm text-muted-foreground">
           O disparo automático de cada funil mora dentro do próprio funil, em{' '}
-          <strong>Quando este funil começa</strong>. O que fica aqui é o que não é de um
-          funil só: o destino de quem o corretor põe no follow-up à mão, e o robô de quem
-          não respondeu.
+          <strong>Quando este funil começa</strong>. Aqui fica só o que não é de um funil
+          específico: quando o corretor põe o lead no follow-up pelo botão do card, a
+          origem do lead decide qual funil ele recebe.
         </p>
         {/* A `key` remonta esta seção quando o CONJUNTO de funis muda (criou, apagou,
             ligou/desligou). Sem isso, quem acabava de criar o primeiro funil continuava
@@ -614,12 +619,11 @@ export default function FollowupSequences() {
             recém-desbloqueada parecia quebrada de novo. */}
         <FollowupEnrollment embedded key={sequences.map(s => `${s.id}:${s.is_active}`).join(',')} />
 
-        {/* O Robô Sem Resposta era uma aba separada no menu. Separado, escondia que ele e
-            a chave acima decidem a MESMA coisa (quem entra no funil) — e a chave acima
-            desligava a regra dele em silêncio, com a tela dele seguindo em "ligado". */}
-        <div className="mt-6 border-t pt-6">
-          <NoReplyRobot embedded key={`nrr-${sequences.map(s => `${s.id}:${s.is_active}`).join(',')}`} />
-        </div>
+        {/* A seção "Quem não respondeu" (o antigo Robô Sem Resposta) saiu daqui em
+            2026-08-13, por decisão do dono do produto: enquanto o fluxo por coluna —
+            arrastar o card — não estiver validado, follow-up não deve ser disparado
+            por silêncio. A varredura é desligada pelo backend na mesma entrega, pra
+            não sobrar rodando sem lugar nenhum de desligar. */}
       </section>
 
       {loading ? (

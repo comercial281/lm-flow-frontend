@@ -72,6 +72,21 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
 
   const needsOf = (kind: FollowupEntryKind) => kinds.find(k => k.value === kind)?.needs ?? null;
 
+  // O que falta preencher pra entrada poder ser salva. Vira texto na tela e trava o
+  // botão: antes dava pra clicar em salvar com o formulário recém-aberto e receber
+  // um erro vermelho dizendo o que faltava — o que se lê como defeito, não como
+  // "falta um campo".
+  const missing = (f: FollowupEntryFormData): string | null => {
+    switch (needsOf(f.kind)) {
+      case 'stage_id':
+        return f.stage_id ? null : 'Escolha a coluna que inicia o funil.';
+      case 'label':
+        return f.label?.trim() ? null : 'Escolha a etiqueta que inicia o funil.';
+      default:
+        return null;
+    }
+  };
+
   const describe = (entry: FollowupEntry): string => {
     switch (entry.kind) {
       case 'stage': {
@@ -82,8 +97,6 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
         return `etiqueta "${entry.tag}"`;
       case 'new_lead':
         return entry.paid_only ? 'só leads de anúncio' : 'qualquer lead novo';
-      case 'no_reply':
-        return `${entry.no_reply_minutes} min sem responder`;
       default:
         return '';
     }
@@ -115,7 +128,6 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
         stage_id: entry.stage_id ?? undefined,
         label: entry.tag ?? undefined,
         paid_only: entry.paid_only,
-        no_reply_minutes: entry.no_reply_minutes ?? undefined,
       });
       await load();
       onChanged?.();
@@ -277,25 +289,19 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
             </label>
           )}
 
-          {needsOf(form.kind) === 'no_reply_minutes' && (
-            <div>
-              <UILabel className="text-xs" htmlFor="followup-entry-minutes">Minutos sem responder</UILabel>
-              <Input
-                id="followup-entry-minutes"
-                type="number"
-                min={1}
-                value={form.no_reply_minutes ?? ''}
-                placeholder="Ex.: 60"
-                onChange={e => setForm({ ...form, no_reply_minutes: Number(e.target.value) })}
-              />
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2">
+          <div className="flex items-center justify-end gap-2">
+            {missing(form) && (
+              <span className="mr-auto text-xs text-muted-foreground">{missing(form)}</span>
+            )}
             <Button type="button" variant="ghost" size="sm" onClick={() => setForm(null)}>
               Cancelar
             </Button>
-            <Button type="button" size="sm" disabled={saving} onClick={() => void save()}>
+            <Button
+              type="button"
+              size="sm"
+              disabled={saving || Boolean(missing(form))}
+              onClick={() => void save()}
+            >
               {saving && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
               Salvar entrada
             </Button>

@@ -37,13 +37,15 @@ export interface FollowupSequence {
   updated_at: string;
 }
 
-/** Os seis gatilhos que a tela oferece. O motor entende 16 — o resto não cabe na
- *  cabeça de quem está montando um funil e nunca foi pedido. */
+/** Os gatilhos que a tela oferece. O motor entende 16 — o resto não cabe na cabeça
+ *  de quem está montando um funil e nunca foi pedido.
+ *
+ *  Não há disparo por "lead não respondeu": ele saiu em 2026-08-13, até o fluxo por
+ *  coluna estar validado. A lista real vem do backend; este tipo só acompanha. */
 export type FollowupEntryKind =
   | 'stage'
   | 'label'
   | 'new_lead'
-  | 'no_reply'
   | 'visit_scheduled'
   | 'visit_completed';
 
@@ -56,14 +58,13 @@ export interface FollowupEntry {
   stage_id?: string | null;
   tag?: string | null;
   paid_only: boolean;
-  no_reply_minutes?: number | null;
 }
 
 export interface FollowupEntryKindOption {
   value: FollowupEntryKind;
   label: string;
   /** Qual detalhe a tela precisa pedir junto (null = nenhum). */
-  needs: 'stage_id' | 'label' | 'paid_only' | 'no_reply_minutes' | null;
+  needs: 'stage_id' | 'label' | 'paid_only' | null;
 }
 
 export interface FollowupEntryStage {
@@ -88,7 +89,6 @@ export interface FollowupEntryFormData {
   stage_id?: string;
   label?: string;
   paid_only?: boolean;
-  no_reply_minutes?: number;
 }
 
 export interface FollowupSequenceFormData {

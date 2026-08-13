@@ -23,7 +23,6 @@ const KINDS = [
   { value: 'stage', label: 'Card entrou numa coluna', needs: 'stage_id' },
   { value: 'label', label: 'Etiqueta foi adicionada', needs: 'label' },
   { value: 'new_lead', label: 'Lead novo chegou', needs: 'paid_only' },
-  { value: 'no_reply', label: 'Lead não respondeu', needs: 'no_reply_minutes' },
   { value: 'visit_completed', label: 'Visita realizada', needs: null },
 ];
 
@@ -70,13 +69,13 @@ describe('Quando este funil começa', () => {
   it('lista as entradas já configuradas com o detalhe de cada uma', async () => {
     getEntries.mockResolvedValue(payload([
       { id: 10, kind: 'stage', label: 'Card entrou numa coluna', enabled: true, stage_id: 'stage-2', paid_only: false },
-      { id: 11, kind: 'no_reply', label: 'Lead não respondeu', enabled: false, paid_only: false, no_reply_minutes: 90 },
+      { id: 11, kind: 'label', label: 'Etiqueta foi adicionada', enabled: false, tag: 'visitou', paid_only: false },
     ]));
 
     render(<SequenceEntries sequenceId="1" sequenceName="Pós-visita" />);
 
     expect(await screen.findByText('Vendas → Visita agendada')).toBeInTheDocument();
-    expect(screen.getByText('90 min sem responder')).toBeInTheDocument();
+    expect(screen.getByText('etiqueta "visitou"')).toBeInTheDocument();
     expect(screen.getByText('desligada')).toBeInTheDocument();
   });
 
@@ -87,9 +86,22 @@ describe('Quando este funil começa', () => {
     await user.click(await screen.findByRole('button', { name: /Adicionar entrada/i }));
     expect(screen.getByLabelText('Coluna que inicia o funil')).toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText('O que faz o funil começar'), 'no_reply');
+    await user.selectOptions(screen.getByLabelText('O que faz o funil começar'), 'label');
     expect(screen.queryByLabelText('Coluna que inicia o funil')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Minutos sem responder')).toBeInTheDocument();
+    expect(screen.getByLabelText('Etiqueta que inicia o funil')).toBeInTheDocument();
+  });
+
+  // O disparo por silêncio saiu em 2026-08-13, até o fluxo por coluna estar
+  // validado. Este exemplo trava a retirada: se o gatilho voltar sozinho pra lista,
+  // volta junto a configuração que não dispara nada.
+  it('não oferece disparo por falta de resposta', async () => {
+    const user = userEvent.setup();
+    render(<SequenceEntries sequenceId="1" sequenceName="Pós-visita" />);
+
+    await user.click(await screen.findByRole('button', { name: /Adicionar entrada/i }));
+
+    const options = [...screen.getByLabelText('O que faz o funil começar').querySelectorAll('option')];
+    expect(options.map(o => o.textContent)).not.toContain('Lead não respondeu');
   });
 
   it('manda a coluna escolhida ao salvar a entrada', async () => {
