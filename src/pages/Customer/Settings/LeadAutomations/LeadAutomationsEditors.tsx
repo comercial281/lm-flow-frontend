@@ -180,6 +180,17 @@ interface ConditionEditorProps {
 const baseSelectClass =
   'mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
 
+// Estado da instância em português. "open" é o que a Evolution chama de conectada;
+// escolher uma desconectada é o caminho mais curto pro aviso não chegar.
+function instanceStatusLabel(status: string): string {
+  switch (status) {
+    case 'open':       return 'conectada ✓';
+    case 'connecting': return 'conectando…';
+    case 'close':      return 'desconectada ⚠️';
+    default:           return status || 'estado desconhecido';
+  }
+}
+
 export function ConditionEditor({ trigger, condition, onChange, resources }: ConditionEditorProps) {
   if (!triggerNeedsCondition(trigger)) return null;
 
@@ -793,13 +804,43 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     case 'notify_group':
       return (
         <>
-          <Field label="Instância" hint="Instância de WhatsApp que envia (e de onde os grupos são listados). Para grupos de cliente use a central: Operacional (LM01).">
-            <Input
-              value={String(params.instance ?? '')}
-              onChange={e => setParam('instance', e.target.value)}
-              placeholder="Operacional (LM01)"
-              className="mt-1"
-            />
+          {/* Instância: LISTA, não campo digitado. O nome tem de bater caractere a
+              caractere com o do painel — digitado, um espaço a mais devolvia lista
+              de grupos vazia e nada explicava o motivo. Quem não enxerga a lista
+              (cliente) continua com o campo livre. */}
+          <Field
+            label="Instância"
+            hint="De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central Operacional (LM01)."
+          >
+            {resources.evolutionInstances.length > 0 ? (
+              <select
+                value={String(params.instance ?? '')}
+                onChange={e => setParam('instance', e.target.value)}
+                className={baseSelectClass}
+              >
+                <option value="">— WhatsApp do próprio cliente —</option>
+                {resources.evolutionInstances.map(inst => (
+                  <option key={inst.name} value={inst.name}>
+                    {inst.name} — {instanceStatusLabel(inst.status)}
+                  </option>
+                ))}
+                {/* Valor já salvo que não veio na lista (instância renomeada/removida):
+                    aparecer como opção evita que salvar a regra o apague sem aviso. */}
+                {params.instance
+                  && !resources.evolutionInstances.some(i => i.name === params.instance) && (
+                  <option value={String(params.instance)}>
+                    {String(params.instance)} — não encontrada no servidor
+                  </option>
+                )}
+              </select>
+            ) : (
+              <Input
+                value={String(params.instance ?? '')}
+                onChange={e => setParam('instance', e.target.value)}
+                placeholder="Operacional (LM01)"
+                className="mt-1"
+              />
+            )}
           </Field>
           <Field label="Destino do lembrete *" hint={loadingGroups ? 'Carregando…' : 'O grupo do cliente, ou um usuário (vai no WhatsApp privado dele).'}>
             <select
