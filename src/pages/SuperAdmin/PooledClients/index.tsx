@@ -333,6 +333,122 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
     } finally { setSavingCampaignOnly(false); }
   };
 
+  // Modo demonstração: arma a trava de saída no backend. O cliente de
+  // demonstração tem um número de WhatsApp REAL pareado e leads FICTÍCIOS — com
+  // a chave ligada, só recebe mensagem quem escreveu para o número primeiro, e
+  // nenhum lead inventado é incomodado por follow-up, funil ou aviso de gestor.
+  // Default OFF: chave ausente = cliente normal.
+  const [demoMode, setDemoMode] = useState<boolean>(tenant.settings?.demo_mode === true);
+  const [savingDemo, setSavingDemo] = useState(false);
+  const saveDemoMode = async (next: boolean) => {
+    if (next && !window.confirm(
+      `Ligar o modo demonstração em "${tenant.name}"?\n\n` +
+      'A partir daí este cliente só manda WhatsApp para quem escrever para o número dele, ' +
+      'e para de mandar e-mail. Use só no CRM de demonstração — num cliente de verdade isso ' +
+      'faz o sistema parar de falar com os leads dele.',
+    )) return;
+
+    const prev = demoMode;
+    setDemoMode(next);
+    setSavingDemo(true);
+    try {
+      await api.patch(`/super/pooled_tenants/${tenant.id}`, { name: tenant.name, demo_mode: next });
+    } catch {
+      setDemoMode(prev);
+      alert('Falha ao salvar o modo demonstração.');
+    } finally { setSavingDemo(false); }
+  };
+
+  // Semear a demo: cria a imobiliária fictícia inteira (equipe, carteira, leads,
+  // conversas e funil) com datas relativas ao momento em que roda. O backend
+  // recusa se o modo demonstração estiver desligado — dado fictício e trava de
+  // saída andam juntos. Idempotente: apertar de novo reaproveita o que existe.
+  const [seeding, setSeeding] = useState(false);
+  const [seedInfo, setSeedInfo] = useState<string | null>(null);
+  const seedDemo = async () => {
+    if (!window.confirm(
+      `Semear a imobiliária fictícia em "${tenant.name}"?\n\n` +
+      'Cria equipe, carteira de imóveis, leads, conversas e funil, com datas de hoje. ' +
+      'Se o WhatsApp já estiver conectado, o histórico nasce dentro do número real.',
+    )) return;
+
+    setSeeding(true);
+    setSeedInfo(null);
+    try {
+      const r = await api.post(`/super/pooled_tenants/${tenant.id}/demo_seed`, { dry_run: false });
+      const d = r.data?.data || {};
+      setSeedInfo(
+        `Pronto: ${d.equipe} pessoas, ${d.imoveis} imóveis, ${d.leads} leads, ${d.cards} cards` +
+        (d.caixa?.whatsapp_real ? ' — dentro do número de WhatsApp conectado.' : ' — numa caixa própria (conecte o chip e semeie de novo para o histórico ficar no número real).'),
+      );
+    } catch (e) {
+      // O backend recusa em cliente sem o modo demonstração e devolve o motivo
+      // em português — mostrar a mensagem dele é mais útil que um erro genérico.
+      const motivo = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setSeedInfo(null);
+      alert(motivo || 'Falha ao semear a demonstração.');
+    } finally { setSeeding(false); }
+  };
+
+  // Fotos da carteira fictícia. O gerador não inventa imagem de imóvel — usar
+  // foto aleatória da internet seria mostrar imóvel de outra pessoa numa
+  // apresentação comercial. O dono sobe as fotos uma vez num endereço público e
+  // cola os links aqui; ficam guardados na ficha, então sobrevivem ao recomeço.
+  const [photoUrls, setPhotoUrls] = useState<string>((tenant.settings?.demo_photo_urls || []).join('\n'));
+  const [savingPhotos, setSavingPhotos] = useState(false);
+  const savePhotoUrls = async () => {
+    setSavingPhotos(true);
+    try {
+      const lista = photoUrls.split('\n').map(u => u.trim()).filter(Boolean);
+      await api.patch(`/super/pooled_tenants/${tenant.id}`, { name: tenant.name, demo_photo_urls: lista });
+      setSeedInfo(`${lista.length} foto(s) guardada(s). Semeie de novo para a carteira usá-las.`);
+    } catch {
+      alert('Falha ao salvar as fotos da demonstração.');
+    } finally { setSavingPhotos(false); }
+  };
+
+  // Recomeçar a demo entre uma call e outra. Limpa TODO o movimento (inclusive o
+  // lead do prospect da call anterior) e semeia de novo com datas frescas —
+  // preservando canal, acessos e a IA configurada, para o WhatsApp não pedir QR
+  // de novo. Confirmação por digitação, igual à de apagar cliente.
+  const [resetting, setResetting] = useState(false);
+  const resetDemo = async () => {
+    const digitado = window.prompt(
+      `Recomeçar a demonstração de "${tenant.name}"?\n\n` +
+      'Apaga leads, conversas, funil, visitas e propostas, e gera tudo de novo com datas de hoje. ' +
+      'O WhatsApp continua conectado.\n\n' +
+      `Digite "${tenant.slug}" para confirmar:`,
+    );
+    if (digitado !== tenant.slug) return;
+
+    setResetting(true);
+    setSeedInfo(null);
+    try {
+      const r = await api.post(`/super/pooled_tenants/${tenant.id}/demo_reset`, { confirm_slug: tenant.slug });
+      const d = r.data?.data?.semeadura || {};
+      setSeedInfo(`Recomeçada: ${d.leads} leads, ${d.cards} cards, ${d.visitas} visitas, ${d.propostas} propostas.`);
+    } catch (e) {
+      const motivo = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      alert(motivo || 'Falha ao recomeçar a demonstração.');
+    } finally { setResetting(false); }
+  };
+
+  // Vistoria: roda o painel por dentro e acusa bloco vazio ou entidade sem
+  // exemplo. É o que avisa que uma funcionalidade nova chegou à demo sem dado —
+  // antes do cliente ver a tela vazia na call.
+  const [auditing, setAuditing] = useState(false);
+  const [audit, setAudit] = useState<{ saude?: string; painel?: { vazios?: string[] }; entidades_sem_exemplo?: string[] } | null>(null);
+  const runAudit = async () => {
+    setAuditing(true);
+    try {
+      const r = await api.get(`/super/pooled_tenants/${tenant.id}/demo_audit`);
+      setAudit(r.data?.data || null);
+    } catch (e) {
+      const motivo = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      alert(motivo || 'Falha ao vistoriar a demonstração.');
+    } finally { setAuditing(false); }
+  };
+
   // Limite de canais de WhatsApp que o cliente pode criar (0 = ilimitado).
   const [maxWa, setMaxWa] = useState<number>(Number(tenant.max_whatsapp_channels ?? tenant.settings?.max_whatsapp_channels ?? 5) || 0);
   const [savingMax, setSavingMax] = useState(false);
@@ -446,6 +562,99 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
                 style={{ left: campaignOnly ? '1.375rem' : '0.125rem' }} />
             </button>
           </div>
+          {/* Âmbar, e não roxo como os outros: não é preferência de operação, é
+              uma chave que muda o que o sistema faz com mensagem de verdade. */}
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1"
+            style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.35)' }}>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-white/90">Modo demonstração</div>
+              <div className="text-xs text-white/40">
+                Só para o CRM que usamos em call de venda. Com a chave ligada, este cliente
+                só manda WhatsApp para quem escreveu para o número dele primeiro, e não manda
+                e-mail nenhum — assim os leads fictícios da demonstração nunca recebem
+                follow-up, funil ou aviso de gestor. Na tela nada muda: a mensagem aparece
+                como enviada na conversa.
+              </div>
+            </div>
+            <button onClick={() => saveDemoMode(!demoMode)} disabled={savingDemo}
+              className="relative w-11 h-6 rounded-full flex-shrink-0 transition-colors disabled:opacity-50"
+              style={{ background: demoMode ? '#f59e0b' : 'rgba(255,255,255,0.15)' }}
+              aria-pressed={demoMode} aria-label="Modo demonstração">
+              <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                style={{ left: demoMode ? '1.375rem' : '0.125rem' }} />
+            </button>
+          </div>
+          {/* Só aparece com a chave ligada: semear é uma ação que só faz sentido
+              no CRM de demonstração, e o backend recusa em qualquer outro. */}
+          {demoMode && (
+            <div className="px-3 py-2.5 rounded-lg mb-1"
+              style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.35)' }}>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-white/90">Semear demonstração</div>
+                  <div className="text-xs text-white/40">
+                    Cria a imobiliária fictícia inteira — equipe, carteira, leads, conversas e
+                    funil — com datas de hoje. Conecte o WhatsApp antes, para o histórico nascer
+                    dentro do número real.
+                  </div>
+                </div>
+                <button onClick={seedDemo} disabled={seeding}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500 text-white flex-shrink-0 disabled:opacity-50">
+                  {seeding ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Semear'}
+                </button>
+              </div>
+              {seedInfo && <div className="mt-2 text-xs text-emerald-300">{seedInfo}</div>}
+
+              <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(245,158,11,0.25)' }}>
+                <div className="text-xs text-white/60 mb-1">Fotos da carteira (um endereço por linha)</div>
+                <div className="text-[11px] text-white/35 mb-1.5">
+                  O gerador não inventa foto de imóvel. Suba as suas num endereço público e cole os
+                  links aqui — ficam guardados e sobrevivem ao recomeço.
+                </div>
+                <textarea value={photoUrls} onChange={e => setPhotoUrls(e.target.value)} rows={3}
+                  placeholder="https://.../casa-1.jpg"
+                  className="w-full px-2 py-1.5 rounded bg-white/10 text-white text-xs outline-none font-mono" />
+                <button onClick={savePhotoUrls} disabled={savingPhotos}
+                  className="mt-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-white/10 text-white/90 disabled:opacity-50">
+                  {savingPhotos ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvar fotos'}
+                </button>
+              </div>
+
+              <div className="mt-3 pt-3 flex items-center gap-2" style={{ borderTop: '1px solid rgba(245,158,11,0.25)' }}>
+                <button onClick={runAudit} disabled={auditing}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/10 text-white/90 disabled:opacity-50">
+                  {auditing ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Conferir saúde'}
+                </button>
+                <button onClick={resetDemo} disabled={resetting}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white disabled:opacity-50">
+                  {resetting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Recomeçar demo'}
+                </button>
+                <span className="text-[11px] text-white/40">Recomeçar não desconecta o WhatsApp.</span>
+              </div>
+
+              {audit && (
+                <div className="mt-2 text-xs">
+                  <span className={
+                    audit.saude === 'verde' ? 'text-emerald-300'
+                      : audit.saude === 'amarelo' ? 'text-amber-300' : 'text-red-300'
+                  }>
+                    {audit.saude === 'verde' ? '● Pronta para apresentar'
+                      : audit.saude === 'amarelo' ? '● Falta exemplo em alguma tela nova'
+                        : '● O painel abriria com bloco vazio'}
+                  </span>
+                  {!!audit.painel?.vazios?.length && (
+                    <div className="text-white/50 mt-1">Blocos vazios no painel: {audit.painel.vazios.join(', ')}</div>
+                  )}
+                  {!!audit.entidades_sem_exemplo?.length && (
+                    <div className="text-white/50 mt-1">
+                      Sem dado de exemplo: {audit.entidades_sem_exemplo.slice(0, 12).join(', ')}
+                      {audit.entidades_sem_exemplo.length > 12 && ` e mais ${audit.entidades_sem_exemplo.length - 12}`}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           {loading ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-violet-400" /></div>
           ) : catalog.map(f => {
