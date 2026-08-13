@@ -77,12 +77,13 @@ const brl = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2,
 // Número de dinheiro em tela sem dizer de onde veio e de quando é vira discussão
 // na hora de faturar.
 function rateNote(u: AiUsage): string {
-  // Cotação com 4 casas, não 2: a conversão usa o valor cheio (5,1611), e
-  // mostrar "5,16" faz quem conferir na mão chegar a um centavo diferente do
-  // que está na tela. Numa tela de dinheiro é assim que nasce discussão sobre
-  // a fatura.
-  const rate = u.usd_brl_rate.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
-  const base = `US$ ${u.cost_usd.toFixed(2)} · dólar a R$ ${rate}`;
+  // Dólar e cotação com 4 casas, não 2. Este texto existe para alguém CONFERIR
+  // a conta, então os dois números precisam ser os mesmos que a conta usou:
+  // arredondados (US$ 2,76 × R$ 5,16) dão R$ 14,24 onde a tela mostra R$ 14,25,
+  // e numa tela de dinheiro é assim que nasce discussão sobre a fatura.
+  const dec = { minimumFractionDigits: 2, maximumFractionDigits: 4 };
+  const rate = u.usd_brl_rate.toLocaleString('pt-BR', dec);
+  const base = `US$ ${u.cost_usd.toLocaleString('en-US', dec)} · dólar a R$ ${rate}`;
   if (u.usd_brl_source === 'fallback') return `${base} (cotação indisponível, valor de referência)`;
   if (u.usd_brl_source === 'config') return `${base} (cotação fixada na configuração)`;
   const at = u.usd_brl_at ? new Date(u.usd_brl_at).toLocaleString('pt-BR') : null;
