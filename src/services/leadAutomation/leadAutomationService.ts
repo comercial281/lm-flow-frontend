@@ -125,7 +125,10 @@ export const leadAutomationService = {
 // Resultado do teste de uma regra, como a tela mostra.
 export interface AutomationTestResult {
   rule: { id: string; name: string; trigger: string; is_active: boolean };
-  lead: { id: string; name: string | null; phone: string | null; conversation_id: string | null };
+  lead: { id: string | null; name: string | null; phone: string | null; conversation_id: string | null };
+  // CRM ainda sem nenhum lead: o teste rodou com dados de exemplo, e os filtros
+  // não tiveram contra o que ser conferidos.
+  lead_de_exemplo?: boolean;
   origem: {
     source?: string;
     form_id?: string;
