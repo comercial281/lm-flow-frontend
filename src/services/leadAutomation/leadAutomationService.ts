@@ -92,11 +92,19 @@ export const leadAutomationService = {
 
   // Grupos de WhatsApp (por nome) de uma instância, pro dropdown do "Notificar grupo".
   async getGroups(instance?: string, all?: boolean): Promise<WaGroup[]> {
+    return (await leadAutomationService.getGroupsResult(instance, all)).groups;
+  },
+
+  // Igual ao getGroups, mas com o MOTIVO quando a lista vem vazia. Sem isso o
+  // seletor de grupo só ficava sem opção nenhuma, sem dizer o que houve — e o
+  // caminho mais comum (nome da instância errado ou fora do ar) fica invisível.
+  async getGroupsResult(instance?: string, all?: boolean): Promise<WaGroupsResult> {
     const params: Record<string, string | boolean> = {};
     if (instance) params.instance = instance;
     if (all) params.all = true;
     const res = await api.get(`${BASE}/groups`, { params });
-    return (res.data as { data: { groups: WaGroup[] } }).data?.groups ?? [];
+    const data = (res.data as { data?: WaGroupsResult }).data;
+    return { groups: data?.groups ?? [], reason: data?.reason ?? null, instance: data?.instance ?? null };
   },
 
   // Instâncias Evolution disponíveis (super-admin only). Usadas no seletor "Instância de envio".
@@ -145,6 +153,13 @@ export interface AutomationTestResult {
 export interface WaGroup {
   id: string;   // JID …@g.us
   name: string;
+}
+
+// Lista de grupos + o motivo de ela estar vazia, quando estiver.
+export interface WaGroupsResult {
+  groups: WaGroup[];
+  reason: string | null;
+  instance: string | null;
 }
 
 // Instância Evolution listada pelo endpoint global (super-admin only).
