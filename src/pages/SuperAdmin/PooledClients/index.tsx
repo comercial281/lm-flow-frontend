@@ -390,6 +390,65 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
     } finally { setSeeding(false); }
   };
 
+  // Fotos da carteira fictícia. O gerador não inventa imagem de imóvel — usar
+  // foto aleatória da internet seria mostrar imóvel de outra pessoa numa
+  // apresentação comercial. O dono sobe as fotos uma vez num endereço público e
+  // cola os links aqui; ficam guardados na ficha, então sobrevivem ao recomeço.
+  const [photoUrls, setPhotoUrls] = useState<string>((tenant.settings?.demo_photo_urls || []).join('\n'));
+  const [savingPhotos, setSavingPhotos] = useState(false);
+  const savePhotoUrls = async () => {
+    setSavingPhotos(true);
+    try {
+      const lista = photoUrls.split('\n').map(u => u.trim()).filter(Boolean);
+      await api.patch(`/super/pooled_tenants/${tenant.id}`, { name: tenant.name, demo_photo_urls: lista });
+      setSeedInfo(`${lista.length} foto(s) guardada(s). Semeie de novo para a carteira usá-las.`);
+    } catch {
+      alert('Falha ao salvar as fotos da demonstração.');
+    } finally { setSavingPhotos(false); }
+  };
+
+  // Recomeçar a demo entre uma call e outra. Limpa TODO o movimento (inclusive o
+  // lead do prospect da call anterior) e semeia de novo com datas frescas —
+  // preservando canal, acessos e a IA configurada, para o WhatsApp não pedir QR
+  // de novo. Confirmação por digitação, igual à de apagar cliente.
+  const [resetting, setResetting] = useState(false);
+  const resetDemo = async () => {
+    const digitado = window.prompt(
+      `Recomeçar a demonstração de "${tenant.name}"?\n\n` +
+      'Apaga leads, conversas, funil, visitas e propostas, e gera tudo de novo com datas de hoje. ' +
+      'O WhatsApp continua conectado.\n\n' +
+      `Digite "${tenant.slug}" para confirmar:`,
+    );
+    if (digitado !== tenant.slug) return;
+
+    setResetting(true);
+    setSeedInfo(null);
+    try {
+      const r = await api.post(`/super/pooled_tenants/${tenant.id}/demo_reset`, { confirm_slug: tenant.slug });
+      const d = r.data?.data?.semeadura || {};
+      setSeedInfo(`Recomeçada: ${d.leads} leads, ${d.cards} cards, ${d.visitas} visitas, ${d.propostas} propostas.`);
+    } catch (e) {
+      const motivo = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      alert(motivo || 'Falha ao recomeçar a demonstração.');
+    } finally { setResetting(false); }
+  };
+
+  // Vistoria: roda o painel por dentro e acusa bloco vazio ou entidade sem
+  // exemplo. É o que avisa que uma funcionalidade nova chegou à demo sem dado —
+  // antes do cliente ver a tela vazia na call.
+  const [auditing, setAuditing] = useState(false);
+  const [audit, setAudit] = useState<{ saude?: string; painel?: { vazios?: string[] }; entidades_sem_exemplo?: string[] } | null>(null);
+  const runAudit = async () => {
+    setAuditing(true);
+    try {
+      const r = await api.get(`/super/pooled_tenants/${tenant.id}/demo_audit`);
+      setAudit(r.data?.data || null);
+    } catch (e) {
+      const motivo = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      alert(motivo || 'Falha ao vistoriar a demonstração.');
+    } finally { setAuditing(false); }
+  };
+
   // Limite de canais de WhatsApp que o cliente pode criar (0 = ilimitado).
   const [maxWa, setMaxWa] = useState<number>(Number(tenant.max_whatsapp_channels ?? tenant.settings?.max_whatsapp_channels ?? 5) || 0);
   const [savingMax, setSavingMax] = useState(false);
@@ -545,6 +604,55 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
                 </button>
               </div>
               {seedInfo && <div className="mt-2 text-xs text-emerald-300">{seedInfo}</div>}
+
+              <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(245,158,11,0.25)' }}>
+                <div className="text-xs text-white/60 mb-1">Fotos da carteira (um endereço por linha)</div>
+                <div className="text-[11px] text-white/35 mb-1.5">
+                  O gerador não inventa foto de imóvel. Suba as suas num endereço público e cole os
+                  links aqui — ficam guardados e sobrevivem ao recomeço.
+                </div>
+                <textarea value={photoUrls} onChange={e => setPhotoUrls(e.target.value)} rows={3}
+                  placeholder="https://.../casa-1.jpg"
+                  className="w-full px-2 py-1.5 rounded bg-white/10 text-white text-xs outline-none font-mono" />
+                <button onClick={savePhotoUrls} disabled={savingPhotos}
+                  className="mt-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-white/10 text-white/90 disabled:opacity-50">
+                  {savingPhotos ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvar fotos'}
+                </button>
+              </div>
+
+              <div className="mt-3 pt-3 flex items-center gap-2" style={{ borderTop: '1px solid rgba(245,158,11,0.25)' }}>
+                <button onClick={runAudit} disabled={auditing}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/10 text-white/90 disabled:opacity-50">
+                  {auditing ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Conferir saúde'}
+                </button>
+                <button onClick={resetDemo} disabled={resetting}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white disabled:opacity-50">
+                  {resetting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Recomeçar demo'}
+                </button>
+                <span className="text-[11px] text-white/40">Recomeçar não desconecta o WhatsApp.</span>
+              </div>
+
+              {audit && (
+                <div className="mt-2 text-xs">
+                  <span className={
+                    audit.saude === 'verde' ? 'text-emerald-300'
+                      : audit.saude === 'amarelo' ? 'text-amber-300' : 'text-red-300'
+                  }>
+                    {audit.saude === 'verde' ? '● Pronta para apresentar'
+                      : audit.saude === 'amarelo' ? '● Falta exemplo em alguma tela nova'
+                        : '● O painel abriria com bloco vazio'}
+                  </span>
+                  {!!audit.painel?.vazios?.length && (
+                    <div className="text-white/50 mt-1">Blocos vazios no painel: {audit.painel.vazios.join(', ')}</div>
+                  )}
+                  {!!audit.entidades_sem_exemplo?.length && (
+                    <div className="text-white/50 mt-1">
+                      Sem dado de exemplo: {audit.entidades_sem_exemplo.slice(0, 12).join(', ')}
+                      {audit.entidades_sem_exemplo.length > 12 && ` e mais ${audit.entidades_sem_exemplo.length - 12}`}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
           {loading ? (
