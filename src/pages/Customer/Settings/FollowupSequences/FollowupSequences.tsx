@@ -33,6 +33,7 @@ import {
 } from '@/services/followupSequences/followupSequencesService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import type { Pipeline, PipelineStage } from '@/types/analytics';
+import { SequenceEntries } from './SequenceEntries';
 import { FollowupEnrollment } from '@/pages/Customer/Automations/FollowupEnrollment/FollowupEnrollment';
 import { NoReplyRobot } from '@/pages/Customer/Automations/NoReplyRobot/NoReplyRobot';
 
@@ -322,6 +323,9 @@ const NEW_SEQUENCE = (): FollowupSequence => ({
   business_hours_only: false,
   progress_tagging: true,
   steps_count: 0,
+  // Funil que ainda não existe não tem entrada: elas só podem ser criadas depois
+  // de salvar, porque cada uma é uma regra apontando pro funil.
+  entries_count: 0,
   steps: [],
   created_at: '',
   updated_at: '',
@@ -597,10 +601,12 @@ export default function FollowupSequences() {
           virou seção daqui: separar as duas escondia que a chave e o funil eram a mesma
           coisa — o usuário desligava numa aba achando que parava o que via na outra. */}
       <section className="rounded-lg border bg-card p-4 shadow-sm">
-        <h2 className="mb-1 text-lg font-medium">Quem entra sozinho</h2>
+        <h2 className="mb-1 text-lg font-medium">Entrada manual e sem resposta</h2>
         <p className="mb-4 text-sm text-muted-foreground">
-          Duas portas de entrada, cada uma com sua chave. Elas convivem: ligar ou desligar
-          uma não mexe na outra.
+          O disparo automático de cada funil mora dentro do próprio funil, em{' '}
+          <strong>Quando este funil começa</strong>. O que fica aqui é o que não é de um
+          funil só: o destino de quem o corretor põe no follow-up à mão, e o robô de quem
+          não respondeu.
         </p>
         {/* A `key` remonta esta seção quando o CONJUNTO de funis muda (criou, apagou,
             ligou/desligou). Sem isso, quem acabava de criar o primeiro funil continuava
@@ -637,6 +643,23 @@ export default function FollowupSequences() {
                       {seq.is_active ? 'Ativa' : 'Desativada'}
                     </Badge>
                     <Badge variant="outline">{seq.steps_count} passos</Badge>
+                    {/* Funil ativo e sem porta de entrada não dispara nada sozinho.
+                        Sem este aviso, quem monta as mensagens e sai da tela acha que
+                        ligou o follow-up — e fica esperando uma mensagem que nunca sai. */}
+                    {seq.is_active && seq.entries_count === 0 && (
+                      <Badge
+                        variant="outline"
+                        className="border-amber-500/40 text-xs text-amber-600"
+                        title="Abra o funil e configure em 'Quando este funil começa'."
+                      >
+                        sem entrada
+                      </Badge>
+                    )}
+                    {seq.entries_count > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        {seq.entries_count === 1 ? '1 entrada' : `${seq.entries_count} entradas`}
+                      </Badge>
+                    )}
                   </div>
                   {seq.description && (
                     <p className="mt-1 text-sm text-muted-foreground">{seq.description}</p>
@@ -764,6 +787,16 @@ export default function FollowupSequences() {
                   </span>
                 </label>
               </div>
+
+              {/* "Quando este funil começa" vem ANTES das mensagens de propósito:
+                  a primeira pergunta de quem monta um funil é o que o dispara, e
+                  era exatamente isso que a tela não respondia — a escolha morava
+                  num painel global, longe daqui, valendo pra um funil só. */}
+              <SequenceEntries
+                sequenceId={editing.id || null}
+                sequenceName={editing.name}
+                onChanged={load}
+              />
 
               <div className="space-y-3">
                 {steps.map((s, idx) => {

@@ -29,9 +29,66 @@ export interface FollowupSequence {
   /** Exemplo da etiqueta que o funil vai aplicar, vindo do backend. */
   progress_tag_sample?: string | null;
   steps_count: number;
+  /** Quantas portas de entrada o funil tem. Zero = só roda quando alguém mandar
+   *  pelo card; a lista avisa, senão parece que o funil está quebrado. */
+  entries_count: number;
   steps: FollowupStep[];
   created_at: string;
   updated_at: string;
+}
+
+/** Os seis gatilhos que a tela oferece. O motor entende 16 — o resto não cabe na
+ *  cabeça de quem está montando um funil e nunca foi pedido. */
+export type FollowupEntryKind =
+  | 'stage'
+  | 'label'
+  | 'new_lead'
+  | 'no_reply'
+  | 'visit_scheduled'
+  | 'visit_completed';
+
+/** Uma porta de entrada do funil: o que faz ELE começar. */
+export interface FollowupEntry {
+  id: number;
+  kind: FollowupEntryKind;
+  label: string;
+  enabled: boolean;
+  stage_id?: string | null;
+  tag?: string | null;
+  paid_only: boolean;
+  no_reply_minutes?: number | null;
+}
+
+export interface FollowupEntryKindOption {
+  value: FollowupEntryKind;
+  label: string;
+  /** Qual detalhe a tela precisa pedir junto (null = nenhum). */
+  needs: 'stage_id' | 'label' | 'paid_only' | 'no_reply_minutes' | null;
+}
+
+export interface FollowupEntryStage {
+  id: string;
+  name: string;
+  pipeline_id: string;
+  pipeline_name: string;
+}
+
+/** Tudo que o formulário de entrada precisa, numa chamada só. */
+export interface FollowupEntriesPayload {
+  entries: FollowupEntry[];
+  kinds: FollowupEntryKindOption[];
+  stages: FollowupEntryStage[];
+  labels: string[];
+}
+
+export interface FollowupEntryFormData {
+  id?: number;
+  kind: FollowupEntryKind;
+  enabled?: boolean;
+  stage_id?: string;
+  label?: string;
+  paid_only?: boolean;
+  no_reply_minutes?: number;
 }
 
 export interface FollowupSequenceFormData {
@@ -114,6 +171,24 @@ export const followupSequencesService = {
   async toggle(id: string): Promise<FollowupSequence> {
     const res = await api.post(`${BASE}/${id}/toggle`);
     return (res.data as { data: FollowupSequence }).data;
+  },
+
+  // --- Entradas do funil ("Quando este funil começa") ---
+
+  async getEntries(id: string): Promise<FollowupEntriesPayload> {
+    const res = await api.get(`${BASE}/${id}/entries`);
+    return (res.data as { data: FollowupEntriesPayload }).data;
+  },
+
+  /** Cria ou atualiza — o backend decide pelo `id`, e a tela usa o mesmo
+   *  formulário nos dois casos. */
+  async saveEntry(id: string, entry: FollowupEntryFormData): Promise<FollowupEntry> {
+    const res = await api.post(`${BASE}/${id}/entries`, { entry });
+    return (res.data as { data: FollowupEntry }).data;
+  },
+
+  async deleteEntry(id: string, entryId: number): Promise<void> {
+    await api.delete(`${BASE}/${id}/entries/${entryId}`);
   },
 
   async testSend(id: string, phone: string, name = 'Teste'): Promise<{
