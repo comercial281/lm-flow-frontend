@@ -34,6 +34,15 @@ import {
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import type { Pipeline, PipelineStage } from '@/types/analytics';
 import { SequenceEntries } from './SequenceEntries';
+import {
+  UNITS,
+  unitFactor,
+  pickUnit,
+  toRelativeSteps,
+  toCumulativeSteps,
+  cumulativeUpTo,
+  type DelayUnit,
+} from './delayConversion';
 import { FollowupEnrollment } from '@/pages/Customer/Automations/FollowupEnrollment/FollowupEnrollment';
 
 // Backend (Followup::SendStep#move_stage_if_configured) deriva o slug a partir do
@@ -300,7 +309,9 @@ function MediaUploadButton({
 // escolha, não default silencioso.
 const EMPTY_STEP = (position: number): FollowupStep => ({
   position,
-  delay_minutes: position * 60,
+  // Relativo: a primeira sai assim que o lead entra, as seguintes um dia depois da
+  // anterior — cadência de follow-up de imóvel, não de minutos.
+  delay_minutes: position === 1 ? 0 : 1440,
   message_type: 'text',
   content: '',
   media_url: '',
@@ -362,6 +373,10 @@ export default function FollowupSequences() {
   // coluna ou etiqueta configurada — esconder o que o cliente configurou seria pior
   // que o excesso de campos que a gaveta veio resolver.
   const [openAdvanced, setOpenAdvanced] = useState<Record<number, boolean>>({});
+  // Unidade escolhida por passo. Fica em estado próprio (e não derivada do número)
+  // porque derivar faria a unidade pular sozinha enquanto a pessoa digita: 120
+  // viraria "2 horas" no meio da digitação de 1200.
+  const [stepUnits, setStepUnits] = useState<Record<number, DelayUnit>>({});
   const [editorOpen, setEditorOpen] = useState(false);
 
   const [testDialogOpen, setTestDialogOpen] = useState(false);
@@ -421,6 +436,7 @@ export default function FollowupSequences() {
   const openCreate = () => {
     setEditing(NEW_SEQUENCE());
     setSteps(Array.from({ length: 3 }, (_, i) => EMPTY_STEP(i + 1)));
+    setStepUnits({});
     setEditorOpen(true);
     pipelines.forEach(p => {
       if (!stagesByPipeline[p.id]) loadStages(p.id);
@@ -491,7 +507,8 @@ export default function FollowupSequences() {
 
   const openEdit = (seq: FollowupSequence) => {
     setEditing(seq);
-    setSteps(seq.steps.length ? [...seq.steps] : Array.from({ length: 6 }, (_, i) => EMPTY_STEP(i + 1)));
+    setSteps(seq.steps.length ? toRelativeSteps(seq.steps) : Array.from({ length: 6 }, (_, i) => EMPTY_STEP(i + 1)));
+    setStepUnits({});
     setEditorOpen(true);
     // Pre-popula stages de todos pipelines pra que o StageSelector consiga inferir
     // qual pipeline esta selecionado a partir do move_to_stage_slug ja salvo.
@@ -504,10 +521,24 @@ export default function FollowupSequences() {
     setEditorOpen(false);
     setEditing(null);
     setSteps([]);
+    setStepUnits({});
   };
 
   const updateStep = (idx: number, patch: Partial<FollowupStep>) => {
     setSteps(prev => prev.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+  };
+
+  const unitOf = (idx: number): DelayUnit =>
+    stepUnits[idx] ?? pickUnit(Number(steps[idx]?.delay_minutes) || 0);
+
+  // Trocar a unidade não muda o tempo "de mentira": o número exibido é arredondado
+  // pra nova unidade e o valor guardado passa a ser exatamente esse. Sem isto, 90
+  // minutos vistos em "horas" apareceriam como 2 e continuariam valendo 90.
+  const changeUnit = (idx: number, unit: DelayUnit) => {
+    const factor = unitFactor(unit);
+    const rounded = Math.max(0, Math.round((Number(steps[idx]?.delay_minutes) || 0) / factor));
+    setStepUnits(prev => ({ ...prev, [idx]: unit }));
+    updateStep(idx, { delay_minutes: rounded * factor });
   };
 
   const addStep = () => {
@@ -532,7 +563,9 @@ export default function FollowupSequences() {
       stop_on_reply: editing.stop_on_reply,
       business_hours_only: editing.business_hours_only,
       progress_tagging: editing.progress_tagging,
-      followup_steps_attributes: steps.map((s, i) => ({ ...s, position: i + 1 })),
+      // A tela edita relativo; a API recebe cumulativo. Converter aqui é o que
+      // permite guardar do jeito que a retomada e o horário comercial precisam.
+      followup_steps_attributes: toCumulativeSteps(steps).map((s, i) => ({ ...s, position: i + 1 })),
     };
 
     setSaving(true);
@@ -544,7 +577,8 @@ export default function FollowupSequences() {
         // Religar o editor ao funil recém-criado deixa escolher a entrada na hora.
         const created = await followupSequencesService.create(payload);
         setEditing(created);
-        setSteps(created.steps?.length ? [...created.steps] : []);
+        setSteps(created.steps?.length ? toRelativeSteps(created.steps) : []);
+        setStepUnits({});
         toast.success('Funil criado. Agora escolha, logo abaixo, o que faz ele começar.');
       } else {
         await followupSequencesService.update(editing.id, payload);
@@ -826,14 +860,32 @@ export default function FollowupSequences() {
 
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <UILabel className="text-xs">Quando enviar</UILabel>
-                        <Input
-                          type="number"
-                          value={s.delay_minutes}
-                          onChange={e => updateStep(idx, { delay_minutes: Number(e.target.value) || 0 })}
-                        />
+                        <UILabel className="text-xs">Esperar</UILabel>
+                        <div className="flex gap-1.5">
+                          <Input
+                            type="number"
+                            min={0}
+                            className="flex-1"
+                            value={Math.round(s.delay_minutes / unitFactor(unitOf(idx)))}
+                            onChange={e => updateStep(idx, {
+                              delay_minutes: Math.max(0, Number(e.target.value) || 0) * unitFactor(unitOf(idx)),
+                            })}
+                          />
+                          <select
+                            aria-label={`Unidade do passo ${idx + 1}`}
+                            value={unitOf(idx)}
+                            onChange={e => changeUnit(idx, e.target.value as DelayUnit)}
+                            className="rounded-md border border-border bg-background px-2 text-sm"
+                          >
+                            {UNITS.map(u => (
+                              <option key={u.value} value={u.value}>{u.label}</option>
+                            ))}
+                          </select>
+                        </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          minutos depois do início — ≈ {formatDelay(s.delay_minutes)}
+                          {idx === 0 ? 'depois de o lead entrar no funil' : 'depois da mensagem anterior'}
+                          {s.delay_minutes === 0 && idx === 0 ? ' — sai na hora' : ''}
+                          {idx > 0 && ` — ≈ ${formatDelay(cumulativeUpTo(steps, idx))} desde o início`}
                         </p>
                       </div>
                       <div>
@@ -944,8 +996,15 @@ export default function FollowupSequences() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Testar sequência</DialogTitle>
+            {/* O texto antigo era pra programador: falava em "os 6 jobs" (são os
+                passos que a pessoa escreveu) e mandava usar um endereço interno.
+                Aqui o que importa é o efeito: sai mensagem de verdade, e o número
+                vira contato no CRM. */}
             <DialogDescription>
-              Cria um contato com esse telefone e enfileira os 6 jobs. Você pode disparar manualmente via /_admin/followup/process_now.
+              As mensagens deste funil são enviadas de verdade para esse número, respeitando
+              os tempos que você configurou. O número vira um contato no CRM — vale apagar
+              depois se for só teste. Testar duas vezes no mesmo número não recomeça do
+              início: o funil continua da mensagem seguinte.
             </DialogDescription>
           </DialogHeader>
           <div>
