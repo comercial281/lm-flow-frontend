@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/ds';
 import {
   Plus, Edit, Trash2, Zap, ChevronDown, ChevronUp, ToggleLeft, ToggleRight,
-  Archive, ArchiveRestore, BookOpen, Lock, Copy, Star, ArrowUp, ArrowDown,
+  Archive, ArchiveRestore, BookOpen, Lock, Copy, Star, ArrowUp, ArrowDown, FlaskConical,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import {
@@ -42,6 +42,7 @@ import {
   formatActionSummary,
 } from './LeadAutomationsEditors';
 import AutomationLibraryModal from './AutomationLibraryModal';
+import AutomationTestDialog from './AutomationTestDialog';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 
@@ -117,6 +118,7 @@ export default function LeadAutomations() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [testing, setTesting] = useState<LeadAutomationRule | null>(null);
 
   const resources = useAutomationResources(canAccess);
 
@@ -508,6 +510,18 @@ export default function LeadAutomations() {
                       </Button>
                     </>
                   )}
+                  {/* Testar: dispara SÓ esta regra contra o último lead e mostra o que
+                      aconteceu. O aviso sai de verdade (marcado como teste); o que
+                      mexeria no card ou falaria com o lead fica simulado. */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Testar esta automação agora"
+                    onClick={() => setTesting(rule)}
+                  >
+                    <FlaskConical className="h-4 w-4" />
+                  </Button>
+
                   <Button
                     variant="ghost"
                     size="icon"
@@ -598,6 +612,12 @@ export default function LeadAutomations() {
         open={libraryOpen}
         onClose={() => { setLibraryOpen(false); if (tab === 'active') load('active'); }}
         onApplied={() => { if (tab === 'active') load('active'); }}
+      />
+
+      <AutomationTestDialog
+        rule={testing}
+        open={!!testing}
+        onOpenChange={open => { if (!open) setTesting(null); }}
       />
 
       {/* Create / Edit Modal */}
