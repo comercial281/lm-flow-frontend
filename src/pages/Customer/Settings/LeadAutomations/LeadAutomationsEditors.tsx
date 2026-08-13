@@ -497,6 +497,9 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
   // Grupos de WhatsApp pro dropdown do "Notificar grupo" (carrega da instância escolhida).
   const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
+  // Por que a lista veio vazia (instância errada, fora do ar, sem grupo). Sem
+  // isso o seletor só ficava sem opção, e não dava pra saber o que consertar.
+  const [groupsReason, setGroupsReason] = useState<string | null>(null);
   // Editor de Funil embutido (ação "Disparar funil de mensagens"): reusa o MESMO
   // componente do chat — subir mídia, gravar áudio, delay por passo, variáveis, reordenar.
   const [funnelEditorOpen, setFunnelEditorOpen] = useState(false);
@@ -507,9 +510,14 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     let cancelled = false;
     setLoadingGroups(true);
     leadAutomationService
-      .getGroups(instanceParam || undefined)
-      .then(g => { if (!cancelled) setGroups(g); })
-      .catch(() => { if (!cancelled) setGroups([]); })
+      .getGroupsResult(instanceParam || undefined)
+      .then(r => { if (!cancelled) { setGroups(r.groups); setGroupsReason(r.reason); } })
+      .catch(() => {
+        if (!cancelled) {
+          setGroups([]);
+          setGroupsReason('Não foi possível carregar os grupos agora. Tente de novo em instantes.');
+        }
+      })
       .finally(() => { if (!cancelled) setLoadingGroups(false); });
     return () => { cancelled = true; };
   }, [action.type, instanceParam]);
@@ -820,6 +828,13 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                 <option value={String(params.group_jid)}>{String(params.group_jid)}</option>
               )}
             </select>
+            {/* Lista vazia com o motivo: quase sempre é o nome da instância
+                escrito diferente do painel, ou a instância desconectada. */}
+            {!loadingGroups && groups.length === 0 && groupsReason && (
+              <p className="mt-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-700">
+                Nenhum grupo apareceu: {groupsReason}
+              </p>
+            )}
           </Field>
           <Field label="Mensagem *">
             <Textarea
