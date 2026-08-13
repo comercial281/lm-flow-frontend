@@ -223,11 +223,13 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
           <select value={origin} onChange={e => commitOrigin(e.target.value)} className={baseSelectClass}>
             <option value="">Qualquer origem</option>
             <option value="formulario">Formulário (Meta Lead Ads)</option>
+            <option value="formulario_site">Formulário do site / landing</option>
             <option value="lead_whats_meta">Lead Whats Meta (anúncio no WhatsApp)</option>
             <option value="organico">Orgânico (sem anúncio)</option>
           </select>
           <p className="text-xs text-muted-foreground mt-1">
             Em branco = qualquer lead novo. <strong>Formulário</strong>: veio de um formulário de anúncio.{' '}
+            <strong>Formulário do site</strong>: preencheu um formulário do site ou de uma landing.{' '}
             <strong>Lead Whats Meta</strong>: clicou no anúncio e caiu direto no WhatsApp.
           </p>
         </div>

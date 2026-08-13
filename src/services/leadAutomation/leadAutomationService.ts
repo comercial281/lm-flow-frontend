@@ -104,7 +104,43 @@ export const leadAutomationService = {
     const res = await api.get('/super/evolution_instances');
     return (res.data as { data: EvolutionInstance[] }).data ?? [];
   },
+
+  // Botão "Testar": roda SÓ esta regra contra um lead real e devolve o diagnóstico.
+  // Sem contactId o backend usa o último lead que entrou. No teste apenas os avisos
+  // saem de verdade — nada que mexa no card ou fale com o lead é executado.
+  async testRun(id: string, contactId?: string): Promise<AutomationTestResult> {
+    const res = await api.post(`${BASE}/${id}/test_run`, contactId ? { contact_id: contactId } : {});
+    return (res.data as { data: AutomationTestResult }).data;
+  },
 };
+
+// Resultado do teste de uma regra, como a tela mostra.
+export interface AutomationTestResult {
+  rule: { id: string; name: string; trigger: string; is_active: boolean };
+  lead: { id: string; name: string | null; phone: string | null; conversation_id: string | null };
+  origem: {
+    source?: string;
+    form_id?: string;
+    form_name?: string;
+    campaign_name?: string;
+    ad_name?: string;
+  };
+  // Se um lead igual a este entrasse agora, a regra dispararia sozinha?
+  dispararia_sozinho: boolean;
+  condicoes: Array<{
+    campo: string;
+    operador: string;
+    esperado: string | string[];
+    encontrado: string | null;
+    casou: boolean;
+  }>;
+  avisos_ligados: boolean;
+  acoes: Array<{
+    type: string;
+    status: 'sent' | 'failed' | 'skipped' | 'simulated';
+    detail: string | null;
+  }>;
+}
 
 export interface WaGroup {
   id: string;   // JID …@g.us
@@ -134,6 +170,15 @@ export interface FormOrigin {
   form_name: string | null;
   count: number;
 }
+
+// Origens que o backend resolve pro lead no gatilho "Lead criado". Mesmos valores
+// do seletor "Origem do lead" — usados também pra traduzir o resultado do teste.
+export const ORIGIN_LABELS: Record<string, string> = {
+  formulario:      'Formulário (Meta Lead Ads)',
+  formulario_site: 'Formulário do site / landing',
+  lead_whats_meta: 'Lead Whats Meta (anúncio no WhatsApp)',
+  organico:        'Orgânico (sem anúncio)',
+};
 
 // Triggers emitidos pelo backend Rails (LeadAutomationExecutorJob.perform_later).
 // 'lead.no_reply_after' é emitido por Followup::NoReplyEnrollJob (roda a cada 1 min).
