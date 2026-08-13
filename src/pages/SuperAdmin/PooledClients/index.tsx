@@ -333,6 +333,32 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
     } finally { setSavingCampaignOnly(false); }
   };
 
+  // Modo demonstração: arma a trava de saída no backend. O cliente de
+  // demonstração tem um número de WhatsApp REAL pareado e leads FICTÍCIOS — com
+  // a chave ligada, só recebe mensagem quem escreveu para o número primeiro, e
+  // nenhum lead inventado é incomodado por follow-up, funil ou aviso de gestor.
+  // Default OFF: chave ausente = cliente normal.
+  const [demoMode, setDemoMode] = useState<boolean>(tenant.settings?.demo_mode === true);
+  const [savingDemo, setSavingDemo] = useState(false);
+  const saveDemoMode = async (next: boolean) => {
+    if (next && !window.confirm(
+      `Ligar o modo demonstração em "${tenant.name}"?\n\n` +
+      'A partir daí este cliente só manda WhatsApp para quem escrever para o número dele, ' +
+      'e para de mandar e-mail. Use só no CRM de demonstração — num cliente de verdade isso ' +
+      'faz o sistema parar de falar com os leads dele.',
+    )) return;
+
+    const prev = demoMode;
+    setDemoMode(next);
+    setSavingDemo(true);
+    try {
+      await api.patch(`/super/pooled_tenants/${tenant.id}`, { name: tenant.name, demo_mode: next });
+    } catch {
+      setDemoMode(prev);
+      alert('Falha ao salvar o modo demonstração.');
+    } finally { setSavingDemo(false); }
+  };
+
   // Limite de canais de WhatsApp que o cliente pode criar (0 = ilimitado).
   const [maxWa, setMaxWa] = useState<number>(Number(tenant.max_whatsapp_channels ?? tenant.settings?.max_whatsapp_channels ?? 5) || 0);
   const [savingMax, setSavingMax] = useState(false);
@@ -444,6 +470,28 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
               aria-pressed={campaignOnly} aria-label="Inbox só-campanha">
               <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
                 style={{ left: campaignOnly ? '1.375rem' : '0.125rem' }} />
+            </button>
+          </div>
+          {/* Âmbar, e não roxo como os outros: não é preferência de operação, é
+              uma chave que muda o que o sistema faz com mensagem de verdade. */}
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1"
+            style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.35)' }}>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-white/90">Modo demonstração</div>
+              <div className="text-xs text-white/40">
+                Só para o CRM que usamos em call de venda. Com a chave ligada, este cliente
+                só manda WhatsApp para quem escreveu para o número dele primeiro, e não manda
+                e-mail nenhum — assim os leads fictícios da demonstração nunca recebem
+                follow-up, funil ou aviso de gestor. Na tela nada muda: a mensagem aparece
+                como enviada na conversa.
+              </div>
+            </div>
+            <button onClick={() => saveDemoMode(!demoMode)} disabled={savingDemo}
+              className="relative w-11 h-6 rounded-full flex-shrink-0 transition-colors disabled:opacity-50"
+              style={{ background: demoMode ? '#f59e0b' : 'rgba(255,255,255,0.15)' }}
+              aria-pressed={demoMode} aria-label="Modo demonstração">
+              <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                style={{ left: demoMode ? '1.375rem' : '0.125rem' }} />
             </button>
           </div>
           {loading ? (
