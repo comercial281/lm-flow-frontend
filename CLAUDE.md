@@ -36,6 +36,23 @@ backend (ex.: deletar contato, endpoints, jobs) vai nesse outro repo, com base
 Ao mexer aqui, lembrar que o backend tem as travas correspondentes — uma chave não
 desliga a regra da outra, e o estado exibido vem da regra, não do config gravado.
 
+### Marcador de progresso (desde 2026-08-12)
+
+O editor de funil tem a chave **"Marcar no card em que mensagem o lead parou"**,
+ligada por padrão em funil novo. Ela existe porque a retomada depende dela: o card
+fica com **uma etiqueta só**, trocada a cada envio, e é o número dessa etiqueta que
+faz o lead que volta pro funil continuar da mensagem seguinte em vez de receber tudo
+de novo.
+
+Duas coisas a respeitar ao mexer nesse editor:
+
+- **A chave vem com explicação embaixo, em bloco próprio** — separada de "parar
+  quando responder" e "só em horário comercial". Sozinha ela não diz o que faz, e
+  quem lê "marcar no card" não adivinha que está decidindo sobre retomada.
+- **O exemplo da etiqueta vem do backend**, não é montado aqui. O nome real é
+  derivado do identificador interno do funil; inventar o exemplo na tela mostraria
+  uma etiqueta diferente da que o card vai receber.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,

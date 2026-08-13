@@ -307,6 +307,7 @@ const NEW_SEQUENCE = (): FollowupSequence => ({
   is_active: true,
   stop_on_reply: true,
   business_hours_only: false,
+  progress_tagging: true,
   steps_count: 0,
   steps: [],
   created_at: '',
@@ -510,6 +511,7 @@ export default function FollowupSequences() {
       is_active: editing.is_active,
       stop_on_reply: editing.stop_on_reply,
       business_hours_only: editing.business_hours_only,
+      progress_tagging: editing.progress_tagging,
       followup_steps_attributes: steps.map((s, i) => ({ ...s, position: i + 1 })),
     };
 
@@ -719,6 +721,30 @@ export default function FollowupSequences() {
                     onChange={e => setEditing({ ...editing, business_hours_only: e.target.checked })}
                   />
                   Só enviar em horário comercial
+                </label>
+              </div>
+
+              {/* O marcador é o que faz o funil RETOMAR. Sem ele o lead que volta
+                  pra coluna recebe a mensagem 1 de novo — foi a queixa do dono do
+                  produto. Fica em bloco próprio (e não junto dos dois acima) porque
+                  precisa da explicação: a chave sozinha não diz o que ela faz. */}
+              <div className="rounded-lg border bg-muted/20 p-3">
+                <label className="flex cursor-pointer items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={editing.progress_tagging}
+                    onChange={e => setEditing({ ...editing, progress_tagging: e.target.checked })}
+                  />
+                  <span>
+                    Marcar no card em que mensagem o lead parou
+                    <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                      O card fica com uma etiqueta só, trocada a cada envio
+                      {editing.progress_tag_sample ? ` (ex.: ${editing.progress_tag_sample})` : ''}.
+                      Se o lead responder e depois voltar para o funil, ele continua da
+                      mensagem seguinte em vez de receber tudo de novo.
+                    </span>
+                  </span>
                 </label>
               </div>
 
