@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/ds';
-import { Clock, Edit, Send, ToggleLeft, ToggleRight, Trash2, Plus, GripVertical, Upload, Loader2, Mic, Square, Sparkles, History, LayoutGrid, MessageSquare } from 'lucide-react';
+import { Clock, Edit, Send, ToggleLeft, ToggleRight, Trash2, Plus, GripVertical, Upload, Loader2, Mic, Square, Sparkles, History, LayoutGrid, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import {
   followupSequencesService,
@@ -355,6 +355,10 @@ export default function FollowupSequences() {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<FollowupSequence | null>(null);
   const [steps, setSteps] = useState<FollowupStep[]>([]);
+  // Quais passos estão com "Mais opções" aberto. Abre sozinho no passo que JÁ tem
+  // coluna ou etiqueta configurada — esconder o que o cliente configurou seria pior
+  // que o excesso de campos que a gaveta veio resolver.
+  const [openAdvanced, setOpenAdvanced] = useState<Record<number, boolean>>({});
   const [editorOpen, setEditorOpen] = useState(false);
 
   const [testDialogOpen, setTestDialogOpen] = useState(false);
@@ -762,7 +766,18 @@ export default function FollowupSequences() {
               </div>
 
               <div className="space-y-3">
-                {steps.map((s, idx) => (
+                {steps.map((s, idx) => {
+                  // "Mais opções" guarda o que é exceção: mover o card e a etiqueta fixa.
+                  // Antes os dois ficavam abertos em TODO passo, então um funil de 10
+                  // mensagens pedia 10 vezes um pipeline e uma coluna — configuração por
+                  // mensagem, quando a decisão do funil é por FLUXO. Abre sozinho onde já
+                  // houver algo configurado, pra não esconder escolha de ninguém.
+                  const hasAdvanced =
+                    Boolean(s.move_to_stage_slug) ||
+                    (!editing.progress_tagging && Boolean(s.tag_on_send));
+                  const advancedOpen = openAdvanced[idx] ?? hasAdvanced;
+
+                  return (
                   <div key={idx} className="rounded-lg border p-3">
                     <div className="mb-2 flex items-center gap-2">
                       <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -772,16 +787,16 @@ export default function FollowupSequences() {
                       </Button>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <UILabel className="text-xs">Delay (min, cumulativo)</UILabel>
+                        <UILabel className="text-xs">Quando enviar</UILabel>
                         <Input
                           type="number"
                           value={s.delay_minutes}
                           onChange={e => updateStep(idx, { delay_minutes: Number(e.target.value) || 0 })}
                         />
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          ≈ {formatDelay(s.delay_minutes)} após o início
+                          minutos depois do início — ≈ {formatDelay(s.delay_minutes)}
                         </p>
                       </div>
                       <div>
@@ -795,22 +810,6 @@ export default function FollowupSequences() {
                           </SelectContent>
                         </Select>
                       </div>
-                      {/* Com o marcador ligado, quem marca é o FUNIL. Deixar o campo por
-                          passo aberto aqui convidaria a criar uma segunda marcação que
-                          acumula no card — as duas juntas quebram o "uma etiqueta só". */}
-                      {editing.progress_tagging ? (
-                        <div>
-                          <UILabel className="text-xs">Etiqueta</UILabel>
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            O funil marca sozinho em que mensagem o lead parou.
-                          </p>
-                        </div>
-                      ) : (
-                        <div>
-                          <UILabel className="text-xs">Tag ao enviar</UILabel>
-                          <Input value={s.tag_on_send ?? ''} onChange={e => updateStep(idx, { tag_on_send: e.target.value })} />
-                        </div>
-                      )}
                     </div>
 
                     <div className="mt-2">
@@ -850,16 +849,42 @@ export default function FollowupSequences() {
                     )}
 
                     <div className="mt-2">
-                      <StageSelector
-                        currentSlug={s.move_to_stage_slug ?? ''}
-                        pipelines={pipelines}
-                        stagesByPipeline={stagesByPipeline}
-                        loadStages={loadStages}
-                        onChange={(slug) => updateStep(idx, { move_to_stage_slug: slug })}
-                      />
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => setOpenAdvanced(prev => ({ ...prev, [idx]: !advancedOpen }))}
+                      >
+                        {advancedOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                        Mais opções
+                      </button>
+
+                      {advancedOpen && (
+                        <div className="mt-2 space-y-3 rounded-md border bg-muted/20 p-3">
+                          {!editing.progress_tagging && (
+                            <div>
+                              <UILabel className="text-xs">Tag ao enviar</UILabel>
+                              <Input value={s.tag_on_send ?? ''} onChange={e => updateStep(idx, { tag_on_send: e.target.value })} />
+                            </div>
+                          )}
+                          <div>
+                            <UILabel className="text-xs">Mover o card de coluna nesta mensagem</UILabel>
+                            <p className="mb-1 text-xs text-muted-foreground">
+                              Deixe em branco para o lead continuar na coluna em que já está.
+                            </p>
+                            <StageSelector
+                              currentSlug={s.move_to_stage_slug ?? ''}
+                              pipelines={pipelines}
+                              stagesByPipeline={stagesByPipeline}
+                              loadStages={loadStages}
+                              onChange={(slug) => updateStep(idx, { move_to_stage_slug: slug })}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
 
                 <Button variant="outline" size="sm" onClick={addStep}>
                   <Plus className="mr-1 h-3 w-3" /> Adicionar passo
