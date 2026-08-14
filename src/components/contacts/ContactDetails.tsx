@@ -285,15 +285,15 @@ export default function ContactDetails({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="!w-[96vw] !max-w-[96vw] sm:!w-[90vw] sm:!max-w-[1400px] max-h-[92vh] p-0 gap-0 flex flex-col"
-      >
-        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
+      {/* `p-0` mantém o respiro por conta das seções abaixo (cada uma tem borda
+          própria); do preset aqui interessa a folga em volta e o teto de 1400px. */}
+      <DialogContent size="wide" className="p-0 gap-0 flex flex-col overflow-hidden">
+        <DialogHeader className="px-6 lg:px-8 pt-6 pb-4 border-b shrink-0">
           <DialogTitle>{t('details.title')}</DialogTitle>
         </DialogHeader>
 
         {/* Contact Header - Fixed */}
-        <div className="flex items-start gap-4 px-6 py-4 border-b shrink-0">
+        <div className="flex items-start gap-4 px-6 lg:px-8 py-4 border-b shrink-0">
           <Avatar className="h-20 w-20 shrink-0">
             {contact.avatar_url || contact.thumbnail ? (
               <img
@@ -382,7 +382,7 @@ export default function ContactDetails({
           onValueChange={setActiveTab}
           className="flex-1 flex flex-col overflow-hidden"
         >
-          <TabsList className="shrink-0 mx-6 mt-4 mb-0 flex overflow-x-auto">
+          <TabsList className="shrink-0 mx-6 lg:mx-8 mt-4 mb-0 flex overflow-x-auto">
             {tabs.map(tab => {
               const Icon = tab.icon;
               return (
@@ -395,7 +395,7 @@ export default function ContactDetails({
           </TabsList>
 
           <ScrollArea className="flex-1 overflow-y-auto">
-            <div className="px-6">
+            <div className="px-6 lg:px-8">
               {/* Companies Tab (for person contacts) */}
               {hasCompanies && (
                 <TabsContent value="companies" className="space-y-4 py-6 mt-0">

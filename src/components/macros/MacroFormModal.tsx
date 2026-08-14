@@ -228,7 +228,12 @@ export default function MacroFormModal({ isOpen, onClose, macro, onSuccess }: Ma
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl w-[85vw] min-w-[700px] max-h-[90vh] overflow-y-auto bg-sidebar border-sidebar-border">
+      {/* O `min-w-[700px]` saiu: no celular ele forçava barra de rolagem horizontal,
+          e da largura de tablet pra cima o preset já entrega mais de 700px sozinho. */}
+      <DialogContent
+        size="wide"
+        className="sm:max-w-6xl overflow-y-auto bg-sidebar border-sidebar-border"
+      >
         <DialogHeader>
           <DialogTitle className="text-sidebar-foreground">
             {isEditing ? t('modal.title.edit') : t('modal.title.create')}

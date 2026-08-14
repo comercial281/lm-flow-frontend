@@ -272,14 +272,13 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
-      {/* sm:max-w-* precisa do prefixo: o DialogContent do design system traz
-          sm:max-w-lg (512px) embutido, e a media query vence classe sem prefixo.
-          O style inline é o cinto de segurança. */}
+      {/* Folga e altura vêm do preset `size="wide"` (ver ds.tsx); aqui fica só o
+          teto, que é maior no modo lote por causa da tabela de conferência. */}
       <DialogContent
+        size="wide"
         className={batch
-          ? 'w-[96vw] max-w-[96vw] sm:max-w-[1600px] h-[88vh] flex flex-col overflow-hidden'
-          : 'w-[92vw] max-w-[92vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto'}
-        style={batch ? { width: '96vw', maxWidth: 'min(1600px, 96vw)' } : { maxWidth: 'min(48rem, 92vw)' }}
+          ? 'sm:max-w-[1600px] h-[88dvh] flex flex-col overflow-hidden'
+          : 'sm:max-w-3xl overflow-y-auto'}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

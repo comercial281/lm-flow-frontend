@@ -725,7 +725,9 @@ const AgentWizardModal = ({ open, onOpenChange, onAgentCreated, embedded = false
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!w-[72vw] !max-w-[72vw] h-[94vh] max-h-[94vh] overflow-hidden p-0 sm:!max-w-[72vw]">
+      {/* Teto próprio: o assistente ocupava 72% da janela. Sem ele o preset o
+          deixaria ir até 1400px, o que é mais largo do que ele era antes. */}
+      <DialogContent size="wide" className="sm:max-w-6xl h-[92dvh] overflow-hidden p-0">
         {wizardContent}
       </DialogContent>
     </Dialog>

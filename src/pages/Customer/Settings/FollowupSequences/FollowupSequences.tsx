@@ -778,7 +778,7 @@ export default function FollowupSequences() {
 
       {/* Editor Dialog */}
       <Dialog open={editorOpen} onOpenChange={(o) => !o && closeEditor()}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogContent size="wide" className="sm:max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editing && !editing.id ? 'Novo funil de follow-up' : `Editar sequência: ${editing?.name}`}
@@ -1088,7 +1088,7 @@ export default function FollowupSequences() {
 
       {/* Escolher modelo pronto */}
       <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogContent size="wide" className="sm:max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Modelos prontos</DialogTitle>
             <DialogDescription>
@@ -1189,7 +1189,7 @@ export default function FollowupSequences() {
 
       {/* Histórico do funil */}
       <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogContent size="wide" className="sm:max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{history ? `Histórico: ${history.sequence.name}` : 'Histórico do funil'}</DialogTitle>
             <DialogDescription>

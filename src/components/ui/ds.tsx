@@ -29,25 +29,73 @@
 // grupo `w-*` (`w-[calc(100%-2rem)]`, liberado de volta em `sm:`), que nenhum
 // desses modais disputa. Quem define o próprio `w-` (MacroFormModal,
 // AgentWizardModal) continua vencendo, porque vem depois na string.
+//
+// Por fim, `size="wide"` é o preset do MODAL GRANDE (cadastrar imóvel, funil de
+// follow-up, ficha do contato, importar imóveis, site builder...). Antes cada
+// tela escrevia a própria largura em PORCENTAGEM da janela (94vw, 95vw, 96vw), e
+// porcentagem não deixa folga: 96% de 1440px são 20px de cada lado, e quanto
+// maior o monitor, mais colado o modal fica na borda. O preset troca isso por
+// uma folga FIXA (20px no celular, 48px do tablet pra cima) mais um teto de
+// 1400px, então a folga só cresce — nunca some. Junto vai o respiro de dentro
+// (a base traz `p-6`, que é pouco para uma janela de 1400px de largura).
 import { forwardRef, type ComponentProps, type ComponentRef } from 'react';
 import { DialogContent as BaseDialogContent, DialogDescription } from '@evoapi/design-system';
 
 export * from '@evoapi/design-system';
 
-type DialogContentProps = ComponentProps<typeof BaseDialogContent>;
+type DialogContentProps = ComponentProps<typeof BaseDialogContent> & {
+  /**
+   * `wide` aplica o preset do modal grande (folga em volta + respiro interno +
+   * teto de 1400px). Quem precisar de outro teto passa `sm:max-w-*` na
+   * className, que vence porque vem depois na string.
+   */
+  size?: 'default' | 'wide';
+};
 
 // `max-w-*` sem `sm:`/`md:`/`lg:`/`!` na frente. O `(^|\s)` evita casar com o
 // sufixo de coisas como `sm:max-w-lg`.
 const UNPREFIXED_MAX_W = /(^|\s)!?max-w-/;
-const UNCAP = 'sm:max-w-none w-[calc(100%-2rem)] sm:w-full';
+const UNCAP = 'sm:max-w-none w-[calc(100%-2.5rem)] sm:w-full';
+
+// ATENÇÃO à mistura de prefixos: o teto do preset é `sm:max-w-[1400px]`, NUNCA
+// `sm:max-w-none` + um teto sem prefixo. Os dois sobreviveriam ao tailwind-merge
+// (grupos diferentes) e a regra com `sm:` vence em qualquer tela >= 640px,
+// soltando a largura. O `sm:max-w-*` daqui é o que derruba o `sm:max-w-lg` da base.
+const WIDE = [
+  // folga entre o modal e a borda da tela: 20px no celular, 48px daí pra cima
+  'w-[calc(100%-2.5rem)] sm:w-[calc(100%-6rem)]',
+  'max-w-[calc(100%-2.5rem)] sm:max-w-[1400px]',
+  // `dvh`, não `vh`: no celular o `vh` ignora a barra do navegador e joga o
+  // rodapé do modal (onde ficam Salvar/Cancelar) para fora da área visível.
+  'max-h-[92dvh]',
+  'rounded-xl',
+].join(' ');
+
+// O respiro de dentro vai SEPARADO porque `p-0` não desliga `sm:p-6`: para o
+// tailwind-merge são grupos diferentes (modificadores diferentes), então os dois
+// sobrevivem e a variante `sm:` vence em qualquer tela >= 640px. Um modal que
+// pede `p-0` para cuidar do próprio recheio (ficha do contato, testar agente)
+// acabaria com padding duplicado no computador. Por isso: se quem chama declara
+// o próprio `p-*` sem prefixo, o preset não injeta padding nenhum.
+const WIDE_PADDING = 'p-5 sm:p-6 lg:p-8';
+// `p-` seguido de dígito ou `[`, para não casar com `px-6`/`py-4`/`pt-6`.
+const UNPREFIXED_P = /(^|\s)!?p-(\d|\[)/;
 
 export const DialogContent = forwardRef<ComponentRef<typeof BaseDialogContent>, DialogContentProps>(
-  ({ children, className, ...props }, ref) => {
-    const needsUncap = typeof className === 'string' && UNPREFIXED_MAX_W.test(className);
+  ({ children, className, size = 'default', ...props }, ref) => {
+    // O preset entra ANTES da className de quem chama: serve de padrão e nunca
+    // atropela a tela que tem necessidade própria (`p-0`, outro teto, `h-*`).
+    const injected = size === 'wide'
+      ? (typeof className === 'string' && UNPREFIXED_P.test(className)
+          ? WIDE
+          : `${WIDE} ${WIDE_PADDING}`)
+      : typeof className === 'string' && UNPREFIXED_MAX_W.test(className)
+        ? UNCAP
+        : '';
     return (
       <BaseDialogContent
         ref={ref}
-        className={needsUncap ? `${UNCAP} ${className}` : className}
+        className={injected ? `${injected} ${className ?? ''}` : className}
         {...props}
       >
         <DialogDescription className="sr-only">Conteúdo do diálogo</DialogDescription>
