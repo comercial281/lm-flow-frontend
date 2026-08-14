@@ -48,6 +48,26 @@ describe('tempo do passo: cumulativo ↔ relativo', () => {
   });
 });
 
+// A prévia dos modelos prontos usa a MESMA conversão do editor, mas o passo que
+// ela recebe é mais magro: só posição, tempo e texto. Se a conversão voltasse a
+// exigir o passo completo, a prévia teria que duplicar a conta — e foi duplicando
+// que as duas telas passaram a mostrar números diferentes pros mesmos passos.
+describe('prévia dos modelos prontos', () => {
+  it('converte passo enxuto sem perder os outros campos', () => {
+    const preview = [
+      { position: 1, delay_minutes: 60,    content: 'primeira' },
+      { position: 2, delay_minutes: 1500,  content: 'segunda' },
+      { position: 3, delay_minutes: 4380,  content: 'terceira' },
+    ];
+
+    expect(toRelativeSteps(preview)).toEqual([
+      { position: 1, delay_minutes: 60,   content: 'primeira' },
+      { position: 2, delay_minutes: 1440, content: 'segunda' },
+      { position: 3, delay_minutes: 2880, content: 'terceira' },
+    ]);
+  });
+});
+
 describe('unidade mostrada na tela', () => {
   it('mostra dias quando o número é redondo em dias', () => {
     expect(pickUnit(10080)).toBe('d');

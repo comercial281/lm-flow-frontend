@@ -784,7 +784,8 @@ export default function FollowupSequences() {
               {editing && !editing.id ? 'Novo funil de follow-up' : `Editar sequência: ${editing?.name}`}
             </DialogTitle>
             <DialogDescription>
-              Tempos são cumulativos desde o início. Toque nas variáveis abaixo de cada mensagem pra inserir dados do lead.
+              Cada mensagem espera o tempo que você põe nela, contado a partir da anterior. Toque nas
+              variáveis abaixo de cada mensagem pra inserir dados do lead.
             </DialogDescription>
           </DialogHeader>
 
@@ -1093,8 +1094,8 @@ export default function FollowupSequences() {
             <DialogTitle>Modelos prontos</DialogTitle>
             <DialogDescription>
               Cada modelo cria um funil já escrito, pra você editar. Ele não entra em ação sozinho:
-              só manda mensagem depois que você apontar o disparo automático pra ele, ali em cima,
-              ou usar o botão Testar.
+              só manda mensagem depois que você abrir o funil e escolher a coluna em
+              "Quando este funil começa" — ou usar o botão Testar.
             </DialogDescription>
           </DialogHeader>
 
@@ -1139,12 +1140,22 @@ export default function FollowupSequences() {
                     </div>
                   </div>
 
+                  {/* O modelo chega com o tempo contado desde o começo do funil, que é como
+                      o servidor guarda. A prévia mostra RELATIVO à mensagem anterior, igual
+                      ao editor: mostrar os dois jeitos fazia os mesmos passos aparecerem com
+                      números diferentes nas duas telas. */}
                   {previewKey === tpl.key && (
                     <div className="mt-3 grid gap-2 border-t pt-3">
-                      {tpl.steps.map(s => (
+                      <p className="text-xs text-muted-foreground">
+                        O tempo de cada mensagem conta a partir da anterior — a primeira, a partir
+                        de o lead entrar no funil.
+                      </p>
+                      {toRelativeSteps(tpl.steps).map(s => (
                         <div key={s.position} className="flex items-start gap-3 rounded border bg-background p-2 text-sm">
                           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-mono">#{s.position}</span>
-                          <span className="shrink-0 text-muted-foreground">{formatDelay(s.delay_minutes)}</span>
+                          <span className="shrink-0 text-muted-foreground">
+                            {s.delay_minutes === 0 ? 'na hora' : `+${formatDelay(s.delay_minutes)}`}
+                          </span>
                           <span className="flex-1">{s.content}</span>
                         </div>
                       ))}
