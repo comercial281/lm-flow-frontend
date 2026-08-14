@@ -91,7 +91,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   // servidor, mas o histórico já gravado continua apontando para o contato: por
   // isso o descarte é aqui na exibição, e não só no que chega novo.
   const senderIsContact = String(message.sender?.type || '').toLowerCase() === 'contact';
-  const agentDisplayName = senderIsContact ? '' : message.sender?.name;
+  // Mensagem AUTOMÁTICA também não leva nome de pessoa.
+  //
+  // O follow-up grava o eco no chat com um usuário real como autor (o primeiro
+  // administrador da conta), porque a mensagem precisa de um autor pra existir. Na
+  // tela isso saía como "Atendente — Fulano", dando a entender que aquela pessoa
+  // escreveu e mandou. A IA Vendedora nunca teve esse problema e serve de régua:
+  // disparo automático aparece só como "Atendente".
+  //
+  // O descarte é na EXIBIÇÃO, pelo mesmo motivo do caso acima: o que já foi enviado
+  // continua gravado com o autor antigo, e também precisa parar de mostrar o nome.
+  const isAutomated = Boolean(message.content_attributes?.automated);
+  const agentDisplayName = senderIsContact || isAutomated ? '' : message.sender?.name;
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 

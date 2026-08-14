@@ -26,9 +26,14 @@ export interface FollowupSequence {
   /** Marca no card em que mensagem o lead parou (uma etiqueta por vez) e permite
    *  retomar dali quando ele volta pro funil, em vez de recomeçar da primeira. */
   progress_tagging: boolean;
+  /** Coluna pra onde o card volta quando o lead responde. Vazio = fica onde está. */
+  reply_stage_slug?: string | null;
   /** Exemplo da etiqueta que o funil vai aplicar, vindo do backend. */
   progress_tag_sample?: string | null;
   steps_count: number;
+  /** Quantos disparos este funil já tem. A confirmação de excluir mostra o número,
+   *  porque apagar o funil apaga o histórico junto. */
+  jobs_count: number;
   /** Quantas portas de entrada o funil tem. Zero = só roda quando alguém mandar
    *  pelo card; a lista avisa, senão parece que o funil está quebrado. */
   entries_count: number;
@@ -100,6 +105,7 @@ export interface FollowupSequenceFormData {
   stop_on_reply?: boolean;
   business_hours_only?: boolean;
   progress_tagging?: boolean;
+  reply_stage_slug?: string | null;
   followup_steps_attributes?: FollowupStep[];
 }
 

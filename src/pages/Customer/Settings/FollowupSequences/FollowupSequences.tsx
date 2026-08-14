@@ -332,9 +332,13 @@ const NEW_SEQUENCE = (): FollowupSequence => ({
   stop_on_reply: true,
   business_hours_only: false,
   progress_tagging: true,
+  // Vazio = o card fica onde está quando o lead responder. Funil novo não move
+  // card de ninguém sem alguém escolher.
+  reply_stage_slug: '',
   steps_count: 0,
-  // Funil que ainda não existe não tem entrada: elas só podem ser criadas depois
-  // de salvar, porque cada uma é uma regra apontando pro funil.
+  // Funil que ainda não existe não tem disparo nem entrada: as entradas só podem
+  // ser criadas depois de salvar, porque cada uma é uma regra apontando pro funil.
+  jobs_count: 0,
   entries_count: 0,
   steps: [],
   created_at: '',
@@ -563,6 +567,9 @@ export default function FollowupSequences() {
       stop_on_reply: editing.stop_on_reply,
       business_hours_only: editing.business_hours_only,
       progress_tagging: editing.progress_tagging,
+      // String vazia (e não undefined) pra conseguir LIMPAR a escolha: undefined
+      // some do corpo e o servidor manteria a coluna anterior.
+      reply_stage_slug: editing.reply_stage_slug ?? '',
       // A tela edita relativo; a API recebe cumulativo. Converter aqui é o que
       // permite guardar do jeito que a retomada e o horário comercial precisam.
       followup_steps_attributes: toCumulativeSteps(steps).map((s, i) => ({ ...s, position: i + 1 })),
@@ -590,6 +597,25 @@ export default function FollowupSequences() {
       toast.error(apiErrorMessage(e, isNew ? 'Falha ao criar o funil.' : 'Falha ao salvar.'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Excluir apaga o HISTÓRICO do funil junto (os disparos são filhos dele no banco).
+  // A confirmação diz o número ANTES: descobrir depois que o histórico sumiu é o
+  // tipo de surpresa que não dá pra desfazer.
+  const removeSequence = async (seq: FollowupSequence) => {
+    const disparos = seq.jobs_count ?? 0;
+    const aviso = disparos > 0
+      ? `\n\nO histórico deste funil vai junto: ${disparos} disparo(s) registrados serão apagados.`
+      : '';
+    if (!window.confirm(`Excluir o funil "${seq.name}"?${aviso}\n\nNão dá pra desfazer.`)) return;
+
+    try {
+      await followupSequencesService.delete(seq.id);
+      toast.success('Funil excluído.');
+      load();
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Falha ao excluir o funil.'));
     }
   };
 
@@ -719,6 +745,18 @@ export default function FollowupSequences() {
                   <Button variant="default" size="sm" onClick={() => openEdit(seq)}>
                     <Edit className="mr-1 h-3 w-3" /> Editar
                   </Button>
+                  {/* Separado dos outros por uma barra: é o único irreversível, e
+                      encostado em "Editar" vira clique errado. */}
+                  <span className="mx-1 h-5 w-px bg-border" aria-hidden />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="Excluir este funil"
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => removeSequence(seq)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
                 </div>
               </div>
 
@@ -824,6 +862,36 @@ export default function FollowupSequences() {
                     </span>
                   </span>
                 </label>
+              </div>
+
+              {/* O card voltar de lugar quando o lead responde já existia, mas com
+                  destino fixo: procurava uma coluna chamada "Novo" e só no pipeline
+                  padrão, desistindo em silêncio fora disso. Agora é escolha, e o
+                  vazio é dito na tela em vez de deduzido. */}
+              <div className="rounded-lg border bg-muted/20 p-3">
+                <h4 className="text-sm font-medium">Quando o lead responder</h4>
+                <p className="mt-0.5 mb-2 text-xs text-muted-foreground">
+                  O follow-up para sozinho assim que o lead responde. Aqui você escolhe
+                  para qual coluna o card volta — deixando em branco, ele fica onde está.
+                </p>
+                <StageSelector
+                  currentSlug={editing.reply_stage_slug ?? ''}
+                  pipelines={pipelines}
+                  stagesByPipeline={stagesByPipeline}
+                  loadStages={loadStages}
+                  onChange={slug => setEditing({ ...editing, reply_stage_slug: slug })}
+                />
+                {editing.reply_stage_slug && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="mt-1"
+                    onClick={() => setEditing({ ...editing, reply_stage_slug: '' })}
+                  >
+                    Não mover o card
+                  </Button>
+                )}
               </div>
 
               {/* "Quando este funil começa" vem ANTES das mensagens de propósito:
