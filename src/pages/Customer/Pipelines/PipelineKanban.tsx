@@ -2108,6 +2108,9 @@ export default function PipelineKanban() {
           pipeline={pipeline}
           onSubmit={handleUpdateItem}
           onItemStageMoved={moveItemToStageLocal}
+          // Tag grava na hora: recarrega em silêncio pro selo do card refletir a
+          // mudança mesmo que a pessoa feche o card sem salvar.
+          onLabelsChanged={() => { void loadPipelineData(true); }}
           loading={isEditingItem}
         />
       )}
