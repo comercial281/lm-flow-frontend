@@ -30,8 +30,15 @@ export const pickUnit = (minutes: number): DelayUnit => {
   return 'min';
 };
 
-/** Cumulativo (API) → relativo (tela). O passo 1 já é relativo à entrada no funil. */
-export const toRelativeSteps = (steps: FollowupStep[]): FollowupStep[] => {
+/**
+ * Cumulativo (API) → relativo (tela). O passo 1 já é relativo à entrada no funil.
+ *
+ * Genérico de propósito: além dos passos do funil, a prévia dos modelos prontos
+ * passa por aqui, e ela carrega um passo mais magro (posição, tempo e texto).
+ * Duplicar a conversão pra atender os dois formatos é como as duas telas passaram
+ * a mostrar números diferentes pros mesmos passos.
+ */
+export const toRelativeSteps = <T extends { delay_minutes: number }>(steps: T[]): T[] => {
   let previous = 0;
   return steps.map(s => {
     const cumulative = Number(s.delay_minutes) || 0;
