@@ -142,7 +142,15 @@ class ContactsService {
             });
           } else if (Array.isArray(value)) {
             // Handle arrays like labels
-            value.forEach(item => formData.append(`${key}[]`, String(item)));
+            // Lista vazia precisa de uma entrada em branco: sem nenhuma entrada o
+            // campo simplesmente não vai no envio, e o backend entende "não mexi
+            // nas tags" em vez de "tirei todas". Era assim que a última tag
+            // sempre voltava quando a ficha era salva junto com uma foto nova.
+            if (value.length === 0) {
+              if (key === 'labels') formData.append(`${key}[]`, '');
+            } else {
+              value.forEach(item => formData.append(`${key}[]`, String(item)));
+            }
           } else {
             formData.append(key, String(value));
           }

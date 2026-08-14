@@ -77,6 +77,10 @@ interface EditItemModalProps {
   }) => void;
   // Move otimista no board (sem reload) quando a etapa muda pelas ações do card.
   onItemStageMoved?: (itemId: string, toStageId: string) => void;
+  // Tag aplicada/removida grava na hora, sem passar pelo botão Salvar. Sem este
+  // aviso o board só recarregava ao salvar o card, e quem só tirava uma tag e
+  // fechava continuava vendo o selo antigo — parecia que não tinha saído.
+  onLabelsChanged?: () => void;
   loading: boolean;
 }
 
@@ -99,6 +103,7 @@ export default function EditItemModal({
   pipeline,
   onSubmit,
   onItemStageMoved,
+  onLabelsChanged,
   loading,
 }: EditItemModalProps) {
   const { t } = useLanguage('pipelines');
@@ -220,22 +225,22 @@ export default function EditItemModal({
         .then(list => { if (!cancelled) setRoletas((list || []).filter(r => r.is_active)); })
         .catch(() => { if (!cancelled) setRoletas([]); });
 
-      // Labels ativas: da conversa (lead de WhatsApp) ou, na ausência de conversa
-      // (lead de cadastro/formulário Meta), do contato — senão a tag do contato
-      // ficava invisível no modal.
-      // Prefere a lista NÃO-VAZIA (conversa OU contato). `??` falhava porque o
-      // serializer pode mandar labels:[] (array vazio, que não é null) na conversa,
-      // escondendo a tag do contato. E labels do contato vêm como {name}, da
-      // conversa como {title} — por isso lemos title ?? name.
+      // Tags ativas: a UNIÃO das tags do contato e das da conversa.
+      // Escolher só uma das duas listas escondia tag: o selo do card lê as do
+      // CONTATO (é onde as automações escrevem) e o chat espelha na CONVERSA. Com
+      // a lista da conversa ganhando, a tag que só existia no contato ficava
+      // invisível aqui — e o "x" parecia não funcionar, porque ela voltava a
+      // aparecer na próxima abertura do card.
+      // Do contato as tags vêm como {name}, da conversa como {title}.
       const convLabels = (item.conversation as any)?.labels;
       const contactLabels = (item.contact as any)?.labels;
-      const rawLabels =
-        (Array.isArray(convLabels) && convLabels.length ? convLabels
-          : Array.isArray(contactLabels) && contactLabels.length ? contactLabels
-          : []);
-      setActiveLabels(rawLabels
-        .map((l: any) => (typeof l === 'string' ? l : (l?.title ?? l?.name ?? '')))
-        .filter(Boolean));
+      const labelNames = (raw: unknown): string[] =>
+        Array.isArray(raw)
+          ? (raw as Array<string | { title?: string; name?: string }>)
+              .map(l => (typeof l === 'string' ? l : (l?.title ?? l?.name ?? '')))
+              .filter(Boolean)
+          : [];
+      setActiveLabels([...new Set([...labelNames(contactLabels), ...labelNames(convLabels)])]);
 
       // Fetch catalog e labels disponíveis
       pipelineServiceDefinitionsService
@@ -343,17 +348,20 @@ export default function EditItemModal({
   const labelTargetContactId =
     item?.contact?.id ?? (item?.conversation as any)?.contact?.id ?? null;
 
-  // Persiste a lista de tags no alvo certo. Conversa = add/remove incremental;
-  // Contato = PATCH substitui a lista inteira (label_list no backend).
+  // Persiste a tag nos DOIS lugares onde ela vive.
+  // O contato é a fonte de verdade: é dele que sai o selo colorido no card e é
+  // nele que as automações escrevem. Gravando só na conversa, tirar a tag não
+  // tinha efeito nenhum visível — o selo continuava no card e a tag voltava ao
+  // reabrir. O contato recebe a lista inteira (substitui); a conversa recebe só
+  // o que mudou, pra não apagar marcador de follow-up que só existe lá.
   const persistLabels = useCallback(
     async (nextLabels: string[], change: { added?: string; removed?: string }) => {
+      if (labelTargetContactId) {
+        await contactsService.updateContact(String(labelTargetContactId), { labels: nextLabels });
+      }
       if (labelTargetConvId) {
         if (change.added) await conversationAPI.addLabels(labelTargetConvId, [change.added]);
         if (change.removed) await conversationAPI.removeLabels(labelTargetConvId, [change.removed]);
-        return;
-      }
-      if (labelTargetContactId) {
-        await contactsService.updateContact(String(labelTargetContactId), { labels: nextLabels });
       }
     },
     [labelTargetConvId, labelTargetContactId],
@@ -362,17 +370,22 @@ export default function EditItemModal({
   const toggleLabel = useCallback(async (labelTitle: string) => {
     if (!labelTargetConvId && !labelTargetContactId) return;
     setSavingLabel(true);
+    const has = activeLabels.includes(labelTitle);
     try {
-      const has = activeLabels.includes(labelTitle);
       const next = has
         ? activeLabels.filter(l => l !== labelTitle)
         : [...activeLabels, labelTitle];
       await persistLabels(next, has ? { removed: labelTitle } : { added: labelTitle });
       setActiveLabels(next);
-    } catch { /* silent */ } finally {
+      onLabelsChanged?.();
+    } catch {
+      // Falhar calado era o pior do caso antigo: a tag sumia da lista e voltava
+      // sozinha depois, sem nenhum aviso de que não tinha sido salva.
+      toast.error(has ? 'Não foi possível remover a tag' : 'Não foi possível aplicar a tag');
+    } finally {
       setSavingLabel(false);
     }
-  }, [activeLabels, persistLabels, labelTargetConvId, labelTargetContactId]);
+  }, [activeLabels, persistLabels, labelTargetConvId, labelTargetContactId, onLabelsChanged]);
 
   const createAndApplyLabel = useCallback(async (rawTitle: string) => {
     const title = rawTitle.trim();
@@ -390,13 +403,16 @@ export default function EditItemModal({
         const next = [...activeLabels, canonical];
         await persistLabels(next, { added: canonical });
         setActiveLabels(next);
+        onLabelsChanged?.();
       }
-    } catch { /* silent */ } finally {
+    } catch {
+      toast.error('Não foi possível criar a tag');
+    } finally {
       setCreatingLabel(false);
       setLabelPopoverOpen(false);
       setLabelSearch('');
     }
-  }, [activeLabels, persistLabels, labelTargetConvId, labelTargetContactId]);
+  }, [activeLabels, persistLabels, labelTargetConvId, labelTargetContactId, onLabelsChanged]);
 
   // Salva nome/telefone/e-mail no CONTATO (endpoint separado do item do funil).
   // Só manda o que mudou; telefone vai em E.164 porque o backend recusa outro formato.
