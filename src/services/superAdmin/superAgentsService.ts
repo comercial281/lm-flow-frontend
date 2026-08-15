@@ -91,7 +91,69 @@ export const superAgentsService = {
     const res = await api.get('/super/sales_agents/costs', { params: { days } });
     return (res.data as Envelope<CostReport>).data;
   },
+
+  // O avesso do costs: o RESULTADO da IA, não o gasto dela. Traz todos os
+  // clientes de uma vez, cada um com a própria série diária, porque trocar de
+  // cliente é o gesto mais repetido quando a tela está sendo mostrada pra alguém.
+  async performance(days = 30): Promise<PerformanceReport> {
+    const res = await api.get('/super/sales_agents/performance', { params: { days } });
+    return (res.data as Envelope<PerformanceReport>).data;
+  },
 };
+
+// ── Resultados da IA ────────────────────────────────────────────────────────
+
+export interface PerformancePoint {
+  day: string;
+  leads: number;
+  replies: number;
+  visits: number;
+}
+
+// Contagens que existem tanto por cliente quanto no total.
+export interface PerformanceCounts {
+  ai_leads: number;
+  replies: number;
+  failed: number;
+  skipped: number;
+  runs: number;
+  after_hours_replies: number;
+  attended: number;
+  answered: number;
+  qualified: number;
+  hot: number;
+  handoffs: number;
+  visits: number;
+  visits_completed: number;
+  visits_upcoming: number;
+  agents_total: number;
+  agents_enabled: number;
+  cost_usd: number;
+  // null (e não 0) quando não houve atendimento no período: "0%" acusaria a IA
+  // de um fracasso que não houve. A tela mostra "—" nesse caso.
+  reply_rate: number | null;
+  qualify_rate: number | null;
+  median_latency_ms: number | null;
+}
+
+export interface PerformanceTenant extends PerformanceCounts {
+  tenant_slug: string | null;
+  tenant_name: string;
+  series: PerformancePoint[];
+}
+
+export interface PerformanceTotals extends PerformanceCounts {
+  clients: number;
+}
+
+export interface PerformanceReport {
+  days: number;
+  since: string;
+  generated_at: string;
+  totals: PerformanceTotals;
+  tenants: PerformanceTenant[];
+  series: PerformancePoint[];
+}
 
 export interface CostTotals {
   cost_usd: number;

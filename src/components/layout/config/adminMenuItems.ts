@@ -15,6 +15,7 @@ import {
   MessageSquarePlus,
   Radio,
   DollarSign,
+  Sparkles,
 } from 'lucide-react';
 
 /**
@@ -71,6 +72,14 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     href: '/admin/agentes',
     icon: Bot,
     description: 'A IA Vendedora de todos os clientes: ligar, desligar e configurar',
+  },
+  {
+    // Vem ANTES do Custo de propósito: esta é a tela que se abre na frente do
+    // cliente, e a outra é a que fecha a fatura.
+    name: 'Resultados da IA',
+    href: '/admin/resultados-ia',
+    icon: Sparkles,
+    description: 'O que a IA produziu: leads atendidos, taxa de resposta e visitas que ela agendou',
   },
   {
     name: 'Custo da IA',

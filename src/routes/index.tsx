@@ -131,6 +131,7 @@ const PushCentral = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral')
 const ClientMode = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientMode'));
 const CerebroUniversal = lazyWithRetry(() => import('@/pages/SuperAdmin/CerebroUniversal'));
 const CustoIA = lazyWithRetry(() => import('@/pages/SuperAdmin/CustoIA'));
+const ResultadosIA = lazyWithRetry(() => import('@/pages/SuperAdmin/ResultadosIA'));
 const SuperAgents = lazyWithRetry(() => import('@/pages/SuperAdmin/SuperAgents'));
 const OnboardingForms = lazyWithRetry(() => import('@/pages/SuperAdmin/OnboardingForms'));
 const SdrRefinement = lazyWithRetry(() => import('@/pages/SuperAdmin/SdrRefinement'));
@@ -2105,6 +2106,21 @@ const AppRouter = () => {
                 <SuperAdminRoute>
                   <AdminLayout>
                     <SuperAgents />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          {/* O avesso do Custo da IA: o que ela PRODUZIU. É a tela que o dono
+              abre na frente do cliente — leads atendidos, taxa de resposta,
+              qualificados e as visitas que a IA marcou sozinha. */}
+          <Route
+            path="/admin/resultados-ia"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <ResultadosIA />
                   </AdminLayout>
                 </SuperAdminRoute>
               </PrivateRoute>
