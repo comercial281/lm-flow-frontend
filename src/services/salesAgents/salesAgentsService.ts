@@ -1,4 +1,5 @@
 import api from '@/services/core/api';
+import type { AgentPerformance } from '@/types/aiResults';
 
 export type SalesAgentMode = 'seller' | 'sdr' | 'assistant';
 
@@ -503,6 +504,15 @@ export const salesAgentsService = {
 
   // Checklist de "essa IA está mesmo no ar?": canal, credenciais da Evolution,
   // chave da IA, base de conhecimento, horário, gatilhos e disputa de agentes.
+  // O RESULTADO desta IA, pra aba Resultados. Mesma medição que a Leal Mídia usa
+  // no painel dela — de propósito: dois números diferentes pro mesmo fato
+  // transformariam qualquer conversa numa discussão sobre qual painel mente.
+  // Devolve null quando esta IA ainda não tem nenhum registro no período.
+  async performance(id: string, days = 30): Promise<AgentPerformance | null> {
+    const res = await api.get(`${BASE}/${id}/performance`, { params: { days } });
+    return (res.data as { data: AgentPerformance | null }).data ?? null;
+  },
+
   async diagnostics(id: string): Promise<HealthReport> {
     const res = await api.get(`${BASE}/${id}/diagnostics`);
     return (res.data as { data: HealthReport }).data;
