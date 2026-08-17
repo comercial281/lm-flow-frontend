@@ -53,6 +53,8 @@ import { contactEventsService } from '@/services/contacts/contactEventsService';
 import { labelsService } from '@/services/contacts/labelsService';
 import { contactsService } from '@/services/contacts/contactsService';
 import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
+import { brokerAssignmentsService, type BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
+import RemoveFromRoletaDialog from '@/components/roleta/RemoveFromRoletaDialog';
 import { toast } from 'sonner';
 import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
@@ -143,6 +145,12 @@ export default function EditItemModal({
   // o round-robin fake. Escolher uma atribui o lead via sorteio ponderado.
   const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
   const [assigningRoleta, setAssigningRoleta] = useState(false);
+
+  // Ofertas EM ABERTO deste lead. Enquanto houver uma, o lead está no meio do
+  // sorteio com prazo correndo — e é só nesse caso que faz sentido oferecer
+  // "Tirar da roleta".
+  const [ofertasAbertas, setOfertasAbertas] = useState<BrokerAssignmentDetail[]>([]);
+  const [tirandoDaRoleta, setTirandoDaRoleta] = useState(false);
   const [showCreateRoleta, setShowCreateRoleta] = useState(false);
 
   // Tags/labels
@@ -224,6 +232,18 @@ export default function EditItemModal({
       roletaConfigService.getAll()
         .then(list => { if (!cancelled) setRoletas((list || []).filter(r => r.is_active)); })
         .catch(() => { if (!cancelled) setRoletas([]); });
+
+      // Este lead está com oferta correndo agora? Falha aqui só esconde o botão
+      // "Tirar da roleta" — o corretor sem permissão de mexer na roleta recebe
+      // 403 e não deve ver o botão mesmo.
+      const contatoDoLead = item.contact?.id ?? (item.conversation as any)?.contact?.id;
+      if (contatoDoLead) {
+        brokerAssignmentsService.listForLead(String(contatoDoLead))
+          .then(list => { if (!cancelled) setOfertasAbertas(list); })
+          .catch(() => { if (!cancelled) setOfertasAbertas([]); });
+      } else {
+        setOfertasAbertas([]);
+      }
 
       // Tags ativas: a UNIÃO das tags do contato e das da conversa.
       // Escolher só uma das duas listas escondia tag: o selo do card lê as do
@@ -870,6 +890,28 @@ export default function EditItemModal({
                       </SelectItem>
                     </SelectContent>
                   </Select>
+
+                  {/* Só aparece com oferta EM ABERTO: é o único momento em que há
+                      prazo correndo e corretor esperando. Sem isto, a única forma
+                      de tirar um lead da roleta era trocar o responsável na mão —
+                      e trocar para o MESMO corretor da oferta não encerrava nada,
+                      porque o sistema lê isso como escolha da própria roleta. */}
+                  {ofertasAbertas.length > 0 && (
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 dark:border-amber-900 dark:bg-amber-950/30">
+                      <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                        No sorteio agora, esperando o aceite de{' '}
+                        <strong>{ofertasAbertas.map(o => o.corretor ?? 'corretor').join(', ')}</strong>.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-1.5 h-7 text-xs"
+                        onClick={() => setTirandoDaRoleta(true)}
+                      >
+                        Tirar da roleta
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Fase */}
@@ -1232,6 +1274,18 @@ export default function EditItemModal({
             availableUsers={users}
           />
         </>
+      )}
+
+      {/* Tirar da roleta — o destino do lead é escolhido no diálogo. */}
+      {tirandoDaRoleta && (item.contact?.id || (item.conversation as any)?.contact?.id) && (
+        <RemoveFromRoletaDialog
+          open
+          onOpenChange={setTirandoDaRoleta}
+          contactId={String(item.contact?.id ?? (item.conversation as any)?.contact?.id)}
+          leadName={item.contact?.name ?? (item.conversation as any)?.contact?.name}
+          offers={ofertasAbertas}
+          onDone={() => setOfertasAbertas([])}
+        />
       )}
 
       {/* Criação de roleta direto do card (sem ir pra Configurações) */}

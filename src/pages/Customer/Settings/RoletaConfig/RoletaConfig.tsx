@@ -18,6 +18,7 @@ import {
   RoletaDiagnostic, RepairOwnersResult, RepairInboxAccessResult, RoletaQueue,
   RoletaHoursWindow, RoletaBusinessHours,
 } from '@/services/roletaConfig/roletaConfigService';
+import RemoveFromRoletaDialog from '@/components/roleta/RemoveFromRoletaDialog';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { DEFAULT_WINDOW } from '@/components/schedule/scheduleWindows';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
@@ -275,6 +276,9 @@ export default function RoletaConfigPage() {
     }
   };
   const [assignments, setAssignments] = useState<BrokerAssignment[]>([]);
+  // O lead que o gestor está tirando da roleta. A oferta some da lista assim que
+  // o diálogo confirma — por isso guardamos nome e contato, não a oferta.
+  const [tirandoDaRoleta, setTirandoDaRoleta] = useState<{ contactId: string; nome: string } | null>(null);
   const [loadingAssign, setLoadingAssign] = useState(false);
 
   // Fila ao vivo. O prazo corre em minutos, então recarregar de minuto em minuto
@@ -1049,16 +1053,42 @@ export default function RoletaConfigPage() {
                   Corretor: {a.assigned_user.name ?? a.assigned_user.id} — Round {a.round}
                 </p>
               </div>
-              <div className="text-right">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[a.status]}`}>
-                  {STATUS_LABEL[a.status] ?? a.status}
-                </span>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {formatDateTimeBR(a.assigned_at)}
-                </p>
+              <div className="flex items-center gap-3">
+                {/* Só na oferta EM ABERTO: é a única que ainda tem prazo correndo
+                    e corretor esperando — nas demais não há o que tirar. */}
+                {a.status === 'pending' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTirandoDaRoleta({
+                      contactId: String(a.contact_id),
+                      nome: a.contact_name ?? a.contact_phone ?? 'Lead',
+                    })}
+                  >
+                    Tirar da roleta
+                  </Button>
+                )}
+                <div className="text-right">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[a.status]}`}>
+                    {STATUS_LABEL[a.status] ?? a.status}
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatDateTimeBR(a.assigned_at)}
+                  </p>
+                </div>
               </div>
             </div>
           ))}
+
+          {tirandoDaRoleta && (
+            <RemoveFromRoletaDialog
+              open
+              onOpenChange={(aberto) => { if (!aberto) setTirandoDaRoleta(null); }}
+              contactId={tirandoDaRoleta.contactId}
+              leadName={tirandoDaRoleta.nome}
+              onDone={loadAssignments}
+            />
+          )}
         </div>
       )}
 
