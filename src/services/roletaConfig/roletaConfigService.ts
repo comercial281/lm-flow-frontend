@@ -204,6 +204,10 @@ export type RoletaOutcome =
   | 'atendimento_direto'
   | 'corretor_sem_whatsapp'
   | 'oferta_cancelada'
+  // O mesmo lead chegou de novo (portal reenviou, ou veio por dois caminhos)
+  // enquanto a oferta anterior ainda esperava resposta: não houve sorteio novo
+  // nem aviso repetido, a oferta em aberto continua valendo.
+  | 'oferta_ja_pendente'
   // O lead TEM dono; o que falhou foi abrir o atendimento no número sorteado.
   | 'canal_nao_aberto'
   | 'instancia_divergente'
