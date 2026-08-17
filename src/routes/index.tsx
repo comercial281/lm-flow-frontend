@@ -56,10 +56,10 @@ const Disparos = lazyWithRetry(() => import('@/pages/Customer/Disparos/Disparos'
 const TeamAccess = lazyWithRetry(() => import('@/pages/Customer/Team/TeamAccessPage'));
 const PipelineKanban = lazyWithRetry(() => import('@/pages/Customer/Pipelines/PipelineKanban'));
 const AccountSettings = lazyWithRetry(() => import('@/pages/Customer/Settings/Account').then(m => ({ default: m.AccountSettings })));
-const Teams = lazyWithRetry(() => import('@/pages/Customer/Settings/Teams/Teams'));
+// Times e Cargos não têm mais rota própria: viraram abas da tela de Equipe, que
+// os carrega junto. Só a sub-tela de adicionar gente a um Time continua com rota
+// (é navegação interna da lista de Times).
 const AddUsers = lazyWithRetry(() => import('@/pages/Customer/Settings/Teams').then(m => ({ default: m.AddUsers })));
-const Users = lazyWithRetry(() => import('@/pages/Customer/Settings/Users'));
-const RolesPage = lazyWithRetry(() => import('@/pages/Customer/Settings/Roles'));
 const Labels = lazyWithRetry(() => import('@/pages/Customer/Settings/Labels'));
 const CustomAttributes = lazyWithRetry(() => import('@/pages/Customer/Settings/CustomAttributes'));
 const MessageFunnels = lazyWithRetry(() => import('@/pages/Customer/Settings/MessageFunnels').then(m => ({ default: m.MessageFunnels })));
@@ -781,50 +781,14 @@ const AppRouter = () => {
             }
           />
 
-          <Route
-            path="/settings/users"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="users" action="read">
-                      <Users />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/settings/roles"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="users" action="read">
-                      <RolesPage />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/settings/teams"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="teams" action="read">
-                      <Teams />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
+          {/* Cargos e Times passaram a ser ABAS da tela de Equipe — uma tela só
+              manda em pessoas, cargo e instância. Estas rotas continuam vivas e
+              redirecionam para a aba certa: link salvo, atalho de tour e texto de
+              ajuda antigos não podem morrer. Mesmo padrão do Robô Sem Resposta →
+              Follow-up, logo abaixo. */}
+          <Route path="/settings/roles" element={<Navigate to="/equipe?aba=cargos" replace />} />
+          <Route path="/settings/teams" element={<Navigate to="/equipe?aba=times" replace />} />
+          <Route path="/settings/users" element={<Navigate to="/equipe" replace />} />
 
           <Route
             path="/settings/teams/:teamId/add-users"

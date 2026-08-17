@@ -27,11 +27,12 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
     if (pathname.startsWith('/conversations')) {
       return { inboxes: true, agents: false, labels: false, teams: false };
     }
-    if (pathname.startsWith('/settings/users')) {
-      return { inboxes: false, agents: true, labels: false, teams: false };
-    }
-    if (pathname.startsWith('/settings/teams')) {
-      return { inboxes: false, agents: false, labels: false, teams: true };
+    // A tela de Equipe reúne pessoas, cargos e times numa só — e mostra as
+    // instâncias de cada pessoa. Precisa dos três de uma vez; antes cada um era
+    // uma tela com um endereço próprio (/settings/users e /settings/teams, que
+    // hoje redirecionam para cá).
+    if (pathname.startsWith('/equipe')) {
+      return { inboxes: true, agents: true, labels: false, teams: true };
     }
     if (pathname.startsWith('/settings/labels')) {
       return { inboxes: false, agents: false, labels: true, teams: false };

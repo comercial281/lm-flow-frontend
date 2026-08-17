@@ -327,27 +327,11 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         resource: 'accounts',
         action: 'read',
       },
-      {
-        name: t('menu.settings.users'),
-        href: '/settings/users',
-        icon: Users2,
-        resource: 'users',
-        action: 'read',
-      },
-      {
-        name: t('menu.settings.teams'),
-        href: '/settings/teams',
-        icon: Clock,
-        resource: 'teams',
-        action: 'read',
-      },
-      {
-        name: 'Cargos e Permissões',
-        href: '/settings/roles',
-        icon: Shield,
-        resource: 'users',
-        action: 'read',
-      },
+      // Usuários, Times e Cargos e Permissões saíram daqui: viraram as abas da
+      // tela *Equipe*, no menu de cima. Eram quatro endereços mandando em
+      // pedaços da mesma decisão (quem é a pessoa, o que ela pode, por onde
+      // atende) e nenhum mandando na decisão inteira. As rotas antigas
+      // redirecionam para a aba certa — link salvo não morre.
       {
         name: t('menu.settings.labels'),
         href: '/settings/labels',

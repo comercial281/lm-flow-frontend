@@ -124,7 +124,10 @@ export function SettingsAgentsTour() {
 // ---------------------------------------------------------------------------
 // Times Tour
 // ---------------------------------------------------------------------------
-const TEAMS_ROUTE = '/settings/teams';
+// A lista de Times virou aba da tela de Equipe. O tour segue os mesmos pontos
+// (eles moram no próprio componente da lista), só mudou de endereço — sem isto
+// ele nunca mais dispararia, porque /settings/teams agora só redireciona.
+const TEAMS_ROUTE = '/equipe';
 
 export function SettingsTeamsTour() {
   const { t } = useTranslation('tours');

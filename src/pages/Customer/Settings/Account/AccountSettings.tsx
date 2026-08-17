@@ -19,7 +19,8 @@ import BaseHeader from '@/components/base/BaseHeader';
 import { accountService } from '@/services/account/accountService';
 import { useAppDataStore } from '@/store/appDataStore';
 import type { Account, FormDataOptions } from '@/types/settings';
-import { Copy } from 'lucide-react';
+import { Copy, Users2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import { SettingsTour } from '@/tours';
 
@@ -55,6 +56,7 @@ function SectionLayout({
 
 export default function AccountSettings() {
   const { t } = useLanguage('accountSettings');
+  const navigate = useNavigate();
   const { can, isReady: permissionsReady } = useUserPermissions();
   const normalizeAccountLocale = (locale?: string | null): string => {
     if (!locale) return 'pt-BR';
@@ -537,6 +539,25 @@ export default function AccountSettings() {
           <div className="mt-6">
             <NotificationCenter />
           </div>
+
+          {/* Ponte para a Equipe. Esta tela é a CASA (nome, fuso, avisos); as
+              PESSOAS moram em Equipe, e misturar as duas foi o que espalhou o
+              assunto por quatro telas. Quem chega aqui procurando "adicionar
+              corretor" precisa do caminho, não de mais um formulário. */}
+          <SectionLayout
+            title="Equipe e acessos"
+            description="Cadastrar pessoas, definir cargo e escolher por quais instâncias cada uma atende."
+            withBorder
+            headerActions={
+              <Button variant="outline" onClick={() => navigate('/equipe')} className="gap-1.5">
+                <Users2 className="h-4 w-4" /> Gerenciar equipe
+              </Button>
+            }
+          >
+            <p className="text-sm text-sidebar-foreground/70">
+              Pessoas, cargos e times ficam numa tela só, em <strong>Equipe</strong>, no menu principal.
+            </p>
+          </SectionLayout>
 
           {/* Informações de Build */}
           <div className="text-center py-4 text-sm text-sidebar-foreground/60 border-t border-sidebar-border">

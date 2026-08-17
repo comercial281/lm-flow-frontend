@@ -1,400 +1,88 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { toast } from 'sonner';
-import { RefreshCw, ShieldCheck, MessageCircle, Search } from 'lucide-react';
-import { Button, Input, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, Label as UILabel } from '@/components/ui/ds';
-import IconActionButton from '@/components/base/IconActionButton';
-import { usersService } from '@/services/users';
-import InboxesService from '@/services/channels/inboxesService';
-import InboxMembersService from '@/services/channels/inboxMembersService';
-import { useUserPermissions } from '@/hooks/useUserPermissions';
-import type { User } from '@/types/users';
-import type { Inbox } from '@/types/channels/inbox';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Users2, Shield, Users } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/ds';
+import PeopleTab from './PeopleTab';
+import RolesPage from '@/pages/Customer/Settings/Roles';
+import Teams from '@/pages/Customer/Settings/Teams/Teams';
 
-/* Painel "Equipe & Acessos" — o gestor controla, por pessoa e numa tela só:
-   cargo, quais instâncias (WhatsApp) ela vê, e remover do time. Reusa as APIs
-   que já existem (users, roles, inbox_members) — não muda a regra por baixo. */
+/* "Equipe" — a tela única de pessoas, cargos e times.
+ *
+ * Antes isso vivia em quatro endereços que ninguém conseguia relacionar: Equipe
+ * (cargo + instâncias), Configurações → Usuários (cadastro), Configurações →
+ * Cargos e Permissões (o que cada cargo pode) e Configurações → Times. Cada tela
+ * era dona de um pedaço da mesma decisão e nenhuma era dona da decisão inteira,
+ * então cadastrar alguém exigia passar pelas quatro na ordem certa — e a ordem
+ * certa não estava escrita em lugar nenhum.
+ *
+ * Mesmo remédio já aplicado no follow-up e na IA: UMA tela manda, o resto vira
+ * aba aqui dentro e as rotas antigas redirecionam (ver as rotas). Se aparecer
+ * uma quinta tela sobre gente, ela entra como aba — não como endereço novo.
+ *
+ * A aba vem da URL (?aba=cargos) de propósito: é o que faz o redirect das rotas
+ * antigas cair na aba certa em vez de largar a pessoa na primeira. */
 
-const CARGOS: Array<{ key: 'admin' | 'manager' | 'agent'; label: string; desc: string }> = [
-  { key: 'admin', label: 'Administrador', desc: 'Acesso total: configurações, equipe, todas as instâncias.' },
-  { key: 'manager', label: 'Gerente', desc: 'Gerencia leads, funil e relatórios do time.' },
-  { key: 'agent', label: 'Corretor', desc: 'Atende leads. Só vê as instâncias que você liberar.' },
-];
-const cargoLabel = (k?: string) => CARGOS.find((c) => c.key === k)?.label ?? 'Corretor';
-const cargoColor = (k?: string) =>
-  k === 'admin' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300'
-  : k === 'manager' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
+const TABS = [
+  { key: 'pessoas', label: 'Pessoas', icon: Users2 },
+  { key: 'cargos', label: 'Cargos e Permissões', icon: Shield },
+  { key: 'times', label: 'Times', icon: Users },
+] as const;
+
+type TabKey = (typeof TABS)[number]['key'];
 
 export default function TeamAccessPage() {
-  const { can } = useUserPermissions();
-  const canManage = can('users', 'update');
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<User[]>([]);
-  const [inboxes, setInboxes] = useState<Inbox[]>([]);
-  // userId -> Set(inboxId) que a pessoa vê
-  const [membership, setMembership] = useState<Record<string, Set<string>>>({});
-  const [search, setSearch] = useState('');
-  const [editing, setEditing] = useState<User | null>(null);
-  const [saving, setSaving] = useState(false);
+  const activeTab = useMemo<TabKey>(() => {
+    const requested = searchParams.get('aba');
+    return TABS.some(t => t.key === requested) ? (requested as TabKey) : 'pessoas';
+  }, [searchParams]);
 
-  // Enviar acesso por WhatsApp (1 clique por pessoa)
-  const [sending, setSending] = useState<User | null>(null);
-  const [sendPhone, setSendPhone] = useState('');
-  const [sendPwd, setSendPwd] = useState('');
-  const [sendBusy, setSendBusy] = useState(false);
-
-  const openSend = (u: User) => {
-    setSending(u);
-    setSendPhone(u.whatsapp_number ?? '');
-    setSendPwd(u.plain_password ?? '');
+  const handleTabChange = (value: string) => {
+    // replace: trocar de aba não é navegação, e empilhar histórico faria o botão
+    // Voltar do navegador percorrer abas em vez de sair da tela.
+    setSearchParams(value === 'pessoas' ? {} : { aba: value }, { replace: true });
   };
-
-  const doSend = async () => {
-    if (!sending) return;
-    if (sendPhone.replace(/\D/g, '').length < 10) { toast.error('Informe o WhatsApp com DDD.'); return; }
-    if (sendPwd.trim().length < 6) { toast.error('Defina uma senha de ao menos 6 caracteres.'); return; }
-    setSendBusy(true);
-    try {
-      const res = await usersService.sendAccess(String(sending.id), { whatsapp_number: sendPhone, password: sendPwd.trim() });
-      const wa = res.whatsapp;
-      const who = sending.name;
-      // reflete telefone/senha salvos na lista
-      setUsers((prev) => prev.map((u) => (u.id === sending.id ? { ...u, whatsapp_number: sendPhone, plain_password: sendPwd.trim() } : u)));
-      if (wa?.sent) {
-        toast.success(`Acesso enviado no WhatsApp de ${who}${wa.instance ? ` (${wa.instance})` : ''}.`);
-        setSending(null);
-      } else if (wa?.error) {
-        toast.error(`Acesso salvo, mas o WhatsApp falhou: ${wa.error}`);
-      } else {
-        toast.error(`Não enviou: ${wa?.skipped ?? 'motivo desconhecido'}`);
-      }
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Erro ao enviar o acesso.');
-    } finally {
-      setSendBusy(false);
-    }
-  };
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [usersRes, inboxesRes] = await Promise.all([
-        usersService.getUsers({ per_page: 200 }),
-        InboxesService.list(),
-      ]);
-      const inboxList = inboxesRes.data ?? [];
-      setUsers(usersRes.data ?? []);
-      setInboxes(inboxList);
-
-      // membros de cada inbox -> mapa userId -> inboxes
-      const map: Record<string, Set<string>> = {};
-      await Promise.all(
-        inboxList.map(async (ib) => {
-          try {
-            const members = await InboxMembersService.get(String(ib.id));
-            members.forEach((m) => {
-              const uid = String(m.id);
-              (map[uid] ??= new Set()).add(String(ib.id));
-            });
-          } catch { /* ignora inbox que falhar */ }
-        }),
-      );
-      setMembership(map);
-    } catch {
-      toast.error('Erro ao carregar a equipe');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter((u) => `${u.name} ${u.email}`.toLowerCase().includes(q));
-  }, [users, search]);
-
-  const changeCargo = async (user: User, chave: 'admin' | 'manager' | 'agent') => {
-    setSaving(true);
-    try {
-      await usersService.updateUser(String(user.id), { chave_role: chave });
-      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, chave_role: chave } : u)));
-      setEditing((e) => (e && e.id === user.id ? { ...e, chave_role: chave } : e));
-      toast.success('Cargo atualizado');
-    } catch {
-      toast.error('Erro ao mudar o cargo');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const toggleInbox = async (user: User, inboxId: string, on: boolean) => {
-    const uid = String(user.id);
-    setSaving(true);
-    try {
-      const current = await InboxMembersService.get(inboxId);
-      const ids = new Set(current.map((m) => String(m.id)));
-      if (on) ids.add(uid); else ids.delete(uid);
-      await InboxMembersService.update(inboxId, Array.from(ids));
-      setMembership((prev) => {
-        const set = new Set(prev[uid] ?? []);
-        if (on) set.add(inboxId); else set.delete(inboxId);
-        return { ...prev, [uid]: set };
-      });
-    } catch {
-      toast.error('Erro ao mudar a instância');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const removeUser = async (user: User) => {
-    if (!window.confirm(`Remover ${user.name} do time? Ele perde o acesso ao CRM.`)) return;
-    setSaving(true);
-    try {
-      await usersService.deleteUser(String(user.id));
-      setUsers((prev) => prev.filter((u) => u.id !== user.id));
-      setEditing(null);
-      toast.success('Removido do time');
-    } catch {
-      toast.error('Erro ao remover');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const initials = (name: string) => name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
-  const isAdmin = (u: User) => u.chave_role === 'admin';
 
   return (
-    <div className="mx-auto max-w-5xl p-6">
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div
-            className="w-1 h-9 rounded-full shrink-0"
-            style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
-          />
-          <div>
-            <h1 className="text-2xl font-bold text-foreground leading-tight">Equipe</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {users.length} pessoa{users.length !== 1 ? 's' : ''} · cargo e instâncias de cada um numa tela só
-            </p>
-          </div>
-        </div>
-        <IconActionButton
-          label="Atualizar"
-          icon={<RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />}
-          onClick={load}
-          disabled={loading}
+    <div className="mx-auto max-w-6xl p-6">
+      <div className="mb-5 flex items-start gap-3">
+        <div
+          className="w-1 h-9 rounded-full shrink-0"
+          style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
         />
+        <div>
+          <h1 className="text-2xl font-bold text-foreground leading-tight">Equipe</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Quem é quem, o que cada cargo pode fazer e por onde cada um atende
+          </p>
+        </div>
       </div>
 
-      <div className="relative mb-4 max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome ou e-mail" className="pl-9" />
-      </div>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+        <TabsList className="flex flex-wrap justify-start gap-1 bg-transparent p-0 h-auto">
+          {TABS.map(tab => {
+            const Icon = tab.icon;
+            return (
+              <TabsTrigger key={tab.key} value={tab.key} className="gap-1.5">
+                <Icon className="h-4 w-4" /> {tab.label}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
-          <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Carregando equipe…
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="py-16 text-center text-sm text-muted-foreground">Nenhuma pessoa encontrada.</div>
-      ) : (
-        <div className="rounded-xl border bg-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="font-medium px-4 py-3">Membro</th>
-                  <th className="font-medium px-4 py-3">Cargo</th>
-                  <th className="font-medium px-4 py-3">Instâncias</th>
-                  <th className="font-medium px-4 py-3">Status</th>
-                  <th className="font-medium px-4 py-3 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((u) => {
-                  const seen = membership[String(u.id)]?.size ?? 0;
-                  return (
-                    <tr key={u.id} className="border-t border-border/60 hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                            {initials(u.name)}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="truncate font-medium">{u.name}</div>
-                            <div className="truncate text-xs text-muted-foreground">{u.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cargoColor(u.chave_role)}`}>{cargoLabel(u.chave_role)}</span>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                        <span className="inline-flex items-center gap-1.5">
-                          <MessageCircle className="h-3.5 w-3.5" />
-                          {isAdmin(u) ? 'Todas' : `${seen} de ${inboxes.length}`}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {u.confirmed
-                          ? <Badge variant="outline" className="text-xs text-emerald-500">Ativo</Badge>
-                          : <Badge variant="outline" className="text-xs text-amber-600">Convite pendente</Badge>}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openSend(u)}
-                            disabled={!canManage}
-                            className="h-8 gap-1 text-xs text-emerald-600 hover:text-emerald-700"
-                            title="Enviar o acesso (link+login+senha) no WhatsApp da pessoa"
-                          >
-                            <MessageCircle className="h-3.5 w-3.5" /> Enviar acesso
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => setEditing(u)} disabled={!canManage} className="h-8 text-xs">
-                            Gerenciar acesso
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Modal por pessoa */}
-      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-          {editing && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Acesso de {editing.name}</DialogTitle>
-                <DialogDescription>{editing.email}</DialogDescription>
-              </DialogHeader>
-
-              {/* Cargo */}
-              <div className="py-2">
-                <UILabel className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
-                  <ShieldCheck className="h-4 w-4" /> Cargo
-                </UILabel>
-                <div className="space-y-2">
-                  {CARGOS.map((c) => (
-                    <button
-                      key={c.key}
-                      type="button"
-                      disabled={saving}
-                      onClick={() => changeCargo(editing, c.key)}
-                      className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
-                        editing.chave_role === c.key ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <span className={`mt-0.5 h-4 w-4 flex-none rounded-full border-2 ${editing.chave_role === c.key ? 'border-primary bg-primary' : 'border-muted-foreground/40'}`} />
-                      <span>
-                        <span className="block text-sm font-medium">{c.label}</span>
-                        <span className="block text-xs text-muted-foreground">{c.desc}</span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Instâncias */}
-              <div className="border-t border-border py-3">
-                <UILabel className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
-                  <MessageCircle className="h-4 w-4" /> Instâncias que essa pessoa vê
-                </UILabel>
-                {isAdmin(editing) ? (
-                  <p className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
-                    Administrador vê <strong>todas as instâncias</strong> automaticamente.
-                  </p>
-                ) : inboxes.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Nenhuma instância conectada ainda.</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {inboxes.map((ib) => {
-                      const on = membership[String(editing.id)]?.has(String(ib.id)) ?? false;
-                      return (
-                        <label key={ib.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-2.5 hover:bg-muted/30">
-                          <input
-                            type="checkbox"
-                            checked={on}
-                            disabled={saving}
-                            onChange={(e) => toggleInbox(editing, String(ib.id), e.target.checked)}
-                            className="h-4 w-4 rounded"
-                          />
-                          <span className="flex-1 text-sm">{ib.name}</span>
-                          <span className="text-xs text-muted-foreground">{ib.channel_type?.split('::')[1] || ''}</span>
-                        </label>
-                      );
-                    })}
-                    <p className="pt-1 text-xs text-muted-foreground">
-                      Desmarcado = a pessoa não vê a instância nem as mensagens dela.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
-                <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={() => removeUser(editing)} disabled={saving}>
-                  Remover do time
-                </Button>
-                <Button onClick={() => setEditing(null)} disabled={saving}>Concluir</Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Enviar acesso por WhatsApp */}
-      <Dialog open={!!sending} onOpenChange={(o) => !o && setSending(null)}>
-        <DialogContent className="max-w-md">
-          {sending && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4 text-emerald-500" /> Enviar acesso no WhatsApp
-                </DialogTitle>
-                <DialogDescription>{sending.name} · {sending.email}</DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-3 py-1">
-                <div>
-                  <UILabel className="text-xs">WhatsApp (com DDD)</UILabel>
-                  <Input value={sendPhone} onChange={(e) => setSendPhone(e.target.value)} placeholder="Ex: 11 94087 1974" className="mt-1" />
-                </div>
-                <div>
-                  <UILabel className="text-xs">Senha que vai na mensagem</UILabel>
-                  <Input value={sendPwd} onChange={(e) => setSendPwd(e.target.value)} placeholder="defina uma senha (min. 6)" className="mt-1" />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {sending.plain_password
-                      ? 'Vem a senha atual. Se você mudar aqui, a senha de acesso da pessoa é trocada.'
-                      : 'Sem senha salva — defina uma. Ela vira a senha de acesso da pessoa.'}
-                  </p>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Envia link + login + senha pela instância operacional da Leal Mídia.
-                </p>
-              </div>
-
-              <DialogFooter>
-                <Button variant="ghost" onClick={() => setSending(null)} disabled={sendBusy}>Cancelar</Button>
-                <Button onClick={doSend} disabled={sendBusy} className="gap-1">
-                  {sendBusy ? <RefreshCw className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />} Enviar acesso
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+        <TabsContent value="pessoas">
+          <PeopleTab />
+        </TabsContent>
+        <TabsContent value="cargos">
+          {/* embedded: a aba já tem o título "Equipe" acima, e a tela de cargos
+              traz o próprio <h1> quando aberta sozinha. */}
+          <RolesPage embedded />
+        </TabsContent>
+        <TabsContent value="times">
+          <Teams />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

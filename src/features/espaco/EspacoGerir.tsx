@@ -341,7 +341,7 @@ function TabPessoas() {
         <p className="text-xs text-lm-subtle max-w-md">
           As pessoas do Espaço são os usuários cadastrados do tenant. Pra adicionar, editar ou remover, use a tela de gestão de usuários.
         </p>
-        <Link to="/settings/users" className={btnPrimary}>
+        <Link to="/equipe" className={btnPrimary}>
           <ExternalLink size={14} strokeWidth={2.5} /> Gerenciar usuários
         </Link>
       </div>
