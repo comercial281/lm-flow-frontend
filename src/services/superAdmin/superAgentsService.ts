@@ -1,4 +1,5 @@
 import api from '@/services/core/api';
+import type { PerformanceReport } from '@/types/aiResults';
 
 // Épico B — super-admin gerencia os agentes de IA de TODOS os tenants sem SSO.
 // Backend: /api/v1/super/sales_agents (?tenant=<slug>; raiz Leal Mídia = slug vazio).
@@ -101,60 +102,16 @@ export const superAgentsService = {
   },
 };
 
-// ── Resultados da IA ────────────────────────────────────────────────────────
-
-export interface PerformancePoint {
-  day: string;
-  leads: number;
-  replies: number;
-  visits: number;
-}
-
-// Contagens que existem tanto por cliente quanto no total.
-export interface PerformanceCounts {
-  ai_leads: number;
-  replies: number;
-  failed: number;
-  skipped: number;
-  runs: number;
-  after_hours_replies: number;
-  attended: number;
-  answered: number;
-  qualified: number;
-  hot: number;
-  handoffs: number;
-  visits: number;
-  visits_completed: number;
-  visits_upcoming: number;
-  agents_total: number;
-  agents_enabled: number;
-  cost_usd: number;
-  // null (e não 0) quando não houve atendimento no período: "0%" acusaria a IA
-  // de um fracasso que não houve. A tela mostra "—" nesse caso.
-  reply_rate: number | null;
-  qualify_rate: number | null;
-  median_latency_ms: number | null;
-}
-
-export interface PerformanceTenant extends PerformanceCounts {
-  tenant_slug: string | null;
-  tenant_name: string;
-  series: PerformancePoint[];
-}
-
-export interface PerformanceTotals extends PerformanceCounts {
-  clients: number;
-}
-
-export interface PerformanceReport {
-  days: number;
-  since: string;
-  generated_at: string;
-  totals: PerformanceTotals;
-  tenants: PerformanceTenant[];
-  series: PerformancePoint[];
-}
-
+// Resultados da IA — os tipos vivem em @/types/aiResults porque a aba do cliente
+// lê exatamente o mesmo formato. Reexportados aqui para não quebrar quem já
+// importava daqui.
+export type {
+  PerformancePoint,
+  PerformanceCounts,
+  PerformanceTenant,
+  PerformanceTotals,
+  PerformanceReport,
+} from '@/types/aiResults';
 export interface CostTotals {
   cost_usd: number;
   runs: number;
