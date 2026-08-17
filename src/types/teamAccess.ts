@@ -31,7 +31,10 @@ export interface TeamAccessRole {
 
 export interface TeamAccessInbox {
   id: string;
+  /** o nome que a pessoa digitou ("Comercial") — é o que a tela mostra */
   name: string;
+  /** o identificador sanitizado ("comercial"), que é o que vai para a Evolution */
+  slug?: string;
   channel_type?: string;
 }
 
