@@ -208,6 +208,9 @@ export type RoletaOutcome =
   // enquanto a oferta anterior ainda esperava resposta: não houve sorteio novo
   // nem aviso repetido, a oferta em aberto continua valendo.
   | 'oferta_ja_pendente'
+  // Lead que já tem corretor não volta para o sorteio: continua com quem já
+  // cuidava dele.
+  | 'lead_ja_tem_dono'
   // O lead TEM dono; o que falhou foi abrir o atendimento no número sorteado.
   | 'canal_nao_aberto'
   | 'instancia_divergente'
