@@ -7,7 +7,14 @@ import type { CustomRole, PermissionSection } from '@/types/customRoles';
 import RoleEditorModal from './RoleEditorModal';
 import RoleAuditModal from './RoleAuditModal';
 
-export default function RolesPage() {
+interface RolesPageProps {
+  /* Dentro da aba Cargos da tela de Equipe, o título da página já está acima.
+     Repetir "Cargos e Permissões" em corpo de h1 no meio da tela daria dois
+     títulos concorrendo. Aberta sozinha (rota própria), a tela segue com o dela. */
+  embedded?: boolean;
+}
+
+export default function RolesPage({ embedded = false }: RolesPageProps) {
   const [roles, setRoles] = useState<CustomRole[]>([]);
   const [catalog, setCatalog] = useState<PermissionSection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,16 +94,24 @@ export default function RolesPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className={embedded ? 'space-y-6' : 'space-y-6 p-6'}>
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <Shield className="h-6 w-6 text-primary" />
-            Cargos e Permissões
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Defina quais funções cada cargo pode acessar no CRM
-          </p>
+          {embedded ? (
+            <p className="text-sm text-muted-foreground">
+              Defina quais funções cada cargo pode acessar no CRM
+            </p>
+          ) : (
+            <>
+              <h1 className="flex items-center gap-2 text-2xl font-bold">
+                <Shield className="h-6 w-6 text-primary" />
+                Cargos e Permissões
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Defina quais funções cada cargo pode acessar no CRM
+              </p>
+            </>
+          )}
         </div>
         <Button onClick={handleNew} className="gap-2">
           <Plus className="h-4 w-4" />

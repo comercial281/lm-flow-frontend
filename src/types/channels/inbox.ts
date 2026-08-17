@@ -367,6 +367,11 @@ export interface AgentChannel {
   role: Role;
   availability_status: string;
   confirmed: boolean;
+  /* Só vem na lista de membros de uma instância: true = o acesso não foi
+     concedido por um humano, o sistema liberou para a pessoa conseguir abrir os
+     leads que já são dela. Ela não entra na fila de leads novos, e tentar
+     desmarcar é recusado lá atrás — por isso a tela não a mostra como marcada. */
+  auto_granted?: boolean;
   ui_flags: {
     is_creating: boolean;
     is_fetching: boolean;
