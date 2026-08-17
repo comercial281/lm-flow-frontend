@@ -21,7 +21,7 @@ export default function AgentTestChat({ open, onOpenChange, agent }: AgentTestCh
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!w-[90vw] !max-w-[90vw] h-[90vh] max-h-[90vh] overflow-hidden p-0 sm:!max-w-[90vw]">
+      <DialogContent size="wide" className="sm:max-w-6xl h-[90dvh] overflow-hidden p-0">
         <DialogHeader className="sr-only">
           <DialogTitle>{t('chat.chatWithAgent', { name: agent.name })}</DialogTitle>
           <DialogDescription>{t('chat.startConversation')}</DialogDescription>

@@ -837,12 +837,10 @@ export default function Properties() {
 
       {/* Create/Edit Modal — horizontal: usa a largura da tela em 3 colunas */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        {/* sm:max-w-* precisa do prefixo: o DialogContent do design system traz
-            sm:max-w-lg (512px) embutido, e a media query vence classe sem prefixo. */}
-        <DialogContent
-          className="w-[94vw] max-w-[94vw] sm:max-w-[1400px] max-h-[92vh] overflow-y-auto"
-          style={{ width: '94vw', maxWidth: 'min(1400px, 94vw)' }}
-        >
+        {/* Largura, folga e altura vêm do preset `size="wide"` (ver ds.tsx). Antes
+            eram 94vw escritos aqui, com um style inline por cima — porcentagem não
+            deixa folga: num monitor grande o modal encostava nas duas bordas. */}
+        <DialogContent size="wide" className="overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar imóvel' : 'Cadastrar imóvel'}</DialogTitle>
             <DialogDescription>Preencha as informações do imóvel</DialogDescription>
