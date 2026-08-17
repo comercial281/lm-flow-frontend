@@ -9,6 +9,7 @@ import { teamAccessService } from '@/services/teamAccess/teamAccessService';
 import customRolesService from '@/services/customRoles/customRolesService';
 import InboxAccessList from '@/components/team/InboxAccessList';
 import AddPersonWizard from './AddPersonWizard';
+import { buildCargoOptions, cargoPayload, isCargoSelected, type CargoOption } from './cargoOptions';
 // Vem da tela antiga de Usuários: convidar vários por e-mail de uma vez era uma
 // capacidade real dela, e unificar não pode significar perder função.
 import BulkInviteModal from '@/components/users/BulkInviteModal';
@@ -63,6 +64,10 @@ export default function PeopleTab() {
   // mostrando o valor velho até fechar e abrir de novo.
   const editing = useMemo(() => members.find(m => m.id === editingId) ?? null, [members, editingId]);
   const sending = useMemo(() => members.find(m => m.id === sendingId) ?? null, [members, sendingId]);
+
+  // Sempre traz os três de fábrica, mesmo quando o cliente não tem cargo nenhum
+  // gravado no banco — que é o caso da maioria (ver cargoOptions).
+  const cargoOptions = useMemo(() => buildCargoOptions(roles), [roles]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -125,18 +130,26 @@ export default function PeopleTab() {
     }
   };
 
-  const changeCargo = async (member: TeamAccessMember, role: CustomRole) => {
+  const changeCargo = async (member: TeamAccessMember, option: CargoOption) => {
     setSaving(true);
     try {
-      // Manda o cargo de verdade; o backend sincroniza o enum legado sozinho,
-      // que é o que mantém lista e permissão contando a mesma história.
-      const updated = await usersService.updateUser(member.id, { custom_role_id: role.id } as any);
+      // Manda o cargo gravado quando ele existe; senão, o cargo legado (o
+      // cliente pode não ter os cargos no banco — ver cargoOptions). O backend
+      // sincroniza os dois lados, que é o que mantém lista e permissão contando
+      // a mesma história.
+      const updated: any = await usersService.updateUser(member.id, cargoPayload(option) as any);
       setMembers(prev => prev.map(m => (
         m.id === member.id
           ? {
             ...m,
-            role: { key: role.slug, name: role.name, color: role.color, custom_role_id: role.id, chave_role: (updated as any)?.chave_role ?? m.role.chave_role },
-            sees_all_inboxes: ((updated as any)?.chave_role ?? m.role.chave_role) === 'admin',
+            role: {
+              key: updated?.role?.key ?? m.role.key,
+              name: updated?.role?.name ?? option.label,
+              color: updated?.role?.color ?? m.role.color,
+              custom_role_id: updated?.custom_role_id ?? option.customRoleId ?? null,
+              chave_role: updated?.chave_role ?? option.chaveRole ?? m.role.chave_role,
+            },
+            sees_all_inboxes: (updated?.chave_role ?? option.chaveRole ?? m.role.chave_role) === 'admin',
           }
           : m
       )));
@@ -346,34 +359,28 @@ export default function PeopleTab() {
                   <ShieldCheck className="h-4 w-4" /> Cargo
                 </UILabel>
                 <div className="space-y-2">
-                  {roles.map(role => {
-                    const selected = String(editing.role.custom_role_id ?? '') === String(role.id)
-                      || editing.role.key === role.slug;
+                  {cargoOptions.map(option => {
+                    const selected = isCargoSelected(option, editing.role);
                     return (
                       <button
-                        key={role.id}
+                        key={option.key}
                         type="button"
                         disabled={saving}
-                        onClick={() => changeCargo(editing, role)}
+                        onClick={() => changeCargo(editing, option)}
                         className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
                           selected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
                         }`}
                       >
                         <span className={`mt-0.5 h-4 w-4 flex-none rounded-full border-2 ${selected ? 'border-primary bg-primary' : 'border-muted-foreground/40'}`} />
                         <span>
-                          <span className="block text-sm font-medium">{role.name}</span>
-                          {role.description && (
-                            <span className="block text-xs text-muted-foreground">{role.description}</span>
+                          <span className="block text-sm font-medium">{option.label}</span>
+                          {option.description && (
+                            <span className="block text-xs text-muted-foreground">{option.description}</span>
                           )}
                         </span>
                       </button>
                     );
                   })}
-                  {roles.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Nenhum cargo cadastrado. Crie os cargos em Cargos e Permissões.
-                    </p>
-                  )}
                 </div>
               </div>
 

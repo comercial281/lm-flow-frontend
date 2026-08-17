@@ -9,6 +9,7 @@ import { usersService } from '@/services/users';
 import InboxMembersService from '@/services/channels/inboxMembersService';
 import type { CustomRole } from '@/types/customRoles';
 import type { TeamAccessInbox } from '@/types/teamAccess';
+import { buildCargoOptions, cargoPayload } from './cargoOptions';
 
 /* Cadastrar alguém era o buraco do produto: criar a pessoa numa tela, definir o
    cargo noutra, liberar as instâncias numa terceira e mandar a senha numa quarta
@@ -41,24 +42,31 @@ export default function AddPersonWizard({ open, roles, inboxes, onClose, onCreat
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [password, setPassword] = useState('');
-  const [roleId, setRoleId] = useState<string | number | null>(null);
+  const [cargoKey, setCargoKey] = useState<string | null>(null);
   const [inboxIds, setInboxIds] = useState<Set<string>>(new Set());
 
-  const selectedRole = useMemo(() => roles.find(r => String(r.id) === String(roleId)), [roles, roleId]);
+  // Os três de fábrica sempre aparecem, mesmo no cliente que não tem cargo
+  // nenhum gravado no banco (ver cargoOptions) — senão este passo fica vazio e
+  // não dá para cadastrar ninguém.
+  const cargoOptions = useMemo(() => buildCargoOptions(roles), [roles]);
+  const selectedCargo = useMemo(
+    () => cargoOptions.find(o => o.key === cargoKey) ?? null,
+    [cargoOptions, cargoKey],
+  );
   // Administrador alcança toda instância sozinho — pedir para escolher instância
   // seria oferecer uma decisão que não tem efeito.
-  const roleSeesAll = selectedRole?.slug === 'administrador';
+  const roleSeesAll = selectedCargo?.seesAllInboxes ?? false;
 
   const reset = () => {
     setStep(0); setName(''); setEmail(''); setWhatsapp(''); setPassword('');
-    setRoleId(null); setInboxIds(new Set());
+    setCargoKey(null); setInboxIds(new Set());
   };
 
   const close = () => { reset(); onClose(); };
 
   const canAdvance = () => {
     if (step === 0) return name.trim().length > 1 && /\S+@\S+\.\S+/.test(email.trim());
-    if (step === 1) return roleId !== null;
+    if (step === 1) return selectedCargo !== null;
     return true;
   };
 
@@ -81,7 +89,7 @@ export default function AddPersonWizard({ open, roles, inboxes, onClose, onCreat
         email: email.trim().toLowerCase(),
         whatsapp_number: whatsapp.replace(/\D/g, ''),
         ...(password.trim().length >= 6 ? { password: password.trim() } : {}),
-        ...(roleId !== null ? { custom_role_id: roleId } : {}),
+        ...(selectedCargo ? cargoPayload(selectedCargo) : {}),
       } as any);
 
       const userId = String(created?.id ?? '');
@@ -193,26 +201,21 @@ export default function AddPersonWizard({ open, roles, inboxes, onClose, onCreat
 
           {step === 1 && (
             <div className="space-y-2">
-              {roles.length === 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Nenhum cargo cadastrado. Crie os cargos na aba Cargos.
-                </p>
-              )}
-              {roles.map(role => {
-                const selected = String(roleId ?? '') === String(role.id);
+              {cargoOptions.map(option => {
+                const selected = option.key === cargoKey;
                 return (
                   <button
-                    key={role.id}
+                    key={option.key}
                     type="button"
-                    onClick={() => setRoleId(role.id)}
+                    onClick={() => setCargoKey(option.key)}
                     className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
                       selected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
                     }`}
                   >
                     <span className={`mt-0.5 h-4 w-4 flex-none rounded-full border-2 ${selected ? 'border-primary bg-primary' : 'border-muted-foreground/40'}`} />
                     <span>
-                      <span className="block text-sm font-medium">{role.name}</span>
-                      {role.description && <span className="block text-xs text-muted-foreground">{role.description}</span>}
+                      <span className="block text-sm font-medium">{option.label}</span>
+                      {option.description && <span className="block text-xs text-muted-foreground">{option.description}</span>}
                     </span>
                   </button>
                 );
