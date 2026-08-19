@@ -49,7 +49,7 @@ export default function ArchivedFeaturesView() {
     // Otimista: some/aparece na hora, reverte se o backend recusar.
     setArchivedKeys(archived ? [...prev, key] : prev.filter(k => k !== key));
     try {
-      const res = await api.patch('/super/pooled_tenants/archived_features', { key, archived });
+      const res = await api.patch('/super/pooled_tenants/update_archived_features', { key, archived });
       setArchivedKeys(res.data?.data?.keys ?? prev);
     } catch (e) {
       setArchivedKeys(prev);
