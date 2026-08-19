@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Home, Star, Clock, ChevronRight } from 'lucide-react';
-import { portalsService, Portal, PORTAL_LOGOS } from '@/services/portals/portalsService';
+import { portalsService, Portal } from '@/services/portals/portalsService';
+import { PortalLogo } from '@/components/portals/PortalLogo';
 
 function lastUpdateLabel(portal: Portal): string {
   if (!portal.last_accessed_at) return 'aguardando portal';
@@ -55,9 +56,7 @@ export default function PortalsList() {
                 onClick={() => navigate(`/settings/portals/${portal.portal_key}`)}
                 className="w-full flex items-center gap-4 rounded-xl border bg-card p-5 text-left hover:border-primary/40 hover:shadow-sm transition-all"
               >
-                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-2xl border shrink-0">
-                  {PORTAL_LOGOS[portal.portal_key] ?? '🌐'}
-                </div>
+                <PortalLogo portalKey={portal.portal_key} className="w-12 h-12" />
 
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold truncate">{portal.name}</p>

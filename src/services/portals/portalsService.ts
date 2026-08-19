@@ -23,15 +23,6 @@ export interface PortalDetail extends Portal {
   featured_property_ids: string[];
 }
 
-export const PORTAL_LOGOS: Record<string, string> = {
-  portal_zap: '🟣',
-  portal_imovelweb: '🟠',
-  portal_chaves_na_mao: '🔑',
-  portal_casa_mineira: '🏠',
-  portal_meta_catalog: '📘',
-  portal_generic: '🌐',
-};
-
 export const portalsService = {
   async list(): Promise<Portal[]> {
     const res = await api.get('/portals');

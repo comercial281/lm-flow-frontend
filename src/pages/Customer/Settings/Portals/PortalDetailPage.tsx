@@ -6,7 +6,8 @@ import {
   ArrowLeft, CheckCircle2, Copy, RefreshCw, Home, Star, Clock, Mail, Webhook,
 } from 'lucide-react';
 import api from '@/services/core/api';
-import { portalsService, PortalDetail, PORTAL_LOGOS } from '@/services/portals/portalsService';
+import { portalsService, PortalDetail } from '@/services/portals/portalsService';
+import { PortalLogo } from '@/components/portals/PortalLogo';
 import PortalPropertiesSelector from './PortalPropertiesSelector';
 
 function CopyRow({ label, value, icon: Icon }: { label: string; value: string; icon: typeof Copy }) {
@@ -119,9 +120,7 @@ export default function PortalDetailPage() {
         </button>
 
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center text-3xl border">
-            {PORTAL_LOGOS[portal.portal_key] ?? '🌐'}
-          </div>
+          <PortalLogo portalKey={portal.portal_key} className="w-14 h-14" />
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">{portal.name}</h1>
