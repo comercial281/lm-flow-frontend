@@ -356,6 +356,8 @@ export interface ConversationListParams {
   q?: string;
   sort_by?: 'last_activity_at' | 'created_at' | 'priority';
   conversation_type?: 'mention' | 'unattended' | 'participating';
+  /** Só conversas que a IA (Vendedora ou bot externo) respondeu. */
+  handled_by_ai?: boolean;
 }
 
 export interface MessageListParams {

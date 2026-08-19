@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
+import { Bot, Check, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@evoapi/design-system/button';
 import chatService from '@/services/chat/chatService';
 import type { Label } from '@/types/chat/api';
@@ -105,6 +105,8 @@ export default function QuickFilters({
   const activeTagFilter = filters.find(f => f.attributeKey === 'labels');
   const activeTagTitle = activeTagFilter ? String(activeTagFilter.values) : undefined;
 
+  const aiOnly = filters.some(f => f.attributeKey === 'handled_by_ai' && String(f.values) === 'true');
+
   const activeInboxFilter = filters.find(f => f.attributeKey === 'inbox_id');
   const activeInboxId = activeInboxFilter ? String(activeInboxFilter.values) : undefined;
 
@@ -122,6 +124,7 @@ export default function QuickFilters({
     (activeTagTitle ? 1 : 0) +
     (activeInboxId ? 1 : 0) +
     (startDate || endDate ? 1 : 0) +
+    (aiOnly ? 1 : 0) +
     advancedCount;
 
   function withoutKeys(keys: string[]): BaseFilter[] {
@@ -136,6 +139,11 @@ export default function QuickFilters({
   function applyInbox(id: string | undefined) {
     const base = withoutKeys(['inbox_id']);
     onApply(id ? [...base, mkFilter('inbox_id', 'equal_to', id)] : base);
+  }
+
+  function applyAiOnly(next: boolean) {
+    const base = withoutKeys(['handled_by_ai']);
+    onApply(next ? [...base, mkFilter('handled_by_ai', 'equal_to', 'true')] : base);
   }
 
   function applyPeriod(nextStart: string, nextEnd: string) {
@@ -153,7 +161,7 @@ export default function QuickFilters({
   }
 
   function clearAll() {
-    onApply(withoutKeys(['labels', 'inbox_id', 'last_activity_at']));
+    onApply(withoutKeys(['labels', 'inbox_id', 'last_activity_at', 'handled_by_ai']));
   }
 
   return (
@@ -233,6 +241,27 @@ export default function QuickFilters({
                 })}
               </div>
             )}
+          </section>
+
+          {/* ATENDIMENTO — mesmo botão "Só IA" do dashboard (AiToggle.tsx),
+              aqui como toggle na lista em vez de botão solto na barra: é
+              binário, não uma lista de opções pra escolher. */}
+          <section className="mt-2 border-t pt-2">
+            <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              Atendimento
+            </p>
+            <button
+              type="button"
+              onClick={() => applyAiOnly(!aiOnly)}
+              aria-pressed={aiOnly}
+              className={`flex w-full items-center gap-2 rounded px-1.5 py-1.5 text-left text-sm transition cursor-pointer ${
+                aiOnly ? 'bg-primary/10 font-semibold text-primary' : 'hover:bg-muted'
+              }`}
+            >
+              <Bot className="h-3.5 w-3.5 shrink-0" />
+              <span className="min-w-0 flex-1 truncate">Só leads atendidos pela IA</span>
+              {aiOnly && <Check className="h-3.5 w-3.5 shrink-0" />}
+            </button>
           </section>
 
           {/* INSTÂNCIA — só com 2+, uma só não é filtro, é a caixa inteira */}
