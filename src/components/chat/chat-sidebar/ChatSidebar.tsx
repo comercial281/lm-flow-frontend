@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@evoapi/design-system/button';
 import { Input } from '@evoapi/design-system/input';
 import { Badge } from '@evoapi/design-system/badge';
-import { NativeSelect } from '@/components/ui/native-select';
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -12,7 +11,6 @@ import {
 } from '@evoapi/design-system/context-menu';
 import {
   Search,
-  Filter,
   Mail,
   MailOpen,
   MessageCircle,
@@ -43,6 +41,7 @@ import { NoConversations } from '../empty-states';
 import ContactAvatar from '../contact/ContactAvatar';
 import ConversationBadges from '../conversation/ConversationBadges';
 import ConversationsFilter from '../conversation/ConversationsFilter';
+import QuickFilters from '../filters/QuickFilters';
 import GlobalSearchPanel from '../search/GlobalSearchPanel';
 import { BaseFilter } from '@/types/core';
 import InboxesService from '@/services/channels/inboxesService';
@@ -264,35 +263,25 @@ const ChatSidebar = ({
     onFilterClear();
   };
 
-  // Seletor rápido de instância: aplica/remove um filtro inbox_id.
-  const selectedInboxId = String(
-    conversationFilters.find((f) => f.attributeKey === 'inbox_id')?.values ?? '',
-  );
-  const applyInstanceFilter = (inboxId: string) => {
-    const others = conversationFilters.filter((f) => f.attributeKey !== 'inbox_id');
-    const next: BaseFilter[] = inboxId
-      ? [
-          ...others,
-          {
-            attributeKey: 'inbox_id',
-            filterOperator: 'equal_to',
-            values: inboxId,
-            queryOperator: 'and',
-            attributeModel: 'standard',
-          },
-        ]
-      : others;
+  // Filtro rápido (tag, instância, período) — um popover só, aplicado na
+  // hora do clique, sem passar pelo modal de filtro avançado. Ver
+  // `QuickFilters.tsx`.
+  const applyQuickFilters = (next: BaseFilter[]) => {
+    const previousInboxId = conversationFilters.find((f) => f.attributeKey === 'inbox_id')?.values;
+    const nextInboxId = next.find((f) => f.attributeKey === 'inbox_id')?.values;
     handleApplyFilters(next);
 
     // Fecha a conversa aberta se ela for de outra instância — sem isso o
     // painel direito fica preso no snapshot antigo (selectedConversationData
     // nunca é invalidado quando a lista é refiltrada) e mostra a instância
     // errada mesmo depois de trocar o filtro.
-    const openConversation = chatContext.conversations.selectedConversation;
-    const openInboxId = openConversation?.inbox?.id != null ? String(openConversation.inbox.id) : null;
-    if (openConversation && inboxId && openInboxId !== inboxId) {
-      conversations.selectConversation(null);
-      navigate('/conversations', { replace: true });
+    if (nextInboxId && nextInboxId !== previousInboxId) {
+      const openConversation = chatContext.conversations.selectedConversation;
+      const openInboxId = openConversation?.inbox?.id != null ? String(openConversation.inbox.id) : null;
+      if (openConversation && openInboxId !== nextInboxId) {
+        conversations.selectConversation(null);
+        navigate('/conversations', { replace: true });
+      }
     }
   };
 
@@ -664,28 +653,6 @@ const ChatSidebar = ({
           </button>
         </div>
 
-        {/* Seletor rápido de instância (WhatsApp) — só aparece com 2+ instâncias */}
-        {inboxOptions.length > 1 && (
-          <div className="flex items-center gap-2">
-            <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">Instância</span>
-            {/* `min-w-0` para o nome comprido da instância truncar em vez de
-                empurrar o rótulo para fora da barra lateral. */}
-            <div className="min-w-0 flex-1">
-              <NativeSelect
-                value={selectedInboxId}
-                onChange={(e) => applyInstanceFilter(e.target.value)}
-                className="h-8 cursor-pointer"
-                aria-label="Filtrar por instância"
-              >
-                <option value="">Todas as instâncias</option>
-                {inboxOptions.map((i) => (
-                  <option key={i.id} value={i.id}>{i.label}</option>
-                ))}
-              </NativeSelect>
-            </div>
-          </div>
-        )}
-
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
             {pagination?.total != null && pagination.total > visibleConversations.length
@@ -695,26 +662,13 @@ const ChatSidebar = ({
               ? t('chatSidebar.conversation')
               : t('chatSidebar.conversations')}
           </span>
-          <div className="flex items-center gap-2">
-            {filters.state.activeFilters.length > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {filters.state.activeFilters.length}{' '}
-                {filters.state.activeFilters.length === 1
-                  ? t('chatSidebar.filter')
-                  : t('chatSidebar.filters')}
-              </Badge>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setFilterModalOpen(true)}
-              disabled={filters.state.isApplyingFilters}
-              className="h-8 px-2 cursor-pointer"
-              data-tour="chat-filter-button"
-            >
-              <Filter className="h-4 w-4" />
-              {t('chatSidebar.filtersButton')}
-            </Button>
+          <div className="flex items-center gap-2" data-tour="chat-filter-button">
+            <QuickFilters
+              filters={conversationFilters}
+              inboxOptions={inboxOptions}
+              onApply={applyQuickFilters}
+              onOpenAdvanced={() => setFilterModalOpen(true)}
+            />
           </div>
         </div>
         {showArchived && (
