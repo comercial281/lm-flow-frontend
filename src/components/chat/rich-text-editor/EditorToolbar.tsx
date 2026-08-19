@@ -26,7 +26,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   };
 
   return (
-    <div className="flex items-center gap-1 p-2 border-b border-border bg-muted/30">
+    <div className="flex flex-wrap items-center gap-1 p-2 border-b border-border bg-muted/30">
       <Button
         variant={isMarkActive('strong') ? 'default' : 'outline'}
         size="icon"

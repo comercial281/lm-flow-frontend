@@ -475,7 +475,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         )}
 
         {/* Input Area */}
-        <CardContent className="px-3 py-2 relative">
+        <CardContent className="px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] relative">
           {/* 🚀 FUNIS DE MENSAGEM (substitui Canned Responses + Quick Replies) */}
           {canMessageFunnel && (
             <MessageFunnelPopover
@@ -496,7 +496,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           )}
 
           {/* Primeira linha: Reply Mode Toggle + Botões de ação rápida */}
-          <div className="flex items-center justify-between mb-2 gap-3">
+          <div className="flex items-center justify-between mb-2 gap-2 md:gap-3">
             {/* Reply Mode Toggle */}
             <ReplyModeToggle
               currentMode={isPendingConversation ? ReplyMode.NOTE : replyMode}
@@ -551,10 +551,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
             </div>
           </div>
 
-          {/* Segunda linha: Botões de formatação + Input + Botões de envio */}
-          <div className="flex items-end gap-2 w-full overflow-visible">
+          {/* Segunda linha: Botões de formatação + Input + Botões de envio.
+              No celular isso vira DUAS linhas: o campo de digitar sozinho em cima
+              (w-full + order-1) e os dois grupos de ícones embaixo (order-2/3, com
+              ml-auto jogando microfone+enviar pra direita). Sem isso o campo, único
+              item flexível da linha, era espremido a ~6px num aparelho de 360px.
+              A partir de md o flex-nowrap e os md:order-* devolvem o layout de antes.
+              Feito em CSS e não com detecção de celular em JS de propósito: trocar a
+              árvore remontaria o ProseMirror e apagaria o rascunho a cada rotação. */}
+          <div className="flex flex-wrap md:flex-nowrap items-end gap-2 w-full overflow-visible">
             {/* Botões de formatação à esquerda */}
-            <div className="flex-shrink-0 flex items-center gap-1 pb-1">
+            <div className="order-2 md:order-1 flex-shrink-0 flex items-center gap-1 md:pb-1">
               {/* Botão de formatação (Aa): mostra/esconde a barra de negrito/itálico/etc. */}
               {!isPendingConversation && (
                 <Button
@@ -641,8 +648,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
               )}
             </div>
 
-            {/* Text Input Container */}
-            <div className="flex-1 min-w-0 overflow-hidden">
+            {/* Text Input Container. `chat-composer-editor` é o gancho do CSS que
+                dá 16px de fonte no celular (abaixo disso o iOS dá zoom ao focar). */}
+            <div className="chat-composer-editor order-1 md:order-2 w-full md:w-auto md:flex-1 min-w-0 overflow-hidden">
               <RichTextEditor
                 ref={richEditorRef}
                 placeholder={
@@ -700,7 +708,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex-shrink-0 flex items-center gap-1.5 pb-1">
+            <div className="order-3 ml-auto md:ml-0 flex-shrink-0 flex items-center gap-1.5 md:pb-1">
               {canSendAudio && replyMode === ReplyMode.REPLY && !isPendingConversation && (
                 <Button
                   variant={isRecordingAudio ? 'default' : 'ghost'}
