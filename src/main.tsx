@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — virtual module gerado pelo vite-plugin-pwa em build
 import { registerSW } from 'virtual:pwa-register';
+import { toast } from 'sonner';
 import "@evoapi/design-system/styles";
 import './styles/globals.css';
 import './i18n/config'; // Importar configuração do i18n
@@ -12,15 +13,43 @@ import { initGA4 } from './utils/ga4Utils';
 import { reloadForNewVersion } from './utils/chunkReload';
 import * as Sentry from '@sentry/react';
 
-// Registra o Service Worker PWA (atualiza silenciosamente).
+// Registra o Service Worker PWA.
 // Aba aberta há horas NÃO pega deploy novo sozinha (o build em memória continua
-// o antigo até um reload manual) — era a causa de "essa aba não loga / sumiu o
-// olho": JS pré-fix preso. Com registerType:'autoUpdate', assim que o SW acha
-// uma versão nova ele ativa e recarrega a página. Só faltava DISPARAR a checagem
-// em abas de vida longa: fazemos a cada 60s e ao voltar o foco pra aba.
+// o antigo até um reload) — era a causa de "essa aba não loga / sumiu o olho":
+// JS pré-fix preso. Checamos update a cada 60s + ao voltar o foco pra aba.
+//
+// IMPORTANTE: registerType:'prompt' (não 'autoUpdate') — a lib NÃO dá
+// window.location.reload() sozinha assim que acha versão nova. Isso já
+// interrompeu o usuário no meio do uso (aba recarregava sem aviso, perdendo
+// o que estava fazendo). A versão nova é aplicada: (1) na hora, se o usuário
+// clicar em "Atualizar agora" no aviso; ou (2) sozinha, sem incomodar
+// ninguém, na próxima vez que a aba for pra segundo plano (visibilitychange
+// -> hidden) — garante que ninguém fica preso em bundle velho por muito
+// tempo sem nunca forçar um reload enquanto a pessoa está de fato usando.
 if ('serviceWorker' in navigator) {
-  registerSW({
+  let applyUpdate: ((reload?: boolean) => Promise<void>) | undefined;
+  let updateAvailable = false;
+
+  const applyUpdateNow = () => {
+    if (!updateAvailable || !applyUpdate) return;
+    updateAvailable = false;
+    void applyUpdate(true);
+  };
+
+  applyUpdate = registerSW({
     immediate: true,
+    onNeedRefresh() {
+      updateAvailable = true;
+      toast('Nova versão do LM Flow disponível', {
+        id: 'lm-flow-sw-update',
+        duration: Infinity,
+        description: 'Atualiza sozinho quando você sair desta aba, ou clique pra já pegar agora.',
+        action: {
+          label: 'Atualizar agora',
+          onClick: applyUpdateNow,
+        },
+      });
+    },
     onRegisteredSW(_swUrl: string, registration: ServiceWorkerRegistration | undefined) {
       if (!registration) return;
       const checkForUpdate = () => {
@@ -30,7 +59,13 @@ if ('serviceWorker' in navigator) {
       };
       setInterval(checkForUpdate, 60_000);
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') checkForUpdate();
+        if (document.visibilityState === 'visible') {
+          checkForUpdate();
+        } else if (updateAvailable) {
+          // Aba foi pra segundo plano com update pendente: aplica agora,
+          // fora da hora em que a pessoa está de fato olhando a tela.
+          applyUpdateNow();
+        }
       });
     },
   });

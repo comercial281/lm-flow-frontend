@@ -10,7 +10,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' (não 'autoUpdate'): não força window.location.reload() no meio
+      // do uso só porque um deploy novo ativou o SW em background. A troca de
+      // versão continua garantida (ver main.tsx: aplica sozinho quando a aba
+      // vai pra segundo plano, ou na hora se o usuário clicar em "Atualizar").
+      registerType: 'prompt',
       injectRegister: 'auto',
       manifest: false, // usamos o public/manifest.json manualmente
       workbox: {
