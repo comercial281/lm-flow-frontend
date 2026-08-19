@@ -475,7 +475,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
         )}
 
         {/* Input Area */}
-        <CardContent className="px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] relative">
+        {/* A folga da barrinha de gesto do iPhone é descontada do teclado: com
+            ele aberto o indicador fica atrás dele, então essa folga viraria
+            espaço morto entre a barra e o teclado. Com o teclado fechado (ou
+            sem a variável) a conta resolve para calc(0.5rem + safe-area) — a
+            mesma expressão de antes, não só parecida. */}
+        <CardContent className="px-3 py-2 pb-[calc(0.5rem+max(0px,env(safe-area-inset-bottom)-var(--keyboard-inset,0px)))] relative">
           {/* 🚀 FUNIS DE MENSAGEM (substitui Canned Responses + Quick Replies) */}
           {canMessageFunnel && (
             <MessageFunnelPopover
