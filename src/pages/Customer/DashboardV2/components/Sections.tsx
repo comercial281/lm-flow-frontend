@@ -2,7 +2,7 @@ import React from 'react';
 import { EmptyBlock, formatCurrency, formatDuration, formatNumber, GlassCard } from './primitives';
 import { isAvailable } from '../types';
 import type {
-  AgentBlock, AutomationsBlock, CapiBlock, PipelineBlock, QueueBlock, ResponseBlock, UpcomingBlock,
+  AgentBlock, AiBlock, AutomationsBlock, CapiBlock, PipelineBlock, QueueBlock, ResponseBlock, UpcomingBlock,
 } from '../types';
 
 /**
@@ -107,7 +107,7 @@ export const PipelineFunnel: React.FC<{
   );
 };
 
-/** Os 4 números do agente que o Giovani pediu + uso da IA. */
+/** Os 4 números do agente que o Giovani pediu. */
 export const AgentSection: React.FC<{ agent: AgentBlock }> = ({ agent }) => {
   const items = [
     { label: 'Visitas agendadas', value: agent.visits_scheduled },
@@ -128,18 +128,70 @@ export const AgentSection: React.FC<{ agent: AgentBlock }> = ({ agent }) => {
           </div>
         ))}
       </div>
-
-      {/* Uso de IA é métrica de plataforma, sem dono pra recortar: o backend
-          omite a chave inteira pra quem não tem dashboard.operations. */}
-      {agent.ai && isAvailable(agent.ai) ? (
-        <div className="lmf-row" style={{ marginTop: 14, borderTop: '1px solid rgba(42,27,73,0.7)', borderBottom: 0, paddingTop: 14 }}>
-          <span className="lmf-row-sub">IA: {formatNumber(agent.ai.sessions)} sessões · {formatNumber(agent.ai.executions)} execuções</span>
-          <span className="lmf-pill">{formatNumber(agent.ai.tokens)} tokens</span>
-        </div>
-      ) : null}
     </GlassCard>
   );
 };
+
+/**
+ * Card próprio da IA — antes era uma linha escondida dentro de "Agente".
+ *
+ * `leadsHandled`/`leadsTotal` já nascem recortados por dono/instância/tag (a
+ * mesma unidade de "Leads captados"), então aparecem pra qualquer um que veja
+ * o dashboard. `usage` (execuções/sessões/tokens) é métrica de plataforma sem
+ * dono pra recortar — o backend omite a chave pra quem não tem
+ * `dashboard.operations`, daí o `ai.usage &&` antes de desenhar.
+ */
+export const AiSection: React.FC<{
+  ai: AiBlock;
+  responseAi?: { samples: number; avg_seconds: number; median_seconds: number };
+}> = ({ ai, responseAi }) => (
+  <GlassCard title="IA" subtitle="Leads atendidos pelo agente de IA no período">
+    {ai.leads_total === 0 ? (
+      <EmptyBlock text="Nenhum lead no período." />
+    ) : (
+      <>
+        <div className="flex items-end gap-8">
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--lmf-muted)' }}>Leads atendidos pela IA</div>
+            <div style={{ fontSize: 30, fontWeight: 650, letterSpacing: '-0.02em' }}>
+              {formatNumber(ai.leads_handled)}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--lmf-muted)' }}>% dos leads do período</div>
+            <div style={{ fontSize: 20, fontWeight: 550, color: 'var(--lmf-muted)' }}>
+              {ai.leads_handled_percent.toFixed(1)}%
+            </div>
+          </div>
+        </div>
+
+        {responseAi && (
+          <div className="lmf-row" style={{ marginTop: 14, borderTop: '1px solid rgba(42,27,73,0.7)', borderBottom: 0, paddingTop: 14 }}>
+            <span className="lmf-row-sub">Mediana de resposta da IA</span>
+            <span className="lmf-pill">{formatDuration(responseAi.median_seconds)}</span>
+          </div>
+        )}
+
+        {ai.usage && (
+          <div
+            className="lmf-row"
+            style={{
+              marginTop: responseAi ? 8 : 14,
+              borderTop: responseAi ? 0 : '1px solid rgba(42,27,73,0.7)',
+              borderBottom: 0,
+              paddingTop: responseAi ? 0 : 14,
+            }}
+          >
+            <span className="lmf-row-sub">
+              {formatNumber(ai.usage.sessions)} sessões · {formatNumber(ai.usage.executions)} execuções
+            </span>
+            <span className="lmf-pill">{formatNumber(ai.usage.tokens)} tokens</span>
+          </div>
+        )}
+      </>
+    )}
+  </GlassCard>
+);
 
 /** Automações: o que mais dispara e os funis mais usados. */
 export const AutomationsSection: React.FC<{ automations: AutomationsBlock }> = ({ automations }) => (

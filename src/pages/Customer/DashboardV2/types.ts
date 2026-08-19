@@ -105,8 +105,21 @@ export interface AgentBlock {
   visits_completed: number;
   visits_cancelled: number;
   leads_in_followup: number;
-  /** Ausente sem `dashboard.operations`: uso de IA é métrica de plataforma. */
-  ai?: Maybe<{ executions: number; sessions: number; tokens: number }>;
+}
+
+/**
+ * Card próprio da IA — antes era uma linha escondida dentro de "Agente".
+ *
+ * `leads_handled`/`leads_total` usam a MESMA unidade de "Leads captados" (não
+ * confundir com `usage`, que é execução de plataforma sem dono pra recortar).
+ * `usage` só vem com `dashboard.operations` — o resto do card é visível pra
+ * qualquer um que veja o dashboard, porque já nasce recortado por dono.
+ */
+export interface AiBlock {
+  leads_handled: number;
+  leads_total: number;
+  leads_handled_percent: number;
+  usage?: { executions: number; sessions: number; tokens: number };
 }
 
 export interface AutomationsBlock {
@@ -197,6 +210,7 @@ export interface DashboardMetrics {
   sources: Maybe<SourcesBlock>;
   pipeline: Maybe<PipelineBlock>;
   agent: Maybe<AgentBlock>;
+  ai: Maybe<AiBlock>;
   response: Maybe<ResponseBlock>;
   heatmap: Maybe<HeatmapBlock>;
   upcoming: Maybe<UpcomingBlock>;

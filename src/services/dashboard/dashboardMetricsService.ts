@@ -17,6 +17,10 @@ export interface DashboardMetricsParams {
   scope?: ScopeMode;
   /** Filtra por instância (inbox/WhatsApp) — independente do `scope` acima. */
   inbox_id?: string;
+  /** Filtra por etiqueta do CRM — independente do `scope` acima. */
+  label?: string;
+  /** Só leads/conversas atendidos pela IA — independente do `scope` acima. */
+  ai_only?: boolean;
 }
 
 /**

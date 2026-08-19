@@ -6,11 +6,14 @@ import { useDashboardMetrics } from './hooks/useDashboardMetrics';
 import { PeriodPicker } from './components/PeriodPicker';
 import { ScopePicker } from './components/ScopePicker';
 import { InstancePicker } from './components/InstancePicker';
+import { TagPicker } from './components/TagPicker';
+import { AiToggle } from './components/AiToggle';
 import { KpiRow } from './components/KpiRow';
 import { HistoryChart, LeadsChart, SourcesDonut } from './components/Charts';
 import { Heatmap } from './components/Heatmap';
 import {
-  AgentSection, AutomationsSection, CapiSection, PipelineFunnel, QueueCard, ResponseTimeCard, UpcomingVisits,
+  AgentSection, AiSection, AutomationsSection, CapiSection, PipelineFunnel, QueueCard, ResponseTimeCard,
+  UpcomingVisits,
 } from './components/Sections';
 import { EmptyBlock, GlassCard, Skeleton } from './components/primitives';
 import { AdsSection } from './components/AdsSection';
@@ -46,11 +49,13 @@ const DashboardV2: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [filters, setFilters] = useState<{
-    preset: PeriodPreset; since?: string; until?: string; pipelineId?: string; scope?: ScopeMode; inboxId?: string;
+    preset: PeriodPreset; since?: string; until?: string; pipelineId?: string; scope?: ScopeMode;
+    inboxId?: string; labelId?: string; aiOnly?: boolean;
   }>({ preset: 'this_month' });
-  // Só pro texto do subtítulo — o InstancePicker já resolveu o rótulo ao
-  // buscar a lista, não vale a pena o dashboard buscar de novo só por isso.
+  // Só pro texto do subtítulo — os pickers já resolveram o rótulo ao buscar a
+  // lista, não vale a pena o dashboard buscar de novo só por isso.
   const [instanceLabel, setInstanceLabel] = useState<string>();
+  const [tagLabel, setTagLabel] = useState<string>();
 
   const { data, loading, error, reload } = useDashboardMetrics(filters);
 
@@ -62,8 +67,10 @@ const DashboardV2: React.FC = () => {
     // gestor lê "180 leads" sem saber se é a casa ou a equipe dele.
     const dono = data.scope ? ` · ${SCOPE_SUBTITLE[data.scope.mode]}` : '';
     const instancia = filters.inboxId && instanceLabel ? ` · ${instanceLabel}` : '';
-    return `${periodo}${dono}${instancia} · comparado com o período anterior de mesmo tamanho`;
-  }, [data?.period, data?.scope, filters.inboxId, instanceLabel]);
+    const tag = filters.labelId && tagLabel ? ` · #${tagLabel}` : '';
+    const ia = filters.aiOnly ? ' · só IA' : '';
+    return `${periodo}${dono}${instancia}${tag}${ia} · comparado com o período anterior de mesmo tamanho`;
+  }, [data?.period, data?.scope, filters.inboxId, instanceLabel, filters.labelId, tagLabel, filters.aiOnly]);
 
   const firstName = (user?.name || '').trim().split(' ')[0];
 
@@ -93,6 +100,18 @@ const DashboardV2: React.FC = () => {
               setFilters(prev => ({ ...prev, inboxId }));
               setInstanceLabel(label);
             }}
+          />
+          {/* Some sozinho sem etiqueta cadastrada. */}
+          <TagPicker
+            value={filters.labelId}
+            onChange={(labelId, title) => {
+              setFilters(prev => ({ ...prev, labelId }));
+              setTagLabel(title);
+            }}
+          />
+          <AiToggle
+            active={!!filters.aiOnly}
+            onChange={aiOnly => setFilters(prev => ({ ...prev, aiOnly }))}
           />
           <PeriodPicker
             preset={filters.preset}
@@ -204,6 +223,12 @@ const DashboardV2: React.FC = () => {
           </GlassCard>
         )}
       </div>
+
+      {isAvailable(data?.ai) && (
+        <div style={{ marginTop: 18 }}>
+          <AiSection ai={data.ai} responseAi={isAvailable(data?.response) ? data.response.ai : undefined} />
+        </div>
+      )}
 
       <div style={{ marginTop: 18 }}>
         <GlassCard title="Mapa de calor" subtitle="Mensagens recebidas por dia da semana e horário">
