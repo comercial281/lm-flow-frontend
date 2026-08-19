@@ -47,6 +47,7 @@ import {
   ChevronRight,
   ArrowDown,
   ArrowUp,
+  Shuffle,
 } from 'lucide-react';
 
 import { pipelinesService } from '@/services/pipelines';
@@ -2096,6 +2097,7 @@ export default function PipelineKanban() {
                 <div className="flex items-center gap-4 px-4 py-2.5 border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground">
                   <div className="flex-1 min-w-0">Lead</div>
                   <div className="hidden md:block w-40 shrink-0">Coluna</div>
+                  <div className="hidden xl:block w-44 shrink-0">Responsável</div>
                   <div className="hidden lg:flex w-48 shrink-0 flex-wrap gap-1">Tags</div>
                   <button
                     type="button"
@@ -2190,6 +2192,30 @@ export default function PipelineKanban() {
                           />
                           <span className="truncate">{stage.name}</span>
                         </span>
+                      </div>
+
+                      {/* Responsável + roleta de origem */}
+                      <div className="hidden xl:block w-44 shrink-0 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                          {(item.assignee ?? item.conversation?.assignee) ? (
+                            <>
+                              <User className="w-3 h-3 shrink-0" />
+                              <span className="truncate">
+                                {(item.assignee ?? item.conversation?.assignee)?.name}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground/50">Sem responsável</span>
+                          )}
+                        </div>
+                        {item.roleta?.inbox_name && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground/70 mt-0.5">
+                            <Shuffle className="w-3 h-3 shrink-0" />
+                            <span className="truncate" title={`Veio da roleta: ${item.roleta.inbox_name}`}>
+                              {item.roleta.inbox_name}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Tags */}

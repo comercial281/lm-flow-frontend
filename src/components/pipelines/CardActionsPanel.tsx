@@ -28,7 +28,6 @@ interface CardActionsPanelProps {
 }
 
 const FOLLOW_UP_LABEL = 'follow-up';
-const BOT_PAUSED_LABEL = 'bot-pausado';
 
 export default function CardActionsPanel({
   item,
@@ -58,10 +57,8 @@ export default function CardActionsPanel({
 
   const [followUpActive, setFollowUpActive] = useState(convLabels.includes(FOLLOW_UP_LABEL));
   const [followUpPaused, setFollowUpPaused] = useState(convLabels.includes('follow-up-pausado'));
-  const [botPaused, setBotPaused] = useState(convLabels.includes(BOT_PAUSED_LABEL));
 
   const [togglingFollowUp, setTogglingFollowUp] = useState(false);
-  const [togglingBot, setTogglingBot] = useState(false);
 
   // Estado da IA Vendedora neste lead. Chega pronto do backend no card; guardamos
   // local só pra refletir o toggle na hora, sem recarregar o board inteiro.
@@ -162,26 +159,6 @@ export default function CardActionsPanel({
       setTogglingFollowUp(false);
     }
   }, [convId, followUpPaused]);
-
-  const toggleBot = useCallback(async () => {
-    if (!convId) return;
-    setTogglingBot(true);
-    try {
-      if (botPaused) {
-        await conversationAPI.removeLabels(convId, [BOT_PAUSED_LABEL]);
-        setBotPaused(false);
-        toast.success('Chatbot reativado');
-      } else {
-        await conversationAPI.addLabels(convId, [BOT_PAUSED_LABEL]);
-        setBotPaused(true);
-        toast.success('Chatbot pausado');
-      }
-    } catch {
-      toast.error('Erro ao alterar chatbot');
-    } finally {
-      setTogglingBot(false);
-    }
-  }, [convId, botPaused]);
 
   const handleMoveStage = useCallback(async (toStageId: string) => {
     if (!currentStageId || toStageId === currentStageId) return;
@@ -293,9 +270,7 @@ export default function CardActionsPanel({
         </div>
       </div>
 
-      {/* IA Vendedora — separada do "Chatbot" logo abaixo, que é o bot de fluxo
-          (n8n/Dify) e usa etiqueta. São coisas diferentes e pausar uma não pausa
-          a outra.
+      {/* IA Vendedora.
 
           O bloco aparece SEMPRE que o lead tem conversa de WhatsApp, inclusive
           quando não há IA no canal dele. Esconder nesse caso era o pior dos
@@ -375,30 +350,6 @@ export default function CardActionsPanel({
           )}
         </div>
       )}
-
-      {/* Chatbot */}
-      <div className="rounded-lg border border-border p-3 space-y-2">
-        <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Chatbot</h5>
-        <Button
-          size="sm"
-          variant={botPaused ? 'destructive' : 'outline'}
-          className="h-7 text-xs gap-1.5"
-          onClick={toggleBot}
-          disabled={togglingBot || !convId}
-        >
-          {togglingBot ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : botPaused ? (
-            <BotOff className="h-3.5 w-3.5" />
-          ) : (
-            <Bot className="h-3.5 w-3.5" />
-          )}
-          {botPaused ? 'Chatbot pausado — retomar' : 'Pausar chatbot'}
-        </Button>
-        {!convId && (
-          <p className="text-[10px] text-muted-foreground">Disponível apenas para leads com conversa WhatsApp.</p>
-        )}
-      </div>
 
       {/* Resultado do lead */}
       <div className="rounded-lg border border-border p-3 space-y-2">

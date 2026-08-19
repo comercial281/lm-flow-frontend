@@ -279,6 +279,13 @@ export interface PipelineItem {
    * acontece no WhatsApp.
    */
   sales_agent?: SalesAgentCardState | null;
+  // Roleta que atribuiu este lead (histórico em broker_assignments). null = nunca
+  // passou por sorteio — atribuído na mão, importado, ou automação direta.
+  roleta?: {
+    id: string;
+    inbox_name?: string | null;
+    assigned_at?: string | null;
+  } | null;
   position?: number; // ordem manual no kanban (epoch da chegada por padrão)
   entered_at?: number;
   completed_at?: number | null;

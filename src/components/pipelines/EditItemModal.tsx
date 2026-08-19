@@ -704,7 +704,7 @@ export default function EditItemModal({
             <div className="grid grid-cols-2 gap-4 flex-1 overflow-hidden min-h-0">
               {/* LEFT: details form */}
               <div className="space-y-4 overflow-y-auto pr-2 min-h-0">
-                {/* Contact info (read-only) */}
+                {/* Contato — editável; grava no contato ao clicar em Salvar Alterações */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -863,15 +863,24 @@ export default function EditItemModal({
                 )}
 
                 {/* Roleta de atendimento — roletas REAIS cadastradas (por canal).
-                    Sem nenhuma: atalho pra criar. Escolher uma atribui o lead. */}
+                    Se o lead já veio de uma roleta (broker_assignments), o seletor
+                    abre já marcado nela — antes ficava sempre vazio mesmo pra quem
+                    já tinha sido sorteado. Escolher uma diferente reatribui; sem
+                    nenhuma cadastrada, atalho pra criar. */}
                 <div className="grid gap-1.5">
                   <Label className="flex items-center gap-1 text-xs">
                     <Shuffle className="h-3.5 w-3.5" />
                     Roleta de atendimento
                     {assigningRoleta && <Loader2 className="h-3 w-3 animate-spin" />}
                   </Label>
+                  {item.roleta?.inbox_name && !roletas.some(r => r.id === item.roleta!.id) && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Veio da roleta <span className="font-medium text-foreground">{item.roleta.inbox_name}</span>{' '}
+                      (inativa ou removida)
+                    </p>
+                  )}
                   <Select
-                    value=""
+                    value={item.roleta?.id && roletas.some(r => r.id === item.roleta!.id) ? item.roleta.id : ''}
                     onValueChange={(v) => {
                       if (v === '__create__') { setShowCreateRoleta(true); return; }
                       handleAssignViaRoleta(v);
