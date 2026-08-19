@@ -42,6 +42,11 @@ import {
   Home,
   Tag,
   Columns3,
+  LayoutGrid,
+  List as ListIcon,
+  ChevronRight,
+  ArrowDown,
+  ArrowUp,
 } from 'lucide-react';
 
 import { pipelinesService } from '@/services/pipelines';
@@ -247,6 +252,12 @@ export default function PipelineKanban() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [disparoModalOpen, setDisparoModalOpen] = useState(false);
   const [archivedModalOpen, setArchivedModalOpen] = useState(false);
+
+  // Modo de visualização do funil: quadro (Kanban) ou lista (todos os leads,
+  // por ordem de chegada, com foto/tags/coluna/data — mais rápido pra escanear
+  // o funil inteiro sem ficar rolando colunas).
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+  const [listSortOrder, setListSortOrder] = useState<'desc' | 'asc'>('desc');
 
   // Feature flags por cliente (super-admin liga/desliga no painel Clientes CRM).
   const canImport = useFeature('pipeline_import');
@@ -607,6 +618,14 @@ export default function PipelineKanban() {
       month: '2-digit',
       year: '2-digit',
     });
+  };
+  // Mesma data de chegada acima, mas em epoch ms — pra ordenar a Lista por
+  // ordem de chegada real (não confundir com `position`, que é a ordem manual
+  // de arraste dentro da coluna do Kanban).
+  const itemArrivalMs = (item: PipelineItem): number => {
+    if (typeof item.entered_at === 'number') return item.entered_at * 1000;
+    if (typeof item.created_at === 'number') return item.created_at * 1000;
+    return item.created_at ? new Date(item.created_at).getTime() : 0;
   };
 
   // Último contato com o lead medido pela CONVERSA da instância WhatsApp.
@@ -1046,6 +1065,20 @@ export default function PipelineKanban() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stages, searchQuery, timeRange, selectedTags, hiddenStages, abandonedOnly]);
 
+  // Visão em Lista: todos os leads do funil (respeitando os mesmos filtros do
+  // Kanban acima) numa lista única, por ordem de chegada, com a coluna atual
+  // de cada um.
+  const allListItems = useMemo(() => {
+    const rows = filteredStages.flatMap(stage =>
+      (stage.items || []).map(item => ({ item, stage })),
+    );
+    rows.sort((a, b) => {
+      const diff = itemArrivalMs(a.item) - itemArrivalMs(b.item);
+      return listSortOrder === 'asc' ? diff : -diff;
+    });
+    return rows;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredStages, listSortOrder]);
 
   // Garante que o auto-scroll do drag pare se o componente desmontar no meio.
   useEffect(() => stopAutoScroll, [stopAutoScroll]);
@@ -1438,6 +1471,30 @@ export default function PipelineKanban() {
                   Limpar filtros
                 </Button>
               )}
+
+              {/* Alternar visualização: Quadro (Kanban) ou Lista (todos os leads) */}
+              <div className="ml-auto flex items-center border rounded-lg">
+                <Button
+                  variant={viewMode === 'board' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('board')}
+                  className="border-0 rounded-r-none whitespace-nowrap"
+                  title="Visualização em quadro"
+                >
+                  <LayoutGrid className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Quadro</span>
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className="border-0 rounded-l-none whitespace-nowrap"
+                  title="Visualização em lista"
+                >
+                  <ListIcon className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Lista</span>
+                </Button>
+              </div>
             </div>
 
             {/* Faixa de datas personalizada (só quando "Período personalizado") */}
@@ -1462,6 +1519,7 @@ export default function PipelineKanban() {
         </div>
 
         {/* Kanban Board */}
+        {viewMode === 'board' && (
         <div className="flex-1 overflow-hidden relative">
           <div
             ref={boardScrollRef}
@@ -2023,6 +2081,148 @@ export default function PipelineKanban() {
             </div>
           </div>
         </div>
+        )}
+
+        {/* Lista: todos os leads do funil, por ordem de chegada */}
+        {viewMode === 'list' && (
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6">
+            {allListItems.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                {t('kanban.stage.noConversations')}
+              </div>
+            ) : (
+              <div className="bg-background rounded-xl border border-border overflow-hidden">
+                {/* Header da lista */}
+                <div className="flex items-center gap-4 px-4 py-2.5 border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground">
+                  <div className="flex-1 min-w-0">Lead</div>
+                  <div className="hidden md:block w-40 shrink-0">Coluna</div>
+                  <div className="hidden lg:flex w-48 shrink-0 flex-wrap gap-1">Tags</div>
+                  <button
+                    type="button"
+                    onClick={() => setListSortOrder(o => (o === 'asc' ? 'desc' : 'asc'))}
+                    className="w-24 shrink-0 flex items-center gap-1 text-right justify-end hover:text-foreground"
+                    title="Ordenar por data de chegada"
+                  >
+                    Chegou
+                    {listSortOrder === 'asc' ? (
+                      <ArrowUp className="w-3 h-3" />
+                    ) : (
+                      <ArrowDown className="w-3 h-3" />
+                    )}
+                  </button>
+                  <div className="w-4 shrink-0" />
+                </div>
+
+                {/* Linhas */}
+                <div className="divide-y divide-border">
+                  {allListItems.map(({ item, stage }) => (
+                    <div
+                      key={item.id}
+                      onClick={() => handleEditItem(item)}
+                      className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/40 transition-colors"
+                    >
+                      {/* Foto + nome + telefone */}
+                      <div className="flex-1 min-w-0 flex items-center gap-3">
+                        <div className="relative shrink-0">
+                          {resolveItemAvatar(item) ? (
+                            <img
+                              src={resolveItemAvatar(item)}
+                              alt={resolveItemName(item)}
+                              className="w-9 h-9 rounded-full object-cover shadow-sm bg-muted"
+                              onError={e => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                const fb = e.currentTarget
+                                  .nextElementSibling as HTMLElement | null;
+                                if (fb) fb.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className="w-9 h-9 rounded-full items-center justify-center text-white text-xs font-bold shadow-sm"
+                            style={{
+                              backgroundColor: getContactColor(resolveItemName(item)),
+                              display: resolveItemAvatar(item) ? 'none' : 'flex',
+                            }}
+                          >
+                            {resolveItemName(item)?.[0]?.toUpperCase() || 'U'}
+                          </div>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-foreground truncate">
+                              {resolveItemName(item)}
+                            </span>
+                            <span className="shrink-0 text-[10px] text-muted-foreground/60 font-medium">
+                              #{resolveItemRef(item).slice(0, 6)}
+                            </span>
+                          </div>
+                          {item.contact?.phone_number && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Phone className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{item.contact.phone_number}</span>
+                            </div>
+                          )}
+                          {/* Coluna — visível só no mobile (colunas escondem a partir de md) */}
+                          <div className="md:hidden mt-1">
+                            <span
+                              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                              style={{ backgroundColor: `${stage.color}22`, color: stage.color }}
+                            >
+                              <span
+                                className="w-1.5 h-1.5 rounded-full"
+                                style={{ backgroundColor: stage.color }}
+                              />
+                              {stage.name}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Coluna atual */}
+                      <div className="hidden md:block w-40 shrink-0">
+                        <span
+                          className="inline-flex items-center gap-1.5 max-w-full rounded-full px-2 py-1 text-xs font-medium"
+                          style={{ backgroundColor: `${stage.color}22`, color: stage.color }}
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: stage.color }}
+                          />
+                          <span className="truncate">{stage.name}</span>
+                        </span>
+                      </div>
+
+                      {/* Tags */}
+                      <div className="hidden lg:flex w-48 shrink-0 flex-wrap gap-1">
+                        {itemTagInfos(item).slice(0, 3).map(tag => (
+                          <span
+                            key={tag.name}
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                            style={{ backgroundColor: `${tag.color}22`, color: tag.color }}
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
+                        {itemTagInfos(item).length > 3 && (
+                          <span className="text-[10px] text-muted-foreground">
+                            +{itemTagInfos(item).length - 3}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Data de chegada */}
+                      <div className="w-24 shrink-0 text-right text-xs text-muted-foreground">
+                        {formatArrivalDate(item) || '-'}
+                      </div>
+
+                      <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/50" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Edit Pipeline Modal */}
