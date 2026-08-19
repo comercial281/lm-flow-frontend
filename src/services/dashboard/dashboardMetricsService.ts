@@ -15,6 +15,8 @@ export interface DashboardMetricsParams {
    * resposta diz o que valeu de verdade.
    */
   scope?: ScopeMode;
+  /** Filtra por instância (inbox/WhatsApp) — independente do `scope` acima. */
+  inbox_id?: string;
 }
 
 /**

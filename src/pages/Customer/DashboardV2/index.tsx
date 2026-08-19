@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardMetrics } from './hooks/useDashboardMetrics';
 import { PeriodPicker } from './components/PeriodPicker';
 import { ScopePicker } from './components/ScopePicker';
+import { InstancePicker } from './components/InstancePicker';
 import { KpiRow } from './components/KpiRow';
 import { HistoryChart, LeadsChart, SourcesDonut } from './components/Charts';
 import { Heatmap } from './components/Heatmap';
@@ -45,8 +46,11 @@ const DashboardV2: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [filters, setFilters] = useState<{
-    preset: PeriodPreset; since?: string; until?: string; pipelineId?: string; scope?: ScopeMode;
+    preset: PeriodPreset; since?: string; until?: string; pipelineId?: string; scope?: ScopeMode; inboxId?: string;
   }>({ preset: 'this_month' });
+  // Só pro texto do subtítulo — o InstancePicker já resolveu o rótulo ao
+  // buscar a lista, não vale a pena o dashboard buscar de novo só por isso.
+  const [instanceLabel, setInstanceLabel] = useState<string>();
 
   const { data, loading, error, reload } = useDashboardMetrics(filters);
 
@@ -57,8 +61,9 @@ const DashboardV2: React.FC = () => {
     // Dizer de quem são os números em texto, e não só no seletor: sem isso o
     // gestor lê "180 leads" sem saber se é a casa ou a equipe dele.
     const dono = data.scope ? ` · ${SCOPE_SUBTITLE[data.scope.mode]}` : '';
-    return `${periodo}${dono} · comparado com o período anterior de mesmo tamanho`;
-  }, [data?.period, data?.scope]);
+    const instancia = filters.inboxId && instanceLabel ? ` · ${instanceLabel}` : '';
+    return `${periodo}${dono}${instancia} · comparado com o período anterior de mesmo tamanho`;
+  }, [data?.period, data?.scope, filters.inboxId, instanceLabel]);
 
   const firstName = (user?.name || '').trim().split(' ')[0];
 
@@ -81,6 +86,14 @@ const DashboardV2: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2">
           {/* Some sozinho pra quem não tem escolha de escopo (corretor). */}
           <ScopePicker scope={data?.scope} onChange={scope => setFilters(prev => ({ ...prev, scope }))} />
+          {/* Some sozinho com menos de 2 instâncias — mesma regra do seletor do chat. */}
+          <InstancePicker
+            value={filters.inboxId}
+            onChange={(inboxId, label) => {
+              setFilters(prev => ({ ...prev, inboxId }));
+              setInstanceLabel(label);
+            }}
+          />
           <PeriodPicker
             preset={filters.preset}
             since={filters.since}

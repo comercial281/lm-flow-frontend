@@ -9,6 +9,8 @@ export interface DashboardFilters {
   pipelineId?: string;
   /** Preferência de recorte; o servidor decide o que vale. */
   scope?: ScopeMode;
+  /** Instância (inbox/WhatsApp) selecionada; independente do `scope`. */
+  inboxId?: string;
 }
 
 /**
@@ -26,7 +28,7 @@ export function useDashboardMetrics(filters: DashboardFilters) {
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const { preset, since, until, pipelineId, scope } = filters;
+  const { preset, since, until, pipelineId, scope, inboxId } = filters;
 
   const load = useCallback(async () => {
     abortRef.current?.abort();
@@ -43,6 +45,7 @@ export function useDashboardMetrics(filters: DashboardFilters) {
           ...(preset === 'custom' && until ? { until } : {}),
           ...(pipelineId ? { pipeline_id: pipelineId } : {}),
           ...(scope ? { scope } : {}),
+          ...(inboxId ? { inbox_id: inboxId } : {}),
         },
         controller.signal,
       );
@@ -56,7 +59,7 @@ export function useDashboardMetrics(filters: DashboardFilters) {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [preset, since, until, pipelineId, scope]);
+  }, [preset, since, until, pipelineId, scope, inboxId]);
 
   useEffect(() => {
     load();
