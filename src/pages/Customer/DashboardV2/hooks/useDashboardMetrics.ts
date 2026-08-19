@@ -15,6 +15,8 @@ export interface DashboardFilters {
   labelId?: string;
   /** Só leads/conversas atendidos pela IA; independente do `scope`. */
   aiOnly?: boolean;
+  /** Qual IA Vendedora, quando o tenant tem mais de uma. */
+  salesAgentId?: string;
 }
 
 /**
@@ -32,7 +34,7 @@ export function useDashboardMetrics(filters: DashboardFilters) {
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const { preset, since, until, pipelineId, scope, inboxId, labelId, aiOnly } = filters;
+  const { preset, since, until, pipelineId, scope, inboxId, labelId, aiOnly, salesAgentId } = filters;
 
   const load = useCallback(async () => {
     abortRef.current?.abort();
@@ -52,6 +54,7 @@ export function useDashboardMetrics(filters: DashboardFilters) {
           ...(inboxId ? { inbox_id: inboxId } : {}),
           ...(labelId ? { label: labelId } : {}),
           ...(aiOnly ? { ai_only: true } : {}),
+          ...(salesAgentId ? { sales_agent_id: salesAgentId } : {}),
         },
         controller.signal,
       );
@@ -65,7 +68,7 @@ export function useDashboardMetrics(filters: DashboardFilters) {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [preset, since, until, pipelineId, scope, inboxId, labelId, aiOnly]);
+  }, [preset, since, until, pipelineId, scope, inboxId, labelId, aiOnly, salesAgentId]);
 
   useEffect(() => {
     load();

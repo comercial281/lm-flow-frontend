@@ -21,6 +21,8 @@ export interface DashboardMetricsParams {
   label?: string;
   /** Só leads/conversas atendidos pela IA — independente do `scope` acima. */
   ai_only?: boolean;
+  /** Qual IA Vendedora, quando o tenant tem mais de uma. Implica `ai_only`. */
+  sales_agent_id?: string;
 }
 
 /**

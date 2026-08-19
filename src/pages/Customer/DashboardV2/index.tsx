@@ -50,12 +50,13 @@ const DashboardV2: React.FC = () => {
   const navigate = useNavigate();
   const [filters, setFilters] = useState<{
     preset: PeriodPreset; since?: string; until?: string; pipelineId?: string; scope?: ScopeMode;
-    inboxId?: string; labelId?: string; aiOnly?: boolean;
+    inboxId?: string; labelId?: string; aiOnly?: boolean; salesAgentId?: string;
   }>({ preset: 'this_month' });
   // Só pro texto do subtítulo — os pickers já resolveram o rótulo ao buscar a
   // lista, não vale a pena o dashboard buscar de novo só por isso.
   const [instanceLabel, setInstanceLabel] = useState<string>();
   const [tagLabel, setTagLabel] = useState<string>();
+  const [agentLabel, setAgentLabel] = useState<string>();
 
   const { data, loading, error, reload } = useDashboardMetrics(filters);
 
@@ -68,9 +69,12 @@ const DashboardV2: React.FC = () => {
     const dono = data.scope ? ` · ${SCOPE_SUBTITLE[data.scope.mode]}` : '';
     const instancia = filters.inboxId && instanceLabel ? ` · ${instanceLabel}` : '';
     const tag = filters.labelId && tagLabel ? ` · #${tagLabel}` : '';
-    const ia = filters.aiOnly ? ' · só IA' : '';
+    const ia = filters.aiOnly ? ` · ${filters.salesAgentId && agentLabel ? `IA ${agentLabel}` : 'só IA'}` : '';
     return `${periodo}${dono}${instancia}${tag}${ia} · comparado com o período anterior de mesmo tamanho`;
-  }, [data?.period, data?.scope, filters.inboxId, instanceLabel, filters.labelId, tagLabel, filters.aiOnly]);
+  }, [
+    data?.period, data?.scope, filters.inboxId, instanceLabel, filters.labelId, tagLabel,
+    filters.aiOnly, filters.salesAgentId, agentLabel,
+  ]);
 
   const firstName = (user?.name || '').trim().split(' ')[0];
 
@@ -111,7 +115,11 @@ const DashboardV2: React.FC = () => {
           />
           <AiToggle
             active={!!filters.aiOnly}
-            onChange={aiOnly => setFilters(prev => ({ ...prev, aiOnly }))}
+            salesAgentId={filters.salesAgentId}
+            onChange={({ active, salesAgentId, salesAgentName }) => {
+              setFilters(prev => ({ ...prev, aiOnly: active, salesAgentId }));
+              setAgentLabel(salesAgentName);
+            }}
           />
           <PeriodPicker
             preset={filters.preset}
