@@ -20,6 +20,10 @@ const FETCH_TIMEOUT_MS = 4000;
 export interface TenantFeaturesState {
   // map de feature key → bool. Chave AUSENTE = ON por default.
   features: Record<string, boolean>;
+  // menus arquivados GLOBALMENTE (fora do ar pra todo mundo, inclusive
+  // super-admin, enquanto em desenvolvimento) — camada acima de `features`,
+  // ver ArchivedFeatures no backend.
+  archivedKeys: string[];
   // true enquanto ainda não terminou a primeira tentativa de fetch.
   loading: boolean;
   // último motivo do fallback, útil pra debug. Ex: 'no_env', 'fetch_failed', 'ok'.
@@ -28,15 +32,20 @@ export interface TenantFeaturesState {
 
 const DEFAULT_STATE: TenantFeaturesState = {
   features: {},
+  archivedKeys: [],
   loading: true,
   source: 'fallback',
 };
 
 const TenantFeaturesContext = createContext<TenantFeaturesState>(DEFAULT_STATE);
 
-interface CachedPayload {
-  ts: number;
+interface FetchedPayload {
   features: Record<string, boolean>;
+  archivedKeys: string[];
+}
+
+interface CachedPayload extends FetchedPayload {
+  ts: number;
 }
 
 function readCache(slug: string): CachedPayload | null {
@@ -45,24 +54,24 @@ function readCache(slug: string): CachedPayload | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedPayload;
     if (!parsed.ts || (Date.now() - parsed.ts) > CACHE_TTL_MS) return null;
-    return parsed;
+    return { ...parsed, archivedKeys: parsed.archivedKeys ?? [] };
   } catch {
     return null;
   }
 }
 
-function writeCache(slug: string, features: Record<string, boolean>) {
+function writeCache(slug: string, payload: FetchedPayload) {
   try {
     localStorage.setItem(
       CACHE_KEY_PREFIX + slug,
-      JSON.stringify({ ts: Date.now(), features })
+      JSON.stringify({ ts: Date.now(), ...payload })
     );
   } catch {
     // ignore quota errors
   }
 }
 
-async function fetchFeatures(masterUrl: string, slug: string): Promise<Record<string, boolean> | null> {
+async function fetchFeatures(masterUrl: string, slug: string): Promise<FetchedPayload | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
@@ -71,8 +80,9 @@ async function fetchFeatures(masterUrl: string, slug: string): Promise<Record<st
     if (!res.ok) return null;
     const body = await res.json();
     const features = body?.data?.features;
-    if (features && typeof features === 'object') return features as Record<string, boolean>;
-    return null;
+    if (!features || typeof features !== 'object') return null;
+    const archivedKeys = Array.isArray(body?.data?.archived_features) ? body.data.archived_features : [];
+    return { features: features as Record<string, boolean>, archivedKeys };
   } catch {
     return null;
   } finally {
@@ -87,13 +97,13 @@ export function TenantFeaturesProvider({ children }: { children: ReactNode }) {
 
   const [state, setState] = useState<TenantFeaturesState>(() => {
     if (!masterUrl || !slug) {
-      return { features: {}, loading: false, source: 'no_env' };
+      return { features: {}, archivedKeys: [], loading: false, source: 'no_env' };
     }
     const cached = readCache(slug);
     if (cached) {
-      return { features: cached.features, loading: false, source: 'cache' };
+      return { features: cached.features, archivedKeys: cached.archivedKeys, loading: false, source: 'cache' };
     }
-    return { features: {}, loading: true, source: 'fallback' };
+    return { features: {}, archivedKeys: [], loading: true, source: 'fallback' };
   });
 
   useEffect(() => {
@@ -105,12 +115,12 @@ export function TenantFeaturesProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       if (fresh) {
         writeCache(slug, fresh);
-        setState({ features: fresh, loading: false, source: 'ok' });
+        setState({ features: fresh.features, archivedKeys: fresh.archivedKeys, loading: false, source: 'ok' });
       } else {
         // Só sobrescreve pra fetch_failed se NÃO havia cache (caso contrário mantém cache exibido).
         setState(prev => prev.source === 'cache'
           ? prev
-          : { features: {}, loading: false, source: 'fetch_failed' });
+          : { features: {}, archivedKeys: [], loading: false, source: 'fetch_failed' });
       }
     })();
     return () => { cancelled = true; };

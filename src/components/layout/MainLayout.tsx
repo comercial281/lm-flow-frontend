@@ -42,7 +42,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const { t } = useLanguage('layout');
   const { user, logout } = useAuth();
   const { can, canAny, canAll } = usePermissions();
-  const { features: tenantFeatures } = useTenantFeatures();
+  const { features: tenantFeatures, archivedKeys } = useTenantFeatures();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuPrefsVersion, setMenuPrefsVersion] = useState(0);
@@ -104,14 +104,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // Itens permitidos (filtrados por permissão) — usados pelo editor de menu.
   const permittedMenuItems = useMemo(() => {
     const rawMenuItems = getMenuItems();
-    let finalItems = filterMenuItemsByPermissions(rawMenuItems, can, canAny, canAll, user?.role?.key, user?.email, tenantFeatures);
+    let finalItems = filterMenuItemsByPermissions(rawMenuItems, can, canAny, canAll, user?.role?.key, user?.email, tenantFeatures, archivedKeys);
 
     if (dashboardApps.length > 0) {
       finalItems = injectDashboardAppsIntoMenu(finalItems, dashboardApps);
     }
 
     return finalItems;
-  }, [getMenuItems, can, canAny, canAll, dashboardApps, user?.role?.key, user?.email, tenantFeatures]);
+  }, [getMenuItems, can, canAny, canAll, dashboardApps, user?.role?.key, user?.email, tenantFeatures, archivedKeys]);
 
   // Aplica as preferências do usuário (esconder/favoritar/ordenar) por cima.
   // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -9,8 +9,9 @@ import clientInstancesService, { DashboardData, CentralInstance, WhatsappSendRes
 import DashboardView from '../ClientInstances/DashboardView';
 import LogsView from '../ClientInstances/LogsView';
 import UserMetricsView from '../ClientInstances/UserMetricsView';
+import ArchivedFeaturesView from './ArchivedFeaturesView';
 
-type ViewTab = 'clients' | 'dashboard' | 'logs' | 'metrics';
+type ViewTab = 'clients' | 'dashboard' | 'logs' | 'metrics' | 'archived-features';
 
 // Consumo de IA do mês corrente, já cruzado com a franquia contratada.
 // Vem pronto do backend (SalesAgents::UsageReport) de propósito: a conta do
@@ -973,6 +974,7 @@ export default function PooledClients() {
             { id: 'dashboard', label: 'Dashboard', Icon: BarChart3 },
             { id: 'logs', label: 'Logs', Icon: ScrollText },
             { id: 'metrics', label: 'Métricas de Uso', Icon: Gauge },
+            { id: 'archived-features', label: 'Arquivados', Icon: Archive },
           ] as { id: ViewTab; label: string; Icon: typeof List }[]).map(({ id, label, Icon }) => (
             <button key={id} onClick={() => setTab(id)}
               className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
@@ -991,6 +993,8 @@ export default function PooledClients() {
         <div className="h-full"><LogsView /></div>
       ) : tab === 'metrics' ? (
         <div className="h-full"><UserMetricsView /></div>
+      ) : tab === 'archived-features' ? (
+        <ArchivedFeaturesView />
       ) : loading && tenants.length === 0 ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-violet-500" /></div>
       ) : (

@@ -475,9 +475,19 @@ export const shouldShowMenuItem = (
   canAllFunction: (permissions: string[]) => boolean,
   userRoleKey?: string,
   userEmail?: string,
-  features?: Record<string, boolean>
+  features?: Record<string, boolean>,
+  archivedKeys?: string[]
 ): boolean => {
   const isSuper = isSuperAdminEmail(userEmail);
+
+  // Menu arquivado GLOBALMENTE (painel Clientes > Arquivados) some pra TODO
+  // MUNDO, sem exceção pro super-admin — ao contrário dos gates abaixo, que o
+  // super-admin sempre atravessa. É pra telas em desenvolvimento saírem do ar
+  // por completo até ficarem prontas.
+  const archiveKey = item.featureKey || item.clientToggleKey;
+  if (archiveKey && archivedKeys?.includes(archiveKey)) {
+    return false;
+  }
 
   // Gate por tenant feature flag (desligado no painel master = desaparece pro
   // CLIENTE). O super-admin (Leal Mídia) NUNCA perde o item — ele precisa
@@ -534,7 +544,8 @@ export const filterMenuItemsByPermissions = (
   canAllFunction: (permissions: string[]) => boolean,
   userRoleKey?: string,
   userEmail?: string,
-  features?: Record<string, boolean>
+  features?: Record<string, boolean>,
+  archivedKeys?: string[]
 ): MenuItem[] => {
   const isSuper = isSuperAdminEmail(userEmail);
   // Só o super-admin recebe o selo "oculto pro cliente"; o cliente nunca vê
@@ -543,13 +554,13 @@ export const filterMenuItemsByPermissions = (
     isSuper ? isHiddenFromClient(item, features) : false;
 
   return items
-    .filter(item => shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features))
+    .filter(item => shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features, archivedKeys))
     .map((item): MenuItem | null => {
       // Se o item tem subitens, filtrar os subitens também
       if (item.subItems && item.subItems.length > 0) {
         const filteredSubItems = item.subItems
           .filter(subItem =>
-            shouldShowMenuItem(subItem, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features)
+            shouldShowMenuItem(subItem, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features, archivedKeys)
           )
           .map(subItem => ({ ...subItem, hiddenFromClient: mark(subItem) }));
 
