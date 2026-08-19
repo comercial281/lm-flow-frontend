@@ -142,7 +142,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background transition-colors duration-150 ease-in-out">
+    // `dvh`, não `vh`: no celular o `vh` ignora a barra de endereço do
+    // navegador, então o rodapé da tela (a barra de digitar do chat, por
+    // exemplo) fica embaixo dela. Mesmo motivo do `max-h-[92dvh]` em ds.tsx.
+    <div className="flex flex-col h-[100dvh] bg-background transition-colors duration-150 ease-in-out">
 
       {/* Barra do Modo Cliente (super-admin) — só aparece quando ativo */}
       <ClientModeBar />
