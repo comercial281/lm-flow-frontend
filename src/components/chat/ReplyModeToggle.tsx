@@ -24,7 +24,7 @@ export const ReplyModeToggle = ({
   const isNoteMode = effectiveMode === ReplyMode.NOTE;
 
   return (
-    <div className="flex items-center justify-start">
+    <div className="flex items-center justify-start shrink-0">
       {/* Toggle Container - Tamanho fixo, alinhado à esquerda */}
       <div className="flex items-center gap-1 p-1 bg-muted rounded-lg border w-fit">
         {/* Botão Resposta Pública */}
@@ -71,7 +71,7 @@ export const ReplyModeToggle = ({
 
       {/* Indicador de modo ativo - Separado do toggle */}
       {isNoteMode && (
-        <div className="ml-3 flex items-center text-xs text-muted-foreground">
+        <div className="ml-3 hidden md:flex items-center text-xs text-muted-foreground">
           <span className="font-medium">{t('replyModeToggle.visibleOnlyToAgents')}</span>
         </div>
       )}

@@ -22,6 +22,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useMenuState } from '@/hooks/useMenuState';
+import { useKeyboardInsetVar } from '@/hooks/useKeyboardInset';
 import { useDashboardApps } from '@/hooks/useDashboardApps';
 import { injectDashboardAppsIntoMenu } from '@/utils/injectDashboardApps';
 import { applyMenuPrefs, MENU_PREFS_EVENT } from './config/menuPrefs';
@@ -46,6 +47,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation();
   const [menuPrefsVersion, setMenuPrefsVersion] = useState(0);
   const [showMenuCustomizer, setShowMenuCustomizer] = useState(false);
+
+  // Mantém --keyboard-inset atualizada para a casca encolher com o teclado
+  // do celular (ver a altura do container abaixo).
+  useKeyboardInsetVar();
 
   useEffect(() => {
     const onPrefs = () => setMenuPrefsVersion(v => v + 1);
@@ -142,7 +147,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background transition-colors duration-150 ease-in-out">
+    // `dvh`, não `vh`: no celular o `vh` ignora a barra de endereço do
+    // navegador, então o rodapé da tela (a barra de digitar do chat, por
+    // exemplo) fica embaixo dela. Mesmo motivo do `max-h-[92dvh]` em ds.tsx.
+    //
+    // E menos --keyboard-inset: este é o ÚNICO nó que manda na altura do
+    // viewport — tudo abaixo é flex-1/min-h-0 — então encolher só ele faz a
+    // barra de digitar subir junto com o teclado e a lista de mensagens
+    // encolher, sem mais nenhuma mudança de layout. Com o teclado fechado a
+    // variável é 0px e a conta vira 100dvh, idêntico ao que era.
+    // Sem transição na altura de propósito: animar faria a barra chegar
+    // atrasada em relação ao teclado (`transition-colors` só afeta cores).
+    <div className="flex flex-col h-[calc(100dvh-var(--keyboard-inset,0px))] bg-background transition-colors duration-150 ease-in-out">
 
       {/* Barra do Modo Cliente (super-admin) — só aparece quando ativo */}
       <ClientModeBar />
