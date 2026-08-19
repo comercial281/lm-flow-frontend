@@ -24,7 +24,14 @@ const AccountPicker: React.FC<{ onDone: () => void }> = ({ onDone }) => {
     let alive = true;
     fetchMetaAdAccounts()
       .then(list => { if (alive) setAccounts(list); })
-      .catch(() => { if (alive) setError('Não foi possível listar as contas de anúncio.'); });
+      .catch((err: { response?: { data?: { error?: { message?: string } } } }) => {
+        if (!alive) return;
+        // Cliente sem token próprio não pode ver a lista de contas — ela vem do
+        // token de sistema, que enxerga a BM inteira da Leal Mídia (as contas de
+        // TODOS os clientes). O backend recusa (403) e manda um recado próprio
+        // pra esse caso; qualquer outro erro cai na mensagem genérica.
+        setError(err?.response?.data?.error?.message || 'Não foi possível listar as contas de anúncio.');
+      });
     return () => { alive = false; };
   }, []);
 
