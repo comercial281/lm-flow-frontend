@@ -25,7 +25,15 @@ export default function ChannelsTable({
       label: t('table.channels'),
       render: (item: Inbox) => (
         <div className="flex items-center gap-3">
-          <ChannelIcon channelType={item.channel_type} provider={item.provider as string | undefined} size="md" />
+          {item.avatar_url ? (
+            <img
+              src={item.avatar_url}
+              alt={item.provider_config?.whatsapp_profile_name || item.name}
+              className="w-8 h-8 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <ChannelIcon channelType={item.channel_type} provider={item.provider as string | undefined} size="md" />
+          )}
           <div className="flex flex-col">
             <span className="font-medium text-sidebar-foreground">{item.name}</span>
             <span className="text-xs text-sidebar-foreground/60">{item.channel_type ? getChannelDisplayName(item.channel_type, item.provider) : '—'}</span>
@@ -38,6 +46,13 @@ export default function ChannelsTable({
       label: t('table.displayName'),
       render: (item: Inbox) => (
         <span className="text-sidebar-foreground">{item.display_name || '—'}</span>
+      ),
+    },
+    {
+      key: 'whatsapp_profile_name',
+      label: t('table.whatsappName'),
+      render: (item: Inbox) => (
+        <span className="text-sidebar-foreground">{item.provider_config?.whatsapp_profile_name || '—'}</span>
       ),
     },
     { key: 'id', label: t('table.id') },

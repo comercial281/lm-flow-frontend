@@ -8,12 +8,14 @@
   "card": {
     "channelId": "Canal ID",
     "type": "Tipo",
-    "displayName": "Nome de Exibição"
+    "displayName": "Nome de Exibição",
+    "whatsappName": "Nome no WhatsApp"
   },
   "table": {
     "channels": "Canais",
     "id": "ID",
     "displayName": "Nome de Exibição",
+    "whatsappName": "Nome no WhatsApp",
     "empty": {
       "title": "Nenhum canal encontrado",
       "description": "Crie um novo canal para começar a receber mensagens dos seus clientes."

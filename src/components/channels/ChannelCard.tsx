@@ -17,6 +17,7 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete }:
   const typeName = inbox.channel_type
     ? getChannelDisplayName(inbox.channel_type, inbox.provider)
     : '—';
+  const whatsappProfileName = inbox.provider_config?.whatsapp_profile_name;
 
   return (
     <Card className="group relative flex flex-col gap-3 p-5 bg-sidebar border-sidebar-border overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-black/10">
@@ -27,19 +28,32 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete }:
         style={{ background: 'rgba(124,58,237,0.16)' }}
       />
 
-      {/* Ícone do canal em quadrado (estilo protótipo) */}
-      <div className="w-11 h-11 rounded-xl grid place-items-center shrink-0 relative bg-sidebar-accent/40">
-        <ChannelIcon
-          channelType={inbox.channel_type}
-          provider={inbox.provider as string | undefined}
-          size="lg"
-        />
+      {/* Foto real do perfil (quando já sincronizada) ou ícone genérico do canal */}
+      <div className="w-11 h-11 rounded-xl grid place-items-center shrink-0 relative bg-sidebar-accent/40 overflow-hidden">
+        {inbox.avatar_url ? (
+          <img
+            src={inbox.avatar_url}
+            alt={whatsappProfileName || inbox.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <ChannelIcon
+            channelType={inbox.channel_type}
+            provider={inbox.provider as string | undefined}
+            size="lg"
+          />
+        )}
       </div>
 
       {/* Nome + tipo */}
       <div className="relative min-w-0">
         <h4 className="font-semibold text-base truncate text-sidebar-foreground">{inbox.name}</h4>
         <p className="text-xs text-sidebar-foreground/60 truncate mt-0.5">{inbox.display_name || typeName}</p>
+        {whatsappProfileName && (
+          <p className="text-xs text-sidebar-foreground/50 truncate mt-0.5">
+            {t('card.whatsappName')}: {whatsappProfileName}
+          </p>
+        )}
       </div>
 
       {/* Rodapé: badge do tipo + Configurar + excluir */}

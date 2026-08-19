@@ -8,12 +8,14 @@
   "card": {
     "channelId": "Channel ID",
     "type": "Type",
-    "displayName": "Display Name"
+    "displayName": "Display Name",
+    "whatsappName": "WhatsApp Name"
   },
   "table": {
     "channels": "Channels",
     "id": "ID",
     "displayName": "Display Name",
+    "whatsappName": "WhatsApp Name",
     "empty": {
       "title": "No channels found",
       "description": "Create a new channel to start receiving messages from your customers."

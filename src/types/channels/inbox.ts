@@ -21,7 +21,12 @@ export interface Inbox {
   channel_type: string;
   avatar_url?: string;
   provider?: string;
-  provider_config?: Record<string, unknown>;
+  // `whatsapp_profile_name`: nome cadastrado no PERFIL do WhatsApp daquele
+  // número (ex. "Nicholas corretor") — diferente de `name` (rótulo que o
+  // usuário deu ao canal no LM Flow) e de `display_name`. Só existe pra
+  // canais Evolution/Evolution Go, preenchido pelo
+  // Evolution::InstanceProfileSyncService no backend.
+  provider_config?: Record<string, unknown> & { whatsapp_profile_name?: string };
   // Channel-specific fields
   medium?: string;
   phone_number?: string;
