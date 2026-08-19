@@ -283,6 +283,17 @@ const ChatSidebar = ({
         ]
       : others;
     handleApplyFilters(next);
+
+    // Fecha a conversa aberta se ela for de outra instância — sem isso o
+    // painel direito fica preso no snapshot antigo (selectedConversationData
+    // nunca é invalidado quando a lista é refiltrada) e mostra a instância
+    // errada mesmo depois de trocar o filtro.
+    const openConversation = chatContext.conversations.selectedConversation;
+    const openInboxId = openConversation?.inbox?.id != null ? String(openConversation.inbox.id) : null;
+    if (openConversation && inboxId && openInboxId !== inboxId) {
+      conversations.selectConversation(null);
+      navigate('/conversations', { replace: true });
+    }
   };
 
   const handleBulkResolve = async () => {
