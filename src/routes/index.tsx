@@ -577,7 +577,7 @@ const AppRouter = () => {
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
                     <PermissionRoute resource="canned_responses" action="read">
-                      <MessageFunnels />
+                      <EditorDeFunis />
                     </PermissionRoute>
                   </Suspense>
                 }
