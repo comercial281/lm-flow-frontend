@@ -235,14 +235,6 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     featureKey: 'channels',
   },
   {
-    name: 'Automações',
-    href: '/automations',
-    icon: Zap,
-    // Feature gerenciada pela Leal Mídia: super-admin SEMPRE vê; o cliente só vê
-    // se a Leal Mídia ligar "client_manage_automations" nas Funções do CRM.
-    clientToggleKey: 'client_manage_automations',
-  },
-  {
     name: 'Marketplace',
     href: '/marketplace',
     icon: Store,
