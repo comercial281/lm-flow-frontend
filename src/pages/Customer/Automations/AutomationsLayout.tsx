@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
 import { Zap, Rocket, Radio, Repeat, Bell, Shuffle, GitBranch } from 'lucide-react';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
@@ -89,6 +90,15 @@ export default function AutomationsLayout() {
   const { features } = useTenantFeatures();
   const isSuper = useIsSuperAdmin();
   const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+
+  // O <main> é o mesmo elemento DOM entre trocas de aba (só o Outlet muda) — se
+  // uma aba tiver conteúdo mais largo, o scroll horizontal fica na posição
+  // antiga ao entrar numa aba mais estreita, e o conteúdo novo parece "sumido"
+  // fora da viewport. Zera o scroll a cada troca de rota.
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+  }, [location.pathname]);
 
   // Espelha a mesma regra de visibilidade do menu lateral (shouldShowMenuItem).
   const visible = SECTORS.filter(s => {
@@ -138,7 +148,7 @@ export default function AutomationsLayout() {
           ))}
         </div>
       </div>
-      <main className="flex-1 min-w-0 overflow-auto">
+      <main ref={mainRef} className="flex-1 min-w-0 overflow-auto">
         <Outlet />
       </main>
     </div>

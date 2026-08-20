@@ -62,7 +62,7 @@ interface ChatSidebarProps {
   searchInput: string;
   onSearchChange: (value: string) => void;
   onConversationSelect: (conversation: Conversation) => void;
-  onFilterApply: (filters: BaseFilter[]) => void;
+  onFilterApply: (filters: BaseFilter[]) => Promise<Conversation[] | void>;
   onFilterClear: () => void;
   onMarkAsRead: (conversation: Conversation) => void;
   onMarkAsUnread: (conversation: Conversation) => void;
@@ -265,7 +265,7 @@ const ChatSidebar = ({
 
   const handleApplyFilters = async (newFilters: BaseFilter[]) => {
     setConversationFilters(newFilters);
-    onFilterApply(newFilters);
+    return onFilterApply(newFilters);
   };
 
   const handleClearFilters = async () => {
@@ -273,25 +273,63 @@ const ChatSidebar = ({
     onFilterClear();
   };
 
-  // Filtro rápido (tag, instância, período) — um popover só, aplicado na
-  // hora do clique, sem passar pelo modal de filtro avançado. Ver
-  // `QuickFilters.tsx`.
-  const applyQuickFilters = (next: BaseFilter[]) => {
+  // Filtro rápido (tag, instância, responsável, roleta, período) — um
+  // popover só, aplicado na hora do clique, sem passar pelo modal de filtro
+  // avançado. Ver `QuickFilters.tsx`.
+  //
+  // 🐛 BUG (relatado 20/08): trocar o filtro (ex: Responsável) enquanto uma
+  // conversa está aberta mantinha o painel direito preso na conversa velha,
+  // mesmo ela não pertencendo mais ao filtro novo. Causa: o
+  // `ConversationsContext` mantém `selectedConversation` de propósito mesmo
+  // fora da lista filtrada (pra não fechar o painel só por paginação) — só
+  // existia fechamento automático pra "Instância". Generalizado abaixo pra
+  // "Responsável" (e "Roleta") também: cada dimensão fecha o painel do jeito
+  // mais seguro pra ela.
+  const applyQuickFilters = async (next: BaseFilter[]) => {
     const previousInboxId = conversationFilters.find((f) => f.attributeKey === 'inbox_id')?.values;
     const nextInboxId = next.find((f) => f.attributeKey === 'inbox_id')?.values;
-    handleApplyFilters(next);
+    const previousAssigneeId = conversationFilters.find((f) => f.attributeKey === 'assignee_id')?.values;
+    const nextAssigneeId = next.find((f) => f.attributeKey === 'assignee_id')?.values;
+    const previousRoletaId = conversationFilters.find((f) => f.attributeKey === 'roleta_config_id')?.values;
+    const nextRoletaId = next.find((f) => f.attributeKey === 'roleta_config_id')?.values;
 
-    // Fecha a conversa aberta se ela for de outra instância — sem isso o
-    // painel direito fica preso no snapshot antigo (selectedConversationData
-    // nunca é invalidado quando a lista é refiltrada) e mostra a instância
-    // errada mesmo depois de trocar o filtro.
-    if (nextInboxId && nextInboxId !== previousInboxId) {
-      const openConversation = chatContext.conversations.selectedConversation;
-      const openInboxId = openConversation?.inbox?.id != null ? String(openConversation.inbox.id) : null;
-      if (openConversation && openInboxId !== nextInboxId) {
-        conversations.selectConversation(null);
-        navigate('/conversations', { replace: true });
-      }
+    // Guardar a conversa aberta ANTES de trocar o filtro — depois da troca
+    // o `selectedConversation` do contexto pode já não bater mais com nada.
+    const openConversation = chatContext.conversations.selectedConversation;
+
+    const freshList = await handleApplyFilters(next);
+
+    if (!openConversation) return;
+
+    // Instância e Responsável são campos que a própria conversa carrega —
+    // comparar direto contra o valor do filtro novo evita fechar o painel à
+    // toa quando a conversa só ficou fora da PÁGINA 1 da lista (ela pode
+    // continuar batendo com o filtro e só estar mais pra trás).
+    const inboxMismatch =
+      Boolean(nextInboxId) &&
+      nextInboxId !== previousInboxId &&
+      String(openConversation.inbox?.id ?? '') !== String(nextInboxId);
+
+    const assigneeMismatch =
+      Boolean(nextAssigneeId) &&
+      nextAssigneeId !== previousAssigneeId &&
+      String(openConversation.assignee_id ?? '') !== String(nextAssigneeId);
+
+    // Roleta não é campo da conversa (é derivada por BrokerAssignment no
+    // backend, ver `ConversationFinder#apply_roleta_filter`) — só dá pra
+    // saber se ela ainda pertence ao filtro novo olhando se ela voltou na
+    // lista recém-carregada.
+    const roletaMismatch =
+      Boolean(nextRoletaId) &&
+      nextRoletaId !== previousRoletaId &&
+      Array.isArray(freshList) &&
+      !freshList.some(
+        (c) => String(c.uuid || c.id) === String(openConversation.uuid || openConversation.id),
+      );
+
+    if (inboxMismatch || assigneeMismatch || roletaMismatch) {
+      conversations.selectConversation(null);
+      navigate('/conversations', { replace: true });
     }
   };
 

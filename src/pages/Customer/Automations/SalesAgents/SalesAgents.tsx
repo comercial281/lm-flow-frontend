@@ -23,6 +23,9 @@ import {
   type PromptPreview,
   type SalesAgentTrigger,
   type SalesAgentTriggerType,
+  type SalesAgentTriggerMatchMode,
+  type BantConfig,
+  type UsageLimits,
   type SalesAgentOpening,
   type SalesAgentLesson,
   type SalesAgentLessonKind,
@@ -126,6 +129,9 @@ export default function SalesAgents() {
         inbox_id: patch.inbox_id ?? selected.inbox_id,
         trigger_keyword: patch.trigger_keyword ?? selected.trigger_keyword,
         triggers: patch.triggers ?? selected.triggers,
+        trigger_match_mode: patch.trigger_match_mode ?? selected.trigger_match_mode,
+        bant_config: patch.bant_config ?? selected.bant_config,
+        usage_limits: patch.usage_limits ?? selected.usage_limits,
         model: patch.model ?? selected.model,
         temperature: patch.temperature ?? selected.temperature,
         max_context_tokens: patch.max_context_tokens ?? selected.max_context_tokens,
@@ -580,10 +586,12 @@ function ConfigTab({
         </p>
       </div>
 
+      <BantSection agent={agent} onChange={onChange} onSave={onSave} />
       <RecepcaoSection agent={agent} onChange={onChange} onSave={onSave} />
       <VisitSection agent={agent} onChange={onChange} onSave={onSave} />
       <IntelligenceSection agent={agent} onChange={onChange} onSave={onSave} />
       <ScheduleSection agent={agent} onSave={onSave} />
+      <LimitsSection agent={agent} onChange={onChange} onSave={onSave} />
       <AudioSection agent={agent} onChange={onChange} onSave={onSave} />
       <FollowupSection agent={agent} onChange={onChange} onSave={onSave} />
       <AdvancedSection agent={agent} onChange={onChange} onSave={onSave} />
@@ -721,6 +729,17 @@ function ScheduleSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
 
           O editor mora em components/schedule desde que a roleta passou a ter
           horário também — duas cópias da regra de dias/meia-noite divergiriam. */}
+      {enabled && mode === 'custom' && (
+        <div className="mt-2">
+          <button
+            type="button"
+            className="text-xs text-primary hover:underline"
+            onClick={() => commit({ mode: 'custom', windows: [DEFAULT_WINDOW] })}
+          >
+            Aplicar horário comercial padrão (08h às 18h, seg a sex)
+          </button>
+        </div>
+      )}
       {enabled && mode === 'custom' && (
         <WeeklyWindowsEditor
           value={windows}
@@ -908,11 +927,19 @@ function VisitSection({
 function VisitWindows({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
   const c = agent.visit_config ?? {};
   const days = c.days ?? [1, 2, 3, 4, 5];
+  const blockedDates = c.blocked_dates ?? [];
+  const [newBlockedDate, setNewBlockedDate] = useState('');
   const patch = (p: Partial<NonNullable<SalesAgent['visit_config']>>) => onSave({ visit_config: { ...c, ...p } });
   const toggleDay = (d: number) => {
     const next = days.includes(d) ? days.filter((x) => x !== d) : [...days, d];
     patch({ days: next });
   };
+  const addBlockedDate = () => {
+    if (!newBlockedDate || blockedDates.includes(newBlockedDate)) return;
+    patch({ blocked_dates: [...blockedDates, newBlockedDate].sort() });
+    setNewBlockedDate('');
+  };
+  const removeBlockedDate = (d: string) => patch({ blocked_dates: blockedDates.filter((x) => x !== d) });
 
   return (
     <div className="space-y-2">
@@ -949,6 +976,44 @@ function VisitWindows({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Pa
             onChange={(e) => patch({ max_advance_days: Number(e.target.value) })} />
         </div>
       </div>
+
+      {/* Granularidade de CALENDÁRIO, além do dia da semana recorrente: feriado,
+          plantão fechado, manutenção — datas específicas que nunca aparecem como
+          opção pra IA, mesmo caindo num dia da semana liberado acima. */}
+      <div className="pt-2">
+        <Label className="text-xs">Datas bloqueadas no calendário (feriado, plantão fechado etc)</Label>
+        <div className="flex items-end gap-2 mt-1">
+          <Input type="date" value={newBlockedDate} className="w-40"
+            onChange={(e) => setNewBlockedDate(e.target.value)} />
+          <Button type="button" variant="outline" size="sm" onClick={addBlockedDate} disabled={!newBlockedDate}>
+            <Plus className="h-3 w-3 mr-1" /> Bloquear data
+          </Button>
+        </div>
+        {blockedDates.length === 0 ? (
+          <p className="text-xs text-muted-foreground mt-1">Nenhuma data bloqueada.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {blockedDates.map((d) => (
+              <span key={d} className="flex items-center gap-1 px-2 py-1 rounded text-xs border border-sidebar-border">
+                {d}
+                <button type="button" onClick={() => removeBlockedDate(d)} className="text-muted-foreground hover:text-destructive">
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Sem isto, dois leads diferentes podiam sair com o MESMO horário marcado
+          pro mesmo imóvel — a IA não enxergava a visita agendada pelo OUTRO lead. */}
+      <div className="flex items-center justify-between gap-3 pt-2">
+        <div>
+          <Label className="text-xs">Evitar dois leads no mesmo horário</Label>
+          <p className="text-xs text-muted-foreground">Antes de marcar, confere se já não tem outra visita no mesmo imóvel no mesmo horário.</p>
+        </div>
+        <Toggle on={c.avoid_double_booking !== false} onChange={(v) => patch({ avoid_double_booking: v })} />
+      </div>
     </div>
   );
 }
@@ -966,6 +1031,128 @@ function CheckRow({ checked, onChange, title, desc }: {
         {desc && <div className="text-xs text-muted-foreground">{desc}</div>}
       </div>
     </label>
+  );
+}
+
+// ---------------- BANT (qualificação estruturada) ----------------
+
+const BANT_DEFAULT_QUESTIONS: Record<keyof Pick<BantConfig, 'budget_question' | 'authority_question' | 'need_question' | 'timeline_question'>, string> = {
+  budget_question: 'Qual faixa de investimento você tem em mente pra esse imóvel?',
+  authority_question: 'Essa decisão é só sua ou mais alguém participa (cônjuge, sócio, família)?',
+  need_question: 'O que está fazendo você procurar um imóvel agora?',
+  timeline_question: 'Em quanto tempo pretende fechar negócio?',
+};
+
+function BantSection({ agent, onChange, onSave }: {
+  agent: SalesAgent;
+  onChange: (a: SalesAgent) => void;
+  onSave: (patch: Partial<SalesAgent>) => void;
+}) {
+  const cfg: BantConfig = agent.bant_config ?? {};
+  const on = !!cfg.enabled;
+  const patch = (p: Partial<BantConfig>) => onChange({ ...agent, bant_config: { ...cfg, ...p } });
+  const commit = (p: Partial<BantConfig>) => onSave({ bant_config: { ...cfg, ...p } });
+
+  const field = (key: keyof typeof BANT_DEFAULT_QUESTIONS, label: string) => (
+    <div>
+      <Label htmlFor={`bant_${key}`} className="text-xs">{label}</Label>
+      <Textarea
+        id={`bant_${key}`}
+        rows={2}
+        className="mt-1"
+        placeholder={BANT_DEFAULT_QUESTIONS[key]}
+        value={cfg[key] ?? ''}
+        onChange={(e) => patch({ [key]: e.target.value } as Partial<BantConfig>)}
+        onBlur={() => commit({ [key]: (cfg[key] ?? '').trim() || undefined } as Partial<BantConfig>)}
+      />
+    </div>
+  );
+
+  return (
+    <div className="pt-2 border-t border-sidebar-border">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-medium">Qualificação BANT</div>
+          <div className="text-xs text-muted-foreground">
+            Budget, Authority, Need, Timeline: os 4 pontos que decidem se o lead está pronto pra avançar. A IA cobre
+            os 4 ao longo da conversa (sem virar interrogatório) e registra o que descobrir.
+          </div>
+        </div>
+        <Toggle on={on} onChange={(v) => onSave({ bant_config: { ...cfg, enabled: v } })} />
+      </div>
+
+      {on && (
+        <div className="mt-3 space-y-3 pl-1">
+          {field('budget_question', 'Orçamento (Budget)')}
+          {field('authority_question', 'Quem decide (Authority)')}
+          {field('need_question', 'Necessidade real (Need)')}
+          {field('timeline_question', 'Prazo (Timeline)')}
+
+          <div>
+            <Label htmlFor="bant_criteria" className="text-xs">Critério de qualificação</Label>
+            <Textarea
+              id="bant_criteria"
+              rows={3}
+              className="mt-1"
+              placeholder="Ex: qualificado quando tem orçamento compatível com o imóvel E decide sozinho ou já envolveu quem decide E quer fechar em até 3 meses"
+              value={cfg.qualify_criteria ?? ''}
+              onChange={(e) => patch({ qualify_criteria: e.target.value })}
+              onBlur={() => commit({ qualify_criteria: (cfg.qualify_criteria ?? '').trim() || undefined })}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Escreva em texto livre o que torna um lead qualificado pra você. A IA usa isso pra marcar o lead como
+              qualificado ou não (aparece como etiqueta na conversa). Vazio = ela nunca decide sozinha.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------- Limites de volume e uso ----------------
+
+function LimitsSection({ agent, onChange, onSave }: {
+  agent: SalesAgent;
+  onChange: (a: SalesAgent) => void;
+  onSave: (patch: Partial<SalesAgent>) => void;
+}) {
+  const limits: UsageLimits = agent.usage_limits ?? {};
+  const patch = (p: Partial<UsageLimits>) => onChange({ ...agent, usage_limits: { ...limits, ...p } });
+  const commit = (p: Partial<UsageLimits>) => onSave({ usage_limits: { ...limits, ...p } });
+
+  const numField = (
+    key: keyof UsageLimits, label: string, help: string, id: string,
+  ) => (
+    <div>
+      <Label htmlFor={id} className="text-xs">{label}</Label>
+      <Input
+        id={id}
+        type="number"
+        min={0}
+        placeholder="Sem limite"
+        className="mt-1 w-40"
+        value={limits[key] ?? ''}
+        onChange={(e) => patch({ [key]: e.target.value === '' ? null : Number(e.target.value) } as Partial<UsageLimits>)}
+        onBlur={() => commit({ [key]: limits[key] || null } as Partial<UsageLimits>)}
+      />
+      <p className="text-xs text-muted-foreground mt-1">{help}</p>
+    </div>
+  );
+
+  return (
+    <div className="pt-2 border-t border-sidebar-border">
+      <div className="text-sm font-medium mb-1">Limites de volume e uso</div>
+      <div className="text-xs text-muted-foreground mb-3">
+        Tetos de VOLUME (diferente dos "Limites da IA" acima, que são de conteúdo). Uma conversa já em andamento
+        nunca é cortada, mesmo com o teto batido — só a entrada de lead NOVO para. Vazio = sem limite.
+      </div>
+      <div className="space-y-3">
+        {numField('max_new_leads_per_day', 'Máx. de leads novos por dia', 'Depois desse número de leads NOVOS no dia, a IA para de puxar conversa nova (quem já está conversando continua).', 'lim_leads')}
+        {numField('max_active_conversations', 'Máx. de conversas ativas ao mesmo tempo', 'Teto de conversas em aberto que a IA está tocando ao mesmo tempo.', 'lim_conv')}
+        {numField('daily_budget_usd', 'Orçamento diário (USD)', 'Quando o gasto do dia (mesma conta da aba Resultados) bate este valor, a IA para de atender lead novo até o dia seguinte.', 'lim_budget')}
+      </div>
+    </div>
   );
 }
 
@@ -1532,10 +1719,16 @@ const TRIGGER_TYPES: { value: SalesAgentTriggerType; label: string }[] = [
   // são a mesma coisa — toda mensagem de número desconhecido vira contato, mas
   // só quem entra no funil é lead. É a definição que o resto do sistema já usa.
   { value: 'pipeline', label: 'É lead (tem card no funil)' },
-  { value: 'keyword', label: 'Contém palavra' },
+  { value: 'keyword', label: 'Contém/é igual a palavra' },
   { value: 'origin', label: 'Origem do lead' },
   { value: 'property', label: 'Imóvel (código / form)' },
   { value: 'pipeline_stage', label: 'Coluna de pipeline' },
+  { value: 'tag', label: 'Tem a tag' },
+];
+
+const TRIGGER_MATCH_MODE_OPTIONS: [SalesAgentTriggerMatchMode, string, string][] = [
+  ['any', 'Qualquer gatilho ativa (OU)', 'Basta UM dos gatilhos abaixo bater pra IA entrar na conversa.'],
+  ['all', 'Todos os gatilhos juntos (E)', 'Só ativa quando TODOS os gatilhos abaixo baterem ao mesmo tempo — pra combinar mais de uma condição.'],
 ];
 
 interface PipelineOpt { id: string; name: string }
@@ -1543,12 +1736,13 @@ interface StageOpt { id: string; name: string }
 
 function newTrigger(type: SalesAgentTriggerType): SalesAgentTrigger {
   switch (type) {
-    case 'keyword': return { type, value: '' };
+    case 'keyword': return { type, value: '', match_type: 'contains' };
     case 'origin': return { type, mode: 'ads' };
     case 'property': return { type, mode: 'any' };
     case 'pipeline_stage': return { type, pipeline_id: '', stage_id: '' };
     // pipeline_id vazio = qualquer funil, que é o caso normal.
     case 'pipeline': return { type, mode: 'any', pipeline_id: '' };
+    case 'tag': return { type, value: '' };
   }
 }
 
@@ -1586,6 +1780,8 @@ function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
   const remove = (i: number) => commit(triggers.filter((_, idx) => idx !== i));
   const add = () => commit([...triggers, newTrigger('keyword')]);
 
+  const matchMode = agent.trigger_match_mode ?? 'any';
+
   return (
     <div className="pt-2 border-t border-sidebar-border">
       <div className="flex items-center gap-2">
@@ -1593,8 +1789,25 @@ function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
         <Label>Gatilhos de ativação (avançado)</Label>
       </div>
       <p className="text-xs text-muted-foreground mt-1 mb-2">
-        A IA ativa quando QUALQUER gatilho bater (além da palavra-chave acima). Sem nenhum gatilho = atende todo lead do canal.
+        Sem nenhum gatilho = atende todo lead do canal (além da palavra-chave acima, que sempre restringe sozinha).
       </p>
+
+      {triggers.length > 1 && (
+        <div className="grid grid-cols-1 gap-2 mb-2">
+          {TRIGGER_MATCH_MODE_OPTIONS.map(([m, title, help]) => (
+            <label key={m} className={`flex items-start gap-3 p-2 rounded-md border cursor-pointer text-sm ${
+              matchMode === m ? 'border-primary bg-primary/5' : 'border-sidebar-border'
+            }`}>
+              <input type="radio" name="trigger_match_mode" className="mt-1"
+                checked={matchMode === m} onChange={() => onSave({ trigger_match_mode: m })} />
+              <div>
+                <div className="font-medium">{title}</div>
+                <div className="text-xs text-muted-foreground">{help}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+      )}
 
       <div className="space-y-2">
         {triggers.map((t, i) => (
@@ -1608,7 +1821,19 @@ function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
             </select>
 
             {t.type === 'keyword' && (
-              <Input className="flex-1 min-w-40" placeholder="palavra (ex: fluxoimob)" value={t.value ?? ''}
+              <>
+                <select value={t.match_type ?? 'contains'} onChange={(e) => update(i, { match_type: e.target.value as 'contains' | 'equals' })}
+                  className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+                  <option value="contains">Contém</option>
+                  <option value="equals">É exatamente</option>
+                </select>
+                <Input className="flex-1 min-w-40" placeholder="palavra (ex: fluxoimob)" value={t.value ?? ''}
+                  onChange={(e) => update(i, { value: e.target.value })} onBlur={() => commit(triggers)} />
+              </>
+            )}
+
+            {t.type === 'tag' && (
+              <Input className="flex-1 min-w-40" placeholder="tag (ex: vip)" value={t.value ?? ''}
                 onChange={(e) => update(i, { value: e.target.value })} onBlur={() => commit(triggers)} />
             )}
 

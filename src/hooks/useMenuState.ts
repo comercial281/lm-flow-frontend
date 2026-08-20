@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { MenuItem } from '@/components/layout/config/menuItems';
 
 interface MenuState {
@@ -21,6 +21,7 @@ export function useMenuState(
   setIsMobileMenuOpen?: (open: boolean) => void
 ): UseMenuStateReturn {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   const [state, setState] = useState<MenuState>({
     activeSubmenu: null,
@@ -199,6 +200,20 @@ export function useMenuState(
       if (item.href === '#') {
         e.preventDefault();
 
+        // Sidebar.tsx suprime o flyout do submenu inteiro quando a rota está
+        // dentro de /automations (senão empilha com o menu lateral próprio da
+        // seção). Sem essa saída, o clique não fazia nada: preventDefault
+        // bloqueava a navegação e o flyout nem aparecia. Navega direto pro
+        // primeiro subitem em vez de travar mudo.
+        if (pathname.startsWith('/automations') && item.subItems?.[0]?.href) {
+          navigate(item.subItems[0].href);
+          isManualSubmenuOpenRef.current = false;
+          if (isMobile && setIsMobileMenuOpen) {
+            setIsMobileMenuOpen(false);
+          }
+          return;
+        }
+
         // Calculate new state atomically
         setState(prev => {
           const isCurrentlyActive = prev.activeSubmenu?.name === item.name;
@@ -253,7 +268,7 @@ export function useMenuState(
         setIsMobileMenuOpen(false);
       }
     }
-  }, [setIsMobileMenuOpen]);
+  }, [setIsMobileMenuOpen, pathname, navigate]);
 
   // Helper functions
   const setActiveSubmenu = useCallback((item: MenuItem | null) => {

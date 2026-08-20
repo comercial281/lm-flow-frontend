@@ -132,7 +132,7 @@ const Chat = () => {
   const handleApplyFilters = useCallback(
     async (newFilters: BaseFilter[]) => {
       try {
-        await filterHandlers.handleApplyFilters(newFilters);
+        return await filterHandlers.handleApplyFilters(newFilters);
       } catch (error) {
         // Se erro 403 ou 404, marcar como erro
         const axiosError = error as AxiosError;

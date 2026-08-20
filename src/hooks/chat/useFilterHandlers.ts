@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useChatContext } from '@/contexts/chat/ChatContext';
 import { BaseFilter } from '@/types/core';
+import { Conversation } from '@/types/chat/api';
 import { convertBaseFiltersToConversationFilters } from '@/utils/chat/filterAdapters';
 import { saveConversationFilters, clearConversationFilters } from '@/utils/storage/filtersStorage';
 
@@ -12,7 +13,10 @@ export const useFilterHandlers = () => {
       // Converter BaseFilter para ConversationFilter e aplicar
       const apiFilters = convertBaseFiltersToConversationFilters(newFilters);
 
-      return new Promise<void>((resolve, reject) => {
+      // Resolve com a lista recém-carregada (não só void): quem chama
+      // precisa saber se a conversa aberta ainda está nela pra decidir se
+      // fecha o painel — ver `applyQuickFilters` em `ChatSidebar.tsx`.
+      return new Promise<Conversation[]>((resolve, reject) => {
         filters.applyFilters(
           apiFilters,
           (conversationsResult, pagination) => {
@@ -21,7 +25,7 @@ export const useFilterHandlers = () => {
 
             // 💾 PERSISTIR: Salvar filtros aplicados no localStorage
             saveConversationFilters(newFilters);
-            resolve();
+            resolve(conversationsResult);
           },
           error => {
             // Erro - mostrar mensagem e rejeitar promise
