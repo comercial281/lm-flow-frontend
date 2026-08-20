@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardContent } from '@evoapi/design-system/card';
-import { Brain, ChevronDown, ArrowRightLeft } from 'lucide-react';
+import { Brain, ChevronDown, ArrowRightLeft, History, CheckCircle2, XCircle, MinusCircle } from 'lucide-react';
 
 import type { Conversation } from '@/types/chat/api';
+import { chatService } from '@/services/chat/chatService';
+import type { SalesAgentLeadReport } from '@/types/analytics/pipelines';
 
 /**
  * "O que a IA entendeu" — as leituras da IA Vendedora sobre ESTE lead.
@@ -67,6 +69,26 @@ interface Props {
 
 export default function AiUnderstandingPanel({ conversation }: Props) {
   const [aberto, setAberto] = useState(true);
+  const [logsAbertos, setLogsAbertos] = useState(false);
+  const [report, setReport] = useState<SalesAgentLeadReport | null>(null);
+
+  // Histórico da IA nesta conversa: os turnos que ela já rodou (respondeu, pulou
+  // ou falhou) + o próximo passo que o backend calcula. Mesmo dado que a janela
+  // "Ativar IA" já usa (getSalesAgentStatus) — só que aqui fica plugado direto
+  // na aba, sem precisar abrir aquela janela pra ver (pedido do Giovani, 19/08:
+  // "os próximos envios e disparos programados ou não, se meio que morreu").
+  useEffect(() => {
+    if (!conversation?.id) {
+      setReport(null);
+      return;
+    }
+    let alive = true;
+    chatService
+      .getSalesAgentStatus(conversation.id)
+      .then(r => { if (alive) setReport(r); })
+      .catch(() => { if (alive) setReport(null); });
+    return () => { alive = false; };
+  }, [conversation?.id]);
 
   const attrs = (conversation?.additional_attributes ?? {}) as Record<string, unknown>;
 
@@ -82,13 +104,17 @@ export default function AiUnderstandingPanel({ conversation }: Props) {
   const coletado = COLETADO.map(c => ({ ...c, valor: texto(coletadoBruto[c.chave]) })).filter(c => c.valor);
 
   // "unknown" sozinho não é leitura: é a IA dizendo que ainda não sabe. Nesse
-  // caso o bloco só aparece se houver alguma outra coisa de verdade para mostrar.
+  // caso o bloco só aparece se houver alguma outra coisa de verdade para mostrar
+  // — incluindo o log de turnos (uma IA que só falhou não tem "leitura" nenhuma
+  // do lead, mas o corretor ainda precisa ver que ela tentou e não deu certo).
+  const temLog = Boolean(report && (report.runs.length > 0 || report.why));
   const temLeitura =
     (temperatura && temperatura !== 'unknown') ||
     Boolean(resumo) ||
     Boolean(etapa) ||
     coletado.length > 0 ||
-    transferiu;
+    transferiu ||
+    temLog;
 
   if (!temLeitura) return null;
 
@@ -175,6 +201,75 @@ export default function AiUnderstandingPanel({ conversation }: Props) {
                   Passou para um corretor
                   {motivoTransferencia ? `: ${motivoTransferencia}` : '.'}
                 </span>
+              </div>
+            )}
+
+            {/* Log da IA nesta conversa: turno a turno (respondeu/pulou/falhou) +
+                o próximo passo calculado pelo backend. Fica fechado por padrão —
+                é detalhe de investigação, não a primeira coisa que se quer ver. */}
+            {temLog && report && (
+              <div className="pt-2 mt-2 border-t border-violet-200/60 dark:border-violet-800/60">
+                <button
+                  type="button"
+                  onClick={() => setLogsAbertos(!logsAbertos)}
+                  aria-expanded={logsAbertos}
+                  className="flex w-full items-center justify-between text-[11px] uppercase tracking-wide text-muted-foreground hover:text-foreground"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <History className="h-3 w-3" />
+                    Histórico e próximos passos
+                    {report.runs.length > 0 && (
+                      <span className="normal-case font-normal">({report.runs.length})</span>
+                    )}
+                  </span>
+                  <ChevronDown className={`h-3 w-3 transition-transform ${logsAbertos ? 'rotate-180' : ''}`} />
+                </button>
+
+                {logsAbertos && (
+                  <div className="mt-2 space-y-2">
+                    <div className="rounded bg-muted/40 p-2 space-y-1">
+                      <p className="text-xs">{report.why}</p>
+                      {report.next_step && (
+                        <p className="text-xs text-muted-foreground">{report.next_step}</p>
+                      )}
+                    </div>
+
+                    {report.runs.length > 0 && (
+                      <ul className="space-y-1">
+                        {report.runs.map((run, i) => {
+                          const Icon =
+                            run.status === 'replied' && run.delivered
+                              ? CheckCircle2
+                              : run.status === 'failed'
+                                ? XCircle
+                                : MinusCircle;
+                          const cor =
+                            run.status === 'replied' && run.delivered
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : run.status === 'failed'
+                                ? 'text-red-600 dark:text-red-400'
+                                : 'text-muted-foreground';
+                          const rotulo =
+                            run.status === 'replied'
+                              ? run.delivered
+                                ? 'Respondeu o lead'
+                                : 'Gerou resposta, mas não conseguiu enviar'
+                              : run.status === 'failed'
+                                ? `Falhou: ${run.error_message ?? 'erro no servidor'}`
+                                : (run.reason_label ?? 'Não respondeu');
+                          return (
+                            <li key={i} className="flex items-start gap-1.5 text-[11px]">
+                              <Icon className={`h-3 w-3 mt-0.5 flex-shrink-0 ${cor}`} />
+                              <span className="text-muted-foreground">
+                                {new Date(run.created_at).toLocaleString('pt-BR')} · {rotulo}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

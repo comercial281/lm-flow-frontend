@@ -20,7 +20,6 @@ import {
   PenLine,
   Rocket,
   Building2,
-  Type,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -121,10 +120,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   // 🎯 EMOJI PICKER: Estado
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-
-  // ✍️ FORMATAÇÃO: barra de formatação (negrito/itálico/etc.) fica escondida por
-  // padrão pra deixar a barra enxuta (estilo WhatsApp); o botão "Aa" mostra/esconde.
-  const [showFormatting, setShowFormatting] = useState(false);
 
   // 🎯 MESSAGE SIGNATURE: Hook para gerenciar assinatura
   const { isSignatureEnabled, toggleSignature, hasSignature, appendSignatureIfEnabled } =
@@ -500,8 +495,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
             />
           )}
 
-          {/* Primeira linha: Reply Mode Toggle + Botões de ação rápida */}
-          <div className="flex items-center justify-between mb-2 gap-2 md:gap-3">
+          {/* Primeira linha: Reply Mode Toggle + Botões de ação rápida.
+              mt-1.5 pedido pelo Giovani (19/08): a barra ficava colada no topo
+              do card, sem respiro em relação à borda de cima. */}
+          <div className="flex items-center justify-between mt-1.5 mb-2 gap-2 md:gap-3">
             {/* Reply Mode Toggle */}
             <ReplyModeToggle
               currentMode={isPendingConversation ? ReplyMode.NOTE : replyMode}
@@ -567,20 +564,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
           <div className="flex flex-wrap md:flex-nowrap items-end gap-2 w-full overflow-visible">
             {/* Botões de formatação à esquerda */}
             <div className="order-2 md:order-1 flex-shrink-0 flex items-center gap-1 md:pb-1">
-              {/* Botão de formatação (Aa): mostra/esconde a barra de negrito/itálico/etc. */}
-              {!isPendingConversation && (
-                <Button
-                  variant={showFormatting ? 'default' : 'ghost'}
-                  size="icon"
-                  disabled={isDisabled || isSending}
-                  className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
-                  onClick={() => setShowFormatting(v => !v)}
-                  title={t('messageInput.formatting.toggle', 'Formatação')}
-                >
-                  <Type className="h-4 w-4" />
-                </Button>
-              )}
-
               {/* File Upload Button */}
               {canSendAttachment && (
                 <FileUpload
@@ -708,7 +691,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 disabled={isDisabled || isSending || (isPendingConversation && replyMode !== ReplyMode.NOTE)}
                 className="min-h-[44px]"
                 editorMinHeightClass="min-h-[44px]"
-                showToolbar={showFormatting && !isPendingConversation}
+                showToolbar={!isPendingConversation}
               />
             </div>
 
@@ -737,7 +720,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
                       size="icon"
                       onClick={handleSend}
                       disabled={!canSend}
-                      className="bg-primary hover:bg-primary/85 text-primary-foreground h-9 w-9 flex-shrink-0 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50"
+                      // Botão de enviar em verde WhatsApp — antes era cinza-claro em
+                      // cima de roxo-claro (contraste quase zero, pedido do Giovani
+                      // pra ficar visível de verdade, 19/08).
+                      className="rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] text-white shadow-sm hover:brightness-110 h-9 w-9 flex-shrink-0 disabled:from-muted disabled:to-muted disabled:text-muted-foreground disabled:opacity-50 disabled:shadow-none"
                     >
                       {isSending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
