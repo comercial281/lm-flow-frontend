@@ -9,7 +9,7 @@ import LogsView from '@/pages/SuperAdmin/ClientInstances/LogsView';
  */
 export default function AdminAtividade() {
   return (
-    <div className="p-6 h-[calc(100vh-3.5rem)] flex flex-col">
+    <div className="flex h-full flex-col">
       <div className="mb-4 border-l-4 border-primary pl-3">
         <h1 className="text-xl font-semibold">Atividade</h1>
         <p className="text-sm text-muted-foreground">Quem está online e tudo que os clientes fizeram</p>

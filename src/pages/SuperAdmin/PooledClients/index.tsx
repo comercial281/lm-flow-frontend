@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
-import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, Eye, EyeOff, MessageCircle, XCircle, Bot } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, Eye, EyeOff, MessageCircle, XCircle, Bot, Radio, UserCog, ClipboardList, MessageSquarePlus, Activity } from 'lucide-react';
 import api from '@/services/core/api';
 import IconActionButton from '@/components/base/IconActionButton';
 import NewTenantWizard from './NewTenantWizard';
@@ -10,8 +11,23 @@ import DashboardView from '../ClientInstances/DashboardView';
 import LogsView from '../ClientInstances/LogsView';
 import UserMetricsView from '../ClientInstances/UserMetricsView';
 import ArchivedFeaturesView from './ArchivedFeaturesView';
+import LeadsFeed from '../LeadsFeed';
+import ClientMode from '../ClientMode';
+import OnboardingForms from '../OnboardingForms';
+import CustomerFeedbacks from '../CustomerFeedbacks';
+import AdminAtividade from '@/pages/Admin/Area/Auditoria';
 
-type ViewTab = 'clients' | 'dashboard' | 'logs' | 'metrics' | 'archived-features';
+type ViewTab =
+  | 'clients'
+  | 'dashboard'
+  | 'logs'
+  | 'metrics'
+  | 'archived-features'
+  | 'leads-ao-vivo'
+  | 'modo-cliente'
+  | 'formularios'
+  | 'sugestoes-bugs'
+  | 'atividade';
 
 // Consumo de IA do mês corrente, já cruzado com a franquia contratada.
 // Vem pronto do backend (SalesAgents::UsageReport) de propósito: a conta do
@@ -833,7 +849,16 @@ export default function PooledClients() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<PooledTenant | null>(null);
   const [deleteText, setDeleteText] = useState('');
-  const [tab, setTab] = useState<ViewTab>('clients');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const VALID_TABS: ViewTab[] = ['clients', 'dashboard', 'logs', 'metrics', 'archived-features', 'leads-ao-vivo', 'modo-cliente', 'formularios', 'sugestoes-bugs', 'atividade'];
+  const initialTab = searchParams.get('tab') as ViewTab | null;
+  const [tab, setTabState] = useState<ViewTab>(
+    initialTab && VALID_TABS.includes(initialTab) ? initialTab : 'clients',
+  );
+  const setTab = (id: ViewTab) => {
+    setTabState(id);
+    setSearchParams(id === 'clients' ? {} : { tab: id }, { replace: true });
+  };
   const [dashData, setDashData] = useState<DashboardData | null>(null);
   const [loadingDash, setLoadingDash] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
@@ -975,6 +1000,11 @@ export default function PooledClients() {
             { id: 'logs', label: 'Logs', Icon: ScrollText },
             { id: 'metrics', label: 'Métricas de Uso', Icon: Gauge },
             { id: 'archived-features', label: 'Arquivados', Icon: Archive },
+            { id: 'leads-ao-vivo', label: 'Leads ao Vivo', Icon: Radio },
+            { id: 'modo-cliente', label: 'Modo Cliente', Icon: UserCog },
+            { id: 'formularios', label: 'Formulários', Icon: ClipboardList },
+            { id: 'sugestoes-bugs', label: 'Sugestões/Bugs', Icon: MessageSquarePlus },
+            { id: 'atividade', label: 'Atividade', Icon: Activity },
           ] as { id: ViewTab; label: string; Icon: typeof List }[]).map(({ id, label, Icon }) => (
             <button key={id} onClick={() => setTab(id)}
               className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
@@ -995,6 +1025,16 @@ export default function PooledClients() {
         <div className="h-full"><UserMetricsView /></div>
       ) : tab === 'archived-features' ? (
         <ArchivedFeaturesView />
+      ) : tab === 'leads-ao-vivo' ? (
+        <LeadsFeed />
+      ) : tab === 'modo-cliente' ? (
+        <ClientMode />
+      ) : tab === 'formularios' ? (
+        <OnboardingForms />
+      ) : tab === 'sugestoes-bugs' ? (
+        <CustomerFeedbacks />
+      ) : tab === 'atividade' ? (
+        <div className="h-full"><AdminAtividade /></div>
       ) : loading && tenants.length === 0 ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-violet-500" /></div>
       ) : (

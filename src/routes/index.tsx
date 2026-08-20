@@ -125,18 +125,14 @@ function EspacoPublicRoute() {
 }
 
 const ClientInstances = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances'));
-const AutomationTemplatesPage = lazyWithRetry(() => import('@/pages/SuperAdmin/AutomationTemplates/AutomationTemplates'));
+// Clientes, Leads ao Vivo, Modo Cliente, Formulários, Sugestões/Bugs e
+// Atividade viraram abas DENTRO do PooledClients — só ele é rota.
 const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients'));
 const PushCentral = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral'));
-const ClientMode = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientMode'));
-const CerebroUniversal = lazyWithRetry(() => import('@/pages/SuperAdmin/CerebroUniversal'));
 const CustoIA = lazyWithRetry(() => import('@/pages/SuperAdmin/CustoIA'));
-const ResultadosIA = lazyWithRetry(() => import('@/pages/SuperAdmin/ResultadosIA'));
+// Agentes, Cérebro Universal, Resultados e Aperfeiçoamento viraram abas
+// DENTRO do SuperAgents (IA Vendedora) — só ele é rota.
 const SuperAgents = lazyWithRetry(() => import('@/pages/SuperAdmin/SuperAgents'));
-const OnboardingForms = lazyWithRetry(() => import('@/pages/SuperAdmin/OnboardingForms'));
-const SdrRefinement = lazyWithRetry(() => import('@/pages/SuperAdmin/SdrRefinement'));
-const CustomerFeedbacks = lazyWithRetry(() => import('@/pages/SuperAdmin/CustomerFeedbacks'));
-const LeadsFeed = lazyWithRetry(() => import('@/pages/SuperAdmin/LeadsFeed'));
 const PublicOnboardingForm = lazyWithRetry(() => import('@/pages/PublicOnboardingForm'));
 
 // Área do Admin — shell próprio (AdminLayout), fora do menu do CRM.
@@ -144,7 +140,6 @@ const AdminLayout = lazyWithRetry(() => import('@/components/layout/AdminLayout'
 // Shell da área de membros (Academia do cliente) — sem o CRM em volta.
 const MembersLayout = lazyWithRetry(() => import('@/components/layout/MembersLayout'));
 const AdminOverview = lazyWithRetry(() => import('@/pages/Admin/Area/Overview'));
-const AdminAtividade = lazyWithRetry(() => import('@/pages/Admin/Area/Auditoria'));
 const AdminUso = lazyWithRetry(() => import('@/pages/Admin/Area/Uso'));
 const AdminEquipe = lazyWithRetry(() => import('@/pages/Admin/Area/Equipe'));
 const AdminAcademia = lazyWithRetry(() => import('@/pages/Admin/Area/Academia'));
@@ -2027,42 +2022,16 @@ const AppRouter = () => {
               </PrivateRoute>
             }
           />
-          <Route
-            path="/admin/leads-ao-vivo"
-            element={
-              <PrivateRoute>
-                <SuperAdminRoute>
-                  <AdminLayout>
-                    <LeadsFeed />
-                  </AdminLayout>
-                </SuperAdminRoute>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/admin/modo-cliente"
-            element={
-              <PrivateRoute>
-                <SuperAdminRoute>
-                  <AdminLayout>
-                    <ClientMode />
-                  </AdminLayout>
-                </SuperAdminRoute>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/admin/cerebro"
-            element={
-              <PrivateRoute>
-                <SuperAdminRoute>
-                  <AdminLayout>
-                    <CerebroUniversal />
-                  </AdminLayout>
-                </SuperAdminRoute>
-              </PrivateRoute>
-            }
-          />
+          {/* Leads ao Vivo, Modo Cliente, Formulários, Sugestões/Bugs e Atividade
+              viraram abas dentro de /admin/clientes (reorg 19/08/2026) — rotas
+              antigas só redirecionam, pra não quebrar link salvo/bookmark. */}
+          <Route path="/admin/leads-ao-vivo" element={<Navigate to="/admin/clientes?tab=leads-ao-vivo" replace />} />
+          <Route path="/admin/modo-cliente" element={<Navigate to="/admin/clientes?tab=modo-cliente" replace />} />
+          <Route path="/admin/formularios" element={<Navigate to="/admin/clientes?tab=formularios" replace />} />
+          <Route path="/admin/sugestoes-bugs" element={<Navigate to="/admin/clientes?tab=sugestoes-bugs" replace />} />
+          <Route path="/admin/atividade" element={<Navigate to="/admin/clientes?tab=atividade" replace />} />
+          {/* Rota antiga: Auditoria virou Atividade, que agora é aba de Clientes */}
+          <Route path="/admin/auditoria" element={<Navigate to="/admin/clientes?tab=atividade" replace />} />
           <Route
             path="/admin/agentes"
             element={
@@ -2075,21 +2044,11 @@ const AppRouter = () => {
               </PrivateRoute>
             }
           />
-          {/* O avesso do Custo da IA: o que ela PRODUZIU. É a tela que o dono
-              abre na frente do cliente — leads atendidos, taxa de resposta,
-              qualificados e as visitas que a IA marcou sozinha. */}
-          <Route
-            path="/admin/resultados-ia"
-            element={
-              <PrivateRoute>
-                <SuperAdminRoute>
-                  <AdminLayout>
-                    <ResultadosIA />
-                  </AdminLayout>
-                </SuperAdminRoute>
-              </PrivateRoute>
-            }
-          />
+          {/* Cérebro Universal, Resultados e Aperfeiçoamento viraram abas dentro
+              de /admin/agentes (IA Vendedora) — rotas antigas só redirecionam. */}
+          <Route path="/admin/cerebro" element={<Navigate to="/admin/agentes?tab=cerebro" replace />} />
+          <Route path="/admin/resultados-ia" element={<Navigate to="/admin/agentes?tab=resultados" replace />} />
+          <Route path="/admin/aperfeicoamento" element={<Navigate to="/admin/agentes?tab=aperfeicoamento" replace />} />
           {/* Rateio do consumo da Anthropic por cliente: a chave é uma só pra
               todos os tenants, então sem esta tela a fatura não tem dono. */}
           <Route
@@ -2099,42 +2058,6 @@ const AppRouter = () => {
                 <SuperAdminRoute>
                   <AdminLayout>
                     <CustoIA />
-                  </AdminLayout>
-                </SuperAdminRoute>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/admin/aperfeicoamento"
-            element={
-              <PrivateRoute>
-                <SuperAdminRoute>
-                  <AdminLayout>
-                    <SdrRefinement />
-                  </AdminLayout>
-                </SuperAdminRoute>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/admin/formularios"
-            element={
-              <PrivateRoute>
-                <SuperAdminRoute>
-                  <AdminLayout>
-                    <OnboardingForms />
-                  </AdminLayout>
-                </SuperAdminRoute>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/admin/sugestoes-bugs"
-            element={
-              <PrivateRoute>
-                <SuperAdminRoute>
-                  <AdminLayout>
-                    <CustomerFeedbacks />
                   </AdminLayout>
                 </SuperAdminRoute>
               </PrivateRoute>
@@ -2152,20 +2075,6 @@ const AppRouter = () => {
               </PrivateRoute>
             }
           />
-          <Route
-            path="/admin/atividade"
-            element={
-              <PrivateRoute>
-                <SuperAdminRoute>
-                  <AdminLayout>
-                    <AdminAtividade />
-                  </AdminLayout>
-                </SuperAdminRoute>
-              </PrivateRoute>
-            }
-          />
-          {/* Rota antiga: Auditoria virou Atividade (juntou com Uso) */}
-          <Route path="/admin/auditoria" element={<Navigate to="/admin/atividade" replace />} />
           <Route
             path="/admin/equipe"
             element={
@@ -2190,18 +2099,10 @@ const AppRouter = () => {
               </PrivateRoute>
             }
           />
-          <Route
-            path="/admin/biblioteca"
-            element={
-              <PrivateRoute>
-                <SuperAdminRoute>
-                  <AdminLayout>
-                    <AutomationTemplatesPage />
-                  </AdminLayout>
-                </SuperAdminRoute>
-              </PrivateRoute>
-            }
-          />
+          {/* Biblioteca de Automações excluída (19/08/2026) — sem uso real, era
+              redundante com o modal de biblioteca que o cliente já tem em
+              Automações. Bookmark antigo cai na Visão Geral. */}
+          <Route path="/admin/biblioteca" element={<Navigate to="/admin" replace />} />
           {/* Academia dentro do admin: mesma tela do /tutorials, mas no shell do
               admin. /tutorials continua sendo por onde o CLIENTE assiste. */}
           <Route
@@ -2219,7 +2120,7 @@ const AppRouter = () => {
 
           {/* Rotas antigas: mantidas como redirect pra não quebrar link salvo/bookmark. */}
           <Route path="/super-admin/pooled-clients" element={<Navigate to="/admin/clientes" replace />} />
-          <Route path="/super-admin/automation-templates" element={<Navigate to="/admin/biblioteca" replace />} />
+          <Route path="/super-admin/automation-templates" element={<Navigate to="/admin" replace />} />
 
           {/* Super Admin — gerenciamento de instâncias de clientes */}
           <Route path="/super-admin/clients" element={<Navigate to="/super-admin/clientes" replace />} />
