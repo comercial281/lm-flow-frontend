@@ -15,12 +15,8 @@ import {
   Code,
   Key,
   Tags,
-  TestTube,
-  Wand,
   Settings,
-  List,
   GraduationCap,
-  Shield,
   Zap,
   Store,
   Building2,
@@ -226,56 +222,6 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     featureKey: 'property_interests',
   },
   {
-    // Antes se chamava "Agentes de IA" — o MESMO nome do que a IA Vendedora é,
-    // uma linha acima. Enquanto os dois se chamassem "agente de IA", a confusão
-    // voltava sozinha: quem procurava a IA que atende o lead caía aqui, que é
-    // outra plataforma (Evo AI) e não tem noção nenhuma de canal.
-    //
-    // Agora: a IA Vendedora é a ÚNICA IA do produto. Isto aqui é conexão de robô
-    // de FORA (n8n, webhook, ferramentas, MCP), e passa a vir desligado pro
-    // cliente — clientToggleKey em vez de featureKey, mesmo tratamento da IA
-    // Vendedora: super-admin sempre vê, cliente só se a Leal Mídia liberar.
-    //
-    // A chave continua sendo `ai_agents` (liberador PRÓPRIO, não o das
-    // Automações): quem libera automação de lead não ganha robô externo junto.
-    // O que muda é o default — `ai_agents` entrou em DEFAULT_OFF_FEATURES no
-    // backend, senão o tenant sem valor gravado receberia `true` e o item
-    // continuaria aparecendo pra todo mundo.
-    id: 'customer-agents',
-    name: 'Robôs e Integrações',
-    href: '/agents/list',
-    icon: Bot,
-    resource: 'ai_agents',
-    action: 'read',
-    clientToggleKey: 'ai_agents',
-    subItems: [
-      {
-        name: 'Robôs Externos',
-        href: '/agents/list',
-        icon: List,
-        resource: 'ai_agents',
-        action: 'read',
-      },
-      // "Robô Sem Resposta" saiu daqui: não é IA e não é robô externo — é o motor
-      // que enrola no follow-up quem não respondeu. Vive em Automações, junto dos
-      // funis de mensagem que ele dispara, e continua acessível por lá.
-      {
-        name: 'Ferramentas',
-        href: '/agents/custom-tools',
-        icon: Wand,
-        resource: 'ai_custom_tools',
-        action: 'read',
-      },
-      {
-        name: 'Servidores MCP',
-        href: '/agents/custom-mcp-servers',
-        icon: TestTube,
-        resource: 'ai_custom_mcp_servers',
-        action: 'read',
-      },
-    ],
-  },
-  {
     name: t('menu.customer.channels'),
     href: '/channels',
     icon: Layers,
@@ -391,13 +337,6 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         icon: Key,
         resource: 'access_tokens',
         action: 'read',
-      },
-      {
-        name: t('menu.settings.admin'),
-        href: '/settings/admin',
-        icon: Shield,
-        resource: 'installation_configs',
-        action: 'manage',
       },
     ],
   },

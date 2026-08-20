@@ -104,8 +104,7 @@
       "cannedResponses": "Respuestas Rápidas",
       "macros": "Macros",
       "integrations": "Integraciones",
-      "accessTokens": "Tokens de Acceso",
-      "admin": "Configuración Admin"
+      "accessTokens": "Tokens de Acceso"
     }
   }
 }

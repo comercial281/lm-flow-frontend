@@ -38,12 +38,6 @@ const SaasSignup = lazyWithRetry(() => import('@/pages/Auth/SaasSignup'));
 // O antigo segue no repo, sem rota, até a nova tela rodar alguns dias em
 // produção — remover no mesmo passo da troca deixaria sem para onde voltar.
 const Dashboard = lazyWithRetry(() => import('@/pages/Customer/DashboardV2'));
-const Agents = lazyWithRetry(() => import('@/pages/Customer/Agents'));
-const AgentEditPage = lazyWithRetry(() => import('@/pages/Customer/Agents/Agent/AgentEditPage'));
-const MCPServers = lazyWithRetry(() => import('@/pages/Customer/Agents/MCPServers'));
-const CustomMCPServers = lazyWithRetry(() => import('@/pages/Customer/Agents/CustomMCPServers'));
-const Tools = lazyWithRetry(() => import('@/pages/Customer/Agents/Tools'));
-const CustomTools = lazyWithRetry(() => import('@/pages/Customer/Agents/CustomTools'));
 const Contacts = lazyWithRetry(() => import('@/pages/Customer/Contacts'));
 const ScheduledActions = lazyWithRetry(() => import('@/pages/Customer/Contacts/ScheduledActions'));
 const Channels = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.Channels })));
@@ -175,17 +169,6 @@ const PortalsList = lazyWithRetry(() => import('../pages/Customer/Settings/Porta
 const PortalDetailPage = lazyWithRetry(() => import('../pages/Customer/Settings/Portals/PortalDetailPage'));
 // import { Overview, Conversations } from '../pages/Customer/Reports';
 // import * as Reports from '../pages/Customer/Reports';
-
-// Páginas admin
-import AdminSettingsLayout from '@/pages/Admin/Settings';
-const SmtpConfig = lazyWithRetry(() => import('@/pages/Admin/Settings/SmtpConfig'));
-const StorageConfig = lazyWithRetry(() => import('@/pages/Admin/Settings/StorageConfig'));
-const SocialLoginConfig = lazyWithRetry(() => import('@/pages/Admin/Settings/SocialLoginConfig'));
-const ChannelConfig = lazyWithRetry(() => import('@/pages/Admin/Settings/ChannelConfig'));
-const OpenAIConfig = lazyWithRetry(() => import('@/pages/Admin/Settings/OpenAIConfig'));
-const IntegrationsConfig = lazyWithRetry(() => import('@/pages/Admin/Settings/IntegrationsConfig'));
-const InboundEmailConfig = lazyWithRetry(() => import('@/pages/Admin/Settings/InboundEmailConfig'));
-const FrontendRuntimeConfig = lazyWithRetry(() => import('@/pages/Admin/Settings/FrontendRuntimeConfig'));
 
 // Página de tutoriais
 const Tutorials = lazyWithRetry(() => import('@/pages/Customer/Tutorials'));
@@ -1011,16 +994,6 @@ const AppRouter = () => {
             }
           />
 
-          {/* Redirecionamentos das rotas antigas de settings para agents */}
-          <Route
-            path="/settings/custom-tools"
-            element={<Navigate to="/agents/custom-tools" replace />}
-          />
-
-          <Route
-            path="/settings/custom-mcp-servers"
-            element={<Navigate to="/agents/custom-mcp-servers" replace />}
-          />
 
           <Route
             path="/settings/integrations/webhooks"
@@ -1478,130 +1451,6 @@ const AppRouter = () => {
             }
           />
 
-          {/* Rota principal de agents redireciona para /agents/list */}
-          <Route path="/agents" element={<Navigate to="/agents/list" replace />} />
-
-          {/* Lista de agentes */}
-          <Route
-            path="/agents/list"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_agents" action="read">
-                      <Agents />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/agents/new"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_agents" action="create">
-                      <Agents />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/agents/:id/edit"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_agents" action="update">
-                      <AgentEditPage />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/agents/management"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_agents" action="read">
-                      <Agents />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/agents/mcp-servers"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_mcp_servers" action="read">
-                      <MCPServers />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/agents/custom-mcp-servers"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_custom_mcp_servers" action="read">
-                      <CustomMCPServers />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/agents/tools"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_tools" action="read">
-                      <Tools />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/agents/custom-tools"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_custom_tools" action="read">
-                      <CustomTools />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
           <Route
             path="/dashboard"
             element={
@@ -1690,87 +1539,6 @@ const AppRouter = () => {
 
           {/* Rotas específicas de canais foram integradas no fluxo unificado do NewChannel */}
           {/* Meta e WhatsApp Cloud agora são parte do componente NewChannel */}
-
-          {/* Admin Settings Routes */}
-          <Route
-            path="/settings/admin"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="installation_configs" action="manage">
-                      <AdminSettingsLayout />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          >
-            <Route
-              path="email"
-              element={
-                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <SmtpConfig />
-                </Suspense>
-              }
-            />
-            <Route
-              path="storage"
-              element={
-                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <StorageConfig />
-                </Suspense>
-              }
-            />
-            <Route
-              path="social-login"
-              element={
-                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <SocialLoginConfig />
-                </Suspense>
-              }
-            />
-            <Route
-              path="channels"
-              element={
-                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <ChannelConfig />
-                </Suspense>
-              }
-            />
-            <Route
-              path="openai"
-              element={
-                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <OpenAIConfig />
-                </Suspense>
-              }
-            />
-            <Route
-              path="integrations"
-              element={
-                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <IntegrationsConfig />
-                </Suspense>
-              }
-            />
-            <Route
-              path="inbound-email"
-              element={
-                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <InboundEmailConfig />
-                </Suspense>
-              }
-            />
-            <Route
-              path="frontend-runtime"
-              element={
-                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <FrontendRuntimeConfig />
-                </Suspense>
-              }
-            />
-          </Route>
 
           {/* Rotas Compartilhadas */}
           <Route
