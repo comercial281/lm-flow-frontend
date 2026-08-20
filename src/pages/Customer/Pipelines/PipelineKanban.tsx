@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { formatDateBR } from '@/utils/dateUtils';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -17,27 +17,18 @@ import {
   ArrowLeft,
   Plus,
   MoreVertical,
-  GripVertical,
   Edit,
   Trash2,
   Copy,
   ArrowUpDown,
   Phone,
-  Mail,
   User,
-  CalendarClock,
-  ListTodo,
-  AlertCircle,
-  Clock,
-  CheckCircle2,
   Search,
   X,
   Download,
   Upload,
-  MessageCircle,
   Megaphone,
   Archive,
-  Home,
   LayoutGrid,
   List as ListIcon,
   ChevronRight,
@@ -55,28 +46,53 @@ import {
   UpdatePipelineData,
   CreateStageData,
 } from '@/types/analytics';
+// PipelineSwitcher e PipelineFiltersPopover ficam no header/toolbar, sempre
+// visíveis de cara (não são modais) — seguem import estático de propósito
+// (lazy aqui só adicionaria uma requisição inútil).
 import PipelineSwitcher from '@/components/pipelines/PipelineSwitcher';
-import EditPipelineModal from '@/components/pipelines/EditPipelineModal';
-import CreateStageModal from '@/components/pipelines/CreateStageModal';
-import AddItemModal from '@/components/pipelines/AddItemModal';
-import ImportLeadsModal from '@/components/pipelines/ImportLeadsModal';
-import BulkDispatchModal from '@/components/pipelines/BulkDispatchModal';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
-import RemoveItemModal from '@/components/pipelines/RemoveItemModal';
-import EditItemModal from '@/components/pipelines/EditItemModal';
-import EditStageModal from '@/components/pipelines/EditStageModal';
-import DeleteStageModal from '@/components/pipelines/DeleteStageModal';
-import DeletePipelineModal from '@/components/pipelines/DeletePipelineModal';
-import ReorderStagesModal from '@/components/pipelines/ReorderStagesModal';
 import PipelineFiltersPopover, {
   type TimePreset,
   type AbandonedPreset,
 } from '@/components/pipelines/PipelineFiltersPopover';
-import { ScheduleActionModal } from '@/components/scheduledActions';
-import { NotesHistoryModal } from '@/components/pipelines/NotesHistoryModal';
-import ArchivedLeadsModal from '@/components/pipelines/ArchivedLeadsModal';
 import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
+import { lazyWithRetry } from '@/utils/chunkReload';
+// Card do board, sempre visível de cara — import estático de propósito.
+import PipelineItemCard from './PipelineItemCard';
+import {
+  itemPos,
+  itemTagInfos,
+  itemTagNames,
+  calculateStageTotal,
+  lastContactDays,
+  resolveItemName,
+  resolveItemAvatar,
+  resolveItemRef,
+  getContactColor,
+  formatArrivalDate,
+} from './pipelineItemHelpers';
+
+// Os modais abaixo só aparecem quando o usuário clica em algo pra abrir —
+// código deles não precisa estar no bundle inicial da página de Pipelines.
+const EditPipelineModal = lazyWithRetry(() => import('@/components/pipelines/EditPipelineModal'));
+const CreateStageModal = lazyWithRetry(() => import('@/components/pipelines/CreateStageModal'));
+const AddItemModal = lazyWithRetry(() => import('@/components/pipelines/AddItemModal'));
+const ImportLeadsModal = lazyWithRetry(() => import('@/components/pipelines/ImportLeadsModal'));
+const BulkDispatchModal = lazyWithRetry(() => import('@/components/pipelines/BulkDispatchModal'));
+const RemoveItemModal = lazyWithRetry(() => import('@/components/pipelines/RemoveItemModal'));
+const EditItemModal = lazyWithRetry(() => import('@/components/pipelines/EditItemModal'));
+const EditStageModal = lazyWithRetry(() => import('@/components/pipelines/EditStageModal'));
+const DeleteStageModal = lazyWithRetry(() => import('@/components/pipelines/DeleteStageModal'));
+const DeletePipelineModal = lazyWithRetry(() => import('@/components/pipelines/DeletePipelineModal'));
+const ReorderStagesModal = lazyWithRetry(() => import('@/components/pipelines/ReorderStagesModal'));
+const ScheduleActionModal = lazyWithRetry(() =>
+  import('@/components/scheduledActions').then(m => ({ default: m.ScheduleActionModal })),
+);
+const NotesHistoryModal = lazyWithRetry(() =>
+  import('@/components/pipelines/NotesHistoryModal').then(m => ({ default: m.NotesHistoryModal })),
+);
+const ArchivedLeadsModal = lazyWithRetry(() => import('@/components/pipelines/ArchivedLeadsModal'));
 
 export default function PipelineKanban() {
   const { t } = useLanguage('pipelines');
@@ -404,34 +420,29 @@ export default function PipelineKanban() {
     }
   };
 
-  // Drag and drop handlers
-  const handleDragStart = (item: PipelineItem) => {
+  // Drag and drop handlers.
+  // Viram useCallback (referência estável) porque handleDragStart/handleCardDragOver/
+  // handleCardDrop/handleDragEnd são passados como prop pro PipelineItemCard
+  // memoizado — sem isso, cada render do board recriava a função e quebrava o
+  // memo (card inteiro re-renderizava mesmo sem o item mudar).
+  const handleDragStart = useCallback((item: PipelineItem) => {
     setDraggedItem(item);
     isDraggingRef.current = true;
     suppressClickUntilRef.current = Date.now() + 200;
     startAutoScroll();
-  };
+  }, [startAutoScroll]);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-  };
+  }, []);
 
   // Limpa o estado de arraste (reuso entre drop em coluna e em card).
-  const finishDrag = () => {
+  const finishDrag = useCallback(() => {
     setDraggedItem(null);
     isDraggingRef.current = false;
     suppressClickUntilRef.current = Date.now() + 200;
     stopAutoScroll();
-  };
-
-  // Valor de ordenação do card: position quando existe, senão a chegada
-  // (entered_at/created_at em epoch). Mesma escala em ambos (segundos).
-  const itemPos = (it: PipelineItem): number =>
-    typeof it.position === 'number'
-      ? it.position
-      : typeof it.entered_at === 'number'
-      ? it.entered_at
-      : new Date(it.created_at).getTime() / 1000;
+  }, [stopAutoScroll]);
 
   // Onde o cursor está sobre o card alvo (metade de cima = acima, baixo = abaixo).
   const dragOverPosRef = useRef<'above' | 'below'>('above');
@@ -439,7 +450,7 @@ export default function PipelineKanban() {
   // Move/reordena o card arrastado para targetStageId na position newPos,
   // inserindo no índice insertIdx (no array já SEM o card arrastado).
   // Atualização otimista + persistência via /reorder.
-  const commitReorder = async (targetStageId: string, newPos: number, insertIdx: number) => {
+  const commitReorder = useCallback(async (targetStageId: string, newPos: number, insertIdx: number) => {
     if (!draggedItem || !pipelineId) {
       finishDrag();
       return;
@@ -475,14 +486,14 @@ export default function PipelineKanban() {
     } finally {
       finishDrag();
     }
-  };
+  }, [draggedItem, pipelineId, stages, t, finishDrag]);
 
   // Drop na área da coluna (fora de um card):
   // - outra coluna: lead vai pro TOPO da coluna destino.
   // - mesma coluna (área vazia abaixo dos cards): manda o card pro FUNDO.
   //   Sem isso, arrastar pro espaço vazio embaixo não fazia nada e dava a
   //   impressão de que o card "não desce".
-  const handleDrop = (e: React.DragEvent, targetStageId: string) => {
+  const handleDrop = useCallback((e: React.DragEvent, targetStageId: string) => {
     e.preventDefault();
     if (!draggedItem) return;
     const targetStage = stages.find(s => s.id === targetStageId);
@@ -500,19 +511,19 @@ export default function PipelineKanban() {
     }
     const newPos = items.length ? itemPos(items[0]) + 1 : Date.now() / 1000;
     void commitReorder(targetStageId, newPos, 0);
-  };
+  }, [draggedItem, stages, commitReorder, finishDrag]);
 
   // Marca acima/abaixo conforme a metade do card sob o cursor.
-  const handleCardDragOver = (e: React.DragEvent) => {
+  const handleCardDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     dragOverPosRef.current = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below';
-  };
+  }, []);
 
   // Drop em cima de um card: insere acima/abaixo dele e grava a position no
   // ponto médio entre os vizinhos (ou topo+1 / fundo-1 nas pontas).
-  const handleCardDrop = (e: React.DragEvent, targetItem: PipelineItem, targetStageId: string) => {
+  const handleCardDrop = useCallback((e: React.DragEvent, targetItem: PipelineItem, targetStageId: string) => {
     e.preventDefault();
     e.stopPropagation();
     if (!draggedItem || draggedItem.id === targetItem.id) {
@@ -539,20 +550,13 @@ export default function PipelineKanban() {
     else if (!below) newPos = itemPos(above) - 1;
     else newPos = (itemPos(above) + itemPos(below)) / 2;
     void commitReorder(targetStageId, newPos, insertIdx);
-  };
+  }, [draggedItem, stages, commitReorder, finishDrag]);
 
-  const handleDragEnd = () => {
+  const handleDragEnd = useCallback(() => {
     isDraggingRef.current = false;
     suppressClickUntilRef.current = Date.now() + 200;
     stopAutoScroll();
-  };
-
-  // Calculate stage total value
-  const calculateStageTotal = (items: PipelineItem[] = []) => {
-    return items.reduce((total, item) => {
-      return total + (item.value || 0);
-    }, 0);
-  };
+  }, [stopAutoScroll]);
 
   // Calculate pipeline total value
   const calculatePipelineTotal = () => {
@@ -569,118 +573,15 @@ export default function PipelineKanban() {
     }).format(value);
   };
 
-  // Get contact color
-  const getContactColor = (name?: string) => {
-    if (!name) return '#6B7280';
-    const colors = ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#F97316'];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
-  };
-
-  // Nome cru às vezes vem como o número de telefone (Evolution não manda pushName no 1º evento).
-  // Resolve pro melhor candidato disponível, descartando nomes que são só dígitos/telefone.
-  const isPhoneLikeName = (value?: string | null) => {
-    if (!value) return true;
-    return /^[+\d\s()\-@.]+$/.test(value.replace(/whatsapp|net|us|s\./gi, ''));
-  };
-  const resolveItemName = (item: PipelineItem): string => {
-    const candidates = [item.contact?.name, item.conversation?.contact?.name];
-    const good = candidates.find(c => c && !isPhoneLikeName(c));
-    if (good) return good as string;
-    // sem nome real: mostra o telefone formatado em vez de string crua tipo JID
-    const phone =
-      item.contact?.phone_number || item.conversation?.contact?.phone_number || candidates[0];
-    return phone || t('kanban.conversation.unknownUser');
-  };
-  const resolveItemAvatar = (item: PipelineItem): string | undefined => {
-    return item.contact?.avatar_url || item.conversation?.contact?.avatar_url || undefined;
-  };
-  // ID único do lead pro card. Usa o id do contato (a pessoa), não o número da
-  // conversa: lead importado sem WhatsApp não tem conversa, então display_id caía
-  // tudo no mesmo número. Contato é único por lead e estável.
-  const resolveItemRef = (item: PipelineItem): string => {
-    const id =
-      item.contact?.id ||
-      item.conversation?.contact?.id ||
-      item.item_id ||
-      item.id;
-    return String(id).padStart(4, '0');
-  };
-  // Data de chegada do lead no pipeline (quando o card entrou).
-  const formatArrivalDate = (item: PipelineItem): string | null => {
-    const raw = item.entered_at
-      ? item.entered_at * 1000
-      : item.created_at
-      ? typeof item.created_at === 'number'
-        ? item.created_at * 1000
-        : new Date(item.created_at).getTime()
-      : null;
-    if (!raw) return null;
-    return new Date(raw).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-    });
-  };
-  // Mesma data de chegada acima, mas em epoch ms — pra ordenar a Lista por
-  // ordem de chegada real (não confundir com `position`, que é a ordem manual
-  // de arraste dentro da coluna do Kanban).
+  // Mesma data de chegada de formatArrivalDate, mas em epoch ms — pra ordenar
+  // a Lista por ordem de chegada real (não confundir com `position`, que é a
+  // ordem manual de arraste dentro da coluna do Kanban). Fica local: não é
+  // usada pelo card extraído.
   const itemArrivalMs = (item: PipelineItem): number => {
     if (typeof item.entered_at === 'number') return item.entered_at * 1000;
     if (typeof item.created_at === 'number') return item.created_at * 1000;
     return item.created_at ? new Date(item.created_at).getTime() : 0;
   };
-
-  // Último contato com o lead medido pela CONVERSA da instância WhatsApp.
-  // last_non_activity_message = última mensagem real (entrada OU saída), incluindo
-  // mensagens que o corretor mandou pelo celular (persistidas via webhook Evolution).
-  // NÃO é baseado em envios internos do LM Flow — é o timestamp da própria conversa.
-  const lastContactMs = (item: PipelineItem): number | null => {
-    const msg = item.conversation?.last_non_activity_message;
-    if (msg?.created_at != null) {
-      return typeof msg.created_at === 'number'
-        ? msg.created_at * 1000
-        : new Date(msg.created_at).getTime();
-    }
-    if (item.conversation?.last_activity_at) {
-      return item.conversation.last_activity_at * 1000;
-    }
-    return null;
-  };
-  const lastContactDays = (item: PipelineItem): number | null => {
-    const ms = lastContactMs(item);
-    if (!ms) return null;
-    return Math.floor((Date.now() - ms) / 86_400_000);
-  };
-
-  // Labels da conversa (vêm como string[] ou {title}[]).
-  const itemLabels = (item: PipelineItem): string[] => {
-    const raw = (item.conversation as any)?.labels ?? [];
-    return Array.isArray(raw)
-      ? raw.map((l: any) => (typeof l === 'string' ? l : l?.title ?? '')).filter(Boolean)
-      : [];
-  };
-  const hasVisitScheduled = (item: PipelineItem) => itemLabels(item).includes('visita-agendada');
-
-  // Tags do lead pro filtro: une as etiquetas do contato (as que aparecem no card,
-  // ex "tráfego pago") com as labels da conversa. Retorna {name,color} sem repetir.
-  const itemTagInfos = (item: PipelineItem): Array<{ name: string; color: string }> => {
-    const out: Array<{ name: string; color: string }> = [];
-    const seen = new Set<string>();
-    const push = (name?: string | null, color?: string | null) => {
-      const n = (name || '').trim();
-      if (!n || seen.has(n)) return;
-      seen.add(n);
-      out.push({ name: n, color: color || '#7c3aed' });
-    };
-    const contactLabels = (item.contact as any)?.labels;
-    if (Array.isArray(contactLabels)) {
-      contactLabels.forEach((l: any) => push(l?.name || l?.title, l?.color));
-    }
-    itemLabels(item).forEach(n => push(n));
-    return out;
-  };
-  const itemTagNames = (item: PipelineItem): string[] => itemTagInfos(item).map(t => t.name);
 
   // Todas as tags presentes no pipeline (pro menu do filtro).
   const allTags = useMemo(() => {
@@ -695,20 +596,7 @@ export default function PipelineKanban() {
     return Array.from(map, ([name, color]) => ({ name, color })).sort((a, b) =>
       a.name.localeCompare(b.name),
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stages]);
-  // Dia/hora da próxima visita do lead (do mapa carregado de /visits).
-  const itemVisitLabel = (item: PipelineItem): string | null => {
-    const cid = item.contact?.id || item.conversation?.contact?.id;
-    const when = cid ? visitsByContact[cid] : undefined;
-    if (!when) return null;
-    return new Date(when).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   // Pipeline management handlers
   const handleEditPipeline = () => {
@@ -811,10 +699,10 @@ export default function PipelineKanban() {
     await loadPipelineData();
   };
 
-  const handleRemoveItem = (item: PipelineItem) => {
+  const handleRemoveItem = useCallback((item: PipelineItem) => {
     setItemToRemove(item);
     setShowRemoveItemModal(true);
-  };
+  }, []);
 
   // Remove o card do board no estado (otimista), sem reload — usado ao arquivar.
   const removeItemFromBoardLocal = useCallback((itemId: string) => {
@@ -858,10 +746,25 @@ export default function PipelineKanban() {
     }
   };
 
-  const handleEditItem = (item: PipelineItem) => {
+  const handleEditItem = useCallback((item: PipelineItem) => {
     setItemToEdit(item);
     setShowEditItemModal(true);
-  };
+  }, []);
+
+  // Ações do menu do card (extraídas do JSX inline pra referência estável — useCallback).
+  const handleOpenScheduleAction = useCallback((item: PipelineItem) => {
+    setSelectedConversationForSchedule(item);
+    setScheduleActionOpen(true);
+  }, []);
+
+  const handleOpenNotesForItem = useCallback((item: PipelineItem) => {
+    const contactId = item.contact?.id ?? item.conversation?.contact?.id;
+    const contactName = item.contact?.name ?? item.conversation?.contact?.name;
+    if (contactId) {
+      setSelectedContactForNotes({ id: contactId, name: contactName });
+      setNotesModalOpen(true);
+    }
+  }, []);
 
   // Move otimista do card pra outra etapa, SEM reload (fluido igual o arrastar).
   // Usado pelas ações do card no modal ("Mover para coluna", "Ganho/Perdido")
@@ -1076,7 +979,6 @@ export default function PipelineKanban() {
         return matchesSearch && matchesFrom && matchesTo && matchesTags && matchesAbandoned;
       }),
     }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stages, searchQuery, timeRange, selectedTags, hiddenStages, abandonedThresholdDays]);
 
   // Visão em Lista: todos os leads do funil (respeitando os mesmos filtros do
@@ -1091,7 +993,6 @@ export default function PipelineKanban() {
       return listSortOrder === 'asc' ? diff : -diff;
     });
     return rows;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredStages, listSortOrder]);
 
   // Garante que o auto-scroll do drag pare se o componente desmontar no meio.
@@ -1466,448 +1367,26 @@ export default function PipelineKanban() {
                     >
                       {/* Items */}
                       {(stage.items || []).map(item => (
-                        <div
+                        <PipelineItemCard
                           key={item.id}
-                          className="group bg-background rounded-xl p-4 border border-border shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200 cursor-pointer select-none relative"
-                          draggable
-                          onDragStart={() => handleDragStart(item)}
+                          item={item}
+                          stageId={stage.id}
+                          visitsByContact={visitsByContact}
+                          isDraggingRef={isDraggingRef}
+                          suppressClickUntilRef={suppressClickUntilRef}
+                          onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
-                          onDragOver={handleCardDragOver}
-                          onDrop={e => handleCardDrop(e, item, stage.id)}
-                          onClick={() => {
-                            if (!isDraggingRef.current && Date.now() > suppressClickUntilRef.current) {
-                              handleEditItem(item);
-                            }
-                          }}
-                        >
-                          {/* Card Options Menu */}
-                          <div
-                            className="absolute top-2 right-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div className="flex items-center space-x-1">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-auto p-1 hover:bg-muted"
-                                  >
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleEditItem(item)}>
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    {t('kanban.item.editItem')}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={async () => {
-                                      const ref =
-                                        item.contact?.id ||
-                                        item.conversation?.contact?.id ||
-                                        item.item_id ||
-                                        item.id;
-                                      await navigator.clipboard.writeText(String(ref));
-                                      toast.success(t('kanban.idCopied'));
-                                    }}
-                                  >
-                                    <Copy className="h-4 w-4 mr-2" />
-                                    {t('kanban.copyId')}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setSelectedConversationForSchedule(item);
-                                      setScheduleActionOpen(true);
-                                    }}
-                                  >
-                                    <CalendarClock className="h-4 w-4 mr-2" />
-                                    {t('kanban.item.scheduleAction')}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      const contactId = item.contact?.id ?? item.conversation?.contact?.id;
-                                      const contactName = item.contact?.name ?? item.conversation?.contact?.name;
-                                      if (contactId) {
-                                        setSelectedContactForNotes({ id: contactId, name: contactName });
-                                        setNotesModalOpen(true);
-                                      }
-                                    }}
-                                  >
-                                    <MessageCircle className="h-4 w-4 mr-2" />
-                                    Ver Notas
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleArchiveItem(item)}>
-                                    <Archive className="h-4 w-4 mr-2" />
-                                    Arquivar
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => handleRemoveItem(item)}
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    {t('kanban.item.removeFromPipeline')}
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                              <GripVertical className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                          </div>
-
-                          {/* Contact Info Header */}
-                          <div className="flex items-start space-x-3 mb-3">
-                            <div className="relative">
-                              {resolveItemAvatar(item) ? (
-                                <img
-                                  src={resolveItemAvatar(item)}
-                                  alt={resolveItemName(item)}
-                                  className="w-10 h-10 rounded-full object-cover shadow-sm bg-muted"
-                                  onError={e => {
-                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                    const fb = e.currentTarget
-                                      .nextElementSibling as HTMLElement | null;
-                                    if (fb) fb.style.display = 'flex';
-                                  }}
-                                />
-                              ) : null}
-                              <div
-                                className="w-10 h-10 rounded-full items-center justify-center text-white text-sm font-bold shadow-sm"
-                                style={{
-                                  backgroundColor: getContactColor(resolveItemName(item)),
-                                  display: resolveItemAvatar(item) ? 'none' : 'flex',
-                                }}
-                              >
-                                {resolveItemName(item)?.[0]?.toUpperCase() || 'U'}
-                              </div>
-                              {/* Online indicator */}
-                              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 border-2 border-background rounded-full" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <h4 className="text-sm font-semibold text-foreground truncate">
-                                  {resolveItemName(item)}
-                                </h4>
-                                <span
-                                  title={`#${resolveItemRef(item)}`}
-                                  className="shrink-0 text-[10px] text-muted-foreground/60 font-medium"
-                                >
-                                  #{resolveItemRef(item).slice(0, 6)}
-                                </span>
-                              </div>
-                              {/* Tempo sem contato (medido pela conversa da instância WhatsApp) */}
-                              {(() => {
-                                const d = lastContactDays(item);
-                                if (d == null || d < 3) return null;
-                                const tone =
-                                  d >= 7
-                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
-                                return (
-                                  <span
-                                    title={`Última mensagem há ${d} dias`}
-                                    className={`inline-flex items-center gap-1 mb-1 px-1.5 py-0.5 rounded-md text-xs font-semibold ${tone}`}
-                                  >
-                                    <Clock className="w-3 h-3" />
-                                    {d}d sem contato
-                                  </span>
-                                );
-                              })()}
-                              {/* Temperatura do lead (qualificação IA: quente/morno/frio) */}
-                              {(() => {
-                                const s = String((item.contact as any)?.qualification_status || '').toLowerCase();
-                                const map: Record<string, { label: string; cls: string }> = {
-                                  hot:  { label: 'Quente', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-                                  warm: { label: 'Morno',  cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-                                  cold: { label: 'Frio',   cls: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400' },
-                                };
-                                const m = map[s];
-                                if (!m) return null;
-                                const score = (item.contact as any)?.qualification_score;
-                                return (
-                                  <span
-                                    title={`Lead ${m.label}${score ? ` · score ${score}` : ''}`}
-                                    className={`inline-flex items-center gap-1 mb-1 ml-1 px-1.5 py-0.5 rounded-md text-xs font-semibold ${m.cls}`}
-                                  >
-                                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                    {m.label}
-                                  </span>
-                                );
-                              })()}
-                              {/* Visita agendada — mostra dia/hora se houver visita carregada, senão só a tag */}
-                              {(itemVisitLabel(item) || hasVisitScheduled(item)) && (
-                                <span
-                                  title="Visita agendada"
-                                  className="inline-flex items-center gap-1 mb-1 ml-1 px-1.5 py-0.5 rounded-md text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                >
-                                  <CalendarClock className="w-3 h-3" />
-                                  {itemVisitLabel(item) ? `Visita ${itemVisitLabel(item)}` : 'Visita agendada'}
-                                </span>
-                              )}
-                              {/* Imóvel vinculado ao lead */}
-                              {item.primary_property && (
-                                <span
-                                  title="Imóvel vinculado"
-                                  className="inline-flex items-center gap-1 mb-1 ml-1 px-1.5 py-0.5 rounded-md text-xs font-semibold bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 max-w-[180px]"
-                                >
-                                  <Home className="w-3 h-3 shrink-0" />
-                                  <span className="truncate">
-                                    {item.primary_property.title || item.primary_property.code || 'Imóvel'}
-                                  </span>
-                                </span>
-                              )}
-                              {/* Contact details */}
-                              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                                {item.contact?.phone_number && (
-                                  <span className="flex items-center space-x-1">
-                                    <Phone className="w-3 h-3 shrink-0" />
-                                    <span className="whitespace-nowrap">
-                                      {item.contact.phone_number}
-                                    </span>
-                                  </span>
-                                )}
-                                {item.contact?.email && (
-                                  <span className="flex items-center space-x-1">
-                                    <Mail className="w-3 h-3" />
-                                    <span className="truncate max-w-20">{item.contact?.email}</span>
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Ações rápidas do corretor — responder em <30s sem abrir o lead */}
-                          {item.contact?.phone_number && (
-                            <div className="mb-3 flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
-                              <a
-                                href={`tel:${item.contact.phone_number.replace(/[^\d+]/g, '')}`}
-                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-                                title={t('kanban.item.call', 'Ligar')}
-                              >
-                                <Phone className="w-3.5 h-3.5" />
-                                {t('kanban.item.call', 'Ligar')}
-                              </a>
-                              {/* Abre a conversa DENTRO do LM Flow. Era um link wa.me,
-                                  que levava o corretor para fora do CRM. */}
-                              <button
-                                type="button"
-                                onClick={() => openLeadConversation(item)}
-                                disabled={openingConversation}
-                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-400 transition-colors"
-                                title={t('kanban.item.openChat', 'Abrir conversa')}
-                              >
-                                <MessageCircle className="w-3.5 h-3.5" />
-                                {t('kanban.item.whatsapp', 'WhatsApp')}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleEditItem(item)}
-                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-                                title={t('kanban.item.schedule', 'Agendar')}
-                              >
-                                <CalendarClock className="w-3.5 h-3.5" />
-                                {t('kanban.item.schedule', 'Agendar')}
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Etiquetas/Tags do contato (ex: tráfego pago) */}
-                          {Array.isArray((item.contact as any)?.labels) && (item.contact as any).labels.length > 0 && (
-                            <div className="mb-3 flex flex-wrap gap-1">
-                              {(item.contact as any).labels.map((label: any, idx: number) => {
-                                const color = label?.color || '#7c3aed';
-                                const name = label?.name || label?.title;
-                                if (!name) return null;
-                                return (
-                                  <span
-                                    key={`${name}-${idx}`}
-                                    className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
-                                    style={{ backgroundColor: `${color}22`, color }}
-                                  >
-                                    {name}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          {/* Preview da última mensagem removido do card a pedido
-                              do Giovani: o card mostra só nome, ID curto, telefone
-                              e as tags. O histórico fica no modal de detalhes. */}
-
-                          {/* Inbox and Status Row */}
-                          <div className="flex items-center justify-between mb-3">
-                            {!item.is_lead && (
-                              <div className="flex items-center space-x-2 text-xs">
-                                <div className="flex items-center space-x-1 px-2 py-1 bg-muted/50 rounded-md">
-                                  <div className="w-3 h-3 text-muted-foreground">
-                                    <svg fill="currentColor" viewBox="0 0 20 20">
-                                      <path
-                                        fillRule="evenodd"
-                                        d="M2 5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 002 2H4a2 2 0 01-2-2V5zm3 1h6v4H5V6zm6 6H5v2h6v-2z"
-                                        clipRule="evenodd"
-                                      />
-                                    </svg>
-                                  </div>
-                                  <span className="text-foreground font-medium truncate max-w-16">
-                                    {item.conversation?.inbox?.name ||
-                                      t('kanban.conversation.noInbox')}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                            {!item.is_lead && (
-                              <div className="flex items-center space-x-2">
-                                {/* Status badge */}
-                                <span
-                                  className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                    item.conversation?.status === 'open'
-                                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                                      : item.conversation?.status === 'resolved'
-                                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
-                                      : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-                                  }`}
-                                >
-                                  {item.conversation?.status === 'open'
-                                    ? t('kanban.conversation.status.open')
-                                    : item.conversation?.status === 'resolved'
-                                    ? t('kanban.conversation.status.resolved')
-                                    : item.conversation?.status ||
-                                      t('kanban.conversation.status.unknown')}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Services Total Value */}
-                          {item.services_info?.has_services &&
-                            item.services_info.total_value > 0 && (
-                              <div className="mb-3 pt-2 border-t border-border">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                                    <div className="w-3 h-3">
-                                      <svg fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-                                        <path
-                                          fillRule="evenodd"
-                                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.51-1.31c-.562-.649-1.413-1.076-2.353-1.253V5z"
-                                          clipRule="evenodd"
-                                        />
-                                      </svg>
-                                    </div>
-                                    <span className="font-medium">
-                                      {t('kanban.conversation.valueLabel')}
-                                    </span>
-                                  </div>
-                                  <div className="text-xs font-semibold text-green-600 dark:text-green-400">
-                                    {item.services_info.formatted_total}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                          {/* Tasks Summary - Compact and Visual */}
-                          {(item.tasks_info?.pending_count > 0 ||
-                            item.tasks_info?.overdue_count > 0 ||
-                            item.tasks_info?.due_soon_count > 0 ||
-                            item.tasks_info?.completed_count > 0) && (
-                            <div className="mb-3 flex items-center gap-1.5 flex-wrap">
-                              <div className="text-sm">{t('tasks.title')}</div>
-                              {/* Tasks vencidas - Prioridade máxima */}
-                              {item.tasks_info?.overdue_count > 0 && (
-                                <Badge
-                                  title={t('tasks.status.overdue')}
-                                  variant="destructive"
-                                  className="h-5 px-1.5 text-xs"
-                                >
-                                  <AlertCircle className="w-3 h-3 mr-1" />
-                                  {item.tasks_info.overdue_count}
-                                </Badge>
-                              )}
-
-                              {/* Tasks próximas do vencimento */}
-                              {item.tasks_info?.due_soon_count > 0 && (
-                                <Badge
-                                  title={t('tasks.status.dueSoon')}
-                                  className="h-5 px-1.5 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400"
-                                >
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  {item.tasks_info.due_soon_count}
-                                </Badge>
-                              )}
-
-                              {/* Tasks pendentes (sem urgência) */}
-                              {item.tasks_info?.pending_count > 0 &&
-                                !item.tasks_info?.overdue_count &&
-                                !item.tasks_info?.due_soon_count && (
-                                  <Badge
-                                    title={t('tasks.status.pending')}
-                                    variant="secondary"
-                                    className="h-5 px-1.5 text-xs"
-                                  >
-                                    <ListTodo className="w-3 h-3 mr-1" />
-                                    {item.tasks_info.pending_count}
-                                  </Badge>
-                                )}
-
-                              {/* Tasks concluídas */}
-                              {item.tasks_info?.completed_count > 0 && (
-                                <Badge
-                                  title={t('tasks.status.completed')}
-                                  className="h-5 px-1.5 text-xs bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                                >
-                                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                                  {item.tasks_info.completed_count}
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Time and assignee info */}
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center space-x-1 text-muted-foreground">
-                              <div className="w-3 h-3">
-                                <svg fill="currentColor" viewBox="0 0 20 20">
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              </div>
-                              <span title={t('kanban.item.arrivedAt', 'Lead chegou em')}>
-                                {formatArrivalDate(item) ||
-                                  (item.conversation?.last_activity_at
-                                    ? formatDateBR(item.conversation.last_activity_at * 1000,)
-                                    : '')}
-                              </span>
-                            </div>
-
-                            {/* Responsável: `item.assignee` (topo) já vem do
-                                backend com o dono certo — assignee da conversa
-                                OU default_assignee do contato. Lead sem conversa
-                                aparecia sempre sem responsável. Avatar prioriza a
-                                foto real do WhatsApp da instância dele (backend
-                                já resolve isso em avatar_url quando ele é dono
-                                de uma instância). */}
-                            {(item.assignee ?? item.conversation?.assignee) && (
-                              <div className="flex items-center space-x-1 text-muted-foreground">
-                                {(item.assignee ?? item.conversation?.assignee)?.avatar_url ? (
-                                  <img
-                                    src={(item.assignee ?? item.conversation?.assignee)?.avatar_url}
-                                    alt=""
-                                    className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
-                                  />
-                                ) : (
-                                  <User className="w-3 h-3 shrink-0" />
-                                )}
-                                <span className="truncate max-w-20">
-                                  {(item.assignee ?? item.conversation?.assignee)?.name}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                          onCardDragOver={handleCardDragOver}
+                          onCardDrop={handleCardDrop}
+                          onOpenItem={handleEditItem}
+                          onEdit={handleEditItem}
+                          onArchive={handleArchiveItem}
+                          onRemove={handleRemoveItem}
+                          onScheduleAction={handleOpenScheduleAction}
+                          onNotesClick={handleOpenNotesForItem}
+                          onOpenConversation={openLeadConversation}
+                          openingConversation={openingConversation}
+                        />
                       ))}
 
                       {/* Empty state */}
@@ -1995,7 +1474,7 @@ export default function PipelineKanban() {
                           {resolveItemAvatar(item) ? (
                             <img
                               src={resolveItemAvatar(item)}
-                              alt={resolveItemName(item)}
+                              alt={resolveItemName(item, t)}
                               className="w-9 h-9 rounded-full object-cover shadow-sm bg-muted"
                               onError={e => {
                                 (e.currentTarget as HTMLImageElement).style.display = 'none';
@@ -2008,17 +1487,17 @@ export default function PipelineKanban() {
                           <div
                             className="w-9 h-9 rounded-full items-center justify-center text-white text-xs font-bold shadow-sm"
                             style={{
-                              backgroundColor: getContactColor(resolveItemName(item)),
+                              backgroundColor: getContactColor(resolveItemName(item, t)),
                               display: resolveItemAvatar(item) ? 'none' : 'flex',
                             }}
                           >
-                            {resolveItemName(item)?.[0]?.toUpperCase() || 'U'}
+                            {resolveItemName(item, t)?.[0]?.toUpperCase() || 'U'}
                           </div>
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-foreground truncate">
-                              {resolveItemName(item)}
+                              {resolveItemName(item, t)}
                             </span>
                             <span className="shrink-0 text-[10px] text-muted-foreground/60 font-medium">
                               #{resolveItemRef(item).slice(0, 6)}
@@ -2127,159 +1606,187 @@ export default function PipelineKanban() {
 
       {/* Edit Pipeline Modal */}
       {pipeline && (
-        <EditPipelineModal
-          open={showEditPipelineModal}
-          onOpenChange={setShowEditPipelineModal}
-          pipeline={pipeline}
-          onSubmit={handleUpdatePipeline}
-          loading={isUpdatingPipeline}
-        />
+        <Suspense fallback={null}>
+          <EditPipelineModal
+            open={showEditPipelineModal}
+            onOpenChange={setShowEditPipelineModal}
+            pipeline={pipeline}
+            onSubmit={handleUpdatePipeline}
+            loading={isUpdatingPipeline}
+          />
+        </Suspense>
       )}
 
       {/* Create Stage Modal */}
-      <CreateStageModal
-        open={showCreateStageModal}
-        onOpenChange={setShowCreateStageModal}
-        onSubmit={handleCreateStage}
-        loading={isCreatingStage}
-      />
+      <Suspense fallback={null}>
+        <CreateStageModal
+          open={showCreateStageModal}
+          onOpenChange={setShowCreateStageModal}
+          onSubmit={handleCreateStage}
+          loading={isCreatingStage}
+        />
+      </Suspense>
 
       {/* Add Item Modal */}
       {pipeline && (
-        <AddItemModal
-          open={showAddItemModal}
-          onOpenChange={setShowAddItemModal}
-          pipelineId={pipeline.id}
-          stages={stages}
-          preselectedStage={selectedStageForItem}
-          onItemAdded={handleItemAdded}
-        />
+        <Suspense fallback={null}>
+          <AddItemModal
+            open={showAddItemModal}
+            onOpenChange={setShowAddItemModal}
+            pipelineId={pipeline.id}
+            stages={stages}
+            preselectedStage={selectedStageForItem}
+            onItemAdded={handleItemAdded}
+          />
+        </Suspense>
       )}
 
       {/* Import Leads Modal */}
       {pipeline && (
-        <ImportLeadsModal
-          open={importModalOpen}
-          onOpenChange={setImportModalOpen}
-          pipelineId={pipeline.id}
-          pipelineName={pipeline.name}
-          stages={stages}
-          onImported={loadPipelineData}
-        />
+        <Suspense fallback={null}>
+          <ImportLeadsModal
+            open={importModalOpen}
+            onOpenChange={setImportModalOpen}
+            pipelineId={pipeline.id}
+            pipelineName={pipeline.name}
+            stages={stages}
+            onImported={loadPipelineData}
+          />
+        </Suspense>
       )}
 
       {/* Disparo em Massa Modal */}
       {pipeline && (
-        <BulkDispatchModal
-          open={disparoModalOpen}
-          onOpenChange={setDisparoModalOpen}
-          pipelineId={pipeline.id}
-          pipelineName={pipeline.name}
-          stages={stages}
-        />
+        <Suspense fallback={null}>
+          <BulkDispatchModal
+            open={disparoModalOpen}
+            onOpenChange={setDisparoModalOpen}
+            pipelineId={pipeline.id}
+            pipelineName={pipeline.name}
+            stages={stages}
+          />
+        </Suspense>
       )}
 
       {/* Leads Arquivados Modal */}
       {pipeline && (
-        <ArchivedLeadsModal
-          open={archivedModalOpen}
-          onClose={() => setArchivedModalOpen(false)}
-          pipelineId={pipeline.id}
-          onUnarchived={() => loadPipelineData(true)}
-        />
+        <Suspense fallback={null}>
+          <ArchivedLeadsModal
+            open={archivedModalOpen}
+            onClose={() => setArchivedModalOpen(false)}
+            pipelineId={pipeline.id}
+            onUnarchived={() => loadPipelineData(true)}
+          />
+        </Suspense>
       )}
 
       {/* Remove Item Modal */}
-      <RemoveItemModal
-        open={showRemoveItemModal}
-        onOpenChange={setShowRemoveItemModal}
-        item={itemToRemove}
-        onConfirm={handleConfirmRemoveItem}
-        loading={isRemovingItem}
-      />
+      <Suspense fallback={null}>
+        <RemoveItemModal
+          open={showRemoveItemModal}
+          onOpenChange={setShowRemoveItemModal}
+          item={itemToRemove}
+          onConfirm={handleConfirmRemoveItem}
+          loading={isRemovingItem}
+        />
+      </Suspense>
 
       {/* Edit Item Modal */}
       {itemToEdit && (
-        <EditItemModal
-          open={showEditItemModal}
-          onOpenChange={setShowEditItemModal}
-          item={itemToEdit}
-          stages={stages}
-          pipeline={pipeline}
-          onSubmit={handleUpdateItem}
-          onItemStageMoved={moveItemToStageLocal}
-          // Tag grava na hora: recarrega em silêncio pro selo do card refletir a
-          // mudança mesmo que a pessoa feche o card sem salvar.
-          onLabelsChanged={() => { void loadPipelineData(true); }}
-          loading={isEditingItem}
-        />
+        <Suspense fallback={null}>
+          <EditItemModal
+            open={showEditItemModal}
+            onOpenChange={setShowEditItemModal}
+            item={itemToEdit}
+            stages={stages}
+            pipeline={pipeline}
+            onSubmit={handleUpdateItem}
+            onItemStageMoved={moveItemToStageLocal}
+            // Tag grava na hora: recarrega em silêncio pro selo do card refletir a
+            // mudança mesmo que a pessoa feche o card sem salvar.
+            onLabelsChanged={() => { void loadPipelineData(true); }}
+            loading={isEditingItem}
+          />
+        </Suspense>
       )}
 
       {/* Iniciar conversa — só monta para lead que ainda não tem conversa */}
       {startConversationModal}
 
       {/* Edit Stage Modal */}
-      <EditStageModal
-        open={showEditStageModal}
-        onOpenChange={setShowEditStageModal}
-        stage={stageToEdit}
-        onSubmit={handleUpdateStage}
-        loading={isEditingStage}
-      />
+      <Suspense fallback={null}>
+        <EditStageModal
+          open={showEditStageModal}
+          onOpenChange={setShowEditStageModal}
+          stage={stageToEdit}
+          onSubmit={handleUpdateStage}
+          loading={isEditingStage}
+        />
+      </Suspense>
 
       {/* Delete Stage Modal */}
-      <DeleteStageModal
-        open={showDeleteStageModal}
-        onOpenChange={setShowDeleteStageModal}
-        stage={stageToDelete}
-        itemCount={stageToDelete?.item_count || 0}
-        onConfirm={handleConfirmDeleteStage}
-        loading={isDeletingStage}
-      />
+      <Suspense fallback={null}>
+        <DeleteStageModal
+          open={showDeleteStageModal}
+          onOpenChange={setShowDeleteStageModal}
+          stage={stageToDelete}
+          itemCount={stageToDelete?.item_count || 0}
+          onConfirm={handleConfirmDeleteStage}
+          loading={isDeletingStage}
+        />
+      </Suspense>
 
       {/* Delete Pipeline Modal */}
       {pipeline && (
-        <DeletePipelineModal
-          open={showDeletePipelineModal}
-          onOpenChange={setShowDeletePipelineModal}
-          pipeline={pipeline}
-          onConfirm={handleConfirmDeletePipeline}
-          loading={isDeletingPipeline}
-        />
+        <Suspense fallback={null}>
+          <DeletePipelineModal
+            open={showDeletePipelineModal}
+            onOpenChange={setShowDeletePipelineModal}
+            pipeline={pipeline}
+            onConfirm={handleConfirmDeletePipeline}
+            loading={isDeletingPipeline}
+          />
+        </Suspense>
       )}
 
       {/* Reorder Stages Modal */}
-      <ReorderStagesModal
-        open={showReorderStagesModal}
-        onOpenChange={setShowReorderStagesModal}
-        stages={stages}
-        onSubmit={handleUpdateStageOrder}
-        loading={isReorderingStages}
-      />
+      <Suspense fallback={null}>
+        <ReorderStagesModal
+          open={showReorderStagesModal}
+          onOpenChange={setShowReorderStagesModal}
+          stages={stages}
+          onSubmit={handleUpdateStageOrder}
+          loading={isReorderingStages}
+        />
+      </Suspense>
 
       {/* Schedule Action Modal */}
       {selectedConversationForSchedule && scheduleActionContactId && (
-        <ScheduleActionModal
-          open={scheduleActionOpen}
-          onClose={() => {
-            setScheduleActionOpen(false);
-            setSelectedConversationForSchedule(null);
-          }}
-          contactId={scheduleActionContactId}
-        />
+        <Suspense fallback={null}>
+          <ScheduleActionModal
+            open={scheduleActionOpen}
+            onClose={() => {
+              setScheduleActionOpen(false);
+              setSelectedConversationForSchedule(null);
+            }}
+            contactId={scheduleActionContactId}
+          />
+        </Suspense>
       )}
 
       {/* Notes History Modal */}
       {selectedContactForNotes && (
-        <NotesHistoryModal
-          isOpen={notesModalOpen}
-          contactId={selectedContactForNotes.id}
-          contactName={selectedContactForNotes.name}
-          onClose={() => {
-            setNotesModalOpen(false);
-            setSelectedContactForNotes(null);
-          }}
-        />
+        <Suspense fallback={null}>
+          <NotesHistoryModal
+            isOpen={notesModalOpen}
+            contactId={selectedContactForNotes.id}
+            contactName={selectedContactForNotes.name}
+            onClose={() => {
+              setNotesModalOpen(false);
+              setSelectedContactForNotes(null);
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );
