@@ -3,7 +3,7 @@ import { Card, CardContent } from '@evoapi/design-system/card';
 import { Button } from '@evoapi/design-system/button';
 import {
   Rocket, X, Play, Type, Mic, Image as ImageIcon, Video, FileText, Search, Loader2, Plus,
-  Archive, Trash2, Clock,
+  Archive, ArchiveRestore, Trash2, Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { messageFunnelsService, tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
@@ -232,19 +232,21 @@ export default function MessageFunnelPopover({
   const [customVars, setCustomVars] = useState<TenantTemplateVariable[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
   // Após o fix de re-render cascading (dispatch fora do Popover), `running` é só pra
   // bloquear duplo-click instantâneo enquanto onClose() não foi processado.
   const [running] = useState<{ id: string; idx: number; total: number } | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Busca funis ativos + vars custom do tenant em paralelo. Custom vars
-  // resolvem placeholders {{token}} dos funis no momento do envio.
+  // Busca TODOS os funis (ativos + arquivados) + vars custom do tenant em paralelo.
+  // Sem `activeOnly` o backend retorna os dois — split em ativos/arquivados é client-side,
+  // pro toggle "Ativos / Arquivados". Custom vars resolvem placeholders {{token}} no envio.
   // Extraído pra callback pra recarregar a lista após criar um funil inline.
   const loadFunnels = useCallback(() => {
     setLoading(true);
     return Promise.all([
-      messageFunnelsService.list({ activeOnly: true }),
+      messageFunnelsService.list({}),
       tenantTemplateVariablesService
         .list()
         .then(res => res.custom)
@@ -264,12 +266,15 @@ export default function MessageFunnelPopover({
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [isOpen, loadFunnels]);
 
+  const activeFunnels = funnels.filter(f => f.active);
+  const archivedFunnels = funnels.filter(f => !f.active);
+  const visible = showArchived ? archivedFunnels : activeFunnels;
   const filtered = search.trim()
-    ? funnels.filter(f =>
+    ? visible.filter(f =>
         f.name.toLowerCase().includes(search.toLowerCase())
         || (f.description ?? '').toLowerCase().includes(search.toLowerCase()),
       )
-    : funnels;
+    : visible;
 
   async function handleDispatch(funnel: MessageFunnel) {
     if (running) return;
@@ -307,6 +312,17 @@ export default function MessageFunnelPopover({
       loadFunnels();
     } catch {
       toast.error('Erro ao arquivar funil');
+    }
+  }
+
+  // Reativar = active:true → volta a aparecer na aba Ativos do chat.
+  async function handleUnarchive(funnel: MessageFunnel) {
+    try {
+      await messageFunnelsService.update(funnel.id, { active: true });
+      toast.success(`Funil "${funnel.name}" reativado`);
+      loadFunnels();
+    } catch {
+      toast.error('Erro ao reativar funil');
     }
   }
 
@@ -352,6 +368,36 @@ export default function MessageFunnelPopover({
           </div>
         </div>
 
+        {/* Toggle Ativos / Arquivados */}
+        <div className="px-3 pt-2">
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
+            <button
+              type="button"
+              onClick={() => setShowArchived(false)}
+              disabled={!!running}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-50 ${
+                !showArchived ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Rocket className="h-3 w-3" />
+              Ativos ({activeFunnels.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowArchived(true)}
+              disabled={!!running}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-50 ${
+                showArchived
+                  ? 'bg-orange-100 text-orange-700 shadow-sm dark:bg-orange-950/40 dark:text-orange-400'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Archive className="h-3 w-3" />
+              Arquivados ({archivedFunnels.length})
+            </button>
+          </div>
+        </div>
+
         {/* Busca */}
         <div className="px-3 py-2 border-b border-border">
           <div className="flex items-center gap-2 bg-muted/40 rounded-md px-3 py-1.5">
@@ -376,11 +422,17 @@ export default function MessageFunnelPopover({
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 p-6 text-muted-foreground">
-              <Rocket className="h-8 w-8" />
-              <p className="text-sm">
-                {funnels.length === 0 ? 'Nenhum funil criado ainda' : 'Nenhum resultado'}
+              {showArchived ? <Archive className="h-8 w-8" /> : <Rocket className="h-8 w-8" />}
+              <p className="text-sm text-center">
+                {search.trim()
+                  ? 'Nenhum resultado'
+                  : showArchived
+                    ? 'Nenhum funil arquivado'
+                    : archivedFunnels.length > 0
+                      ? 'Nenhum funil ativo — veja os arquivados acima'
+                      : 'Nenhum funil criado ainda'}
               </p>
-              {funnels.length === 0 && (
+              {!showArchived && !search.trim() && funnels.length === 0 && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -409,7 +461,7 @@ export default function MessageFunnelPopover({
                     disabled={!!running}
                     className="w-full text-left px-4 py-3"
                   >
-                    <div className="flex items-center gap-2 mb-1 pr-14">
+                    <div className={`flex items-center gap-2 mb-1 ${showArchived ? 'pr-28' : 'pr-14'}`}>
                       <Rocket size={12} className="text-primary shrink-0" />
                       <span className="text-sm font-semibold text-foreground truncate">{funnel.name}</span>
                       {isRunning && (
@@ -445,16 +497,31 @@ export default function MessageFunnelPopover({
 
                   {/* Ações por funil (não disparam o funil) */}
                   {!running && (
-                    <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        type="button"
-                        onClick={e => { e.stopPropagation(); handleArchive(funnel); }}
-                        className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-muted text-muted-foreground"
-                        aria-label="Arquivar"
-                        title="Arquivar (some do chat)"
-                      >
-                        <Archive size={13} />
-                      </button>
+                    <div className={`absolute top-2 right-2 flex items-center gap-0.5 transition-opacity ${
+                      showArchived ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                    }`}>
+                      {showArchived ? (
+                        <button
+                          type="button"
+                          onClick={e => { e.stopPropagation(); handleUnarchive(funnel); }}
+                          className="h-6 inline-flex items-center gap-1 rounded px-2 text-xs font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-950/40 dark:text-orange-400"
+                          aria-label="Reativar"
+                          title="Reativar (volta pro chat)"
+                        >
+                          <ArchiveRestore size={13} />
+                          Reativar
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={e => { e.stopPropagation(); handleArchive(funnel); }}
+                          className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-muted text-muted-foreground"
+                          aria-label="Arquivar"
+                          title="Arquivar (some do chat)"
+                        >
+                          <Archive size={13} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={e => { e.stopPropagation(); handleDelete(funnel); }}

@@ -7,7 +7,7 @@
   "stats": {
     "totalPipelines": "Pipelines",
     "activePipelines": "Ativos",
-    "totalItems": "Total de Itens",
+    "totalItems": "Total de Leads",
     "completedPipelines": "Pipelines Completados"
   },
   "viewMode": {
@@ -58,31 +58,31 @@
     "noPermissionUpdate": "Você não tem permissão para atualizar pipelines"
   },
   "addItem": {
-    "title": "Adicionar Item ao Pipeline",
-    "description": "Selecione um item disponível para adicionar ao pipeline.",
+    "title": "Adicionar Lead ao Pipeline",
+    "description": "Selecione um lead disponível para adicionar ao pipeline.",
     "selectStage": "Selecionar Etapa",
     "chooseStage": "Escolha uma etapa",
-    "itemType": "Tipo de Item",
-    "chooseItemType": "Escolha o tipo de item",
+    "itemType": "Origem do Lead",
+    "chooseItemType": "Escolha a origem do lead",
     "itemTypes": {
       "conversation": "Conversa",
       "contact": "Contato"
     },
-    "searchItems": "Buscar Itens",
+    "searchItems": "Buscar Leads",
     "searchPlaceholder": "Buscar por nome, email, telefone ou ID...",
-    "availableItems": "Itens Disponíveis",
-    "noItemsFound": "Nenhum item encontrado",
-    "noItemsAvailable": "Nenhum item disponível",
+    "availableItems": "Leads Disponíveis",
+    "noItemsFound": "Nenhum lead encontrado",
+    "noItemsAvailable": "Nenhum lead disponível",
     "notes": "Observações (opcional)",
-    "notesPlaceholder": "Adicione observações sobre este item no pipeline...",
+    "notesPlaceholder": "Adicione observações sobre este lead no pipeline...",
     "unknownUser": "Usuário Desconhecido",
     "loading": "Carregando...",
     "adding": "Adicionando...",
-    "add": "Adicionar Item",
+    "add": "Adicionar Lead",
     "cancel": "Cancelar",
-    "success": "Item adicionado com sucesso ao pipeline",
-    "error": "Erro ao adicionar item ao pipeline",
-    "loadError": "Erro ao carregar itens disponíveis"
+    "success": "Lead adicionado com sucesso ao pipeline",
+    "error": "Erro ao adicionar lead ao pipeline",
+    "loadError": "Erro ao carregar leads disponíveis"
   },
   "createPipeline": {
     "title": "Criar Novo Pipeline",
@@ -283,8 +283,8 @@
     "duplicate": "Duplicar Pipeline"
   },
   "editItem": {
-    "title": "Editar Item no Pipeline",
-    "description": "Detalhes do item",
+    "title": "Editar Lead no Pipeline",
+    "description": "Detalhes do lead",
     "unknownUser": "Usuário Desconhecido",
     "currentStage": "Etapa Atual",
     "chooseStage": "Escolha uma etapa",
@@ -306,10 +306,10 @@
     "value": "Valor",
     "totalValue": "Valor Total:",
     "notes": "Observações",
-    "notesPlaceholder": "Adicione observações sobre este item no pipeline...",
+    "notesPlaceholder": "Adicione observações sobre este lead no pipeline...",
     "customAttributes": "Atributos Personalizados",
-    "servicesDescription": "Gerencie os serviços associados a este item",
-    "attributesDescription": "Configure atributos personalizados para este item",
+    "servicesDescription": "Gerencie os serviços associados a este lead",
+    "attributesDescription": "Configure atributos personalizados para este lead",
     "tabs": {
       "details": "Detalhes",
       "services": "Serviços",
@@ -321,8 +321,8 @@
     "save": "Salvar Alterações"
   },
   "editConversation": {
-    "title": "Editar Item no Pipeline",
-    "description": "Detalhes do item",
+    "title": "Editar Lead no Pipeline",
+    "description": "Detalhes do lead",
     "unknownUser": "Usuário Desconhecido",
     "currentStage": "Etapa Atual",
     "chooseStage": "Escolha uma etapa",
@@ -432,7 +432,7 @@
     "view": "Visualizar",
     "setAsDefault": "Marcar como padrão",
     "stats": {
-      "items": "Items",
+      "items": "Leads",
       "stages": "Etapas",
       "completion": "Conclusão",
       "type": "Tipo",
@@ -455,7 +455,7 @@
   "pipelinesStats": {
     "totalPipelines": "Total de Pipelines",
     "activePipelines": "Pipelines Ativos",
-    "totalItems": "Total de Itens",
+    "totalItems": "Total de Leads",
     "completedPipelines": "Pipelines Completados"
   },
   "pipelinesTable": {
@@ -503,31 +503,31 @@
     "stagesCount": "{{count}} etapas"
   },
   "removeItem": {
-    "title": "Remover Item do Pipeline",
+    "title": "Remover Lead do Pipeline",
     "description": "Esta ação não pode ser desfeita.",
-    "confirmMessage": "Tem certeza que deseja remover o item de",
+    "confirmMessage": "Tem certeza que deseja remover o lead de",
     "unknownUser": "Usuário Desconhecido",
-    "details": "Detalhes do item:",
+    "details": "Detalhes do lead:",
     "contact": "Contato:",
     "id": "ID:",
     "status": "Status:",
     "inbox": "Inbox:",
-    "note": "O item será apenas removido do pipeline, mas continuará existindo no sistema.",
+    "note": "O lead será apenas removido do pipeline, mas continuará existindo no sistema.",
     "cancel": "Cancelar",
     "removing": "Removendo...",
     "remove": "Remover do Pipeline"
   },
   "removeConversation": {
-    "title": "Remover Item do Pipeline",
+    "title": "Remover Lead do Pipeline",
     "description": "Esta ação não pode ser desfeita.",
-    "confirmMessage": "Tem certeza que deseja remover o item de",
+    "confirmMessage": "Tem certeza que deseja remover o lead de",
     "unknownUser": "Usuário Desconhecido",
-    "details": "Detalhes do item:",
+    "details": "Detalhes do lead:",
     "contact": "Contato:",
     "id": "ID:",
     "status": "Status:",
     "inbox": "Inbox:",
-    "note": "O item será apenas removido do pipeline, mas continuará existindo no sistema.",
+    "note": "O lead será apenas removido do pipeline, mas continuará existindo no sistema.",
     "cancel": "Cancelar",
     "removing": "Removendo...",
     "remove": "Remover do Pipeline"
@@ -545,11 +545,11 @@
     "copyId": "Copiar ID",
     "idCopied": "ID copiado para a área de transferência",
     "header": {
-      "conversations": "Itens",
+      "conversations": "Leads",
       "stages": "Etapas",
       "totalValue": "Valor Total",
-      "addItem": "Adicionar Item",
-      "addConversation": "Adicionar Item",
+      "addItem": "Adicionar Lead",
+      "addConversation": "Adicionar Lead",
       "editPipeline": "Editar Pipeline",
       "reorderStages": "Reordenar Etapas",
       "deletePipeline": "Deletar Pipeline"
@@ -565,7 +565,7 @@
     },
     "item": {
       "unknownUser": "Usuário Desconhecido",
-      "editItem": "Editar Item",
+      "editItem": "Editar Lead",
       "scheduleAction": "Agendar Ação",
       "scheduleActionComingSoon": "Em breve",
       "scheduleActionTooltip": "Esta funcionalidade está em desenvolvimento e estará disponível em breve.",
@@ -581,8 +581,8 @@
     },
     "conversation": {
       "unknownUser": "Usuário Desconhecido",
-      "editConversation": "Editar Item",
-      "editItem": "Editar Item",
+      "editConversation": "Editar Lead",
+      "editItem": "Editar Lead",
       "removeFromPipeline": "Remover do Pipeline",
       "noInbox": "Sem Inbox",
       "status": {
@@ -594,10 +594,10 @@
       "system": "Sistema"
     },
     "messages": {
-      "itemMoved": "Item movido com sucesso",
-      "itemMoveError": "Erro ao mover item",
-      "conversationMoved": "Item movido com sucesso",
-      "conversationMoveError": "Erro ao mover item",
+      "itemMoved": "Lead movido com sucesso",
+      "itemMoveError": "Erro ao mover lead",
+      "conversationMoved": "Lead movido com sucesso",
+      "conversationMoveError": "Erro ao mover lead",
       "loadDataError": "Erro ao carregar dados do pipeline",
       "stageCreated": "Etapa criada com sucesso",
       "stageCreateError": "Erro ao criar etapa",
@@ -607,16 +607,16 @@
       "stageDeleteError": "Erro ao deletar etapa",
       "stageReordered": "Ordem das etapas atualizada com sucesso",
       "stageReorderError": "Erro ao reordenar etapas",
-      "itemAdded": "Item adicionado com sucesso",
-      "itemRemoved": "Item removido do pipeline com sucesso",
-      "itemRemoveError": "Erro ao remover item do pipeline",
-      "itemUpdated": "Item atualizado com sucesso",
-      "itemUpdateError": "Erro ao atualizar item",
-      "conversationAdded": "Item adicionado com sucesso",
-      "conversationRemoved": "Item removido do pipeline com sucesso",
-      "conversationRemoveError": "Erro ao remover item do pipeline",
-      "conversationUpdated": "Item atualizado com sucesso",
-      "conversationUpdateError": "Erro ao atualizar item"
+      "itemAdded": "Lead adicionado com sucesso",
+      "itemRemoved": "Lead removido do pipeline com sucesso",
+      "itemRemoveError": "Erro ao remover lead do pipeline",
+      "itemUpdated": "Lead atualizado com sucesso",
+      "itemUpdateError": "Erro ao atualizar lead",
+      "conversationAdded": "Lead adicionado com sucesso",
+      "conversationRemoved": "Lead removido do pipeline com sucesso",
+      "conversationRemoveError": "Erro ao remover lead do pipeline",
+      "conversationUpdated": "Lead atualizado com sucesso",
+      "conversationUpdateError": "Erro ao atualizar lead"
     },
     "tasks": {
       "pending": "pendentes",

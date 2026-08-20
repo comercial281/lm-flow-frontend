@@ -127,7 +127,7 @@ const ContactAvatar: React.FC<ContactAvatarProps> = ({
 
   return (
     <div className="relative">
-      <Avatar className={`${sizeClasses[size]} flex-shrink-0 ${className}`}>
+      <Avatar className={`lm-redact-img ${sizeClasses[size]} flex-shrink-0 ${className}`}>
         {avatarUrl && (
           <AvatarImage
             src={avatarUrl}

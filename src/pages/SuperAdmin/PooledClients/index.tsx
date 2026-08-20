@@ -14,14 +14,15 @@ interface PooledTenant {
   id: string; name: string; slug: string; status: string;
   members: number | null; login_url: string; admin_email?: string;
   settings?: Record<string, any>; archived?: boolean; created_at?: string;
+  max_whatsapp_channels?: number; whatsapp_channels_used?: number | null;
 }
 interface Member { id: string; email: string; name?: string; plain_password?: string; }
 
 const STATUS: Record<string, { label: string; cls: string }> = {
-  active:    { label: 'Ativo',         cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
-  trial:     { label: 'Provisionando', cls: 'bg-blue-500/15 text-blue-300 border-blue-500/30' },
-  error:     { label: 'Erro',          cls: 'bg-red-500/15 text-red-300 border-red-500/30' },
-  suspended: { label: 'Suspenso',      cls: 'bg-orange-500/15 text-orange-300 border-orange-500/30' },
+  active:    { label: 'Ativo',         cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40' },
+  trial:     { label: 'Provisionando', cls: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/40' },
+  error:     { label: 'Erro',          cls: 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40' },
+  suspended: { label: 'Suspenso',      cls: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/40' },
 };
 
 function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () => void }) {
@@ -198,6 +199,26 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
     } finally { setSavingAds(false); }
   };
 
+  // Limite de canais de WhatsApp que o cliente pode criar (0 = ilimitado).
+  const [maxWa, setMaxWa] = useState<number>(Number(tenant.max_whatsapp_channels ?? tenant.settings?.max_whatsapp_channels ?? 5) || 0);
+  const [savingMax, setSavingMax] = useState(false);
+  const usedWa = tenant.whatsapp_channels_used;
+  const saveMaxWa = async () => {
+    setSavingMax(true);
+    try {
+      const s = tenant.settings || {};
+      await api.patch(`/super/pooled_tenants/${tenant.id}`, {
+        name: tenant.name,
+        only_ad_leads: !!s.only_ad_leads,
+        whatsapp_reminder_group_jid: s.whatsapp_reminder_group_jid || '',
+        whatsapp_logs_group_jid: s.whatsapp_logs_group_jid || '',
+        max_whatsapp_channels: maxWa,
+      });
+    } catch {
+      alert('Falha ao salvar o limite de canais.');
+    } finally { setSavingMax(false); }
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
       <div className="w-full max-w-lg max-h-[85vh] flex flex-col rounded-xl overflow-hidden"
@@ -221,6 +242,23 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
               {savingAds
                 ? <Loader2 className="w-3 h-3 animate-spin text-white absolute top-1.5 left-3.5" />
                 : <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${onlyAds ? 'left-5' : 'left-1'}`} />}
+            </button>
+          </div>
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1"
+            style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.25)' }}>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-white/90">Máximo de canais de WhatsApp</div>
+              <div className="text-xs text-white/40">
+                Quantas instâncias este cliente pode conectar. 0 = ilimitado.
+                {typeof usedWa === 'number' && <> Usando {usedWa} de {maxWa > 0 ? maxWa : '∞'}.</>}
+              </div>
+            </div>
+            <input type="number" min={0} value={maxWa}
+              onChange={e => setMaxWa(Math.max(0, parseInt(e.target.value || '0', 10) || 0))}
+              className="w-14 px-2 py-1 rounded bg-white/10 text-white text-sm text-center outline-none flex-shrink-0" />
+            <button onClick={saveMaxWa} disabled={savingMax}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-600 text-white flex-shrink-0 disabled:opacity-50">
+              {savingMax ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvar'}
             </button>
           </div>
           {loading ? (
@@ -367,11 +405,11 @@ export default function PooledClients() {
             {tab === 'clients' && (
               <>
                 <button onClick={() => setShowArchived(v => !v)}
-                  className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-md border ${showArchived ? 'border-violet-500/50 text-violet-300 bg-violet-500/10' : 'border-border text-muted-foreground hover:text-foreground'}`}>
+                  className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-md border ${showArchived ? 'border-violet-500/50 text-violet-700 dark:text-violet-300 bg-violet-500/10' : 'border-border text-muted-foreground hover:text-foreground'}`}>
                   <Archive className="w-4 h-4" /> {showArchived ? 'Ativos' : 'Arquivados'}
                 </button>
                 <button onClick={() => setShowBroadcast(true)} disabled={tenants.length === 0}
-                  className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md border border-violet-500/40 text-violet-300 hover:bg-violet-500/10 disabled:opacity-40">
+                  className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md border border-violet-500/40 text-violet-700 dark:text-violet-300 hover:bg-violet-500/10 disabled:opacity-40">
                   <Megaphone className="w-4 h-4" /> Comunicado
                 </button>
                 <button onClick={() => setShowWizard(true)}
@@ -394,7 +432,7 @@ export default function PooledClients() {
           ] as { id: ViewTab; label: string; Icon: typeof List }[]).map(({ id, label, Icon }) => (
             <button key={id} onClick={() => setTab(id)}
               className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                tab === id ? 'border-violet-500 text-violet-400' : 'border-transparent text-muted-foreground hover:text-foreground'
+                tab === id ? 'border-violet-500 text-violet-600 dark:text-violet-400' : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}>
               <Icon className="h-3.5 w-3.5" /> {label}
             </button>
@@ -431,7 +469,7 @@ export default function PooledClients() {
                       {isProvisioning && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400 flex-shrink-0" />}
                     </div>
                     <a href={`https://${t.slug}.lmflow.com.br`} target="_blank" rel="noreferrer"
-                      className="text-xs text-violet-400 hover:underline flex items-center gap-1 truncate">
+                      className="text-xs text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1 truncate">
                       {t.slug}.lmflow.com.br <ExternalLink className="w-3 h-3 flex-shrink-0" />
                     </a>
                   </div>
@@ -464,18 +502,18 @@ export default function PooledClients() {
                 <div className="flex gap-2 mt-2 pt-2 border-t border-white/5">
                   {t.status === 'suspended' && !t.archived ? (
                     <button onClick={() => doAction(t, 'unsuspend')} disabled={busyId === t.id}
-                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50">
+                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50">
                       <Play className="w-3.5 h-3.5" /> Descongelar
                     </button>
                   ) : !t.archived ? (
                     <button onClick={() => doAction(t, 'suspend')} disabled={busyId === t.id || isProvisioning}
-                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-amber-500/30 text-amber-300 hover:bg-amber-500/10 disabled:opacity-50">
+                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 disabled:opacity-50">
                       <Snowflake className="w-3.5 h-3.5" /> Congelar
                     </button>
                   ) : null}
                   {t.archived ? (
                     <button onClick={() => doAction(t, 'unarchive')} disabled={busyId === t.id}
-                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-violet-500/30 text-violet-300 hover:bg-violet-500/10 disabled:opacity-50">
+                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-violet-500/40 text-violet-700 dark:text-violet-300 hover:bg-violet-500/10 disabled:opacity-50">
                       <ArchiveRestore className="w-3.5 h-3.5" /> Desarquivar
                     </button>
                   ) : (
@@ -485,7 +523,7 @@ export default function PooledClients() {
                     </button>
                   )}
                   <button onClick={() => { setConfirmDelete(t); setDeleteText(''); }} disabled={busyId === t.id}
-                    className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-red-500/30 text-red-400 hover:bg-red-500/10 disabled:opacity-50 ml-auto">
+                    className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-red-500/40 text-red-600 dark:text-red-400 hover:bg-red-500/10 disabled:opacity-50 ml-auto">
                     <Trash2 className="w-3.5 h-3.5" /> Excluir
                   </button>
                 </div>

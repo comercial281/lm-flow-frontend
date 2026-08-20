@@ -137,8 +137,9 @@ export default function Sidebar({
         </TooltipProvider>
       </div>
 
-      {/* Second Sidebar for Submenus */}
-      {activeSubmenu && !isCollapsed && (
+      {/* Second Sidebar for Submenus — nunca em cima de /automations, que já
+          renderiza o próprio menu lateral (senão empilha os dois). */}
+      {activeSubmenu && !isCollapsed && !pathname.startsWith('/automations') && (
         <div className="hidden md:flex w-64 bg-sidebar text-sidebar-foreground flex-col border-r border-sidebar-border">
           {/* Submenu Header */}
           <div className="flex items-center gap-3 p-4 border-b border-sidebar-border">
@@ -187,6 +188,7 @@ export default function Sidebar({
                 <Link
                   key={subItem.href}
                   to={subItem.href}
+                  onClick={subItem.closesSubmenu ? () => setActiveSubmenu(null) : undefined}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-md transition-all text-sm',
                     isSubActive

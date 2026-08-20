@@ -360,6 +360,18 @@
           "administrator": "Administrador"
         }
       },
+      "owner": {
+        "title": "Responsável da instância",
+        "description": "O corretor dono deste número — a foto real do WhatsApp dele passa a ser usada como avatar de responsável no CRM",
+        "placeholder": "Selecione o corretor dono deste número",
+        "none": "Nenhum (número compartilhado)",
+        "success": {
+          "updated": "Responsável da instância atualizado!"
+        },
+        "errors": {
+          "updateError": "Erro ao atualizar o responsável da instância"
+        }
+      },
       "status": {
         "online": "Online",
         "busy": "Ocupado",

@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Card, CardContent, Button, Switch } from '@/components/ui/ds';
-import { Check, Users, Settings, Info } from 'lucide-react';
+import {
+  Card, CardContent, Button, Switch,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/ds';
+import { Check, Users, Settings, Info, UserCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -14,6 +17,10 @@ interface CollaboratorsFormProps {
   enableAutoAssignment?: boolean;
   maxAssignmentLimit?: number | null;
   onAutoAssignmentChange?: (enabled: boolean, limit?: number | null) => void;
+  // Corretor dono desta instância (número pessoal dele) — a foto real do
+  // WhatsApp dela vira o avatar de "Responsável" onde ele aparece no CRM.
+  ownerUserId?: string | null;
+  onOwnerChange?: (ownerUserId: string | null) => void | Promise<void>;
 }
 
 export default function CollaboratorsForm({
@@ -21,9 +28,12 @@ export default function CollaboratorsForm({
   enableAutoAssignment: initialAutoAssignment = false,
   maxAssignmentLimit: initialMaxLimit = null,
   onAutoAssignmentChange,
+  ownerUserId = null,
+  onOwnerChange,
 }: CollaboratorsFormProps) {
   const { t } = useLanguage('channels');
   const [agents, setAgents] = useState<AgentChannel[]>([]);
+  const [savingOwner, setSavingOwner] = useState(false);
   const [selectedAgents, setSelectedAgents] = useState<AgentChannel[]>([]);
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
   const [isUpdatingAgents, setIsUpdatingAgents] = useState(false);
@@ -142,6 +152,20 @@ export default function CollaboratorsForm({
     }
   };
 
+  const handleOwnerChange = async (value: string) => {
+    if (!onOwnerChange) return;
+    setSavingOwner(true);
+    try {
+      await onOwnerChange(value === '__none__' ? null : value);
+      toast.success(t('settings.collaborators.owner.success.updated'));
+    } catch (error) {
+      console.error('Error updating instance owner:', error);
+      toast.error(t('settings.collaborators.owner.errors.updateError'));
+    } finally {
+      setSavingOwner(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'online':
@@ -188,6 +212,44 @@ export default function CollaboratorsForm({
 
   return (
     <div className="space-y-6">
+      {/* Responsável da instância */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-border">
+            <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20">
+              <UserCircle className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-foreground">
+                {t('settings.collaborators.owner.title')}
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                {t('settings.collaborators.owner.description')}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center gap-2">
+            <Select
+              value={ownerUserId ?? '__none__'}
+              onValueChange={handleOwnerChange}
+              disabled={savingOwner || isLoadingAgents}
+            >
+              <SelectTrigger className="max-w-sm">
+                <SelectValue placeholder={t('settings.collaborators.owner.placeholder')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">{t('settings.collaborators.owner.none')}</SelectItem>
+                {agents.map(agent => (
+                  <SelectItem key={agent.id} value={String(agent.id)}>{agent.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {savingOwner && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Agents Selection */}
       <Card>
         <CardContent className="p-6">

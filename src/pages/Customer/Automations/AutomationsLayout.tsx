@@ -1,5 +1,5 @@
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { Zap, Rocket, Code, FileInput, Repeat, Bell, Shuffle, SlidersHorizontal, Target } from 'lucide-react';
+import { Zap, Rocket, Radio, Repeat, Bell, Shuffle, SlidersHorizontal, Bot } from 'lucide-react';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { isRootTenantHost } from '@/components/layout/config/menuItems';
@@ -22,39 +22,32 @@ interface Sector {
 // Configurações, agora agrupadas num único lugar.
 const SECTORS: Sector[] = [
   {
-    key: 'message-funnels',
-    name: 'Funis de Mensagem',
-    path: '/automations/message-funnels',
-    icon: Rocket,
-    featureKey: 'message_funnels',
-  },
-  {
-    key: 'template-variables',
-    name: 'Variáveis de Funis',
-    path: '/automations/template-variables',
-    icon: Code,
-    featureKey: 'message_funnels',
-  },
-  {
     key: 'lead-automations',
-    name: 'Automações de Lead',
+    name: 'Regras de Lead',
     path: '/automations/lead-automations',
     icon: Zap,
     featureKey: 'lead_automations',
     clientToggleKey: 'client_manage_automations',
   },
   {
-    key: 'lead-ads-forms',
-    name: 'Formulários (Meta)',
-    path: '/automations/lead-ads-forms',
+    key: 'message-funnels',
+    name: 'Editor de Funis',
+    path: '/automations/message-funnels',
+    icon: Rocket,
+    featureKey: 'message_funnels',
+  },
+  {
+    key: 'origem',
+    name: 'Origem',
+    path: '/automations/origem',
     hideOnRoot: true,
-    icon: FileInput,
+    icon: Radio,
     featureKey: 'lead_automations',
     clientToggleKey: 'client_manage_automations',
   },
   {
     key: 'follow-ups',
-    name: 'Follow-ups',
+    name: 'Follow-up',
     path: '/automations/follow-ups',
     icon: Repeat,
     featureKey: 'follow_ups',
@@ -64,6 +57,13 @@ const SECTORS: Sector[] = [
     name: 'Follow-up automático',
     path: '/automations/follow-up-auto',
     icon: Repeat,
+    featureKey: 'follow_ups',
+  },
+  {
+    key: 'no-reply-robot',
+    name: 'Robô Sem Resposta',
+    path: '/automations/no-reply-robot',
+    icon: Bot,
     featureKey: 'follow_ups',
   },
   {
@@ -84,13 +84,6 @@ const SECTORS: Sector[] = [
     name: 'Distribuição de Leads',
     path: '/automations/assignment-settings',
     icon: SlidersHorizontal,
-    featureKey: 'lead_automations',
-  },
-  {
-    key: 'pixel-capi',
-    name: 'Pixel / CAPI',
-    path: '/automations/pixel-capi',
-    icon: Target,
     featureKey: 'lead_automations',
   },
 ];

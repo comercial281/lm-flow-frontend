@@ -4,6 +4,7 @@ import { Button, Badge, DropdownMenu, DropdownMenuContent, DropdownMenuItem, Dro
 import { Edit, Trash2, MoreVertical, Phone, Mail, MessageSquare, User, Clock, AlertCircle, ListTodo, CheckCircle2, GripVertical, GitBranch, Megaphone, Home, Calendar } from 'lucide-react';
 import { PipelineItem, Pipeline, PipelineStage } from '@/types/analytics';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import CreditCheckBadge from '@/components/contacts/CreditCheckBadge';
 
 interface PipelineItemCardProps {
   item: PipelineItem;
@@ -100,7 +101,7 @@ export default function PipelineItemCard({
       <div className="flex items-start space-x-3 mb-3">
         <div className="relative">
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm"
+            className="lm-redact-img w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm"
             style={{ backgroundColor: getContactColor(item.contact?.name) }}
           >
             {item.contact?.name?.[0]?.toUpperCase() || 'U'}
@@ -110,7 +111,7 @@ export default function PipelineItemCard({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2 mb-1">
-            <h4 className="text-sm font-semibold text-foreground truncate">
+            <h4 className="lm-redact text-sm font-semibold text-foreground truncate">
               {item.contact?.name || t('kanban.item.unknownUser', 'Usuário Desconhecido')}
             </h4>
             {item.conversation?.display_id && (
@@ -124,7 +125,7 @@ export default function PipelineItemCard({
             {item.contact?.phone_number && (
               <span className="flex items-center space-x-1">
                 <Phone className="w-3 h-3" />
-                <span className="truncate max-w-20">
+                <span className="lm-redact truncate max-w-20">
                   {item.contact.phone_number}
                 </span>
               </span>
@@ -132,7 +133,7 @@ export default function PipelineItemCard({
             {item.contact?.email && (
               <span className="flex items-center space-x-1">
                 <Mail className="w-3 h-3" />
-                <span className="truncate max-w-20">
+                <span className="lm-redact truncate max-w-20">
                   {item.contact?.email}
                 </span>
               </span>
@@ -244,6 +245,17 @@ export default function PipelineItemCard({
         );
       })()}
 
+      {/* Situação de CPF (BigDataCorp) */}
+      {(() => {
+        const cc = (item.contact as any)?.additional_attributes?.credit_check;
+        if (!cc?.status) return null;
+        return (
+          <div className="mb-3">
+            <CreditCheckBadge status={cc.status} score={cc.score} compact />
+          </div>
+        );
+      })()}
+
       {/* Imóvel de origem (empreendimento) */}
       {(() => {
         const cf = (item as any)?.custom_fields ?? {};
@@ -272,12 +284,12 @@ export default function PipelineItemCard({
             <MessageSquare className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2 mb-1">
-                <span className="text-xs font-medium text-foreground">
+                <span className="lm-redact text-xs font-medium text-foreground">
                   {item.conversation.last_non_activity_message.sender?.name ||
                     t('kanban.item.system', 'Sistema')}
                 </span>
               </div>
-              <p className="text-sm text-foreground line-clamp-2 leading-relaxed">
+              <p className="lm-redact text-sm text-foreground line-clamp-2 leading-relaxed">
                 {stripHtml(item.conversation.last_non_activity_message.processed_message_content ||
                   item.conversation.last_non_activity_message.content)}
               </p>

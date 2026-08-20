@@ -7,7 +7,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { Button } from '@evoapi/design-system/button';
 import { Card, CardHeader, CardContent } from '@evoapi/design-system/card';
 import { Badge } from '@evoapi/design-system/badge';
-import { X, User, FileText, MessageSquare, Clock, ChevronDown, GitBranch, Tag, Megaphone, ExternalLink, Pencil, Check } from 'lucide-react';
+import { X, User, FileText, MessageSquare, Clock, ChevronDown, GitBranch, Tag, Megaphone, ExternalLink, Pencil, Check, Play } from 'lucide-react';
 import { Input } from '@evoapi/design-system/input';
 import { toast } from 'sonner';
 import apiAuth from '@/services/core/apiAuth';
@@ -16,7 +16,6 @@ import ContactHeader from './ContactHeader';
 import ContactDetails from './ContactDetails';
 // import MacrosList from './MacrosList'; // OCULTO
 
-import EditableContactCustomAttributes from './EditableContactCustomAttributes';
 import ContactTagsManager from './ContactTagsManager';
 
 import ConversationPipelineItem from '@/components/pipelines/ConversationPipelineItem';
@@ -238,7 +237,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
 
             {showContactDetails && (
               <CardContent className="pt-0 px-3 pb-3">
-                <ContactDetails contact={contact} />
+                <ContactDetails contact={contact} leadArrivedAt={conversation?.created_at} />
               </CardContent>
             )}
           </Card>
@@ -555,6 +554,8 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                     const originLabel = ref
                       ? `Anúncio ${ref.source_app === 'instagram' ? 'Instagram' : 'Facebook'}`
                       : conversation.inbox_name || 'WhatsApp';
+                    // Campos já mostrados visualmente (imagem/link) ou irrelevantes p/ o operador — não duplicar na lista crua.
+                    const HIDDEN_AD_KEYS = new Set(['source_id', 'source_url', 'thumbnail_url', 'media_type']);
                     // Achata os dados em pares chave/valor legíveis (sem objetos crus).
                     const rows: Array<{ k: string; v: string }> = [];
                     const pushVal = (k: string, v: unknown) => {
@@ -566,9 +567,18 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                       if (k === 'ad_referral') return;
                       pushVal(k, v);
                     });
-                    if (ref) Object.entries(ref).forEach(([k, v]) => pushVal(`anúncio.${k}`, v));
+                    if (ref) Object.entries(ref).forEach(([k, v]) => {
+                      if (HIDDEN_AD_KEYS.has(k)) return;
+                      if (k === 'captured_at' && typeof v === 'string') {
+                        pushVal(`anúncio.${k}`, formatDateBR(v));
+                        return;
+                      }
+                      pushVal(`anúncio.${k}`, v);
+                    });
                     const custom = (conversation.custom_attributes || {}) as Record<string, unknown>;
                     Object.entries(custom).forEach(([k, v]) => pushVal(k, v));
+                    const mediaType = ref?.media_type;
+                    const isVideo = mediaType === 2 || mediaType === '2' || String(mediaType).toLowerCase() === 'video';
                     return (
                       <div className="space-y-2">
                         <div className="flex justify-between text-xs">
@@ -577,6 +587,22 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                             {originLabel}
                           </span>
                         </div>
+                        {Boolean(ref?.thumbnail_url) && (
+                          <div className="relative mx-auto h-[220px] w-full max-w-[240px] overflow-hidden rounded-lg border border-border bg-muted">
+                            <img
+                              src={String(ref!.thumbnail_url)}
+                              alt={ref?.title ? String(ref.title) : 'Anúncio'}
+                              className="h-full w-full object-contain"
+                            />
+                            {isVideo && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/60">
+                                  <Play className="h-5 w-5 fill-white text-white" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         {Boolean(ref?.source_url) && (
                           <a
                             href={String(ref!.source_url)}
@@ -611,13 +637,13 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
           {/* 6b. Nome do atendente nesta conversa */}
           {conversation && <AgentDisplayNameCard conversation={conversation} />}
 
-          {/* 7. Contact Custom Attributes */}
+          {/* 7. Tags do lead — respostas de formulário ficam em "Informações do Contato" (1) */}
           {contact && (
             <Card>
               <CardHeader className="pb-2">
                 <CollapsibleHeader
-                  title={t('contactSidebar.sections.contactAttributes.title')}
-                  description={t('contactSidebar.sections.contactAttributes.description')}
+                  title="Tags"
+                  description="Etiquetas do lead"
                   icon={<Tag className="h-4 w-4 text-pink-500" />}
                   isOpen={showContactAttributes}
                   onToggle={() => setShowContactAttributes(!showContactAttributes)}
@@ -625,20 +651,12 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
               </CardHeader>
 
               {showContactAttributes && (
-                <CardContent className="pt-0 px-3 pb-3 space-y-4">
-                  {/* Tags do lead (mesmas globais do card do kanban) */}
-                  <div>
-                    <p className="mb-2 text-xs font-medium text-muted-foreground">Tags</p>
-                    <ContactTagsManager
-                      contactId={String(contact.id)}
-                      conversationId={conversation ? String(conversation.id) : undefined}
-                      initialLabels={(contact as { labels?: Array<{ name?: string; title?: string; color?: string }> }).labels}
-                      onUpdated={onFilterReload}
-                    />
-                  </div>
-                  <EditableContactCustomAttributes
-                    contact={contact}
-                    onContactUpdate={onFilterReload}
+                <CardContent className="pt-0 px-3 pb-3">
+                  <ContactTagsManager
+                    contactId={String(contact.id)}
+                    conversationId={conversation ? String(conversation.id) : undefined}
+                    initialLabels={(contact as { labels?: Array<{ name?: string; title?: string; color?: string }> }).labels}
+                    onUpdated={onFilterReload}
                   />
                 </CardContent>
               )}

@@ -4,6 +4,7 @@ import {
   Plus, RefreshCw, Building2, CheckCircle, AlertCircle, Loader2,
   Copy, ExternalLink, Trash2, ChevronDown, ChevronUp, Users, ToggleLeft,
   BarChart3, List, Archive, ArchiveRestore, UploadCloud, ScrollText, Gauge,
+  MessageCircle,
 } from 'lucide-react';
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Input, Label } from '@/components/ui/ds';
 import clientInstancesService, {
@@ -12,6 +13,7 @@ import clientInstancesService, {
 import { buildMasterSsoUrl } from '@/utils/masterSso';
 import { useAuth } from '@/contexts/AuthContext';
 import MembersModal from './MembersModal';
+import MemberAccessConfigModal from './MemberAccessConfigModal';
 import FeaturesModal from './FeaturesModal';
 import DashboardView from './DashboardView';
 import LogsView from './LogsView';
@@ -302,6 +304,7 @@ export default function ClientInstances() {
   const [loadingDash, setLoadingDash] = useState(false);
 
   const [modalOpen, setModalOpen]   = useState(false);
+  const [accessCfgOpen, setAccessCfgOpen] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
 
   const loadList = useCallback(async () => {
@@ -408,6 +411,15 @@ export default function ClientInstances() {
             <Button variant="outline" size="sm" onClick={handleRefresh}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Atualizar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAccessCfgOpen(true)}
+              title="Editar a mensagem de acesso enviada no WhatsApp ao criar um membro"
+            >
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Msg de acesso
             </Button>
             <Button
               variant="outline"
@@ -572,6 +584,11 @@ export default function ClientInstances() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCreate={loadList}
+      />
+
+      <MemberAccessConfigModal
+        open={accessCfgOpen}
+        onClose={() => setAccessCfgOpen(false)}
       />
     </div>
   );

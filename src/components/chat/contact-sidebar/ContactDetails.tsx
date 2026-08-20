@@ -45,9 +45,11 @@ import { Contact as FullContact, ContactFormData } from '@/types/contacts';
 
 interface ContactDetailsProps {
   contact: Contact | null;
+  /** Data de criação da conversa atual (quando este lead chegou por este canal). */
+  leadArrivedAt?: string;
 }
 
-const ContactDetails: React.FC<ContactDetailsProps> = ({ contact }) => {
+const ContactDetails: React.FC<ContactDetailsProps> = ({ contact, leadArrivedAt }) => {
   const { t } = useLanguage('chat');
 
   const { updateContactInConversations } = useConversations();
@@ -315,6 +317,13 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({ contact }) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0 space-y-2">
+          {leadArrivedAt && (
+            <InfoField
+              label="Data de chegada do lead"
+              value={formatDate(leadArrivedAt)}
+              icon={<Calendar className="h-4 w-4" />}
+            />
+          )}
           <InfoField
             label={t('contactSidebar.contactDetails.fields.createdAt')}
             value={formatDate(contact?.created_at)}

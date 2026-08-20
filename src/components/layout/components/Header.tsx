@@ -29,6 +29,7 @@ import { TourFab } from '@/components/TourFab';
 import MenuItem from './MenuItem';
 import { MenuItem as MenuItemType } from '../config/menuItems';
 import { ThemeToggle } from '../../ThemeToggle';
+import { DemoModeToggle } from '../../DemoModeToggle';
 import { AppLogo } from '../../AppLogo';
 import { useAppDataStore } from '@/store/appDataStore';
 
@@ -213,7 +214,7 @@ export default function Header({
           <div className="flex flex-col items-center min-w-0">
             <Link to="/dashboard"><AppLogo className="h-8 max-w-32" /></Link>
             {account?.name && (
-              <span className="text-[11px] font-medium text-muted-foreground truncate max-w-40">
+              <span className="lm-redact text-[11px] font-medium text-muted-foreground truncate max-w-40">
                 {account.name}
               </span>
             )}
@@ -234,6 +235,7 @@ export default function Header({
             </Button>
           )}
           <TourFab />
+          <DemoModeToggle />
           <PlantaoToggle compact />
           <NotificationBell />
           <ProfileMenu
@@ -289,7 +291,7 @@ export default function Header({
           {account?.name && (
             <div className="flex items-center gap-2 min-w-0 rounded-md bg-primary/10 px-3 py-1.5">
               <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
-              <span className="truncate text-sm font-semibold text-sidebar-foreground">
+              <span className="lm-redact truncate text-sm font-semibold text-sidebar-foreground">
                 {account.name}
               </span>
             </div>
@@ -314,6 +316,8 @@ export default function Header({
           <TourFab />
           {/* Theme Toggle */}
           <ThemeToggle />
+          {/* Modo Demo (borra dados sensíveis p/ gravar tutoriais) */}
+          <DemoModeToggle />
           {/* Modo Plantão (push de lead novo) */}
           <PlantaoToggle />
           {/* Notifications */}

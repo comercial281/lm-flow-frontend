@@ -11,7 +11,6 @@ import {
 } from '@evoapi/design-system/context-menu';
 import {
   Search,
-  Filter,
   Mail,
   MailOpen,
   MessageCircle,
@@ -41,6 +40,7 @@ import { NoConversations } from '../empty-states';
 import ContactAvatar from '../contact/ContactAvatar';
 import ConversationBadges from '../conversation/ConversationBadges';
 import ConversationsFilter from '../conversation/ConversationsFilter';
+import QuickFilters from '../filters/QuickFilters';
 import GlobalSearchPanel from '../search/GlobalSearchPanel';
 import { BaseFilter } from '@/types/core';
 import InboxesService from '@/services/channels/inboxesService';
@@ -136,7 +136,12 @@ const ChatSidebar = ({
   const filters = chatContext.filters;
   const [conversationFilters, setConversationFilters] = useState<BaseFilter[]>([]);
   // Instâncias (inboxes/WhatsApp) do tenant — pro seletor rápido de instância.
-  const [inboxOptions, setInboxOptions] = useState<Array<{ id: string; label: string }>>([]);
+  // `iaAtiva` vem do backend (`Inbox#active_bot?`, ver InboxSerializer): diz
+  // se tem um agent_bot LIGADO nesta instância — é o que desenha o
+  // iconezinho roxo no `QuickFilters` (pedido do Giovani, 19/08).
+  const [inboxOptions, setInboxOptions] = useState<
+    Array<{ id: string; label: string; iaAtiva: boolean }>
+  >([]);
   useEffect(() => {
     let alive = true;
     InboxesService.list()
@@ -145,7 +150,11 @@ const ChatSidebar = ({
         setInboxOptions(
           (res.data ?? []).map((i: Inbox) => {
             const ch = i.channel_type?.split('::')[1] || '';
-            return { id: String(i.id), label: ch ? `${i.name} (${ch})` : i.name };
+            return {
+              id: String(i.id),
+              label: ch ? `${i.name} (${ch})` : i.name,
+              iaAtiva: Boolean(i.has_active_agent_bot),
+            };
           }),
         );
       })
@@ -253,25 +262,26 @@ const ChatSidebar = ({
     onFilterClear();
   };
 
-  // Seletor rápido de instância: aplica/remove um filtro inbox_id.
-  const selectedInboxId = String(
-    conversationFilters.find((f) => f.attributeKey === 'inbox_id')?.values ?? '',
-  );
-  const applyInstanceFilter = (inboxId: string) => {
-    const others = conversationFilters.filter((f) => f.attributeKey !== 'inbox_id');
-    const next: BaseFilter[] = inboxId
-      ? [
-          ...others,
-          {
-            attributeKey: 'inbox_id',
-            filterOperator: 'equal_to',
-            values: inboxId,
-            queryOperator: 'and',
-            attributeModel: 'standard',
-          },
-        ]
-      : others;
+  // Filtro rápido (tag, instância, período) — um popover só, aplicado na
+  // hora do clique, sem passar pelo modal de filtro avançado. Ver
+  // `QuickFilters.tsx`.
+  const applyQuickFilters = (next: BaseFilter[]) => {
+    const previousInboxId = conversationFilters.find((f) => f.attributeKey === 'inbox_id')?.values;
+    const nextInboxId = next.find((f) => f.attributeKey === 'inbox_id')?.values;
     handleApplyFilters(next);
+
+    // Fecha a conversa aberta se ela for de outra instância — sem isso o
+    // painel direito fica preso no snapshot antigo (selectedConversationData
+    // nunca é invalidado quando a lista é refiltrada) e mostra a instância
+    // errada mesmo depois de trocar o filtro.
+    if (nextInboxId && nextInboxId !== previousInboxId) {
+      const openConversation = chatContext.conversations.selectedConversation;
+      const openInboxId = openConversation?.inbox?.id != null ? String(openConversation.inbox.id) : null;
+      if (openConversation && openInboxId !== nextInboxId) {
+        conversations.selectConversation(null);
+        navigate('/conversations', { replace: true });
+      }
+    }
   };
 
   const handleBulkResolve = async () => {
@@ -567,7 +577,7 @@ const ChatSidebar = ({
       data-tour="chat-sidebar"
       className={`
         ${mobileView === 'list' ? 'flex' : 'hidden'} md:flex
-        w-full md:w-80 border-r bg-card/50 flex-col h-full
+        w-full min-w-0 md:w-80 md:shrink-0 border-r bg-card/50 flex-col h-full
       `}
     >
       {/* Search and Filter Header */}
@@ -593,49 +603,36 @@ const ChatSidebar = ({
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
+          <button
             type="button"
-            variant={showArchived ? 'ghost' : 'secondary'}
-            size="sm"
-            className="h-8 cursor-pointer"
             aria-pressed={!showArchived}
             onClick={() => setShowArchived(false)}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+              !showArchived
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
             {t('chatSidebar.view.active')}
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
-            variant={showArchived ? 'secondary' : 'ghost'}
-            size="sm"
-            className="h-8 cursor-pointer"
             aria-pressed={showArchived}
             onClick={() => setShowArchived(true)}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+              showArchived
+                ? 'bg-orange-100 text-orange-700 shadow-sm dark:bg-orange-950/40 dark:text-orange-400'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
+            <Archive className="h-3 w-3" />
             {t('chatSidebar.view.archived')}
-          </Button>
+          </button>
         </div>
 
-        {/* Seletor rápido de instância (WhatsApp) — só aparece com 2+ instâncias */}
-        {inboxOptions.length > 1 && (
-          <div className="flex items-center gap-2">
-            <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">Instância</span>
-            <select
-              value={selectedInboxId}
-              onChange={(e) => applyInstanceFilter(e.target.value)}
-              className="h-8 flex-1 cursor-pointer rounded-md border border-border bg-background px-2 text-sm outline-none focus:border-primary"
-              aria-label="Filtrar por instância"
-            >
-              <option value="">Todas as instâncias</option>
-              {inboxOptions.map((i) => (
-                <option key={i.id} value={i.id}>{i.label}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <span className="min-w-0 truncate text-sm text-muted-foreground">
             {pagination?.total != null && pagination.total > visibleConversations.length
               ? `${visibleConversations.length} / ${pagination.total}`
               : visibleConversations.length}{' '}
@@ -643,26 +640,13 @@ const ChatSidebar = ({
               ? t('chatSidebar.conversation')
               : t('chatSidebar.conversations')}
           </span>
-          <div className="flex items-center gap-2">
-            {filters.state.activeFilters.length > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {filters.state.activeFilters.length}{' '}
-                {filters.state.activeFilters.length === 1
-                  ? t('chatSidebar.filter')
-                  : t('chatSidebar.filters')}
-              </Badge>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setFilterModalOpen(true)}
-              disabled={filters.state.isApplyingFilters}
-              className="h-8 px-2 cursor-pointer"
-              data-tour="chat-filter-button"
-            >
-              <Filter className="h-4 w-4" />
-              {t('chatSidebar.filtersButton')}
-            </Button>
+          <div className="flex shrink-0 items-center gap-2" data-tour="chat-filter-button">
+            <QuickFilters
+              filters={conversationFilters}
+              inboxOptions={inboxOptions}
+              onApply={applyQuickFilters}
+              onOpenAdvanced={() => setFilterModalOpen(true)}
+            />
           </div>
         </div>
         {showArchived && (
@@ -807,11 +791,11 @@ const ChatSidebar = ({
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                               <div className="min-w-0 flex-1">
-                                <p className="font-medium truncate">
+                                <p className="lm-redact font-medium truncate">
                                   {conversation.contact?.name || t('chatSidebar.contactNoName')}
                                 </p>
                                 {conversation.contact?.phone_number && (
-                                  <p className="text-xs text-muted-foreground/70 truncate">
+                                  <p className="lm-redact text-xs text-muted-foreground/70 truncate">
                                     {conversation.contact.phone_number}
                                   </p>
                                 )}
@@ -840,7 +824,7 @@ const ChatSidebar = ({
                             </div>
                           </div>
 
-                          <p className="text-sm text-muted-foreground truncate">
+                          <p className="lm-redact text-sm text-muted-foreground truncate">
                             {getLastMessage(conversation)}
                           </p>
 

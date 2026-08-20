@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Loader2, Users, Trash2, Eye, EyeOff, RotateCw, KeyRound, Check, Copy, AlertTriangle,
+  MessageCircle, XCircle,
 } from 'lucide-react';
 import {
   Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Input,
 } from '@/components/ui/ds';
 import clientInstancesService, {
-  ClientInstance, TenantUser, CreateTenantUserPayload,
+  ClientInstance, TenantUser, CreateTenantUserPayload, CentralInstance, WhatsappSendResult,
 } from '@/services/clientInstances/clientInstancesService';
 
 interface Props {
@@ -154,24 +155,51 @@ function PasswordCell({
   );
 }
 
+function pickInstance(list: CentralInstance[]): string {
+  const op = list.find(i => i.name.startsWith('Operacional') && i.connected);
+  if (op) return op.name;
+  const conn = list.find(i => i.connected);
+  return conn?.name ?? list[0]?.name ?? '';
+}
+
 function AddMemberRow({
   instanceId, onAdded,
 }: {
   instanceId: number;
-  onAdded: (created: TenantUser) => void;
+  onAdded: (created: TenantUser, whatsapp?: WhatsappSendResult) => void;
 }) {
   const [open, setOpen]       = useState(false);
-  const [form, setForm]       = useState<CreateTenantUserPayload>({ email: '', name: '', password: '', chave_role: 'agent', remember_password: true });
+  const [form, setForm]       = useState<CreateTenantUserPayload>({ email: '', name: '', password: '', chave_role: 'agent', remember_password: true, whatsapp_number: '', send_whatsapp: true });
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
+  const [instances, setInstances]   = useState<CentralInstance[]>([]);
+  const [instance, setInstance]     = useState('');
+  const [loadingInst, setLoadingInst] = useState(false);
+
+  // Carrega as instancias remetentes ao abrir o form (1x).
+  useEffect(() => {
+    if (!open || instances.length > 0) return;
+    setLoadingInst(true);
+    clientInstancesService.centralInstances()
+      .then(r => {
+        const list = r.data.data ?? [];
+        setInstances(list);
+        setInstance(prev => prev || pickInstance(list));
+      })
+      .catch(() => setInstances([]))
+      .finally(() => setLoadingInst(false));
+  }, [open, instances.length]);
+
+  const phone = form.whatsapp_number?.trim() ?? '';
+  const willSend = !!phone && (form.send_whatsapp ?? true);
 
   const submit = async () => {
     if (!form.email || !form.name) return;
     setLoading(true); setError('');
     try {
-      const r = await clientInstancesService.addMember(instanceId, form);
-      onAdded(r.data.data);
-      setForm({ email: '', name: '', password: '', chave_role: 'agent', remember_password: true });
+      const r = await clientInstancesService.addMember(instanceId, { ...form, instance: instance || undefined });
+      onAdded(r.data.data, r.data.whatsapp);
+      setForm({ email: '', name: '', password: '', chave_role: 'agent', remember_password: true, whatsapp_number: '', send_whatsapp: true });
       setOpen(false);
     } catch (e) { setError(pickError(e)); }
     finally { setLoading(false); }
@@ -181,7 +209,7 @@ function AddMemberRow({
     return (
       <div className="px-3 py-2 border-t">
         <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="h-8 text-xs gap-1">
-          <Plus className="h-3.5 w-3.5" /> Adicionar membro
+          <Plus className="h-3.5 w-3.5" /> Adicionar acesso
         </Button>
       </div>
     );
@@ -219,7 +247,48 @@ function AddMemberRow({
           <option value="manager">Gerente</option>
           <option value="admin">Administrador</option>
         </select>
+        <Input
+          type="tel"
+          placeholder="WhatsApp com DDD (opcional)"
+          value={form.whatsapp_number ?? ''}
+          onChange={e => setForm(f => ({ ...f, whatsapp_number: e.target.value }))}
+          className="h-8 text-sm col-span-2"
+        />
       </div>
+
+      {phone && (
+        <div className="rounded border bg-background px-2.5 py-2 space-y-2">
+          <label className="text-xs flex items-center gap-2 font-medium">
+            <input
+              type="checkbox"
+              checked={form.send_whatsapp ?? true}
+              onChange={e => setForm(f => ({ ...f, send_whatsapp: e.target.checked }))}
+            />
+            <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+            Enviar o acesso por WhatsApp (link + login + senha)
+          </label>
+          {willSend && (
+            <div className="flex items-center gap-2 pl-6">
+              <span className="text-xs text-muted-foreground">Enviar por:</span>
+              <select
+                value={instance}
+                onChange={e => setInstance(e.target.value)}
+                className="h-7 text-xs border rounded px-2 bg-background flex-1"
+                disabled={loadingInst}
+              >
+                {loadingInst && <option value="">carregando instâncias...</option>}
+                {!loadingInst && instances.length === 0 && <option value="">padrão (Operacional LM01)</option>}
+                {instances.map(i => (
+                  <option key={i.name} value={i.name}>
+                    {i.name}{i.connected ? '' : ' (desconectada)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
+
       <label className="text-xs flex items-center gap-2">
         <input
           type="checkbox"
@@ -232,8 +301,8 @@ function AddMemberRow({
       <div className="flex gap-2 justify-end">
         <Button size="sm" variant="ghost" onClick={() => { setOpen(false); setError(''); }} className="h-8 text-xs">Cancelar</Button>
         <Button size="sm" onClick={submit} disabled={loading || !form.email || !form.name} className="h-8 text-xs gap-1">
-          {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-          Adicionar
+          {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : willSend ? <MessageCircle className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+          {willSend ? 'Criar e enviar' : 'Criar acesso'}
         </Button>
       </div>
     </div>
@@ -244,6 +313,7 @@ export default function MembersModal({ instance, open, onClose }: Props) {
   const [members, setMembers] = useState<TenantUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
+  const [notice, setNotice]   = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -255,11 +325,19 @@ export default function MembersModal({ instance, open, onClose }: Props) {
   }, [instance.id]);
 
   useEffect(() => {
-    if (open) load();
+    if (open) { setNotice(null); load(); }
   }, [open, load]);
 
-  const handleAdded = (u: TenantUser) => {
+  const handleAdded = (u: TenantUser, wa?: WhatsappSendResult) => {
     setMembers(prev => [...prev, u]);
+    if (!wa || wa.skipped === 'sem telefone') { setNotice({ ok: true, text: `Acesso de ${u.name} criado.` }); return; }
+    if (wa.sent) {
+      setNotice({ ok: true, text: `Acesso de ${u.name} criado e enviado no WhatsApp${wa.instance ? ` (${wa.instance})` : ''}.` });
+    } else if (wa.skipped) {
+      setNotice({ ok: true, text: `Acesso de ${u.name} criado. WhatsApp não enviado: ${wa.skipped}.` });
+    } else {
+      setNotice({ ok: false, text: `Acesso de ${u.name} criado, mas o WhatsApp falhou: ${wa.error ?? `HTTP ${wa.http}`}.` });
+    }
   };
 
   const handleRemove = async (u: TenantUser) => {
@@ -288,6 +366,17 @@ export default function MembersModal({ instance, open, onClose }: Props) {
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
+          {notice && (
+            <div className={`mb-3 flex items-start gap-2 rounded-md border px-3 py-2 text-xs ${
+              notice.ok
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-300'
+                : 'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-300'
+            }`}>
+              {notice.ok ? <MessageCircle className="h-4 w-4 mt-0.5 shrink-0" /> : <XCircle className="h-4 w-4 mt-0.5 shrink-0" />}
+              <span className="flex-1">{notice.text}</span>
+              <button onClick={() => setNotice(null)} className="opacity-60 hover:opacity-100">✕</button>
+            </div>
+          )}
           <div className="border rounded-lg overflow-hidden bg-card">
             <div className="grid grid-cols-[1.4fr,1fr,0.8fr,1.4fr,0.3fr] gap-2 px-3 py-2 bg-muted/40 text-xs font-medium text-muted-foreground sticky top-0 z-10">
               <div>Email</div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button, Textarea } from '@/components/ui/ds';
-import { MessageCircle, Send, Loader2, RefreshCw, Paperclip, Rocket, Bell, X, Mic } from 'lucide-react';
+import { MessageCircle, Send, Loader2, RefreshCw, Paperclip, Rocket, Bell, X, Mic, Archive, ArchiveX } from 'lucide-react';
 
 const OPENAI_KEY = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
 
@@ -25,6 +25,7 @@ async function transcribeAudioUrl(audioUrl: string): Promise<string> {
 }
 import { toast } from 'sonner';
 import { conversationAPI } from '@/services/conversations/conversationService';
+import { chatService } from '@/services/chat/chatService';
 import MessageFunnelPopover from '@/components/chat/message-funnels/MessageFunnelPopover';
 import { useWebSocketContext } from '@/contexts/chat/WebSocketContext';
 
@@ -38,8 +39,14 @@ function useSafeWsHandlers() {
     return undefined;
   }
 }
+import MessageImage from '@/components/chat/messages/MessageImage';
+import MessageVideo from '@/components/chat/messages/MessageVideo';
+import MessageFile from '@/components/chat/messages/MessageFile';
+import MessageLocation from '@/components/chat/messages/MessageLocation';
+import SystemMessage from '@/components/chat/messages/SystemMessage';
 import type { PipelineItem } from '@/types/analytics';
-import type { Message, Conversation } from '@/types/chat/api';
+import { MESSAGE_TYPE } from '@/types/chat/api';
+import type { Message, Conversation, Attachment } from '@/types/chat/api';
 
 interface CardConversationTabProps {
   item: PipelineItem;
@@ -72,16 +79,16 @@ function resolveContactName(item: PipelineItem): string | null {
   return null;
 }
 
-interface Attachment {
-  url?: string;
-  file_type?: string;
-  thumb_url?: string;
-  file_name?: string;
-}
-
-function AudioAttachment({ url }: { url: string }) {
+// Áudio com transcrição: mostra a transcrição já gravada pelo backend
+// (attachment.transcribed_text/meta) quando existe; senão oferece transcrever
+// na hora via Whisper (client-side), pra não deixar o corretor sem o texto.
+function AudioAttachment({ att }: { att: Attachment }) {
+  const url = att.data_url;
+  const existing = att.transcribed_text || (att.meta as any)?.transcribed_text || null;
   const [transcribing, setTranscribing] = useState(false);
-  const [transcription, setTranscription] = useState<string | null>(null);
+  const [transcription, setTranscription] = useState<string | null>(existing);
+
+  if (!url) return null;
 
   const handleTranscribe = async () => {
     if (!OPENAI_KEY) { setTranscription('Chave OpenAI não configurada.'); return; }
@@ -118,41 +125,40 @@ function AudioAttachment({ url }: { url: string }) {
   );
 }
 
-function MediaAttachment({ att }: { att: Attachment }) {
-  const url = att.url ?? '';
-  const ft = (att.file_type ?? '').toLowerCase();
-
-  if (ft.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(url)) {
-    return (
-      <img
-        src={url}
-        alt="imagem"
-        className="mt-1 max-h-48 cursor-pointer rounded object-cover"
-        onClick={() => window.open(url, '_blank')}
-      />
-    );
+// Anexos pelos MESMOS componentes da tela de Conversas (MessageImage/Video/
+// File/Location) — antes essa aba lia `att.url`, mas o backend manda
+// `data_url`; a imagem/vídeo nunca tinha src e a mídia simplesmente sumia.
+// Reusar os componentes reais elimina essa classe de bug de vez (fica
+// idêntico ao que o corretor vê na tela de Conversas, garantido).
+function MessageAttachments({ attachments }: { attachments: Attachment[] }) {
+  if (attachments.length === 0) return null;
+  const fileType = attachments[0]?.file_type;
+  switch (fileType) {
+    case 'image':
+      return <div className="mt-1"><MessageImage attachments={attachments} /></div>;
+    case 'video':
+      return <div className="mt-1"><MessageVideo attachments={attachments} /></div>;
+    case 'location':
+      return <div className="mt-1"><MessageLocation attachments={attachments} /></div>;
+    case 'audio':
+      return (
+        <>
+          {attachments.map(att => <AudioAttachment key={att.id} att={att} />)}
+        </>
+      );
+    default:
+      return <div className="mt-1"><MessageFile attachments={attachments} /></div>;
   }
-  if (ft.startsWith('audio/') || /\.(mp3|ogg|webm|m4a|aac|opus)$/i.test(url)) {
-    return <AudioAttachment url={url} />;
-  }
-  if (ft.startsWith('video/') || /\.(mp4|mov|avi|webm|mkv)$/i.test(url)) {
-    return <video controls src={url} className="mt-1 max-h-48 w-full rounded" />;
-  }
-  return (
-    <a href={url} target="_blank" rel="noreferrer" className="mt-1 flex items-center gap-1 text-xs underline">
-      {att.file_name ?? 'arquivo'}
-    </a>
-  );
 }
 
 function MessageBubble({ m, isOutgoing }: { m: Message; isOutgoing: boolean }) {
-  const attachments = ((m.attachments ?? []) as Attachment[]);
+  const attachments = m.attachments ?? [];
   return (
     <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${
       isOutgoing ? 'bg-primary text-primary-foreground' : 'bg-card border'
     }`}>
       {m.content && <p className="whitespace-pre-wrap break-words">{m.content}</p>}
-      {attachments.map((att, i) => <MediaAttachment key={i} att={att} />)}
+      <MessageAttachments attachments={attachments} />
       {!m.content && attachments.length === 0 && (
         <em className="text-xs opacity-70">[mídia]</em>
       )}
@@ -177,6 +183,10 @@ export default function CardConversationTab({ item, onCreateReminder }: CardConv
   const [text, setText] = useState('');
   const [funnelOpen, setFunnelOpen] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isArchived, setIsArchived] = useState(
+    Boolean(item.conversation?.custom_attributes?.archived)
+  );
+  const [archiving, setArchiving] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -270,6 +280,26 @@ export default function CardConversationTab({ item, onCreateReminder }: CardConv
     await doSend(opts.content, opts.files);
   };
 
+  const toggleArchive = async () => {
+    if (!conversationId) return;
+    setArchiving(true);
+    try {
+      if (isArchived) {
+        await chatService.unarchiveConversation(conversationId);
+        setIsArchived(false);
+        toast.success('Conversa desarquivada');
+      } else {
+        await chatService.archiveConversation(conversationId);
+        setIsArchived(true);
+        toast.success('Conversa arquivada');
+      }
+    } catch {
+      toast.error('Falha ao arquivar conversa');
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   // Cast item.conversation to Conversation — funnel popover só usa contact fields
   const convForFunnel = (item.conversation ?? null) as unknown as Conversation | null;
 
@@ -289,14 +319,44 @@ export default function CardConversationTab({ item, onCreateReminder }: CardConv
   return (
     <div className="flex h-[60vh] flex-col">
       {/* header */}
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">
-          {contactName && <span className="font-medium text-foreground">{contactName} · </span>}
-          {messages.length} mensagem{messages.length === 1 ? '' : 's'} · tempo real
-        </span>
-        <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
-          <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
-        </Button>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs text-muted-foreground truncate">
+            {contactName && <span className="font-medium text-foreground">{contactName} · </span>}
+            {messages.length} mensagem{messages.length === 1 ? '' : 's'} · tempo real
+          </span>
+          {isArchived && (
+            <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700 dark:bg-orange-950/40 dark:text-orange-400">
+              <Archive className="h-2.5 w-2.5" />
+              Arquivada
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            title={isArchived ? 'Desarquivar conversa' : 'Arquivar conversa'}
+            onClick={toggleArchive}
+            disabled={archiving}
+            className={`flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-colors ${
+              isArchived
+                ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-950/40 dark:text-orange-400'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            }`}
+          >
+            {archiving ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : isArchived ? (
+              <ArchiveX className="h-3 w-3" />
+            ) : (
+              <Archive className="h-3 w-3" />
+            )}
+            {isArchived ? 'Desarquivar' : 'Arquivar'}
+          </button>
+          <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </div>
 
       {/* messages list */}
@@ -308,9 +368,15 @@ export default function CardConversationTab({ item, onCreateReminder }: CardConv
         ) : messages.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma mensagem ainda.</p>
         ) : (
-          messages.map(m => {
-            const mt: unknown = m.message_type;
-            const isOutgoing = mt === 1 || mt === 'outgoing';
+          messages.map((m, index) => {
+            // Eventos do sistema (atribuição, mudança de status/etiqueta, etc)
+            // não são mensagem de ninguém — iam parar num balão como se o
+            // LEAD tivesse escrito "Assigned to X, inherited from...". Vira
+            // uma etiqueta central, igual à tela de Conversas.
+            if (m.message_type === MESSAGE_TYPE.ACTIVITY || m.message_type === MESSAGE_TYPE.TEMPLATE) {
+              return <SystemMessage key={`system-${m.id}-${index}`} message={m} />;
+            }
+            const isOutgoing = m.message_type === MESSAGE_TYPE.OUTGOING;
             const senderName = !isOutgoing
               ? (m.sender?.name && !isPhoneNumber(m.sender.name) ? m.sender.name : contactName)
               : null;

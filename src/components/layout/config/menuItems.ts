@@ -12,12 +12,9 @@ import {
   PieChart,
   Users2,
   Clock,
-  Code,
-  Key,
   Tags,
   TestTube,
   Wand,
-  Settings,
   List,
   GraduationCap,
   Shield,
@@ -31,6 +28,8 @@ import {
   FileText,
   TrendingUp,
   Library,
+  Rocket,
+  Target,
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -81,6 +80,12 @@ export interface SubMenuItem {
   clientToggleKey?: string;
   rootTenantOnly?: boolean;
   hiddenFromClient?: boolean;
+  /**
+   * Atalho que leva pra uma seção com o próprio menu lateral (ex: Automações).
+   * Fecha o painel de submenu ao navegar, senão os dois ficam abertos ao
+   * mesmo tempo (2 menus empilhados).
+   */
+  closesSubmenu?: boolean;
 }
 
 export interface ProfileMenuItem {
@@ -193,6 +198,13 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         action: 'read',
       },
       {
+        // Robô que joga quem não respondeu no follow-up. Mora em Automações (é lá que
+        // vivem os painéis do funil), mas aparece aqui também porque é um robô.
+        name: 'Robô Sem Resposta',
+        href: '/automations/no-reply-robot',
+        icon: Bot,
+      },
+      {
         name: t('menu.agents.customTools'),
         href: '/agents/custom-tools',
         icon: Wand,
@@ -303,35 +315,23 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         action: 'read',
       },
       {
-        name: t('menu.settings.customAttributes'),
-        href: '/settings/attributes',
-        icon: Code,
-        resource: 'custom_attribute_definitions',
-        action: 'read',
+        name: 'Funis de Mensagem',
+        href: '/automations/message-funnels',
+        icon: Rocket,
+        featureKey: 'message_funnels',
+        closesSubmenu: true,
       },
       {
-        name: 'Automações',
-        href: '/automations',
-        icon: Zap,
-        clientToggleKey: 'client_manage_automations',
-      },
-      {
-        name: 'Produtos',
-        href: '/settings/products',
-        icon: Store,
-        featureKey: 'products',
+        name: 'Pixel / CAPI',
+        href: '/settings/pixel-capi',
+        icon: Target,
+        featureKey: 'lead_automations',
       },
       {
         name: 'Site Builder',
         href: '/settings/site-builder',
         icon: Globe,
         featureKey: 'site_builder',
-      },
-      {
-        name: 'Formulários',
-        href: '/settings/dynamic-forms',
-        icon: FileText,
-        featureKey: 'dynamic_forms',
       },
       // MACROS OCULTO — habilitar quando pronto
       // {
@@ -341,27 +341,15 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
       //   resource: 'macros',
       //   action: 'read',
       // },
-      {
-        name: t('menu.settings.integrations'),
-        href: '/settings/integrations',
-        icon: Settings,
-        resource: 'integrations',
-        action: 'read',
-      },
-      {
-        name: t('menu.settings.accessTokens'),
-        href: '/settings/access-tokens',
-        icon: Key,
-        resource: 'access_tokens',
-        action: 'read',
-      },
-      {
-        name: t('menu.settings.admin'),
-        href: '/settings/admin',
-        icon: Shield,
-        resource: 'installation_configs',
-        action: 'manage',
-      },
+      // INTEGRAÇÕES OCULTO DO MENU — rota continua viva (Meta Ads/Shopify/etc
+      // ainda são acessadas via link direto, ex: dentro de Automações → Origem).
+      // {
+      //   name: t('menu.settings.integrations'),
+      //   href: '/settings/integrations',
+      //   icon: Settings,
+      //   resource: 'integrations',
+      //   action: 'read',
+      // },
     ],
   },
 ];

@@ -29,6 +29,19 @@ export interface SiteTracking {
   facebook_pixel_id?: string | null;
 }
 
+/** Proposta da IA (ai_setup): só o que estava no material; campo sem base = null. */
+export interface AiSetupProposal {
+  name?: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  seo_keywords?: string | null;
+  contact_phone?: string | null;
+  contact_whatsapp?: string | null;
+  contact_email?: string | null;
+  contact_address?: string | null;
+  about_html?: string | null;
+}
+
 export interface Site {
   id: string;
   name: string;
@@ -171,6 +184,24 @@ export const siteBuilderService = {
   async getSite(id: string): Promise<Site> {
     const res = await api.get(`/sites/${id}`);
     return (res.data as { data: Site }).data;
+  },
+
+  /** Upload genérico (logo, imagens do site) — POST /uploads, devolve URL pública. */
+  async uploadAsset(file: File): Promise<{ url: string }> {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await api.post('/uploads', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+    return (res.data as { data: { url: string } }).data;
+  },
+
+  /**
+   * IA lê o material colado (texto institucional) e PROPÕE os campos do site
+   * (nome, SEO, contato, sobre). Não salva nada — o form é preenchido pro
+   * usuário revisar e salvar.
+   */
+  async aiSetup(siteId: string, text: string): Promise<AiSetupProposal> {
+    const res = await api.post(`/sites/${siteId}/ai_setup`, { text });
+    return (res.data as { data: AiSetupProposal }).data;
   },
 
   async createSite(data: SiteFormData): Promise<Site> {

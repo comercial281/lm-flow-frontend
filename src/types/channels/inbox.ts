@@ -106,6 +106,12 @@ export interface Inbox {
   };
   web_widget_script?: string;
   default_conversation_status?: string;
+  // Corretor dono desta instância (número pessoal dele) — a foto real do
+  // WhatsApp dela vira o avatar de "Responsável" em vez do avatar genérico.
+  owner_user_id?: string | null;
+  owner_name?: string | null;
+  /** A IA está operando nesta instância — bot vinculado (`agent_bot_inbox`) com status `active`. */
+  has_active_agent_bot?: boolean;
 }
 
 // ============================================

@@ -24,6 +24,7 @@ interface WizardState {
   only_ad_leads: boolean;
   whatsapp_reminder_group_jid: string;
   whatsapp_logs_group_jid: string;
+  max_whatsapp_channels: number;
   template_ids: string[];
 }
 
@@ -45,6 +46,7 @@ export default function NewTenantWizard({ onClose, onCreated }: { onClose: () =>
     name: '', admin_name: '', admin_email: '', phone: '', slug: '',
     extra_users: [], notify_email: true, notify_whatsapp: false,
     only_ad_leads: false, whatsapp_reminder_group_jid: '', whatsapp_logs_group_jid: '',
+    max_whatsapp_channels: 5,
     template_ids: [],
   });
 
@@ -74,6 +76,7 @@ export default function NewTenantWizard({ onClose, onCreated }: { onClose: () =>
         only_ad_leads:               state.only_ad_leads,
         whatsapp_reminder_group_jid: state.whatsapp_reminder_group_jid || undefined,
         whatsapp_logs_group_jid:     state.whatsapp_logs_group_jid || undefined,
+        max_whatsapp_channels:       state.max_whatsapp_channels,
         notify_email:                state.notify_email,
         notify_whatsapp:             state.notify_whatsapp,
         template_ids:                state.template_ids,
@@ -260,6 +263,16 @@ function StepLeads({ state, set, groups, loading }: { state: WizardState; set: (
         {!state.only_ad_leads && (
           <p className="text-xs text-white/30">Todos os leads (anuncio e organico) entrarao automaticamente no pipeline.</p>
         )}
+      </div>
+
+      <div className="space-y-2 pt-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+        <p className="text-xs font-medium text-white/70">Limite de canais de WhatsApp</p>
+        <div className="flex items-center gap-3">
+          <input type="number" min={0} value={state.max_whatsapp_channels}
+            onChange={e => set('max_whatsapp_channels', Math.max(0, parseInt(e.target.value || '0', 10) || 0))}
+            className="w-16 px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm text-center outline-none" />
+          <span className="text-xs text-white/40">Quantas instancias este cliente pode conectar. 0 = ilimitado.</span>
+        </div>
       </div>
 
       <div className="space-y-3 pt-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>

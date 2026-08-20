@@ -221,6 +221,13 @@ export interface PipelineItem {
     title?: string | null;
     code?: string | null;
   } | null;
+  // Roleta que atribuiu este lead (histórico em broker_assignments). null = nunca
+  // passou por sorteio — atribuído na mão, importado, ou automação direta.
+  roleta?: {
+    id: string;
+    inbox_name?: string | null;
+    assigned_at?: string | null;
+  } | null;
   position?: number; // ordem manual no kanban (epoch da chegada por padrão)
   entered_at?: number;
   completed_at?: number | null;
@@ -273,6 +280,7 @@ export interface PipelineItem {
         type: string;
       };
     };
+    custom_attributes?: Record<string, unknown>;
     last_non_activity_message?: {
       id: string;
       content: string;
