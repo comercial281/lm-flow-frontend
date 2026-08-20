@@ -79,10 +79,24 @@ export function retryImport<T>(factory: () => Promise<T>): Promise<T> {
   });
 }
 
-/** Igual ao React.lazy, mas com auto-recuperação de chunk faltante. */
+/** Componente lazy com a função de import original anexada (ver lazyWithRetry). */
+export type PreloadableLazyComponent<T extends ComponentType<unknown>> = LazyExoticComponent<T> & {
+  /** Dispara o mesmo import() (com retry) sem renderizar — usado pra prefetch de rota. */
+  __preload: () => Promise<unknown>;
+};
+
+/**
+ * Igual ao React.lazy, mas com auto-recuperação de chunk faltante — e expõe a
+ * função de import original em `__preload`, pra permitir prefetch (idle) do
+ * mesmo chunk sem duplicar o import() em outro arquivo (ver
+ * src/routes/lazyPages.ts e src/utils/routePrefetch.ts).
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- espelha a assinatura do React.lazy
 export function lazyWithRetry<T extends ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
-): LazyExoticComponent<T> {
-  return lazy(() => retryImport(factory));
+): PreloadableLazyComponent<T> {
+  const preload = () => retryImport(factory);
+  const Component = lazy(preload) as PreloadableLazyComponent<T>;
+  Component.__preload = preload;
+  return Component;
 }

@@ -24,6 +24,7 @@ import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useMenuState } from '@/hooks/useMenuState';
 import { useKeyboardInsetVar } from '@/hooks/useKeyboardInset';
 import { useDashboardApps } from '@/hooks/useDashboardApps';
+import { useRoutePrefetch } from '@/hooks/useRoutePrefetch';
 import { injectDashboardAppsIntoMenu } from '@/utils/injectDashboardApps';
 import { applyMenuPrefs, MENU_PREFS_EVENT } from './config/menuPrefs';
 import MenuCustomizer from './components/MenuCustomizer';
@@ -51,6 +52,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // Mantém --keyboard-inset atualizada para a casca encolher com o teclado
   // do celular (ver a altura do container abaixo).
   useKeyboardInsetVar();
+
+  // Prefetch ocioso dos chunks das páginas do menu principal — MainLayout só
+  // monta com usuário autenticado, então a rota real já passou pelo
+  // PrivateRoute/CustomerRoute (ver src/routes/index.tsx). Ver
+  // src/hooks/useRoutePrefetch.ts.
+  useRoutePrefetch(!!user);
 
   useEffect(() => {
     const onPrefs = () => setMenuPrefsVersion(v => v + 1);
