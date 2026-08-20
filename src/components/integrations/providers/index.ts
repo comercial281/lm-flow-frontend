@@ -1,3 +1,1 @@
-export * from './slack';
-export * from './webhooks';
-export * from './oauth';
+export { default as RealEstateIntegrationPage } from './RealEstateIntegrationPage';
