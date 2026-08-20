@@ -121,8 +121,8 @@
       "all": "Todos os eventos",
       "contact_created": "Contato Criado",
       "contact_updated": "Contato Atualizado",
-      "label_added": "Label Adicionada",
-      "label_removed": "Label Removida",
+      "label_added": "Etiqueta Adicionada",
+      "label_removed": "Etiqueta Removida",
       "custom_attribute_changed": "Atributo Personalizado Alterado",
       "conversation_created": "Conversa Criada",
       "conversation_updated": "Conversa Atualizada",
@@ -138,8 +138,8 @@
       "pipeline_custom_fields_updated": "Campos Personalizados do Pipeline",
       "contactCreated": "Contato criado",
       "contactUpdated": "Contato atualizado",
-      "labelAdded": "Label adicionada",
-      "labelRemoved": "Label removida",
+      "labelAdded": "Etiqueta adicionada",
+      "labelRemoved": "Etiqueta removida",
       "customAttributeChanged": "Atributo personalizado alterado",
       "conversationCreated": "Conversa criada",
       "conversationUpdated": "Conversa atualizada",
@@ -150,8 +150,8 @@
     "descriptions": {
       "contact_created": "Um novo contato foi criado no sistema",
       "contact_updated": "{{count}} campo(s) foram alterados",
-      "label_added": "Label \"{{labelName}}\" foi adicionada",
-      "label_removed": "Label \"{{labelName}}\" foi removida",
+      "label_added": "Etiqueta \"{{labelName}}\" foi adicionada",
+      "label_removed": "Etiqueta \"{{labelName}}\" foi removida",
       "custom_attribute_changed": "Atributo \"{{attributeName}}\" foi alterado",
       "conversation_created": "Nova conversa criada no inbox \"{{inbox_name}}\"",
       "conversation_updated": "Conversa atualizada ({{count}} alterações)",
@@ -190,8 +190,8 @@
       },
       "type": "Tipo: {{type}}",
       "channel": "Canal: {{channel}}",
-      "labelAdded": "Label Adicionada",
-      "labelRemoved": "Label Removida",
+      "labelAdded": "Etiqueta Adicionada",
+      "labelRemoved": "Etiqueta Removida",
       "customAttribute": "Atributo Personalizado",
       "attribute": "Atributo:",
       "value": "Valor:",
@@ -199,14 +199,14 @@
         "updated_at": "Timestamp de atualização modificado",
         "waiting_since": "Tempo de espera atualizado",
         "first_reply_created_at": "Primeira resposta registrada",
-        "cached_label_list": "Lista de labels atualizada",
+        "cached_label_list": "Lista de etiquetas atualizada",
         "status": "Status da conversa alterado",
         "assignee_last_seen_at": "Última visualização do atendente",
         "generic": "Campo \"{{field}}\" foi modificado"
       },
       "inbox": "Inbox: {{name}}",
       "channelType": "Canal: {{type}}",
-      "labelUnknown": "Label desconhecida",
+      "labelUnknown": "Etiqueta desconhecida",
       "yes": "Sim",
       "no": "Não"
     }
@@ -266,7 +266,7 @@
       "location": "Localização",
       "description": "Descrição",
       "socialProfiles": "Redes Sociais",
-      "labels": "Labels",
+      "labels": "Etiquetas",
       "customAttributes": "Atributos Personalizados",
       "contactStatus": "Status do Contato"
     },
@@ -575,9 +575,9 @@
     "next": "Próximo"
   },
   "labels": {
-    "add": "Adicionar Label",
-    "search": "Buscar labels...",
-    "empty": "Nenhuma label encontrada."
+    "add": "Adicionar Etiqueta",
+    "search": "Buscar etiquetas...",
+    "empty": "Nenhuma etiqueta encontrada."
   },
   "modal": {
     "title": {

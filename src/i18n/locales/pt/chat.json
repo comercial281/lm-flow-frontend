@@ -396,9 +396,9 @@
         "error": "Erro ao alterar atribuição"
       },
       "labels": {
-        "title": "Labels",
-        "noneApplied": "Nenhuma label aplicada",
-        "manage": "Gerenciar labels"
+        "title": "Etiquetas",
+        "noneApplied": "Nenhuma etiqueta aplicada",
+        "manage": "Gerenciar etiquetas"
       },
       "priority": {
         "title": "Prioridade",
@@ -698,8 +698,8 @@
       "equal_to": "É igual a",
       "not_equal_to": "É diferente de",
       "contains": "Contém",
-      "is_present": "Tem labels",
-      "is_not_present": "Não tem labels",
+      "is_present": "Tem etiquetas",
+      "is_not_present": "Não tem etiquetas",
       "is_greater_than": "É posterior a",
       "is_less_than": "É anterior a",
       "days_before": "Dias atrás"
@@ -710,7 +710,7 @@
       "inbox_id": "Canal",
       "channel_type": "Tipo de Canal",
       "team_id": "Equipe",
-      "labels": "Labels",
+      "labels": "Etiquetas",
       "created_at": "Data de Criação",
       "last_activity_at": "Última Atividade",
       "priority": "Prioridade",
