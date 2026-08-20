@@ -142,7 +142,12 @@ const ChatSidebar = ({
   const filters = chatContext.filters;
   const [conversationFilters, setConversationFilters] = useState<BaseFilter[]>([]);
   // Instâncias (inboxes/WhatsApp) do tenant — pro seletor rápido de instância.
-  const [inboxOptions, setInboxOptions] = useState<Array<{ id: string; label: string }>>([]);
+  // `iaAtiva` vem do backend (`Inbox#active_bot?`, ver InboxSerializer): diz
+  // se tem um agent_bot LIGADO nesta instância — é o que desenha o
+  // iconezinho roxo no `QuickFilters` (pedido do Giovani, 19/08).
+  const [inboxOptions, setInboxOptions] = useState<
+    Array<{ id: string; label: string; iaAtiva: boolean }>
+  >([]);
   useEffect(() => {
     let alive = true;
     // Só pede se o cargo lê instâncias: sem a guarda, quem não lê levava um erro
@@ -155,7 +160,11 @@ const ChatSidebar = ({
         setInboxOptions(
           (res.data ?? []).map((i: Inbox) => {
             const ch = i.channel_type?.split('::')[1] || '';
-            return { id: String(i.id), label: ch ? `${i.name} (${ch})` : i.name };
+            return {
+              id: String(i.id),
+              label: ch ? `${i.name} (${ch})` : i.name,
+              iaAtiva: Boolean(i.has_active_agent_bot),
+            };
           }),
         );
       })

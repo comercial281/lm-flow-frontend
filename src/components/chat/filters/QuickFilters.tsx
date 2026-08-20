@@ -26,6 +26,8 @@ import type { BaseFilter } from '@/types/core';
 interface InboxOption {
   id: string;
   label: string;
+  /** A IA está operando nesta instância (bot ligado — ver `Inbox#active_bot?`). */
+  iaAtiva?: boolean;
 }
 
 interface QuickFiltersProps {
@@ -283,6 +285,16 @@ export default function QuickFilters({
                       }`}
                     >
                       <span className="min-w-0 flex-1 truncate">{i.label}</span>
+                      {/* IA ATIVA NESTA INSTÂNCIA — pedido do Giovani (19/08):
+                          ver de relance em qual chip a IA está respondendo,
+                          sem abrir Configurações → Canais pra checar um por
+                          um. Aparece em CADA instância com bot ligado — se a
+                          IA opera em três chips, os três mostram o ícone. */}
+                      {i.iaAtiva && (
+                        <span title="IA ativa nesta instância" className="shrink-0">
+                          <Bot aria-label="IA ativa nesta instância" className="h-3.5 w-3.5 text-[#9333EA]" />
+                        </span>
+                      )}
                       {active && <Check className="h-3.5 w-3.5 shrink-0" />}
                     </button>
                   );
