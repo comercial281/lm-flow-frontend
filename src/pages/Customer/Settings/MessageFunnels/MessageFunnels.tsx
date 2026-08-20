@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type MouseEvent } from 'react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/ds';
 import {
   Rocket, Search, Plus, Edit2, Trash2, Type, Mic, Image as ImageIcon,
-  Video, FileText, Pause, Archive, ArchiveRestore, Clock, Contact as ContactIcon, Sticker, Folder,
+  Video, FileText, Pause, Archive, ArchiveRestore, Clock, Contact as ContactIcon, Sticker, Folder, FolderPlus, Pencil,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import MessageFunnelEditor from '@/components/messageFunnels/MessageFunnelEditor';
@@ -111,6 +111,40 @@ export default function MessageFunnels() {
     }
   };
 
+  const createFolder = async () => {
+    const name = window.prompt('Nome da pasta:');
+    if (!name?.trim()) return;
+    try {
+      await messageFunnelFoldersService.create({ name: name.trim() });
+      load();
+    } catch {
+      toast.error('Erro ao criar pasta');
+    }
+  };
+
+  const renameFolder = async (f: MessageFunnelFolder, ev: MouseEvent) => {
+    ev.stopPropagation();
+    const name = window.prompt('Novo nome da pasta:', f.name);
+    if (!name?.trim() || name.trim() === f.name) return;
+    try {
+      await messageFunnelFoldersService.update(f.id, { name: name.trim() });
+      load();
+    } catch {
+      toast.error('Erro ao renomear pasta');
+    }
+  };
+
+  const deleteFolder = async (f: MessageFunnelFolder, ev: MouseEvent) => {
+    ev.stopPropagation();
+    if (!window.confirm(`Excluir a pasta "${f.name}"? Os funis de dentro voltam pra "Sem pasta".`)) return;
+    try {
+      await messageFunnelFoldersService.destroy(f.id);
+      load();
+    } catch {
+      toast.error('Erro ao excluir pasta');
+    }
+  };
+
   return (
     <div className="h-full flex flex-col p-4">
       {/* Header */}
@@ -142,21 +176,33 @@ export default function MessageFunnels() {
       </div>
 
       {/* Pastas — pasta é LUGAR (entra), não filtro (mesma regra do Hub, 14/08) */}
-      {folderId === undefined && !search.trim() && folders.length > 0 && (
+      {folderId === undefined && !search.trim() && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
           {folders.map(f => (
-            <button
-              key={f.id}
-              onClick={() => setFolderId(f.id)}
-              className="flex items-center gap-2 rounded-lg border border-border p-3 text-left hover:border-primary transition-colors"
-            >
-              <Folder className="h-4 w-4 shrink-0" style={{ color: f.color }} />
-              <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{f.name}</div>
-                <div className="text-xs text-muted-foreground">{f.funnels_count} itens · {f.enabled_count} ativos</div>
+            <div key={f.id} className="group relative flex items-center gap-2 rounded-lg border border-border p-3 hover:border-primary transition-colors">
+              <button onClick={() => setFolderId(f.id)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                <Folder className="h-4 w-4 shrink-0" style={{ color: f.color }} />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{f.name}</div>
+                  <div className="text-xs text-muted-foreground">{f.funnels_count} itens · {f.enabled_count} ativos</div>
+                </div>
+              </button>
+              <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                <button onClick={ev => renameFolder(f, ev)} title="Renomear" className="p-1 rounded hover:bg-accent">
+                  <Pencil className="h-3 w-3 text-muted-foreground" />
+                </button>
+                <button onClick={ev => deleteFolder(f, ev)} title="Excluir pasta" className="p-1 rounded hover:bg-accent">
+                  <Trash2 className="h-3 w-3 text-muted-foreground" />
+                </button>
               </div>
-            </button>
+            </div>
           ))}
+          <button
+            onClick={createFolder}
+            className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+          >
+            <FolderPlus className="h-4 w-4" /> Nova pasta
+          </button>
         </div>
       )}
       {folderId !== undefined && (

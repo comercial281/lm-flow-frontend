@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button, Input, Badge } from '@/components/ui/ds';
-import { GitBranch, Plus, Search, Folder, Play, Pause, Copy, Archive, Trash2 } from 'lucide-react';
+import { GitBranch, Plus, Search, Folder, FolderPlus, Pencil, Play, Pause, Copy, Archive, Trash2 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import { flowAutomationsService, flowAutomationFoldersService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationFolder } from '@/types/flowAutomations';
@@ -86,6 +86,40 @@ export default function FlowAutomationsList() {
     }
   };
 
+  const createFolder = async () => {
+    const name = window.prompt('Nome da pasta:');
+    if (!name?.trim()) return;
+    try {
+      await flowAutomationFoldersService.create({ name: name.trim() });
+      load();
+    } catch {
+      toast.error('Erro ao criar pasta');
+    }
+  };
+
+  const renameFolder = async (f: FlowAutomationFolder, ev: MouseEvent) => {
+    ev.stopPropagation();
+    const name = window.prompt('Novo nome da pasta:', f.name);
+    if (!name?.trim() || name.trim() === f.name) return;
+    try {
+      await flowAutomationFoldersService.update(f.id, { name: name.trim() });
+      load();
+    } catch {
+      toast.error('Erro ao renomear pasta');
+    }
+  };
+
+  const deleteFolder = async (f: FlowAutomationFolder, ev: MouseEvent) => {
+    ev.stopPropagation();
+    if (!window.confirm(`Excluir a pasta "${f.name}"? Os fluxos de dentro voltam pra "Sem pasta".`)) return;
+    try {
+      await flowAutomationFoldersService.destroy(f.id);
+      load();
+    } catch {
+      toast.error('Erro ao excluir pasta');
+    }
+  };
+
   return (
     <div className="h-full flex flex-col p-4">
       <div className="flex items-center gap-2 mb-2">
@@ -104,21 +138,33 @@ export default function FlowAutomationsList() {
         <Button onClick={handleCreate}><Plus className="h-4 w-4 mr-1" /> Novo fluxo</Button>
       </div>
 
-      {folderId === undefined && folders.length > 0 && (
+      {folderId === undefined && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
           {folders.map(f => (
-            <button
-              key={f.id}
-              onClick={() => setFolderId(f.id)}
-              className="flex items-center gap-2 rounded-lg border border-border p-3 text-left hover:border-primary transition-colors"
-            >
-              <Folder className="h-4 w-4 shrink-0" style={{ color: f.color }} />
-              <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{f.name}</div>
-                <div className="text-xs text-muted-foreground">{f.automations_count} itens · {f.enabled_count} ligados</div>
+            <div key={f.id} className="group relative flex items-center gap-2 rounded-lg border border-border p-3 hover:border-primary transition-colors">
+              <button onClick={() => setFolderId(f.id)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                <Folder className="h-4 w-4 shrink-0" style={{ color: f.color }} />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{f.name}</div>
+                  <div className="text-xs text-muted-foreground">{f.automations_count} itens · {f.enabled_count} ligados</div>
+                </div>
+              </button>
+              <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                <button onClick={ev => renameFolder(f, ev)} title="Renomear" className="p-1 rounded hover:bg-accent">
+                  <Pencil className="h-3 w-3 text-muted-foreground" />
+                </button>
+                <button onClick={ev => deleteFolder(f, ev)} title="Excluir pasta" className="p-1 rounded hover:bg-accent">
+                  <Trash2 className="h-3 w-3 text-muted-foreground" />
+                </button>
               </div>
-            </button>
+            </div>
           ))}
+          <button
+            onClick={createFolder}
+            className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+          >
+            <FolderPlus className="h-4 w-4" /> Nova pasta
+          </button>
         </div>
       )}
 
