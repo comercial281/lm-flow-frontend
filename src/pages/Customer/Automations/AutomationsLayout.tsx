@@ -1,5 +1,5 @@
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { Zap, Rocket, Code, FileInput, Repeat, Bell, Shuffle, Target } from 'lucide-react';
+import { Zap, Rocket, Radio, Repeat, Bell, Shuffle } from 'lucide-react';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { isRootTenantHost } from '@/components/layout/config/menuItems';
@@ -22,38 +22,33 @@ interface Sector {
 // Configurações, agora agrupadas num único lugar.
 const SECTORS: Sector[] = [
   {
-    key: 'message-funnels',
-    name: 'Funis de Mensagem',
-    path: '/automations/message-funnels',
-    icon: Rocket,
-    featureKey: 'message_funnels',
-  },
-  {
-    key: 'template-variables',
-    name: 'Variáveis de Funis',
-    path: '/automations/template-variables',
-    icon: Code,
-    featureKey: 'message_funnels',
-  },
-  {
     key: 'lead-automations',
-    name: 'Automações de Lead',
+    name: 'Regras de Lead',
     path: '/automations/lead-automations',
     icon: Zap,
     featureKey: 'lead_automations',
     clientToggleKey: 'client_manage_automations',
   },
   {
-    key: 'lead-ads-forms',
-    name: 'Formulários (Meta)',
-    path: '/automations/lead-ads-forms',
+    key: 'message-funnels',
+    name: 'Editor de Funis',
+    path: '/automations/message-funnels',
+    icon: Rocket,
+    featureKey: 'message_funnels',
+  },
+  // Substitui "Formulários (Meta)": além dos formulários, junta a conexão da
+  // Página do Facebook (antes solta em Configurações → Integrações).
+  {
+    key: 'origem',
+    name: 'Origem',
+    path: '/automations/origem',
     hideOnRoot: true,
-    icon: FileInput,
+    icon: Radio,
     featureKey: 'lead_automations',
     clientToggleKey: 'client_manage_automations',
   },
-  // "Follow-ups" e "Follow-up automático" eram dois setores; viraram um só. A config de
-  // disparo automático agora é uma seção dentro da própria tela do funil.
+  // "Follow-ups", "Follow-up automático" e "Robô Sem Resposta" eram três setores;
+  // viraram um só. As outras duas viram seção dentro da própria tela do funil.
   {
     key: 'follow-ups',
     name: 'Follow-up',
@@ -61,10 +56,6 @@ const SECTORS: Sector[] = [
     icon: Repeat,
     featureKey: 'follow_ups',
   },
-  // "Robô Sem Resposta" saiu do menu: ele decide a MESMA coisa que a chave de disparo
-  // do Follow-up (quem entra no funil) e agora é uma seção dentro daquela tela. Como
-  // abas separadas, uma desligava a regra da outra sem avisar. A rota antiga
-  // redireciona, pra não quebrar link salvo.
   {
     key: 'whatsapp-reminders',
     name: 'Lembretes',
@@ -79,13 +70,6 @@ const SECTORS: Sector[] = [
     name: 'Distribuição de Leads',
     path: '/automations/roleta-config',
     icon: Shuffle,
-    featureKey: 'lead_automations',
-  },
-  {
-    key: 'pixel-capi',
-    name: 'Pixel / CAPI',
-    path: '/automations/pixel-capi',
-    icon: Target,
     featureKey: 'lead_automations',
   },
 ];

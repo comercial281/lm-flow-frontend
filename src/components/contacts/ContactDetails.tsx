@@ -22,6 +22,7 @@ import ContactTypeBadge from './ContactTypeBadge';
 import ContactConversationTab from './ContactConversationTab';
 import ContactMergeSelectorModal from './ContactMergeSelectorModal';
 import ContactMergeModal from './ContactMergeModal';
+import ContactCreditCheck from './ContactCreditCheck';
 import { contactsService } from '@/services/contacts/contactsService';
 import {
   Edit,
@@ -670,8 +671,11 @@ export default function ContactDetails({
                 </div>
               </TabsContent>
 
-              <TabsContent value="attributes" className="py-6 mt-0">
-                <div className="text-center text-muted-foreground py-12">
+              <TabsContent value="attributes" className="py-6 mt-0 space-y-4">
+                {contact && (
+                  <ContactCreditCheck contact={contact} onUpdated={onContactUpdated} />
+                )}
+                <div className="text-center text-muted-foreground py-8">
                   <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>{t('details.notImplemented.attributes')}</p>
                 </div>

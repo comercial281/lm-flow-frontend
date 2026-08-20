@@ -58,12 +58,13 @@ const Labels = lazyWithRetry(() => import('@/pages/Customer/Settings/Labels'));
 const CustomAttributes = lazyWithRetry(() => import('@/pages/Customer/Settings/CustomAttributes'));
 const MessageFunnels = lazyWithRetry(() => import('@/pages/Customer/Settings/MessageFunnels').then(m => ({ default: m.MessageFunnels })));
 const TemplateVariables = lazyWithRetry(() => import('@/pages/Customer/Settings/TemplateVariables').then(m => ({ default: m.TemplateVariables })));
+const EditorDeFunis = lazyWithRetry(() => import('@/pages/Customer/Automations/EditorDeFunis/EditorDeFunis'));
+const Origem = lazyWithRetry(() => import('@/pages/Customer/Automations/Origem/Origem'));
 const WelcomeAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings/WelcomeAutomations').then(m => ({ default: m.WelcomeAutomations })));
 const LeadAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadAutomations').then(m => ({ default: m.LeadAutomations })));
 const LeadAdsForms = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadAdsForms'));
 const FollowupSequences = lazyWithRetry(() => import('@/pages/Customer/Settings/FollowupSequences').then(m => ({ default: m.FollowupSequences })));
 const SiteBuilder = lazyWithRetry(() => import('@/pages/Customer/Settings/SiteBuilder').then(m => ({ default: m.SiteBuilder })));
-const DynamicForms = lazyWithRetry(() => import('@/pages/Customer/Settings/DynamicForms').then(m => ({ default: m.DynamicForms })));
 const Properties = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.Properties })));
 const PropertiesMap = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.PropertiesMap })));
 const PropertyBooks = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.PropertyBooks })));
@@ -146,12 +147,10 @@ const SalesAgents = lazyWithRetry(() => import('@/pages/Customer/Automations/Sal
 const PropertyInterests = lazyWithRetry(() => import('@/pages/Customer/PropertyInterests').then(m => ({ default: m.PropertyInterests })));
 const Macros = lazyWithRetry(() => import('@/pages/Customer/Settings/Macros').then(m => ({ default: m.Macros })));
 const WhatsappReminders = lazyWithRetry(() => import('@/pages/Customer/Settings/WhatsappReminders'));
-const Products = lazyWithRetry(() => import('@/pages/Customer/Settings/Products').then(m => ({ default: m.Products })));
 const EmailTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Settings/EmailTemplateEditor'));
 const WebhooksPage = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/WebhooksPage'));
 const OAuthAppsPage = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/OAuthAppsPage'));
 const DashboardAppsPage = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/DashboardAppsPage'));
-const AccessTokens = lazyWithRetry(() => import('../pages/Customer/Settings/AccessTokens/AccessTokens'));
 const SlackIntegrationPage = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/SlackIntegrationPage'));
 const OpenAIPage = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/OpenAIPage'));
 const BMSPage = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/BMSPage'));
@@ -623,15 +622,26 @@ const AppRouter = () => {
             }
           >
             <Route
+              path="lead-automations"
+              element={
+                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
+                  <LeadAutomations />
+                </Suspense>
+              }
+            />
+            <Route
               path="message-funnels"
               element={
                 <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
                   <PermissionRoute resource="canned_responses" action="read">
-                    <MessageFunnels />
+                    <EditorDeFunis />
                   </PermissionRoute>
                 </Suspense>
               }
             />
+            {/* Rotas antigas mantidas vivas por baixo (compat/deep-link) — não aparecem
+                mais no submenu de Automações, o conteúdo delas foi pra dentro do
+                Editor de Funis (message-funnels) unificado. */}
             <Route
               path="template-variables"
               element={
@@ -646,10 +656,12 @@ const AppRouter = () => {
                 Mantém redirect para não quebrar deep-links antigos. */}
             <Route path="sales-agents" element={<Navigate to="/ia-vendedora" replace />} />
             <Route
-              path="lead-automations"
+              path="origem"
               element={
                 <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <LeadAutomations />
+                  <PermissionRoute resource="canned_responses" action="read">
+                    <Origem />
+                  </PermissionRoute>
                 </Suspense>
               }
             />
@@ -706,15 +718,24 @@ const AppRouter = () => {
                 </Suspense>
               }
             />
-            <Route
-              path="pixel-capi"
-              element={
-                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <PixelCapiConfig />
-                </Suspense>
-              }
-            />
           </Route>
+
+          {/* Pixel/CAPI mora agora em Configurações, não em Automações — não usa mais
+              o layout com submenu de setores. */}
+          <Route
+            path="/settings/pixel-capi"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
+                      <PixelCapiConfig />
+                    </Suspense>
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
 
           {/* <Route
             path="/automation"
@@ -921,19 +942,6 @@ const AppRouter = () => {
           />
 
           <Route
-            path="/settings/dynamic-forms"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <DynamicForms />
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
             path="/settings/macros"
             element={
               <PrivateRoute>
@@ -955,19 +963,6 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <WhatsappReminders />
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/settings/products"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <Products />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>
@@ -1248,21 +1243,6 @@ const AppRouter = () => {
                   <MainLayout>
                     <PermissionRoute resource="integrations" action="read">
                       <DashboardAppPage />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/settings/access-tokens"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="access_tokens" action="read">
-                      <AccessTokens />
                     </PermissionRoute>
                   </MainLayout>
                 </CustomerRoute>
