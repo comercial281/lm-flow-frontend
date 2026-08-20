@@ -3,6 +3,7 @@ import { Bot, Check, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@evoapi/design-system/button';
 import chatService from '@/services/chat/chatService';
 import usersService from '@/services/users/usersService';
+import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import type { Label } from '@/types/chat/api';
 import type { BaseFilter } from '@/types/core';
 import type { User } from '@/types/users';
@@ -76,6 +77,8 @@ export default function QuickFilters({
   const [loadingLabels, setLoadingLabels] = useState(false);
   const [agents, setAgents] = useState<User[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
+  const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
+  const [loadingRoletas, setLoadingRoletas] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -116,6 +119,28 @@ export default function QuickFilters({
     return () => { alive = false; };
   }, [open, agents.length]);
 
+  // ROLETA — isola por GRUPO de distribuição (ex: "ROLETA MULTI - TENDA"),
+  // não por corretor nem por número. Uma instância é compartilhada por várias
+  // roletas e uma roleta distribui pra vários corretores — "Instância",
+  // "Responsável" e "Roleta" são 3 filtros independentes, cada um resolve uma
+  // pergunta diferente (pedido do Giovani, 19/08: "ver pelas roletas E o lead
+  // de cada atendente isolado"). Mesma fonte de Automações > Distribuição de
+  // Leads.
+  useEffect(() => {
+    if (!open || roletas.length > 0) return;
+    let alive = true;
+    setLoadingRoletas(true);
+    roletaConfigService
+      .getAll()
+      .then(res => {
+        if (!alive) return;
+        setRoletas(res);
+      })
+      .catch(() => { /* silencioso, seção fica vazia */ })
+      .finally(() => { if (alive) setLoadingRoletas(false); });
+    return () => { alive = false; };
+  }, [open, roletas.length]);
+
   useEffect(() => {
     if (!open) return;
     const onClickOutside = (e: MouseEvent) => {
@@ -140,6 +165,9 @@ export default function QuickFilters({
 
   const activeAssigneeFilter = filters.find(f => f.attributeKey === 'assignee_id');
   const activeAssigneeId = activeAssigneeFilter ? String(activeAssigneeFilter.values) : undefined;
+
+  const activeRoletaFilter = filters.find(f => f.attributeKey === 'roleta_config_id');
+  const activeRoletaId = activeRoletaFilter ? String(activeRoletaFilter.values) : undefined;
 
   const startFilter = filters.find(
     f => f.attributeKey === 'last_activity_at' && f.filterOperator === 'is_greater_than',
@@ -166,6 +194,7 @@ export default function QuickFilters({
     (activeTagTitle ? 1 : 0) +
     (activeInboxId ? 1 : 0) +
     (activeAssigneeId ? 1 : 0) +
+    (activeRoletaId ? 1 : 0) +
     (startDate || endDate ? 1 : 0) +
     (aiOnly ? 1 : 0) +
     advancedCount;
@@ -187,6 +216,11 @@ export default function QuickFilters({
   function applyAssignee(id: string | undefined) {
     const base = withoutKeys(['assignee_id']);
     onApply(id ? [...base, mkFilter('assignee_id', 'equal_to', id)] : base);
+  }
+
+  function applyRoleta(id: string | undefined) {
+    const base = withoutKeys(['roleta_config_id']);
+    onApply(id ? [...base, mkFilter('roleta_config_id', 'equal_to', id)] : base);
   }
 
   function applyAiOnly(next: boolean) {
@@ -377,6 +411,35 @@ export default function QuickFilters({
               </select>
             )}
           </section>
+
+          {/* ROLETA — isola pelo GRUPO de distribuição (ex: "ROLETA MULTI -
+              TENDA"), não pelo corretor nem pelo número. Mesma fonte de
+              Automações > Distribuição de Leads (pedido do Giovani, 19/08).
+              Some se o tenant não usa roleta nenhuma (loadingRoletas some,
+              lista vazia) — nada a filtrar aqui. */}
+          {(loadingRoletas || roletas.length > 0) && (
+            <section className="mt-2 border-t pt-2">
+              <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                Roleta
+              </p>
+              {loadingRoletas ? (
+                <p className="px-0.5 py-1.5 text-xs text-muted-foreground">Carregando…</p>
+              ) : (
+                <select
+                  value={activeRoletaId ?? ''}
+                  onChange={e => applyRoleta(e.target.value || undefined)}
+                  className="w-full cursor-pointer rounded border bg-background px-1.5 py-1.5 text-sm text-foreground outline-none focus:border-primary"
+                >
+                  <option value="">Todas as roletas</option>
+                  {roletas.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.display_name || r.name || r.inbox_name || r.id}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </section>
+          )}
 
           {/* PERÍODO — presets rápidos + intervalo manual, os dois na mesma
               coluna `last_activity_at` (última mensagem), que é o que

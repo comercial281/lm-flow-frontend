@@ -81,6 +81,12 @@ export const convertFiltersToUrlParams = (
         }
         break;
 
+      case 'roleta_config_id':
+        if (values.length === 1) {
+          params.roleta_config_id = values[0] as string;
+        }
+        break;
+
       case 'team_id':
         if (values.length === 1) {
           params.team_id = values[0] as string;
