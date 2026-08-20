@@ -73,6 +73,7 @@ function draftFromFunnelItem(it: MessageFunnelItem): SequenceDraftItem {
     media_filename: it.media_filename,
     media_caption: it.media_caption,
     delay_seconds: it.delay_seconds,
+    config: it.config || {},
     pendingFile: null,
   };
 }
@@ -736,6 +737,7 @@ export function ScheduleActionModal({
                         onChange={items => updateBlock(i, { items })}
                         variables={variables}
                         uploadMedia={uploadMedia}
+                        excludeKinds={['contact', 'sticker']}
                       />
                     </div>
                   ))}

@@ -84,6 +84,8 @@ const AddUsers = lazyWithRetry(() => import('@/pages/Customer/Settings/Teams').t
 const MessageFunnels = lazyWithRetry(() => import('@/pages/Customer/Settings/MessageFunnels').then(m => ({ default: m.MessageFunnels })));
 const TemplateVariables = lazyWithRetry(() => import('@/pages/Customer/Settings/TemplateVariables').then(m => ({ default: m.TemplateVariables })));
 const EditorDeFunis = lazyWithRetry(() => import('@/pages/Customer/Automations/EditorDeFunis/EditorDeFunis'));
+const FlowAutomationsList = lazyWithRetry(() => import('@/pages/Customer/Automations/FlowBuilder/FlowAutomationsList'));
+const FlowAutomationCanvas = lazyWithRetry(() => import('@/pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas'));
 const Origem = lazyWithRetry(() => import('@/pages/Customer/Automations/Origem/Origem'));
 const WelcomeAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings/WelcomeAutomations').then(m => ({ default: m.WelcomeAutomations })));
 const LeadAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadAutomations').then(m => ({ default: m.LeadAutomations })));
@@ -578,6 +580,26 @@ const AppRouter = () => {
                   <Suspense fallback={outletSuspenseFallback}>
                     <PermissionRoute resource="canned_responses" action="read">
                       <EditorDeFunis />
+                    </PermissionRoute>
+                  </Suspense>
+                }
+              />
+              <Route
+                path="flow-builder"
+                element={
+                  <Suspense fallback={outletSuspenseFallback}>
+                    <PermissionRoute resource="canned_responses" action="read">
+                      <FlowAutomationsList />
+                    </PermissionRoute>
+                  </Suspense>
+                }
+              />
+              <Route
+                path="flow-builder/:id"
+                element={
+                  <Suspense fallback={outletSuspenseFallback}>
+                    <PermissionRoute resource="canned_responses" action="read">
+                      <FlowAutomationCanvas />
                     </PermissionRoute>
                   </Suspense>
                 }

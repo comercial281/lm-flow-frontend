@@ -3,7 +3,7 @@ import { Card, CardContent } from '@evoapi/design-system/card';
 import { Button } from '@evoapi/design-system/button';
 import {
   Rocket, X, Play, Type, Mic, Image as ImageIcon, Video, FileText, Search, Loader2, Plus,
-  Archive, ArchiveRestore, Trash2, Clock,
+  Archive, ArchiveRestore, Trash2, Clock, Contact as ContactIcon, Sticker,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { messageFunnelsService, tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
@@ -29,9 +29,11 @@ interface SendMessageOptions {
 
 const KIND_ICONS: Record<FunnelItemKind, typeof Type> = {
   text: Type, audio: Mic, image: ImageIcon, video: Video, document: FileText, delay: Clock,
+  contact: ContactIcon, sticker: Sticker,
 };
 const KIND_COLORS: Record<FunnelItemKind, string> = {
   text: '#7c3aed', audio: '#00a884', image: '#3b82f6', video: '#f43f5e', document: '#f97316', delay: '#64748b',
+  contact: '#0891b2', sticker: '#f59e0b',
 };
 
 // ── Interpolação de variáveis ────────────────────────────────────────────────
@@ -200,6 +202,10 @@ async function dispatchFunnel(
     onProgress?.(i + 1, sorted.length);
 
     if (item.kind === 'delay') continue; // item de espera: só aguarda, não envia
+    // Cartão de contato ainda não tem rota própria neste disparo manual (mesma
+    // lacuna documentada no disparo manual do Hub — só o motor de automação
+    // no servidor manda contato de verdade). Pula sem travar o resto do funil.
+    if (item.kind === 'contact') continue;
 
     const ctx: ResolveContext = {
       conversation: helpers.conversation,

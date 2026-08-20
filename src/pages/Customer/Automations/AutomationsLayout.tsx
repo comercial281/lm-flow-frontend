@@ -1,5 +1,5 @@
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { Zap, Rocket, Radio, Repeat, Bell, Shuffle } from 'lucide-react';
+import { Zap, Rocket, Radio, Repeat, Bell, Shuffle, GitBranch } from 'lucide-react';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { isRootTenantHost } from '@/components/layout/config/menuItems';
@@ -35,6 +35,17 @@ const SECTORS: Sector[] = [
     path: '/automations/message-funnels',
     icon: Rocket,
     featureKey: 'message_funnels',
+  },
+  // FlowBuilder: editor visual de automação (canvas de blocos), irmão de
+  // "Regras de Lead" — reusa o mesmo feature flag por não ter registro
+  // próprio ainda (ver TODO no plano de porte do Hub).
+  {
+    key: 'flow-builder',
+    name: 'FlowBuilder',
+    path: '/automations/flow-builder',
+    icon: GitBranch,
+    featureKey: 'lead_automations',
+    clientToggleKey: 'client_manage_automations',
   },
   // Substitui "Formulários (Meta)": além dos formulários, junta a conexão da
   // Página do Facebook (antes solta em Configurações → Integrações).

@@ -3,6 +3,7 @@ import { Button, Input, Textarea } from '@/components/ui/ds';
 import {
   X, Trash2, Type, Mic, Image as ImageIcon, Video, FileText,
   ChevronUp, ChevronDown, Square, Upload, Clock, AlertCircle, Loader2, Copy, Plus,
+  Contact as ContactIcon, Sticker,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { FunnelItemKind, TemplateVariable } from '@/types/messageFunnels';
@@ -31,6 +32,10 @@ export interface SequenceDraftItem {
   media_filename: string | null;
   media_caption: string | null;
   delay_seconds: number;
+  /** contact_name/contact_phone (item 'contact'), random_interval/min_seconds/
+   *  max_seconds (item 'delay' com pausa sorteada) — mirror do config jsonb
+   *  do MessageFunnelItem. */
+  config: Record<string, unknown>;
   pendingFile: File | null;  // só no modo "upload diferido" (funil)
   serverItemId?: string;     // pra updates de item já existente no backend
 }
@@ -44,6 +49,7 @@ export function newSequenceItem(kind: FunnelItemKind = 'text'): SequenceDraftIte
     media_filename: null,
     media_caption: null,
     delay_seconds: kind === 'delay' ? 30 : 0,
+    config: {},
     pendingFile: null,
   };
 }
@@ -55,6 +61,8 @@ const KIND_LABELS: Record<FunnelItemKind, string> = {
   video: 'Vídeo',
   document: 'Documento',
   delay: 'Aguardar',
+  contact: 'Contato',
+  sticker: 'Figurinha',
 };
 const KIND_ICONS: Record<FunnelItemKind, typeof Type> = {
   text: Type,
@@ -63,6 +71,8 @@ const KIND_ICONS: Record<FunnelItemKind, typeof Type> = {
   video: Video,
   document: FileText,
   delay: Clock,
+  contact: ContactIcon,
+  sticker: Sticker,
 };
 const KIND_COLORS: Record<FunnelItemKind, string> = {
   text: '#7c3aed',
@@ -71,6 +81,8 @@ const KIND_COLORS: Record<FunnelItemKind, string> = {
   video: '#f43f5e',
   document: '#f97316',
   delay: '#64748b',
+  contact: '#0891b2',
+  sticker: '#f59e0b',
 };
 
 // ── Props ────────────────────────────────────────────────────────────────────
@@ -84,9 +96,12 @@ interface Props {
   /** Libera variações de texto (spintax). Só o Disparo em Massa persiste isso —
    *  funil/follow-up/agendamento NÃO, então fica escondido lá pra não perder em silêncio. */
   allowTextVariations?: boolean;
+  /** Tipos que o chamador NÃO sabe entregar ainda — somem do "+ Adicionar".
+   *  Ex.: Disparo em Massa ainda não manda contato/figurinha em lote. */
+  excludeKinds?: FunnelItemKind[];
 }
 
-export default function MessageSequenceEditor({ items, onChange, variables, uploadMedia, allowTextVariations }: Props) {
+export default function MessageSequenceEditor({ items, onChange, variables, uploadMedia, allowTextVariations, excludeKinds }: Props) {
   const updateItem = (uiKey: string, patch: Partial<SequenceDraftItem>) => {
     onChange(items.map(it => (it.uiKey === uiKey ? { ...it, ...patch } : it)));
   };
@@ -143,7 +158,7 @@ export default function MessageSequenceEditor({ items, onChange, variables, uplo
           />
         ))}
       </div>
-      <AddItemButtons onAdd={addItem} />
+      <AddItemButtons onAdd={addItem} excludeKinds={excludeKinds} />
     </div>
   );
 }
@@ -253,7 +268,7 @@ function ItemEditor({
           <Icon size={12} />
           <span className="text-xs font-semibold">{KIND_LABELS[item.kind]}</span>
         </div>
-        {item.kind !== 'text' && item.kind !== 'delay' && (
+        {item.kind !== 'text' && item.kind !== 'delay' && item.kind !== 'contact' && (
           <select
             value={item.kind}
             onChange={e =>
@@ -270,6 +285,7 @@ function ItemEditor({
             <option value="image">Imagem</option>
             <option value="video">Vídeo</option>
             <option value="document">Documento</option>
+            <option value="sticker">Figurinha</option>
           </select>
         )}
         <div className="ml-auto flex items-center gap-0.5">
@@ -319,8 +335,24 @@ function ItemEditor({
         </>
       )}
 
+      {/* Contato */}
+      {item.kind === 'contact' && (
+        <div className="grid grid-cols-2 gap-2">
+          <Input
+            placeholder="Nome do contato"
+            value={(item.config.contact_name as string) || ''}
+            onChange={e => onUpdate({ config: { ...item.config, contact_name: e.target.value } })}
+          />
+          <Input
+            placeholder="Telefone (com DDI)"
+            value={(item.config.contact_phone as string) || ''}
+            onChange={e => onUpdate({ config: { ...item.config, contact_phone: e.target.value } })}
+          />
+        </div>
+      )}
+
       {/* Mídia */}
-      {item.kind !== 'text' && item.kind !== 'delay' && (
+      {item.kind !== 'text' && item.kind !== 'delay' && item.kind !== 'contact' && (
         <div className="space-y-2">
           {item.media_url ? (
             <div className="flex items-center gap-2 bg-background border border-border rounded-lg px-2.5 py-2">
@@ -445,25 +477,50 @@ function ItemEditor({
 
       {/* Item de espera: só aguarda N segundos antes do próximo item. */}
       {item.kind === 'delay' && (
-        <div className="flex items-center gap-2">
-          <Clock size={14} className="text-muted-foreground shrink-0" />
-          <span className="text-xs text-muted-foreground">Aguardar</span>
-          <Input
-            type="number"
-            min={1}
-            max={600}
-            value={item.delay_seconds}
-            onChange={e =>
-              onUpdate({ delay_seconds: Math.max(1, Math.min(600, Number(e.target.value) || 1)) })
-            }
-            className="w-20 h-8 text-sm text-center"
-          />
-          <span className="text-xs text-muted-foreground">segundos antes do próximo</span>
+        <div className="space-y-2">
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={Boolean(item.config.random_interval)}
+              onChange={e => onUpdate({ config: { ...item.config, random_interval: e.target.checked } })}
+            />
+            Sortear um tempo aleatório em vez de fixo
+          </label>
+          {item.config.random_interval ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Entre</span>
+              <Input
+                type="number" min={0} max={120} className="w-16 h-8 text-sm text-center"
+                value={(item.config.min_seconds as number) ?? 0}
+                onChange={e => onUpdate({ config: { ...item.config, min_seconds: Number(e.target.value) || 0 } })}
+              />
+              <span className="text-xs text-muted-foreground">e</span>
+              <Input
+                type="number" min={0} max={120} className="w-16 h-8 text-sm text-center"
+                value={(item.config.max_seconds as number) ?? 0}
+                onChange={e => onUpdate({ config: { ...item.config, max_seconds: Number(e.target.value) || 0 } })}
+              />
+              <span className="text-xs text-muted-foreground">segundos (sorteado a cada envio)</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Clock size={14} className="text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground">Aguardar</span>
+              <Input
+                type="number"
+                min={1}
+                max={600}
+                value={item.delay_seconds}
+                onChange={e =>
+                  onUpdate({ delay_seconds: Math.max(1, Math.min(600, Number(e.target.value) || 1)) })
+                }
+                className="w-20 h-8 text-sm text-center"
+              />
+              <span className="text-xs text-muted-foreground">segundos antes do próximo</span>
+            </div>
+          )}
           {index === 0 && (
-            <div
-              className="flex items-center gap-1 text-xs text-orange-500 ml-auto"
-              title="Espera como 1º item não faz sentido"
-            >
+            <div className="flex items-center gap-1 text-xs text-orange-500" title="Espera como 1º item não faz sentido">
               <AlertCircle size={10} />
               <span>1º item</span>
             </div>
@@ -608,8 +665,9 @@ function VariableChips({ variables, targetRef, currentValue, onChange }: Variabl
 
 // ── Add item buttons ─────────────────────────────────────────────────────────
 
-function AddItemButtons({ onAdd }: { onAdd: (kind: FunnelItemKind) => void }) {
-  const kinds: FunnelItemKind[] = ['text', 'audio', 'image', 'video', 'document', 'delay'];
+function AddItemButtons({ onAdd, excludeKinds }: { onAdd: (kind: FunnelItemKind) => void; excludeKinds?: FunnelItemKind[] }) {
+  const allKinds: FunnelItemKind[] = ['text', 'audio', 'image', 'video', 'document', 'delay', 'contact', 'sticker'];
+  const kinds = excludeKinds?.length ? allKinds.filter(k => !excludeKinds.includes(k)) : allKinds;
   return (
     <div className="flex flex-wrap gap-1.5 mt-3">
       <span className="text-xs text-muted-foreground flex items-center mr-1">+ Adicionar:</span>

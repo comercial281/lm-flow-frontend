@@ -12,22 +12,27 @@ import {
 } from '@/components/ui/ds';
 import {
   Rocket, Search, Plus, Edit2, Trash2, Type, Mic, Image as ImageIcon,
-  Video, FileText, Pause, Archive, ArchiveRestore, Clock,
+  Video, FileText, Pause, Archive, ArchiveRestore, Clock, Contact as ContactIcon, Sticker, Folder,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import MessageFunnelEditor from '@/components/messageFunnels/MessageFunnelEditor';
-import { messageFunnelsService } from '@/services/messageFunnels/messageFunnelsService';
-import type { MessageFunnel, FunnelItemKind } from '@/types/messageFunnels';
+import { messageFunnelsService, messageFunnelFoldersService } from '@/services/messageFunnels/messageFunnelsService';
+import type { MessageFunnel, FunnelItemKind, MessageFunnelFolder } from '@/types/messageFunnels';
 
 const KIND_ICONS: Record<FunnelItemKind, typeof Type> = {
   text: Type, audio: Mic, image: ImageIcon, video: Video, document: FileText, delay: Clock,
+  contact: ContactIcon, sticker: Sticker,
 };
 const KIND_COLORS: Record<FunnelItemKind, string> = {
   text: '#7c3aed', audio: '#00a884', image: '#3b82f6', video: '#f43f5e', document: '#f97316', delay: '#64748b',
+  contact: '#0891b2', sticker: '#f59e0b',
 };
 
 export default function MessageFunnels() {
   const [funnels, setFunnels] = useState<MessageFunnel[]>([]);
+  const [folders, setFolders] = useState<MessageFunnelFolder[]>([]);
+  // undefined = mostrando a grade de pastas; null = "Sem pasta"; string = dentro de uma pasta.
+  const [folderId, setFolderId] = useState<string | null | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [editorOpen, setEditorOpen] = useState(false);
@@ -38,14 +43,18 @@ export default function MessageFunnels() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await messageFunnelsService.list();
+      const [list, fldrs] = await Promise.all([
+        messageFunnelsService.list(folderId !== undefined ? { folderId } : {}),
+        messageFunnelFoldersService.list(),
+      ]);
       setFunnels(list);
+      setFolders(fldrs);
     } catch {
       toast.error('Erro ao carregar funis');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [folderId]);
 
   useEffect(() => {
     load();
@@ -62,6 +71,10 @@ export default function MessageFunnels() {
     setEditing(null);
     setEditorOpen(true);
   };
+
+  // Novo funil nasce na pasta onde a pessoa está, se estiver dentro de uma —
+  // mesma regra do Hub (14/08): "o que for criado dentro dela já nasce nela".
+  const pendingFolderId = folderId ?? null;
 
   const handleEdit = (f: MessageFunnel) => {
     setEditing(f);
@@ -128,6 +141,30 @@ export default function MessageFunnels() {
         />
       </div>
 
+      {/* Pastas — pasta é LUGAR (entra), não filtro (mesma regra do Hub, 14/08) */}
+      {folderId === undefined && !search.trim() && folders.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
+          {folders.map(f => (
+            <button
+              key={f.id}
+              onClick={() => setFolderId(f.id)}
+              className="flex items-center gap-2 rounded-lg border border-border p-3 text-left hover:border-primary transition-colors"
+            >
+              <Folder className="h-4 w-4 shrink-0" style={{ color: f.color }} />
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate">{f.name}</div>
+                <div className="text-xs text-muted-foreground">{f.funnels_count} itens · {f.enabled_count} ativos</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+      {folderId !== undefined && (
+        <button onClick={() => setFolderId(undefined)} className="text-xs text-muted-foreground hover:text-foreground mb-3 self-start">
+          ← Voltar pras pastas
+        </button>
+      )}
+
       {/* Lista */}
       <div className="flex-1 overflow-auto">
         {loading ? (
@@ -163,6 +200,7 @@ export default function MessageFunnels() {
         onClose={() => { setEditorOpen(false); setEditing(null); }}
         funnel={editing ?? undefined}
         onSaved={() => load()}
+        defaultFolderId={pendingFolderId}
       />
 
       {/* Delete confirm */}

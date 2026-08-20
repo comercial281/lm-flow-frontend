@@ -1,9 +1,21 @@
 // Types do módulo Funis de Mensagem — substitui Respostas Prontas + Respostas Rápidas.
 // Backend: app/controllers/api/v1/message_funnels_controller.rb (evo-ai-crm-community)
 
-// 'delay' = item de espera puro (igual "adicionar áudio", mas só aguarda N segundos
-// antes do próximo). Não envia conteúdo.
-export type FunnelItemKind = 'text' | 'audio' | 'image' | 'video' | 'document' | 'delay';
+// 'delay' = item de espera puro. Se `config.random_interval` for true, a espera
+// sorteia entre `config.min_seconds`/`config.max_seconds` (mirror do bloco
+// "intervalo" do Hub) em vez de usar `delay_seconds` fixo.
+// 'contact' = cartão de contato (config.contact_name/contact_phone).
+// 'sticker' = figurinha (mesmo limite de mídia da imagem, sem legenda).
+export type FunnelItemKind = 'text' | 'audio' | 'image' | 'video' | 'document' | 'delay' | 'contact' | 'sticker';
+
+export interface FunnelItemConfig {
+  random_interval?: boolean;
+  min_seconds?: number;
+  max_seconds?: number;
+  contact_name?: string;
+  contact_phone?: string;
+  [key: string]: unknown;
+}
 
 export interface MessageFunnelItem {
   id: string;
@@ -15,6 +27,7 @@ export interface MessageFunnelItem {
   media_filename: string | null;
   media_content_type: string | null;
   delay_seconds: number;
+  config: FunnelItemConfig;
   created_at: string;
   updated_at: string;
 }
@@ -28,9 +41,28 @@ export interface MessageFunnel {
   user_id: string | null;
   shared: boolean;
   usage_count: number;
+  folder_id: string | null;
+  humanize: boolean;
+  tag_ids: string[];
   items: MessageFunnelItem[];
   created_at: string;
   updated_at: string;
+}
+
+export interface MessageFunnelFolder {
+  id: string;
+  name: string;
+  color: string;
+  position: number;
+  funnels_count: number;
+  enabled_count: number;
+}
+
+export interface MessageFunnelTag {
+  id: string;
+  name: string;
+  color: string;
+  usage_count: number;
 }
 
 // Payload pra criar/editar (frontend → backend).
@@ -43,6 +75,7 @@ export interface FunnelItemPayload {
   media_caption?: string | null;
   media_filename?: string | null;
   delay_seconds: number;
+  config?: FunnelItemConfig;
   media_signed_id?: string;  // novo upload via direct upload
 }
 
@@ -52,6 +85,9 @@ export interface FunnelPayload {
   category?: string;
   active?: boolean;
   shared?: boolean;
+  folder_id?: string | null;
+  humanize?: boolean;
+  tag_ids?: string[];
   items: FunnelItemPayload[];
 }
 

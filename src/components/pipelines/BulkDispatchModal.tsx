@@ -77,6 +77,9 @@ const STATUS_META: Record<BroadcastCampaign['status'], { label: string; cls: str
   failed: { label: 'Falhou', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
 };
 
+// contact/sticker entram só pra satisfazer o tipo (SequenceDraftItem cobre os
+// 8 tipos do editor compartilhado) — nunca aparecem aqui de verdade porque o
+// editor já exclui os dois nesta tela (excludeKinds).
 const KIND_LABEL: Record<SequenceDraftItem['kind'], string> = {
   text: 'Texto',
   image: 'Imagem',
@@ -84,6 +87,8 @@ const KIND_LABEL: Record<SequenceDraftItem['kind'], string> = {
   video: 'Vídeo',
   document: 'Documento',
   delay: 'Aguardar',
+  contact: 'Contato',
+  sticker: 'Figurinha',
 };
 
 // Preview substituindo {{nome}} por um exemplo só na revisão.
@@ -96,21 +101,26 @@ function itemIsValid(it: SequenceDraftItem) {
   return it.kind === 'text' ? (it.text_content ?? '').trim() !== '' : !!it.media_url;
 }
 
-// Converte os itens do editor no payload de sequência do backend.
+// Converte os itens do editor no payload de sequência do backend. `contact`/
+// `sticker` não têm rota no disparo em massa ainda (`excludeKinds` no editor
+// já impede escolher esses tipos aqui) — filtra de novo por segurança, caso
+// um item desses sobreviva de uma edição anterior salva antes da exclusão.
 function toSequencePayload(items: SequenceDraftItem[]): BroadcastSequenceItem[] {
-  return items.map((it, idx) => {
-    const variations = (it.text_variations ?? []).map(s => s.trim()).filter(Boolean);
-    return {
-      position: idx,
-      kind: it.kind,
-      text_content: it.text_content,
-      ...(variations.length ? { text_variations: variations } : {}),
-      media_url: it.media_url,
-      media_caption: it.media_caption,
-      media_filename: it.media_filename,
-      delay_seconds: it.delay_seconds,
-    };
-  });
+  return items
+    .filter((it): it is SequenceDraftItem & { kind: BroadcastSequenceItem['kind'] } => it.kind !== 'contact' && it.kind !== 'sticker')
+    .map((it, idx) => {
+      const variations = (it.text_variations ?? []).map(s => s.trim()).filter(Boolean);
+      return {
+        position: idx,
+        kind: it.kind,
+        text_content: it.text_content,
+        ...(variations.length ? { text_variations: variations } : {}),
+        media_url: it.media_url,
+        media_caption: it.media_caption,
+        media_filename: it.media_filename,
+        delay_seconds: it.delay_seconds,
+      };
+    });
 }
 
 // Item de funil salvo → item do editor (mesmo mapeamento do agendar/funil).
@@ -123,6 +133,7 @@ function draftFromFunnelItem(it: MessageFunnelItem): SequenceDraftItem {
     media_filename: it.media_filename,
     media_caption: it.media_caption,
     delay_seconds: it.delay_seconds,
+    config: it.config || {},
     pendingFile: null,
   };
 }
@@ -770,6 +781,7 @@ export default function BulkDispatchModal({
                       variables={variables}
                       uploadMedia={broadcastsService.uploadMedia.bind(broadcastsService)}
                       allowTextVariations
+                      excludeKinds={['contact', 'sticker']}
                     />
 
                     <p className="text-xs text-muted-foreground">

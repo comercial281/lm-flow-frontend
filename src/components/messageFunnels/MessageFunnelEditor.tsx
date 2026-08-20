@@ -9,16 +9,22 @@ import {
   Button,
   Input,
   Label as UILabel,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
 } from '@/components/ui/ds';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import type {
   MessageFunnel,
   MessageFunnelItem,
+  MessageFunnelFolder,
   FunnelPayload,
   TemplateVariable,
 } from '@/types/messageFunnels';
-import { messageFunnelsService, tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
+import { messageFunnelsService, tenantTemplateVariablesService, messageFunnelFoldersService } from '@/services/messageFunnels/messageFunnelsService';
 import MessageSequenceEditor, {
   type SequenceDraftItem,
   newSequenceItem,
@@ -36,6 +42,7 @@ function draftFromServerItem(item: MessageFunnelItem): SequenceDraftItem {
     media_filename: item.media_filename,
     media_caption: item.media_caption,
     delay_seconds: item.delay_seconds,
+    config: item.config || {},
     pendingFile: null,
   };
 }
@@ -47,17 +54,28 @@ interface Props {
   onClose: () => void;
   funnel?: MessageFunnel;            // undefined → criar; preenchido → editar
   onSaved?: (funnel: MessageFunnel) => void;
+  /** Pasta ativa na tela de origem — um funil novo nasce nela (mesma regra
+   *  do Hub: "o que for criado dentro dela já nasce nela"). */
+  defaultFolderId?: string | null;
 }
 
 // ── Componente ───────────────────────────────────────────────────────────────
 
-export default function MessageFunnelEditor({ open, onClose, funnel, onSaved }: Props) {
+export default function MessageFunnelEditor({ open, onClose, funnel, onSaved, defaultFolderId = null }: Props) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [active, setActive] = useState(true);
+  const [folderId, setFolderId] = useState<string | null>(null);
+  const [humanize, setHumanize] = useState(true);
   const [items, setItems] = useState<SequenceDraftItem[]>([newSequenceItem()]);
   const [saving, setSaving] = useState(false);
   const [variables, setVariables] = useState<TemplateVariable[]>([]);
+  const [folders, setFolders] = useState<MessageFunnelFolder[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    messageFunnelFoldersService.list().then(setFolders).catch(() => setFolders([]));
+  }, [open]);
 
   // Carrega vars do tenant (built-in + custom manual) só uma vez ao abrir.
   // Fica de fora a custom AUTO-CRIADA de campo de formulário (auto_created):
@@ -101,6 +119,8 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved }: 
       setName(funnel.name);
       setDescription(funnel.description ?? '');
       setActive(funnel.active);
+      setFolderId(funnel.folder_id ?? null);
+      setHumanize(funnel.humanize ?? true);
       setItems(
         funnel.items.length > 0
           ? funnel.items.map(draftFromServerItem)
@@ -110,6 +130,8 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved }: 
       setName('');
       setDescription('');
       setActive(true);
+      setFolderId(defaultFolderId);
+      setHumanize(true);
       setItems([newSequenceItem()]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -126,7 +148,10 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved }: 
       if (it.kind === 'text' && !(it.text_content ?? '').trim()) {
         return `Item ${i + 1}: texto vazio.`;
       }
-      if (it.kind !== 'text' && !it.media_url && !it.pendingFile) {
+      if (it.kind === 'contact' && !(it.config.contact_phone as string | undefined)?.trim()) {
+        return `Item ${i + 1}: telefone do contato não preenchido.`;
+      }
+      if (it.kind !== 'text' && it.kind !== 'contact' && !it.media_url && !it.pendingFile) {
         return `Item ${i + 1}: mídia não anexada.`;
       }
     }
@@ -145,6 +170,8 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved }: 
         category: 'geral',
         active,
         shared: true,
+        folder_id: folderId,
+        humanize,
         items: items.map((it, idx) => ({
           // Manda o id do item existente pro backend fazer upsert e PRESERVAR a
           // mídia já anexada (antes o update apagava a mídia de quem não foi reanexado).
@@ -155,6 +182,7 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved }: 
           media_caption: it.media_caption,
           media_filename: it.media_filename,
           delay_seconds: it.delay_seconds,
+          config: it.config,
         })),
       };
 
@@ -225,6 +253,16 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved }: 
                 maxLength={2000}
               />
             </div>
+            <div className="space-y-1.5">
+              <UILabel>Pasta (opcional)</UILabel>
+              <Select value={folderId ?? '__none__'} onValueChange={v => setFolderId(v === '__none__' ? null : v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sem pasta</SelectItem>
+                  {folders.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <label className="flex items-center gap-2 cursor-pointer pt-1">
               <input
                 type="checkbox"
@@ -233,6 +271,15 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved }: 
                 className="h-4 w-4 rounded border-border"
               />
               <span className="text-sm">Funil ativo (aparece pro atendente no chat)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={humanize}
+                onChange={e => setHumanize(e.target.checked)}
+                className="h-4 w-4 rounded border-border"
+              />
+              <span className="text-sm">Parece digitado à mão (mostra "digitando…"/"gravando áudio…" antes de cada balão)</span>
             </label>
           </div>
 
