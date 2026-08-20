@@ -355,6 +355,7 @@ export interface ConversationListParams {
   assignee_type?: 'me' | 'unassigned' | 'all';
   assignee_id?: string;
   inbox_id?: string;
+  roleta_config_id?: string;
   team_id?: string;
   labels?: string[];
   q?: string;
