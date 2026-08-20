@@ -59,7 +59,12 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved }: 
   const [saving, setSaving] = useState(false);
   const [variables, setVariables] = useState<TemplateVariable[]>([]);
 
-  // Carrega vars do tenant (built-in + custom) só uma vez ao abrir
+  // Carrega vars do tenant (built-in + custom manual) só uma vez ao abrir.
+  // Fica de fora a custom AUTO-CRIADA de campo de formulário (auto_created):
+  // pedido do Giovani (19/08/2026) — cada formulário novo cria uma variável
+  // sozinho e a lista de sugestão do funil virava dezenas de itens ilegíveis.
+  // A variável auto-criada continua existindo e funcionando se alguém já
+  // tiver usado; só para de ser oferecida como chip aqui.
   useEffect(() => {
     if (!open) return;
     tenantTemplateVariablesService
@@ -67,13 +72,15 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved }: 
       .then(res => {
         const all: TemplateVariable[] = [
           ...res.builtin,
-          ...res.custom.map(v => ({
-            token: v.token,
-            placeholder: v.placeholder,
-            label: v.label,
-            description: v.description,
-            builtin: false,
-          })),
+          ...res.custom
+            .filter(v => !v.auto_created)
+            .map(v => ({
+              token: v.token,
+              placeholder: v.placeholder,
+              label: v.label,
+              description: v.description,
+              builtin: false,
+            })),
         ];
         setVariables(all);
       })
