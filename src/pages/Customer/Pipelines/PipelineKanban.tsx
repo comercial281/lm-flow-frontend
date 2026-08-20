@@ -72,6 +72,7 @@ import {
   getContactColor,
   formatArrivalDate,
 } from './pipelineItemHelpers';
+import { useAppDataStore } from '@/store/appDataStore';
 
 // Os modais abaixo só aparecem quando o usuário clica em algo pra abrir —
 // código deles não precisa estar no bundle inicial da página de Pipelines.
@@ -104,6 +105,13 @@ export default function PipelineKanban() {
     opening: openingConversation,
   } = useOpenLeadConversation();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Catálogo COMPLETO de etiquetas da conta, pro filtro de Tags — não dá pra
+  // derivar só dos leads já carregados no board (ver allTags abaixo).
+  const { labels: accountLabels, fetchLabels } = useAppDataStore();
+  useEffect(() => {
+    fetchLabels();
+  }, [fetchLabels]);
 
   const [loading, setLoading] = useState(true);
   const [pipeline, setPipeline] = useState<Pipeline | null>(null);
@@ -583,20 +591,13 @@ export default function PipelineKanban() {
     return item.created_at ? new Date(item.created_at).getTime() : 0;
   };
 
-  // Todas as tags presentes no pipeline (pro menu do filtro).
+  // Todas as etiquetas da conta (catálogo completo — não só as que já aparecem
+  // em algum card carregado neste pipeline; ver comentário acima em accountLabels).
   const allTags = useMemo(() => {
-    const map = new Map<string, string>();
-    stages.forEach(s =>
-      (s.items || []).forEach(it =>
-        itemTagInfos(it).forEach(({ name, color }) => {
-          if (!map.has(name)) map.set(name, color);
-        }),
-      ),
-    );
-    return Array.from(map, ([name, color]) => ({ name, color })).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
-  }, [stages]);
+    return accountLabels
+      .map(l => ({ name: l.title, color: l.color }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [accountLabels]);
 
   // Pipeline management handlers
   const handleEditPipeline = () => {
