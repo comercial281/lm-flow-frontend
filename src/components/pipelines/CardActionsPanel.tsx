@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, Suspense } from 'react';
 import { Button } from '@/components/ui/ds';
 import {
   Loader2, Calendar, Trash2, Move, CheckSquare, Square,
@@ -9,13 +9,20 @@ import { toast } from 'sonner';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { visitsService } from '@/services/visits/visitsService';
-import { ScheduleActionModal } from '@/components/scheduledActions/ScheduleActionModal';
+import { lazyWithRetry } from '@/utils/chunkReload';
+// FollowupTimeline é conteúdo do painel, já visível de cara — segue import
+// estático de propósito.
 import FollowupTimeline from './FollowupTimeline';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import type { SalesAgentCardState, SalesAgentLeadReport } from '@/types/analytics/pipelines';
 import { chatService } from '@/services/chat/chatService';
 import SalesAgentBadge from '@/components/salesAgents/SalesAgentBadge';
+
+// Modal de agendamento só aparece com clique explícito — vira lazy.
+const ScheduleActionModal = lazyWithRetry(() =>
+  import('@/components/scheduledActions/ScheduleActionModal').then(m => ({ default: m.ScheduleActionModal })),
+);
 
 const VISIT_SCHEDULED_LABEL = 'visita-agendada';
 
@@ -457,11 +464,13 @@ export default function CardActionsPanel({
 
       {/* Schedule modal */}
       {contactId && (
-        <ScheduleActionModal
-          open={scheduleOpen}
-          onClose={() => setScheduleOpen(false)}
-          contactId={String(contactId)}
-        />
+        <Suspense fallback={null}>
+          <ScheduleActionModal
+            open={scheduleOpen}
+            onClose={() => setScheduleOpen(false)}
+            contactId={String(contactId)}
+          />
+        </Suspense>
       )}
 
       {/* Agendar visita modal */}

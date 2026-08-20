@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useAccountUsers } from '@/hooks/useAccountUsers';
 import {
@@ -37,11 +37,16 @@ import PipelineItemCustomAttributes from './PipelineItemCustomAttributes';
 import PipelineTasksList, { PipelineTasksListRef } from './tasks/PipelineTasksList';
 import CreateTaskModal from './tasks/CreateTaskModal';
 import EditTaskModal from './tasks/EditTaskModal';
-import CardConversationTab from './CardConversationTab';
+// CardActionsPanel e CardNotesTab ficam na aba "Detalhes" (padrão, já visível
+// ao abrir o modal) — import estático de propósito, lazy aqui só atrasaria o
+// que já precisa carregar de cara. CardConversationTab (aba "Conversa") e
+// CardPropertyInterests (aba "Imóveis") só renderizam quando o usuário troca
+// de aba (Tabs sem forceMount não monta abas inativas); CreateRoletaModal e
+// RemoveFromRoletaDialog só aparecem com clique explícito ("Criar roleta" /
+// "Tirar da roleta") — todos viram lazy.
 import CardActionsPanel from './CardActionsPanel';
 import CardNotesTab from './CardNotesTab';
-import CreateRoletaModal from './CreateRoletaModal';
-import CardPropertyInterests from './CardPropertyInterests';
+import { lazyWithRetry } from '@/utils/chunkReload';
 import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
@@ -54,10 +59,14 @@ import { labelsService } from '@/services/contacts/labelsService';
 import { contactsService } from '@/services/contacts/contactsService';
 import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { brokerAssignmentsService, type BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
-import RemoveFromRoletaDialog from '@/components/roleta/RemoveFromRoletaDialog';
 import { toast } from 'sonner';
 import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
+
+const CardConversationTab = lazyWithRetry(() => import('./CardConversationTab'));
+const CardPropertyInterests = lazyWithRetry(() => import('./CardPropertyInterests'));
+const CreateRoletaModal = lazyWithRetry(() => import('./CreateRoletaModal'));
+const RemoveFromRoletaDialog = lazyWithRetry(() => import('@/components/roleta/RemoveFromRoletaDialog'));
 
 interface Service {
   name: string;
@@ -1028,10 +1037,12 @@ export default function EditItemModal({
           {/* Conversa */}
           <TabsContent value="conversation" className="flex-1 overflow-y-auto mt-0 pt-3">
             {item && (
-              <CardConversationTab
-                item={item}
-                onCreateReminder={() => { setShowCreateTaskModal(true); }}
-              />
+              <Suspense fallback={null}>
+                <CardConversationTab
+                  item={item}
+                  onCreateReminder={() => { setShowCreateTaskModal(true); }}
+                />
+              </Suspense>
             )}
           </TabsContent>
 
@@ -1055,9 +1066,11 @@ export default function EditItemModal({
           {canProperties && (
             <TabsContent value="properties" className="flex-1 overflow-y-auto mt-0 pt-3">
               {item && (
-                <CardPropertyInterests
-                  item={item}
-                />
+                <Suspense fallback={null}>
+                  <CardPropertyInterests
+                    item={item}
+                  />
+                </Suspense>
               )}
             </TabsContent>
           )}
@@ -1287,23 +1300,27 @@ export default function EditItemModal({
 
       {/* Tirar da roleta — o destino do lead é escolhido no diálogo. */}
       {tirandoDaRoleta && (item.contact?.id || (item.conversation as any)?.contact?.id) && (
-        <RemoveFromRoletaDialog
-          open
-          onOpenChange={setTirandoDaRoleta}
-          contactId={String(item.contact?.id ?? (item.conversation as any)?.contact?.id)}
-          leadName={item.contact?.name ?? (item.conversation as any)?.contact?.name}
-          offers={ofertasAbertas}
-          onDone={() => setOfertasAbertas([])}
-        />
+        <Suspense fallback={null}>
+          <RemoveFromRoletaDialog
+            open
+            onOpenChange={setTirandoDaRoleta}
+            contactId={String(item.contact?.id ?? (item.conversation as any)?.contact?.id)}
+            leadName={item.contact?.name ?? (item.conversation as any)?.contact?.name}
+            offers={ofertasAbertas}
+            onDone={() => setOfertasAbertas([])}
+          />
+        </Suspense>
       )}
 
       {/* Criação de roleta direto do card (sem ir pra Configurações) */}
-      <CreateRoletaModal
-        open={showCreateRoleta}
-        onOpenChange={setShowCreateRoleta}
-        users={users}
-        onCreated={(roleta) => setRoletas(prev => [...prev, roleta])}
-      />
+      <Suspense fallback={null}>
+        <CreateRoletaModal
+          open={showCreateRoleta}
+          onOpenChange={setShowCreateRoleta}
+          users={users}
+          onCreated={(roleta) => setRoletas(prev => [...prev, roleta])}
+        />
+      </Suspense>
 
       {/* Iniciar conversa — só monta para lead que ainda não tem conversa */}
       {startConversationModal}
