@@ -39,6 +39,7 @@
     "framer-motion": "^12.40.0",
     "heic2any": "^0.0.4",
     "i18next": "^25.3.2",
+    "i18next-resources-to-backend": "^1.2.3",
     "imask": "^7.6.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.525.0",
