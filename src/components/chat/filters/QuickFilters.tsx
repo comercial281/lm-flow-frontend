@@ -121,7 +121,18 @@ export default function QuickFilters({
   const startDate = startFilter ? String(startFilter.values) : '';
   const endDate = endFilter ? String(endFilter.values) : '';
 
-  const advancedCount = filters.filter(f => ADVANCED_ONLY_KEYS.has(f.attributeKey)).length;
+  // `status=open` é o baseline da tela (FiltersContext.DEFAULT_FILTER) — vai
+  // junto em toda request, sempre, não é escolha do usuário. Contar ele aqui
+  // dava um "1" fantasma que não batia com nenhuma seção deste popup nem do
+  // toggle Ativas/Arquivadas (que é outro filtro, client-side, sobre
+  // custom_attributes.archived) — clicar em "Filtros avançados" pra descobrir
+  // o que era só mostrava "Status = Aberta", sem relação com nada visível
+  // aqui (reportado pelo Giovani, 19/08).
+  const isDefaultStatusFilter = (f: BaseFilter) =>
+    f.attributeKey === 'status' && String(f.values) === 'open';
+  const advancedCount = filters.filter(
+    f => ADVANCED_ONLY_KEYS.has(f.attributeKey) && !isDefaultStatusFilter(f),
+  ).length;
   const totalActive =
     (activeTagTitle ? 1 : 0) +
     (activeInboxId ? 1 : 0) +
@@ -163,12 +174,15 @@ export default function QuickFilters({
   }
 
   // Limpa TUDO — inclusive os filtros do modal avançado (status, time,
-  // pipeline...). O "X" fica ao lado de um contador único (`totalActive`)
-  // que soma quick + avançado, então limpar só os 4 quick deixava o
-  // contador preso em 1 sem nenhuma seção marcada aqui pra explicar o
-  // motivo (bug reportado pelo Giovani, 19/08).
+  // pipeline...) — EXCETO o baseline `status=open` (ver isDefaultStatusFilter
+  // acima): esse não é escolha do usuário pra desfazer aqui, é o "só mostra
+  // conversa aberta" que a tela inteira assume. Removê-lo junto faria a lista
+  // misturar resolvida/fechada sem aviso nenhum. O "X" fica ao lado de um
+  // contador único (`totalActive`) que soma quick + avançado, então limpar só
+  // os 4 quick deixava o contador preso em 1 sem nenhuma seção marcada aqui
+  // pra explicar o motivo (bug reportado pelo Giovani, 19/08).
   function clearAll() {
-    onApply([]);
+    onApply(filters.filter(isDefaultStatusFilter));
   }
 
   return (
