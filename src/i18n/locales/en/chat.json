@@ -556,7 +556,8 @@
   "replyModeToggle": {
     "reply": "Reply",
     "privateNote": "Private Note",
-    "visibleOnlyToAgents": "Visible only to Team Members"
+    "visibleOnlyToAgents": "Visible only to Team Members",
+    "pendingExplainer": "Pending conversation — claim the lead to reply"
   },
   "contexts": {
     "conversations": {

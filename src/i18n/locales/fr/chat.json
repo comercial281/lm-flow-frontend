@@ -529,7 +529,8 @@
   "replyModeToggle": {
     "reply": "Réponse",
     "privateNote": "Note Privée",
-    "visibleOnlyToAgents": "Visible uniquement par les Agents"
+    "visibleOnlyToAgents": "Visible uniquement par les Agents",
+    "pendingExplainer": "Conversation en attente — prenez le lead pour répondre"
   },
   "contexts": {
     "conversations": {

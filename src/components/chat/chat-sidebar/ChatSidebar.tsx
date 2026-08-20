@@ -40,6 +40,7 @@ import { ConversationSkeleton } from '../loading-states';
 import { NoConversations } from '../empty-states';
 import ContactAvatar from '../contact/ContactAvatar';
 import ConversationBadges from '../conversation/ConversationBadges';
+import SalesAgentBadge from '@/components/salesAgents/SalesAgentBadge';
 import ConversationsFilter from '../conversation/ConversationsFilter';
 import QuickFilters from '../filters/QuickFilters';
 import GlobalSearchPanel from '../search/GlobalSearchPanel';
@@ -813,6 +814,14 @@ const ChatSidebar = ({
                           onClick={e => e.stopPropagation()}
                           className="mt-1 flex-shrink-0 cursor-pointer"
                         />
+                        {/* Robozinho roxo: a IA Vendedora já passou por esta conversa?
+                            À esquerda do avatar de propósito (pedido do Giovani, 19/08) —
+                            é a primeira coisa que o olho bate ao varrer a lista. */}
+                        {conversation.sales_agent && (
+                          <div className="mt-1 flex-shrink-0">
+                            <SalesAgentBadge state={conversation.sales_agent} size="sm" />
+                          </div>
+                        )}
                         <ContactAvatar
                           contact={conversation.contact}
                           channelType={channelType}

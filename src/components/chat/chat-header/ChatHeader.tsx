@@ -1,5 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@evoapi/design-system/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@evoapi/design-system/tooltip';
 import {
   ArrowLeft,
   X,
@@ -8,6 +14,8 @@ import {
   Clock,
   Pause,
   Bot,
+  BotOff,
+  UserCheck,
   MoreVertical,
   ArrowUp,
   ArrowDown,
@@ -31,11 +39,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@evoapi/design-system/dropdown-menu';
+import { toast } from 'sonner';
 import { Conversation } from '@/types/chat/api';
+import type { SalesAgentCardState } from '@/types/analytics/pipelines';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import ActivateAiDialog from '@/components/chat/conversation/ActivateAiDialog';
 import { getStatusLabel, isPendingStatus } from '@/utils/chat/conversationStatus';
 import { useLanguage } from '@/hooks/useLanguage';
+import { apiErrorMessage } from '@/utils/apiHelpers';
+import { chatService } from '@/services/chat/chatService';
 
 interface ChatHeaderProps {
   conversation: Conversation;
@@ -95,6 +107,39 @@ const ChatHeader = ({
   // é o jeito clássico de a janela abrir e fechar sozinha.
   const [menuOpen, setMenuOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  // Liga/desliga a IA NESTA conversa (pedido do Giovani, 19/08). Usa o mesmo
+  // endpoint que o card do Kanban já lê pra pintar o robozinho — POST
+  // /conversations/:id/sales_agent — em vez de escrever additional_attributes
+  // na mão: esse endpoint também limpa sales_agent_handoff ao religar, senão
+  // uma conversa que a IA passou pra um corretor ficaria travada mentindo que
+  // ainda está em transferência (ver SalesAgents::ConversationState).
+  const [aiState, setAiState] = useState<SalesAgentCardState | null>(null);
+  const [togglingAi, setTogglingAi] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    chatService
+      .getSalesAgentStatus(conversation.id)
+      .then(r => { if (alive) setAiState(r.state); })
+      .catch(() => { if (alive) setAiState(null); });
+    return () => { alive = false; };
+  }, [conversation.id]);
+
+  const aiEnabled = aiState?.status === 'active' || aiState?.status === 'idle';
+
+  const handleToggleAi = async () => {
+    const next = !aiEnabled;
+    setTogglingAi(true);
+    try {
+      const state = await chatService.toggleSalesAgent(conversation.id, next);
+      setAiState(state);
+      toast.success(next ? 'IA reativada nesta conversa' : 'IA desativada nesta conversa');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não consegui mudar o status da IA'));
+    } finally {
+      setTogglingAi(false);
+    }
+  };
+
   const currentStatus = conversation.status;
   const hasUnreadMessages = unreadCount > 0;
   const isPinned = Boolean(conversation.custom_attributes?.pinned);
@@ -373,6 +418,48 @@ const ChatHeader = ({
               <Unlock className="h-4 w-4" />
               {t('chatHeader.openConversation')}
             </Button>
+          )}
+
+          {/* Ativar/desligar IA nesta conversa — só aparece quando existe
+              alguma IA Vendedora configurada neste canal (status !== 'none'),
+              senão o botão liga/desliga algo que não existe. */}
+          {aiState && aiState.status !== 'none' && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={togglingAi}
+                    onClick={handleToggleAi}
+                    className={`h-8 w-8 p-0 ${
+                      aiState.status === 'active'
+                        ? 'text-violet-600 hover:text-violet-700 dark:text-violet-400'
+                        : aiState.status === 'handoff'
+                          ? 'text-blue-600 hover:text-blue-700 dark:text-blue-400'
+                          : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {aiState.status === 'handoff' ? (
+                      <UserCheck className="h-4 w-4" />
+                    ) : aiEnabled ? (
+                      <Bot className="h-4 w-4" />
+                    ) : (
+                      <BotOff className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {aiState.status === 'handoff'
+                      ? 'A IA passou este lead pra um corretor — clique para religar'
+                      : aiEnabled
+                        ? `${aiState.label} — clique para desativar`
+                        : `${aiState.label} — clique para reativar`}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
 
           {/* Dropdown de ações da conversa */}
