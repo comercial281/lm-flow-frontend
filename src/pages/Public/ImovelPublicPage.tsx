@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { BrPhoneInput } from '@/components/shared';
+import { isValidBrPhone } from '@/lib/brPhone';
+import { labelsFor } from '@/features/properties/amenities';
+import {
+  typologyHeadline,
+  typologyName,
+  typologyPrice,
+  typologySpecs,
+  type PropertyTypology,
+} from '@/features/properties/typologies';
+import { PropertyCard, type PortalProperty } from './portalShared';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — PÁGINA DO IMÓVEL (Produto A). Mesma pegada "Editorial
@@ -9,13 +20,15 @@ import { Link, useParams } from 'react-router-dom';
 
 interface Photo { file_url: string; thumbnail_url?: string | null; caption?: string | null; alt_text?: string | null; is_cover?: boolean }
 interface PropertyDTO {
-  code: string; title: string; description?: string;
+  id?: string; code: string; title: string; description?: string;
   transaction_type?: string; property_type?: string;
-  sale_price?: number | null;
+  sale_price?: number | null; rent_price?: number | null;
+  condo_fee?: number | null; iptu?: number | null;
   bedrooms?: number | null; bathrooms?: number | null; suites?: number | null; parking_spaces?: number | null;
   useful_area_m2?: number | null; total_area_m2?: number | null;
   address_neighborhood?: string; address_city?: string; address_state?: string;
-  latitude?: number | null; longitude?: number | null;
+  features?: string[] | null; condo_features?: string[] | null;
+  typologies?: PropertyTypology[] | null;
   responsible_name?: string; photos?: Photo[];
 }
 interface SiteInfo {
@@ -37,12 +50,21 @@ function setMeta(name: string, content: string) {
 
 const I = {
   bed: 'M2 17v-5a2 2 0 0 1 2-2h11a3 3 0 0 1 3 3v4M2 21v-4M22 21v-6M2 12V7m4 3V8a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v2',
+  suite: 'M3 18v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5M3 18v2M21 18v2M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3M17 4l1.5 1.5L20 4',
   bath: 'M4 12V5a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2M4 12h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-3ZM6 21l-1 1M18 21l1 1',
   car: 'M5 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM17 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM5 15h12M3 15l1.5-5A2 2 0 0 1 6.4 8.6h9.2a2 2 0 0 1 1.9 1.4L19 15',
   ruler: 'M3 3h4v4M3 3l7 7M21 21h-4v-4M21 21l-7-7M3 21v-4M3 21h4M21 3h-4M21 3v4',
+  land: 'M3 4h18v16H3zM3 9h18M9 4v16',
   pin: 'M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11ZM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z',
+  tag: 'M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h8l8.6 8.6a1 1 0 0 1 0 1.4ZM7.5 8.5h.01',
+  home: 'M3 10.5 12 3l9 7.5M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5M9.5 21v-6h5v6',
+  coin: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v10M9.5 9.5a2.5 2 0 0 1 2.5-1.5c1.4 0 2.5.8 2.5 1.8s-1.1 1.7-2.5 1.7-2.5.8-2.5 1.8 1.1 1.8 2.5 1.8a2.5 2 0 0 0 2.5-1.5',
   wa: 'M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.3A10 10 0 1 0 12 2Zm5.5 14.2c-.2.6-1.2 1.2-1.7 1.2-.9.1-1 .4-3.6-.9-2.6-1.4-4.1-4.1-4.2-4.3-.1-.2-1-1.3-1-2.5s.6-1.8.9-2c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6c-.2.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2 1.3 2.3 1.5.2.1.4.1.5-.1l.7-.8c.2-.2.4-.2.6-.1l1.9.9c.3.1.4.2.5.3.1.2.1.7-.1 1.3Z',
+  check: 'M20 6 9 17l-5-5',
   back: 'M15 18l-6-6 6-6',
+  next: 'M9 18l6-6-6-6',
+  close: 'M18 6 6 18M6 6l12 12',
+  expand: 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7',
 };
 function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: string }) {
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className={cls}><path d={d} /></svg>;
@@ -54,9 +76,12 @@ export default function ImovelPublicPage() {
   const [site, setSite] = useState<SiteInfo>({});
   const [prop, setProp] = useState<PropertyDTO | null>(null);
   const [active, setActive] = useState(0);
+  const [lightbox, setLightbox] = useState(false);
+  const [suggestions, setSuggestions] = useState<PortalProperty[]>([]);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneErr, setPhoneErr] = useState(false);
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
@@ -66,18 +91,19 @@ export default function ImovelPublicPage() {
       try {
         const [siteRes, imovelRes] = await Promise.all([
           fetch(`${API}/api/public/v1/site`, { headers: { 'X-Tenant': tenant } }),
-          fetch(`${API}/api/public/v1/site/imovel/${encodeURIComponent(code)}`, { headers: { 'X-Tenant': tenant } }),
+          fetch(`${API}/api/public/v1/site/properties/${encodeURIComponent(code)}`, { headers: { 'X-Tenant': tenant } }),
         ]);
         if (!alive) return;
         if (!imovelRes.ok) { setState('notfound'); return; }
-        const imovel = (await imovelRes.json()).data as { property: PropertyDTO; site?: { name?: string } };
+        // O back-end serializa o imóvel direto em `data` (objeto plano).
+        const property = (await imovelRes.json()).data as PropertyDTO;
         const siteInfo = siteRes.ok ? ((await siteRes.json()).data as SiteInfo) : {};
-        setSite({ ...siteInfo, name: siteInfo.name || imovel.site?.name });
-        setProp(imovel.property);
+        setSite(siteInfo);
+        setProp(property);
 
-        const siteName = siteInfo.name || imovel.site?.name || 'Imóveis';
-        document.title = `${imovel.property.title} · ${siteName}`;
-        const desc = (imovel.property.description || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+        const siteName = siteInfo.name || 'Imóveis';
+        document.title = `${property.title} · ${siteName}`;
+        const desc = (property.description || '').replace(/\s+/g, ' ').trim().slice(0, 160);
         if (desc) setMeta('description', desc);
         setMeta('robots', 'index,follow');
         setState('ok');
@@ -86,8 +112,56 @@ export default function ImovelPublicPage() {
     return () => { alive = false; };
   }, [tenant, code]);
 
+  // Navegação por teclado + trava do scroll enquanto o lightbox está aberto
+  useEffect(() => {
+    if (!lightbox) return;
+    const total = prop?.photos?.length ?? 0;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightbox(false);
+      else if (e.key === 'ArrowLeft' && total > 1) setActive(a => (a - 1 + total) % total);
+      else if (e.key === 'ArrowRight' && total > 1) setActive(a => (a + 1) % total);
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [lightbox, prop]);
+
+  // Imóveis recomendados (fim da página): outros publicados da MESMA cidade,
+  // excluindo o atual. Sem endpoint novo — usa a listagem pública do portal.
+  useEffect(() => {
+    if (!tenant || !code || !prop) return;
+    let alive = true;
+    const fetchList = async (city?: string): Promise<PortalProperty[]> => {
+      const qs = new URLSearchParams({ per_page: '8' });
+      if (city) qs.set('city', city);
+      try {
+        const res = await fetch(`${API}/api/public/v1/site/properties?${qs.toString()}`, { headers: { 'X-Tenant': tenant } });
+        if (!res.ok) return [];
+        return ((await res.json()).data as PortalProperty[]).filter(p => p.code !== code);
+      } catch { return []; }
+    };
+    (async () => {
+      let list = await fetchList(prop.address_city);
+      // Fallback: se a cidade tiver poucos imóveis, completa com outros quaisquer.
+      if (list.length < 3) {
+        const extra = await fetchList();
+        const seen = new Set(list.map(p => p.code));
+        list = [...list, ...extra.filter(p => !seen.has(p.code))];
+      }
+      if (alive) setSuggestions(list.slice(0, 3));
+    })();
+    return () => { alive = false; };
+  }, [tenant, code, prop]);
+
   const brand = site.branding?.primary_color || '#0E7C5A';
-  const font = site.branding?.font_family || 'Inter, system-ui, sans-serif';
+  const font = site.branding?.font_family || 'Inter';
+  const fontPrimary = font.split(',')[0].trim();
+  const fontStack = font.includes(',') ? font : `${font}, system-ui, sans-serif`;
+  const fontHref = `https://fonts.googleapis.com/css2?family=${fontPrimary.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`;
   const wa = site.contact?.whatsapp;
   const waHref = useMemo(() => {
     if (!wa || !prop) return null;
@@ -96,13 +170,15 @@ export default function ImovelPublicPage() {
 
   const submitLead = async (e: FormEvent) => {
     e.preventDefault();
-    if (!tenant || !code || !name.trim() || !phone.trim()) return;
+    if (!tenant || !code || !name.trim()) return;
+    if (!isValidBrPhone(phone)) { setPhoneErr(true); return; }
     const params = new URLSearchParams(window.location.search);
     try {
       await fetch(`${API}/api/public/v1/site/leads`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
         body: JSON.stringify({ lead: {
-          name, phone, source: 'portal', form_type: 'imovel', property_code: code,
+          name, phone, source: 'portal', form_type: 'imovel',
+          property_code: code, property_id: prop?.id,
           message: `Interesse no imóvel ${code}`,
           utm_source: params.get('utm_source') ?? undefined, utm_campaign: params.get('utm_campaign') ?? undefined,
           form_data: { page_url: window.location.href, referrer: document.referrer || null },
@@ -115,17 +191,52 @@ export default function ImovelPublicPage() {
   if (state === 'loading') return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   if (state === 'notfound' || !prop) return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Imóvel não encontrado.</div>;
 
-  const cssVars = { ['--brand' as string]: brand, ['--ink' as string]: '#17140F', ['--paper' as string]: '#FAF7F2', ['--display' as string]: 'Fraunces, Georgia, serif', fontFamily: font } as CSSProperties;
+  const cssVars = { ['--brand' as string]: brand, ['--ink' as string]: '#17140F', ['--paper' as string]: '#FAF7F2', ['--display' as string]: fontStack, fontFamily: fontStack } as CSSProperties;
   const photos = prop.photos ?? [];
   const cover = photos[active] || photos[0];
-  const local = [prop.address_neighborhood, prop.address_city, prop.address_state].filter(Boolean).join(', ');
   const typeLabel = TYPE_LABEL[prop.property_type || ''] || prop.property_type || 'Imóvel';
-  const price = brl(prop.sale_price);
+
+  // Preço principal segue o tipo de transação (aluguel mostra "/mês"; venda, o
+  // valor cheio). Locação sem venda cai no aluguel; senão, venda.
+  const isRent = prop.transaction_type === 'rent' || prop.transaction_type === 'season';
+  const price = brl(isRent ? prop.rent_price : prop.sale_price);
+  const priceSuffix = isRent ? '/mês' : '';
+  // Valor do m²: base de venda sobre a área útil (ou total como fallback).
+  const areaForM2 = prop.useful_area_m2 || prop.total_area_m2 || 0;
+  const pricePerM2 = !isRent && prop.sale_price && areaForM2 ? brl(prop.sale_price / areaForM2) : null;
+  // Linha de valores recorrentes (condomínio / IPTU / m²), como nos portais.
+  // Monta a linha a partir do RESULTADO do brl() (não do campo cru): se o valor
+  // não formatar como número, a linha nem aparece — nunca renderiza "null".
+  const feeRow = (label: string, n?: number | null, suffix = ''): { label: string; value: string } | null => {
+    const v = brl(n);
+    return v ? { label, value: `${v}${suffix}` } : null;
+  };
+  const money = [
+    feeRow('Condomínio', prop.condo_fee, '/mês'),
+    feeRow('IPTU', prop.iptu, '/ano'),
+    pricePerM2 ? { label: 'Valor do m²', value: pricePerM2 } : null,
+  ].filter(Boolean) as { label: string; value: string }[];
+
+  // Características/comodidades → rótulos (via catálogo compartilhado).
+  const featureLabels = labelsFor(prop.features);
+  const condoLabels = labelsFor(prop.condo_features);
+  // Tipologias (plantas) do empreendimento — [] quando o imóvel tem uma só ou
+  // quando o tenant ainda não recebeu a coluna (backend devolve [] nesse caso).
+  const typologies = prop.typologies ?? [];
+
+  // Localização: só bairro (privacidade — sem rua/número). O mapa mostra a REGIÃO
+  // de forma aproximada, buscando pelo nome do bairro/cidade — sem pino no
+  // endereço exato.
+  const regionText = [prop.address_neighborhood, prop.address_city, prop.address_state].filter(Boolean).join(', ');
+  const mapQuery = regionText ? encodeURIComponent(regionText) : null;
+
   const specs = [
     prop.bedrooms ? { d: I.bed, label: `${prop.bedrooms} ${prop.bedrooms > 1 ? 'quartos' : 'quarto'}` } : null,
-    prop.suites ? { d: I.bath, label: `${prop.suites} ${prop.suites > 1 ? 'suítes' : 'suíte'}` } : null,
+    prop.suites ? { d: I.suite, label: `${prop.suites} ${prop.suites > 1 ? 'suítes' : 'suíte'}` } : null,
+    prop.bathrooms ? { d: I.bath, label: `${prop.bathrooms} ${prop.bathrooms > 1 ? 'banheiros' : 'banheiro'}` } : null,
     prop.parking_spaces ? { d: I.car, label: `${prop.parking_spaces} ${prop.parking_spaces > 1 ? 'vagas' : 'vaga'}` } : null,
-    prop.useful_area_m2 ? { d: I.ruler, label: `${prop.useful_area_m2} m²` } : null,
+    prop.useful_area_m2 ? { d: I.ruler, label: `${prop.useful_area_m2} m² úteis` } : null,
+    prop.total_area_m2 ? { d: I.land, label: `${prop.total_area_m2} m² total` } : null,
   ].filter(Boolean) as { d: string; label: string }[];
 
   const ContactForm = (
@@ -140,7 +251,15 @@ export default function ImovelPublicPage() {
     ) : (
       <form onSubmit={submitLead} className="space-y-3">
         <input value={name} onChange={e => setName(e.target.value)} required placeholder="Seu nome" className="w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)]" />
-        <input value={phone} onChange={e => setPhone(e.target.value)} required inputMode="tel" placeholder="Seu WhatsApp" className="w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)]" />
+        <BrPhoneInput
+          value={phone}
+          onChange={v => { setPhone(v); if (phoneErr) setPhoneErr(false); }}
+          required
+          placeholder="Seu WhatsApp"
+          aria-invalid={phoneErr}
+          className={`w-full rounded-xl border px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)] ${phoneErr ? 'border-red-400' : 'border-black/10'}`}
+        />
+        {phoneErr && <p className="-mt-1 text-[13px] text-red-500">Digite um telefone válido com DDD.</p>}
         <button type="submit" className="w-full rounded-xl py-3.5 text-[15px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--brand)' }}>Tenho interesse</button>
         {waHref && <a href={waHref} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={18} /> Chamar no WhatsApp</a>}
       </form>
@@ -150,7 +269,7 @@ export default function ImovelPublicPage() {
   return (
     <div style={cssVars} className="min-h-screen bg-[var(--paper)] pb-24 text-[var(--ink)] antialiased lg:pb-0">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet" />
+      <link href={fontHref} rel="stylesheet" />
 
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-[var(--paper)]/85 backdrop-blur-md">
@@ -176,12 +295,45 @@ export default function ImovelPublicPage() {
         {/* Galeria */}
         {cover && (
           <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-            <div className="overflow-hidden rounded-[20px] bg-neutral-100">
-              <img src={cover.file_url} alt={cover.alt_text || prop.title} className="h-[280px] w-full object-cover sm:h-[440px]" />
+            <div className="group relative overflow-hidden rounded-[20px] bg-neutral-100">
+              <button
+                type="button"
+                aria-label="Ampliar foto"
+                onClick={() => setLightbox(true)}
+                className="block w-full cursor-zoom-in"
+              >
+                <img src={cover.file_url} alt={cover.alt_text || prop.title} className="h-[280px] w-full object-cover sm:h-[440px]" />
+              </button>
+              <span className="pointer-events-none absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100">
+                <Ic d={I.expand} s={16} />
+              </span>
+              {photos.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Foto anterior"
+                    onClick={e => { e.stopPropagation(); setActive(a => (a - 1 + photos.length) % photos.length); }}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-[var(--ink)] shadow-sm ring-1 ring-black/[0.06] backdrop-blur transition hover:bg-white"
+                  >
+                    <Ic d={I.back} s={20} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Próxima foto"
+                    onClick={e => { e.stopPropagation(); setActive(a => (a + 1) % photos.length); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-[var(--ink)] shadow-sm ring-1 ring-black/[0.06] backdrop-blur transition hover:bg-white"
+                  >
+                    <Ic d={I.next} s={20} />
+                  </button>
+                  <span className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-[12px] font-medium text-white backdrop-blur">
+                    {active + 1} / {photos.length}
+                  </span>
+                </>
+              )}
             </div>
             {photos.length > 1 && (
               <div className="flex gap-2 overflow-x-auto sm:max-h-[440px] sm:w-24 sm:flex-col sm:overflow-y-auto">
-                {photos.slice(0, 8).map((ph, i) => (
+                {photos.map((ph, i) => (
                   <button key={i} type="button" onClick={() => setActive(i)}
                     className={`h-16 w-24 shrink-0 overflow-hidden rounded-xl sm:h-16 sm:w-full ${i === active ? 'ring-2 ring-[var(--brand)]' : 'ring-1 ring-black/[0.06] opacity-80'}`}>
                     <img src={ph.thumbnail_url || ph.file_url} alt="" className="h-full w-full object-cover" loading="lazy" />
@@ -197,14 +349,26 @@ export default function ImovelPublicPage() {
           <div>
             <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">{typeLabel}</span>
             <h1 className="mt-1.5 font-[var(--display)] text-3xl font-semibold leading-tight sm:text-4xl">{prop.title}</h1>
-            {local && <p className="mt-2 flex items-center gap-1.5 text-[15px] text-neutral-500"><Ic d={I.pin} s={16} /> {local}</p>}
+            {regionText && <p className="mt-2 flex items-center gap-1.5 text-[15px] text-neutral-500"><Ic d={I.pin} s={16} /> {regionText}</p>}
 
             {specs.length > 0 && (
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {specs.map((s, i) => (
                   <div key={i} className="rounded-2xl bg-white p-4 ring-1 ring-black/[0.06]">
                     <span className="text-[var(--brand)]"><Ic d={s.d} s={20} /></span>
                     <div className="mt-2 text-[14px] font-semibold text-[var(--ink)]">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {money.length > 0 && (
+              <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl bg-white px-5 py-4 ring-1 ring-black/[0.06]">
+                {money.map((m, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-[var(--brand)]"><Ic d={I.coin} s={17} /></span>
+                    <span className="text-[13px] text-neutral-500">{m.label}</span>
+                    <span className="text-[14px] font-semibold text-[var(--ink)]">{m.value}</span>
                   </div>
                 ))}
               </div>
@@ -217,13 +381,77 @@ export default function ImovelPublicPage() {
               </section>
             )}
 
-            {typeof prop.latitude === 'number' && typeof prop.longitude === 'number' && (
+            {/* Tipologias: a tabela de plantas do empreendimento. Sem ela, um
+                lançamento com 3 plantas aparecia como se tivesse uma unidade só
+                (a do resumo) e o lead perguntava no WhatsApp o que já estava no book. */}
+            {typologies.length > 0 && (
+              <section className="mt-9">
+                <h2 className="font-[var(--display)] text-2xl font-semibold">Tipologias disponíveis</h2>
+                {typologyHeadline(typologies) && (
+                  <p className="mt-1 text-[14px] text-neutral-500">{typologyHeadline(typologies)}</p>
+                )}
+                <div className="mt-3 overflow-x-auto">
+                  <ul className="min-w-full space-y-2">
+                    {typologies.map((t, i) => {
+                      const price = typologyPrice(t);
+                      return (
+                        <li
+                          key={i}
+                          className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-2xl bg-white px-5 py-4 ring-1 ring-black/[0.06]"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-[15px] font-semibold text-[var(--ink)]">{typologyName(t, i)}</p>
+                            <p className="mt-0.5 text-[13px] text-neutral-500">{typologySpecs(t).join(' · ')}</p>
+                            {t.notes && <p className="mt-0.5 text-[13px] text-neutral-500">{t.notes}</p>}
+                          </div>
+                          {price && (
+                            <span className="whitespace-nowrap text-[15px] font-semibold text-[var(--brand)]">{price}</span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </section>
+            )}
+
+            {featureLabels.length > 0 && (
+              <section className="mt-9">
+                <h2 className="font-[var(--display)] text-2xl font-semibold">Características</h2>
+                <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2.5 sm:grid-cols-3">
+                  {featureLabels.map((label, i) => (
+                    <li key={i} className="flex items-center gap-2 text-[15px] text-neutral-700">
+                      <span className="text-[var(--brand)]"><Ic d={I.check} s={17} /></span>
+                      {label}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {condoLabels.length > 0 && (
+              <section className="mt-9">
+                <h2 className="font-[var(--display)] text-2xl font-semibold">Comodidades do condomínio</h2>
+                <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2.5 sm:grid-cols-3">
+                  {condoLabels.map((label, i) => (
+                    <li key={i} className="flex items-center gap-2 text-[15px] text-neutral-700">
+                      <span className="text-[var(--brand)]"><Ic d={I.check} s={17} /></span>
+                      {label}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {mapQuery && (
               <section className="mt-9">
                 <h2 className="font-[var(--display)] text-2xl font-semibold">Localização</h2>
-                {local && <p className="mt-1 text-[14px] text-neutral-500">{local}</p>}
+                <p className="mt-1 text-[14px] text-neutral-500">{regionText}</p>
+                {/* Mapa aproximado da região (busca por bairro/cidade), sem pino no
+                    endereço exato — privacidade do imóvel. */}
                 <div className="mt-3 overflow-hidden rounded-[20px] ring-1 ring-black/[0.06]">
-                  <iframe title="Mapa" width="100%" height="300" loading="lazy" style={{ border: 0 }}
-                    src={`https://www.google.com/maps?q=${prop.latitude},${prop.longitude}&z=15&output=embed`} />
+                  <iframe title="Mapa da região" width="100%" height="300" loading="lazy" style={{ border: 0 }}
+                    src={`https://www.google.com/maps?q=${mapQuery}&z=14&output=embed`} />
                 </div>
               </section>
             )}
@@ -232,8 +460,22 @@ export default function ImovelPublicPage() {
           {/* Card de contato (sticky no desktop) */}
           <aside className="hidden lg:block">
             <div className="sticky top-24 rounded-[22px] bg-white p-6 shadow-[0_20px_45px_-25px_rgba(0,0,0,0.35)] ring-1 ring-black/[0.06]">
-              {price && <div className="font-[var(--display)] text-3xl font-semibold text-[var(--ink)]">{price}</div>}
+              {price && (
+                <div className="font-[var(--display)] text-3xl font-semibold text-[var(--ink)]">
+                  {price}{priceSuffix && <span className="text-base font-medium text-neutral-400">{priceSuffix}</span>}
+                </div>
+              )}
               <div className="mt-1 text-[13px] text-neutral-500">Código {prop.code}</div>
+              {money.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  {money.map((m, i) => (
+                    <div key={i} className="flex items-center justify-between text-[13px]">
+                      <span className="text-neutral-500">{m.label}</span>
+                      <span className="font-medium text-[var(--ink)]">{m.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="my-4 border-t border-black/[0.06]" />
               <p className="mb-3 text-[14px] font-medium text-neutral-600">Fale com um especialista sobre este imóvel</p>
               {ContactForm}
@@ -244,15 +486,34 @@ export default function ImovelPublicPage() {
 
         {/* Form no fluxo (mobile) */}
         <section id="contato" className="mt-10 rounded-[22px] bg-white p-6 ring-1 ring-black/[0.06] lg:hidden">
-          {price && <div className="font-[var(--display)] text-2xl font-semibold">{price}</div>}
-          <p className="mb-3 mt-1 text-[14px] text-neutral-500">Fale com um especialista sobre este imóvel</p>
+          {price && (
+            <div className="font-[var(--display)] text-2xl font-semibold">
+              {price}{priceSuffix && <span className="text-sm font-medium text-neutral-400">{priceSuffix}</span>}
+            </div>
+          )}
+          {money.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-neutral-500">
+              {money.map((m, i) => <span key={i}>{m.label} <span className="font-medium text-[var(--ink)]">{m.value}</span></span>)}
+            </div>
+          )}
+          <p className="mb-3 mt-2 text-[14px] text-neutral-500">Fale com um especialista sobre este imóvel</p>
           {ContactForm}
         </section>
+
+        {/* Imóveis recomendados */}
+        {suggestions.length > 0 && (
+          <section className="mt-14">
+            <h2 className="font-[var(--display)] text-2xl font-semibold sm:text-3xl">Você também pode gostar</h2>
+            <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {suggestions.map(s => <PropertyCard key={s.id} tenant={tenant!} p={s} wa={wa} />)}
+            </div>
+          </section>
+        )}
       </main>
 
       {/* Barra fixa (mobile) */}
       <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-black/[0.06] bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
-        {price && <div className="flex-1"><div className="text-[11px] text-neutral-400">a partir de</div><div className="font-[var(--display)] text-lg font-semibold leading-none">{price}</div></div>}
+        {price && <div className="flex-1"><div className="text-[11px] text-neutral-400">{isRent ? 'aluguel' : 'a partir de'}</div><div className="font-[var(--display)] text-lg font-semibold leading-none">{price}{priceSuffix && <span className="text-[11px] font-medium text-neutral-400">{priceSuffix}</span>}</div></div>}
         {waHref
           ? <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={17} /> WhatsApp</a>
           : <a href="#contato" className="rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--brand)' }}>Tenho interesse</a>}
@@ -261,6 +522,57 @@ export default function ImovelPublicPage() {
       <footer className="border-t border-black/[0.06] bg-white py-6 text-center text-[12px] text-neutral-400">
         © {site.name || 'Portal'} — feito com LM Flow.
       </footer>
+
+      {/* Lightbox — foto em tela cheia */}
+      {lightbox && cover && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          onClick={() => setLightbox(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Galeria de fotos"
+        >
+          <button
+            type="button"
+            aria-label="Fechar"
+            onClick={() => setLightbox(false)}
+            className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
+          >
+            <Ic d={I.close} s={22} />
+          </button>
+
+          <img
+            src={cover.file_url}
+            alt={cover.alt_text || prop.title}
+            onClick={e => e.stopPropagation()}
+            className="max-h-[85vh] max-w-[92vw] rounded-lg object-contain"
+          />
+
+          {photos.length > 1 && (
+            <>
+              <button
+                type="button"
+                aria-label="Foto anterior"
+                onClick={e => { e.stopPropagation(); setActive(a => (a - 1 + photos.length) % photos.length); }}
+                className="absolute left-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:left-6"
+              >
+                <Ic d={I.back} s={24} />
+              </button>
+              <button
+                type="button"
+                aria-label="Próxima foto"
+                onClick={e => { e.stopPropagation(); setActive(a => (a + 1) % photos.length); }}
+                className="absolute right-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:right-6"
+              >
+                <Ic d={I.next} s={24} />
+              </button>
+              <span className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full bg-white/15 px-3.5 py-1.5 text-[13px] font-medium text-white">
+                {active + 1} / {photos.length}
+              </span>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

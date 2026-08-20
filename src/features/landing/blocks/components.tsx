@@ -12,6 +12,8 @@ import {
   TrendingUp,
   UserRound,
 } from 'lucide-react';
+import { BrPhoneInput } from '@/components/shared';
+import { isValidBrPhone } from '@/lib/brPhone';
 import type { BlockType } from './contract';
 import {
   type BlockComponentProps,
@@ -568,9 +570,11 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
   const [answers, setAnswers] = useState<{ question: string; answer: string }[]>([]);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneErr, setPhoneErr] = useState(false);
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+  const [resultQual, setResultQual] = useState<string | undefined>();
 
   const progress = done ? 100 : ((step + 1) / totalSteps) * 100;
 
@@ -580,10 +584,12 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
   };
 
   const submit = async () => {
-    if (!name.trim() || !phone.trim()) return;
+    if (!name.trim()) return;
+    if (!isValidBrPhone(phone)) { setPhoneErr(true); return; }
     setSending(true);
     try {
-      await onSubmitLead?.({ name: name.trim(), phone: phone.trim(), email: email.trim() || undefined, answers });
+      const res = await onSubmitLead?.({ name: name.trim(), phone, email: email.trim() || undefined, answers });
+      setResultQual(res?.qualification);
       setDone(true);
     } finally {
       setSending(false);
@@ -598,20 +604,29 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
         style={{ background: 'var(--lp-block-bg)', borderColor: 'var(--lp-border)', boxShadow: '0 10px 30px rgba(0,0,0,0.06)' }}>
         {done ? (
           <div className="relative py-2 text-center">
-            <Confetti />
+            {resultQual !== 'disqualified' && <Confetti />}
             <div className="relative">
               <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full" style={{ background: '#16A34A' }}>
                 <Check size={30} className="text-white" />
               </div>
-              <h2 className="text-xl font-bold">Recebemos suas informações!</h2>
-              <p className="mx-auto mt-1 max-w-xs text-sm opacity-70">
-                O corretor {specialist} entrará em contato em breve. {config.interestedCount} pessoas estão interessadas nesse imóvel.
-              </p>
-              <button type="button" data-lp-action="whatsapp"
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 font-semibold text-white"
-                style={{ background: '#16A34A' }}>
-                <WhatsAppIcon size={18} /> Fura a fila e fale direto no WhatsApp
-              </button>
+              {resultQual === 'disqualified' ? (
+                <>
+                  <h2 className="text-xl font-bold">{config.disqualifiedTitle}</h2>
+                  <p className="mx-auto mt-1 max-w-xs text-sm opacity-70">{config.disqualifiedMessage}</p>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-xl font-bold">Recebemos suas informações!</h2>
+                  <p className="mx-auto mt-1 max-w-xs text-sm opacity-70">
+                    O corretor {specialist} entrará em contato em breve. {config.interestedCount} pessoas estão interessadas nesse imóvel.
+                  </p>
+                  <button type="button" data-lp-action="whatsapp"
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 font-semibold text-white"
+                    style={{ background: '#16A34A' }}>
+                    <WhatsAppIcon size={18} /> Fura a fila e fale direto no WhatsApp
+                  </button>
+                </>
+              )}
               <div className="mt-5 flex items-center gap-3 rounded-xl border p-3 text-left" style={{ borderColor: 'var(--lp-border)' }}>
                 {property?.responsibleName || config.specialistName ? (
                   <div className="flex h-12 w-12 flex-none items-center justify-center rounded-full" style={{ background: 'var(--lp-card)' }}>
@@ -664,9 +679,11 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
                   <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome *"
                     className="w-full rounded-xl border bg-transparent px-4 py-3 text-sm outline-none focus:border-amber-400"
                     style={{ borderColor: 'var(--lp-border)', color: 'var(--lp-text)' }} />
-                  <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" inputMode="tel"
+                  <BrPhoneInput value={phone} onChange={(v) => { setPhone(v); if (phoneErr) setPhoneErr(false); }}
+                    aria-invalid={phoneErr}
                     className="w-full rounded-xl border bg-transparent px-4 py-3 text-sm outline-none focus:border-amber-400"
-                    style={{ borderColor: 'var(--lp-border)', color: 'var(--lp-text)' }} />
+                    style={{ borderColor: phoneErr ? '#f87171' : 'var(--lp-border)', color: 'var(--lp-text)' }} />
+                  {phoneErr && <p className="text-xs text-red-500">Digite um telefone válido com DDD.</p>}
                   <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" inputMode="email"
                     className="w-full rounded-xl border bg-transparent px-4 py-3 text-sm outline-none focus:border-amber-400"
                     style={{ borderColor: 'var(--lp-border)', color: 'var(--lp-text)' }} />

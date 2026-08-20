@@ -8,6 +8,8 @@ import type {
   ContactsListParams,
   ContactsSearchParams,
   ContactsFilterParams,
+  ContactsBulkQuery,
+  ContactsBulkResult,
   ContactUpdateData,
   ContactFormData,
   ContactMergeParams,
@@ -141,7 +143,15 @@ class ContactsService {
             });
           } else if (Array.isArray(value)) {
             // Handle arrays like labels
-            value.forEach(item => formData.append(`${key}[]`, String(item)));
+            // Lista vazia precisa de uma entrada em branco: sem nenhuma entrada o
+            // campo simplesmente não vai no envio, e o backend entende "não mexi
+            // nas tags" em vez de "tirei todas". Era assim que a última tag
+            // sempre voltava quando a ficha era salva junto com uma foto nova.
+            if (value.length === 0) {
+              if (key === 'labels') formData.append(`${key}[]`, '');
+            } else {
+              value.forEach(item => formData.append(`${key}[]`, String(item)));
+            }
           } else {
             formData.append(key, String(value));
           }
@@ -308,7 +318,7 @@ class ContactsService {
   }
 
   // Bulk Actions
-  async bulkDelete(contactIds: string[]): Promise<{ message: string; affected_count?: number }> {
+  async bulkDelete(contactIds: string[]): Promise<ContactsBulkResult> {
     const response = await api.post(`/bulk_actions`, {
       type: 'Contact',
       ids: contactIds,
@@ -316,7 +326,24 @@ class ContactsService {
         action: 'delete',
       },
     });
-    return extractData<{ message: string; affected_count?: number }>(response);
+    return extractData<ContactsBulkResult>(response);
+  }
+
+  /**
+   * Deleta TODOS os contatos que casam com a consulta atual, não só os ids da
+   * página. O backend resolve o conjunto com o mesmo escopo da listagem e joga
+   * o lote na fila — por isso a resposta vem com `async: true`.
+   */
+  async bulkDeleteAll(query: ContactsBulkQuery): Promise<ContactsBulkResult> {
+    const response = await api.post(`/bulk_actions`, {
+      type: 'Contact',
+      select_all: true,
+      query,
+      fields: {
+        action: 'delete',
+      },
+    });
+    return extractData<ContactsBulkResult>(response);
   }
 
   async bulkUpdateLabels(

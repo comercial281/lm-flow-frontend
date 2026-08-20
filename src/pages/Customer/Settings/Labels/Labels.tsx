@@ -11,7 +11,7 @@ import {
   DialogTitle,
   Button,
 } from '@/components/ui/ds';
-import { Tags } from 'lucide-react';
+import { Tags, AlertTriangle } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 
 import { labelsService } from '@/services/contacts/labelsService';
@@ -45,6 +45,7 @@ const INITIAL_STATE: LabelsState = {
   searchQuery: '',
   sortBy: 'title',
   sortOrder: 'asc',
+  loadError: false,
 };
 
 export default function Labels() {
@@ -65,7 +66,7 @@ export default function Labels() {
       return;
     }
 
-    setState(prev => ({ ...prev, loading: { ...prev.loading, list: true } }));
+    setState(prev => ({ ...prev, loading: { ...prev.loading, list: true }, loadError: false }));
 
     try {
       const response = await labelsService.getLabels();
@@ -86,11 +87,16 @@ export default function Labels() {
           }
         },
         loading: { ...prev.loading, list: false },
+        loadError: false,
       }));
     } catch (error) {
+      // Antes: erro caía aqui e a tela ficava indistinguível de "0 etiquetas
+      // cadastradas" (só um toast que some sozinho) — parecia catálogo vazio
+      // quando na verdade a request falhou. Agora marca loadError pra render
+      // um estado de erro explícito, com botão de tentar de novo.
       console.error('Error loading labels:', error);
       toast.error(t('messages.loadError'));
-      setState(prev => ({ ...prev, loading: { ...prev.loading, list: false } }));
+      setState(prev => ({ ...prev, loading: { ...prev.loading, list: false }, loadError: true }));
     }
   }, [can, t]);
 
@@ -326,6 +332,17 @@ export default function Labels() {
           <div className="flex items-center justify-center py-16">
             <div className="text-muted-foreground">{t('loading')}</div>
           </div>
+        ) : state.loadError ? (
+          <EmptyState
+            icon={AlertTriangle}
+            title="Não deu pra carregar as etiquetas"
+            description="A busca falhou (conexão ou servidor). Isso NÃO significa que não existem etiquetas cadastradas — tente de novo."
+            action={{
+              label: 'Tentar novamente',
+              onClick: loadLabels,
+            }}
+            className="h-full"
+          />
         ) : state.labels.length === 0 ? (
           <EmptyState
             icon={Tags}

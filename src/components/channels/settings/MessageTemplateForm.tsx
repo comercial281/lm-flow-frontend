@@ -154,10 +154,7 @@ const TemplateFormModal: React.FC<{
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="!max-w-[95vw] !w-[95vw] max-h-[90vh] overflow-hidden"
-        style={{ maxWidth: '95vw', width: '95vw' }}
-      >
+      <DialogContent size="wide" className="overflow-hidden">
         <DialogHeader>
           <DialogTitle>
             {mode === 'create'

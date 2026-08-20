@@ -182,6 +182,30 @@ const apartmentTypesConfig = z.object({
     .default([]),
 });
 
+/** Perguntas de qualificação padrão (as do VGV Elite). Exportado pra o editor
+ *  usar de fallback quando o bloco ainda não tem `steps` no config gravado. */
+export const DEFAULT_LEAD_FORM_STEPS: { question: string; options: string[] }[] = [
+  {
+    question: 'Quando você pretende comprar?',
+    options: [
+      'Quero fechar o quanto antes',
+      'Nos próximos 30 dias',
+      'Em até 3 meses',
+      'Em 6 meses ou mais',
+      'Ainda estou pesquisando',
+    ],
+  },
+  {
+    question: 'Como pretende pagar?',
+    options: [
+      'Já tenho financiamento aprovado',
+      'Vou pagar à vista',
+      'Estou em processo de aprovação',
+      'Ainda não sei',
+    ],
+  },
+];
+
 const leadFormConfig = z.object({
   title: z.string().max(160).default('Preencha o formulário para falar com o especialista'),
   /** Nome do corretor/especialista mostrado no header e na tela final. */
@@ -192,27 +216,29 @@ const leadFormConfig = z.object({
   /** Perguntas de qualificação (default = as do VGV Elite). */
   steps: z
     .array(z.object({ question: z.string(), options: z.array(z.string()) }))
-    .default([
-      {
-        question: 'Quando você pretende comprar?',
-        options: [
-          'Quero fechar o quanto antes',
-          'Nos próximos 30 dias',
-          'Em até 3 meses',
-          'Em 6 meses ou mais',
-          'Ainda estou pesquisando',
-        ],
-      },
-      {
-        question: 'Como pretende pagar?',
-        options: [
-          'Já tenho financiamento aprovado',
-          'Vou pagar à vista',
-          'Estou em processo de aprovação',
-          'Ainda não sei',
-        ],
-      },
-    ]),
+    .default(DEFAULT_LEAD_FORM_STEPS),
+  /* --- Qualificação (Fatia 2a). Design não-quebra: opções seguem strings; a
+     qualificação vem por mapas paralelos, casados pelo texto da resposta. --- */
+  /** Nota de corte: score abaixo disso = desqualificado. */
+  cutoff: z.number().int().default(0),
+  /** Respostas que, escolhidas, desqualificam o lead na hora. */
+  disqualifyingAnswers: z.array(z.string()).default([]),
+  /** Peso (pontos) por resposta, somado no score. Chave = texto da opção. */
+  answerWeights: z.record(z.string(), z.number()).default({}),
+  /* --- Tela de resultado do lead desqualificado (Fatia 4a, variante in-page).
+     Se o lead cai como desqualificado, mostra estes textos em vez da tela de
+     "fura a fila". --- */
+  disqualifiedTitle: z.string().max(120).default('Obrigado pelo seu interesse!'),
+  disqualifiedMessage: z
+    .string()
+    .max(400)
+    .default('Recebemos seus dados. No momento este imóvel pode não ser o ideal pro seu perfil, mas vamos te avisar sobre outras oportunidades que combinam com você.'),
+  /* --- Páginas de resultado (Fatia 4b). 'inline' = tela na mesma página (4a);
+     'url' = redireciona pra /lp/<slug>/obrigado|desqualificado (PageView
+     próprio pro Pixel). --- */
+  resultMode: z.enum(['inline', 'url']).default('inline'),
+  thankyouTitle: z.string().max(120).default('Recebemos suas informações!'),
+  thankyouMessage: z.string().max(400).default('Em breve um especialista entrará em contato com você. Fique de olho no seu WhatsApp.'),
 });
 
 const stickyCtaConfig = z.object({

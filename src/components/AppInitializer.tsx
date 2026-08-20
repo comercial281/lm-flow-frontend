@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAppDataStore } from '@/store/appDataStore';
 import { useAuthStore } from '@/store/authStore';
 import { tourService } from '@/services/tours/tourService';
+import { syncPushSubscription } from '@/services/pushNotificationService';
 import i18n from '@/i18n/config';
 import LoadingScreen from '@/components/LoadingScreen';
 interface AppInitializerProps {
@@ -26,11 +27,12 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
     if (pathname.startsWith('/conversations')) {
       return { inboxes: true, agents: false, labels: false, teams: false };
     }
-    if (pathname.startsWith('/settings/users')) {
-      return { inboxes: false, agents: true, labels: false, teams: false };
-    }
-    if (pathname.startsWith('/settings/teams')) {
-      return { inboxes: false, agents: false, labels: false, teams: true };
+    // A tela de Equipe reúne pessoas, cargos e times numa só — e mostra as
+    // instâncias de cada pessoa. Precisa dos três de uma vez; antes cada um era
+    // uma tela com um endereço próprio (/settings/users e /settings/teams, que
+    // hoje redirecionam para cá).
+    if (pathname.startsWith('/equipe')) {
+      return { inboxes: true, agents: true, labels: false, teams: true };
     }
     if (pathname.startsWith('/settings/labels')) {
       return { inboxes: false, agents: false, labels: true, teams: false };
@@ -103,6 +105,19 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
       });
   }, [user?.id, setTours]);
 
+  // Ressincroniza a inscrição de push a cada login. O servidor apaga a inscrição
+  // sozinho quando o serviço de push responde 410, e nada a reenviava: o
+  // aparelho ficava com o Modo Plantão "verde" e sem receber nada, para sempre.
+  // Fica num efeito próprio keyed em user?.id pelo mesmo motivo dos tours acima
+  // — o initializeApp principal trava em `isInitialized` e não re-roda no
+  // segundo login da mesma aba.
+  useEffect(() => {
+    if (!user?.id) return;
+    syncPushSubscription().catch(() => {
+      // Não crítico: nova tentativa no próximo carregamento.
+    });
+  }, [user?.id]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -160,7 +175,7 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   // "LM Flow" — o visitante do anúncio tem que ver a página na hora, não a marca
   // do CRM. Elas cuidam do próprio carregamento.
   const path = typeof window !== 'undefined' ? window.location.pathname : '';
-  const isPublicPath = ['/lp', '/imovel', '/portal', '/auth', '/login', '/register', '/widget', '/setup']
+  const isPublicPath = ['/lp', '/imovel', '/portal', '/auth', '/login', '/register', '/widget', '/setup', '/formulario']
     .some((p) => path.startsWith(p));
 
   if ((!isInitialized || initError) && !isPublicPath) {

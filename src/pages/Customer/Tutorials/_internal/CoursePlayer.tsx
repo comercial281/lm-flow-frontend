@@ -21,11 +21,13 @@ import {
   Upload,
   ChevronUp,
   ChevronDown,
+  Pencil,
 } from 'lucide-react';
 import {
   useLessons,
   useCreateLesson,
   useUploadLessonVideo,
+  useReplaceLessonVideo,
   useDeleteLesson,
   useUpdateLesson,
   useProgress,
@@ -238,7 +240,7 @@ export default function CoursePlayer({ module: m, onBack, canEdit }: Props) {
   );
 }
 
-// ── Ações admin por aula (reordenar / excluir) ────────────────────────────
+// ── Ações admin por aula (editar / reordenar / excluir) ───────────────────
 function LessonAdminActions({
   lesson,
   lessons,
@@ -250,6 +252,7 @@ function LessonAdminActions({
 }) {
   const del = useDeleteLesson();
   const update = useUpdateLesson();
+  const [editing, setEditing] = useState(false);
   const idx = lessons.findIndex((l) => l.id === lesson.id);
 
   async function move(dir: -1 | 1) {
@@ -262,35 +265,199 @@ function LessonAdminActions({
   }
 
   return (
-    <div className="flex items-center gap-2 mb-2">
-      <button
-        onClick={() => move(-1)}
-        disabled={idx <= 0}
-        className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-border hover:border-primary/40 disabled:opacity-30"
-        type="button"
-      >
-        <ChevronUp size={12} /> Subir
-      </button>
-      <button
-        onClick={() => move(1)}
-        disabled={idx >= lessons.length - 1}
-        className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-border hover:border-primary/40 disabled:opacity-30"
-        type="button"
-      >
-        <ChevronDown size={12} /> Descer
-      </button>
-      <button
-        onClick={() => {
-          if (window.confirm(`Excluir aula "${lesson.titulo}"?`)) {
-            del.mutate(lesson.id);
-            onDeleted();
-          }
-        }}
-        className="flex items-center gap-1 px-2 py-1 text-[11px] text-red-500 rounded-md border border-red-500/30 hover:bg-red-500/10"
-        type="button"
-      >
-        <Trash2 size={12} /> Excluir aula
-      </button>
+    <div className="mb-2">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setEditing((v) => !v)}
+          className={`flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border ${
+            editing ? 'bg-primary/15 text-primary border-primary/40' : 'border-border hover:border-primary/40'
+          }`}
+          type="button"
+        >
+          <Pencil size={12} /> Editar aula
+        </button>
+        <button
+          onClick={() => move(-1)}
+          disabled={idx <= 0}
+          className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-border hover:border-primary/40 disabled:opacity-30"
+          type="button"
+        >
+          <ChevronUp size={12} /> Subir
+        </button>
+        <button
+          onClick={() => move(1)}
+          disabled={idx >= lessons.length - 1}
+          className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-border hover:border-primary/40 disabled:opacity-30"
+          type="button"
+        >
+          <ChevronDown size={12} /> Descer
+        </button>
+        <button
+          onClick={() => {
+            if (window.confirm(`Excluir aula "${lesson.titulo}"?`)) {
+              del.mutate(lesson.id);
+              onDeleted();
+            }
+          }}
+          className="flex items-center gap-1 px-2 py-1 text-[11px] text-red-500 rounded-md border border-red-500/30 hover:bg-red-500/10"
+          type="button"
+        >
+          <Trash2 size={12} /> Excluir aula
+        </button>
+      </div>
+
+      {editing && <LessonEditForm key={lesson.id} lesson={lesson} onClose={() => setEditing(false)} />}
+    </div>
+  );
+}
+
+// ── Form de editar aula (título, descrição, duração, trocar vídeo) ─────────
+function LessonEditForm({ lesson, onClose }: { lesson: KnowledgeLesson; onClose: () => void }) {
+  const update = useUpdateLesson();
+  const replaceVideo = useReplaceLessonVideo();
+
+  const [titulo, setTitulo] = useState(lesson.titulo);
+  const [descricao, setDescricao] = useState(lesson.descricao_md ?? '');
+  const [duracao, setDuracao] = useState(lesson.duracao_min ? String(lesson.duracao_min) : '');
+  // Troca de vídeo (opcional). vazio = mantém o atual.
+  const [videoMode, setVideoMode] = useState<'keep' | 'embed' | 'upload'>('keep');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+
+  const busy = update.isPending || replaceVideo.isPending;
+
+  async function save() {
+    if (!titulo.trim()) {
+      window.alert('O título não pode ficar vazio.');
+      return;
+    }
+    if (videoMode === 'embed' && (!videoUrl.trim() || !parseVideoUrl(videoUrl))) {
+      window.alert('Cole um link válido do YouTube ou Vimeo.');
+      return;
+    }
+    if (videoMode === 'upload' && !file) {
+      window.alert('Selecione um arquivo de vídeo.');
+      return;
+    }
+
+    // 1) Campos de texto/duração.
+    await update.mutateAsync({
+      id: lesson.id,
+      titulo: titulo.trim(),
+      descricao_md: descricao,
+      duracao_min: duracao ? parseInt(duracao, 10) : null,
+    });
+
+    // 2) Troca de vídeo (se pedida).
+    if (videoMode === 'embed') {
+      const parsed = parseVideoUrl(videoUrl)!;
+      await update.mutateAsync({
+        id: lesson.id,
+        video_url: videoUrl.trim(),
+        video_provider: parsed.provider,
+        video_id: parsed.id,
+        storage_path: null,
+      });
+    } else if (videoMode === 'upload' && file) {
+      await replaceVideo.mutateAsync({ id: lesson.id, file });
+    }
+
+    onClose();
+  }
+
+  return (
+    <div className="mt-3 space-y-3 max-w-2xl bg-card border border-border rounded-xl p-4">
+      <p className="text-xs font-semibold">Editar aula</p>
+
+      <input
+        autoFocus
+        value={titulo}
+        onChange={(e) => setTitulo(e.target.value)}
+        placeholder="Título da aula"
+        className="w-full bg-background border border-border rounded px-3 py-2 text-sm"
+      />
+      <input
+        value={duracao}
+        onChange={(e) => setDuracao(e.target.value.replace(/[^0-9]/g, ''))}
+        placeholder="Duração em minutos (opcional)"
+        className="w-full bg-background border border-border rounded px-3 py-2 text-sm"
+      />
+      <textarea
+        value={descricao}
+        onChange={(e) => setDescricao(e.target.value)}
+        placeholder="Descrição em markdown (opcional)"
+        rows={4}
+        className="w-full bg-background border border-border rounded px-3 py-2 text-sm resize-y"
+      />
+
+      {/* Trocar vídeo */}
+      <div className="space-y-2">
+        <p className="text-[11px] text-muted-foreground">Vídeo da aula</p>
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-1 w-fit">
+          <button
+            onClick={() => setVideoMode('keep')}
+            className={`px-3 py-1 text-[11px] rounded-md ${
+              videoMode === 'keep' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+            }`}
+            type="button"
+          >
+            Manter atual
+          </button>
+          <button
+            onClick={() => setVideoMode('embed')}
+            className={`flex items-center gap-1.5 px-3 py-1 text-[11px] rounded-md ${
+              videoMode === 'embed' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+            }`}
+            type="button"
+          >
+            <Link2 size={12} /> Link YouTube/Vimeo
+          </button>
+          <button
+            onClick={() => setVideoMode('upload')}
+            className={`flex items-center gap-1.5 px-3 py-1 text-[11px] rounded-md ${
+              videoMode === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+            }`}
+            type="button"
+          >
+            <Upload size={12} /> Enviar arquivo
+          </button>
+        </div>
+
+        {videoMode === 'embed' && (
+          <input
+            value={videoUrl}
+            onChange={(e) => setVideoUrl(e.target.value)}
+            placeholder="URL do YouTube ou Vimeo"
+            className="w-full bg-background border border-border rounded px-3 py-2 text-sm"
+          />
+        )}
+        {videoMode === 'upload' && (
+          <input
+            type="file"
+            accept="video/*"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="w-full text-xs file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 file:bg-primary file:text-primary-foreground"
+          />
+        )}
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={onClose}
+          className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={save}
+          disabled={busy}
+          className="px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-50 rounded-lg"
+          type="button"
+        >
+          {busy ? 'Salvando...' : 'Salvar alterações'}
+        </button>
+      </div>
     </div>
   );
 }

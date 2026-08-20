@@ -26,6 +26,12 @@ interface RichTextEditorProps {
   disabled?: boolean;
   className?: string;
   showToolbar?: boolean;
+  /**
+   * Classe Tailwind da altura mínima da área de digitação do ProseMirror.
+   * Default preserva o comportamento antigo (usado no SiteBuilder). O chat passa
+   * uma altura menor pra barra ficar enxuta (estilo WhatsApp).
+   */
+  editorMinHeightClass?: string;
 }
 
 export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
@@ -38,6 +44,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       disabled = false,
       className = '',
       showToolbar = true,
+      editorMinHeightClass = 'min-h-[100px]',
     },
     ref,
   ) => {
@@ -172,7 +179,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
         editable: () => !disabled,
         attributes: {
           class:
-            'prosemirror-editor p-3 min-h-[100px] max-h-[200px] overflow-y-auto focus:outline-none resize-none text-sm leading-relaxed text-foreground',
+            `prosemirror-editor p-3 ${editorMinHeightClass} max-h-[200px] overflow-y-auto focus:outline-none resize-none text-sm leading-relaxed text-foreground`,
           'data-placeholder': placeholder,
         },
       });

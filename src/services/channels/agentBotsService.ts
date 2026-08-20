@@ -1,5 +1,5 @@
 import api from '@/services/core/api';
-import { AgentBot } from '@/components/channels/settings/helpers/agentBotHelpers';
+import type { AgentBot } from '@/types/channels/inbox';
 import type {
   AgentBotsResponse,
   AgentBotResponse,

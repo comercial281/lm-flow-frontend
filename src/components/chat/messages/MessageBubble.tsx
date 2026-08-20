@@ -82,6 +82,28 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     (moderation.moderation_action === 'delete_comment' || moderation.moderation_action === 'block_user');
   const isPendingResponse = moderation?.moderation_action === 'response_approval' && hasPendingModeration;
 
+  // Mensagem NOSSA nunca é assinada pelo lead.
+  //
+  // Houve um período em que toda mensagem automática (IA Vendedora, boas-vindas,
+  // follow-up, disparo agendado) era gravada com o CONTATO como autor. Na tela
+  // isso aparecia como o nome do próprio cliente ao lado do selo "Atendente" —
+  // como se ele estivesse respondendo a si mesmo. A gravação foi corrigida no
+  // servidor, mas o histórico já gravado continua apontando para o contato: por
+  // isso o descarte é aqui na exibição, e não só no que chega novo.
+  const senderIsContact = String(message.sender?.type || '').toLowerCase() === 'contact';
+  // Mensagem AUTOMÁTICA também não leva nome de pessoa.
+  //
+  // O follow-up grava o eco no chat com um usuário real como autor (o primeiro
+  // administrador da conta), porque a mensagem precisa de um autor pra existir. Na
+  // tela isso saía como "Atendente — Fulano", dando a entender que aquela pessoa
+  // escreveu e mandou. A IA Vendedora nunca teve esse problema e serve de régua:
+  // disparo automático aparece só como "Atendente".
+  //
+  // O descarte é na EXIBIÇÃO, pelo mesmo motivo do caso acima: o que já foi enviado
+  // continua gravado com o autor antigo, e também precisa parar de mostrar o nome.
+  const isAutomated = Boolean(message.content_attributes?.automated);
+  const agentDisplayName = senderIsContact || isAutomated ? '' : message.sender?.name;
+
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // 🔧 REPLY TO: Buscar mensagem original quando content_attributes.in_reply_to ou in_reply_to_external_id existe
@@ -409,7 +431,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             <Badge variant="outline" className="h-4 px-1 text-[10px] font-medium bg-primary/10 text-primary border border-primary/30 dark:bg-primary/20 dark:text-primary dark:border-primary/50">
               {t('messages.messageBubble.agent.badge')}
             </Badge>
-            {message.sender?.name || t('messages.messageBubble.agent.fallback')}
+            {agentDisplayName || t('messages.messageBubble.agent.fallback')}
           </div>
         )}
 
@@ -425,7 +447,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {renderContextMenu(
           <div
-            className={`rounded-lg px-3 py-2 ${isDeleted ? 'cursor-default' : 'cursor-pointer'} ${isThreadReply
+            data-own={isOwn ? '1' : '0'}
+            data-private={isPrivate ? '1' : '0'}
+            data-bot={isFromBot ? '1' : '0'}
+            className={`wa-msg-bubble rounded-lg px-3 py-2 ${isDeleted ? 'cursor-default' : 'cursor-pointer'} ${isThreadReply
               ? 'rounded-tl-md' // Canto superior esquerdo mais suave para replies
               : ''
               } ${isPrivate
@@ -477,10 +502,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             )}
 
             <div className={isDeleted ? 'opacity-60' : ''}>{renderMessageContent()}</div>
+            {showTimestamp && (
+              <div className="wa-time flex justify-end mt-0.5 -mb-1">
+                <MessageStatus message={message} isOwn={isOwn} onRetry={onRetry} />
+              </div>
+            )}
           </div>,
         )}
-
-        {showTimestamp && <MessageStatus message={message} isOwn={isOwn} onRetry={onRetry} />}
       </div>
 
       {/* Alert Dialog para confirmação de exclusão */}

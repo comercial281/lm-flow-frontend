@@ -23,6 +23,7 @@ import {
   AlertTriangle,
   User as UserIcon,
   Users,
+  UserMinus,
   Tag,
   Trash2,
   X,
@@ -44,6 +45,7 @@ import QuickFilters from '../filters/QuickFilters';
 import GlobalSearchPanel from '../search/GlobalSearchPanel';
 import { BaseFilter } from '@/types/core';
 import InboxesService from '@/services/channels/inboxesService';
+import { mayRead } from '@/store/appDataStore';
 import type { Inbox } from '@/types/channels/inbox';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -78,6 +80,8 @@ interface ChatSidebarProps {
   onAssignAgent: (conversation: Conversation) => void;
   onAssignTeam: (conversation: Conversation) => void;
   onAssignTag: (conversation: Conversation) => void;
+  onUnassignAgent: (conversation: Conversation) => void;
+  onUnassignTeam: (conversation: Conversation) => void;
   onDeleteConversation: (conversation: Conversation) => void;
 }
 
@@ -112,6 +116,8 @@ const ChatSidebar = ({
   onAssignAgent,
   onAssignTeam,
   onAssignTag,
+  onUnassignAgent,
+  onUnassignTeam,
   onDeleteConversation,
 }: ChatSidebarProps) => {
   const { t } = useLanguage('chat');
@@ -144,9 +150,13 @@ const ChatSidebar = ({
   >([]);
   useEffect(() => {
     let alive = true;
-    InboxesService.list()
+    // Só pede se o cargo lê instâncias: sem a guarda, quem não lê levava um erro
+    // vermelho ao abrir a caixa. O seletor já some sozinho quando a lista vem
+    // vazia (precisa de mais de uma instância para aparecer).
+    mayRead('inboxes.read')
+      .then((pode) => (pode ? InboxesService.list() : null))
       .then((res) => {
-        if (!alive) return;
+        if (!alive || !res) return;
         setInboxOptions(
           (res.data ?? []).map((i: Inbox) => {
             const ch = i.channel_type?.split('::')[1] || '';
@@ -557,6 +567,27 @@ const ChatSidebar = ({
             {t('chatHeader.actions.assignTag')}
           </ContextMenuItem>
 
+          {/* Desvincular corretor/equipe — só aparece quando há vínculo */}
+          {conversation.assignee_id && (
+            <ContextMenuItem
+              onClick={e => { e.stopPropagation(); onUnassignAgent(conversation); }}
+              className="flex items-center gap-2"
+            >
+              <UserMinus className="h-4 w-4" />
+              {t('chatHeader.actions.unassignAgent')}
+            </ContextMenuItem>
+          )}
+
+          {conversation.team_id && (
+            <ContextMenuItem
+              onClick={e => { e.stopPropagation(); onUnassignTeam(conversation); }}
+              className="flex items-center gap-2"
+            >
+              <UserMinus className="h-4 w-4" />
+              {t('chatHeader.actions.unassignTeam')}
+            </ContextMenuItem>
+          )}
+
           <ContextMenuSeparator />
 
           <ContextMenuItem
@@ -577,7 +608,7 @@ const ChatSidebar = ({
       data-tour="chat-sidebar"
       className={`
         ${mobileView === 'list' ? 'flex' : 'hidden'} md:flex
-        w-full min-w-0 md:w-80 md:shrink-0 border-r bg-card/50 flex-col h-full
+        w-full md:w-80 border-r bg-card/50 flex-col h-full
       `}
     >
       {/* Search and Filter Header */}
@@ -631,8 +662,8 @@ const ChatSidebar = ({
           </button>
         </div>
 
-        <div className="flex min-w-0 items-center justify-between gap-2">
-          <span className="min-w-0 truncate text-sm text-muted-foreground">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">
             {pagination?.total != null && pagination.total > visibleConversations.length
               ? `${visibleConversations.length} / ${pagination.total}`
               : visibleConversations.length}{' '}
@@ -640,7 +671,7 @@ const ChatSidebar = ({
               ? t('chatSidebar.conversation')
               : t('chatSidebar.conversations')}
           </span>
-          <div className="flex shrink-0 items-center gap-2" data-tour="chat-filter-button">
+          <div className="flex items-center gap-2" data-tour="chat-filter-button">
             <QuickFilters
               filters={conversationFilters}
               inboxOptions={inboxOptions}

@@ -3,7 +3,7 @@ import {
   Card, CardContent, Button, Switch,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/ds';
-import { Check, Users, Settings, Info, UserCircle, Loader2 } from 'lucide-react';
+import { Check, Users, Settings, Info, Sparkles, UserCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -35,6 +35,7 @@ export default function CollaboratorsForm({
   const [agents, setAgents] = useState<AgentChannel[]>([]);
   const [savingOwner, setSavingOwner] = useState(false);
   const [selectedAgents, setSelectedAgents] = useState<AgentChannel[]>([]);
+  const [autoGrantedIds, setAutoGrantedIds] = useState<Set<string>>(new Set());
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
   const [isUpdatingAgents, setIsUpdatingAgents] = useState(false);
   const [enableAutoAssignment, setEnableAutoAssignment] = useState(initialAutoAssignment);
@@ -66,7 +67,18 @@ export default function CollaboratorsForm({
           id: String(agent.id),
         })),
       );
-      setSelectedAgents(normalizedMembers);
+      setAutoGrantedIds(
+        new Set(normalizedMembers.filter(m => m.auto_granted).map(m => String(m.id))),
+      );
+      /* MARCADO = "um humano escolheu que essa pessoa atende esta instância".
+         Quem só tem acesso automático (é dona de um lead que fala por aqui) fica
+         DESMARCADO de propósito: ela não entra na fila de leads novos, e tentar
+         desmarcá-la é recusado lá atrás para ela não perder o próprio lead. Como
+         a tela mostrava marcada, o gestor desmarcava, salvava, e a pessoa voltava
+         marcada no recarregamento — sem aviso nenhum. Agora ela aparece embaixo,
+         com selo e motivo; marcar continua funcionando e significa promovê-la a
+         atendente de verdade. */
+      setSelectedAgents(normalizedMembers.filter(m => !m.auto_granted));
     } catch (error) {
       console.error('Error loading collaborators data:', error);
       toast.error(t('settings.collaborators.errors.loadError'));
@@ -342,6 +354,14 @@ export default function CollaboratorsForm({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h5 className="font-medium text-foreground truncate">{agent.name}</h5>
+                        {autoGrantedIds.has(agentId) && !isSelected && (
+                          <span
+                            className="flex items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] font-normal text-muted-foreground"
+                            title="O sistema liberou esta instância para a pessoa conseguir abrir os leads que já são dela. Ela só vê os leads dela aqui e não recebe leads novos. Marque para ela passar a atender esta instância de verdade."
+                          >
+                            <Sparkles className="w-3 h-3" /> acesso automático
+                          </span>
+                        )}
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             (() => {

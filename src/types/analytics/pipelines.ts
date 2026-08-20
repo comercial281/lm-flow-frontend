@@ -16,6 +16,43 @@ export interface AvailableConversationsResponse extends StandardResponse<Convers
 export interface AvailableContactsResponse extends StandardResponse<Contact[]> {}
 
 // For conversations used in pipeline modals
+/**
+ * Situação da IA Vendedora num lead. Os cinco estados são exclusivos e o backend
+ * já resolve a precedência (transferida vence pausada, que vence ativa) — a tela
+ * só pinta o que recebe.
+ *
+ * - active  = atendendo agora
+ * - paused  = o corretor desligou NESTE lead
+ * - handoff = a IA passou pro humano (decisão dela)
+ * - idle    = tem IA no canal, mas o gatilho ainda não bateu
+ * - none    = não há IA neste canal
+ */
+export type SalesAgentCardStatus = 'active' | 'paused' | 'handoff' | 'idle' | 'none';
+
+export interface SalesAgentCardState {
+  status: SalesAgentCardStatus;
+  label: string;
+  agent_id: string | null;
+}
+
+/** Um turno da IA neste lead: respondeu, pulou (com motivo) ou falhou. */
+export interface SalesAgentLeadRun {
+  status: 'replied' | 'skipped' | 'failed';
+  delivered: boolean | null;
+  reason: string | null;
+  reason_label: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+/** "Por que a IA não respondeu ESTE lead?" — resposta pronta pra tela. */
+export interface SalesAgentLeadReport {
+  state: SalesAgentCardState;
+  why: string;
+  next_step: string | null;
+  runs: SalesAgentLeadRun[];
+}
+
 export interface ConversationForModal {
   id: string;
   display_id?: string;
@@ -101,6 +138,11 @@ export interface Pipeline {
   custom_fields?: Record<string, unknown> & {
     attributes?: string[]; // Array of attribute keys created at pipeline level
   };
+  /**
+   * Origens de lead que entram AUTOMATICAMENTE nesta pipeline.
+   * null/undefined = herda o padrão do cliente; [] = nada entra automático.
+   */
+  pipe_entry_sources?: string[] | null;
   created_at: string | number;
   updated_at: string | number;
   created_by?: {
@@ -153,6 +195,11 @@ export interface CreatePipelineData {
   is_active?: boolean;
   stages?: PipelineStage[];
   team_ids?: string[];
+  /**
+   * Origens de lead que entram AUTOMATICAMENTE nesta pipeline.
+   * undefined = não configurado (herda o padrão do cliente); [] = nada entra automático.
+   */
+  pipe_entry_sources?: string[] | null;
 }
 
 export interface UpdatePipelineData extends Partial<CreatePipelineData> {
@@ -221,6 +268,17 @@ export interface PipelineItem {
     title?: string | null;
     code?: string | null;
   } | null;
+  // Espelho da origem do lead (backend: LeadOrigin::Recorder). As chaves variam
+  // por origem — anúncio, formulário, landing, manual — daí o índice aberto.
+  // `manual_origin` é a origem escrita à mão ("Indicação", "Cliente de carteira").
+  lead_origin?: { source?: string; manual_origin?: string; [key: string]: unknown } | null;
+  /**
+   * A IA Vendedora está cuidando deste lead? Vem pré-calculado pelo backend
+   * (SalesAgents::ConversationState) — mesma fonte que o runner usa pra decidir
+   * se responde, pra a bolinha do card não contar uma história diferente do que
+   * acontece no WhatsApp.
+   */
+  sales_agent?: SalesAgentCardState | null;
   // Roleta que atribuiu este lead (histórico em broker_assignments). null = nunca
   // passou por sorteio — atribuído na mão, importado, ou automação direta.
   roleta?: {

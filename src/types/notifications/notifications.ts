@@ -14,7 +14,15 @@ export interface Notification {
   notification_type: string;
   primary_actor_id: string;
   primary_actor: { id: string } | null;
+  // Nem toda notificação aponta para uma Conversation: as de lead
+  // (lead_created / lead_assigned) apontam para um Contact, porque o lead pode
+  // existir sem nunca ter gerado conversa.
+  primary_actor_type?: string;
   push_message_title: string;
+  push_message_body?: string;
+  // Destino do clique, calculado pelo backend (Notification#target_url).
+  // Ausente em notificações antigas — daí o fallback em NotificationPanel.
+  url?: string;
   last_activity_at: string;
   read_at: string | null;
   primary_actor_meta?: NotificationMeta | null;

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button, Input, Textarea } from '@/components/ui/ds';
 import {
   X, Trash2, Type, Mic, Image as ImageIcon, Video, FileText,
-  ChevronUp, ChevronDown, Square, Upload, Clock, AlertCircle, Loader2,
+  ChevronUp, ChevronDown, Square, Upload, Clock, AlertCircle, Loader2, Copy, Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { FunnelItemKind, TemplateVariable } from '@/types/messageFunnels';
@@ -23,6 +23,10 @@ export interface SequenceDraftItem {
   uiKey: string;
   kind: FunnelItemKind;
   text_content: string | null;
+  /** Variações EXTRAS do texto (além de text_content). No disparo, o backend
+   *  sorteia UMA por destinatário entre [text_content, ...text_variations].
+   *  Só usado em itens de texto. Vazio/ausente = comportamento antigo. */
+  text_variations?: string[];
   media_url: string | null;
   media_filename: string | null;
   media_caption: string | null;
@@ -77,9 +81,12 @@ interface Props {
   variables: TemplateVariable[];
   /** Presente = sobe o arquivo na hora e devolve a URL pública (modo Disparo). */
   uploadMedia?: (file: File) => Promise<{ url: string }>;
+  /** Libera variações de texto (spintax). Só o Disparo em Massa persiste isso —
+   *  funil/follow-up/agendamento NÃO, então fica escondido lá pra não perder em silêncio. */
+  allowTextVariations?: boolean;
 }
 
-export default function MessageSequenceEditor({ items, onChange, variables, uploadMedia }: Props) {
+export default function MessageSequenceEditor({ items, onChange, variables, uploadMedia, allowTextVariations }: Props) {
   const updateItem = (uiKey: string, patch: Partial<SequenceDraftItem>) => {
     onChange(items.map(it => (it.uiKey === uiKey ? { ...it, ...patch } : it)));
   };
@@ -102,6 +109,17 @@ export default function MessageSequenceEditor({ items, onChange, variables, uplo
     onChange([...items, newSequenceItem(kind)]);
   };
 
+  const duplicateItem = (uiKey: string) => {
+    const idx = items.findIndex(it => it.uiKey === uiKey);
+    if (idx < 0) return;
+    // Cópia logo abaixo do original. uiKey novo; serverItemId zerado pra o backend
+    // criar um item novo (não sobrescrever o original ao salvar).
+    const copy: SequenceDraftItem = { ...items[idx], uiKey: crypto.randomUUID(), serverItemId: undefined };
+    const next = [...items];
+    next.splice(idx + 1, 0, copy);
+    onChange(next);
+  };
+
   return (
     <div>
       <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
@@ -116,8 +134,10 @@ export default function MessageSequenceEditor({ items, onChange, variables, uplo
             totalCount={items.length}
             variables={variables}
             uploadMedia={uploadMedia}
+            allowTextVariations={allowTextVariations}
             onUpdate={patch => updateItem(it.uiKey, patch)}
             onRemove={() => removeItem(it.uiKey)}
+            onDuplicate={() => duplicateItem(it.uiKey)}
             onMoveUp={() => moveItem(it.uiKey, 'up')}
             onMoveDown={() => moveItem(it.uiKey, 'down')}
           />
@@ -136,14 +156,17 @@ interface ItemEditorProps {
   totalCount: number;
   variables: TemplateVariable[];
   uploadMedia?: (file: File) => Promise<{ url: string }>;
+  allowTextVariations?: boolean;
   onUpdate: (patch: Partial<SequenceDraftItem>) => void;
   onRemove: () => void;
+  onDuplicate: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
 }
 
 function ItemEditor({
-  item, index, totalCount, variables, uploadMedia, onUpdate, onRemove, onMoveUp, onMoveDown,
+  item, index, totalCount, variables, uploadMedia, allowTextVariations,
+  onUpdate, onRemove, onDuplicate, onMoveUp, onMoveDown,
 }: ItemEditorProps) {
   const Icon = KIND_ICONS[item.kind];
   const color = KIND_COLORS[item.kind];
@@ -160,8 +183,10 @@ function ItemEditor({
   async function selectFile(file: File) {
     if (uploadMedia) {
       // Modo Disparo: sobe na hora e guarda a URL pública.
-      if (file.size > 16 * 1024 * 1024) {
-        toast.error('Arquivo muito grande (máx. 16MB).');
+      // 200MB: WhatsApp entrega documento grande (book de imóvel passa de 16MB).
+      const MAX_UPLOAD_MB = 200;
+      if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+        toast.error(`Arquivo muito grande (máx. ${MAX_UPLOAD_MB}MB).`);
         return;
       }
       setUploading(true);
@@ -256,6 +281,10 @@ function ItemEditor({
                   onClick={onMoveDown} disabled={index === totalCount - 1} aria-label="Mover pra baixo">
             <ChevronDown size={14} />
           </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7"
+                  onClick={onDuplicate} aria-label="Duplicar" title="Duplicar">
+            <Copy size={14} />
+          </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
                   onClick={onRemove} disabled={totalCount === 1} aria-label="Remover">
             <Trash2 size={14} />
@@ -280,6 +309,13 @@ function ItemEditor({
             currentValue={item.text_content ?? ''}
             onChange={next => onUpdate({ text_content: next })}
           />
+          {allowTextVariations && (
+            <TextVariations
+              variations={item.text_variations ?? []}
+              variables={variables}
+              onChange={next => onUpdate({ text_variations: next })}
+            />
+          )}
         </>
       )}
 
@@ -341,13 +377,22 @@ function ItemEditor({
                 </Button>
               </div>
             ) : (
-              <Button
-                variant="outline"
-                onClick={startRec}
-                className="w-full justify-center gap-2 border-dashed"
-              >
-                <Mic size={14} /> Gravar áudio
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={startRec}
+                  className="flex-1 justify-center gap-2 border-dashed"
+                >
+                  <Mic size={14} /> Gravar áudio
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-1 justify-center gap-2 border-dashed"
+                >
+                  <Upload size={14} /> Subir arquivo
+                </Button>
+              </div>
             )
           ) : (
             <Button
@@ -425,6 +470,91 @@ function ItemEditor({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Variações de texto (spintax) ─────────────────────────────────────────────
+// O disparo sorteia UMA mensagem por lead entre a principal (text_content) e
+// estas variações. Reduz "cara de robô" e risco de bloqueio no WhatsApp.
+
+interface TextVariationsProps {
+  variations: string[];
+  variables: TemplateVariable[];
+  onChange: (next: string[]) => void;
+}
+
+function TextVariations({ variations, variables, onChange }: TextVariationsProps) {
+  const add = () => onChange([...variations, '']);
+  const update = (i: number, val: string) => onChange(variations.map((v, idx) => (idx === i ? val : v)));
+  const remove = (i: number) => onChange(variations.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="mt-2 space-y-2">
+      {variations.length > 0 && (
+        <p className="text-[11px] text-muted-foreground">
+          Cada lead recebe UMA mensagem sorteada entre a principal e as variações abaixo.
+        </p>
+      )}
+      {variations.map((v, i) => (
+        <VariationField
+          key={i}
+          value={v}
+          index={i}
+          variables={variables}
+          onChange={val => update(i, val)}
+          onRemove={() => remove(i)}
+        />
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={add}
+        className="gap-1 h-7 border-dashed"
+        title="Adicionar outra forma de escrever a mesma mensagem"
+      >
+        <Plus size={12} /> Variação
+      </Button>
+    </div>
+  );
+}
+
+interface VariationFieldProps {
+  value: string;
+  index: number;
+  variables: TemplateVariable[];
+  onChange: (val: string) => void;
+  onRemove: () => void;
+}
+
+function VariationField({ value, index, variables, onChange, onRemove }: VariationFieldProps) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  return (
+    <div className="rounded-md border border-dashed border-border/70 bg-background/40 p-2">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-[11px] font-semibold text-muted-foreground">
+          Variação {index + 2}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 text-destructive"
+          onClick={onRemove}
+          aria-label="Remover variação"
+        >
+          <X size={12} />
+        </Button>
+      </div>
+      <Textarea
+        ref={ref}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="Outra forma de dizer a mesma coisa..."
+        rows={2}
+        className="resize-none"
+      />
+      <VariableChips variables={variables} targetRef={ref} currentValue={value} onChange={onChange} />
     </div>
   );
 }

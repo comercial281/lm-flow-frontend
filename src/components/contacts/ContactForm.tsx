@@ -29,6 +29,7 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { Contact, ContactFormData } from '@/types/contacts';
+import { useAccountUsers } from '@/hooks/useAccountUsers';
 import ContactLabels from './ContactLabels';
 import CustomAttributes from './CustomAttributes';
 import CompanyMultiSelect from './CompanyMultiSelect';
@@ -37,6 +38,8 @@ import { Label as LabelType } from '@/types/settings';
 
 import { PhoneInput } from '@/components/shared/PhoneInput';
 import { TaxIdInput } from '@/components/shared/TaxIdInput';
+import { ManualOriginInput } from '@/components/shared/ManualOriginInput';
+import { readManualOrigin } from '@/constants/manualLeadOrigin';
 import { validateTaxId, getTaxIdLabel } from '@/utils/validation';
 import '@/components/shared/PhoneInput.css';
 import { parsePhoneNumber, type Country } from 'react-phone-number-input';
@@ -78,6 +81,10 @@ interface FormData {
   company_ids: string[];
   avatar?: File;
   removeAvatar?: boolean;
+  /** Origem escrita à mão — vai pro backend como `lead_origin_note`. */
+  leadOriginNote: string;
+  /** Responsável pelo contato — vai pro backend como `default_assignee_id`. */
+  defaultAssigneeId: string | null;
 }
 
 const initialFormData: FormData = {
@@ -107,6 +114,8 @@ const initialFormData: FormData = {
   labels: [],
   custom_attributes: {},
   company_ids: [],
+  leadOriginNote: '',
+  defaultAssigneeId: null,
 };
 
 // countryOptions moved inside component to access t()
@@ -125,6 +134,8 @@ export default function ContactForm({
   const [availableLabels, setAvailableLabels] = useState<LabelType[]>([]);
   const [phoneCountry, setPhoneCountry] = useState<Country>('BR'); // Track phone country
   const [customAttributes, setCustomAttributes] = useState<Record<string, unknown>>({});
+  // Atendentes da conta pro select de Responsável
+  const { users: accountUsers } = useAccountUsers();
 
   const countryOptions = [
     { value: 'BR', label: t('form.countries.BR'), name: 'Brazil' },
@@ -182,6 +193,8 @@ export default function ContactForm({
         labels: contact.labels || [],
         custom_attributes: {},
         company_ids: contact.companies?.map(c => c.id) || [],
+        leadOriginNote: readManualOrigin(contact.additional_attributes?.lead_origin),
+        defaultAssigneeId: contact.default_assignee_id ? String(contact.default_assignee_id) : null,
       });
 
       setCustomAttributes(contact.custom_attributes || {});
@@ -336,6 +349,11 @@ export default function ContactForm({
       custom_attributes: customAttributes,
       company_ids: formData.company_ids,
       avatar: formData.avatar,
+      // Responsável pelo contato — as conversas dele nascem atribuídas a esse
+      // usuário (Conversation#assign_from_contact_default no backend).
+      default_assignee_id: formData.defaultAssigneeId,
+      // Só pessoa tem origem de lead; empresa não passa pelo funil.
+      lead_origin_note: formData.type === 'person' ? formData.leadOriginNote.trim() : undefined,
     };
 
     onSubmit(submitData);
@@ -572,7 +590,46 @@ export default function ContactForm({
             />
             {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber}</p>}
           </div>
+
+          {/* Responsável pelo contato — mesma lista de atendentes do card do
+              funil; as conversas do contato nascem atribuídas a ele. */}
+          <div className="space-y-2">
+            <Label htmlFor="defaultAssignee">Responsável</Label>
+            <Select
+              value={formData.defaultAssigneeId ?? 'unassigned'}
+              onValueChange={value =>
+                setFormData(prev => ({
+                  ...prev,
+                  defaultAssigneeId: value === 'unassigned' ? null : value,
+                }))
+              }
+              disabled={loading}
+            >
+              <SelectTrigger id="defaultAssignee">
+                <SelectValue placeholder="Sem responsável" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Sem responsável</SelectItem>
+                {accountUsers.map(user => (
+                  <SelectItem key={user.id} value={String(user.id)}>
+                    {user.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+
+        {/* Origem escrita — lead cadastrado na mão não tem anúncio pra rastrear,
+            quem sabe de onde ele veio é quem está cadastrando. */}
+        {isPerson && (
+          <ManualOriginInput
+            id="lead_origin_note"
+            value={formData.leadOriginNote}
+            onChange={value => setFormData(prev => ({ ...prev, leadOriginNote: value }))}
+            disabled={loading}
+          />
+        )}
       </div>
 
       <Separator />

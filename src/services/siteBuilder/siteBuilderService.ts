@@ -29,6 +29,12 @@ export interface SiteTracking {
   facebook_pixel_id?: string | null;
 }
 
+/** Seções liga/desliga da home do portal. Ausência de chave = visível. */
+export interface SiteSections {
+  stats?: boolean;        // faixa de números (imóveis disponíveis, cidades atendidas…)
+  lead_capture?: boolean; // bloco "Não achou? A gente encontra pra você"
+}
+
 /** Proposta da IA (ai_setup): só o que estava no material; campo sem base = null. */
 export interface AiSetupProposal {
   name?: string | null;
@@ -51,6 +57,10 @@ export interface Site {
   active: boolean;
   published: boolean;
   branding: SiteBranding;
+  /** Vídeo do banner da home do portal (armazenado em settings no backend). */
+  hero_video_url?: string | null;
+  /** Seções liga/desliga da home (armazenado em settings no backend). */
+  sections?: SiteSections;
   contact: SiteContact;
   social_links?: Record<string, string>;
   seo: SiteSeo;
@@ -58,6 +68,10 @@ export interface Site {
   pages_count?: number;
   articles_count?: number;
   leads_count?: number;
+  /** Roteamento default dos leads do site: pipeline/etapa/tag de destino. */
+  lead_pipeline_id?: string | null;
+  lead_stage_id?: string | null;
+  lead_label_id?: string | null;
   /** Template único da página de imóvel (portal Produto A). Só vem no show (deep). */
   property_page_template?: BlockInstance[];
   created_at: string;
@@ -85,7 +99,7 @@ export interface SiteArticle {
   site_id: string;
   title: string;
   slug: string;
-  content?: string | null;
+  body_html?: string | null;
   excerpt?: string | null;
   cover_image_url?: string | null;
   status: 'draft' | 'published' | 'archived';
@@ -107,6 +121,8 @@ export interface SiteFormData {
   primary_color?: string;
   accent_color?: string;
   font_family?: string;
+  hero_video_url?: string;
+  sections?: SiteSections;
   contact_phone?: string;
   contact_whatsapp?: string;
   contact_email?: string;
@@ -118,6 +134,9 @@ export interface SiteFormData {
   gtm_id?: string;
   ga4_measurement_id?: string;
   facebook_pixel_id?: string;
+  lead_pipeline_id?: string | null;
+  lead_stage_id?: string | null;
+  lead_label_id?: string | null;
 }
 
 export interface PageFormData {
@@ -134,7 +153,7 @@ export interface PageFormData {
 
 export interface ArticleFormData {
   title: string;
-  content?: string;
+  body_html?: string;
   excerpt?: string;
   cover_image_url?: string;
   meta_title?: string;
@@ -189,9 +208,11 @@ export const siteBuilderService = {
   /** Upload genérico (logo, imagens do site) — POST /uploads, devolve URL pública. */
   async uploadAsset(file: File): Promise<{ url: string }> {
     const fd = new FormData();
-    fd.append('file', file);
+    // Api::V1::UploadController espera o campo `attachment` (não `file`).
+    fd.append('attachment', file);
     const res = await api.post('/uploads', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-    return (res.data as { data: { url: string } }).data;
+    // O controller devolve a URL em `data.file_url`.
+    return { url: (res.data as { data: { file_url: string } }).data.file_url };
   },
 
   /**
@@ -252,6 +273,12 @@ export const siteBuilderService = {
   async listArticles(siteId: string): Promise<SiteArticle[]> {
     const res = await api.get(`/sites/${siteId}/articles`);
     return (res.data as { data: SiteArticle[] }).data;
+  },
+
+  /** Busca 1 artigo COM o corpo (`body_html`) — a listagem não inclui o corpo. */
+  async getArticle(siteId: string, articleId: string): Promise<SiteArticle> {
+    const res = await api.get(`/sites/${siteId}/articles/${articleId}`);
+    return (res.data as { data: SiteArticle }).data;
   },
 
   async createArticle(siteId: string, data: ArticleFormData): Promise<SiteArticle> {

@@ -577,7 +577,11 @@
         "unknown": "Desconhecido"
       },
       "valueLabel": "Valor Total:",
-      "system": "Sistema"
+      "system": "Sistema",
+      "call": "Ligar",
+      "schedule": "Agendar",
+      "whatsapp": "WhatsApp",
+      "openChat": "Abrir conversa"
     },
     "conversation": {
       "unknownUser": "Usuário Desconhecido",

@@ -9,6 +9,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 
 import { useLanguage } from '@/hooks/useLanguage';
 import { useConversationPresence } from '@/hooks/useConversationPresence';
+import ClaimLeadBanner from '@/components/chat/assignment/ClaimLeadBanner';
 
 // Hooks customizados
 import { useConversationHandlers } from '@/hooks/chat/useConversationHandlers';
@@ -248,10 +249,11 @@ const Chat = () => {
             return;
           }
 
-          // 🔒 AGUARDAR: Aguardar carregamento inicial das conversas (pelo menos uma tentativa)
-          if (conversationsCount === 0 && !conversations.state.conversationsError) {
-            return;
-          }
+          // NÃO retornar aqui quando a lista vem vazia: o carregamento já terminou
+          // (conversationsLoading foi checado acima) e uma conversa alvo na URL pode
+          // simplesmente não estar na lista — ex.: recém-criada com status fora do
+          // filtro padrão (status=open), ou lista filtrada. Nesse caso seguimos para
+          // o fallback loadSpecificConversation, que a carrega direto por ID.
 
           // 🔍 VERIFICAR: Se conversa UUID existe na lista carregada
           let targetConversation = conversations.getConversation(conversationIdStr);
@@ -476,6 +478,22 @@ const Chat = () => {
     [assignmentHandlers],
   );
 
+  const handleUnassignAgent = useCallback(
+    async (conversation: Conversation) => {
+      await assignmentHandlers.handleUnassignAgent(conversation);
+      await reloadCurrentFilters();
+    },
+    [assignmentHandlers, reloadCurrentFilters],
+  );
+
+  const handleUnassignTeam = useCallback(
+    async (conversation: Conversation) => {
+      await assignmentHandlers.handleUnassignTeam(conversation);
+      await reloadCurrentFilters();
+    },
+    [assignmentHandlers, reloadCurrentFilters],
+  );
+
   const handleDeleteConversation = useCallback(
     (conversation: Conversation) => {
       const result = conversationHandlers.handleDeleteConversation(conversation);
@@ -518,6 +536,10 @@ const Chat = () => {
         assignmentType,
         selectedIds,
       );
+      // Recarrega a lista pra refletir o novo vínculo na hora (assignee_id/team_id).
+      // O endpoint de atribuição não devolve a conversa completa, então sem esse
+      // reload o item "Desvincular" só apareceria depois de atualizar a página.
+      await reloadCurrentFilters();
     } catch (error) {
       console.error('Error in assignment:', error);
       throw error; // Re-throw to let modal handle it
@@ -682,6 +704,8 @@ const Chat = () => {
           onAssignAgent={handleAssignAgent}
           onAssignTeam={handleAssignTeam}
           onAssignTag={handleAssignTag}
+          onUnassignAgent={handleUnassignAgent}
+          onUnassignTeam={handleUnassignTeam}
           onDeleteConversation={handleDeleteConversation}
         />
 
@@ -715,9 +739,19 @@ const Chat = () => {
                 onAssignAgent={handleAssignAgent}
                 onAssignTeam={handleAssignTeam}
                 onAssignTag={handleAssignTag}
+                onUnassignAgent={handleUnassignAgent}
+                onUnassignTeam={handleUnassignTeam}
                 onDeleteConversation={handleDeleteConversation}
                 unreadCount={conversations.getUnreadCount(selectedConversation.id) || 0}
               />
+
+              {/* Leilão — lead sem dono, quem assumir primeiro leva */}
+              {!selectedConversation.assignee_id && (
+                <ClaimLeadBanner
+                  conversationId={String(selectedConversation.id)}
+                  onClaimed={() => conversations.loadSpecificConversation(String(selectedConversation.id))}
+                />
+              )}
 
               {/* Presença — outro agente está nessa conversa */}
               {othersPresent.length > 0 && (

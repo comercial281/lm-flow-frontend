@@ -5,7 +5,6 @@ export interface CapiStageRule {
   event_name: string;            // 'Lead' | 'Qualificado' | 'Purchase' | ...
   enabled: boolean;
   to_client: boolean;            // dispara no pixel do cliente
-  to_lm: boolean;                // dispara no dataset geral da Leal Mídia
   value_field?: string | null;   // p/ Purchase: 'card_value' ou atributo custom
   intent?: 'lookalike' | 'exclusion' | 'none';
 }
@@ -27,11 +26,9 @@ export interface CapiConfig {
   is_enabled: boolean;
   pixel_id: string | null;
   access_token_set: boolean;     // backend nunca devolve o token cru
-  contribute_to_lm: boolean;
   test_event_code: string | null;
   default_currency: string;
   stage_map: Record<string, CapiStageRule>;
-  lm_pixel_configured: boolean;  // dataset geral da Leal Mídia está configurado?
   known_events: string[];
   intents: string[];
   pipelines: CapiPipeline[];
@@ -42,7 +39,6 @@ export interface CapiConfigUpdate {
   is_enabled?: boolean;
   pixel_id?: string | null;
   access_token?: string;         // só enviar quando o usuário digitar um novo
-  contribute_to_lm?: boolean;
   test_event_code?: string | null;
   default_currency?: string;
   stage_map?: Record<string, CapiStageRule>;

@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Building2, Copy, ExternalLink, GitBranch, Loader2, Megaphone, Plus, Rocket, Trash2 } from 'lucide-react';
+import { Building2, Copy, ExternalLink, GitBranch, LayoutTemplate, Loader2, Megaphone, Plus, Rocket, Sparkles, Trash2 } from 'lucide-react';
 import {
   landingPageService,
   type LandingPageDTO,
 } from '@/services/landingPages/landingPageService';
+import { landingTemplatesService } from '@/services/landingPages/landingTemplatesService';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import { getTenantSlug } from '@/services/core/tenant';
+import IconActionButton from '@/components/base/IconActionButton';
 import LeadRoutingModal from './LeadRoutingModal';
+import CreateLandingWizard from '@/features/landing/wizard/CreateLandingWizard';
 
 function slugify(name: string): string {
   return name
@@ -32,6 +35,7 @@ export default function LandingsListPage() {
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [routingPage, setRoutingPage] = useState<LandingPageDTO | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
 
   const reload = async (sid: string) => setLandings(await landingPageService.listLandings(sid));
 
@@ -103,6 +107,23 @@ export default function LandingsListPage() {
     }
   };
 
+  const handleSaveAsTemplate = async (l: LandingPageDTO) => {
+    const name = window.prompt('Nome do template:', `${l.title} (template)`)?.trim();
+    if (!name) return;
+    // Na raiz (super-admin, sem tenant) dá pra marcar como GLOBAL (todos os clientes).
+    const isRoot = getTenantSlug() == null;
+    const scope: 'tenant' | 'global' =
+      isRoot && window.confirm('Disponibilizar para TODOS os clientes?\n\nOK = todos os clientes (global)\nCancelar = só esta conta')
+        ? 'global'
+        : 'tenant';
+    try {
+      await landingTemplatesService.createFromPage(l.id, name, scope);
+      toast.success(scope === 'global' ? 'Template GLOBAL salvo (todos os clientes)' : 'Template salvo — já aparece no assistente');
+    } catch {
+      toast.error('Erro ao salvar o template');
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!siteId) return;
     try {
@@ -133,14 +154,20 @@ export default function LandingsListPage() {
           placeholder="Nome da nova landing (ex: Campanha Lançamento Setembro)"
           className="min-w-[260px] flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
         />
-        <button
-          type="button"
+        <IconActionButton
+          label="Nova landing do zero (digite o nome ao lado)"
+          icon={creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           onClick={handleCreate}
           disabled={creating || !newName.trim()}
+        />
+        <button
+          type="button"
+          onClick={() => setShowWizard(true)}
+          disabled={!siteId}
           className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40"
         >
-          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          Nova landing do zero
+          <Sparkles className="h-4 w-4" />
+          Criar com assistente
         </button>
       </div>
 
@@ -167,6 +194,10 @@ export default function LandingsListPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => handleSaveAsTemplate(l)} title="Salvar como template"
+                      className="text-muted-foreground hover:text-primary">
+                      <LayoutTemplate className="h-4 w-4" />
+                    </button>
                     <button type="button" onClick={() => setRoutingPage(l)} title="Roteamento do lead (pipeline/coluna/tag)"
                       className="text-muted-foreground hover:text-primary">
                       <GitBranch className="h-4 w-4" />
@@ -226,6 +257,10 @@ export default function LandingsListPage() {
             reload(siteId);
           }}
         />
+      )}
+
+      {showWizard && siteId && (
+        <CreateLandingWizard siteId={siteId} onClose={() => setShowWizard(false)} />
       )}
     </div>
   );

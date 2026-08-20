@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useAccountUsers } from '@/hooks/useAccountUsers';
 import {
@@ -31,7 +30,7 @@ import {
   PopoverTrigger,
   Badge,
 } from '@/components/ui/ds';
-import { Plus, Trash2, ChevronsUpDown, Check, User, Phone, Mail, History, Loader2, Tag, Shuffle, X, RefreshCw, Home, Settings2, Link, MessageSquare, Megaphone, MessageCircle } from 'lucide-react';
+import { Plus, Trash2, ChevronsUpDown, Check, User, Phone, Mail, History, Loader2, Tag, Shuffle, X, RefreshCw, Home, Settings2, Link, MessageSquare, Megaphone } from 'lucide-react';
 import { PipelineItem, PipelineStage, Pipeline, PipelineTask, CreateTaskData, UpdateTaskData, PipelineServiceDefinition } from '@/types/analytics';
 import pipelineServiceDefinitionsService from '@/services/pipelines/pipelineServiceDefinitionsService';
 import PipelineItemCustomAttributes from './PipelineItemCustomAttributes';
@@ -43,13 +42,19 @@ import CardActionsPanel from './CardActionsPanel';
 import CardNotesTab from './CardNotesTab';
 import CreateRoletaModal from './CreateRoletaModal';
 import CardPropertyInterests from './CardPropertyInterests';
+import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
+import { ManualOriginInput } from '@/components/shared/ManualOriginInput';
+import { MANUAL_ORIGIN_KEY, readManualOrigin } from '@/constants/manualLeadOrigin';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { contactEventsService } from '@/services/contacts/contactEventsService';
 import { labelsService } from '@/services/contacts/labelsService';
 import { contactsService } from '@/services/contacts/contactsService';
 import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
+import { brokerAssignmentsService, type BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
+import RemoveFromRoletaDialog from '@/components/roleta/RemoveFromRoletaDialog';
 import { toast } from 'sonner';
 import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
@@ -74,8 +79,23 @@ interface EditItemModalProps {
   }) => void;
   // Move otimista no board (sem reload) quando a etapa muda pelas ações do card.
   onItemStageMoved?: (itemId: string, toStageId: string) => void;
+  // Tag aplicada/removida grava na hora, sem passar pelo botão Salvar. Sem este
+  // aviso o board só recarregava ao salvar o card, e quem só tirava uma tag e
+  // fechava continuava vendo o selo antigo — parecia que não tinha saído.
+  onLabelsChanged?: () => void;
   loading: boolean;
 }
+
+// Os eventos da roleta são o motivo de o gestor abrir o histórico: quem aceitou o
+// lead e por que ele trocou de corretor. Sem cor, essas linhas ficam idênticas a
+// "Etiqueta adicionada" no meio de dezenas de mensagens. O prefixo do id vem do
+// backend (Leads::RoletaTimeline); o resto do histórico segue com a cor padrão.
+const historyDotColor = (id: string): string => {
+  if (id.startsWith('roleta-aceite-')) return 'bg-emerald-500';
+  if (id.startsWith('roleta-repasse-') || id.startsWith('roleta-prazo-')) return 'bg-amber-500';
+  if (id.startsWith('roleta-diag-')) return 'bg-red-500';
+  return 'bg-primary';
+};
 
 export default function EditItemModal({
   open,
@@ -85,11 +105,16 @@ export default function EditItemModal({
   pipeline,
   onSubmit,
   onItemStageMoved,
+  onLabelsChanged,
   loading,
 }: EditItemModalProps) {
   const { t } = useLanguage('pipelines');
-  const navigate = useNavigate();
   const { users } = useAccountUsers();
+  const {
+    openLeadConversation,
+    startConversationModal,
+    opening: openingConversation,
+  } = useOpenLeadConversation();
 
   // Feature flags do tenant (ausente/ligada = true → preserva comportamento atual).
   const canNotes = useFeature('card_notes');
@@ -120,6 +145,12 @@ export default function EditItemModal({
   // o round-robin fake. Escolher uma atribui o lead via sorteio ponderado.
   const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
   const [assigningRoleta, setAssigningRoleta] = useState(false);
+
+  // Ofertas EM ABERTO deste lead. Enquanto houver uma, o lead está no meio do
+  // sorteio com prazo correndo — e é só nesse caso que faz sentido oferecer
+  // "Tirar da roleta".
+  const [ofertasAbertas, setOfertasAbertas] = useState<BrokerAssignmentDetail[]>([]);
+  const [tirandoDaRoleta, setTirandoDaRoleta] = useState(false);
   const [showCreateRoleta, setShowCreateRoleta] = useState(false);
 
   // Tags/labels
@@ -133,6 +164,12 @@ export default function EditItemModal({
   // History
   const [historyEvents, setHistoryEvents] = useState<ContactEvent[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Origem escrita à mão ("Indicação", "Cliente de carteira"...). É o ÚNICO campo
+  // da aba Origem que pode ser corrigido depois — anúncio/campanha é write-once.
+  const [manualOrigin, setManualOrigin] = useState('');
+  const [savedManualOrigin, setSavedManualOrigin] = useState('');
+  const [savingManualOrigin, setSavingManualOrigin] = useState(false);
 
   // Task modals state
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
@@ -175,31 +212,55 @@ export default function EditItemModal({
       setContactPhone(c?.phone_number || '');
       setContactEmail(c?.email || '');
 
-      // Responsável
-      const currentAssigneeId = item.conversation?.assignee?.id;
+      // Responsável: `item.assignee` (topo) já vem resolvido pelo backend —
+      // assignee da conversa OU default_assignee do contato. Lendo só da
+      // conversa, lead de formulário/anúncio abria sempre "sem responsável".
+      const currentAssigneeId = item.assignee?.id ?? item.conversation?.assignee?.id;
       setSelectedAssigneeId(currentAssigneeId ? String(currentAssigneeId) : null);
+
+      // Origem escrita: o card já traz o espelho, mas leads antigos podem só ter
+      // no contato — por isso os fallbacks.
+      const contactAdditional = (item.contact ?? item.conversation?.contact) as
+        { additional_attributes?: { lead_origin?: unknown } } | undefined;
+      const writtenOrigin =
+        readManualOrigin(item.lead_origin)
+        || readManualOrigin(contactAdditional?.additional_attributes?.lead_origin);
+      setManualOrigin(writtenOrigin);
+      setSavedManualOrigin(writtenOrigin);
 
       // Roletas reais cadastradas (só as ativas) pra escolher no select.
       roletaConfigService.getAll()
         .then(list => { if (!cancelled) setRoletas((list || []).filter(r => r.is_active)); })
         .catch(() => { if (!cancelled) setRoletas([]); });
 
-      // Labels ativas: da conversa (lead de WhatsApp) ou, na ausência de conversa
-      // (lead de cadastro/formulário Meta), do contato — senão a tag do contato
-      // ficava invisível no modal.
-      // Prefere a lista NÃO-VAZIA (conversa OU contato). `??` falhava porque o
-      // serializer pode mandar labels:[] (array vazio, que não é null) na conversa,
-      // escondendo a tag do contato. E labels do contato vêm como {name}, da
-      // conversa como {title} — por isso lemos title ?? name.
+      // Este lead está com oferta correndo agora? Falha aqui só esconde o botão
+      // "Tirar da roleta" — o corretor sem permissão de mexer na roleta recebe
+      // 403 e não deve ver o botão mesmo.
+      const contatoDoLead = item.contact?.id ?? (item.conversation as any)?.contact?.id;
+      if (contatoDoLead) {
+        brokerAssignmentsService.listForLead(String(contatoDoLead))
+          .then(list => { if (!cancelled) setOfertasAbertas(list); })
+          .catch(() => { if (!cancelled) setOfertasAbertas([]); });
+      } else {
+        setOfertasAbertas([]);
+      }
+
+      // Tags ativas: a UNIÃO das tags do contato e das da conversa.
+      // Escolher só uma das duas listas escondia tag: o selo do card lê as do
+      // CONTATO (é onde as automações escrevem) e o chat espelha na CONVERSA. Com
+      // a lista da conversa ganhando, a tag que só existia no contato ficava
+      // invisível aqui — e o "x" parecia não funcionar, porque ela voltava a
+      // aparecer na próxima abertura do card.
+      // Do contato as tags vêm como {name}, da conversa como {title}.
       const convLabels = (item.conversation as any)?.labels;
       const contactLabels = (item.contact as any)?.labels;
-      const rawLabels =
-        (Array.isArray(convLabels) && convLabels.length ? convLabels
-          : Array.isArray(contactLabels) && contactLabels.length ? contactLabels
-          : []);
-      setActiveLabels(rawLabels
-        .map((l: any) => (typeof l === 'string' ? l : (l?.title ?? l?.name ?? '')))
-        .filter(Boolean));
+      const labelNames = (raw: unknown): string[] =>
+        Array.isArray(raw)
+          ? (raw as Array<string | { title?: string; name?: string }>)
+              .map(l => (typeof l === 'string' ? l : (l?.title ?? l?.name ?? '')))
+              .filter(Boolean)
+          : [];
+      setActiveLabels([...new Set([...labelNames(contactLabels), ...labelNames(convLabels)])]);
 
       // Fetch catalog e labels disponíveis
       pipelineServiceDefinitionsService
@@ -242,7 +303,10 @@ export default function EditItemModal({
     if (!contactId) return;
     setHistoryLoading(true);
     try {
-      const res = await contactEventsService.getContactEvents(String(contactId), { limit: 50 });
+      // Sem paginação neste painel: o que não vier aqui não tem como ser buscado
+      // depois. Um lead de roleta gasta duas linhas por oferta, então 50 acabava
+      // rápido num lead com histórico de conversa.
+      const res = await contactEventsService.getContactEvents(String(contactId), { limit: 100 });
       setHistoryEvents(Array.isArray(res.data) ? res.data : []);
     } catch {
       setHistoryEvents([]);
@@ -251,13 +315,29 @@ export default function EditItemModal({
     }
   }, [item]);
 
+  // Atribuir responsável NÃO depende mais de existir conversa. Lead de
+  // formulário/anúncio entra no funil sem conversa nenhuma, e antes o campo
+  // simplesmente não aparecia — não havia como dar dono a ele pela tela.
+  //
+  // Com conversa: atribui a conversa (o backend espelha em
+  // contacts.default_assignee_id). Sem conversa: grava direto no contato, que é
+  // a fonte de verdade do dono do lead e o que uma conversa futura herda.
   const handleAssigneeChange = useCallback(async (userId: string) => {
-    if (!item?.conversation?.id) return;
-    setSelectedAssigneeId(userId === 'unassigned' ? null : userId);
+    const nextId = userId === 'unassigned' ? null : userId;
+    const contactId = item?.contact?.id ?? item?.conversation?.contact?.id;
+    if (!item?.conversation?.id && !contactId) return;
+
+    setSelectedAssigneeId(nextId);
     setAssigningUser(true);
     try {
-      await conversationAPI.assignConversation(item.conversation.id, userId === 'unassigned' ? null : userId);
-    } catch { /* silent */ } finally {
+      if (item?.conversation?.id) {
+        await conversationAPI.assignConversation(item.conversation.id, nextId);
+      } else {
+        await contactsService.updateContact(String(contactId), { default_assignee_id: nextId });
+      }
+    } catch {
+      toast.error('Erro ao definir o responsável');
+    } finally {
       setAssigningUser(false);
     }
   }, [item]);
@@ -288,17 +368,20 @@ export default function EditItemModal({
   const labelTargetContactId =
     item?.contact?.id ?? (item?.conversation as any)?.contact?.id ?? null;
 
-  // Persiste a lista de tags no alvo certo. Conversa = add/remove incremental;
-  // Contato = PATCH substitui a lista inteira (label_list no backend).
+  // Persiste a tag nos DOIS lugares onde ela vive.
+  // O contato é a fonte de verdade: é dele que sai o selo colorido no card e é
+  // nele que as automações escrevem. Gravando só na conversa, tirar a tag não
+  // tinha efeito nenhum visível — o selo continuava no card e a tag voltava ao
+  // reabrir. O contato recebe a lista inteira (substitui); a conversa recebe só
+  // o que mudou, pra não apagar marcador de follow-up que só existe lá.
   const persistLabels = useCallback(
     async (nextLabels: string[], change: { added?: string; removed?: string }) => {
+      if (labelTargetContactId) {
+        await contactsService.updateContact(String(labelTargetContactId), { labels: nextLabels });
+      }
       if (labelTargetConvId) {
         if (change.added) await conversationAPI.addLabels(labelTargetConvId, [change.added]);
         if (change.removed) await conversationAPI.removeLabels(labelTargetConvId, [change.removed]);
-        return;
-      }
-      if (labelTargetContactId) {
-        await contactsService.updateContact(String(labelTargetContactId), { labels: nextLabels });
       }
     },
     [labelTargetConvId, labelTargetContactId],
@@ -307,17 +390,22 @@ export default function EditItemModal({
   const toggleLabel = useCallback(async (labelTitle: string) => {
     if (!labelTargetConvId && !labelTargetContactId) return;
     setSavingLabel(true);
+    const has = activeLabels.includes(labelTitle);
     try {
-      const has = activeLabels.includes(labelTitle);
       const next = has
         ? activeLabels.filter(l => l !== labelTitle)
         : [...activeLabels, labelTitle];
       await persistLabels(next, has ? { removed: labelTitle } : { added: labelTitle });
       setActiveLabels(next);
-    } catch { /* silent */ } finally {
+      onLabelsChanged?.();
+    } catch {
+      // Falhar calado era o pior do caso antigo: a tag sumia da lista e voltava
+      // sozinha depois, sem nenhum aviso de que não tinha sido salva.
+      toast.error(has ? 'Não foi possível remover a tag' : 'Não foi possível aplicar a tag');
+    } finally {
       setSavingLabel(false);
     }
-  }, [activeLabels, persistLabels, labelTargetConvId, labelTargetContactId]);
+  }, [activeLabels, persistLabels, labelTargetConvId, labelTargetContactId, onLabelsChanged]);
 
   const createAndApplyLabel = useCallback(async (rawTitle: string) => {
     const title = rawTitle.trim();
@@ -335,13 +423,16 @@ export default function EditItemModal({
         const next = [...activeLabels, canonical];
         await persistLabels(next, { added: canonical });
         setActiveLabels(next);
+        onLabelsChanged?.();
       }
-    } catch { /* silent */ } finally {
+    } catch {
+      toast.error('Não foi possível criar a tag');
+    } finally {
       setCreatingLabel(false);
       setLabelPopoverOpen(false);
       setLabelSearch('');
     }
-  }, [activeLabels, persistLabels, labelTargetConvId, labelTargetContactId]);
+  }, [activeLabels, persistLabels, labelTargetConvId, labelTargetContactId, onLabelsChanged]);
 
   // Salva nome/telefone/e-mail no CONTATO (endpoint separado do item do funil).
   // Só manda o que mudou; telefone vai em E.164 porque o backend recusa outro formato.
@@ -352,8 +443,7 @@ export default function EditItemModal({
 
     const name = contactName.trim();
     const email = contactEmail.trim();
-    const rawPhoneInput = contactPhone.trim();
-    const digits = rawPhoneInput.replace(/\D/g, '');
+    const digits = contactPhone.trim().replace(/\D/g, '');
     const phone = digits ? `+${digits}` : '';
 
     const payload: Record<string, string> = {};
@@ -442,11 +532,31 @@ export default function EditItemModal({
       }
     : null;
 
-  // Link direto pra conversa no WhatsApp (Web no desktop, app no celular)
-  const rawPhone: string =
-    item.contact?.phone_number || (item.conversation as any)?.contact?.phone_number || '';
-  const whatsappDigits = rawPhone.replace(/\D/g, '');
-  const whatsappUrl = whatsappDigits ? `https://wa.me/${whatsappDigits}` : null;
+  // A origem escrita mora no contato, não no card — o card só espelha.
+  const handleSaveManualOrigin = async () => {
+    const contactId = contactObj?.id ? String(contactObj.id) : null;
+    if (!contactId) {
+      toast.error('Este card não tem contato — não dá pra gravar a origem.');
+      return;
+    }
+
+    const text = manualOrigin.trim();
+    setSavingManualOrigin(true);
+    try {
+      await contactsService.updateContact(contactId, { lead_origin_note: text });
+      setManualOrigin(text);
+      setSavedManualOrigin(text);
+      // O board só recarrega no submit do card. Sem espelhar aqui, fechar e
+      // reabrir o modal mostraria o valor antigo do item em memória.
+      item.lead_origin = { ...(item.lead_origin ?? {}), manual_origin: text };
+      toast.success(text ? 'Origem do lead salva.' : 'Origem do lead limpa.');
+    } catch (error) {
+      console.error('Error saving lead origin:', error);
+      toast.error('Não consegui salvar a origem do lead.');
+    } finally {
+      setSavingManualOrigin(false);
+    }
+  };
 
   const handleCreateTask = async (data: CreateTaskData) => {
     if (!tasksListRef.current) return;
@@ -528,30 +638,21 @@ export default function EditItemModal({
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0 mt-0.5">
-            {whatsappUrl && (
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Abrir conversa no WhatsApp"
-                className="p-1.5 rounded-md text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
-              >
-                <MessageCircle className="h-3.5 w-3.5" />
-              </a>
-            )}
-            {item.conversation?.id && (
-              <button
-                type="button"
-                title="Ir para conversa no CRM"
-                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                onClick={() => {
-                  onOpenChange(false);
-                  navigate(`/conversations/${item.conversation!.id}`);
-                }}
-              >
-                <MessageSquare className="h-3.5 w-3.5" />
-              </button>
-            )}
+            {/* Um botão só. Havia dois ícones verdes de chat colados aqui — um
+                abria o wa.me (saía do CRM e perdia o histórico) e o outro a
+                conversa interna. Cara-ou-coroa para o usuário, e o lado errado
+                era o que levava embora. Ficou o interno, agora pelo hook, que
+                também atende lead ainda sem conversa (antes o botão nem
+                aparecia para lead de formulário/anúncio). */}
+            <button
+              type="button"
+              title="Abrir conversa no CRM"
+              disabled={openingConversation}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-60 dark:hover:bg-emerald-950/30 transition-colors"
+              onClick={() => openLeadConversation(item)}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+            </button>
             <button
               type="button"
               title="Copiar link do card"
@@ -637,6 +738,12 @@ export default function EditItemModal({
                     />
                   </div>
                 </div>
+
+                {/* Conversão Meta (Pixel/CAPI) — marcação manual do desfecho do lead */}
+                <CapiConversionPanel
+                  contactId={item.contact?.id ?? (item.conversation as any)?.contact?.id ?? null}
+                  pipelineItemId={item.id}
+                />
 
                 {/* Respostas do formulário (perguntas personalizadas da campanha) */}
                 {(() => {
@@ -733,8 +840,9 @@ export default function EditItemModal({
                   )}
                 </div>
 
-                {/* Responsável */}
-                {item.conversation?.id && (
+                {/* Responsável — sem gate de conversa: lead de formulário/anúncio
+                    não tem conversa e mesmo assim precisa de dono. */}
+                {(item.conversation?.id || item.contact?.id) && (
                   <div className="grid gap-1.5">
                     <Label className="flex items-center gap-1 text-xs">
                       Responsável
@@ -791,6 +899,28 @@ export default function EditItemModal({
                       </SelectItem>
                     </SelectContent>
                   </Select>
+
+                  {/* Só aparece com oferta EM ABERTO: é o único momento em que há
+                      prazo correndo e corretor esperando. Sem isto, a única forma
+                      de tirar um lead da roleta era trocar o responsável na mão —
+                      e trocar para o MESMO corretor da oferta não encerrava nada,
+                      porque o sistema lê isso como escolha da própria roleta. */}
+                  {ofertasAbertas.length > 0 && (
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 dark:border-amber-900 dark:bg-amber-950/30">
+                      <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                        No sorteio agora, esperando o aceite de{' '}
+                        <strong>{ofertasAbertas.map(o => o.corretor ?? 'corretor').join(', ')}</strong>.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-1.5 h-7 text-xs"
+                        onClick={() => setTirandoDaRoleta(true)}
+                      >
+                        Tirar da roleta
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Fase */}
@@ -857,7 +987,7 @@ export default function EditItemModal({
                     ) : (
                       historyEvents.map(ev => (
                         <div key={ev.id} className="flex gap-2 text-xs">
-                          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                          <div className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${historyDotColor(ev.id)}`} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-1">
                               <span className="font-medium truncate">{ev.eventName}</span>
@@ -867,7 +997,7 @@ export default function EditItemModal({
                             </div>
                             {ev.properties && Object.keys(ev.properties).length > 0 && (
                               <p className="text-muted-foreground truncate">
-                                {Object.entries(ev.properties).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                                {Object.entries(ev.properties).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(' · ')}
                               </p>
                             )}
                           </div>
@@ -952,24 +1082,77 @@ export default function EditItemModal({
                 ctwa_clid: 'ID do clique', thumbnail_url: 'Imagem do anúncio',
                 // Landing Page
                 landing_name: 'Landing', landing_slug: 'Slug', landing_url: 'Link da landing',
+                // Origem universal (manual / orgânico / tracking interno)
+                inbox_name: 'Caixa de entrada', added_by_name: 'Adicionado por',
               };
-              const HIDDEN = new Set(['thumbnail_url', 'source']);
+              // manual_origin sai da lista genérica: tem campo editável próprio no topo.
+              const HIDDEN = new Set(['thumbnail_url', 'source', 'entered_via', 'added_by_id', 'channel_type', MANUAL_ORIGIN_KEY]);
+              // Rótulo + cor por origem. Todo lead tem origem (nunca "sem dados"):
+              // anúncio, formulário, landing, UTM, WhatsApp orgânico, manual ou não identificada.
+              const SOURCE_META: Record<string, { label: string; cls: string }> = {
+                whatsapp_ctwa:    { label: '💬 WhatsApp Direto (CTWA)', cls: 'bg-green-500/15 text-green-600 dark:text-green-400' },
+                meta_lead_ads:    { label: '📋 Formulário Meta Ads', cls: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
+                landing:          { label: '🌐 Landing Page', cls: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
+                utm:              { label: 'Campanha (UTM)', cls: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
+                organic_whatsapp: { label: 'WhatsApp orgânico', cls: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
+                manual:           { label: 'Adicionado manualmente', cls: 'bg-slate-500/15 text-slate-600 dark:text-slate-300' },
+                unknown:          { label: 'Origem não identificada', cls: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' },
+              };
               const source = (ar as any).source as string | undefined;
-              const isCtwa = source === 'whatsapp_ctwa';
-              const isForm = source === 'meta_lead_ads';
-              const isLanding = source === 'landing';
+              const meta = source ? SOURCE_META[source] : undefined;
               const entries = Object.entries(ar).filter(([k, v]) => k !== 'extra_fields' && !HIDDEN.has(k) && v != null && v !== '');
-              const extra = (ar as any).extra_fields && typeof (ar as any).extra_fields === 'object' ? (ar as any).extra_fields : null;
-              if (entries.length === 0 && !extra) {
-                return <div className="text-sm text-muted-foreground py-12 text-center border border-dashed border-border rounded-lg">Sem dados de origem para este lead.</div>;
-              }
+              // Respostas do formulário Meta: o backend grava o hash completo de
+              // respostas em custom_attributes.form_answers (antes só nome/email/telefone
+              // eram aproveitados). Le tambem additional_attributes por compat com leads
+              // gravados na versao anterior. Fallback pro extra_fields legado.
+              const formAnswers = (item.contact as any)?.custom_attributes?.form_answers
+                ?? (item.contact as any)?.additional_attributes?.form_answers
+                ?? (item.conversation as any)?.custom_attributes?.form_answers
+                ?? (item.conversation as any)?.additional_attributes?.form_answers;
+              const extra = ((ar as any).extra_fields && typeof (ar as any).extra_fields === 'object' ? (ar as any).extra_fields : null)
+                ?? (formAnswers && typeof formAnswers === 'object' && Object.keys(formAnswers).length ? formAnswers : null);
+              const hasTrackedData = entries.length > 0 || !!extra || !!meta;
               return (
                 <div className="space-y-4">
-                  {(isCtwa || isForm || isLanding) && (
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${isCtwa ? 'bg-green-500/15 text-green-600 dark:text-green-400' : isLanding ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400' : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'}`}>
-                      <span>{isCtwa ? '💬 WhatsApp Direto (CTWA)' : isForm ? '📋 Formulário Meta Ads' : '🌐 Landing Page'}</span>
+                  {meta && (
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${meta.cls}`}>
+                      <span>{meta.label}</span>
                     </div>
                   )}
+
+                  {/* Origem por escrito — o rastreamento automático só sabe de
+                      anúncio/campanha; "veio por indicação" quem informa é o time. */}
+                  <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-3">
+                    <ManualOriginInput
+                      id={`manual-origin-${item.id}`}
+                      value={manualOrigin}
+                      onChange={setManualOrigin}
+                      disabled={savingManualOrigin}
+                    />
+                    <div className="flex items-center justify-end gap-2">
+                      {manualOrigin.trim() !== savedManualOrigin && (
+                        <span className="text-xs text-muted-foreground">Alteração não salva</span>
+                      )}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7"
+                        disabled={savingManualOrigin || manualOrigin.trim() === savedManualOrigin}
+                        onClick={handleSaveManualOrigin}
+                      >
+                        {savingManualOrigin && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                        Salvar origem
+                      </Button>
+                    </div>
+                  </div>
+
+                  {!hasTrackedData && (
+                    <div className="text-sm text-muted-foreground py-6 text-center border border-dashed border-border rounded-lg">
+                      Sem dados de rastreamento automático para este lead.
+                    </div>
+                  )}
+
                   <div className="grid gap-2">
                     {entries.map(([k, v]) => (
                       <div key={k} className="flex items-start justify-between gap-3 text-sm border-b border-border/50 pb-1.5">
@@ -1102,6 +1285,18 @@ export default function EditItemModal({
         </>
       )}
 
+      {/* Tirar da roleta — o destino do lead é escolhido no diálogo. */}
+      {tirandoDaRoleta && (item.contact?.id || (item.conversation as any)?.contact?.id) && (
+        <RemoveFromRoletaDialog
+          open
+          onOpenChange={setTirandoDaRoleta}
+          contactId={String(item.contact?.id ?? (item.conversation as any)?.contact?.id)}
+          leadName={item.contact?.name ?? (item.conversation as any)?.contact?.name}
+          offers={ofertasAbertas}
+          onDone={() => setOfertasAbertas([])}
+        />
+      )}
+
       {/* Criação de roleta direto do card (sem ir pra Configurações) */}
       <CreateRoletaModal
         open={showCreateRoleta}
@@ -1109,6 +1304,9 @@ export default function EditItemModal({
         users={users}
         onCreated={(roleta) => setRoletas(prev => [...prev, roleta])}
       />
+
+      {/* Iniciar conversa — só monta para lead que ainda não tem conversa */}
+      {startConversationModal}
     </Dialog>
   );
 }

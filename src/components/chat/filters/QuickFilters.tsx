@@ -107,6 +107,8 @@ export default function QuickFilters({
   const activeTagFilter = filters.find(f => f.attributeKey === 'labels');
   const activeTagTitle = activeTagFilter ? String(activeTagFilter.values) : undefined;
 
+  const aiOnly = filters.some(f => f.attributeKey === 'handled_by_ai' && String(f.values) === 'true');
+
   const activeInboxFilter = filters.find(f => f.attributeKey === 'inbox_id');
   const activeInboxId = activeInboxFilter ? String(activeInboxFilter.values) : undefined;
 
@@ -124,6 +126,7 @@ export default function QuickFilters({
     (activeTagTitle ? 1 : 0) +
     (activeInboxId ? 1 : 0) +
     (startDate || endDate ? 1 : 0) +
+    (aiOnly ? 1 : 0) +
     advancedCount;
 
   function withoutKeys(keys: string[]): BaseFilter[] {
@@ -140,6 +143,11 @@ export default function QuickFilters({
     onApply(id ? [...base, mkFilter('inbox_id', 'equal_to', id)] : base);
   }
 
+  function applyAiOnly(next: boolean) {
+    const base = withoutKeys(['handled_by_ai']);
+    onApply(next ? [...base, mkFilter('handled_by_ai', 'equal_to', 'true')] : base);
+  }
+
   function applyPeriod(nextStart: string, nextEnd: string) {
     const base = withoutKeys(['last_activity_at']);
     const next = [...base];
@@ -154,8 +162,13 @@ export default function QuickFilters({
     applyPeriod(isoDate(start), '');
   }
 
+  // Limpa TUDO — inclusive os filtros do modal avançado (status, time,
+  // pipeline...). O "X" fica ao lado de um contador único (`totalActive`)
+  // que soma quick + avançado, então limpar só os 4 quick deixava o
+  // contador preso em 1 sem nenhuma seção marcada aqui pra explicar o
+  // motivo (bug reportado pelo Giovani, 19/08).
   function clearAll() {
-    onApply(withoutKeys(['labels', 'inbox_id', 'last_activity_at']));
+    onApply([]);
   }
 
   return (
@@ -183,8 +196,8 @@ export default function QuickFilters({
           <button
             type="button"
             onClick={clearAll}
-            aria-label="Limpar tag, instância e período"
-            title="Limpar tag, instância e período"
+            aria-label="Limpar todos os filtros"
+            title="Limpar todos os filtros"
             className="rounded p-1 text-muted-foreground transition hover:text-destructive cursor-pointer"
           >
             <X className="h-3.5 w-3.5" />
@@ -198,7 +211,10 @@ export default function QuickFilters({
           aria-label="Filtros rápidos"
           className="absolute left-0 top-full z-30 mt-1 w-80 rounded-lg border bg-popover p-3 shadow-lg"
         >
-          {/* TAGS */}
+          {/* TAGS — dropdown nativo, não lista solta. Uma lista de botões
+              esticava o popup toda vez que o tenant tinha muitas etiquetas
+              (pedido do Giovani, 19/08: "não faz sentido esticar esse
+              menu"). Um <select> mostra uma linha só, fechado. */}
           <section>
             <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               Tags
@@ -210,31 +226,40 @@ export default function QuickFilters({
                 Nenhuma tag criada ainda.
               </p>
             ) : (
-              <div className="max-h-40 space-y-0.5 overflow-y-auto">
-                {labels.map(l => {
-                  const active = activeTagTitle === l.title;
-                  return (
-                    <button
-                      key={l.id}
-                      type="button"
-                      onClick={() => applyTag(active ? undefined : l.title)}
-                      className={`flex w-full items-center gap-2 rounded px-1.5 py-1.5 text-left text-sm transition cursor-pointer ${
-                        active ? 'bg-primary/10 font-semibold text-primary' : 'hover:bg-muted'
-                      }`}
-                    >
-                      <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                        <span
-                          className="h-2.5 w-2.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: l.color || '#999' }}
-                        />
-                        <span className="truncate">{l.title}</span>
-                      </span>
-                      {active && <Check className="h-3.5 w-3.5 shrink-0" />}
-                    </button>
-                  );
-                })}
-              </div>
+              <select
+                value={activeTagTitle ?? ''}
+                onChange={e => applyTag(e.target.value || undefined)}
+                className="w-full cursor-pointer rounded border bg-background px-1.5 py-1.5 text-sm text-foreground outline-none focus:border-primary"
+              >
+                <option value="">Todas as tags</option>
+                {labels.map(l => (
+                  <option key={l.id} value={l.title}>
+                    {l.title}
+                  </option>
+                ))}
+              </select>
             )}
+          </section>
+
+          {/* ATENDIMENTO — mesmo botão "Só IA" do dashboard (AiToggle.tsx),
+              aqui como toggle na lista em vez de botão solto na barra: é
+              binário, não uma lista de opções pra escolher. */}
+          <section className="mt-2 border-t pt-2">
+            <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              Atendimento
+            </p>
+            <button
+              type="button"
+              onClick={() => applyAiOnly(!aiOnly)}
+              aria-pressed={aiOnly}
+              className={`flex w-full items-center gap-2 rounded px-1.5 py-1.5 text-left text-sm transition cursor-pointer ${
+                aiOnly ? 'bg-primary/10 font-semibold text-primary' : 'hover:bg-muted'
+              }`}
+            >
+              <Bot className="h-3.5 w-3.5 shrink-0" />
+              <span className="min-w-0 flex-1 truncate">Só leads atendidos pela IA</span>
+              {aiOnly && <Check className="h-3.5 w-3.5 shrink-0" />}
+            </button>
           </section>
 
           {/* INSTÂNCIA — só com 2+, uma só não é filtro, é a caixa inteira */}

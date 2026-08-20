@@ -409,7 +409,7 @@
   },
   "empty": {
     "title": "No contacts found",
-    "description": "Create a new contact to start managing your customer conversations.",
+    "description": "This tab only shows leads tagged as paid traffic. Contacts created manually or coming from other sources do not appear here.",
     "action": "New Contact"
   },
   "loading": {
@@ -435,6 +435,7 @@
     "searchError": "Error searching contacts",
     "createSuccess": "Contact created successfully",
     "createError": "Error creating contact",
+    "openExisting": "Open existing contact",
     "updateSuccess": "Contact updated successfully",
     "updateError": "Error updating contact",
     "deleteSuccess": "Contact deleted successfully",
@@ -450,7 +451,9 @@
     "exportQueued": "Export started. You will receive an email with the download link shortly.",
     "exportError": "Error exporting contacts",
     "filterError": "Error applying filters",
-    "conversationStarted": "Conversation started successfully"
+    "conversationStarted": "Conversation started successfully",
+    "bulkDeleteAllQueued": "Deletion of {{count}} contact(s) started. It runs in the background and the list may take a few minutes to reflect it.",
+    "mergeNeedsExplicitSelection": "To merge, pick the contacts one by one — merging does not work with \"all selected\"."
   },
   "errors": {
     "loadContact": "Error loading contact details"
@@ -468,7 +471,8 @@
       "description": "Are you sure you want to delete {{count}} selected contact(s)? This action cannot be undone.",
       "confirm": "Delete All",
       "cancel": "Cancel",
-      "deleting": "Deleting..."
+      "deleting": "Deleting...",
+      "descriptionAll": "Are you sure you want to delete ALL {{count}} contacts matching the current filter? Deletion runs in the background and cannot be undone."
     },
     "mergeContacts": {
       "title": "Merge Contacts",
@@ -534,7 +538,11 @@
     },
     "quick": {
       "allTags": "All tags",
-      "clear": "Clear"
+      "clear": "Clear",
+      "withoutTagsPlaceholder": "Without tag...",
+      "withoutTagsSummary": "Without {{count}} tag(s)",
+      "withoutTagsHint": "Contacts carrying the checked tags will NOT be listed.",
+      "withoutTagBadge": "without: {{tag}}"
     }
   },
   "import": {
@@ -601,7 +609,7 @@
   },
   "header": {
     "title": "Contacts",
-    "subtitle": "Manage all your contacts in one place",
+    "subtitle": "Leads that came from your paid campaigns",
     "searchPlaceholder": "Search contacts...",
     "newContact": "New Contact",
     "import": "Import",
@@ -611,7 +619,10 @@
     "mergeContacts": "Merge Contacts",
     "clearSelection": "Clear Selection",
     "selected": "{{count}} selected",
-    "selected_other": "{{count}} selected"
+    "selected_other": "{{count}} selected",
+    "selectAllMatching": "Select all {{count}} contacts",
+    "allMatchingSelected": "all contacts matching the current filter",
+    "bulkDeleteAll": "Delete all {{count}}"
   },
   "startConversation": {
     "title": "Start Conversation",
@@ -642,13 +653,19 @@
       "channels": "Loading channels..."
     },
     "empty": {
-      "noChannels": "No channels available for this contact"
+      "noChannels": "No channels available for this contact",
+      "noPhone": "Add a phone number to this contact to start a WhatsApp conversation.",
+      "noChannelAccess": "You don't have access to a WhatsApp channel for this contact. Ask an administrator to assign you to the channel."
     },
     "unavailable": "Unavailable",
+    "recommended": "Lead's number",
     "actions": {
       "cancel": "Cancel",
       "send": "Start Conversation",
       "sending": "Sending..."
+    },
+    "errors": {
+      "createFailed": "Could not start the conversation. Please try again."
     }
   },
   "scheduledActions": {

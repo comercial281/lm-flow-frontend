@@ -81,6 +81,7 @@ export interface AutomationResources {
   messageFunnels: MessageFunnel[];
   evolutionInstances: EvolutionInstance[];
   reloadFunnels: () => void;
+  reloadLabels: () => void;
   loading: boolean;
 }
 
@@ -103,6 +104,13 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     messageFunnelsService.list({ activeOnly: false })
       .then(list => setMessageFunnels(list ?? []))
       .catch(() => { /* funis são opcionais — não trava a tela */ });
+  };
+
+  // Recarrega o catálogo de etiquetas (usado após criar uma etiqueta nova inline).
+  const reloadLabels = () => {
+    labelsService.getLabels()
+      .then(res => setLabels(res.data ?? []))
+      .catch(() => { /* catálogo é enriquecimento — não trava a tela */ });
   };
 
   useEffect(() => {
@@ -155,7 +163,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     return () => { cancelled = true; };
   }, [enabled]);
 
-  return { labels, sequences, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, evolutionInstances, reloadFunnels, loading };
+  return { labels, sequences, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, evolutionInstances, reloadFunnels, reloadLabels, loading };
 }
 
 // ============================================================================
@@ -172,6 +180,17 @@ interface ConditionEditorProps {
 const baseSelectClass =
   'mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
 
+// Estado da instância em português. "open" é o que a Evolution chama de conectada;
+// escolher uma desconectada é o caminho mais curto pro aviso não chegar.
+function instanceStatusLabel(status: string): string {
+  switch (status) {
+    case 'open':       return 'conectada ✓';
+    case 'connecting': return 'conectando…';
+    case 'close':      return 'desconectada ⚠️';
+    default:           return status || 'estado desconhecido';
+  }
+}
+
 export function ConditionEditor({ trigger, condition, onChange, resources }: ConditionEditorProps) {
   if (!triggerNeedsCondition(trigger)) return null;
 
@@ -187,16 +206,25 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
     const field = condition?.field;
     const rawValue = typeof condition?.value === 'string' ? condition.value : '';
     const origin = field === 'form_id' ? 'formulario' : (field === 'source' ? rawValue : '');
-    const formId = field === 'form_id' ? rawValue : '';
+    // Formulários selecionados: aceita array (operator "in") ou valor único legado (eq).
+    const selectedForms: string[] = field === 'form_id'
+      ? (Array.isArray(condition?.value) ? condition!.value : (rawValue ? [rawValue] : []))
+      : [];
 
     const commitOrigin = (o: string) => {
       if (!o) return onChange(null);
       onChange({ field: 'source', operator: 'eq', value: o });
     };
-    const commitForm = (fid: string) => {
-      onChange(fid
-        ? { field: 'form_id', operator: 'eq', value: fid }
+    const commitForms = (ids: string[]) => {
+      // Nenhum marcado = qualquer formulário (só filtra por origem).
+      onChange(ids.length
+        ? { field: 'form_id', operator: 'in', value: ids }
         : { field: 'source', operator: 'eq', value: 'formulario' });
+    };
+    const toggleForm = (fid: string) => {
+      commitForms(selectedForms.includes(fid)
+        ? selectedForms.filter(x => x !== fid)
+        : [...selectedForms, fid]);
     };
 
     return (
@@ -206,29 +234,48 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
           <select value={origin} onChange={e => commitOrigin(e.target.value)} className={baseSelectClass}>
             <option value="">Qualquer origem</option>
             <option value="formulario">Formulário (Meta Lead Ads)</option>
+            <option value="formulario_site">Formulário do site / landing</option>
             <option value="lead_whats_meta">Lead Whats Meta (anúncio no WhatsApp)</option>
             <option value="organico">Orgânico (sem anúncio)</option>
           </select>
           <p className="text-xs text-muted-foreground mt-1">
             Em branco = qualquer lead novo. <strong>Formulário</strong>: veio de um formulário de anúncio.{' '}
+            <strong>Formulário do site</strong>: preencheu um formulário do site ou de uma landing.{' '}
             <strong>Lead Whats Meta</strong>: clicou no anúncio e caiu direto no WhatsApp.
           </p>
         </div>
 
         {origin === 'formulario' && (
           <div>
-            <UILabel>Qual formulário? (opcional)</UILabel>
-            <select value={formId} onChange={e => commitForm(e.target.value)} className={baseSelectClass}>
-              <option value="">Qualquer formulário</option>
-              {resources.formOrigins.map(f => (
-                <option key={f.form_id} value={f.form_id}>
-                  {(f.form_name || f.form_id)}{f.count > 0 ? ` · ${f.count} lead${f.count === 1 ? '' : 's'}` : ''}
-                </option>
-              ))}
-            </select>
+            <UILabel>Quais formulários? (opcional)</UILabel>
+            <div className="mt-1 max-h-52 overflow-y-auto rounded-md border border-border divide-y divide-border">
+              {resources.formOrigins.length === 0 ? (
+                <p className="text-xs text-muted-foreground p-2">
+                  Nenhum formulário conectado ainda — veja Configurações → Formulários (Meta).
+                </p>
+              ) : (
+                resources.formOrigins.map(f => (
+                  <label
+                    key={f.form_id}
+                    className="flex items-center gap-2 px-2.5 py-2 cursor-pointer hover:bg-muted/50 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedForms.includes(f.form_id)}
+                      onChange={() => toggleForm(f.form_id)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    <span className="truncate">
+                      {(f.form_name || f.form_id)}
+                      {f.count > 0 ? ` · ${f.count} lead${f.count === 1 ? '' : 's'}` : ''}
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Em branco = qualquer formulário. Escolha um pra esse fluxo valer só pros leads daquele formulário.
-              {resources.formOrigins.length === 0 && ' (Nenhum formulário conectado ainda — veja Configurações → Formulários (Meta).)'}
+              Nenhum marcado = qualquer formulário. Marque um ou mais pra esse fluxo valer só pros leads
+              daqueles formulários.
             </p>
           </div>
         )}
@@ -461,6 +508,9 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
   // Grupos de WhatsApp pro dropdown do "Notificar grupo" (carrega da instância escolhida).
   const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
+  // Por que a lista veio vazia (instância errada, fora do ar, sem grupo). Sem
+  // isso o seletor só ficava sem opção, e não dava pra saber o que consertar.
+  const [groupsReason, setGroupsReason] = useState<string | null>(null);
   // Editor de Funil embutido (ação "Disparar funil de mensagens"): reusa o MESMO
   // componente do chat — subir mídia, gravar áudio, delay por passo, variáveis, reordenar.
   const [funnelEditorOpen, setFunnelEditorOpen] = useState(false);
@@ -471,9 +521,14 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     let cancelled = false;
     setLoadingGroups(true);
     leadAutomationService
-      .getGroups(instanceParam || undefined)
-      .then(g => { if (!cancelled) setGroups(g); })
-      .catch(() => { if (!cancelled) setGroups([]); })
+      .getGroupsResult(instanceParam || undefined)
+      .then(r => { if (!cancelled) { setGroups(r.groups); setGroupsReason(r.reason); } })
+      .catch(() => {
+        if (!cancelled) {
+          setGroups([]);
+          setGroupsReason('Não foi possível carregar os grupos agora. Tente de novo em instantes.');
+        }
+      })
       .finally(() => { if (!cancelled) setLoadingGroups(false); });
     return () => { cancelled = true; };
   }, [action.type, instanceParam]);
@@ -749,13 +804,43 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     case 'notify_group':
       return (
         <>
-          <Field label="Instância" hint="Instância de WhatsApp que envia (e de onde os grupos são listados). Para grupos de cliente use a central: Operacional (LM01).">
-            <Input
-              value={String(params.instance ?? '')}
-              onChange={e => setParam('instance', e.target.value)}
-              placeholder="Operacional (LM01)"
-              className="mt-1"
-            />
+          {/* Instância: LISTA, não campo digitado. O nome tem de bater caractere a
+              caractere com o do painel — digitado, um espaço a mais devolvia lista
+              de grupos vazia e nada explicava o motivo. Quem não enxerga a lista
+              (cliente) continua com o campo livre. */}
+          <Field
+            label="Instância"
+            hint="De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central Operacional (LM01)."
+          >
+            {resources.evolutionInstances.length > 0 ? (
+              <select
+                value={String(params.instance ?? '')}
+                onChange={e => setParam('instance', e.target.value)}
+                className={baseSelectClass}
+              >
+                <option value="">— WhatsApp do próprio cliente —</option>
+                {resources.evolutionInstances.map(inst => (
+                  <option key={inst.name} value={inst.name}>
+                    {inst.name} — {instanceStatusLabel(inst.status)}
+                  </option>
+                ))}
+                {/* Valor já salvo que não veio na lista (instância renomeada/removida):
+                    aparecer como opção evita que salvar a regra o apague sem aviso. */}
+                {params.instance
+                  && !resources.evolutionInstances.some(i => i.name === params.instance) && (
+                  <option value={String(params.instance)}>
+                    {String(params.instance)} — não encontrada no servidor
+                  </option>
+                )}
+              </select>
+            ) : (
+              <Input
+                value={String(params.instance ?? '')}
+                onChange={e => setParam('instance', e.target.value)}
+                placeholder="Operacional (LM01)"
+                className="mt-1"
+              />
+            )}
           </Field>
           <Field label="Destino do lembrete *" hint={loadingGroups ? 'Carregando…' : 'O grupo do cliente, ou um usuário (vai no WhatsApp privado dele).'}>
             <select
@@ -784,6 +869,13 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                 <option value={String(params.group_jid)}>{String(params.group_jid)}</option>
               )}
             </select>
+            {/* Lista vazia com o motivo: quase sempre é o nome da instância
+                escrito diferente do painel, ou a instância desconectada. */}
+            {!loadingGroups && groups.length === 0 && groupsReason && (
+              <p className="mt-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-700">
+                Nenhum grupo apareceu: {groupsReason}
+              </p>
+            )}
           </Field>
           <Field label="Mensagem *">
             <Textarea
@@ -1071,8 +1163,9 @@ export function formatConditionSummary(
 ): string {
   if (trigger === 'lead.created') {
     if (condition.field === 'form_id') {
-      const f = resources.formOrigins.find(x => x.form_id === condition.value);
-      return `Formulário: ${f?.form_name || condition.value}`;
+      const ids = Array.isArray(condition.value) ? condition.value : [condition.value];
+      const names = ids.map(id => resources.formOrigins.find(x => x.form_id === id)?.form_name || id);
+      return `${names.length > 1 ? 'Formulários' : 'Formulário'}: ${names.join(', ')}`;
     }
     const labels: Record<string, string> = {
       formulario: 'Formulário (Meta Lead Ads)',

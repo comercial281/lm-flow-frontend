@@ -17,7 +17,9 @@ import ContactDetails from './ContactDetails';
 // import MacrosList from './MacrosList'; // OCULTO
 
 import ContactTagsManager from './ContactTagsManager';
+import AiUnderstandingPanel from './AiUnderstandingPanel';
 
+import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import ConversationPipelineItem from '@/components/pipelines/ConversationPipelineItem';
 import PipelineManagement from '@/components/chat/contact-sidebar/PipelineManagement';
 import { pipelinesService } from '@/services/pipelines';
@@ -242,6 +244,10 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
             )}
           </Card>
 
+          {/* 1.5. Conversao Meta (Pixel/CAPI) - marcacao manual do desfecho do lead.
+              O componente se esconde sozinho quando o cliente nao usa CAPI. */}
+          <CapiConversionPanel contactId={contact?.id ?? null} />
+
           {/* 2. Origem do Anuncio - so aparece quando tem externalAdReply */}
           {Boolean(conversation?.additional_attributes?.ad_referral) && (
             <Card className="border-orange-200 bg-orange-50/30 dark:border-orange-800 dark:bg-orange-950/20">
@@ -301,6 +307,11 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
               )}
             </Card>
           )}
+
+          {/* 2.5. O que a IA entendeu — temperatura, resumo e o que ela já
+              perguntou. Fica logo depois da origem porque é a mesma pergunta
+              ("quem é essa pessoa?") e some sozinho em conversa sem IA. */}
+          <AiUnderstandingPanel conversation={conversation} />
 
           {/* 3. Pipeline - Gerenciar funil */}
           {(conversation || contact) && (

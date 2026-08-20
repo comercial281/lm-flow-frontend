@@ -401,7 +401,7 @@
   },
   "empty": {
     "title": "Ningún contacto encontrado",
-    "description": "Cree un nuevo contacto para comenzar a gestionar sus conversaciones con clientes.",
+    "description": "Esta pestaña solo muestra los leads con la etiqueta de tráfico pago. Los contactos creados manualmente o de otros orígenes no aparecen aquí.",
     "action": "Nuevo Contacto"
   },
   "loading": {
@@ -427,6 +427,7 @@
     "searchError": "Error al buscar contactos",
     "createSuccess": "Contacto creado con éxito",
     "createError": "Error al crear contacto",
+    "openExisting": "Abrir contacto existente",
     "updateSuccess": "Contacto actualizado con éxito",
     "updateError": "Error al actualizar contacto",
     "deleteSuccess": "Contacto eliminado con éxito",
@@ -442,7 +443,9 @@
     "exportQueued": "Exportación iniciada. Recibirás un correo electrónico con el enlace de descarga en breve.",
     "exportError": "Error al exportar contactos",
     "filterError": "Error al aplicar filtros",
-    "conversationStarted": "Conversación iniciada con éxito"
+    "conversationStarted": "Conversación iniciada con éxito",
+    "bulkDeleteAllQueued": "Se inició la eliminación de {{count}} contacto(s). Se ejecuta en segundo plano y la lista puede tardar unos minutos en reflejarlo.",
+    "mergeNeedsExplicitSelection": "Para fusionar, selecciona los contactos uno a uno: no funciona con \"todos seleccionados\"."
   },
   "errors": {
     "loadContact": "Error al cargar detalles del contacto"
@@ -460,7 +463,8 @@
       "description": "¿Está seguro de que desea eliminar {{count}} contacto(s) seleccionado(s)? Esta acción no se puede deshacer.",
       "confirm": "Eliminar Todos",
       "cancel": "Cancelar",
-      "deleting": "Eliminando..."
+      "deleting": "Eliminando...",
+      "descriptionAll": "¿Seguro que quieres eliminar TODOS los {{count}} contactos que coinciden con el filtro actual? La eliminación se ejecuta en segundo plano y no se puede deshacer."
     },
     "mergeContacts": {
       "title": "Fusionar Contactos",
@@ -526,7 +530,11 @@
     },
     "quick": {
       "allTags": "Todas las etiquetas",
-      "clear": "Limpar"
+      "clear": "Limpar",
+      "withoutTagsPlaceholder": "Sin la etiqueta...",
+      "withoutTagsSummary": "Sin {{count}} etiqueta(s)",
+      "withoutTagsHint": "Los contactos con las etiquetas marcadas NO aparecen en la lista.",
+      "withoutTagBadge": "sin: {{tag}}"
     }
   },
   "import": {
@@ -593,7 +601,7 @@
   },
   "header": {
     "title": "Contactos",
-    "subtitle": "Gestione todos sus contactos en un solo lugar",
+    "subtitle": "Leads que llegaron por sus anuncios",
     "searchPlaceholder": "Buscar contactos...",
     "newContact": "Nuevo Contacto",
     "import": "Importar",
@@ -603,7 +611,10 @@
     "mergeContacts": "Fusionar Contactos",
     "clearSelection": "Limpiar Selección",
     "selected": "{{count}} seleccionado",
-    "selected_other": "{{count}} seleccionados"
+    "selected_other": "{{count}} seleccionados",
+    "selectAllMatching": "Seleccionar los {{count}} contactos",
+    "allMatchingSelected": "todos los contactos del filtro actual",
+    "bulkDeleteAll": "Eliminar los {{count}}"
   },
   "startConversation": {
     "title": "Iniciar Conversación",
@@ -634,13 +645,19 @@
       "channels": "Cargando canales..."
     },
     "empty": {
-      "noChannels": "Ningún canal disponible para este contacto"
+      "noChannels": "Ningún canal disponible para este contacto",
+      "noPhone": "Agrega un número de teléfono a este contacto para iniciar una conversación de WhatsApp.",
+      "noChannelAccess": "No tienes acceso a un canal de WhatsApp para este contacto. Pide a un administrador que te asigne al canal."
     },
     "unavailable": "No disponible",
+    "recommended": "Número del lead",
     "actions": {
       "cancel": "Cancelar",
       "send": "Iniciar Conversación",
       "sending": "Enviando..."
+    },
+    "errors": {
+      "createFailed": "No se pudo iniciar la conversación. Inténtalo de nuevo."
     }
   },
   "scheduledActions": {

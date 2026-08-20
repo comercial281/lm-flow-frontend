@@ -16,11 +16,18 @@ import EmptyState from '@/components/base/EmptyState';
 
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { contactsService } from '@/services/contacts';
-import { Contact, ContactsState, ContactsListParams, ContactFormData } from '@/types/contacts';
+import {
+  Contact,
+  ContactsState,
+  ContactsListParams,
+  ContactFormData,
+  ContactsBulkQuery,
+} from '@/types/contacts';
 import { BaseFilter, AppliedFilter } from '@/types/core';
 import { ContactCard } from '@/components/contacts';
 import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 import { extractError } from '@/utils/apiHelpers';
+import { contactSaveError } from '@/utils/contactErrors';
 
 import ContactsHeader from '@/components/contacts/ContactsHeader';
 import ContactsTable from '@/components/contacts/ContactsTable';
@@ -63,13 +70,17 @@ const INITIAL_STATE: ContactsState = {
   sortOrder: 'asc',
 };
 
+// Último payload por combinação de parâmetros (memória da sessão): voltar pra
+// tela de contatos pinta a lista na hora e revalida por trás.
+const contactsPayloadCache = new Map<string, Awaited<ReturnType<typeof contactsService.getContacts>>>();
+
 export default function Contacts() {
   const { t } = useLanguage('contacts');
   const { contactId: contactIdFromRoute } = useParams<{ contactId?: string }>();
   const navigate = useNavigate();
   const { can, isReady: permissionsReady } = useUserPermissions();
   const [state, setState] = useState<ContactsState>(INITIAL_STATE);
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
@@ -88,23 +99,27 @@ export default function Contacts() {
   const [eventsContact, setEventsContact] = useState<Contact | null>(null);
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
   const [contactsToMerge, setContactsToMerge] = useState<Contact[]>([]);
+  // "Selecionar todos": a seleção deixa de ser a lista de ids da página e passa a
+  // ser a CONSULTA atual — o backend resolve o conjunto inteiro. Guardar ids aqui
+  // não serviria: eles nem foram carregados (2 mil contatos, 20 por página).
+  const [selectAllMatching, setSelectAllMatching] = useState(false);
 
   // Load contacts
   const loadContacts = useCallback(
     async (params?: Partial<ContactsListParams>) => {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, list: true } }));
+      const requestParams: ContactsListParams = {
+        page: 1,
+        per_page: DEFAULT_PAGE_SIZE,
+        sort: 'name',
+        order: 'asc',
+        // Traz de qual NÚMERO cada contato veio. Com um WhatsApp por corretor,
+        // "de quem é este contato" deixou de ser óbvio — e quem foi importado
+        // pela agenda de um aparelho chegava sem nenhuma marca de origem.
+        include_contact_inboxes: true,
+        ...params,
+      };
 
-      try {
-        const requestParams: ContactsListParams = {
-          page: 1,
-          per_page: DEFAULT_PAGE_SIZE,
-          sort: 'name',
-          order: 'asc',
-          ...params,
-        };
-
-        const response = await contactsService.getContacts(requestParams);
-
+      const applyResponse = (response: Awaited<ReturnType<typeof contactsService.getContacts>>) => {
         const total = response.meta?.pagination?.total || 0;
         const pageSize = response.meta?.pagination?.page_size || DEFAULT_PAGE_SIZE;
 
@@ -123,6 +138,22 @@ export default function Contacts() {
           },
           loading: { ...prev.loading, list: false },
         }));
+      };
+
+      // Revisita com os mesmos parâmetros: pinta na hora com o payload
+      // anterior e revalida por trás (stale-while-revalidate).
+      const cacheKey = JSON.stringify(requestParams);
+      const cached = contactsPayloadCache.get(cacheKey);
+      if (cached) {
+        applyResponse(cached);
+      } else {
+        setState(prev => ({ ...prev, loading: { ...prev.loading, list: true } }));
+      }
+
+      try {
+        const response = await contactsService.getContacts(requestParams);
+        contactsPayloadCache.set(cacheKey, response);
+        applyResponse(response);
       } catch (error) {
         console.error('Error loading contacts:', error);
 
@@ -132,7 +163,7 @@ export default function Contacts() {
           console.error('Account not found or without permission. Stopping contact attempts.');
         }
 
-        toast.error(t('messages.loadError'));
+        if (!cached) toast.error(t('messages.loadError'));
         setState(prev => ({ ...prev, loading: { ...prev.loading, list: false } }));
       }
     },
@@ -191,6 +222,15 @@ export default function Contacts() {
     loadContacts();
   }, [permissionsReady]);
 
+  // No modo "todos", paginar não pode desmarcar nada: o conjunto é a consulta,
+  // não a página. Remarca as linhas recém-carregadas para o checkbox refletir o
+  // que o delete vai realmente atingir.
+  useEffect(() => {
+    if (!selectAllMatching) return;
+
+    setState(prev => ({ ...prev, selectedContactIds: prev.contacts.map(contact => contact.id) }));
+  }, [selectAllMatching, state.contacts]);
+
   useEffect(() => {
     if (!contactIdFromRoute) return;
 
@@ -218,8 +258,10 @@ export default function Contacts() {
 
   // Handlers
   const handleSearchChange = (query: string) => {
+    setSelectAllMatching(false);
     setState(prev => ({
       ...prev,
+      selectedContactIds: [],
       searchQuery: query,
       meta: {
         ...prev.meta,
@@ -255,23 +297,36 @@ export default function Contacts() {
   };
 
   // Build filter payload for API request
-  // Backend expects payload (not filters) and query_operator in uppercase (AND/OR)
+  // Backend expects payload (not filters) and query_operator in uppercase (AND/OR).
+  //
+  // O operador de cada linha é o conector que a LIGA À ANTERIOR — é assim que o
+  // modal a mostra (só a partir da 2ª linha) e é assim que o backend a lê
+  // (`query_builder` usa o operador da linha atual como conector). Zerar o da
+  // última linha jogava fora justamente o "OU" que o usuário escolheu e o
+  // filtro voltava a somar tudo com E.
   const buildFilterPayload = (filters: BaseFilter[]) => {
-    const filterQuery = generateFilterQuery(filters);
-    
-    return filterQuery.map((filter, index) => {
-      const isLastFilter = index === filterQuery.length - 1;
-      const queryOperator = isLastFilter 
-        ? null 
-        : (filter.query_operator.toUpperCase() as 'AND' | 'OR');
-      
-      return {
-        attribute_key: filter.attribute_key,
-        values: filter.values,
-        filter_operator: filter.filter_operator,
-        query_operator: queryOperator,
-      };
-    });
+    return generateFilterQuery(filters).map((filter, index) => ({
+      attribute_key: filter.attribute_key,
+      values: filter.values,
+      filter_operator: filter.filter_operator,
+      // A primeira linha não tem antecessora para conectar.
+      query_operator: index === 0 ? null : ((filter.query_operator || 'and').toUpperCase() as 'AND' | 'OR'),
+    }));
+  };
+
+  // Descreve para o backend a consulta que montou a lista atual — é o que o
+  // "selecionar todos" usa no lugar dos ids. A precedência é a mesma da tela:
+  // filtro avançado > busca livre > listagem simples.
+  const buildBulkQuery = (): ContactsBulkQuery => {
+    if (activeFilters.length > 0) return { payload: buildFilterPayload(activeFilters) };
+    if (state.searchQuery.trim()) return { q: state.searchQuery.trim() };
+    return {};
+  };
+
+  // Trocar a consulta invalida o "todos os N": o N era de outro conjunto.
+  const clearSelection = () => {
+    setSelectAllMatching(false);
+    setState(prev => ({ ...prev, selectedContactIds: [] }));
   };
 
   const convertFiltersToApplied = (filters: BaseFilter[]): AppliedFilter[] => {
@@ -294,9 +349,11 @@ export default function Contacts() {
   const handleApplyFilters = async (filters: BaseFilter[]) => {
     setActiveFilters(filters);
     setAppliedFilters(convertFiltersToApplied(filters));
+    setSelectAllMatching(false);
 
     setState(prev => ({
       ...prev,
+      selectedContactIds: [],
       loading: { ...prev.loading, list: true },
       meta: {
         ...prev.meta,
@@ -395,6 +452,7 @@ export default function Contacts() {
   const handleClearFilters = () => {
     setActiveFilters([]);
     setAppliedFilters([]);
+    clearSelection();
     loadContacts({ page: 1 });
   };
 
@@ -491,6 +549,10 @@ export default function Contacts() {
   };
 
   const handleMergeContacts = () => {
+    if (selectAllMatching) {
+      toast.error(t('messages.mergeNeedsExplicitSelection'));
+      return;
+    }
     if (state.selectedContactIds.length < 2) {
       toast.error('Selecione pelo menos 2 contatos para mesclar');
       return;
@@ -582,16 +644,31 @@ export default function Contacts() {
 
   // Confirm bulk delete
   const confirmBulkDelete = async () => {
-    if (state.selectedContactIds.length === 0) return;
+    if (!selectAllMatching && state.selectedContactIds.length === 0) return;
 
     setState(prev => ({ ...prev, loading: { ...prev.loading, bulk: true } }));
 
     try {
-      await contactsService.bulkDelete(state.selectedContactIds);
-      toast.success(t('messages.bulkDeleteSuccess', { count: state.selectedContactIds.length }));
+      if (selectAllMatching) {
+        // O lote é a base inteira do filtro: o backend resolve os ids e joga na
+        // fila, então a lista só reflete o resultado depois — daí a mensagem de
+        // "iniciada" em vez de "concluída".
+        const result = await contactsService.bulkDeleteAll(buildBulkQuery());
+        toast.success(
+          t('messages.bulkDeleteAllQueued', {
+            count: result?.affected_count ?? state.meta.pagination.total,
+          }),
+        );
+      } else {
+        await contactsService.bulkDelete(state.selectedContactIds);
+        toast.success(t('messages.bulkDeleteSuccess', { count: state.selectedContactIds.length }));
+      }
 
-      // Clear selection and refresh
-      setState(prev => ({ ...prev, selectedContactIds: [] }));
+      // Clear selection and refresh. O cache de payload guarda a lista de ANTES
+      // da exclusão; sem limpar, voltar para a tela repinta contatos que já não
+      // existem mais.
+      contactsPayloadCache.clear();
+      clearSelection();
       loadContacts();
 
       setBulkDeleteDialogOpen(false);
@@ -677,7 +754,27 @@ export default function Contacts() {
       }
     } catch (error) {
       console.error('Error saving contact:', error);
-      toast.error(editingContact ? t('messages.updateError') : t('messages.createError'));
+
+      // Telefone/e-mail já cadastrado é o erro mais comum de quem cadastra
+      // cliente de carteira — a pessoa já está na base, mas fora do recorte de
+      // lead da aba, então ele não a encontra na busca. O toast genérico não
+      // dizia nada disso; agora diz quem é e leva até o contato.
+      const failure = contactSaveError(
+        error,
+        editingContact ? t('messages.updateError') : t('messages.createError'),
+      );
+
+      toast.error(
+        failure.message,
+        failure.existing?.id
+          ? {
+              action: {
+                label: t('messages.openExisting'),
+                onClick: () => navigate(`/contacts/${failure.existing!.id}`),
+              },
+            }
+          : undefined,
+      );
     } finally {
       setState(prev => ({
         ...prev,
@@ -689,8 +786,7 @@ export default function Contacts() {
   // Handle conversation creation
   const handleConversationCreated = (conversationId: string) => {
     toast.success(t('messages.conversationStarted'));
-    // TODO: Navigate to conversation
-    console.log('Navigate to conversation:', conversationId);
+    navigate(`/conversations/${conversationId}`);
   };
 
   // Handle modal close
@@ -747,7 +843,9 @@ export default function Contacts() {
         onFilter={handleOpenFilter}
         onBulkDelete={handleBulkDelete}
         onMergeContacts={handleMergeContacts}
-        onClearSelection={() => setState(prev => ({ ...prev, selectedContactIds: [] }))}
+        onClearSelection={clearSelection}
+        allMatchingSelected={selectAllMatching}
+        onSelectAllMatching={() => setSelectAllMatching(true)}
         activeFilters={appliedFilters}
         showFilters={true}
       />
@@ -816,12 +914,14 @@ export default function Contacts() {
               state.selectedContactIds.includes(contact.id),
             )}
             loading={state.loading.list}
-            onSelectionChange={contacts =>
+            onSelectionChange={contacts => {
+              // Mexer no checkbox é dizer "quero estes, não a base toda".
+              setSelectAllMatching(false);
               setState(prev => ({
                 ...prev,
                 selectedContactIds: contacts.map(c => c.id),
-              }))
-            }
+              }));
+            }}
             onContactClick={handleContactClick}
             onStartConversation={handleStartConversation}
             onEditContact={handleEditContact}
@@ -899,7 +999,9 @@ export default function Contacts() {
           <DialogHeader>
             <DialogTitle>{t('dialog.bulkDelete.title')}</DialogTitle>
             <DialogDescription>
-              {t('dialog.bulkDelete.description', { count: state.selectedContactIds.length })}
+              {selectAllMatching
+                ? t('dialog.bulkDelete.descriptionAll', { count: state.meta.pagination.total })
+                : t('dialog.bulkDelete.description', { count: state.selectedContactIds.length })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import {
   Search, Plus, FileText, Building2, User, TrendingUp,
   Send, CheckCircle, XCircle, RefreshCw, ChevronDown,
-  DollarSign, Calendar,
 } from 'lucide-react';
 import {
   Button,
@@ -310,10 +309,16 @@ export default function Proposals() {
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <div className="border-b bg-card px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Propostas</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Gerencie propostas comerciais de compra e locação</p>
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-start gap-3">
+            <div
+              className="w-1 h-9 rounded-full shrink-0"
+              style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
+            />
+            <div>
+              <h1 className="text-2xl font-bold text-foreground leading-tight">Propostas</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">Propostas comerciais de compra e locação</p>
+            </div>
           </div>
           {canCreate && (
             <Button onClick={openCreate} className="gap-2">
@@ -382,20 +387,37 @@ export default function Proposals() {
             <Button variant="outline" size="sm" onClick={openCreate}>Criar primeira proposta</Button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {filtered.map(proposal => (
-              <ProposalCard
-                key={proposal.id}
-                proposal={proposal}
-                onEdit={() => openEdit(proposal)}
-                onDelete={() => handleDelete(proposal.id)}
-                onSend={() => handleSend(proposal.id)}
-                onAccept={() => handleAccept(proposal.id)}
-                onReject={() => setRejectModal({ open: true, proposalId: proposal.id, reason: '' })}
-                onWithdraw={() => handleWithdraw(proposal.id)}
-                onCounter={() => setCounterModal({ open: true, proposalId: proposal.id, value: '' })}
-              />
-            ))}
+          <div className="rounded-xl border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="font-medium px-4 py-3">Cliente</th>
+                    <th className="font-medium px-4 py-3">Imóvel</th>
+                    <th className="font-medium px-4 py-3">Valor</th>
+                    <th className="font-medium px-4 py-3">Enviada</th>
+                    <th className="font-medium px-4 py-3">Validade</th>
+                    <th className="font-medium px-4 py-3">Status</th>
+                    <th className="font-medium px-4 py-3 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(proposal => (
+                    <ProposalRow
+                      key={proposal.id}
+                      proposal={proposal}
+                      onEdit={() => openEdit(proposal)}
+                      onDelete={() => handleDelete(proposal.id)}
+                      onSend={() => handleSend(proposal.id)}
+                      onAccept={() => handleAccept(proposal.id)}
+                      onReject={() => setRejectModal({ open: true, proposalId: proposal.id, reason: '' })}
+                      onWithdraw={() => handleWithdraw(proposal.id)}
+                      onCounter={() => setCounterModal({ open: true, proposalId: proposal.id, value: '' })}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -599,7 +621,7 @@ interface ProposalCardProps {
   onCounter: () => void;
 }
 
-function ProposalCard({ proposal, onEdit, onDelete, onSend, onAccept, onReject, onWithdraw, onCounter }: ProposalCardProps) {
+function ProposalRow({ proposal, onEdit, onDelete, onSend, onAccept, onReject, onWithdraw, onCounter }: ProposalCardProps) {
   const canSendFeature = useFeature('proposals_send');
   const statusColor = PROPOSAL_STATUS_COLORS[proposal.status] ?? '';
   const statusLabel = PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status;
@@ -612,83 +634,49 @@ function ProposalCard({ proposal, onEdit, onDelete, onSend, onAccept, onReject, 
   const canCounter = proposal.status === 'sent';
 
   return (
-    <div className="bg-card border rounded-lg p-4 hover:shadow-sm transition-shadow">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-2">
-            <Badge className={`text-xs font-medium ${statusColor}`}>{statusLabel}</Badge>
-            <Badge variant="outline" className="text-xs">{typeLabel}</Badge>
-            {isExpired && proposal.status === 'sent' && (
-              <Badge className="text-xs bg-orange-100 text-orange-700">Expirada</Badge>
-            )}
+    <tr className="border-t border-border/60 hover:bg-muted/20 transition-colors align-top">
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-1.5 font-medium min-w-0">
+          <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <span className="truncate max-w-[160px]">{proposal.contact?.name ?? '-'}</span>
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-1.5 min-w-0 max-w-[220px]">
+          <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <span className="truncate" title={proposal.property?.title ?? undefined}>
+            {proposal.property?.title ?? proposal.property_id.slice(0, 8)}
+          </span>
+        </div>
+        {proposal.property?.code && (
+          <div className="text-[11px] text-muted-foreground mt-0.5 pl-5">{proposal.property.code}</div>
+        )}
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap">
+        <div className="font-semibold">{proposal.display_offered_value}</div>
+        {proposal.counter_value && (
+          <div className="text-[11px] text-orange-500">Contra: {formatCurrency(proposal.counter_value)}</div>
+        )}
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
+        {proposal.sent_at ? formatDate(proposal.sent_at) : '—'}
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
+        {proposal.expires_at && proposal.status === 'sent' ? formatDate(proposal.expires_at) : '—'}
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Badge className={`text-xs font-medium w-fit ${statusColor}`}>{statusLabel}</Badge>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">{typeLabel}</Badge>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Property */}
-            <div className="flex items-start gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Imóvel</p>
-                <p className="text-sm font-medium truncate">
-                  {proposal.property?.title ?? proposal.property_id.slice(0, 8)}
-                </p>
-                {proposal.property?.code && (
-                  <p className="text-xs text-muted-foreground">{proposal.property.code}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Contact */}
-            <div className="flex items-start gap-2">
-              <User className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-              <div>
-                <p className="text-xs text-muted-foreground">Lead</p>
-                <p className="text-sm font-medium">{proposal.contact?.name ?? '-'}</p>
-              </div>
-            </div>
-
-            {/* Value */}
-            <div className="flex items-start gap-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-              <div>
-                <p className="text-xs text-muted-foreground">Valor ofertado</p>
-                <p className="text-sm font-semibold text-foreground">{proposal.display_offered_value}</p>
-                {proposal.counter_value && (
-                  <p className="text-xs text-orange-600">Contra: {formatCurrency(proposal.counter_value)}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Dates row */}
-          <div className="flex gap-4 mt-2">
-            {proposal.sent_at && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Send className="h-3 w-3" />
-                Enviada em {formatDate(proposal.sent_at)}
-              </div>
-            )}
-            {proposal.expires_at && proposal.status === 'sent' && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Calendar className="h-3 w-3" />
-                Expira em {formatDate(proposal.expires_at)}
-              </div>
-            )}
-            {proposal.responded_at && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <CheckCircle className="h-3 w-3" />
-                Respondida em {formatDate(proposal.responded_at)}
-              </div>
-            )}
-          </div>
-
-          {proposal.conditions && (
-            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{proposal.conditions}</p>
+          {isExpired && proposal.status === 'sent' && (
+            <Badge className="text-[10px] w-fit bg-orange-100 text-orange-700">Expirada</Badge>
           )}
         </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-2 shrink-0">
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-end gap-1.5">
           {canSend && canSendFeature && (
             <Button size="sm" variant="outline" className="gap-1 h-8 text-xs" onClick={onSend}>
               <Send className="h-3 w-3" />
@@ -731,7 +719,7 @@ function ProposalCard({ proposal, onEdit, onDelete, onSend, onAccept, onReject, 
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }

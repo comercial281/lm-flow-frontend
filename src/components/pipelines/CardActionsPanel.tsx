@@ -2,8 +2,8 @@ import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/ds';
 import {
   Loader2, Calendar, Trash2, Move, CheckSquare, Square,
-  PauseCircle, PlayCircle, AlertCircle,
-  Trophy, XCircle, CalendarPlus,
+  PauseCircle, PlayCircle, BotOff, Bot, AlertCircle,
+  Trophy, XCircle, CalendarPlus, HelpCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { conversationAPI } from '@/services/conversations/conversationService';
@@ -13,6 +13,9 @@ import { ScheduleActionModal } from '@/components/scheduledActions/ScheduleActio
 import FollowupTimeline from './FollowupTimeline';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
+import type { SalesAgentCardState, SalesAgentLeadReport } from '@/types/analytics/pipelines';
+import { chatService } from '@/services/chat/chatService';
+import SalesAgentBadge from '@/components/salesAgents/SalesAgentBadge';
 
 const VISIT_SCHEDULED_LABEL = 'visita-agendada';
 
@@ -56,6 +59,48 @@ export default function CardActionsPanel({
   const [followUpPaused, setFollowUpPaused] = useState(convLabels.includes('follow-up-pausado'));
 
   const [togglingFollowUp, setTogglingFollowUp] = useState(false);
+
+  // Estado da IA Vendedora neste lead. Chega pronto do backend no card; guardamos
+  // local só pra refletir o toggle na hora, sem recarregar o board inteiro.
+  const [aiState, setAiState] = useState<SalesAgentCardState | null>(item.sales_agent ?? null);
+  const [togglingAi, setTogglingAi] = useState(false);
+  const aiOn = aiState?.status === 'active';
+
+  // Por que a IA não respondeu ESTE lead. O selo diz o estado ("Transferido para
+  // um corretor"), que não é a mesma pergunta: fora do horário, gatilho que não
+  // bateu e canal sem conexão dão o mesmo silêncio e exigiam abrir o log pra
+  // distinguir. Carrega sob demanda, num clique, pra não pesar o board.
+  const [aiReport, setAiReport] = useState<SalesAgentLeadReport | null>(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+
+  const loadAiReport = useCallback(async () => {
+    if (!convId) return;
+    setLoadingReport(true);
+    try {
+      const report = await chatService.getSalesAgentStatus(convId);
+      setAiReport(report);
+      setAiState(report.state);
+    } catch {
+      toast.error('Não consegui carregar a situação da IA neste lead.');
+    } finally {
+      setLoadingReport(false);
+    }
+  }, [convId]);
+
+  const toggleSalesAgent = useCallback(async () => {
+    if (!convId) return;
+    setTogglingAi(true);
+    try {
+      const next = await chatService.toggleSalesAgent(convId, !aiOn);
+      setAiState(next);
+      setAiReport(null);
+      toast.success(next.label);
+    } catch {
+      toast.error('Não consegui mudar a IA neste lead.');
+    } finally {
+      setTogglingAi(false);
+    }
+  }, [convId, aiOn]);
   const [movingStage, setMovingStage] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -224,6 +269,87 @@ export default function CardActionsPanel({
           <FollowupTimeline contactId={contactId ? String(contactId) : null} conversationId={convId} />
         </div>
       </div>
+
+      {/* IA Vendedora.
+
+          O bloco aparece SEMPRE que o lead tem conversa de WhatsApp, inclusive
+          quando não há IA no canal dele. Esconder nesse caso era o pior dos
+          mundos: é justamente quando a IA não atende o lead e não deixa rastro
+          nenhum, e a tela vazia dava a entender que estava tudo normal. */}
+      {convId && (
+        <div className="rounded-lg border border-border p-3 space-y-2">
+          <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">IA Vendedora</h5>
+          <div className="flex items-center gap-2 flex-wrap">
+            <SalesAgentBadge state={aiState} size="md" />
+            {(!aiState || aiState.status === 'none') && (
+              <span className="text-xs text-muted-foreground">Nenhuma IA ligada no canal deste lead</span>
+            )}
+            <Button
+              size="sm"
+              variant={aiOn ? 'outline' : 'default'}
+              className="h-7 text-xs gap-1.5"
+              onClick={toggleSalesAgent}
+              disabled={togglingAi || !convId || !aiState || aiState.status === 'none'}
+            >
+              {togglingAi ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : aiOn ? (
+                <BotOff className="h-3.5 w-3.5" />
+              ) : (
+                <Bot className="h-3.5 w-3.5" />
+              )}
+              {aiOn ? 'Desligar neste lead' : 'Ligar neste lead'}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs gap-1.5"
+              onClick={loadAiReport}
+              disabled={loadingReport || !convId}
+            >
+              {loadingReport ? <Loader2 className="h-3 w-3 animate-spin" /> : <HelpCircle className="h-3.5 w-3.5" />}
+              Por que não respondeu?
+            </Button>
+          </div>
+          {aiReport && (
+            <div className="rounded-md bg-muted/50 p-2 space-y-1">
+              <p className="text-[11px] text-foreground">{aiReport.why}</p>
+              {aiReport.next_step && (
+                <p className="text-[10px] text-muted-foreground">{aiReport.next_step}</p>
+              )}
+              {aiReport.runs.length > 0 && (
+                <ul className="pt-1 space-y-0.5">
+                  {aiReport.runs.map((run, i) => (
+                    <li key={i} className="text-[10px] text-muted-foreground">
+                      {new Date(run.created_at).toLocaleString('pt-BR')} ·{' '}
+                      {run.status === 'replied'
+                        ? run.delivered
+                          ? 'respondeu o lead'
+                          : 'gerou resposta, mas não conseguiu enviar'
+                        : run.status === 'failed'
+                          ? `falhou: ${run.error_message ?? 'erro no servidor'}`
+                          : (run.reason_label ?? 'não respondeu')}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+          {aiState?.status === 'idle' && (
+            <p className="text-[10px] text-muted-foreground">
+              A IA atende este canal, mas o gatilho ainda não bateu neste lead. Ligar aqui força o atendimento.
+            </p>
+          )}
+          {aiState?.status === 'handoff' && (
+            <p className="text-[10px] text-muted-foreground">
+              A IA passou este lead pra um corretor. Ligar de volta desfaz a transferência.
+            </p>
+          )}
+          {!convId && (
+            <p className="text-[10px] text-muted-foreground">Disponível apenas para leads com conversa WhatsApp.</p>
+          )}
+        </div>
+      )}
 
       {/* Resultado do lead */}
       <div className="rounded-lg border border-border p-3 space-y-2">

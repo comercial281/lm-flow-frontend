@@ -49,12 +49,14 @@ export const PHOTO_TYPE_LABELS: Record<string, string> = {
   view:              'Vista',
   floor_plan:        'Planta',
   video:             'Vídeo',
+  audio:             'Áudio',
   other:             'Outro',
 };
 
 export const ACCEPTED_MIME_TYPES = [
   'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/heic', 'image/heif',
   'video/mp4', 'video/quicktime', 'video/webm',
+  'audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/ogg', 'audio/wav', 'audio/x-wav', 'audio/webm',
 ];
 
 export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // 100 MB

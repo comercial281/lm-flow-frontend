@@ -1,5 +1,5 @@
 import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { Zap, Rocket, Radio, Repeat, Bell, Shuffle, SlidersHorizontal, Bot } from 'lucide-react';
+import { Zap, Rocket, Radio, Repeat, Bell, Shuffle } from 'lucide-react';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { isRootTenantHost } from '@/components/layout/config/menuItems';
@@ -36,6 +36,8 @@ const SECTORS: Sector[] = [
     icon: Rocket,
     featureKey: 'message_funnels',
   },
+  // Substitui "Formulários (Meta)": além dos formulários, junta a conexão da
+  // Página do Facebook (antes solta em Configurações → Integrações).
   {
     key: 'origem',
     name: 'Origem',
@@ -45,6 +47,8 @@ const SECTORS: Sector[] = [
     featureKey: 'lead_automations',
     clientToggleKey: 'client_manage_automations',
   },
+  // "Follow-ups", "Follow-up automático" e "Robô Sem Resposta" eram três setores;
+  // viraram um só. As outras duas viram seção dentro da própria tela do funil.
   {
     key: 'follow-ups',
     name: 'Follow-up',
@@ -53,37 +57,19 @@ const SECTORS: Sector[] = [
     featureKey: 'follow_ups',
   },
   {
-    key: 'follow-up-auto',
-    name: 'Follow-up automático',
-    path: '/automations/follow-up-auto',
-    icon: Repeat,
-    featureKey: 'follow_ups',
-  },
-  {
-    key: 'no-reply-robot',
-    name: 'Robô Sem Resposta',
-    path: '/automations/no-reply-robot',
-    icon: Bot,
-    featureKey: 'follow_ups',
-  },
-  {
     key: 'whatsapp-reminders',
     name: 'Lembretes',
     path: '/automations/whatsapp-reminders',
     icon: Bell,
   },
+  // Tela única de distribuição: modo (Rodízio/Leilão/Manual/Por disponibilidade)
+  // + quem participa + prazo + gestor. Antes eram 2 itens aqui ("Roleta de
+  // Corretores" e "Distribuição de Leads") pro mesmo conceito, com 2 motores.
   {
     key: 'roleta-config',
-    name: 'Roleta de Corretores',
+    name: 'Distribuição de Leads',
     path: '/automations/roleta-config',
     icon: Shuffle,
-    featureKey: 'lead_automations',
-  },
-  {
-    key: 'assignment-settings',
-    name: 'Distribuição de Leads',
-    path: '/automations/assignment-settings',
-    icon: SlidersHorizontal,
     featureKey: 'lead_automations',
   },
 ];

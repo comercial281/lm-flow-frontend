@@ -52,12 +52,14 @@ export default function TeamsHeader({
       icon: <Download className="h-4 w-4" />,
       onClick: onExport,
       variant: 'outline',
+      iconOnly: true,
     },
     {
       label: t('header.import'),
       icon: <Upload className="h-4 w-4" />,
       onClick: onImport,
       variant: 'outline',
+      iconOnly: true,
     },
   ];
 

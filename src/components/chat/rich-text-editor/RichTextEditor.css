@@ -108,3 +108,34 @@
 .rich-content p:last-child {
   margin-bottom: 0;
 }
+
+/* ==========================================================================
+   Celular: barra de digitar do chat
+   ==========================================================================
+   Abaixo do breakpoint `md` do Tailwind (48rem/768px), que é o mesmo limite
+   usado pela tela de chat para alternar lista <-> conversa.
+
+   Escopado em `.chat-composer-editor` de propósito: o Site Builder monta o
+   mesmo RichTextEditor e não pode mudar de tamanho.
+
+   Vai em CSS, e não em prop, porque a string de classes do ProseMirror é
+   montada dentro do useEffect de dependências vazias (RichTextEditor.tsx) e
+   fica congelada na montagem — uma prop responsiva exigiria setProps() mais
+   listener de resize, ou remontar a view (o que apagaria o rascunho).
+
+   Vence as utilities do Tailwind sem !important por dois motivos: a
+   especificidade é (0,2,0) contra (0,1,0), e este arquivo não importa o
+   Tailwind, então suas regras ficam fora das cascade layers da v4 —
+   não-layered sempre vence layered. */
+@media (max-width: 47.99rem) {
+  .chat-composer-editor .prosemirror-editor {
+    /* uma linha (24px) + os 24px de recuo vertical do p-3; cresce daí pra cima */
+    min-height: 48px;
+    /* teto acompanha o aparelho em vez dos 200px fixos, pra não disputar
+       pixels com o teclado; o piso de 120px protege o celular deitado */
+    max-height: max(30vh, 120px);
+    /* 16px é o mínimo que impede o zoom automático do iOS ao focar o campo */
+    font-size: 16px;
+    line-height: 1.5;
+  }
+}

@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/ds';
 import {
   Plus, Edit, Trash2, Zap, ChevronDown, ChevronUp, ToggleLeft, ToggleRight,
-  Archive, ArchiveRestore, BookOpen, Lock,
+  Archive, ArchiveRestore, BookOpen, Lock, Copy, Star, ArrowUp, ArrowDown, FlaskConical,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import {
@@ -42,8 +42,8 @@ import {
   formatActionSummary,
 } from './LeadAutomationsEditors';
 import AutomationLibraryModal from './AutomationLibraryModal';
+import AutomationTestDialog from './AutomationTestDialog';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
-import NotificationCenter from './NotificationCenter';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 
 const TRIGGERS = Object.entries(TRIGGER_LABELS).map(([value, label]) => ({ value, label }));
@@ -72,6 +72,30 @@ const EMPTY_FORM: LeadAutomationRuleFormData = {
 
 type Tab = 'active' | 'archived';
 
+// Regras que NASCERAM de uma tela amigável (as chaves de Follow-up e as da Central de
+// Notificações). Elas aparecem aqui porque são regras de verdade, mas editar à mão
+// desalinha da tela que as criou: a chave continua mostrando o estado antigo e o
+// usuário fica sem entender por que "está ligado e não acontece".
+//
+// Por isso ganham selo e perdem o botão de editar. Ligar/desligar e arquivar seguem
+// disponíveis — é a saída de emergência de quem precisa parar algo agora.
+function managedBy(rule: LeadAutomationRule): string | null {
+  if (rule.name?.startsWith('[Sistema] ')) return 'Follow-up';
+  if (rule.description?.includes('central:notif:')) return 'Notificações';
+  return null;
+}
+
+// Favoritos no topo, depois priority, depois criação. O backend NÃO ordena por
+// favorite (coluna pode faltar em schema de tenant pooled), então a ordem final é
+// aplicada aqui no cliente — no load e em toda mudança.
+function sortRules(list: LeadAutomationRule[]): LeadAutomationRule[] {
+  return [...list].sort((a, b) => {
+    if (!!b.favorite !== !!a.favorite) return (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0);
+    if ((a.priority ?? 0) !== (b.priority ?? 0)) return (a.priority ?? 0) - (b.priority ?? 0);
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+}
+
 export default function LeadAutomations() {
   const isSuperAdmin = useIsSuperAdmin();
   const { features } = useTenantFeatures();
@@ -92,13 +116,16 @@ export default function LeadAutomations() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [toDelete, setToDelete] = useState<LeadAutomationRule | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [testing, setTesting] = useState<LeadAutomationRule | null>(null);
 
   const resources = useAutomationResources(canAccess);
 
   const load = useCallback(async (which: Tab) => {
     setLoading(true);
     try {
-      setRules(await leadAutomationService.getAll(which === 'archived'));
+      setRules(sortRules(await leadAutomationService.getAll(which === 'archived')));
     } catch {
       toast.error('Erro ao carregar automações');
     } finally {
@@ -172,6 +199,26 @@ export default function LeadAutomations() {
     }
   };
 
+  const handleDuplicate = async (rule: LeadAutomationRule) => {
+    try {
+      // Cópia nasce DESLIGADA pra não disparar sem querer; usuário liga quando quiser.
+      const created = await leadAutomationService.create({
+        name:        `${rule.name} (cópia)`,
+        description: rule.description ?? '',
+        trigger:     rule.trigger,
+        conditions:  rule.conditions,
+        actions:     rule.actions,
+        is_active:   false,
+        priority:    rule.priority,
+        pipeline_id: rule.pipeline_id,
+      });
+      setRules(prev => [...prev, created]);
+      toast.success('Automação duplicada (desligada)');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao duplicar automação'));
+    }
+  };
+
   const handleToggle = async (rule: LeadAutomationRule) => {
     try {
       const updated = await leadAutomationService.toggle(rule.id);
@@ -180,6 +227,50 @@ export default function LeadAutomations() {
     } catch {
       toast.error('Erro ao alterar status');
     }
+  };
+
+  const handleFavorite = async (rule: LeadAutomationRule) => {
+    const fav = !rule.favorite;
+    setRules(prev => sortRules(prev.map(r => r.id === rule.id ? { ...r, favorite: fav } : r)));
+    try {
+      await leadAutomationService.update(rule.id, { favorite: fav });
+    } catch {
+      toast.error('Erro ao favoritar');
+      setRules(prev => sortRules(prev.map(r => r.id === rule.id ? { ...r, favorite: !fav } : r)));
+    }
+  };
+
+  const startRename = (rule: LeadAutomationRule) => {
+    setEditingNameId(rule.id);
+    setEditingName(rule.name);
+  };
+
+  const saveRename = async (rule: LeadAutomationRule) => {
+    const name = editingName.trim();
+    setEditingNameId(null);
+    if (!name || name === rule.name) return;
+    setRules(prev => prev.map(r => r.id === rule.id ? { ...r, name } : r));
+    try {
+      await leadAutomationService.update(rule.id, { name });
+      toast.success('Nome atualizado');
+    } catch {
+      toast.error('Erro ao renomear');
+      setRules(prev => prev.map(r => r.id === rule.id ? { ...r, name: rule.name } : r));
+    }
+  };
+
+  // Reordena movendo o card 1 posição; persiste priority = índice (só das regras que mudaram).
+  const handleMove = (rule: LeadAutomationRule, dir: 'up' | 'down') => {
+    const idx = rules.findIndex(r => r.id === rule.id);
+    const target = dir === 'up' ? idx - 1 : idx + 1;
+    if (idx < 0 || target < 0 || target >= rules.length) return;
+    const swapped = [...rules];
+    [swapped[idx], swapped[target]] = [swapped[target], swapped[idx]];
+    const renumbered = swapped.map((r, i) => ({ ...r, priority: i }));
+    setRules(renumbered);
+    const changed = renumbered.filter(r => rules.find(o => o.id === r.id)?.priority !== r.priority);
+    Promise.all(changed.map(r => leadAutomationService.update(r.id, { priority: r.priority })))
+      .catch(() => { toast.error('Erro ao reordenar'); void load(tab); });
   };
 
   const handleArchive = async (rule: LeadAutomationRule) => {
@@ -285,7 +376,6 @@ export default function LeadAutomations() {
       </div>
 
       {/* Central de Notificações — presets de push em toggle */}
-      <NotificationCenter />
 
       {/* Tabs Ativas / Arquivadas */}
       <div className="flex gap-1 mb-4 border-b border-border">
@@ -327,6 +417,16 @@ export default function LeadAutomations() {
               <div className="flex items-center gap-4 px-5 py-4">
                 {!archivedTab && (
                   <button
+                    onClick={() => handleFavorite(rule)}
+                    className="flex-shrink-0"
+                    title={rule.favorite ? 'Desafixar do topo' : 'Favoritar (fixa no topo)'}
+                  >
+                    <Star className={`h-5 w-5 ${rule.favorite ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'}`} />
+                  </button>
+                )}
+
+                {!archivedTab && (
+                  <button
                     onClick={() => handleToggle(rule)}
                     className="flex-shrink-0"
                     title={rule.is_active ? 'Desativar' : 'Ativar'}
@@ -339,10 +439,39 @@ export default function LeadAutomations() {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium truncate">{rule.name}</span>
+                    {editingNameId === rule.id ? (
+                      <Input
+                        autoFocus
+                        value={editingName}
+                        onChange={e => setEditingName(e.target.value)}
+                        onBlur={() => saveRename(rule)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') { e.preventDefault(); saveRename(rule); }
+                          if (e.key === 'Escape') setEditingNameId(null);
+                        }}
+                        className="h-7 w-56 text-sm font-medium"
+                      />
+                    ) : (
+                      <span
+                        className="font-medium truncate cursor-text"
+                        title="Duplo-clique para renomear"
+                        onDoubleClick={() => startRename(rule)}
+                      >
+                        {rule.name}
+                      </span>
+                    )}
                     <Badge variant="secondary" className="text-xs">
                       {TRIGGER_LABELS[rule.trigger] ?? rule.trigger}
                     </Badge>
+                    {managedBy(rule) && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-primary/40 text-primary"
+                        title={`Criada e mantida pela tela de ${managedBy(rule)}. Edite por lá — mexer aqui desalinha os dois.`}
+                      >
+                        gerenciada por {managedBy(rule)}
+                      </Badge>
+                    )}
                     {!archivedTab && !rule.is_active && (
                       <Badge variant="outline" className="text-xs text-muted-foreground">
                         Inativa
@@ -359,6 +488,40 @@ export default function LeadAutomations() {
                 </div>
 
                 <div className="flex items-center gap-1">
+                  {!archivedTab && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Mover pra cima"
+                        disabled={rules.findIndex(r => r.id === rule.id) === 0}
+                        onClick={() => handleMove(rule, 'up')}
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Mover pra baixo"
+                        disabled={rules.findIndex(r => r.id === rule.id) === rules.length - 1}
+                        onClick={() => handleMove(rule, 'down')}
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                  {/* Testar: dispara SÓ esta regra contra o último lead e mostra o que
+                      aconteceu. O aviso sai de verdade (marcado como teste); o que
+                      mexeria no card ou falaria com o lead fica simulado. */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Testar esta automação agora"
+                    onClick={() => setTesting(rule)}
+                  >
+                    <FlaskConical className="h-4 w-4" />
+                  </Button>
+
                   <Button
                     variant="ghost"
                     size="icon"
@@ -380,9 +543,11 @@ export default function LeadAutomations() {
                     </Button>
                   ) : (
                     <>
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(rule)} title="Editar">
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      {!managedBy(rule) && (
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(rule)} title="Editar">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -393,6 +558,15 @@ export default function LeadAutomations() {
                       </Button>
                     </>
                   )}
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Duplicar"
+                    onClick={() => handleDuplicate(rule)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
 
                   <Button
                     variant="ghost"
@@ -438,6 +612,12 @@ export default function LeadAutomations() {
         open={libraryOpen}
         onClose={() => { setLibraryOpen(false); if (tab === 'active') load('active'); }}
         onApplied={() => { if (tab === 'active') load('active'); }}
+      />
+
+      <AutomationTestDialog
+        rule={testing}
+        open={!!testing}
+        onOpenChange={open => { if (!open) setTesting(null); }}
       />
 
       {/* Create / Edit Modal */}

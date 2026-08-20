@@ -23,20 +23,128 @@ export interface FollowupSequence {
   is_active: boolean;
   stop_on_reply: boolean;
   business_hours_only: boolean;
+  /** Marca no card em que mensagem o lead parou (uma etiqueta por vez) e permite
+   *  retomar dali quando ele volta pro funil, em vez de recomeçar da primeira. */
+  progress_tagging: boolean;
+  /** Coluna pra onde o card volta quando o lead responde. Vazio = fica onde está. */
+  reply_stage_slug?: string | null;
+  /** Exemplo da etiqueta que o funil vai aplicar, vindo do backend. */
+  progress_tag_sample?: string | null;
   steps_count: number;
+  /** Quantos disparos este funil já tem. A confirmação de excluir mostra o número,
+   *  porque apagar o funil apaga o histórico junto. */
+  jobs_count: number;
+  /** Quantas portas de entrada o funil tem. Zero = só roda quando alguém mandar
+   *  pelo card; a lista avisa, senão parece que o funil está quebrado. */
+  entries_count: number;
   steps: FollowupStep[];
   created_at: string;
   updated_at: string;
 }
 
+/** Os gatilhos que a tela oferece. O motor entende 16 — o resto não cabe na cabeça
+ *  de quem está montando um funil e nunca foi pedido.
+ *
+ *  Não há disparo por "lead não respondeu": ele saiu em 2026-08-13, até o fluxo por
+ *  coluna estar validado. A lista real vem do backend; este tipo só acompanha. */
+export type FollowupEntryKind =
+  | 'stage'
+  | 'label'
+  | 'new_lead'
+  | 'visit_scheduled'
+  | 'visit_completed';
+
+/** Uma porta de entrada do funil: o que faz ELE começar. */
+export interface FollowupEntry {
+  id: number;
+  kind: FollowupEntryKind;
+  label: string;
+  enabled: boolean;
+  stage_id?: string | null;
+  tag?: string | null;
+  paid_only: boolean;
+}
+
+export interface FollowupEntryKindOption {
+  value: FollowupEntryKind;
+  label: string;
+  /** Qual detalhe a tela precisa pedir junto (null = nenhum). */
+  needs: 'stage_id' | 'label' | 'paid_only' | null;
+}
+
+export interface FollowupEntryStage {
+  id: string;
+  name: string;
+  pipeline_id: string;
+  pipeline_name: string;
+}
+
+/** Tudo que o formulário de entrada precisa, numa chamada só. */
+export interface FollowupEntriesPayload {
+  entries: FollowupEntry[];
+  kinds: FollowupEntryKindOption[];
+  stages: FollowupEntryStage[];
+  labels: string[];
+}
+
+export interface FollowupEntryFormData {
+  id?: number;
+  kind: FollowupEntryKind;
+  enabled?: boolean;
+  stage_id?: string;
+  label?: string;
+  paid_only?: boolean;
+}
+
 export interface FollowupSequenceFormData {
   name: string;
-  slug: string;
+  /** Opcional na criação: o backend deriva do nome e desempata duplicatas. */
+  slug?: string;
   description?: string;
   is_active?: boolean;
   stop_on_reply?: boolean;
   business_hours_only?: boolean;
+  progress_tagging?: boolean;
+  reply_stage_slug?: string | null;
   followup_steps_attributes?: FollowupStep[];
+}
+
+/** Um funil pronto do catálogo. Vem com o texto dos passos pra tela mostrar a
+ *  prévia ANTES de o usuário escolher — escolher às cegas foi o problema que
+ *  derrubou o modelo de marketing no CRM de um cliente. */
+export interface FollowupTemplate {
+  key: string;
+  name: string;
+  description: string;
+  business_hours_only: boolean;
+  steps_count: number;
+  steps: { position: number; delay_minutes: number; content: string }[];
+}
+
+export interface FollowupHistoryEntry {
+  id: string;
+  status: 'pending' | 'sent' | 'cancelled' | 'failed';
+  /** epoch em segundos */
+  run_at: number | null;
+  executed_at: number | null;
+  last_error: string | null;
+  contact: { id: string | null; name: string | null };
+  step: { position: number; message_type: FollowupMessageType; content: string } | null;
+}
+
+export interface FollowupHistory {
+  sequence: { id: string; name: string; slug: string };
+  summary: {
+    leads: number;
+    pending: number;
+    sent: number;
+    cancelled: number;
+    failed: number;
+    /** Cancelados porque o lead respondeu — o único cancelamento que é sucesso. */
+    stopped_by_reply: number;
+    last_sent_at: number | null;
+  };
+  recent: FollowupHistoryEntry[];
 }
 
 const BASE = '/followup_sequences';
@@ -71,6 +179,24 @@ export const followupSequencesService = {
     return (res.data as { data: FollowupSequence }).data;
   },
 
+  // --- Entradas do funil ("Quando este funil começa") ---
+
+  async getEntries(id: string): Promise<FollowupEntriesPayload> {
+    const res = await api.get(`${BASE}/${id}/entries`);
+    return (res.data as { data: FollowupEntriesPayload }).data;
+  },
+
+  /** Cria ou atualiza — o backend decide pelo `id`, e a tela usa o mesmo
+   *  formulário nos dois casos. */
+  async saveEntry(id: string, entry: FollowupEntryFormData): Promise<FollowupEntry> {
+    const res = await api.post(`${BASE}/${id}/entries`, { entry });
+    return (res.data as { data: FollowupEntry }).data;
+  },
+
+  async deleteEntry(id: string, entryId: number): Promise<void> {
+    await api.delete(`${BASE}/${id}/entries/${entryId}`);
+  },
+
   async testSend(id: string, phone: string, name = 'Teste'): Promise<{
     contact_id: string;
     sequence_slug: string;
@@ -80,6 +206,23 @@ export const followupSequencesService = {
       params: { phone, name },
     });
     return (res.data as { data: { contact_id: string; sequence_slug: string; pending_jobs: number } }).data;
+  },
+
+  async getTemplates(): Promise<FollowupTemplate[]> {
+    const res = await api.get(`${BASE}/templates`);
+    return (res.data as { data: FollowupTemplate[] }).data ?? [];
+  },
+
+  /** Cria UM funil a partir do catálogo. Diferente de `reseedTemplate`, não toca
+   *  em pipeline, coluna, etiqueta nem regra — só nasce a sequência. */
+  async createFromTemplate(templateKey: string, name?: string): Promise<FollowupSequence> {
+    const res = await api.post(`${BASE}/create_from_template`, { template_key: templateKey, name });
+    return (res.data as { data: FollowupSequence }).data;
+  },
+
+  async getHistory(id: string): Promise<FollowupHistory> {
+    const res = await api.get(`${BASE}/${id}/history`);
+    return (res.data as { data: FollowupHistory }).data;
   },
 
   async uploadMedia(file: File): Promise<{

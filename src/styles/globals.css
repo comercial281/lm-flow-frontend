@@ -1,16 +1,17 @@
 @import 'tailwindcss';
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* Define o variant dark para o Tailwind v4 */
 @custom-variant dark (&:is(.dark *));
 
 /* Tokens tipográficos — display = mesma família do app, só pesos finos + tracking apertado */
 :root {
-  --font-display: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Poppins', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 @theme inline {
+  --font-sans: 'Poppins', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -55,33 +56,34 @@
  * Accent:  soft violet highlight (marca) — sem dourado/amarelo
  * ==================================================================== */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  /* [redesign fase 1] neutros com viés violeta + fundo separado dos cards */
+  --background: oklch(0.968 0.006 300);
+  --foreground: oklch(0.165 0.018 295);
+  --card: oklch(0.995 0.002 300);
+  --card-foreground: oklch(0.165 0.018 295);
+  --popover: oklch(0.995 0.002 300);
+  --popover-foreground: oklch(0.165 0.018 295);
   --primary: oklch(0.55 0.22 295);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.85 0.10 295);
-  --accent-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.955 0.008 300);
+  --secondary-foreground: oklch(0.205 0.015 295);
+  --muted: oklch(0.955 0.008 300);
+  --muted-foreground: oklch(0.556 0.012 295);
+  --accent: oklch(0.9 0.05 300);
+  --accent-foreground: oklch(0.3 0.12 295);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --border: oklch(0.91 0.009 300);
+  --input: oklch(0.91 0.009 300);
   --ring: oklch(0.55 0.22 295);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
+  --radius: 0.875rem;
+  --sidebar: oklch(0.99 0.003 300);
+  --sidebar-foreground: oklch(0.165 0.018 295);
   --sidebar-primary: oklch(0.55 0.22 295);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-accent: oklch(0.955 0.008 300);
+  --sidebar-accent-foreground: oklch(0.205 0.015 295);
+  --sidebar-border: oklch(0.91 0.009 300);
   --sidebar-ring: oklch(0.55 0.22 295);
   --chart-1: oklch(0.55 0.22 295);
   --chart-2: oklch(0.70 0.14 200);
@@ -91,38 +93,58 @@
 }
 
 .dark {
-  --background: oklch(0.08 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.12 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.12 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.52 0.23 295);
+  /* [redesign fase A] preto/cinza real — violeta SÓ nos destaques */
+  --background: oklch(0.09 0 0);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.135 0 0);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.135 0 0);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.55 0.23 295);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.18 0 0);
+  --secondary: oklch(0.2 0 0);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.18 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.85 0.10 295);
-  --accent-foreground: oklch(0.145 0 0);
+  --muted: oklch(0.2 0 0);
+  --muted-foreground: oklch(0.7 0 0);
+  --accent: oklch(0.26 0.03 295);
+  --accent-foreground: oklch(0.97 0 0);
   --destructive: oklch(0.65 0.24 27);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.22 0 0);
-  --input: oklch(0.18 0 0);
+  --border: oklch(0.24 0 0);
+  --input: oklch(0.2 0 0);
   --ring: oklch(0.62 0.24 295);
-  --sidebar: oklch(0.10 0 0);
+  --sidebar: oklch(0.11 0 0);
   --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.52 0.23 295);
+  --sidebar-primary: oklch(0.55 0.23 295);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.18 0 0);
+  --sidebar-accent: oklch(0.2 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.22 0 0);
+  --sidebar-border: oklch(0.24 0 0);
   --sidebar-ring: oklch(0.62 0.24 295);
   --chart-1: oklch(0.62 0.24 295);
   --chart-2: oklch(0.70 0.14 200);
   --chart-3: oklch(0.48 0.2 295);
   --chart-4: oklch(0.65 0.20 350);
   --chart-5: oklch(0.7 0.14 305);
+}
+
+/* [redesign fase 2] Cards "flutuam" (sombra suave estilo kit CRM).
+   Mira o contrato do design-system (data-slot=card). Mantém um anel violeta
+   sutil pra definição + sombra de profundidade. Só visual. */
+/* !important porque o design-system aplica box-shadow INLINE (anel violeta)
+   no card — sem !important a folha de estilo perde pro inline. rgba (não oklch)
+   pra sombra renderizar consistente. Provado no app real (screenshot). */
+[data-slot="card"] {
+  box-shadow:
+    0 0 0 1px rgba(124, 58, 237, 0.12),
+    0 1px 2px rgba(20, 12, 44, 0.05),
+    0 14px 28px -12px rgba(90, 40, 160, 0.20) !important;
+}
+.dark [data-slot="card"] {
+  box-shadow:
+    0 0 0 1px rgba(168, 85, 247, 0.16),
+    0 2px 6px -1px rgba(0, 0, 0, 0.40),
+    0 18px 36px -16px rgba(0, 0, 0, 0.55) !important;
 }
 
 /* Hover com CONTRASTE real no tema escuro.
@@ -472,4 +494,165 @@ button[role='switch'][data-state='unchecked'],
 [role='switch'][aria-checked='false'] {
   background-color: #ef4444 !important; /* vermelho */
   border-color: #ef4444 !important;
+}
+
+/* ═══ Conversas = espelho do WhatsApp (só reskin, lógica intacta) ═══ */
+.wa-chat {
+  --wa-bg: #e5ddd5;
+  --wa-in: #ffffff;
+  --wa-out: #dcf8c6;
+  --wa-in-tx: #111b21;
+  --wa-out-tx: #111b21;
+  --wa-bar: #f0f2f5;
+  background-color: var(--wa-bg) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='340' height='340' viewBox='0 0 340 340'%3E%3Cg fill='none' stroke='%230b141a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='0.05'%3E%3Cpath d='M40 60c-8-8-20-2-20 8 0 9 20 20 20 20s20-11 20-20c0-10-12-16-20-8z'/%3E%3Cpath d='M120 40h34a6 6 0 0 1 6 6v18a6 6 0 0 1-6 6h-20l-9 8v-8h-5a6 6 0 0 1-6-6V46a6 6 0 0 1 6-6z'/%3E%3Crect x='240' y='36' width='26' height='46' rx='5'/%3E%3Cline x1='248' y1='75' x2='258' y2='75'/%3E%3Ccircle cx='300' cy='150' r='20'/%3E%3Cpath d='M292 156a10 10 0 0 0 16 0'/%3E%3Crect x='30' y='150' width='44' height='32' rx='5'/%3E%3Ccircle cx='52' cy='166' r='9'/%3E%3Cpath d='M40 150l4-6h16l4 6'/%3E%3Cpath d='M210 118l6 13 14 2-10 10 2 14-12-7-12 7 2-14-10-10 14-2z'/%3E%3Cpath d='M40 250l60-22-22 60-10-24z'/%3E%3Ccircle cx='170' cy='262' r='20'/%3E%3Cpath d='M170 250v12l8 5'/%3E%3Cpath d='M270 250h34v14a12 12 0 0 1-12 12h-10a12 12 0 0 1-12-12z'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 360px;
+}
+.dark .wa-chat {
+  --wa-bg: #0b141a;
+  --wa-in: #202c33;
+  --wa-out: #005c4b;
+  --wa-in-tx: #e9edef;
+  --wa-out-tx: #e9edef;
+  --wa-bar: #202c33;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='340' height='340' viewBox='0 0 340 340'%3E%3Cg fill='none' stroke='%23e9edef' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='0.04'%3E%3Cpath d='M40 60c-8-8-20-2-20 8 0 9 20 20 20 20s20-11 20-20c0-10-12-16-20-8z'/%3E%3Cpath d='M120 40h34a6 6 0 0 1 6 6v18a6 6 0 0 1-6 6h-20l-9 8v-8h-5a6 6 0 0 1-6-6V46a6 6 0 0 1 6-6z'/%3E%3Crect x='240' y='36' width='26' height='46' rx='5'/%3E%3Cline x1='248' y1='75' x2='258' y2='75'/%3E%3Ccircle cx='300' cy='150' r='20'/%3E%3Cpath d='M292 156a10 10 0 0 0 16 0'/%3E%3Crect x='30' y='150' width='44' height='32' rx='5'/%3E%3Ccircle cx='52' cy='166' r='9'/%3E%3Cpath d='M40 150l4-6h16l4 6'/%3E%3Cpath d='M210 118l6 13 14 2-10 10 2 14-12-7-12 7 2-14-10-10 14-2z'/%3E%3Cpath d='M40 250l60-22-22 60-10-24z'/%3E%3Ccircle cx='170' cy='262' r='20'/%3E%3Cpath d='M170 250v12l8 5'/%3E%3Cpath d='M270 250h34v14a12 12 0 0 1-12 12h-10a12 12 0 0 1-12-12z'/%3E%3C/g%3E%3C/svg%3E");
+}
+/* balões estilo WhatsApp — só mensagens normais (privadas/bot mantêm o estilo) */
+.wa-chat .wa-msg-bubble[data-own='1'][data-private='0'][data-bot='0'] {
+  background: var(--wa-out) !important;
+  color: var(--wa-out-tx) !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  border-top-right-radius: 2px !important;
+  box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13) !important;
+}
+.wa-chat .wa-msg-bubble[data-own='0'][data-private='0'] {
+  background: var(--wa-in) !important;
+  color: var(--wa-in-tx) !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  border-top-left-radius: 2px !important;
+  box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13) !important;
+}
+.wa-chat .wa-msg-bubble[data-private='0'] .text-muted-foreground {
+  color: inherit !important;
+  opacity: 0.6;
+}
+/* header verde estilo WhatsApp */
+.wa-header {
+  background: #075e54 !important;
+  color: #fff !important;
+  border-bottom-color: transparent !important;
+  backdrop-filter: none !important;
+}
+.dark .wa-header {
+  background: #202c33 !important;
+}
+.wa-header .text-muted-foreground {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+.wa-header svg {
+  color: #fff;
+}
+/* barra de digitar estilo WhatsApp */
+.wa-chat .wa-input-bar {
+  background: var(--wa-bar) !important;
+  box-shadow: none !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+.dark .wa-chat .wa-input-bar {
+  border-top-color: rgba(255, 255, 255, 0.06) !important;
+}
+/* hora + visto dentro do balão (estilo WhatsApp) */
+.wa-chat .wa-time {
+  font-size: 10.5px;
+  line-height: 1;
+}
+.wa-chat .wa-time .text-primary {
+  color: #53bdeb !important; /* ✓✓ lido = azul do WhatsApp */
+}
+
+/* ═══ Lote geral: gradiente da marca nos botões primários (todas as telas) ═══ */
+button.bg-primary, [data-slot='button'].bg-primary {
+  background-image: linear-gradient(135deg, #7c3aed 0%, #9333ea 55%, #a855f7 100%) !important;
+  box-shadow: 0 8px 18px -6px rgba(124, 58, 237, 0.5) !important;
+  border-color: transparent !important;
+}
+button.bg-primary:hover, [data-slot='button'].bg-primary:hover {
+  filter: brightness(1.07);
+}
+/* item ativo do menu com o mesmo gradiente */
+[aria-label='Menu lateral'] a.bg-primary,
+[aria-label='Menu lateral'] .bg-primary {
+  background-image: linear-gradient(135deg, #7c3aed 0%, #9333ea 55%, #a855f7 100%) !important;
+  border-color: transparent !important;
+}
+
+/* ============================================================================
+   MÓDULO ESPAÇO (Notion por tenant) — tokens lm-* portados do LM Hub.
+   Os componentes portados usam classes utilitárias lm-* (bg-lm-card,
+   text-lm-subtle, rounded-lm-lg, shadow-lm-md, bg-lm-neon/20, etc.). O LM Flow
+   não tinha esses tokens; definimos aqui como cores/raios/sombras do tema v4.
+   @theme (não-inline) => as utilities referenciam var(--color-lm-*), então as
+   overrides de dark abaixo trocam o valor em runtime dentro de `.dark`.
+   Valores light = DS v1.0 do LM Hub; dark = identidade obsidiana/violeta.
+   ============================================================================ */
+@theme {
+  /* superfícies */
+  --color-lm-deep: #f6f4fb;
+  --color-lm-bg: #ffffff;
+  --color-lm-dark: #ffffff;
+  --color-lm-card: #ffffff;
+  --color-lm-card2: #faf9fc;
+  --color-lm-border: #d6d0e0;
+  --color-lm-border2: #bfb6cd;
+  /* accent */
+  --color-lm-mid: #5b21b6;
+  --color-lm-neon: #6d28d9;
+  --color-lm-glow: #a78bfa;
+  /* texto */
+  --color-lm-primary: #17112e;
+  --color-lm-muted: #5f5875;
+  --color-lm-subtle: #787190;
+  --color-lm-disabled: #a9a3b5;
+  --color-lm-inverse: #ffffff;
+  /* semânticos / decorativos */
+  --color-lm-success: #0f7a52;
+  --color-lm-danger: #c92040;
+  --color-lm-star: #b54708;
+  /* raios */
+  --radius-lm-sm: 6px;
+  --radius-lm-md: 10px;
+  --radius-lm-lg: 14px;
+  --radius-lm-xl: 18px;
+  /* sombras */
+  --shadow-lm-sm: 0 1px 2px rgb(15 5 32 / 0.06);
+  --shadow-lm-md: 0 2px 8px rgb(15 5 32 / 0.08);
+  --shadow-lm-lg: 0 8px 24px rgb(15 5 32 / 0.12);
+  --shadow-lm-modal: 0 20px 60px rgb(15 5 32 / 0.28);
+}
+
+.dark {
+  --color-lm-deep: #0f0520;
+  --color-lm-bg: #1a0a2e;
+  --color-lm-dark: #150826;
+  --color-lm-card: #1a0a2e;
+  --color-lm-card2: #241238;
+  --color-lm-border: #2e1d45;
+  --color-lm-border2: #3b2a55;
+  --color-lm-mid: #7c3aed;
+  --color-lm-neon: #9333ea;
+  --color-lm-glow: #c084fc;
+  --color-lm-primary: #f3eefa;
+  --color-lm-muted: #b9aed0;
+  --color-lm-subtle: #8e82ac;
+  --color-lm-disabled: #5e5478;
+  --color-lm-inverse: #ffffff;
+  --color-lm-success: #34d399;
+  --color-lm-danger: #fb7185;
+  --color-lm-star: #fbbf24;
+  --shadow-lm-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-lm-md: 0 2px 8px rgb(0 0 0 / 0.5);
+  --shadow-lm-lg: 0 8px 24px rgb(0 0 0 / 0.55);
+  --shadow-lm-modal: 0 20px 60px rgb(0 0 0 / 0.7);
 }

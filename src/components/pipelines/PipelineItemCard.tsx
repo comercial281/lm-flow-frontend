@@ -4,7 +4,8 @@ import { Button, Badge, DropdownMenu, DropdownMenuContent, DropdownMenuItem, Dro
 import { Edit, Trash2, MoreVertical, Phone, Mail, MessageSquare, User, Clock, AlertCircle, ListTodo, CheckCircle2, GripVertical, GitBranch, Megaphone, Home, Calendar } from 'lucide-react';
 import { PipelineItem, Pipeline, PipelineStage } from '@/types/analytics';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
-import CreditCheckBadge from '@/components/contacts/CreditCheckBadge';
+import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
+import SalesAgentBadge from '@/components/salesAgents/SalesAgentBadge';
 
 interface PipelineItemCardProps {
   item: PipelineItem;
@@ -45,6 +46,7 @@ export default function PipelineItemCard({
   showActions = true,
 }: PipelineItemCardProps) {
   const { t } = useLanguage('pipelines');
+  const { openLeadConversation, startConversationModal, opening } = useOpenLeadConversation();
   const canRemoveFromPipeline = useFeature('card_remove_from_pipeline');
   // Item "Remover do pipeline" só aparece se a feature estiver ligada E houver handler.
   const showRemove = !!onRemove && canRemoveFromPipeline;
@@ -119,6 +121,9 @@ export default function PipelineItemCard({
                 #{item.conversation.display_id}
               </span>
             )}
+            {/* Junto do nome de propósito: é o primeiro lugar onde o olho bate, e
+                a pergunta "a IA já falou com esse?" vem antes de qualquer outra. */}
+            <SalesAgentBadge state={item.sales_agent} />
           </div>
           {/* Contact details */}
           <div className="flex items-center space-x-2 text-xs text-muted-foreground">
@@ -153,16 +158,18 @@ export default function PipelineItemCard({
             <Phone className="w-3.5 h-3.5" />
             {t('kanban.item.call', 'Ligar')}
           </a>
-          <a
-            href={`https://wa.me/${(item.contact.phone_number.match(/\d/g) || []).join('')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-400 transition-colors"
-            title="WhatsApp"
+          {/* Abre a conversa DENTRO do LM Flow. Era um link wa.me, que levava o
+              corretor para fora do CRM e deixava a conversa sem histórico aqui. */}
+          <button
+            type="button"
+            onClick={() => openLeadConversation(item)}
+            disabled={opening}
+            className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-400 transition-colors"
+            title={t('kanban.item.openChat', 'Abrir conversa')}
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            WhatsApp
-          </a>
+            {t('kanban.item.whatsapp', 'WhatsApp')}
+          </button>
           {onView && (
             <button
               type="button"
@@ -241,17 +248,6 @@ export default function PipelineItemCard({
               {adName && <p className="text-xs font-medium text-violet-700 dark:text-violet-300 truncate">{adName}</p>}
               {adSet && <p className="text-[10px] text-violet-500 dark:text-violet-400 truncate">{adSet}</p>}
             </div>
-          </div>
-        );
-      })()}
-
-      {/* Situação de CPF (BigDataCorp) */}
-      {(() => {
-        const cc = (item.contact as any)?.additional_attributes?.credit_check;
-        if (!cc?.status) return null;
-        return (
-          <div className="mb-3">
-            <CreditCheckBadge status={cc.status} score={cc.score} compact />
           </div>
         );
       })()}
@@ -448,16 +444,28 @@ export default function PipelineItemCard({
           </span>
         </div>
 
-        {/* Assignee */}
-        {item.conversation?.assignee && (
+        {/* Responsável. `item.assignee` (topo) é a fonte certa: o backend já o
+            preenche do assignee da conversa OU do default_assignee do contato.
+            Lendo só de item.conversation.assignee, lead de formulário/anúncio
+            — que não tem conversa — aparecia SEMPRE sem responsável, mesmo com
+            a roleta tendo gravado o dono direitinho. */}
+        {(item.assignee ?? item.conversation?.assignee) && (
           <div className="flex items-center space-x-1 text-muted-foreground">
             <User className="w-3 h-3" />
             <span className="truncate max-w-20">
-              {item.conversation.assignee.name}
+              {(item.assignee ?? item.conversation?.assignee)?.name}
             </span>
           </div>
         )}
       </div>
+
+      {/* Só monta quando o lead ainda não tem conversa (fica null no resto do tempo).
+          O stopPropagation é obrigatório: portal do React continua propagando pela
+          ÁRVORE React, então um clique dentro do modal chegaria no onClick do card
+          e abriria a ficha do lead por baixo. */}
+      {startConversationModal && (
+        <div onClick={e => e.stopPropagation()}>{startConversationModal}</div>
+      )}
     </div>
   );
 }

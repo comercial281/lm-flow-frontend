@@ -24,7 +24,6 @@ export { default as BusinessHoursForm } from './settings/BusinessHoursForm';
 export { default as CSATForm } from './settings/CSATForm';
 export { default as PreChatForm } from './settings/PreChatForm';
 export { default as WidgetBuilderForm } from './settings/WidgetBuilderForm';
-export { default as AgentBotConfigurationForm } from './settings/AgentBotConfigurationForm';
 export { default as ModerationDashboard } from './settings/ModerationDashboard';
 export { default as ConfigurationForm } from './settings/ConfigurationForm';
 export { default as MessageTemplateForm } from './settings/MessageTemplateForm';

@@ -55,7 +55,7 @@
       "attachments": {
         "label": "Attachments (Images, Audios, Videos, Documents)",
         "addButton": "Add File",
-        "hint": "Maximum 10MB per file. Formats: images, audios, videos, PDF, DOC",
+        "hint": "Maximum {{maxSize}}MB per file. Formats: images, audios, videos, PDF, DOC",
         "existing": "Existing attachments:",
         "new": "New attachments:"
       }

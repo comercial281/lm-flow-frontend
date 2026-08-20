@@ -5,4 +5,6 @@
  */
 
 export { PhoneInput } from './PhoneInput';
+export { BrPhoneInput } from './BrPhoneInput';
 export { TaxIdInput } from './TaxIdInput';
+export { ManualOriginInput } from './ManualOriginInput';

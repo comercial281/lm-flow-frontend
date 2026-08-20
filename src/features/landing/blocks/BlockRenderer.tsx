@@ -6,6 +6,7 @@ import {
   type LandingProperty,
   type LandingTheme,
   type LeadSubmitPayload,
+  type LeadSubmitResult,
   themeToCssVars,
 } from './render-types';
 
@@ -27,7 +28,7 @@ export interface BlockRendererProps {
   /** Editor preview hint: render hidden blocks dimmed instead of removing them. */
   showHidden?: boolean;
   /** Grava o lead do formulário (render público). */
-  onSubmitLead?: (payload: LeadSubmitPayload) => Promise<void> | void;
+  onSubmitLead?: (payload: LeadSubmitPayload) => Promise<LeadSubmitResult | void> | LeadSubmitResult | void;
 }
 
 /** Renders an ordered list of blocks. Shared by the editor preview and the

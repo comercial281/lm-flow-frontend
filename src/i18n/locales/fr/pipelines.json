@@ -539,7 +539,11 @@
         "unknown": "Inconnu"
       },
       "valueLabel": "Valeur Totale :",
-      "system": "Système"
+      "system": "Système",
+      "call": "Appeler",
+      "schedule": "Planifier",
+      "whatsapp": "WhatsApp",
+      "openChat": "Ouvrir la conversation"
     },
     "conversation": {
       "unknownUser": "Utilisateur Inconnu",

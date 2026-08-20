@@ -8,8 +8,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Badge,
@@ -40,8 +38,6 @@ import {
   Megaphone,
   Archive,
   Home,
-  Tag,
-  Columns3,
   LayoutGrid,
   List as ListIcon,
   ChevronRight,
@@ -72,14 +68,25 @@ import EditStageModal from '@/components/pipelines/EditStageModal';
 import DeleteStageModal from '@/components/pipelines/DeleteStageModal';
 import DeletePipelineModal from '@/components/pipelines/DeletePipelineModal';
 import ReorderStagesModal from '@/components/pipelines/ReorderStagesModal';
+import PipelineFiltersPopover, {
+  type TimePreset,
+  type AbandonedPreset,
+} from '@/components/pipelines/PipelineFiltersPopover';
 import { ScheduleActionModal } from '@/components/scheduledActions';
 import { NotesHistoryModal } from '@/components/pipelines/NotesHistoryModal';
 import ArchivedLeadsModal from '@/components/pipelines/ArchivedLeadsModal';
+import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
+import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 
 export default function PipelineKanban() {
   const { t } = useLanguage('pipelines');
   const { pipelineId } = useParams<{ pipelineId: string }>();
   const navigate = useNavigate();
+  const {
+    openLeadConversation,
+    startConversationModal,
+    opening: openingConversation,
+  } = useOpenLeadConversation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(true);
@@ -236,11 +243,13 @@ export default function PipelineKanban() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   // Filtro por tempo (entrada do lead): atalhos rápidos + faixa personalizada.
-  const [timePreset, setTimePreset] = useState<'all' | 'today' | '7d' | '30d' | 'custom'>('all');
+  const [timePreset, setTimePreset] = useState<TimePreset>('all');
   // Filtro por tags: nomes selecionados (vazio = todas).
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  // #13 Detector de lead largado: filtra só quem está sem contato há 7+ dias.
-  const [abandonedOnly, setAbandonedOnly] = useState(false);
+  // #13 Detector de lead largado: limiar de dias sem contato escolhível (era
+  // fixo em 7 dias) — pedido do Giovani (20/08).
+  const [abandonedPreset, setAbandonedPreset] = useState<AbandonedPreset>('off');
+  const [abandonedCustomDays, setAbandonedCustomDays] = useState('');
   // Filtro por colunas: ids de etapas ocultas (vazio = todas visíveis).
   const [hiddenStages, setHiddenStages] = useState<string[]>([]);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -266,18 +275,29 @@ export default function PipelineKanban() {
   const loadPipelineData = useCallback(async (silent = false) => {
     if (!pipelineId) return;
 
-    if (!silent) setLoading(true);
+    // Reabrir um pipe já visitado renderiza NA HORA com o último payload do
+    // servidor e revalida silencioso por trás (stale-while-revalidate).
+    const cached = getCachedPipeline(pipelineId);
+    const showSpinner = !silent && !cached;
+    if (!silent && cached) {
+      setPipeline(cached);
+      setStages(cached.stages || []);
+      setLoading(false);
+    }
+
+    if (showSpinner) setLoading(true);
     try {
       // Load pipeline with all data (stages, items, tasks_info, services_info)
       const pipelineData = await pipelinesService.getPipeline(pipelineId);
 
+      setCachedPipeline(pipelineId, pipelineData);
       setPipeline(pipelineData);
       setStages(pipelineData.stages || []);
     } catch (error) {
       console.error('Error loading pipeline data:', error);
-      if (!silent) toast.error(t('kanban.messages.loadDataError'));
+      if (showSpinner) toast.error(t('kanban.messages.loadDataError'));
     } finally {
-      if (!silent) setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   }, [pipelineId]);
 
@@ -586,9 +606,6 @@ export default function PipelineKanban() {
       item.id;
     return String(id).padStart(4, '0');
   };
-  // Corretor responsável pelo lead (mesma fonte do "Assignee" do card do Kanban).
-  const resolveItemAssignee = (item: PipelineItem): string | null =>
-    item.assignee?.name || item.conversation?.assignee?.name || null;
   // Data de chegada do lead no pipeline (quando o card entrou).
   const formatArrivalDate = (item: PipelineItem): string | null => {
     const raw = item.entered_at
@@ -1002,12 +1019,22 @@ export default function PipelineKanban() {
     }
   }, [timePreset, dateFrom, dateTo]);
 
+  // Limiar de dias sem contato pro filtro "Largados" — null = filtro desligado.
+  const abandonedThresholdDays = useMemo(() => {
+    if (abandonedPreset === 'off') return null;
+    if (abandonedPreset === 'custom') {
+      const n = parseInt(abandonedCustomDays, 10);
+      return Number.isFinite(n) && n > 0 ? n : 7;
+    }
+    return parseInt(abandonedPreset, 10);
+  }, [abandonedPreset, abandonedCustomDays]);
+
   // Quantos filtros estão ativos (pro botão "Limpar" e badges).
   const activeFilterCount =
     (searchQuery ? 1 : 0) +
     (timePreset !== 'all' ? 1 : 0) +
     (selectedTags.length ? 1 : 0) +
-    (abandonedOnly ? 1 : 0) +
+    (abandonedThresholdDays != null ? 1 : 0) +
     (hiddenStages.length ? 1 : 0);
   const clearAllFilters = () => {
     setSearchQuery('');
@@ -1015,7 +1042,8 @@ export default function PipelineKanban() {
     setDateFrom('');
     setDateTo('');
     setSelectedTags([]);
-    setAbandonedOnly(false);
+    setAbandonedPreset('off');
+    setAbandonedCustomDays('');
     setHiddenStages([]);
   };
 
@@ -1024,7 +1052,7 @@ export default function PipelineKanban() {
     const visible = stages.filter(s => !hiddenStages.includes(s.id));
     const q = searchQuery.toLowerCase();
     const { from, to } = timeRange;
-    if (!q && !from && !to && selectedTags.length === 0 && !abandonedOnly) return visible;
+    if (!q && !from && !to && selectedTags.length === 0 && abandonedThresholdDays == null) return visible;
     return visible.map(stage => ({
       ...stage,
       items: (stage.items || []).filter(item => {
@@ -1042,14 +1070,14 @@ export default function PipelineKanban() {
         const tags = itemTagNames(item);
         const matchesTags =
           selectedTags.length === 0 || selectedTags.some(t => tags.includes(t));
-        // Largado = sem contato há 7+ dias (mesma régua do badge "Xd sem contato").
+        // Largado = sem contato há N+ dias (limiar escolhido no filtro).
         const d = lastContactDays(item);
-        const matchesAbandoned = !abandonedOnly || (d != null && d >= 7);
+        const matchesAbandoned = abandonedThresholdDays == null || (d != null && d >= abandonedThresholdDays);
         return matchesSearch && matchesFrom && matchesTo && matchesTags && matchesAbandoned;
       }),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stages, searchQuery, timeRange, selectedTags, hiddenStages, abandonedOnly]);
+  }, [stages, searchQuery, timeRange, selectedTags, hiddenStages, abandonedThresholdDays]);
 
   // Visão em Lista: todos os leads do funil (respeitando os mesmos filtros do
   // Kanban acima) numa lista única, por ordem de chegada, com a coluna atual
@@ -1295,168 +1323,29 @@ export default function PipelineKanban() {
                 )}
               </div>
 
-              {/* Filtro por TEMPO (entrada do lead): atalhos + personalizado */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant={timePreset !== 'all' ? 'default' : 'outline'}
-                    size="sm"
-                    className="whitespace-nowrap"
-                  >
-                    <CalendarClock className="w-4 h-4 mr-2" />
-                    {timePreset === 'today'
-                      ? 'Hoje'
-                      : timePreset === '7d'
-                      ? 'Últimos 7 dias'
-                      : timePreset === '30d'
-                      ? 'Últimos 30 dias'
-                      : timePreset === 'custom'
-                      ? 'Período personalizado'
-                      : 'Tempo'}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuLabel>Filtrar por tempo</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setTimePreset('all')}>Todos</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTimePreset('today')}>Hoje</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTimePreset('7d')}>
-                    Últimos 7 dias
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTimePreset('30d')}>
-                    Últimos 30 dias
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTimePreset('custom')}>
-                    Período personalizado…
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Filtro por TAGS (etiquetas do lead) */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant={selectedTags.length ? 'default' : 'outline'}
-                    size="sm"
-                    className="whitespace-nowrap"
-                    disabled={allTags.length === 0}
-                  >
-                    <Tag className="w-4 h-4 mr-2" />
-                    Tags
-                    {selectedTags.length > 0 && (
-                      <span className="ml-2 rounded-full bg-background/30 px-1.5 text-xs">
-                        {selectedTags.length}
-                      </span>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
-                  <DropdownMenuLabel>Filtrar por tags</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {allTags.length === 0 && (
-                    <div className="px-2 py-1.5 text-xs text-muted-foreground">Nenhuma tag</div>
-                  )}
-                  {allTags.map(tag => (
-                    <DropdownMenuCheckboxItem
-                      key={tag.name}
-                      checked={selectedTags.includes(tag.name)}
-                      onCheckedChange={checked =>
-                        setSelectedTags(prev =>
-                          checked ? [...prev, tag.name] : prev.filter(t => t !== tag.name),
-                        )
-                      }
-                      onSelect={e => e.preventDefault()}
-                    >
-                      <span
-                        className="mr-2 inline-block h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: tag.color }}
-                      />
-                      {tag.name}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                  {selectedTags.length > 0 && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setSelectedTags([])}>
-                        Limpar tags
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* #13 Filtro: só leads largados (sem contato há 7+ dias) */}
-              <Button
-                variant={abandonedOnly ? 'default' : 'outline'}
-                size="sm"
-                className="whitespace-nowrap"
-                onClick={() => setAbandonedOnly(v => !v)}
-                title="Mostrar só leads sem contato há 7+ dias (largados)"
-              >
-                <Clock className="w-4 h-4 mr-2" />
-                Largados
-              </Button>
-
-              {/* Filtro por COLUNAS (mostrar/ocultar etapas) */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant={hiddenStages.length ? 'default' : 'outline'}
-                    size="sm"
-                    className="whitespace-nowrap"
-                  >
-                    <Columns3 className="w-4 h-4 mr-2" />
-                    Colunas
-                    {hiddenStages.length > 0 && (
-                      <span className="ml-2 rounded-full bg-background/30 px-1.5 text-xs">
-                        {stages.length - hiddenStages.length}/{stages.length}
-                      </span>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
-                  <DropdownMenuLabel>Mostrar colunas</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {stages.map(stage => (
-                    <DropdownMenuCheckboxItem
-                      key={stage.id}
-                      checked={!hiddenStages.includes(stage.id)}
-                      onCheckedChange={checked =>
-                        setHiddenStages(prev =>
-                          checked ? prev.filter(id => id !== stage.id) : [...prev, stage.id],
-                        )
-                      }
-                      onSelect={e => e.preventDefault()}
-                    >
-                      <span
-                        className="mr-2 inline-block h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: stage.color }}
-                      />
-                      {stage.name}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                  {hiddenStages.length > 0 && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setHiddenStages([])}>
-                        Mostrar todas
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {activeFilterCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearAllFilters}
-                  className="whitespace-nowrap text-muted-foreground"
-                >
-                  <X className="w-4 h-4 mr-1" />
-                  Limpar filtros
-                </Button>
-              )}
+              {/* Filtros unificados: Tempo, Tags, Largados (limiar escolhível) e
+                  Colunas num só popup — antes eram 4 botões brigando por
+                  espaço na barra (pedido do Giovani, 20/08). */}
+              <PipelineFiltersPopover
+                timePreset={timePreset}
+                onTimePresetChange={setTimePreset}
+                dateFrom={dateFrom}
+                dateTo={dateTo}
+                onDateFromChange={setDateFrom}
+                onDateToChange={setDateTo}
+                allTags={allTags}
+                selectedTags={selectedTags}
+                onSelectedTagsChange={setSelectedTags}
+                abandonedPreset={abandonedPreset}
+                onAbandonedPresetChange={setAbandonedPreset}
+                abandonedCustomDays={abandonedCustomDays}
+                onAbandonedCustomDaysChange={setAbandonedCustomDays}
+                stages={stages.map(s => ({ id: s.id, name: s.name, color: s.color }))}
+                hiddenStages={hiddenStages}
+                onHiddenStagesChange={setHiddenStages}
+                activeFilterCount={activeFilterCount}
+                onClearAll={clearAllFilters}
+              />
 
               {/* Alternar visualização: Quadro (Kanban) ou Lista (todos os leads) */}
               <div className="ml-auto flex items-center border rounded-lg">
@@ -1482,25 +1371,6 @@ export default function PipelineKanban() {
                 </Button>
               </div>
             </div>
-
-            {/* Faixa de datas personalizada (só quando "Período personalizado") */}
-            {timePreset === 'custom' && (
-              <div className="flex items-center gap-2 pb-3">
-                <Input
-                  type="date"
-                  value={dateFrom}
-                  onChange={e => setDateFrom(e.target.value)}
-                  className="h-9 w-auto"
-                />
-                <span className="text-muted-foreground text-sm">até</span>
-                <Input
-                  type="date"
-                  value={dateTo}
-                  onChange={e => setDateTo(e.target.value)}
-                  className="h-9 w-auto"
-                />
-              </div>
-            )}
           </div>
         </div>
 
@@ -1522,11 +1392,16 @@ export default function PipelineKanban() {
               {/* Stage Columns */}
               {filteredStages.map((stage: PipelineStage) => (
                 <div key={stage.id} className="w-80 flex-shrink-0">
-                  <div className="bg-background rounded-xl shadow-sm border border-border h-full flex flex-col">
+                  <div className="bg-muted/40 rounded-xl shadow-sm border border-border h-full flex flex-col">
                     {/* Stage Header */}
                     <div
-                      className="flex-shrink-0 px-4 py-3 border-b border-border bg-muted/50 rounded-t-xl border-t-4"
-                      style={{ borderTopColor: stage.color }}
+                      className="flex-shrink-0 px-4 py-3 border-b border-border rounded-t-xl border-t-4"
+                      style={{
+                        borderTopColor: stage.color,
+                        backgroundColor: stage.color?.startsWith('#')
+                          ? `${stage.color}1f`
+                          : undefined,
+                      }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
@@ -1807,29 +1682,31 @@ export default function PipelineKanban() {
                               <a
                                 href={`tel:${item.contact.phone_number.replace(/[^\d+]/g, '')}`}
                                 className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-                                title="Ligar"
+                                title={t('kanban.item.call', 'Ligar')}
                               >
                                 <Phone className="w-3.5 h-3.5" />
-                                Ligar
+                                {t('kanban.item.call', 'Ligar')}
                               </a>
-                              <a
-                                href={`https://wa.me/${(item.contact.phone_number.match(/\d/g) || []).join('')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-400 transition-colors"
-                                title="WhatsApp"
+                              {/* Abre a conversa DENTRO do LM Flow. Era um link wa.me,
+                                  que levava o corretor para fora do CRM. */}
+                              <button
+                                type="button"
+                                onClick={() => openLeadConversation(item)}
+                                disabled={openingConversation}
+                                className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-400 transition-colors"
+                                title={t('kanban.item.openChat', 'Abrir conversa')}
                               >
                                 <MessageCircle className="w-3.5 h-3.5" />
-                                WhatsApp
-                              </a>
+                                {t('kanban.item.whatsapp', 'WhatsApp')}
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleEditItem(item)}
                                 className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-                                title="Agendar"
+                                title={t('kanban.item.schedule', 'Agendar')}
                               >
                                 <CalendarClock className="w-3.5 h-3.5" />
-                                Agendar
+                                {t('kanban.item.schedule', 'Agendar')}
                               </button>
                             </div>
                           )}
@@ -2006,12 +1883,26 @@ export default function PipelineKanban() {
                               </span>
                             </div>
 
-                            {/* Assignee */}
-                            {item.conversation?.assignee && (
+                            {/* Responsável: `item.assignee` (topo) já vem do
+                                backend com o dono certo — assignee da conversa
+                                OU default_assignee do contato. Lead sem conversa
+                                aparecia sempre sem responsável. Avatar prioriza a
+                                foto real do WhatsApp da instância dele (backend
+                                já resolve isso em avatar_url quando ele é dono
+                                de uma instância). */}
+                            {(item.assignee ?? item.conversation?.assignee) && (
                               <div className="flex items-center space-x-1 text-muted-foreground">
-                                <User className="w-3 h-3" />
+                                {(item.assignee ?? item.conversation?.assignee)?.avatar_url ? (
+                                  <img
+                                    src={(item.assignee ?? item.conversation?.assignee)?.avatar_url}
+                                    alt=""
+                                    className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+                                  />
+                                ) : (
+                                  <User className="w-3 h-3 shrink-0" />
+                                )}
                                 <span className="truncate max-w-20">
-                                  {item.conversation.assignee.name}
+                                  {(item.assignee ?? item.conversation?.assignee)?.name}
                                 </span>
                               </div>
                             )}
@@ -2172,10 +2063,20 @@ export default function PipelineKanban() {
                       {/* Responsável + roleta de origem */}
                       <div className="hidden xl:block w-44 shrink-0 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1.5">
-                          {resolveItemAssignee(item) ? (
+                          {(item.assignee ?? item.conversation?.assignee) ? (
                             <>
-                              <User className="w-3 h-3 shrink-0" />
-                              <span className="truncate">{resolveItemAssignee(item)}</span>
+                              {(item.assignee ?? item.conversation?.assignee)?.avatar_url ? (
+                                <img
+                                  src={(item.assignee ?? item.conversation?.assignee)?.avatar_url}
+                                  alt=""
+                                  className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+                                />
+                              ) : (
+                                <User className="w-3 h-3 shrink-0" />
+                              )}
+                              <span className="truncate">
+                                {(item.assignee ?? item.conversation?.assignee)?.name}
+                              </span>
                             </>
                           ) : (
                             <span className="text-muted-foreground/50">Sem responsável</span>
@@ -2307,9 +2208,15 @@ export default function PipelineKanban() {
           pipeline={pipeline}
           onSubmit={handleUpdateItem}
           onItemStageMoved={moveItemToStageLocal}
+          // Tag grava na hora: recarrega em silêncio pro selo do card refletir a
+          // mudança mesmo que a pessoa feche o card sem salvar.
+          onLabelsChanged={() => { void loadPipelineData(true); }}
           loading={isEditingItem}
         />
       )}
+
+      {/* Iniciar conversa — só monta para lead que ainda não tem conversa */}
+      {startConversationModal}
 
       {/* Edit Stage Modal */}
       <EditStageModal

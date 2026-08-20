@@ -1,6 +1,6 @@
 import { Suspense, type ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { isRootTenantHost } from '@/components/layout/config/menuItems';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import PrivateRoute from './PrivateRoute';
@@ -34,13 +34,10 @@ import SurveyResponse from '@/pages/Public/Survey/SurveyResponse';
 // Páginas customer — lazy (code-splitting): cada página vira um chunk próprio,
 // baixado só quando a rota é acessada. Reduz o bundle inicial (era ~7MB num arquivo).
 const SaasSignup = lazyWithRetry(() => import('@/pages/Auth/SaasSignup'));
-const Dashboard = lazyWithRetry(() => import('@/pages/Customer/Dashboard'));
-const Agents = lazyWithRetry(() => import('@/pages/Customer/Agents'));
-const AgentEditPage = lazyWithRetry(() => import('@/pages/Customer/Agents/Agent/AgentEditPage'));
-const MCPServers = lazyWithRetry(() => import('@/pages/Customer/Agents/MCPServers'));
-const CustomMCPServers = lazyWithRetry(() => import('@/pages/Customer/Agents/CustomMCPServers'));
-const Tools = lazyWithRetry(() => import('@/pages/Customer/Agents/Tools'));
-const CustomTools = lazyWithRetry(() => import('@/pages/Customer/Agents/CustomTools'));
+// Dashboard reconstruído do zero na identidade do protótipo (DashboardV2).
+// O antigo segue no repo, sem rota, até a nova tela rodar alguns dias em
+// produção — remover no mesmo passo da troca deixaria sem para onde voltar.
+const Dashboard = lazyWithRetry(() => import('@/pages/Customer/DashboardV2'));
 const Contacts = lazyWithRetry(() => import('@/pages/Customer/Contacts'));
 const ScheduledActions = lazyWithRetry(() => import('@/pages/Customer/Contacts/ScheduledActions'));
 const Channels = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.Channels })));
@@ -49,12 +46,14 @@ const NewChannel = lazyWithRetry(() => import('@/pages/Customer/Channels').then(
 const ChatPage = lazyWithRetry(() => import('@/pages/Customer/Chat/ChatPage'));
 
 const Pipelines = lazyWithRetry(() => import('@/pages/Customer/Pipelines/Pipelines'));
+const Disparos = lazyWithRetry(() => import('@/pages/Customer/Disparos/Disparos'));
+const TeamAccess = lazyWithRetry(() => import('@/pages/Customer/Team/TeamAccessPage'));
 const PipelineKanban = lazyWithRetry(() => import('@/pages/Customer/Pipelines/PipelineKanban'));
 const AccountSettings = lazyWithRetry(() => import('@/pages/Customer/Settings/Account').then(m => ({ default: m.AccountSettings })));
-const Teams = lazyWithRetry(() => import('@/pages/Customer/Settings/Teams/Teams'));
+// Times e Cargos não têm mais rota própria: viraram abas da tela de Equipe, que
+// os carrega junto. Só a sub-tela de adicionar gente a um Time continua com rota
+// (é navegação interna da lista de Times).
 const AddUsers = lazyWithRetry(() => import('@/pages/Customer/Settings/Teams').then(m => ({ default: m.AddUsers })));
-const Users = lazyWithRetry(() => import('@/pages/Customer/Settings/Users'));
-const RolesPage = lazyWithRetry(() => import('@/pages/Customer/Settings/Roles'));
 const Labels = lazyWithRetry(() => import('@/pages/Customer/Settings/Labels'));
 const CustomAttributes = lazyWithRetry(() => import('@/pages/Customer/Settings/CustomAttributes'));
 const MessageFunnels = lazyWithRetry(() => import('@/pages/Customer/Settings/MessageFunnels').then(m => ({ default: m.MessageFunnels })));
@@ -65,43 +64,89 @@ const WelcomeAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings
 const LeadAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadAutomations').then(m => ({ default: m.LeadAutomations })));
 const LeadAdsForms = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadAdsForms'));
 const FollowupSequences = lazyWithRetry(() => import('@/pages/Customer/Settings/FollowupSequences').then(m => ({ default: m.FollowupSequences })));
-const FollowupEnrollment = lazyWithRetry(() => import('@/pages/Customer/Automations/FollowupEnrollment/FollowupEnrollment').then(m => ({ default: m.FollowupEnrollment })));
-const NoReplyRobot = lazyWithRetry(() => import('@/pages/Customer/Automations/NoReplyRobot/NoReplyRobot').then(m => ({ default: m.NoReplyRobot })));
 const SiteBuilder = lazyWithRetry(() => import('@/pages/Customer/Settings/SiteBuilder').then(m => ({ default: m.SiteBuilder })));
 const Properties = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.Properties })));
 const PropertiesMap = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.PropertiesMap })));
+const PropertyBooks = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.PropertyBooks })));
 const LandingPageEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingPageEditorPage'));
 const LandingByIdEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingByIdEditorPage'));
 const LandingsList = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingsListPage'));
 const PropertyTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/PropertyTemplateEditor/PropertyTemplateEditorPage'));
 const SimulatorDemo = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/SimulatorDemoPage'));
 const LandingPublic = lazyWithRetry(() => import('@/pages/Public/LandingPublicPage'));
+const LandingResult = lazyWithRetry(() => import('@/pages/Public/LandingResultPage'));
 const ImovelPublic = lazyWithRetry(() => import('@/pages/Public/ImovelPublicPage'));
 const PortalHome = lazyWithRetry(() => import('@/pages/Public/PortalHomePage'));
+const PortalSearch = lazyWithRetry(() => import('@/pages/Public/PortalSearchPage'));
+const PortalBlog = lazyWithRetry(() => import('@/pages/Public/PortalBlogPage'));
+const PortalArticle = lazyWithRetry(() => import('@/pages/Public/PortalArticlePage'));
 const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => ({ default: m.Visits })));
 const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
 const Contracts = lazyWithRetry(() => import('@/pages/Customer/Contracts').then(m => ({ default: m.Contracts })));
 const PropertyCaptureRequests = lazyWithRetry(() => import('@/pages/Customer/PropertyCapture').then(m => ({ default: m.PropertyCaptureRequests })));
-// Gate de rota super-admin: só renderiza no deploy raiz (app.lmflow.com.br) E
-// logado como super-admin. Em subdomínio de cliente (*.lmflow.com.br) ou usuário
-// comum, redireciona pra home — defesa extra além do bloqueio server-side (401/403).
+// Espaço — módulo "Notion por tenant" (portado do LM Hub). Modo auth (usuário
+// logado) e modo público por token. Lazy: vira um chunk próprio (BlockNote é pesado).
+const Espaco = lazyWithRetry(() => import('@/features/espaco/Espaco'));
+// Gate de rota da Área do Admin: só no deploy raiz (app.lmflow.com.br) E com
+// acesso de admin (o dono por e-mail OU a equipe cadastrada, via whoami). Em
+// subdomínio de cliente ou usuário comum, redireciona — defesa extra além do
+// bloqueio server-side (401/403). Enquanto o whoami resolve (só pra não-dono),
+// segura numa tela de carregando pra não chutar a equipe antes da hora.
 function SuperAdminRoute({ children }: { children: ReactNode }) {
-  const isSuper = useIsSuperAdmin();
-  if (!isRootTenantHost() || !isSuper) return <Navigate to="/" replace />;
+  const { loading, isAdmin } = useAdminAccess();
+  if (!isRootTenantHost()) return <Navigate to="/" replace />;
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center text-muted-foreground">Carregando...</div>;
+  }
+  if (!isAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
+// Wrapper da rota pública do Espaço: lê o :token da URL e monta o módulo em
+// modo público. Suspense próprio porque Espaco é lazy.
+function EspacoPublicRoute() {
+  const { token } = useParams<{ token: string }>();
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen w-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      }
+    >
+      <Espaco mode="public" token={token} />
+    </Suspense>
+  );
+}
+
 const ClientInstances = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances'));
-const AutomationTemplatesPage = lazyWithRetry(() => import('@/pages/SuperAdmin/AutomationTemplates/AutomationTemplates'));
+// Clientes, Leads ao Vivo, Modo Cliente, Formulários, Sugestões/Bugs e
+// Atividade viraram abas DENTRO do PooledClients — só ele é rota.
 const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients'));
+const PushCentral = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral'));
+const CustoIA = lazyWithRetry(() => import('@/pages/SuperAdmin/CustoIA'));
+// Agentes, Cérebro Universal, Resultados e Aperfeiçoamento viraram abas
+// DENTRO do SuperAgents (IA Vendedora) — só ele é rota.
+const SuperAgents = lazyWithRetry(() => import('@/pages/SuperAdmin/SuperAgents'));
+const PublicOnboardingForm = lazyWithRetry(() => import('@/pages/PublicOnboardingForm'));
+
+// Área do Admin — shell próprio (AdminLayout), fora do menu do CRM.
+const AdminLayout = lazyWithRetry(() => import('@/components/layout/AdminLayout'));
+// Shell da área de membros (Academia do cliente) — sem o CRM em volta.
+const MembersLayout = lazyWithRetry(() => import('@/components/layout/MembersLayout'));
+const AdminOverview = lazyWithRetry(() => import('@/pages/Admin/Area/Overview'));
+const AdminUso = lazyWithRetry(() => import('@/pages/Admin/Area/Uso'));
+const AdminEquipe = lazyWithRetry(() => import('@/pages/Admin/Area/Equipe'));
+const AdminAcademia = lazyWithRetry(() => import('@/pages/Admin/Area/Academia'));
 const RoletaConfigPage = lazyWithRetry(() => import('@/pages/Customer/Settings/RoletaConfig/RoletaConfig'));
+const AcceptLeadPage = lazyWithRetry(() => import('@/pages/Customer/Roleta/AcceptLeadPage'));
 const AssignmentSettingsPage = lazyWithRetry(() => import('@/pages/Customer/Settings/AssignmentSettings/AssignmentSettings'));
 const AutomationsLayout = lazyWithRetry(() => import('@/pages/Customer/Automations/AutomationsLayout'));
 const PixelCapiConfig = lazyWithRetry(() => import('@/pages/Customer/Automations/PixelCapi/PixelCapiConfig'));
+const SalesAgents = lazyWithRetry(() => import('@/pages/Customer/Automations/SalesAgents/SalesAgents'));
 const PropertyInterests = lazyWithRetry(() => import('@/pages/Customer/PropertyInterests').then(m => ({ default: m.PropertyInterests })));
 const Macros = lazyWithRetry(() => import('@/pages/Customer/Settings/Macros').then(m => ({ default: m.Macros })));
 const WhatsappReminders = lazyWithRetry(() => import('@/pages/Customer/Settings/WhatsappReminders'));
-const Integrations = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations').then(m => ({ default: m.Integrations })));
 const EmailTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Settings/EmailTemplateEditor'));
 const WebhooksPage = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/WebhooksPage'));
 const OAuthAppsPage = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/OAuthAppsPage'));
@@ -119,11 +164,17 @@ const RdStationPage = lazyWithRetry(() => import('../pages/Customer/Settings/Int
 const Studio360Page = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/RealEstate/Studio360Page'));
 const LeadloversPage = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/RealEstate/LeadloversPage'));
 const OruloPage = lazyWithRetry(() => import('../pages/Customer/Settings/Integrations/RealEstate/OruloPage'));
+const PortalsList = lazyWithRetry(() => import('../pages/Customer/Settings/Portals/PortalsList'));
+const PortalDetailPage = lazyWithRetry(() => import('../pages/Customer/Settings/Portals/PortalDetailPage'));
 // import { Overview, Conversations } from '../pages/Customer/Reports';
 // import * as Reports from '../pages/Customer/Reports';
 
 // Página de tutoriais
 const Tutorials = lazyWithRetry(() => import('@/pages/Customer/Tutorials'));
+
+// Área de membros (Academia) — experiência em tela cheia, sem o menu do app.
+const AcademiaHomePage = lazyWithRetry(() => import('@/pages/Customer/Academia'));
+const AcademiaCoursePage = lazyWithRetry(() => import('@/pages/Customer/Academia/CoursePage'));
 
 // Páginas compartilhadas
 const Documentation = lazyWithRetry(() => import('@/pages/Shared/Documentation'));
@@ -498,6 +549,36 @@ const AppRouter = () => {
           />
 
           <Route
+            path="/equipe"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PermissionRoute resource="users" action="update">
+                      <TeamAccess />
+                    </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          {/* IA Vendedora — item de topo do CRM (URL própria). Antes vivia como
+              sub-aba de Automações (/automations/sales-agents). */}
+          <Route
+            path="/ia-vendedora"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <SalesAgents />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
             path="/pipelines/:pipelineId"
             element={
               <PrivateRoute>
@@ -506,6 +587,19 @@ const AppRouter = () => {
                     <PermissionRoute resource="pipelines" action="read">
                       <PipelineKanban />
                     </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/disparos"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <Disparos />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>
@@ -558,6 +652,9 @@ const AppRouter = () => {
                 </Suspense>
               }
             />
+            {/* IA Vendedora saiu de Automações e virou item de topo /ia-vendedora.
+                Mantém redirect para não quebrar deep-links antigos. */}
+            <Route path="sales-agents" element={<Navigate to="/ia-vendedora" replace />} />
             <Route
               path="origem"
               element={
@@ -584,22 +681,13 @@ const AppRouter = () => {
                 </Suspense>
               }
             />
-            <Route
-              path="follow-up-auto"
-              element={
-                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <FollowupEnrollment />
-                </Suspense>
-              }
-            />
-            <Route
-              path="no-reply-robot"
-              element={
-                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <NoReplyRobot />
-                </Suspense>
-              }
-            />
+            {/* A tela "Follow-up automático" virou seção dentro de follow-ups. Mantém a
+                rota antiga redirecionando pra não quebrar link salvo/favoritado. */}
+            <Route path="follow-up-auto" element={<Navigate to="/automations/follow-ups" replace />} />
+            {/* O Robô Sem Resposta virou seção dentro de follow-ups pelo mesmo motivo:
+                ele e a chave de disparo decidem quem entra no funil, e separados uma
+                desligava a regra da outra em silêncio. */}
+            <Route path="no-reply-robot" element={<Navigate to="/automations/follow-ups" replace />} />
             <Route
               path="whatsapp-reminders"
               element={
@@ -608,12 +696,18 @@ const AppRouter = () => {
                 </Suspense>
               }
             />
+            {/* A API já exige `roleta_configs.read` (PermissionRegistry deriva a
+                permissão por convenção). Sem o guard aqui o corretor abre a tela
+                e toma 403 em cada chamada, o que parece bug em vez de acesso
+                negado. */}
             <Route
               path="roleta-config"
               element={
-                <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-                  <RoletaConfigPage />
-                </Suspense>
+                <PermissionRoute resource="roleta_configs" action="read">
+                  <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
+                    <RoletaConfigPage />
+                  </Suspense>
+                </PermissionRoute>
               }
             />
             <Route
@@ -686,50 +780,14 @@ const AppRouter = () => {
             }
           />
 
-          <Route
-            path="/settings/users"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="users" action="read">
-                      <Users />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/settings/roles"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="users" action="read">
-                      <RolesPage />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/settings/teams"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="teams" action="read">
-                      <Teams />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
+          {/* Cargos e Times passaram a ser ABAS da tela de Equipe — uma tela só
+              manda em pessoas, cargo e instância. Estas rotas continuam vivas e
+              redirecionam para a aba certa: link salvo, atalho de tour e texto de
+              ajuda antigos não podem morrer. Mesmo padrão do Robô Sem Resposta →
+              Follow-up, logo abaixo. */}
+          <Route path="/settings/roles" element={<Navigate to="/equipe?aba=cargos" replace />} />
+          <Route path="/settings/teams" element={<Navigate to="/equipe?aba=times" replace />} />
+          <Route path="/settings/users" element={<Navigate to="/equipe" replace />} />
 
           <Route
             path="/settings/teams/:teamId/add-users"
@@ -918,7 +976,12 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <PermissionRoute resource="integrations" action="read">
-                      <Integrations />
+                      {/* Usa o Marketplace (endpoint /integrations, implementado no
+                          backend) em vez da página legada Integrations, que batia em
+                          /integrations/apps — rota inexistente no backend — e sempre
+                          caía em "erro para carregar". É por aqui que o Meta Ads e as
+                          demais integrações imobiliárias ficam acessíveis. */}
+                      <Marketplace />
                     </PermissionRoute>
                   </MainLayout>
                 </CustomerRoute>
@@ -926,16 +989,6 @@ const AppRouter = () => {
             }
           />
 
-          {/* Redirecionamentos das rotas antigas de settings para agents */}
-          <Route
-            path="/settings/custom-tools"
-            element={<Navigate to="/agents/custom-tools" replace />}
-          />
-
-          <Route
-            path="/settings/custom-mcp-servers"
-            element={<Navigate to="/agents/custom-mcp-servers" replace />}
-          />
 
           <Route
             path="/settings/integrations/webhooks"
@@ -1152,6 +1205,34 @@ const AppRouter = () => {
               </PrivateRoute>
             }
           />
+          <Route
+            path="/settings/portals"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PermissionRoute resource="integrations" action="read">
+                      <PortalsList />
+                    </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/settings/portals/:portalKey"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PermissionRoute resource="integrations" action="read">
+                      <PortalDetailPage />
+                    </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
 
           {/* Dynamic Dashboard Apps Routes */}
           <Route
@@ -1350,130 +1431,6 @@ const AppRouter = () => {
             }
           />
 
-          {/* Rota principal de agents redireciona para /agents/list */}
-          <Route path="/agents" element={<Navigate to="/agents/list" replace />} />
-
-          {/* Lista de agentes */}
-          <Route
-            path="/agents/list"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_agents" action="read">
-                      <Agents />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/agents/new"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_agents" action="create">
-                      <Agents />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/agents/:id/edit"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_agents" action="update">
-                      <AgentEditPage />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/agents/management"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_agents" action="read">
-                      <Agents />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/agents/mcp-servers"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_mcp_servers" action="read">
-                      <MCPServers />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/agents/custom-mcp-servers"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_custom_mcp_servers" action="read">
-                      <CustomMCPServers />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/agents/tools"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_tools" action="read">
-                      <Tools />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
-          <Route
-            path="/agents/custom-tools"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <MainLayout>
-                    <PermissionRoute resource="ai_custom_tools" action="read">
-                      <CustomTools />
-                    </PermissionRoute>
-                  </MainLayout>
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
-
           <Route
             path="/dashboard"
             element={
@@ -1489,9 +1446,38 @@ const AppRouter = () => {
             }
           />
 
+          {/* Espaço — Notion por tenant (usuário logado). Sem gate de permissão:
+              QUALQUER staff logado do tenant acessa (decisão do Giovani). O
+              controle fino (pausar / visibilidade por seção / links) fica na aba
+              Gerir, que só aparece pra admin (role do backend). */}
+          <Route
+            path="/espaco"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <Espaco mode="auth" />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
           <Route path="/conversations" element={ChatRouteElement} />
 
           <Route path="/conversations/:conversationId" element={ChatRouteElement} />
+
+          {/* Fluxo de aceite da roleta — tela cheia (link que o corretor recebe) */}
+          <Route
+            path="/roleta/aceite/:assignmentId"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <AcceptLeadPage />
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
 
           {/* Tutoriais */}
           <Route
@@ -1499,9 +1485,33 @@ const AppRouter = () => {
             element={
               <PrivateRoute>
                 <CustomerRoute>
-                  <MainLayout>
+                  {/* Área de membros: shell próprio, sem o CRM em volta. O cliente
+                      estuda numa tela limpa e volta pelo botão. */}
+                  <MembersLayout>
                     <Tutorials />
-                  </MainLayout>
+                  </MembersLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          {/* Área de membros (Academia) — experiência de curso em tela cheia */}
+          <Route
+            path="/academia"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <AcademiaHomePage />
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/academia/curso/:courseId"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <AcademiaCoursePage />
                 </CustomerRoute>
               </PrivateRoute>
             }
@@ -1529,6 +1539,19 @@ const AppRouter = () => {
                 <CustomerRoute>
                   <MainLayout>
                     <Properties />
+                  </MainLayout>
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/books"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PropertyBooks />
                   </MainLayout>
                 </CustomerRoute>
               </PrivateRoute>
@@ -1608,12 +1631,28 @@ const AppRouter = () => {
 
           {/* Público (sem login) — landing de anúncio hospedada. */}
           <Route path="/lp/:tenant/:slug" element={<LandingPublic />} />
+          <Route path="/lp/:tenant/:slug/:result" element={<LandingResult />} />
+
+          {/* Público (sem login): formulário de onboarding por link (Épico E). */}
+          <Route path="/formulario/:token" element={<PublicOnboardingForm />} />
+
+          {/* Público (sem login): Espaço compartilhado por link/token. Rota nua
+              (sem PublicRoute) igual às outras rotas de token — pra não bounce
+              um usuário logado que abrir o link. */}
+          <Route path="/espaco/:token" element={<EspacoPublicRoute />} />
 
           {/* Público INDEXÁVEL — página de imóvel do portal (Produto A). */}
           <Route path="/imovel/:tenant/:code" element={<ImovelPublic />} />
 
           {/* Público INDEXÁVEL — home/listagem de imóveis do portal. */}
           <Route path="/portal/:tenant" element={<PortalHome />} />
+
+          {/* Público — página dedicada de busca/filtros de imóveis do portal. */}
+          <Route path="/portal/:tenant/imoveis" element={<PortalSearch />} />
+
+          {/* Público INDEXÁVEL — blog do portal (listagem + artigo). */}
+          <Route path="/portal/:tenant/blog" element={<PortalBlog />} />
+          <Route path="/portal/:tenant/blog/:slug" element={<PortalArticle />} />
 
           <Route
             path="/visits"
@@ -1702,6 +1741,135 @@ const AppRouter = () => {
             }
           />
 
+          {/* ================= ÁREA DO ADMIN (Leal Mídia) =================
+              Shell próprio: o menu do CRM some e entra o menu do admin.
+              Gate: SuperAdminRoute (host raiz + super-admin), o mesmo das
+              rotas /super-admin/* — que continuam vivas e redirecionando pra cá.
+          */}
+          <Route
+            path="/admin"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminOverview />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/clientes"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <PooledClients />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          {/* Leads ao Vivo, Modo Cliente, Formulários, Sugestões/Bugs e Atividade
+              viraram abas dentro de /admin/clientes (reorg 19/08/2026) — rotas
+              antigas só redirecionam, pra não quebrar link salvo/bookmark. */}
+          <Route path="/admin/leads-ao-vivo" element={<Navigate to="/admin/clientes?tab=leads-ao-vivo" replace />} />
+          <Route path="/admin/modo-cliente" element={<Navigate to="/admin/clientes?tab=modo-cliente" replace />} />
+          <Route path="/admin/formularios" element={<Navigate to="/admin/clientes?tab=formularios" replace />} />
+          <Route path="/admin/sugestoes-bugs" element={<Navigate to="/admin/clientes?tab=sugestoes-bugs" replace />} />
+          <Route path="/admin/atividade" element={<Navigate to="/admin/clientes?tab=atividade" replace />} />
+          {/* Rota antiga: Auditoria virou Atividade, que agora é aba de Clientes */}
+          <Route path="/admin/auditoria" element={<Navigate to="/admin/clientes?tab=atividade" replace />} />
+          <Route
+            path="/admin/agentes"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <SuperAgents />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          {/* Cérebro Universal, Resultados e Aperfeiçoamento viraram abas dentro
+              de /admin/agentes (IA Vendedora) — rotas antigas só redirecionam. */}
+          <Route path="/admin/cerebro" element={<Navigate to="/admin/agentes?tab=cerebro" replace />} />
+          <Route path="/admin/resultados-ia" element={<Navigate to="/admin/agentes?tab=resultados" replace />} />
+          <Route path="/admin/aperfeicoamento" element={<Navigate to="/admin/agentes?tab=aperfeicoamento" replace />} />
+          {/* Rateio do consumo da Anthropic por cliente: a chave é uma só pra
+              todos os tenants, então sem esta tela a fatura não tem dono. */}
+          <Route
+            path="/admin/custo-ia"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <CustoIA />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/push"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <PushCentral />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/equipe"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminEquipe />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/uso"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminUso />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+          {/* Biblioteca de Automações excluída (19/08/2026) — sem uso real, era
+              redundante com o modal de biblioteca que o cliente já tem em
+              Automações. Bookmark antigo cai na Visão Geral. */}
+          <Route path="/admin/biblioteca" element={<Navigate to="/admin" replace />} />
+          {/* Academia dentro do admin: mesma tela do /tutorials, mas no shell do
+              admin. /tutorials continua sendo por onde o CLIENTE assiste. */}
+          <Route
+            path="/admin/academia"
+            element={
+              <PrivateRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminAcademia />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </PrivateRoute>
+            }
+          />
+
+          {/* Rotas antigas: mantidas como redirect pra não quebrar link salvo/bookmark. */}
+          <Route path="/super-admin/pooled-clients" element={<Navigate to="/admin/clientes" replace />} />
+          <Route path="/super-admin/automation-templates" element={<Navigate to="/admin" replace />} />
+
           {/* Super Admin — gerenciamento de instâncias de clientes */}
           <Route path="/super-admin/clients" element={<Navigate to="/super-admin/clientes" replace />} />
           <Route
@@ -1717,42 +1885,23 @@ const AppRouter = () => {
             }
           />
 
-          {/* Super Admin — biblioteca de templates de automacao */}
-          <Route
-            path="/super-admin/automation-templates"
-            element={
-              <PrivateRoute>
-                <MainLayout>
-                  <SuperAdminRoute>
-                    <AutomationTemplatesPage />
-                  </SuperAdminRoute>
-                </MainLayout>
-              </PrivateRoute>
-            }
-          />
+          {/* /super-admin/automation-templates e /super-admin/pooled-clients viraram
+              redirects pra /admin/* (declarados no bloco da Área do Admin, acima). */}
 
-          {/* Super Admin — painel SaaS pooled (Entrar 1-clique, membros, senhas) */}
-          <Route
-            path="/super-admin/pooled-clients"
-            element={
-              <PrivateRoute>
-                <MainLayout>
-                  <SuperAdminRoute>
-                    <PooledClients />
-                  </SuperAdminRoute>
-                </MainLayout>
-              </PrivateRoute>
-            }
-          />
-
-          {/* Settings — roleta de corretores */}
+          {/* Settings — roleta de corretores. Montagem antiga da mesma tela de
+              /automations/roleta-config; faltava CustomerRoute e PermissionRoute,
+              então dava para chegar nela digitando a URL. */}
           <Route
             path="/settings/roleta-config"
             element={
               <PrivateRoute>
-                <MainLayout>
-                  <RoletaConfigPage />
-                </MainLayout>
+                <CustomerRoute>
+                  <MainLayout>
+                    <PermissionRoute resource="roleta_configs" action="read">
+                      <RoletaConfigPage />
+                    </PermissionRoute>
+                  </MainLayout>
+                </CustomerRoute>
               </PrivateRoute>
             }
           />

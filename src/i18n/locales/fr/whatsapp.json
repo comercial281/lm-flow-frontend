@@ -167,7 +167,7 @@
         "readMessages": "Marquer les Messages comme Lus",
         "readStatus": "Lire les Statuts",
         "groupsIgnore": "Ignorer les Groupes",
-        "enableSyncFeatures": "Activer la Synchronisation",
+        "enableSyncFeatures": "Importer le carnet d'adresses du téléphone (tous les contacts)",
         "syncFullHistory": "Synchroniser l'Historique Complet",
         "msgCall": {
           "label": "Message pour les Appels",

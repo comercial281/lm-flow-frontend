@@ -1,11 +1,73 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Loader2, RefreshCw, Search, Radio, Building2, Server, ChevronDown,
   AlertTriangle, XCircle, CheckCircle2, Info, Filter, Plug,
+  Users, Circle, EyeOff, Eye, BarChart3,
 } from 'lucide-react';
 import superLogsService, {
-  ActivityEvent, LogClient, ActivityParams,
+  ActivityEvent, LogClient, ActivityParams, UserMetricsResponse,
 } from '@/services/superLogs/superLogsService';
+
+function fmtDur(seconds: number): string {
+  if (!seconds || seconds < 60) return `${Math.max(0, seconds | 0)}s`;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// Faixa de presença: quem está online / usando, no cliente selecionado.
+function PresenceStrip({ client, includeInternal }: { client: string; includeInternal: boolean }) {
+  const [data, setData] = useState<UserMetricsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    superLogsService.userMetrics(client, includeInternal)
+      .then(r => { if (alive) setData(r.data.data); })
+      .catch(() => { if (alive) setData(null); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [client, includeInternal]);
+
+  const online = (data?.users || []).filter(u => u.online);
+  const ov = data?.overview;
+
+  return (
+    <div className="rounded-lg border bg-card p-3 mb-3">
+      <div className="flex items-center gap-4 flex-wrap text-sm">
+        <span className="flex items-center gap-1.5 font-medium">
+          <Circle className={`h-2.5 w-2.5 ${online.length ? 'fill-emerald-500 text-emerald-500' : 'fill-muted text-muted'}`} />
+          {loading ? '...' : `${online.length} online agora`}
+        </span>
+        <span className="flex items-center gap-1.5 text-muted-foreground">
+          <Users className="h-3.5 w-3.5" /> {ov?.total_users ?? 0} usuários
+        </span>
+        <span className="hidden sm:flex items-center gap-1.5 text-muted-foreground">
+          {ov?.total_accesses ?? 0} acessos · {fmtDur(ov?.total_seconds ?? 0)} de uso
+        </span>
+        <button
+          onClick={() => navigate(`/admin/uso?client=${encodeURIComponent(client)}`)}
+          className="ml-auto flex items-center gap-1 text-xs text-primary hover:underline"
+        >
+          <BarChart3 className="h-3.5 w-3.5" /> Uso detalhado
+        </button>
+      </div>
+      {online.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {online.slice(0, 8).map(u => (
+            <span key={u.user_id} className="flex items-center gap-1 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 px-2 py-0.5 text-xs">
+              <Circle className="h-1.5 w-1.5 fill-emerald-500 text-emerald-500" />
+              {u.name || u.email || 'Usuário'}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const LEVEL_STYLE: Record<string, { color: string; Icon: typeof Info }> = {
   error:   { color: 'text-red-600',     Icon: XCircle },
@@ -80,6 +142,7 @@ export default function LogsView() {
   const [category, setCategory] = useState('');
   const [level, setLevel] = useState('');
   const [includeRaw, setIncludeRaw] = useState(false);
+  const [includeInternal, setIncludeInternal] = useState(false);
   const [categories, setCategories] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
 
@@ -92,7 +155,8 @@ export default function LogsView() {
     category: category || undefined,
     level: level || undefined,
     include_raw: includeRaw || undefined,
-  }), [client, q, category, level, includeRaw]);
+    include_internal: includeInternal || undefined,
+  }), [client, q, category, level, includeRaw, includeInternal]);
 
   const loadInitial = useCallback(async () => {
     setLoading(true);
@@ -174,6 +238,9 @@ export default function LogsView() {
 
       {/* Feed */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
+        {/* Presença: quem está online / usando agora */}
+        <PresenceStrip client={client} includeInternal={includeInternal} />
+
         {/* Controles */}
         <div className="flex items-center gap-2 flex-wrap mb-3">
           <div className="relative flex-1 min-w-[160px]">
@@ -205,6 +272,13 @@ export default function LogsView() {
             className={`flex items-center gap-1 text-xs px-2 py-1.5 rounded border transition-colors ${includeRaw ? 'bg-primary/10 text-primary border-primary/30' : 'text-muted-foreground'}`}
           >
             <Filter className="h-3.5 w-3.5" /> Cruas
+          </button>
+          <button
+            onClick={() => setIncludeInternal(v => !v)}
+            title="Mostrar acessos e ações da Leal Mídia (você e a equipe). Por padrão, a tela mostra só os clientes."
+            className={`flex items-center gap-1 text-xs px-2 py-1.5 rounded border transition-colors ${includeInternal ? 'bg-primary/10 text-primary border-primary/30' : 'text-muted-foreground'}`}
+          >
+            {includeInternal ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />} Leal Mídia
           </button>
           <button
             onClick={() => setLive(v => !v)}

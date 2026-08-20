@@ -23,6 +23,11 @@ export interface ContactableInboxes {
   updated_at: number;
   available?: boolean;
   can_create_conversation?: boolean;
+  // O número que DEVERIA atender este lead: a conversa que ele já tem, o canal
+  // que ele já tocou, ou a instância da roleta do dono dele. Vem do backend
+  // porque é a mesma conta que campanha, follow-up e automação fazem — a tela
+  // não pode discordar de quem dispara sozinho.
+  recommended?: boolean;
   source_id: string;
   channel: Channel;
 }
@@ -63,6 +68,12 @@ export interface ContactAdditionalAttributes {
   campaign_medium?: string;
   campaign_name?: string;
   credit_check?: CreditCheckResult;
+  /**
+   * Espelho da origem do lead gravado pelo backend (LeadOrigin::Recorder).
+   * Chaves variam por origem (anúncio, formulário, landing, manual...), por isso
+   * o índice aberto. `manual_origin` é a origem escrita à mão.
+   */
+  lead_origin?: { source?: string; manual_origin?: string; [key: string]: unknown };
 }
 
 export type CreditCheckStatus = 'clean' | 'restricted' | 'unknown';
@@ -159,6 +170,13 @@ export interface Contact {
     last_activity_at: string;
   };
   pipelines?: ContactPipelineInfo[];
+  /** Responsável pelo contato — herda pras conversas dele. */
+  default_assignee_id?: string | null;
+  default_assignee?: {
+    id: string;
+    name: string;
+    avatar_url?: string | null;
+  } | null;
 }
 
 export interface ContactNote {
@@ -251,6 +269,27 @@ export interface ContactsFilterParams {
   payload: ContactFilter[];
 }
 
+/**
+ * Consulta que montou a lista atual — busca livre, filtro avançado ou listagem
+ * simples. É o que o backend usa para resolver o "selecionar todos os N" sem
+ * precisar receber milhares de ids (e sem depender de o usuário ter paginado
+ * até o fim da base).
+ */
+export interface ContactsBulkQuery {
+  q?: string;
+  payload?: ContactFilter[];
+  type?: 'person' | 'company';
+  company_id?: string;
+  labels?: string[];
+}
+
+export interface ContactsBulkResult {
+  message?: string;
+  affected_count?: number;
+  /** true quando o lote foi grande demais para o ciclo da requisição e foi para a fila. */
+  async?: boolean;
+}
+
 export interface ContactCreateData {
   name: string;
   type: 'person' | 'company';
@@ -266,6 +305,17 @@ export interface ContactCreateData {
   inbox_id?: string;
   labels?: string[];
   company_ids?: string[];
+  /**
+   * Responsável pelo contato (contacts.default_assignee_id). As conversas que o
+   * contato abrir nascem atribuídas a esse usuário.
+   */
+  default_assignee_id?: string | null;
+  /**
+   * Origem escrita à mão ("Indicação", "Cliente de carteira"...). Não é coluna do
+   * contato: o backend manda pro rastreamento de origem e espelha em
+   * additional_attributes.lead_origin.manual_origin. String vazia limpa.
+   */
+  lead_origin_note?: string;
 }
 
 export interface ContactUpdateData {
@@ -283,6 +333,8 @@ export interface ContactUpdateData {
   labels?: string[];
   company_ids?: string[];
   default_assignee_id?: string | null;
+  /** Ver ContactCreateData.lead_origin_note. */
+  lead_origin_note?: string;
 }
 
 export interface ContactsResponse extends PaginatedResponse<Contact> {}

@@ -19,6 +19,8 @@ import {
   Reply,
   PenLine,
   Rocket,
+  Building2,
+  Type,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -36,6 +38,7 @@ import AudioRecorder from '../audio';
 
 import { AIAssistanceButton } from '../ai-assistance';
 import { MessageFunnelPopover } from '../message-funnels';
+import { PropertyBookPopover } from '../property-book';
 import { RichTextEditor, RichTextEditorRef } from '../rich-text-editor';
 
 import { ReplyMode, Message, Conversation } from '@/types/chat/api';
@@ -119,6 +122,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
   // 🎯 EMOJI PICKER: Estado
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
+  // ✍️ FORMATAÇÃO: barra de formatação (negrito/itálico/etc.) fica escondida por
+  // padrão pra deixar a barra enxuta (estilo WhatsApp); o botão "Aa" mostra/esconde.
+  const [showFormatting, setShowFormatting] = useState(false);
+
   // 🎯 MESSAGE SIGNATURE: Hook para gerenciar assinatura
   const { isSignatureEnabled, toggleSignature, hasSignature, appendSignatureIfEnabled } =
     useMessageSignature();
@@ -127,6 +134,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   // 🎯 FUNIS DE MENSAGEM (substitui Canned Responses + Quick Replies)
   const [showFunnels, setShowFunnels] = useState(false);
+
+  // 🏠 ENVIO DE BOOK DE IMÓVEL: buscar imóvel do acervo e mandar o PDF do book.
+  const [showBookPicker, setShowBookPicker] = useState(false);
+  const isWhatsApp = channelType === 'Channel::Whatsapp';
 
   // Forçar modo de nota privada quando a conversa está pendente
   useEffect(() => {
@@ -394,7 +405,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   }, [user?.ui_settings?.editor_message_key]);
 
   const cardClassNames = `
-    w-full border-t border-x-0 border-b-0 rounded-none shadow-lg py-0 gap-0 transition-all duration-200 bg-background
+    wa-input-bar w-full border-t border-x-0 border-b-0 rounded-none shadow-lg py-0 gap-0 transition-all duration-200 bg-background
   `;
 
   // Componente de preview da resposta
@@ -464,7 +475,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
         )}
 
         {/* Input Area */}
-        <CardContent className="p-4 px-4 py-4 relative">
+        {/* A folga da barrinha de gesto do iPhone é descontada do teclado: com
+            ele aberto o indicador fica atrás dele, então essa folga viraria
+            espaço morto entre a barra e o teclado. Com o teclado fechado (ou
+            sem a variável) a conta resolve para calc(0.5rem + safe-area) — a
+            mesma expressão de antes, não só parecida. */}
+        <CardContent className="px-3 py-2 pb-[calc(0.5rem+max(0px,env(safe-area-inset-bottom)-var(--keyboard-inset,0px)))] relative">
           {/* 🚀 FUNIS DE MENSAGEM (substitui Canned Responses + Quick Replies) */}
           {canMessageFunnel && (
             <MessageFunnelPopover
@@ -475,8 +491,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
             />
           )}
 
+          {/* 🏠 BOOK DE IMÓVEL: buscar no acervo e enviar o PDF direto na conversa */}
+          {isWhatsApp && canSendAttachment && (
+            <PropertyBookPopover
+              isOpen={showBookPicker}
+              onClose={() => setShowBookPicker(false)}
+              conversationId={conversationId}
+            />
+          )}
+
           {/* Primeira linha: Reply Mode Toggle + Botões de ação rápida */}
-          <div className="flex items-center justify-between mb-3 gap-3">
+          <div className="flex items-center justify-between mb-2 gap-2 md:gap-3">
             {/* Reply Mode Toggle */}
             <ReplyModeToggle
               currentMode={isPendingConversation ? ReplyMode.NOTE : replyMode}
@@ -531,15 +556,35 @@ const MessageInput: React.FC<MessageInputProps> = ({
             </div>
           </div>
 
-          {/* Segunda linha: Botões de formatação + Input + Botões de envio */}
-          <div className="flex items-end gap-2 w-full overflow-visible">
+          {/* Segunda linha: Botões de formatação + Input + Botões de envio.
+              No celular isso vira DUAS linhas: o campo de digitar sozinho em cima
+              (w-full + order-1) e os dois grupos de ícones embaixo (order-2/3, com
+              ml-auto jogando microfone+enviar pra direita). Sem isso o campo, único
+              item flexível da linha, era espremido a ~6px num aparelho de 360px.
+              A partir de md o flex-nowrap e os md:order-* devolvem o layout de antes.
+              Feito em CSS e não com detecção de celular em JS de propósito: trocar a
+              árvore remontaria o ProseMirror e apagaria o rascunho a cada rotação. */}
+          <div className="flex flex-wrap md:flex-nowrap items-end gap-2 w-full overflow-visible">
             {/* Botões de formatação à esquerda */}
-            <div className="flex-shrink-0 flex items-center gap-1.5 pb-1">
+            <div className="order-2 md:order-1 flex-shrink-0 flex items-center gap-1 md:pb-1">
+              {/* Botão de formatação (Aa): mostra/esconde a barra de negrito/itálico/etc. */}
+              {!isPendingConversation && (
+                <Button
+                  variant={showFormatting ? 'default' : 'ghost'}
+                  size="icon"
+                  disabled={isDisabled || isSending}
+                  className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
+                  onClick={() => setShowFormatting(v => !v)}
+                  title={t('messageInput.formatting.toggle', 'Formatação')}
+                >
+                  <Type className="h-4 w-4" />
+                </Button>
+              )}
+
               {/* File Upload Button */}
               {canSendAttachment && (
                 <FileUpload
                   onFilesSelected={handleFilesSelected}
-                  maxFileSize={10}
                   multiple={true}
                   disabled={isDisabled || isSending || isPendingConversation}
                 />
@@ -579,6 +624,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 </Button>
               )}
 
+              {/* 🏠 Enviar book de imóvel */}
+              {isWhatsApp && canSendAttachment && (
+                <Button
+                  variant={showBookPicker ? 'default' : 'ghost'}
+                  size="icon"
+                  disabled={isDisabled || isSending || isPendingConversation}
+                  className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
+                  onClick={() => setShowBookPicker(v => !v)}
+                  title="Enviar book de imóvel"
+                >
+                  <Building2 className="h-4 w-4" />
+                </Button>
+              )}
+
               {/* Template Button */}
               {canMessageTemplate && (
                 <Button
@@ -594,8 +653,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
               )}
             </div>
 
-            {/* Text Input Container */}
-            <div className="flex-1 min-w-0 overflow-hidden">
+            {/* Text Input Container. `chat-composer-editor` é o gancho do CSS que
+                dá 16px de fonte no celular (abaixo disso o iOS dá zoom ao focar). */}
+            <div className="chat-composer-editor order-1 md:order-2 w-full md:w-auto md:flex-1 min-w-0 overflow-hidden">
               <RichTextEditor
                 ref={richEditorRef}
                 placeholder={
@@ -646,13 +706,14 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   return false;
                 }}
                 disabled={isDisabled || isSending || (isPendingConversation && replyMode !== ReplyMode.NOTE)}
-                className="min-h-[100px]"
-                showToolbar={!isPendingConversation}
+                className="min-h-[44px]"
+                editorMinHeightClass="min-h-[44px]"
+                showToolbar={showFormatting && !isPendingConversation}
               />
             </div>
 
             {/* Action Buttons */}
-            <div className="flex-shrink-0 flex items-center gap-1.5 pb-1">
+            <div className="order-3 ml-auto md:ml-0 flex-shrink-0 flex items-center gap-1.5 md:pb-1">
               {canSendAudio && replyMode === ReplyMode.REPLY && !isPendingConversation && (
                 <Button
                   variant={isRecordingAudio ? 'default' : 'ghost'}

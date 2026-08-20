@@ -93,6 +93,12 @@ export const convertFiltersToUrlParams = (
         }
         break;
 
+      case 'handled_by_ai':
+        if (values.length === 1 && values[0] === 'true') {
+          params.handled_by_ai = true;
+        }
+        break;
+
       // case 'priority': // Não suportado pela API GET
       //   if (values.length === 1) {
       //     params.priority = values[0] as string;

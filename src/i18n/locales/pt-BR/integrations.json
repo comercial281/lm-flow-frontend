@@ -169,12 +169,12 @@
     "title": "Integração BMS",
     "subtitle": "Configure a integração com Brius Message System",
     "notConfigured": "BMS não configurado",
-    "notConfiguredDescription": "Configure sua integração com Brius Message System para sincronização de contatos, labels e campanhas.",
+    "notConfiguredDescription": "Configure sua integração com Brius Message System para sincronização de contatos, etiquetas e campanhas.",
     "configureBMS": "Configurar BMS",
     "modal": {
       "title": "Configurar Integração BMS",
       "updateTitle": "Atualizar Integração BMS",
-      "description": "Configure a integração com Brius Message System (BMS) para sincronização de contatos, labels e campanhas.",
+      "description": "Configure a integração com Brius Message System (BMS) para sincronização de contatos, etiquetas e campanhas.",
       "apiConfig": "Configuração da API",
       "syncOptions": "Opções de Sincronização",
       "fields": {
@@ -189,8 +189,8 @@
           "description": "Permite sincronização automática de contatos com o BMS"
         },
         "labelSync": {
-          "label": "Sincronizar Labels",
-          "description": "Permite sincronização automática de labels com o BMS"
+          "label": "Sincronizar Etiquetas",
+          "description": "Permite sincronização automática de etiquetas com o BMS"
         },
         "customAttributesSync": {
           "label": "Sincronizar Atributos Personalizados",
@@ -204,7 +204,7 @@
       "features": {
         "title": "Recursos Disponíveis",
         "bidirectionalSync": "Sincronização bidirectional de contatos",
-        "labelSync": "Sincronização automática de labels e tags",
+        "labelSync": "Sincronização automática de etiquetas e tags",
         "customAttributes": "Integração com atributos personalizados",
         "campaignSync": "Sincronização de campanhas de marketing",
         "centralizedHistory": "Histórico de interações centralizado"
@@ -235,7 +235,7 @@
       "apiKey": "API Key",
       "notConfigured": "Não configurada",
       "contactSync": "Sincronizar Contatos",
-      "labelSync": "Sincronizar Labels",
+      "labelSync": "Sincronizar Etiquetas",
       "customAttributes": "Atributos Personalizados",
       "campaignSync": "Sincronizar Campanhas",
       "enabled": "✓ Ativado",
@@ -244,7 +244,7 @@
     "featuresCard": {
       "title": "Recursos Disponíveis",
       "contactSync": "Sincronização de Contatos: Mantenha contatos sincronizados entre sistemas",
-      "labelManagement": "Gestão de Labels: Sincronize tags e categorias automaticamente",
+      "labelManagement": "Gestão de Etiquetas: Sincronize tags e categorias automaticamente",
       "customAttributes": "Atributos Personalizados: Transfira dados customizados entre plataformas",
       "campaigns": "Campanhas Integradas: Conecte campanhas de marketing e comunicação",
       "unifiedHistory": "Histórico Unificado: Veja todo o histórico de interações em um só lugar"
@@ -644,7 +644,7 @@
         "summaries": "Resumos automáticos de conversas",
         "improvement": "Melhoria de redação e tom das mensagens",
         "correction": "Correção de gramática e ortografia",
-        "labels": "Sugestão de labels automatizadas"
+        "labels": "Sugestão de etiquetas automatizadas"
       },
       "security": {
         "title": "Segurança:",
@@ -687,7 +687,7 @@
         "summaries": "Resumos de Conversa: Crie resumos automáticos das conversas",
         "improvement": "Melhoria de Texto: Refine o tom e a redação das mensagens",
         "correction": "Correção Automática: Corrige gramática e ortografia",
-        "labels": "Labels Inteligentes: Sugestão automática de labels para conversas"
+        "labels": "Etiquetas Inteligentes: Sugestão automática de etiquetas para conversas"
       },
       "deleteDialog": {
         "title": "Remover Integração OpenAI",

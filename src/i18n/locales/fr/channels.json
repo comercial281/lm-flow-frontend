@@ -279,7 +279,6 @@
       "preChatForm": "Formulaire Pré-Chat",
       "widgetBuilder": "Constructeur de Widget",
       "configuration": "Configuration",
-      "botConfiguration": "Configuration du Bot",
       "moderation": "Modération",
       "messageTemplates": "Modèles de Message"
     },
@@ -773,6 +772,13 @@
           "statusDisconnected": "Déconnecté",
           "statusConnecting": "Connexion en cours",
           "connectDevice": "Connecter l'Appareil",
+          "qrSteps": {
+            "title": "Comment scanner sur votre téléphone",
+            "step1": "Ouvrez WhatsApp sur votre téléphone (le même numéro que vous allez utiliser).",
+            "step2": "Sur Android, appuyez sur les trois points (⋮) en haut à droite. Sur iPhone, appuyez sur Réglages dans le menu du bas.",
+            "step3": "Appuyez sur « Appareils connectés » puis sur « Connecter un appareil ».",
+            "step4": "Dirigez la caméra du téléphone vers le QR Code de cet écran et attendez la confirmation."
+          },
           "qrCodeInstructions": "Scannez ce QR Code avec votre WhatsApp",
           "settingsTitle": "Paramètres de l'Instance",
           "settingsDescription": "Configurez le comportement de votre instance WhatsApp",
@@ -788,7 +794,8 @@
           "errors": {
             "nameNotFound": "Nom de l'instance non trouvé",
             "qrCodeError": "Erreur lors de la génération du QR Code",
-            "updateError": "Erreur lors de la mise à jour des paramètres de l'instance"
+            "updateError": "Erreur lors de la mise à jour des paramètres de l'instance",
+            "qrImageError": "Impossible d’afficher le QR code. Générez-en un nouveau."
           },
           "success": {
             "qrCodeGenerated": "QR Code généré avec succès !",
@@ -854,12 +861,22 @@
             "disconnect": "Déconnecter l'Instance",
             "confirmDisconnect": "Êtes-vous sûr de vouloir déconnecter l'instance ?",
             "success": {
-              "disconnected": "Instance déconnectée avec succès !"
+              "disconnected": "Instance déconnectée avec succès !",
+              "reconnected": "Connexion reconstruite. Scannez le nouveau code."
             },
             "errors": {
-              "disconnectError": "Erreur lors de la déconnexion de l'instance"
-            }
-          }
+              "disconnectError": "Erreur lors de la déconnexion de l'instance",
+              "reconnectError": "Impossible de reconnecter l’instance"
+            },
+            "reconnect": "Reconnecter",
+            "confirmReconnect": "La reconnexion reconstruit la connexion de zéro et génère un nouveau code. À utiliser quand le QR code n’associe pas. Continuer ?"
+          },
+          "qrExpiresIn": "Ce code expire dans {{seconds}} s",
+          "qrExpired": "Le code a expiré",
+          "qrRefreshing": "Génération d’un nouveau code...",
+          "refreshQrCode": "Générer un nouveau code",
+          "closeQrModal": "Fermer",
+          "ignoreStatus": "Ignorer le statut"
         },
         "zapi": {
           "privacy": {
@@ -1196,47 +1213,6 @@
         "placeholder": "Entrez le texte indicatif du champ"
       }
     },
-    "agentBot": {
-      "providers": {
-        "webhook": {
-          "label": "Webhook",
-          "description": "Intégration via webhook personnalisé"
-        },
-        "dialogflow": {
-          "label": "Dialogflow",
-          "description": "Intégration avec Google Dialogflow"
-        },
-        "rasa": {
-          "label": "Rasa",
-          "description": "Intégration avec Rasa Open Source"
-        }
-      },
-      "types": {
-        "webhook": {
-          "label": "Webhook",
-          "description": "Bot via webhook"
-        },
-        "csml": {
-          "label": "CSML",
-          "description": "Bot CSML"
-        }
-      },
-      "status": {
-        "connected": "Connecté",
-        "disconnected": "Déconnecté"
-      },
-      "validation": {
-        "nameRequired": "Le nom est obligatoire",
-        "descriptionRequired": "La description est obligatoire",
-        "webhookUrlRequired": "L'URL du webhook est obligatoire",
-        "webhookUrlInvalid": "URL du webhook invalide",
-        "segmentationLimitMinimum": "La limite de segmentation doit être supérieure à 0",
-        "segmentationMinSizeMinimum": "La taille minimale de segmentation doit être supérieure à 0",
-        "segmentationMinSizeSmallerThanLimit": "La taille minimale doit être inférieure à la limite",
-        "delayPerCharacterNonNegative": "Le délai par caractère doit être non négatif",
-        "debounceTimeNonNegative": "Le temps de debounce doit être non négatif"
-      }
-    },
     "widgetBuilder": {
       "title": "Constructeur de Widget",
       "description": "Personnalisez l'apparence et le comportement de votre widget de chat",
@@ -1315,135 +1291,6 @@
     },
     "timestamp": {
       "unavailable": "Indisponible"
-    },
-    "agentBotConfiguration": {
-      "title": "Configuration du Bot",
-      "description": "Configurez des bots de service client pour automatiser les réponses",
-      "fields": {
-        "selectBot": "Sélectionner un Bot",
-        "provider": "Fournisseur",
-        "type": "Type"
-      },
-      "placeholders": {
-        "selectBot": "Sélectionnez un bot"
-      },
-      "status": {
-        "disconnected": "Déconnecté",
-        "connected": "Connecté",
-        "active": "Actif"
-      },
-      "noBots": {
-        "title": "Aucun Bot Disponible",
-        "description": "Vous n'avez pas encore de bots configurés pour ce canal."
-      },
-      "buttons": {
-        "manageBots": "Gérer les Bots",
-        "configure": "Configurer le Bot",
-        "configuring": "Configuration...",
-        "disconnect": "Déconnecter le Bot",
-        "disconnecting": "Déconnexion...",
-        "advancedSettings": "Paramètres Avancés"
-      },
-      "info": {
-        "title": "Comment ça Fonctionne :",
-        "point1": "Les bots peuvent répondre automatiquement aux messages des clients",
-        "point2": "Configurez des mots-clés et des réponses automatiques",
-        "point3": "Les bots peuvent transférer les conversations à des agents humains",
-        "point4": "Les statistiques de performance des bots sont disponibles"
-      },
-      "advanced": {
-        "title": "Configuration Avancée",
-        "description": "Configurez les comportements et paramètres avancés du bot",
-        "conversationStatus": {
-          "title": "Statut de la Conversation",
-          "description": "Sélectionnez quels statuts de conversation permettent au bot de s'exécuter. Si aucun n'est sélectionné, le bot s'exécutera pour tous les statuts.",
-          "emptyHint": "Si aucun statut n'est sélectionné, le bot s'exécutera pour tous les statuts de conversation."
-        },
-        "labels": {
-          "title": "Étiquettes",
-          "description": "Sélectionnez quelles étiquettes permettent au bot de s'exécuter. Si aucune n'est sélectionnée, le bot s'exécutera pour toutes les conversations indépendamment des étiquettes.",
-          "emptyHint": "Si aucune étiquette n'est sélectionnée, le bot s'exécutera pour toutes les conversations indépendamment des étiquettes.",
-          "noLabels": "Aucune étiquette disponible. Créez des étiquettes dans la section Étiquettes pour utiliser cette fonctionnalité.",
-          "addLabel": "Ajouter une Étiquette"
-        },
-        "ignoredLabels": {
-          "title": "Étiquettes Ignorées",
-          "description": "Sélectionnez les étiquettes qui empêcheront le bot de répondre. Les conversations avec ces étiquettes seront ignorées par le bot.",
-          "addLabel": "Ajouter une Étiquette Ignorée",
-          "noAvailableLabels": "Aucune étiquette disponible à ignorer. Toutes les étiquettes sont déjà ignorées ou dans la liste autorisée."
-        },
-        "facebookMessenger": {
-          "title": "Configuration de Facebook Messenger",
-          "description": "Configurez la façon dont le bot interagit avec les messages directs et les commentaires sur Facebook",
-          "interactionType": "Type d'Interaction",
-          "interactionTypes": {
-            "both": "Commentaires et Messages Directs",
-            "commentsOnly": "Commentaires Uniquement",
-            "messagesOnly": "Messages Directs Uniquement"
-          },
-          "enableCommentReplies": "Activer les Réponses aux Commentaires",
-          "enableCommentRepliesDescription": "Lorsqu'il est activé, le bot répondra aux commentaires sur les publications Facebook",
-          "commentAgentBot": "Bot Agent pour Commentaires",
-          "commentAgentBotDescription": "Sélectionnez quel bot agent doit gérer les réponses aux commentaires. Choisissez 'Utiliser le Même Agent' pour utiliser le bot principal, ou sélectionnez un bot différent spécifiquement pour les commentaires.",
-          "useSameAgent": "Utiliser le Même Agent (Bot Principal)",
-          "noOtherBots": "Aucun autre bot disponible. Le bot principal sera utilisé pour les commentaires.",
-          "postSelection": "Sélection des Publications",
-          "postSelectionDescription": "Choisissez si le bot doit répondre à toutes les publications ou uniquement à des publications spécifiques",
-          "allPosts": "Toutes les Publications",
-          "specificPosts": "Publications Spécifiques",
-          "postIdPlaceholder": "Entrez l'ID de la publication (ex: 123456789_987654321)",
-          "addPostId": "Ajouter",
-          "selectedPosts": "Publications Sélectionnées",
-          "noPostsFound": "Aucune publication trouvée. Veuillez vérifier si la page Facebook est correctement connectée.",
-          "viewOnFacebook": "Voir sur Facebook"
-        },
-        "moderation": {
-          "title": "Modération des Messages",
-          "description": "Configurez la modération automatique pour les messages reçus",
-          "enableModeration": "Activer la Modération",
-          "enableModerationDescription": "Lorsqu'elle est activée, les messages seront automatiquement filtrés et modérés avant l'envoi des réponses",
-          "explicitWords": {
-            "title": "Filtre de Mots Explicites",
-            "description": "Entrez des mots ou des motifs regex (un par ligne) pour filtrer le contenu explicite. Les messages contenant ces mots seront signalés pour modération.",
-            "placeholder": "Entrez des mots ou des motifs regex, un par ligne\nexemple:\ngros mot\n\\bprofanité\\b\n^spam"
-          },
-          "sentimentAnalysis": {
-            "title": "Analyse de Sentiment",
-            "description": "Utilisez l'IA pour détecter les messages offensants ou inappropriés. Les messages signalés comme offensants seront envoyés à la modération."
-          },
-          "autoApproveResponses": {
-            "title": "Approbation Automatique des Réponses",
-            "description": "Lorsqu'elle est activée, les réponses générées par l'IA seront envoyées automatiquement sans nécessiter d'approbation. Lorsqu'elle est désactivée, toutes les réponses doivent être approuvées avant d'être envoyées."
-          },
-          "autoRejectExplicitWords": {
-            "title": "Rejet Automatique - Mots Explicites",
-            "description": "Lorsqu'il est activé, les messages contenant des mots explicites seront automatiquement rejetés et supprimés sans nécessiter d'approbation manuelle."
-          },
-          "autoRejectOffensiveSentiment": {
-            "title": "Rejet Automatique - Sentiment Offensant",
-            "description": "Lorsqu'il est activé, les messages détectés comme offensants par l'analyse de sentiment seront automatiquement rejetés et supprimés sans nécessiter d'approbation manuelle."
-          }
-        }
-      },
-      "statusOptions": {
-        "open": "Ouvert",
-        "resolved": "Résolu",
-        "pending": "En attente",
-        "snoozed": "Reporté"
-      },
-      "errors": {
-        "loadError": "Erreur lors du chargement des données des bots",
-        "configureError": "Erreur lors de la configuration du bot",
-        "disconnectError": "Erreur lors de la déconnexion du bot",
-        "loadPostsError": "Erreur lors du chargement des publications Facebook"
-      },
-      "success": {
-        "configured": "Bot configuré avec succès !",
-        "disconnected": "Bot déconnecté avec succès !"
-      },
-      "validation": {
-        "selectBot": "Sélectionnez un bot avant de continuer"
-      }
     },
     "lockToSingleConversation": {
       "title": "Verrouiller à une Seule Conversation",

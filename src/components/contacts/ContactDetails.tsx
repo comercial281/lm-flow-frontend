@@ -40,9 +40,8 @@ import {
   // CalendarClock,
   GitBranch,
   Merge,
-  Plus,
   TrendingUp,
-  ChevronRight,
+  ChevronDown,
   X,
 } from 'lucide-react';
 // import { ScheduledActionsList } from '@/components/scheduledActions';
@@ -57,6 +56,7 @@ import {
   INTEREST_STAGE_LABELS,
   INTEREST_STAGE_COLORS,
 } from '@/services/propertyInterests/propertyInterestsService';
+import { propertiesService, type Property } from '@/services/properties/propertiesService';
 
 interface ContactDetailsProps {
   open: boolean;
@@ -88,8 +88,11 @@ export default function ContactDetails({
   const [merging, setMerging] = useState(false);
   const [propertyInterests, setPropertyInterests] = useState<PropertyInterest[]>([]);
   const [interestsLoading, setInterestsLoading] = useState(false);
-  const [newInterestPropertyId, setNewInterestPropertyId] = useState('');
   const [addingInterest, setAddingInterest] = useState(false);
+  // Busca de imóvel por código/título pra adicionar interesse (em vez de colar UUID).
+  const [propSearch, setPropSearch] = useState('');
+  const [propResults, setPropResults] = useState<Property[]>([]);
+  const [searchingProps, setSearchingProps] = useState(false);
 
   const loadPropertyInterests = useCallback(async (contactId: string) => {
     setInterestsLoading(true);
@@ -118,17 +121,41 @@ export default function ContactDetails({
     }
   }, [contact?.id, activeTab, loadPropertyInterests]);
 
-  const handleAddInterest = async () => {
-    if (!contact || !newInterestPropertyId.trim()) return;
+  // Busca imóveis por código/título (debounce) pra adicionar como interesse.
+  useEffect(() => {
+    const q = propSearch.trim();
+    if (q.length < 2) { setPropResults([]); setSearchingProps(false); return; }
+    setSearchingProps(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await propertiesService.list({ q, per_page: 8 });
+        setPropResults(res.data ?? []);
+      } catch {
+        setPropResults([]);
+      } finally {
+        setSearchingProps(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [propSearch]);
+
+  const addInterestForProperty = async (propertyId: string) => {
+    if (!contact || !propertyId) return;
+    if (propertyInterests.some(pi => pi.property_id === propertyId)) {
+      toast.info('Esse imóvel já está nos interesses');
+      setPropSearch(''); setPropResults([]);
+      return;
+    }
     setAddingInterest(true);
     try {
       await propertyInterestsService.create({
         contact_id: contact.id,
-        property_id: newInterestPropertyId.trim(),
+        property_id: propertyId,
         interest_stage: 'interested',
       });
-      setNewInterestPropertyId('');
+      setPropSearch(''); setPropResults([]);
       loadPropertyInterests(contact.id);
+      toast.success('Imóvel adicionado aos interesses');
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Erro ao adicionar interesse'));
     } finally {
@@ -136,12 +163,12 @@ export default function ContactDetails({
     }
   };
 
-  const handleAdvanceInterest = async (id: string) => {
+  const handleChangeInterestStage = async (id: string, stage: string) => {
     try {
-      await propertyInterestsService.advance(id);
+      await propertyInterestsService.update(id, { interest_stage: stage });
       if (contact) loadPropertyInterests(contact.id);
     } catch (e) {
-      toast.error(apiErrorMessage(e, 'Não foi possível avançar o estágio'));
+      toast.error(apiErrorMessage(e, 'Não foi possível mudar o estágio'));
     }
   };
 
@@ -259,15 +286,15 @@ export default function ContactDetails({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="!w-[95vw] !max-w-[95vw] sm:!w-[75vw] sm:!max-w-[75vw] max-h-[90vh] p-0 gap-0 flex flex-col"
-      >
-        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
+      {/* `p-0` mantém o respiro por conta das seções abaixo (cada uma tem borda
+          própria); do preset aqui interessa a folga em volta e o teto de 1400px. */}
+      <DialogContent size="wide" className="p-0 gap-0 flex flex-col overflow-hidden">
+        <DialogHeader className="px-6 lg:px-8 pt-6 pb-4 border-b shrink-0">
           <DialogTitle>{t('details.title')}</DialogTitle>
         </DialogHeader>
 
         {/* Contact Header - Fixed */}
-        <div className="flex items-start gap-4 px-6 py-4 border-b shrink-0">
+        <div className="flex items-start gap-4 px-6 lg:px-8 py-4 border-b shrink-0">
           <Avatar className="h-20 w-20 shrink-0">
             {contact.avatar_url || contact.thumbnail ? (
               <img
@@ -356,7 +383,7 @@ export default function ContactDetails({
           onValueChange={setActiveTab}
           className="flex-1 flex flex-col overflow-hidden"
         >
-          <TabsList className="shrink-0 mx-6 mt-4 mb-0 flex overflow-x-auto">
+          <TabsList className="shrink-0 mx-6 lg:mx-8 mt-4 mb-0 flex overflow-x-auto">
             {tabs.map(tab => {
               const Icon = tab.icon;
               return (
@@ -369,7 +396,7 @@ export default function ContactDetails({
           </TabsList>
 
           <ScrollArea className="flex-1 overflow-y-auto">
-            <div className="px-6">
+            <div className="px-6 lg:px-8">
               {/* Companies Tab (for person contacts) */}
               {hasCompanies && (
                 <TabsContent value="companies" className="space-y-4 py-6 mt-0">
@@ -534,19 +561,41 @@ export default function ContactDetails({
                     <Badge variant="secondary">{propertyInterests.length} imóveis</Badge>
                   </div>
 
-                  {/* Add interest */}
-                  <div className="flex gap-2">
+                  {/* Add interest — busca por código/título (sem UUID). */}
+                  <div className="relative">
                     <Input
-                      placeholder="ID do imóvel (UUID)"
-                      value={newInterestPropertyId}
-                      onChange={e => setNewInterestPropertyId(e.target.value)}
-                      className="flex-1"
-                      onKeyDown={e => e.key === 'Enter' && handleAddInterest()}
+                      placeholder="Buscar imóvel por código (IM0001) ou título…"
+                      value={propSearch}
+                      onChange={e => setPropSearch(e.target.value)}
+                      className="w-full"
                     />
-                    <Button size="sm" onClick={handleAddInterest} disabled={addingInterest || !newInterestPropertyId.trim()}>
-                      <Plus className="h-4 w-4 mr-1" />
-                      Adicionar
-                    </Button>
+                    {propSearch.trim().length >= 2 && (
+                      <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-popover shadow-md max-h-64 overflow-auto">
+                        {searchingProps ? (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">Buscando…</div>
+                        ) : propResults.length === 0 ? (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum imóvel encontrado</div>
+                        ) : (
+                          propResults.map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              disabled={addingInterest}
+                              onClick={() => addInterestForProperty(p.id)}
+                              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-accent disabled:opacity-50"
+                            >
+                              <span className="min-w-0 truncate">
+                                <span className="font-medium">{p.code}</span>
+                                <span className="text-muted-foreground"> · {p.title}</span>
+                              </span>
+                              {p.display_price && (
+                                <span className="shrink-0 text-xs text-muted-foreground">{p.display_price}</span>
+                              )}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* List */}
@@ -561,8 +610,6 @@ export default function ContactDetails({
                     <div className="space-y-3">
                       {propertyInterests.map(pi => {
                         const stageColor = INTEREST_STAGE_COLORS[pi.interest_stage] ?? '';
-                        const stageLabel = INTEREST_STAGE_LABELS[pi.interest_stage] ?? pi.interest_stage;
-                        const isClosed = pi.interest_stage === 'closed_won' || pi.interest_stage === 'closed_lost';
                         return (
                           <div key={pi.id} className="border rounded-lg p-3 flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
@@ -575,7 +622,22 @@ export default function ContactDetails({
                                 )}
                               </div>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <Badge className={`text-xs ${stageColor}`}>{stageLabel}</Badge>
+                                {/* Status do interesse NESTE imóvel — dropdown pra mudar direto.
+                                    Um lead pode ter vários imóveis, cada um com seu status.
+                                    Chevron explícito porque a seta nativa some no modo escuro. */}
+                                <div className="relative inline-flex items-center">
+                                  <select
+                                    value={pi.interest_stage}
+                                    onChange={e => handleChangeInterestStage(pi.id, e.target.value)}
+                                    className={`appearance-none cursor-pointer text-xs rounded-md border border-input pl-2 pr-6 py-1 font-medium ${stageColor}`}
+                                    title="Status do interesse neste imóvel"
+                                  >
+                                    {Object.entries(INTEREST_STAGE_LABELS).map(([value, label]) => (
+                                      <option key={value} value={value}>{label}</option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="pointer-events-none absolute right-1.5 h-3.5 w-3.5 opacity-70" />
+                                </div>
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                   <TrendingUp className="h-3 w-3" />
                                   {pi.match_score}% match
@@ -591,17 +653,6 @@ export default function ContactDetails({
                               )}
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
-                              {!isClosed && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 px-2 text-xs"
-                                  onClick={() => handleAdvanceInterest(pi.id)}
-                                  title="Avançar estágio"
-                                >
-                                  <ChevronRight className="h-3 w-3" />
-                                </Button>
-                              )}
                               <Button
                                 variant="ghost"
                                 size="sm"

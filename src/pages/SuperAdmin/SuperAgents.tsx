@@ -1,0 +1,323 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Button, Input, Label } from '@/components/ui/ds';
+import { toast } from 'sonner';
+import { Bot, ChevronDown, Power, Clock, MessageSquare, Loader2, Coins, Brain, Sparkles, Wand2 } from 'lucide-react';
+import {
+  superAgentsService,
+  MODE_LABELS,
+  type SuperAgent,
+  type SuperAgentPatch,
+  type ModelOption,
+} from '@/services/superAdmin/superAgentsService';
+import CerebroUniversal from './CerebroUniversal';
+import ResultadosIA from './ResultadosIA';
+import SdrRefinement from './SdrRefinement';
+
+type HubTab = 'agentes' | 'cerebro' | 'resultados' | 'aperfeicoamento';
+
+const HUB_TABS: { id: HubTab; label: string; Icon: typeof Bot }[] = [
+  { id: 'agentes', label: 'Agentes', Icon: Bot },
+  { id: 'cerebro', label: 'Cérebro Universal', Icon: Brain },
+  { id: 'resultados', label: 'Resultados', Icon: Sparkles },
+  { id: 'aperfeicoamento', label: 'Aperfeiçoamento', Icon: Wand2 },
+];
+
+/**
+ * Épico B — IA Vendedora (todos os clientes) na Área do Admin.
+ *
+ * Hub com 4 abas: tudo aqui é a mesma IA Vendedora, só olhada de ângulos
+ * diferentes — quem ela é (Agentes), o que ela sabe (Cérebro Universal), o
+ * que ela produziu (Resultados) e como ela melhora (Aperfeiçoamento). Eram 4
+ * itens soltos no menu; juntos porque são um assunto só.
+ */
+export default function SuperAgents() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = (searchParams.get('tab') as HubTab) || 'agentes';
+  const [hubTab, setHubTab] = useState<HubTab>(
+    HUB_TABS.some(t => t.id === initialTab) ? initialTab : 'agentes',
+  );
+
+  const changeHubTab = (id: HubTab) => {
+    setHubTab(id);
+    setSearchParams(id === 'agentes' ? {} : { tab: id }, { replace: true });
+  };
+
+  const [agents, setAgents] = useState<SuperAgent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      setAgents(await superAgentsService.listAll());
+    } catch {
+      toast.error('Não consegui carregar os agentes.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const byTenant = useMemo(() => {
+    const map = new Map<string, SuperAgent[]>();
+    for (const a of agents) {
+      const key = a.tenant_name;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(a);
+    }
+    return Array.from(map.entries());
+  }, [agents]);
+
+  const patchLocal = (id: string, patch: Partial<SuperAgent>) =>
+    setAgents(prev => prev.map(a => (a.id === id ? { ...a, ...patch } : a)));
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-6">
+      <header className="mb-5">
+        <h1 className="text-xl font-semibold text-foreground">IA Vendedora</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Todas as IAs Vendedoras, de todos os clientes. Configure cada uma daqui, sem entrar no CRM.
+        </p>
+      </header>
+
+      <div className="mb-5 flex items-center gap-1 border-b border-border">
+        {HUB_TABS.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            onClick={() => changeHubTab(id)}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              hubTab === id
+                ? 'border-violet-500 text-violet-600 dark:text-violet-400'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" /> {label}
+          </button>
+        ))}
+      </div>
+
+      {hubTab === 'cerebro' ? (
+        <CerebroUniversal />
+      ) : hubTab === 'resultados' ? (
+        <ResultadosIA />
+      ) : hubTab === 'aperfeicoamento' ? (
+        <SdrRefinement />
+      ) : loading ? (
+        <p className="text-sm text-muted-foreground">Carregando...</p>
+      ) : agents.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+          Nenhum agente encontrado nos clientes.
+        </p>
+      ) : (
+        <div className="space-y-6">
+          {byTenant.map(([tenant, list]) => (
+            <section key={tenant}>
+              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{tenant}</h2>
+              <ul className="space-y-2">
+                {list.map(a => (
+                  <AgentRow
+                    key={a.id}
+                    agent={a}
+                    open={openId === a.id}
+                    onToggleOpen={() => setOpenId(prev => (prev === a.id ? null : a.id))}
+                    onPatched={p => patchLocal(a.id, p)}
+                  />
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AgentRow({
+  agent,
+  open,
+  onToggleOpen,
+  onPatched,
+}: {
+  agent: SuperAgent;
+  open: boolean;
+  onToggleOpen: () => void;
+  onPatched: (p: Partial<SuperAgent>) => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [mode, setMode] = useState(agent.mode);
+  const [keyword, setKeyword] = useState(agent.trigger_keyword ?? '');
+  const [hoursStart, setHoursStart] = useState('');
+  const [hoursEnd, setHoursEnd] = useState('');
+  const [inboxId, setInboxId] = useState(agent.inbox_id ?? '');
+  const [inboxes, setInboxes] = useState<Array<{ id: string; name: string }>>([]);
+  // Economia de tokens
+  const [model, setModel] = useState(agent.model ?? '');
+  const [testModel, setTestModel] = useState(agent.test_model ?? '');
+  const [maxOut, setMaxOut] = useState(String(agent.max_output_tokens ?? ''));
+  const [catalog, setCatalog] = useState<ModelOption[]>([]);
+
+  useEffect(() => {
+    const w = agent.active_hours?.windows?.[0];
+    setHoursStart(w?.start ?? '');
+    setHoursEnd(w?.end ?? '');
+  }, [agent.active_hours]);
+
+  // Carrega as instâncias do tenant só quando o painel abre.
+  useEffect(() => {
+    if (!open || inboxes.length > 0) return;
+    superAgentsService.inboxes(agent.tenant_slug).then(setInboxes).catch(() => setInboxes([]));
+  }, [open, agent.tenant_slug, inboxes.length]);
+
+  // Catálogo de modelos (preço real + mínimo de cache) — só ao abrir.
+  useEffect(() => {
+    if (!open || catalog.length > 0) return;
+    superAgentsService.models().then(setCatalog).catch(() => setCatalog([]));
+  }, [open, catalog.length]);
+
+  const save = async (patch: SuperAgentPatch, okMsg = 'Salvo.') => {
+    setSaving(true);
+    try {
+      const updated = await superAgentsService.update(agent.id, agent.tenant_slug, patch);
+      onPatched(updated);
+      toast.success(okMsg);
+    } catch {
+      toast.error('Não consegui salvar.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectedModel = catalog.find(m => m.id === model);
+
+  const toggleEnabled = () => void save({ enabled: !agent.enabled }, agent.enabled ? 'Agente desligado.' : 'Agente ligado.');
+
+  const saveConfig = () => {
+    const patch: SuperAgentPatch = { mode, trigger_keyword: keyword.trim() || null };
+    if (inboxId && inboxId !== agent.inbox_id) patch.inbox_id = inboxId;
+    if (model !== (agent.model ?? '')) patch.model = model || null;
+    if (testModel !== (agent.test_model ?? '')) patch.test_model = testModel || null;
+    if (maxOut !== String(agent.max_output_tokens ?? '')) patch.max_output_tokens = maxOut ? Number(maxOut) : null;
+    if (hoursStart && hoursEnd) {
+      const existing = agent.active_hours ?? {};
+      const days = existing.windows?.[0]?.days ?? [1, 2, 3, 4, 5];
+      patch.active_hours = { ...existing, mode: existing.mode ?? 'always', windows: [{ start: hoursStart, end: hoursEnd, days }] };
+    }
+    void save(patch, 'Configuração salva.');
+  };
+
+  return (
+    <li className="rounded-lg border border-border bg-card">
+      <div className="flex items-center gap-3 p-3">
+        <span className={`flex h-8 w-8 items-center justify-center rounded-full ${agent.enabled ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-muted text-muted-foreground'}`}>
+          <Bot className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-medium text-foreground">{agent.name}</span>
+            <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">{MODE_LABELS[agent.mode] ?? agent.mode}</span>
+            {!agent.enabled && <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">desligado</span>}
+          </div>
+          <p className="mt-0.5 flex items-center gap-3 text-[11px] text-muted-foreground">
+            {agent.inbox_name && <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" />{agent.inbox_name}</span>}
+            {agent.trigger_keyword && <span>gatilho: {agent.trigger_keyword}</span>}
+          </p>
+        </div>
+        <button onClick={toggleEnabled} disabled={saving} title={agent.enabled ? 'Desligar' : 'Ligar'} className={`rounded p-1.5 ${agent.enabled ? 'text-emerald-600' : 'text-muted-foreground'} hover:bg-accent`}>
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Power className="h-4 w-4" />}
+        </button>
+        <button onClick={onToggleOpen} title="Configurar" className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground">
+          <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+
+      {open && (
+        <div className="space-y-3 border-t border-border p-3">
+          <div>
+            <Label>Modo</Label>
+            <select
+              value={mode}
+              onChange={e => setMode(e.target.value)}
+              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            >
+              {Object.entries(MODE_LABELS).map(([v, l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> Instância (com qual WhatsApp opera)</Label>
+            <select
+              value={inboxId}
+              onChange={e => setInboxId(e.target.value)}
+              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            >
+              <option value="">{agent.inbox_name ? `Atual: ${agent.inbox_name}` : 'Nenhuma'}</option>
+              {inboxes.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor={`kw-${agent.id}`}>Gatilho por palavra (vazio = atende todos)</Label>
+            <Input id={`kw-${agent.id}`} value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Ex: fluxoimob" />
+          </div>
+          <div>
+            <Label className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Horário de funcionamento</Label>
+            <div className="mt-1 flex items-center gap-2">
+              <Input type="time" value={hoursStart} onChange={e => setHoursStart(e.target.value)} className="w-32" />
+              <span className="text-sm text-muted-foreground">até</span>
+              <Input type="time" value={hoursEnd} onChange={e => setHoursEnd(e.target.value)} className="w-32" />
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">Dias úteis. Deixe em branco pra manter o atual.</p>
+          </div>
+          {/* Custo & Modelo — economia de tokens */}
+          <div className="rounded-md border border-border bg-muted/30 p-3">
+            <Label className="flex items-center gap-1"><Coins className="h-3.5 w-3.5" /> Custo e modelo</Label>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label className="text-xs">Atendimento ao lead</Label>
+                <select value={model} onChange={e => setModel(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs">
+                  <option value="">Padrão do sistema</option>
+                  {catalog.map(m => <option key={m.id} value={m.id}>{m.label} — ${m.input}/${m.output} por 1M</option>)}
+                </select>
+                {selectedModel && (
+                  <p className="mt-1 text-[11px] text-muted-foreground">{selectedModel.use_for}</p>
+                )}
+              </div>
+              <div>
+                <Label className="text-xs">Painel Testar (você iterando)</Label>
+                <select value={testModel} onChange={e => setTestModel(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs">
+                  <option value="">Haiku (mais barato) — recomendado</option>
+                  {catalog.map(m => <option key={m.id} value={m.id}>{m.label} — ${m.input}/${m.output} por 1M</option>)}
+                </select>
+                <p className="mt-1 text-[11px] text-muted-foreground">Testar não precisa do modelo caro. Só afeta o painel, nunca o lead real.</p>
+              </div>
+            </div>
+            <div className="mt-3">
+              <Label htmlFor={`mo-${agent.id}`} className="text-xs">Teto de resposta (tokens de saída)</Label>
+              <Input id={`mo-${agent.id}`} type="number" value={maxOut} onChange={e => setMaxOut(e.target.value)} placeholder="1200 (padrão)" className="h-8 w-40 text-xs" />
+              <p className="mt-1 text-[11px] text-muted-foreground">Resposta de WhatsApp é curta. Menor = mais barato e sem textão.</p>
+            </div>
+            {selectedModel && selectedModel.min_cache_tokens >= 4096 && (
+              <p className="mt-2 rounded bg-amber-100 px-2 py-1.5 text-[11px] text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                Atenção: este modelo só usa cache com prompt acima de {selectedModel.min_cache_tokens.toLocaleString('pt-BR')} tokens.
+                Se o prompt deste agente for menor, o cache para de funcionar em silêncio e o custo sobe.
+              </p>
+            )}
+            {selectedModel && !selectedModel.sampling && (
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Este modelo ignora o ajuste de temperatura (o comportamento se guia pelo prompt).
+              </p>
+            )}
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={saveConfig} disabled={saving}>Salvar configuração</Button>
+          </div>
+        </div>
+      )}
+    </li>
+  );
+}

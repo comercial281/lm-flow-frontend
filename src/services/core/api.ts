@@ -1,8 +1,10 @@
 import axios, { AxiosRequestConfig, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
 import { requestMonitor } from '@/utils/requestMonitor';
 import apiAuth from '@/services/core/apiAuth';
 import { applySetupInterceptor } from '@/services/core/setupInterceptor';
+import { getClientModeToken } from '@/store/clientModeStore';
 
 const api = axios.create({
   baseURL: `${import.meta.env.VITE_API_URL}/api/v1`,
@@ -52,12 +54,35 @@ api.interceptors.request.use(config => {
   (config as AxiosRequestConfig & { requestId?: string; requestStartTime?: number }).requestId = requestId;
   (config as AxiosRequestConfig & { requestId?: string; requestStartTime?: number }).requestStartTime = Date.now();
 
-  const authHeader = useAuthStore.getState().getAuthHeader();
-  if (authHeader) {
-    config.headers.Authorization = authHeader.Authorization;
+  // Modo Cliente (super-admin): usa o token cunhado dentro do cliente.
+  const clientToken = getClientModeToken();
+  if (clientToken) {
+    config.headers.Authorization = `Bearer ${clientToken}`;
+  } else {
+    const authHeader = useAuthStore.getState().getAuthHeader();
+    if (authHeader) {
+      config.headers.Authorization = authHeader.Authorization;
+    }
   }
 
-  if (config.data instanceof FormData && config.headers['Content-Type'] === undefined) {
+  // Upload de arquivo: o Content-Type TEM que sair, sempre.
+  //
+  // Esta guarda existia, mas com a condição invertida: ela só apagava o cabeçalho
+  // quando ele já estava ausente — e ele NUNCA está, porque o `axios.create` acima
+  // define 'application/json' como padrão do cliente. Ou seja, era um no-op.
+  //
+  // O estrago: com Content-Type application/json e corpo FormData, o axios SERIALIZA
+  // o FormData como JSON (`formDataToJSON`). O arquivo vira `{}` e o servidor recebe
+  // uma requisição SEM arquivo nenhum — sem erro, sem pista. Foi o que fez o upload da
+  // Base de Conhecimento da IA Vendedora falhar com "o arquivo não passou pelo passo
+  // de guardar", e o que levou três consertos no backend a não mudarem nada: lá o
+  // arquivo nunca chegava.
+  //
+  // Apagar sempre (e não só quando é JSON) é o correto: multipart precisa do boundary,
+  // que só o navegador sabe gerar. Cabeçalho escrito à mão fica sem boundary; o adapter
+  // do axios já o remove nesse caso, então quem sobrescreve com 'multipart/form-data'
+  // não regride.
+  if (config.data instanceof FormData) {
     delete config.headers['Content-Type'];
     delete config.headers['content-type'];
   }
@@ -90,6 +115,12 @@ api.interceptors.response.use(
     }
 
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    // Em Modo Cliente, um 401 é do token do cliente — NÃO renova nem derruba a
+    // sessão raiz do super-admin. Apenas propaga o erro pra tela tratar.
+    if (getClientModeToken()) {
+      return Promise.reject(error);
+    }
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (isRefreshing) {
@@ -145,6 +176,24 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 403) {
+      // Chamada de fundo não grita. O aviso existe para o clique do usuário —
+      // quando é o app que busca sozinho algo que o cargo não lê (lista de
+      // instâncias, de equipes), o corretor levava um erro vermelho na cara sem
+      // ter feito nada, e às vezes por cima de uma tela que funcionava.
+      if ((error.config as { silentForbidden?: boolean } | undefined)?.silentForbidden) {
+        return Promise.reject(error);
+      }
+
+      // O backend agora valida o cargo (CustomRole) em toda a API, não só na
+      // tela. Sem este aviso um 403 vira "não aconteceu nada" e parece bug do
+      // sistema em vez de permissão faltando.
+      const required = error.response?.data?.required_permission;
+      toast.error(
+        required
+          ? `Seu cargo não permite esta ação (${required})`
+          : 'Seu cargo não permite esta ação',
+        { id: `rbac-403-${required ?? 'generic'}` },
+      );
       return Promise.reject(error);
     }
 

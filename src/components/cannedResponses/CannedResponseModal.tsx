@@ -19,6 +19,7 @@ import {
 } from '@/types/knowledge';
 import { cannedResponsesService } from '@/services/cannedResponses/cannedResponsesService';
 import { Paperclip, X, FileText, Image as ImageIcon, Film, Music } from 'lucide-react';
+import { CHAT_MAX_ATTACHMENT_BYTES } from '@/types/core/attachments';
 import { toast } from 'sonner';
 
 interface CannedResponseModalProps {
@@ -141,7 +142,7 @@ export default function CannedResponseModal({
     if (files.length === 0) return;
 
     // Validar tamanho e tipo
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = CHAT_MAX_ATTACHMENT_BYTES;
     const allowedTypes = [
       'image/jpeg', 'image/png', 'image/gif', 'image/webp',
       'audio/mpeg', 'audio/wav', 'audio/ogg',
@@ -154,7 +155,7 @@ export default function CannedResponseModal({
 
     files.forEach(file => {
       if (file.size > maxSize) {
-        toast.error(`Arquivo ${file.name} é muito grande (máximo 10MB)`);
+        toast.error(`Arquivo ${file.name} é muito grande (${formatFileSize(file.size)} — máximo ${formatFileSize(maxSize)})`);
         return;
       }
 
@@ -318,7 +319,7 @@ export default function CannedResponseModal({
                 {t('modal.fields.attachments.addButton')}
               </Button>
               <p className="text-xs text-muted-foreground">
-                {t('modal.fields.attachments.hint')}
+                {t('modal.fields.attachments.hint', { maxSize: CHAT_MAX_ATTACHMENT_BYTES / (1024 * 1024) })}
               </p>
             </div>
 

@@ -18,7 +18,7 @@ import {
   MESSAGE_TYPE,
 } from '@/types/chat/api';
 import { ConversationsContextValue } from '@/types/chat/conversations';
-import { useAppDataStore } from '@/store/appDataStore';
+import { useAppDataStore, mayRead } from '@/store/appDataStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { playNotificationSound, getAudioSettings } from '@/utils/audioNotificationUtils';
 import { normalizeToUnixSeconds } from '@/utils/time/timeHelpers';
@@ -569,9 +569,15 @@ function useChatIntegration() {
         const isZapiChannel = isWhatsAppChannel && channelProvider?.toLowerCase() === 'zapi';
 
         if (isZapiChannel) {
-          // Recarregar inboxes para obter provider_connection atualizado
-          const { fetchInboxes } = useAppDataStore.getState();
-          fetchInboxes(true).catch(console.error);
+          // Recarregar inboxes para obter provider_connection atualizado.
+          // Guardado por permissão: este refetch ignora o cache e dispara a CADA
+          // evento de conversa, então para quem não lê instâncias ele ressuscitava
+          // o erro vermelho o dia inteiro, mesmo com o boot já corrigido.
+          void mayRead('inboxes.read').then(pode => {
+            if (!pode) return;
+            const { fetchInboxes } = useAppDataStore.getState();
+            fetchInboxes(true).catch(console.error);
+          });
         }
       },
 

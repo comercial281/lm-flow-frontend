@@ -32,6 +32,8 @@ import {
   Send,
   Paperclip,
   Save,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PipelineStage } from '@/types/analytics';
@@ -40,6 +42,9 @@ import {
   BroadcastCampaign,
   BroadcastSequenceItem,
   AudienceMode,
+  BroadcastChannelKind,
+  BroadcastTemplateConfig,
+  CloudChannelOption,
 } from '@/services/broadcasts/broadcastsService';
 import { labelsService } from '@/services/contacts/labelsService';
 import type { Label as LabelType } from '@/types/settings';
@@ -93,15 +98,19 @@ function itemIsValid(it: SequenceDraftItem) {
 
 // Converte os itens do editor no payload de sequência do backend.
 function toSequencePayload(items: SequenceDraftItem[]): BroadcastSequenceItem[] {
-  return items.map((it, idx) => ({
-    position: idx,
-    kind: it.kind,
-    text_content: it.text_content,
-    media_url: it.media_url,
-    media_caption: it.media_caption,
-    media_filename: it.media_filename,
-    delay_seconds: it.delay_seconds,
-  }));
+  return items.map((it, idx) => {
+    const variations = (it.text_variations ?? []).map(s => s.trim()).filter(Boolean);
+    return {
+      position: idx,
+      kind: it.kind,
+      text_content: it.text_content,
+      ...(variations.length ? { text_variations: variations } : {}),
+      media_url: it.media_url,
+      media_caption: it.media_caption,
+      media_filename: it.media_filename,
+      delay_seconds: it.delay_seconds,
+    };
+  });
 }
 
 // Item de funil salvo → item do editor (mesmo mapeamento do agendar/funil).
@@ -141,6 +150,13 @@ export default function BulkDispatchModal({
   const [variables, setVariables] = useState<TemplateVariable[]>([]);
   const [funnelTemplates, setFunnelTemplates] = useState<MessageFunnel[]>([]);
 
+  // Canal do disparo: 'evolution' (sessão livre) ou 'whatsapp_cloud' (template oficial).
+  const [channelKind, setChannelKind] = useState<BroadcastChannelKind>('evolution');
+  const [cloudOptions, setCloudOptions] = useState<CloudChannelOption[]>([]);
+  const [cloudInboxId, setCloudInboxId] = useState('');
+  const [cloudTemplateName, setCloudTemplateName] = useState('');
+  const [cloudVars, setCloudVars] = useState<Record<string, string>>({});
+
   // Nome do envio (vai pro registro/LOG e pra lista de disparos)
   const [campaignName, setCampaignName] = useState('');
 
@@ -154,6 +170,10 @@ export default function BulkDispatchModal({
   const [batchSize, setBatchSize] = useState(10);
   const [pauseS, setPauseS] = useState(60);
   const [businessHours, setBusinessHours] = useState(true);
+  // Fase 4/5: teto de gasto (R$), respeitar opt-out, frequency cap (dias).
+  const [maxSpend, setMaxSpend] = useState('');
+  const [respectOptOut, setRespectOptOut] = useState(true);
+  const [frequencyCapDays, setFrequencyCapDays] = useState(0);
 
   // Teste
   const [testPhone, setTestPhone] = useState('');
@@ -170,6 +190,10 @@ export default function BulkDispatchModal({
     setSelectedLabels([]);
     setRecipientCount(null);
     setItems([newSequenceItem()]);
+    setChannelKind('evolution');
+    setCloudInboxId('');
+    setCloudTemplateName('');
+    setCloudVars({});
     setCampaignName('');
     setPostStageId('');
     setPostLabel('');
@@ -178,6 +202,9 @@ export default function BulkDispatchModal({
     setBatchSize(10);
     setPauseS(60);
     setBusinessHours(true);
+    setMaxSpend('');
+    setRespectOptOut(true);
+    setFrequencyCapDays(0);
     setTestPhone('');
   }, []);
 
@@ -229,6 +256,10 @@ export default function BulkDispatchModal({
       .list({ activeOnly: true })
       .then(setFunnelTemplates)
       .catch(() => setFunnelTemplates([]));
+    broadcastsService
+      .whatsappCloudOptions()
+      .then(setCloudOptions)
+      .catch(() => setCloudOptions([]));
   }, [open, refreshList, resetWizard]);
 
   // Carrega um modelo salvo (funil) na sequência atual.
@@ -306,8 +337,45 @@ export default function BulkDispatchModal({
 
   const itemsValid = useMemo(() => items.length > 0 && items.every(itemIsValid), [items]);
 
+  // Canal oficial (WhatsApp Cloud): exige template aprovado + variáveis preenchidas.
+  const cloudMode = channelKind === 'whatsapp_cloud';
+  const selectedCloudInbox = useMemo(
+    () => cloudOptions.find(o => o.inbox_id === cloudInboxId) || cloudOptions[0],
+    [cloudOptions, cloudInboxId],
+  );
+  const selectedCloudTemplate = useMemo(
+    () => selectedCloudInbox?.templates.find(t => t.name === cloudTemplateName),
+    [selectedCloudInbox, cloudTemplateName],
+  );
+  const cloudVarsFilled = useMemo(
+    () => (selectedCloudTemplate?.variables ?? []).every(v => (cloudVars[v] ?? '').trim() !== ''),
+    [selectedCloudTemplate, cloudVars],
+  );
+  // Estimativa de custo do disparo oficial (Fase 4). Tarifas BRL de referência
+  // Brasil por categoria — o backend é a fonte de verdade pro budget cap.
+  const costEstimate = useMemo(() => {
+    if (channelKind !== 'whatsapp_cloud' || !recipientCount) return null;
+    const cat = (selectedCloudTemplate?.category ?? 'marketing').toLowerCase();
+    const rates: Record<string, number> = {
+      marketing: 0.35, utility: 0.02, authentication: 0.16, service: 0,
+    };
+    const rate = rates[cat] ?? rates.marketing;
+    return { cat, rate, total: recipientCount * rate };
+  }, [channelKind, recipientCount, selectedCloudTemplate]);
+  const buildTemplateConfig = useCallback(
+    (): BroadcastTemplateConfig => ({
+      inbox_id: selectedCloudInbox?.inbox_id,
+      template_name: selectedCloudTemplate?.name ?? '',
+      language: selectedCloudTemplate?.language,
+      parameters: (selectedCloudTemplate?.variables ?? []).map(v => cloudVars[v] ?? ''),
+    }),
+    [selectedCloudInbox, selectedCloudTemplate, cloudVars],
+  );
+
   const step1Ok = (recipientCount ?? 0) > 0;
-  const step2Ok = itemsValid;
+  const step2Ok = cloudMode
+    ? !!selectedCloudInbox && !!selectedCloudTemplate && !!selectedCloudTemplate.approved && cloudVarsFilled
+    : itemsValid;
   const step3Ok = minS >= 2 && maxS >= minS && batchSize >= 1 && batchSize <= 50 && pauseS >= 10;
 
   const sumItemDelays = useMemo(
@@ -329,13 +397,22 @@ export default function BulkDispatchModal({
       toast.error('Número inválido (use DDD + número, ex: 5511999999999).');
       return;
     }
-    if (!itemsValid) {
+    if (cloudMode) {
+      if (!step2Ok) {
+        toast.error('Escolha um template aprovado e preencha as variáveis.');
+        return;
+      }
+    } else if (!itemsValid) {
       toast.error('Monte a sequência antes de testar.');
       return;
     }
     setTesting(true);
     try {
-      await broadcastsService.testSendSequence(phone, toSequencePayload(items));
+      if (cloudMode) {
+        await broadcastsService.testSendTemplate(phone, buildTemplateConfig());
+      } else {
+        await broadcastsService.testSendSequence(phone, toSequencePayload(items));
+      }
       toast.success('Teste enviado! Confere o WhatsApp.');
     } catch (err: any) {
       toast.error(err?.response?.data?.errors?.[0] || 'Falha ao enviar o teste.');
@@ -356,12 +433,14 @@ export default function BulkDispatchModal({
       await broadcastsService.create({
         name: campaignName.trim() || undefined,
         pipeline_id: pipelineId,
+        channel_kind: channelKind,
+        template_config: cloudMode ? buildTemplateConfig() : undefined,
         audience: {
           mode: audienceMode,
           stage_id: audienceMode === 'stage' ? stageId : undefined,
           labels: audienceMode === 'tag' ? selectedLabels : undefined,
         },
-        funnel_items: toSequencePayload(items),
+        funnel_items: cloudMode ? undefined : toSequencePayload(items),
         post_send:
           postStageId || postLabel.trim()
             ? { stage_id: postStageId || undefined, label: postLabel.trim() || undefined }
@@ -371,6 +450,9 @@ export default function BulkDispatchModal({
         batch_size: batchSize,
         batch_pause_seconds: pauseS,
         business_hours_only: businessHours,
+        respect_opt_out: respectOptOut,
+        frequency_cap_days: frequencyCapDays,
+        max_spend: maxSpend.trim() ? Number(maxSpend.replace(',', '.')) : undefined,
       });
       await refreshList();
       setStep('done');
@@ -611,51 +693,189 @@ export default function BulkDispatchModal({
               </div>
             )}
 
-            {/* STEP 2 — Mensagem (sequência) */}
+            {/* STEP 2 — Mensagem (canal + conteúdo) */}
             {step === 'messages' && (
               <div className="space-y-4 py-2">
-                <div className="flex items-center justify-between gap-2">
-                  <Label className="text-sm flex items-center gap-1.5">
-                    <MessageSquareText className="w-4 h-4" /> Sequência de mensagens
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    {funnelTemplates.length > 0 && (
-                      <Select value="" onValueChange={loadTemplate}>
-                        <SelectTrigger className="h-7 w-40 text-xs">
-                          <SelectValue placeholder="Usar modelo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {funnelTemplates.map(f => (
-                            <SelectItem key={f.id} value={f.id}>
-                              {f.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                    <Button
+                {/* Seletor de canal */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Canal de envio</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={saveAsTemplate}
-                      className="h-7 text-xs"
-                      title="Salvar a sequência como modelo na biblioteca"
+                      onClick={() => setChannelKind('evolution')}
+                      className={`flex items-start gap-2 rounded-lg border p-3 text-left transition-colors ${
+                        !cloudMode ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted'
+                      }`}
                     >
-                      <Save className="w-3.5 h-3.5 mr-1" /> Salvar modelo
-                    </Button>
+                      <Zap className={`w-4 h-4 mt-0.5 ${!cloudMode ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <span className="text-sm">
+                        <span className="font-medium block">Evolution</span>
+                        <span className="text-xs text-muted-foreground">Mensagem livre (sequência)</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChannelKind('whatsapp_cloud')}
+                      className={`flex items-start gap-2 rounded-lg border p-3 text-left transition-colors ${
+                        cloudMode ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted'
+                      }`}
+                    >
+                      <ShieldCheck className={`w-4 h-4 mt-0.5 ${cloudMode ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <span className="text-sm">
+                        <span className="font-medium block">WhatsApp Oficial</span>
+                        <span className="text-xs text-muted-foreground">Template aprovado (Cloud API)</span>
+                      </span>
+                    </button>
                   </div>
                 </div>
 
-                <MessageSequenceEditor
-                  items={items}
-                  onChange={setItems}
-                  variables={variables}
-                  uploadMedia={broadcastsService.uploadMedia.bind(broadcastsService)}
-                />
+                {/* ---- Evolution: sequência livre ---- */}
+                {!cloudMode && (
+                  <>
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-sm flex items-center gap-1.5">
+                        <MessageSquareText className="w-4 h-4" /> Sequência de mensagens
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        {funnelTemplates.length > 0 && (
+                          <Select value="" onValueChange={loadTemplate}>
+                            <SelectTrigger className="h-7 w-40 text-xs">
+                              <SelectValue placeholder="Usar modelo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {funnelTemplates.map(f => (
+                                <SelectItem key={f.id} value={f.id}>
+                                  {f.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={saveAsTemplate}
+                          className="h-7 text-xs"
+                          title="Salvar a sequência como modelo na biblioteca"
+                        >
+                          <Save className="w-3.5 h-3.5 mr-1" /> Salvar modelo
+                        </Button>
+                      </div>
+                    </div>
 
-                <p className="text-xs text-muted-foreground">
-                  Use as variáveis pra personalizar (ex: {'{{nome}}'}); a mídia é anexada na hora.
-                </p>
+                    <MessageSequenceEditor
+                      items={items}
+                      onChange={setItems}
+                      variables={variables}
+                      uploadMedia={broadcastsService.uploadMedia.bind(broadcastsService)}
+                      allowTextVariations
+                    />
+
+                    <p className="text-xs text-muted-foreground">
+                      Use as variáveis pra personalizar (ex: {'{{nome}}'}); a mídia é anexada na hora.
+                    </p>
+                  </>
+                )}
+
+                {/* ---- WhatsApp Oficial: template aprovado ---- */}
+                {cloudMode && (
+                  <div className="space-y-3">
+                    {cloudOptions.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+                        Nenhum canal WhatsApp Oficial conectado. Conecte um número em{' '}
+                        <strong>Canais → WhatsApp Oficial</strong> e aprove um template pra disparar por aqui.
+                      </div>
+                    ) : (
+                      <>
+                        {cloudOptions.length > 1 && (
+                          <div className="space-y-1.5">
+                            <Label className="text-sm">Número (canal oficial)</Label>
+                            <Select
+                              value={selectedCloudInbox?.inbox_id ?? ''}
+                              onValueChange={v => {
+                                setCloudInboxId(v);
+                                setCloudTemplateName('');
+                                setCloudVars({});
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Escolher número" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {cloudOptions.map(o => (
+                                  <SelectItem key={o.inbox_id} value={o.inbox_id}>
+                                    {o.name} · {o.phone_number}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        <div className="space-y-1.5">
+                          <Label className="text-sm flex items-center gap-1.5">
+                            <ShieldCheck className="w-4 h-4" /> Template aprovado
+                          </Label>
+                          {(selectedCloudInbox?.templates.length ?? 0) === 0 ? (
+                            <p className="text-xs text-muted-foreground">
+                              Esse número não tem template ainda. Crie e aprove um template na Meta primeiro.
+                            </p>
+                          ) : (
+                            <Select
+                              value={cloudTemplateName}
+                              onValueChange={v => {
+                                setCloudTemplateName(v);
+                                setCloudVars({});
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Escolher template" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {selectedCloudInbox?.templates.map(t => (
+                                  <SelectItem key={`${t.name}_${t.language}`} value={t.name} disabled={!t.approved}>
+                                    {t.name} · {t.language}
+                                    {!t.approved && ` (${(t.status || 'pendente').toLowerCase()})`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+
+                        {selectedCloudTemplate && (
+                          <div className="rounded-lg bg-muted/50 p-3 text-sm whitespace-pre-wrap">
+                            {selectedCloudTemplate.content}
+                          </div>
+                        )}
+
+                        {selectedCloudTemplate && selectedCloudTemplate.variables.length > 0 && (
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">
+                              Preencha as variáveis do template (use {'{{nome}}'} pra puxar o nome do lead)
+                            </Label>
+                            {selectedCloudTemplate.variables.map((v, i) => (
+                              <div key={v} className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground w-14 shrink-0">{`{{${i + 1}}}`}</span>
+                                <Input
+                                  value={cloudVars[v] ?? ''}
+                                  onChange={e => setCloudVars(prev => ({ ...prev, [v]: e.target.value }))}
+                                  placeholder="{{nome}} ou texto fixo"
+                                  className="h-9"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <p className="text-xs text-muted-foreground">
+                          Fora da janela de 24h, a Meta só entrega template aprovado. As variáveis são preenchidas por lead.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -717,6 +937,50 @@ export default function BulkDispatchModal({
                   />
                   Só enviar em horário comercial (seg-sex 08-20h, sáb 09-18h)
                 </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={respectOptOut}
+                    onChange={e => setRespectOptOut(e.target.checked)}
+                    className="rounded border-border"
+                  />
+                  Não enviar pra quem pediu PARAR (opt-out)
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Não reenviar nos últimos (dias)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={frequencyCapDays}
+                      onChange={e => setFrequencyCapDays(Math.max(0, Number(e.target.value) || 0))}
+                      className="h-9"
+                      placeholder="0 = sem limite"
+                    />
+                  </div>
+                  {channelKind === 'whatsapp_cloud' && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Teto de gasto (R$)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={maxSpend}
+                        onChange={e => setMaxSpend(e.target.value)}
+                        className="h-9"
+                        placeholder="opcional"
+                      />
+                    </div>
+                  )}
+                </div>
+                {costEstimate && (
+                  <p className="text-xs text-muted-foreground">
+                    Custo estimado: <strong className="text-foreground">
+                      R$ {costEstimate.total.toFixed(2).replace('.', ',')}
+                    </strong>{' '}
+                    ({recipientCount} msg × R$ {costEstimate.rate.toFixed(2).replace('.', ',')}, categoria {costEstimate.cat}). Estimativa — custo real vem da Meta.
+                  </p>
+                )}
                 {!step3Ok && (
                   <p className="text-xs text-amber-600">
                     Máximo deve ser ≥ mínimo (≥2s), lote entre 1 e 50, pausa ≥ 10s.
@@ -797,8 +1061,12 @@ export default function BulkDispatchModal({
                     <strong>{recipientCount}</strong>
                   </div>
                   <div className="flex justify-between p-2.5">
-                    <span className="text-muted-foreground">Itens na sequência</span>
-                    <strong>{items.length}</strong>
+                    <span className="text-muted-foreground">Canal</span>
+                    <strong>{cloudMode ? 'WhatsApp Oficial (template)' : 'Evolution (sessão)'}</strong>
+                  </div>
+                  <div className="flex justify-between p-2.5">
+                    <span className="text-muted-foreground">{cloudMode ? 'Template' : 'Itens na sequência'}</span>
+                    <strong>{cloudMode ? selectedCloudTemplate?.name ?? '—' : items.length}</strong>
                   </div>
                   <div className="flex justify-between p-2.5">
                     <span className="text-muted-foreground">Ritmo</span>
@@ -811,26 +1079,45 @@ export default function BulkDispatchModal({
                     <strong>{businessHours ? 'Sim' : 'Não'}</strong>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  {items.map((it, i) => (
-                    <div key={it.uiKey} className="p-3 rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
-                      <span className="text-xs text-muted-foreground block mb-1">
-                        #{i + 1} · {KIND_LABEL[it.kind]}
-                        {it.delay_seconds > 0 && ` · aguarda ${it.delay_seconds}s`}
-                      </span>
-                      {it.kind !== 'text' && (
-                        <span className="text-xs text-primary flex items-center gap-1 mb-1">
-                          <Paperclip className="w-3 h-3" /> mídia anexada
+                {!cloudMode && (
+                  <div className="space-y-2">
+                    {items.map((it, i) => (
+                      <div key={it.uiKey} className="p-3 rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
+                        <span className="text-xs text-muted-foreground block mb-1">
+                          #{i + 1} · {KIND_LABEL[it.kind]}
+                          {it.delay_seconds > 0 && ` · aguarda ${it.delay_seconds}s`}
+                          {it.kind === 'text' &&
+                            (it.text_variations?.filter(v => v.trim()).length ?? 0) > 0 &&
+                            ` · ${(it.text_variations?.filter(v => v.trim()).length ?? 0) + 1} variações (sorteia 1/lead)`}
                         </span>
-                      )}
-                      {it.kind === 'text'
-                        ? preview(it.text_content ?? '')
-                        : it.media_caption
-                          ? preview(it.media_caption)
-                          : <span className="text-muted-foreground italic">(sem legenda)</span>}
-                    </div>
-                  ))}
-                </div>
+                        {it.kind !== 'text' && (
+                          <span className="text-xs text-primary flex items-center gap-1 mb-1">
+                            <Paperclip className="w-3 h-3" /> mídia anexada
+                          </span>
+                        )}
+                        {it.kind === 'text'
+                          ? preview(it.text_content ?? '')
+                          : it.media_caption
+                            ? preview(it.media_caption)
+                            : <span className="text-muted-foreground italic">(sem legenda)</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {cloudMode && selectedCloudTemplate && (
+                  <div className="p-3 rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                      <ShieldCheck className="w-3 h-3" /> Template {selectedCloudTemplate.name} · {selectedCloudTemplate.language}
+                    </span>
+                    {preview(
+                      selectedCloudTemplate.variables.reduce(
+                        (txt, v, i) => txt.replace(`{{${i + 1}}}`, cloudVars[v] || `{{${i + 1}}}`),
+                        selectedCloudTemplate.content,
+                      ),
+                    )}
+                  </div>
+                )}
 
                 {/* Enviar teste pra um número antes de disparar pros leads */}
                 <div className="border-t border-border pt-3 space-y-2">
@@ -855,7 +1142,9 @@ export default function BulkDispatchModal({
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Manda a sequência inteira só pra esse número, sem tocar nos leads.
+                    {cloudMode
+                      ? 'Manda o template só pra esse número, sem tocar nos leads.'
+                      : 'Manda a sequência inteira só pra esse número, sem tocar nos leads.'}
                   </p>
                 </div>
               </div>

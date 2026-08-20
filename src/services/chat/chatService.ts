@@ -17,6 +17,7 @@ import {
   Inbox,
   Pipeline,
 } from '@/types/chat/api';
+import type { SalesAgentCardState, SalesAgentLeadReport } from '@/types/analytics/pipelines';
 import { extractData } from '@/utils/apiHelpers';
 
 class ChatService {
@@ -100,6 +101,34 @@ class ChatService {
   }
 
   // ===== CONVERSATION ACTIONS =====
+
+  /**
+   * Liga/desliga a IA Vendedora NESTE lead.
+   *
+   * Desligar grava uma pausa própria, não um handoff: os dois calam a IA, mas
+   * handoff significa "a IA decidiu passar pro humano" e alimenta etiqueta,
+   * atribuição e métrica. Ligar de volta também limpa o handoff no backend.
+   */
+  async toggleSalesAgent(
+    conversationId: string,
+    enabled: boolean,
+  ): Promise<SalesAgentCardState> {
+    const response = await api.post(`/conversations/${conversationId}/sales_agent`, { enabled });
+    return (response.data as { data: SalesAgentCardState }).data;
+  }
+
+  /**
+   * "Por que a IA não respondeu ESTE lead?"
+   *
+   * O Diagnóstico da IA responde pelo canal (ligada? conectada? com base?), e
+   * nada disso explica um lead específico ficar mudo. O motivo real mora no
+   * turno: transferida pro corretor, desligada neste lead, fora do horário ou
+   * gatilho que não bateu. Sem isso na tela só restava trocar gatilho às cegas.
+   */
+  async getSalesAgentStatus(conversationId: string): Promise<SalesAgentLeadReport> {
+    const response = await api.get(`/conversations/${conversationId}/sales_agent_status`);
+    return (response.data as { data: SalesAgentLeadReport }).data;
+  }
 
   async toggleStatus(conversationId: string): Promise<ConversationResponse> {
     const response = await api.post(`/conversations/${conversationId}/toggle_status`);
@@ -208,6 +237,19 @@ class ChatService {
 
   async deleteMessage(conversationId: string, messageId: string): Promise<Message> {
     const response = await api.delete(`/conversations/${conversationId}/messages/${messageId}`);
+    return extractData<Message>(response);
+  }
+
+  // Envia o book (PDF) de um imóvel direto na conversa. O backend baixa o PDF da
+  // book_url e anexa server-side, sem passar pelo upload do navegador. Nasceu para
+  // contornar o antigo teto de 10MB do anexo; o teto hoje é CHAT_MAX_ATTACHMENT_BYTES
+  // (100MB), mas este caminho segue valendo: o book pode ter até 200MB no cadastro e
+  // aqui não trafega pela máquina de quem clica.
+  async sendPropertyBook(conversationId: string, propertyId: string, caption?: string): Promise<Message> {
+    const response = await api.post(`/conversations/${conversationId}/messages/send_book`, {
+      property_id: propertyId,
+      caption: caption ?? '',
+    });
     return extractData<Message>(response);
   }
 

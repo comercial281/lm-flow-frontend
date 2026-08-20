@@ -263,6 +263,8 @@
       "assignAgent": "Assegna Agente",
       "assignTeam": "Assegna Team",
       "assignTag": "Assegna Etichetta",
+      "unassignAgent": "Rimuovi agente",
+      "unassignTeam": "Rimuovi team",
       "deleteConversation": "Elimina conversazione"
     },
     "contactNoName": "Contatto senza nome",
@@ -633,7 +635,7 @@
       },
       "errors": {
         "fileTooLarge": "File troppo grande",
-        "fileTooLargeDescription": "{{fileName}} supera il limite di {{maxSize}}MB",
+        "fileTooLargeDescription": "{{fileName}} è {{fileSize}} — il limite è {{maxSize}}MB",
         "fileTypeNotAllowed": "Tipo di file non consentito",
         "fileTypeNotAllowedDescription": "{{fileName}} non è un tipo di file supportato"
       },

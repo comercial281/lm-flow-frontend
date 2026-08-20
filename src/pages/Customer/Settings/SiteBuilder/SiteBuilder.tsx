@@ -14,14 +14,17 @@ import {
   Label as UILabel,
   Textarea,
   Badge,
+  Switch,
 } from '@/components/ui/ds';
 import {
   Globe, Plus, Edit, Trash2, FileText, Newspaper,
   ExternalLink, Archive, Send, RefreshCw, Users,
   LayoutTemplate, Copy, Check, Home, Building2, Search, MessageCircle,
-  Upload, Loader2, Sparkles,
+  Upload, Loader2, Sparkles, Image as ImageIcon, Lightbulb, X,
 } from 'lucide-react';
 import { getTenantSlug } from '@/services/core/tenant';
+import { RichTextEditor, type RichTextEditorRef } from '@/components/chat/rich-text-editor';
+import LeadRoutingFields from '@/components/pipelines/LeadRoutingFields';
 import { extractLogoColors } from '@/utils/logoColors';
 import {
   siteBuilderService,
@@ -46,6 +49,8 @@ const TABS = [
   { key: 'leads', label: 'Leads', icon: Users },
 ];
 
+const SITE_FONTS = ['Inter', 'Space Grotesk', 'Lato', 'Poppins', 'Montserrat', 'Roboto'];
+
 const EMPTY_SITE_FORM: SiteFormData = {
   name: '',
   slug: '',
@@ -53,8 +58,11 @@ const EMPTY_SITE_FORM: SiteFormData = {
   active: true,
   published: false,
   logo_url: '',
+  hero_video_url: '',
+  sections: { stats: true, lead_capture: true },
   primary_color: '#7C3AED',
   accent_color: '#9333EA',
+  font_family: 'Inter',
   contact_phone: '',
   contact_whatsapp: '',
   contact_email: '',
@@ -64,6 +72,9 @@ const EMPTY_SITE_FORM: SiteFormData = {
   gtm_id: '',
   ga4_measurement_id: '',
   facebook_pixel_id: '',
+  lead_pipeline_id: null,
+  lead_stage_id: null,
+  lead_label_id: null,
 };
 
 const EMPTY_PAGE_FORM: PageFormData = {
@@ -77,10 +88,24 @@ const EMPTY_PAGE_FORM: PageFormData = {
 
 const EMPTY_ARTICLE_FORM: ArticleFormData = {
   title: '',
-  content: '',
+  body_html: '',
   excerpt: '',
   cover_image_url: '',
 };
+
+// Sugestões prontas de pauta (nicho imobiliário) — clicar preenche o título.
+const ARTICLE_IDEAS = [
+  'Como financiar um imóvel: passo a passo',
+  'Documentos necessários para comprar um imóvel',
+  'Vale a pena alugar ou comprar? Como decidir',
+  'Dicas para valorizar seu imóvel antes de vender',
+  'O que avaliar antes de comprar o primeiro apê',
+  'Financiamento pela Caixa: como funciona',
+  'Erros comuns na hora de alugar um imóvel',
+  'Como funciona o processo de compra na planta',
+  'Bairros em alta na região: onde investir',
+  'Checklist de vistoria antes de assinar o contrato',
+];
 
 function formatDate(iso: string) {
   return formatDateBR(iso);
@@ -101,6 +126,10 @@ export default function SiteBuilder() {
   const logoInputRef = useRef<HTMLInputElement | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
 
+  // Vídeo do banner da home (upload → URL pública)
+  const bannerVideoInputRef = useRef<HTMLInputElement | null>(null);
+  const [bannerVideoUploading, setBannerVideoUploading] = useState(false);
+
   // Preencher com IA (proposta — o usuário revisa e salva)
   const [aiText, setAiText] = useState('');
   const [aiRunning, setAiRunning] = useState(false);
@@ -119,6 +148,12 @@ export default function SiteBuilder() {
   const [articleModal, setArticleModal] = useState(false);
   const [editingArticle, setEditingArticle] = useState<SiteArticle | null>(null);
   const [articleForm, setArticleForm] = useState<ArticleFormData>(EMPTY_ARTICLE_FORM);
+  const [articleLoadingBody, setArticleLoadingBody] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const articleEditorRef = useRef<RichTextEditorRef>(null);
+  // Semente do editor: (re)carrega o HTML no editor a cada abertura do modal.
+  const [editorSeed, setEditorSeed] = useState({ html: '', nonce: 0 });
 
   // Leads
   const [leads, setLeads] = useState<SiteLead[]>([]);
@@ -140,8 +175,14 @@ export default function SiteBuilder() {
           active: s.active,
           published: s.published,
           logo_url: s.branding.logo_url ?? '',
+          hero_video_url: s.hero_video_url ?? '',
+          sections: {
+            stats: s.sections?.stats ?? true,
+            lead_capture: s.sections?.lead_capture ?? true,
+          },
           primary_color: s.branding.primary_color ?? '#7C3AED',
           accent_color: s.branding.accent_color ?? '#9333EA',
+          font_family: s.branding.font_family ?? 'Inter',
           contact_phone: s.contact.phone ?? '',
           contact_whatsapp: s.contact.whatsapp ?? '',
           contact_email: s.contact.email ?? '',
@@ -151,6 +192,9 @@ export default function SiteBuilder() {
           gtm_id: s.tracking.gtm_id ?? '',
           ga4_measurement_id: s.tracking.ga4_measurement_id ?? '',
           facebook_pixel_id: s.tracking.facebook_pixel_id ?? '',
+          lead_pipeline_id: s.lead_pipeline_id ?? null,
+          lead_stage_id: s.lead_stage_id ?? null,
+          lead_label_id: s.lead_label_id ?? null,
         });
       }
     } catch {
@@ -207,6 +251,13 @@ export default function SiteBuilder() {
     if (site && activeTab === 'leads') loadLeads(leadsStatusFilter || undefined);
   }, [site, activeTab, loadPages, loadArticles, loadLeads, leadsStatusFilter]);
 
+  // (Re)injeta o HTML no editor sempre que o modal abre ou o corpo é carregado.
+  // O editor prosemirror lida com HTML via setContent (o `value` só trata texto).
+  useEffect(() => {
+    if (!articleModal) return;
+    articleEditorRef.current?.setContent(editorSeed.html || '');
+  }, [articleModal, editorSeed.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSaveSite = async () => {
     setSaving(true);
     try {
@@ -256,6 +307,26 @@ export default function SiteBuilder() {
       toast.error('Falha no upload da logo.');
     } finally {
       setLogoUploading(false);
+    }
+  };
+
+  // Sobe o vídeo do banner da home. Fica no form (hero_video_url) até o usuário salvar.
+  const handleBannerVideoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (bannerVideoInputRef.current) bannerVideoInputRef.current.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('video/')) { toast.error('Envie um arquivo de vídeo (MP4/WebM).'); return; }
+    if (file.size > 60 * 1024 * 1024) { toast.error('Vídeo muito grande (máx 60MB). Comprima antes de enviar.'); return; }
+
+    setBannerVideoUploading(true);
+    try {
+      const { url } = await siteBuilderService.uploadAsset(file);
+      setF({ hero_video_url: url });
+      toast.success('Vídeo no ar. Revise o preview e clique em Salvar.');
+    } catch {
+      toast.error('Falha no upload do vídeo.');
+    } finally {
+      setBannerVideoUploading(false);
     }
   };
 
@@ -368,30 +439,67 @@ export default function SiteBuilder() {
   const openCreateArticle = () => {
     setEditingArticle(null);
     setArticleForm(EMPTY_ARTICLE_FORM);
+    setEditorSeed(s => ({ html: '', nonce: s.nonce + 1 }));
     setArticleModal(true);
   };
 
-  const openEditArticle = (article: SiteArticle) => {
+  const openEditArticle = async (article: SiteArticle) => {
     setEditingArticle(article);
     setArticleForm({
       title: article.title,
-      content: article.content ?? '',
+      body_html: article.body_html ?? '',
       excerpt: article.excerpt ?? '',
       cover_image_url: article.cover_image_url ?? '',
     });
+    setEditorSeed(s => ({ html: article.body_html ?? '', nonce: s.nonce + 1 }));
     setArticleModal(true);
+    // A listagem não traz o corpo; busca o artigo completo e recarrega o editor.
+    if (!site) return;
+    setArticleLoadingBody(true);
+    try {
+      const full = await siteBuilderService.getArticle(site.id, article.id);
+      setArticleForm(f => ({ ...f, body_html: full.body_html ?? '', excerpt: full.excerpt ?? f.excerpt }));
+      setEditorSeed(s => ({ html: full.body_html ?? '', nonce: s.nonce + 1 }));
+    } catch {
+      toast.error('Erro ao carregar o conteúdo do artigo');
+    } finally {
+      setArticleLoadingBody(false);
+    }
+  };
+
+  const handleCoverFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (coverInputRef.current) coverInputRef.current.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Envie um arquivo de imagem.'); return; }
+    if (file.size > 8 * 1024 * 1024) { toast.error('Imagem muito grande (máx 8MB).'); return; }
+    setCoverUploading(true);
+    try {
+      const { url } = await siteBuilderService.uploadAsset(file);
+      setArticleForm(f => ({ ...f, cover_image_url: url }));
+      toast.success('Capa enviada.');
+    } catch {
+      toast.error('Falha no upload da capa.');
+    } finally {
+      setCoverUploading(false);
+    }
   };
 
   const handleSaveArticle = async () => {
     if (!site || !articleForm.title.trim()) { toast.error('Título é obrigatório'); return; }
+    // O editor é a fonte da verdade do corpo (HTML serializado via ref).
+    const payload: ArticleFormData = {
+      ...articleForm,
+      body_html: articleEditorRef.current?.getContent() ?? articleForm.body_html ?? '',
+    };
     setSaving(true);
     try {
       if (editingArticle) {
-        const updated = await siteBuilderService.updateArticle(site.id, editingArticle.id, articleForm);
+        const updated = await siteBuilderService.updateArticle(site.id, editingArticle.id, payload);
         setArticles(prev => prev.map(a => a.id === updated.id ? updated : a));
         toast.success('Artigo atualizado');
       } else {
-        const created = await siteBuilderService.createArticle(site.id, articleForm);
+        const created = await siteBuilderService.createArticle(site.id, payload);
         setArticles(prev => [...prev, created]);
         toast.success('Artigo criado');
       }
@@ -708,6 +816,90 @@ export default function SiteBuilder() {
                     placeholder="#9333EA" className="font-mono flex-1" />
                 </div>
               </div>
+              <div className="col-span-2">
+                <UILabel htmlFor="site-font">Fonte</UILabel>
+                <select
+                  id="site-font"
+                  value={siteForm.font_family ?? 'Inter'}
+                  onChange={e => setF({ font_family: e.target.value })}
+                  className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  style={{ fontFamily: `${siteForm.font_family ?? 'Inter'}, system-ui, sans-serif` }}
+                >
+                  {SITE_FONTS.map(f => (
+                    <option key={f} value={f} style={{ fontFamily: `${f}, system-ui, sans-serif` }}>{f}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Aplica-se a textos e títulos do site público.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Banner da home (vídeo) */}
+          <section className="rounded-xl border border-border bg-card p-5">
+            <h2 className="text-base font-semibold mb-1">Banner da home</h2>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Envie um vídeo (MP4/WebM, máx 60MB) para tocar como fundo do banner da home do portal —
+              sem som, em loop. Sem vídeo, o banner usa a foto do primeiro imóvel.
+            </p>
+            <div className="flex items-center gap-2">
+              <Input value={siteForm.hero_video_url ?? ''} onChange={e => setF({ hero_video_url: e.target.value })}
+                placeholder="https://... ou envie o arquivo" className="flex-1" />
+              <input ref={bannerVideoInputRef} type="file" accept="video/mp4,video/webm,video/*" className="hidden" onChange={handleBannerVideoFile} />
+              <Button type="button" variant="outline" onClick={() => bannerVideoInputRef.current?.click()}
+                disabled={bannerVideoUploading} className="flex-none">
+                {bannerVideoUploading
+                  ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Enviando...</>
+                  : <><Upload className="mr-1.5 h-4 w-4" /> Enviar vídeo</>}
+              </Button>
+              {siteForm.hero_video_url && (
+                <Button type="button" variant="ghost" size="icon" title="Remover vídeo"
+                  className="flex-none text-destructive hover:text-destructive"
+                  onClick={() => setF({ hero_video_url: '' })}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            {siteForm.hero_video_url && (
+              <video key={siteForm.hero_video_url} src={siteForm.hero_video_url} muted loop autoPlay playsInline
+                className="mt-3 aspect-video w-full max-w-md rounded-lg border border-border object-cover" />
+            )}
+          </section>
+
+          {/* Seções da home — liga/desliga blocos do portal. Nem toda imobiliária
+              tem imóveis/cidades suficientes pra faixa de números fazer sentido. */}
+          <section className="rounded-xl border border-border bg-card p-5">
+            <h2 className="text-base font-semibold mb-1">Seções da home</h2>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Ligue ou desligue blocos do portal. Desligado, o bloco some da home pública.
+            </p>
+            <div className="divide-y divide-border">
+              {[
+                {
+                  key: 'stats' as const,
+                  title: 'Faixa de números',
+                  desc: 'Ex.: "5 imóveis disponíveis", "2 cidades atendidas", "24h no WhatsApp".',
+                },
+                {
+                  key: 'lead_capture' as const,
+                  title: 'Captura de lead',
+                  desc: 'Bloco "Não achou? A gente encontra pra você" com formulário de contato.',
+                },
+              ].map(s => (
+                <div key={s.key} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">{s.title}</div>
+                    <p className="text-xs text-muted-foreground">{s.desc}</p>
+                  </div>
+                  <Switch
+                    checked={siteForm.sections?.[s.key] ?? true}
+                    onCheckedChange={checked =>
+                      setF({ sections: { ...siteForm.sections, [s.key]: checked } })
+                    }
+                  />
+                </div>
+              ))}
             </div>
           </section>
 
@@ -736,6 +928,25 @@ export default function SiteBuilder() {
                   placeholder="Rua..." className="mt-1" />
               </div>
             </div>
+          </section>
+
+          {/* Roteamento de leads: pra onde vão os leads capturados nos formulários
+              do site. Sem pipeline = cai no pipeline padrão do tenant (comportamento
+              antigo). A tag do imóvel (cadastro do imóvel) é aplicada por cima desta. */}
+          <section className="rounded-xl border border-border bg-card p-5">
+            <h2 className="text-base font-semibold mb-1">Roteamento de leads</h2>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Escolha o pipeline, a coluna e a tag de destino dos leads que se cadastram
+              nos formulários do site. Deixe o pipeline vazio para usar o pipeline padrão.
+            </p>
+            <LeadRoutingFields
+              value={{
+                lead_pipeline_id: siteForm.lead_pipeline_id ?? null,
+                lead_stage_id: siteForm.lead_stage_id ?? null,
+                lead_label_id: siteForm.lead_label_id ?? null,
+              }}
+              onChange={patch => setF(patch)}
+            />
           </section>
 
           {/* SEO */}
@@ -1046,40 +1257,93 @@ export default function SiteBuilder() {
 
       {/* Article modal */}
       <Dialog open={articleModal} onOpenChange={setArticleModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent size="wide" className="sm:max-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingArticle ? 'Editar artigo' : 'Novo artigo'}</DialogTitle>
             <DialogDescription>Escreva o conteúdo do artigo para o blog do site</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <UILabel>Título *</UILabel>
-              <Input value={articleForm.title}
-                onChange={e => setArticleForm(f => ({ ...f, title: e.target.value }))}
-                placeholder="Ex: Como financiar um imóvel?" className="mt-1" />
+
+          <div className="grid gap-6 py-2 md:grid-cols-[1fr_260px]">
+            {/* Coluna principal — formulário */}
+            <div className="space-y-4 min-w-0">
+              <div>
+                <UILabel>Título *</UILabel>
+                <Input value={articleForm.title}
+                  onChange={e => setArticleForm(f => ({ ...f, title: e.target.value }))}
+                  placeholder="Ex: Como financiar um imóvel?" className="mt-1" />
+              </div>
+
+              <div>
+                <UILabel>Capa</UILabel>
+                <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFile} />
+                {articleForm.cover_image_url ? (
+                  <div className="mt-1 relative w-full overflow-hidden rounded-lg border border-border">
+                    <img src={articleForm.cover_image_url} alt="Capa"
+                      className="h-40 w-full object-cover"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <div className="absolute right-2 top-2 flex gap-1.5">
+                      <Button type="button" size="sm" variant="secondary"
+                        onClick={() => coverInputRef.current?.click()} disabled={coverUploading}>
+                        {coverUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Trocar'}
+                      </Button>
+                      <Button type="button" size="icon" variant="secondary"
+                        onClick={() => setArticleForm(f => ({ ...f, cover_image_url: '' }))} title="Remover capa">
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => coverInputRef.current?.click()} disabled={coverUploading}
+                    className="mt-1 flex h-32 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50">
+                    {coverUploading
+                      ? <><Loader2 className="h-5 w-5 animate-spin" /> Enviando...</>
+                      : <><ImageIcon className="h-6 w-6" /> <span className="text-sm">Enviar imagem de capa</span></>}
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <UILabel>Resumo</UILabel>
+                <Textarea value={articleForm.excerpt ?? ''}
+                  onChange={e => setArticleForm(f => ({ ...f, excerpt: e.target.value }))}
+                  rows={2} placeholder="Breve descrição exibida na listagem..." className="mt-1 resize-none" />
+              </div>
+
+              <div>
+                <UILabel>Conteúdo</UILabel>
+                <div className="mt-1 relative">
+                  <RichTextEditor ref={articleEditorRef} showToolbar
+                    placeholder="Escreva o conteúdo do artigo... (use a barra para negrito, itálico e listas)" />
+                  {articleLoadingBody && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/70 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" /> Carregando conteúdo...
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div>
-              <UILabel>Capa (URL da imagem)</UILabel>
-              <Input value={articleForm.cover_image_url ?? ''}
-                onChange={e => setArticleForm(f => ({ ...f, cover_image_url: e.target.value }))}
-                placeholder="https://..." className="mt-1" />
-            </div>
-            <div>
-              <UILabel>Resumo</UILabel>
-              <Textarea value={articleForm.excerpt ?? ''}
-                onChange={e => setArticleForm(f => ({ ...f, excerpt: e.target.value }))}
-                rows={2} placeholder="Breve descrição exibida na listagem..." className="mt-1 resize-none" />
-            </div>
-            <div>
-              <UILabel>Conteúdo</UILabel>
-              <Textarea value={articleForm.content ?? ''}
-                onChange={e => setArticleForm(f => ({ ...f, content: e.target.value }))}
-                rows={10} placeholder="Conteúdo completo do artigo..." className="mt-1 resize-none" />
-            </div>
+
+            {/* Coluna lateral — sugestões de pauta */}
+            <aside className="md:border-l md:border-border md:pl-5">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Lightbulb className="h-4 w-4 text-amber-500" /> Ideias de artigo
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">Clique para usar como título e comece a escrever.</p>
+              <div className="mt-3 space-y-1.5">
+                {ARTICLE_IDEAS.map(idea => (
+                  <button key={idea} type="button"
+                    onClick={() => setArticleForm(f => ({ ...f, title: idea }))}
+                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-left text-xs leading-snug text-muted-foreground transition-colors hover:border-primary hover:text-foreground">
+                    {idea}
+                  </button>
+                ))}
+              </div>
+            </aside>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setArticleModal(false)}>Cancelar</Button>
-            <Button onClick={handleSaveArticle} disabled={saving}>
+            <Button onClick={handleSaveArticle} disabled={saving || coverUploading}>
               {saving ? 'Salvando...' : editingArticle ? 'Salvar' : 'Criar'}
             </Button>
           </DialogFooter>

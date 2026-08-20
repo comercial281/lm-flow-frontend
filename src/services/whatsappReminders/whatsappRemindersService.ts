@@ -44,7 +44,7 @@ class WhatsappRemindersService {
     return extractData<any>(response);
   }
 
-  async listGroups(inboxId: number): Promise<WhatsappReminderGroup[]> {
+  async listGroups(inboxId: string | number): Promise<WhatsappReminderGroup[]> {
     const response = await api.get('/whatsapp_reminders/groups', { params: { inbox_id: inboxId } });
     const payload: any = extractData(response);
     return (payload?.groups || []) as WhatsappReminderGroup[];

@@ -101,6 +101,9 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
       const created = await roletaConfigService.create({
         inbox_id: inboxId,
         is_active: true,
+        // Atalho rápido cria no Rodízio. O modo (inclusive Leilão) se troca na
+        // tela Automações > Distribuição de Leads.
+        distribution_mode: 'rodizio',
         timeout_minutes: timeoutMin,
         gestor_whatsapp_number: gestorNum.trim(),
         notification_inbox_id: null,

@@ -31,6 +31,11 @@ const fmt = (s: number | null) =>
 
 // Linha do tempo dos passos do follow-up de um lead (read-only).
 // Consome GET /api/v1/followup_jobs?contact_id= (ou conversation_id=).
+//
+// ⚠️ O caminho aqui vai SEM o `/api/v1`: o cliente HTTP já carrega esse prefixo
+// na baseURL. Com ele escrito à mão a chamada saía como
+// `/api/v1/api/v1/followup_jobs` e tomava 404 em toda abertura de card — a
+// linha do tempo aparecia sempre vazia, e o erro só existia no console.
 export default function FollowupTimeline({ contactId, conversationId }: { contactId?: string | null; conversationId?: string | null }) {
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +45,7 @@ export default function FollowupTimeline({ contactId, conversationId }: { contac
     let alive = true;
     setLoading(true);
     apiClient
-      .get('/api/v1/followup_jobs', { params: contactId ? { contact_id: contactId } : { conversation_id: conversationId } })
+      .get('/followup_jobs', { params: contactId ? { contact_id: contactId } : { conversation_id: conversationId } })
       .then(r => { if (alive) setJobs(r.data?.data || []); })
       .catch(() => { if (alive) setJobs([]); })
       .finally(() => { if (alive) setLoading(false); });

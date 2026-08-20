@@ -23,6 +23,8 @@ import { pipelinesService } from '@/services/pipelines';
 import { contactsService } from '@/services/contacts';
 import { toast } from 'sonner';
 import { Contact, ContactFormData } from '@/types/contacts';
+import { ManualOriginInput } from '@/components/shared';
+import { contactSaveError } from '@/utils/contactErrors';
 
 // Normaliza telefone para E.164 (backend exige). Limpa tudo que não é dígito e prefixa "+".
 function normalizePhoneE164(raw: string): string {
@@ -34,9 +36,22 @@ function normalizePhoneE164(raw: string): string {
 }
 
 // Telefone e e-mail são únicos por conta. Quando o lead digitado já existe na
-// base (POST /contacts volta 422), procuramos o contato existente pra reusá-lo
-// em vez de falhar — assim "Criar novo lead" vira "criar ou reaproveitar".
-async function findExistingContact(phoneE164: string, email: string): Promise<Contact | null> {
+// base (POST /contacts volta 422), reaproveitamos o contato existente em vez de
+// falhar — assim "Criar novo lead" vira "criar ou reaproveitar".
+//
+// O id vem do PRÓPRIO 422: o backend devolve o contato conflitante em
+// error.details.contact. A busca só entra como plano B, e não é confiável aqui —
+// ela passa pelo recorte da aba Contatos (Contacts::PaidTrafficScope), que
+// esconde justamente o caso comum: cliente de carteira que já estava na base
+// como contato da agenda, sem etiqueta de tráfego e sem origem de lead.
+async function findExistingContact(
+  error: unknown,
+  phoneE164: string,
+  email: string,
+): Promise<{ id: string } | null> {
+  const fromError = contactSaveError(error, '').existing;
+  if (fromError?.id) return fromError;
+
   const search = async (q: string): Promise<Contact[]> => {
     if (!q) return [];
     try {
@@ -121,7 +136,7 @@ export default function AddItemModal({
 
   // Modo: pegar item existente ou criar um lead novo do zero.
   const [mode, setMode] = useState<'existing' | 'new'>('existing');
-  const [newLead, setNewLead] = useState({ name: '', phone: '', email: '' });
+  const [newLead, setNewLead] = useState({ name: '', phone: '', email: '', origin: '' });
   const [isCreating, setIsCreating] = useState(false);
 
   // Initialize modal
@@ -133,7 +148,7 @@ export default function AddItemModal({
       setNotes('');
       setItemType('conversation');
       setMode('existing');
-      setNewLead({ name: '', phone: '', email: '' });
+      setNewLead({ name: '', phone: '', email: '', origin: '' });
 
       // Pre-select stage
       if (preselectedStage) {
@@ -236,6 +251,8 @@ export default function AddItemModal({
       if (phone) payload.phone_number = phone;
       const email = newLead.email.trim();
       if (email) payload.email = email;
+      const origin = newLead.origin.trim();
+      if (origin) payload.lead_origin_note = origin;
 
       // Cria o contato. Se telefone/e-mail já existir (contato único por conta →
       // 422), reaproveita o contato existente em vez de quebrar.
@@ -249,12 +266,22 @@ export default function AddItemModal({
       } catch (createErr) {
         const ce = createErr as { response?: { status?: number } };
         if (ce?.response?.status !== 422) throw createErr;
-        const existing = await findExistingContact(phone, email);
+        const existing = await findExistingContact(createErr, phone, email);
         if (!existing?.id) throw createErr;
         contactId = existing.id;
         reused = true;
       }
       if (!contactId) throw new Error('Contato criado sem id.');
+
+      // Contato reaproveitado não passou pelo POST — a origem escrita precisa ir
+      // num PATCH. Falhar aqui não invalida o lead, então só avisa.
+      if (reused && origin) {
+        try {
+          await contactsService.updateContact(contactId, { lead_origin_note: origin });
+        } catch (originErr) {
+          console.error('Error saving lead origin:', originErr);
+        }
+      }
 
       try {
         await pipelinesService.addItemToPipeline(pipelineId, {
@@ -290,11 +317,10 @@ export default function AddItemModal({
       onItemAdded();
       onOpenChange(false);
     } catch (error) {
-      let errorMessage = 'Não consegui criar o lead.';
-      if (error instanceof Error) errorMessage = error.message;
-      const e = error as { response?: { data?: { error?: { message?: string }; message?: string } } };
-      errorMessage = e?.response?.data?.error?.message || e?.response?.data?.message || errorMessage;
-      toast.error(errorMessage);
+      // Duplicidade que chegou até aqui é a que nem o reaproveitamento resolveu
+      // (contato de outro corretor, p.ex.) — vale dizer isso, não "não consegui".
+      const fallback = error instanceof Error ? error.message : 'Não consegui criar o lead.';
+      toast.error(contactSaveError(error, fallback).message);
     } finally {
       setIsCreating(false);
     }
@@ -406,6 +432,14 @@ export default function AddItemModal({
                   onChange={e => setNewLead(p => ({ ...p, email: e.target.value }))}
                 />
               </div>
+              {/* Lead cadastrado na mão não tem anúncio pra rastrear — quem sabe
+                  de onde ele veio é quem está cadastrando. */}
+              <ManualOriginInput
+                id="new-lead-origin"
+                value={newLead.origin}
+                onChange={origin => setNewLead(p => ({ ...p, origin }))}
+                disabled={isCreating}
+              />
             </div>
           )}
 

@@ -15,14 +15,27 @@ interface Props {
   onSaved?: (updated: ClientInstance) => void;
 }
 
+// Cada key aqui = um grupo do catálogo (config/lm_flow_features.yml no backend),
+// e cada grupo = um MENU real do CRM. O label é o nome do menu como o cliente vê.
 const GROUP_LABELS: Record<string, string> = {
-  menus:            'Menus principais',
-  pipeline_actions: 'Ações do board (Pipeline)',
-  chat_actions:     'Ações do Chat',
-  card_actions:     'Ações do card do lead',
-  contacts_actions: 'Ações de Contatos',
-  module_actions:   'Ações dos módulos',
-  settings:         'Configurações de produto',
+  dashboard:           'Dashboard',
+  conversations:       'Conversas',
+  contacts:            'Contatos',
+  pipelines:           'Pipelines',
+  properties:          'Imóveis',
+  visits:              'Agenda de Visitas',
+  proposals:           'Propostas',
+  contracts:           'Contratos',
+  property_capture:    'Captação',
+  property_interests:  'Interesses',
+  ai_agents:           'Robôs e Integrações',
+  channels:            'Canais',
+  automations:         'Automações',
+  marketplace:         'Marketplace',
+  disparos:            'Disparos',
+  espaco:              'Espaço',
+  tutorials:           'Tutoriais',
+  settings:            'Configurações (sem menu próprio)',
 };
 
 function pickError(e: any): string {
@@ -138,8 +151,10 @@ export default function FeaturesModal({ instance, open, onClose, onSaved }: Prop
             Funções de {instance.name}
           </DialogTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Liga ou desliga o que o cliente vê no CRM dele. Mudanças propagam quando o cliente
-            recarrega a página (cache de até 5 minutos).
+            Liga ou desliga o que o cliente vê no CRM dele. Cada seção é um menu do CRM: o toggle
+            destacado com <span className="text-primary font-medium">menu inteiro</span> esconde o
+            menu todo, os de baixo são funções específicas dentro dele. Mudanças propagam quando o
+            cliente recarrega a página (cache de até 5 minutos).
           </p>
         </DialogHeader>
 
@@ -192,30 +207,55 @@ export default function FeaturesModal({ instance, open, onClose, onSaved }: Prop
                   </div>
 
                   <div className="space-y-1 rounded-md border bg-card">
-                    {items.map((item, idx) => {
-                      const on = features[item.key] !== false;
-                      const id = `feat-${item.key}`;
+                    {(() => {
+                      // Convenção do catálogo: o primeiro item de cada grupo cuja key bate
+                      // com o nome do grupo é o toggle do MENU INTEIRO (ex: group "conversations"
+                      // → item key "conversations"). O resto são funções de dentro do menu.
+                      const menuToggle = items.find(i => i.key === group);
+                      const subItems = menuToggle ? items.filter(i => i.key !== group) : items;
+
+                      const renderRow = (item: FeatureCatalogItem, opts: { indent?: boolean; border?: boolean; strong?: boolean }) => {
+                        const on = features[item.key] !== false;
+                        const id = `feat-${item.key}`;
+                        return (
+                          <div
+                            key={item.key}
+                            className={`flex items-center justify-between py-2 pr-3 ${
+                              opts.indent ? 'pl-7' : 'pl-3'
+                            } ${opts.border ? 'border-t' : ''} ${opts.strong ? 'bg-muted/40' : ''}`}
+                          >
+                            <Label htmlFor={id} className={`cursor-pointer flex-1 text-sm ${opts.strong ? 'font-medium' : ''}`}>
+                              {item.label}
+                              {opts.strong && (
+                                <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                                  menu inteiro
+                                </span>
+                              )}
+                              <span className="ml-2 text-[10px] text-muted-foreground font-mono">
+                                {item.key}
+                              </span>
+                            </Label>
+                            <Switch
+                              id={id}
+                              checked={on}
+                              onCheckedChange={(v: boolean) => toggle(item.key, v)}
+                            />
+                          </div>
+                        );
+                      };
+
                       return (
-                        <div
-                          key={item.key}
-                          className={`flex items-center justify-between px-3 py-2 ${
-                            idx > 0 ? 'border-t' : ''
-                          }`}
-                        >
-                          <Label htmlFor={id} className="cursor-pointer flex-1 text-sm">
-                            {item.label}
-                            <span className="ml-2 text-[10px] text-muted-foreground font-mono">
-                              {item.key}
-                            </span>
-                          </Label>
-                          <Switch
-                            id={id}
-                            checked={on}
-                            onCheckedChange={(v: boolean) => toggle(item.key, v)}
-                          />
-                        </div>
+                        <>
+                          {menuToggle && renderRow(menuToggle, { strong: true })}
+                          {subItems.map((item, idx) =>
+                            renderRow(item, {
+                              indent: !!menuToggle,
+                              border: menuToggle ? true : idx > 0,
+                            })
+                          )}
+                        </>
                       );
-                    })}
+                    })()}
                   </div>
                 </section>
               ))}
