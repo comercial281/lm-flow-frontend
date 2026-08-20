@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Bot, Check, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@evoapi/design-system/button';
 import chatService from '@/services/chat/chatService';
+import usersService from '@/services/users/usersService';
 import type { Label } from '@/types/chat/api';
 import type { BaseFilter } from '@/types/core';
+import type { User } from '@/types/users';
 
 /**
  * O POPUP DE FILTRO — não o modal de 4xl.
@@ -72,6 +74,8 @@ export default function QuickFilters({
   const [open, setOpen] = useState(false);
   const [labels, setLabels] = useState<Label[]>([]);
   const [loadingLabels, setLoadingLabels] = useState(false);
+  const [agents, setAgents] = useState<User[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -89,6 +93,28 @@ export default function QuickFilters({
       .finally(() => { if (alive) setLoadingLabels(false); });
     return () => { alive = false; };
   }, [open, labels.length]);
+
+  // RESPONSÁVEL — lista de todo mundo que pode ser dono de conversa no
+  // tenant (mesma fonte de Configurações > Usuários), não só quem atende
+  // pela instância aberta. Pedido do Giovani (19/08): filtrar quem quiser
+  // ver o atendimento, por nome, não por número/roleta — "Instância" e
+  // "Responsável" são dimensões diferentes (uma instância pode ser
+  // compartilhada por vários corretores via roleta).
+  useEffect(() => {
+    if (!open || agents.length > 0) return;
+    let alive = true;
+    setLoadingAgents(true);
+    usersService
+      .getUsers({ per_page: 100 })
+      .then(res => {
+        if (!alive) return;
+        const list = Array.isArray(res) ? res : (res as { data?: User[] })?.data || [];
+        setAgents(list);
+      })
+      .catch(() => { /* silencioso, seção fica vazia */ })
+      .finally(() => { if (alive) setLoadingAgents(false); });
+    return () => { alive = false; };
+  }, [open, agents.length]);
 
   useEffect(() => {
     if (!open) return;
@@ -111,6 +137,9 @@ export default function QuickFilters({
 
   const activeInboxFilter = filters.find(f => f.attributeKey === 'inbox_id');
   const activeInboxId = activeInboxFilter ? String(activeInboxFilter.values) : undefined;
+
+  const activeAssigneeFilter = filters.find(f => f.attributeKey === 'assignee_id');
+  const activeAssigneeId = activeAssigneeFilter ? String(activeAssigneeFilter.values) : undefined;
 
   const startFilter = filters.find(
     f => f.attributeKey === 'last_activity_at' && f.filterOperator === 'is_greater_than',
@@ -136,6 +165,7 @@ export default function QuickFilters({
   const totalActive =
     (activeTagTitle ? 1 : 0) +
     (activeInboxId ? 1 : 0) +
+    (activeAssigneeId ? 1 : 0) +
     (startDate || endDate ? 1 : 0) +
     (aiOnly ? 1 : 0) +
     advancedCount;
@@ -152,6 +182,11 @@ export default function QuickFilters({
   function applyInbox(id: string | undefined) {
     const base = withoutKeys(['inbox_id']);
     onApply(id ? [...base, mkFilter('inbox_id', 'equal_to', id)] : base);
+  }
+
+  function applyAssignee(id: string | undefined) {
+    const base = withoutKeys(['assignee_id']);
+    onApply(id ? [...base, mkFilter('assignee_id', 'equal_to', id)] : base);
   }
 
   function applyAiOnly(next: boolean) {
@@ -312,6 +347,36 @@ export default function QuickFilters({
               </div>
             </section>
           )}
+
+          {/* RESPONSÁVEL — quem atende, por nome. Independente de
+              "Instância": uma instância pode ser compartilhada por vários
+              corretores via roleta, então filtrar por número não isola o
+              atendimento de uma pessoa (pedido do Giovani, 19/08). */}
+          <section className="mt-2 border-t pt-2">
+            <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              Responsável
+            </p>
+            {loadingAgents ? (
+              <p className="px-0.5 py-1.5 text-xs text-muted-foreground">Carregando…</p>
+            ) : agents.length === 0 ? (
+              <p className="px-0.5 py-1.5 text-xs text-muted-foreground">
+                Nenhum usuário encontrado.
+              </p>
+            ) : (
+              <select
+                value={activeAssigneeId ?? ''}
+                onChange={e => applyAssignee(e.target.value || undefined)}
+                className="w-full cursor-pointer rounded border bg-background px-1.5 py-1.5 text-sm text-foreground outline-none focus:border-primary"
+              >
+                <option value="">Todos os responsáveis</option>
+                {agents.map(a => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </section>
 
           {/* PERÍODO — presets rápidos + intervalo manual, os dois na mesma
               coluna `last_activity_at` (última mensagem), que é o que
