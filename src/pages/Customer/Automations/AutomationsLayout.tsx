@@ -102,33 +102,31 @@ export default function AutomationsLayout() {
   }
 
   return (
-    <div className="flex h-full">
-      <aside className="w-56 shrink-0 border-r border-sidebar-border p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Zap className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
-            Automações
-          </h3>
+    <div className="flex flex-col h-full">
+      <div className="border-b border-border px-6 pt-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Zap className="h-5 w-5 text-primary" />
+          <h1 className="text-lg font-semibold">Automações</h1>
         </div>
-        <nav className="space-y-1">
+        <div className="flex items-center gap-1 overflow-x-auto">
           {visible.map(({ key, path, name, icon: Icon }) => (
             <NavLink
               key={key}
               to={path}
               className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                `flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ${
                   isActive
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`
               }
             >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{name}</span>
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              {name}
             </NavLink>
           ))}
-        </nav>
-      </aside>
+        </div>
+      </div>
       <main className="flex-1 min-w-0 overflow-auto">
         <Outlet />
       </main>

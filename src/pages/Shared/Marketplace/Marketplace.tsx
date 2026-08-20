@@ -37,7 +37,7 @@ const CATALOG: CatalogEntry[] = [
     description: 'Integre com Facebook e Instagram Ads para capturar leads diretamente do formulário de anúncios.',
     category: 'Marketing',
     tags: ['leads', 'facebook', 'instagram', 'ads'],
-    configPath: '/settings/integrations/meta-ads',
+    configPath: '/automations/origem',
     logo: '📘',
   },
   {
@@ -55,7 +55,6 @@ const CATALOG: CatalogEntry[] = [
     description: 'Sincronize contatos, negócios e atividades com o HubSpot.',
     category: 'CRM',
     tags: ['crm', 'contatos', 'pipeline'],
-    configPath: '/settings/integrations/hubspot',
     logo: '🟠',
   },
   {
@@ -64,7 +63,6 @@ const CATALOG: CatalogEntry[] = [
     description: 'Integre com RD Station Marketing para automações de e-mail e nutrição de leads.',
     category: 'Marketing',
     tags: ['email', 'automação', 'marketing'],
-    configPath: '/settings/integrations/rd-station',
     logo: '🔵',
   },
   {
@@ -73,7 +71,6 @@ const CATALOG: CatalogEntry[] = [
     description: 'Plataforma de gestão para construtoras e imobiliárias. Sincronize imóveis e clientes.',
     category: 'Imobiliário',
     tags: ['imóveis', 'construtora', 'crm-imob'],
-    configPath: '/settings/integrations/studio360',
     logo: '🏗️',
   },
   {
@@ -82,7 +79,6 @@ const CATALOG: CatalogEntry[] = [
     description: 'Plataforma de automação de marketing. Envie leads capturados para funis de nutrição.',
     category: 'Marketing',
     tags: ['email', 'automação', 'funil'],
-    configPath: '/settings/integrations/leadlovers',
     logo: '🎯',
   },
   {
@@ -100,7 +96,6 @@ const CATALOG: CatalogEntry[] = [
     description: 'Portal de imóveis lançamentos. Sincronize empreendimentos e interesse de compradores.',
     category: 'Imobiliário',
     tags: ['lançamentos', 'empreendimentos', 'portal'],
-    configPath: '/settings/integrations/orulo',
     logo: '🏢',
   },
   {
@@ -109,7 +104,6 @@ const CATALOG: CatalogEntry[] = [
     description: 'Conecte o LM Flow com mais de 5.000 apps via Zapier com webhooks.',
     category: 'Automação',
     tags: ['webhook', 'automação', 'zap'],
-    configPath: '/settings/integrations/webhooks',
     logo: '⚡',
   },
   {
@@ -118,7 +112,6 @@ const CATALOG: CatalogEntry[] = [
     description: 'Automações avançadas com n8n self-hosted. Use webhooks para disparar e receber eventos.',
     category: 'Automação',
     tags: ['webhook', 'automação', 'self-hosted'],
-    configPath: '/settings/integrations/webhooks',
     logo: '🔄',
   },
   {
@@ -127,7 +120,6 @@ const CATALOG: CatalogEntry[] = [
     description: 'Sincronize agendamentos de visitas com Google Calendar e crie eventos Meet automaticamente.',
     category: 'Produtividade',
     tags: ['agenda', 'meet', 'visitas'],
-    configPath: '/settings/integrations',
     logo: '📅',
   },
   {
@@ -136,7 +128,6 @@ const CATALOG: CatalogEntry[] = [
     description: 'Habilite transcrição de áudio (Whisper) e respostas inteligentes com GPT.',
     category: 'IA',
     tags: ['ia', 'gpt', 'transcrição', 'whisper'],
-    configPath: '/settings/integrations/openai',
     logo: '🤖',
   },
   {
@@ -145,7 +136,6 @@ const CATALOG: CatalogEntry[] = [
     description: 'Automatize processos complexos com Make. Conecte com qualquer app via webhook.',
     category: 'Automação',
     tags: ['automação', 'webhook', 'make'],
-    configPath: '/settings/integrations/webhooks',
     logo: '🔧',
   },
 ];

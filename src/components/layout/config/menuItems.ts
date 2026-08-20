@@ -291,6 +291,13 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         action: 'read',
       },
       {
+        name: 'Automações',
+        href: '/automations',
+        icon: Zap,
+        clientToggleKey: 'client_manage_automations',
+        closesSubmenu: true,
+      },
+      {
         name: 'Funis de Mensagem',
         href: '/automations/message-funnels',
         icon: Rocket,
