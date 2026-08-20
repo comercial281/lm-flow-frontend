@@ -8,8 +8,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Badge,
@@ -40,8 +38,6 @@ import {
   Megaphone,
   Archive,
   Home,
-  Tag,
-  Columns3,
   LayoutGrid,
   List as ListIcon,
   ChevronRight,
@@ -72,6 +68,10 @@ import EditStageModal from '@/components/pipelines/EditStageModal';
 import DeleteStageModal from '@/components/pipelines/DeleteStageModal';
 import DeletePipelineModal from '@/components/pipelines/DeletePipelineModal';
 import ReorderStagesModal from '@/components/pipelines/ReorderStagesModal';
+import PipelineFiltersPopover, {
+  type TimePreset,
+  type AbandonedPreset,
+} from '@/components/pipelines/PipelineFiltersPopover';
 import { ScheduleActionModal } from '@/components/scheduledActions';
 import { NotesHistoryModal } from '@/components/pipelines/NotesHistoryModal';
 import ArchivedLeadsModal from '@/components/pipelines/ArchivedLeadsModal';
@@ -243,11 +243,13 @@ export default function PipelineKanban() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   // Filtro por tempo (entrada do lead): atalhos rápidos + faixa personalizada.
-  const [timePreset, setTimePreset] = useState<'all' | 'today' | '7d' | '30d' | 'custom'>('all');
+  const [timePreset, setTimePreset] = useState<TimePreset>('all');
   // Filtro por tags: nomes selecionados (vazio = todas).
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  // #13 Detector de lead largado: filtra só quem está sem contato há 7+ dias.
-  const [abandonedOnly, setAbandonedOnly] = useState(false);
+  // #13 Detector de lead largado: limiar de dias sem contato escolhível (era
+  // fixo em 7 dias) — pedido do Giovani (20/08).
+  const [abandonedPreset, setAbandonedPreset] = useState<AbandonedPreset>('off');
+  const [abandonedCustomDays, setAbandonedCustomDays] = useState('');
   // Filtro por colunas: ids de etapas ocultas (vazio = todas visíveis).
   const [hiddenStages, setHiddenStages] = useState<string[]>([]);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -1017,12 +1019,22 @@ export default function PipelineKanban() {
     }
   }, [timePreset, dateFrom, dateTo]);
 
+  // Limiar de dias sem contato pro filtro "Largados" — null = filtro desligado.
+  const abandonedThresholdDays = useMemo(() => {
+    if (abandonedPreset === 'off') return null;
+    if (abandonedPreset === 'custom') {
+      const n = parseInt(abandonedCustomDays, 10);
+      return Number.isFinite(n) && n > 0 ? n : 7;
+    }
+    return parseInt(abandonedPreset, 10);
+  }, [abandonedPreset, abandonedCustomDays]);
+
   // Quantos filtros estão ativos (pro botão "Limpar" e badges).
   const activeFilterCount =
     (searchQuery ? 1 : 0) +
     (timePreset !== 'all' ? 1 : 0) +
     (selectedTags.length ? 1 : 0) +
-    (abandonedOnly ? 1 : 0) +
+    (abandonedThresholdDays != null ? 1 : 0) +
     (hiddenStages.length ? 1 : 0);
   const clearAllFilters = () => {
     setSearchQuery('');
@@ -1030,7 +1042,8 @@ export default function PipelineKanban() {
     setDateFrom('');
     setDateTo('');
     setSelectedTags([]);
-    setAbandonedOnly(false);
+    setAbandonedPreset('off');
+    setAbandonedCustomDays('');
     setHiddenStages([]);
   };
 
@@ -1039,7 +1052,7 @@ export default function PipelineKanban() {
     const visible = stages.filter(s => !hiddenStages.includes(s.id));
     const q = searchQuery.toLowerCase();
     const { from, to } = timeRange;
-    if (!q && !from && !to && selectedTags.length === 0 && !abandonedOnly) return visible;
+    if (!q && !from && !to && selectedTags.length === 0 && abandonedThresholdDays == null) return visible;
     return visible.map(stage => ({
       ...stage,
       items: (stage.items || []).filter(item => {
@@ -1057,14 +1070,14 @@ export default function PipelineKanban() {
         const tags = itemTagNames(item);
         const matchesTags =
           selectedTags.length === 0 || selectedTags.some(t => tags.includes(t));
-        // Largado = sem contato há 7+ dias (mesma régua do badge "Xd sem contato").
+        // Largado = sem contato há N+ dias (limiar escolhido no filtro).
         const d = lastContactDays(item);
-        const matchesAbandoned = !abandonedOnly || (d != null && d >= 7);
+        const matchesAbandoned = abandonedThresholdDays == null || (d != null && d >= abandonedThresholdDays);
         return matchesSearch && matchesFrom && matchesTo && matchesTags && matchesAbandoned;
       }),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stages, searchQuery, timeRange, selectedTags, hiddenStages, abandonedOnly]);
+  }, [stages, searchQuery, timeRange, selectedTags, hiddenStages, abandonedThresholdDays]);
 
   // Visão em Lista: todos os leads do funil (respeitando os mesmos filtros do
   // Kanban acima) numa lista única, por ordem de chegada, com a coluna atual
@@ -1310,168 +1323,29 @@ export default function PipelineKanban() {
                 )}
               </div>
 
-              {/* Filtro por TEMPO (entrada do lead): atalhos + personalizado */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant={timePreset !== 'all' ? 'default' : 'outline'}
-                    size="sm"
-                    className="whitespace-nowrap"
-                  >
-                    <CalendarClock className="w-4 h-4 mr-2" />
-                    {timePreset === 'today'
-                      ? 'Hoje'
-                      : timePreset === '7d'
-                      ? 'Últimos 7 dias'
-                      : timePreset === '30d'
-                      ? 'Últimos 30 dias'
-                      : timePreset === 'custom'
-                      ? 'Período personalizado'
-                      : 'Tempo'}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuLabel>Filtrar por tempo</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setTimePreset('all')}>Todos</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTimePreset('today')}>Hoje</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTimePreset('7d')}>
-                    Últimos 7 dias
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTimePreset('30d')}>
-                    Últimos 30 dias
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTimePreset('custom')}>
-                    Período personalizado…
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Filtro por TAGS (etiquetas do lead) */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant={selectedTags.length ? 'default' : 'outline'}
-                    size="sm"
-                    className="whitespace-nowrap"
-                    disabled={allTags.length === 0}
-                  >
-                    <Tag className="w-4 h-4 mr-2" />
-                    Tags
-                    {selectedTags.length > 0 && (
-                      <span className="ml-2 rounded-full bg-background/30 px-1.5 text-xs">
-                        {selectedTags.length}
-                      </span>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
-                  <DropdownMenuLabel>Filtrar por tags</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {allTags.length === 0 && (
-                    <div className="px-2 py-1.5 text-xs text-muted-foreground">Nenhuma tag</div>
-                  )}
-                  {allTags.map(tag => (
-                    <DropdownMenuCheckboxItem
-                      key={tag.name}
-                      checked={selectedTags.includes(tag.name)}
-                      onCheckedChange={checked =>
-                        setSelectedTags(prev =>
-                          checked ? [...prev, tag.name] : prev.filter(t => t !== tag.name),
-                        )
-                      }
-                      onSelect={e => e.preventDefault()}
-                    >
-                      <span
-                        className="mr-2 inline-block h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: tag.color }}
-                      />
-                      {tag.name}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                  {selectedTags.length > 0 && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setSelectedTags([])}>
-                        Limpar tags
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* #13 Filtro: só leads largados (sem contato há 7+ dias) */}
-              <Button
-                variant={abandonedOnly ? 'default' : 'outline'}
-                size="sm"
-                className="whitespace-nowrap"
-                onClick={() => setAbandonedOnly(v => !v)}
-                title="Mostrar só leads sem contato há 7+ dias (largados)"
-              >
-                <Clock className="w-4 h-4 mr-2" />
-                Largados
-              </Button>
-
-              {/* Filtro por COLUNAS (mostrar/ocultar etapas) */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant={hiddenStages.length ? 'default' : 'outline'}
-                    size="sm"
-                    className="whitespace-nowrap"
-                  >
-                    <Columns3 className="w-4 h-4 mr-2" />
-                    Colunas
-                    {hiddenStages.length > 0 && (
-                      <span className="ml-2 rounded-full bg-background/30 px-1.5 text-xs">
-                        {stages.length - hiddenStages.length}/{stages.length}
-                      </span>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
-                  <DropdownMenuLabel>Mostrar colunas</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {stages.map(stage => (
-                    <DropdownMenuCheckboxItem
-                      key={stage.id}
-                      checked={!hiddenStages.includes(stage.id)}
-                      onCheckedChange={checked =>
-                        setHiddenStages(prev =>
-                          checked ? prev.filter(id => id !== stage.id) : [...prev, stage.id],
-                        )
-                      }
-                      onSelect={e => e.preventDefault()}
-                    >
-                      <span
-                        className="mr-2 inline-block h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: stage.color }}
-                      />
-                      {stage.name}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                  {hiddenStages.length > 0 && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setHiddenStages([])}>
-                        Mostrar todas
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {activeFilterCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearAllFilters}
-                  className="whitespace-nowrap text-muted-foreground"
-                >
-                  <X className="w-4 h-4 mr-1" />
-                  Limpar filtros
-                </Button>
-              )}
+              {/* Filtros unificados: Tempo, Tags, Largados (limiar escolhível) e
+                  Colunas num só popup — antes eram 4 botões brigando por
+                  espaço na barra (pedido do Giovani, 20/08). */}
+              <PipelineFiltersPopover
+                timePreset={timePreset}
+                onTimePresetChange={setTimePreset}
+                dateFrom={dateFrom}
+                dateTo={dateTo}
+                onDateFromChange={setDateFrom}
+                onDateToChange={setDateTo}
+                allTags={allTags}
+                selectedTags={selectedTags}
+                onSelectedTagsChange={setSelectedTags}
+                abandonedPreset={abandonedPreset}
+                onAbandonedPresetChange={setAbandonedPreset}
+                abandonedCustomDays={abandonedCustomDays}
+                onAbandonedCustomDaysChange={setAbandonedCustomDays}
+                stages={stages.map(s => ({ id: s.id, name: s.name, color: s.color }))}
+                hiddenStages={hiddenStages}
+                onHiddenStagesChange={setHiddenStages}
+                activeFilterCount={activeFilterCount}
+                onClearAll={clearAllFilters}
+              />
 
               {/* Alternar visualização: Quadro (Kanban) ou Lista (todos os leads) */}
               <div className="ml-auto flex items-center border rounded-lg">
@@ -1497,25 +1371,6 @@ export default function PipelineKanban() {
                 </Button>
               </div>
             </div>
-
-            {/* Faixa de datas personalizada (só quando "Período personalizado") */}
-            {timePreset === 'custom' && (
-              <div className="flex items-center gap-2 pb-3">
-                <Input
-                  type="date"
-                  value={dateFrom}
-                  onChange={e => setDateFrom(e.target.value)}
-                  className="h-9 w-auto"
-                />
-                <span className="text-muted-foreground text-sm">até</span>
-                <Input
-                  type="date"
-                  value={dateTo}
-                  onChange={e => setDateTo(e.target.value)}
-                  className="h-9 w-auto"
-                />
-              </div>
-            )}
           </div>
         </div>
 
