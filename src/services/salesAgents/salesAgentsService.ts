@@ -23,14 +23,17 @@ export interface ActiveHours {
   windows?: ActiveHoursWindow[];
 }
 
-export type SalesAgentTriggerType = 'keyword' | 'origin' | 'property' | 'pipeline_stage' | 'pipeline';
+export type SalesAgentTriggerType = 'keyword' | 'origin' | 'property' | 'pipeline_stage' | 'pipeline' | 'tag';
+/** any = QUALQUER gatilho da lista ativa (padrão/OR). all = TODOS precisam bater (AND). */
+export type SalesAgentTriggerMatchMode = 'any' | 'all';
 export interface SalesAgentTrigger {
   type: SalesAgentTriggerType;
-  value?: string;        // keyword: a palavra
+  value?: string;        // keyword: a palavra ; tag: nome da etiqueta
   mode?: string;         // origin: 'all' | 'ads' ; property: 'any' | 'code'
   code?: string;         // property: código do imóvel
   pipeline_id?: string;  // pipeline_stage
   stage_id?: string;     // pipeline_stage
+  match_type?: 'contains' | 'equals'; // keyword: contém a palavra ou é exatamente ela
 }
 
 export interface SalesAgent {
@@ -56,6 +59,9 @@ export interface SalesAgent {
   stage_id: string | null;
   active_hours: ActiveHours;
   triggers: SalesAgentTrigger[];
+  trigger_match_mode: SalesAgentTriggerMatchMode;
+  bant_config: BantConfig;
+  usage_limits: UsageLimits;
   followup_enabled: boolean;
   followup_only: boolean;
   followup_min_days: number;
@@ -201,6 +207,29 @@ export interface VisitConfig {
   end?: string;
   min_advance_hours?: number;
   max_advance_days?: number;
+  /** Datas específicas (YYYY-MM-DD) que a IA NUNCA pode oferecer — feriado, plantão fechado, manutenção. */
+  blocked_dates?: string[];
+  /** Antes de marcar, checa se já existe outra visita no mesmo imóvel no mesmo horário (padrão: sim). */
+  avoid_double_booking?: boolean;
+}
+
+export interface BantConfig {
+  enabled?: boolean;
+  budget_question?: string;
+  authority_question?: string;
+  need_question?: string;
+  timeline_question?: string;
+  /** Texto livre: a IA decide "qualificado" com base nisto (sem critério = nunca decide sozinha). */
+  qualify_criteria?: string;
+}
+
+export interface UsageLimits {
+  /** Teto de leads NOVOS que a IA começa a atender por dia. Conversa já em andamento nunca é cortada. */
+  max_new_leads_per_day?: number | null;
+  /** Teto de conversas ativas ao mesmo tempo. */
+  max_active_conversations?: number | null;
+  /** Teto de gasto em dólar por dia (mesma métrica da aba Resultados). */
+  daily_budget_usd?: number | null;
 }
 
 // Config gerada pelo formulário (o dono responde perguntas e o Claude monta).
@@ -234,6 +263,9 @@ export interface SalesAgentPayload {
   stage_id?: string | null;
   active_hours?: ActiveHours;
   triggers?: SalesAgentTrigger[];
+  trigger_match_mode?: SalesAgentTriggerMatchMode;
+  bant_config?: BantConfig;
+  usage_limits?: UsageLimits;
   followup_enabled?: boolean;
   followup_only?: boolean;
   followup_min_days?: number;
@@ -355,6 +387,8 @@ export interface SalesAgentTestResult {
   lead_summary: string;
   stage?: string | null;
   book_visit?: { should_book: boolean; date: string | null; time: string | null; notes: string | null } | null;
+  bant?: { budget?: string | null; authority?: string | null; need?: string | null; timeline?: string | null };
+  qualified?: boolean | null;
 }
 
 export interface TestHistoryItem {
