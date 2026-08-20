@@ -2031,10 +2031,21 @@ export default function PipelineKanban() {
                             {/* Responsável: `item.assignee` (topo) já vem do
                                 backend com o dono certo — assignee da conversa
                                 OU default_assignee do contato. Lead sem conversa
-                                aparecia sempre sem responsável. */}
+                                aparecia sempre sem responsável. Avatar prioriza a
+                                foto real do WhatsApp da instância dele (backend
+                                já resolve isso em avatar_url quando ele é dono
+                                de uma instância). */}
                             {(item.assignee ?? item.conversation?.assignee) && (
                               <div className="flex items-center space-x-1 text-muted-foreground">
-                                <User className="w-3 h-3" />
+                                {(item.assignee ?? item.conversation?.assignee)?.avatar_url ? (
+                                  <img
+                                    src={(item.assignee ?? item.conversation?.assignee)?.avatar_url}
+                                    alt=""
+                                    className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+                                  />
+                                ) : (
+                                  <User className="w-3 h-3 shrink-0" />
+                                )}
                                 <span className="truncate max-w-20">
                                   {(item.assignee ?? item.conversation?.assignee)?.name}
                                 </span>
@@ -2199,7 +2210,15 @@ export default function PipelineKanban() {
                         <div className="flex items-center gap-1.5">
                           {(item.assignee ?? item.conversation?.assignee) ? (
                             <>
-                              <User className="w-3 h-3 shrink-0" />
+                              {(item.assignee ?? item.conversation?.assignee)?.avatar_url ? (
+                                <img
+                                  src={(item.assignee ?? item.conversation?.assignee)?.avatar_url}
+                                  alt=""
+                                  className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+                                />
+                              ) : (
+                                <User className="w-3 h-3 shrink-0" />
+                              )}
                               <span className="truncate">
                                 {(item.assignee ?? item.conversation?.assignee)?.name}
                               </span>

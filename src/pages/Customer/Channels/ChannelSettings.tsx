@@ -775,6 +775,13 @@ export default function ChannelSettings() {
                   await InboxesService.update(inboxId, payload);
                   await loadChannelData(); // Refresh data after update
                 }}
+                ownerUserId={inbox?.owner_user_id ?? null}
+                onOwnerChange={async ownerUserId => {
+                  // Dono da instância: pro card do lead mostrar a foto real do
+                  // WhatsApp dele como avatar de responsável.
+                  await InboxesService.update(inboxId, { owner_user_id: ownerUserId });
+                  await loadChannelData(); // Refresh data after update
+                }}
               />}
             </TabsContent>
 
