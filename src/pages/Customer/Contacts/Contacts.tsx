@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { Suspense, useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -37,12 +37,16 @@ import StartConversationModal from '@/components/contacts/StartConversationModal
 import ContactDetails from '@/components/contacts/ContactDetails';
 import ContactsFilter from '@/components/contacts/ContactsFilter';
 import ContactQuickFilters from '@/components/contacts/ContactQuickFilters';
-import ImportLeadsModal from '@/components/pipelines/ImportLeadsModal';
 import ContactExportModal from '@/components/contacts/ContactExportModal';
 import ContactEventsModal from '@/components/contacts/ContactEventsModal';
 import ContactMergeModal from '@/components/contacts/ContactMergeModal';
 import { AxiosError } from 'axios';
 import { ContactsTour } from '@/tours';
+import { lazyWithRetry } from '@/utils/chunkReload';
+
+// Import estático aqui forçava carregar sempre, mesmo com o chunk já existindo
+// separado (outro ponto do app também importa lazy). Lazy aqui reusa o mesmo chunk.
+const ImportLeadsModal = lazyWithRetry(() => import('@/components/pipelines/ImportLeadsModal'));
 
 const INITIAL_STATE: ContactsState = {
   contacts: [],
@@ -1082,11 +1086,13 @@ export default function Contacts() {
       />
 
       {/* Contact Import Modal (com mapeamento de colunas e etiqueta) */}
-      <ImportLeadsModal
-        open={importModalOpen}
-        onOpenChange={setImportModalOpen}
-        onImported={() => loadContacts()}
-      />
+      <Suspense fallback={null}>
+        <ImportLeadsModal
+          open={importModalOpen}
+          onOpenChange={setImportModalOpen}
+          onImported={() => loadContacts()}
+        />
+      </Suspense>
 
       {/* Contact Export Modal */}
       <ContactExportModal

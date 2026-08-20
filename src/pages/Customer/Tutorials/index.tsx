@@ -3,16 +3,19 @@
 // Leitura publica via anon key; edicao restrita ao super-admin universal
 // (comercial@lealmidia.com.br) via Edge Function `tutorial-admin`.
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BookOpen, FileText, GraduationCap, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useCategories } from '@/hooks/useKnowledge';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { LMHUB_CONFIGURED } from '@/lib/supabaseLmHub';
+import { lazyWithRetry } from '@/utils/chunkReload';
 import CategoriaSidebar from './_internal/CategoriaSidebar';
-import DocsTab from './tabs/DocsTab';
-import AulasTab from './tabs/AulasTab';
+
+// Só uma aba (docs/aulas) renderiza por vez.
+const DocsTab = lazyWithRetry(() => import('./tabs/DocsTab'));
+const AulasTab = lazyWithRetry(() => import('./tabs/AulasTab'));
 
 type Tab = 'docs' | 'aulas';
 
@@ -117,8 +120,16 @@ const Tutorials = () => {
             canEdit={canEdit}
           />
         )}
-        {tab === 'docs' && <DocsTab categoryId={categoryId} canEdit={canEdit} />}
-        {tab === 'aulas' && <AulasTab canEdit={canEdit} />}
+        <Suspense
+          fallback={
+            <div className="flex-1 flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          }
+        >
+          {tab === 'docs' && <DocsTab categoryId={categoryId} canEdit={canEdit} />}
+          {tab === 'aulas' && <AulasTab canEdit={canEdit} />}
+        </Suspense>
       </div>
     </div>
   );
