@@ -70,6 +70,40 @@ export default function Channels() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permissionsReady, permissionsLoading, fetchInboxes]);
 
+  // O selo de conexão de cada card só vale se ele acompanhar a realidade
+  // enquanto a tela está aberta. Sem isto, quem deixa Canais aberto vendo tudo
+  // verde continuaria vendo tudo verde depois de uma instância cair — o oposto
+  // do que o selo promete. A lista fica em cache por 15 minutos no app, então o
+  // recarregamento aqui é forçado.
+  //
+  // Só com a aba à vista (aba em segundo plano não tem quem olhe) e sem piscar
+  // a lista: o esqueleto de carregamento só aparece quando ainda não há nada
+  // na tela.
+  useEffect(() => {
+    if (!permissionsReady || permissionsLoading || !can('channels', 'read')) {
+      return;
+    }
+
+    const REFRESH_INTERVAL = 60_000;
+
+    const refresh = () => {
+      if (document.visibilityState === 'visible') {
+        fetchInboxes(true).catch(() => {
+          /* silencioso: é atualização de fundo, o erro já foi logado no store */
+        });
+      }
+    };
+
+    const interval = window.setInterval(refresh, REFRESH_INTERVAL);
+    document.addEventListener('visibilitychange', refresh);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permissionsReady, permissionsLoading, fetchInboxes]);
+
   const { filteredInboxes, paginatedInboxes } = useMemo(() => {
     // First filter by search query
     const filtered = query
@@ -168,6 +202,11 @@ export default function Channels() {
 
   const isDeleteConfirmationValid = deleteModal.confirmationText === deleteModal.channel?.name;
 
+  // Esqueleto só na PRIMEIRA carga. A atualização periódica do estado das
+  // instâncias também liga o "carregando" — trocar a lista inteira por
+  // esqueletos a cada minuto faria a tela piscar sem parar.
+  const isInitialLoading = isLoadingInboxes && inboxes.length === 0;
+
   // Columns moved to ChannelsTable
 
   return (
@@ -207,7 +246,7 @@ export default function Channels() {
       </div>
 
       <div className="flex-1 overflow-auto" data-tour="channels-list">
-        {isLoadingInboxes ? (
+        {isInitialLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, idx) => (
               <Skeleton key={idx} className="h-28" />
@@ -236,7 +275,7 @@ export default function Channels() {
         ) : (
           <ChannelsTable
             channels={paginatedInboxes}
-            loading={isLoadingInboxes}
+            loading={isInitialLoading}
             onSettings={openChannelSettings}
             onDelete={openDeleteModal}
           />
@@ -253,7 +292,7 @@ export default function Channels() {
             perPage={perPage}
             onPageChange={setCurrentPage}
             onPerPageChange={setPerPage}
-            loading={isLoadingInboxes}
+            loading={isInitialLoading}
           />
         </div>
       )}

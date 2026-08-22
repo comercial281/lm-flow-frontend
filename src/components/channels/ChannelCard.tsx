@@ -1,9 +1,11 @@
 import { Button, Card, Badge } from '@/components/ui/ds';
-import { Settings, Trash2 } from 'lucide-react';
+import { RefreshCw, Settings, Trash2 } from 'lucide-react';
 import { Inbox } from '@/types/channels/inbox';
 import ChannelIcon from './ChannelIcon';
+import ChannelConnectionBadge from './ChannelConnectionBadge';
 import { getChannelDisplayName } from '@/utils/channelUtils';
 import { useLanguage } from '@/hooks/useLanguage';
+import { cn } from '@/lib/utils';
 
 type ChannelCardProps = {
   inbox: Inbox;
@@ -18,9 +20,18 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete }:
     ? getChannelDisplayName(inbox.channel_type, inbox.provider)
     : '—';
   const whatsappProfileName = inbox.provider_config?.whatsapp_profile_name;
+  // Instância caída ganha a borda vermelha além do selo: num grid de doze
+  // canais, o selo sozinho some no meio dos outros onze verdes — o card
+  // inteiro precisa saltar pra que "qual caiu?" se responda de relance.
+  const isDown = inbox.connection_status === 'disconnected';
 
   return (
-    <Card className="group relative flex flex-col gap-3 p-5 bg-sidebar border-sidebar-border overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-black/10">
+    <Card
+      className={cn(
+        'group relative flex flex-col gap-3 p-5 bg-sidebar border-sidebar-border overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-black/10',
+        isDown && 'border-red-500/40 hover:border-red-500/60',
+      )}
+    >
       {/* Glow no hover */}
       <div
         aria-hidden
@@ -28,21 +39,30 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete }:
         style={{ background: 'rgba(124,58,237,0.16)' }}
       />
 
-      {/* Foto real do perfil (quando já sincronizada) ou ícone genérico do canal */}
-      <div className="w-11 h-11 rounded-xl grid place-items-center shrink-0 relative bg-sidebar-accent/40 overflow-hidden">
-        {inbox.avatar_url ? (
-          <img
-            src={inbox.avatar_url}
-            alt={whatsappProfileName || inbox.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <ChannelIcon
-            channelType={inbox.channel_type}
-            provider={inbox.provider as string | undefined}
-            size="lg"
-          />
-        )}
+      {/* Foto real do perfil (quando já sincronizada) ou ícone genérico do canal,
+          com o estado da conexão do lado oposto — a primeira coisa que a pessoa
+          precisa saber ao bater o olho no card. */}
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="w-11 h-11 rounded-xl grid place-items-center shrink-0 relative bg-sidebar-accent/40 overflow-hidden">
+          {inbox.avatar_url ? (
+            <img
+              src={inbox.avatar_url}
+              alt={whatsappProfileName || inbox.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <ChannelIcon
+              channelType={inbox.channel_type}
+              provider={inbox.provider as string | undefined}
+              size="lg"
+            />
+          )}
+        </div>
+
+        <ChannelConnectionBadge
+          status={inbox.connection_status}
+          disconnectedAt={inbox.disconnected_at}
+        />
       </div>
 
       {/* Nome + tipo */}
@@ -62,14 +82,24 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete }:
           {typeName}
         </Badge>
         <div className="flex items-center gap-1">
+          {/* Com a instância caída o botão passa a dizer o que a pessoa precisa
+              fazer — é a mesma tela (é lá que mora o QR Code), mas "Configurar"
+              não conta a ninguém que dali sai a reconexão. */}
           <Button
             size="sm"
-            variant="outline"
-            className="h-8 text-xs bg-sidebar border-sidebar-border hover:bg-sidebar-accent"
+            variant={isDown ? 'default' : 'outline'}
+            className={cn(
+              'h-8 text-xs',
+              !isDown && 'bg-sidebar border-sidebar-border hover:bg-sidebar-accent',
+            )}
             onClick={() => onSettings(inbox)}
           >
-            <Settings className="h-3.5 w-3.5 mr-1" />
-            {t('actions.configure')}
+            {isDown ? (
+              <RefreshCw className="h-3.5 w-3.5 mr-1" />
+            ) : (
+              <Settings className="h-3.5 w-3.5 mr-1" />
+            )}
+            {isDown ? t('actions.reconnect') : t('actions.configure')}
           </Button>
           <Button
             size="sm"

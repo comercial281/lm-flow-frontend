@@ -7,7 +7,16 @@
   },
   "card": {
     "channelId": "ID du Canal",
-    "type": "Type"
+    "type": "Type",
+    "connection": {
+      "connected": "Connecté",
+      "connectedHint": "L'instance est en ligne : elle envoie et reçoit les messages normalement.",
+      "connecting": "Connexion en cours",
+      "connectingHint": "L'instance est en train de s'appairer au téléphone. Si cela persiste, scannez à nouveau le QR code.",
+      "disconnected": "Déconnecté",
+      "disconnectedHint": "L'instance est hors ligne : elle n'envoie ni ne reçoit de messages. Ouvrez le canal et scannez le QR code.",
+      "since": "Hors ligne depuis {{since}}"
+    }
   },
   "table": {
     "channels": "Canaux",
@@ -15,7 +24,8 @@
     "empty": {
       "title": "Aucun canal trouvé",
       "description": "Créez un nouveau canal pour commencer à recevoir des messages de vos clients."
-    }
+    },
+    "connection": "Connexion"
   },
   "navigation": {
     "channels": "Canaux",

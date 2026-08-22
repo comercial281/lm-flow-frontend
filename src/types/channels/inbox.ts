@@ -116,7 +116,18 @@ export interface Inbox {
   owner_name?: string | null;
   /** A IA está operando nesta instância — bot vinculado (`agent_bot_inbox`) com status `active`. */
   has_active_agent_bot?: boolean;
+  // Estado da conexão da instância, já resolvido pelo backend numa palavra só.
+  // Ausente/nulo = o canal não mantém sessão (Cloud API, 360dialog, Notificame
+  // e todo canal que não é WhatsApp falam por token e não têm o que cair), e aí
+  // a tela não desenha selo nenhum — inventar "desconectado" ali seria falso.
+  connection_status?: ChannelConnectionStatus | null;
+  // Quando a instância caiu (ISO). Só faz sentido com `connection_status` em
+  // 'disconnected' — é o "fora do ar desde" do selo.
+  disconnected_at?: string | null;
 }
+
+// As três respostas possíveis para "essa instância está funcionando?".
+export type ChannelConnectionStatus = 'connected' | 'connecting' | 'disconnected';
 
 // ============================================
 // Channel Creation Payload Types

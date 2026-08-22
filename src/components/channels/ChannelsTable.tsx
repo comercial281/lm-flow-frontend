@@ -2,7 +2,7 @@
 import { Settings, Trash2 } from 'lucide-react';
 import { BaseTable, TableColumn, TableAction } from '@/components/base';
 import { Inbox } from '@/types/channels/inbox';
-import { ChannelIcon } from '@/components/channels';
+import { ChannelConnectionBadge, ChannelIcon } from '@/components/channels';
 import { getChannelDisplayName } from '@/utils/channelUtils';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -40,6 +40,20 @@ export default function ChannelsTable({
           </div>
         </div>
       ),
+    },
+    {
+      key: 'connection_status',
+      label: t('table.connection'),
+      render: (item: Inbox) =>
+        item.connection_status ? (
+          <ChannelConnectionBadge
+            status={item.connection_status}
+            variant="compact"
+            className="items-start"
+          />
+        ) : (
+          <span className="text-sidebar-foreground/40">—</span>
+        ),
     },
     {
       key: 'display_name',

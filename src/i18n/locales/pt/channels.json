@@ -9,7 +9,16 @@
     "channelId": "Canal ID",
     "type": "Tipo",
     "displayName": "Nome de Exibição",
-    "whatsappName": "Nome no WhatsApp"
+    "whatsappName": "Nome no WhatsApp",
+    "connection": {
+      "connected": "Conectado",
+      "connectedHint": "A instância está no ar: recebe e envia mensagens normalmente.",
+      "connecting": "Conectando",
+      "connectingHint": "A instância está pareando com o celular. Se ficar parada aqui, leia o QR Code de novo.",
+      "disconnected": "Desconectado",
+      "disconnectedHint": "A instância está fora do ar: não recebe nem envia mensagens. Abra o canal e leia o QR Code.",
+      "since": "Fora do ar desde {{since}}"
+    }
   },
   "table": {
     "channels": "Canais",
@@ -19,7 +28,8 @@
     "empty": {
       "title": "Nenhum canal encontrado",
       "description": "Crie um novo canal para começar a receber mensagens dos seus clientes."
-    }
+    },
+    "connection": "Conexão"
   },
   "navigation": {
     "channels": "Canais",

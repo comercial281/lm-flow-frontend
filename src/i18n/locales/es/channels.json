@@ -7,7 +7,16 @@
   },
   "card": {
     "channelId": "Canal ID",
-    "type": "Tipo"
+    "type": "Tipo",
+    "connection": {
+      "connected": "Conectado",
+      "connectedHint": "La instancia está activa: envía y recibe mensajes con normalidad.",
+      "connecting": "Conectando",
+      "connectingHint": "La instancia se está vinculando con el teléfono. Si se queda así, vuelve a escanear el código QR.",
+      "disconnected": "Desconectado",
+      "disconnectedHint": "La instancia está caída: no envía ni recibe mensajes. Abre el canal y escanea el código QR.",
+      "since": "Caída desde {{since}}"
+    }
   },
   "table": {
     "channels": "Canales",
@@ -15,7 +24,8 @@
     "empty": {
       "title": "Ningún canal encontrado",
       "description": "Cree un nuevo canal para comenzar a recibir mensajes de sus clientes."
-    }
+    },
+    "connection": "Conexión"
   },
   "navigation": {
     "channels": "Canales",
