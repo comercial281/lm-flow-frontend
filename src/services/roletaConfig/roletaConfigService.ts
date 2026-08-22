@@ -279,6 +279,10 @@ export interface RoletaQueueMember {
 
 export interface RoletaQueueConfig {
   id: string;
+  // Como a roleta se chama na tela de configuração. `instancia` é o nome do
+  // NÚMERO de entrada — com várias roletas, é ele que fazia a lista virar três
+  // blocos parecidos sem dizer qual era qual.
+  nome: string | null;
   instancia: string | null;
   modo: DistributionMode;
   ativa: boolean;

@@ -285,6 +285,10 @@ export default function RoletaConfigPage() {
   // é o suficiente pro cronômetro não mentir.
   const [queue, setQueue]             = useState<RoletaQueue | null>(null);
   const [loadingQueue, setLoadingQueue] = useState(false);
+  // "Não deu pra carregar" ≠ "não há roleta". O bloco de quem está no sorteio
+  // sumia da tela nos dois casos, e quem abria o Diagnóstico pra entender por que
+  // um lead não foi distribuído não via nem a lista nem o motivo de ela faltar.
+  const [queueError, setQueueError]   = useState(false);
 
   // form state
   const [nome, setNome]                     = useState('');
@@ -406,12 +410,16 @@ export default function RoletaConfigPage() {
 
   const loadQueue = useCallback(async () => {
     setLoadingQueue(true);
+    setQueueError(false);
     try {
       setQueue(await roletaConfigService.getQueue());
     } catch {
-      // Bloco secundário do Diagnóstico: se o cargo não alcança, some em silêncio
-      // em vez de jogar um erro na cara de quem veio ver a trilha dos leads.
+      // Bloco secundário do Diagnóstico: não derruba a tela nem joga um erro na
+      // cara de quem veio ver a trilha dos leads — mas também não some calado.
+      // A linha discreta abaixo é o que diferencia "seu cargo não alcança" de
+      // "esta conta não tem roleta nenhuma".
       setQueue(null);
+      setQueueError(true);
     } finally {
       setLoadingQueue(false);
     }
@@ -1098,6 +1106,22 @@ export default function RoletaConfigPage() {
               tela de configuração mostra quem foi ESCOLHIDO, e aqui aparece quem
               o sorteio realmente alcança — a diferença entre os dois é a causa
               silenciosa de "por que fulano nunca recebe lead?". */}
+          {/* Não conseguiu carregar: uma linha discreta, com o botão de tentar de
+              novo. Some de vez só quando a resposta vem certa e vazia — aí a
+              informação verdadeira é "não há roleta", e ela já está na aba
+              Configurações. */}
+          {!loadingQueue && queueError && (
+            <div className="border rounded-lg p-3 flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                Não consegui carregar quem está recebendo lead hoje. Pode ser permissão do seu cargo
+                (Gerente e Administrador enxergam) ou uma falha momentânea.
+              </p>
+              <Button variant="outline" size="sm" onClick={loadQueue} className="shrink-0">
+                Tentar de novo
+              </Button>
+            </div>
+          )}
+
           {queue && queue.roletas.length > 0 && (
             <div className="border rounded-lg p-4">
               <div className="flex items-start justify-between gap-3">
@@ -1121,7 +1145,14 @@ export default function RoletaConfigPage() {
                     <div key={r.id}>
                       <div className="flex flex-wrap items-center gap-2">
                         <div className={`h-2 w-2 rounded-full ${r.ativa ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                        <span className="text-sm font-medium">{r.instancia ?? r.id}</span>
+                        {/* O NOME da roleta vem primeiro; o número entra como
+                            legenda. Antes só havia o nome do número de entrada, e
+                            quem tem várias roletas via blocos quase idênticos sem
+                            saber de qual eram. */}
+                        <span className="text-sm font-medium">{r.nome ?? r.instancia ?? r.id}</span>
+                        {r.instancia && r.instancia !== r.nome && (
+                          <span className="text-xs text-muted-foreground">· {r.instancia}</span>
+                        )}
                         <Badge variant="outline" className="text-[10px]">{MODE_LABEL[r.modo] ?? r.modo}</Badge>
                         {!r.ativa && <span className="text-xs text-red-600">desativada — não distribui nada</span>}
                       </div>
@@ -1323,6 +1354,10 @@ export default function RoletaConfigPage() {
                     <p className="font-medium text-sm">{d.lead ?? d.contact_id ?? 'Lead'}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{d.explicacao}</p>
                     <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+                      {/* De QUAL roleta é esta linha. O backend já mandava e a
+                          tela não mostrava: com várias roletas, "o lead não
+                          entrou" sem dizer onde não é diagnóstico. */}
+                      {d.roleta && <span>Roleta: {d.roleta}</span>}
                       {d.formulario && <span>Formulário: {d.formulario}</span>}
                       {d.corretor && <span>Sorteado: {d.corretor}</span>}
                       <span>Responsável no card: {d.dono_atual ?? 'nenhum'}</span>
