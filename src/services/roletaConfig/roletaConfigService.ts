@@ -331,6 +331,23 @@ export interface RepairInboxAccessResult {
   revogacoes: RepairInboxAccessRow[];
 }
 
+/**
+ * O nome da roleta como ela deve aparecer em QUALQUER tela.
+ *
+ * O gestor batiza a roleta ("Apto Premium"); quando não batiza, ela se chama
+ * pelo número de entrada ("apto-premium-bernardo-numero-principal"). Metade das
+ * telas resolvia isso na mão e a outra metade mostrava direto o nome do NÚMERO —
+ * daí o seletor do card do CRM listar nomes que não batiam com nenhuma roleta da
+ * lista de roletas. Uma função só para todas elas contarem a mesma história.
+ *
+ * Aceita tanto a roleta inteira quanto o resumo que vem no card (só id + nomes).
+ */
+export function roletaLabel(
+  r?: { name?: string | null; display_name?: string | null; inbox_name?: string | null } | null,
+): string {
+  return r?.display_name?.trim() || r?.name?.trim() || r?.inbox_name?.trim() || 'Roleta';
+}
+
 const BASE = '/roleta_configs';
 
 export const roletaConfigService = {

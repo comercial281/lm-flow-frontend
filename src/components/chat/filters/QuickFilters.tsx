@@ -3,7 +3,7 @@ import { Bot, Check, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@evoapi/design-system/button';
 import chatService from '@/services/chat/chatService';
 import usersService from '@/services/users/usersService';
-import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
+import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import type { Label } from '@/types/chat/api';
 import type { BaseFilter } from '@/types/core';
 import type { User } from '@/types/users';
@@ -433,7 +433,7 @@ export default function QuickFilters({
                   <option value="">Todas as roletas</option>
                   {roletas.map(r => (
                     <option key={r.id} value={r.id}>
-                      {r.display_name || r.name || r.inbox_name || r.id}
+                      {roletaLabel(r)}
                     </option>
                   ))}
                 </select>

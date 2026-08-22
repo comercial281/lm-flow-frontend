@@ -40,6 +40,10 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
   const [inboxes, setInboxes] = useState<Inbox[]>([]);
   const [loadingInboxes, setLoadingInboxes] = useState(false);
   const [inboxId, setInboxId] = useState('');
+  // Nome da roleta. Em branco ela se chama pelo nome do NÚMERO de entrada — que
+  // é exatamente o que fazia o seletor do card listar
+  // "apto-premium-bernardo-numero-principal" em vez de uma roleta reconhecível.
+  const [nome, setNome] = useState('');
   const [timeoutMin, setTimeoutMin] = useState(30);
   const [gestorNum, setGestorNum] = useState('');
   // user_id -> whatsapp (marcado quando presente no map)
@@ -50,6 +54,7 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
     if (!open) return;
     // reset ao abrir
     setInboxId('');
+    setNome('');
     setTimeoutMin(30);
     setGestorNum('');
     setSelected({});
@@ -99,6 +104,8 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
     setSaving(true);
     try {
       const created = await roletaConfigService.create({
+        // Vazio = sem apelido: o backend resolve pro nome do número de entrada.
+        name: nome.trim() || null,
         inbox_id: inboxId,
         is_active: true,
         // Atalho rápido cria no Rodízio. O modo (inclusive Leilão) se troca na
@@ -111,7 +118,13 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
       });
       // o create às vezes não devolve inbox_name — completa pro select mostrar bonito
       const inboxName = inboxes.find(i => i.id === inboxId)?.name;
-      onCreated({ ...created, inbox_name: created.inbox_name || inboxName || null });
+      onCreated({
+        ...created,
+        inbox_name: created.inbox_name || inboxName || null,
+        // Mesma razão: sem o resolvido, a roleta recém-criada entrava na lista do
+        // card com o nome do canal mesmo tendo sido batizada agora.
+        display_name: created.display_name || nome.trim() || inboxName || null,
+      });
       toast.success('Roleta criada.');
       onOpenChange(false);
     } catch (e) {
@@ -133,6 +146,20 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Nome — o que vai aparecer no card, no board e na lista de roletas. */}
+          <div className="grid gap-1.5">
+            <Label className="text-xs">Nome da roleta</Label>
+            <Input
+              value={nome}
+              onChange={e => setNome(e.target.value)}
+              placeholder={inboxes.find(i => i.id === inboxId)?.name || 'Ex.: Plantão do fim de semana'}
+              className="h-9 text-sm"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              É por este nome que ela aparece no card do lead. Em branco, usa o nome do canal.
+            </p>
+          </div>
+
           {/* Canal */}
           <div className="grid gap-1.5">
             <Label className="text-xs">Canal (inbox)</Label>

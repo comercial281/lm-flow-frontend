@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shuffle } from 'lucide-react';
 import { mayRead } from '@/store/appDataStore';
-import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
+import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { EmptyBlock, GlassCard } from './primitives';
 
 /**
@@ -66,7 +66,7 @@ function montarLinha(c: RoletaConfig): Linha {
   };
 
   return {
-    nome: c.display_name || c.inbox_name || 'Roleta',
+    nome: roletaLabel(c),
     ativa: c.is_active,
     multi: instancias.length > 1,
     corretores: membrosAtivos
