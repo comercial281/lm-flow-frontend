@@ -7,7 +7,16 @@
   },
   "card": {
     "channelId": "ID Canale",
-    "type": "Tipo"
+    "type": "Tipo",
+    "connection": {
+      "connected": "Connesso",
+      "connectedHint": "L'istanza è online: invia e riceve messaggi normalmente.",
+      "connecting": "Connessione in corso",
+      "connectingHint": "L'istanza si sta associando al telefono. Se resta così, scansiona di nuovo il codice QR.",
+      "disconnected": "Disconnesso",
+      "disconnectedHint": "L'istanza è offline: non invia né riceve messaggi. Apri il canale e scansiona il codice QR.",
+      "since": "Offline dal {{since}}"
+    }
   },
   "table": {
     "channels": "Canali",
@@ -15,7 +24,8 @@
     "empty": {
       "title": "Nessun canale trovato",
       "description": "Crea un nuovo canale per iniziare a ricevere messaggi dai tuoi clienti."
-    }
+    },
+    "connection": "Connessione"
   },
   "navigation": {
     "channels": "Canali",

@@ -9,7 +9,16 @@
     "channelId": "Channel ID",
     "type": "Type",
     "displayName": "Display Name",
-    "whatsappName": "WhatsApp Name"
+    "whatsappName": "WhatsApp Name",
+    "connection": {
+      "connected": "Connected",
+      "connectedHint": "The instance is live: it sends and receives messages normally.",
+      "connecting": "Connecting",
+      "connectingHint": "The instance is pairing with the phone. If it stays here, scan the QR code again.",
+      "disconnected": "Disconnected",
+      "disconnectedHint": "The instance is offline: it neither sends nor receives messages. Open the channel and scan the QR code.",
+      "since": "Offline since {{since}}"
+    }
   },
   "table": {
     "channels": "Channels",
@@ -19,7 +28,8 @@
     "empty": {
       "title": "No channels found",
       "description": "Create a new channel to start receiving messages from your customers."
-    }
+    },
+    "connection": "Connection"
   },
   "navigation": {
     "channels": "Channels",

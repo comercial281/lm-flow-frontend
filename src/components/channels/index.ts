@@ -3,6 +3,7 @@ export { default as ChannelsTable } from './ChannelsTable';
 export { default as ChannelsPagination } from './ChannelsPagination';
 export { default as ChannelIcon } from './ChannelIcon';
 export { default as ChannelCard } from './ChannelCard';
+export { default as ChannelConnectionBadge } from './ChannelConnectionBadge';
 
 // Channels Components
 export { default as WebWidgetForm } from './WebWidgetForm';
