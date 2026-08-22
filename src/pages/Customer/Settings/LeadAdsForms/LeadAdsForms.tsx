@@ -29,7 +29,7 @@ import {
   MetaTokenDebug,
 } from '@/services/leadAds/leadAdsFormsService';
 import { useAutomationResources } from '../LeadAutomations/LeadAutomationsEditors';
-import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
+import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import LabelMultiSelect from '@/components/labels/LabelMultiSelect';
 
@@ -1134,7 +1134,7 @@ export default function LeadAdsForms() {
                 {roletas.length > 0 && (
                   <optgroup label="Roleta">
                     {roletas.map(r => (
-                      <option key={r.id} value={`roleta:${r.id}`}>{r.inbox_name || 'Roleta'}</option>
+                      <option key={r.id} value={`roleta:${r.id}`}>{roletaLabel(r)}</option>
                     ))}
                   </optgroup>
                 )}

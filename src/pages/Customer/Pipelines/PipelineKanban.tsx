@@ -73,6 +73,7 @@ import {
   formatArrivalDate,
 } from './pipelineItemHelpers';
 import { useAppDataStore } from '@/store/appDataStore';
+import { roletaLabel } from '@/services/roletaConfig/roletaConfigService';
 
 // Os modais abaixo só aparecem quando o usuário clica em algo pra abrir —
 // código deles não precisa estar no bundle inicial da página de Pipelines.
@@ -1562,11 +1563,11 @@ export default function PipelineKanban() {
                             <span className="text-muted-foreground/50">Sem responsável</span>
                           )}
                         </div>
-                        {item.roleta?.inbox_name && (
+                        {item.roleta && (
                           <div className="flex items-center gap-1.5 text-muted-foreground/70 mt-0.5">
                             <Shuffle className="w-3 h-3 shrink-0" />
-                            <span className="truncate" title={`Veio da roleta: ${item.roleta.inbox_name}`}>
-                              {item.roleta.inbox_name}
+                            <span className="truncate" title={`Veio da roleta: ${roletaLabel(item.roleta)}`}>
+                              {roletaLabel(item.roleta)}
                             </span>
                           </div>
                         )}

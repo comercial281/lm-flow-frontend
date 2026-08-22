@@ -57,7 +57,7 @@ import { conversationAPI } from '@/services/conversations/conversationService';
 import { contactEventsService } from '@/services/contacts/contactEventsService';
 import { labelsService } from '@/services/contacts/labelsService';
 import { contactsService } from '@/services/contacts/contactsService';
-import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
+import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { brokerAssignmentsService, type BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
 import { toast } from 'sonner';
 import type { ContactEvent } from '@/types/notifications/contact-events';
@@ -882,9 +882,9 @@ export default function EditItemModal({
                     Roleta de atendimento
                     {assigningRoleta && <Loader2 className="h-3 w-3 animate-spin" />}
                   </Label>
-                  {item.roleta?.inbox_name && !roletas.some(r => r.id === item.roleta!.id) && (
+                  {item.roleta && !roletas.some(r => r.id === item.roleta!.id) && (
                     <p className="text-[11px] text-muted-foreground">
-                      Veio da roleta <span className="font-medium text-foreground">{item.roleta.inbox_name}</span>{' '}
+                      Veio da roleta <span className="font-medium text-foreground">{roletaLabel(item.roleta)}</span>{' '}
                       (inativa ou removida)
                     </p>
                   )}
@@ -900,8 +900,12 @@ export default function EditItemModal({
                       <SelectValue placeholder={roletas.length ? 'Atribuir por uma roleta' : 'Nenhuma roleta — criar uma'} />
                     </SelectTrigger>
                     <SelectContent>
+                      {/* O NOME DA ROLETA — o mesmo da lista de roletas. Antes vinha
+                          o nome do número de entrada ("apto-premium-bernardo-numero-
+                          principal"), que não bate com roleta nenhuma pra quem só olha
+                          o card. */}
                       {roletas.map(r => (
-                        <SelectItem key={r.id} value={r.id}>{r.inbox_name || 'Roleta'}</SelectItem>
+                        <SelectItem key={r.id} value={r.id}>{roletaLabel(r)}</SelectItem>
                       ))}
                       <SelectItem value="__create__" className="text-primary font-medium">
                         + Criar roleta

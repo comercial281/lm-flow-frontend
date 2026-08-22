@@ -283,6 +283,12 @@ export interface PipelineItem {
   // passou por sorteio — atribuído na mão, importado, ou automação direta.
   roleta?: {
     id: string;
+    // `name` é o apelido que o gestor deu à roleta; `display_name` é o já
+    // resolvido (cai no nome do número quando ninguém batizou); `inbox_name` é
+    // o número de entrada. Use sempre `roletaLabel()` para exibir — o card
+    // mostrava o nome do NÚMERO e ele não bate com a lista de roletas.
+    name?: string | null;
+    display_name?: string | null;
     inbox_name?: string | null;
     assigned_at?: string | null;
   } | null;
