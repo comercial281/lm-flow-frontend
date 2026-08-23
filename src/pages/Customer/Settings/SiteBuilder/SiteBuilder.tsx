@@ -31,6 +31,7 @@ import {
   SITE_LEAD_STATUS_LABELS,
   SITE_LEAD_STATUS_COLORS,
 } from '@/services/siteBuilder/siteBuilderService';
+import DomainSettings from './DomainSettings';
 
 const TABS = [
   { key: 'config', label: 'Configurações', icon: Globe },
@@ -193,12 +194,16 @@ export default function SiteBuilder() {
   const handleSaveSite = async () => {
     setSaving(true);
     try {
+      // primary_domain é gerenciado pelo card "Domínio próprio" (que também
+      // registra o domínio na Vercel). Mandá-lo aqui sobrescreveria o valor.
+      const payload: SiteFormData = { ...siteForm };
+      delete payload.primary_domain;
       if (site) {
-        const updated = await siteBuilderService.updateSite(site.id, siteForm);
+        const updated = await siteBuilderService.updateSite(site.id, payload);
         setSite(updated);
         toast.success('Site atualizado');
       } else {
-        const created = await siteBuilderService.createSite(siteForm);
+        const created = await siteBuilderService.createSite(payload);
         setSite(created);
         toast.success('Site criado');
       }
@@ -425,11 +430,6 @@ export default function SiteBuilder() {
                 <Input value={siteForm.slug} onChange={e => setF({ slug: e.target.value })}
                   placeholder="imobiliaria-xyz" className="mt-1 font-mono" />
               </div>
-              <div className="col-span-2">
-                <UILabel>Domínio principal</UILabel>
-                <Input value={siteForm.primary_domain ?? ''} onChange={e => setF({ primary_domain: e.target.value })}
-                  placeholder="www.minhaImobiliaria.com.br" className="mt-1" />
-              </div>
               <div className="flex items-center gap-3">
                 <input type="checkbox" id="active" checked={siteForm.active}
                   onChange={e => setF({ active: e.target.checked })} className="rounded" />
@@ -442,6 +442,9 @@ export default function SiteBuilder() {
               </div>
             </div>
           </section>
+
+          {/* Domínio próprio — conectado direto na Vercel, sem ninguém entrar lá na mão */}
+          {site && <DomainSettings siteId={site.id} />}
 
           {/* Branding */}
           <section className="rounded-xl border border-border bg-card p-5">
