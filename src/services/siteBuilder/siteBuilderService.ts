@@ -78,6 +78,39 @@ export interface Site {
   updated_at: string;
 }
 
+export type SiteDomainStatus =
+  | 'disabled'              // integração com a Vercel não configurada no servidor
+  | 'none'                  // nenhum domínio conectado
+  | 'not_registered'        // salvo aqui, mas ausente na Vercel (removido por fora)
+  | 'pending_dns'           // domínio registrado, DNS ainda não aponta pra cá
+  | 'pending_verification'  // falta provar a posse do domínio (registro TXT)
+  | 'active';               // no ar, com SSL
+
+export interface SiteDomainDnsRecord {
+  domain: string;
+  type: string;   // 'A' | 'CNAME'
+  name: string;   // '@' | 'www'
+  value: string;
+}
+
+export interface SiteDomainVerification {
+  type: string;
+  name: string;
+  value: string;
+  reason?: string | null;
+}
+
+export interface SiteDomainState {
+  configured: boolean;
+  domain?: string | null;
+  status: SiteDomainStatus;
+  status_label: string;
+  verified: boolean;
+  dns_records: SiteDomainDnsRecord[];
+  verification: SiteDomainVerification[];
+  checked_at: string;
+}
+
 export interface SitePage {
   id: string;
   site_id: string;
@@ -248,6 +281,26 @@ export const siteBuilderService = {
   async savePropertyTemplate(siteId: string, blocks: BlockInstance[]): Promise<void> {
     await api.put(`/sites/${siteId}`, { site: { property_page_template: blocks } });
   },
+
+  // Domínio próprio (Vercel)
+  async getDomain(siteId: string): Promise<SiteDomainState> {
+    const res = await api.get(`/sites/${siteId}/domain`);
+    return (res.data as { data: SiteDomainState }).data;
+  },
+
+  async connectDomain(siteId: string, domain: string): Promise<SiteDomainState> {
+    const res = await api.post(`/sites/${siteId}/domain`, { domain });
+    return (res.data as { data: SiteDomainState }).data;
+  },
+
+  async verifyDomain(siteId: string): Promise<SiteDomainState> {
+    const res = await api.post(`/sites/${siteId}/domain/verify`);
+    return (res.data as { data: SiteDomainState }).data;
+  },
+
+  async disconnectDomain(siteId: string): Promise<SiteDomainState> {
+    const res = await api.delete(`/sites/${siteId}/domain`);
+    return (res.data as { data: SiteDomainState }).data;  },
 
   // Pages
   async listPages(siteId: string): Promise<SitePage[]> {
