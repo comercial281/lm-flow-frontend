@@ -64,6 +64,12 @@ const getSystemMessageIcon = (content: string) => {
   if (
     lowerContent.includes('assigned') ||
     lowerContent.includes('atribuída') ||
+    // "Atribuído a X pela Roleta" (masculino) não casava com 'atribuída' e caía
+    // no ícone genérico, junto com a linha de intervenção.
+    lowerContent.includes('atribuído') ||
+    lowerContent.includes('roleta') ||
+    lowerContent.includes('respondeu num lead') ||
+    lowerContent.includes('replied on a lead') ||
     lowerContent.includes('assignee') ||
     lowerContent.includes('agent') ||
     lowerContent.includes('team') ||

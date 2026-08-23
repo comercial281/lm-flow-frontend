@@ -1,4 +1,4 @@
-import { CommandItem } from '@evoapi/design-system';
+import { CommandItem } from '@/components/ui/ds';
 import { User } from 'lucide-react';
 import type { SearchContactResult } from '@/types/chat/search';
 import { highlightMatch } from './searchHighlight';

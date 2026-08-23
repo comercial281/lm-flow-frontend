@@ -6,7 +6,7 @@ import {
   CardTitle,
   CardDescription,
   Button,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Settings, Save, Loader2, AlertCircle } from 'lucide-react';
 import integrationService from '@/services/agents/integrationService';
 import { useLanguage } from '@/hooks/useLanguage';

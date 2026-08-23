@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   Button,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Plus } from 'lucide-react';
 import PrimaryActionButton from './PrimaryActionButton';
 

@@ -10,6 +10,19 @@ import type {
   User,
 } from '@/types/users';
 
+export interface WhatsappSendResult {
+  sent: boolean;
+  skipped?: string;
+  http?: string | number;
+  error?: string;
+  instance?: string;
+}
+
+export interface SendAccessResult {
+  user: User;
+  whatsapp?: WhatsappSendResult;
+}
+
 class UsersService {
   // List users with pagination and filters
   async getUsers(params?: UsersListParams): Promise<UsersResponse> {
@@ -94,6 +107,16 @@ class UsersService {
   async bulkInvite(params: BulkInviteParams): Promise<BulkInviteResponse> {
     const response = await apiAuth.post('/users/bulk_create', params);
     return extractData<BulkInviteResponse>(response);
+  }
+
+  // Enviar o acesso (link+login+senha) no WhatsApp da pessoa (tela Equipe)
+  async sendAccess(
+    userId: string,
+    payload: { whatsapp_number: string; password: string },
+  ): Promise<SendAccessResult> {
+    const response = await apiAuth.post(`/users/${userId}/send_access`, payload);
+    const body = (response?.data ?? {}) as { data?: User; whatsapp?: WhatsappSendResult };
+    return { user: body.data as User, whatsapp: body.whatsapp };
   }
 
   // Get assignable agents for inbox

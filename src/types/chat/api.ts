@@ -1,7 +1,7 @@
 // ===== CRM CHAT API TYPES =====
 // Baseado na estrutura real da API do Evolution/CRM
 
-import type { Pipeline as PipelineType, PipelineStage } from '@/types/analytics';
+import type { Pipeline as PipelineType, PipelineStage, SalesAgentCardState } from '@/types/analytics';
 import type {
   PaginatedResponse,
   StandardResponse,
@@ -87,6 +87,10 @@ export interface Conversation {
       type: SenderType;
     };
   } | null;
+  // Robozinho da IA Vendedora nesta conversa (mesmo campo que o Kanban já usa
+  // em PipelineItem — ver SalesAgentBadge). Opcional: some sozinho enquanto o
+  // endpoint de listagem de conversas não estiver mandando o campo.
+  sales_agent?: SalesAgentCardState | null;
 }
 
 export interface ConversationMeta {
@@ -351,11 +355,14 @@ export interface ConversationListParams {
   assignee_type?: 'me' | 'unassigned' | 'all';
   assignee_id?: string;
   inbox_id?: string;
+  roleta_config_id?: string;
   team_id?: string;
   labels?: string[];
   q?: string;
   sort_by?: 'last_activity_at' | 'created_at' | 'priority';
   conversation_type?: 'mention' | 'unattended' | 'participating';
+  /** Só conversas que a IA (Vendedora ou bot externo) respondeu. */
+  handled_by_ai?: boolean;
 }
 
 export interface MessageListParams {

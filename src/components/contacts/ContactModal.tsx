@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   ScrollArea,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Contact, ContactFormData } from '@/types/contacts';
 import ContactForm from './ContactForm';
 

@@ -10,7 +10,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Plug } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 

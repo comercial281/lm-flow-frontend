@@ -1,16 +1,28 @@
-import { useState, useCallback } from 'react';
-import { Button } from '@evoapi/design-system';
+import { useState, useCallback, Suspense } from 'react';
+import { Button } from '@/components/ui/ds';
 import {
   Loader2, Calendar, Trash2, Move, CheckSquare, Square,
   PauseCircle, PlayCircle, BotOff, Bot, AlertCircle,
-  Trophy, XCircle, CalendarPlus,
+  Trophy, XCircle, CalendarPlus, HelpCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { visitsService } from '@/services/visits/visitsService';
-import { ScheduleActionModal } from '@/components/scheduledActions/ScheduleActionModal';
+import { lazyWithRetry } from '@/utils/chunkReload';
+// FollowupTimeline é conteúdo do painel, já visível de cara — segue import
+// estático de propósito.
+import FollowupTimeline from './FollowupTimeline';
+import { useFeature } from '@/contexts/TenantFeaturesContext';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
+import type { SalesAgentCardState, SalesAgentLeadReport } from '@/types/analytics/pipelines';
+import { chatService } from '@/services/chat/chatService';
+import SalesAgentBadge from '@/components/salesAgents/SalesAgentBadge';
+
+// Modal de agendamento só aparece com clique explícito — vira lazy.
+const ScheduleActionModal = lazyWithRetry(() =>
+  import('@/components/scheduledActions/ScheduleActionModal').then(m => ({ default: m.ScheduleActionModal })),
+);
 
 const VISIT_SCHEDULED_LABEL = 'visita-agendada';
 
@@ -23,7 +35,6 @@ interface CardActionsPanelProps {
 }
 
 const FOLLOW_UP_LABEL = 'follow-up';
-const BOT_PAUSED_LABEL = 'bot-pausado';
 
 export default function CardActionsPanel({
   item,
@@ -32,7 +43,15 @@ export default function CardActionsPanel({
   onStageChanged,
   onRemoved,
 }: CardActionsPanelProps) {
-  const convId = item.conversation?.id ? String(item.conversation.id) : null;
+  const canScheduleAction = useFeature('card_schedule_action');
+
+  const convId = item.conversation?.id
+    ? String(item.conversation.id)
+    : (item as any).conversation_id
+      ? String((item as any).conversation_id)
+      : (item as any).whatsapp_conversation_id
+        ? String((item as any).whatsapp_conversation_id)
+        : null;
   const contactId = item.contact?.id ?? (item.conversation as any)?.contact?.id;
 
   // Derive initial state from conversation labels
@@ -45,10 +64,50 @@ export default function CardActionsPanel({
 
   const [followUpActive, setFollowUpActive] = useState(convLabels.includes(FOLLOW_UP_LABEL));
   const [followUpPaused, setFollowUpPaused] = useState(convLabels.includes('follow-up-pausado'));
-  const [botPaused, setBotPaused] = useState(convLabels.includes(BOT_PAUSED_LABEL));
 
   const [togglingFollowUp, setTogglingFollowUp] = useState(false);
-  const [togglingBot, setTogglingBot] = useState(false);
+
+  // Estado da IA Vendedora neste lead. Chega pronto do backend no card; guardamos
+  // local só pra refletir o toggle na hora, sem recarregar o board inteiro.
+  const [aiState, setAiState] = useState<SalesAgentCardState | null>(item.sales_agent ?? null);
+  const [togglingAi, setTogglingAi] = useState(false);
+  const aiOn = aiState?.status === 'active';
+
+  // Por que a IA não respondeu ESTE lead. O selo diz o estado ("Transferido para
+  // um corretor"), que não é a mesma pergunta: fora do horário, gatilho que não
+  // bateu e canal sem conexão dão o mesmo silêncio e exigiam abrir o log pra
+  // distinguir. Carrega sob demanda, num clique, pra não pesar o board.
+  const [aiReport, setAiReport] = useState<SalesAgentLeadReport | null>(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+
+  const loadAiReport = useCallback(async () => {
+    if (!convId) return;
+    setLoadingReport(true);
+    try {
+      const report = await chatService.getSalesAgentStatus(convId);
+      setAiReport(report);
+      setAiState(report.state);
+    } catch {
+      toast.error('Não consegui carregar a situação da IA neste lead.');
+    } finally {
+      setLoadingReport(false);
+    }
+  }, [convId]);
+
+  const toggleSalesAgent = useCallback(async () => {
+    if (!convId) return;
+    setTogglingAi(true);
+    try {
+      const next = await chatService.toggleSalesAgent(convId, !aiOn);
+      setAiState(next);
+      setAiReport(null);
+      toast.success(next.label);
+    } catch {
+      toast.error('Não consegui mudar a IA neste lead.');
+    } finally {
+      setTogglingAi(false);
+    }
+  }, [convId, aiOn]);
   const [movingStage, setMovingStage] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -107,26 +166,6 @@ export default function CardActionsPanel({
       setTogglingFollowUp(false);
     }
   }, [convId, followUpPaused]);
-
-  const toggleBot = useCallback(async () => {
-    if (!convId) return;
-    setTogglingBot(true);
-    try {
-      if (botPaused) {
-        await conversationAPI.removeLabels(convId, [BOT_PAUSED_LABEL]);
-        setBotPaused(false);
-        toast.success('Chatbot reativado');
-      } else {
-        await conversationAPI.addLabels(convId, [BOT_PAUSED_LABEL]);
-        setBotPaused(true);
-        toast.success('Chatbot pausado');
-      }
-    } catch {
-      toast.error('Erro ao alterar chatbot');
-    } finally {
-      setTogglingBot(false);
-    }
-  }, [convId, botPaused]);
 
   const handleMoveStage = useCallback(async (toStageId: string) => {
     if (!currentStageId || toStageId === currentStageId) return;
@@ -231,31 +270,93 @@ export default function CardActionsPanel({
         {!convId && (
           <p className="text-[10px] text-muted-foreground">Disponível apenas para leads com conversa WhatsApp.</p>
         )}
+        {/* Linha do tempo dos passos do follow-up (o que o robô já mandou e o que falta) */}
+        <div className="pt-1 border-t border-border/60 mt-1">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Linha do tempo</p>
+          <FollowupTimeline contactId={contactId ? String(contactId) : null} conversationId={convId} />
+        </div>
       </div>
 
-      {/* Chatbot */}
-      <div className="rounded-lg border border-border p-3 space-y-2">
-        <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Chatbot</h5>
-        <Button
-          size="sm"
-          variant={botPaused ? 'destructive' : 'outline'}
-          className="h-7 text-xs gap-1.5"
-          onClick={toggleBot}
-          disabled={togglingBot || !convId}
-        >
-          {togglingBot ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : botPaused ? (
-            <BotOff className="h-3.5 w-3.5" />
-          ) : (
-            <Bot className="h-3.5 w-3.5" />
+      {/* IA Vendedora.
+
+          O bloco aparece SEMPRE que o lead tem conversa de WhatsApp, inclusive
+          quando não há IA no canal dele. Esconder nesse caso era o pior dos
+          mundos: é justamente quando a IA não atende o lead e não deixa rastro
+          nenhum, e a tela vazia dava a entender que estava tudo normal. */}
+      {convId && (
+        <div className="rounded-lg border border-border p-3 space-y-2">
+          <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">IA Vendedora</h5>
+          <div className="flex items-center gap-2 flex-wrap">
+            <SalesAgentBadge state={aiState} size="md" />
+            {(!aiState || aiState.status === 'none') && (
+              <span className="text-xs text-muted-foreground">Nenhuma IA ligada no canal deste lead</span>
+            )}
+            <Button
+              size="sm"
+              variant={aiOn ? 'outline' : 'default'}
+              className="h-7 text-xs gap-1.5"
+              onClick={toggleSalesAgent}
+              disabled={togglingAi || !convId || !aiState || aiState.status === 'none'}
+            >
+              {togglingAi ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : aiOn ? (
+                <BotOff className="h-3.5 w-3.5" />
+              ) : (
+                <Bot className="h-3.5 w-3.5" />
+              )}
+              {aiOn ? 'Desligar neste lead' : 'Ligar neste lead'}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs gap-1.5"
+              onClick={loadAiReport}
+              disabled={loadingReport || !convId}
+            >
+              {loadingReport ? <Loader2 className="h-3 w-3 animate-spin" /> : <HelpCircle className="h-3.5 w-3.5" />}
+              Por que não respondeu?
+            </Button>
+          </div>
+          {aiReport && (
+            <div className="rounded-md bg-muted/50 p-2 space-y-1">
+              <p className="text-[11px] text-foreground">{aiReport.why}</p>
+              {aiReport.next_step && (
+                <p className="text-[10px] text-muted-foreground">{aiReport.next_step}</p>
+              )}
+              {aiReport.runs.length > 0 && (
+                <ul className="pt-1 space-y-0.5">
+                  {aiReport.runs.map((run, i) => (
+                    <li key={i} className="text-[10px] text-muted-foreground">
+                      {new Date(run.created_at).toLocaleString('pt-BR')} ·{' '}
+                      {run.status === 'replied'
+                        ? run.delivered
+                          ? 'respondeu o lead'
+                          : 'gerou resposta, mas não conseguiu enviar'
+                        : run.status === 'failed'
+                          ? `falhou: ${run.error_message ?? 'erro no servidor'}`
+                          : (run.reason_label ?? 'não respondeu')}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
-          {botPaused ? 'Chatbot pausado — retomar' : 'Pausar chatbot'}
-        </Button>
-        {!convId && (
-          <p className="text-[10px] text-muted-foreground">Disponível apenas para leads com conversa WhatsApp.</p>
-        )}
-      </div>
+          {aiState?.status === 'idle' && (
+            <p className="text-[10px] text-muted-foreground">
+              A IA atende este canal, mas o gatilho ainda não bateu neste lead. Ligar aqui força o atendimento.
+            </p>
+          )}
+          {aiState?.status === 'handoff' && (
+            <p className="text-[10px] text-muted-foreground">
+              A IA passou este lead pra um corretor. Ligar de volta desfaz a transferência.
+            </p>
+          )}
+          {!convId && (
+            <p className="text-[10px] text-muted-foreground">Disponível apenas para leads com conversa WhatsApp.</p>
+          )}
+        </div>
+      )}
 
       {/* Resultado do lead */}
       <div className="rounded-lg border border-border p-3 space-y-2">
@@ -326,7 +427,7 @@ export default function CardActionsPanel({
       <div className="rounded-lg border border-border p-3 space-y-2">
         <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ações</h5>
         <div className="flex flex-wrap gap-2">
-          {contactId && (
+          {contactId && canScheduleAction && (
             <Button
               size="sm"
               variant="outline"
@@ -363,11 +464,13 @@ export default function CardActionsPanel({
 
       {/* Schedule modal */}
       {contactId && (
-        <ScheduleActionModal
-          open={scheduleOpen}
-          onClose={() => setScheduleOpen(false)}
-          contactId={String(contactId)}
-        />
+        <Suspense fallback={null}>
+          <ScheduleActionModal
+            open={scheduleOpen}
+            onClose={() => setScheduleOpen(false)}
+            contactId={String(contactId)}
+          />
+        </Suspense>
       )}
 
       {/* Agendar visita modal */}

@@ -10,9 +10,12 @@
         "fullName": "Nome completo",
         "displayName": "Nome visualizzato",
         "email": "Email",
+        "whatsappNumber": "WhatsApp",
         "fullNamePlaceholder": "Il tuo nome completo",
         "displayNamePlaceholder": "Come vuoi essere chiamato",
-        "emailPlaceholder": "tua@email.com"
+        "emailPlaceholder": "tua@email.com",
+        "whatsappNumberPlaceholder": "+39 320 123 4567",
+        "whatsappNumberHelp": "Usato per ricevere promemoria e automazioni sul tuo WhatsApp"
       },
       "actions": {
         "saveChanges": "Salva modifiche",
@@ -122,16 +125,7 @@
       },
       "push": {
         "title": "Notifiche push",
-        "types": {
-          "conversation_creation": "Nuova conversazione creata",
-          "conversation_assignment": "Conversazione assegnata a me",
-          "assigned_conversation_new_message": "Nuovo messaggio in conversazione assegnata",
-          "conversation_mention": "Menzionato in conversazione",
-          "participating_conversation_new_message": "Nuovo messaggio in conversazione partecipante",
-          "sla_missed_first_response": "SLA prima risposta non rispettato",
-          "sla_missed_next_response": "SLA prossima risposta non rispettato",
-          "sla_missed_resolution": "SLA risoluzione non rispettato"
-        }
+        "alwaysOn": "Le notifiche sul dispositivo vengono inviate ogni volta che il Modo Plantão è attivo su di esso. Attivalo o disattivalo dall'icona in alto nello schermo."
       },
       "loading": "Caricamento preferenze notifiche...",
       "updated": "Configurazione notifica aggiornata",
@@ -282,7 +276,9 @@
       "uploading": "Caricamento...",
       "fileTypeError": "Seleziona solo file di immagine",
       "fileSizeError": "L'immagine deve essere al massimo di 5MB",
-      "fileInfo": "JPG, PNG o GIF. Massimo 5MB.",
+      "fileInfo": "JPG, PNG, GIF o HEIC (foto iPhone). Massimo 5MB.",
+      "converting": "Conversione...",
+      "heicConversionError": "Impossibile convertire questa foto HEIC. Prova a esportarla come JPG prima di caricarla.",
       "photoRemoved": "Foto rimossa con successo",
       "photoRemoveError": "Errore durante la rimozione della foto"
     },

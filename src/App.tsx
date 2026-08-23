@@ -1,6 +1,7 @@
 import AppRouter from './routes';
 import { AuthProvider } from './contexts/AuthContext';
 import { DarkModeProvider } from './contexts/ThemeContext';
+import { DemoModeProvider } from './contexts/DemoModeContext';
 import ImpersonationBar from './components/ImpersonationBar';
 import AppInitializer from './components/AppInitializer';
 import { GlobalConfigProvider } from './contexts/GlobalConfigContext';
@@ -10,7 +11,7 @@ import { TenantFeaturesProvider } from './contexts/TenantFeaturesContext';
 import { UISettingsApplier } from './components/UISettingsApplier';
 import ErrorBoundary from './components/ErrorBoundary';
 
-import { Toaster } from '@evoapi/design-system';
+import { Toaster } from '@/components/ui/ds';
 
 import { useIsDarkClass } from '@/hooks/chat/useIsDarkClass';
 
@@ -34,6 +35,7 @@ function App() {
     <ErrorBoundary>
       <AuthProvider>
         <DarkModeProvider>
+          <DemoModeProvider>
           <GlobalConfigProvider>
             <UISettingsApplier />
             <PermissionsProvider>
@@ -48,6 +50,7 @@ function App() {
               </TenantFeaturesProvider>
             </PermissionsProvider>
           </GlobalConfigProvider>
+          </DemoModeProvider>
         </DarkModeProvider>
       </AuthProvider>
     </ErrorBoundary>

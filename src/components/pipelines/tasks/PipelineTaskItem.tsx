@@ -1,6 +1,6 @@
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
 import { useLanguage } from '@/hooks/useLanguage';
-import { Badge, Button, Checkbox } from '@evoapi/design-system';
+import { Badge, Button, Checkbox } from '@/components/ui/ds';
 import {
   Phone,
   Mail,

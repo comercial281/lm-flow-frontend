@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from '@/services/core';
-import { setupService } from '@/services/setup/setupService';
 import { initClarity } from '@/utils/clarityUtils';
 
 export interface GlobalConfig {
@@ -77,14 +76,12 @@ export const fetchSetupStatus = async (): Promise<boolean> => {
     return setupRequiredCache;
   }
 
-  try {
-    const status = await setupService.getStatus();
-    setupRequiredCache = status.status === 'inactive';
-    return setupRequiredCache;
-  } catch {
-    setupRequiredCache = false;
-    return false;
-  }
+  // No modelo pooled (SaaS), não há setup wizard in-app: o provisionamento é
+  // feito pelo super-admin. O backend não expõe /setup/status (rota morta → 404
+  // barulhento a cada boot). Antes o catch já caía em `false`; aqui evitamos o
+  // request quebrado de vez. Mesmo comportamento, sem 404/5xx no boot.
+  setupRequiredCache = false;
+  return false;
 };
 
 // Listeners para notificar componentes React quando o cache é limpo

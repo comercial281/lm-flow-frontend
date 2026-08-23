@@ -12,7 +12,7 @@ import {
   TabsList,
   TabsTrigger,
   Separator,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import {
   Edit,
   Users,

@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Badge, Card, CardContent, CardHeader, Switch, Label } from '@evoapi/design-system';
+import { Badge, Card, CardContent, CardHeader, Switch, Label } from '@/components/ui/ds';
 import { Settings, Brain, Zap } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 

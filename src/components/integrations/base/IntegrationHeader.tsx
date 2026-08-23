@@ -1,5 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
-import { Button, Badge } from '@evoapi/design-system';
+import { Button, Badge } from '@/components/ui/ds';
 import { ArrowLeft, ExternalLink, AlertCircle, CheckCircle } from 'lucide-react';
 import { Integration } from '@/types/integrations';
 

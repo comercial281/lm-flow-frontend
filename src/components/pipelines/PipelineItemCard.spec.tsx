@@ -1,6 +1,17 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import PipelineItemCard from './PipelineItemCard';
+
+const openLeadConversation = vi.fn();
+
+vi.mock('@/hooks/useOpenLeadConversation', () => ({
+  useOpenLeadConversation: () => ({
+    openLeadConversation,
+    startConversationModal: null,
+    opening: false,
+  }),
+}));
 
 vi.mock('@/hooks/useLanguage', () => ({
   useLanguage: () => ({ t: (key: string, fallback?: string) => fallback || key }),
@@ -36,7 +47,12 @@ vi.mock('lucide-react', () => ({
   CheckCircle2: () => <span data-testid="icon-check" />,
   GripVertical: () => <span data-testid="icon-grip" />,
   GitBranch: () => <span data-testid="icon-branch" />,
+  Megaphone: () => <span data-testid="icon-megaphone" />,
+  Home: () => <span data-testid="icon-home" />,
+  Calendar: () => <span data-testid="icon-calendar" />,
 }));
+
+const renderCard = (ui: React.ReactElement) => render(ui, { wrapper: MemoryRouter });
 
 const baseItem = {
   id: 'item-1',
@@ -52,7 +68,7 @@ describe('PipelineItemCard', () => {
   });
 
   it('renders menu with mobile-visible responsive classes', () => {
-    const { container } = render(
+    const { container } = renderCard(
       <PipelineItemCard item={baseItem} onEdit={vi.fn()} showActions />,
     );
 
@@ -66,7 +82,7 @@ describe('PipelineItemCard', () => {
   it('calls onView when card body is clicked', () => {
     const onView = vi.fn();
 
-    const { container } = render(
+    const { container } = renderCard(
       <PipelineItemCard item={baseItem} onView={onView} />,
     );
 
@@ -77,7 +93,7 @@ describe('PipelineItemCard', () => {
   it('does not call onView when menu area is clicked', () => {
     const onView = vi.fn();
 
-    const { container } = render(
+    const { container } = renderCard(
       <PipelineItemCard item={baseItem} onView={onView} onEdit={vi.fn()} showActions />,
     );
 
@@ -87,7 +103,26 @@ describe('PipelineItemCard', () => {
   });
 
   it('renders contact name', () => {
-    render(<PipelineItemCard item={baseItem} />);
+    renderCard(<PipelineItemCard item={baseItem} />);
     expect(screen.getByText('João Silva')).toBeTruthy();
+  });
+
+  // O botão era um <a href="https://wa.me/..."> que tirava o corretor do CRM:
+  // a conversa acontecia fora, sem histórico e sem nada do funil.
+  it('does not link out to wa.me anymore', () => {
+    const { container } = renderCard(<PipelineItemCard item={baseItem} />);
+
+    expect(container.querySelector('a[href^="https://wa.me"]')).toBeNull();
+  });
+
+  it('opens the conversation inside the CRM when WhatsApp is clicked', () => {
+    const onView = vi.fn();
+    renderCard(<PipelineItemCard item={baseItem} onView={onView} />);
+
+    fireEvent.click(screen.getByTitle('Abrir conversa'));
+
+    expect(openLeadConversation).toHaveBeenCalledWith(baseItem);
+    // A linha de ações tem stopPropagation: clicar ali não abre a ficha do lead.
+    expect(onView).not.toHaveBeenCalled();
   });
 });

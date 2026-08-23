@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDateTimeBR } from '@/utils/dateUtils';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   Dialog,
@@ -16,7 +17,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Loader2 } from 'lucide-react';
 import type { UpdateTaskData, PipelineTask } from '@/types/analytics';
 import type { User } from '@/types/users';
@@ -232,7 +233,7 @@ export default function EditTaskModal({
             />
             {task?.parent_task?.due_date && (
               <p className="text-xs text-muted-foreground">
-                {t('tasks.form.exactDueDate')}: {new Date(task.parent_task.due_date).toLocaleString('pt-BR')}
+                {t('tasks.form.exactDueDate')}: {formatDateTimeBR(task.parent_task.due_date)}
               </p>
             )}
             {errors.due_date && (

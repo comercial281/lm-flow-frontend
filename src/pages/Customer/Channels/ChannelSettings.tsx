@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
   CardContent,
@@ -9,7 +9,7 @@ import {
   TabsList,
   TabsTrigger,
   Textarea,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import {
   ArrowLeft,
   Save,
@@ -19,7 +19,6 @@ import {
   Clock,
   Star,
   MessageSquare,
-  Bot,
   Shield,
   Mail,
 } from 'lucide-react';
@@ -41,7 +40,6 @@ import {
   CSATForm,
   PreChatForm,
   WidgetBuilderForm,
-  AgentBotConfigurationForm,
   ConfigurationForm,
   MessageTemplateForm,
   ModerationDashboard,
@@ -286,6 +284,7 @@ export default function ChannelSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('inbox_settings');
+  const [searchParams] = useSearchParams();
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [emailSignature, setEmailSignature] = useState('');
   const [isSavingSignature, setIsSavingSignature] = useState(false);
@@ -347,12 +346,15 @@ export default function ChannelSettings() {
       });
     }
 
-    // Agent bots tab (available for most channel types)
-    baseTabs.push({
-      key: 'botConfiguration',
-      name: t('settings.tabs.botConfiguration'),
-      icon: Bot,
-    });
+    // A aba "Configuração de Agente de IA" saiu daqui (2026-08-07). Ela listava
+    // agent_bots (bot externo por webhook) e nunca teve tela de CRIAÇÃO em lugar
+    // nenhum do app — só listar/conectar/desconectar. Resultado: lista sempre
+    // vazia, e o único botão do estado vazio ("Gerenciar Agentes de IA") não
+    // tinha onClick. Quem conectava uma instância vinha procurar a IA Vendedora
+    // aqui e caía num beco sem saída.
+    //
+    // A IA Vendedora é a única IA do produto e se configura na tela dela, onde
+    // já existe o campo "Instância do WhatsApp que ela opera".
 
     // Moderation tab (available for all channel types)
     baseTabs.push({
@@ -363,6 +365,17 @@ export default function ChannelSettings() {
 
     return baseTabs;
   }, [inboxHook, inbox?.provider, t]);
+
+  // Abre a aba pedida pela URL (?tab=configuration), usada pelo fluxo de criar
+  // canal → parear o WhatsApp. Precisa ser efeito e não estado inicial porque
+  // `tabs` só existe depois que o inbox carrega — antes disso a aba pedida
+  // ainda não está na lista e a troca seria descartada.
+  useEffect(() => {
+    const pedida = searchParams.get('tab');
+    if (!pedida || pedida === activeTab) return;
+    if (!tabs.some(tab => tab.key === pedida)) return;
+    setActiveTab(pedida);
+  }, [searchParams, tabs, activeTab]);
 
   // Inbox name with channel info
   const inboxName = useMemo(() => {
@@ -762,6 +775,13 @@ export default function ChannelSettings() {
                   await InboxesService.update(inboxId, payload);
                   await loadChannelData(); // Refresh data after update
                 }}
+                ownerUserId={inbox?.owner_user_id ?? null}
+                onOwnerChange={async ownerUserId => {
+                  // Dono da instância: pro card do lead mostrar a foto real do
+                  // WhatsApp dele como avatar de responsável.
+                  await InboxesService.update(inboxId, { owner_user_id: ownerUserId });
+                  await loadChannelData(); // Refresh data after update
+                }}
               />}
             </TabsContent>
 
@@ -853,19 +873,6 @@ export default function ChannelSettings() {
                     await InboxesService.update(inboxId, data);
                   }
                   await loadChannelData();
-                }}
-              />}
-            </TabsContent>
-
-            {/* Agent Bot Configuration Tab */}
-            <TabsContent value="botConfiguration">
-              {activeTab === 'botConfiguration' && <AgentBotConfigurationForm
-                inboxId={inboxId}
-                onUpdate={success => {
-                  if (success) {
-                    // Optionally refresh inbox data or show success feedback
-                    console.log('Agent bot configuration updated successfully');
-                  }
                 }}
               />}
             </TabsContent>

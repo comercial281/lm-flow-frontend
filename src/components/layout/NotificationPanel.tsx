@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
-import { Button } from '@evoapi/design-system';
+import { Button } from '@/components/ui/ds';
 import {
   ChevronLeft,
   ChevronRight,
@@ -55,14 +55,29 @@ export default function NotificationPanel({
     actions.fetchNotifications({ page: newPage });
   };
 
+  // Destino do clique. O backend manda `url` calculado (Notification#target_url):
+  // conversa quando existe, ficha do contato quando o lead ainda não gerou uma.
+  // Antes daqui era sempre /conversations/<primary_actor.id>, então notificação
+  // de lead sem conversa abria uma conversa inexistente.
+  const resolveTarget = (notification: Notification): string | null => {
+    if (notification.url) return notification.url;
+
+    const actorId = notification.primary_actor?.id || notification.primary_actor_id;
+    if (!actorId) return null;
+
+    return notification.primary_actor_type === 'Contact'
+      ? `/contacts/${actorId}`
+      : `/conversations/${actorId}`;
+  };
+
   const handleOpenNotification = async (notification: Notification) => {
     try {
       // Mark as read
       await actions.markAsRead(notification);
 
-      // Navigate to conversation
-      if (notification.primary_actor?.id) {
-        navigate(`/conversations/${notification.primary_actor.id}`);
+      const target = resolveTarget(notification);
+      if (target) {
+        navigate(target);
         onClose();
       }
     } catch (error) {
@@ -99,9 +114,9 @@ export default function NotificationPanel({
   };
 
   return (
-    <div className="flex flex-col h-[90vh] max-h-[600px]">
+    <div className="flex flex-col h-[80vh] max-h-[600px]">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-border">
+      <div className="flex items-center justify-between gap-2 p-4 sm:p-6 border-b border-border">
         <div className="flex items-center gap-2">
           <span className="text-xl font-bold">{t('notifications.panel.title')}</span>
           {totalUnreadCount > 0 && (
@@ -120,8 +135,8 @@ export default function NotificationPanel({
               disabled={state.uiFlags.isUpdating}
               className="text-muted-foreground hover:text-foreground"
             >
-              <ListCheck className="h-4 w-4 mr-2" />
-              {t('notifications.panel.markAllAsRead')}
+              <ListCheck className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('notifications.panel.markAllAsRead')}</span>
             </Button>
           )}
 

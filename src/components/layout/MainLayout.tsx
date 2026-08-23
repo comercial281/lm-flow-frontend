@@ -8,7 +8,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { Header, Sidebar } from './components';
 import {
@@ -22,9 +22,18 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useMenuState } from '@/hooks/useMenuState';
+import { useKeyboardInsetVar } from '@/hooks/useKeyboardInset';
 import { useDashboardApps } from '@/hooks/useDashboardApps';
+import { useRoutePrefetch } from '@/hooks/useRoutePrefetch';
 import { injectDashboardAppsIntoMenu } from '@/utils/injectDashboardApps';
+import { applyMenuPrefs, MENU_PREFS_EVENT } from './config/menuPrefs';
+import MenuCustomizer from './components/MenuCustomizer';
+import InstallAppPrompt from './components/InstallAppPrompt';
+import ClientModeBar from './ClientModeBar';
+import PendingOffersBanner from '@/components/roleta/PendingOffersBanner';
 import { WelcomeTourModal } from '@/components/WelcomeTourModal';
+import GlobalCommandPalette from '@/components/command-palette/GlobalCommandPalette';
+import FeedbackWidget from '@/components/feedback/FeedbackWidget';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -34,15 +43,46 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const { t } = useLanguage('layout');
   const { user, logout } = useAuth();
   const { can, canAny, canAll } = usePermissions();
-  const { features: tenantFeatures } = useTenantFeatures();
+  const { features: tenantFeatures, archivedKeys } = useTenantFeatures();
   const navigate = useNavigate();
   const location = useLocation();
+  const [menuPrefsVersion, setMenuPrefsVersion] = useState(0);
+  const [showMenuCustomizer, setShowMenuCustomizer] = useState(false);
+
+  // Mantém --keyboard-inset atualizada para a casca encolher com o teclado
+  // do celular (ver a altura do container abaixo).
+  useKeyboardInsetVar();
+
+  // Prefetch ocioso dos chunks das páginas do menu principal — MainLayout só
+  // monta com usuário autenticado, então a rota real já passou pelo
+  // PrivateRoute/CustomerRoute (ver src/routes/index.tsx). Ver
+  // src/hooks/useRoutePrefetch.ts.
+  useRoutePrefetch(!!user);
+
+  useEffect(() => {
+    const onPrefs = () => setMenuPrefsVersion(v => v + 1);
+    window.addEventListener(MENU_PREFS_EVENT, onPrefs);
+    return () => window.removeEventListener(MENU_PREFS_EVENT, onPrefs);
+  }, []);
   const pathname = location.pathname;
 
   // Estados do layout
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+
+  // Atalho global Cmd+K (Mac) / Ctrl+K (Windows) abre a busca global.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setCommandOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // Load dashboard apps for sidebar integration
   const { apps: dashboardApps } = useDashboardApps({
@@ -68,16 +108,21 @@ export default function MainLayout({ children }: MainLayoutProps) {
     return getCustomerMenuItems(t);
   }, [t]);
 
-  const menuItems = useMemo(() => {
+  // Itens permitidos (filtrados por permissão) — usados pelo editor de menu.
+  const permittedMenuItems = useMemo(() => {
     const rawMenuItems = getMenuItems();
-    let finalItems = filterMenuItemsByPermissions(rawMenuItems, can, canAny, canAll, user?.role?.key, user?.email, tenantFeatures);
+    let finalItems = filterMenuItemsByPermissions(rawMenuItems, can, canAny, canAll, user?.role?.key, user?.email, tenantFeatures, archivedKeys);
 
     if (dashboardApps.length > 0) {
       finalItems = injectDashboardAppsIntoMenu(finalItems, dashboardApps);
     }
 
     return finalItems;
-  }, [getMenuItems, can, canAny, canAll, dashboardApps, user?.role?.key, user?.email, tenantFeatures]);
+  }, [getMenuItems, can, canAny, canAll, dashboardApps, user?.role?.key, user?.email, tenantFeatures, archivedKeys]);
+
+  // Aplica as preferências do usuário (esconder/favoritar/ordenar) por cima.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const menuItems = useMemo(() => applyMenuPrefs(permittedMenuItems), [permittedMenuItems, menuPrefsVersion]);
 
   // Use the custom menu state hook
   const menuState = useMenuState(menuItems, setIsMobileMenuOpen);
@@ -109,7 +154,24 @@ export default function MainLayout({ children }: MainLayoutProps) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background transition-colors duration-150 ease-in-out">
+    // `dvh`, não `vh`: no celular o `vh` ignora a barra de endereço do
+    // navegador, então o rodapé da tela (a barra de digitar do chat, por
+    // exemplo) fica embaixo dela. Mesmo motivo do `max-h-[92dvh]` em ds.tsx.
+    //
+    // E menos --keyboard-inset: este é o ÚNICO nó que manda na altura do
+    // viewport — tudo abaixo é flex-1/min-h-0 — então encolher só ele faz a
+    // barra de digitar subir junto com o teclado e a lista de mensagens
+    // encolher, sem mais nenhuma mudança de layout. Com o teclado fechado a
+    // variável é 0px e a conta vira 100dvh, idêntico ao que era.
+    // Sem transição na altura de propósito: animar faria a barra chegar
+    // atrasada em relação ao teclado (`transition-colors` só afeta cores).
+    <div className="flex flex-col h-[calc(100dvh-var(--keyboard-inset,0px))] bg-background transition-colors duration-150 ease-in-out">
+
+      {/* Barra do Modo Cliente (super-admin) — só aparece quando ativo */}
+      <ClientModeBar />
+
+      {/* Ofertas da roleta esperando aceite — só aparece quando há alguma */}
+      <PendingOffersBanner />
 
       {/* Header */}
       <Header
@@ -125,6 +187,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         isMenuItemActive={menuState.isMenuItemActive}
         isMenuWithSubItemsActive={menuState.isMenuWithSubItemsActive}
         handleMenuClick={menuState.handleMenuClick}
+        onOpenSearch={() => setCommandOpen(true)}
       />
 
       {/* Main Layout Container */}
@@ -138,6 +201,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           isMenuWithSubItemsActive={menuState.isMenuWithSubItemsActive}
           handleMenuClick={menuState.handleMenuClick}
           setActiveSubmenu={menuState.setActiveSubmenu}
+          onCustomizeMenu={() => setShowMenuCustomizer(true)}
         />
 
         {/* Main Content */}
@@ -147,8 +211,21 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       </div>
 
+      {/* Busca global (Cmd+K) */}
+      <GlobalCommandPalette
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        menuItems={menuItems}
+      />
+
       {/* Tour */}
       <WelcomeTourModal />
+
+      {/* Instalar app (PWA) na tela inicial */}
+      <InstallAppPrompt />
+
+      {/* Botão flutuante de Sugestões/Bugs (cai na aba do admin) */}
+      <FeedbackWidget />
 
       {/* Logout Dialog */}
       <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
@@ -167,6 +244,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Personalizar menu */}
+      {showMenuCustomizer && (
+        <MenuCustomizer items={permittedMenuItems} onClose={() => setShowMenuCustomizer(false)} />
+      )}
     </div>
   );
 }

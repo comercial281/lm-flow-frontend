@@ -1,7 +1,11 @@
 import { useLanguage } from '@/hooks/useLanguage';
-import { Button, Badge, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@evoapi/design-system';
-import { Edit, Trash2, MoreVertical, Phone, Mail, MessageSquare, User, Clock, AlertCircle, ListTodo, CheckCircle2, GripVertical, GitBranch, Megaphone } from 'lucide-react';
+import { formatDateBR } from '@/utils/dateUtils';
+import { Button, Badge, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/ds';
+import { Edit, Trash2, MoreVertical, Phone, Mail, MessageSquare, User, Clock, AlertCircle, ListTodo, CheckCircle2, GripVertical, GitBranch, Megaphone, Home, Calendar } from 'lucide-react';
 import { PipelineItem, Pipeline, PipelineStage } from '@/types/analytics';
+import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
+import SalesAgentBadge from '@/components/salesAgents/SalesAgentBadge';
 
 interface PipelineItemCardProps {
   item: PipelineItem;
@@ -42,6 +46,10 @@ export default function PipelineItemCard({
   showActions = true,
 }: PipelineItemCardProps) {
   const { t } = useLanguage('pipelines');
+  const { openLeadConversation, startConversationModal, opening } = useOpenLeadConversation();
+  const canRemoveFromPipeline = useFeature('card_remove_from_pipeline');
+  // Item "Remover do pipeline" só aparece se a feature estiver ligada E houver handler.
+  const showRemove = !!onRemove && canRemoveFromPipeline;
 
   return (
     <div
@@ -49,7 +57,7 @@ export default function PipelineItemCard({
       onClick={() => onView?.(item)}
     >
       {/* Card Options Menu */}
-      {showActions && (onEdit || onRemove) && (
+      {showActions && (onEdit || showRemove) && (
         <div
           className="absolute top-2 right-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
           onClick={e => e.stopPropagation()}
@@ -72,11 +80,11 @@ export default function PipelineItemCard({
                     {t('kanban.item.editItem')}
                   </DropdownMenuItem>
                 )}
-                {onEdit && onRemove && <DropdownMenuSeparator />}
-                {onRemove && (
+                {onEdit && showRemove && <DropdownMenuSeparator />}
+                {showRemove && (
                   <DropdownMenuItem
                     className="text-destructive"
-                    onClick={() => onRemove(item)}
+                    onClick={() => onRemove!(item)}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     {t('kanban.item.removeFromPipeline')}
@@ -95,7 +103,7 @@ export default function PipelineItemCard({
       <div className="flex items-start space-x-3 mb-3">
         <div className="relative">
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm"
+            className="lm-redact-img w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm"
             style={{ backgroundColor: getContactColor(item.contact?.name) }}
           >
             {item.contact?.name?.[0]?.toUpperCase() || 'U'}
@@ -105,7 +113,7 @@ export default function PipelineItemCard({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2 mb-1">
-            <h4 className="text-sm font-semibold text-foreground truncate">
+            <h4 className="lm-redact text-sm font-semibold text-foreground truncate">
               {item.contact?.name || t('kanban.item.unknownUser', 'Usuário Desconhecido')}
             </h4>
             {item.conversation?.display_id && (
@@ -113,13 +121,16 @@ export default function PipelineItemCard({
                 #{item.conversation.display_id}
               </span>
             )}
+            {/* Junto do nome de propósito: é o primeiro lugar onde o olho bate, e
+                a pergunta "a IA já falou com esse?" vem antes de qualquer outra. */}
+            <SalesAgentBadge state={item.sales_agent} />
           </div>
           {/* Contact details */}
           <div className="flex items-center space-x-2 text-xs text-muted-foreground">
             {item.contact?.phone_number && (
               <span className="flex items-center space-x-1">
                 <Phone className="w-3 h-3" />
-                <span className="truncate max-w-20">
+                <span className="lm-redact truncate max-w-20">
                   {item.contact.phone_number}
                 </span>
               </span>
@@ -127,7 +138,7 @@ export default function PipelineItemCard({
             {item.contact?.email && (
               <span className="flex items-center space-x-1">
                 <Mail className="w-3 h-3" />
-                <span className="truncate max-w-20">
+                <span className="lm-redact truncate max-w-20">
                   {item.contact?.email}
                 </span>
               </span>
@@ -135,6 +146,63 @@ export default function PipelineItemCard({
           </div>
         </div>
       </div>
+
+      {/* Ações rápidas do corretor — responder em <30s sem abrir o lead */}
+      {item.contact?.phone_number && (
+        <div className="mb-3 flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+          <a
+            href={`tel:${item.contact.phone_number.replace(/[^\d+]/g, '')}`}
+            className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+            title={t('kanban.item.call', 'Ligar')}
+          >
+            <Phone className="w-3.5 h-3.5" />
+            {t('kanban.item.call', 'Ligar')}
+          </a>
+          {/* Abre a conversa DENTRO do LM Flow. Era um link wa.me, que levava o
+              corretor para fora do CRM e deixava a conversa sem histórico aqui. */}
+          <button
+            type="button"
+            onClick={() => openLeadConversation(item)}
+            disabled={opening}
+            className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-400 transition-colors"
+            title={t('kanban.item.openChat', 'Abrir conversa')}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            {t('kanban.item.whatsapp', 'WhatsApp')}
+          </button>
+          {onView && (
+            <button
+              type="button"
+              onClick={() => onView(item)}
+              className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              title={t('kanban.item.schedule', 'Agendar')}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              {t('kanban.item.schedule', 'Agendar')}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Tags / Etiquetas do contato (ex: "tráfego pago") */}
+      {Array.isArray((item.contact as any)?.labels) && (item.contact as any).labels.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1">
+          {(item.contact as any).labels.map((label: any, idx: number) => {
+            const color = label?.color || '#7c3aed';
+            const name = label?.name || label?.title;
+            if (!name) return null;
+            return (
+              <span
+                key={`${name}-${idx}`}
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                style={{ backgroundColor: `${color}22`, color }}
+              >
+                {name}
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       {/* Pipeline and Stage Info */}
       {(pipeline || stage) && (
@@ -184,6 +252,27 @@ export default function PipelineItemCard({
         );
       })()}
 
+      {/* Imóvel de origem (empreendimento) */}
+      {(() => {
+        const cf = (item as any)?.custom_fields ?? {};
+        const ca = (item.contact as any)?.custom_attributes ?? {};
+        let imovel = cf.Empreendimento || cf.empreendimento || ca.empreendimento;
+        if (!imovel) {
+          const ar = (item.contact as any)?.additional_attributes?.ad_referral
+            ?? (item.conversation as any)?.additional_attributes?.ad_referral ?? {};
+          const src = ar.adset_name || ar.campaign_name || '';
+          const m = String(src).match(/\[([^\]]+)\]/g);
+          if (m && m[1]) imovel = m[1].replace(/[[\]]/g, '').trim();
+        }
+        if (!imovel) return null;
+        return (
+          <div className="mb-3 flex items-center gap-1.5 rounded-md bg-primary/5 border border-primary/20 px-2 py-1.5">
+            <Home className="w-3 h-3 text-primary shrink-0" />
+            <span className="text-xs font-medium text-foreground truncate">{String(imovel)}</span>
+          </div>
+        );
+      })()}
+
       {/* Last Message Preview */}
       {item.conversation?.last_non_activity_message?.content && (
         <div className="mb-3 p-3 bg-muted/50 rounded-lg border border-border">
@@ -191,12 +280,12 @@ export default function PipelineItemCard({
             <MessageSquare className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2 mb-1">
-                <span className="text-xs font-medium text-foreground">
+                <span className="lm-redact text-xs font-medium text-foreground">
                   {item.conversation.last_non_activity_message.sender?.name ||
                     t('kanban.item.system', 'Sistema')}
                 </span>
               </div>
-              <p className="text-sm text-foreground line-clamp-2 leading-relaxed">
+              <p className="lm-redact text-sm text-foreground line-clamp-2 leading-relaxed">
                 {stripHtml(item.conversation.last_non_activity_message.processed_message_content ||
                   item.conversation.last_non_activity_message.content)}
               </p>
@@ -350,21 +439,33 @@ export default function PipelineItemCard({
           </div>
           <span>
             {item.conversation?.last_activity_at
-              ? new Date(item.conversation.last_activity_at * 1000).toLocaleDateString('pt-BR')
-              : new Date((item.entered_at || 0) * 1000).toLocaleDateString('pt-BR')}
+              ? formatDateBR(item.conversation.last_activity_at * 1000)
+              : formatDateBR((item.entered_at || 0) * 1000)}
           </span>
         </div>
 
-        {/* Assignee */}
-        {item.conversation?.assignee && (
+        {/* Responsável. `item.assignee` (topo) é a fonte certa: o backend já o
+            preenche do assignee da conversa OU do default_assignee do contato.
+            Lendo só de item.conversation.assignee, lead de formulário/anúncio
+            — que não tem conversa — aparecia SEMPRE sem responsável, mesmo com
+            a roleta tendo gravado o dono direitinho. */}
+        {(item.assignee ?? item.conversation?.assignee) && (
           <div className="flex items-center space-x-1 text-muted-foreground">
             <User className="w-3 h-3" />
             <span className="truncate max-w-20">
-              {item.conversation.assignee.name}
+              {(item.assignee ?? item.conversation?.assignee)?.name}
             </span>
           </div>
         )}
       </div>
+
+      {/* Só monta quando o lead ainda não tem conversa (fica null no resto do tempo).
+          O stopPropagation é obrigatório: portal do React continua propagando pela
+          ÁRVORE React, então um clique dentro do modal chegaria no onClick do card
+          e abriria a ficha do lead por baixo. */}
+      {startConversationModal && (
+        <div onClick={e => e.stopPropagation()}>{startConversationModal}</div>
+      )}
     </div>
   );
 }

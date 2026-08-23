@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/hooks/useLanguage';
 import { integrationsService } from '@/services/integrations';
 import { DashboardApp } from '@/types/integrations';
-import { Skeleton } from '@evoapi/design-system';
+import { Skeleton } from '@/components/ui/ds';
 import { AlertCircle } from 'lucide-react';
 
 /**

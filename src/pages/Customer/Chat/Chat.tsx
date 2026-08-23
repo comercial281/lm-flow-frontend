@@ -1,12 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { Suspense, useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { Suspense, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 
 import { useParams, useNavigate } from 'react-router-dom';
+import { lazyWithRetry } from '@/utils/chunkReload';
 
 import { useChatContext } from '@/contexts/chat/ChatContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 
 import { useLanguage } from '@/hooks/useLanguage';
+import { useConversationPresence } from '@/hooks/useConversationPresence';
+import ClaimLeadBanner from '@/components/chat/assignment/ClaimLeadBanner';
 
 // Hooks customizados
 import { useConversationHandlers } from '@/hooks/chat/useConversationHandlers';
@@ -44,9 +47,9 @@ import { BaseFilter } from '@/types/core';
 import type { DashboardApp } from '../../../types/integrations';
 import type { AssignmentOption, AssignmentType } from '@/components/chat/assignment';
 
-const ContactSidebar = React.lazy(() => import('@/components/chat/contact-sidebar/ContactSidebar'));
+const ContactSidebar = lazyWithRetry(() => import('@/components/chat/contact-sidebar/ContactSidebar'));
 
-const AssignmentModal = React.lazy(() => import('@/components/chat/assignment/AssignmentModal'));
+const AssignmentModal = lazyWithRetry(() => import('@/components/chat/assignment/AssignmentModal'));
 
 interface SendMessageOptions {
   content: string;
@@ -68,6 +71,7 @@ const Chat = () => {
   // Explicitly type conversations to ensure TypeScript recognizes it has 'state'
   const conversations = chatContext.conversations;
   const { messages, selectedConversation, selectedMessages } = chatContext;
+  const { othersPresent } = useConversationPresence(selectedConversation?.id);
 
   // 🔒 RACE CONDITION FIX: Ref para rastrear última conversa carregada
   const lastLoadedConversationRef = useRef<string | null>(null);
@@ -128,7 +132,7 @@ const Chat = () => {
   const handleApplyFilters = useCallback(
     async (newFilters: BaseFilter[]) => {
       try {
-        await filterHandlers.handleApplyFilters(newFilters);
+        return await filterHandlers.handleApplyFilters(newFilters);
       } catch (error) {
         // Se erro 403 ou 404, marcar como erro
         const axiosError = error as AxiosError;
@@ -245,10 +249,11 @@ const Chat = () => {
             return;
           }
 
-          // 🔒 AGUARDAR: Aguardar carregamento inicial das conversas (pelo menos uma tentativa)
-          if (conversationsCount === 0 && !conversations.state.conversationsError) {
-            return;
-          }
+          // NÃO retornar aqui quando a lista vem vazia: o carregamento já terminou
+          // (conversationsLoading foi checado acima) e uma conversa alvo na URL pode
+          // simplesmente não estar na lista — ex.: recém-criada com status fora do
+          // filtro padrão (status=open), ou lista filtrada. Nesse caso seguimos para
+          // o fallback loadSpecificConversation, que a carrega direto por ID.
 
           // 🔍 VERIFICAR: Se conversa UUID existe na lista carregada
           let targetConversation = conversations.getConversation(conversationIdStr);
@@ -473,6 +478,22 @@ const Chat = () => {
     [assignmentHandlers],
   );
 
+  const handleUnassignAgent = useCallback(
+    async (conversation: Conversation) => {
+      await assignmentHandlers.handleUnassignAgent(conversation);
+      await reloadCurrentFilters();
+    },
+    [assignmentHandlers, reloadCurrentFilters],
+  );
+
+  const handleUnassignTeam = useCallback(
+    async (conversation: Conversation) => {
+      await assignmentHandlers.handleUnassignTeam(conversation);
+      await reloadCurrentFilters();
+    },
+    [assignmentHandlers, reloadCurrentFilters],
+  );
+
   const handleDeleteConversation = useCallback(
     (conversation: Conversation) => {
       const result = conversationHandlers.handleDeleteConversation(conversation);
@@ -515,6 +536,10 @@ const Chat = () => {
         assignmentType,
         selectedIds,
       );
+      // Recarrega a lista pra refletir o novo vínculo na hora (assignee_id/team_id).
+      // O endpoint de atribuição não devolve a conversa completa, então sem esse
+      // reload o item "Desvincular" só apareceria depois de atualizar a página.
+      await reloadCurrentFilters();
     } catch (error) {
       console.error('Error in assignment:', error);
       throw error; // Re-throw to let modal handle it
@@ -679,6 +704,8 @@ const Chat = () => {
           onAssignAgent={handleAssignAgent}
           onAssignTeam={handleAssignTeam}
           onAssignTag={handleAssignTag}
+          onUnassignAgent={handleUnassignAgent}
+          onUnassignTeam={handleUnassignTeam}
           onDeleteConversation={handleDeleteConversation}
         />
 
@@ -712,9 +739,27 @@ const Chat = () => {
                 onAssignAgent={handleAssignAgent}
                 onAssignTeam={handleAssignTeam}
                 onAssignTag={handleAssignTag}
+                onUnassignAgent={handleUnassignAgent}
+                onUnassignTeam={handleUnassignTeam}
                 onDeleteConversation={handleDeleteConversation}
                 unreadCount={conversations.getUnreadCount(selectedConversation.id) || 0}
               />
+
+              {/* Leilão — lead sem dono, quem assumir primeiro leva */}
+              {!selectedConversation.assignee_id && (
+                <ClaimLeadBanner
+                  conversationId={String(selectedConversation.id)}
+                  onClaimed={() => conversations.loadSpecificConversation(String(selectedConversation.id))}
+                />
+              )}
+
+              {/* Presença — outro agente está nessa conversa */}
+              {othersPresent.length > 0 && (
+                <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-400">
+                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                  {othersPresent.map(u => u.name).join(', ')} também {othersPresent.length === 1 ? 'está' : 'estão'} nesta conversa
+                </div>
+              )}
 
               {/* Chat Tabs - Show tabs for conversation type dashboard apps */}
               <ChatTabs

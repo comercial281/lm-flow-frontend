@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
   ScrollArea,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { MCPServer, MCPServerConfig } from '@/types/ai';
 import { Server, Settings, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';

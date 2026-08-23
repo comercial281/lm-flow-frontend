@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Badge } from '@evoapi/design-system';
+import { Badge } from '@/components/ui/ds';
 import { CheckCircle2, Clock, AlertCircle, ListTodo } from 'lucide-react';
 import { isPast, isToday, addHours } from 'date-fns';
 import type { PipelineTask } from '@/types/analytics';

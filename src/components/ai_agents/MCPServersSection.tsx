@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import {
   Button,
   Badge,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import {
   Server,
   Plus,

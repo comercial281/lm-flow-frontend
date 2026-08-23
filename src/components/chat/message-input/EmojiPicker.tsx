@@ -1,7 +1,12 @@
-import React, { useRef, useEffect } from 'react';
-import EmojiPickerReact, { EmojiClickData, Theme } from 'emoji-picker-react';
+import React, { Suspense, useRef, useEffect } from 'react';
+import type { EmojiClickData, Theme } from 'emoji-picker-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useIsDarkClass } from '@/hooks/chat/useIsDarkClass';
+import { lazyWithRetry } from '@/utils/chunkReload';
+
+const EmojiPickerReact = lazyWithRetry(() =>
+  import('emoji-picker-react').then((m) => ({ default: m.default })),
+);
 
 interface EmojiPickerProps {
   onEmojiSelect: (emoji: string) => void;
@@ -17,7 +22,8 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose, isOpe
   const isDark = useIsDarkClass();
 
   // Converter tema do sistema para o tema do EmojiPicker
-  const emojiTheme = isDark ? Theme.DARK : Theme.LIGHT;
+  // (valores 'dark'/'light' espelham o enum Theme da lib, sem importá-la em runtime)
+  const emojiTheme = (isDark ? 'dark' : 'light') as Theme;
 
   // Fechar o picker ao clicar fora dele
   useEffect(() => {
@@ -79,19 +85,21 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose, isOpe
       }}
     >
       <div className="bg-background border-2 border-border rounded-lg shadow-2xl overflow-hidden">
-        <EmojiPickerReact
-          onEmojiClick={handleEmojiClick}
-          theme={emojiTheme}
-          searchPlaceHolder={t('messageInput.emojiPicker.searchPlaceholder')}
-          width="350px"
-          height="400px"
-          previewConfig={{
-            showPreview: false,
-          }}
-          skinTonesDisabled={false}
-          searchDisabled={false}
-          lazyLoadEmojis={true}
-        />
+        <Suspense fallback={null}>
+          <EmojiPickerReact
+            onEmojiClick={handleEmojiClick}
+            theme={emojiTheme}
+            searchPlaceHolder={t('messageInput.emojiPicker.searchPlaceholder')}
+            width="350px"
+            height="400px"
+            previewConfig={{
+              showPreview: false,
+            }}
+            skinTonesDisabled={false}
+            searchDisabled={false}
+            lazyLoadEmojis={true}
+          />
+        </Suspense>
       </div>
     </div>
   );

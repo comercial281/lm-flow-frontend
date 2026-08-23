@@ -1,4 +1,4 @@
-import { Badge } from '@evoapi/design-system';
+import { Badge } from '@/components/ui/ds';
 import { User, Building2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 

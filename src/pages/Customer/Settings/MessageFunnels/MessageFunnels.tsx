@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type MouseEvent } from 'react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -9,25 +9,30 @@ import {
   DialogTitle,
   Button,
   Input,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import {
   Rocket, Search, Plus, Edit2, Trash2, Type, Mic, Image as ImageIcon,
-  Video, FileText, Pause,
+  Video, FileText, Pause, Archive, ArchiveRestore, Clock, Contact as ContactIcon, Sticker, Folder, FolderPlus, Pencil,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import MessageFunnelEditor from '@/components/messageFunnels/MessageFunnelEditor';
-import { messageFunnelsService } from '@/services/messageFunnels/messageFunnelsService';
-import type { MessageFunnel, FunnelItemKind } from '@/types/messageFunnels';
+import { messageFunnelsService, messageFunnelFoldersService } from '@/services/messageFunnels/messageFunnelsService';
+import type { MessageFunnel, FunnelItemKind, MessageFunnelFolder } from '@/types/messageFunnels';
 
 const KIND_ICONS: Record<FunnelItemKind, typeof Type> = {
-  text: Type, audio: Mic, image: ImageIcon, video: Video, document: FileText,
+  text: Type, audio: Mic, image: ImageIcon, video: Video, document: FileText, delay: Clock,
+  contact: ContactIcon, sticker: Sticker,
 };
 const KIND_COLORS: Record<FunnelItemKind, string> = {
-  text: '#7c3aed', audio: '#00a884', image: '#3b82f6', video: '#f43f5e', document: '#f97316',
+  text: '#7c3aed', audio: '#00a884', image: '#3b82f6', video: '#f43f5e', document: '#f97316', delay: '#64748b',
+  contact: '#0891b2', sticker: '#f59e0b',
 };
 
 export default function MessageFunnels() {
   const [funnels, setFunnels] = useState<MessageFunnel[]>([]);
+  const [folders, setFolders] = useState<MessageFunnelFolder[]>([]);
+  // undefined = mostrando a grade de pastas; null = "Sem pasta"; string = dentro de uma pasta.
+  const [folderId, setFolderId] = useState<string | null | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [editorOpen, setEditorOpen] = useState(false);
@@ -38,14 +43,18 @@ export default function MessageFunnels() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await messageFunnelsService.list();
+      const [list, fldrs] = await Promise.all([
+        messageFunnelsService.list(folderId !== undefined ? { folderId } : {}),
+        messageFunnelFoldersService.list(),
+      ]);
       setFunnels(list);
+      setFolders(fldrs);
     } catch {
       toast.error('Erro ao carregar funis');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [folderId]);
 
   useEffect(() => {
     load();
@@ -62,6 +71,10 @@ export default function MessageFunnels() {
     setEditing(null);
     setEditorOpen(true);
   };
+
+  // Novo funil nasce na pasta onde a pessoa está, se estiver dentro de uma —
+  // mesma regra do Hub (14/08): "o que for criado dentro dela já nasce nela".
+  const pendingFolderId = folderId ?? null;
 
   const handleEdit = (f: MessageFunnel) => {
     setEditing(f);
@@ -84,6 +97,51 @@ export default function MessageFunnels() {
       toast.error('Erro ao remover funil');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // Arquivar = active:false (some do chat, fica em Settings). Desarquivar = active:true.
+  const handleToggleArchive = async (f: MessageFunnel) => {
+    try {
+      await messageFunnelsService.update(f.id, { active: !f.active });
+      toast.success(f.active ? 'Funil arquivado' : 'Funil reativado');
+      await load();
+    } catch {
+      toast.error('Erro ao arquivar funil');
+    }
+  };
+
+  const createFolder = async () => {
+    const name = window.prompt('Nome da pasta:');
+    if (!name?.trim()) return;
+    try {
+      await messageFunnelFoldersService.create({ name: name.trim() });
+      load();
+    } catch {
+      toast.error('Erro ao criar pasta');
+    }
+  };
+
+  const renameFolder = async (f: MessageFunnelFolder, ev: MouseEvent) => {
+    ev.stopPropagation();
+    const name = window.prompt('Novo nome da pasta:', f.name);
+    if (!name?.trim() || name.trim() === f.name) return;
+    try {
+      await messageFunnelFoldersService.update(f.id, { name: name.trim() });
+      load();
+    } catch {
+      toast.error('Erro ao renomear pasta');
+    }
+  };
+
+  const deleteFolder = async (f: MessageFunnelFolder, ev: MouseEvent) => {
+    ev.stopPropagation();
+    if (!window.confirm(`Excluir a pasta "${f.name}"? Os funis de dentro voltam pra "Sem pasta".`)) return;
+    try {
+      await messageFunnelFoldersService.destroy(f.id);
+      load();
+    } catch {
+      toast.error('Erro ao excluir pasta');
     }
   };
 
@@ -117,6 +175,42 @@ export default function MessageFunnels() {
         />
       </div>
 
+      {/* Pastas — pasta é LUGAR (entra), não filtro (mesma regra do Hub, 14/08) */}
+      {folderId === undefined && !search.trim() && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
+          {folders.map(f => (
+            <div key={f.id} className="group relative flex items-center gap-2 rounded-lg border border-border p-3 hover:border-primary transition-colors">
+              <button onClick={() => setFolderId(f.id)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                <Folder className="h-4 w-4 shrink-0" style={{ color: f.color }} />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{f.name}</div>
+                  <div className="text-xs text-muted-foreground">{f.funnels_count} itens · {f.enabled_count} ativos</div>
+                </div>
+              </button>
+              <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                <button onClick={ev => renameFolder(f, ev)} title="Renomear" className="p-1 rounded hover:bg-accent">
+                  <Pencil className="h-3 w-3 text-muted-foreground" />
+                </button>
+                <button onClick={ev => deleteFolder(f, ev)} title="Excluir pasta" className="p-1 rounded hover:bg-accent">
+                  <Trash2 className="h-3 w-3 text-muted-foreground" />
+                </button>
+              </div>
+            </div>
+          ))}
+          <button
+            onClick={createFolder}
+            className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+          >
+            <FolderPlus className="h-4 w-4" /> Nova pasta
+          </button>
+        </div>
+      )}
+      {folderId !== undefined && (
+        <button onClick={() => setFolderId(undefined)} className="text-xs text-muted-foreground hover:text-foreground mb-3 self-start">
+          ← Voltar pras pastas
+        </button>
+      )}
+
       {/* Lista */}
       <div className="flex-1 overflow-auto">
         {loading ? (
@@ -139,6 +233,7 @@ export default function MessageFunnels() {
                 funnel={funnel}
                 onEdit={() => handleEdit(funnel)}
                 onDelete={() => handleDelete(funnel)}
+                onToggleArchive={() => handleToggleArchive(funnel)}
               />
             ))}
           </div>
@@ -151,6 +246,7 @@ export default function MessageFunnels() {
         onClose={() => { setEditorOpen(false); setEditing(null); }}
         funnel={editing ?? undefined}
         onSaved={() => load()}
+        defaultFolderId={pendingFolderId}
       />
 
       {/* Delete confirm */}
@@ -182,9 +278,10 @@ interface FunnelCardProps {
   funnel: MessageFunnel;
   onEdit: () => void;
   onDelete: () => void;
+  onToggleArchive: () => void;
 }
 
-function FunnelCard({ funnel, onEdit, onDelete }: FunnelCardProps) {
+function FunnelCard({ funnel, onEdit, onDelete, onToggleArchive }: FunnelCardProps) {
   return (
     <div className="border border-border rounded-lg p-4 hover:border-primary/40 transition-colors flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
@@ -205,6 +302,16 @@ function FunnelCard({ funnel, onEdit, onDelete }: FunnelCardProps) {
         <div className="flex items-center gap-0.5 shrink-0">
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit} aria-label="Editar">
             <Edit2 size={13} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={onToggleArchive}
+            aria-label={funnel.active ? 'Arquivar' : 'Reativar'}
+            title={funnel.active ? 'Arquivar (some do chat)' : 'Reativar'}
+          >
+            {funnel.active ? <Archive size={13} /> : <ArchiveRestore size={13} />}
           </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onDelete} aria-label="Excluir">
             <Trash2 size={13} />

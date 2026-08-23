@@ -10,7 +10,7 @@ import {
   Badge,
   Input,
   Checkbox,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Search, Server, Tag, Clock, RotateCcw, Plus, Wand } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { listCustomMcpServers } from '@/services/agents';

@@ -15,7 +15,7 @@ import {
   SelectValue,
   Badge,
   Button,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Bot, Key, MessageSquare, Settings } from 'lucide-react';
 import { ApiKey } from '@/types/agents';
 import { ApiKeysModal } from '@/components/ApiKeysModal';

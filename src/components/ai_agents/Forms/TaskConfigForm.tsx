@@ -21,7 +21,7 @@ import {
   DialogTitle,
   DialogFooter,
   Checkbox,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Maximize2, Save, X, ArrowDown, List, Search, Edit, PenTool, Loader2 } from 'lucide-react';
 import { listAgents } from '@/services/agents';
 import { useLanguage } from '@/hooks/useLanguage';

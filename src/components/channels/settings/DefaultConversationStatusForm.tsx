@@ -1,4 +1,4 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Label } from '@evoapi/design-system';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Label } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
 import { MessageCircle } from 'lucide-react';
 

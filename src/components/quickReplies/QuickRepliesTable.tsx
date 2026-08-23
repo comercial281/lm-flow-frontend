@@ -1,4 +1,5 @@
 import { Edit, Trash2, Share2 } from 'lucide-react';
+import { formatDateBR } from '@/utils/dateUtils';
 import BaseTable from '@/components/base/BaseTable';
 import type { TableColumn } from '@/components/base/BaseTable';
 import type { QuickReply } from '@/types/knowledge';
@@ -67,7 +68,7 @@ export default function QuickRepliesTable({
       sortable: true,
       render: (item: Record<string, any>) => (
         <span className="text-sm text-muted-foreground">
-          {new Date(item.created_at).toLocaleDateString('pt-BR')}
+          {formatDateBR(item.created_at)}
         </span>
       ),
     },

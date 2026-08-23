@@ -15,7 +15,7 @@ import {
   SelectValue,
   Textarea,
   Switch,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Plus, X, Settings, Pencil, Check, Loader2 } from 'lucide-react';
 import { customAttributesService } from '@/services/customAttributes/customAttributesService';
 import { CustomAttributeDefinition, AttributeModel } from '@/types/settings';

@@ -167,7 +167,7 @@
         "readMessages": "Marcar Mensagens como Lidas",
         "readStatus": "Ler Status",
         "groupsIgnore": "Ignorar Grupos",
-        "enableSyncFeatures": "Habilitar Sincronização",
+        "enableSyncFeatures": "Importar a agenda do celular (todos os contatos)",
         "syncFullHistory": "Sincronizar Histórico Completo",
         "msgCall": {
           "label": "Mensagem para Chamadas",

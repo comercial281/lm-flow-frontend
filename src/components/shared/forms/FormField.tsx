@@ -1,4 +1,4 @@
-import { Input, Label } from '@evoapi/design-system';
+import { Input, Label } from '@/components/ui/ds';
 
 interface FormFieldProps {
   id: string;

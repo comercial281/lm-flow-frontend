@@ -6,7 +6,7 @@ import {
   Label,
   Alert,
   AlertDescription,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Shield, Smartphone, Mail, RefreshCw, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 

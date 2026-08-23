@@ -7,9 +7,9 @@ import {
   DialogTitle,
   Button,
   Input,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Copy, Eye, EyeOff, Key } from 'lucide-react';
-import { Badge } from '@evoapi/design-system';
+import { Badge } from '@/components/ui/ds';
 import type { AccessToken } from '@/types/auth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { parseScopesFromAPI } from '@/services/auth/accessTokensService';

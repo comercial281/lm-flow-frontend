@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -26,7 +27,7 @@ import {
   Textarea,
   Skeleton,
   Switch,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   Plus,
@@ -153,10 +154,7 @@ const TemplateFormModal: React.FC<{
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="!max-w-[95vw] !w-[95vw] max-h-[90vh] overflow-hidden"
-        style={{ maxWidth: '95vw', width: '95vw' }}
-      >
+      <DialogContent size="wide" className="overflow-hidden">
         <DialogHeader>
           <DialogTitle>
             {mode === 'create'
@@ -825,7 +823,7 @@ const MessageTemplateForm: React.FC<MessageTemplateFormProps> = ({
                   <TableCell>{template.language}</TableCell>
                   <TableCell>
                     {template.created_at
-                      ? new Date(template.created_at).toLocaleDateString('pt-BR')
+                      ? formatDateBR(template.created_at)
                       : '-'}
                   </TableCell>
                   <TableCell>

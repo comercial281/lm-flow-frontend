@@ -4,7 +4,7 @@ import {
   DialogHeader,
   DialogTitle,
   ScrollArea,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Team, TeamFormData } from '@/types/users';
 import TeamForm from './TeamForm';
 import { useLanguage } from '@/hooks/useLanguage';

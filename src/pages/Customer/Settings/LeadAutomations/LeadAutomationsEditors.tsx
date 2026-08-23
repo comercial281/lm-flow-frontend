@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Input, Label as UILabel, Textarea } from '@evoapi/design-system';
+import { Input, Label as UILabel, Textarea, Button } from '@/components/ui/ds';
+import { Plus, Pencil } from 'lucide-react';
 
+import MessageFunnelEditor from '@/components/messageFunnels/MessageFunnelEditor';
+import { messageFunnelsService } from '@/services/messageFunnels/messageFunnelsService';
+import type { MessageFunnel } from '@/types/messageFunnels';
 import { labelsService } from '@/services/contacts/labelsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import usersService from '@/services/users/usersService';
@@ -10,10 +14,15 @@ import type { Label as ContactLabel } from '@/types/settings/labels';
 import type { Pipeline, PipelineStage } from '@/types/analytics/pipelines';
 import type { User } from '@/types/users';
 import type { QuickReply } from '@/types/knowledge';
-import type {
-  LeadAutomationCondition,
-  LeadAutomationAction,
+import {
+  leadAutomationService,
+  type LeadAutomationCondition,
+  type LeadAutomationAction,
+  type AdOrigin,
+  type FormOrigin,
+  type EvolutionInstance,
 } from '@/services/leadAutomation/leadAutomationService';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 
 // ============================================================================
 // Catálogos por gatilho/ação
@@ -21,9 +30,12 @@ import type {
 
 // Triggers cujo context emitido tem campos filtraveis (LeadFollowupListener etc).
 const TRIGGERS_WITH_CONDITION = new Set([
+  'lead.created',
+  'lead.campaign_received',
   'lead.tag_added',
   'lead.message_received',
   'lead.stage_changed',
+  'lead.no_reply_after',
 ]);
 
 export const triggerNeedsCondition = (trigger: string): boolean =>
@@ -36,6 +48,8 @@ const ACTIONS_REQUIRING_PARAMS: Record<string, string[]> = {
   send_image:              ['media_url'],
   send_video:              ['media_url'],
   send_document:           ['media_url'],
+  send_sticker:            ['media_url'],
+  send_message_funnel:     ['funnel_id'],
   start_followup_sequence: ['sequence_slug'],
   assign_broker:           ['user_id'],
   add_label:               ['label_id'],
@@ -43,9 +57,11 @@ const ACTIONS_REQUIRING_PARAMS: Record<string, string[]> = {
   move_pipeline_stage:     ['stage_id'],
   create_task:             ['title'],
   notify_group:            ['group_jid', 'message'],
+  notify_user:             ['user_id', 'message'],
   send_quick_reply:        ['quick_reply_id'],
   notify_broker:           ['message'],
   notify_gestor:           ['message'],
+  notify_push:             ['user_ids', 'message'],
   // assign_via_roleta e wait não têm params obrigatórios
 };
 
@@ -60,17 +76,42 @@ export interface AutomationResources {
   pipelines: Pipeline[];
   stagesByPipeline: Record<string, PipelineStage[]>;
   quickReplies: QuickReply[];
+  adOrigins: AdOrigin[];
+  formOrigins: FormOrigin[];
+  messageFunnels: MessageFunnel[];
+  evolutionInstances: EvolutionInstance[];
+  reloadFunnels: () => void;
+  reloadLabels: () => void;
   loading: boolean;
 }
 
 export function useAutomationResources(enabled: boolean): AutomationResources {
+  const isSuperAdmin = useIsSuperAdmin();
   const [labels, setLabels] = useState<ContactLabel[]>([]);
   const [sequences, setSequences] = useState<FollowupSequence[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [stagesByPipeline, setStagesByPipeline] = useState<Record<string, PipelineStage[]>>({});
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>([]);
+  const [adOrigins, setAdOrigins] = useState<AdOrigin[]>([]);
+  const [formOrigins, setFormOrigins] = useState<FormOrigin[]>([]);
+  const [messageFunnels, setMessageFunnels] = useState<MessageFunnel[]>([]);
+  const [evolutionInstances, setEvolutionInstances] = useState<EvolutionInstance[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Recarrega a lista de funis (usado após criar/editar um funil dentro da automação).
+  const reloadFunnels = () => {
+    messageFunnelsService.list({ activeOnly: false })
+      .then(list => setMessageFunnels(list ?? []))
+      .catch(() => { /* funis são opcionais — não trava a tela */ });
+  };
+
+  // Recarrega o catálogo de etiquetas (usado após criar uma etiqueta nova inline).
+  const reloadLabels = () => {
+    labelsService.getLabels()
+      .then(res => setLabels(res.data ?? []))
+      .catch(() => { /* catálogo é enriquecimento — não trava a tela */ });
+  };
 
   useEffect(() => {
     if (!enabled) return;
@@ -78,12 +119,16 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     setLoading(true);
 
     (async () => {
-      const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes] = await Promise.allSettled([
+      const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes, funnelsRes, evoRes] = await Promise.allSettled([
         labelsService.getLabels(),
         followupSequencesService.getAll(),
         usersService.getUsers(),
         pipelinesService.getPipelines(),
         quickRepliesService.getQuickReplies(),
+        leadAutomationService.getAdOrigins(),
+        leadAutomationService.getFormOrigins(),
+        messageFunnelsService.list({ activeOnly: false }),
+        isSuperAdmin ? leadAutomationService.getEvolutionInstances() : Promise.resolve([]),
       ]);
 
       if (cancelled) return;
@@ -92,6 +137,10 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
       if (seqRes.status === 'fulfilled') setSequences(seqRes.value ?? []);
       if (usersRes.status === 'fulfilled') setUsers(usersRes.value.data ?? []);
       if (qrRes.status === 'fulfilled') setQuickReplies(qrRes.value.data ?? []);
+      if (adRes.status === 'fulfilled') setAdOrigins(adRes.value ?? []);
+      if (formRes.status === 'fulfilled') setFormOrigins(formRes.value ?? []);
+      if (funnelsRes.status === 'fulfilled') setMessageFunnels(funnelsRes.value ?? []);
+      if (evoRes.status === 'fulfilled') setEvolutionInstances(evoRes.value ?? []);
 
       if (pipelinesRes.status === 'fulfilled') {
         const list = pipelinesRes.value.data ?? [];
@@ -114,7 +163,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     return () => { cancelled = true; };
   }, [enabled]);
 
-  return { labels, sequences, users, pipelines, stagesByPipeline, quickReplies, loading };
+  return { labels, sequences, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, evolutionInstances, reloadFunnels, reloadLabels, loading };
 }
 
 // ============================================================================
@@ -131,8 +180,145 @@ interface ConditionEditorProps {
 const baseSelectClass =
   'mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
 
+// Estado da instância em português. "open" é o que a Evolution chama de conectada;
+// escolher uma desconectada é o caminho mais curto pro aviso não chegar.
+function instanceStatusLabel(status: string): string {
+  switch (status) {
+    case 'open':       return 'conectada ✓';
+    case 'connecting': return 'conectando…';
+    case 'close':      return 'desconectada ⚠️';
+    default:           return status || 'estado desconhecido';
+  }
+}
+
 export function ConditionEditor({ trigger, condition, onChange, resources }: ConditionEditorProps) {
   if (!triggerNeedsCondition(trigger)) return null;
+
+  // --- lead.created ---
+  // Origem do lead (opcional). Backend resolve 'source' do ad_referral no Executor:
+  // formulario (Meta Lead Ads) | lead_whats_meta (CTWA) | organico.
+  // Quando origem = Formulário, dá pra afunilar por form_id (qual formulário).
+  // Condição emitida (sempre 1 só, o backend casa por form_id ou por source):
+  //   form X selecionado → { form_id eq X }   (já implica formulário)
+  //   formulário sem form específico → { source eq formulario }
+  //   outras origens → { source eq <origem> }
+  if (trigger === 'lead.created') {
+    const field = condition?.field;
+    const rawValue = typeof condition?.value === 'string' ? condition.value : '';
+    const origin = field === 'form_id' ? 'formulario' : (field === 'source' ? rawValue : '');
+    // Formulários selecionados: aceita array (operator "in") ou valor único legado (eq).
+    const selectedForms: string[] = field === 'form_id'
+      ? (Array.isArray(condition?.value) ? condition!.value : (rawValue ? [rawValue] : []))
+      : [];
+
+    const commitOrigin = (o: string) => {
+      if (!o) return onChange(null);
+      onChange({ field: 'source', operator: 'eq', value: o });
+    };
+    const commitForms = (ids: string[]) => {
+      // Nenhum marcado = qualquer formulário (só filtra por origem).
+      onChange(ids.length
+        ? { field: 'form_id', operator: 'in', value: ids }
+        : { field: 'source', operator: 'eq', value: 'formulario' });
+    };
+    const toggleForm = (fid: string) => {
+      commitForms(selectedForms.includes(fid)
+        ? selectedForms.filter(x => x !== fid)
+        : [...selectedForms, fid]);
+    };
+
+    return (
+      <div className="space-y-2">
+        <div>
+          <UILabel>Origem do lead (opcional)</UILabel>
+          <select value={origin} onChange={e => commitOrigin(e.target.value)} className={baseSelectClass}>
+            <option value="">Qualquer origem</option>
+            <option value="formulario">Formulário (Meta Lead Ads)</option>
+            <option value="formulario_site">Formulário do site / landing</option>
+            <option value="lead_whats_meta">Lead Whats Meta (anúncio no WhatsApp)</option>
+            <option value="organico">Orgânico (sem anúncio)</option>
+          </select>
+          <p className="text-xs text-muted-foreground mt-1">
+            Em branco = qualquer lead novo. <strong>Formulário</strong>: veio de um formulário de anúncio.{' '}
+            <strong>Formulário do site</strong>: preencheu um formulário do site ou de uma landing.{' '}
+            <strong>Lead Whats Meta</strong>: clicou no anúncio e caiu direto no WhatsApp.
+          </p>
+        </div>
+
+        {origin === 'formulario' && (
+          <div>
+            <UILabel>Quais formulários? (opcional)</UILabel>
+            <div className="mt-1 max-h-52 overflow-y-auto rounded-md border border-border divide-y divide-border">
+              {resources.formOrigins.length === 0 ? (
+                <p className="text-xs text-muted-foreground p-2">
+                  Nenhum formulário conectado ainda — veja Configurações → Formulários (Meta).
+                </p>
+              ) : (
+                resources.formOrigins.map(f => (
+                  <label
+                    key={f.form_id}
+                    className="flex items-center gap-2 px-2.5 py-2 cursor-pointer hover:bg-muted/50 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedForms.includes(f.form_id)}
+                      onChange={() => toggleForm(f.form_id)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    <span className="truncate">
+                      {(f.form_name || f.form_id)}
+                      {f.count > 0 ? ` · ${f.count} lead${f.count === 1 ? '' : 's'}` : ''}
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Nenhum marcado = qualquer formulário. Marque um ou mais pra esse fluxo valer só pros leads
+              daqueles formulários.
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // --- lead.campaign_received (Lead Whats Meta / CTWA) ---
+  // Funil por anúncio: filtra por ad_id. O Executor resolve ad_id do ad_referral.
+  if (trigger === 'lead.campaign_received') {
+    const value = typeof condition?.value === 'string' ? condition.value : '';
+    const commit = (v: string) =>
+      onChange(v ? { field: 'ad_id', operator: 'eq', value: v } : null);
+    const withId = resources.adOrigins.filter(o => o.ad_id);
+    return (
+      <div className="space-y-2">
+        <div>
+          <UILabel>Qual anúncio? (opcional)</UILabel>
+          <select value={value} onChange={e => commit(e.target.value)} className={baseSelectClass}>
+            <option value="">Qualquer anúncio (todo lead que veio de anúncio no WhatsApp)</option>
+            {withId.map(o => (
+              <option key={o.ad_id!} value={o.ad_id!}>
+                {(o.title || o.campaign_name || o.ad_id)} · {o.count} lead{o.count === 1 ? '' : 's'}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground mt-1">
+            Em branco = vale pra qualquer anúncio. Escolha um anúncio pra esse fluxo valer só pra ele.
+            {withId.length === 0 && ' (Nenhum anúncio detectado ainda — cole o ID abaixo ou espere chegar lead de anúncio.)'}
+          </p>
+        </div>
+        <div>
+          <UILabel>Ou cole o ID do anúncio</UILabel>
+          <Input
+            value={value}
+            onChange={e => commit(e.target.value)}
+            placeholder="Ex: 120210..."
+            className="mt-1"
+          />
+        </div>
+      </div>
+    );
+  }
 
   // --- lead.tag_added ---
   // Backend emite context { contact_id, conversation_id, label: <nome da tag> }
@@ -159,6 +345,31 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
             Nenhuma etiqueta cadastrada. Crie em Configurações &rarr; Etiquetas.
           </p>
         )}
+      </div>
+    );
+  }
+
+  // --- lead.no_reply_after ---
+  // Dispatcher (Followup::NoReplyEnrollJob) roda o executor com context[no_reply_minutes]=decorridos.
+  // A condição no_reply_minutes gte X define o tempo (editável aqui).
+  if (trigger === 'lead.no_reply_after') {
+    const minutes = condition?.field === 'no_reply_minutes' ? (Number(condition.value) || 30) : 30;
+    return (
+      <div>
+        <UILabel>Sem resposta após quantos minutos? *</UILabel>
+        <Input
+          type="number"
+          min={1}
+          value={minutes}
+          onChange={e =>
+            onChange({ field: 'no_reply_minutes', operator: 'gte', value: String(parseInt(e.target.value) || 1) })
+          }
+          className="mt-1"
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Dispara quando o lead recebeu o 1º contato e não respondeu nesse tempo (ex: 30 = meia hora).
+          Edite aqui quando quiser. A ação típica é "Adicionar etiqueta: follow-up".
+        </p>
       </div>
     );
   }
@@ -249,12 +460,150 @@ interface ActionEditorProps {
   resources: AutomationResources;
 }
 
+// Variáveis interpoladas pelo backend (LeadAutomation::Executor#interpolate).
+const MESSAGE_VARS: { label: string; token: string }[] = [
+  { label: 'Nome',          token: '{{nome}}' },
+  { label: 'Nome completo', token: '{{nome_completo}}' },
+  { label: 'Telefone',      token: '{{telefone}}' },
+  { label: 'E-mail',        token: '{{email}}' },
+  { label: 'Data',          token: '{{data}}' },
+  { label: 'Hora',          token: '{{hora}}' },
+  { label: 'Link do card',  token: '{{link_do_card}}' },
+  { label: 'Origem',        token: '{{origem}}' },
+  { label: 'Campanha',      token: '{{campanha}}' },
+  { label: 'Conjunto',      token: '{{conjunto}}' },
+  { label: 'Anúncio',       token: '{{anuncio}}' },
+  { label: 'Título anúncio', token: '{{titulo_anuncio}}' },
+  { label: 'Plataforma',    token: '{{plataforma}}' },
+  { label: 'Respostas form', token: '{{respostas}}' },
+];
+
+// Chips de variável: 1 clique insere o token no campo. Reutilizável em msg/legenda/notificações.
+function VariableChips({ onInsert }: { onInsert: (token: string) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1 mt-1.5">
+      <span className="text-xs text-muted-foreground mr-1">Inserir variável:</span>
+      {MESSAGE_VARS.map(v => (
+        <button
+          key={v.token}
+          type="button"
+          onClick={() => onInsert(v.token)}
+          className="text-xs px-2 py-0.5 rounded-full border border-input bg-muted/40 hover:bg-muted transition-colors"
+        >
+          {v.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function ActionEditor({ action, onChange, resources }: ActionEditorProps) {
   const params = (action.params ?? {}) as Record<string, string | number>;
   const setParam = (key: string, value: string | number) =>
     onChange({ ...action, params: { ...params, [key]: value } });
+  const appendToParam = (key: string, token: string) =>
+    setParam(key, `${String(params[key] ?? '')}${token}`);
+  const isSuperAdmin = useIsSuperAdmin();
+
+  // Grupos de WhatsApp pro dropdown do "Notificar grupo" (carrega da instância escolhida).
+  const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  // Por que a lista veio vazia (instância errada, fora do ar, sem grupo). Sem
+  // isso o seletor só ficava sem opção, e não dava pra saber o que consertar.
+  const [groupsReason, setGroupsReason] = useState<string | null>(null);
+  // Editor de Funil embutido (ação "Disparar funil de mensagens"): reusa o MESMO
+  // componente do chat — subir mídia, gravar áudio, delay por passo, variáveis, reordenar.
+  const [funnelEditorOpen, setFunnelEditorOpen] = useState(false);
+  const [funnelToEdit, setFunnelToEdit] = useState<MessageFunnel | undefined>(undefined);
+  const instanceParam = String(params.instance ?? '');
+  useEffect(() => {
+    if (action.type !== 'notify_group') return;
+    let cancelled = false;
+    setLoadingGroups(true);
+    leadAutomationService
+      .getGroupsResult(instanceParam || undefined)
+      .then(r => { if (!cancelled) { setGroups(r.groups); setGroupsReason(r.reason); } })
+      .catch(() => {
+        if (!cancelled) {
+          setGroups([]);
+          setGroupsReason('Não foi possível carregar os grupos agora. Tente de novo em instantes.');
+        }
+      })
+      .finally(() => { if (!cancelled) setLoadingGroups(false); });
+    return () => { cancelled = true; };
+  }, [action.type, instanceParam]);
+
+  // Usuários do sistema com WhatsApp cadastrado — pra mandar o lembrete no privado deles.
+  const usersWithWhatsapp = resources.users.filter(
+    u => String((u as { whatsapp_number?: string }).whatsapp_number ?? '').trim() !== '',
+  ) as Array<User & { whatsapp_number?: string }>;
 
   switch (action.type) {
+    // ----- send_message_funnel -----
+    // "Igual ao funil": escolhe um funil pronto OU cria/edita um na hora com o MESMO
+    // editor do chat. O backend (Executor#send_message_funnel) dispara cada passo.
+    case 'send_message_funnel': {
+      const selectedFunnelId = String(params.funnel_id ?? '');
+      const selectedFunnel = resources.messageFunnels.find(f => f.id === selectedFunnelId);
+      return (
+        <>
+          <Field
+            label="Funil de mensagens *"
+            hint="Mesma sequência que o atendente dispara no chat (texto, áudio, imagem, vídeo — com delay por passo)."
+          >
+            <select
+              value={selectedFunnelId}
+              onChange={e => setParam('funnel_id', e.target.value)}
+              className={baseSelectClass}
+            >
+              <option value="">Selecione um funil</option>
+              {resources.messageFunnels.map(f => (
+                <option key={f.id} value={f.id}>
+                  {f.name}{f.items?.length ? ` · ${f.items.length} passo${f.items.length === 1 ? '' : 's'}` : ''}
+                </option>
+              ))}
+            </select>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => { setFunnelToEdit(undefined); setFunnelEditorOpen(true); }}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> Criar funil novo
+              </Button>
+              {selectedFunnel && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setFunnelToEdit(selectedFunnel); setFunnelEditorOpen(true); }}
+                >
+                  <Pencil className="h-3.5 w-3.5 mr-1" /> Editar funil
+                </Button>
+              )}
+            </div>
+            {resources.messageFunnels.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Nenhum funil ainda. Clique em <strong>Criar funil novo</strong> pra montar (sobe mídia, grava áudio, delay por passo).
+              </p>
+            )}
+          </Field>
+
+          <MessageFunnelEditor
+            open={funnelEditorOpen}
+            onClose={() => setFunnelEditorOpen(false)}
+            funnel={funnelToEdit}
+            onSaved={saved => {
+              resources.reloadFunnels();
+              setParam('funnel_id', saved.id);
+              setFunnelEditorOpen(false);
+            }}
+          />
+        </>
+      );
+    }
+
     // ----- start_followup_sequence -----
     // Backend lookup: FollowupSequence.active.find_by(slug: slug). Value = slug, NÃO id.
     case 'start_followup_sequence':
@@ -278,24 +627,55 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     // ----- send_whatsapp_message -----
     case 'send_whatsapp_message':
       return (
-        <Field label="Mensagem *" hint="Use {{nome}} pra personalizar com o nome do lead.">
-          <Textarea
-            value={String(params.message ?? '')}
-            onChange={e => setParam('message', e.target.value)}
-            placeholder="Olá {{nome}}, tudo bem?"
-            rows={3}
-            className="mt-1 resize-none"
-          />
-        </Field>
+        <>
+          <Field label="Mensagem *" hint="Toque numa variável pra inserir. No envio ela vira o dado real do lead.">
+            <Textarea
+              value={String(params.message ?? '')}
+              onChange={e => setParam('message', e.target.value)}
+              placeholder="Olá {{nome}}, tudo bem?"
+              rows={3}
+              className="mt-1 resize-none"
+            />
+            <VariableChips onInsert={tok => appendToParam('message', tok)} />
+          </Field>
+          {isSuperAdmin && resources.evolutionInstances.length > 0 && (
+            <Field
+              label="Instância de envio (admin)"
+              hint="Só você vê este campo. Deixe em branco para usar a instância padrão do cliente."
+            >
+              <select
+                value={String(params.sender_instance ?? '')}
+                onChange={e => setParam('sender_instance', e.target.value)}
+                className={baseSelectClass}
+              >
+                <option value="">— Padrão do cliente —</option>
+                {resources.evolutionInstances.map(inst => (
+                  <option key={inst.name} value={inst.name}>
+                    {inst.name} {inst.status === 'open' ? '✓' : `(${inst.status})`}
+                  </option>
+                ))}
+              </select>
+              {params.sender_instance && (
+                <p className="text-xs text-amber-500 mt-1">
+                  ⚠️ Mensagem enviada pelo número da instância selecionada, não pelo número do cliente.
+                </p>
+              )}
+            </Field>
+          )}
+        </>
       );
 
     // ----- send_audio / send_image / send_video -----
     case 'send_audio':
     case 'send_image':
     case 'send_video':
+    case 'send_sticker':
       return (
         <>
-          <Field label="URL da mídia *">
+          <Field
+            label="URL da mídia *"
+            hint={action.type === 'send_sticker' ? 'PNG ou WebP. A Evolution converte pra figurinha.' : undefined}
+          >
             <Input
               value={String(params.media_url ?? '')}
               onChange={e => setParam('media_url', e.target.value)}
@@ -303,7 +683,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               className="mt-1"
             />
           </Field>
-          {action.type !== 'send_audio' && (
+          {(action.type === 'send_image' || action.type === 'send_video') && (
             <Field label="Legenda">
               <Input
                 value={String(params.caption ?? '')}
@@ -311,6 +691,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                 placeholder="Opcional"
                 className="mt-1"
               />
+              <VariableChips onInsert={tok => appendToParam('caption', tok)} />
             </Field>
           )}
         </>
@@ -423,13 +804,78 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     case 'notify_group':
       return (
         <>
-          <Field label="JID do grupo WhatsApp *" hint="ID do grupo no Evolution (ex: 120363xxxxxxxxxxx@g.us)">
-            <Input
+          {/* Instância: LISTA, não campo digitado. O nome tem de bater caractere a
+              caractere com o do painel — digitado, um espaço a mais devolvia lista
+              de grupos vazia e nada explicava o motivo. Quem não enxerga a lista
+              (cliente) continua com o campo livre. */}
+          <Field
+            label="Instância"
+            hint="De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central Operacional (LM01)."
+          >
+            {resources.evolutionInstances.length > 0 ? (
+              <select
+                value={String(params.instance ?? '')}
+                onChange={e => setParam('instance', e.target.value)}
+                className={baseSelectClass}
+              >
+                <option value="">— WhatsApp do próprio cliente —</option>
+                {resources.evolutionInstances.map(inst => (
+                  <option key={inst.name} value={inst.name}>
+                    {inst.name} — {instanceStatusLabel(inst.status)}
+                  </option>
+                ))}
+                {/* Valor já salvo que não veio na lista (instância renomeada/removida):
+                    aparecer como opção evita que salvar a regra o apague sem aviso. */}
+                {params.instance
+                  && !resources.evolutionInstances.some(i => i.name === params.instance) && (
+                  <option value={String(params.instance)}>
+                    {String(params.instance)} — não encontrada no servidor
+                  </option>
+                )}
+              </select>
+            ) : (
+              <Input
+                value={String(params.instance ?? '')}
+                onChange={e => setParam('instance', e.target.value)}
+                placeholder="Operacional (LM01)"
+                className="mt-1"
+              />
+            )}
+          </Field>
+          <Field label="Destino do lembrete *" hint={loadingGroups ? 'Carregando…' : 'O grupo do cliente, ou um usuário (vai no WhatsApp privado dele).'}>
+            <select
               value={String(params.group_jid ?? '')}
               onChange={e => setParam('group_jid', e.target.value)}
-              placeholder="…@g.us"
-              className="mt-1"
-            />
+              className={baseSelectClass}
+            >
+              <option value="">{loadingGroups ? 'Carregando…' : 'Selecione o destino'}</option>
+              {groups.length > 0 && (
+                <optgroup label="Grupo do cliente">
+                  {groups.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </optgroup>
+              )}
+              {usersWithWhatsapp.length > 0 && (
+                <optgroup label="Usuários (privado)">
+                  {usersWithWhatsapp.map(u => (
+                    <option key={u.id} value={String(u.whatsapp_number)}>{u.name} (privado)</option>
+                  ))}
+                </optgroup>
+              )}
+              {params.group_jid
+                && !groups.some(g => g.id === params.group_jid)
+                && !usersWithWhatsapp.some(u => String(u.whatsapp_number) === params.group_jid) && (
+                <option value={String(params.group_jid)}>{String(params.group_jid)}</option>
+              )}
+            </select>
+            {/* Lista vazia com o motivo: quase sempre é o nome da instância
+                escrito diferente do painel, ou a instância desconectada. */}
+            {!loadingGroups && groups.length === 0 && groupsReason && (
+              <p className="mt-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-700">
+                Nenhum grupo apareceu: {groupsReason}
+              </p>
+            )}
           </Field>
           <Field label="Mensagem *">
             <Textarea
@@ -438,9 +884,53 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               rows={3}
               className="mt-1 resize-none"
             />
+            <VariableChips onInsert={tok => appendToParam('message', tok)} />
           </Field>
         </>
       );
+
+    // ----- notify_user -----
+    // Backend: notify_user(user_id, message) -> manda no WhatsApp cadastrado do usuário.
+    case 'notify_user': {
+      const selected = resources.users.find(u => u.id === String(params.user_id ?? ''));
+      const selectedWa = (selected as unknown as { whatsapp_number?: string })?.whatsapp_number;
+      return (
+        <>
+          <Field label="Avisar qual usuário? *">
+            <select
+              value={String(params.user_id ?? '')}
+              onChange={e => setParam('user_id', e.target.value)}
+              className={baseSelectClass}
+            >
+              <option value="">Selecione um usuário</option>
+              {resources.users.map(u => {
+                const wa = (u as unknown as { whatsapp_number?: string }).whatsapp_number;
+                return (
+                  <option key={u.id} value={u.id}>
+                    {u.name}{wa ? ` (${wa})` : ' — sem WhatsApp cadastrado'}
+                  </option>
+                );
+              })}
+            </select>
+          </Field>
+          {selected && !selectedWa && (
+            <p className="text-xs text-red-500 mt-1">
+              Esse usuário não tem WhatsApp cadastrado. Cadastre em Configurações &gt; Usuários pra ele receber o lembrete.
+            </p>
+          )}
+          <Field label="Mensagem do lembrete *" hint="Enviada no WhatsApp do usuário escolhido. Toque numa variável pra inserir.">
+            <Textarea
+              value={String(params.message ?? '')}
+              onChange={e => setParam('message', e.target.value)}
+              placeholder="Novo lead do anúncio: {{nome_completo}} — {{telefone}}"
+              rows={3}
+              className="mt-1 resize-none"
+            />
+            <VariableChips onInsert={tok => appendToParam('message', tok)} />
+          </Field>
+        </>
+      );
+    }
 
     // ----- send_quick_reply -----
     case 'send_quick_reply':
@@ -518,6 +1008,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             rows={3}
             className="mt-1 resize-none"
           />
+          <VariableChips onInsert={tok => appendToParam('message', tok)} />
         </Field>
       );
 
@@ -535,8 +1026,59 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             rows={3}
             className="mt-1 resize-none"
           />
+          <VariableChips onInsert={tok => appendToParam('message', tok)} />
         </Field>
       );
+
+    // ----- notify_push -----
+    // Backend: notify_push(user_ids[], title, message) -> push no app (PWA/Modo Plantão) dos usuários.
+    case 'notify_push': {
+      const rawIds = (action.params as Record<string, unknown> | undefined)?.user_ids;
+      const selectedIds: string[] = Array.isArray(rawIds) ? rawIds.map(String) : [];
+      const setUserIds = (ids: string[]) =>
+        onChange({ ...action, params: { ...params, user_ids: ids } as unknown as Record<string, string | number> });
+      const toggleUser = (id: string) =>
+        setUserIds(selectedIds.includes(id) ? selectedIds.filter(x => x !== id) : [...selectedIds, id]);
+      return (
+        <>
+          <Field label="Notificar quais usuários? *" hint="Recebe o push só quem ativou o Modo Plantão no app/celular.">
+            <div className="mt-1 max-h-44 overflow-y-auto rounded-md border border-input bg-background divide-y divide-input">
+              {resources.users.length === 0 && (
+                <p className="text-xs text-muted-foreground p-2">Nenhum usuário cadastrado.</p>
+              )}
+              {resources.users.map(u => (
+                <label key={u.id} className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-muted/50">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(String(u.id))}
+                    onChange={() => toggleUser(String(u.id))}
+                  />
+                  <span>{u.name}</span>
+                </label>
+              ))}
+            </div>
+          </Field>
+          <Field label="Título da notificação" hint="Aparece em negrito no push. Padrão: LM Flow.">
+            <Input
+              value={String(params.title ?? '')}
+              onChange={e => setParam('title', e.target.value)}
+              placeholder="Novo lead!"
+              className="mt-1"
+            />
+          </Field>
+          <Field label="Mensagem do push *" hint="Texto do push. Toque numa variável pra inserir.">
+            <Textarea
+              value={String(params.message ?? '')}
+              onChange={e => setParam('message', e.target.value)}
+              placeholder="{{nome_completo}} acabou de entrar — {{telefone}}"
+              rows={3}
+              className="mt-1 resize-none"
+            />
+            <VariableChips onInsert={tok => appendToParam('message', tok)} />
+          </Field>
+        </>
+      );
+    }
 
     default:
       return null;
@@ -576,8 +1118,12 @@ export function validateRule(
   actions: LeadAutomationAction[],
 ): ValidationResult {
   if (triggerNeedsCondition(trigger)) {
-    // message_received é o único onde a condição é opcional (keyword vazia = qualquer msg).
-    const isOptional = trigger === 'lead.message_received';
+    // Condição opcional: message_received (keyword vazia = qualquer msg) e
+    // lead.created (origem vazia = qualquer lead novo).
+    const isOptional =
+      trigger === 'lead.message_received' ||
+      trigger === 'lead.created' ||
+      trigger === 'lead.campaign_received';
     const hasValue =
       conditions.length > 0 &&
       conditions[0].value !== '' &&
@@ -594,7 +1140,7 @@ export function validateRule(
     const required = ACTIONS_REQUIRING_PARAMS[action.type] ?? [];
     for (const key of required) {
       const value = action.params?.[key];
-      if (value === undefined || value === '' || value === null) {
+      if (value === undefined || value === '' || value === null || (Array.isArray(value) && value.length === 0)) {
         return {
           ok: false,
           error: `Preencha "${key}" na ação "${action.type}".`,
@@ -615,6 +1161,24 @@ export function formatConditionSummary(
   condition: LeadAutomationCondition,
   resources: AutomationResources,
 ): string {
+  if (trigger === 'lead.created') {
+    if (condition.field === 'form_id') {
+      const ids = Array.isArray(condition.value) ? condition.value : [condition.value];
+      const names = ids.map(id => resources.formOrigins.find(x => x.form_id === id)?.form_name || id);
+      return `${names.length > 1 ? 'Formulários' : 'Formulário'}: ${names.join(', ')}`;
+    }
+    const labels: Record<string, string> = {
+      formulario: 'Formulário (Meta Lead Ads)',
+      lead_whats_meta: 'Lead Whats Meta (anúncio no WhatsApp)',
+      organico: 'Orgânico (sem anúncio)',
+    };
+    return `Origem: ${labels[String(condition.value)] ?? condition.value}`;
+  }
+  if (trigger === 'lead.campaign_received') {
+    if (!condition?.value) return 'Qualquer anúncio';
+    const o = resources.adOrigins.find(a => a.ad_id === condition.value);
+    return `Anúncio: ${o?.title || o?.campaign_name || condition.value}`;
+  }
   if (trigger === 'lead.tag_added') {
     return `Etiqueta: ${condition.value}`;
   }
@@ -626,6 +1190,9 @@ export function formatConditionSummary(
     const allStages = Object.values(resources.stagesByPipeline).flat();
     const stage = allStages.find(s => s.id === condition.value);
     return `Para o estágio: ${stage?.name ?? condition.value}`;
+  }
+  if (trigger === 'lead.no_reply_after') {
+    return `Sem resposta por ${condition.value} min`;
   }
   return `${condition.field} ${condition.operator} ${JSON.stringify(condition.value)}`;
 }
@@ -646,6 +1213,12 @@ export function formatActionSummary(
     case 'send_image':
     case 'send_video':
       return p.media_url ? `Mídia: ${String(p.media_url).slice(0, 40)}…` : '(sem mídia)';
+    case 'send_sticker':
+      return p.media_url ? `Figurinha: ${String(p.media_url).slice(0, 40)}…` : '(sem figurinha)';
+    case 'send_message_funnel': {
+      const f = resources.messageFunnels.find(x => x.id === p.funnel_id);
+      return f ? `Funil: ${f.name}` : 'Funil: (não definido)';
+    }
     case 'assign_broker': {
       const u = resources.users.find(x => x.id === p.user_id);
       return u ? `Corretor: ${u.name}` : 'Corretor: (não definido)';
@@ -664,6 +1237,10 @@ export function formatActionSummary(
       return p.title ? `Tarefa: ${p.title}` : '(tarefa sem título)';
     case 'notify_group':
       return p.group_jid ? `Grupo: ${String(p.group_jid).slice(0, 30)}…` : '(sem grupo)';
+    case 'notify_user': {
+      const u = resources.users.find(x => x.id === p.user_id);
+      return u ? `Avisar: ${u.name}` : 'Avisar usuário: (não definido)';
+    }
     case 'send_quick_reply': {
       const qr = resources.quickReplies.find(q => q.id === p.quick_reply_id);
       return qr ? `Resposta: ${qr.title}` : '(nao definida)';
@@ -678,6 +1255,11 @@ export function formatActionSummary(
       return p.message ? `Corretor: "${String(p.message).slice(0, 50)}..."` : '(mensagem vazia)';
     case 'notify_gestor':
       return p.message ? `Gestor: "${String(p.message).slice(0, 50)}..."` : '(mensagem vazia)';
+    case 'notify_push': {
+      const ids = Array.isArray((p as Record<string, unknown>).user_ids) ? ((p as Record<string, unknown>).user_ids as string[]) : [];
+      const names = ids.map(id => resources.users.find(x => String(x.id) === String(id))?.name).filter(Boolean);
+      return names.length ? `Push p/ ${names.join(', ')}` : 'Push no app: (sem usuário)';
+    }
     default:
       return '';
   }

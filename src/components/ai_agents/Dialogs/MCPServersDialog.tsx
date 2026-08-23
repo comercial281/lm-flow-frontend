@@ -10,7 +10,7 @@ import {
   Badge,
   Input,
   ScrollArea,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Search, Server, CheckCircle } from 'lucide-react';
 import { MCPServer, MCPServerConfig } from '@/types/ai';
 import { useLanguage } from '@/hooks/useLanguage';

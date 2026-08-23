@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Button, Badge } from '@evoapi/design-system';
+import { Button, Badge } from '@/components/ui/ds';
 import {
   ArrowLeft, Building2, MapPin, Bed, Bath, Car, Ruler, Loader2,
 } from 'lucide-react';

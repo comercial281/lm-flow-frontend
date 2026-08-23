@@ -3,7 +3,8 @@ import {
   Activity, RefreshCw, MessageSquare, Smartphone, AlertTriangle,
   CheckCircle2, XCircle, Clock, Loader2, ServerCog,
 } from 'lucide-react';
-import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from '@evoapi/design-system';
+import { Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui/ds';
+import IconActionButton from '@/components/base/IconActionButton';
 import BaseStatsCard from '@/components/base/BaseStatsCard';
 import BarChartCard from '@/components/charts/BarChartCard';
 import DonutChartCard from '@/components/charts/DonutChartCard';
@@ -88,10 +89,12 @@ export default function Monitoring() {
             </p>
           </div>
         </div>
-        <Button variant="outline" onClick={load} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Atualizar
-        </Button>
+        <IconActionButton
+          label="Atualizar"
+          icon={<RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />}
+          onClick={load}
+          disabled={loading}
+        />
       </div>
 
       {error && (

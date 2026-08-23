@@ -29,27 +29,6 @@ export const getChannelTypes = (): ChannelType[] => [
         description: i18n.t('channels:newChannel.providers.evolution.description'),
         popular: false,
       },
-      {
-        id: 'evolution_go',
-        name: i18n.t('channels:newChannel.providers.evolutionGo.name'),
-        description: i18n.t('channels:newChannel.providers.evolutionGo.description'),
-        popular: true,
-      },
-      {
-        id: 'notificame',
-        name: i18n.t('channels:newChannel.providers.notificame.name'),
-        description: i18n.t('channels:newChannel.providers.notificame.description'),
-      },
-      {
-        id: 'zapi',
-        name: i18n.t('channels:newChannel.providers.zapi.name'),
-        description: i18n.t('channels:newChannel.providers.zapi.description'),
-      },
-      {
-        id: 'twilio',
-        name: i18n.t('channels:newChannel.providers.twilio.name'),
-        description: i18n.t('channels:newChannel.providers.twilio.description'),
-      },
     ],
   },
   {

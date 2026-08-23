@@ -13,7 +13,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Search } from 'lucide-react';
 import type { AccessToken, AccessTokenFormData } from '@/types/auth';
 import { useUserPermissions } from '@/hooks/useUserPermissions';

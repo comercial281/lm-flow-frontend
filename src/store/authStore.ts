@@ -55,7 +55,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
   return {
     currentUser: null,
-    accessToken: sessionStorage.getItem('access_token'),
+    accessToken: localStorage.getItem('access_token') || sessionStorage.getItem('access_token'),
     isLoggedIn: false,
     isLoading: true,
     isFetching: false,
@@ -75,14 +75,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
     setAccessToken: (token) => {
       set({ accessToken: token });
       if (token) {
-        sessionStorage.setItem('access_token', token);
+        localStorage.setItem('access_token', token);
       } else {
-        sessionStorage.removeItem('access_token');
+        localStorage.removeItem('access_token'); sessionStorage.removeItem('access_token');
       }
     },
 
     getAuthHeader: () => {
-      const token = get().accessToken || sessionStorage.getItem('access_token');
+      const token = get().accessToken || localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
       if (token) {
         return { Authorization: `Bearer ${token}` };
       }
@@ -90,7 +90,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
     },
 
     clearUser: () => {
-      sessionStorage.removeItem('access_token');
+      localStorage.removeItem('access_token'); sessionStorage.removeItem('access_token');
       set({
         currentUser: null,
         accessToken: null,

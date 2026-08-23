@@ -6,7 +6,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { ArrowLeft } from 'lucide-react';
 import { ChannelIcon } from '@/components/channels';
 import { useLanguage } from '@/hooks/useLanguage';

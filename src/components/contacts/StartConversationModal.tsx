@@ -17,7 +17,8 @@ import {
   Avatar,
   AvatarFallback,
   Badge,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
+import { toast } from 'sonner';
 import { MessageSquare, Phone, Mail, Send, Loader2 } from 'lucide-react';
 import { Contact, ContactableInboxes } from '@/types/contacts';
 import { contactsService } from '@/services/contacts';
@@ -25,6 +26,7 @@ import { conversationAPI } from '@/services/conversations';
 import MessageTemplateService from '@/services/channels/messageTemplatesService';
 import { MessageTemplate } from '@/types/channels/inbox';
 import { ConversationCreateData } from '@/types/chat/api';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 
 interface StartConversationModalProps {
   open: boolean;
@@ -37,6 +39,7 @@ export default function StartConversationModal({
   open,
   onOpenChange,
   contact,
+  onConversationCreated,
 }: StartConversationModalProps) {
   const { t } = useLanguage('contacts');
   const [selectedInboxId, setSelectedInboxId] = useState<string>('');
@@ -65,12 +68,18 @@ export default function StartConversationModal({
     return selectedInbox?.channel_type === 'Channel::Whatsapp';
   }, [selectedInbox]);
 
-  // Check if it's WhatsApp Cloud (requires template)
+  // Check if it's WhatsApp Cloud (requires an approved template to start a conversation).
+  // Only the official APIs (whatsapp_cloud / default / unknown) enforce the template +
+  // 24h-window rules. Unofficial providers (baileys, evolution, evolution_go, zapi,
+  // notificame) support free text and must NOT be treated as Cloud — otherwise the modal
+  // wrongly demands a template and the user cannot start the conversation.
   const isWhatsAppCloud = useMemo(() => {
     if (!isWhatsAppInbox) return false;
-    const provider = (selectedInbox?.channel.provider as string)?.toLowerCase();
-    // WhatsApp Cloud providers (not baileys, evolution, evolution_go)
-    return !provider || !['baileys', 'evolution', 'evolution_go'].includes(provider);
+    const provider = (
+      (selectedInbox?.channel?.provider as string) ||
+      ((selectedInbox as unknown as { provider?: string })?.provider ?? '')
+    ).toLowerCase();
+    return !provider || provider === 'whatsapp_cloud' || provider === 'default';
   }, [isWhatsAppInbox, selectedInbox]);
 
   const loadAvailableInboxes = useCallback(async () => {
@@ -80,12 +89,22 @@ export default function StartConversationModal({
 
       setAvailableInboxes(inboxes);
 
-      // Auto-select first available inbox
-      const firstAvailable = inboxes.find(
-        (inbox: ContactableInboxes) => inbox.available && inbox.can_create_conversation,
-      );
-      if (firstAvailable) {
-        setSelectedInboxId(firstAvailable.id.toString());
+      // Pré-seleciona o número que o backend marcou como o DESTE lead — a
+      // conversa que ele já tem, o canal que ele já tocou, ou a instância da
+      // roleta do dono dele.
+      //
+      // Antes pegava o primeiro item da lista, que não tinha relação nenhuma
+      // com o sorteio (e vinha sem ordem definida do banco). Com um número por
+      // corretor isso fazia o lead sorteado para uma corretora abrir no número
+      // principal da imobiliária, e era por ele que ela respondia — o oposto do
+      // que a roleta multinúmero promete.
+      const usable = (inbox: ContactableInboxes) =>
+        inbox.available && inbox.can_create_conversation;
+      const preferred = inboxes.find((inbox: ContactableInboxes) => inbox.recommended && usable(inbox));
+      const fallback = inboxes.find(usable);
+      const chosen = preferred ?? fallback;
+      if (chosen) {
+        setSelectedInboxId(chosen.id.toString());
       }
     } catch (error) {
       console.error('Error loading contactable inboxes:', error);
@@ -240,6 +259,12 @@ export default function StartConversationModal({
         contact_id: contact.id,
         inbox_id: selectedInboxId,
         source_id: selectedInbox?.source_id || '',
+        // Conversa iniciada manualmente por um humano é ATIVA (open), não 'pending'.
+        // Sem isso, inboxes com bot/IA ativa criam a conversa como 'pending'
+        // (Inbox#default_conversation_status_value) e ela some da lista, cujo
+        // filtro padrão é status=open — a conversa é criada e a mensagem enviada,
+        // mas nunca aparece em "Conversas".
+        status: 'open',
       };
 
       // Add message or template params
@@ -268,8 +293,16 @@ export default function StartConversationModal({
       if (data && data.id) {
         onOpenChange(false);
 
-        // Redirect to conversation like the Vue frontend does
-        window.location.href = `/conversations/${data.id}`;
+        // Quem passou onConversationCreated navega por conta própria (client-side).
+        // O window.location.href continua como padrão para quem não passou, mas ele
+        // recarrega a página inteira e joga fora o estado do app — por isso deixou
+        // de ser incondicional: antes ele rodava SEMPRE, inclusive por cima do
+        // callback, e a navegação de quem passava o callback acontecia por acidente.
+        if (onConversationCreated) {
+          onConversationCreated(data.id);
+        } else {
+          window.location.href = `/conversations/${data.id}`;
+        }
 
         // Reset form
         setMessage('');
@@ -277,9 +310,15 @@ export default function StartConversationModal({
         setUseTemplate(false);
         setSelectedTemplate(null);
         setTemplateParams({});
+      } else {
+        // Backend answered without a conversation id — don't fail silently.
+        toast.error(t('startConversation.errors.createFailed'));
       }
     } catch (error) {
+      // Surface the REAL backend message (validation / authorization) instead of
+      // swallowing it — otherwise the user just sees "nothing happened".
       console.error('Error creating conversation:', error);
+      toast.error(apiErrorMessage(error, t('startConversation.errors.createFailed')));
     } finally {
       setLoading(false);
     }
@@ -366,8 +405,12 @@ export default function StartConversationModal({
                 </span>
               </div>
             ) : availableInboxes.length === 0 ? (
-              <div className="p-3 rounded-md border border-orange-200 bg-orange-50">
-                <p className="text-sm text-orange-700">{t('startConversation.empty.noChannels')}</p>
+              <div className="p-3 rounded-md border border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800">
+                <p className="text-sm text-orange-700 dark:text-orange-400">
+                  {contact.phone_number?.trim()
+                    ? t('startConversation.empty.noChannelAccess')
+                    : t('startConversation.empty.noPhone')}
+                </p>
               </div>
             ) : (
               <Select value={selectedInboxId} onValueChange={setSelectedInboxId} required>
@@ -385,6 +428,13 @@ export default function StartConversationModal({
                         <div className="flex items-center gap-2">
                           {getChannelIcon(inbox.channel_type)}
                           <span>{inbox.name}</span>
+                          {/* Sem esta marca o corretor não tem como saber que
+                              trocar o número aqui tira o lead do WhatsApp dele. */}
+                          {inbox.recommended && (
+                            <Badge variant="outline" className="border-[#7c3aed] text-[#7c3aed]">
+                              {t('startConversation.recommended')}
+                            </Badge>
+                          )}
                           <Badge
                             variant={inbox.available ? 'default' : 'secondary'}
                             className="ml-auto"

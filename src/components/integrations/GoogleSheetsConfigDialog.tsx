@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Sheet, CheckSquare, Edit3, FilePlus, Loader2, Settings } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { toast } from 'sonner';
@@ -138,7 +139,7 @@ const GoogleSheetsConfigDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving Google Sheets configuration:', error);
-      toast.error('Erro ao salvar configurações');
+      toast.error(apiErrorMessage(error, 'Erro ao salvar configurações'));
     }
   };
 

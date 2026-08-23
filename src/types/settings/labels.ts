@@ -39,4 +39,5 @@ export interface LabelsState {
   searchQuery: string;
   sortBy: 'title' | 'created_at';
   sortOrder: 'asc' | 'desc';
+  loadError: boolean;
 }

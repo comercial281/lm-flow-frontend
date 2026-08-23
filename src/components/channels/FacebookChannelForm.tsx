@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Button, Input } from '@evoapi/design-system';
+import { Button, Input } from '@/components/ui/ds';
 import { useGlobalConfig } from '@/contexts/GlobalConfigContext';
 import ChannelsService from '@/services/channels/channelsService';
 import { toast } from 'sonner';

@@ -6,7 +6,7 @@ import {
   ScrollArea,
   Badge,
   Separator,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Wrench, Tag, FileText, Settings } from 'lucide-react';
 import { Tool } from '@/types/ai';
 import { useLanguage } from '@/hooks/useLanguage';

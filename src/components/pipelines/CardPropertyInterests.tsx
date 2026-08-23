@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Button, Input, Badge } from '@evoapi/design-system';
-import { Plus, Trash2, Loader2, Search, Home, X } from 'lucide-react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
+import { Button, Input } from '@/components/ui/ds';
+import { Plus, Trash2, Loader2, Search, Home, X, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   propertyInterestsService,
@@ -62,10 +63,10 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
 
   const handleSearch = useCallback(async (q: string) => {
     setSearchQuery(q);
-    if (q.trim().length < 2) { setSearchResults([]); return; }
     setSearching(true);
     try {
-      const res = await propertiesService.list({ q, status: 'active', per_page: 20 });
+      // q vazio lista todos os imóveis ativos (ao clicar/focar); com texto, filtra
+      const res = await propertiesService.list({ q: q.trim() || undefined, status: 'active', per_page: 50 });
       setSearchResults(res.data ?? []);
     } catch {
       setSearchResults([]);
@@ -88,12 +89,21 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
       setSearchResults([]);
       setSearchOpen(false);
       await load();
-    } catch {
-      toast.error('Erro ao adicionar imóvel');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao adicionar imóvel'));
     } finally {
       setAdding(null);
     }
   }, [contactId, load]);
+
+  const handleChangeStage = useCallback(async (interestId: string, stage: string) => {
+    try {
+      await propertyInterestsService.update(interestId, { interest_stage: stage });
+      await load();
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não foi possível mudar o status'));
+    }
+  }, [load]);
 
   const handleRemove = useCallback(async (interestId: string) => {
     setRemoving(interestId);
@@ -101,8 +111,8 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
       await propertyInterestsService.delete(interestId);
       toast.success('Imóvel removido');
       await load();
-    } catch {
-      toast.error('Erro ao remover');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao remover'));
     } finally {
       setRemoving(null);
     }
@@ -135,7 +145,7 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
             <Input
               value={searchQuery}
               onChange={e => handleSearch(e.target.value)}
-              onFocus={() => setSearchOpen(true)}
+              onFocus={() => { setSearchOpen(true); handleSearch(searchQuery); }}
               placeholder="Buscar imóvel por código ou título..."
               className="pl-8 h-9 text-sm"
             />
@@ -228,9 +238,21 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
                       {interest.property.display_price}
                     </span>
                   )}
-                  <Badge className={`text-[10px] h-4 px-1.5 ${INTEREST_STAGE_COLORS[interest.interest_stage] ?? ''}`}>
-                    {INTEREST_STAGE_LABELS[interest.interest_stage] ?? interest.interest_stage}
-                  </Badge>
+                  {/* Status do interesse — dropdown pra mudar direto (chevron
+                      explícito porque a seta nativa some no modo escuro). */}
+                  <div className="relative inline-flex items-center">
+                    <select
+                      value={interest.interest_stage}
+                      onChange={e => handleChangeStage(interest.id, e.target.value)}
+                      className={`appearance-none cursor-pointer text-[10px] rounded-md border border-input pl-1.5 pr-5 py-0.5 font-medium ${INTEREST_STAGE_COLORS[interest.interest_stage] ?? ''}`}
+                      title="Status do interesse neste imóvel"
+                    >
+                      {Object.entries(INTEREST_STAGE_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-1 h-3 w-3 opacity-70" />
+                  </div>
                 </div>
               </div>
               <Button

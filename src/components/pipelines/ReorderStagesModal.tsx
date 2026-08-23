@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   Button,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
 import { PipelineStage as BasePipelineStage } from '@/types/analytics';
 

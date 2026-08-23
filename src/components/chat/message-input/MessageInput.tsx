@@ -19,6 +19,7 @@ import {
   Reply,
   PenLine,
   Rocket,
+  Building2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -26,6 +27,7 @@ import { AudioRecordingData } from '@/hooks/chat/useAudioRecorder';
 import { useMessageSignature } from '@/hooks/useMessageSignature';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFeature } from '@/contexts/TenantFeaturesContext';
 
 import FileUpload from './FileUpload';
 import FilePreview from './FilePreview';
@@ -35,6 +37,7 @@ import AudioRecorder from '../audio';
 
 import { AIAssistanceButton } from '../ai-assistance';
 import { MessageFunnelPopover } from '../message-funnels';
+import { PropertyBookPopover } from '../property-book';
 import { RichTextEditor, RichTextEditorRef } from '../rich-text-editor';
 
 import { ReplyMode, Message, Conversation } from '@/types/chat/api';
@@ -85,6 +88,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const { t } = useLanguage('chat');
   const { user } = useAuth();
 
+  // Feature flags por tenant (ON quando a chave está ausente/ligada)
+  const canSendAudio = useFeature('chat_send_audio');
+  const canSendAttachment = useFeature('chat_send_attachment');
+  const canEmoji = useFeature('chat_emoji');
+  const canMessageFunnel = useFeature('chat_message_funnel');
+  const canMessageTemplate = useFeature('chat_message_template');
+
   // Detectar se é WhatsApp Cloud (apenas Cloud, não baileys/evolution/evolution_go)
   const isWhatsAppCloud = React.useMemo(() => {
     if (channelType !== 'Channel::Whatsapp') return false;
@@ -119,6 +129,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   // 🎯 FUNIS DE MENSAGEM (substitui Canned Responses + Quick Replies)
   const [showFunnels, setShowFunnels] = useState(false);
+
+  // 🏠 ENVIO DE BOOK DE IMÓVEL: buscar imóvel do acervo e mandar o PDF do book.
+  const [showBookPicker, setShowBookPicker] = useState(false);
+  const isWhatsApp = channelType === 'Channel::Whatsapp';
 
   // Forçar modo de nota privada quando a conversa está pendente
   useEffect(() => {
@@ -386,7 +400,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   }, [user?.ui_settings?.editor_message_key]);
 
   const cardClassNames = `
-    w-full border-t border-x-0 border-b-0 rounded-none shadow-lg py-0 gap-0 transition-all duration-200 bg-background
+    wa-input-bar w-full border-t border-x-0 border-b-0 rounded-none shadow-lg py-0 gap-0 transition-all duration-200 bg-background
   `;
 
   // Componente de preview da resposta
@@ -456,17 +470,35 @@ const MessageInput: React.FC<MessageInputProps> = ({
         )}
 
         {/* Input Area */}
-        <CardContent className="p-4 px-4 py-4 relative">
+        {/* A folga da barrinha de gesto do iPhone é descontada do teclado: com
+            ele aberto o indicador fica atrás dele, então essa folga viraria
+            espaço morto entre a barra e o teclado. Com o teclado fechado (ou
+            sem a variável) a conta resolve para calc(0.5rem + safe-area) — a
+            mesma expressão de antes, não só parecida. */}
+        <CardContent className="px-3 py-2 pb-[calc(0.5rem+max(0px,env(safe-area-inset-bottom)-var(--keyboard-inset,0px)))] relative">
           {/* 🚀 FUNIS DE MENSAGEM (substitui Canned Responses + Quick Replies) */}
-          <MessageFunnelPopover
-            isOpen={showFunnels}
-            onClose={() => setShowFunnels(false)}
-            conversation={selectedConversation}
-            onSendMessage={onSendMessage}
-          />
+          {canMessageFunnel && (
+            <MessageFunnelPopover
+              isOpen={showFunnels}
+              onClose={() => setShowFunnels(false)}
+              conversation={selectedConversation}
+              onSendMessage={onSendMessage}
+            />
+          )}
 
-          {/* Primeira linha: Reply Mode Toggle + Botões de ação rápida */}
-          <div className="flex items-center justify-between mb-3 gap-3">
+          {/* 🏠 BOOK DE IMÓVEL: buscar no acervo e enviar o PDF direto na conversa */}
+          {isWhatsApp && canSendAttachment && (
+            <PropertyBookPopover
+              isOpen={showBookPicker}
+              onClose={() => setShowBookPicker(false)}
+              conversationId={conversationId}
+            />
+          )}
+
+          {/* Primeira linha: Reply Mode Toggle + Botões de ação rápida.
+              mt-1.5 pedido pelo Giovani (19/08): a barra ficava colada no topo
+              do card, sem respiro em relação à borda de cima. */}
+          <div className="flex items-center justify-between mt-1.5 mb-2 gap-2 md:gap-3">
             {/* Reply Mode Toggle */}
             <ReplyModeToggle
               currentMode={isPendingConversation ? ReplyMode.NOTE : replyMode}
@@ -521,63 +553,92 @@ const MessageInput: React.FC<MessageInputProps> = ({
             </div>
           </div>
 
-          {/* Segunda linha: Botões de formatação + Input + Botões de envio */}
-          <div className="flex items-end gap-2 w-full overflow-visible">
+          {/* Segunda linha: Botões de formatação + Input + Botões de envio.
+              No celular isso vira DUAS linhas: o campo de digitar sozinho em cima
+              (w-full + order-1) e os dois grupos de ícones embaixo (order-2/3, com
+              ml-auto jogando microfone+enviar pra direita). Sem isso o campo, único
+              item flexível da linha, era espremido a ~6px num aparelho de 360px.
+              A partir de md o flex-nowrap e os md:order-* devolvem o layout de antes.
+              Feito em CSS e não com detecção de celular em JS de propósito: trocar a
+              árvore remontaria o ProseMirror e apagaria o rascunho a cada rotação. */}
+          <div className="flex flex-wrap md:flex-nowrap items-end gap-2 w-full overflow-visible">
             {/* Botões de formatação à esquerda */}
-            <div className="flex-shrink-0 flex items-center gap-1.5 pb-1">
+            <div className="order-2 md:order-1 flex-shrink-0 flex items-center gap-1 md:pb-1">
               {/* File Upload Button */}
-              <FileUpload
-                onFilesSelected={handleFilesSelected}
-                maxFileSize={10}
-                multiple={true}
-                disabled={isDisabled || isSending || isPendingConversation}
-              />
+              {canSendAttachment && (
+                <FileUpload
+                  onFilesSelected={handleFilesSelected}
+                  multiple={true}
+                  disabled={isDisabled || isSending || isPendingConversation}
+                />
+              )}
 
               {/* Emoji Button */}
-              <div className="relative">
+              {canEmoji && (
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={isDisabled || isSending || isPendingConversation}
+                    className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
+                    onClick={handleEmojiClick}
+                  >
+                    <Smile className="h-4 w-4" />
+                  </Button>
+                  <EmojiPicker
+                    isOpen={showEmojiPicker}
+                    onEmojiSelect={handleEmojiSelect}
+                    onClose={() => setShowEmojiPicker(false)}
+                  />
+                </div>
+              )}
+
+              {/* 🚀 Funis de Mensagem (substitui Canned Responses + Quick Replies) */}
+              {canMessageFunnel && (
                 <Button
-                  variant="ghost"
+                  variant={showFunnels ? 'default' : 'ghost'}
                   size="icon"
                   disabled={isDisabled || isSending || isPendingConversation}
                   className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
-                  onClick={handleEmojiClick}
+                  onClick={() => setShowFunnels(v => !v)}
+                  title="Funis de Mensagem"
                 >
-                  <Smile className="h-4 w-4" />
+                  <Rocket className="h-4 w-4" />
                 </Button>
-                <EmojiPicker
-                  isOpen={showEmojiPicker}
-                  onEmojiSelect={handleEmojiSelect}
-                  onClose={() => setShowEmojiPicker(false)}
-                />
-              </div>
+              )}
 
-              {/* 🚀 Funis de Mensagem (substitui Canned Responses + Quick Replies) */}
-              <Button
-                variant={showFunnels ? 'default' : 'ghost'}
-                size="icon"
-                disabled={isDisabled || isSending || isPendingConversation}
-                className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
-                onClick={() => setShowFunnels(v => !v)}
-                title="Funis de Mensagem"
-              >
-                <Rocket className="h-4 w-4" />
-              </Button>
+              {/* 🏠 Enviar book de imóvel */}
+              {isWhatsApp && canSendAttachment && (
+                <Button
+                  variant={showBookPicker ? 'default' : 'ghost'}
+                  size="icon"
+                  disabled={isDisabled || isSending || isPendingConversation}
+                  className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
+                  onClick={() => setShowBookPicker(v => !v)}
+                  title="Enviar book de imóvel"
+                >
+                  <Building2 className="h-4 w-4" />
+                </Button>
+              )}
 
               {/* Template Button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled={isSending || isPendingConversation}
-                className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
-                onClick={handleTemplateClick}
-                title={t('messageTemplates.button.title')}
-              >
-                <FileText className="h-4 w-4" />
-              </Button>
+              {canMessageTemplate && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={isSending || isPendingConversation}
+                  className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
+                  onClick={handleTemplateClick}
+                  title={t('messageTemplates.button.title')}
+                >
+                  <FileText className="h-4 w-4" />
+                </Button>
+              )}
             </div>
 
-            {/* Text Input Container */}
-            <div className="flex-1 min-w-0 overflow-hidden">
+            {/* Text Input Container. `chat-composer-editor` é o gancho do CSS que
+                dá 16px de fonte no celular (abaixo disso o iOS dá zoom ao focar). */}
+            <div className="chat-composer-editor order-1 md:order-2 w-full md:w-auto md:flex-1 min-w-0 overflow-hidden">
               <RichTextEditor
                 ref={richEditorRef}
                 placeholder={
@@ -628,14 +689,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   return false;
                 }}
                 disabled={isDisabled || isSending || (isPendingConversation && replyMode !== ReplyMode.NOTE)}
-                className="min-h-[100px]"
+                className="min-h-[44px]"
+                editorMinHeightClass="min-h-[44px]"
                 showToolbar={!isPendingConversation}
               />
             </div>
 
             {/* Action Buttons */}
-            <div className="flex-shrink-0 flex items-center gap-1.5 pb-1">
-              {replyMode === ReplyMode.REPLY && !isPendingConversation && (
+            <div className="order-3 ml-auto md:ml-0 flex-shrink-0 flex items-center gap-1.5 md:pb-1">
+              {canSendAudio && replyMode === ReplyMode.REPLY && !isPendingConversation && (
                 <Button
                   variant={isRecordingAudio ? 'default' : 'ghost'}
                   size="icon"
@@ -658,7 +720,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
                       size="icon"
                       onClick={handleSend}
                       disabled={!canSend}
-                      className="bg-primary hover:bg-primary/85 text-primary-foreground h-9 w-9 flex-shrink-0 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50"
+                      // Botão de enviar em verde WhatsApp — antes era cinza-claro em
+                      // cima de roxo-claro (contraste quase zero, pedido do Giovani
+                      // pra ficar visível de verdade, 19/08).
+                      className="rounded-full bg-gradient-to-br from-[#25D366] to-[#128C7E] text-white shadow-sm hover:brightness-110 h-9 w-9 flex-shrink-0 disabled:from-muted disabled:to-muted disabled:text-muted-foreground disabled:opacity-50 disabled:shadow-none"
                     >
                       {isSending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

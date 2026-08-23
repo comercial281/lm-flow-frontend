@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
-import { Avatar, AvatarFallback } from '@evoapi/design-system';
+import { Avatar, AvatarFallback } from '@/components/ui/ds';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Check, ExternalLink } from 'lucide-react';
@@ -96,14 +96,15 @@ export default function NotificationItem({
       {isHovered && isUnread && onMarkRead && (
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-background border border-border rounded-md shadow-sm p-0.5">
           <button
-            title="Marcar como lido"
+            title={t('notifications.item.markAsRead')}
             onClick={e => { e.stopPropagation(); onMarkRead(notification); }}
             className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
           >
             <Check className="h-3.5 w-3.5" />
           </button>
           <button
-            title="Abrir conversa"
+            /* Genérico: notificação de lead abre a ficha do contato, não uma conversa. */
+            title={t('notifications.item.open')}
             onClick={e => { e.stopPropagation(); onOpen(notification); }}
             className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
           >

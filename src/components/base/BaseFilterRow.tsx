@@ -12,7 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
   Button,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';

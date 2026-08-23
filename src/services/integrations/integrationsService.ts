@@ -32,7 +32,9 @@ import {
 } from '@/types/integrations';
 
 class IntegrationsService {
-  private readonly baseURL = '/api/v1/integrations';
+  // baseURL do apiClient já é ${VITE_API_URL}/api/v1 — NÃO repetir /api/v1 aqui,
+  // senão provider auth/callback/sync batem em /api/v1/api/v1/integrations/... → 404.
+  private readonly baseURL = '/integrations';
 
   // General integrations
   async getIntegrations(): Promise<IntegrationsResponse> {
@@ -46,9 +48,10 @@ class IntegrationsService {
   }
 
   async toggleIntegration(integrationId: string, enabled: boolean): Promise<IntegrationToggleResponse> {
-    const response = await api.post(`/integrations/${integrationId}/toggle`, {
-      enabled
-    });
+    // Backend não tem rota /toggle — tem /connect e /disconnect (member). Chamar /toggle
+    // dava 404 ao ligar/desligar integração. Roteia pelo verbo certo conforme `enabled`.
+    const action = enabled ? 'connect' : 'disconnect';
+    const response = await api.post(`/integrations/${integrationId}/${action}`, {});
     return extractData<IntegrationToggleResponse>(response);
   }
 

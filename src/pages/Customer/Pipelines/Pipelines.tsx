@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Button,
   Dialog,
@@ -10,9 +11,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Grid3X3, List, GitBranch, Sparkles } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
+import IconActionButton from '@/components/base/IconActionButton';
 import { followupAdminService } from '@/services/followupSequences/followupSequencesService';
 
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -36,6 +38,7 @@ import {
 } from '@/components/pipelines/index';
 import DeletePipelineModal from '@/components/pipelines/DeletePipelineModal';
 import { PipelinesTour } from '@/tours';
+import { prefetchPipeline } from './pipelinePayloadCache';
 
 const INITIAL_STATE: PipelinesState = {
   pipelines: [],
@@ -102,7 +105,10 @@ export default function Pipelines() {
       loadPipelines();
     } catch (err) {
       console.error(err);
-      toast.error('Falha ao aplicar template. Verifique se o tenant tem usuário admin.');
+      // A frase fixa daqui mandava procurar no lugar errado: a recusa mais comum é
+      // de CARGO de quem clicou, não de o CRM não ter admin. O backend agora diz
+      // qual etapa falhou / qual permissão falta — repassamos isso ao usuário.
+      toast.error(apiErrorMessage(err, 'Falha ao aplicar template.'));
     } finally {
       setApplyingTemplate(false);
     }
@@ -124,6 +130,9 @@ export default function Pipelines() {
           per_page: state.meta.pagination.page_size,
           sort: 'name',
           order: 'asc',
+          // Lista só mostra nome/etapas/contagem — não baixar TODOS os itens
+          // de TODOS os pipelines (payload cai de ~centenas de KB pra ~3KB).
+          include_items: false,
           ...params,
         };
 
@@ -389,14 +398,11 @@ export default function Pipelines() {
 
       {/* View Mode Toggle */}
       <div className="flex items-center justify-between mb-3" data-tour="pipelines-view-toggle">
-        <Button
-          variant="outline"
-          size="sm"
+        <IconActionButton
+          label="Aplicar template Leads (Marketing)"
+          icon={<Sparkles className="h-4 w-4" />}
           onClick={() => setApplyTemplateOpen(true)}
-        >
-          <Sparkles className="mr-2 h-4 w-4" />
-          Aplicar template Leads (Marketing)
-        </Button>
+        />
         <div className="flex items-center border rounded-lg">
           <Button
             variant={viewMode === 'cards' ? 'default' : 'ghost'}
@@ -445,16 +451,19 @@ export default function Pipelines() {
         ) : viewMode === 'cards' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPipelines.map(pipeline => (
-              <PipelineCard
-                key={pipeline.id}
-                pipeline={pipeline}
-                onView={handleViewPipeline}
-                onEdit={handleEditPipeline}
-                onDelete={handleDeletePipeline}
-                onDuplicate={handleDuplicatePipeline}
-                onToggleStatus={handleToggleStatus}
-                onSetAsDefault={handleSetAsDefault}
-              />
+              // onMouseEnter: passou o mouse, o payload do board já desce por
+              // trás — clicar abre instantâneo (prefetch com dedupe + TTL).
+              <div key={pipeline.id} onMouseEnter={() => prefetchPipeline(pipeline.id)}>
+                <PipelineCard
+                  pipeline={pipeline}
+                  onView={handleViewPipeline}
+                  onEdit={handleEditPipeline}
+                  onDelete={handleDeletePipeline}
+                  onDuplicate={handleDuplicatePipeline}
+                  onToggleStatus={handleToggleStatus}
+                  onSetAsDefault={handleSetAsDefault}
+                />
+              </div>
             ))}
           </div>
         ) : (

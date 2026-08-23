@@ -10,9 +10,12 @@
         "fullName": "Full Name",
         "displayName": "Display Name",
         "email": "Email",
+        "whatsappNumber": "WhatsApp",
         "fullNamePlaceholder": "Your full name",
         "displayNamePlaceholder": "How you want to be called",
-        "emailPlaceholder": "your@email.com"
+        "emailPlaceholder": "your@email.com",
+        "whatsappNumberPlaceholder": "+1 555 123 4567",
+        "whatsappNumberHelp": "Used to receive reminders and automations on your WhatsApp"
       },
       "actions": {
         "saveChanges": "Save Changes",
@@ -122,16 +125,7 @@
       },
       "push": {
         "title": "Push Notifications",
-        "types": {
-          "conversation_creation": "New conversation created",
-          "conversation_assignment": "Conversation assigned to me",
-          "assigned_conversation_new_message": "New message in assigned conversation",
-          "conversation_mention": "Mentioned in conversation",
-          "participating_conversation_new_message": "New message in participating conversation",
-          "sla_missed_first_response": "First response SLA missed",
-          "sla_missed_next_response": "Next response SLA missed",
-          "sla_missed_resolution": "Resolution SLA missed"
-        }
+        "alwaysOn": "Device notifications are always sent while Modo Plantão is on for that device. Turn it on or off from the icon at the top of the screen."
       },
       "loading": "Loading notification preferences...",
       "updated": "Notification configuration updated",
@@ -282,7 +276,9 @@
       "uploading": "Uploading...",
       "fileTypeError": "Please select only image files",
       "fileSizeError": "The image must be less than 5MB",
-      "fileInfo": "JPG, PNG or GIF. Maximum 5MB.",
+      "fileInfo": "JPG, PNG, GIF or HEIC (iPhone photos). Maximum 5MB.",
+      "converting": "Converting...",
+      "heicConversionError": "Could not convert this HEIC photo. Try exporting it as JPG before uploading.",
       "photoRemoved": "Photo removed successfully",
       "photoRemoveError": "Error removing photo",
       "photoUpdated": "Photo updated successfully",

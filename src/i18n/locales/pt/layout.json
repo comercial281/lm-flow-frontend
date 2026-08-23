@@ -2,6 +2,7 @@
   "profile": {
     "language": "Idioma",
     "myProfile": "Meu Perfil",
+    "feedback": "Sugestões/Bugs",
     "logout": "Sair",
     "userInitial": "U",
     "defaultUser": "Usuário"
@@ -22,7 +23,9 @@
     "item": {
       "someTimeAgo": "Há algum tempo",
       "noAssignee": "NA",
-      "noContent": "Sem conteúdo"
+      "noContent": "Sem conteúdo",
+      "markAsRead": "Marcar como lido",
+      "open": "Abrir"
     },
     "panel": {
       "title": "Notificações não lidas",
@@ -34,6 +37,10 @@
         "separator": " - "
       },
       "types": {
+        "lead_created": "Lead novo",
+        "lead_assigned": "Lead atribuído a você",
+        "roleta_lead_accepted": "Lead aceito",
+        "roleta_lead_passed": "Lead não assumido",
         "conversation_assignment": "Atribuição",
         "conversation_mention": "Menção",
         "conversation_creation": "Nova Conversa",
@@ -80,7 +87,6 @@
       "conversations": "Conversas",
       "contacts": "Contatos",
       "pipelines": "Pipelines",
-      "agents": "Agentes de IA",
       "channels": "Canais",
       "tutorials": "Tutoriais",
       "settings": "Configurações"
@@ -88,11 +94,6 @@
     "contacts": {
       "list": "Contatos",
       "scheduledActions": "Ações Agendadas"
-    },
-    "agents": {
-      "list": "Agentes de IA",
-      "customTools": "Custom Tools",
-      "customMcps": "Custom MCPs"
     },
     "settings": {
       "account": "Conta",
@@ -103,8 +104,7 @@
       "cannedResponses": "Respostas Rápidas",
       "macros": "Macros",
       "integrations": "Integrações",
-      "accessTokens": "Tokens de Acesso",
-      "admin": "Configurações Admin"
+      "accessTokens": "Tokens de Acesso"
     }
   }
 }

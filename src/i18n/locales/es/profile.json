@@ -10,9 +10,12 @@
         "fullName": "Nombre Completo",
         "displayName": "Nombre de Visualización",
         "email": "Email",
+        "whatsappNumber": "WhatsApp",
         "fullNamePlaceholder": "Su nombre completo",
         "displayNamePlaceholder": "Cómo quiere ser llamado",
-        "emailPlaceholder": "su@email.com"
+        "emailPlaceholder": "su@email.com",
+        "whatsappNumberPlaceholder": "+34 600 123 456",
+        "whatsappNumberHelp": "Se usa para recibir recordatorios y automatizaciones en su WhatsApp"
       },
       "actions": {
         "saveChanges": "Guardar Cambios",
@@ -122,16 +125,7 @@
       },
       "push": {
         "title": "Notificaciones Push",
-        "types": {
-          "conversation_creation": "Nueva conversación creada",
-          "conversation_assignment": "Conversación asignada a mí",
-          "assigned_conversation_new_message": "Nuevo mensaje en conversación asignada",
-          "conversation_mention": "Mencionado en conversación",
-          "participating_conversation_new_message": "Nuevo mensaje en conversación participante",
-          "sla_missed_first_response": "SLA de primera respuesta perdido",
-          "sla_missed_next_response": "SLA de próxima respuesta perdido",
-          "sla_missed_resolution": "SLA de resolución perdido"
-        }
+        "alwaysOn": "Las notificaciones en el dispositivo se envían siempre que el Modo Plantão esté activo en él. Actívalo o desactívalo desde el icono en la parte superior de la pantalla."
       },
       "loading": "Cargando preferencias de notificación...",
       "updated": "Configuración de notificación actualizada",
@@ -282,7 +276,9 @@
       "uploading": "Cargando...",
       "fileTypeError": "Por favor, seleccione solo archivos de imagen",
       "fileSizeError": "La imagen debe tener como máximo 5MB",
-      "fileInfo": "JPG, PNG o GIF. Máximo 5MB.",
+      "fileInfo": "JPG, PNG, GIF o HEIC (fotos de iPhone). Máximo 5MB.",
+      "converting": "Convirtiendo...",
+      "heicConversionError": "No fue posible convertir esta foto HEIC. Intente exportarla como JPG antes de subirla.",
       "photoRemoved": "Foto eliminada con éxito",
       "photoRemoveError": "Error al eliminar foto"
     },

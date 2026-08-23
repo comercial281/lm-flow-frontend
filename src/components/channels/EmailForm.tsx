@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Card, CardContent, Button, Input, Skeleton } from '@evoapi/design-system';
+import { Card, CardContent, Button, Input, Skeleton } from '@/components/ui/ds';
 import { Mail, AlertTriangle } from 'lucide-react';
 import EmailOauthService from '@/services/channels/emailOauthService';
 import { EmailChannelPayload } from '@/types/channels/inbox';

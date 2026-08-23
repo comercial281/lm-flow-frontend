@@ -2,6 +2,7 @@
   "profile": {
     "language": "Langue",
     "myProfile": "Mon Profil",
+    "feedback": "Suggestions/Bugs",
     "logout": "Déconnexion",
     "userInitial": "U",
     "defaultUser": "Utilisateur"
@@ -22,7 +23,9 @@
     "item": {
       "someTimeAgo": "Il y a quelque temps",
       "noAssignee": "NA",
-      "noContent": "Sans contenu"
+      "noContent": "Sans contenu",
+      "markAsRead": "Marquer comme lu",
+      "open": "Ouvrir"
     },
     "panel": {
       "title": "Notifications non lues",
@@ -34,6 +37,10 @@
         "separator": " - "
       },
       "types": {
+        "lead_created": "Nouveau lead",
+        "lead_assigned": "Lead qui vous est attribué",
+        "roleta_lead_accepted": "Lead accepté",
+        "roleta_lead_passed": "Lead non pris",
         "conversation_assignment": "Attribution",
         "conversation_mention": "Mention",
         "conversation_creation": "Nouvelle Conversation",
@@ -80,7 +87,6 @@
       "conversations": "Conversations",
       "contacts": "Contacts",
       "pipelines": "Pipelines",
-      "agents": "Agents",
       "channels": "Canaux",
       "tutorials": "Tutoriels",
       "settings": "Paramètres"
@@ -88,11 +94,6 @@
     "contacts": {
       "list": "Contacts",
       "scheduledActions": "Actions Programmées"
-    },
-    "agents": {
-      "list": "Agents",
-      "customTools": "Outils Personnalisés",
-      "customMcps": "MCPs Personnalisés"
     },
     "settings": {
       "account": "Compte",
@@ -103,8 +104,7 @@
       "cannedResponses": "Réponses Rapides",
       "macros": "Macros",
       "integrations": "Intégrations",
-      "accessTokens": "Jetons D'accès",
-      "admin": "Paramètres Admin"
+      "accessTokens": "Jetons D'accès"
     }
   }
 }

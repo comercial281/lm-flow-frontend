@@ -1,5 +1,5 @@
 import { Zap, Trash2, Plus } from 'lucide-react';
-import { Button, Input } from '@evoapi/design-system';
+import { Button, Input } from '@/components/ui/ds';
 
 interface QuickRepliesHeaderProps {
   totalCount: number;

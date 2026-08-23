@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Dialog,
   DialogContent,
@@ -14,16 +15,26 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { scheduledActionsService } from '@/services/scheduledActions/scheduledActionsService';
 import { followupSequencesService } from '@/services/followupSequences/followupSequencesService';
+import {
+  messageFunnelsService,
+  tenantTemplateVariablesService,
+} from '@/services/messageFunnels/messageFunnelsService';
+import type { MessageFunnel, MessageFunnelItem, TemplateVariable } from '@/types/messageFunnels';
 import InboxesService from '@/services/channels/inboxesService';
 import { contactsService } from '@/services/contacts';
 import type { ScheduledAction, CreateScheduledAction } from '@/types/automation';
 import type { Inbox } from '@/types/channels/inbox';
 import type { Contact } from '@/types/contacts';
 import { useLanguage } from '@/hooks/useLanguage';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, Plus, Trash2, Save, CalendarClock } from 'lucide-react';
+import { toast } from 'sonner';
+import MessageSequenceEditor, {
+  type SequenceDraftItem,
+  newSequenceItem,
+} from '@/components/messaging/MessageSequenceEditor';
 import {
   buildChannelOptions,
   getMessagingInboxes,
@@ -36,6 +47,49 @@ interface ScheduleActionModalProps {
   onClose: () => void;
   contactId?: string;
   action?: ScheduledAction | null;
+}
+
+type DelayUnit = 'minutes' | 'hours' | 'days';
+
+interface ScheduleBlock {
+  items: SequenceDraftItem[];
+  delayValue: number;
+  delayUnit: DelayUnit;
+}
+
+const unitMin = (u: DelayUnit) => (u === 'minutes' ? 1 : u === 'hours' ? 60 : 1440);
+
+function itemIsValid(it: SequenceDraftItem) {
+  if (it.kind === 'delay') return true; // item de espera é sempre válido
+  return it.kind === 'text' ? (it.text_content ?? '').trim() !== '' : !!it.media_url;
+}
+
+function draftFromFunnelItem(it: MessageFunnelItem): SequenceDraftItem {
+  return {
+    uiKey: crypto.randomUUID(),
+    kind: it.kind,
+    text_content: it.text_content,
+    media_url: it.media_url,
+    media_filename: it.media_filename,
+    media_caption: it.media_caption,
+    delay_seconds: it.delay_seconds,
+    config: it.config || {},
+    pendingFile: null,
+  };
+}
+
+function toSeqPayload(items: SequenceDraftItem[]) {
+  return items
+    .filter(itemIsValid)
+    .map((it, idx) => ({
+      position: idx,
+      kind: it.kind,
+      text_content: it.text_content,
+      media_url: it.media_url,
+      media_caption: it.media_caption,
+      media_filename: it.media_filename,
+      delay_seconds: it.delay_seconds,
+    }));
 }
 
 export function ScheduleActionModal({
@@ -70,75 +124,137 @@ export function ScheduleActionModal({
     media_type: '',
     media_url: '',
   });
-  const [uploadingMedia, setUploadingMedia] = useState(false);
+
+  // Sequência rica + agendamento por bloco (modal único).
+  const [blocks, setBlocks] = useState<ScheduleBlock[]>([
+    { items: [newSequenceItem()], delayValue: 1, delayUnit: 'days' },
+  ]);
+  const [variables, setVariables] = useState<TemplateVariable[]>([]);
+  const [funnelTemplates, setFunnelTemplates] = useState<MessageFunnel[]>([]);
+
+  const isRichChannel = formData.channel !== '' && formData.channel !== 'email';
+
+  const updateBlock = (i: number, patch: Partial<ScheduleBlock>) =>
+    setBlocks(prev => prev.map((b, idx) => (idx === i ? { ...b, ...patch } : b)));
+  const addBlock = () =>
+    setBlocks(prev => [...prev, { items: [newSequenceItem()], delayValue: 1, delayUnit: 'days' }]);
+  const removeBlock = (i: number) =>
+    setBlocks(prev => (prev.length <= 1 ? prev : prev.filter((_, idx) => idx !== i)));
+
+  const uploadMedia = useCallback((file: File) => followupSequencesService.uploadMedia(file), []);
+
+  useEffect(() => {
+    if (!open) return;
+    tenantTemplateVariablesService
+      .list()
+      .then(res =>
+        setVariables([
+          ...res.builtin,
+          ...res.custom.map(v => ({
+            token: v.token,
+            placeholder: v.placeholder,
+            label: v.label,
+            description: v.description,
+            builtin: false,
+          })),
+        ]),
+      )
+      .catch(() =>
+        setVariables([
+          { token: 'nome', placeholder: '{{nome}}', label: 'Nome', builtin: true },
+          { token: 'telefone', placeholder: '{{telefone}}', label: 'Telefone', builtin: true },
+          { token: 'email', placeholder: '{{email}}', label: 'E-mail', builtin: true },
+        ]),
+      );
+    messageFunnelsService
+      .list({ activeOnly: true })
+      .then(setFunnelTemplates)
+      .catch(() => setFunnelTemplates([]));
+  }, [open]);
+
+  const loadTemplateIntoBlock = async (blockIdx: number, funnelId: string) => {
+    try {
+      const funnel = await messageFunnelsService.get(funnelId);
+      const items = funnel.items.length ? funnel.items.map(draftFromFunnelItem) : [newSequenceItem()];
+      updateBlock(blockIdx, { items });
+      toast.success(`Modelo "${funnel.name}" carregado`);
+    } catch {
+      toast.error('Não consegui carregar o modelo.');
+    }
+  };
+
+  const saveBlockAsTemplate = async (blockIdx: number) => {
+    const items = blocks[blockIdx]?.items.filter(itemIsValid) ?? [];
+    if (!items.length) {
+      toast.error('Monte a mensagem antes de salvar o modelo.');
+      return;
+    }
+    const name = window.prompt('Nome do modelo:')?.trim();
+    if (!name) return;
+    try {
+      await messageFunnelsService.create({
+        name,
+        category: 'geral',
+        active: true,
+        shared: true,
+        items: toSeqPayload(items).map((it, idx) => ({
+          position: idx,
+          kind: it.kind,
+          text_content: it.text_content,
+          media_caption: it.media_caption,
+          media_filename: it.media_filename,
+          delay_seconds: it.delay_seconds,
+        })),
+      });
+      toast.success('Modelo salvo na biblioteca.');
+      setFunnelTemplates(await messageFunnelsService.list({ activeOnly: true }));
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não consegui salvar o modelo.'));
+    }
+  };
 
   const channelOptions = useMemo<ChannelOption[]>(() => buildChannelOptions(availableInboxes, t), [availableInboxes, t]);
 
-  // Fetch available inboxes when modal opens
   useEffect(() => {
     const fetchInboxes = async () => {
       if (!open) return;
-
       setLoadingInboxes(true);
       try {
         const response = await InboxesService.list();
         const inboxes = response.data || [];
         setAvailableInboxes(getMessagingInboxes(inboxes));
-
       } catch (error) {
         console.error('Error fetching inboxes:', error);
       } finally {
         setLoadingInboxes(false);
       }
     };
-
     fetchInboxes();
   }, [open]);
 
   useEffect(() => {
-    if (!open || action || formData.channel || channelOptions.length === 0) {
-      return;
-    }
-
+    if (!open || action || formData.channel || channelOptions.length === 0) return;
     setFormData(prev => ({ ...prev, channel: channelOptions[0].value }));
   }, [action, channelOptions, formData.channel, open]);
 
-  // Load contact when contactId is provided or when editing
   useEffect(() => {
     if (action?.contact_id) {
       setSelectedContactId(action.contact_id);
-      // Try to load contact details if available
-      contactsService
-        .getContact(action.contact_id)
-        .then(contact => setSelectedContact(contact))
-        .catch(() => {
-          // Contact might not exist, ignore error
-        });
+      contactsService.getContact(action.contact_id).then(setSelectedContact).catch(() => {});
     } else if (initialContactId) {
       setSelectedContactId(initialContactId);
-      contactsService
-        .getContact(initialContactId)
-        .then(contact => setSelectedContact(contact))
-        .catch(() => {
-          // Contact might not exist, ignore error
-        });
+      contactsService.getContact(initialContactId).then(setSelectedContact).catch(() => {});
     }
   }, [action?.contact_id, initialContactId]);
 
-  // Search contacts with debounce
   const searchContacts = useCallback(async (query: string) => {
     if (!query || query.length < 2) {
       setContactSearchResults([]);
       return;
     }
-
     setLoadingContacts(true);
     try {
-      const response = await contactsService.searchContacts({
-        q: query,
-        page: 1,
-        per_page: 10,
-      });
+      const response = await contactsService.searchContacts({ q: query, page: 1, per_page: 10 });
       setContactSearchResults(response.data || []);
     } catch (error) {
       console.error('Error searching contacts:', error);
@@ -148,22 +264,15 @@ export function ScheduleActionModal({
     }
   }, []);
 
-  // Debounce contact search
   useEffect(() => {
     if (!open) return;
-
     const timeoutId = setTimeout(() => {
-      if (contactSearchQuery) {
-        searchContacts(contactSearchQuery);
-      } else {
-        setContactSearchResults([]);
-      }
+      if (contactSearchQuery) searchContacts(contactSearchQuery);
+      else setContactSearchResults([]);
     }, 300);
-
     return () => clearTimeout(timeoutId);
   }, [contactSearchQuery, open, searchContacts]);
 
-  // Reset contact search when modal closes
   useEffect(() => {
     if (!open) {
       setContactSearchQuery('');
@@ -173,13 +282,12 @@ export function ScheduleActionModal({
         setSelectedContactId(undefined);
         setSelectedContact(null);
       } else {
-        // Reset to initial contactId if provided
         setSelectedContactId(initialContactId || action?.contact_id);
       }
+      setBlocks([{ items: [newSequenceItem()], delayValue: 1, delayUnit: 'days' }]);
     }
   }, [open, initialContactId, action]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -187,7 +295,6 @@ export function ScheduleActionModal({
         setShowContactDropdown(false);
       }
     };
-
     if (showContactDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -196,77 +303,43 @@ export function ScheduleActionModal({
 
   const getMinDateTime = () => {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    // Validate contact_id is required
-    if (!selectedContactId) {
-      newErrors.contact_id = t('scheduledActions.validationRequired.contact');
-    }
-
-    if (!formData.scheduled_for) {
-      newErrors.scheduled_for = t('scheduledActions.validationRequired.dateTime');
-    } else {
-      const selectedDate = new Date(formData.scheduled_for);
-      const now = new Date();
-      if (selectedDate <= now) {
-        newErrors.scheduled_for = t('scheduledActions.validationRequired.dateTimeFuture');
-      }
-    }
-
-    switch (formData.action_type) {
-      case 'send_message':
-        if (!formData.channel) newErrors.channel = t('scheduledActions.validationRequired.channel');
-        if (formData.channel && !isSupportedPayloadChannel(formData.channel)) {
-          newErrors.channel = t('scheduledActions.validationRequired.channel');
-        }
-        if (!formData.message) newErrors.message = t('scheduledActions.validationRequired.message');
-        break;
-      case 'execute_webhook':
-        if (!formData.webhook_url)
-          newErrors.webhook_url = t('scheduledActions.validationRequired.webhookUrl');
-        break;
-      case 'create_task':
-        if (!formData.task_title)
-          newErrors.task_title = t('scheduledActions.validationRequired.taskTitle');
-        break;
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}T${p(now.getHours())}:${p(now.getMinutes())}`;
   };
 
   useEffect(() => {
     if (action) {
-      const getStringValue = (value: unknown, defaultValue: string = ''): string => {
-        return typeof value === 'string' ? value : defaultValue;
-      };
-
+      const sv = (value: unknown, def = ''): string => (typeof value === 'string' ? value : def);
       setFormData({
         action_type: action.action_type,
         scheduled_for: action.scheduled_for.slice(0, 16),
-        channel: getStringValue(action.payload.channel),
-        message: getStringValue(action.payload.message),
-        subject: getStringValue(action.payload.subject),
-        body: getStringValue(action.payload.body),
-        webhook_url: getStringValue(action.payload.webhook_url),
-        webhook_method: getStringValue(action.payload.webhook_method, 'POST'),
-        task_title: getStringValue(action.payload.task_title),
-        task_description: getStringValue(action.payload.task_description),
+        channel: sv(action.payload.channel),
+        message: sv(action.payload.message),
+        subject: sv(action.payload.subject),
+        body: sv(action.payload.body),
+        webhook_url: sv(action.payload.webhook_url),
+        webhook_method: sv(action.payload.webhook_method, 'POST'),
+        task_title: sv(action.payload.task_title),
+        task_description: sv(action.payload.task_description),
         recurrence_type: action.recurrence_type || 'once',
-        media_type: getStringValue(action.payload.media_type),
-        media_url: getStringValue(action.payload.media_url),
+        media_type: sv(action.payload.media_type),
+        media_url: sv(action.payload.media_url),
       });
+      const fi = Array.isArray(action.payload.funnel_items)
+        ? (action.payload.funnel_items as MessageFunnelItem[])
+        : [];
+      if (fi.length) {
+        setBlocks([{ items: fi.map(draftFromFunnelItem), delayValue: 1, delayUnit: 'days' }]);
+      } else if (sv(action.payload.message)) {
+        setBlocks([
+          {
+            items: [{ ...newSequenceItem('text'), text_content: sv(action.payload.message) }],
+            delayValue: 1,
+            delayUnit: 'days',
+          },
+        ]);
+      }
     } else if (!open) {
-      // Reset form when modal closes
       setFormData({
         action_type: 'send_message',
         scheduled_for: '',
@@ -286,15 +359,96 @@ export function ScheduleActionModal({
     }
   }, [action, open]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateBase = () => {
+    const e: Record<string, string> = {};
+    if (!selectedContactId) e.contact_id = t('scheduledActions.validationRequired.contact');
+    if (!formData.scheduled_for) {
+      e.scheduled_for = t('scheduledActions.validationRequired.dateTime');
+    } else if (new Date(formData.scheduled_for) <= new Date()) {
+      e.scheduled_for = t('scheduledActions.validationRequired.dateTimeFuture');
+    }
+    return e;
+  };
 
-    if (!validateForm()) {
+  const validateForm = () => {
+    const newErrors = validateBase();
+    switch (formData.action_type) {
+      case 'send_message':
+        if (!formData.channel || !isSupportedPayloadChannel(formData.channel)) {
+          newErrors.channel = t('scheduledActions.validationRequired.channel');
+        }
+        if (!formData.message) newErrors.message = t('scheduledActions.validationRequired.message');
+        break;
+      case 'execute_webhook':
+        if (!formData.webhook_url) newErrors.webhook_url = t('scheduledActions.validationRequired.webhookUrl');
+        break;
+      case 'create_task':
+        if (!formData.task_title) newErrors.task_title = t('scheduledActions.validationRequired.taskTitle');
+        break;
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmitRich = async () => {
+    const errs = validateBase();
+    if (!formData.channel) errs.channel = t('scheduledActions.validationRequired.channel');
+    const anyValid = blocks.some(b => b.items.some(itemIsValid));
+    if (Object.keys(errs).length > 0 || !anyValid) {
+      setErrors(errs);
+      if (!anyValid) toast.error('Monte ao menos uma mensagem.');
       return;
     }
-
     setLoading(true);
+    try {
+      const startMs = new Date(formData.scheduled_for).getTime();
+      let cum = 0;
+      let created = 0;
+      if (action) {
+        const items = toSeqPayload(blocks[0].items);
+        await scheduledActionsService.update(action.id, {
+          contact_id: selectedContactId,
+          action_type: 'send_message',
+          scheduled_for: new Date(formData.scheduled_for).toISOString(),
+          recurrence_type: formData.recurrence_type,
+          payload: { channel: formData.channel, funnel_items: items },
+        } as CreateScheduledAction);
+        created = 1;
+      } else {
+        for (let i = 0; i < blocks.length; i++) {
+          const b = blocks[i];
+          cum += i === 0 ? 0 : unitMin(b.delayUnit) * Math.max(0, Math.round(b.delayValue));
+          const items = toSeqPayload(b.items);
+          if (!items.length) continue;
+          const when = new Date(startMs + cum * 60000).toISOString();
+          await scheduledActionsService.create({
+            contact_id: selectedContactId,
+            action_type: 'send_message',
+            scheduled_for: when,
+            recurrence_type: i === 0 ? formData.recurrence_type : 'once',
+            payload: { channel: formData.channel, funnel_items: items },
+          } as CreateScheduledAction);
+          created += 1;
+        }
+      }
+      toast.success(`${created} agendamento(s) criado(s).`);
+      onClose();
+    } catch (error) {
+      console.error('Error scheduling rich blocks:', error);
+      toast.error('Falha ao agendar.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.action_type === 'send_message' && isRichChannel) {
+      void handleSubmitRich();
+      return;
+    }
+    if (!validateForm()) return;
+    setLoading(true);
     try {
       const payload: CreateScheduledAction = {
         contact_id: selectedContactId,
@@ -303,23 +457,19 @@ export function ScheduleActionModal({
         payload: {},
         recurrence_type: formData.recurrence_type,
       };
-
-      // Build payload based on action type
       switch (formData.action_type) {
         case 'send_message':
           payload.payload = {
             channel: formData.channel,
             message: formData.message,
+            ...(formData.subject ? { subject: formData.subject } : {}),
             ...(formData.media_url
               ? { media_url: formData.media_url, media_type: formData.media_type || 'image' }
               : {}),
           };
           break;
         case 'execute_webhook':
-          payload.payload = {
-            webhook_url: formData.webhook_url,
-            webhook_method: formData.webhook_method,
-          };
+          payload.payload = { webhook_url: formData.webhook_url, webhook_method: formData.webhook_method };
           break;
         case 'create_task':
           payload.payload = {
@@ -328,20 +478,20 @@ export function ScheduleActionModal({
           };
           break;
       }
-
       if (action) {
         await scheduledActionsService.update(action.id, payload);
       } else {
         await scheduledActionsService.create(payload);
       }
-
       onClose();
     } catch (error) {
       console.error('Error saving scheduled action:', error);
       if (error instanceof Error && error.message.includes('422')) {
-        const errorData = JSON.parse(error.message);
-        if (errorData.errors) {
-          setErrors(errorData.errors);
+        try {
+          const errorData = JSON.parse(error.message);
+          if (errorData.errors) setErrors(errorData.errors);
+        } catch {
+          /* ignore */
         }
       }
     } finally {
@@ -351,15 +501,12 @@ export function ScheduleActionModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {action ? t('scheduledActions.titleEdit') : t('scheduledActions.title')}
-          </DialogTitle>
+          <DialogTitle>{action ? t('scheduledActions.titleEdit') : t('scheduledActions.title')}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* CONTACT SELECTOR - Show when contactId is not provided and not editing */}
           {!initialContactId && !action?.contact_id && (
             <div className="space-y-2 contact-selector-container">
               <Label htmlFor="contact">{t('scheduledActions.contact')}</Label>
@@ -413,15 +560,11 @@ export function ScheduleActionModal({
                           setSelectedContactId(contact.id);
                           setContactSearchQuery('');
                           setShowContactDropdown(false);
-                          if (errors.contact_id) {
-                            setErrors({ ...errors, contact_id: '' });
-                          }
+                          if (errors.contact_id) setErrors({ ...errors, contact_id: '' });
                         }}
                       >
                         <div className="font-medium">{contact.name}</div>
-                        {contact.email && (
-                          <div className="text-sm text-muted-foreground">{contact.email}</div>
-                        )}
+                        {contact.email && <div className="text-sm text-muted-foreground">{contact.email}</div>}
                         {contact.phone_number && (
                           <div className="text-sm text-muted-foreground">{contact.phone_number}</div>
                         )}
@@ -439,7 +582,6 @@ export function ScheduleActionModal({
             </div>
           )}
 
-          {/* GENERAL SCHEDULE PARAMETERS - FIRST */}
           <div className="space-y-2">
             <Label htmlFor="scheduled_for">{t('scheduledActions.dateTime')}</Label>
             <Input
@@ -449,9 +591,7 @@ export function ScheduleActionModal({
               min={getMinDateTime()}
               onChange={e => {
                 setFormData({ ...formData, scheduled_for: e.target.value });
-                if (errors.scheduled_for) {
-                  setErrors({ ...errors, scheduled_for: '' });
-                }
+                if (errors.scheduled_for) setErrors({ ...errors, scheduled_for: '' });
               }}
               required
               className={errors.scheduled_for ? 'border-red-500' : ''}
@@ -477,40 +617,25 @@ export function ScheduleActionModal({
             </Select>
           </div>
 
-          {/* ACTION TYPE - MIDDLE */}
           <div className="space-y-2">
             <Label htmlFor="action_type">{t('scheduledActions.actionType')}</Label>
             <Select
               value={formData.action_type}
               onValueChange={value =>
-                setFormData({
-                  ...formData,
-                  action_type: value,
-                  message: '',
-                  webhook_url: '',
-                            task_title: '',
-                })
+                setFormData({ ...formData, action_type: value, message: '', webhook_url: '', task_title: '' })
               }
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="send_message">
-                  {t('scheduledActions.actions.send_message')}
-                </SelectItem>
-                <SelectItem value="execute_webhook">
-                  {t('scheduledActions.actions.execute_webhook')}
-                </SelectItem>
-                <SelectItem value="create_task">
-                  {t('scheduledActions.actions.create_task')}
-                </SelectItem>
+                <SelectItem value="send_message">{t('scheduledActions.actions.send_message')}</SelectItem>
+                <SelectItem value="execute_webhook">{t('scheduledActions.actions.execute_webhook')}</SelectItem>
+                <SelectItem value="create_task">{t('scheduledActions.actions.create_task')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* ACTION-SPECIFIC FIELDS - LAST */}
-          {/* SEND MESSAGE - with channel selector */}
           {formData.action_type === 'send_message' && (
             <>
               <div className="space-y-2">
@@ -525,9 +650,7 @@ export function ScheduleActionModal({
                   </SelectTrigger>
                   <SelectContent>
                     {channelOptions.length === 0 && !loadingInboxes && (
-                      <div className="px-2 py-1.5 text-sm text-gray-500">
-                        No channels configured
-                      </div>
+                      <div className="px-2 py-1.5 text-sm text-gray-500">No channels configured</div>
                     )}
                     {channelOptions.map(option => (
                       <SelectItem key={option.value} value={option.value}>
@@ -537,92 +660,126 @@ export function ScheduleActionModal({
                   </SelectContent>
                 </Select>
                 {channelOptions.length === 0 && !loadingInboxes && (
-                  <p className="text-sm text-orange-600">
-                    {t('scheduledActions.messages.noChannelsConfigured')}
-                  </p>
+                  <p className="text-sm text-orange-600">{t('scheduledActions.messages.noChannelsConfigured')}</p>
                 )}
                 {errors.channel && <p className="text-sm text-red-500">{errors.channel}</p>}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="message">{t('scheduledActions.message')}</Label>
-                <Textarea
-                  id="message"
-                  value={formData.message}
-                  onChange={e => {
-                    setFormData({ ...formData, message: e.target.value });
-                    if (errors.message) {
-                      setErrors({ ...errors, message: '' });
-                    }
-                  }}
-                  rows={5}
-                  required
-                  className={errors.message ? 'border-red-500' : ''}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Variáveis: <code>{'{{nome}}'}</code> <code>{'{{nome_completo}}'}</code>{' '}
-                  <code>{'{{telefone}}'}</code> <code>{'{{email}}'}</code> — substituídas pelos dados do contato no envio.
-                </p>
-                {errors.message && <p className="text-sm text-red-500">{errors.message}</p>}
+              {isRichChannel && (
+                <div className="space-y-3">
+                  {blocks.map((b, i) => (
+                    <div key={i} className="rounded-lg border border-border p-3 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                          <CalendarClock className="h-3.5 w-3.5" /> Bloco {i + 1}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {funnelTemplates.length > 0 && (
+                            <Select value="" onValueChange={v => loadTemplateIntoBlock(i, v)}>
+                              <SelectTrigger className="h-7 w-40 text-xs">
+                                <SelectValue placeholder="Usar modelo" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {funnelTemplates.map(f => (
+                                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          <button
+                            type="button"
+                            title="Salvar como modelo na biblioteca"
+                            onClick={() => saveBlockAsTemplate(i)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <Save className="h-3.5 w-3.5" />
+                          </button>
+                          {blocks.length > 1 && (
+                            <button
+                              type="button"
+                              title="Remover bloco"
+                              onClick={() => removeBlock(i)}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
 
-                {/* Mídia opcional (imagem/áudio/vídeo/documento) */}
-                <div className="flex items-center gap-2 pt-1">
-                  <select
-                    value={formData.media_type}
-                    onChange={e => setFormData({ ...formData, media_type: e.target.value })}
-                    className="rounded-md border border-border bg-background px-2 py-1 text-xs"
-                  >
-                    <option value="">Sem mídia</option>
-                    <option value="image">Imagem</option>
-                    <option value="audio">Áudio</option>
-                    <option value="video">Vídeo</option>
-                    <option value="document">Documento</option>
-                  </select>
-                  {formData.media_type && (
-                    <label className="cursor-pointer text-xs text-primary underline">
-                      {uploadingMedia
-                        ? 'Enviando...'
-                        : formData.media_url
-                        ? 'Trocar arquivo'
-                        : 'Anexar arquivo'}
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept={
-                          formData.media_type === 'image'
-                            ? 'image/*'
-                            : formData.media_type === 'audio'
-                            ? 'audio/*'
-                            : formData.media_type === 'video'
-                            ? 'video/*'
-                            : '.pdf,.doc,.docx,.xls,.xlsx,.txt,application/pdf'
-                        }
-                        onChange={async e => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          setUploadingMedia(true);
-                          try {
-                            const out = await followupSequencesService.uploadMedia(file);
-                            setFormData(prev => ({ ...prev, media_url: out.url }));
-                          } catch {
-                            /* erro de upload tratado pelo toast do serviço */
-                          } finally {
-                            setUploadingMedia(false);
-                            e.currentTarget.value = '';
-                          }
-                        }}
+                      {i === 0 ? (
+                        <p className="text-[11px] text-muted-foreground">Dispara na data/hora marcada acima.</p>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="text-muted-foreground">Enviar</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={b.delayValue}
+                            onChange={e => updateBlock(i, { delayValue: Number(e.target.value) || 0 })}
+                            className="h-7 w-16 text-xs"
+                          />
+                          <select
+                            value={b.delayUnit}
+                            onChange={e => updateBlock(i, { delayUnit: e.target.value as DelayUnit })}
+                            className="h-7 rounded-md border border-border bg-background px-2 text-xs"
+                          >
+                            <option value="minutes">minutos</option>
+                            <option value="hours">horas</option>
+                            <option value="days">dias</option>
+                          </select>
+                          <span className="text-muted-foreground">depois do bloco anterior</span>
+                        </div>
+                      )}
+
+                      <MessageSequenceEditor
+                        items={b.items}
+                        onChange={items => updateBlock(i, { items })}
+                        variables={variables}
+                        uploadMedia={uploadMedia}
+                        excludeKinds={['contact', 'sticker']}
                       />
-                    </label>
-                  )}
-                  {formData.media_url && (
-                    <span className="text-xs text-emerald-600">anexado ✓</span>
+                    </div>
+                  ))}
+
+                  {!action && (
+                    <button
+                      type="button"
+                      onClick={addBlock}
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Adicionar bloco agendado
+                    </button>
                   )}
                 </div>
-              </div>
+              )}
+
+              {!isRichChannel && formData.channel === 'email' && (
+                <div className="space-y-2">
+                  <Label htmlFor="subject">Assunto</Label>
+                  <Input
+                    id="subject"
+                    value={formData.subject}
+                    onChange={e => setFormData({ ...formData, subject: e.target.value })}
+                  />
+                  <Label htmlFor="message">{t('scheduledActions.message')}</Label>
+                  <Textarea
+                    id="message"
+                    value={formData.message}
+                    onChange={e => {
+                      setFormData({ ...formData, message: e.target.value });
+                      if (errors.message) setErrors({ ...errors, message: '' });
+                    }}
+                    rows={5}
+                    required
+                    className={errors.message ? 'border-red-500' : ''}
+                  />
+                  {errors.message && <p className="text-sm text-red-500">{errors.message}</p>}
+                </div>
+              )}
             </>
           )}
 
-          {/* EXECUTE WEBHOOK */}
           {formData.action_type === 'execute_webhook' && (
             <>
               <div className="space-y-2">
@@ -633,9 +790,7 @@ export function ScheduleActionModal({
                   value={formData.webhook_url}
                   onChange={e => {
                     setFormData({ ...formData, webhook_url: e.target.value });
-                    if (errors.webhook_url) {
-                      setErrors({ ...errors, webhook_url: '' });
-                    }
+                    if (errors.webhook_url) setErrors({ ...errors, webhook_url: '' });
                   }}
                   placeholder="https://example.com/webhook"
                   required
@@ -643,7 +798,6 @@ export function ScheduleActionModal({
                 />
                 {errors.webhook_url && <p className="text-sm text-red-500">{errors.webhook_url}</p>}
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="webhook_method">{t('scheduledActions.webhookMethod')}</Label>
                 <Select
@@ -664,7 +818,6 @@ export function ScheduleActionModal({
             </>
           )}
 
-          {/* CREATE TASK */}
           {formData.action_type === 'create_task' && (
             <>
               <div className="space-y-2">
@@ -674,16 +827,13 @@ export function ScheduleActionModal({
                   value={formData.task_title}
                   onChange={e => {
                     setFormData({ ...formData, task_title: e.target.value });
-                    if (errors.task_title) {
-                      setErrors({ ...errors, task_title: '' });
-                    }
+                    if (errors.task_title) setErrors({ ...errors, task_title: '' });
                   }}
                   required
                   className={errors.task_title ? 'border-red-500' : ''}
                 />
                 {errors.task_title && <p className="text-sm text-red-500">{errors.task_title}</p>}
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="task_description">{t('scheduledActions.taskDescription')}</Label>
                 <Textarea

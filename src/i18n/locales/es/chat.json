@@ -263,6 +263,8 @@
       "assignAgent": "Asignar Agente",
       "assignTeam": "Asignar Equipo",
       "assignTag": "Asignar Etiqueta",
+      "unassignAgent": "Desvincular agente",
+      "unassignTeam": "Desvincular equipo",
       "deleteConversation": "Eliminar conversación"
     },
     "contactNoName": "Contacto sin nombre",
@@ -318,9 +320,10 @@
         "description": "Gestionar embudo de ventas"
       },
       "contactNotes": {
-        "title": "Notas del Contacto",
-        "description": "Anotaciones importantes",
-        "noNotes": "No se han agregado notas aún"
+        "title": "Comentarios",
+        "description": "Comentarios del lead (sincronizados con la tarjeta)",
+        "noNotes": "Aún no hay comentarios",
+        "placeholder": "Escribir un comentario..."
       },
       "previousConversations": {
         "title": "Conversaciones Anteriores",
@@ -526,7 +529,8 @@
   "replyModeToggle": {
     "reply": "Respuesta",
     "privateNote": "Nota Privada",
-    "visibleOnlyToAgents": "Visible solo para Agentes"
+    "visibleOnlyToAgents": "Visible solo para Agentes",
+    "pendingExplainer": "Conversación pendiente — asuma el lead para responder"
   },
   "contexts": {
     "conversations": {
@@ -632,7 +636,7 @@
       },
       "errors": {
         "fileTooLarge": "Archivo muy grande",
-        "fileTooLargeDescription": "{{fileName}} excede el límite de {{maxSize}}MB",
+        "fileTooLargeDescription": "{{fileName}} tiene {{fileSize}} — el límite es {{maxSize}}MB",
         "fileTypeNotAllowed": "Tipo de archivo no permitido",
         "fileTypeNotAllowedDescription": "{{fileName}} no es un tipo de archivo soportado"
       },
@@ -692,7 +696,8 @@
       "created_at": "Fecha de Creación",
       "last_activity_at": "Última Actividad",
       "priority": "Prioridad",
-      "pipeline_id": "Pipeline"
+      "pipeline_id": "Pipeline",
+      "pipeline_stage_id": "Etapa (Columna)"
     },
     "options": {
       "status": {

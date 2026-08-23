@@ -1,4 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
+import { formatDateBR } from '@/utils/dateUtils';
 import { Edit, Trash2 } from 'lucide-react';
 import BaseTable from '@/components/base/BaseTable';
 import { Label } from '@/types/settings';
@@ -81,11 +82,16 @@ export default function LabelsTable({
       key: 'created_at',
       label: t('table.columns.createdAt'),
       sortable: true,
-      render: (label: Label) => (
-        <div className="text-sm text-muted-foreground">
-          {new Date(label.created_at).toLocaleDateString('pt-BR')}
-        </div>
-      ),
+      render: (label: Label) => {
+        // created_at vem como epoch em SEGUNDOS (não ms) → sem *1000 mostrava 21/01/1970.
+        const raw = label.created_at as unknown;
+        const ms = typeof raw === 'number' || /^\d+$/.test(String(raw)) ? Number(raw) * 1000 : Date.parse(String(raw));
+        return (
+          <div className="text-sm text-muted-foreground">
+            {Number.isFinite(ms) ? formatDateBR(ms) : '-'}
+          </div>
+        );
+      },
     },
   ];
 

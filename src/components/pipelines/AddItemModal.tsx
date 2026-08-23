@@ -16,12 +16,67 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@evoapi/design-system';
-import { Search, User, Phone, Mail, MessageSquare } from 'lucide-react';
+} from '@/components/ui/ds';
+import { Search, User, Phone, Mail, MessageSquare, ListChecks, UserPlus } from 'lucide-react';
 import { ConversationForModal, PipelineStage } from '@/types/analytics';
 import { pipelinesService } from '@/services/pipelines';
+import { contactsService } from '@/services/contacts';
 import { toast } from 'sonner';
-import { Contact } from '@/types/contacts';
+import { Contact, ContactFormData } from '@/types/contacts';
+import { ManualOriginInput } from '@/components/shared';
+import { contactSaveError } from '@/utils/contactErrors';
+
+// Normaliza telefone para E.164 (backend exige). Limpa tudo que não é dígito e prefixa "+".
+function normalizePhoneE164(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  const digits = trimmed.replace(/\D/g, '');
+  if (!digits) return '';
+  return `+${digits}`;
+}
+
+// Telefone e e-mail são únicos por conta. Quando o lead digitado já existe na
+// base (POST /contacts volta 422), reaproveitamos o contato existente em vez de
+// falhar — assim "Criar novo lead" vira "criar ou reaproveitar".
+//
+// O id vem do PRÓPRIO 422: o backend devolve o contato conflitante em
+// error.details.contact. A busca só entra como plano B, e não é confiável aqui —
+// ela passa pelo recorte da aba Contatos (Contacts::PaidTrafficScope), que
+// esconde justamente o caso comum: cliente de carteira que já estava na base
+// como contato da agenda, sem etiqueta de tráfego e sem origem de lead.
+async function findExistingContact(
+  error: unknown,
+  phoneE164: string,
+  email: string,
+): Promise<{ id: string } | null> {
+  const fromError = contactSaveError(error, '').existing;
+  if (fromError?.id) return fromError;
+
+  const search = async (q: string): Promise<Contact[]> => {
+    if (!q) return [];
+    try {
+      const res = await contactsService.searchContacts({ q });
+      return (res?.data as Contact[]) || [];
+    } catch {
+      return [];
+    }
+  };
+
+  const phoneDigits = phoneE164.replace(/\D/g, '');
+  if (phoneDigits) {
+    const matches = await search(phoneDigits);
+    const exact = matches.find(c => (c.phone_number || '').replace(/\D/g, '') === phoneDigits);
+    if (exact) return exact;
+  }
+
+  if (email) {
+    const matches = await search(email);
+    const exact = matches.find(c => (c.email || '').toLowerCase() === email.toLowerCase());
+    if (exact) return exact;
+  }
+
+  return null;
+}
 
 interface Item {
   id: string;
@@ -79,6 +134,11 @@ export default function AddItemModal({
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
 
+  // Modo: pegar item existente ou criar um lead novo do zero.
+  const [mode, setMode] = useState<'existing' | 'new'>('existing');
+  const [newLead, setNewLead] = useState({ name: '', phone: '', email: '', origin: '' });
+  const [isCreating, setIsCreating] = useState(false);
+
   // Initialize modal
   useEffect(() => {
     if (open) {
@@ -87,6 +147,8 @@ export default function AddItemModal({
       setSearchQuery('');
       setNotes('');
       setItemType('conversation');
+      setMode('existing');
+      setNewLead({ name: '', phone: '', email: '', origin: '' });
 
       // Pre-select stage
       if (preselectedStage) {
@@ -173,6 +235,97 @@ export default function AddItemModal({
     }
   };
 
+  // Cria um lead novo do zero e já o adiciona na etapa escolhida.
+  const handleCreateLead = async () => {
+    if (!selectedStage) return;
+    const name = newLead.name.trim();
+    if (!name) {
+      toast.error('Informe ao menos o nome do lead.');
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const payload: ContactFormData = { type: 'person', name };
+      const phone = normalizePhoneE164(newLead.phone);
+      if (phone) payload.phone_number = phone;
+      const email = newLead.email.trim();
+      if (email) payload.email = email;
+      const origin = newLead.origin.trim();
+      if (origin) payload.lead_origin_note = origin;
+
+      // Cria o contato. Se telefone/e-mail já existir (contato único por conta →
+      // 422), reaproveita o contato existente em vez de quebrar.
+      let contactId: string | undefined;
+      let reused = false;
+      try {
+        const created = (await contactsService.createContact(payload)) as Contact & {
+          contact?: { id: string };
+        };
+        contactId = created?.id || created?.contact?.id;
+      } catch (createErr) {
+        const ce = createErr as { response?: { status?: number } };
+        if (ce?.response?.status !== 422) throw createErr;
+        const existing = await findExistingContact(createErr, phone, email);
+        if (!existing?.id) throw createErr;
+        contactId = existing.id;
+        reused = true;
+      }
+      if (!contactId) throw new Error('Contato criado sem id.');
+
+      // Contato reaproveitado não passou pelo POST — a origem escrita precisa ir
+      // num PATCH. Falhar aqui não invalida o lead, então só avisa.
+      if (reused && origin) {
+        try {
+          await contactsService.updateContact(contactId, { lead_origin_note: origin });
+        } catch (originErr) {
+          console.error('Error saving lead origin:', originErr);
+        }
+      }
+
+      try {
+        await pipelinesService.addItemToPipeline(pipelineId, {
+          item_id: contactId,
+          type: 'contact',
+          pipeline_stage_id: selectedStage.id,
+          custom_fields: {},
+          notes: notes || undefined,
+        });
+      } catch (addErr) {
+        // Pode já ter entrado no pipeline automaticamente (auto-enroll do padrão).
+        // Nesse caso, mover pra etapa escolhida em vez de falhar.
+        const e = addErr as { response?: { data?: { error?: { message?: string }; message?: string } } };
+        const addMsg = e?.response?.data?.error?.message || e?.response?.data?.message || '';
+        if (/already in this pipeline/i.test(addMsg)) {
+          const pls = await contactsService.getContactPipelines(contactId);
+          const match = (pls || []).find(p => p.pipeline?.id === pipelineId);
+          const itemId = match?.item?.id;
+          if (itemId && match?.stage?.id !== selectedStage.id) {
+            await pipelinesService.moveItem({
+              item_id: itemId,
+              pipeline_id: pipelineId,
+              from_stage_id: match?.stage?.id,
+              to_stage_id: selectedStage.id,
+            });
+          }
+        } else {
+          throw addErr;
+        }
+      }
+
+      toast.success(reused ? 'Lead já existia — adicionado ao pipeline.' : 'Lead criado e adicionado ao pipeline.');
+      onItemAdded();
+      onOpenChange(false);
+    } catch (error) {
+      // Duplicidade que chegou até aqui é a que nem o reaproveitamento resolveu
+      // (contato de outro corretor, p.ex.) — vale dizer isso, não "não consegui".
+      const fallback = error instanceof Error ? error.message : 'Não consegui criar o lead.';
+      toast.error(contactSaveError(error, fallback).message);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   // Get contact color for avatar
   const getContactColor = (name?: string) => {
     if (!name) return '#6B7280';
@@ -229,6 +382,70 @@ export default function AddItemModal({
             </Select>
           </div>
 
+          {/* Mode toggle: pegar existente x criar novo */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={mode === 'existing' ? 'default' : 'outline'}
+              onClick={() => setMode('existing')}
+              className="justify-center"
+            >
+              <ListChecks className="mr-2 h-4 w-4" />
+              Lead existente
+            </Button>
+            <Button
+              type="button"
+              variant={mode === 'new' ? 'default' : 'outline'}
+              onClick={() => setMode('new')}
+              className="justify-center"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Criar novo lead
+            </Button>
+          </div>
+
+          {/* MODO: CRIAR LEAD NOVO */}
+          {mode === 'new' && (
+            <div className="grid gap-3">
+              <div className="grid gap-2">
+                <Label>Nome *</Label>
+                <Input
+                  placeholder="Nome do lead"
+                  value={newLead.name}
+                  onChange={e => setNewLead(p => ({ ...p, name: e.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Telefone (WhatsApp)</Label>
+                <Input
+                  placeholder="ex: 5543998196577"
+                  value={newLead.phone}
+                  onChange={e => setNewLead(p => ({ ...p, phone: e.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>E-mail</Label>
+                <Input
+                  type="email"
+                  placeholder="email@exemplo.com"
+                  value={newLead.email}
+                  onChange={e => setNewLead(p => ({ ...p, email: e.target.value }))}
+                />
+              </div>
+              {/* Lead cadastrado na mão não tem anúncio pra rastrear — quem sabe
+                  de onde ele veio é quem está cadastrando. */}
+              <ManualOriginInput
+                id="new-lead-origin"
+                value={newLead.origin}
+                onChange={origin => setNewLead(p => ({ ...p, origin }))}
+                disabled={isCreating}
+              />
+            </div>
+          )}
+
+          {/* MODO: ITEM EXISTENTE */}
+          {mode === 'existing' && (
+          <>
           {/* Item Type Selection */}
           <div className="grid gap-2">
             <Label>{t('addItem.itemType')}</Label>
@@ -359,6 +576,8 @@ export default function AddItemModal({
               )}
             </div>
           </div>
+          </>
+          )}
 
           {/* Notes */}
           <div className="grid gap-2">
@@ -373,12 +592,25 @@ export default function AddItemModal({
         </div>
 
         <DialogFooter className="flex-shrink-0 mt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isAdding}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isAdding || isCreating}
+          >
             {t('addItem.cancel')}
           </Button>
-          <Button onClick={handleAddItem} disabled={!canAddItem || isAdding}>
-            {isAdding ? t('addItem.adding') : t('addItem.add')}
-          </Button>
+          {mode === 'new' ? (
+            <Button
+              onClick={handleCreateLead}
+              disabled={!selectedStage || !newLead.name.trim() || isCreating}
+            >
+              {isCreating ? 'Criando...' : 'Criar e adicionar'}
+            </Button>
+          ) : (
+            <Button onClick={handleAddItem} disabled={!canAddItem || isAdding}>
+              {isAdding ? t('addItem.adding') : t('addItem.add')}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

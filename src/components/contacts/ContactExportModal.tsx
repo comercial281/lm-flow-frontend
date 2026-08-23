@@ -10,7 +10,7 @@ import {
   Button,
   Label,
   Checkbox,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Download, FileSpreadsheet } from 'lucide-react';
 import { BaseFilter as ContactFilter } from '@/types/core';
 

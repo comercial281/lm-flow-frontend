@@ -6,7 +6,7 @@ import {
   Label,
   Textarea,
   Separator,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import {
   TestTube,
   FileText,

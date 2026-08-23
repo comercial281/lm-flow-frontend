@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Button, Input, Label } from '@evoapi/design-system';
+import { Button, Input, Label } from '@/components/ui/ds';
 import { ArrowLeft, CheckCircle2, XCircle, ExternalLink, LucideIcon } from 'lucide-react';
 import api from '@/services/core/api';
 

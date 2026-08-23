@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@evoapi/design-system';
-import { Card, CardContent, CardHeader } from '@evoapi/design-system';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/ds';
+import { Card, CardContent, CardHeader } from '@/components/ui/ds';
 import { User, Settings, Wrench, Users } from 'lucide-react';
 import BasicInfoForm, { BasicInfoData } from '../Forms/BasicInfoForm';
 import LLMConfigForm, { LLMConfigData } from '../Forms/LLMConfigForm';

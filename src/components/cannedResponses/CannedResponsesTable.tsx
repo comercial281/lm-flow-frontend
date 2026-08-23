@@ -1,4 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
+import { formatDateBR } from '@/utils/dateUtils';
 import { Edit, Trash2 } from 'lucide-react';
 import BaseTable from '@/components/base/BaseTable';
 import { CannedResponse } from '@/types/knowledge';
@@ -54,7 +55,7 @@ export default function CannedResponsesTable({
       sortable: true,
       render: (cannedResponse: CannedResponse) => (
         <div className="text-sm text-muted-foreground">
-          {new Date(cannedResponse.created_at).toLocaleDateString('pt-BR')}
+          {formatDateBR(cannedResponse.created_at)}
         </div>
       ),
     },

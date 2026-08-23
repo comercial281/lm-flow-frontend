@@ -12,6 +12,10 @@ export interface ConnectionParams {
   channel: string;
   pubsub_token: string;
   user_id: string;
+  // POOLED: slug do tenant (subdomínio). O backend usa pra resolver o schema do
+  // cliente ao buscar o usuário por pubsub_token; sem isso o WS não acha o user
+  // (que vive em tenant_<slug>) e rejeita a inscrição → sem tempo real.
+  tenant?: string;
 }
 
 export interface EventHandlers {
@@ -62,6 +66,7 @@ export class BaseActionCableConnector {
           channel: this.connectionParams.channel,
           pubsub_token: this.connectionParams.pubsub_token,
           user_id: this.connectionParams.user_id,
+          tenant: this.connectionParams.tenant,
         },
         {
           // Receber mensagens do WebSocket

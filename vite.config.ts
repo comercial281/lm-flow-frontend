@@ -10,13 +10,23 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' (não 'autoUpdate'): não força window.location.reload() no meio
+      // do uso só porque um deploy novo ativou o SW em background. A troca de
+      // versão continua garantida (ver main.tsx: aplica sozinho quando a aba
+      // vai pra segundo plano, ou na hora se o usuário clicar em "Atualizar").
+      registerType: 'prompt',
       injectRegister: 'auto',
       manifest: false, // usamos o public/manifest.json manualmente
       workbox: {
-        globPatterns: ['**/*.{css,html,ico,png,svg,woff2}'], // exclui JS grande do precache
+        // NÃO precachear index.html: senão o SW serve o HTML antigo do cache, que
+        // referencia chunks /assets/index-*.js já substituídos por um deploy novo
+        // (404 → tela branca). HTML sempre vem da rede; só assets estáticos cacheiam.
+        globPatterns: ['**/*.{css,ico,png,svg,woff2}'],
         importScripts: ['/push-sw.js'],
         navigateFallback: null,
+        cleanupOutdatedCaches: true, // remove precache de versões antigas na ativação
+        clientsClaim: true, // assume o controle das abas abertas imediatamente
+        skipWaiting: true, // ativa o SW novo na hora (não espera fechar todas as abas)
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB
       },
       devOptions: {

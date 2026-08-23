@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogFooter,
   Button,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { customRolesService } from '@/services/customRoles/customRolesService';
 import type {

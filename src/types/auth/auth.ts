@@ -56,6 +56,7 @@ export interface ProfileUpdateData {
   availability?: 'online' | 'offline' | 'busy';
   auto_offline?: boolean;
   avatar?: File | null;
+  whatsapp_number?: string;
 }
 
 // Password change data interface

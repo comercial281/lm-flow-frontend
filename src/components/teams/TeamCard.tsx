@@ -1,4 +1,4 @@
-import { Button, Card, CardContent, Avatar, AvatarFallback, Badge } from '@evoapi/design-system';
+import { Button, Card, CardContent, Avatar, AvatarFallback, Badge } from '@/components/ui/ds';
 import { Edit, Users, Trash2 } from 'lucide-react';
 import { Team } from '@/types/users';
 import { useLanguage } from '@/hooks/useLanguage';

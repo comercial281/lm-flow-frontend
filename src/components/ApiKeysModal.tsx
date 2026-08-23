@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   Button,
@@ -17,7 +18,7 @@ import {
   SelectValue,
   Badge,
   Checkbox,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Edit, Eye, Key, Plus, Trash2, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ApiKey, ApiKeyCreate, ApiKeyUpdate } from '@/types/agents';
@@ -383,7 +384,7 @@ export function ApiKeysModal({ open, onOpenChange, onApiKeysChange }: ApiKeysMod
                             )}
                             <Badge variant="outline">{getProviderLabel(apiKey.provider)}</Badge>
                             <span className="text-sm text-muted-foreground">
-                              {t('list.createdAt')} {new Date(apiKey.created_at).toLocaleDateString('pt-BR')}
+                              {t('list.createdAt')} {formatDateBR(apiKey.created_at)}
                             </span>
                             {!apiKey.is_active && <Badge variant="destructive">{t('list.inactive')}</Badge>}
                           </div>

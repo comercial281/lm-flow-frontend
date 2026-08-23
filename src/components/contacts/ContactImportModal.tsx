@@ -9,7 +9,7 @@ import {
   DialogTitle,
   Button,
   Label,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Upload, Trash2, FileText, Download } from 'lucide-react';
 
 interface ContactImportModalProps {

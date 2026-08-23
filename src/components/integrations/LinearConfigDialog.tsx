@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Dialog,
   DialogContent,
@@ -7,7 +8,7 @@ import {
   Button,
   Checkbox,
   Label,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { toast } from 'sonner';
@@ -160,7 +161,7 @@ const LinearConfigDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving Linear configuration:', error);
-      toast.error('Erro ao salvar configurações');
+      toast.error(apiErrorMessage(error, 'Erro ao salvar configurações'));
     }
   };
 

@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router-dom';
 import { CircleHelp } from 'lucide-react';
-import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@evoapi/design-system';
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/ds';
 import { tourRegistry, matchTourRoute } from '@/tours/tourRegistry';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';

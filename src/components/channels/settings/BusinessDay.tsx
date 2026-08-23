@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Checkbox, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@evoapi/design-system';
+import { Checkbox, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/ds';
 import { Minus } from 'lucide-react';
 import { TimeSlot, generateTimeSlots, validateTimeSlot, calculateTotalHours } from './helpers/businessHours';
 import { useLanguage } from '@/hooks/useLanguage';

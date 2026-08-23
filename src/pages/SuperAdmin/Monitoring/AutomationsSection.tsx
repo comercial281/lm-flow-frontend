@@ -3,7 +3,7 @@ import {
   Zap, ChevronDown, ChevronRight, ExternalLink, AlertTriangle,
   CheckCircle2, XCircle, Loader2, Workflow, Building2,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, Badge } from '@evoapi/design-system';
+import { Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui/ds';
 import clientInstancesService, {
   AutomationsMonitorData, AutomationGroup, AutomationItem,
 } from '@/services/clientInstances/clientInstancesService';

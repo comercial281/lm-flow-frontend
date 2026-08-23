@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +18,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import {
   Calendar,
   Clock,
@@ -236,7 +237,7 @@ const GoogleCalendarConfigDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving Google Calendar configuration:', error);
-      toast.error('Erro ao salvar configurações');
+      toast.error(apiErrorMessage(error, 'Erro ao salvar configurações'));
     }
   };
 

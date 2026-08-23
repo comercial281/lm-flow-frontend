@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import {
   ChevronRight,
   ChevronDown,

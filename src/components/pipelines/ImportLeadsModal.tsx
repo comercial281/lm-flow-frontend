@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Upload, FileText, Trash2, CheckCircle2, AlertCircle, Loader2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { PipelineStage } from '@/types/analytics';
@@ -202,8 +203,8 @@ export default function ImportLeadsModal({
       setTag(title);
       setNewTagName('');
       toast.success(`Etiqueta "${title}" criada.`);
-    } catch {
-      toast.error('Não consegui criar a etiqueta.');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não consegui criar a etiqueta.'));
     } finally {
       setCreatingTag(false);
     }

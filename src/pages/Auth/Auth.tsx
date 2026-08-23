@@ -11,7 +11,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { login, register, forgotPassword } from '@/services/auth';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,16 +22,25 @@ import MfaVerification from '@/components/auth/MfaVerification';
 import { twoFactorService } from '@/services/profile/twoFactorService';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, Globe, ArrowRight, ChevronLeft } from 'lucide-react';
+import { AlertCircle, Globe, ArrowRight, ChevronLeft, Eye, EyeOff } from 'lucide-react';
 
 import { ApiError } from '@/types/auth';
 import { type Locale } from '@/i18n/config';
 import { useGlobalConfig } from '@/contexts/GlobalConfigContext';
 import { AppLogo } from '@/components/AppLogo';
 import FlowBackground from './FlowBackground';
+
+// Só aceita caminho interno. O `returnUrl` sempre existiu aqui, mas nada o
+// preenchia; agora o PrivateRoute o preenche a cada redirect para o login, então
+// um link com `?returnUrl=https://…` viraria redirect aberto logo depois de
+// autenticar. `//host` também é absoluto (protocol-relative) e fica de fora.
+const safeReturnUrl = (value: string | null): string | null => {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
+  return value;
+};
 
 // ─── Animation variants ───────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -126,6 +135,8 @@ export const Auth: React.FC = () => {
   type TabKey = 'login' | 'register' | 'forgot';
   const [activeTab, setActiveTab] = useState<TabKey>('login');
   const [isLoading, setIsLoading] = useState(false);
+  const [showLoginPass, setShowLoginPass] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loginError, setLoginError] = useState('');
   const [registerError, setRegisterError] = useState('');
   const [forgotPasswordError, setForgotPasswordError] = useState('');
@@ -176,14 +187,19 @@ export const Auth: React.FC = () => {
   type RegisterFormData = z.infer<typeof registerSchema>;
   type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
-  const loginForm = useForm<LoginFormData>({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } });
+  const loginForm = useForm<LoginFormData>({ resolver: zodResolver(loginSchema), defaultValues: { email: (typeof window !== 'undefined' && localStorage.getItem('lmflow:email')) || '', password: '' } });
   const registerForm = useForm<RegisterFormData>({ resolver: zodResolver(registerSchema), defaultValues: { fullName: '', email: '', password: '', confirmPassword: '' } });
   const forgotPasswordForm = useForm<ForgotPasswordFormData>({ resolver: zodResolver(forgotPasswordSchema), defaultValues: { email: '' } });
 
   const onLoginSubmit = async (data: LoginFormData) => {
     setIsLoading(true); setLoginError('');
+    try { if (rememberMe) localStorage.setItem('lmflow:email', data.email); else localStorage.removeItem('lmflow:email'); } catch { /* noop */ }
     try {
-      const recaptchaToken = await executeRecaptcha('login');
+      // reCAPTCHA não pode travar o login: nos subdomínios novos (*.lmflow.com.br)
+      // o reCAPTCHA pode falhar por domínio não-registrado. O backend não exige o
+      // token, então se falhar, segue sem ele.
+      let recaptchaToken: string | null = null;
+      try { recaptchaToken = await executeRecaptcha('login'); } catch { recaptchaToken = null; }
       const result = await login({ email: data.email, password: data.password, recaptcha_token: recaptchaToken || undefined });
       if (result.requiresMfa && result.mfaData) {
         const mfaData = result.mfaData as { method: 'totp' | 'email'; tempToken: string; email: string };
@@ -193,7 +209,7 @@ export const Auth: React.FC = () => {
       await authLogin(result.response.data.user, { access_token: result.response.data.token?.access_token || result.response.data.token?.token?.access_token });
       const { validityCheck } = useAuthStore.getState();
       await validityCheck();
-      const returnUrl = new URLSearchParams(location.search).get('returnUrl');
+      const returnUrl = safeReturnUrl(new URLSearchParams(location.search).get('returnUrl'));
       if (returnUrl) window.location.href = returnUrl;
       else navigate('/', { replace: true });
     } catch (error) {
@@ -207,7 +223,8 @@ export const Auth: React.FC = () => {
   const onRegisterSubmit = async (data: RegisterFormData) => {
     setIsLoading(true); setRegisterError('');
     try {
-      const recaptchaToken = await executeRecaptcha('register');
+      let recaptchaToken: string | null = null;
+      try { recaptchaToken = await executeRecaptcha('register'); } catch { recaptchaToken = null; }
       await register({ email: data.email, password: data.password, password_confirmation: data.confirmPassword, name: data.fullName, recaptcha_token: recaptchaToken || undefined });
       toast.success(t('auth.register.registrationSuccessful'));
       setActiveTab('login');
@@ -222,7 +239,8 @@ export const Auth: React.FC = () => {
   const onForgotPasswordSubmit = async (data: ForgotPasswordFormData) => {
     setIsLoading(true); setForgotPasswordError('');
     try {
-      const recaptchaToken = await executeRecaptcha('forgot_password');
+      let recaptchaToken: string | null = null;
+      try { recaptchaToken = await executeRecaptcha('forgot_password'); } catch { recaptchaToken = null; }
       await forgotPassword({ email: data.email, recaptcha_token: recaptchaToken || undefined });
       toast.success(t('auth.forgotPassword.emailSent'));
       setActiveTab('login');
@@ -237,7 +255,7 @@ export const Auth: React.FC = () => {
 
   const handleMfaVerification = async (code: string) => {
     await verifyMfaCode(code);
-    const returnUrl = new URLSearchParams(location.search).get('returnUrl');
+    const returnUrl = safeReturnUrl(new URLSearchParams(location.search).get('returnUrl'));
     if (returnUrl) window.location.href = returnUrl;
     else navigate('/', { replace: true });
   };
@@ -326,24 +344,63 @@ export const Auth: React.FC = () => {
                   )}
 
                   <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                    {[
-                      { i: 1, id: 'login-email', type: 'email', label: t('auth.login.email'), field: 'email' as const },
-                      { i: 2, id: 'login-password', type: 'password', label: t('auth.login.password'), field: 'password' as const },
-                    ].map(({ i, id, type, label, field }) => (
-                      <motion.div key={field} custom={i} variants={fadeUpVariant} initial="hidden" animate="visible" className={fieldCls}>
-                        <Label htmlFor={id} className="text-white/70 text-sm">{label}</Label>
-                        <Input
-                          id={id} type={type} placeholder={label} disabled={isLoading}
-                          className="bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-violet-500/60 focus:ring-violet-500/20"
-                          {...loginForm.register(field)}
-                        />
-                        {loginForm.formState.errors[field] && (
-                          <p className={errorCls}>{loginForm.formState.errors[field]?.message}</p>
-                        )}
-                      </motion.div>
-                    ))}
+                    {/* Email */}
+                    <motion.div custom={1} variants={fadeUpVariant} initial="hidden" animate="visible" className={fieldCls}>
+                      <Label htmlFor="login-email" className="text-white/70 text-sm">{t('auth.login.email')}</Label>
+                      <Input
+                        id="login-email" type="email" placeholder={t('auth.login.email')} disabled={isLoading}
+                        autoComplete="username"
+                        className="bg-white/10 border-white/25 text-white placeholder:text-white/45 focus:border-violet-500/70 focus:ring-violet-500/25"
+                        {...loginForm.register('email')}
+                      />
+                      {loginForm.formState.errors.email && (
+                        <p className={errorCls}>{loginForm.formState.errors.email.message}</p>
+                      )}
+                    </motion.div>
 
-                    <motion.div custom={3} variants={fadeUpVariant} initial="hidden" animate="visible" className="flex justify-end">
+                    {/* Senha — Controller garante que autopreenchimento do browser é rastreado */}
+                    <motion.div custom={2} variants={fadeUpVariant} initial="hidden" animate="visible" className={fieldCls}>
+                      <Label htmlFor="login-password" className="text-white/70 text-sm">{t('auth.login.password')}</Label>
+                      <div className="relative">
+                        <Controller
+                          control={loginForm.control}
+                          name="password"
+                          render={({ field: f }) => (
+                            <Input
+                              id="login-password"
+                              type={showLoginPass ? 'text' : 'password'}
+                              placeholder={t('auth.login.password')}
+                              disabled={isLoading}
+                              autoComplete="current-password"
+                              className="bg-white/10 border-white/25 text-white placeholder:text-white/45 focus:border-violet-500/70 focus:ring-violet-500/25 pr-10"
+                              {...f}
+                            />
+                          )}
+                        />
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onClick={() => setShowLoginPass(v => !v)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors z-10"
+                        >
+                          {showLoginPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      {loginForm.formState.errors.password && (
+                        <p className={errorCls}>{loginForm.formState.errors.password.message}</p>
+                      )}
+                    </motion.div>
+
+                    <motion.div custom={3} variants={fadeUpVariant} initial="hidden" animate="visible" className="flex justify-between items-center">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={e => setRememberMe(e.target.checked)}
+                          className="w-3.5 h-3.5 rounded accent-violet-500 cursor-pointer"
+                        />
+                        <span className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>Lembrar de mim</span>
+                      </label>
                       <button
                         type="button"
                         onClick={() => setActiveTab('forgot')}

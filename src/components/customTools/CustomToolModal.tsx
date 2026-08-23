@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   ScrollArea,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { CustomTool, CustomToolFormData } from '@/types/ai';
 import CustomToolForm from './CustomToolForm';
 

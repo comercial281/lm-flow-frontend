@@ -166,7 +166,7 @@
         "readMessages": "Mark Messages as Read",
         "readStatus": "Read Status",
         "groupsIgnore": "Ignore Groups",
-        "enableSyncFeatures": "Enable Sync Features",
+        "enableSyncFeatures": "Import phone address book (all contacts)",
         "syncFullHistory": "Sync Full History",
         "msgCall": {
           "label": "Message for Calls",

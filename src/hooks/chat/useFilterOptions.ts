@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import InboxesService from '@/services/channels/inboxesService';
+import { mayRead } from '@/store/appDataStore';
 import chatService from '@/services/chat/chatService';
+import { pipelinesService } from '@/services/pipelines';
 import { Inbox } from '@/types/channels/inbox';
-import type { Pipeline } from '@/types/chat/api';
+import type { Pipeline, Label, Team } from '@/types/chat/api';
 
 interface FilterOptions {
   inboxes: Array<{ label: string; value: string }>;
   teams: Array<{ label: string; value: string }>;
   labels: Array<{ label: string; value: string }>;
   pipelines: Array<{ label: string; value: string }>;
+  stages: Array<{ label: string; value: string }>;
   loading: boolean;
   error: string | null;
 }
@@ -30,6 +33,7 @@ export const useFilterOptions = (params: UseFilterOptionsParams = {}): FilterOpt
     teams: [],
     labels: [],
     pipelines: [],
+    stages: [],
     loading: false,
     error: null,
   });
@@ -41,11 +45,23 @@ export const useFilterOptions = (params: UseFilterOptionsParams = {}): FilterOpt
       setOptions(prev => ({ ...prev, loading: true, error: null }));
 
       try {
-        // ✅ Carregar inboxes e pipelines
-        const [inboxesResponse, pipelinesResponse] = await Promise.allSettled([
-          InboxesService.list(),
-          chatService.getAvailablePipelines(),
+        // ✅ Carregar inboxes, pipelines, labels, teams e etapas
+        // Instâncias e equipes só são pedidas para quem lê: sem a guarda, abrir o
+        // modal de filtros dava erro vermelho para o corretor. Os dropdowns já
+        // ficam vazios de qualquer forma quando ele não tem acesso.
+        const [podeInboxes, podeTeams] = await Promise.all([
+          mayRead('inboxes.read'),
+          mayRead('teams.read'),
         ]);
+
+        const [inboxesResponse, pipelinesResponse, labelsResponse, teamsResponse, stagesResponse] =
+          await Promise.allSettled([
+            podeInboxes ? InboxesService.list() : Promise.reject(new Error('sem permissão')),
+            chatService.getAvailablePipelines(),
+            chatService.getAvailableLabels(),
+            podeTeams ? chatService.getAvailableTeams() : Promise.reject(new Error('sem permissão')),
+            pipelinesService.getPipelines({ include_items: false }),
+          ]);
 
         // ✅ Processar inboxes
         const inboxes: Array<{ label: string; value: string }> = [];
@@ -81,15 +97,50 @@ export const useFilterOptions = (params: UseFilterOptionsParams = {}): FilterOpt
           }
         }
 
-        // ❌ Teams e Labels temporariamente vazios (APIs não implementadas no chatService)
-        const teams: Array<{ label: string; value: string }> = [];
+        // ✅ Processar labels (o backend filtra por NOME da tag → value = title)
         const labels: Array<{ label: string; value: string }> = [];
+        if (labelsResponse.status === 'fulfilled') {
+          const raw = labelsResponse.value;
+          const list = Array.isArray(raw) ? raw : (raw as { data?: Label[] })?.data || [];
+          labels.push(
+            ...list
+              .filter((l: Label) => !!l?.title)
+              .map((l: Label) => ({ label: l.title, value: l.title })),
+          );
+        }
+
+        // ✅ Processar teams (filtra por id)
+        const teams: Array<{ label: string; value: string }> = [];
+        if (teamsResponse.status === 'fulfilled') {
+          const raw = teamsResponse.value;
+          const list = Array.isArray(raw) ? raw : (raw as { data?: Team[] })?.data || [];
+          teams.push(
+            ...list
+              .filter((tm: Team) => !!tm?.name)
+              .map((tm: Team) => ({ label: tm.name, value: tm.id.toString() })),
+          );
+        }
+
+        // ✅ Processar etapas (coluna) de todos os pipelines → "Pipeline › Etapa"
+        const stages: Array<{ label: string; value: string }> = [];
+        if (stagesResponse.status === 'fulfilled') {
+          const list = stagesResponse.value?.data || [];
+          list.forEach(pipeline => {
+            (pipeline.stages || []).forEach(stage => {
+              stages.push({
+                label: `${pipeline.name} › ${stage.name}`,
+                value: stage.id.toString(),
+              });
+            });
+          });
+        }
 
         setOptions({
           inboxes,
           teams,
           labels,
           pipelines,
+          stages,
           loading: false,
           error: null,
         });

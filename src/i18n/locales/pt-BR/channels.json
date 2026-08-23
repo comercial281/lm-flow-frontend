@@ -8,16 +8,28 @@
   "card": {
     "channelId": "Canal ID",
     "type": "Tipo",
-    "displayName": "Nome de Exibição"
+    "displayName": "Nome de Exibição",
+    "whatsappName": "Nome no WhatsApp",
+    "connection": {
+      "connected": "Conectado",
+      "connectedHint": "A instância está no ar: recebe e envia mensagens normalmente.",
+      "connecting": "Conectando",
+      "connectingHint": "A instância está pareando com o celular. Se ficar parada aqui, leia o QR Code de novo.",
+      "disconnected": "Desconectado",
+      "disconnectedHint": "A instância está fora do ar: não recebe nem envia mensagens. Abra o canal e leia o QR Code.",
+      "since": "Fora do ar desde {{since}}"
+    }
   },
   "table": {
     "channels": "Canais",
     "id": "ID",
     "displayName": "Nome de Exibição",
+    "whatsappName": "Nome no WhatsApp",
     "empty": {
       "title": "Nenhum canal encontrado",
       "description": "Crie um novo canal para começar a receber mensagens dos seus clientes."
-    }
+    },
+    "connection": "Conexão"
   },
   "navigation": {
     "channels": "Canais",
@@ -281,7 +293,6 @@
       "preChatForm": "Formulário Pré-Chat",
       "widgetBuilder": "Construtor do Widget",
       "configuration": "Configuração",
-      "botConfiguration": "Configuração de Agente de IA",
       "moderation": "Moderação",
       "messageTemplates": "Modelos de Mensagem"
     },
@@ -358,6 +369,18 @@
         "roles": {
           "agent": "Atendente",
           "administrator": "Administrador"
+        }
+      },
+      "owner": {
+        "title": "Responsável da instância",
+        "description": "O corretor dono deste número — a foto real do WhatsApp dele passa a ser usada como avatar de responsável no CRM",
+        "placeholder": "Selecione o corretor dono deste número",
+        "none": "Nenhum (número compartilhado)",
+        "success": {
+          "updated": "Responsável da instância atualizado!"
+        },
+        "errors": {
+          "updateError": "Erro ao atualizar o responsável da instância"
         }
       },
       "status": {
@@ -829,6 +852,13 @@
           "statusDisconnected": "Desconectado",
           "statusConnecting": "Conectando",
           "connectDevice": "Conectar Dispositivo",
+          "qrSteps": {
+            "title": "Como escanear no seu celular",
+            "step1": "Abra o WhatsApp no seu celular (o mesmo número que vai atender).",
+            "step2": "No Android, toque nos três pontinhos (⋮) no canto superior direito. No iPhone, toque em Configurações no menu de baixo.",
+            "step3": "Toque em \"Dispositivos conectados\" e depois em \"Conectar dispositivo\".",
+            "step4": "Aponte a câmera do celular para o QR Code desta tela e aguarde a confirmação."
+          },
           "qrCodeInstructions": "Escaneie este QR Code com seu WhatsApp",
           "settingsTitle": "Configurações da Instância",
           "settingsDescription": "Configure o comportamento da sua instância do WhatsApp",
@@ -845,7 +875,8 @@
           "errors": {
             "nameNotFound": "Nome da instância não encontrado",
             "qrCodeError": "Erro ao gerar QR Code",
-            "updateError": "Erro ao atualizar configurações da instância"
+            "updateError": "Erro ao atualizar configurações da instância",
+            "qrImageError": "Não foi possível exibir o QR Code. Gere um novo."
           },
           "success": {
             "qrCodeGenerated": "QR Code gerado com sucesso!",
@@ -911,12 +942,21 @@
             "disconnect": "Desconectar Instância",
             "confirmDisconnect": "Tem certeza que deseja desconectar a instância?",
             "success": {
-              "disconnected": "Instância desconectada com sucesso!"
+              "disconnected": "Instância desconectada com sucesso!",
+              "reconnected": "Conexão reconstruída. Escaneie o novo código."
             },
             "errors": {
-              "disconnectError": "Erro ao desconectar instância"
-            }
-          }
+              "disconnectError": "Erro ao desconectar instância",
+              "reconnectError": "Erro ao reconectar a instância"
+            },
+            "reconnect": "Reconectar",
+            "confirmReconnect": "Reconectar reconstrói a conexão do zero e gera um código novo. Use quando o QR Code não estiver pareando. Deseja continuar?"
+          },
+          "qrExpiresIn": "Este código expira em {{seconds}}s",
+          "qrExpired": "O código expirou",
+          "qrRefreshing": "Gerando um código novo...",
+          "refreshQrCode": "Gerar novo código",
+          "closeQrModal": "Fechar"
         },
         "zapi": {
           "privacy": {
@@ -1255,47 +1295,6 @@
         "placeholder": "Digite o placeholder do campo"
       }
     },
-    "agentBot": {
-      "providers": {
-        "webhook": {
-          "label": "Webhook",
-          "description": "Integração via webhook personalizado"
-        },
-        "dialogflow": {
-          "label": "Dialogflow",
-          "description": "Integração com Google Dialogflow"
-        },
-        "rasa": {
-          "label": "Rasa",
-          "description": "Integração com Rasa Open Source"
-        }
-      },
-      "types": {
-        "webhook": {
-          "label": "Webhook",
-          "description": "Bot via webhook"
-        },
-        "csml": {
-          "label": "CSML",
-          "description": "Bot CSML"
-        }
-      },
-      "status": {
-        "connected": "Conectado",
-        "disconnected": "Desconectado"
-      },
-      "validation": {
-        "nameRequired": "Nome é obrigatório",
-        "descriptionRequired": "Descrição é obrigatória",
-        "webhookUrlRequired": "URL do webhook é obrigatória",
-        "webhookUrlInvalid": "URL do webhook inválida",
-        "segmentationLimitMinimum": "Limite de segmentação deve ser maior que 0",
-        "segmentationMinSizeMinimum": "Tamanho mínimo de segmentação deve ser maior que 0",
-        "segmentationMinSizeSmallerThanLimit": "Tamanho mínimo deve ser menor que o limite",
-        "delayPerCharacterNonNegative": "Atraso por caractere deve ser não-negativo",
-        "debounceTimeNonNegative": "Tempo de debounce deve ser não-negativo"
-      }
-    },
     "widgetBuilder": {
       "title": "Construtor do Widget",
       "description": "Personalize a aparência e comportamento do seu widget de chat",
@@ -1374,135 +1373,6 @@
     },
     "timestamp": {
       "unavailable": "Indisponível"
-    },
-    "agentBotConfiguration": {
-      "title": "Configuração de Agente de IA",
-      "description": "Configure agentes de IA para automatizar respostas",
-      "fields": {
-        "selectBot": "Selecionar Agente de IA",
-        "provider": "Provedor",
-        "type": "Tipo"
-      },
-      "placeholders": {
-        "selectBot": "Selecione um agente de IA"
-      },
-      "status": {
-        "disconnected": "Desconectado",
-        "connected": "Conectado",
-        "active": "Ativo"
-      },
-      "noBots": {
-        "title": "Nenhum Agente de IA Disponível",
-        "description": "Você ainda não possui agentes de IA configurados para este canal."
-      },
-      "buttons": {
-        "manageBots": "Gerenciar Agentes de IA",
-        "configure": "Configurar Agente de IA",
-        "configuring": "Configurando...",
-        "disconnect": "Desconectar Agente de IA",
-        "disconnecting": "Desconectando...",
-        "advancedSettings": "Configurações Avançadas"
-      },
-      "info": {
-        "title": "Como Funciona:",
-        "point1": "Agentes de IA podem responder automaticamente às mensagens dos clientes",
-        "point2": "Configure palavras-chave e respostas automáticas",
-        "point3": "Agentes de IA podem transferir conversas para atendentes humanos",
-        "point4": "Estatísticas de desempenho dos agentes de IA estão disponíveis"
-      },
-      "advanced": {
-        "title": "Configuração Avançada",
-        "description": "Configure comportamentos e configurações avançadas do agente de IA",
-        "conversationStatus": {
-          "title": "Status da Conversa",
-          "description": "Selecione quais status de conversa permitem que o agente de IA execute. Se nenhum for selecionado, o agente de IA executará para todos os status.",
-          "emptyHint": "Se nenhum status for selecionado, o agente de IA executará para todos os status de conversa."
-        },
-        "labels": {
-          "title": "Etiquetas",
-          "description": "Selecione quais etiquetas permitem que o agente de IA execute. Se nenhuma for selecionada, o agente de IA executará para todas as conversas independentemente das etiquetas.",
-          "emptyHint": "Se nenhuma etiqueta for selecionada, o agente de IA executará para todas as conversas independentemente das etiquetas.",
-          "noLabels": "Nenhuma etiqueta disponível. Crie etiquetas na seção de Etiquetas para usar este recurso.",
-          "addLabel": "Adicionar Etiqueta"
-        },
-        "ignoredLabels": {
-          "title": "Etiquetas Ignoradas",
-          "description": "Selecione etiquetas que impedirão o agente de IA de responder. Conversas com essas etiquetas serão ignoradas pelo agente de IA.",
-          "addLabel": "Adicionar Etiqueta Ignorada",
-          "noAvailableLabels": "Nenhuma etiqueta disponível para ignorar. Todas as etiquetas já estão ignoradas ou na lista de permitidas."
-        },
-        "facebookMessenger": {
-          "title": "Configuração do Facebook Messenger",
-          "description": "Configure como o agente de IA interage com mensagens diretas e comentários do Facebook",
-          "interactionType": "Tipo de Interação",
-          "interactionTypes": {
-            "both": "Comentários e Mensagens Diretas",
-            "commentsOnly": "Somente Comentários",
-            "messagesOnly": "Somente Mensagens Diretas"
-          },
-          "enableCommentReplies": "Habilitar Respostas a Comentários",
-          "enableCommentRepliesDescription": "Quando habilitado, o agente de IA responderá a comentários em posts do Facebook",
-          "commentAgentBot": "Agente de IA para Comentários",
-          "commentAgentBotDescription": "Selecione qual agente de IA deve lidar com respostas a comentários. Escolha 'Usar Mesmo Agente' para usar o agente principal, ou selecione um agente diferente especificamente para comentários.",
-          "useSameAgent": "Usar Mesmo Agente (Agente Principal)",
-          "noOtherBots": "Nenhum outro agente de IA disponível. O agente principal será usado para comentários.",
-          "postSelection": "Seleção de Posts",
-          "postSelectionDescription": "Escolha se o agente de IA deve responder a todos os posts ou apenas posts específicos",
-          "allPosts": "Todos os Posts",
-          "specificPosts": "Posts Específicos",
-          "postIdPlaceholder": "Digite o ID do post (ex: 123456789_987654321)",
-          "addPostId": "Adicionar",
-          "selectedPosts": "Posts Selecionados",
-          "noPostsFound": "Nenhum post encontrado. Verifique se a página do Facebook está conectada corretamente.",
-          "viewOnFacebook": "Ver no Facebook"
-        },
-        "moderation": {
-          "title": "Moderação de Mensagens",
-          "description": "Configure a moderação automática para mensagens recebidas",
-          "enableModeration": "Habilitar Moderação",
-          "enableModerationDescription": "Quando habilitado, as mensagens serão filtradas e moderadas automaticamente antes que as respostas sejam enviadas",
-          "explicitWords": {
-            "title": "Filtro de Palavras Explícitas",
-            "description": "Digite palavras ou padrões regex (um por linha) para filtrar conteúdo explícito. Mensagens contendo essas palavras serão marcadas para moderação.",
-            "placeholder": "Digite palavras ou padrões regex, um por linha\nexemplo:\npalavrao\n\\bprofanidade\\b\n^spam"
-          },
-          "sentimentAnalysis": {
-            "title": "Análise de Sentimento",
-            "description": "Use IA para detectar mensagens ofensivas ou inadequadas. Mensagens marcadas como ofensivas serão enviadas para moderação."
-          },
-          "autoApproveResponses": {
-            "title": "Aprovação Automática de Respostas",
-            "description": "Quando habilitado, as respostas geradas pela IA serão enviadas automaticamente sem exigir aprovação. Quando desabilitado, todas as respostas devem ser aprovadas antes de serem enviadas."
-          },
-          "autoRejectExplicitWords": {
-            "title": "Rejeição Automática - Palavras Explícitas",
-            "description": "Quando habilitado, mensagens que contenham palavras explícitas serão automaticamente rejeitadas e deletadas sem exigir aprovação manual."
-          },
-          "autoRejectOffensiveSentiment": {
-            "title": "Rejeição Automática - Sentimento Ofensivo",
-            "description": "Quando habilitado, mensagens detectadas como ofensivas pela análise de sentimento serão automaticamente rejeitadas e deletadas sem exigir aprovação manual."
-          }
-        }
-      },
-      "statusOptions": {
-        "open": "Aberto",
-        "resolved": "Resolvido",
-        "pending": "Pendente",
-        "snoozed": "Adiado"
-      },
-      "errors": {
-        "loadError": "Erro ao carregar dados dos agentes de IA",
-        "configureError": "Erro ao configurar agente de IA",
-        "disconnectError": "Erro ao desconectar agente de IA",
-        "loadPostsError": "Erro ao carregar posts do Facebook"
-      },
-      "success": {
-        "configured": "Agente de IA configurado com sucesso!",
-        "disconnected": "Agente de IA desconectado com sucesso!"
-      },
-      "validation": {
-        "selectBot": "Selecione um agente de IA antes de continuar"
-      }
     },
     "lockToSingleConversation": {
       "title": "Bloquear para Conversa Única",

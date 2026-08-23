@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Button, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@evoapi/design-system';
+import { Button, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/ds';
 import { cn } from '@/utils/cn';
 
 

@@ -17,6 +17,8 @@ export interface User {
   availability_status?: 'online' | 'busy' | 'offline'; // Alias for availability
   role?: Role;
   chave_role?: CRole; // LM Flow role: agent | manager | admin
+  whatsapp_number?: string | null; // WhatsApp p/ receber lembretes de automação
+  plain_password?: string | null; // senha guardada (super-admin/gestor), quando houver
   confirmed: boolean;
   created_at: string;
   updated_at: string;
@@ -37,6 +39,7 @@ export interface UserCreateData {
   role: string;
   auto_offline?: boolean;
   availability?: 'online' | 'busy' | 'offline';
+  whatsapp_number?: string;
 }
 
 export interface UserUpdateData {
@@ -48,6 +51,7 @@ export interface UserUpdateData {
   availability?: 'online' | 'busy' | 'offline';
   avatar?: File;
   password?: string;
+  whatsapp_number?: string;
 }
 
 export interface UsersResponse extends PaginatedResponse<User> {}
@@ -99,6 +103,7 @@ export interface UserFormData {
   removeAvatar?: boolean;
   password?: string;
   confirmPassword?: string;
+  whatsapp_number?: string;
 }
 
 export interface UserTableColumn {

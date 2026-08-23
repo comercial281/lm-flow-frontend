@@ -1,5 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
-import { Badge } from '@evoapi/design-system';
+import { Badge } from '@/components/ui/ds';
 import { Server, Eye, Wrench } from 'lucide-react';
 import { MCPServer } from '@/types/ai';
 import { BaseTable, TableColumn, TableAction } from '@/components/base';

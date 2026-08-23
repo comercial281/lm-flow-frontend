@@ -1,6 +1,6 @@
 import { useLanguage } from '@/hooks/useLanguage';
-import { Card, CardContent } from '@evoapi/design-system';
-import { Button } from '@evoapi/design-system';
+import { Card, CardContent } from '@/components/ui/ds';
+import { Button } from '@/components/ui/ds';
 import { GitBranch, Eye, Edit, Trash2, Copy, CopyPlus, Power, MoreVertical, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Pipeline } from '@/types/analytics';
 import { cn } from '@/lib/utils';
 

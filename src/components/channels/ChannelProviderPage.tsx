@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Card, CardContent } from '@evoapi/design-system';
+import { Button, Card, CardContent } from '@/components/ui/ds';
 import { ArrowLeft } from 'lucide-react';
 import ProviderGrid, { Provider } from './ProviderGrid';
 import { useLanguage } from '@/hooks/useLanguage';

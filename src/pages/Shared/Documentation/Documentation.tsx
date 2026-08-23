@@ -1,5 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
-import { Button } from '@evoapi/design-system';
+import { Button } from '@/components/ui/ds';
 import { FileText, Search, BookOpen, Code, Video, Download } from 'lucide-react';
 
 const Documentacao = () => {

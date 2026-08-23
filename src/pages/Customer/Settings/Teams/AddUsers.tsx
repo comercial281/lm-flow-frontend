@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLanguage } from '@/hooks/useLanguage';
 import { toast } from 'sonner';
-import { Button, Checkbox, Avatar, AvatarFallback, AvatarImage } from '@evoapi/design-system';
+import { Button, Checkbox, Avatar, AvatarFallback, AvatarImage } from '@/components/ui/ds';
 import { ArrowLeft, Users, UserPlus } from 'lucide-react';
 import BaseHeader from '@/components/base/BaseHeader';
 import BaseTable, { TableColumn } from '@/components/base/BaseTable';

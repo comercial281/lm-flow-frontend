@@ -10,7 +10,7 @@ import {
   Textarea,
   Button,
   Label,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Upload, X } from 'lucide-react';
 import { MACRO_ACTION_TYPES } from '@/types/automation';
 

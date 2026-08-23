@@ -11,7 +11,7 @@ import {
   Input,
   Label,
   Textarea,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Pipeline } from '@/types/analytics';
 
 interface DuplicatePipelineModalProps {

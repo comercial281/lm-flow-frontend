@@ -18,7 +18,7 @@ import {
   SelectValue,
   Switch,
   Badge,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { X, Plus } from 'lucide-react';
 import {
   CustomAttributeDefinition,

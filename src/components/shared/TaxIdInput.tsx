@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { IMaskInput } from 'react-imask';
-import { Input } from '@evoapi/design-system';
+import { Input } from '@/components/ui/ds';
 import { cn } from '@/lib/utils';
 
 interface TaxIdInputProps {

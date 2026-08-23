@@ -1,4 +1,4 @@
-import { Badge } from '@evoapi/design-system';
+import { Badge } from '@/components/ui/ds';
 import { Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ContactLabel } from '@/types/contacts';

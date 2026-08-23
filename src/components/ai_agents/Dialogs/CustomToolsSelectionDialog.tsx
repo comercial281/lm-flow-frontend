@@ -10,7 +10,7 @@ import {
   Badge,
   Input,
   Checkbox,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Search, Code, Tag, Plus, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { listCustomTools } from '@/services/agents/customToolsService';

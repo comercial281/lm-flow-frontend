@@ -9,7 +9,7 @@ import {
   Button,
   Alert,
   AlertDescription,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { toast } from 'sonner';
 import usersService from '@/services/users/usersService';
 import { Loader2, CheckCircle, XCircle, Mail } from 'lucide-react';

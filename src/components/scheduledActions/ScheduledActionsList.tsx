@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, Button, Badge } from '@evoapi/design-system';
+import { formatDateTimeBR } from '@/utils/dateUtils';
+import { Card, CardContent, Button, Badge } from '@/components/ui/ds';
 import { CalendarClock, Plus, Edit, X, Clock, AlertCircle } from 'lucide-react';
 import { scheduledActionsService } from '@/services/scheduledActions/scheduledActionsService';
 import { ScheduleActionModal } from './ScheduleActionModal';
@@ -251,7 +252,7 @@ export function ScheduledActionsList({ contactId }: ScheduledActionsListProps) {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          <span>{new Date(action.scheduled_for).toLocaleString('pt-BR')}</span>
+                          <span>{formatDateTimeBR(action.scheduled_for)}</span>
                         </div>
                         {action.overdue && (
                           <div className="flex items-center gap-1 text-destructive">

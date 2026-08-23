@@ -268,6 +268,8 @@
       "assignAgent": "Assign Team Member",
       "assignTeam": "Assign Team",
       "assignTag": "Assign Label",
+      "unassignAgent": "Unassign agent",
+      "unassignTeam": "Unassign team",
       "deleteConversation": "Delete conversation"
     },
     "contactNoName": "Contact without name",
@@ -323,9 +325,10 @@
         "description": "Manage sales funnel"
       },
       "contactNotes": {
-        "title": "Contact Notes",
-        "description": "Important notes",
-        "noNotes": "No notes added yet"
+        "title": "Comments",
+        "description": "Lead comments (synced with the card)",
+        "noNotes": "No comments yet",
+        "placeholder": "Write a comment..."
       },
       "previousConversations": {
         "title": "Previous Conversations",
@@ -553,7 +556,8 @@
   "replyModeToggle": {
     "reply": "Reply",
     "privateNote": "Private Note",
-    "visibleOnlyToAgents": "Visible only to Team Members"
+    "visibleOnlyToAgents": "Visible only to Team Members",
+    "pendingExplainer": "Pending conversation — claim the lead to reply"
   },
   "contexts": {
     "conversations": {
@@ -669,7 +673,7 @@
       },
       "errors": {
         "fileTooLarge": "File too large",
-        "fileTooLargeDescription": "{{fileName}} exceeds the limit of {{maxSize}}MB",
+        "fileTooLargeDescription": "{{fileName}} is {{fileSize}} — the limit is {{maxSize}}MB",
         "fileTypeNotAllowed": "File type not allowed",
         "fileTypeNotAllowedDescription": "{{fileName}} is not a supported file type"
       },
@@ -729,7 +733,8 @@
       "created_at": "Creation Date",
       "last_activity_at": "Last Activity",
       "priority": "Priority",
-      "pipeline_id": "Pipeline"
+      "pipeline_id": "Pipeline",
+      "pipeline_stage_id": "Stage (Column)"
     },
     "options": {
       "status": {

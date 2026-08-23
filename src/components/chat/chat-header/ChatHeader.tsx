@@ -1,4 +1,11 @@
+import { useEffect, useState } from 'react';
 import { Button } from '@evoapi/design-system/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@evoapi/design-system/tooltip';
 import {
   ArrowLeft,
   X,
@@ -6,6 +13,9 @@ import {
   CheckCircle,
   Clock,
   Pause,
+  Bot,
+  BotOff,
+  UserCheck,
   MoreVertical,
   ArrowUp,
   ArrowDown,
@@ -13,6 +23,7 @@ import {
   AlertTriangle,
   User as UserIcon,
   Users,
+  UserMinus,
   Tag,
   Trash2,
   Mail,
@@ -28,10 +39,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@evoapi/design-system/dropdown-menu';
+import { toast } from 'sonner';
 import { Conversation } from '@/types/chat/api';
+import type { SalesAgentCardState } from '@/types/analytics/pipelines';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
+import ActivateAiDialog from '@/components/chat/conversation/ActivateAiDialog';
 import { getStatusLabel, isPendingStatus } from '@/utils/chat/conversationStatus';
 import { useLanguage } from '@/hooks/useLanguage';
+import { apiErrorMessage } from '@/utils/apiHelpers';
+import { chatService } from '@/services/chat/chatService';
 
 interface ChatHeaderProps {
   conversation: Conversation;
@@ -55,6 +71,8 @@ interface ChatHeaderProps {
   onAssignAgent: (conversation: Conversation) => void;
   onAssignTeam: (conversation: Conversation) => void;
   onAssignTag: (conversation: Conversation) => void;
+  onUnassignAgent: (conversation: Conversation) => void;
+  onUnassignTeam: (conversation: Conversation) => void;
   onDeleteConversation: (conversation: Conversation) => void;
   unreadCount: number;
 }
@@ -78,10 +96,50 @@ const ChatHeader = ({
   onAssignAgent,
   onAssignTeam,
   onAssignTag,
+  onUnassignAgent,
+  onUnassignTeam,
   onDeleteConversation,
   unreadCount,
 }: ChatHeaderProps) => {
   const { t } = useLanguage('chat');
+  // O menu é controlado por causa da janela da IA: o item precisa FECHAR o menu
+  // e só então abrir a janela. Menu e janela disputando o foco no mesmo instante
+  // é o jeito clássico de a janela abrir e fechar sozinha.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  // Liga/desliga a IA NESTA conversa (pedido do Giovani, 19/08). Usa o mesmo
+  // endpoint que o card do Kanban já lê pra pintar o robozinho — POST
+  // /conversations/:id/sales_agent — em vez de escrever additional_attributes
+  // na mão: esse endpoint também limpa sales_agent_handoff ao religar, senão
+  // uma conversa que a IA passou pra um corretor ficaria travada mentindo que
+  // ainda está em transferência (ver SalesAgents::ConversationState).
+  const [aiState, setAiState] = useState<SalesAgentCardState | null>(null);
+  const [togglingAi, setTogglingAi] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    chatService
+      .getSalesAgentStatus(conversation.id)
+      .then(r => { if (alive) setAiState(r.state); })
+      .catch(() => { if (alive) setAiState(null); });
+    return () => { alive = false; };
+  }, [conversation.id]);
+
+  const aiEnabled = aiState?.status === 'active' || aiState?.status === 'idle';
+
+  const handleToggleAi = async () => {
+    const next = !aiEnabled;
+    setTogglingAi(true);
+    try {
+      const state = await chatService.toggleSalesAgent(conversation.id, next);
+      setAiState(state);
+      toast.success(next ? 'IA reativada nesta conversa' : 'IA desativada nesta conversa');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não consegui mudar o status da IA'));
+    } finally {
+      setTogglingAi(false);
+    }
+  };
+
   const currentStatus = conversation.status;
   const hasUnreadMessages = unreadCount > 0;
   const isPinned = Boolean(conversation.custom_attributes?.pinned);
@@ -91,13 +149,31 @@ const ChatHeader = ({
 
   const renderConversationStatusDropdown = () => {
     return (
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
+          {/* IA Vendedora — primeiro item de propósito.
+              É a ação que resgata o lead que ficou no vácuo (ex.: escreveu fora
+              do horário de atuação e não teve resposta): a IA lê a conversa
+              inteira e continua de onde parou, sem se reapresentar. Ela existia
+              só na API e numa janela que nenhuma tela abria. */}
+          <DropdownMenuItem
+            onClick={() => {
+              setMenuOpen(false);
+              setAiOpen(true);
+            }}
+            className="flex items-center gap-2"
+          >
+            <Bot className="h-4 w-4" />
+            Ativar IA pra este lead
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
           {/* Read/Unread Actions */}
           {hasUnreadMessages ? (
             <DropdownMenuItem
@@ -259,6 +335,27 @@ const ChatHeader = ({
             {t('chatHeader.actions.assignTag')}
           </DropdownMenuItem>
 
+          {/* Desvincular corretor/equipe — só aparece quando há vínculo */}
+          {conversation.assignee_id && (
+            <DropdownMenuItem
+              onClick={() => onUnassignAgent(conversation)}
+              className="flex items-center gap-2"
+            >
+              <UserMinus className="h-4 w-4" />
+              {t('chatHeader.actions.unassignAgent')}
+            </DropdownMenuItem>
+          )}
+
+          {conversation.team_id && (
+            <DropdownMenuItem
+              onClick={() => onUnassignTeam(conversation)}
+              className="flex items-center gap-2"
+            >
+              <UserMinus className="h-4 w-4" />
+              {t('chatHeader.actions.unassignTeam')}
+            </DropdownMenuItem>
+          )}
+
           <DropdownMenuSeparator />
 
           <DropdownMenuItem
@@ -274,7 +371,7 @@ const ChatHeader = ({
   };
 
   return (
-    <div className="flex-shrink-0 p-4 border-b bg-background/95 backdrop-blur-sm">
+    <div className="wa-header flex-shrink-0 p-4 border-b bg-background/95 backdrop-blur-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* Back button for mobile */}
@@ -287,8 +384,12 @@ const ChatHeader = ({
           >
             <ContactAvatar contact={conversation.contact} />
           </div>
-          <div>
-            <h3 className="font-semibold">
+          <div
+            className="cursor-pointer rounded-md px-1 -mx-1 hover:bg-muted/60 transition-colors"
+            onClick={onContactSidebarOpen}
+            title={t('chatHeader.openContactInfo', 'Ver dados do contato')}
+          >
+            <h3 className="lm-redact font-semibold">
               {conversation.contact?.name || t('chatHeader.contactNoName')}
             </h3>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -319,6 +420,48 @@ const ChatHeader = ({
             </Button>
           )}
 
+          {/* Ativar/desligar IA nesta conversa — só aparece quando existe
+              alguma IA Vendedora configurada neste canal (status !== 'none'),
+              senão o botão liga/desliga algo que não existe. */}
+          {aiState && aiState.status !== 'none' && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={togglingAi}
+                    onClick={handleToggleAi}
+                    className={`h-8 w-8 p-0 ${
+                      aiState.status === 'active'
+                        ? 'text-violet-600 hover:text-violet-700 dark:text-violet-400'
+                        : aiState.status === 'handoff'
+                          ? 'text-blue-600 hover:text-blue-700 dark:text-blue-400'
+                          : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {aiState.status === 'handoff' ? (
+                      <UserCheck className="h-4 w-4" />
+                    ) : aiEnabled ? (
+                      <Bot className="h-4 w-4" />
+                    ) : (
+                      <BotOff className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {aiState.status === 'handoff'
+                      ? 'A IA passou este lead pra um corretor — clique para religar'
+                      : aiEnabled
+                        ? `${aiState.label} — clique para desativar`
+                        : `${aiState.label} — clique para reativar`}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
           {/* Dropdown de ações da conversa */}
           {renderConversationStatusDropdown()}
 
@@ -334,6 +477,9 @@ const ChatHeader = ({
           </Button>
         </div>
       </div>
+
+      {/* Fora do menu de propósito: montada aqui, ela sobrevive ao menu fechar. */}
+      <ActivateAiDialog conversation={conversation} open={aiOpen} onOpenChange={setAiOpen} />
     </div>
   );
 };

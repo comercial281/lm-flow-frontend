@@ -1,4 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
+import { formatDateBR } from '@/utils/dateUtils';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +9,7 @@ import {
   Badge,
   Button,
   Separator,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Wand, Edit, Globe, Settings, Calendar, FileText, Tags, Loader2 } from 'lucide-react';
 import { CustomTool } from '@/types/ai';
 
@@ -124,7 +125,7 @@ export default function CustomToolDetails({
                   <label className="text-sm font-medium text-muted-foreground">{t('details.fields.createdAt')}</label>
                   <p className="text-sm mt-1 flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    {new Date(tool.created_at).toLocaleDateString('pt-BR')}
+                    {formatDateBR(tool.created_at)}
                   </p>
                 </div>
               </div>

@@ -1,4 +1,7 @@
 import api from '@/services/core/api';
+import type { PropertyTypology, TypologySummary } from '@/features/properties/typologies';
+
+export type { PropertyTypology, TypologySummary };
 
 export interface Property {
   id: string;
@@ -32,6 +35,7 @@ export interface Property {
   exclusive?: boolean;
   featured?: boolean;
   published_on_site?: boolean;
+  ai_enabled?: boolean;
   display_price?: string;
   full_address?: string;
   icon_summary?: {
@@ -46,8 +50,27 @@ export interface Property {
   responsible_id?: string | null;
   captor_id?: string | null;
   owner_contact_id?: string | null;
+  /** Tag do imóvel: aplicada ao lead que entra pela página deste imóvel. */
+  label_id?: string | null;
   responsible?: { id: string; name: string } | null;
   captor?: { id: string; name: string } | null;
+  /** Características do imóvel e comodidades do condomínio (slugs do catálogo). */
+  features?: string[];
+  condo_features?: string[];
+  /** Tipologias (plantas) do empreendimento — vazio quando o imóvel tem uma só. */
+  typologies?: PropertyTypology[];
+  /** Faixas prontas (min/max de dorms, área e preço) calculadas pelo backend. */
+  typology_summary?: TypologySummary | null;
+  /**
+   * Foto de capa resolvida pelo backend (mesma regra do site: capa marcada >
+   * primeira foto). Miniatura quando existe. `null` = imóvel sem foto.
+   */
+  cover_photo_url?: string | null;
+  photos_count?: number | null;
+  /** Book (PDF do cadastro via importação) salvo no imóvel, para reenviar no chat. */
+  has_book?: boolean;
+  book_url?: string | null;
+  book_file_name?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -83,10 +106,16 @@ export interface PropertyFormData {
   exclusive?: boolean;
   featured?: boolean;
   published_on_site?: boolean;
+  ai_enabled?: boolean;
   on_sign?: boolean;
   responsible_id?: string | null;
   captor_id?: string | null;
   owner_contact_id?: string | null;
+  label_id?: string | null;
+  features?: string[];
+  condo_features?: string[];
+  /** Tipologias (plantas) do empreendimento. Linha em branco é descartada no save. */
+  typologies?: PropertyTypology[];
 }
 
 export interface PropertyMapMarker {
@@ -114,6 +143,8 @@ export interface PropertiesListParams {
   transaction_type?: string;
   property_type?: string;
   city?: string;
+  /** Só imóveis que têm book salvo (?has_book=1). */
+  has_book?: boolean;
   page?: number;
   per_page?: number;
 }
@@ -121,6 +152,33 @@ export interface PropertiesListParams {
 export interface PropertiesResponse {
   data: Property[];
   meta: { total: number; page: number; per_page: number };
+}
+
+/** Proposta da IA (ai_extract) — só o que estava no material; ausente = null. */
+export interface AiExtractResult {
+  title?: string | null;
+  transaction_type?: string | null;
+  property_type?: string | null;
+  sale_price?: number | null;
+  rent_price?: number | null;
+  condo_fee?: number | null;
+  iptu?: number | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  suites?: number | null;
+  parking_spaces?: number | null;
+  useful_area_m2?: number | null;
+  total_area_m2?: number | null;
+  address_neighborhood?: string | null;
+  address_city?: string | null;
+  address_state?: string | null;
+  address_cep?: string | null;
+  address_street?: string | null;
+  features?: string[] | null;
+  condo_features?: string[] | null;
+  /** Plantas que a IA/o parser acharam no book (vazio quando é unidade única). */
+  typologies?: PropertyTypology[] | null;
+  description?: string | null;
 }
 
 export const propertiesService = {
@@ -148,12 +206,55 @@ export const propertiesService = {
     await api.delete(`/properties/${id}`);
   },
 
+  // Aba Books: sobe/troca o book (PDF) de um imóvel já existente. Devolve o imóvel atualizado.
+  async uploadBook(id: string, file: File, onProgress?: (pct: number) => void): Promise<Property> {
+    const fd = new FormData();
+    fd.append('file', file, file.name);
+    const res = await api.post(`/properties/${id}/book`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: e => {
+        if (onProgress && e.total) onProgress(Math.round((e.loaded * 100) / e.total));
+      },
+    });
+    return (res.data as { data: Property }).data;
+  },
+
+  // Aba Books: remove o book do imóvel.
+  async removeBook(id: string): Promise<Property> {
+    const res = await api.delete(`/properties/${id}/book`);
+    return (res.data as { data: Property }).data;
+  },
+
   async generateDescription(
     id: string,
     opts: { tone?: string; audience?: string; focus?: string; apply?: boolean } = {}
   ): Promise<{ headline: string; description: string; highlights: string[] }> {
     const res = await api.post(`/properties/${id}/generate_description`, opts);
     return (res.data as { data: { headline: string; description: string; highlights: string[] } }).data;
+  },
+
+  /** IA lê texto colado OU link de um anúncio e PROPÕE os campos do imóvel +
+   *  descrição no tom humano. Não salva — o form é preenchido pro corretor revisar. */
+  async aiExtract(data: { text?: string; url?: string }): Promise<AiExtractResult> {
+    const res = await api.post('/properties/ai_extract', data);
+    return (res.data as { data: AiExtractResult }).data;
+  },
+
+  /** Preenche os campos a partir de um TXT/texto — 100% LOCAL, sem IA/API (regex
+   *  + palavras-chave). Não gera descrição. */
+  async parseText(text: string): Promise<AiExtractResult> {
+    const res = await api.post('/properties/parse_text', { text });
+    return (res.data as { data: AiExtractResult }).data;
+  },
+
+  /** Gera SÓ a descrição (IA) a partir dos campos do formulário — sem precisar de
+   *  imóvel salvo. Usado pelo botão opt-in "Gerar descrição". */
+  async generateDescriptionPreview(
+    property: Partial<PropertyFormData>,
+    opts: { text?: string; tone?: string; audience?: string; focus?: string } = {}
+  ): Promise<{ headline: string; description: string }> {
+    const res = await api.post('/properties/generate_description_preview', { property, ...opts });
+    return (res.data as { data: { headline: string; description: string } }).data;
   },
 
   async calculateScore(id: string): Promise<{ score: number; label: string; breakdown: Record<string, number> }> {

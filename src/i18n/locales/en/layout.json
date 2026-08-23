@@ -2,6 +2,7 @@
   "profile": {
     "language": "Language",
     "myProfile": "My Profile",
+    "feedback": "Suggestions/Bugs",
     "logout": "Sign Out",
     "userInitial": "U",
     "defaultUser": "User"
@@ -22,7 +23,9 @@
     "item": {
       "someTimeAgo": "Some time ago",
       "noAssignee": "NA",
-      "noContent": "No content"
+      "noContent": "No content",
+      "markAsRead": "Mark as read",
+      "open": "Open"
     },
     "panel": {
       "title": "Unread notifications",
@@ -34,6 +37,10 @@
         "separator": " - "
       },
       "types": {
+        "lead_created": "New lead",
+        "lead_assigned": "Lead assigned to you",
+        "roleta_lead_accepted": "Lead accepted",
+        "roleta_lead_passed": "Lead not taken",
         "conversation_assignment": "Assignment",
         "conversation_mention": "Mention",
         "conversation_creation": "New Conversation",
@@ -80,7 +87,6 @@
       "conversations": "Conversations",
       "contacts": "Contacts",
       "pipelines": "Pipelines",
-      "agents": "AI Agents",
       "channels": "Channels",
       "tutorials": "Tutorials",
       "settings": "Settings"
@@ -88,11 +94,6 @@
     "contacts": {
       "list": "Contacts",
       "scheduledActions": "Scheduled Actions"
-    },
-    "agents": {
-      "list": "AI Agents",
-      "customTools": "Custom Tools",
-      "customMcps": "Custom MCPs"
     },
     "settings": {
       "account": "Account",
@@ -103,8 +104,7 @@
       "cannedResponses": "Canned Responses",
       "macros": "Macros",
       "integrations": "Integrations",
-      "accessTokens": "Access Tokens",
-      "admin": "Admin Settings"
+      "accessTokens": "Access Tokens"
     }
   }
 }

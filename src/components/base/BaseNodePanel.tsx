@@ -10,7 +10,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import {
   Search,
   X,

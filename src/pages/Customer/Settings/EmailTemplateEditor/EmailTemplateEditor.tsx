@@ -14,7 +14,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { ArrowLeft, Save } from 'lucide-react';
 import EmailEditorComponent, { EditorRef } from 'react-email-editor';
 import { useLanguage } from '@/hooks/useLanguage';

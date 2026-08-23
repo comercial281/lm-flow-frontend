@@ -1,4 +1,4 @@
-import { Badge } from '@evoapi/design-system';
+import { Badge } from '@/components/ui/ds';
 import { Wrench, Eye } from 'lucide-react';
 import { Tool } from '@/types/ai';
 import { BaseTable, TableColumn, TableAction } from '@/components/base';

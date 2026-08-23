@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Card, CardContent, Button, Input, Skeleton } from '@evoapi/design-system';
+import { Card, CardContent, Button, Input, Skeleton } from '@/components/ui/ds';
 import { MessageSquare, Key, Shield, Bot } from 'lucide-react';
 import InboxesService from '@/services/channels/inboxesService';
 import type { TelegramChannelPayload } from '@/types/channels/inbox';

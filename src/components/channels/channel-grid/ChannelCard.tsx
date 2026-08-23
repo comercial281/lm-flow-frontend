@@ -5,7 +5,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { ChannelIcon } from '@/components/channels';
 import { ChannelType } from '@/hooks/channels/useChannelForm';
 

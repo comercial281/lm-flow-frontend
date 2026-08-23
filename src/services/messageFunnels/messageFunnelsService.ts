@@ -2,6 +2,8 @@ import api from '@/services/core/api';
 import type {
   MessageFunnel,
   MessageFunnelItem,
+  MessageFunnelFolder,
+  MessageFunnelTag,
   FunnelPayload,
   TemplateVariablesResponse,
 } from '@/types/messageFunnels';
@@ -17,11 +19,13 @@ class MessageFunnelsService {
     return '/message_funnels';
   }
 
-  async list(params: { search?: string; activeOnly?: boolean } = {}): Promise<MessageFunnel[]> {
+  async list(params: { search?: string; activeOnly?: boolean; folderId?: string | null; tagId?: string } = {}): Promise<MessageFunnel[]> {
     const response = await api.get(this.baseUrl, {
       params: {
         ...(params.search ? { search: params.search } : {}),
         ...(params.activeOnly ? { active: true } : {}),
+        ...(params.folderId !== undefined ? { folder_id: params.folderId ?? '' } : {}),
+        ...(params.tagId ? { tag_id: params.tagId } : {}),
       },
     });
     return unwrap<MessageFunnel[]>(response);
@@ -108,5 +112,51 @@ class TenantTemplateVariablesService {
   }
 }
 
+class MessageFunnelFoldersService {
+  private get baseUrl(): string {
+    return '/message_funnel_folders';
+  }
+
+  async list(): Promise<MessageFunnelFolder[]> {
+    return unwrap<MessageFunnelFolder[]>(await api.get(this.baseUrl));
+  }
+
+  async create(payload: { name: string; color?: string; position?: number }): Promise<MessageFunnelFolder> {
+    return unwrap<MessageFunnelFolder>(await api.post(this.baseUrl, { message_funnel_folder: payload }));
+  }
+
+  async update(id: string, payload: Partial<{ name: string; color: string; position: number }>): Promise<MessageFunnelFolder> {
+    return unwrap<MessageFunnelFolder>(await api.patch(`${this.baseUrl}/${id}`, { message_funnel_folder: payload }));
+  }
+
+  async destroy(id: string): Promise<void> {
+    await api.delete(`${this.baseUrl}/${id}`);
+  }
+}
+
+class MessageFunnelTagsService {
+  private get baseUrl(): string {
+    return '/message_funnel_tags';
+  }
+
+  async list(): Promise<MessageFunnelTag[]> {
+    return unwrap<MessageFunnelTag[]>(await api.get(this.baseUrl));
+  }
+
+  async create(payload: { name: string; color?: string }): Promise<MessageFunnelTag> {
+    return unwrap<MessageFunnelTag>(await api.post(this.baseUrl, { message_funnel_tag: payload }));
+  }
+
+  async update(id: string, payload: Partial<{ name: string; color: string }>): Promise<MessageFunnelTag> {
+    return unwrap<MessageFunnelTag>(await api.patch(`${this.baseUrl}/${id}`, { message_funnel_tag: payload }));
+  }
+
+  async destroy(id: string): Promise<void> {
+    await api.delete(`${this.baseUrl}/${id}`);
+  }
+}
+
 export const messageFunnelsService = new MessageFunnelsService();
 export const tenantTemplateVariablesService = new TenantTemplateVariablesService();
+export const messageFunnelFoldersService = new MessageFunnelFoldersService();
+export const messageFunnelTagsService = new MessageFunnelTagsService();

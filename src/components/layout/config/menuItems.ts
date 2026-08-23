@@ -1,7 +1,6 @@
 import { LucideIcon } from 'lucide-react';
 import { SUPER_ADMIN_EMAIL } from '@/hooks/useIsSuperAdmin';
 import {
-  Activity,
   User,
   LogOut,
   Cog,
@@ -13,15 +12,8 @@ import {
   PieChart,
   Users2,
   Clock,
-  Code,
-  Key,
   Tags,
-  TestTube,
-  Wand,
-  Settings,
-  List,
   GraduationCap,
-  Shield,
   Zap,
   Store,
   Building2,
@@ -32,10 +24,12 @@ import {
   FileText,
   TrendingUp,
   Rocket,
-  Bell,
-  Shuffle,
-  Library,
+  Target,
+  Megaphone,
+  NotebookPen,
+  MessageSquarePlus,
 } from 'lucide-react';
+import { openFeedbackDialog } from '@/components/feedback/openFeedback';
 
 export interface MenuItem {
   id?: string;
@@ -63,6 +57,12 @@ export interface MenuItem {
   clientToggleKey?: string;
   /** Quando true, só aparece no tenant raiz (VITE_IS_ROOT_TENANT=true). */
   rootTenantOnly?: boolean;
+  /**
+   * Anotado em runtime (não configurar à mão): true quando o item está visível
+   * pra ele (super-admin) mas OCULTO pro cliente pelo estado atual dos toggles.
+   * O Sidebar usa isso pra mostrar o selo "oculto pro cliente" — só o super vê.
+   */
+  hiddenFromClient?: boolean;
 }
 
 export interface SubMenuItem {
@@ -78,6 +78,13 @@ export interface SubMenuItem {
   featureKey?: string;
   clientToggleKey?: string;
   rootTenantOnly?: boolean;
+  hiddenFromClient?: boolean;
+  /**
+   * Atalho que leva pra uma seção com o próprio menu lateral (ex: Automações).
+   * Fecha o painel de submenu ao navegar, senão os dois ficam abertos ao
+   * mesmo tempo (2 menus empilhados).
+   */
+  closesSubmenu?: boolean;
 }
 
 export interface ProfileMenuItem {
@@ -138,9 +145,55 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     featureKey: 'pipelines',
   },
   {
+    name: 'Disparos',
+    href: '/disparos',
+    icon: Megaphone,
+    featureKey: 'disparos',
+  },
+  {
+    // IA Vendedora (pré-atendimento). Promovida de sub-item de Automações para
+    // item de topo do CRM (URL própria /ia-vendedora). Feature gerenciada pela
+    // Leal Mídia: super-admin SEMPRE vê; cliente só se ligar o toggle.
+    name: 'IA Vendedora',
+    href: '/ia-vendedora',
+    icon: Bot,
+    clientToggleKey: 'client_manage_automations',
+  },
+  {
+    // Espaço — Notion por tenant (docs/bases colaborativas). Feature gerenciada
+    // pela Leal Mídia: super-admin SEMPRE vê; o cliente só vê se a Leal Mídia
+    // ligar o toggle "espaco" nas Funções do CRM (default OFF, como clientToggleKey).
+    name: 'Espaço',
+    href: '/espaco',
+    icon: NotebookPen,
+    clientToggleKey: 'espaco',
+  },
+  {
+    // Painel "Equipe & Acessos" — só admins (gate resource users/update).
+    name: 'Equipe',
+    href: '/equipe',
+    icon: Users2,
+    resource: 'users',
+    action: 'update',
+  },
+  {
     name: 'Imóveis',
     href: '/properties',
     icon: Building2,
+    featureKey: 'properties',
+  },
+  {
+    // Books (PDF) salvos nos imóveis — visualizar e baixar
+    name: 'Books',
+    href: '/books',
+    icon: FileText,
+    featureKey: 'properties',
+  },
+  {
+    // Portais imobiliários (ZAP, Imóvel Web…) — feed + leads
+    name: 'Portais',
+    href: '/settings/portals',
+    icon: Globe,
     featureKey: 'properties',
   },
   {
@@ -156,6 +209,12 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     featureKey: 'proposals',
   },
   {
+    name: 'Contratos',
+    href: '/contracts',
+    icon: FileText,
+    featureKey: 'contracts',
+  },
+  {
     name: 'Captação',
     href: '/property-capture-requests',
     icon: ClipboardList,
@@ -166,38 +225,6 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     href: '/property-interests',
     icon: TrendingUp,
     featureKey: 'property_interests',
-  },
-  {
-    id: 'customer-agents',
-    name: t('menu.customer.agents'),
-    href: '/agents/list',
-    icon: Bot,
-    resource: 'ai_agents',
-    action: 'read',
-    featureKey: 'ai_agents',
-    subItems: [
-      {
-        name: t('menu.agents.list'),
-        href: '/agents/list',
-        icon: List,
-        resource: 'ai_agents',
-        action: 'read',
-      },
-      {
-        name: t('menu.agents.customTools'),
-        href: '/agents/custom-tools',
-        icon: Wand,
-        resource: 'ai_custom_tools',
-        action: 'read',
-      },
-      {
-        name: t('menu.agents.customMcps'),
-        href: '/agents/custom-mcp-servers',
-        icon: TestTube,
-        resource: 'ai_custom_mcp_servers',
-        action: 'read',
-      },
-    ],
   },
   {
     name: t('menu.customer.channels'),
@@ -213,29 +240,14 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     icon: Store,
     resource: 'integrations',
     action: 'read',
-    featureKey: 'marketplace',
+    // Acesso da Leal Mídia: super-admin SEMPRE vê; cliente só se a Leal Mídia
+    // ligar o toggle "marketplace" nas Funções dele (default OFF — ver
+    // DEFAULT_OFF_FEATURES no backend). Não faz sentido cliente ver isso.
+    clientToggleKey: 'marketplace',
   },
-  {
-    name: 'Clientes CRM',
-    href: '/super-admin/clients',
-    icon: Building2,
-    requiredEmail: 'comercial@lealmidia.com.br',
-    rootTenantOnly: true,
-  },
-  {
-    name: 'Monitoramento',
-    href: '/super-admin/monitoring',
-    icon: Activity,
-    requiredEmail: 'comercial@lealmidia.com.br',
-    rootTenantOnly: true,
-  },
-  {
-    name: 'Biblioteca de Automacoes',
-    href: '/super-admin/automation-templates',
-    icon: Library,
-    requiredEmail: 'comercial@lealmidia.com.br',
-    rootTenantOnly: true,
-  },
+  // 'Clientes CRM' e 'Biblioteca de Automacoes' saíram daqui: agora moram na
+  // Área do Admin (/admin), num shell próprio. O menu do CRM só tem coisa que o
+  // cliente usa — era esse o ponto de separar. Entrada: AdminAreaButton, no Header.
   {
     name: t('menu.customer.tutorials'),
     href: '/tutorials',
@@ -252,29 +264,17 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         name: t('menu.settings.account'),
         href: '/settings/account',
         icon: User,
-        // Configurações de conta são sempre disponíveis - sem permissão específica
-      },
-      {
-        name: t('menu.settings.users'),
-        href: '/settings/users',
-        icon: Users2,
-        resource: 'users',
+        // A rota /settings/account é protegida por accounts.read (PermissionRoute).
+        // Gate do menu tem que casar com a rota, senão o corretor vê o item,
+        // clica e cai em "Acesso Negado" (/unauthorized).
+        resource: 'accounts',
         action: 'read',
       },
-      {
-        name: t('menu.settings.teams'),
-        href: '/settings/teams',
-        icon: Clock,
-        resource: 'teams',
-        action: 'read',
-      },
-      {
-        name: 'Cargos e Permissões',
-        href: '/settings/roles',
-        icon: Shield,
-        resource: 'users',
-        action: 'read',
-      },
+      // Usuários, Times e Cargos e Permissões saíram daqui: viraram as abas da
+      // tela *Equipe*, no menu de cima. Eram quatro endereços mandando em
+      // pedaços da mesma decisão (quem é a pessoa, o que ela pode, por onde
+      // atende) e nenhum mandando na decisão inteira. As rotas antigas
+      // redirecionam para a aba certa — link salvo não morre.
       {
         name: t('menu.settings.labels'),
         href: '/settings/labels',
@@ -283,64 +283,30 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         action: 'read',
       },
       {
-        name: t('menu.settings.customAttributes'),
-        href: '/settings/attributes',
-        icon: Code,
-        resource: 'custom_attribute_definitions',
-        action: 'read',
+        name: 'Automações',
+        href: '/automations',
+        icon: Zap,
+        clientToggleKey: 'client_manage_automations',
+        closesSubmenu: true,
       },
       {
         name: 'Funis de Mensagem',
-        href: '/settings/message-funnels',
+        href: '/automations/message-funnels',
         icon: Rocket,
-        resource: 'canned_responses',
-        action: 'read',
         featureKey: 'message_funnels',
+        closesSubmenu: true,
       },
       {
-        name: 'Variáveis de Funis',
-        href: '/settings/template-variables',
-        icon: Code,
-        resource: 'canned_responses',
-        action: 'read',
-        featureKey: 'message_funnels',
-      },
-      {
-        name: 'Automações Boas-Vindas',
-        href: '/settings/welcome-automations',
-        icon: Zap,
-        featureKey: 'welcome_automations',
-      },
-      {
-        name: 'Automações de Lead',
-        href: '/settings/lead-automations',
-        icon: Zap,
+        name: 'Pixel / CAPI',
+        href: '/settings/pixel-capi',
+        icon: Target,
         featureKey: 'lead_automations',
-        clientToggleKey: 'client_manage_automations',
-      },
-      {
-        name: 'Follow-ups',
-        href: '/settings/follow-ups',
-        icon: Zap,
-        featureKey: 'follow_ups',
-      },
-      {
-        name: 'Produtos',
-        href: '/settings/products',
-        icon: Store,
-        featureKey: 'products',
       },
       {
         name: 'Site Builder',
         href: '/settings/site-builder',
         icon: Globe,
         featureKey: 'site_builder',
-      },
-      {
-        name: 'Formulários',
-        href: '/settings/dynamic-forms',
-        icon: FileText,
-        featureKey: 'dynamic_forms',
       },
       // MACROS OCULTO — habilitar quando pronto
       // {
@@ -350,38 +316,15 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
       //   resource: 'macros',
       //   action: 'read',
       // },
-      {
-        name: 'Lembretes',
-        href: '/settings/whatsapp-reminders',
-        icon: Bell,
-      },
-      {
-        name: 'Roleta de Corretores',
-        href: '/settings/roleta-config',
-        icon: Shuffle,
-        featureKey: 'lead_automations',
-      },
-      {
-        name: t('menu.settings.integrations'),
-        href: '/settings/integrations',
-        icon: Settings,
-        resource: 'integrations',
-        action: 'read',
-      },
-      {
-        name: t('menu.settings.accessTokens'),
-        href: '/settings/access-tokens',
-        icon: Key,
-        resource: 'access_tokens',
-        action: 'read',
-      },
-      {
-        name: t('menu.settings.admin'),
-        href: '/settings/admin',
-        icon: Shield,
-        resource: 'installation_configs',
-        action: 'manage',
-      },
+      // INTEGRAÇÕES OCULTO DO MENU — rota continua viva (Meta Ads/Shopify/etc
+      // ainda são acessadas via link direto, ex: dentro de Automações → Origem).
+      // {
+      //   name: t('menu.settings.integrations'),
+      //   href: '/settings/integrations',
+      //   icon: Settings,
+      //   resource: 'integrations',
+      //   action: 'read',
+      // },
     ],
   },
 ];
@@ -398,6 +341,14 @@ export const getProfileMenuItems = (
       icon: User,
       onClick: () => navigate('/profile'),
     },
+    // Entrada fixa para o diálogo de feedback. Necessária porque na aba de
+    // Conversas o botão flutuante é escondido (cobria o botão de enviar).
+    {
+      name: t('profile.feedback'),
+      href: '#',
+      icon: MessageSquarePlus,
+      onClick: () => openFeedbackDialog(),
+    },
     {
       name: t('profile.logout'),
       href: '#',
@@ -408,6 +359,41 @@ export const getProfileMenuItems = (
 };
 
 // Função utilitária para verificar se um item de menu deve ser exibido
+/**
+ * Detecta em RUNTIME se estamos no deploy raiz (app.lmflow.com.br / dev) e não
+ * num subdomínio de cliente. Necessário porque UM único build (com
+ * VITE_IS_ROOT_TENANT='true') serve TODOS os subdomínios *.lmflow.com.br via
+ * wildcard — então o flag de build-time não distingue raiz de cliente, e os
+ * menus de super-admin (rootTenantOnly) vazavam pra dentro do CRM do cliente.
+ */
+export function isRootTenantHost(): boolean {
+  if (typeof window === 'undefined') return true;
+  const h = window.location.hostname.toLowerCase();
+  if (h === 'localhost' || h === '127.0.0.1') return true; // dev local
+  if (h.endsWith('.vercel.app')) return true; // previews do projeto principal
+  // raiz = app.lmflow.com.br (ou apex). Cliente = renato/mybroker/...lmflow.com.br
+  return h === 'app.lmflow.com.br' || h === 'lmflow.com.br';
+}
+
+// Super-admin Leal Mídia: a conta comercial@ (fantasma em todo tenant). Precisa
+// enxergar e operar todas as funções, mesmo as OFF pro cliente.
+export function isSuperAdminEmail(email?: string): boolean {
+  if (!email) return false;
+  return email.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase();
+}
+
+// Um item aparece pra ele (super) mas está OCULTO pro cliente quando:
+//  - featureKey está explicitamente false (cliente não veria), ou
+//  - clientToggleKey não está true (default OFF — só a Leal Mídia liga).
+function isHiddenFromClient(
+  item: MenuItem | SubMenuItem,
+  features?: Record<string, boolean>
+): boolean {
+  if (item.featureKey && features?.[item.featureKey] === false) return true;
+  if (item.clientToggleKey && features?.[item.clientToggleKey] !== true) return true;
+  return false;
+}
+
 export const shouldShowMenuItem = (
   item: MenuItem | SubMenuItem,
   canFunction: (resource: string, action: string) => boolean,
@@ -415,11 +401,24 @@ export const shouldShowMenuItem = (
   canAllFunction: (permissions: string[]) => boolean,
   userRoleKey?: string,
   userEmail?: string,
-  features?: Record<string, boolean>
+  features?: Record<string, boolean>,
+  archivedKeys?: string[]
 ): boolean => {
-  // Gate por tenant feature flag (mais alta prioridade — desligado no painel
-  // master = desaparece independente de permissão).
-  if (item.featureKey && features && features[item.featureKey] === false) {
+  const isSuper = isSuperAdminEmail(userEmail);
+
+  // Menu arquivado GLOBALMENTE (painel Clientes > Arquivados) some pra TODO
+  // MUNDO, sem exceção pro super-admin — ao contrário dos gates abaixo, que o
+  // super-admin sempre atravessa. É pra telas em desenvolvimento saírem do ar
+  // por completo até ficarem prontas.
+  const archiveKey = item.featureKey || item.clientToggleKey;
+  if (archiveKey && archivedKeys?.includes(archiveKey)) {
+    return false;
+  }
+
+  // Gate por tenant feature flag (desligado no painel master = desaparece pro
+  // CLIENTE). O super-admin (Leal Mídia) NUNCA perde o item — ele precisa
+  // enxergar e operar tudo, mesmo o que está OFF pro cliente (aí ganha o selo).
+  if (item.featureKey && features && features[item.featureKey] === false && !isSuper) {
     return false;
   }
 
@@ -427,12 +426,11 @@ export const shouldShowMenuItem = (
   // Super-admin (Leal Mídia) SEMPRE vê; o cliente só vê se o toggle estiver
   // explicitamente ligado no painel de Funções do CRM (default OFF).
   if (item.clientToggleKey) {
-    const isSuper = !!userEmail && userEmail.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase();
     if (!isSuper && features?.[item.clientToggleKey] !== true) return false;
   }
 
   // Gate por tenant raiz (apenas no deploy principal, não em tenants de clientes)
-  if ('rootTenantOnly' in item && item.rootTenantOnly && import.meta.env.VITE_IS_ROOT_TENANT !== 'true') {
+  if ('rootTenantOnly' in item && item.rootTenantOnly && !isRootTenantHost()) {
     return false;
   }
 
@@ -472,16 +470,25 @@ export const filterMenuItemsByPermissions = (
   canAllFunction: (permissions: string[]) => boolean,
   userRoleKey?: string,
   userEmail?: string,
-  features?: Record<string, boolean>
+  features?: Record<string, boolean>,
+  archivedKeys?: string[]
 ): MenuItem[] => {
+  const isSuper = isSuperAdminEmail(userEmail);
+  // Só o super-admin recebe o selo "oculto pro cliente"; o cliente nunca vê
+  // esses itens (foram filtrados), então nunca vê selo.
+  const mark = (item: MenuItem | SubMenuItem) =>
+    isSuper ? isHiddenFromClient(item, features) : false;
+
   return items
-    .filter(item => shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features))
-    .map(item => {
+    .filter(item => shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features, archivedKeys))
+    .map((item): MenuItem | null => {
       // Se o item tem subitens, filtrar os subitens também
       if (item.subItems && item.subItems.length > 0) {
-        const filteredSubItems = item.subItems.filter(subItem =>
-          shouldShowMenuItem(subItem, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features)
-        );
+        const filteredSubItems = item.subItems
+          .filter(subItem =>
+            shouldShowMenuItem(subItem, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features, archivedKeys)
+          )
+          .map(subItem => ({ ...subItem, hiddenFromClient: mark(subItem) }));
 
         // Se não há subitens visíveis, não mostrar o item pai
         if (filteredSubItems.length === 0) {
@@ -490,11 +497,12 @@ export const filterMenuItemsByPermissions = (
 
         return {
           ...item,
+          hiddenFromClient: mark(item),
           subItems: filteredSubItems
         };
       }
 
-      return item;
+      return { ...item, hiddenFromClient: mark(item) };
     })
     .filter((item): item is MenuItem => item !== null);
 };

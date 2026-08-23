@@ -1,5 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
-import { Button, Input } from '@evoapi/design-system';
+import { Button, Input } from '@/components/ui/ds';
 import { Plus, Search, Trash2, X } from 'lucide-react';
 import BaseHeader from '@/components/base/BaseHeader';
 import { useUserPermissions } from '@/hooks/useUserPermissions';

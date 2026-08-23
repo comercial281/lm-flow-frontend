@@ -5,7 +5,7 @@ import {
   CardHeader,
   CardTitle,
   Button,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

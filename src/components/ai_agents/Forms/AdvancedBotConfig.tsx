@@ -9,7 +9,7 @@ import {
   CardDescription,
   Switch,
   Textarea,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Zap, Clock } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 

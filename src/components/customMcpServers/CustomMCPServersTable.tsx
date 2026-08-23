@@ -1,5 +1,6 @@
 import { useLanguage } from '@/hooks/useLanguage';
-import { Badge, Button } from '@evoapi/design-system';
+import { formatDateBR } from '@/utils/dateUtils';
+import { Badge, Button } from '@/components/ui/ds';
 import { Edit, Trash2, TestTube, Loader2, ExternalLink } from 'lucide-react';
 import { CustomMcpServer } from '@/types/ai';
 import { BaseTable, TableColumn, TableAction } from '@/components/base';
@@ -112,7 +113,7 @@ export default function CustomMCPServersTable({
       sortable: true,
       render: server => (
         <span className="text-sm text-muted-foreground">
-          {new Date(server.created_at).toLocaleDateString('pt-BR')}
+          {formatDateBR(server.created_at)}
         </span>
       ),
     },

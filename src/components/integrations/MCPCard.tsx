@@ -1,5 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '@evoapi/design-system';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '@/components/ui/ds';
 import { Plus, Check, Settings } from 'lucide-react';
 
 interface AvailableMCP {

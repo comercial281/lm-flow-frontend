@@ -30,8 +30,18 @@ export interface AttachmentValidation {
   allowedTypes: string[];
 }
 
+// Teto único de anexo do app (conversa, chat de teste do agente, respostas rápidas e
+// widget do site). É o teto do próprio WhatsApp, e tem que bater com o
+// ATTACHMENT_MAX_BYTES do MessagesController no backend — se divergirem, a tela aceita
+// um arquivo que o servidor recusa, e o erro só aparece depois do upload inteiro.
+// Atenção: o arquivo viaja inteiro dentro da requisição de envio (base64 infla ~1,37x),
+// então perto do teto o envio é lento e pesado em memória — não há compressão automática
+// neste caminho, por decisão de produto. Quem comprime é só a IA Vendedora.
+export const CHAT_MAX_ATTACHMENT_BYTES = 100 * 1024 * 1024; // 100MB
+export const CHAT_MAX_ATTACHMENT_MB = CHAT_MAX_ATTACHMENT_BYTES / (1024 * 1024);
+
 export const DEFAULT_ATTACHMENT_VALIDATION: AttachmentValidation = {
-  maxSize: 40 * 1024 * 1024, // 40MB
+  maxSize: CHAT_MAX_ATTACHMENT_BYTES,
   allowedTypes: [
     'image/jpeg',
     'image/jpg', 

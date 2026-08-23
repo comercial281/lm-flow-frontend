@@ -1,9 +1,11 @@
-import { Button, Card, CardContent } from '@evoapi/design-system';
-import { Settings, Trash2 } from 'lucide-react';
+import { Button, Card, Badge } from '@/components/ui/ds';
+import { RefreshCw, Settings, Trash2 } from 'lucide-react';
 import { Inbox } from '@/types/channels/inbox';
 import ChannelIcon from './ChannelIcon';
+import ChannelConnectionBadge from './ChannelConnectionBadge';
 import { getChannelDisplayName } from '@/utils/channelUtils';
 import { useLanguage } from '@/hooks/useLanguage';
+import { cn } from '@/lib/utils';
 
 type ChannelCardProps = {
   inbox: Inbox;
@@ -14,73 +16,102 @@ type ChannelCardProps = {
 
 export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete }: ChannelCardProps) {
   const { t } = useLanguage('channels');
+  const typeName = inbox.channel_type
+    ? getChannelDisplayName(inbox.channel_type, inbox.provider)
+    : '—';
+  const whatsappProfileName = inbox.provider_config?.whatsapp_profile_name;
+  // Instância caída ganha a borda vermelha além do selo: num grid de doze
+  // canais, o selo sozinho some no meio dos outros onze verdes — o card
+  // inteiro precisa saltar pra que "qual caiu?" se responda de relance.
+  const isDown = inbox.connection_status === 'disconnected';
 
   return (
-    <Card className="group relative bg-sidebar border-sidebar-border hover:bg-sidebar-accent/30 transition-all duration-300 hover:shadow-lg hover:shadow-black/10 overflow-hidden">
-      <CardContent className="p-0">
-        {/* Header with icon, name and type */}
-        <div className="flex items-center gap-3 p-4 border-b border-sidebar-border">
-          <div className="flex-shrink-0">
+    <Card
+      className={cn(
+        'group relative flex flex-col gap-3 p-5 bg-sidebar border-sidebar-border overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-black/10',
+        isDown && 'border-red-500/40 hover:border-red-500/60',
+      )}
+    >
+      {/* Glow no hover */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        style={{ background: 'rgba(124,58,237,0.16)' }}
+      />
+
+      {/* Foto real do perfil (quando já sincronizada) ou ícone genérico do canal,
+          com o estado da conexão do lado oposto — a primeira coisa que a pessoa
+          precisa saber ao bater o olho no card. */}
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="w-11 h-11 rounded-xl grid place-items-center shrink-0 relative bg-sidebar-accent/40 overflow-hidden">
+          {inbox.avatar_url ? (
+            <img
+              src={inbox.avatar_url}
+              alt={whatsappProfileName || inbox.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
             <ChannelIcon
               channelType={inbox.channel_type}
               provider={inbox.provider as string | undefined}
               size="lg"
             />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-base truncate text-sidebar-foreground">
-              {inbox.name}
-            </h3>
-            <p className="text-xs text-sidebar-foreground/60 truncate">
-              {inbox.channel_type ? getChannelDisplayName(inbox.channel_type, inbox.provider) : '—'}
-            </p>
-          </div>
-        </div>
-
-        {/* Details section */}
-        <div className="px-4 py-3 text-xs text-sidebar-foreground/70 space-y-1">
-          {inbox.display_name && (
-            <div className="flex items-center justify-between">
-              <span>{t('card.displayName')}</span>
-              <span className="font-medium text-sidebar-foreground">{inbox.display_name}</span>
-            </div>
           )}
-          <div className="flex items-center justify-between">
-            <span>{t('card.channelId')}</span>
-            <span className="font-mono">{inbox.id}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>{t('card.type')}</span>
-            <span className="font-mono">
-              {inbox.channel_type
-                ? getChannelDisplayName(inbox.channel_type, inbox.provider)
-                : t('common.notAvailable')}
-            </span>
-          </div>
         </div>
 
-        {/* Action buttons - hover effect like other cards */}
-        <div className="flex border-t border-sidebar-border opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <ChannelConnectionBadge
+          status={inbox.connection_status}
+          disconnectedAt={inbox.disconnected_at}
+        />
+      </div>
+
+      {/* Nome + tipo */}
+      <div className="relative min-w-0">
+        <h4 className="font-semibold text-base truncate text-sidebar-foreground">{inbox.name}</h4>
+        <p className="text-xs text-sidebar-foreground/60 truncate mt-0.5">{inbox.display_name || typeName}</p>
+        {whatsappProfileName && (
+          <p className="text-xs text-sidebar-foreground/50 truncate mt-0.5">
+            {t('card.whatsappName')}: {whatsappProfileName}
+          </p>
+        )}
+      </div>
+
+      {/* Rodapé: badge do tipo + Configurar + excluir */}
+      <div className="relative flex items-center justify-between gap-2 mt-auto pt-1">
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-sidebar-border text-sidebar-foreground/70">
+          {typeName}
+        </Badge>
+        <div className="flex items-center gap-1">
+          {/* Com a instância caída o botão passa a dizer o que a pessoa precisa
+              fazer — é a mesma tela (é lá que mora o QR Code), mas "Configurar"
+              não conta a ninguém que dali sai a reconexão. */}
           <Button
-            variant="ghost"
-            className="flex-1 rounded-none h-12 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
+            size="sm"
+            variant={isDown ? 'default' : 'outline'}
+            className={cn(
+              'h-8 text-xs',
+              !isDown && 'bg-sidebar border-sidebar-border hover:bg-sidebar-accent',
+            )}
             onClick={() => onSettings(inbox)}
           >
-            <Settings className="h-4 w-4 mr-2" />
-            {t('actions.configure')}
+            {isDown ? (
+              <RefreshCw className="h-3.5 w-3.5 mr-1" />
+            ) : (
+              <Settings className="h-3.5 w-3.5 mr-1" />
+            )}
+            {isDown ? t('actions.reconnect') : t('actions.configure')}
           </Button>
-          <div className="w-px bg-sidebar-border" />
           <Button
+            size="sm"
             variant="ghost"
-            className="rounded-none h-12 px-4 text-red-500 hover:text-red-400 hover:bg-red-500/10"
+            className="h-8 px-2 text-red-500 hover:text-red-400 hover:bg-red-500/10"
             disabled={isDeleting === inbox.id}
             onClick={() => onDelete(inbox)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

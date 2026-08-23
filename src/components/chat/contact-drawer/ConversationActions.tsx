@@ -13,6 +13,7 @@ import type { Label } from '@/types/settings';
 import { chatService } from '@/services/chat/chatService';
 import usersService from '@/services/users/usersService';
 import type { User } from '@/types/users';
+import { useFeature } from '@/contexts/TenantFeaturesContext';
 
 interface ConversationActionsProps {
   conversation: Conversation | null;
@@ -24,6 +25,8 @@ const ConversationActions: React.FC<ConversationActionsProps> = ({
   onFilterReload,
 }) => {
   const { t } = useLanguage('chat');
+  const canAssign = useFeature('chat_assign');
+  const canLabels = useFeature('chat_labels');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isUpdatingPriority, setIsUpdatingPriority] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
@@ -125,47 +128,49 @@ const ConversationActions: React.FC<ConversationActionsProps> = ({
       </Card>
 
       {/* Assignment Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            {t('contactSidebar.conversationActions.assignment.title')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Select
-            value={conversation?.assignee_id ? String(conversation.assignee_id) : '__none__'}
-            onValueChange={(val) => handleAssigneeChange(val === '__none__' ? null : val)}
-            disabled={isAssigning}
-          >
-            <SelectTrigger className="w-full text-sm">
-              <SelectValue placeholder={t('contactSidebar.conversationActions.assignment.notAssigned')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">
-                {t('contactSidebar.conversationActions.assignment.notAssigned')}
-              </SelectItem>
-              {agents.map((agent) => (
-                <SelectItem key={agent.id} value={String(agent.id)}>
-                  {agent.name || agent.email}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {conversation?.assignee_id && (
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => handleAssigneeChange(null)}
+      {canAssign && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              {t('contactSidebar.conversationActions.assignment.title')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Select
+              value={conversation?.assignee_id ? String(conversation.assignee_id) : '__none__'}
+              onValueChange={(val) => handleAssigneeChange(val === '__none__' ? null : val)}
               disabled={isAssigning}
             >
-              <UserMinus className="h-4 w-4 mr-2" />
-              {t('contactSidebar.conversationActions.assignment.unassign')}
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+              <SelectTrigger className="w-full text-sm">
+                <SelectValue placeholder={t('contactSidebar.conversationActions.assignment.notAssigned')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">
+                  {t('contactSidebar.conversationActions.assignment.notAssigned')}
+                </SelectItem>
+                {agents.map((agent) => (
+                  <SelectItem key={agent.id} value={String(agent.id)}>
+                    {agent.name || agent.email}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {conversation?.assignee_id && (
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => handleAssigneeChange(null)}
+                disabled={isAssigning}
+              >
+                <UserMinus className="h-4 w-4 mr-2" />
+                {t('contactSidebar.conversationActions.assignment.unassign')}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Labels Actions */}
       <Card>
@@ -190,10 +195,12 @@ const ConversationActions: React.FC<ConversationActionsProps> = ({
             </div>
           )}
 
-          <Button variant="outline" className="w-full justify-start">
-            <Tag className="h-4 w-4 mr-2" />
-            {t('contactSidebar.conversationActions.labels.manage')}
-          </Button>
+          {canLabels && (
+            <Button variant="outline" className="w-full justify-start">
+              <Tag className="h-4 w-4 mr-2" />
+              {t('contactSidebar.conversationActions.labels.manage')}
+            </Button>
+          )}
         </CardContent>
       </Card>
 

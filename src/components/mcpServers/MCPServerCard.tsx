@@ -1,5 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
-import { Badge, Card, CardContent } from '@evoapi/design-system';
+import { Badge, Card, CardContent } from '@/components/ui/ds';
 import { Server, Wrench } from 'lucide-react';
 import { MCPServer } from '@/types/ai';
 

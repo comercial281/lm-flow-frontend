@@ -11,7 +11,7 @@ import {
   SelectValue,
   Textarea,
   Badge,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Star, Info, X, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';

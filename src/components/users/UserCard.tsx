@@ -1,4 +1,4 @@
-import { Button, Card, CardContent, Avatar, AvatarFallback } from '@evoapi/design-system';
+import { Button, Card, CardContent, Avatar, AvatarFallback } from '@/components/ui/ds';
 import { Edit, MessageSquare, Trash2 } from 'lucide-react';
 import { User } from '@/types/users';
 import UserStatusBadge from './UserStatusBadge';

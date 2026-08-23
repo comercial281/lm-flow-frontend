@@ -1,4 +1,4 @@
-import { Badge, Card, CardContent } from '@evoapi/design-system';
+import { Badge, Card, CardContent } from '@/components/ui/ds';
 import { Wrench } from 'lucide-react';
 import { Tool } from '@/types/ai';
 import { useLanguage } from '@/hooks/useLanguage';

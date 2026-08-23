@@ -1,13 +1,7 @@
-import { useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
-import {
-  WebWidgetForm,
-  FacebookChannelForm,
-  InstagramForm,
-  EmailForm,
-} from '@/components/channels';
 import ProviderSelection from '@/components/channels/ProviderSelection';
 import ChannelBreadcrumb, { BreadcrumbItem } from '@/components/channels/ChannelBreadcrumb';
 
@@ -19,10 +13,28 @@ import { Provider as ProviderType } from '@/components/channels/ProviderGrid';
 import { ChannelGrid } from '@/components/channels/channel-grid';
 import { FormContainer } from '@/components/channels/layout/FormContainer';
 import { FormFooter } from '@/components/channels/shared/FormFooter';
-import { WhatsappForms } from '@/components/channels/forms/whatsapp';
-import { SmsForm } from '@/components/channels/forms/SmsForm';
-import { TelegramForm } from '@/components/channels/forms/TelegramForm';
-import { ApiForm } from '@/components/channels/forms/ApiForm';
+import { lazyWithRetry } from '@/utils/chunkReload';
+
+// Formulários de canal: só o do `selectedChannel.type` renderiza por vez (switch
+// em renderForm), viraram lazy pra não pesar o chunk de Channels com os 8 juntos.
+const WebWidgetForm = lazyWithRetry(() => import('@/components/channels/WebWidgetForm'));
+const FacebookChannelForm = lazyWithRetry(
+  () => import('@/components/channels/FacebookChannelForm'),
+);
+const InstagramForm = lazyWithRetry(() => import('@/components/channels/InstagramForm'));
+const EmailForm = lazyWithRetry(() => import('@/components/channels/EmailForm'));
+const WhatsappForms = lazyWithRetry(() =>
+  import('@/components/channels/forms/whatsapp').then(m => ({ default: m.WhatsappForms })),
+);
+const SmsForm = lazyWithRetry(() =>
+  import('@/components/channels/forms/SmsForm').then(m => ({ default: m.SmsForm })),
+);
+const TelegramForm = lazyWithRetry(() =>
+  import('@/components/channels/forms/TelegramForm').then(m => ({ default: m.TelegramForm })),
+);
+const ApiForm = lazyWithRetry(() =>
+  import('@/components/channels/forms/ApiForm').then(m => ({ default: m.ApiForm })),
+);
 
 // Import constants
 import { getChannelTypes } from '@/constants/channelTypes';
@@ -445,7 +457,15 @@ export default function NewChannel() {
                     ) : undefined
                   }
                 >
-                  {renderForm()}
+                  <Suspense
+                    fallback={
+                      <div className="flex justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                      </div>
+                    }
+                  >
+                    {renderForm()}
+                  </Suspense>
                 </FormContainer>
               </div>
             </div>

@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -11,30 +12,29 @@ import {
   DropdownMenuTrigger,
   Badge,
   Input,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import {
   ArrowLeft,
   Plus,
   MoreVertical,
-  GripVertical,
   Edit,
   Trash2,
   Copy,
   ArrowUpDown,
   Phone,
-  Mail,
-  MessageSquare,
   User,
-  CalendarClock,
-  ListTodo,
-  AlertCircle,
-  Clock,
-  CheckCircle2,
   Search,
   X,
   Download,
   Upload,
-  MessageCircle,
+  Megaphone,
+  Archive,
+  LayoutGrid,
+  List as ListIcon,
+  ChevronRight,
+  ArrowDown,
+  ArrowUp,
+  Shuffle,
 } from 'lucide-react';
 
 import { pipelinesService } from '@/services/pipelines';
@@ -46,25 +46,73 @@ import {
   UpdatePipelineData,
   CreateStageData,
 } from '@/types/analytics';
+// PipelineSwitcher e PipelineFiltersPopover ficam no header/toolbar, sempre
+// visíveis de cara (não são modais) — seguem import estático de propósito
+// (lazy aqui só adicionaria uma requisição inútil).
 import PipelineSwitcher from '@/components/pipelines/PipelineSwitcher';
-import EditPipelineModal from '@/components/pipelines/EditPipelineModal';
-import CreateStageModal from '@/components/pipelines/CreateStageModal';
-import AddItemModal from '@/components/pipelines/AddItemModal';
-import ImportLeadsModal from '@/components/pipelines/ImportLeadsModal';
-import RemoveItemModal from '@/components/pipelines/RemoveItemModal';
-import EditItemModal from '@/components/pipelines/EditItemModal';
-import EditStageModal from '@/components/pipelines/EditStageModal';
-import DeleteStageModal from '@/components/pipelines/DeleteStageModal';
-import DeletePipelineModal from '@/components/pipelines/DeletePipelineModal';
-import ReorderStagesModal from '@/components/pipelines/ReorderStagesModal';
-import { ScheduleActionModal } from '@/components/scheduledActions';
-import { NotesHistoryModal } from '@/components/pipelines/NotesHistoryModal';
+import { useFeature } from '@/contexts/TenantFeaturesContext';
+import PipelineFiltersPopover, {
+  type TimePreset,
+  type AbandonedPreset,
+} from '@/components/pipelines/PipelineFiltersPopover';
+import { getCachedPipeline, setCachedPipeline } from './pipelinePayloadCache';
+import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
+import { lazyWithRetry } from '@/utils/chunkReload';
+// Card do board, sempre visível de cara — import estático de propósito.
+import PipelineItemCard from './PipelineItemCard';
+import {
+  itemPos,
+  itemTagInfos,
+  itemTagNames,
+  calculateStageTotal,
+  lastContactDays,
+  resolveItemName,
+  resolveItemAvatar,
+  resolveItemRef,
+  getContactColor,
+  formatArrivalDate,
+} from './pipelineItemHelpers';
+import { useAppDataStore } from '@/store/appDataStore';
+import { roletaLabel } from '@/services/roletaConfig/roletaConfigService';
+
+// Os modais abaixo só aparecem quando o usuário clica em algo pra abrir —
+// código deles não precisa estar no bundle inicial da página de Pipelines.
+const EditPipelineModal = lazyWithRetry(() => import('@/components/pipelines/EditPipelineModal'));
+const CreateStageModal = lazyWithRetry(() => import('@/components/pipelines/CreateStageModal'));
+const AddItemModal = lazyWithRetry(() => import('@/components/pipelines/AddItemModal'));
+const ImportLeadsModal = lazyWithRetry(() => import('@/components/pipelines/ImportLeadsModal'));
+const BulkDispatchModal = lazyWithRetry(() => import('@/components/pipelines/BulkDispatchModal'));
+const RemoveItemModal = lazyWithRetry(() => import('@/components/pipelines/RemoveItemModal'));
+const EditItemModal = lazyWithRetry(() => import('@/components/pipelines/EditItemModal'));
+const EditStageModal = lazyWithRetry(() => import('@/components/pipelines/EditStageModal'));
+const DeleteStageModal = lazyWithRetry(() => import('@/components/pipelines/DeleteStageModal'));
+const DeletePipelineModal = lazyWithRetry(() => import('@/components/pipelines/DeletePipelineModal'));
+const ReorderStagesModal = lazyWithRetry(() => import('@/components/pipelines/ReorderStagesModal'));
+const ScheduleActionModal = lazyWithRetry(() =>
+  import('@/components/scheduledActions').then(m => ({ default: m.ScheduleActionModal })),
+);
+const NotesHistoryModal = lazyWithRetry(() =>
+  import('@/components/pipelines/NotesHistoryModal').then(m => ({ default: m.NotesHistoryModal })),
+);
+const ArchivedLeadsModal = lazyWithRetry(() => import('@/components/pipelines/ArchivedLeadsModal'));
 
 export default function PipelineKanban() {
   const { t } = useLanguage('pipelines');
   const { pipelineId } = useParams<{ pipelineId: string }>();
   const navigate = useNavigate();
+  const {
+    openLeadConversation,
+    startConversationModal,
+    opening: openingConversation,
+  } = useOpenLeadConversation();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Catálogo COMPLETO de etiquetas da conta, pro filtro de Tags — não dá pra
+  // derivar só dos leads já carregados no board (ver allTags abaixo).
+  const { labels: accountLabels, fetchLabels } = useAppDataStore();
+  useEffect(() => {
+    fetchLabels();
+  }, [fetchLabels]);
 
   const [loading, setLoading] = useState(true);
   const [pipeline, setPipeline] = useState<Pipeline | null>(null);
@@ -73,6 +121,110 @@ export default function PipelineKanban() {
   const [draggedItem, setDraggedItem] = useState<PipelineItem | null>(null);
   const isDraggingRef = useRef(false);
   const suppressClickUntilRef = useRef(0);
+
+  // Scroll horizontal do board — feito por arrastar-pra-rolar e roda do mouse
+  // (ver handlers abaixo). O scroll nativo é pouco descobrível no desktop.
+  const boardScrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll enquanto arrasta um card: chegar perto da borda do board rola
+  // na horizontal (pra alcançar coluna escondida); perto do topo/fundo de uma
+  // coluna rola a lista de cards dela. Usa setInterval (não rAF) pra rodar
+  // independente de a aba estar visível ou não. dragPointer guarda a última
+  // posição do cursor capturada no onDragOver.
+  const dragPointerRef = useRef({ x: 0, y: 0, active: false });
+  const autoScrollRef = useRef<number | null>(null);
+  const stopAutoScroll = useCallback(() => {
+    if (autoScrollRef.current != null) {
+      clearInterval(autoScrollRef.current);
+      autoScrollRef.current = null;
+    }
+    dragPointerRef.current = { x: 0, y: 0, active: false };
+  }, []);
+  const startAutoScroll = useCallback(() => {
+    if (autoScrollRef.current != null) return;
+    const EDGE = 90; // zona de borda (px) que ativa o scroll
+    const SPEED = 14; // px por tick
+    autoScrollRef.current = window.setInterval(() => {
+      const board = boardScrollRef.current;
+      const p = dragPointerRef.current;
+      if (!board || !p.active) return;
+      const r = board.getBoundingClientRect();
+      // horizontal
+      if (p.x < r.left + EDGE) board.scrollLeft -= SPEED;
+      else if (p.x > r.right - EDGE) board.scrollLeft += SPEED;
+      // vertical: a lista de cards da coluna sob o cursor
+      const col = (document.elementFromPoint(p.x, p.y) as HTMLElement | null)?.closest(
+        '[data-col-scroll]',
+      ) as HTMLElement | null;
+      if (col) {
+        const cr = col.getBoundingClientRect();
+        if (p.y < cr.top + EDGE) col.scrollTop -= SPEED;
+        else if (p.y > cr.bottom - EDGE) col.scrollTop += SPEED;
+      }
+    }, 16);
+  }, []);
+  // Captura a posição do cursor durante o arraste (dragover do board inteiro).
+  const handleBoardDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragPointerRef.current = { x: e.clientX, y: e.clientY, active: true };
+  };
+
+  // Arrastar-pra-rolar (pan): clicar no fundo do board e arrastar move na
+  // horizontal — scroll lateral natural no desktop, sem depender de seta nem da
+  // barrinha. Não inicia se o clique foi num card/botão/input (deixa o drag do
+  // card e os cliques funcionarem normal).
+  const panRef = useRef({ active: false, startX: 0, startScroll: 0, moved: false });
+  const handleBoardMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const el = boardScrollRef.current;
+    if (!el) return;
+    if (
+      (e.target as HTMLElement).closest(
+        '[draggable="true"], button, a, input, textarea, select, [role="button"], [data-no-pan]',
+      )
+    ) {
+      return;
+    }
+    panRef.current = { active: true, startX: e.clientX, startScroll: el.scrollLeft, moved: false };
+    el.style.cursor = 'grabbing';
+  };
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const p = panRef.current;
+      if (!p.active) return;
+      const el = boardScrollRef.current;
+      if (!el) return;
+      const dx = e.clientX - p.startX;
+      if (Math.abs(dx) > 3) p.moved = true;
+      el.scrollLeft = p.startScroll - dx;
+    };
+    const onUp = () => {
+      const p = panRef.current;
+      if (!p.active) return;
+      p.active = false;
+      const el = boardScrollRef.current;
+      if (el) el.style.cursor = '';
+      // bloqueia o clique fantasma logo após um arraste real
+      if (p.moved) suppressClickUntilRef.current = Date.now() + 200;
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, []);
+
+  // Roda do mouse vertical vira scroll horizontal quando o cursor está sobre o
+  // board mas fora de uma lista de cards (colunas têm scroll vertical próprio).
+  const handleBoardWheel = (e: React.WheelEvent) => {
+    if (e.deltaY === 0 || e.shiftKey) return;
+    const overColumnList = (e.target as HTMLElement).closest('[data-col-scroll]');
+    if (overColumnList) return; // deixa a roda rolar os cards da coluna
+    const el = boardScrollRef.current;
+    if (!el) return;
+    el.scrollLeft += e.deltaY;
+  };
 
   // Modal states
   const [showEditPipelineModal, setShowEditPipelineModal] = useState(false);
@@ -115,25 +267,62 @@ export default function PipelineKanban() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [showDateFilter, setShowDateFilter] = useState(false);
+  // Filtro por tempo (entrada do lead): atalhos rápidos + faixa personalizada.
+  const [timePreset, setTimePreset] = useState<TimePreset>('all');
+  // Filtro por tags: nomes selecionados (vazio = todas).
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  // #13 Detector de lead largado: limiar de dias sem contato escolhível (era
+  // fixo em 7 dias) — pedido do Giovani (20/08).
+  const [abandonedPreset, setAbandonedPreset] = useState<AbandonedPreset>('off');
+  const [abandonedCustomDays, setAbandonedCustomDays] = useState('');
+  // Filtro por colunas: ids de etapas ocultas (vazio = todas visíveis).
+  const [hiddenStages, setHiddenStages] = useState<string[]>([]);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [disparoModalOpen, setDisparoModalOpen] = useState(false);
+  const [archivedModalOpen, setArchivedModalOpen] = useState(false);
+
+  // Modo de visualização do funil: quadro (Kanban) ou lista (todos os leads,
+  // por ordem de chegada, com foto/tags/coluna/data — mais rápido pra escanear
+  // o funil inteiro sem ficar rolando colunas).
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+  const [listSortOrder, setListSortOrder] = useState<'desc' | 'asc'>('desc');
+
+  // Feature flags por cliente (super-admin liga/desliga no painel Clientes CRM).
+  const canImport = useFeature('pipeline_import');
+  const canExport = useFeature('pipeline_export');
+  const canAddItem = useFeature('pipeline_add_item');
+  const canBulkDispatch = useFeature('bulk_campaigns');
 
   // Load pipeline data
-  const loadPipelineData = useCallback(async () => {
+  // silent=true: atualiza em segundo plano sem o spinner de tela cheia (usado
+  // pelo refresh automático ao voltar pra aba e no poll), pra lead novo aparecer
+  // sozinho sem o usuário recarregar a página.
+  const loadPipelineData = useCallback(async (silent = false) => {
     if (!pipelineId) return;
 
-    setLoading(true);
+    // Reabrir um pipe já visitado renderiza NA HORA com o último payload do
+    // servidor e revalida silencioso por trás (stale-while-revalidate).
+    const cached = getCachedPipeline(pipelineId);
+    const showSpinner = !silent && !cached;
+    if (!silent && cached) {
+      setPipeline(cached);
+      setStages(cached.stages || []);
+      setLoading(false);
+    }
+
+    if (showSpinner) setLoading(true);
     try {
       // Load pipeline with all data (stages, items, tasks_info, services_info)
       const pipelineData = await pipelinesService.getPipeline(pipelineId);
 
+      setCachedPipeline(pipelineId, pipelineData);
       setPipeline(pipelineData);
       setStages(pipelineData.stages || []);
     } catch (error) {
       console.error('Error loading pipeline data:', error);
-      toast.error(t('kanban.messages.loadDataError'));
+      if (showSpinner) toast.error(t('kanban.messages.loadDataError'));
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   }, [pipelineId]);
 
@@ -159,7 +348,8 @@ export default function PipelineKanban() {
   // Load all pipelines for selector
   const loadAllPipelines = useCallback(async () => {
     try {
-      const response = await pipelinesService.getPipelines();
+      // Seletor só precisa de nome/cor/etapas/contagem — modo enxuto (sem itens).
+      const response = await pipelinesService.getPipelines({ include_items: false });
       const pipelinesData = response.data || [];
       setAllPipelines(pipelinesData);
     } catch (error) {
@@ -172,6 +362,52 @@ export default function PipelineKanban() {
     loadAllPipelines();
     loadUpcomingVisits();
   }, [loadPipelineData, loadAllPipelines, loadUpcomingVisits]);
+
+  // Atualização automática (sem recarregar a página): lead novo aparece sozinho.
+  // - ao voltar o foco pra aba / aba ficar visível: refresh silencioso na hora.
+  // - a cada 60s enquanto a aba está visível: refresh silencioso.
+  // Pula enquanto arrasta um card (não atrapalhar a reordenação otimista).
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (isDraggingRef.current) return;
+      loadPipelineData(true);
+      loadUpcomingVisits();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisibility);
+    const interval = window.setInterval(refresh, 60_000);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisibility);
+      clearInterval(interval);
+    };
+  }, [loadPipelineData, loadUpcomingVisits]);
+
+  // AO VIVO (websocket): lead/mensagem nova chega pelo evento global 'lmflow:realtime'
+  // (re-emitido pela conexão WS do app em useGlobalWebSocket). Refresh silencioso
+  // com debounce de 1.5s pra colapsar rajadas (conversation.created + message.created
+  // chegam juntos). O poll de 60s acima fica de rede de segurança se o WS cair.
+  useEffect(() => {
+    let timer: number | undefined;
+    const onRealtime = () => {
+      if (document.visibilityState !== 'visible' || isDraggingRef.current) return;
+      clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (isDraggingRef.current) return;
+        loadPipelineData(true);
+        loadUpcomingVisits();
+      }, 1500);
+    };
+    window.addEventListener('lmflow:realtime', onRealtime);
+    return () => {
+      window.removeEventListener('lmflow:realtime', onRealtime);
+      clearTimeout(timer);
+    };
+  }, [loadPipelineData, loadUpcomingVisits]);
 
   // Auto-open card from ?card= URL param
   useEffect(() => {
@@ -193,84 +429,143 @@ export default function PipelineKanban() {
     }
   };
 
-  // Drag and drop handlers
-  const handleDragStart = (item: PipelineItem) => {
+  // Drag and drop handlers.
+  // Viram useCallback (referência estável) porque handleDragStart/handleCardDragOver/
+  // handleCardDrop/handleDragEnd são passados como prop pro PipelineItemCard
+  // memoizado — sem isso, cada render do board recriava a função e quebrava o
+  // memo (card inteiro re-renderizava mesmo sem o item mudar).
+  const handleDragStart = useCallback((item: PipelineItem) => {
     setDraggedItem(item);
     isDraggingRef.current = true;
     suppressClickUntilRef.current = Date.now() + 200;
-  };
+    startAutoScroll();
+  }, [startAutoScroll]);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-  };
+  }, []);
 
-  const handleDrop = async (e: React.DragEvent, targetStageId: string) => {
-    e.preventDefault();
+  // Limpa o estado de arraste (reuso entre drop em coluna e em card).
+  const finishDrag = useCallback(() => {
+    setDraggedItem(null);
+    isDraggingRef.current = false;
+    suppressClickUntilRef.current = Date.now() + 200;
+    stopAutoScroll();
+  }, [stopAutoScroll]);
 
-    if (!draggedItem) return;
+  // Onde o cursor está sobre o card alvo (metade de cima = acima, baixo = abaixo).
+  const dragOverPosRef = useRef<'above' | 'below'>('above');
 
-    const fromStageId = draggedItem.stage_id;
-
-    // Don't move if dropping on same stage
-    if (fromStageId === targetStageId) {
-      setDraggedItem(null);
-      isDraggingRef.current = false;
-      suppressClickUntilRef.current = Date.now() + 200;
+  // Move/reordena o card arrastado para targetStageId na position newPos,
+  // inserindo no índice insertIdx (no array já SEM o card arrastado).
+  // Atualização otimista + persistência via /reorder.
+  const commitReorder = useCallback(async (targetStageId: string, newPos: number, insertIdx: number) => {
+    if (!draggedItem || !pipelineId) {
+      finishDrag();
       return;
     }
-
-    // Optimistic update: move item locally BEFORE API call
+    const fromStageId = draggedItem.stage_id;
     const previousStages = stages;
-    const optimisticStages = stages.map(stage => {
-      if (stage.id === draggedItem.stage_id) {
-        return {
-          ...stage,
-          items: (stage.items || []).filter(item => item.id !== draggedItem.id),
-        };
-      }
+    const moved = {
+      ...draggedItem,
+      stage_id: targetStageId,
+      pipeline_stage_id: targetStageId,
+      position: newPos,
+    };
+    const next = stages.map(stage => {
+      let items = (stage.items || []).filter(i => i.id !== draggedItem.id);
       if (stage.id === targetStageId) {
-        return {
-          ...stage,
-          items: [...(stage.items || []), { ...draggedItem, stage_id: targetStageId }],
-        };
+        items = [...items];
+        const idx = Math.max(0, Math.min(insertIdx, items.length));
+        items.splice(idx, 0, moved);
       }
-      return stage;
+      return { ...stage, items };
     });
-
-    setStages(optimisticStages);
-    toast.success(t('kanban.messages.itemMoved'));
+    setStages(next);
 
     try {
-      await pipelinesService.moveItem({
-        item_id: draggedItem.id,
-        pipeline_id: pipelineId!,
-        from_stage_id: fromStageId,
-        to_stage_id: targetStageId,
+      await pipelinesService.reorderItem(pipelineId, draggedItem.id, {
+        position: newPos,
+        ...(fromStageId !== targetStageId ? { new_stage_id: targetStageId } : {}),
       });
-      // API call succeeded — optimistic update was correct, no need to reload
     } catch (error) {
-      console.error('Error moving item:', error);
-      // Rollback on failure
+      console.error('Error reordering item:', error);
       setStages(previousStages);
       toast.error(t('kanban.messages.itemMoveError'));
     } finally {
-      setDraggedItem(null);
-      isDraggingRef.current = false;
-      suppressClickUntilRef.current = Date.now() + 200;
+      finishDrag();
     }
-  };
+  }, [draggedItem, pipelineId, stages, t, finishDrag]);
 
-  const handleDragEnd = () => {
+  // Drop na área da coluna (fora de um card):
+  // - outra coluna: lead vai pro TOPO da coluna destino.
+  // - mesma coluna (área vazia abaixo dos cards): manda o card pro FUNDO.
+  //   Sem isso, arrastar pro espaço vazio embaixo não fazia nada e dava a
+  //   impressão de que o card "não desce".
+  const handleDrop = useCallback((e: React.DragEvent, targetStageId: string) => {
+    e.preventDefault();
+    if (!draggedItem) return;
+    const targetStage = stages.find(s => s.id === targetStageId);
+    const items = (targetStage?.items || []).filter(i => i.id !== draggedItem.id);
+    if (draggedItem.stage_id === targetStageId) {
+      // mesma coluna: já está sozinho na coluna → nada a fazer
+      if (!items.length) {
+        finishDrag();
+        return;
+      }
+      // fundo da coluna: position menor que a do último card
+      const newPos = itemPos(items[items.length - 1]) - 1;
+      void commitReorder(targetStageId, newPos, items.length);
+      return;
+    }
+    const newPos = items.length ? itemPos(items[0]) + 1 : Date.now() / 1000;
+    void commitReorder(targetStageId, newPos, 0);
+  }, [draggedItem, stages, commitReorder, finishDrag]);
+
+  // Marca acima/abaixo conforme a metade do card sob o cursor.
+  const handleCardDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    dragOverPosRef.current = e.clientY < rect.top + rect.height / 2 ? 'above' : 'below';
+  }, []);
+
+  // Drop em cima de um card: insere acima/abaixo dele e grava a position no
+  // ponto médio entre os vizinhos (ou topo+1 / fundo-1 nas pontas).
+  const handleCardDrop = useCallback((e: React.DragEvent, targetItem: PipelineItem, targetStageId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedItem || draggedItem.id === targetItem.id) {
+      finishDrag();
+      return;
+    }
+    const where = dragOverPosRef.current;
+    const targetStage = stages.find(s => s.id === targetStageId);
+    if (!targetStage) {
+      finishDrag();
+      return;
+    }
+    const arr = (targetStage.items || []).filter(i => i.id !== draggedItem.id);
+    const at = arr.findIndex(i => i.id === targetItem.id);
+    if (at < 0) {
+      finishDrag();
+      return;
+    }
+    const insertIdx = where === 'above' ? at : at + 1;
+    const above = arr[insertIdx - 1];
+    const below = arr[insertIdx];
+    let newPos: number;
+    if (!above) newPos = itemPos(below) + 1;
+    else if (!below) newPos = itemPos(above) - 1;
+    else newPos = (itemPos(above) + itemPos(below)) / 2;
+    void commitReorder(targetStageId, newPos, insertIdx);
+  }, [draggedItem, stages, commitReorder, finishDrag]);
+
+  const handleDragEnd = useCallback(() => {
     isDraggingRef.current = false;
     suppressClickUntilRef.current = Date.now() + 200;
-  };
-
-  // Calculate stage total value
-  const calculateStageTotal = (items: PipelineItem[] = []) => {
-    return items.reduce((total, item) => {
-      return total + (item.value || 0);
-    }, 0);
-  };
+    stopAutoScroll();
+  }, [stopAutoScroll]);
 
   // Calculate pipeline total value
   const calculatePipelineTotal = () => {
@@ -287,91 +582,23 @@ export default function PipelineKanban() {
     }).format(value);
   };
 
-  // Get contact color
-  const getContactColor = (name?: string) => {
-    if (!name) return '#6B7280';
-    const colors = ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#F97316'];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
+  // Mesma data de chegada de formatArrivalDate, mas em epoch ms — pra ordenar
+  // a Lista por ordem de chegada real (não confundir com `position`, que é a
+  // ordem manual de arraste dentro da coluna do Kanban). Fica local: não é
+  // usada pelo card extraído.
+  const itemArrivalMs = (item: PipelineItem): number => {
+    if (typeof item.entered_at === 'number') return item.entered_at * 1000;
+    if (typeof item.created_at === 'number') return item.created_at * 1000;
+    return item.created_at ? new Date(item.created_at).getTime() : 0;
   };
 
-  // Nome cru às vezes vem como o número de telefone (Evolution não manda pushName no 1º evento).
-  // Resolve pro melhor candidato disponível, descartando nomes que são só dígitos/telefone.
-  const isPhoneLikeName = (value?: string | null) => {
-    if (!value) return true;
-    return /^[+\d\s()\-@.]+$/.test(value.replace(/whatsapp|net|us|s\./gi, ''));
-  };
-  const resolveItemName = (item: PipelineItem): string => {
-    const candidates = [item.contact?.name, item.conversation?.contact?.name];
-    const good = candidates.find(c => c && !isPhoneLikeName(c));
-    if (good) return good as string;
-    // sem nome real: mostra o telefone formatado em vez de string crua tipo JID
-    const phone =
-      item.contact?.phone_number || item.conversation?.contact?.phone_number || candidates[0];
-    return phone || t('kanban.conversation.unknownUser');
-  };
-  const resolveItemAvatar = (item: PipelineItem): string | undefined => {
-    return item.contact?.avatar_url || item.conversation?.contact?.avatar_url || undefined;
-  };
-  // Data de chegada do lead no pipeline (quando o card entrou).
-  const formatArrivalDate = (item: PipelineItem): string | null => {
-    const raw = item.entered_at
-      ? item.entered_at * 1000
-      : item.created_at
-      ? typeof item.created_at === 'number'
-        ? item.created_at * 1000
-        : new Date(item.created_at).getTime()
-      : null;
-    if (!raw) return null;
-    return new Date(raw).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-    });
-  };
-
-  // Último contato com o lead medido pela CONVERSA da instância WhatsApp.
-  // last_non_activity_message = última mensagem real (entrada OU saída), incluindo
-  // mensagens que o corretor mandou pelo celular (persistidas via webhook Evolution).
-  // NÃO é baseado em envios internos do LM Flow — é o timestamp da própria conversa.
-  const lastContactMs = (item: PipelineItem): number | null => {
-    const msg = item.conversation?.last_non_activity_message;
-    if (msg?.created_at != null) {
-      return typeof msg.created_at === 'number'
-        ? msg.created_at * 1000
-        : new Date(msg.created_at).getTime();
-    }
-    if (item.conversation?.last_activity_at) {
-      return item.conversation.last_activity_at * 1000;
-    }
-    return null;
-  };
-  const lastContactDays = (item: PipelineItem): number | null => {
-    const ms = lastContactMs(item);
-    if (!ms) return null;
-    return Math.floor((Date.now() - ms) / 86_400_000);
-  };
-
-  // Labels da conversa (vêm como string[] ou {title}[]).
-  const itemLabels = (item: PipelineItem): string[] => {
-    const raw = (item.conversation as any)?.labels ?? [];
-    return Array.isArray(raw)
-      ? raw.map((l: any) => (typeof l === 'string' ? l : l?.title ?? '')).filter(Boolean)
-      : [];
-  };
-  const hasVisitScheduled = (item: PipelineItem) => itemLabels(item).includes('visita-agendada');
-  // Dia/hora da próxima visita do lead (do mapa carregado de /visits).
-  const itemVisitLabel = (item: PipelineItem): string | null => {
-    const cid = item.contact?.id || item.conversation?.contact?.id;
-    const when = cid ? visitsByContact[cid] : undefined;
-    if (!when) return null;
-    return new Date(when).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  // Todas as etiquetas da conta (catálogo completo — não só as que já aparecem
+  // em algum card carregado neste pipeline; ver comentário acima em accountLabels).
+  const allTags = useMemo(() => {
+    return accountLabels
+      .map(l => ({ name: l.title, color: l.color }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [accountLabels]);
 
   // Pipeline management handlers
   const handleEditPipeline = () => {
@@ -474,10 +701,33 @@ export default function PipelineKanban() {
     await loadPipelineData();
   };
 
-  const handleRemoveItem = (item: PipelineItem) => {
+  const handleRemoveItem = useCallback((item: PipelineItem) => {
     setItemToRemove(item);
     setShowRemoveItemModal(true);
-  };
+  }, []);
+
+  // Remove o card do board no estado (otimista), sem reload — usado ao arquivar.
+  const removeItemFromBoardLocal = useCallback((itemId: string) => {
+    setStages(prev =>
+      prev.map(stage => ({
+        ...stage,
+        items: (stage.items || []).filter(i => String(i.id) !== String(itemId)),
+      })),
+    );
+  }, []);
+
+  // Arquivar = soft-hide: some do board na hora, fica em "Arquivados".
+  const handleArchiveItem = useCallback(async (item: PipelineItem) => {
+    if (!pipelineId) return;
+    removeItemFromBoardLocal(item.id);
+    try {
+      await pipelinesService.archiveItem(pipelineId, item.id);
+      toast.success('Lead arquivado');
+    } catch {
+      toast.error('Erro ao arquivar');
+      loadPipelineData(true);
+    }
+  }, [pipelineId, removeItemFromBoardLocal, loadPipelineData]);
 
   const handleConfirmRemoveItem = async () => {
     if (!itemToRemove || !pipelineId) return;
@@ -498,10 +748,58 @@ export default function PipelineKanban() {
     }
   };
 
-  const handleEditItem = (item: PipelineItem) => {
+  const handleEditItem = useCallback((item: PipelineItem) => {
     setItemToEdit(item);
     setShowEditItemModal(true);
-  };
+  }, []);
+
+  // Ações do menu do card (extraídas do JSX inline pra referência estável — useCallback).
+  const handleOpenScheduleAction = useCallback((item: PipelineItem) => {
+    setSelectedConversationForSchedule(item);
+    setScheduleActionOpen(true);
+  }, []);
+
+  const handleOpenNotesForItem = useCallback((item: PipelineItem) => {
+    const contactId = item.contact?.id ?? item.conversation?.contact?.id;
+    const contactName = item.contact?.name ?? item.conversation?.contact?.name;
+    if (contactId) {
+      setSelectedContactForNotes({ id: contactId, name: contactName });
+      setNotesModalOpen(true);
+    }
+  }, []);
+
+  // Move otimista do card pra outra etapa, SEM reload (fluido igual o arrastar).
+  // Usado pelas ações do card no modal ("Mover para coluna", "Ganho/Perdido")
+  // e pela mudança de Fase ao salvar. O card pula de coluna na hora; o refresh
+  // de dados acontece em segundo plano (silencioso), sem piscar a tela.
+  const moveItemToStageLocal = useCallback((itemId: string, toStageId: string) => {
+    if (!toStageId) return;
+    setStages(prev => {
+      let moved: PipelineItem | undefined;
+      const without = prev.map(stage => ({
+        ...stage,
+        items: (stage.items || []).filter(i => {
+          if (String(i.id) === String(itemId)) {
+            moved = { ...i, stage_id: toStageId, pipeline_stage_id: toStageId } as PipelineItem;
+            return false;
+          }
+          return true;
+        }),
+      }));
+      if (!moved) return prev;
+      return without.map(stage =>
+        String(stage.id) === String(toStageId)
+          ? { ...stage, items: [moved as PipelineItem, ...(stage.items || [])] }
+          : stage,
+      );
+    });
+    // Mantém o card aberto coerente com a nova etapa.
+    setItemToEdit(prev =>
+      prev && String(prev.id) === String(itemId)
+        ? ({ ...prev, stage_id: toStageId, pipeline_stage_id: toStageId } as PipelineItem)
+        : prev,
+    );
+  }, []);
 
   const handleUpdateItem = async (data: {
     notes: string;
@@ -512,9 +810,12 @@ export default function PipelineKanban() {
   }) => {
     if (!itemToEdit || !pipelineId) return;
 
+    const movedId = itemToEdit.id;
+    const stageChanged = String(itemToEdit.stage_id) !== String(data.stage_id);
+
     setIsEditingItem(true);
     try {
-      await pipelinesService.updateItemInPipeline(pipelineId, itemToEdit.id, {
+      await pipelinesService.updateItemInPipeline(pipelineId, movedId, {
         pipeline_stage_id: data.stage_id,
         notes: data.notes,
         custom_fields: {
@@ -527,11 +828,14 @@ export default function PipelineKanban() {
       toast.success(t('kanban.messages.itemUpdated'));
       setShowEditItemModal(false);
       setItemToEdit(null);
-      // Reload pipeline data to reflect changes
-      await loadPipelineData();
+      // Move otimista na hora + refresh silencioso (sem o spinner de tela cheia
+      // que dava a sensação de "recarregar a página").
+      if (stageChanged) moveItemToStageLocal(movedId, data.stage_id);
+      await loadPipelineData(true);
     } catch (error) {
       console.error('Error updating item:', error);
       toast.error(t('kanban.messages.itemUpdateError'));
+      await loadPipelineData(true);
     } finally {
       setIsEditingItem(false);
     }
@@ -598,13 +902,63 @@ export default function PipelineKanban() {
     }
   };
 
-  // Filter stages by search query and date range
+  // Faixa de tempo (entrada do lead) derivada do atalho escolhido.
+  const timeRange = useMemo(() => {
+    const now = Date.now();
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    switch (timePreset) {
+      case 'today':
+        return { from: startOfToday.getTime(), to: null as number | null };
+      case '7d':
+        return { from: now - 7 * 86_400_000, to: null as number | null };
+      case '30d':
+        return { from: now - 30 * 86_400_000, to: null as number | null };
+      case 'custom':
+        return {
+          from: dateFrom ? new Date(dateFrom).getTime() : null,
+          to: dateTo ? new Date(dateTo + 'T23:59:59').getTime() : null,
+        };
+      default:
+        return { from: null as number | null, to: null as number | null };
+    }
+  }, [timePreset, dateFrom, dateTo]);
+
+  // Limiar de dias sem contato pro filtro "Largados" — null = filtro desligado.
+  const abandonedThresholdDays = useMemo(() => {
+    if (abandonedPreset === 'off') return null;
+    if (abandonedPreset === 'custom') {
+      const n = parseInt(abandonedCustomDays, 10);
+      return Number.isFinite(n) && n > 0 ? n : 7;
+    }
+    return parseInt(abandonedPreset, 10);
+  }, [abandonedPreset, abandonedCustomDays]);
+
+  // Quantos filtros estão ativos (pro botão "Limpar" e badges).
+  const activeFilterCount =
+    (searchQuery ? 1 : 0) +
+    (timePreset !== 'all' ? 1 : 0) +
+    (selectedTags.length ? 1 : 0) +
+    (abandonedThresholdDays != null ? 1 : 0) +
+    (hiddenStages.length ? 1 : 0);
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setTimePreset('all');
+    setDateFrom('');
+    setDateTo('');
+    setSelectedTags([]);
+    setAbandonedPreset('off');
+    setAbandonedCustomDays('');
+    setHiddenStages([]);
+  };
+
+  // Filtra etapas por colunas ocultas e itens por busca + tempo + tags.
   const filteredStages = useMemo(() => {
-    if (!searchQuery && !dateFrom && !dateTo) return stages;
+    const visible = stages.filter(s => !hiddenStages.includes(s.id));
     const q = searchQuery.toLowerCase();
-    const from = dateFrom ? new Date(dateFrom).getTime() : null;
-    const to = dateTo ? new Date(dateTo + 'T23:59:59').getTime() : null;
-    return stages.map(stage => ({
+    const { from, to } = timeRange;
+    if (!q && !from && !to && selectedTags.length === 0 && abandonedThresholdDays == null) return visible;
+    return visible.map(stage => ({
       ...stage,
       items: (stage.items || []).filter(item => {
         const matchesSearch =
@@ -618,10 +972,33 @@ export default function PipelineKanban() {
             : new Date(item.created_at).getTime();
         const matchesFrom = !from || enteredMs >= from;
         const matchesTo = !to || enteredMs <= to;
-        return matchesSearch && matchesFrom && matchesTo;
+        const tags = itemTagNames(item);
+        const matchesTags =
+          selectedTags.length === 0 || selectedTags.some(t => tags.includes(t));
+        // Largado = sem contato há N+ dias (limiar escolhido no filtro).
+        const d = lastContactDays(item);
+        const matchesAbandoned = abandonedThresholdDays == null || (d != null && d >= abandonedThresholdDays);
+        return matchesSearch && matchesFrom && matchesTo && matchesTags && matchesAbandoned;
       }),
     }));
-  }, [stages, searchQuery, dateFrom, dateTo]);
+  }, [stages, searchQuery, timeRange, selectedTags, hiddenStages, abandonedThresholdDays]);
+
+  // Visão em Lista: todos os leads do funil (respeitando os mesmos filtros do
+  // Kanban acima) numa lista única, por ordem de chegada, com a coluna atual
+  // de cada um.
+  const allListItems = useMemo(() => {
+    const rows = filteredStages.flatMap(stage =>
+      (stage.items || []).map(item => ({ item, stage })),
+    );
+    rows.sort((a, b) => {
+      const diff = itemArrivalMs(a.item) - itemArrivalMs(b.item);
+      return listSortOrder === 'asc' ? diff : -diff;
+    });
+    return rows;
+  }, [filteredStages, listSortOrder]);
+
+  // Garante que o auto-scroll do drag pare se o componente desmontar no meio.
+  useEffect(() => stopAutoScroll, [stopAutoScroll]);
 
   // Export leads as CSV
   const handleExportCSV = () => {
@@ -633,8 +1010,8 @@ export default function PipelineKanban() {
         etapa: stage.name,
         valor: item.value || '',
         entrada: item.entered_at
-          ? new Date(item.entered_at * 1000).toLocaleDateString('pt-BR')
-          : new Date(item.created_at).toLocaleDateString('pt-BR'),
+          ? formatDateBR(item.entered_at * 1000)
+          : formatDateBR(item.created_at),
       })),
     );
     if (allItems.length === 0) {
@@ -668,7 +1045,7 @@ export default function PipelineKanban() {
         {/* Header */}
         <div className="flex-shrink-0 bg-background border-b border-border shadow-sm">
           <div className="px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col gap-3 py-3 lg:h-16 lg:flex-row lg:items-center lg:justify-between lg:py-0">
+            <div className="flex flex-col gap-3 py-3 lg:min-h-16 lg:flex-row lg:items-center lg:justify-between lg:py-2">
               {/* Navigation and Pipeline Info */}
               <div className="flex items-center gap-3 min-w-0">
                 <Button
@@ -691,7 +1068,7 @@ export default function PipelineKanban() {
               </div>
 
               {/* Quick Stats and Actions */}
-              <div className="flex w-full flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm lg:w-auto">
+              <div className="flex w-full flex-wrap items-center justify-end gap-1.5 sm:gap-2 lg:gap-3 text-xs sm:text-sm lg:w-auto xl:flex-nowrap">
                 {pipeline?.pipeline_type === 'sale' && (
                   <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 border-0">
                     Venda
@@ -702,53 +1079,72 @@ export default function PipelineKanban() {
                     Locação
                   </Badge>
                 )}
-                <div className="text-center min-w-16">
-                  <div className="font-semibold text-foreground">
+                <div className="text-center">
+                  <div className="font-semibold text-foreground leading-tight">
                     {pipeline?.item_count || pipeline?.conversations_count || 0}
                   </div>
-                  <div className="text-muted-foreground">{t('kanban.header.conversations')}</div>
+                  <div className="hidden sm:block text-muted-foreground">{t('kanban.header.conversations')}</div>
                 </div>
-                <div className="text-center min-w-14">
-                  <div className="font-semibold text-foreground">{stages.length}</div>
-                  <div className="text-muted-foreground">{t('kanban.header.stages')}</div>
+                <div className="text-center">
+                  <div className="font-semibold text-foreground leading-tight">{stages.length}</div>
+                  <div className="hidden sm:block text-muted-foreground">{t('kanban.header.stages')}</div>
                 </div>
                 {calculatePipelineTotal() > 0 && (
-                  <div className="text-center min-w-20">
-                    <div className="font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
+                  <div className="hidden md:block text-center">
+                    <div className="font-semibold text-green-600 dark:text-green-400 whitespace-nowrap leading-tight">
                       R$ {formatCurrency(calculatePipelineTotal())}
                     </div>
                     <div className="text-muted-foreground">{t('kanban.header.totalValue')}</div>
                   </div>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setImportModalOpen(true)}
-                  className="whitespace-nowrap"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Importar
-                </Button>
+                {/* Botões secundários: só em telas largas (xl). Abaixo disso vão pro menu. */}
+                {canImport && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setImportModalOpen(true)}
+                    className="hidden xl:inline-flex whitespace-nowrap"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Importar
+                  </Button>
+                )}
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportCSV}
-                  className="whitespace-nowrap"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar
-                </Button>
+                {canExport && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportCSV}
+                    className="hidden xl:inline-flex whitespace-nowrap"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar
+                  </Button>
+                )}
 
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => handleAddItem()}
-                  className="whitespace-nowrap"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  {t('kanban.header.addItem')}
-                </Button>
+                {canBulkDispatch && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDisparoModalOpen(true)}
+                    className="hidden xl:inline-flex whitespace-nowrap"
+                  >
+                    <Megaphone className="w-4 h-4 mr-2" />
+                    Disparo em massa
+                  </Button>
+                )}
+
+                {canAddItem && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => handleAddItem()}
+                    className="whitespace-nowrap"
+                  >
+                    <Plus className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">{t('kanban.header.addItem')}</span>
+                  </Button>
+                )}
 
                 {/* Pipeline Options Menu */}
                 <DropdownMenu>
@@ -758,6 +1154,26 @@ export default function PipelineKanban() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    {/* Ações que somem da barra em telas < xl ficam acessíveis aqui */}
+                    {canImport && (
+                      <DropdownMenuItem className="xl:hidden" onClick={() => setImportModalOpen(true)}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Importar
+                      </DropdownMenuItem>
+                    )}
+                    {canExport && (
+                      <DropdownMenuItem className="xl:hidden" onClick={handleExportCSV}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar
+                      </DropdownMenuItem>
+                    )}
+                    {canBulkDispatch && (
+                      <DropdownMenuItem className="xl:hidden" onClick={() => setDisparoModalOpen(true)}>
+                        <Megaphone className="h-4 w-4 mr-2" />
+                        Disparo em massa
+                      </DropdownMenuItem>
+                    )}
+                    {(canImport || canExport || canBulkDispatch) && <DropdownMenuSeparator className="xl:hidden" />}
                     <DropdownMenuItem onClick={handleEditPipeline}>
                       <Edit className="h-4 w-4 mr-2" />
                       {t('kanban.header.editPipeline')}
@@ -775,6 +1191,10 @@ export default function PipelineKanban() {
                     <DropdownMenuItem onClick={handleReorderStages}>
                       <ArrowUpDown className="h-4 w-4 mr-2" />
                       {t('kanban.header.reorderStages')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setArchivedModalOpen(true)}>
+                      <Archive className="h-4 w-4 mr-2" />
+                      Leads arquivados
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-destructive" onClick={handleDeletePipeline}>
@@ -806,52 +1226,67 @@ export default function PipelineKanban() {
                 )}
               </div>
 
-              <Button
-                variant={showDateFilter || dateFrom || dateTo ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setShowDateFilter(v => !v)}
-                className="whitespace-nowrap"
-              >
-                <CalendarClock className="w-4 h-4 mr-2" />
-                Período
-              </Button>
+              {/* Filtros unificados: Tempo, Tags, Largados (limiar escolhível) e
+                  Colunas num só popup — antes eram 4 botões brigando por
+                  espaço na barra (pedido do Giovani, 20/08). */}
+              <PipelineFiltersPopover
+                timePreset={timePreset}
+                onTimePresetChange={setTimePreset}
+                dateFrom={dateFrom}
+                dateTo={dateTo}
+                onDateFromChange={setDateFrom}
+                onDateToChange={setDateTo}
+                allTags={allTags}
+                selectedTags={selectedTags}
+                onSelectedTagsChange={setSelectedTags}
+                abandonedPreset={abandonedPreset}
+                onAbandonedPresetChange={setAbandonedPreset}
+                abandonedCustomDays={abandonedCustomDays}
+                onAbandonedCustomDaysChange={setAbandonedCustomDays}
+                stages={stages.map(s => ({ id: s.id, name: s.name, color: s.color }))}
+                hiddenStages={hiddenStages}
+                onHiddenStagesChange={setHiddenStages}
+                activeFilterCount={activeFilterCount}
+                onClearAll={clearAllFilters}
+              />
 
-              {showDateFilter && (
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="date"
-                    value={dateFrom}
-                    onChange={e => setDateFrom(e.target.value)}
-                    className="h-9 w-auto"
-                  />
-                  <span className="text-muted-foreground text-sm">até</span>
-                  <Input
-                    type="date"
-                    value={dateTo}
-                    onChange={e => setDateTo(e.target.value)}
-                    className="h-9 w-auto"
-                  />
-                  {(dateFrom || dateTo) && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setDateFrom('');
-                        setDateTo('');
-                      }}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              )}
+              {/* Alternar visualização: Quadro (Kanban) ou Lista (todos os leads) */}
+              <div className="ml-auto flex items-center border rounded-lg">
+                <Button
+                  variant={viewMode === 'board' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('board')}
+                  className="border-0 rounded-r-none whitespace-nowrap"
+                  title="Visualização em quadro"
+                >
+                  <LayoutGrid className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Quadro</span>
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className="border-0 rounded-l-none whitespace-nowrap"
+                  title="Visualização em lista"
+                >
+                  <ListIcon className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Lista</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Kanban Board */}
-        <div className="flex-1 overflow-hidden">
-          <div className="h-full overflow-x-auto overflow-y-hidden px-4 sm:px-6 lg:px-8 py-6">
+        {viewMode === 'board' && (
+        <div className="flex-1 overflow-hidden relative">
+          <div
+            ref={boardScrollRef}
+            className="h-full overflow-x-auto overflow-y-hidden px-4 sm:px-6 lg:px-8 py-6 cursor-grab"
+            onDragOver={handleBoardDragOver}
+            onMouseDown={handleBoardMouseDown}
+            onWheel={handleBoardWheel}
+          >
             {/* Kanban Content */}
             <div
               className="flex gap-6 h-full pb-6"
@@ -860,11 +1295,16 @@ export default function PipelineKanban() {
               {/* Stage Columns */}
               {filteredStages.map((stage: PipelineStage) => (
                 <div key={stage.id} className="w-80 flex-shrink-0">
-                  <div className="bg-background rounded-xl shadow-sm border border-border h-full flex flex-col">
+                  <div className="bg-muted/40 rounded-xl shadow-sm border border-border h-full flex flex-col">
                     {/* Stage Header */}
                     <div
-                      className="flex-shrink-0 px-4 py-3 border-b border-border bg-muted/50 rounded-t-xl border-t-4"
-                      style={{ borderTopColor: stage.color }}
+                      className="flex-shrink-0 px-4 py-3 border-b border-border rounded-t-xl border-t-4"
+                      style={{
+                        borderTopColor: stage.color,
+                        backgroundColor: stage.color?.startsWith('#')
+                          ? `${stage.color}1f`
+                          : undefined,
+                      }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
@@ -922,390 +1362,33 @@ export default function PipelineKanban() {
 
                     {/* Items Drop Zone */}
                     <div
+                      data-col-scroll
                       className="flex-1 overflow-y-auto p-4 space-y-3"
                       onDragOver={handleDragOver}
                       onDrop={e => handleDrop(e, stage.id)}
                     >
                       {/* Items */}
                       {(stage.items || []).map(item => (
-                        <div
+                        <PipelineItemCard
                           key={item.id}
-                          className="group bg-background rounded-xl p-4 border border-border shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200 cursor-pointer select-none relative"
-                          draggable
-                          onDragStart={() => handleDragStart(item)}
+                          item={item}
+                          stageId={stage.id}
+                          visitsByContact={visitsByContact}
+                          isDraggingRef={isDraggingRef}
+                          suppressClickUntilRef={suppressClickUntilRef}
+                          onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
-                          onClick={() => {
-                            if (!isDraggingRef.current && Date.now() > suppressClickUntilRef.current) {
-                              handleEditItem(item);
-                            }
-                          }}
-                        >
-                          {/* Card Options Menu */}
-                          <div
-                            className="absolute top-2 right-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div className="flex items-center space-x-1">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-auto p-1 hover:bg-muted"
-                                  >
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleEditItem(item)}>
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    {t('kanban.item.editItem')}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={async () => {
-                                      await navigator.clipboard.writeText(String(item.id));
-                                      toast.success(t('kanban.idCopied'));
-                                    }}
-                                  >
-                                    <Copy className="h-4 w-4 mr-2" />
-                                    {t('kanban.copyId')}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setSelectedConversationForSchedule(item);
-                                      setScheduleActionOpen(true);
-                                    }}
-                                  >
-                                    <CalendarClock className="h-4 w-4 mr-2" />
-                                    {t('kanban.item.scheduleAction')}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      const contactId = item.contact?.id ?? item.conversation?.contact?.id;
-                                      const contactName = item.contact?.name ?? item.conversation?.contact?.name;
-                                      if (contactId) {
-                                        setSelectedContactForNotes({ id: contactId, name: contactName });
-                                        setNotesModalOpen(true);
-                                      }
-                                    }}
-                                  >
-                                    <MessageCircle className="h-4 w-4 mr-2" />
-                                    Ver Notas
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => handleRemoveItem(item)}
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    {t('kanban.item.removeFromPipeline')}
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                              <GripVertical className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                          </div>
-
-                          {/* Contact Info Header */}
-                          <div className="flex items-start space-x-3 mb-3">
-                            <div className="relative">
-                              {resolveItemAvatar(item) ? (
-                                <img
-                                  src={resolveItemAvatar(item)}
-                                  alt={resolveItemName(item)}
-                                  className="w-10 h-10 rounded-full object-cover shadow-sm bg-muted"
-                                  onError={e => {
-                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                    const fb = e.currentTarget
-                                      .nextElementSibling as HTMLElement | null;
-                                    if (fb) fb.style.display = 'flex';
-                                  }}
-                                />
-                              ) : null}
-                              <div
-                                className="w-10 h-10 rounded-full items-center justify-center text-white text-sm font-bold shadow-sm"
-                                style={{
-                                  backgroundColor: getContactColor(resolveItemName(item)),
-                                  display: resolveItemAvatar(item) ? 'none' : 'flex',
-                                }}
-                              >
-                                {resolveItemName(item)?.[0]?.toUpperCase() || 'U'}
-                              </div>
-                              {/* Online indicator */}
-                              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 border-2 border-background rounded-full" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <h4 className="text-sm font-semibold text-foreground truncate">
-                                  {resolveItemName(item)}
-                                </h4>
-                                <span className="text-xs text-muted-foreground font-medium">
-                                  #{item.conversation?.display_id}
-                                </span>
-                              </div>
-                              {/* Tempo sem contato (medido pela conversa da instância WhatsApp) */}
-                              {(() => {
-                                const d = lastContactDays(item);
-                                if (d == null || d < 3) return null;
-                                const tone =
-                                  d >= 7
-                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
-                                return (
-                                  <span
-                                    title={`Última mensagem há ${d} dias`}
-                                    className={`inline-flex items-center gap-1 mb-1 px-1.5 py-0.5 rounded-md text-xs font-semibold ${tone}`}
-                                  >
-                                    <Clock className="w-3 h-3" />
-                                    {d}d sem contato
-                                  </span>
-                                );
-                              })()}
-                              {/* Visita agendada — mostra dia/hora se houver visita carregada, senão só a tag */}
-                              {(itemVisitLabel(item) || hasVisitScheduled(item)) && (
-                                <span
-                                  title="Visita agendada"
-                                  className="inline-flex items-center gap-1 mb-1 ml-1 px-1.5 py-0.5 rounded-md text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                >
-                                  <CalendarClock className="w-3 h-3" />
-                                  {itemVisitLabel(item) ? `Visita ${itemVisitLabel(item)}` : 'Visita agendada'}
-                                </span>
-                              )}
-                              {/* Contact details */}
-                              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                                {item.contact?.phone_number && (
-                                  <span className="flex items-center space-x-1">
-                                    <Phone className="w-3 h-3" />
-                                    <span className="truncate max-w-20">
-                                      {item.contact.phone_number}
-                                    </span>
-                                  </span>
-                                )}
-                                {item.contact?.email && (
-                                  <span className="flex items-center space-x-1">
-                                    <Mail className="w-3 h-3" />
-                                    <span className="truncate max-w-20">{item.contact?.email}</span>
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Last Message Preview */}
-                          {item.conversation?.last_non_activity_message?.content && (
-                            <div className="mb-3 p-3 bg-muted/50 rounded-lg border border-border">
-                              <div className="flex items-start space-x-2">
-                                <MessageSquare className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center space-x-2 mb-1">
-                                    <span className="text-xs font-medium text-foreground">
-                                      {item.conversation.last_non_activity_message.sender?.name ||
-                                        t('kanban.conversation.system')}
-                                    </span>
-                                  </div>
-                                  <p
-                                    className="text-sm text-foreground line-clamp-2 leading-relaxed [&_p]:inline [&_br]:hidden"
-                                    dangerouslySetInnerHTML={{
-                                      __html:
-                                        item.conversation.last_non_activity_message
-                                          .processed_message_content ||
-                                        item.conversation.last_non_activity_message.content || '',
-                                    }}
-                                  />
-                                  <div className="flex items-center justify-between mt-2">
-                                    <span className="text-xs text-muted-foreground">
-                                      {new Date(
-                                        typeof item.conversation.last_non_activity_message
-                                          .created_at === 'number'
-                                          ? item.conversation.last_non_activity_message.created_at *
-                                            1000
-                                          : item.conversation.last_non_activity_message.created_at,
-                                      ).toLocaleString('pt-BR', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        hour: '2-digit',
-                                        minute: '2-digit',
-                                      })}
-                                    </span>
-                                    {item.conversation.last_non_activity_message?.message_type !==
-                                      undefined && (
-                                      <span className="text-xs text-muted-foreground">
-                                        {item.conversation.last_non_activity_message
-                                          .message_type === 0
-                                          ? t('kanban.conversation.incoming', 'Incoming')
-                                          : item.conversation.last_non_activity_message
-                                              .message_type === 1
-                                          ? t('kanban.conversation.outgoing', 'Outgoing')
-                                          : ''}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Inbox and Status Row */}
-                          <div className="flex items-center justify-between mb-3">
-                            {!item.is_lead && (
-                              <div className="flex items-center space-x-2 text-xs">
-                                <div className="flex items-center space-x-1 px-2 py-1 bg-muted/50 rounded-md">
-                                  <div className="w-3 h-3 text-muted-foreground">
-                                    <svg fill="currentColor" viewBox="0 0 20 20">
-                                      <path
-                                        fillRule="evenodd"
-                                        d="M2 5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 002 2H4a2 2 0 01-2-2V5zm3 1h6v4H5V6zm6 6H5v2h6v-2z"
-                                        clipRule="evenodd"
-                                      />
-                                    </svg>
-                                  </div>
-                                  <span className="text-foreground font-medium truncate max-w-16">
-                                    {item.conversation?.inbox?.name ||
-                                      t('kanban.conversation.noInbox')}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                            {!item.is_lead && (
-                              <div className="flex items-center space-x-2">
-                                {/* Status badge */}
-                                <span
-                                  className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                    item.conversation?.status === 'open'
-                                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                                      : item.conversation?.status === 'resolved'
-                                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
-                                      : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-                                  }`}
-                                >
-                                  {item.conversation?.status === 'open'
-                                    ? t('kanban.conversation.status.open')
-                                    : item.conversation?.status === 'resolved'
-                                    ? t('kanban.conversation.status.resolved')
-                                    : item.conversation?.status ||
-                                      t('kanban.conversation.status.unknown')}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Services Total Value */}
-                          {item.services_info?.has_services &&
-                            item.services_info.total_value > 0 && (
-                              <div className="mb-3 pt-2 border-t border-border">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                                    <div className="w-3 h-3">
-                                      <svg fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-                                        <path
-                                          fillRule="evenodd"
-                                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.51-1.31c-.562-.649-1.413-1.076-2.353-1.253V5z"
-                                          clipRule="evenodd"
-                                        />
-                                      </svg>
-                                    </div>
-                                    <span className="font-medium">
-                                      {t('kanban.conversation.valueLabel')}
-                                    </span>
-                                  </div>
-                                  <div className="text-xs font-semibold text-green-600 dark:text-green-400">
-                                    {item.services_info.formatted_total}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                          {/* Tasks Summary - Compact and Visual */}
-                          {(item.tasks_info?.pending_count > 0 ||
-                            item.tasks_info?.overdue_count > 0 ||
-                            item.tasks_info?.due_soon_count > 0 ||
-                            item.tasks_info?.completed_count > 0) && (
-                            <div className="mb-3 flex items-center gap-1.5 flex-wrap">
-                              <div className="text-sm">{t('tasks.title')}</div>
-                              {/* Tasks vencidas - Prioridade máxima */}
-                              {item.tasks_info?.overdue_count > 0 && (
-                                <Badge
-                                  title={t('tasks.status.overdue')}
-                                  variant="destructive"
-                                  className="h-5 px-1.5 text-xs"
-                                >
-                                  <AlertCircle className="w-3 h-3 mr-1" />
-                                  {item.tasks_info.overdue_count}
-                                </Badge>
-                              )}
-
-                              {/* Tasks próximas do vencimento */}
-                              {item.tasks_info?.due_soon_count > 0 && (
-                                <Badge
-                                  title={t('tasks.status.dueSoon')}
-                                  className="h-5 px-1.5 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400"
-                                >
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  {item.tasks_info.due_soon_count}
-                                </Badge>
-                              )}
-
-                              {/* Tasks pendentes (sem urgência) */}
-                              {item.tasks_info?.pending_count > 0 &&
-                                !item.tasks_info?.overdue_count &&
-                                !item.tasks_info?.due_soon_count && (
-                                  <Badge
-                                    title={t('tasks.status.pending')}
-                                    variant="secondary"
-                                    className="h-5 px-1.5 text-xs"
-                                  >
-                                    <ListTodo className="w-3 h-3 mr-1" />
-                                    {item.tasks_info.pending_count}
-                                  </Badge>
-                                )}
-
-                              {/* Tasks concluídas */}
-                              {item.tasks_info?.completed_count > 0 && (
-                                <Badge
-                                  title={t('tasks.status.completed')}
-                                  className="h-5 px-1.5 text-xs bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                                >
-                                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                                  {item.tasks_info.completed_count}
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Time and assignee info */}
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center space-x-1 text-muted-foreground">
-                              <div className="w-3 h-3">
-                                <svg fill="currentColor" viewBox="0 0 20 20">
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              </div>
-                              <span title={t('kanban.item.arrivedAt', 'Lead chegou em')}>
-                                {formatArrivalDate(item) ||
-                                  (item.conversation?.last_activity_at
-                                    ? new Date(
-                                        item.conversation.last_activity_at * 1000,
-                                      ).toLocaleDateString('pt-BR')
-                                    : '')}
-                              </span>
-                            </div>
-
-                            {/* Assignee */}
-                            {item.conversation?.assignee && (
-                              <div className="flex items-center space-x-1 text-muted-foreground">
-                                <User className="w-3 h-3" />
-                                <span className="truncate max-w-20">
-                                  {item.conversation.assignee.name}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                          onCardDragOver={handleCardDragOver}
+                          onCardDrop={handleCardDrop}
+                          onOpenItem={handleEditItem}
+                          onEdit={handleEditItem}
+                          onArchive={handleArchiveItem}
+                          onRemove={handleRemoveItem}
+                          onScheduleAction={handleOpenScheduleAction}
+                          onNotesClick={handleOpenNotesForItem}
+                          onOpenConversation={openLeadConversation}
+                          openingConversation={openingConversation}
+                        />
                       ))}
 
                       {/* Empty state */}
@@ -1346,135 +1429,366 @@ export default function PipelineKanban() {
             </div>
           </div>
         </div>
+        )}
+
+        {/* Lista: todos os leads do funil, por ordem de chegada */}
+        {viewMode === 'list' && (
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6">
+            {allListItems.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                {t('kanban.stage.noConversations')}
+              </div>
+            ) : (
+              <div className="bg-background rounded-xl border border-border overflow-hidden">
+                {/* Header da lista */}
+                <div className="flex items-center gap-4 px-4 py-2.5 border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground">
+                  <div className="flex-1 min-w-0">Lead</div>
+                  <div className="hidden md:block w-40 shrink-0">Coluna</div>
+                  <div className="hidden xl:block w-44 shrink-0">Responsável</div>
+                  <div className="hidden lg:flex w-48 shrink-0 flex-wrap gap-1">Tags</div>
+                  <button
+                    type="button"
+                    onClick={() => setListSortOrder(o => (o === 'asc' ? 'desc' : 'asc'))}
+                    className="w-24 shrink-0 flex items-center gap-1 text-right justify-end hover:text-foreground"
+                    title="Ordenar por data de chegada"
+                  >
+                    Chegou
+                    {listSortOrder === 'asc' ? (
+                      <ArrowUp className="w-3 h-3" />
+                    ) : (
+                      <ArrowDown className="w-3 h-3" />
+                    )}
+                  </button>
+                  <div className="w-4 shrink-0" />
+                </div>
+
+                {/* Linhas */}
+                <div className="divide-y divide-border">
+                  {allListItems.map(({ item, stage }) => (
+                    <div
+                      key={item.id}
+                      onClick={() => handleEditItem(item)}
+                      className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/40 transition-colors"
+                    >
+                      {/* Foto + nome + telefone */}
+                      <div className="flex-1 min-w-0 flex items-center gap-3">
+                        <div className="relative shrink-0">
+                          {resolveItemAvatar(item) ? (
+                            <img
+                              src={resolveItemAvatar(item)}
+                              alt={resolveItemName(item, t)}
+                              className="w-9 h-9 rounded-full object-cover shadow-sm bg-muted"
+                              onError={e => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                const fb = e.currentTarget
+                                  .nextElementSibling as HTMLElement | null;
+                                if (fb) fb.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className="w-9 h-9 rounded-full items-center justify-center text-white text-xs font-bold shadow-sm"
+                            style={{
+                              backgroundColor: getContactColor(resolveItemName(item, t)),
+                              display: resolveItemAvatar(item) ? 'none' : 'flex',
+                            }}
+                          >
+                            {resolveItemName(item, t)?.[0]?.toUpperCase() || 'U'}
+                          </div>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-foreground truncate">
+                              {resolveItemName(item, t)}
+                            </span>
+                            <span className="shrink-0 text-[10px] text-muted-foreground/60 font-medium">
+                              #{resolveItemRef(item).slice(0, 6)}
+                            </span>
+                          </div>
+                          {item.contact?.phone_number && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Phone className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{item.contact.phone_number}</span>
+                            </div>
+                          )}
+                          {/* Coluna — visível só no mobile (colunas escondem a partir de md) */}
+                          <div className="md:hidden mt-1">
+                            <span
+                              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                              style={{ backgroundColor: `${stage.color}22`, color: stage.color }}
+                            >
+                              <span
+                                className="w-1.5 h-1.5 rounded-full"
+                                style={{ backgroundColor: stage.color }}
+                              />
+                              {stage.name}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Coluna atual */}
+                      <div className="hidden md:block w-40 shrink-0">
+                        <span
+                          className="inline-flex items-center gap-1.5 max-w-full rounded-full px-2 py-1 text-xs font-medium"
+                          style={{ backgroundColor: `${stage.color}22`, color: stage.color }}
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: stage.color }}
+                          />
+                          <span className="truncate">{stage.name}</span>
+                        </span>
+                      </div>
+
+                      {/* Responsável + roleta de origem */}
+                      <div className="hidden xl:block w-44 shrink-0 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                          {(item.assignee ?? item.conversation?.assignee) ? (
+                            <>
+                              {(item.assignee ?? item.conversation?.assignee)?.avatar_url ? (
+                                <img
+                                  src={(item.assignee ?? item.conversation?.assignee)?.avatar_url}
+                                  alt=""
+                                  className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+                                />
+                              ) : (
+                                <User className="w-3 h-3 shrink-0" />
+                              )}
+                              <span className="truncate">
+                                {(item.assignee ?? item.conversation?.assignee)?.name}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground/50">Sem responsável</span>
+                          )}
+                        </div>
+                        {item.roleta && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground/70 mt-0.5">
+                            <Shuffle className="w-3 h-3 shrink-0" />
+                            <span className="truncate" title={`Veio da roleta: ${roletaLabel(item.roleta)}`}>
+                              {roletaLabel(item.roleta)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tags */}
+                      <div className="hidden lg:flex w-48 shrink-0 flex-wrap gap-1">
+                        {itemTagInfos(item).slice(0, 3).map(tag => (
+                          <span
+                            key={tag.name}
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                            style={{ backgroundColor: `${tag.color}22`, color: tag.color }}
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
+                        {itemTagInfos(item).length > 3 && (
+                          <span className="text-[10px] text-muted-foreground">
+                            +{itemTagInfos(item).length - 3}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Data de chegada */}
+                      <div className="w-24 shrink-0 text-right text-xs text-muted-foreground">
+                        {formatArrivalDate(item) || '-'}
+                      </div>
+
+                      <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/50" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Edit Pipeline Modal */}
       {pipeline && (
-        <EditPipelineModal
-          open={showEditPipelineModal}
-          onOpenChange={setShowEditPipelineModal}
-          pipeline={pipeline}
-          onSubmit={handleUpdatePipeline}
-          loading={isUpdatingPipeline}
-        />
+        <Suspense fallback={null}>
+          <EditPipelineModal
+            open={showEditPipelineModal}
+            onOpenChange={setShowEditPipelineModal}
+            pipeline={pipeline}
+            onSubmit={handleUpdatePipeline}
+            loading={isUpdatingPipeline}
+          />
+        </Suspense>
       )}
 
       {/* Create Stage Modal */}
-      <CreateStageModal
-        open={showCreateStageModal}
-        onOpenChange={setShowCreateStageModal}
-        onSubmit={handleCreateStage}
-        loading={isCreatingStage}
-      />
+      <Suspense fallback={null}>
+        <CreateStageModal
+          open={showCreateStageModal}
+          onOpenChange={setShowCreateStageModal}
+          onSubmit={handleCreateStage}
+          loading={isCreatingStage}
+        />
+      </Suspense>
 
       {/* Add Item Modal */}
       {pipeline && (
-        <AddItemModal
-          open={showAddItemModal}
-          onOpenChange={setShowAddItemModal}
-          pipelineId={pipeline.id}
-          stages={stages}
-          preselectedStage={selectedStageForItem}
-          onItemAdded={handleItemAdded}
-        />
+        <Suspense fallback={null}>
+          <AddItemModal
+            open={showAddItemModal}
+            onOpenChange={setShowAddItemModal}
+            pipelineId={pipeline.id}
+            stages={stages}
+            preselectedStage={selectedStageForItem}
+            onItemAdded={handleItemAdded}
+          />
+        </Suspense>
       )}
 
       {/* Import Leads Modal */}
       {pipeline && (
-        <ImportLeadsModal
-          open={importModalOpen}
-          onOpenChange={setImportModalOpen}
-          pipelineId={pipeline.id}
-          pipelineName={pipeline.name}
-          stages={stages}
-          onImported={loadPipelineData}
-        />
+        <Suspense fallback={null}>
+          <ImportLeadsModal
+            open={importModalOpen}
+            onOpenChange={setImportModalOpen}
+            pipelineId={pipeline.id}
+            pipelineName={pipeline.name}
+            stages={stages}
+            onImported={loadPipelineData}
+          />
+        </Suspense>
+      )}
+
+      {/* Disparo em Massa Modal */}
+      {pipeline && (
+        <Suspense fallback={null}>
+          <BulkDispatchModal
+            open={disparoModalOpen}
+            onOpenChange={setDisparoModalOpen}
+            pipelineId={pipeline.id}
+            pipelineName={pipeline.name}
+            stages={stages}
+          />
+        </Suspense>
+      )}
+
+      {/* Leads Arquivados Modal */}
+      {pipeline && (
+        <Suspense fallback={null}>
+          <ArchivedLeadsModal
+            open={archivedModalOpen}
+            onClose={() => setArchivedModalOpen(false)}
+            pipelineId={pipeline.id}
+            onUnarchived={() => loadPipelineData(true)}
+          />
+        </Suspense>
       )}
 
       {/* Remove Item Modal */}
-      <RemoveItemModal
-        open={showRemoveItemModal}
-        onOpenChange={setShowRemoveItemModal}
-        item={itemToRemove}
-        onConfirm={handleConfirmRemoveItem}
-        loading={isRemovingItem}
-      />
+      <Suspense fallback={null}>
+        <RemoveItemModal
+          open={showRemoveItemModal}
+          onOpenChange={setShowRemoveItemModal}
+          item={itemToRemove}
+          onConfirm={handleConfirmRemoveItem}
+          loading={isRemovingItem}
+        />
+      </Suspense>
 
       {/* Edit Item Modal */}
       {itemToEdit && (
-        <EditItemModal
-          open={showEditItemModal}
-          onOpenChange={setShowEditItemModal}
-          item={itemToEdit}
-          stages={stages}
-          pipeline={pipeline}
-          onSubmit={handleUpdateItem}
-          loading={isEditingItem}
-        />
+        <Suspense fallback={null}>
+          <EditItemModal
+            open={showEditItemModal}
+            onOpenChange={setShowEditItemModal}
+            item={itemToEdit}
+            stages={stages}
+            pipeline={pipeline}
+            onSubmit={handleUpdateItem}
+            onItemStageMoved={moveItemToStageLocal}
+            // Tag grava na hora: recarrega em silêncio pro selo do card refletir a
+            // mudança mesmo que a pessoa feche o card sem salvar.
+            onLabelsChanged={() => { void loadPipelineData(true); }}
+            loading={isEditingItem}
+          />
+        </Suspense>
       )}
 
+      {/* Iniciar conversa — só monta para lead que ainda não tem conversa */}
+      {startConversationModal}
+
       {/* Edit Stage Modal */}
-      <EditStageModal
-        open={showEditStageModal}
-        onOpenChange={setShowEditStageModal}
-        stage={stageToEdit}
-        onSubmit={handleUpdateStage}
-        loading={isEditingStage}
-      />
+      <Suspense fallback={null}>
+        <EditStageModal
+          open={showEditStageModal}
+          onOpenChange={setShowEditStageModal}
+          stage={stageToEdit}
+          onSubmit={handleUpdateStage}
+          loading={isEditingStage}
+        />
+      </Suspense>
 
       {/* Delete Stage Modal */}
-      <DeleteStageModal
-        open={showDeleteStageModal}
-        onOpenChange={setShowDeleteStageModal}
-        stage={stageToDelete}
-        itemCount={stageToDelete?.item_count || 0}
-        onConfirm={handleConfirmDeleteStage}
-        loading={isDeletingStage}
-      />
+      <Suspense fallback={null}>
+        <DeleteStageModal
+          open={showDeleteStageModal}
+          onOpenChange={setShowDeleteStageModal}
+          stage={stageToDelete}
+          itemCount={stageToDelete?.item_count || 0}
+          onConfirm={handleConfirmDeleteStage}
+          loading={isDeletingStage}
+        />
+      </Suspense>
 
       {/* Delete Pipeline Modal */}
       {pipeline && (
-        <DeletePipelineModal
-          open={showDeletePipelineModal}
-          onOpenChange={setShowDeletePipelineModal}
-          pipeline={pipeline}
-          onConfirm={handleConfirmDeletePipeline}
-          loading={isDeletingPipeline}
-        />
+        <Suspense fallback={null}>
+          <DeletePipelineModal
+            open={showDeletePipelineModal}
+            onOpenChange={setShowDeletePipelineModal}
+            pipeline={pipeline}
+            onConfirm={handleConfirmDeletePipeline}
+            loading={isDeletingPipeline}
+          />
+        </Suspense>
       )}
 
       {/* Reorder Stages Modal */}
-      <ReorderStagesModal
-        open={showReorderStagesModal}
-        onOpenChange={setShowReorderStagesModal}
-        stages={stages}
-        onSubmit={handleUpdateStageOrder}
-        loading={isReorderingStages}
-      />
+      <Suspense fallback={null}>
+        <ReorderStagesModal
+          open={showReorderStagesModal}
+          onOpenChange={setShowReorderStagesModal}
+          stages={stages}
+          onSubmit={handleUpdateStageOrder}
+          loading={isReorderingStages}
+        />
+      </Suspense>
 
       {/* Schedule Action Modal */}
       {selectedConversationForSchedule && scheduleActionContactId && (
-        <ScheduleActionModal
-          open={scheduleActionOpen}
-          onClose={() => {
-            setScheduleActionOpen(false);
-            setSelectedConversationForSchedule(null);
-          }}
-          contactId={scheduleActionContactId}
-        />
+        <Suspense fallback={null}>
+          <ScheduleActionModal
+            open={scheduleActionOpen}
+            onClose={() => {
+              setScheduleActionOpen(false);
+              setSelectedConversationForSchedule(null);
+            }}
+            contactId={scheduleActionContactId}
+          />
+        </Suspense>
       )}
 
       {/* Notes History Modal */}
       {selectedContactForNotes && (
-        <NotesHistoryModal
-          isOpen={notesModalOpen}
-          contactId={selectedContactForNotes.id}
-          contactName={selectedContactForNotes.name}
-          onClose={() => {
-            setNotesModalOpen(false);
-            setSelectedContactForNotes(null);
-          }}
-        />
+        <Suspense fallback={null}>
+          <NotesHistoryModal
+            isOpen={notesModalOpen}
+            contactId={selectedContactForNotes.id}
+            contactName={selectedContactForNotes.name}
+            onClose={() => {
+              setNotesModalOpen(false);
+              setSelectedContactForNotes(null);
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );

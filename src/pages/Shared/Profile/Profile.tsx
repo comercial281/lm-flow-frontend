@@ -27,7 +27,7 @@ import {
   SelectValue,
   Switch,
   Checkbox,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { AlertTriangle, Mail, Volume2, Bell, Keyboard, Play, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,6 +68,7 @@ const Profile = () => {
     message_signature: '',
     avatar: null as File | null,
     avatar_url: '',
+    whatsapp_number: '',
     // api_access_token: '',
   });
 
@@ -168,6 +169,7 @@ const Profile = () => {
             unconfirmed_email: profileUser.unconfirmed_email || null,
             message_signature: profileUser.message_signature || '',
             avatar_url: normalizeAvatarUrl(profileUser.avatar_url),
+            whatsapp_number: (profileUser.custom_attributes?.whatsapp_number as string) || '',
             // api_access_token: profileUser.api_access_token || '',
           }));
 
@@ -348,6 +350,7 @@ const Profile = () => {
         display_name: userData.display_name,
         email: userData.email,
         message_signature: userData.message_signature,
+        whatsapp_number: userData.whatsapp_number,
       };
 
       // Add avatar if changed
@@ -382,6 +385,7 @@ const Profile = () => {
         message_signature: updatedUser.message_signature || '',
         avatar: null, // Clear file after upload
         avatar_url: normalizeAvatarUrl(updatedUser.avatar_url) || prev.avatar_url,
+        whatsapp_number: (updatedUser.custom_attributes?.whatsapp_number as string) || prev.whatsapp_number,
       }));
 
       if (updatedUser.unconfirmed_email) {
@@ -476,6 +480,20 @@ const Profile = () => {
               onChange={handleInputChange('display_name')}
               placeholder={t('personalData.fields.displayNamePlaceholder')}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="whatsapp_number">{t('personalData.fields.whatsappNumber')}</Label>
+            <Input
+              id="whatsapp_number"
+              type="tel"
+              value={userData.whatsapp_number}
+              onChange={handleInputChange('whatsapp_number')}
+              placeholder={t('personalData.fields.whatsappNumberPlaceholder')}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t('personalData.fields.whatsappNumberHelp')}
+            </p>
           </div>
 
           <div className="space-y-2 md:col-span-2">
@@ -940,33 +958,17 @@ const Profile = () => {
           )}
         </div>
 
-        {/* Notificações push */}
-        <div className="space-y-4">
+        {/*
+          A lista de caixinhas por tipo de PUSH saiu daqui (2026-07-31).
+          O backend deixou de consultar essas flags: push agora é sempre enviado
+          para quem tem o Modo Plantão ligado no aparelho. Manter as caixinhas
+          seria repetir o problema que acabamos de consertar — um controle na
+          tela que não controla nada. As de e-mail continuam acima, porque e-mail
+          segue sendo opt-in de verdade.
+        */}
+        <div className="space-y-2">
           <h4 className="font-medium">{t('notifications.push.title')}</h4>
-          {notificationSettings.available_types.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t('notifications.loading') || 'Loading notification preferences...'}
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {Object.entries(notificationSettings.push_notifications)
-                .filter(([key]) => notificationSettings.available_types.includes(key))
-                .map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between">
-                    <Label htmlFor={`push-${key}`} className="text-sm">
-                      {getNotificationLabel(key)}
-                    </Label>
-                    <Checkbox
-                      id={`push-${key}`}
-                      checked={value}
-                      onCheckedChange={checked =>
-                        handleNotificationChange('push', key, checked === true)
-                      }
-                    />
-                  </div>
-                ))}
-            </div>
-          )}
+          <p className="text-sm text-muted-foreground">{t('notifications.push.alwaysOn')}</p>
         </div>
       </CardContent>
     </Card>

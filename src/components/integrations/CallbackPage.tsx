@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
-import { Button } from '@evoapi/design-system';
+import { Button } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 import i18n from '@/i18n/config';

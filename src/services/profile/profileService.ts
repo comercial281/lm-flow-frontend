@@ -33,11 +33,7 @@ class ProfileService {
       formData.append('profile[avatar]', data.avatar);
     }
 
-    const response = await apiAuth.put('/profile', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await apiAuth.put('/profile', formData);
 
     return extractData<UserProfile>(response);
   }
@@ -109,11 +105,7 @@ class ProfileService {
     const formData = new FormData();
     formData.append('profile[message_signature]', signature);
 
-    const response = await apiAuth.put('/profile', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await apiAuth.put('/profile', formData);
 
     return extractData<UserProfile>(response);
   }

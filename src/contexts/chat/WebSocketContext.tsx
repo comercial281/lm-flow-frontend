@@ -436,15 +436,27 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
                 avatar_url: undefined,
                 provider: data.meta.provider || '',
               },
-              labels: data.labels.map((labelId: string) => ({
-                id: labelId,
-                title: '',
-                description: '',
-                color: '#000000',
-                show_on_sidebar: false,
-                created_at: data.created_at,
-                updated_at: data.updated_at,
-              })),
+              labels: data.labels.map((label: string | Record<string, unknown>) =>
+                typeof label === 'string'
+                  ? {
+                      id: label,
+                      title: label,
+                      description: '',
+                      color: '',
+                      show_on_sidebar: false,
+                      created_at: data.created_at,
+                      updated_at: data.updated_at,
+                    }
+                  : {
+                      id: String(label.id),
+                      title: String(label.title || ''),
+                      description: String(label.description || ''),
+                      color: String(label.color || ''),
+                      show_on_sidebar: Boolean(label.show_on_sidebar),
+                      created_at: String(label.created_at || data.created_at),
+                      updated_at: String(label.updated_at || data.updated_at),
+                    },
+              ),
               unread_count: data.unread_count,
               messages: [], // Será carregado quando selecionado
               custom_attributes: data.custom_attributes || {},

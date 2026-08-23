@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@evoapi/design-system';
+import { Button } from '@/components/ui/ds';
 import { LogOut } from 'lucide-react';
 
 // Barra vermelha do admin master: aparece SÓ quando você entrou no CRM de um

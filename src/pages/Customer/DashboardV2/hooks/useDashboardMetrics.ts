@@ -1,0 +1,79 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { fetchDashboardMetrics } from '@/services/dashboard/dashboardMetricsService';
+import type { DashboardMetrics, PeriodPreset, ScopeMode } from '../types';
+
+export interface DashboardFilters {
+  preset: PeriodPreset;
+  since?: string;
+  until?: string;
+  pipelineId?: string;
+  /** Preferência de recorte; o servidor decide o que vale. */
+  scope?: ScopeMode;
+  /** Instância (inbox/WhatsApp) selecionada; independente do `scope`. */
+  inboxId?: string;
+  /** Etiqueta do CRM selecionada; independente do `scope`. */
+  labelId?: string;
+  /** Só leads/conversas atendidos pela IA; independente do `scope`. */
+  aiOnly?: boolean;
+  /** Qual IA Vendedora, quando o tenant tem mais de uma. */
+  salesAgentId?: string;
+}
+
+/**
+ * Carrega o payload do dashboard.
+ *
+ * Cuidados que já morderam antes neste repo:
+ * - `loading` NÃO entra nas deps do efeito, senão o setState dele reagenda o
+ *   próprio efeito e a tela trava em "Carregando".
+ * - request anterior é abortada quando o filtro muda: sem isso, trocar de
+ *   período rápido faz a resposta antiga chegar depois e sobrescrever a nova.
+ */
+export function useDashboardMetrics(filters: DashboardFilters) {
+  const [data, setData] = useState<DashboardMetrics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const { preset, since, until, pipelineId, scope, inboxId, labelId, aiOnly, salesAgentId } = filters;
+
+  const load = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setLoading(true);
+    setError(null);
+    try {
+      const payload = await fetchDashboardMetrics(
+        {
+          preset,
+          ...(preset === 'custom' && since ? { since } : {}),
+          ...(preset === 'custom' && until ? { until } : {}),
+          ...(pipelineId ? { pipeline_id: pipelineId } : {}),
+          ...(scope ? { scope } : {}),
+          ...(inboxId ? { inbox_id: inboxId } : {}),
+          ...(labelId ? { label: labelId } : {}),
+          ...(aiOnly ? { ai_only: true } : {}),
+          ...(salesAgentId ? { sales_agent_id: salesAgentId } : {}),
+        },
+        controller.signal,
+      );
+      if (!controller.signal.aborted) setData(payload);
+    } catch (err) {
+      const aborted =
+        controller.signal.aborted ||
+        (err as { code?: string; name?: string })?.code === 'ERR_CANCELED' ||
+        (err as { name?: string })?.name === 'CanceledError';
+      if (!aborted) setError('Não foi possível carregar as métricas.');
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  }, [preset, since, until, pipelineId, scope, inboxId, labelId, aiOnly, salesAgentId]);
+
+  useEffect(() => {
+    load();
+    return () => abortRef.current?.abort();
+  }, [load]);
+
+  return { data, loading, error, reload: load };
+}

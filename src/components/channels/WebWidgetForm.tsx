@@ -1,4 +1,4 @@
-import { Input } from '@evoapi/design-system';
+import { Input } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
 import  { sanitizeInboxName } from '@/utils/sanitizeName';
 

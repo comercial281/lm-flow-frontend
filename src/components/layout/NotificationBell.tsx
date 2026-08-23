@@ -6,7 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import NotificationPanel from './NotificationPanel';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { cn } from '@/lib/utils';
@@ -58,9 +58,10 @@ export default function NotificationBell() {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
-        className="w-[520px] p-0 bg-background border shadow-lg"
+        className="w-[min(520px,calc(100vw-1rem))] max-w-[520px] p-0 bg-background border shadow-lg"
         align="end"
         sideOffset={8}
+        collisionPadding={8}
       >
         <NotificationPanel
           onClose={() => setIsOpen(false)}

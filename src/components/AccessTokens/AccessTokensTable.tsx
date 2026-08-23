@@ -1,5 +1,6 @@
 import { Edit, Trash2, Eye, Key, Copy } from 'lucide-react';
-import { Badge } from '@evoapi/design-system';
+import { formatDateBR } from '@/utils/dateUtils';
+import { Badge } from '@/components/ui/ds';
 import BaseTable from '@/components/base/BaseTable';
 import type { AccessToken } from '@/types/auth';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -94,7 +95,7 @@ export default function AccessTokensTable({
       sortable: true,
       render: (token: AccessToken) => (
         <div className="text-sm text-muted-foreground">
-          {new Date(token.created_at).toLocaleDateString()}
+          {formatDateBR(token.created_at)}
         </div>
       ),
     },

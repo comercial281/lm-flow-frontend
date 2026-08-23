@@ -1,20 +1,17 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Button,
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuLabel
-} from '@evoapi/design-system';
+  Button, Avatar, AvatarFallback, AvatarImage,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel
+} from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
 import { getProfileMenuItems } from '../config/menuItems';
 import { Role } from '@/types/auth';
+import { availabilityOptions, getAvailabilityConfig } from '@/hooks/useUserAvailability';
+import { useAuthStore } from '@/store/authStore';
+import apiAuth from '@/services/core/apiAuth';
+import { toast } from 'sonner';
 
 interface User {
   id: string;
@@ -24,6 +21,7 @@ interface User {
   lastName?: string;
   avatar_url?: string;
   role?: Role;
+  availability?: string;
 }
 
 interface ProfileMenuProps {
@@ -33,112 +31,95 @@ interface ProfileMenuProps {
   setIsMobileMenuOpen?: (open: boolean) => void;
 }
 
-// Custom Link Component para lidar com casos especiais
-const CustomLink = ({
-  href,
-  onClick,
-  children,
-  className,
-}: {
-  href: string;
-  onClick?: () => void;
-  children: React.ReactNode;
-  className?: string;
-}) => {
-  if (href === '#' && onClick) {
-    return (
-      <button onClick={onClick} className={className}>
-        {children}
-      </button>
-    );
-  }
-  return (
-    <a href={href} className={className}>
-      {children}
-    </a>
-  );
+const CustomLink = ({ href, onClick, children, className }: { href: string; onClick?: () => void; children: React.ReactNode; className?: string }) => {
+  if (href === '#' && onClick) return <button onClick={onClick} className={className}>{children}</button>;
+  return <a href={href} className={className}>{children}</a>;
 };
 
-export default function ProfileMenu({
-  user,
-  mobile = false,
-  setLogoutDialogOpen,
-  setIsMobileMenuOpen,
-}: ProfileMenuProps) {
+export default function ProfileMenu({ user, mobile = false, setLogoutDialogOpen, setIsMobileMenuOpen }: ProfileMenuProps) {
   const { t } = useLanguage('layout');
   const navigate = useNavigate();
+  const updateAvailabilityStore = useAuthStore(s => s.updateAvailability);
+  const currentAvailability = useAuthStore(s => (s.currentUser as any)?.availability) ?? 'online';
+  const [updatingAvail, setUpdatingAvail] = useState(false);
 
-  // Função para gerar iniciais do nome do usuário
-  const getUserInitials = (name?: string) => {
-    if (!name) return t('profile.userInitial');
+  const handleAvailability = useCallback(async (value: 'online' | 'busy' | 'offline') => {
+    setUpdatingAvail(true);
+    try {
+      await apiAuth.post('/profile/availability', { profile: { availability: value } });
+      updateAvailabilityStore(value);
+    } catch {
+      toast.error('Erro ao atualizar disponibilidade');
+    } finally {
+      setUpdatingAvail(false);
+    }
+  }, [updateAvailabilityStore]);
 
-    return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  const availConfig = getAvailabilityConfig(currentAvailability);
 
-  // Função para obter nome de exibição do usuário
+  const getUserInitials = (name?: string) =>
+    (name ?? '').split(' ').map(w => w.charAt(0)).join('').toUpperCase().slice(0, 2) || '?';
+
   const getUserDisplayName = () => {
     if (!user) return t('profile.defaultUser');
-
-    // Verificar diferentes campos de nome disponíveis
     if (user.name) return user.name;
     if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
     if (user.firstName) return user.firstName;
-
-    // Fallback para parte do email antes do @
     return user.email.split('@')[0];
   };
 
   const userName = getUserDisplayName();
-  const userEmail = user.email;
   const userInitials = getUserInitials(userName);
+  const profileMenuItems = getProfileMenuItems(t, navigate, setLogoutDialogOpen);
 
-  const profileMenuItems = getProfileMenuItems(
-    t,
-    navigate,
-    setLogoutDialogOpen,
+  const AvailabilityPicker = () => (
+    <div className="px-2 py-1.5">
+      <p className="text-xs text-muted-foreground mb-1.5 font-medium">Disponibilidade</p>
+      <div className="flex gap-1">
+        {availabilityOptions.map(opt => (
+          <button key={opt.value} disabled={updatingAvail} onClick={() => handleAvailability(opt.value)}
+            className={`flex-1 flex flex-col items-center gap-0.5 rounded px-1 py-1.5 text-[10px] font-medium transition-colors border ${
+              currentAvailability === opt.value
+                ? 'bg-primary/10 border-primary/40 text-primary'
+                : 'border-transparent text-muted-foreground hover:bg-accent hover:text-foreground'
+            }`}>
+            <span className={`h-2 w-2 rounded-full ${opt.color}`} />
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const AvatarWithDot = ({ size = 'h-8 w-8', border = 'border-background' }: { size?: string; border?: string }) => (
+    <div className="relative">
+      <Avatar className={size}>
+        <AvatarImage src={user.avatar_url} alt={userName} />
+        <AvatarFallback className="bg-violet-700 text-white font-medium">{userInitials}</AvatarFallback>
+      </Avatar>
+      <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 ${border} ${availConfig.color}`} />
+    </div>
   );
 
   if (mobile) {
     return (
       <div className="p-4 border-t border-sidebar-border bg-sidebar">
         <div className="flex items-center gap-3 p-3 rounded-md bg-sidebar-accent/50">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={user.avatar_url} alt={userName} />
-            <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary font-medium">
-              {userInitials}
-            </AvatarFallback>
-          </Avatar>
+          <AvatarWithDot border="border-sidebar" />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-sidebar-foreground truncate">{userName}</div>
-            <div className="text-xs text-muted-foreground truncate">{userEmail}</div>
-            {user.role && (
-              <div className="text-xs text-sidebar-primary truncate mt-0.5">{user.role.name}</div>
-            )}
+            <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+            {user.role && <div className="text-xs text-sidebar-primary truncate mt-0.5">{user.role.name}</div>}
           </div>
         </div>
-
         <div className="mt-2 space-y-1">
-          {profileMenuItems
-            .filter(item => item.name !== t('profile.myProfile')) // Remove "Meu perfil" do mobile
-            .map(item => (
-              <CustomLink
-                key={item.href}
-                href={item.href}
-                onClick={() => {
-                  if (item.onClick) item.onClick();
-                  if (setIsMobileMenuOpen) setIsMobileMenuOpen(false);
-                }}
-                className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-              >
-                <item.icon className="h-4 w-4" />
-                <span>{item.name}</span>
-              </CustomLink>
-            ))}
+          {profileMenuItems.filter(item => item.name !== t('profile.myProfile')).map(item => (
+            <CustomLink key={item.name} href={item.href} onClick={() => { if (item.onClick) item.onClick(); if (setIsMobileMenuOpen) setIsMobileMenuOpen(false); }}
+              className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors">
+              <item.icon className="h-4 w-4" />
+              <span>{item.name}</span>
+            </CustomLink>
+          ))}
         </div>
       </div>
     );
@@ -147,50 +128,26 @@ export default function ProfileMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="h-10 w-auto px-2 py-2 gap-2 text-sidebar-foreground hover:bg-sidebar-accent cursor-pointer"
-        >
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={user.avatar_url} alt={userName} />
-            <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary font-medium">
-              {userInitials}
-            </AvatarFallback>
-          </Avatar>
+        <Button variant="ghost" className="h-10 w-auto px-2 py-2 text-sidebar-foreground hover:bg-sidebar-accent cursor-pointer">
+          <AvatarWithDot border="border-sidebar" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>
           <div className="flex items-center gap-2">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={user.avatar_url} alt={userName} />
-              <AvatarFallback className="bg-primary/20 text-primary font-medium">
-                {userInitials}
-              </AvatarFallback>
-            </Avatar>
+            <AvatarWithDot />
             <div className="flex flex-col">
               <span className="text-sm font-medium">{userName}</span>
-              <span className="text-xs text-muted-foreground">{userEmail}</span>
-              {user.role && (
-                <span className="text-xs text-primary font-medium">{user.role.name}</span>
-              )}
+              <span className="text-xs text-muted-foreground">{user.email}</span>
+              {user.role && <span className="text-xs text-primary font-medium">{user.role.name}</span>}
             </div>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-
+        <AvailabilityPicker />
+        <DropdownMenuSeparator />
         {profileMenuItems.map(item => (
-          <DropdownMenuItem
-            key={item.href}
-            onClick={() => {
-              if (item.onClick) {
-                item.onClick();
-              } else if (item.href !== '#') {
-                navigate(item.href);
-              }
-            }}
-            className="cursor-pointer"
-          >
+          <DropdownMenuItem key={item.name} onClick={() => { if (item.onClick) item.onClick(); else if (item.href !== '#') navigate(item.href); }} className="cursor-pointer">
             <item.icon className="h-4 w-4" />
             <span>{item.name}</span>
           </DropdownMenuItem>

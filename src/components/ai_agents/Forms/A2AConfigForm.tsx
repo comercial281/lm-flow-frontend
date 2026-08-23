@@ -10,7 +10,7 @@ import {
   Button,
   Switch,
   Badge,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { ExternalLink, Settings, Share2, Plus, X, Globe } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 

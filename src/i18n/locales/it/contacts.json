@@ -401,7 +401,7 @@
   },
   "empty": {
     "title": "Nessun contatto trovato",
-    "description": "Crea un nuovo contatto per iniziare a gestire le tue conversazioni con i clienti.",
+    "description": "Questa scheda mostra solo i lead con l'etichetta di traffico a pagamento. I contatti creati manualmente o provenienti da altre origini non compaiono qui.",
     "action": "Nuovo Contatto"
   },
   "loading": {
@@ -427,6 +427,7 @@
     "searchError": "Errore durante la ricerca dei contatti",
     "createSuccess": "Contatto creato con successo",
     "createError": "Errore durante la creazione del contatto",
+    "openExisting": "Apri il contatto esistente",
     "updateSuccess": "Contatto aggiornato con successo",
     "updateError": "Errore durante l'aggiornamento del contatto",
     "deleteSuccess": "Contatto eliminato con successo",
@@ -442,7 +443,9 @@
     "filterError": "Errore durante l'applicazione dei filtri",
     "conversationStarted": "Conversazione avviata con successo",
     "mergeSuccess": "Contatti uniti con successo",
-    "mergeError": "Errore durante l'unione dei contatti"
+    "mergeError": "Errore durante l'unione dei contatti",
+    "bulkDeleteAllQueued": "Eliminazione di {{count}} contatto/i avviata. Viene eseguita in background e l'elenco potrebbe impiegare qualche minuto ad aggiornarsi.",
+    "mergeNeedsExplicitSelection": "Per unire, seleziona i contatti uno a uno: non funziona con \"tutti selezionati\"."
   },
   "errors": {
     "loadContact": "Errore durante il caricamento dei dettagli del contatto"
@@ -460,7 +463,8 @@
       "description": "Sei sicuro di voler eliminare {{count}} contatto/i selezionato/i? Questa azione non può essere annullata.",
       "confirm": "Elimina Tutti",
       "cancel": "Annulla",
-      "deleting": "Eliminazione..."
+      "deleting": "Eliminazione...",
+      "descriptionAll": "Vuoi davvero eliminare TUTTI i {{count}} contatti che corrispondono al filtro attuale? L'eliminazione viene eseguita in background e non può essere annullata."
     },
     "mergeContacts": {
       "title": "Unisci Contatti",
@@ -526,7 +530,11 @@
     },
     "quick": {
       "allTags": "Tutte le etichette",
-      "clear": "Pulisci"
+      "clear": "Pulisci",
+      "withoutTagsPlaceholder": "Senza l'etichetta...",
+      "withoutTagsSummary": "Senza {{count}} etichetta/e",
+      "withoutTagsHint": "I contatti con le etichette selezionate NON compaiono nell'elenco.",
+      "withoutTagBadge": "senza: {{tag}}"
     }
   },
   "import": {
@@ -593,7 +601,7 @@
   },
   "header": {
     "title": "Contatti",
-    "subtitle": "Gestisci tutti i tuoi contatti in un unico posto",
+    "subtitle": "Lead arrivati dai tuoi annunci",
     "searchPlaceholder": "Cerca contatti...",
     "newContact": "Nuovo Contatto",
     "import": "Importa",
@@ -603,7 +611,10 @@
     "mergeContacts": "Unisci Contatti",
     "clearSelection": "Cancella Selezione",
     "selected": "{{count}} selezionato",
-    "selected_other": "{{count}} selezionati"
+    "selected_other": "{{count}} selezionati",
+    "selectAllMatching": "Seleziona tutti i {{count}} contatti",
+    "allMatchingSelected": "tutti i contatti del filtro attuale",
+    "bulkDeleteAll": "Elimina tutti i {{count}}"
   },
   "startConversation": {
     "title": "Avvia Conversazione",
@@ -634,13 +645,19 @@
       "channels": "Caricamento canali..."
     },
     "empty": {
-      "noChannels": "Nessun canale disponibile per questo contatto"
+      "noChannels": "Nessun canale disponibile per questo contatto",
+      "noPhone": "Aggiungi un numero di telefono a questo contatto per avviare una conversazione WhatsApp.",
+      "noChannelAccess": "Non hai accesso a un canale WhatsApp per questo contatto. Chiedi a un amministratore di assegnarti al canale."
     },
     "unavailable": "Non disponibile",
+    "recommended": "Numero del lead",
     "actions": {
       "cancel": "Annulla",
       "send": "Avvia Conversazione",
       "sending": "Invio..."
+    },
+    "errors": {
+      "createFailed": "Impossibile avviare la conversazione. Riprova."
     }
   },
   "scheduledActions": {

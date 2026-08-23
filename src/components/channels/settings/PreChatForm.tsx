@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
   Card,
   CardContent,
@@ -8,7 +9,7 @@ import {
   Select,
   SelectTrigger,
   SelectValue,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { MessageSquare, Info, Settings, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -115,7 +116,7 @@ export default function PreChatForm({
       toast.success('Configurações do formulário pré-chat atualizadas com sucesso!');
     } catch (error) {
       console.error('Error updating pre-chat form:', error);
-      toast.error('Erro ao atualizar configurações do formulário pré-chat');
+      toast.error(apiErrorMessage(error, 'Erro ao atualizar configurações do formulário pré-chat'));
     } finally {
       setIsUpdating(false);
     }

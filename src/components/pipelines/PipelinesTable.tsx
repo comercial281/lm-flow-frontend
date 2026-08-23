@@ -6,8 +6,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@evoapi/design-system';
-import { Button } from '@evoapi/design-system';
+} from '@/components/ui/ds';
+import { Button } from '@/components/ui/ds';
 import {
   Eye,
   Edit,
@@ -26,7 +26,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Pipeline } from '@/types/analytics';
 import { cn } from '@/lib/utils';
 

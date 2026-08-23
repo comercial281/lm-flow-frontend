@@ -13,7 +13,7 @@ import {
   Avatar,
   AvatarImage,
   AvatarFallback,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Contact } from '@/types/contacts';
 import { contactsService } from '@/services/contacts/contactsService';
 import { Search, Mail, Phone, Building2, User, Loader2 } from 'lucide-react';

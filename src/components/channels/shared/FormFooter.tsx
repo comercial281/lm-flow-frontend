@@ -1,4 +1,4 @@
-import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@evoapi/design-system';
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
 import { ConnectionTest } from './ConnectionTest';
 

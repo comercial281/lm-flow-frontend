@@ -13,7 +13,7 @@ import {
   CommandInput,
   CommandItem,
   Input,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Check, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { ApiKey, ApiKeyModelInfo } from '@/types/agents';
 import { agentsService } from '@/services/agents/agentService';

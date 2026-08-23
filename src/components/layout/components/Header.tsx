@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronRight,
   Building2,
+  Search,
 } from 'lucide-react';
 import {
   Button,
@@ -19,14 +20,17 @@ import {
   TooltipContent,
   TooltipTrigger,
   ScrollArea,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { useLanguage } from '../../../hooks/useLanguage';
 import NotificationBell from '../NotificationBell';
+import PlantaoToggle from './PlantaoToggle';
 import ProfileMenu from './ProfileMenu';
 import { TourFab } from '@/components/TourFab';
 import MenuItem from './MenuItem';
 import { MenuItem as MenuItemType } from '../config/menuItems';
 import { ThemeToggle } from '../../ThemeToggle';
+import { DemoModeToggle } from '../../DemoModeToggle';
+import AdminAreaButton from './AdminAreaButton';
 import { AppLogo } from '../../AppLogo';
 import { useAppDataStore } from '@/store/appDataStore';
 
@@ -57,6 +61,7 @@ interface HeaderProps {
   isMenuItemActive: (href: string) => boolean;
   isMenuWithSubItemsActive: (item: MenuItemType) => boolean;
   handleMenuClick: (item: MenuItemType, e: React.MouseEvent) => void;
+  onOpenSearch?: () => void;
 }
 
 export default function Header({
@@ -71,6 +76,7 @@ export default function Header({
   setLogoutDialogOpen,
   isMenuWithSubItemsActive,
   handleMenuClick,
+  onOpenSearch,
 }: HeaderProps) {
   const { t } = useLanguage('layout');
   const [expandedMobileMenus, setExpandedMobileMenus] = useState<Set<string>>(new Set());
@@ -84,11 +90,11 @@ export default function Header({
   }, [fetchAccount]);
 
   return (
-    <div className="flex-shrink-0 bg-sidebar border-b border-sidebar-border px-0 py-3 flex items-center shadow-sm">
+    <div role="banner" className="flex-shrink-0 bg-sidebar border-b border-sidebar-border px-0 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] flex items-center shadow-sm">
       {/* Mobile Layout */}
       <div className="md:hidden flex items-center w-full px-4">
         {/* Left: Menu Button */}
-        <div className="flex-1 flex justify-start">
+        <div className="shrink-0 flex justify-start">
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="text-sidebar-foreground cursor-pointer">
@@ -189,8 +195,12 @@ export default function Header({
                 </nav>
               </ScrollArea>
 
-              <div className="p-4 border-t border-sidebar-border">
+              {/* Ações que saíram da barra do topo no mobile (ver comentário no
+                  bloco "Right" abaixo): não são urgentes, então moram aqui. */}
+              <div className="p-4 border-t border-sidebar-border flex items-center gap-2">
                 <ThemeToggle />
+                <TourFab />
+                <DemoModeToggle />
               </div>
 
               {/* Mobile User Menu */}
@@ -209,16 +219,34 @@ export default function Header({
           <div className="flex flex-col items-center min-w-0">
             <Link to="/dashboard"><AppLogo className="h-8 max-w-32" /></Link>
             {account?.name && (
-              <span className="text-[11px] font-medium text-muted-foreground truncate max-w-40">
+              <span className="lm-redact text-[11px] font-medium text-muted-foreground truncate max-w-40">
                 {account.name}
               </span>
             )}
           </div>
         </div>
 
-        {/* Right: Notifications and User Menu */}
-        <div className="flex-1 flex justify-end items-center gap-2">
-          <TourFab />
+        {/* Right: Notifications and User Menu
+            NÃO usar flex-1 aqui. Os três blocos eram flex-1 (= 1/3 da tela cada),
+            mas 6 ícones não cabem em 1/3 de um celular: com justify-end o excesso
+            vazava PRA ESQUERDA, por cima do centro — a lupa montava em cima da
+            logo (print do iPhone, 16/07/2026). shrink-0 nas laterais + min-w-0 no
+            centro faz o centro ceder espaço em vez de ser invadido.
+            TourFab e DemoModeToggle saíram daqui pro menu hambúrguer: não são
+            ações urgentes e eram 2 dos 6 ícones brigando por espaço. */}
+        <div className="shrink-0 flex justify-end items-center gap-1">
+          {onOpenSearch && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onOpenSearch}
+              className="text-sidebar-foreground cursor-pointer"
+            >
+              <Search className="h-5 w-5" />
+              <span className="sr-only">Buscar</span>
+            </Button>
+          )}
+          <PlantaoToggle compact />
           <NotificationBell />
           <ProfileMenu
             user={user}
@@ -251,6 +279,7 @@ export default function Header({
                   variant="ghost"
                   size="icon"
                   onClick={toggleSidebar}
+                  aria-label={isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
                   className="h-8 w-8 text-sidebar-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent flex-shrink-0 cursor-pointer"
                 >
                   {isCollapsed ? (
@@ -272,7 +301,7 @@ export default function Header({
           {account?.name && (
             <div className="flex items-center gap-2 min-w-0 rounded-md bg-primary/10 px-3 py-1.5">
               <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
-              <span className="truncate text-sm font-semibold text-sidebar-foreground">
+              <span className="lm-redact truncate text-sm font-semibold text-sidebar-foreground">
                 {account.name}
               </span>
             </div>
@@ -281,9 +310,28 @@ export default function Header({
 
         {/* Right side */}
         <div className="flex items-center gap-2 px-4">
+          {onOpenSearch && (
+            <button
+              type="button"
+              onClick={onOpenSearch}
+              className="hidden lg:flex items-center gap-2 rounded-md border border-sidebar-border bg-background/50 px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent transition-colors cursor-pointer"
+            >
+              <Search className="h-4 w-4" />
+              <span>Buscar...</span>
+              <kbd className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium tracking-wide">
+                Ctrl K
+              </kbd>
+            </button>
+          )}
           <TourFab />
+          {/* Área do Admin (só super-admin no host raiz) */}
+          <AdminAreaButton />
           {/* Theme Toggle */}
           <ThemeToggle />
+          {/* Modo Demo (borra dados sensíveis p/ gravar tutoriais) */}
+          <DemoModeToggle />
+          {/* Modo Plantão (push de lead novo) */}
+          <PlantaoToggle />
           {/* Notifications */}
           <NotificationBell />
           {/* User Menu */}

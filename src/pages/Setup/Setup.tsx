@@ -17,7 +17,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 
 import { useLanguage } from '@/hooks/useLanguage';
 import { type Locale } from '@/i18n/config';

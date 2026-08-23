@@ -1,5 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
-import { Badge, Card, Button } from '@evoapi/design-system';
+import { Badge, Card, Button } from '@/components/ui/ds';
 import {
   CheckCircle,
   XCircle,

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Button, Badge, Card, CardContent, CardHeader } from '@evoapi/design-system';
+import { Button, Badge, Card, CardContent, CardHeader } from '@/components/ui/ds';
 import { Wrench, Plus, Settings, X } from 'lucide-react';
 import { Tool } from '@/types/ai';
 import { useLanguage } from '@/hooks/useLanguage';

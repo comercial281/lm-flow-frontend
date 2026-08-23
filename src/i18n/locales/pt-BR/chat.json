@@ -272,6 +272,8 @@
       "assignAgent": "Atribuir Atendente",
       "assignTeam": "Atribuir time",
       "assignTag": "Atribuir etiqueta",
+      "unassignAgent": "Desvincular corretor",
+      "unassignTeam": "Desvincular equipe",
       "deleteConversation": "Deletar conversa"
     },
     "contactNoName": "Contato sem nome",
@@ -327,9 +329,10 @@
         "description": "Gerenciar funil de vendas"
       },
       "contactNotes": {
-        "title": "Notas do Contato",
-        "description": "Anotações importantes",
-        "noNotes": "Nenhuma nota adicionada ainda"
+        "title": "Comentários",
+        "description": "Comentários do lead (sincronizados com o card)",
+        "noNotes": "Nenhum comentário ainda",
+        "placeholder": "Escrever um comentário..."
       },
       "previousConversations": {
         "title": "Conversas Anteriores",
@@ -393,9 +396,9 @@
         "error": "Erro ao alterar atribuição"
       },
       "labels": {
-        "title": "Labels",
-        "noneApplied": "Nenhuma label aplicada",
-        "manage": "Gerenciar labels"
+        "title": "Etiquetas",
+        "noneApplied": "Nenhuma etiqueta aplicada",
+        "manage": "Gerenciar etiquetas"
       },
       "priority": {
         "title": "Prioridade",
@@ -535,7 +538,8 @@
   "replyModeToggle": {
     "reply": "Resposta",
     "privateNote": "Nota Privada",
-    "visibleOnlyToAgents": "Visível apenas para atendentes"
+    "visibleOnlyToAgents": "Visível apenas para atendentes",
+    "pendingExplainer": "Conversa pendente — assuma o lead para responder"
   },
   "contexts": {
     "conversations": {
@@ -641,7 +645,7 @@
       },
       "errors": {
         "fileTooLarge": "Arquivo muito grande",
-        "fileTooLargeDescription": "{{fileName}} excede o limite de {{maxSize}}MB",
+        "fileTooLargeDescription": "{{fileName}} tem {{fileSize}} — o limite é {{maxSize}}MB",
         "fileTypeNotAllowed": "Tipo de arquivo não permitido",
         "fileTypeNotAllowedDescription": "{{fileName}} não é um tipo de arquivo suportado"
       },
@@ -695,8 +699,8 @@
       "equal_to": "É igual a",
       "not_equal_to": "É diferente de",
       "contains": "Contém",
-      "is_present": "Tem labels",
-      "is_not_present": "Não tem labels",
+      "is_present": "Tem etiquetas",
+      "is_not_present": "Não tem etiquetas",
       "is_greater_than": "É posterior a",
       "is_less_than": "É anterior a",
       "days_before": "Dias atrás"
@@ -707,11 +711,12 @@
       "inbox_id": "Canal",
       "channel_type": "Tipo de Canal",
       "team_id": "Equipe",
-      "labels": "Labels",
+      "labels": "Etiquetas",
       "created_at": "Data de Criação",
       "last_activity_at": "Última Atividade",
       "priority": "Prioridade",
-      "pipeline_id": "Pipeline"
+      "pipeline_id": "Pipeline",
+      "pipeline_stage_id": "Etapa (Coluna)"
     },
     "options": {
       "status": {

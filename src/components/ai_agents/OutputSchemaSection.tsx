@@ -4,7 +4,7 @@ import {
   Card,
   CardContent,
   CardHeader,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import {
   FileText,
   Plus,

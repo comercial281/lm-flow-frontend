@@ -5,6 +5,17 @@ import {
 } from '@/services/chat/websocket/ChatActionCableConnector';
 import { ConnectionParams } from '@/services/chat/websocket/BaseActionCableConnector';
 
+// POOLED: deriva o slug do tenant do subdomínio (renato.lmflow.com.br → "renato").
+// Vai como param na inscrição do WebSocket pra o backend achar o user no schema certo.
+function tenantSlugFromHost(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const host = window.location.hostname || '';
+  if (!host.endsWith('.lmflow.com.br')) return undefined;
+  const sub = host.split('.')[0]?.toLowerCase();
+  if (!sub || ['www', 'app', 'api', 'lmflow'].includes(sub)) return undefined;
+  return sub;
+}
+
 export interface UseWebSocketOptions {
   enabled?: boolean;
   websocketHost?: string;
@@ -83,6 +94,7 @@ export const useWebSocket = (
         channel: 'RoomChannel', // Canal padrão do Evolution
         pubsub_token: pubsubToken,
         user_id: userId,
+        tenant: tenantSlugFromHost(),
       };
 
       // Criar novo connector

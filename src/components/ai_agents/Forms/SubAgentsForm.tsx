@@ -10,7 +10,7 @@ import {
   Input,
   Label,
   ScrollArea,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Search, X, Users, Plus, Check, Loader2 } from 'lucide-react';
 import { listAgents } from '@/services/agents';
 import { useLanguage } from '@/hooks/useLanguage';

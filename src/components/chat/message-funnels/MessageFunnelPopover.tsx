@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent } from '@evoapi/design-system/card';
 import { Button } from '@evoapi/design-system/button';
 import {
-  Rocket, X, Play, Pause, Type, Mic, Image as ImageIcon, Video, FileText, Search, Loader2, Plus,
+  Rocket, X, Play, Type, Mic, Image as ImageIcon, Video, FileText, Search, Loader2, Plus,
+  Archive, ArchiveRestore, Trash2, Clock, Contact as ContactIcon, Sticker,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { messageFunnelsService, tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
@@ -27,10 +28,12 @@ interface SendMessageOptions {
 }
 
 const KIND_ICONS: Record<FunnelItemKind, typeof Type> = {
-  text: Type, audio: Mic, image: ImageIcon, video: Video, document: FileText,
+  text: Type, audio: Mic, image: ImageIcon, video: Video, document: FileText, delay: Clock,
+  contact: ContactIcon, sticker: Sticker,
 };
 const KIND_COLORS: Record<FunnelItemKind, string> = {
-  text: '#7c3aed', audio: '#00a884', image: '#3b82f6', video: '#f43f5e', document: '#f97316',
+  text: '#7c3aed', audio: '#00a884', image: '#3b82f6', video: '#f43f5e', document: '#f97316', delay: '#64748b',
+  contact: '#0891b2', sticker: '#f59e0b',
 };
 
 // ── Interpolação de variáveis ────────────────────────────────────────────────
@@ -198,6 +201,12 @@ async function dispatchFunnel(
     }
     onProgress?.(i + 1, sorted.length);
 
+    if (item.kind === 'delay') continue; // item de espera: só aguarda, não envia
+    // Cartão de contato ainda não tem rota própria neste disparo manual (mesma
+    // lacuna documentada no disparo manual do Hub — só o motor de automação
+    // no servidor manda contato de verdade). Pula sem travar o resto do funil.
+    if (item.kind === 'contact') continue;
+
     const ctx: ResolveContext = {
       conversation: helpers.conversation,
       customVars: helpers.customVars,
@@ -229,19 +238,21 @@ export default function MessageFunnelPopover({
   const [customVars, setCustomVars] = useState<TenantTemplateVariable[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
   // Após o fix de re-render cascading (dispatch fora do Popover), `running` é só pra
   // bloquear duplo-click instantâneo enquanto onClose() não foi processado.
   const [running] = useState<{ id: string; idx: number; total: number } | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Busca funis ativos + vars custom do tenant em paralelo. Custom vars
-  // resolvem placeholders {{token}} dos funis no momento do envio.
+  // Busca TODOS os funis (ativos + arquivados) + vars custom do tenant em paralelo.
+  // Sem `activeOnly` o backend retorna os dois — split em ativos/arquivados é client-side,
+  // pro toggle "Ativos / Arquivados". Custom vars resolvem placeholders {{token}} no envio.
   // Extraído pra callback pra recarregar a lista após criar um funil inline.
   const loadFunnels = useCallback(() => {
     setLoading(true);
     return Promise.all([
-      messageFunnelsService.list({ activeOnly: true }),
+      messageFunnelsService.list({}),
       tenantTemplateVariablesService
         .list()
         .then(res => res.custom)
@@ -261,12 +272,15 @@ export default function MessageFunnelPopover({
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [isOpen, loadFunnels]);
 
+  const activeFunnels = funnels.filter(f => f.active);
+  const archivedFunnels = funnels.filter(f => !f.active);
+  const visible = showArchived ? archivedFunnels : activeFunnels;
   const filtered = search.trim()
-    ? funnels.filter(f =>
+    ? visible.filter(f =>
         f.name.toLowerCase().includes(search.toLowerCase())
         || (f.description ?? '').toLowerCase().includes(search.toLowerCase()),
       )
-    : funnels;
+    : visible;
 
   async function handleDispatch(funnel: MessageFunnel) {
     if (running) return;
@@ -293,6 +307,39 @@ export default function MessageFunnelPopover({
     } catch (err) {
       const msg = (err as Error)?.message ?? 'Falha no envio';
       toast.error(`Falha no envio: ${msg}`, { id: toastId });
+    }
+  }
+
+  // Arquivar = active:false → some da lista do chat (continua em Configurações).
+  async function handleArchive(funnel: MessageFunnel) {
+    try {
+      await messageFunnelsService.update(funnel.id, { active: false });
+      toast.success(`Funil "${funnel.name}" arquivado`);
+      loadFunnels();
+    } catch {
+      toast.error('Erro ao arquivar funil');
+    }
+  }
+
+  // Reativar = active:true → volta a aparecer na aba Ativos do chat.
+  async function handleUnarchive(funnel: MessageFunnel) {
+    try {
+      await messageFunnelsService.update(funnel.id, { active: true });
+      toast.success(`Funil "${funnel.name}" reativado`);
+      loadFunnels();
+    } catch {
+      toast.error('Erro ao reativar funil');
+    }
+  }
+
+  async function handleDelete(funnel: MessageFunnel) {
+    if (!window.confirm(`Excluir o funil "${funnel.name}"? Esta ação não pode ser desfeita.`)) return;
+    try {
+      await messageFunnelsService.destroy(funnel.id);
+      toast.success(`Funil "${funnel.name}" excluído`);
+      loadFunnels();
+    } catch {
+      toast.error('Erro ao excluir funil');
     }
   }
 
@@ -327,6 +374,36 @@ export default function MessageFunnelPopover({
           </div>
         </div>
 
+        {/* Toggle Ativos / Arquivados */}
+        <div className="px-3 pt-2">
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
+            <button
+              type="button"
+              onClick={() => setShowArchived(false)}
+              disabled={!!running}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-50 ${
+                !showArchived ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Rocket className="h-3 w-3" />
+              Ativos ({activeFunnels.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowArchived(true)}
+              disabled={!!running}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-50 ${
+                showArchived
+                  ? 'bg-orange-100 text-orange-700 shadow-sm dark:bg-orange-950/40 dark:text-orange-400'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Archive className="h-3 w-3" />
+              Arquivados ({archivedFunnels.length})
+            </button>
+          </div>
+        </div>
+
         {/* Busca */}
         <div className="px-3 py-2 border-b border-border">
           <div className="flex items-center gap-2 bg-muted/40 rounded-md px-3 py-1.5">
@@ -351,11 +428,17 @@ export default function MessageFunnelPopover({
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 p-6 text-muted-foreground">
-              <Rocket className="h-8 w-8" />
-              <p className="text-sm">
-                {funnels.length === 0 ? 'Nenhum funil criado ainda' : 'Nenhum resultado'}
+              {showArchived ? <Archive className="h-8 w-8" /> : <Rocket className="h-8 w-8" />}
+              <p className="text-sm text-center">
+                {search.trim()
+                  ? 'Nenhum resultado'
+                  : showArchived
+                    ? 'Nenhum funil arquivado'
+                    : archivedFunnels.length > 0
+                      ? 'Nenhum funil ativo — veja os arquivados acima'
+                      : 'Nenhum funil criado ainda'}
               </p>
-              {funnels.length === 0 && (
+              {!showArchived && !search.trim() && funnels.length === 0 && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -372,52 +455,91 @@ export default function MessageFunnelPopover({
               const isRunning = running?.id === funnel.id;
               const dimmed = running && !isRunning;
               return (
-                <button
+                <div
                   key={funnel.id}
-                  onClick={() => handleDispatch(funnel)}
-                  disabled={!!running}
-                  className={`w-full text-left px-4 py-3 transition-all duration-150 border-b border-border last:border-b-0 hover:bg-muted/50 ${
+                  className={`group relative transition-all duration-150 border-b border-border last:border-b-0 hover:bg-muted/50 ${
                     isRunning ? 'bg-primary/10 border-l-4 border-l-primary' : 'border-l-4 border-l-transparent'
                   } ${dimmed ? 'opacity-50' : ''}`}
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Rocket size={12} className="text-primary shrink-0" />
-                    <span className="text-sm font-semibold text-foreground truncate">{funnel.name}</span>
-                    {!funnel.active && (
-                      <span className="text-xs text-muted-foreground ml-auto inline-flex items-center gap-0.5">
-                        <Pause size={10} /> pausado
-                      </span>
-                    )}
-                    {isRunning && (
-                      <span className="text-xs text-primary ml-auto font-semibold animate-pulse inline-flex items-center gap-1">
-                        <Play size={10} fill="currentColor" /> Enviando {running.idx}/{running.total}
-                      </span>
-                    )}
-                  </div>
-                  {funnel.description && (
-                    <p className="text-xs text-muted-foreground truncate mb-1">{funnel.description}</p>
-                  )}
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {funnel.items.slice(0, 10).map(item => {
-                      const Icon = KIND_ICONS[item.kind];
-                      const color = KIND_COLORS[item.kind];
-                      return (
-                        <span
-                          key={item.id}
-                          className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-xs"
-                          style={{ background: color + '20', color }}
-                          title={item.text_content?.slice(0, 60) ?? item.media_filename ?? item.kind}
-                        >
-                          <Icon size={9} />
-                          {item.delay_seconds > 0 && <span>·{item.delay_seconds}s</span>}
+                  <button
+                    type="button"
+                    onClick={() => handleDispatch(funnel)}
+                    disabled={!!running}
+                    className="w-full text-left px-4 py-3"
+                  >
+                    <div className={`flex items-center gap-2 mb-1 ${showArchived ? 'pr-28' : 'pr-14'}`}>
+                      <Rocket size={12} className="text-primary shrink-0" />
+                      <span className="text-sm font-semibold text-foreground truncate">{funnel.name}</span>
+                      {isRunning && (
+                        <span className="text-xs text-primary ml-auto font-semibold animate-pulse inline-flex items-center gap-1">
+                          <Play size={10} fill="currentColor" /> Enviando {running.idx}/{running.total}
                         </span>
-                      );
-                    })}
-                    {funnel.items.length > 10 && (
-                      <span className="text-xs text-muted-foreground">+{funnel.items.length - 10}</span>
+                      )}
+                    </div>
+                    {funnel.description && (
+                      <p className="text-xs text-muted-foreground truncate mb-1">{funnel.description}</p>
                     )}
-                  </div>
-                </button>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {funnel.items.slice(0, 10).map(item => {
+                        const Icon = KIND_ICONS[item.kind];
+                        const color = KIND_COLORS[item.kind];
+                        return (
+                          <span
+                            key={item.id}
+                            className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-xs"
+                            style={{ background: color + '20', color }}
+                            title={item.text_content?.slice(0, 60) ?? item.media_filename ?? item.kind}
+                          >
+                            <Icon size={9} />
+                            {item.delay_seconds > 0 && <span>·{item.delay_seconds}s</span>}
+                          </span>
+                        );
+                      })}
+                      {funnel.items.length > 10 && (
+                        <span className="text-xs text-muted-foreground">+{funnel.items.length - 10}</span>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Ações por funil (não disparam o funil) */}
+                  {!running && (
+                    <div className={`absolute top-2 right-2 flex items-center gap-0.5 transition-opacity ${
+                      showArchived ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                    }`}>
+                      {showArchived ? (
+                        <button
+                          type="button"
+                          onClick={e => { e.stopPropagation(); handleUnarchive(funnel); }}
+                          className="h-6 inline-flex items-center gap-1 rounded px-2 text-xs font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-950/40 dark:text-orange-400"
+                          aria-label="Reativar"
+                          title="Reativar (volta pro chat)"
+                        >
+                          <ArchiveRestore size={13} />
+                          Reativar
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={e => { e.stopPropagation(); handleArchive(funnel); }}
+                          className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-muted text-muted-foreground"
+                          aria-label="Arquivar"
+                          title="Arquivar (some do chat)"
+                        >
+                          <Archive size={13} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); handleDelete(funnel); }}
+                        className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-muted text-destructive"
+                        aria-label="Excluir"
+                        title="Excluir funil"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  )}
+                </div>
               );
             })
           )}

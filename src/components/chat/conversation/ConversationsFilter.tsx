@@ -54,11 +54,22 @@ export default function ConversationsFilter({
             ...filterType,
             options: filterOptions.pipelines,
           };
+        case 'pipeline_stage_id':
+          return {
+            ...filterType,
+            options: filterOptions.stages,
+          };
         default:
           return filterType;
       }
     });
-  }, [filterOptions.inboxes, filterOptions.teams, filterOptions.labels, filterOptions.pipelines]);
+  }, [
+    filterOptions.inboxes,
+    filterOptions.teams,
+    filterOptions.labels,
+    filterOptions.pipelines,
+    filterOptions.stages,
+  ]);
 
   return (
     <BaseFilter

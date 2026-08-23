@@ -17,7 +17,7 @@ import {
   SelectValue,
   Switch,
   Textarea
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { whatsappRemindersService } from '@/services/whatsappReminders';
 import {
   WhatsappReminder,

@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Button,
   Badge,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 
 interface CollapsibleHeaderProps {
   title: string;

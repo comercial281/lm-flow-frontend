@@ -7,7 +7,7 @@ import {
   Label,
   Alert,
   AlertDescription,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { resetPassword } from '@/services/auth/authService';

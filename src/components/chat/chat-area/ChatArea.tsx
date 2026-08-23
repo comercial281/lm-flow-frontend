@@ -216,10 +216,14 @@ const ChatArea = ({
     fetchInboxes,
   ]);
 
+  // Providers não-oficiais (baileys, evolution, evolution_go, zapi, notificame) enviam
+  // texto livre e não têm a restrição de janela de 24h / template do WhatsApp Cloud.
   const isWhatsAppFreeTextChannel =
     isWhatsAppChannel &&
     channelProvider &&
-    ['baileys', 'evolution', 'evolution_go'].includes(channelProvider.toLowerCase());
+    ['baileys', 'evolution', 'evolution_go', 'zapi', 'notificame'].includes(
+      channelProvider.toLowerCase(),
+    );
 
   // Verificar status de conexão do Z-API e Evolution
   // Buscar provider_connection do meta ou inbox
@@ -307,7 +311,7 @@ const ChatArea = ({
   const typingUsers = websocket.getTypingUsers(selectedConversationId);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden min-h-0 bg-muted/10">
+    <div className="wa-chat flex-1 flex flex-col overflow-hidden min-h-0 bg-muted/10">
       {/* 🎯 MESSAGING WINDOW RESTRICTIONS: Banner de aviso (WhatsApp, Instagram, Messenger) */}
       {/* Posicionado no topo, logo após o header, para máxima visibilidade */}
       {shouldShowRestrictionBanner && (

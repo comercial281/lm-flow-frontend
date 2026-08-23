@@ -19,7 +19,7 @@ import {
   RadioGroup,
   RadioGroupItem,
   Badge,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Shield, Smartphone, Mail, AlertTriangle, Check, Copy, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { twoFactorService } from '@/services/profile/twoFactorService';

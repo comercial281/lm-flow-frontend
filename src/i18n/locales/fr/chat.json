@@ -263,6 +263,8 @@
       "assignAgent": "Assigner un Agent",
       "assignTeam": "Assigner une Équipe",
       "assignTag": "Assigner une Étiquette",
+      "unassignAgent": "Retirer l'agent",
+      "unassignTeam": "Retirer l'équipe",
       "deleteConversation": "Supprimer la conversation"
     },
     "contactNoName": "Contact sans nom",
@@ -318,9 +320,10 @@
         "description": "Gérer l'entonnoir de vente"
       },
       "contactNotes": {
-        "title": "Notes du Contact",
-        "description": "Annotations importantes",
-        "noNotes": "Aucune note ajoutée pour le moment"
+        "title": "Commentaires",
+        "description": "Commentaires du lead (synchronisés avec la carte)",
+        "noNotes": "Aucun commentaire pour le moment",
+        "placeholder": "Écrire un commentaire..."
       },
       "previousConversations": {
         "title": "Conversations Précédentes",
@@ -526,7 +529,8 @@
   "replyModeToggle": {
     "reply": "Réponse",
     "privateNote": "Note Privée",
-    "visibleOnlyToAgents": "Visible uniquement par les Agents"
+    "visibleOnlyToAgents": "Visible uniquement par les Agents",
+    "pendingExplainer": "Conversation en attente — prenez le lead pour répondre"
   },
   "contexts": {
     "conversations": {
@@ -632,7 +636,7 @@
       },
       "errors": {
         "fileTooLarge": "Fichier trop volumineux",
-        "fileTooLargeDescription": "{{fileName}} dépasse la limite de {{maxSize}}MB",
+        "fileTooLargeDescription": "{{fileName}} fait {{fileSize}} — la limite est de {{maxSize}}MB",
         "fileTypeNotAllowed": "Type de fichier non autorisé",
         "fileTypeNotAllowedDescription": "{{fileName}} n'est pas un type de fichier pris en charge"
       },
@@ -692,7 +696,8 @@
       "created_at": "Date de Création",
       "last_activity_at": "Dernière Activité",
       "priority": "Priorité",
-      "pipeline_id": "Pipeline"
+      "pipeline_id": "Pipeline",
+      "pipeline_stage_id": "Étape (Colonne)"
     },
     "options": {
       "status": {

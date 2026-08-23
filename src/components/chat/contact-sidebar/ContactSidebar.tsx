@@ -1,19 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatDateBR } from '@/utils/dateUtils';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 
 import { useLanguage } from '@/hooks/useLanguage';
 
 import { Button } from '@evoapi/design-system/button';
 import { Card, CardHeader, CardContent } from '@evoapi/design-system/card';
 import { Badge } from '@evoapi/design-system/badge';
-import { X, User, FileText, MessageSquare, Clock, ChevronDown, GitBranch, Tag, Info, Megaphone, ExternalLink } from 'lucide-react';
+import { X, User, FileText, MessageSquare, Clock, ChevronDown, GitBranch, Tag, Megaphone, ExternalLink, Pencil, Check, Play } from 'lucide-react';
+import { Input } from '@evoapi/design-system/input';
+import { toast } from 'sonner';
+import apiAuth from '@/services/core/apiAuth';
 
 import ContactHeader from './ContactHeader';
 import ContactDetails from './ContactDetails';
 // import MacrosList from './MacrosList'; // OCULTO
 
-import EditableContactCustomAttributes from './EditableContactCustomAttributes';
-import EditableConversationCustomAttributes from './EditableConversationCustomAttributes';
+import ContactTagsManager from './ContactTagsManager';
+import AiUnderstandingPanel from './AiUnderstandingPanel';
 
+import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import ConversationPipelineItem from '@/components/pipelines/ConversationPipelineItem';
 import PipelineManagement from '@/components/chat/contact-sidebar/PipelineManagement';
 import { pipelinesService } from '@/services/pipelines';
@@ -233,10 +239,14 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
 
             {showContactDetails && (
               <CardContent className="pt-0 px-3 pb-3">
-                <ContactDetails contact={contact} />
+                <ContactDetails contact={contact} leadArrivedAt={conversation?.created_at} />
               </CardContent>
             )}
           </Card>
+
+          {/* 1.5. Conversao Meta (Pixel/CAPI) - marcacao manual do desfecho do lead.
+              O componente se esconde sozinho quando o cliente nao usa CAPI. */}
+          <CapiConversionPanel contactId={contact?.id ?? null} />
 
           {/* 2. Origem do Anuncio - so aparece quando tem externalAdReply */}
           {Boolean(conversation?.additional_attributes?.ad_referral) && (
@@ -297,6 +307,11 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
               )}
             </Card>
           )}
+
+          {/* 2.5. O que a IA entendeu — temperatura, resumo e o que ela já
+              perguntou. Fica logo depois da origem porque é a mesma pergunta
+              ("quem é essa pessoa?") e some sozinho em conversa sem IA. */}
+          <AiUnderstandingPanel conversation={conversation} />
 
           {/* 3. Pipeline - Gerenciar funil */}
           {(conversation || contact) && (
@@ -387,7 +402,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                         <p className="whitespace-pre-wrap break-words">{note.content}</p>
                         {note.created_at && (
                           <p className="text-muted-foreground mt-1">
-                            {new Date(note.created_at).toLocaleDateString('pt-BR')}
+                            {formatDateBR(note.created_at)}
                           </p>
                         )}
                       </div>
@@ -463,7 +478,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                           <p className="truncate font-medium">{conv.inbox_name || `#${conv.id}`}</p>
                           {conv.created_at && (
                             <p className="text-muted-foreground">
-                              {new Date(conv.created_at).toLocaleDateString('pt-BR')}
+                              {formatDateBR(conv.created_at)}
                             </p>
                           )}
                         </div>
@@ -528,14 +543,14 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
             )}
           </Card>
 
-          {/* 6. Conversation Custom Attributes - Atributos personalizados da conversa */}
+          {/* 6. Origem - de onde veio o lead + todos os dados da conversa */}
           {conversation && (
             <Card>
               <CardHeader className="pb-2">
                 <CollapsibleHeader
-                  title={t('contactSidebar.sections.conversationAttributes.title')}
-                  description={t('contactSidebar.sections.conversationAttributes.description')}
-                  icon={<Info className="h-4 w-4 text-cyan-500" />}
+                  title="Origem"
+                  description="De onde veio o lead e todos os dados"
+                  icon={<Megaphone className="h-4 w-4 text-cyan-500" />}
                   isOpen={showConversationAttributes}
                   onToggle={() => setShowConversationAttributes(!showConversationAttributes)}
                 />
@@ -543,22 +558,103 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
 
               {showConversationAttributes && (
                 <CardContent className="pt-0 px-3 pb-3">
-                  <EditableConversationCustomAttributes
-                    conversation={conversation}
-                    onConversationUpdate={onFilterReload}
-                  />
+                  {(() => {
+                    const add = (conversation.additional_attributes || {}) as Record<string, unknown>;
+                    const ref = add.ad_referral as Record<string, unknown> | undefined;
+                    // Origem principal: anúncio (CTWA) > canal/inbox
+                    const originLabel = ref
+                      ? `Anúncio ${ref.source_app === 'instagram' ? 'Instagram' : 'Facebook'}`
+                      : conversation.inbox_name || 'WhatsApp';
+                    // Campos já mostrados visualmente (imagem/link) ou irrelevantes p/ o operador — não duplicar na lista crua.
+                    const HIDDEN_AD_KEYS = new Set(['source_id', 'source_url', 'thumbnail_url', 'media_type']);
+                    // Achata os dados em pares chave/valor legíveis (sem objetos crus).
+                    const rows: Array<{ k: string; v: string }> = [];
+                    const pushVal = (k: string, v: unknown) => {
+                      if (v == null || v === '') return;
+                      if (typeof v === 'object') return; // objetos aninhados tratados à parte
+                      rows.push({ k, v: String(v) });
+                    };
+                    Object.entries(add).forEach(([k, v]) => {
+                      if (k === 'ad_referral') return;
+                      pushVal(k, v);
+                    });
+                    if (ref) Object.entries(ref).forEach(([k, v]) => {
+                      if (HIDDEN_AD_KEYS.has(k)) return;
+                      if (k === 'captured_at' && typeof v === 'string') {
+                        pushVal(`anúncio.${k}`, formatDateBR(v));
+                        return;
+                      }
+                      pushVal(`anúncio.${k}`, v);
+                    });
+                    const custom = (conversation.custom_attributes || {}) as Record<string, unknown>;
+                    Object.entries(custom).forEach(([k, v]) => pushVal(k, v));
+                    const mediaType = ref?.media_type;
+                    const isVideo = mediaType === 2 || mediaType === '2' || String(mediaType).toLowerCase() === 'video';
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Origem</span>
+                          <span className="font-medium text-right max-w-[60%] truncate" title={originLabel}>
+                            {originLabel}
+                          </span>
+                        </div>
+                        {Boolean(ref?.thumbnail_url) && (
+                          <div className="relative mx-auto h-[220px] w-full max-w-[240px] overflow-hidden rounded-lg border border-border bg-muted">
+                            <img
+                              src={String(ref!.thumbnail_url)}
+                              alt={ref?.title ? String(ref.title) : 'Anúncio'}
+                              className="h-full w-full object-contain"
+                            />
+                            {isVideo && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/60">
+                                  <Play className="h-5 w-5 fill-white text-white" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {Boolean(ref?.source_url) && (
+                          <a
+                            href={String(ref!.source_url)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-xs text-orange-600 hover:underline"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Ver anúncio original
+                          </a>
+                        )}
+                        {rows.length === 0 ? (
+                          <div className="text-xs text-muted-foreground">Sem dados adicionais.</div>
+                        ) : (
+                          rows.map(({ k, v }) => (
+                            <div key={k} className="flex justify-between gap-2 text-xs">
+                              <span className="text-muted-foreground break-all">{k}</span>
+                              <span className="font-medium text-right max-w-[60%] break-all" title={v}>
+                                {v}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               )}
             </Card>
           )}
 
-          {/* 7. Contact Custom Attributes - Atributos personalizados do contato */}
+          {/* 6b. Nome do atendente nesta conversa */}
+          {conversation && <AgentDisplayNameCard conversation={conversation} />}
+
+          {/* 7. Tags do lead — respostas de formulário ficam em "Informações do Contato" (1) */}
           {contact && (
             <Card>
               <CardHeader className="pb-2">
                 <CollapsibleHeader
-                  title={t('contactSidebar.sections.contactAttributes.title')}
-                  description={t('contactSidebar.sections.contactAttributes.description')}
+                  title="Tags"
+                  description="Etiquetas do lead"
                   icon={<Tag className="h-4 w-4 text-pink-500" />}
                   isOpen={showContactAttributes}
                   onToggle={() => setShowContactAttributes(!showContactAttributes)}
@@ -567,9 +663,11 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
 
               {showContactAttributes && (
                 <CardContent className="pt-0 px-3 pb-3">
-                  <EditableContactCustomAttributes
-                    contact={contact}
-                    onContactUpdate={onFilterReload}
+                  <ContactTagsManager
+                    contactId={String(contact.id)}
+                    conversationId={conversation ? String(conversation.id) : undefined}
+                    initialLabels={(contact as { labels?: Array<{ name?: string; title?: string; color?: string }> }).labels}
+                    onUpdated={onFilterReload}
                   />
                 </CardContent>
               )}
@@ -578,6 +676,59 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
         </div>
       </div>
     </>
+  );
+};
+
+// --- AgentDisplayNameCard ---
+interface AgentDisplayNameCardProps { conversation: Conversation; }
+const AgentDisplayNameCard: React.FC<AgentDisplayNameCardProps> = ({ conversation }) => {
+  const currentName = (conversation?.additional_attributes as any)?.agent_display_name ?? '';
+  const [editing, setEditing] = React.useState(false);
+  const [value, setValue] = React.useState(currentName);
+  const [saving, setSaving] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => { setValue((conversation?.additional_attributes as any)?.agent_display_name ?? ''); }, [conversation?.additional_attributes]);
+  React.useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await apiAuth.patch(`/conversations/${conversation.id}`, { additional_attributes: { agent_display_name: value.trim() } });
+      toast.success('Nome do atendente atualizado');
+      setEditing(false);
+    } catch (e) { toast.error(apiErrorMessage(e, 'Erro ao salvar nome')); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-2">
+          <Pencil className="h-4 w-4 text-indigo-500" />
+          <div>
+            <h3 className="text-sm font-semibold">Nome do atendente (nesta conversa)</h3>
+            <p className="text-xs text-muted-foreground">Aparece acima das mensagens enviadas</p>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0 px-3 pb-3">
+        {editing ? (
+          <div className="flex gap-2">
+            <Input ref={inputRef} value={value} onChange={e => setValue(e.target.value)}
+              placeholder="Ex: João Silva" className="text-sm h-8 flex-1"
+              onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} />
+            <Button size="sm" className="h-8 px-2" onClick={handleSave} disabled={saving}><Check className="h-3 w-3" /></Button>
+            <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setEditing(false)}><X className="h-3 w-3" /></Button>
+          </div>
+        ) : (
+          <button onClick={() => setEditing(true)} className="w-full text-left flex items-center justify-between gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
+            <span className="text-sm text-muted-foreground">{currentName || 'Clique para definir um nome'}</span>
+            <Pencil className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+          </button>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

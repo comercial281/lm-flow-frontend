@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   ScrollArea,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { MCPServer, MCPServerFormData } from '@/types/ai';
 import MCPServerForm from './MCPServerForm';
 

@@ -1,5 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
-import { MessageSquare, Edit, Trash2, Users, Activity } from 'lucide-react';
+import { MessageSquare, Edit, Trash2, Users, Activity, Smartphone } from 'lucide-react';
 import { Contact } from '@/types/contacts';
 import { BaseTable, TableColumn, TableAction } from '@/components/base';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
@@ -66,16 +66,16 @@ export default function ContactsTable({
         >
           <ContactAvatar contact={contact} size="md" showColoredFallback={true} />
           <div className="min-w-0 flex-1">
-            <div className="font-medium text-sm truncate mb-1">
+            <div className="lm-redact font-medium text-sm truncate mb-1">
               {contact.name || t('table.noName')}
             </div>
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              {contact.email && <span className="truncate">{contact.email}</span>}
+              {contact.email && <span className="lm-redact truncate">{contact.email}</span>}
               {contact.email && contact.phone_number && (
                 <span className="text-muted-foreground/50">|</span>
               )}
               {contact.phone_number && (
-                <span className="whitespace-nowrap">{contact.phone_number}</span>
+                <span className="lm-redact whitespace-nowrap">{contact.phone_number}</span>
               )}
             </div>
           </div>
@@ -89,6 +89,46 @@ export default function ContactsTable({
       render: contact => (
         <ContactTypeBadge type={contact.type || 'person'} className="justify-center" />
       ),
+    },
+    {
+      // Por qual NÚMERO o contato é atendido. Com um WhatsApp por corretor a
+      // pergunta "de quem é este contato" deixou de ter resposta óbvia — e quem
+      // entrou pela importação da agenda de um aparelho chegava sem marca.
+      //
+      // O backend manda os vínculos do MAIS RECENTE para o mais antigo, na
+      // mesma ordem que o OutboundInboxResolver usa para escolher por onde a
+      // mensagem sai. Então o primeiro item não é "por onde entrou", é "por
+      // onde fala hoje" — que é o que muda quando a roleta abre o atendimento
+      // noutro número.
+      key: 'origem',
+      label: 'Número',
+      sortable: false,
+      render: contact => {
+        const vinculos = (contact.contact_inboxes ?? []) as Array<{ inbox?: { name?: string } }>;
+        const nomes = Array.from(
+          new Set(vinculos.map(v => v?.inbox?.name).filter((n): n is string => !!n)),
+        );
+        if (nomes.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+        // O tooltip separa o atual dos anteriores: sem isso, "+1" não diz se o
+        // outro número é um histórico ou um segundo canal ativo.
+        const titulo =
+          nomes.length > 1
+            ? `Atende por ${nomes[0]} — também passou por ${nomes.slice(1).join(', ')}`
+            : `Atende por ${nomes[0]}`;
+        return (
+          <div className="flex items-center gap-1 text-xs">
+            <Smartphone className="h-3 w-3 text-muted-foreground shrink-0" />
+            <span className="truncate" title={titulo}>
+              {nomes[0]}
+              {/* Contato que fala por mais de um número: mostra o atual e conta
+                  o resto, senão a coluna estoura a largura. */}
+              {nomes.length > 1 && (
+                <span className="text-muted-foreground"> +{nomes.length - 1}</span>
+              )}
+            </span>
+          </div>
+        );
+      },
     },
     {
       key: 'labels',

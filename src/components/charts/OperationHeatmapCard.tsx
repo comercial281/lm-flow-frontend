@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button } from '@evoapi/design-system';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button } from '@/components/ui/ds';
 import { useState } from 'react';
 import { TooltipInfo } from '@/components/base/TooltipInfo';
 

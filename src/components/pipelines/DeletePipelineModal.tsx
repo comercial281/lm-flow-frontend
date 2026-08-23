@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   Button,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { AlertTriangle, Users, Settings, BarChart3 } from 'lucide-react';
 import { Pipeline } from '@/types/analytics';
 

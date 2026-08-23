@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Card, CardContent, Button, Switch } from '@evoapi/design-system';
-import { Check, Users, Settings, Info } from 'lucide-react';
+import {
+  Card, CardContent, Button, Switch,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/ds';
+import { Check, Users, Settings, Info, Sparkles, UserCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -14,6 +17,10 @@ interface CollaboratorsFormProps {
   enableAutoAssignment?: boolean;
   maxAssignmentLimit?: number | null;
   onAutoAssignmentChange?: (enabled: boolean, limit?: number | null) => void;
+  // Corretor dono desta instância (número pessoal dele) — a foto real do
+  // WhatsApp dela vira o avatar de "Responsável" onde ele aparece no CRM.
+  ownerUserId?: string | null;
+  onOwnerChange?: (ownerUserId: string | null) => void | Promise<void>;
 }
 
 export default function CollaboratorsForm({
@@ -21,10 +28,14 @@ export default function CollaboratorsForm({
   enableAutoAssignment: initialAutoAssignment = false,
   maxAssignmentLimit: initialMaxLimit = null,
   onAutoAssignmentChange,
+  ownerUserId = null,
+  onOwnerChange,
 }: CollaboratorsFormProps) {
   const { t } = useLanguage('channels');
   const [agents, setAgents] = useState<AgentChannel[]>([]);
+  const [savingOwner, setSavingOwner] = useState(false);
   const [selectedAgents, setSelectedAgents] = useState<AgentChannel[]>([]);
+  const [autoGrantedIds, setAutoGrantedIds] = useState<Set<string>>(new Set());
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
   const [isUpdatingAgents, setIsUpdatingAgents] = useState(false);
   const [enableAutoAssignment, setEnableAutoAssignment] = useState(initialAutoAssignment);
@@ -56,7 +67,18 @@ export default function CollaboratorsForm({
           id: String(agent.id),
         })),
       );
-      setSelectedAgents(normalizedMembers);
+      setAutoGrantedIds(
+        new Set(normalizedMembers.filter(m => m.auto_granted).map(m => String(m.id))),
+      );
+      /* MARCADO = "um humano escolheu que essa pessoa atende esta instância".
+         Quem só tem acesso automático (é dona de um lead que fala por aqui) fica
+         DESMARCADO de propósito: ela não entra na fila de leads novos, e tentar
+         desmarcá-la é recusado lá atrás para ela não perder o próprio lead. Como
+         a tela mostrava marcada, o gestor desmarcava, salvava, e a pessoa voltava
+         marcada no recarregamento — sem aviso nenhum. Agora ela aparece embaixo,
+         com selo e motivo; marcar continua funcionando e significa promovê-la a
+         atendente de verdade. */
+      setSelectedAgents(normalizedMembers.filter(m => !m.auto_granted));
     } catch (error) {
       console.error('Error loading collaborators data:', error);
       toast.error(t('settings.collaborators.errors.loadError'));
@@ -142,6 +164,20 @@ export default function CollaboratorsForm({
     }
   };
 
+  const handleOwnerChange = async (value: string) => {
+    if (!onOwnerChange) return;
+    setSavingOwner(true);
+    try {
+      await onOwnerChange(value === '__none__' ? null : value);
+      toast.success(t('settings.collaborators.owner.success.updated'));
+    } catch (error) {
+      console.error('Error updating instance owner:', error);
+      toast.error(t('settings.collaborators.owner.errors.updateError'));
+    } finally {
+      setSavingOwner(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'online':
@@ -188,6 +224,44 @@ export default function CollaboratorsForm({
 
   return (
     <div className="space-y-6">
+      {/* Responsável da instância */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-border">
+            <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20">
+              <UserCircle className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-foreground">
+                {t('settings.collaborators.owner.title')}
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                {t('settings.collaborators.owner.description')}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center gap-2">
+            <Select
+              value={ownerUserId ?? '__none__'}
+              onValueChange={handleOwnerChange}
+              disabled={savingOwner || isLoadingAgents}
+            >
+              <SelectTrigger className="max-w-sm">
+                <SelectValue placeholder={t('settings.collaborators.owner.placeholder')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">{t('settings.collaborators.owner.none')}</SelectItem>
+                {agents.map(agent => (
+                  <SelectItem key={agent.id} value={String(agent.id)}>{agent.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {savingOwner && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Agents Selection */}
       <Card>
         <CardContent className="p-6">
@@ -280,6 +354,14 @@ export default function CollaboratorsForm({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h5 className="font-medium text-foreground truncate">{agent.name}</h5>
+                        {autoGrantedIds.has(agentId) && !isSelected && (
+                          <span
+                            className="flex items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] font-normal text-muted-foreground"
+                            title="O sistema liberou esta instância para a pessoa conseguir abrir os leads que já são dela. Ela só vê os leads dela aqui e não recebe leads novos. Marque para ela passar a atender esta instância de verdade."
+                          >
+                            <Sparkles className="w-3 h-3" /> acesso automático
+                          </span>
+                        )}
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             (() => {

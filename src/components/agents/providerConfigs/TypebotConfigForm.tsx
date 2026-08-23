@@ -1,4 +1,4 @@
-import { Label, Input } from '@evoapi/design-system';
+import { Label, Input } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
 
 export interface TypebotConfig {

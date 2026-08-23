@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Input, Label, Badge, Checkbox } from '@evoapi/design-system';
+import { Input, Label, Badge, Checkbox } from '@/components/ui/ds';
 import { Building2, X, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { contactsService } from '@/services/contacts';

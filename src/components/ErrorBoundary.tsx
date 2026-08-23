@@ -1,7 +1,8 @@
 import React from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { Button } from '@evoapi/design-system';
+import { Button } from '@/components/ui/ds';
+import { isChunkError, reloadForNewVersion } from '@/utils/chunkReload';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -20,6 +21,12 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    // Deploy novo no ar: em vez da tela de erro, recarrega pra pegar o bundle
+    // atual (com trava anti-loop + limpeza de SW/cache no chunkReload).
+    if (isChunkError(error)) {
+      void reloadForNewVersion();
+      return { hasError: false };
+    }
     return { hasError: true, error };
   }
 

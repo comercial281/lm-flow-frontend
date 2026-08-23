@@ -1,4 +1,11 @@
 import { AxiosInstance, AxiosError } from 'axios';
+import { getTenantSlug, getSubdomainSlug } from '@/services/core/tenant';
+
+interface SetupInterceptorOptions {
+  // 'app'  => X-Tenant ciente do Modo Cliente (padrão, telas do cliente)
+  // 'auth' => X-Tenant sempre do subdomínio real (login/refresh/validate)
+  authScope?: 'app' | 'auth';
+}
 
 // Applied to all API instances to handle 503 SETUP_REQUIRED responses.
 // Dispatches a custom event consumed by RouterGuard, which calls logout()
@@ -9,7 +16,20 @@ import { AxiosInstance, AxiosError } from 'axios';
 // events and suppresses ghost error toasts on parallel in-flight requests.
 let isDispatching = false;
 
-export function applySetupInterceptor(instance: AxiosInstance): void {
+export function applySetupInterceptor(instance: AxiosInstance, opts: SetupInterceptorOptions = {}): void {
+  const resolveSlug = opts.authScope === 'auth' ? getSubdomainSlug : getTenantSlug;
+  // SaaS multi-tenant: injeta X-Tenant em TODA requisição. Casa com o
+  // TenantResolution do backend. Sem tenant (apex/localhost) não manda nada =>
+  // schema public/legado. Escopo 'app' respeita o Modo Cliente; 'auth' não.
+  instance.interceptors.request.use(config => {
+    const tenant = resolveSlug();
+    if (tenant) {
+      config.headers.set?.('X-Tenant', tenant);
+      (config.headers as Record<string, unknown>)['X-Tenant'] = tenant;
+    }
+    return config;
+  });
+
   instance.interceptors.response.use(
     response => {
       // Reset flag when any successful response arrives — the server is healthy

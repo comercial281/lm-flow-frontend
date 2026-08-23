@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, DragEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Button,
@@ -13,7 +13,11 @@ import {
   DialogTitle,
   Label as UILabel,
   Textarea,
-} from '@evoapi/design-system';
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/ds';
 import {
   Plus,
   Search,
@@ -39,6 +43,11 @@ import {
   Upload,
   Link as LinkIcon,
   Film,
+  Megaphone,
+  LayoutTemplate,
+  Check,
+  ChevronDown,
+  FileText,
 } from 'lucide-react';
 import {
   propertiesService,
@@ -49,6 +58,14 @@ import {
   STATUS_LABELS,
   STATUS_COLORS,
 } from '@/services/properties/propertiesService';
+import { PROPERTY_FEATURES, CONDO_FEATURES } from '@/features/properties/amenities';
+import {
+  EMPTY_TYPOLOGY,
+  cleanTypologies,
+  typologyHeadline,
+  typologyName,
+  type PropertyTypology,
+} from '@/features/properties/typologies';
 import {
   propertyPhotosService,
   PropertyPhoto,
@@ -56,6 +73,10 @@ import {
   ACCEPTED_MIME_TYPES,
   MAX_UPLOAD_BYTES,
 } from '@/services/propertyPhotos/propertyPhotosService';
+import { useFeature } from '@/contexts/TenantFeaturesContext';
+import PropertyImportDialog from './PropertyImportDialog';
+import PropertyBookDialog from '@/components/properties/PropertyBookDialog';
+import { labelsService } from '@/services/contacts/labelsService';
 
 const EMPTY_FORM: PropertyFormData = {
   title: '',
@@ -87,9 +108,14 @@ const EMPTY_FORM: PropertyFormData = {
   exclusive: false,
   featured: false,
   published_on_site: false,
+  ai_enabled: true,
   on_sign: false,
   responsible_id: null,
   captor_id: null,
+  label_id: null,
+  features: [],
+  condo_features: [],
+  typologies: [],
 };
 
 const formatCurrency = (v?: number | null) =>
@@ -97,18 +123,24 @@ const formatCurrency = (v?: number | null) =>
 
 export default function Properties() {
   const navigate = useNavigate();
+  const canCreate      = useFeature('properties_create');
+  const canAiDesc      = useFeature('properties_ai_description');
+  const canAiBatch     = useFeature('properties_ai_batch');
   const [properties, setProperties] = useState<Property[]>([]);
   const [total, setTotal]           = useState(0);
   const [loading, setLoading]       = useState(false);
   const [saving, setSaving]         = useState(false);
   const [deleting, setDeleting]     = useState(false);
 
-  const [search, setSearch]                   = useState('');
+  const [searchParams]                        = useSearchParams();
+  const [search, setSearch]                   = useState(searchParams.get('q') ?? '');
   const [filterStatus, setFilterStatus]       = useState('');
   const [filterType, setFilterType]           = useState('');
   const [filterTransaction, setFilterTransaction] = useState('');
 
   const [modalOpen, setModalOpen]       = useState(false);
+  const [importOpen, setImportOpen]     = useState(false);
+  const [importRefresh, setImportRefresh] = useState(0);
   const [editing, setEditing]           = useState<Property | null>(null);
   const [form, setForm]                 = useState<PropertyFormData>(EMPTY_FORM);
 
@@ -119,7 +151,20 @@ export default function Properties() {
   const [propertyScores, setPropertyScores]     = useState<Record<string, number>>({});
   const [scoringId, setScoringId]               = useState<string | null>(null);
 
+  // Preencher com IA (cola texto / book / link do anúncio -> preenche o form)
+  const [aiOpen, setAiOpen]       = useState(false);
+  const [aiText, setAiText]       = useState('');
+  const [aiRunning, setAiRunning] = useState(false);
+  const [pdfReading, setPdfReading] = useState(false);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+
+  // Mídias (fotos/vídeos/áudios) anexadas direto no cadastro — sobem após criar o imóvel
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
+
   const [photosProperty, setPhotosProperty] = useState<Property | null>(null);
+  const [bookProperty, setBookProperty] = useState<Property | null>(null);
 
   // Batch generate
   const [batchModalOpen, setBatchModalOpen] = useState(false);
@@ -136,6 +181,10 @@ export default function Properties() {
 
   // Sprint 2: usuários do tenant (responsável/captador)
   const [tenantUsers, setTenantUsers] = useState<Array<{ id: string; name: string }>>([]);
+  // Tags (labels) do tenant, pro seletor "Tag do imóvel". Toleram falha (fica vazio).
+  const [labels, setLabels] = useState<Array<{ id: string; title: string }>>([]);
+  const [newTagName, setNewTagName] = useState('');
+  const [creatingTag, setCreatingTag] = useState(false);
 
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -158,9 +207,22 @@ export default function Properties() {
     }
   }, [search, filterStatus, filterType, filterTransaction]);
 
+  // Recarrega os contadores da barra de status (ativos/reservados/…). Tolerante a falha.
+  const loadStats = useCallback(() => {
+    propertiesService.stats().then(setStats).catch(() => {});
+  }, []);
+
+  // Carrega/atualiza a lista de tags. Chamado no mount e ao abrir o modal, pra o
+  // seletor refletir tags novas (inclusive a tag automática do código do imóvel).
+  const loadLabels = useCallback(() => {
+    labelsService.getLabels()
+      .then(res => setLabels((res.data ?? []).map(l => ({ id: String(l.id), title: l.title }))))
+      .catch(() => setLabels([]));
+  }, []);
+
   useEffect(() => {
     load();
-    propertiesService.stats().then(setStats).catch(() => {});
+    loadStats();
     // Carrega usuários do tenant pra select de responsável/captador.
     // Tolerante a falha: se endpoint retornar erro, mantém array vazio (UI cai pro "Nenhum").
     import('@/services/users/usersService').then(({ default: svc }) => {
@@ -172,6 +234,8 @@ export default function Properties() {
         })
         .catch(() => setTenantUsers([]));
     }).catch(() => setTenantUsers([]));
+    // Tags do tenant pro seletor "Tag do imóvel".
+    loadLabels();
   }, []);
 
   const handleSearch = (val: string) => {
@@ -190,11 +254,15 @@ export default function Properties() {
   const openCreate = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
+    setMediaFiles([]);
+    setAiText('');
+    loadLabels();
     setModalOpen(true);
   };
 
   const openEdit = (p: Property) => {
     setEditing(p);
+    loadLabels();
     setForm({
       title: p.title,
       description: p.description ?? '',
@@ -225,35 +293,83 @@ export default function Properties() {
       exclusive: p.exclusive ?? false,
       featured: p.featured ?? false,
       published_on_site: p.published_on_site ?? false,
+      ai_enabled: p.ai_enabled ?? true,
       on_sign: p.on_sign ?? false,
       responsible_id: p.responsible?.id ?? p.responsible_id ?? null,
       captor_id: p.captor?.id ?? p.captor_id ?? null,
       owner_contact_id: p.owner_contact_id ?? null,
+      label_id: p.label_id ?? null,
+      features: p.features ?? [],
+      condo_features: p.condo_features ?? [],
+      typologies: p.typologies ?? [],
     });
     setModalOpen(true);
   };
 
   const handleSave = async () => {
     if (!form.title.trim()) { toast.error('Título é obrigatório'); return; }
+    // Valor de venda é obrigatório p/ Venda/Venda e Locação (regra do backend) —
+    // avisa antes de bater na API.
+    if ((form.transaction_type === 'sale' || form.transaction_type === 'sale_rent') && !form.sale_price) {
+      toast.error('Informe o Valor de venda (obrigatório para imóveis à venda).');
+      return;
+    }
     setSaving(true);
+    // Linha de tipologia que o corretor adicionou e não preencheu não vai pro
+    // backend (ele descartaria de qualquer jeito) — evita gravar planta fantasma.
+    const payload: PropertyFormData = { ...form, typologies: cleanTypologies(form.typologies) };
     try {
       if (editing) {
-        const updated = await propertiesService.update(editing.id, form);
+        const updated = await propertiesService.update(editing.id, payload);
         setProperties(prev => prev.map(p => p.id === updated.id ? updated : p));
         toast.success('Imóvel atualizado');
         setModalOpen(false);
+        // Avisa o modal de importação em lote (se aberto) pra re-buscar os chips/preço
+        setImportRefresh(n => n + 1);
       } else {
-        const created = await propertiesService.create(form);
+        const created = await propertiesService.create(payload);
         setProperties(prev => [created, ...prev]);
         setTotal(t => t + 1);
-        toast.success('Imóvel cadastrado — agora envie as fotos');
+        // Sobe as mídias que o usuário anexou no próprio modal (fotos/vídeos/áudios).
+        if (mediaFiles.length) {
+          setUploadingMedia(true);
+          try {
+            await propertyPhotosService.upload(created.id, mediaFiles);
+            toast.success(`Imóvel cadastrado com ${mediaFiles.length} mídia${mediaFiles.length > 1 ? 's' : ''}`);
+          } catch {
+            toast.warning('Imóvel cadastrado, mas algumas mídias falharam. Reenvie no gerenciador de fotos.');
+          } finally {
+            setUploadingMedia(false);
+          }
+        } else {
+          toast.success('Imóvel cadastrado — agora envie as fotos');
+        }
         setModalOpen(false);
         setPhotosProperty(created);
       }
-    } catch {
-      toast.error('Erro ao salvar imóvel');
+    } catch (e) {
+      // Surfaça a mensagem real do backend (ex.: "Valor de venda é obrigatório...")
+      // em vez de um genérico que deixa o usuário sem saber o que corrigir.
+      const err = e as { response?: { data?: { error?: { message?: string }; message?: string } } };
+      const msg = err?.response?.data?.error?.message || err?.response?.data?.message || 'Erro ao salvar imóvel';
+      toast.error(msg);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Mudança rápida de status direto no card (sem abrir o modal de edição).
+  const handleStatusChange = async (p: Property, newStatus: string) => {
+    if (newStatus === p.status) return;
+    try {
+      const updated = await propertiesService.update(p.id, { status: newStatus });
+      setProperties(prev => prev.map(x => x.id === updated.id ? updated : x));
+      loadStats(); // atualiza a barra de contadores no topo
+      toast.success(`Status alterado para ${STATUS_LABELS[newStatus] ?? newStatus}`);
+    } catch (e) {
+      const err = e as { response?: { data?: { error?: { message?: string }; message?: string } } };
+      const msg = err?.response?.data?.error?.message || err?.response?.data?.message || 'Erro ao alterar status';
+      toast.error(msg);
     }
   };
 
@@ -293,13 +409,18 @@ export default function Properties() {
     }
   };
 
+  // Único ponto que usa IA (consome tokens) — e SÓ quando o corretor clica.
+  // Gera a descrição a partir dos campos atuais do form (funciona em cadastro novo
+  // ou edição), opcionalmente usando o texto colado como material.
   const handleGenerateDescription = async () => {
-    if (!editing) return;
     setGeneratingDesc(true);
     try {
-      const result = await propertiesService.generateDescription(editing.id, { apply: true });
-      setForm(prev => ({ ...prev, description: result.description }));
-      if (result.headline) setForm(prev => ({ ...prev, title: result.headline || prev.title }));
+      const result = await propertiesService.generateDescriptionPreview(form, { text: aiText.trim() || undefined });
+      setForm(prev => ({
+        ...prev,
+        description: result.description,
+        title: (!prev.title && result.headline) ? result.headline : prev.title,
+      }));
       toast.success('Descrição gerada com IA');
     } catch {
       toast.error('Erro ao gerar descrição. Verifique se a chave de IA está configurada.');
@@ -347,32 +468,263 @@ export default function Properties() {
 
   const f = form;
   const setF = (patch: Partial<PropertyFormData>) => setForm(prev => ({ ...prev, ...patch }));
+  const toggleAmenity = (key: 'features' | 'condo_features', slug: string) =>
+    setForm(prev => {
+      const cur = prev[key] ?? [];
+      return { ...prev, [key]: cur.includes(slug) ? cur.filter(s => s !== slug) : [...cur, slug] };
+    });
+
+  // ── Tipologias (plantas) do empreendimento ─────────────────────────────────
+  // Lista repetível: cada linha é uma planta com números próprios. Sempre por
+  // atualização funcional (prev) — o corretor mexe em várias linhas seguidas e
+  // um patch em cima de `form` capturado perderia a edição anterior.
+  const addTypology = () =>
+    setForm(prev => ({ ...prev, typologies: [...(prev.typologies ?? []), { ...EMPTY_TYPOLOGY }] }));
+  const removeTypology = (index: number) =>
+    setForm(prev => ({ ...prev, typologies: (prev.typologies ?? []).filter((_, i) => i !== index) }));
+  const setTypology = (index: number, patch: Partial<PropertyTypology>) =>
+    setForm(prev => ({
+      ...prev,
+      typologies: (prev.typologies ?? []).map((t, i) => (i === index ? { ...t, ...patch } : t)),
+    }));
+
+  // Cria uma nova tag (Label) direto do cadastro do imóvel e já a seleciona.
+  // O backend só aceita título com letras/números/espaço/hífen/underscore, então
+  // sanitiza aqui (troca inválidos por espaço, colapsa, tira separador das pontas).
+  const createTag = async () => {
+    const cleaned = newTagName
+      .replace(/[^\p{L}\p{N} _-]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^[ _-]+|[ _-]+$/g, '')
+      .slice(0, 60);
+    if (!cleaned) { toast.error('Digite um nome válido para a tag'); return; }
+    // Se já existe (case-insensitive), só seleciona.
+    const existing = labels.find(l => l.title.toLowerCase() === cleaned.toLowerCase());
+    if (existing) { setF({ label_id: existing.id }); setNewTagName(''); return; }
+    setCreatingTag(true);
+    try {
+      // createLabel desembrulha pro Label no runtime (o backend normaliza o título
+      // pra minúsculo) — o tipo diz LabelResponse, por isso o cast.
+      const created = await labelsService.createLabel({ title: cleaned, color: '#34d399', show_on_sidebar: true }) as unknown as { id: string; title: string };
+      const item = { id: String(created.id), title: created.title };
+      setLabels(prev => (prev.some(l => l.id === item.id) ? prev : [...prev, item]));
+      setF({ label_id: item.id });
+      setNewTagName('');
+      toast.success('Tag criada e selecionada');
+    } catch {
+      toast.error('Não consegui criar a tag');
+    } finally {
+      setCreatingTag(false);
+    }
+  };
+
+  // IA lê o texto colado / book (PDF) / link do anúncio e preenche o form (sem salvar).
+  // Preenche o formulário a partir de um texto/TXT — 100% LOCAL (sem IA/API).
+  // A descrição NÃO é preenchida aqui: é opcional, por botão (handleGenerateDescription).
+  const doParseText = async (text: string) => {
+    if (!text.trim()) { toast.error('Cole um texto ou envie um .txt do imóvel'); return; }
+    setAiRunning(true);
+    try {
+      const r = await propertiesService.parseText(text);
+      const patch: Partial<PropertyFormData> = {};
+      const put = <K extends keyof PropertyFormData>(k: K, v: PropertyFormData[K] | null | undefined) => {
+        if (v !== null && v !== undefined && v !== '') patch[k] = v;
+      };
+      put('transaction_type', r.transaction_type);
+      put('property_type', r.property_type);
+      put('sale_price', r.sale_price);
+      put('rent_price', r.rent_price);
+      put('condo_fee', r.condo_fee);
+      put('iptu', r.iptu);
+      put('bedrooms', r.bedrooms);
+      put('bathrooms', r.bathrooms);
+      put('suites', r.suites);
+      put('parking_spaces', r.parking_spaces);
+      put('useful_area_m2', r.useful_area_m2);
+      put('total_area_m2', r.total_area_m2);
+      put('address_neighborhood', r.address_neighborhood);
+      put('address_city', r.address_city);
+      put('address_state', r.address_state);
+      // Características/comodidades: só aplica quando achou algo (não apaga o que o
+      // corretor já marcou) e mantém só slugs válidos do catálogo.
+      const featSet = new Set(PROPERTY_FEATURES.map(a => a.slug));
+      const condoSet = new Set(CONDO_FEATURES.map(a => a.slug));
+      const feats = (r.features ?? []).filter(s => featSet.has(s));
+      const condos = (r.condo_features ?? []).filter(s => condoSet.has(s));
+      if (feats.length) patch.features = feats;
+      if (condos.length) patch.condo_features = condos;
+      // Tipologias achadas no book: só aplica quando veio alguma (não apaga as
+      // que o corretor já digitou) e mantém as dele na frente.
+      const found = cleanTypologies(r.typologies);
+      if (found.length) patch.typologies = [...cleanTypologies(f.typologies), ...found];
+      const filled = Object.keys(patch).length;
+      if (!filled) { toast.error('Não achei dados reconhecíveis no texto. Revise e preencha manualmente.'); return; }
+      setF(patch);
+      toast.success(`Preenchi ${filled} campo${filled > 1 ? 's' : ''} do texto. Revise antes de salvar.`);
+    } catch (err) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      toast.error(msg || 'Não consegui ler o texto.');
+    } finally {
+      setAiRunning(false);
+    }
+  };
+
+  const runParseText = () => doParseText(aiText.trim());
+
+  // Carrega um script UMD do CDN uma vez (usado pelo mammoth pra ler .docx).
+  const loadScriptOnce = (src: string) =>
+    new Promise<void>((resolve, reject) => {
+      if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('script load failed'));
+      document.head.appendChild(s);
+    });
+
+  // Extrai o texto de um PDF no navegador (pdf.js via CDN). Vazio = PDF escaneado.
+  const extractPdfText = async (buf: ArrayBuffer): Promise<string> => {
+    const cdnBase = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build';
+    // specifier em variável: o TS não tenta resolver o módulo do CDN (não é dep local)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pdfjs: any = await import(/* @vite-ignore */ `${cdnBase}/pdf.min.mjs`);
+    pdfjs.GlobalWorkerOptions.workerSrc = `${cdnBase}/pdf.worker.min.mjs`;
+    const pdf = await pdfjs.getDocument({ data: buf }).promise;
+    const pages = Math.min(pdf.numPages, 30);
+    let text = '';
+    for (let p = 1; p <= pages; p++) {
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      text += content.items.map((it: any) => it.str ?? '').join(' ') + '\n';
+    }
+    return text.trim();
+  };
+
+  // Extrai o texto de um .docx (Word) no navegador (mammoth via CDN).
+  const extractDocxText = async (buf: ArrayBuffer): Promise<string> => {
+    await loadScriptOnce('https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mammoth = (window as any).mammoth;
+    const out = await mammoth.extractRawText({ arrayBuffer: buf });
+    return String(out?.value ?? '').trim();
+  };
+
+  // OCR em português (Tesseract via CDN) — foto ou PDF escaneado (sem camada de texto).
+  const ocrImage = async (img: Blob | HTMLCanvasElement): Promise<string> => {
+    await loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const Tesseract = (window as any).Tesseract;
+    const { data } = await Tesseract.recognize(img, 'por');
+    return String(data?.text ?? '').trim();
+  };
+
+  // PDF escaneado: renderiza cada página num canvas e passa por OCR (lento — limita 5 págs).
+  const ocrPdfScanned = async (buf: ArrayBuffer): Promise<string> => {
+    const cdnBase = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pdfjs: any = await import(/* @vite-ignore */ `${cdnBase}/pdf.min.mjs`);
+    pdfjs.GlobalWorkerOptions.workerSrc = `${cdnBase}/pdf.worker.min.mjs`;
+    const pdf = await pdfjs.getDocument({ data: buf }).promise;
+    const pages = Math.min(pdf.numPages, 5);
+    let text = '';
+    for (let p = 1; p <= pages; p++) {
+      const page = await pdf.getPage(p);
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) continue;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      text += `${await ocrImage(canvas)}\n`;
+    }
+    return text.trim();
+  };
+
+  // TXT, book em PDF, Word ou FOTO: extrai o texto no navegador e preenche os
+  // campos LOCALMENTE (sem IA). PDF sem texto (escaneado) e imagens passam por OCR.
+  const onPickBook = async (file: File | undefined) => {
+    if (!file) return;
+    const isTxt = file.type === 'text/plain' || /\.txt$/i.test(file.name);
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    const isDocx = /officedocument\.wordprocessingml|\.docx$/i.test(`${file.type} ${file.name}`);
+    const isImage = /^image\//i.test(file.type) || /\.(png|jpe?g|webp|gif|bmp|tiff?)$/i.test(file.name);
+    if (!isTxt && !isPdf && !isDocx && !isImage) {
+      toast.error('Envie um .txt, ou o book em PDF, Word (.docx) ou foto (imagem).');
+      return;
+    }
+    setPdfReading(true);
+    try {
+      let text = '';
+      if (isTxt) {
+        text = await file.text();
+        if (!text.trim()) { toast.error('Esse .txt está vazio.'); return; }
+      } else if (isDocx) {
+        text = await extractDocxText(await file.arrayBuffer());
+        if (!text) { toast.error('Não achei texto nesse Word.'); return; }
+      } else if (isImage) {
+        toast.info('Lendo a foto com OCR (pode levar alguns segundos)...');
+        text = await ocrImage(file);
+        if (!text) { toast.error('Não consegui ler texto nessa foto.'); return; }
+      } else {
+        // PDF: tenta a camada de texto; se vazio (escaneado), cai pro OCR.
+        text = await extractPdfText(await file.arrayBuffer());
+        if (!text) {
+          toast.info('PDF escaneado: lendo com OCR (pode levar alguns segundos)...');
+          text = await ocrPdfScanned(await file.arrayBuffer());
+        }
+        if (!text) { toast.error('Não consegui extrair texto desse PDF.'); return; }
+      }
+      setAiText(prev => (prev ? `${prev}\n\n${text}` : text));
+      await doParseText(text);
+    } catch {
+      toast.error('Não consegui ler o arquivo. Tente colar o texto.');
+    } finally {
+      setPdfReading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="border-b bg-background/95 backdrop-blur px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Building2 className="h-6 w-6 text-primary" />
-              Imóveis
-            </h1>
-            <p className="text-sm text-muted-foreground">{total} imóvel{total !== 1 ? 's' : ''} cadastrado{total !== 1 ? 's' : ''}</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+          <div className="flex items-start gap-3">
+            <div
+              className="w-1 h-9 rounded-full shrink-0"
+              style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
+            />
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2 leading-tight">
+                <Building2 className="h-6 w-6 text-primary" />
+                Imóveis
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{total} imóvel{total !== 1 ? 's' : ''} cadastrado{total !== 1 ? 's' : ''}</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => navigate('/properties/map')}>
-              <MapPin className="h-4 w-4 mr-2" />
-              Ver no mapa
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="icon" disabled title="Landings (em breve)" aria-label="Landings (em breve)">
+              <Megaphone className="h-4 w-4" />
             </Button>
-            <Button variant="outline" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
-              <Wand2 className="h-4 w-4 mr-2" />
-              IA em lote
+            <Button variant="outline" size="icon" disabled title="Página de imóvel (em breve)" aria-label="Página de imóvel (em breve)">
+              <LayoutTemplate className="h-4 w-4" />
             </Button>
-            <Button onClick={openCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              Cadastrar imóvel
+            <Button variant="outline" size="icon" title="Ver no mapa" aria-label="Ver no mapa" onClick={() => navigate('/properties/map')}>
+              <MapPin className="h-4 w-4" />
             </Button>
+            {canAiBatch && (
+              <Button variant="outline" size="icon" title="IA em lote" aria-label="IA em lote" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
+                <Wand2 className="h-4 w-4" />
+              </Button>
+            )}
+            {canCreate && (
+              <Button onClick={() => setImportOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Cadastrar imóveis
+              </Button>
+            )}
           </div>
         </div>
 
@@ -455,10 +807,12 @@ export default function Properties() {
             <Building2 className="h-12 w-12 mb-3" />
             <p className="text-sm font-medium">Nenhum imóvel encontrado</p>
             <p className="text-xs mt-1">Cadastre o primeiro imóvel do seu portfólio</p>
-            <Button className="mt-4" onClick={openCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              Cadastrar imóvel
-            </Button>
+            {canCreate && (
+              <Button className="mt-4" onClick={() => setImportOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Cadastrar imóveis
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -467,8 +821,11 @@ export default function Properties() {
                 key={property.id}
                 property={property}
                 onEdit={openEdit}
+                onStatusChange={handleStatusChange}
                 onDelete={p => { setToDelete(p); setDeleteDialogOpen(true); }}
                 onManagePhotos={p => setPhotosProperty(p)}
+                onViewBook={p => setBookProperty(p)}
+                onLanding={p => navigate(`/properties/${p.id}/landing`)}
                 score={propertyScores[property.id]}
                 onCalculateScore={() => handleCalculateScore(property.id)}
                 scoringId={scoringId}
@@ -478,15 +835,142 @@ export default function Properties() {
         )}
       </div>
 
-      {/* Create/Edit Modal */}
+      {/* Create/Edit Modal — horizontal: usa a largura da tela em 3 colunas */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Largura, folga e altura vêm do preset `size="wide"` (ver ds.tsx). Antes
+            eram 94vw escritos aqui, com um style inline por cima — porcentagem não
+            deixa folga: num monitor grande o modal encostava nas duas bordas. */}
+        <DialogContent size="wide" className="overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar imóvel' : 'Cadastrar imóvel'}</DialogTitle>
             <DialogDescription>Preencha as informações do imóvel</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          {/* Preencher a partir de um texto/TXT — 100% local (sem IA/tokens) */}
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <button
+              type="button"
+              onClick={() => setAiOpen(o => !o)}
+              className="flex w-full items-center gap-2 text-sm font-medium text-primary"
+            >
+              <Wand2 className="h-4 w-4" />
+              Preencher a partir de um texto
+              <span className="ml-auto text-xs font-normal text-muted-foreground">
+                {aiOpen ? 'ocultar' : 'cole o texto ou suba um .txt / book'}
+              </span>
+            </button>
+
+            {aiOpen && (
+              <div className="mt-3 space-y-2">
+                <Textarea
+                  value={aiText}
+                  onChange={e => setAiText(e.target.value)}
+                  placeholder="Cole aqui as informações do imóvel (texto do book, anúncio...). Preenche os campos e as características automaticamente, no seu servidor, sem IA. Nada é obrigatório."
+                  className="min-h-[100px]"
+                />
+
+                {/* TXT / book: input escondido + botão que lê no navegador */}
+                <input
+                  ref={pdfInputRef}
+                  type="file"
+                  accept="text/plain,.txt,application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
+                  className="hidden"
+                  onChange={e => { onPickBook(e.target.files?.[0]); e.target.value = ''; }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => pdfInputRef.current?.click()}
+                  disabled={pdfReading || aiRunning}
+                >
+                  {pdfReading
+                    ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Lendo o arquivo...</>
+                    : <><Upload className="mr-1 h-4 w-4" /> Subir .txt, book (PDF, Word ou foto)</>}
+                </Button>
+
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    Preenche os campos localmente (sem IA). A descrição é gerada à parte, no botão.
+                  </p>
+                  <Button type="button" size="sm" onClick={runParseText} disabled={aiRunning || pdfReading}>
+                    {aiRunning
+                      ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Lendo...</>
+                      : <><Wand2 className="mr-1 h-4 w-4" /> Preencher</>}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Mídias direto no cadastro — fotos, vídeos e áudios (sobem após criar) */}
+          {!editing && (
+            <div className="mt-3 rounded-lg border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Image className="h-4 w-4" />
+                  Fotos, vídeos e áudios
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => mediaInputRef.current?.click()}
+                  disabled={uploadingMedia || saving}
+                >
+                  {uploadingMedia
+                    ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Enviando...</>
+                    : <><Upload className="mr-1 h-4 w-4" /> Adicionar</>}
+                </Button>
+              </div>
+              <input
+                ref={mediaInputRef}
+                type="file"
+                multiple
+                accept={ACCEPTED_MIME_TYPES.join(',')}
+                className="hidden"
+                onChange={e => {
+                  const fs = Array.from(e.target.files ?? []);
+                  if (fs.length) setMediaFiles(prev => [...prev, ...fs]);
+                  e.target.value = '';
+                }}
+              />
+              {mediaFiles.length === 0 ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Opcional. Envie agora ou depois. Áudio de explicação do imóvel também vale.
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-1">
+                  {mediaFiles.map((file, i) => (
+                    <li key={`${file.name}-${i}`} className="flex items-center gap-2 text-xs">
+                      {file.type.startsWith('video/')
+                        ? <Film className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                        : file.type.startsWith('audio/')
+                          ? <Megaphone className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                          : <Image className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />}
+                      <span className="flex-1 truncate">{file.name}</span>
+                      <span className="text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                      <button
+                        type="button"
+                        onClick={() => setMediaFiles(prev => prev.filter((_, x) => x !== i))}
+                        className="text-muted-foreground hover:text-destructive"
+                        aria-label="Remover"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {/* Layout horizontal: 3 colunas lado a lado (dados | valores/composição | endereço),
+              distribuindo o retângulo da tela em vez de uma coluna comprida. */}
+          <div className="py-2 grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-4 items-start">
+            <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dados do imóvel</p>
             {/* Basic */}
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
@@ -534,12 +1018,15 @@ export default function Properties() {
                 </select>
               </div>
             </div>
+            </div>
 
+            <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Valores e composição</p>
             {/* Prices */}
             <div className="grid grid-cols-2 gap-4">
               {(f.transaction_type === 'sale' || f.transaction_type === 'sale_rent') && (
                 <div>
-                  <UILabel>Valor de venda (R$)</UILabel>
+                  <UILabel>Valor de venda (R$) *</UILabel>
                   <Input type="number" value={f.sale_price ?? ''} onChange={e => setF({ sale_price: e.target.value ? parseFloat(e.target.value) : null })}
                     placeholder="450000" className="mt-1" />
                 </div>
@@ -580,7 +1067,10 @@ export default function Properties() {
                 </div>
               ))}
             </div>
+            </div>
 
+            <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Endereço</p>
             {/* Address */}
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
@@ -646,9 +1136,12 @@ export default function Properties() {
                   placeholder="-46.6333" className="mt-1" />
               </div>
             </div>
+            </div>
 
+            {/* Faixa de largura total: atribuição/tag + descrição + flags */}
+            <div className="lg:col-span-3 space-y-4 border-t pt-4">
             {/* Atribuição: responsável + captador */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
               <div>
                 <UILabel>Corretor responsável</UILabel>
                 <select
@@ -671,13 +1164,42 @@ export default function Properties() {
                   {tenantUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               </div>
+              {/* Tag do imóvel: o lead que entra pela página deste imóvel é etiquetado
+                  com essa tag. Assim o pipeline fica geral e a tag identifica o imóvel. */}
+              <div>
+                <UILabel>Tag do imóvel</UILabel>
+              <select
+                value={f.label_id ?? ''}
+                onChange={e => setF({ label_id: e.target.value || null })}
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Gerar automaticamente pelo título</option>
+                {labels.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
+              </select>
+              <div className="mt-2 flex gap-2">
+                <Input
+                  value={newTagName}
+                  onChange={e => setNewTagName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); createTag(); } }}
+                  placeholder="Criar nova tag…"
+                  className="flex-1"
+                />
+                <Button type="button" variant="outline" onClick={createTag} disabled={creatingTag || !newTagName.trim()}>
+                  {creatingTag ? 'Criando…' : 'Criar e usar'}
+                </Button>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Aplicada ao lead capturado na página deste imóvel. Vazio = cria uma tag
+                automática com o título do imóvel.
+              </p>
+              </div>
             </div>
 
             {/* Description */}
             <div>
               <div className="flex items-center justify-between mb-1">
                 <UILabel>Descrição</UILabel>
-                {editing && (
+                {canAiDesc && (
                   <Button
                     type="button"
                     variant="outline"
@@ -712,10 +1234,155 @@ export default function Properties() {
                 <input type="checkbox" checked={f.published_on_site ?? false} onChange={e => setF({ published_on_site: e.target.checked })} className="rounded" />
                 <span className="text-sm">Publicar no site</span>
               </label>
+              <label className="flex items-center gap-2 cursor-pointer" title="A IA Vendedora pode usar e oferecer este imóvel nas conversas">
+                <input type="checkbox" checked={f.ai_enabled ?? true} onChange={e => setF({ ai_enabled: e.target.checked })} className="rounded" />
+                <span className="text-sm">Encontrável pela IA</span>
+              </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={f.on_sign ?? false} onChange={e => setF({ on_sign: e.target.checked })} className="rounded" />
                 <span className="text-sm">Tem placa</span>
               </label>
+            </div>
+
+            {/* Tipologias: as várias plantas de um mesmo empreendimento. Os campos
+                soltos acima (dorms/área/preço) seguem valendo como o RESUMO que
+                alimenta busca, filtro e card — normalmente o da planta de entrada. */}
+            <div className="rounded-lg border p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <label className="block text-sm font-medium">Tipologias do empreendimento</label>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Tem mais de uma planta (2 dorms, 3 dorms, cobertura…)? Cadastre cada uma aqui.
+                    Deixe vazio quando o imóvel é uma unidade só.
+                  </p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addTypology} className="gap-1">
+                  <Plus className="h-3.5 w-3.5" />
+                  Adicionar tipologia
+                </Button>
+              </div>
+
+              {(f.typologies ?? []).length > 0 && (
+                <div className="mt-3 space-y-3">
+                  {(f.typologies ?? []).map((t, i) => (
+                    <div key={i} className="rounded-md border bg-muted/30 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {typologyName(t, i)}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          title="Remover tipologia"
+                          aria-label={`Remover ${typologyName(t, i)}`}
+                          onClick={() => removeTypology(i)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                        <div className="col-span-2 sm:col-span-3 lg:col-span-2">
+                          <UILabel className="text-xs text-muted-foreground">Nome da planta</UILabel>
+                          <Input
+                            value={t.name ?? ''}
+                            onChange={e => setTypology(i, { name: e.target.value })}
+                            placeholder="Tipo A / Final 3"
+                            className="mt-1"
+                          />
+                        </div>
+                        {([
+                          ['bedrooms', 'Dorms'],
+                          ['suites', 'Suítes'],
+                          ['bathrooms', 'Banheiros'],
+                          ['parking_spaces', 'Vagas'],
+                          ['units_available', 'Unid. disp.'],
+                        ] as Array<[keyof PropertyTypology, string]>).map(([key, label]) => (
+                          <div key={key}>
+                            <UILabel className="text-xs text-muted-foreground">{label}</UILabel>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={(t[key] as number | null | undefined) ?? ''}
+                              onChange={e => setTypology(i, { [key]: e.target.value ? parseInt(e.target.value, 10) : null })}
+                              className="mt-1"
+                            />
+                          </div>
+                        ))}
+                        {([
+                          ['useful_area_m2', 'Área útil (m²)'],
+                          ['total_area_m2', 'Área total (m²)'],
+                          ['sale_price', 'Valor de venda (R$)'],
+                          ['rent_price', 'Aluguel (R$)'],
+                        ] as Array<[keyof PropertyTypology, string]>).map(([key, label]) => (
+                          <div key={key} className="col-span-1 sm:col-span-1 lg:col-span-1">
+                            <UILabel className="text-xs text-muted-foreground">{label}</UILabel>
+                            <Input
+                              type="number"
+                              min={0}
+                              step="any"
+                              value={(t[key] as number | null | undefined) ?? ''}
+                              onChange={e => setTypology(i, { [key]: e.target.value ? parseFloat(e.target.value) : null })}
+                              className="mt-1"
+                            />
+                          </div>
+                        ))}
+                        <div className="col-span-2 sm:col-span-3 lg:col-span-6">
+                          <UILabel className="text-xs text-muted-foreground">Observação (opcional)</UILabel>
+                          <Input
+                            value={t.notes ?? ''}
+                            onChange={e => setTypology(i, { notes: e.target.value })}
+                            placeholder="Ex.: última unidade, vista para o parque…"
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Características do imóvel + comodidades do condomínio (aparecem na página pública) */}
+            <div className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium">Características do imóvel</label>
+                <div className="flex flex-wrap gap-2">
+                  {PROPERTY_FEATURES.map(a => {
+                    const on = (f.features ?? []).includes(a.slug);
+                    return (
+                      <button
+                        key={a.slug}
+                        type="button"
+                        onClick={() => toggleAmenity('features', a.slug)}
+                        className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${on ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border text-muted-foreground hover:bg-muted'}`}
+                      >
+                        {a.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium">Comodidades do condomínio</label>
+                <div className="flex flex-wrap gap-2">
+                  {CONDO_FEATURES.map(a => {
+                    const on = (f.condo_features ?? []).includes(a.slug);
+                    return (
+                      <button
+                        key={a.slug}
+                        type="button"
+                        onClick={() => toggleAmenity('condo_features', a.slug)}
+                        className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${on ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border text-muted-foreground hover:bg-muted'}`}
+                      >
+                        {a.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
             </div>
           </div>
 
@@ -765,9 +1432,37 @@ export default function Properties() {
       {photosProperty && (
         <PropertyPhotosDialog
           property={photosProperty}
-          onClose={() => setPhotosProperty(null)}
+          // Recarrega a lista ao fechar: trocar a capa (ou subir/apagar foto) tem
+          // que refletir na miniatura do card, que já foi renderizada com a capa antiga.
+          onClose={() => { setPhotosProperty(null); load(); }}
         />
       )}
+
+      {/* Book dialog — ver/baixar o PDF do book salvo no imóvel */}
+      {bookProperty && (
+        <PropertyBookDialog
+          property={bookProperty}
+          onClose={() => setBookProperty(null)}
+        />
+      )}
+
+      {/* Importação em lote com IA (books/URLs -> rascunhos) */}
+      <PropertyImportDialog
+        open={importOpen}
+        refreshSignal={importRefresh}
+        onClose={() => setImportOpen(false)}
+        onManual={() => { setImportOpen(false); openCreate(); }}
+        onReview={async id => {
+          try {
+            const p = await propertiesService.get(id);
+            openEdit(p);
+          } catch {
+            toast.error('Não consegui carregar o imóvel pra revisão');
+          }
+        }}
+        onChanged={() => load()}
+      />
+
 
       {/* Batch generate dialog */}
       <Dialog open={batchModalOpen} onOpenChange={open => { if (!batchRunning) setBatchModalOpen(open); }}>
@@ -856,16 +1551,22 @@ export default function Properties() {
 function PropertyCard({
   property: p,
   onEdit,
+  onStatusChange,
   onDelete,
   onManagePhotos,
+  onViewBook,
+  onLanding,
   score,
   onCalculateScore,
   scoringId,
 }: {
   property: Property;
   onEdit: (p: Property) => void;
+  onStatusChange: (p: Property, status: string) => void;
   onDelete: (p: Property) => void;
   onManagePhotos: (p: Property) => void;
+  onViewBook: (p: Property) => void;
+  onLanding: (p: Property) => void;
   score?: number;
   onCalculateScore: () => void;
   scoringId: string | null;
@@ -874,15 +1575,72 @@ function PropertyCard({
     ?? formatCurrency(p.sale_price)
     ?? formatCurrency(p.rent_price);
 
+  // [redesign] placeholder da foto com gradiente da marca (varia por imóvel), estilo protótipo
+  const PROP_GRADS = [
+    'linear-gradient(135deg,#7C3AED,#4F46E5)',
+    'linear-gradient(135deg,#0EA5A4,#4F46E5)',
+    'linear-gradient(135deg,#D97706,#9333EA)',
+    'linear-gradient(135deg,#9333EA,#E11D48)',
+    'linear-gradient(135deg,#4F46E5,#7C3AED)',
+    'linear-gradient(135deg,#16A34A,#0EA5A4)',
+  ];
+  const propGradIdx =
+    Math.abs(String(p.id).split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % PROP_GRADS.length;
+
+  // Foto de capa: a mesma que aparece no site (o backend aplica a regra "capa
+  // marcada > primeira foto"). O gradiente deixa de ser o único desenho possível
+  // e passa a ser só o vazio: imóvel sem foto, ou foto que não carregou.
+  // Guarda a URL que falhou, não um booleano: o card é reaproveitado (a key é o
+  // id do imóvel), então um booleano deixaria a capa nova bloqueada para sempre
+  // depois de uma única falha de carregamento.
+  const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
+  const rawCoverUrl = p.cover_photo_url || null;
+  const coverUrl = rawCoverUrl && rawCoverUrl !== failedCoverUrl ? rawCoverUrl : null;
+
   return (
     <div className="group relative flex flex-col rounded-xl border border-border bg-card hover:shadow-md transition-shadow overflow-hidden">
-      {/* Placeholder thumbnail */}
-      <div className="h-36 bg-muted flex items-center justify-center relative">
-        <Building2 className="h-10 w-10 text-muted-foreground/30" />
-        <div className="absolute top-2 left-2 flex gap-1">
-          <span className={`text-xs px-2 py-0.5 rounded font-medium ${STATUS_COLORS[p.status] ?? ''}`}>
-            {STATUS_LABELS[p.status] ?? p.status}
-          </span>
+      {/* Capa do imóvel — cai no gradiente da marca quando não há foto */}
+      <div
+        className="h-36 flex items-center justify-center relative"
+        style={{ background: PROP_GRADS[propGradIdx] }}
+      >
+        {coverUrl ? (
+          <img
+            src={coverUrl}
+            alt={p.title}
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover"
+            onError={() => setFailedCoverUrl(coverUrl)}
+          />
+        ) : (
+          <Building2 className="h-10 w-10 text-white/30" />
+        )}
+        <div className="absolute top-2 left-2 flex gap-1 z-10">
+          {/* Badge de status vira um menu: muda o status direto no card, sem abrir o modal.
+              z-10 mantém clicável por cima do overlay de ações que aparece no hover. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+              <button
+                type="button"
+                title="Alterar status"
+                className={`text-xs px-2 py-0.5 rounded font-medium inline-flex items-center gap-1 cursor-pointer ${STATUS_COLORS[p.status] ?? ''}`}
+              >
+                {STATUS_LABELS[p.status] ?? p.status}
+                <ChevronDown className="h-3 w-3 opacity-70" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                <DropdownMenuItem
+                  key={value}
+                  onClick={e => { e.stopPropagation(); onStatusChange(p, value); }}
+                >
+                  <Check className={`h-3.5 w-3.5 mr-2 ${p.status === value ? 'opacity-100' : 'opacity-0'}`} />
+                  {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           {p.exclusive && (
             <span className="text-xs px-2 py-0.5 rounded font-medium bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 flex items-center gap-1">
               <Lock className="h-2.5 w-2.5" />
@@ -904,6 +1662,14 @@ function PropertyCard({
           </Button>
           <Button size="sm" variant="secondary" onClick={() => onManagePhotos(p)} title="Gerenciar fotos">
             <Image className="h-3.5 w-3.5" />
+          </Button>
+          {p.has_book && (
+            <Button size="sm" variant="secondary" onClick={() => onViewBook(p)} title="Ver book">
+              <FileText className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          <Button size="sm" variant="secondary" onClick={() => onLanding(p)} title="Landing Page de anúncio">
+            <Megaphone className="h-3.5 w-3.5" />
           </Button>
           <Button size="sm" variant="destructive" onClick={() => onDelete(p)}>
             <Trash2 className="h-3.5 w-3.5" />
@@ -941,6 +1707,15 @@ function PropertyCard({
               <span className="flex items-center gap-1"><Ruler className="h-3.5 w-3.5" />{p.icon_summary.useful_area_m2}m²</span>
             )}
           </div>
+        )}
+
+        {/* Empreendimento com várias plantas: mostra a faixa no card, senão o
+            card do lançamento fingiria ser de uma unidade só. */}
+        {(p.typologies?.length ?? 0) > 1 && (
+          <p className="mb-2 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">{p.typologies!.length} tipologias</span>
+            {typologyHeadline(p.typologies) ? ` · ${typologyHeadline(p.typologies)}` : ''}
+          </p>
         )}
 
         {p.address_city && (
@@ -1317,3 +2092,7 @@ function PropertyPhotosDialog({
     </Dialog>
   );
 }
+
+// PropertyBookDialog — visualiza e baixa o book (PDF) salvo no imóvel.
+// PropertyBookDialog foi extraído para @/components/properties/PropertyBookDialog
+// (compartilhado com a aba dedicada "Books").

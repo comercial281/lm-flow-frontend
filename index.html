@@ -2,14 +2,33 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!--
+      interactive-widget=resizes-content: faz o Chrome do Android encolher a
+      página quando o teclado abre, em vez de só deslizá-la por cima. Com isso
+      a barra de digitar do chat fica correta já no primeiro quadro, sem
+      esperar o JavaScript, e as caixas flutuantes se reposicionam acima do
+      teclado. O iOS ignora a chave — lá quem resolve é o useKeyboardInset.
+      Não há dupla contagem: quando o Chrome encolhe o layout, o innerHeight
+      encolhe junto, então o hook mede ~0 e não subtrai de novo.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+
+    <!-- SEO: app/CRM/landings NUNCA indexados (padrão fechado). Só os portais
+         imobiliários (app Next.js separado) serão indexáveis, tratado depois. -->
+    <meta name="robots" content="noindex, nofollow" />
 
     <!-- PWA manifest -->
     <link rel="manifest" href="/manifest.json" />
 
     <!-- Ícones -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
     <!-- iOS PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes" />

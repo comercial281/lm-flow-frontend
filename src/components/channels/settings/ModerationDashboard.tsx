@@ -12,7 +12,7 @@ import {
   Skeleton,
   Textarea,
   Label,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import {
   Shield,
   CheckCircle2,

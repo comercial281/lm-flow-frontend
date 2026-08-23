@@ -1,5 +1,6 @@
 import { useLanguage } from '@/hooks/useLanguage';
-import { Badge, Card, CardContent, Button } from '@evoapi/design-system';
+import { formatDateBR } from '@/utils/dateUtils';
+import { Badge, Card, CardContent, Button } from '@/components/ui/ds';
 import { Wand, Edit, Trash2, Globe, Loader2 } from 'lucide-react';
 import { CustomTool } from '@/types/ai';
 
@@ -96,7 +97,7 @@ export default function CustomToolCard({
           {/* Examples Count */}
           <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
             <span>{t('card.examples', { count: tool.examples?.length || 0 })}</span>
-            <span>{t('card.createdAt')} {new Date(tool.created_at).toLocaleDateString('pt-BR')}</span>
+            <span>{t('card.createdAt')} {formatDateBR(tool.created_at)}</span>
           </div>
         </div>
 

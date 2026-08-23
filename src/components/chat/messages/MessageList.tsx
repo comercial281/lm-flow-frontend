@@ -3,6 +3,7 @@ import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { FacebookCommentModeration } from '@/types/channels/inbox';
 
 import { useLanguage } from '@/hooks/useLanguage';
+import { useKeyboardInsetEffect } from '@/hooks/useKeyboardInset';
 
 import { Button } from '@evoapi/design-system/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@evoapi/design-system/avatar';
@@ -133,6 +134,13 @@ const MessageList: React.FC<MessageListProps> = ({
 
   // 🎯 SCROLL POSITION SIMPLES (WhatsApp style)
   const scrollHeightRef = useRef(0);
+
+  // Espelho de isNearBottom em ref: o efeito do teclado precisa do valor atual
+  // sem virar dependência (senão ele se re-inscreveria a cada rolagem).
+  const isNearBottomRef = useRef(true);
+  useEffect(() => {
+    isNearBottomRef.current = isNearBottom;
+  }, [isNearBottom]);
 
   // 🎯 FLUXO SIMPLES: 1) Carrega → 2) Vai pro final → 3) Scroll pra cima sem mexer
   // 🔧 CORREÇÃO: Usar apenas primeira mensagem para detectar conversa, não recomputar sempre
@@ -306,6 +314,27 @@ const MessageList: React.FC<MessageListProps> = ({
       setIsNearBottom(true);
     }
   }, []);
+
+  // Teclado do celular subindo: a área de mensagens encolhe, então gruda no
+  // fim para a última mensagem não ficar escondida atrás da barra de digitar.
+  // Roda a cada quadro da animação, então a lista acompanha em vez de firmar
+  // uma vez e ficar para trás.
+  useKeyboardInsetEffect(
+    useCallback((inset: number) => {
+      if (inset <= 0) return; // fechando: o navegador já reajusta sozinho
+      if (!isNearBottomRef.current) return; // lendo o histórico: não sequestrar a rolagem
+      const container = scrollRef.current;
+      if (!container) return;
+      // Se mal dá para rolar, colar no fim não muda nada e ainda arriscaria
+      // cair no gatilho de "carregar mais" (scrollTop < 100) do handleScroll.
+      if (container.scrollHeight - container.clientHeight <= 100) return;
+      // scrollTop direto, e não o scrollToBottom acima: aquele é suave e mexe
+      // em estado. A altura do container muda a cada quadro enquanto o teclado
+      // sobe, então a animação suave perseguiria um alvo velho e chegaria
+      // curta — e o setState re-renderizaria a lista inteira a cada quadro.
+      container.scrollTop = container.scrollHeight;
+    }, []),
+  );
 
   // Loading durante carregamento inicial
   if (isInitialLoading) {

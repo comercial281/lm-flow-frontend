@@ -10,6 +10,7 @@ interface ChannelsHeaderProps {
   onSearchChange: (value: string) => void;
   onNewChannel: () => void;
   onClearSelection: () => void;
+  canCreate?: boolean;
 }
 
 export default function ChannelsHeader({
@@ -19,11 +20,12 @@ export default function ChannelsHeader({
   onSearchChange,
   onNewChannel,
   onClearSelection,
+  canCreate = true,
 }: ChannelsHeaderProps) {
   const { t } = useLanguage('channels');
   const { can, isReady } = useUserPermissions();
 
-  const primaryAction: HeaderAction | undefined = isReady && can('channels', 'create') ? {
+  const primaryAction: HeaderAction | undefined = isReady && canCreate && can('channels', 'create') ? {
     label: t('actions.newChannel'),
     icon: <Plus className="h-4 w-4" />,
     onClick: onNewChannel,

@@ -12,7 +12,7 @@ import {
   Label as UILabel,
   Textarea,
   Switch,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Label } from '@/types/settings';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 

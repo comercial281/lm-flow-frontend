@@ -1,4 +1,3 @@
-export { DashboardTour } from './DashboardTour';
 export { ChatTour } from './ChatTour';
 export { ContactsTour } from './ContactsTour';
 export { AgentsTour, AgentsCustomToolsTour, AgentsCustomMCPsTour } from './AgentsTour';

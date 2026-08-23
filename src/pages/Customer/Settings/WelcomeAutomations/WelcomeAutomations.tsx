@@ -11,7 +11,7 @@ import {
   Input,
   Label as UILabel,
   Textarea,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Zap, Plus, Edit, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import {

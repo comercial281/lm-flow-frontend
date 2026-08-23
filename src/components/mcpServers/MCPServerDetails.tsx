@@ -8,7 +8,7 @@ import {
   Badge,
   Button,
   Separator,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Server, Edit, Wrench, Settings, FileText } from 'lucide-react';
 import { MCPServer } from '@/types/ai';
 

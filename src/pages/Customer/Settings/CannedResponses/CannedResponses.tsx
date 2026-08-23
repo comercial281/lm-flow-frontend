@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   Button,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { MessageSquare } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 

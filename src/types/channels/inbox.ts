@@ -1,5 +1,4 @@
 import type { Role } from '@/types/auth';
-import type { AgentBot } from '@/components/channels/settings/helpers/agentBotHelpers';
 import type { PaginatedResponse, PaginationMeta, StandardResponse } from '@/types/core';
 
 // ============================================
@@ -22,7 +21,12 @@ export interface Inbox {
   channel_type: string;
   avatar_url?: string;
   provider?: string;
-  provider_config?: Record<string, unknown>;
+  // `whatsapp_profile_name`: nome cadastrado no PERFIL do WhatsApp daquele
+  // número (ex. "Nicholas corretor") — diferente de `name` (rótulo que o
+  // usuário deu ao canal no LM Flow) e de `display_name`. Só existe pra
+  // canais Evolution/Evolution Go, preenchido pelo
+  // Evolution::InstanceProfileSyncService no backend.
+  provider_config?: Record<string, unknown> & { whatsapp_profile_name?: string };
   // Channel-specific fields
   medium?: string;
   phone_number?: string;
@@ -106,7 +110,24 @@ export interface Inbox {
   };
   web_widget_script?: string;
   default_conversation_status?: string;
+  // Corretor dono desta instância (número pessoal dele) — a foto real do
+  // WhatsApp dela vira o avatar de "Responsável" em vez do avatar genérico.
+  owner_user_id?: string | null;
+  owner_name?: string | null;
+  /** A IA está operando nesta instância — bot vinculado (`agent_bot_inbox`) com status `active`. */
+  has_active_agent_bot?: boolean;
+  // Estado da conexão da instância, já resolvido pelo backend numa palavra só.
+  // Ausente/nulo = o canal não mantém sessão (Cloud API, 360dialog, Notificame
+  // e todo canal que não é WhatsApp falam por token e não têm o que cair), e aí
+  // a tela não desenha selo nenhum — inventar "desconectado" ali seria falso.
+  connection_status?: ChannelConnectionStatus | null;
+  // Quando a instância caiu (ISO). Só faz sentido com `connection_status` em
+  // 'disconnected' — é o "fora do ar desde" do selo.
+  disconnected_at?: string | null;
 }
+
+// As três respostas possíveis para "essa instância está funcionando?".
+export type ChannelConnectionStatus = 'connected' | 'connecting' | 'disconnected';
 
 // ============================================
 // Channel Creation Payload Types
@@ -368,6 +389,11 @@ export interface AgentChannel {
   role: Role;
   availability_status: string;
   confirmed: boolean;
+  /* Só vem na lista de membros de uma instância: true = o acesso não foi
+     concedido por um humano, o sistema liberou para a pessoa conseguir abrir os
+     leads que já são dela. Ela não entra na fila de leads novos, e tentar
+     desmarcar é recusado lá atrás — por isso a tela não a mostra como marcada. */
+  auto_granted?: boolean;
   ui_flags: {
     is_creating: boolean;
     is_fetching: boolean;
@@ -383,6 +409,33 @@ export interface AgentsResponse {
 // ============================================
 // Agent Bots Types
 // ============================================
+
+// Bot externo (webhook/n8n) conectado a um inbox. NÃO é a IA Vendedora — esta
+// família nunca teve tela de criação no app, e a aba que a exibia dentro do
+// canal saiu em 2026-08-07. Os tipos ficam porque o serviço ainda existe para
+// leitura/desconexão fora da UI.
+export interface AgentBot {
+  id: string;
+  name: string;
+  description: string;
+  outgoing_url: string;
+  api_key?: string;
+  bot_type: string;
+  bot_provider: string;
+  thumbnail?: string;
+  message_signature?: string;
+  text_segmentation_enabled: boolean;
+  text_segmentation_limit: number;
+  text_segmentation_min_size: number;
+  delay_per_character: number;
+  debounce_time: number;
+  access_token?: string;
+  bot_config?: {
+    webhook_url?: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
 
 export interface AgentBotsResponse {
   data: AgentBot[];
@@ -564,6 +617,14 @@ export interface EvolutionConnectionParams {
 
 export interface EvolutionAuthorizationResponse {
   success: boolean;
+  // O nome REAL da instância no servidor da Evolution, decidido pelo backend
+  // (prefixado pelo cliente: lmf_<slug>_<rótulo>). O nome que o front manda é
+  // só um rótulo — gravar o do front em provider_config faria todo QR,
+  // settings e logout apontarem para uma instância que não existe.
+  instance_name?: string;
+  // true quando o backend reaproveitou a instância que o "Testar Conexão"
+  // deixou, em vez de criar outra.
+  reused?: boolean;
   instance_uuid?: string;
   instance_token?: string;
   qrcode?: string;

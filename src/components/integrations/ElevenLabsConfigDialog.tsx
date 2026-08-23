@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
   Slider,
-} from '@evoapi/design-system';
+} from '@/components/ui/ds';
 import { Play, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 
