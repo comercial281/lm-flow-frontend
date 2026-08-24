@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/ds';
 import {
   FileInput, RefreshCw, Edit, ToggleLeft, ToggleRight, AlertTriangle, ArrowRight, Download,
-  Stethoscope, Check, X, Copy, Eye, EyeOff, Trash2, Loader2,
+  Stethoscope, Check, X, Copy, Eye, EyeOff, Trash2, Loader2, Ban,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import EmptyState from '@/components/base/EmptyState';
@@ -25,9 +25,12 @@ import {
   LeadAdsFormConfigFormData,
   MetaForm,
   MetaFormsPageError,
+  IgnoredLeadForm,
   BackfillResult,
   MetaTokenDebug,
 } from '@/services/leadAds/leadAdsFormsService';
+import { metaPagesService, type MetaPage } from '@/services/integrations/metaPagesService';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useAutomationResources } from '../LeadAutomations/LeadAutomationsEditors';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
@@ -110,6 +113,15 @@ export default function LeadAdsForms() {
   const [pageFilter, setPageFilter] = useState<string>('');
   const [syncing, setSyncing] = useState(false);
   const [syncedOnce, setSyncedOnce] = useState(false);
+  // Formulários que estão BARRANDO lead por não estarem cadastrados aqui. Desde
+  // 24/08/2026 lead de formulário não cadastrado não entra; sem esta lista, um
+  // formulário certo esquecido no cadastro barraria leads em silêncio.
+  const [ignoredLeads, setIgnoredLeads] = useState<IgnoredLeadForm[]>([]);
+  // Páginas conectadas — só pra chave "receber leads de qualquer formulário
+  // desta página". Editar página é de super-admin, então falha em silêncio.
+  const [metaPages, setMetaPages] = useState<MetaPage[]>([]);
+  const [pageBusy, setPageBusy] = useState<string | null>(null);
+  const isSuperAdmin = useIsSuperAdmin();
   const [cleanupBusy, setCleanupBusy] = useState(false);
 
   // Diagnóstico do token da Meta (super-admin): app, permissões, página e o token salvo.
@@ -233,14 +245,21 @@ export default function LeadAdsForms() {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleSync = async () => {
+  // `silent` = sincronização automática ao abrir a tela: sem toast e sem barulho
+  // de erro. Ela existe para o quadro "Leads ignorados" aparecer sozinho — quem
+  // está barrando lead não vai clicar em Sincronizar pra descobrir que está.
+  const handleSync = async (silent = false) => {
     setSyncing(true);
     try {
       const result = await leadAdsFormsService.syncMetaForms();
       setMetaForms(result.data);
       setMetaPageErrors(result.errors);
+      setIgnoredLeads(result.ignored_leads);
       setMetaError(result.data.length === 0 ? (result.error ?? null) : null);
       setSyncedOnce(true);
+      if (silent) {
+        return;
+      }
       if (result.data.length === 0 && result.error) {
         toast.error(result.error);
       } else {
@@ -249,9 +268,52 @@ export default function LeadAdsForms() {
         toast.success(`${result.data.length} formulário(s) encontrado(s)${sufixo}`);
       }
     } catch {
-      toast.error('Erro ao sincronizar formulários');
+      if (!silent) toast.error('Erro ao sincronizar formulários');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  // Sincroniza sozinho ao abrir, uma vez: é o que traz o quadro "Leads
+  // ignorados" e a lista de formulários disponíveis sem exigir um clique.
+  useEffect(() => { handleSync(true); }, []);
+
+  // Páginas conectadas (pra chave da página). Só o super-admin edita, então um
+  // erro aqui não vira aviso na tela — o quadro simplesmente não mostra a chave.
+  const loadMetaPages = useCallback(async () => {
+    try {
+      setMetaPages(await metaPagesService.getAll());
+    } catch {
+      setMetaPages([]);
+    }
+  }, []);
+
+  useEffect(() => { loadMetaPages(); }, [loadMetaPages]);
+
+  // Liga/desliga "receber leads de qualquer formulário desta página".
+  const toggleAcceptUnconfigured = async (page: MetaPage) => {
+    const turningOn = !page.accept_unconfigured_forms;
+    if (turningOn) {
+      const ok = window.confirm(
+        `Esta página vai voltar a aceitar lead de QUALQUER formulário, inclusive dos que não estão cadastrados aqui.\n\nPágina: ${page.page_name}\n\nConfirmar?`,
+      );
+      if (!ok) return;
+    }
+
+    setPageBusy(page.id);
+    try {
+      await metaPagesService.update(page.id, { accept_unconfigured_forms: turningOn });
+      await loadMetaPages();
+      await handleSync(true);
+      toast.success(
+        turningOn
+          ? 'Esta página passa a aceitar qualquer formulário'
+          : 'Só entram leads dos formulários cadastrados',
+      );
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não foi possível mudar essa chave'));
+    } finally {
+      setPageBusy(null);
     }
   };
 
@@ -424,6 +486,43 @@ export default function LeadAdsForms() {
     return syncedPages.find(p => p.id === metaPageId)?.name ?? fallback ?? null;
   };
 
+  // --- Leads ignorados (formulário não cadastrado) ---
+
+  // O quadro segue o filtro de página, como o resto da tela.
+  const visibleIgnored = ignoredLeads.filter(
+    f => !pageFilter || metaPages.find(p => p.id === pageFilter)?.page_id === f.page_id,
+  );
+
+  const totalIgnoredLeads = visibleIgnored.reduce((sum, f) => sum + f.lead_count, 0);
+
+  // O nome da página vem do page_id do Facebook (é o que o relatório devolve),
+  // e só aparece quando há mais de uma conectada.
+  const pageNameOfIgnored = (f: IgnoredLeadForm): string | null => {
+    if (syncedPages.length <= 1) return null;
+    return metaPages.find(p => p.page_id === f.page_id)?.page_name ?? null;
+  };
+
+  // Páginas que estão barrando algo — são as que ganham a chave de escape.
+  const ignoredPages = metaPages.filter(p => visibleIgnored.some(f => f.page_id === p.page_id));
+
+  // Cadastrar um formulário direto do quadro: reaproveita o mesmo modal da lista
+  // "Disponíveis no Facebook". Se o formulário não veio na sincronização (foi
+  // apagado no Facebook, ou é de página que falhou), monta o mínimo pelo que o
+  // relatório trouxe — senão o botão não teria o que abrir.
+  const openCreateFromIgnored = (f: IgnoredLeadForm) => {
+    const known = metaForms.find(mf => mf.id === f.form_id);
+    openCreate(
+      known ?? {
+        id:           f.form_id,
+        name:         f.form_name,
+        status:       'ACTIVE',
+        leads_count:  f.lead_count,
+        page_id:      f.page_id,
+        meta_page_id: metaPages.find(p => p.page_id === f.page_id)?.id ?? null,
+      },
+    );
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
@@ -460,7 +559,7 @@ export default function LeadAdsForms() {
             onClick={handleCleanupLabels}
             disabled={cleanupBusy}
           />
-          <Button onClick={handleSync} disabled={syncing}>
+          <Button onClick={() => handleSync()} disabled={syncing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
             {syncing ? 'Sincronizando...' : 'Sincronizar formulários'}
           </Button>
@@ -693,18 +792,21 @@ export default function LeadAdsForms() {
               )}
 
               {/* Diagnóstico de roteamento em linguagem simples: os leads recentes
-                  estão pegando a etiqueta do formulário? Se algum entrou sem, diz de
-                  qual formulário (pelo nome) e o que fazer. Sem ids/números. */}
+                  estão entrando? Se algum ficou de fora, diz de qual formulário
+                  (pelo nome) e o que fazer. Sem ids/números.
+                  Desde 24/08/2026 o lead de formulário não cadastrado NÃO entra, então
+                  o texto muda conforme a trava esteja valendo nesta página ou não —
+                  dizer "entrou sem etiqueta" quando o lead nem entrou seria mentira. */}
               {typeof debug.total_recent_leads === 'number' && (
                 debug.total_recent_leads === 0 ? (
                   <div className="rounded-lg border border-border p-3 text-xs text-muted-foreground">
-                    Nenhum lead recebido por esta página ainda — quando chegar, este quadro mostra se ele entrou com a etiqueta certa.
+                    Nenhum lead recebido por esta página ainda — quando chegar, este quadro mostra se ele entrou.
                   </div>
                 ) : debug.routing_ok ? (
                   <div className="rounded-lg border border-green-500/40 bg-green-500/10 p-3 flex items-start gap-2">
                     <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                     <p className="text-sm">
-                      <strong>Tudo certo.</strong> Os últimos leads entraram com as etiquetas dos formulários configurados.
+                      <strong>Tudo certo.</strong> Os últimos leads vieram de formulários cadastrados e entraram com as etiquetas deles.
                     </p>
                   </div>
                 ) : (
@@ -713,10 +815,12 @@ export default function LeadAdsForms() {
                       <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium">
-                          {debug.unmatched_leads} lead{(debug.unmatched_leads ?? 0) > 1 ? 's' : ''} entr{(debug.unmatched_leads ?? 0) > 1 ? 'aram' : 'ou'} sem a etiqueta do imóvel
+                          {debug.unmatched_blocked
+                            ? <>{debug.unmatched_leads} lead{(debug.unmatched_leads ?? 0) > 1 ? 's' : ''} não {(debug.unmatched_leads ?? 0) > 1 ? 'entraram' : 'entrou'}</>
+                            : <>{debug.unmatched_leads} lead{(debug.unmatched_leads ?? 0) > 1 ? 's' : ''} entr{(debug.unmatched_leads ?? 0) > 1 ? 'aram' : 'ou'} sem a etiqueta do imóvel</>}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Vieram de formulário{(debug.unmatched_forms?.length ?? 0) > 1 ? 's' : ''} que ainda <strong>não</strong> {(debug.unmatched_forms?.length ?? 0) > 1 ? 'estão' : 'está'} configurado{(debug.unmatched_forms?.length ?? 0) > 1 ? 's' : ''} aqui:
+                          {debug.unmatched_blocked ? 'Vieram de' : 'Vieram de'} formulário{(debug.unmatched_forms?.length ?? 0) > 1 ? 's' : ''} que <strong>não</strong> {(debug.unmatched_forms?.length ?? 0) > 1 ? 'estão' : 'está'} cadastrado{(debug.unmatched_forms?.length ?? 0) > 1 ? 's' : ''} aqui:
                         </p>
                       </div>
                     </div>
@@ -732,7 +836,9 @@ export default function LeadAdsForms() {
                       ))}
                     </ul>
                     <p className="text-xs text-muted-foreground mt-2">
-                      👉 Clique em <strong>Sincronizar formulários</strong>, ache {(debug.unmatched_forms?.length ?? 0) > 1 ? 'esses formulários' : 'esse formulário'} na lista e configure a etiqueta do imóvel. A partir daí os leads dele entram certos.
+                      👉 {debug.unmatched_blocked
+                        ? <>Se {(debug.unmatched_forms?.length ?? 0) > 1 ? 'esses formulários são seus' : 'esse formulário é seu'}, cadastre {(debug.unmatched_forms?.length ?? 0) > 1 ? 'eles' : 'ele'} no quadro <strong>Leads ignorados</strong> desta tela. A partir daí os leads entram.</>
+                        : <>Ache {(debug.unmatched_forms?.length ?? 0) > 1 ? 'esses formulários' : 'esse formulário'} na lista e configure a etiqueta do imóvel. A partir daí os leads dele entram certos.</>}
                     </p>
                   </div>
                 )
@@ -905,6 +1011,87 @@ export default function LeadAdsForms() {
               {p.name}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Leads ignorados — o rastro da trava.
+          A conexão com a Meta é da PÁGINA inteira, então o Facebook entrega o lead
+          de qualquer formulário dela. Desde 24/08/2026 só entra lead de formulário
+          cadastrado aqui; este quadro é onde o que ficou de fora aparece, para o
+          caso de um formulário certo ter sido esquecido. Fica ANTES da lista de
+          cadastrados de propósito: é a única coisa nesta tela que representa lead
+          que não chegou. */}
+      {visibleIgnored.length > 0 && (
+        <div className="mb-8 rounded-xl border border-amber-500/40 bg-amber-500/5 overflow-hidden">
+          <div className="px-5 py-4 border-b border-amber-500/20">
+            <div className="flex items-start gap-2">
+              <Ban className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">
+                  {totalIgnoredLeads} lead{totalIgnoredLeads > 1 ? 's' : ''} não {totalIgnoredLeads > 1 ? 'entraram' : 'entrou'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {visibleIgnored.length > 1 ? 'Vieram destes formulários, que não estão' : 'Veio deste formulário, que não está'}{' '}
+                  cadastrado{visibleIgnored.length > 1 ? 's' : ''} aqui. Se algum deles é seu, cadastre — os próximos leads entram.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="divide-y divide-amber-500/15">
+            {visibleIgnored.map(f => (
+              <div key={f.form_id} className="flex items-center gap-4 px-5 py-3">
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium truncate block">{f.form_name}</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {f.lead_count} lead{f.lead_count > 1 ? 's' : ''} ignorado{f.lead_count > 1 ? 's' : ''}
+                    {pageNameOfIgnored(f) ? ` • 📘 ${pageNameOfIgnored(f)}` : ''}
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => openCreateFromIgnored(f)}>
+                  Cadastrar
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {/* Válvula de escape, por página. Só o super-admin edita página, então
+              para o resto a chave nem aparece — botão que só dá 403 é pior que
+              botão nenhum. */}
+          {isSuperAdmin && ignoredPages.length > 0 && (
+            <div className="px-5 py-3 border-t border-amber-500/20 bg-background/40 space-y-2">
+              {ignoredPages.map(page => (
+                <div key={page.id} className="flex items-start gap-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleAcceptUnconfigured(page)}
+                    disabled={pageBusy === page.id}
+                    className="flex-shrink-0 mt-0.5 disabled:opacity-50"
+                    title={
+                      page.accept_unconfigured_forms
+                        ? 'Ligado — clique para só aceitar os formulários cadastrados'
+                        : 'Desligado — clique para aceitar qualquer formulário desta página'
+                    }
+                  >
+                    {pageBusy === page.id
+                      ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      : page.accept_unconfigured_forms
+                        ? <ToggleRight className="h-5 w-5 text-green-500" />
+                        : <ToggleLeft className="h-5 w-5 text-muted-foreground" />}
+                  </button>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium">
+                      Receber leads de qualquer formulário desta página
+                      {ignoredPages.length > 1 && <> — 📘 {page.page_name}</>}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Ligado, tudo o que a página produzir entra no CRM, cadastrado ou não.
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
