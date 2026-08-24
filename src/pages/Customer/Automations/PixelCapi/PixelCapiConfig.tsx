@@ -4,6 +4,7 @@ import {
   CAPI_EVENT_LABELS,
   CAPI_INTENT_LABELS,
   type CapiConfig,
+  type CapiConnectionTest,
   type CapiStageRule,
 } from '@/services/capi/capiConfigService';
 
@@ -27,6 +28,10 @@ export default function PixelCapiConfig() {
   const [testEventCode, setTestEventCode] = useState('');
   const [currency, setCurrency] = useState('BRL');
   const [stageMap, setStageMap] = useState<Record<string, CapiStageRule>>({});
+
+  // Resultado do "Testar conexão".
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<CapiConnectionTest | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -91,6 +96,38 @@ export default function PixelCapiConfig() {
     }
   }
 
+  // Testa a credencial que está NA TELA, não a salva: o erro acontece na hora
+  // de colar, e obrigar a salvar antes para descobrir que está errada grava a
+  // credencial ruim por cima da que funcionava.
+  async function handleTestConnection() {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const result = await capiConfigService.testConnection({
+        pixel_id: pixelId.trim(),
+        // Token vazio = usa o que já está gravado (o campo vem em branco quando
+        // já existe um token salvo, e isso é proposital).
+        ...(accessToken.trim() ? { access_token: accessToken.trim() } : {}),
+        test_event_code: testEventCode.trim() || null,
+      });
+      setTestResult(result);
+    } catch {
+      setTestResult({
+        ok: false,
+        dataset_name: null,
+        test_event_sent: false,
+        message: 'Não foi possível concluir o teste. Tente de novo em alguns segundos.',
+      });
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  // Mexeu no campo, o veredito anterior não vale mais.
+  function invalidateTest() {
+    setTestResult(null);
+  }
+
   if (loading) {
     return <div className="p-6 text-sm text-muted-foreground">Carregando…</div>;
   }
@@ -124,7 +161,15 @@ export default function PixelCapiConfig() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1">
             <label className={labelCls}>Pixel ID</label>
-            <input className={inputCls} value={pixelId} onChange={(e) => setPixelId(e.target.value)} placeholder="Ex: 1543903880225628" />
+            <input
+              className={inputCls}
+              value={pixelId}
+              onChange={(e) => {
+                setPixelId(e.target.value);
+                invalidateTest();
+              }}
+              placeholder="Ex: 1543903880225628"
+            />
           </div>
           <div className="space-y-1">
             <label className={labelCls}>Token CAPI</label>
@@ -132,7 +177,10 @@ export default function PixelCapiConfig() {
               className={inputCls}
               type="password"
               value={accessToken}
-              onChange={(e) => setAccessToken(e.target.value)}
+              onChange={(e) => {
+                setAccessToken(e.target.value);
+                invalidateTest();
+              }}
               placeholder={config?.access_token_set ? '•••••• (configurado — deixe vazio p/ manter)' : 'Cole o token da Conversions API'}
             />
           </div>
@@ -142,8 +190,59 @@ export default function PixelCapiConfig() {
           </div>
           <div className="space-y-1">
             <label className={labelCls}>Código de teste (opcional)</label>
-            <input className={inputCls} value={testEventCode} onChange={(e) => setTestEventCode(e.target.value)} placeholder="TEST12345 (Events Manager)" />
+            <input
+              className={inputCls}
+              value={testEventCode}
+              onChange={(e) => {
+                setTestEventCode(e.target.value);
+                invalidateTest();
+              }}
+              placeholder="TEST12345 (Events Manager)"
+            />
           </div>
+        </div>
+
+        {/* Testar conexão — descobrir o problema aqui, não no primeiro lead real. */}
+        <div className="space-y-3 border-t border-border pt-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleTestConnection}
+              disabled={testing}
+              className="rounded-md border border-input px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-60"
+            >
+              {testing ? 'Testando…' : 'Testar conexão'}
+            </button>
+            <p className="text-xs text-muted-foreground">
+              Pergunta à Meta se o pixel e o token funcionam, e mostra o motivo quando não funcionam.
+              {testEventCode.trim()
+                ? ' Com o código de teste preenchido, envia também um evento de amostra — que não conta em relatório nem em otimização.'
+                : ' Nenhum evento é enviado: só a credencial é conferida.'}
+            </p>
+          </div>
+
+          {testResult && (
+            <div
+              role="status"
+              className={`rounded-md border p-3 text-sm ${
+                testResult.ok
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                  : 'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300'
+              }`}
+            >
+              <p className="font-medium">
+                {testResult.ok ? 'Conexão funcionando' : 'A Meta recusou'}
+              </p>
+              <p className="mt-1">{testResult.message}</p>
+              {!testResult.ok && testResult.stage === 'credentials' && (
+                <p className="mt-2 text-xs opacity-80">
+                  Confira, nesta ordem: se o token não expirou, se o usuário do sistema dono do token
+                  tem acesso a este conjunto de dados no Gerenciador de Negócios, e se o Pixel ID é o
+                  desse conjunto.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
