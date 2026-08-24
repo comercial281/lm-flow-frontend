@@ -47,11 +47,12 @@ export interface CapiConfigUpdate {
 // Resultado do "Testar conexão": diagnóstico, não erro de API — por isso vem
 // com HTTP 200 mesmo quando a Meta recusou. O `ok` de dentro é que decide.
 export interface CapiConnectionTest {
-  ok: boolean;
-  stage?: 'credentials' | 'test_event'; // onde parou, quando falhou
-  dataset_name: string | null;          // nome do conjunto na Meta, quando ela deixou ler
-  test_event_sent: boolean;
-  code?: number | null;                 // código de erro da Meta (190, 200, 803…)
+  ok: boolean;              // veredito: dá para ENVIAR conversão? é só isso que importa
+  can_send: boolean;
+  can_read: boolean;        // consegue ler o nome do conjunto (permissão mais ampla, opcional)
+  dataset_name: string | null;
+  test_event_visible: boolean; // a amostra foi com o código do cliente e aparece na tela dele
+  code?: number | null;     // código de erro da Meta (190, 200, 803…)
   message: string;
 }
 

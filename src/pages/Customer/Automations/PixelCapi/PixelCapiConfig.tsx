@@ -114,8 +114,10 @@ export default function PixelCapiConfig() {
     } catch {
       setTestResult({
         ok: false,
+        can_send: false,
+        can_read: false,
         dataset_name: null,
-        test_event_sent: false,
+        test_event_visible: false,
         message: 'Não foi possível concluir o teste. Tente de novo em alguns segundos.',
       });
     } finally {
@@ -214,10 +216,12 @@ export default function PixelCapiConfig() {
               {testing ? 'Testando…' : 'Testar conexão'}
             </button>
             <p className="text-xs text-muted-foreground">
-              Pergunta à Meta se o pixel e o token funcionam, e mostra o motivo quando não funcionam.
+              Envia uma conversão de amostra pelo mesmo caminho que o card usa — é o que prova que
+              vai funcionar de verdade. A amostra vai sempre em modo de teste, então{' '}
+              <strong className="font-medium text-foreground">não entra na medição do cliente</strong>.
               {testEventCode.trim()
-                ? ' Com o código de teste preenchido, envia também um evento de amostra — que não conta em relatório nem em otimização.'
-                : ' Nenhum evento é enviado: só a credencial é conferida.'}
+                ? ' Com o código de teste preenchido, ela aparece na aba Testar eventos do Gerenciador de Eventos.'
+                : ' Preencha o código de teste se quiser vê-la chegando na aba Testar eventos.'}
             </p>
           </div>
 
@@ -225,20 +229,28 @@ export default function PixelCapiConfig() {
             <div
               role="status"
               className={`rounded-md border p-3 text-sm ${
-                testResult.ok
-                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                  : 'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300'
+                !testResult.ok
+                  ? 'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300'
+                  : testResult.can_read
+                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                    : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300'
               }`}
             >
               <p className="font-medium">
-                {testResult.ok ? 'Conexão funcionando' : 'A Meta recusou'}
+                {!testResult.ok
+                  ? 'A Meta recusou'
+                  : testResult.can_read
+                    ? 'Conexão funcionando'
+                    : 'Funcionando, com uma ressalva'}
               </p>
               <p className="mt-1">{testResult.message}</p>
-              {!testResult.ok && testResult.stage === 'credentials' && (
+              {!testResult.ok && (
                 <p className="mt-2 text-xs opacity-80">
                   Confira, nesta ordem: se o token não expirou, se o usuário do sistema dono do token
-                  tem acesso a este conjunto de dados no Gerenciador de Negócios, e se o Pixel ID é o
-                  desse conjunto.
+                  tem o pixel atribuído com <strong>Gerenciar pixel</strong> (não só visualizar), e se
+                  o Pixel ID é o desse conjunto. Lembre que as permissões de um token são congeladas
+                  quando ele é gerado — se faltava alguma, atribuir depois não resolve: gere um token
+                  novo.
                 </p>
               )}
             </div>
