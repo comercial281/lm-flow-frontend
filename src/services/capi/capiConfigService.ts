@@ -44,6 +44,25 @@ export interface CapiConfigUpdate {
   stage_map?: Record<string, CapiStageRule>;
 }
 
+// Resultado do "Testar conexão": diagnóstico, não erro de API — por isso vem
+// com HTTP 200 mesmo quando a Meta recusou. O `ok` de dentro é que decide.
+export interface CapiConnectionTest {
+  ok: boolean;
+  stage?: 'credentials' | 'test_event'; // onde parou, quando falhou
+  dataset_name: string | null;          // nome do conjunto na Meta, quando ela deixou ler
+  test_event_sent: boolean;
+  code?: number | null;                 // código de erro da Meta (190, 200, 803…)
+  message: string;
+}
+
+// Credenciais avulsas para testar ANTES de salvar. O que não for enviado, o
+// backend pega do que já está gravado.
+export interface CapiConnectionTestInput {
+  pixel_id?: string;
+  access_token?: string;
+  test_event_code?: string | null;
+}
+
 const BASE = '/capi_config';
 
 export const capiConfigService = {
@@ -55,6 +74,11 @@ export const capiConfigService = {
   async update(data: CapiConfigUpdate): Promise<CapiConfig> {
     const res = await api.patch(BASE, data);
     return (res.data as { data: CapiConfig }).data;
+  },
+
+  async testConnection(data: CapiConnectionTestInput): Promise<CapiConnectionTest> {
+    const res = await api.post(`${BASE}/test_connection`, data);
+    return (res.data as { data: CapiConnectionTest }).data;
   },
 };
 
