@@ -17,6 +17,12 @@ export interface MetaPage {
   webhook_subscribed_at: string | null;
   connected_at: string | null;
   last_error: string | null;
+  /**
+   * Recebe lead de QUALQUER formulário desta página? Falso por padrão desde
+   * 24/08/2026: formulário não cadastrado não gera lead. Ligar isto devolve o
+   * comportamento antigo (a página inteira entra) para este cliente.
+   */
+  accept_unconfigured_forms?: boolean;
 }
 
 // Página que o token de sistema enxerga — é a lista de onde o operador escolhe,
@@ -42,6 +48,8 @@ export interface MetaPageUpdatePayload {
   is_active?: boolean;
   /** Só com isto o token é apagado — campo em branco significa "não mexer". */
   clear_token?: boolean;
+  /** Aceitar lead de formulário não cadastrado nesta página (padrão: não). */
+  accept_unconfigured_forms?: boolean;
 }
 
 const BASE = '/meta_pages';

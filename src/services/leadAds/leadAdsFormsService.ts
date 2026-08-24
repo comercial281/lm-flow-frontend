@@ -62,11 +62,22 @@ export interface MetaFormsPageError {
   error: string;
 }
 
+// Um formulário que está BARRANDO lead por não estar cadastrado aqui. Desde
+// 24/08/2026 lead de formulário não cadastrado não entra — esta é a lista do que
+// ficou de fora, para o caso de um formulário certo ter sido esquecido.
+export interface IgnoredLeadForm {
+  form_id: string;
+  form_name: string;
+  page_id?: string;
+  lead_count: number;
+}
+
 // Resposta de meta_forms — pode vir { data, errors } se alguma página falhar.
 export interface MetaFormsResult {
   data: MetaForm[];
   errors: MetaFormsPageError[];
   error?: string;
+  ignored_leads: IgnoredLeadForm[];
 }
 
 // Diagnóstico do token da Meta conectado (super-admin). Mostra app/permissões/
@@ -100,7 +111,10 @@ export interface MetaTokenDebug {
   total_recent_leads?: number;
   unmatched_leads?: number;
   matched_forms_count?: number;
-  unmatched_forms?: { name: string; lead_count: number }[];
+  unmatched_forms?: { name: string; form_id?: string; lead_count: number }[];
+  // A trava de formulário não cadastrado está valendo nesta página? Muda o texto
+  // do quadro: "foram ignorados" x "entraram sem a etiqueta do imóvel".
+  unmatched_blocked?: boolean;
 }
 
 export interface MetaTokenDebugResult {
@@ -132,8 +146,14 @@ export const leadAdsFormsService = {
 
   async syncMetaForms(): Promise<MetaFormsResult> {
     const res = await api.get(`${BASE}/meta_forms`);
-    const body = res.data as { data?: MetaForm[]; errors?: MetaFormsPageError[]; error?: string };
-    return { data: body.data ?? [], errors: body.errors ?? [], error: body.error };
+    const body = res.data as {
+      data?: MetaForm[]; errors?: MetaFormsPageError[]; error?: string;
+      ignored_leads?: IgnoredLeadForm[];
+    };
+    return {
+      data: body.data ?? [], errors: body.errors ?? [], error: body.error,
+      ignored_leads: body.ignored_leads ?? [],
+    };
   },
 
   // Diagnostica o token da Meta conectado (super-admin). Lança em erro/403.
