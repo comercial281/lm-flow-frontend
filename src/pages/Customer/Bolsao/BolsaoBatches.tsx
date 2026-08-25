@@ -26,7 +26,10 @@ import {
   FlaskConical,
   Pause,
   Play,
-  Trash2,
+  Archive,
+  ArchiveRestore,
+  ChevronDown,
+  ChevronRight,
   Loader2,
   AlertTriangle,
   Inbox,
@@ -51,6 +54,7 @@ const STATUS_LABEL: Record<BolsaoBatch['status'], string> = {
   ready: 'No ar',
   paused: 'Pausada',
   failed: 'Falhou',
+  archived: 'Arquivada',
 };
 
 function formatDate(iso: string): string {
@@ -64,8 +68,9 @@ export default function BolsaoBatches() {
   const [loading, setLoading] = useState(true);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<BolsaoBatch | null>(null);
+  const [confirmArchive, setConfirmArchive] = useState<BolsaoBatch | null>(null);
   const [cleaning, setCleaning] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -100,6 +105,11 @@ export default function BolsaoBatches() {
     loadClaims();
   }, [load, loadClaims]);
 
+  // O servidor já manda as arquivadas por último; aqui só separamos as duas
+  // pilhas: as que ainda podem servir em cima, as arquivadas recolhidas embaixo.
+  const activeBatches = batches.filter(b => b.status !== 'archived');
+  const archivedBatches = batches.filter(b => b.status === 'archived');
+
   const importing = batches.some(b => b.status === 'importing');
   useEffect(() => {
     if (!importing) return;
@@ -122,15 +132,27 @@ export default function BolsaoBatches() {
     }
   };
 
-  const doDelete = async () => {
-    if (!confirmDelete) return;
+  const doArchive = async () => {
+    if (!confirmArchive) return;
     try {
-      await bolsaoService.deleteBatch(confirmDelete.id);
-      toast.success('Lista apagada.');
-      setConfirmDelete(null);
+      await bolsaoService.archiveBatch(confirmArchive.id);
+      toast.success('Lista arquivada. Os leads que sobraram saíram do Bolsão.');
+      setConfirmArchive(null);
       load(true);
     } catch (e) {
-      toast.error(apiErrorMessage(e, 'Não consegui apagar a lista.'));
+      toast.error(apiErrorMessage(e, 'Não consegui arquivar a lista.'));
+    }
+  };
+
+  // Volta PAUSADA, não ao ar: lista arquivada há meses voltando a distribuir
+  // leads velhos sem o gestor confirmar é a surpresa que o resto do Bolsão evita.
+  const doUnarchive = async (batch: BolsaoBatch) => {
+    try {
+      await bolsaoService.unarchiveBatch(batch.id);
+      toast.success('Lista reaberta, pausada. Clique em "Voltar ao ar" para os corretores verem os leads.');
+      load(true);
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não consegui reabrir a lista.'));
     }
   };
 
@@ -203,14 +225,53 @@ export default function BolsaoBatches() {
               action={{ label: 'Subir planilha', onClick: () => setWizardOpen(true) }}
             />
           ) : (
-            batches.map(batch => (
-              <BatchCard
-                key={batch.id}
-                batch={batch}
-                onTogglePause={() => togglePause(batch)}
-                onDelete={() => setConfirmDelete(batch)}
-              />
-            ))
+            <>
+              {activeBatches.map(batch => (
+                <BatchCard
+                  key={batch.id}
+                  batch={batch}
+                  onTogglePause={() => togglePause(batch)}
+                  onArchive={() => setConfirmArchive(batch)}
+                />
+              ))}
+
+              {activeBatches.length === 0 && (
+                <p className="text-sm text-muted-foreground py-6 text-center border border-dashed border-border rounded-lg">
+                  Nenhuma lista no ar. As arquivadas continuam aí embaixo.
+                </p>
+              )}
+
+              {/* Arquivadas ficam recolhidas: saíram da frente de propósito, mas
+                  nada foi apagado e dá pra trazer de volta. */}
+              {archivedBatches.length > 0 && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowArchived(v => !v)}
+                    className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    {showArchived ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                    Arquivadas ({archivedBatches.length})
+                  </button>
+
+                  {showArchived && (
+                    <div className="mt-3 space-y-4">
+                      {archivedBatches.map(batch => (
+                        <BatchCard
+                          key={batch.id}
+                          batch={batch}
+                          onUnarchive={() => doUnarchive(batch)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
 
@@ -234,18 +295,19 @@ export default function BolsaoBatches() {
         onCreated={() => load(true)}
       />
 
-      <AlertDialog open={!!confirmDelete} onOpenChange={v => (v ? null : setConfirmDelete(null))}>
+      <AlertDialog open={!!confirmArchive} onOpenChange={v => (v ? null : setConfirmArchive(null))}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Apagar “{confirmDelete?.name}”?</AlertDialogTitle>
+            <AlertDialogTitle>Arquivar “{confirmArchive?.name}”?</AlertDialogTitle>
             <AlertDialogDescription>
-              Os leads que ainda estão no Bolsão somem. Quem já foi puxado por um corretor continua
-              com ele, como qualquer outro lead.
+              Ela sai desta lista e para de oferecer leads: os que ainda estavam esperando saem do
+              Bolsão. Quem já foi puxado por um corretor continua com ele, como qualquer outro lead.
+              Nada é apagado — dá para reabrir depois.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={doDelete}>Apagar</AlertDialogAction>
+            <AlertDialogAction onClick={doArchive}>Arquivar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -256,11 +318,13 @@ export default function BolsaoBatches() {
 function BatchCard({
   batch,
   onTogglePause,
-  onDelete,
+  onArchive,
+  onUnarchive,
 }: {
   batch: BolsaoBatch;
-  onTogglePause: () => void;
-  onDelete: () => void;
+  onTogglePause?: () => void;
+  onArchive?: () => void;
+  onUnarchive?: () => void;
 }) {
   const rules = batch.effective_settings;
 
@@ -284,7 +348,7 @@ function BatchCard({
           </div>
 
           <div className="flex gap-2">
-            {batch.status !== 'importing' && batch.status !== 'preview' && (
+            {onTogglePause && batch.status !== 'importing' && batch.status !== 'preview' && (
               <Button variant="outline" size="sm" onClick={onTogglePause}>
                 {batch.status === 'paused' ? (
                   <>
@@ -297,9 +361,16 @@ function BatchCard({
                 )}
               </Button>
             )}
-            {!batch.is_test && (
-              <Button variant="ghost" size="sm" onClick={onDelete}>
-                <Trash2 className="h-4 w-4" />
+            {/* Arquivar é a saída da lista, e não apaga nada. A de teste tem a
+                própria limpeza ("Limpar leads de teste"), lá em cima. */}
+            {onArchive && !batch.is_test && batch.status !== 'importing' && (
+              <Button variant="ghost" size="sm" onClick={onArchive}>
+                <Archive className="h-4 w-4 mr-1" /> Arquivar
+              </Button>
+            )}
+            {onUnarchive && (
+              <Button variant="outline" size="sm" onClick={onUnarchive}>
+                <ArchiveRestore className="h-4 w-4 mr-1" /> Reabrir
               </Button>
             )}
           </div>
