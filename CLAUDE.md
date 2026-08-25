@@ -138,6 +138,50 @@ não consegue abrir o que foi avisado (corretor marcado numa conversa de outro, 
 com tarefa num card que não é dele). Ali o conserto certo é o inverso — dar
 acesso a quem foi deliberadamente envolvido, não calar o aviso.
 
+## Bolsão de Leads (desde 2026-08-25)
+
+A lista de leads **sem dono** que o gestor abastece por planilha e o corretor se
+serve. Duas telas, dois cargos: *Bolsão → Pegar leads* (corretor) e
+*Bolsão → Listas e regras* (gestor), no grupo **Principal** do menu.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **O contato fica escondido até o corretor puxar.** O cartão mostra primeiro
+  nome, cidade, interesse e há quanto tempo o lead espera; telefone e e-mail
+  aparecem com **cadeado**, não em branco — campo vazio faria parecer que o lead
+  não tem telefone. Quem mascara é o servidor: os campos completos **não chegam**
+  na tela antes da retirada. Não tente escondê-los no CSS; o ponto é impedir
+  copiar o número e atender por fora do CRM.
+- **O contador "pode pegar mais N / libera em MM:SS" fica SEMPRE visível**, não
+  só quando trava, e o botão desabilita mostrando o tempo. Ver o limite antes de
+  clicar é o que faz a regra parecer regra, e não castigo.
+- **A cota vem sempre do servidor.** A tela só faz o relógio andar entre uma
+  resposta e outra. Calcular aqui faria a tela mentir no primeiro ajuste de regra.
+- **A lista se atualiza sozinha a cada 30s**, para o corretor não clicar num lead
+  que outro acabou de levar. O polling silencioso **não** emite toast de erro:
+  rede oscila, e um toast a cada 30s viraria cachoeira.
+- **Nada entra no Bolsão antes de o gestor conferir o mapeamento** das colunas,
+  com as primeiras linhas já lidas ao lado. Sem a coluna de telefone o botão de
+  importar não libera.
+
+Armadilhas:
+
+1. **A visibilidade tem DUAS metades, em repositórios diferentes.** Aqui o menu
+   usa `clientToggleKey: 'bolsao'`; no backend, `bolsao` precisa estar em
+   `ClientInstance::DEFAULT_OFF_FEATURES`, porque o endpoint público resolve
+   chave AUSENTE como `true`. Só com as duas o Bolsão fica desligado para quem
+   não foi liberado. Mexeu numa, confira a outra.
+2. **`featureKey` e `clientToggleKey` são opostos.** `featureKey` esconde só
+   quando a chave vale `false` (ausência = LIGADO); `clientToggleKey` mostra só
+   quando vale `true` (ausência = desligado) e a Leal Mídia sempre vê. Trocar um
+   pelo outro por engano estreia a funcionalidade para todo cliente.
+3. **A rota `/bolsao` é gateada só por cargo**, como `/ia-vendedora`: quem digitar
+   a URL alcança a tela (vazia). É o padrão da casa — não é esquecimento.
+4. **O arquivo enviado vai para o servidor**, não é lido no navegador como o
+   importador antigo do funil (`ImportLeadsModal`). Aquele faz uma requisição por
+   linha e cria os contatos na hora — no Bolsão o lead só vira contato quando
+   alguém puxa.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
