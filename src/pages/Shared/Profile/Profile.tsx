@@ -1,4 +1,4 @@
-import { useState, ChangeEvent, useEffect, useCallback } from 'react';
+import { useState, ChangeEvent, useEffect } from 'react';
 import {
   Button,
   Tabs,
@@ -39,7 +39,7 @@ import {
   type ProfileUpdateData,
   type PasswordChangeData,
 } from '@/services/profile/profileService';
-import notificationSettingsService from '@/services/notifications/NotificationSettingsService';
+import PersonalMutes from '@/components/notifications/PersonalMutes';
 import { getAudioSettings, playNotificationSoundPreview } from '@/utils/audioNotificationUtils';
 import { getModifierKey } from '@/utils/platform';
 import { normalizeAvatarUrl } from '@/utils/avatarUrl';
@@ -113,45 +113,6 @@ const Profile = () => {
     }
   });
 
-  // Helper function to extract notification type from flag (remove prefix)
-  const extractNotificationType = (flag: string): string => {
-    return flag.replace(/^(email_|push_)/, '');
-  };
-
-  // Helper function to convert backend flags to frontend format
-  const flagsToSettings = useCallback(
-    (selectedFlags: string[], availableFlags: string[]): Record<string, boolean> => {
-      const settings: Record<string, boolean> = {};
-
-      // Inicializar todos os tipos disponíveis como false
-      availableFlags.forEach(flag => {
-        const type = extractNotificationType(flag);
-        settings[type] = false;
-      });
-
-      // Marcar os selecionados como true
-      selectedFlags.forEach(flag => {
-        const type = extractNotificationType(flag);
-        if (type in settings) {
-          settings[type] = true;
-        }
-      });
-
-      return settings;
-    },
-    [],
-  );
-
-  // Helper function to convert frontend format to backend flags
-  const settingsToFlags = (
-    settings: Record<string, boolean>,
-    prefix: 'email' | 'push',
-  ): string[] => {
-    return Object.entries(settings)
-      .filter(([, enabled]) => enabled)
-      .map(([key]) => `${prefix}_${key}`);
-  };
-
   // Buscar dados completos do perfil quando o componente carrega
   useEffect(() => {
     const fetchProfile = async () => {
@@ -200,47 +161,10 @@ const Profile = () => {
     fetchProfile();
   }, [user]);
 
-  // Carregar preferências de notificação quando o componente carrega
+  // Só o estado do PUSH DO NAVEGADOR mora aqui. A lista de avisos e o que cada um
+  // silenciou vive no PersonalMutes, que fala com a lista única — o antigo carregamento
+  // de flags saiu junto com as caixinhas que não controlavam nada.
   useEffect(() => {
-    const fetchNotificationSettings = async () => {
-      try {
-        const settings = await notificationSettingsService.getSettings();
-
-        // Extrair tipos únicos disponíveis (de all_email_flags ou all_push_flags)
-        const availableEmailFlags = settings.all_email_flags || [];
-        const availablePushFlags = settings.all_push_flags || [];
-        const allAvailableFlags = [...new Set([...availableEmailFlags, ...availablePushFlags])];
-        const availableTypes = allAvailableFlags.map(flag => extractNotificationType(flag));
-
-        console.log('📧 [Profile] Notification settings loaded:', {
-          all_email_flags: settings.all_email_flags,
-          all_push_flags: settings.all_push_flags,
-          selected_email_flags: settings.selected_email_flags,
-          selected_push_flags: settings.selected_push_flags,
-          availableTypes,
-        });
-
-        // Converter flags do backend para formato do frontend usando os tipos disponíveis
-        setNotificationSettings(prev => ({
-          ...prev,
-          email_notifications: flagsToSettings(
-            settings.selected_email_flags || [],
-            availableEmailFlags,
-          ),
-          push_notifications: flagsToSettings(
-            settings.selected_push_flags || [],
-            availablePushFlags,
-          ),
-          available_types: availableTypes,
-        }));
-      } catch (error) {
-        console.error('Error fetching notification settings:', error);
-        // Manter valores padrão se houver erro
-      }
-    };
-
-    fetchNotificationSettings();
-
     // Check browser notification permission status on mount
     if ('Notification' in window) {
       const permission = Notification.permission;
@@ -249,7 +173,7 @@ const Profile = () => {
         browser_push_enabled: permission === 'granted',
       }));
     }
-  }, [flagsToSettings]);
+  }, []);
 
   // Limpar email de confirmação quando dialog fechar
   useEffect(() => {
@@ -622,82 +546,6 @@ const Profile = () => {
     handleUISettingsChange({ editor_message_key: key });
   };
 
-  const handleNotificationChange = async (
-    type: 'email' | 'push',
-    setting: string,
-    value: boolean,
-  ) => {
-    // Verificar se o tipo está disponível
-    if (!notificationSettings.available_types.includes(setting)) {
-      console.warn(`Notification type "${setting}" is not available`);
-      return;
-    }
-
-    // Atualizar estado local primeiro (otimistic update)
-    const notificationType = `${type}_notifications` as keyof typeof notificationSettings;
-    const currentNotifications = notificationSettings[notificationType] as Record<string, boolean> | undefined;
-    const previousValue = currentNotifications?.[setting];
-
-    setNotificationSettings(prev => {
-      const notificationType = `${type}_notifications` as keyof typeof prev;
-      const currentNotifications = prev[notificationType] as Record<string, boolean>;
-
-      return {
-        ...prev,
-        [notificationType]: {
-          ...currentNotifications,
-          [setting]: value,
-        },
-      };
-    });
-
-    try {
-      const updatedSettings = {
-        ...notificationSettings,
-        [`${type}_notifications`]: {
-          ...(notificationSettings[
-            `${type}_notifications` as keyof typeof notificationSettings
-          ] as Record<string, boolean>),
-          [setting]: value,
-        },
-      };
-
-      const emailFlags = settingsToFlags(updatedSettings.email_notifications, 'email');
-      const pushFlags = settingsToFlags(updatedSettings.push_notifications, 'push');
-
-      console.log('📧 [Profile] Updating notification settings:', {
-        emailFlags,
-        pushFlags,
-        setting,
-        value,
-      });
-
-      await notificationSettingsService.updateSettings({
-        selected_email_flags: emailFlags,
-        selected_push_flags: pushFlags,
-      });
-
-      toast.success(t('notifications.updated'));
-    } catch (error) {
-      console.error('Error updating notification settings:', error);
-      toast.error(t('notifications.settingsUpdateError') || 'Error updating notification settings');
-
-      // Reverter mudança em caso de erro
-      setNotificationSettings(prev => {
-        const notificationType = `${type}_notifications` as keyof typeof prev;
-        const currentNotifications = prev[notificationType] as Record<string, boolean>;
-
-        return {
-          ...prev,
-          [notificationType]: {
-            ...currentNotifications,
-            [setting]: previousValue ?? false, // Reverter para valor anterior
-          },
-        };
-      });
-    }
-  };
-
   const handleAudioSettingsChange = async (settings: Partial<typeof audioSettings>) => {
     const updatedSettings = { ...audioSettings, ...settings };
     setAudioSettings(updatedSettings);
@@ -929,47 +777,24 @@ const Profile = () => {
           />
         </div>
 
-        {/* Notificações por email */}
+        {/*
+          O QUE VOCÊ RECEBE — e o que dá pra calar.
+
+          Aqui havia uma caixinha por tipo de aviso gravando um mapa de bits que o
+          produto parou de consultar quando a emissão passou pelo portão único: a
+          pessoa desmarcava tudo, salvava, e continuava recebendo igual.
+
+          Desde 2026-08-25 esta seção é a camada pessoal da lista única: mostra só
+          o que a empresa ligou (Configurações → Conta → Central de Notificações) e
+          deixa cada um silenciar o que não quer, canal a canal. Só TIRA — ligar
+          aqui um aviso que a empresa desligou faria o gestor perder o controle do
+          que a equipe recebe.
+        */}
         <div className="space-y-4">
-          <h4 className="font-medium">{t('notifications.email.title')}</h4>
-          {notificationSettings.available_types.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t('notifications.loading') || 'Loading notification preferences...'}
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {Object.entries(notificationSettings.email_notifications)
-                .filter(([key]) => notificationSettings.available_types.includes(key))
-                .map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between">
-                    <Label htmlFor={`email-${key}`} className="text-sm">
-                      {getNotificationLabel(key)}
-                    </Label>
-                    <Checkbox
-                      id={`email-${key}`}
-                      checked={value}
-                      onCheckedChange={checked =>
-                        handleNotificationChange('email', key, checked === true)
-                      }
-                    />
-                  </div>
-                ))}
-            </div>
-          )}
+          <h4 className="font-medium">Avisos que você recebe</h4>
+          <PersonalMutes />
         </div>
 
-        {/*
-          A lista de caixinhas por tipo de PUSH saiu daqui (2026-07-31).
-          O backend deixou de consultar essas flags: push agora é sempre enviado
-          para quem tem o Modo Plantão ligado no aparelho. Manter as caixinhas
-          seria repetir o problema que acabamos de consertar — um controle na
-          tela que não controla nada. As de e-mail continuam acima, porque e-mail
-          segue sendo opt-in de verdade.
-        */}
-        <div className="space-y-2">
-          <h4 className="font-medium">{t('notifications.push.title')}</h4>
-          <p className="text-sm text-muted-foreground">{t('notifications.push.alwaysOn')}</p>
-        </div>
       </CardContent>
     </Card>
   );
@@ -1072,21 +897,6 @@ const Profile = () => {
       </CardContent>
     </Card>
   );
-
-  const getNotificationLabel = (key: string) => {
-    const labels: Record<string, string> = {
-      conversation_creation: t('notifications.email.types.conversation_creation'),
-      conversation_assignment: t('notifications.email.types.conversation_assignment'),
-      assigned_conversation_new_message: t(
-        'notifications.email.types.assigned_conversation_new_message',
-      ),
-      conversation_mention: t('notifications.email.types.conversation_mention'),
-      participating_conversation_new_message: t(
-        'notifications.email.types.participating_conversation_new_message',
-      ) || 'New message in participating conversation',
-    };
-    return labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  };
 
   const renderZonaPerigo = () => (
     <Card>

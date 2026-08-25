@@ -85,6 +85,15 @@ function managedBy(rule: LeadAutomationRule): string | null {
   return null;
 }
 
+// As chaves da antiga Central de Notificações viravam regra aqui. Desde
+// 2026-08-25 quem manda nesses avisos é a lista única (Configurações → Conta →
+// Central de Notificações), e a regra antiga não dispara mais — ela fica
+// guardada, desligada, porque apagar a configuração de alguém em silêncio é pior
+// do que mostrá-la explicada.
+function retiredByNotifications(rule: LeadAutomationRule): boolean {
+  return Boolean(rule.description?.includes('central:notif:migrado:'));
+}
+
 // Favoritos no topo, depois priority, depois criação. O backend NÃO ordena por
 // favorite (coluna pode faltar em schema de tenant pooled), então a ordem final é
 // aplicada aqui no cliente — no load e em toda mudança.
@@ -463,14 +472,24 @@ export default function LeadAutomations() {
                     <Badge variant="secondary" className="text-xs">
                       {TRIGGER_LABELS[rule.trigger] ?? rule.trigger}
                     </Badge>
-                    {managedBy(rule) && (
+                    {retiredByNotifications(rule) ? (
                       <Badge
                         variant="outline"
-                        className="text-xs border-primary/40 text-primary"
-                        title={`Criada e mantida pela tela de ${managedBy(rule)}. Edite por lá — mexer aqui desalinha os dois.`}
+                        className="text-xs border-muted-foreground/40 text-muted-foreground"
+                        title="Este aviso passou a viver na Central de Notificações (Configurações → Conta). A regra ficou guardada aqui, mas não dispara mais."
                       >
-                        gerenciada por {managedBy(rule)}
+                        virou aviso da Central de Notificações
                       </Badge>
+                    ) : (
+                      managedBy(rule) && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-primary/40 text-primary"
+                          title={`Criada e mantida pela tela de ${managedBy(rule)}. Edite por lá — mexer aqui desalinha os dois.`}
+                        >
+                          gerenciada por {managedBy(rule)}
+                        </Badge>
+                      )
                     )}
                     {!archivedTab && !rule.is_active && (
                       <Badge variant="outline" className="text-xs text-muted-foreground">

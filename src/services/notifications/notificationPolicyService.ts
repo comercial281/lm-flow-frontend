@@ -13,7 +13,14 @@ import api from '@/services/core/api';
 
 export type NotificationChannel = 'bell' | 'push' | 'email' | 'whatsapp';
 
-export type ParamType = 'boolean' | 'string' | 'integer' | 'origin_groups' | 'stage_ids';
+export type ParamType =
+  | 'boolean'
+  | 'string'
+  | 'integer'
+  | 'origin_groups'
+  | 'stage_ids'
+  /** "Quem recebe": nomes em vez de papéis. Era o que a Central do cliente sabia fazer. */
+  | 'user_ids';
 
 export interface CatalogParam {
   key: string;
@@ -80,6 +87,13 @@ export interface PipelineStages {
   stages: { id: string; name: string }[];
 }
 
+/** Pessoas do cliente, para o campo "Quem recebe". */
+export interface PolicyUser {
+  id: string;
+  name: string;
+  email?: string;
+}
+
 class NotificationPolicyService {
   async catalog(): Promise<CatalogData> {
     const res = await api.get('/super/notification_policies');
@@ -115,9 +129,14 @@ class NotificationPolicyService {
     return res.data.data;
   }
 
-  async stages(tenantId: string): Promise<PipelineStages[]> {
+  /**
+   * O que só existe dentro do cliente e a lista precisa: etapas de funil (filtro
+   * do aviso de card movido) e pessoas (campo "Quem recebe"). Vêm juntas porque
+   * respondem à mesma tela.
+   */
+  async tenantContext(tenantId: string): Promise<{ pipelines: PipelineStages[]; users: PolicyUser[] }> {
     const res = await api.get(`/super/notification_policies/${tenantId}/stages`);
-    return res.data.data.pipelines;
+    return { pipelines: res.data.data.pipelines ?? [], users: res.data.data.users ?? [] };
   }
 }
 

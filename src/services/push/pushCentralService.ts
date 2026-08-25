@@ -29,6 +29,15 @@ export interface PushRule {
   body: string;
   url: string | null;
   is_active: boolean;
+  /**
+   * Regra com público "usuários do cliente" e gatilho já coberto pela lista de
+   * avisos: continua existindo e editável, mas não entrega mais nada — quem manda
+   * nesses avisos passou a ser a aba Notificações, e dois donos para o mesmo aviso
+   * era o que fazia o corretor receber o lead duas vezes.
+   */
+  superseded: boolean;
+  /** As chaves dos avisos que assumiram os gatilhos desta regra. */
+  superseded_by: string[];
   created_at: string;
   updated_at: string;
 }
