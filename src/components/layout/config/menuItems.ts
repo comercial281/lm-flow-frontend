@@ -166,6 +166,13 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     // só vê quando a chave vale true (ausência = desligado) e a Leal Mídia
     // sempre vê, que é o que permite liberar cliente a cliente. Mesmo padrão da
     // IA Vendedora.
+    //
+    // ⚠️ ESTA LINHA É METADE DA TRAVA. A outra metade é `bolsao` estar em
+    // ClientInstance::DEFAULT_OFF_FEATURES no backend: o endpoint público
+    // resolve chave AUSENTE como `true`, então sem a lista de lá o cliente
+    // receberia `bolsao: true`, a guarda daqui passaria e o menu apareceria
+    // para todo mundo — que foi exatamente o furo em 25/08/2026. Mexeu numa,
+    // confira a outra.
     id: 'customer-bolsao',
     name: 'Bolsão',
     href: '/bolsao',
