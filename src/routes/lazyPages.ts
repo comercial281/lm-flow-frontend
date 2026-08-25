@@ -21,6 +21,8 @@ export const ScheduledActions = lazyWithRetry(() => import('@/pages/Customer/Con
 export const Channels = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.Channels })));
 export const ChatPage = lazyWithRetry(() => import('@/pages/Customer/Chat/ChatPage'));
 export const Pipelines = lazyWithRetry(() => import('@/pages/Customer/Pipelines/Pipelines'));
+export const Bolsao = lazyWithRetry(() => import('@/pages/Customer/Bolsao/Bolsao'));
+export const BolsaoBatches = lazyWithRetry(() => import('@/pages/Customer/Bolsao/BolsaoBatches'));
 export const Disparos = lazyWithRetry(() => import('@/pages/Customer/Disparos/Disparos'));
 export const TeamAccess = lazyWithRetry(() => import('@/pages/Customer/Team/TeamAccessPage'));
 export const AccountSettings = lazyWithRetry(() => import('@/pages/Customer/Settings/Account').then(m => ({ default: m.AccountSettings })));
@@ -56,6 +58,8 @@ export const routePrefetchMap: Record<string, () => Promise<unknown>> = {
   '/contacts': Contacts.__preload,
   '/contacts/scheduled-actions': ScheduledActions.__preload,
   '/pipelines': Pipelines.__preload,
+  '/bolsao': Bolsao.__preload,
+  '/bolsao/listas': BolsaoBatches.__preload,
   '/disparos': Disparos.__preload,
   '/ia-vendedora': SalesAgents.__preload,
   '/espaco': Espaco.__preload,

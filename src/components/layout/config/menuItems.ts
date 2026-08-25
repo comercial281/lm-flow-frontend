@@ -7,6 +7,9 @@ import {
   MessageSquare,
   Contact,
   SquareKanban,
+  Inbox,
+  ListChecks,
+  Hand,
   Bot,
   Layers,
   PieChart,
@@ -143,6 +146,56 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     resource: 'pipelines',
     action: 'read',
     featureKey: 'pipelines',
+  },
+  {
+    // Bolsão — a lista de leads sem dono que o corretor se serve.
+    //
+    // Fica no grupo Principal, ao lado do funil, porque é tela de uso DIÁRIO do
+    // corretor: é o que ele abre no dia em que não caiu lead nenhum.
+    //
+    // O pai usa `bolsao_leads.read` (o cargo do corretor); "Listas e regras" tem
+    // gate próprio de gestor. Como o pai some quando nenhum sub-item sobrevive,
+    // quem não tem nenhum dos dois não vê o menu.
+    //
+    // ⚠️ O gate daqui tem que casar com o do PermissionRoute da rota, senão o
+    // corretor vê o item e cai em /unauthorized.
+    //
+    // clientToggleKey, e NÃO featureKey: `featureKey` só esconde quando a chave
+    // vale exatamente false, ou seja AUSÊNCIA = LIGADO — o Bolsão estrearia para
+    // todas as imobiliárias no primeiro deploy. Com `clientToggleKey` o cliente
+    // só vê quando a chave vale true (ausência = desligado) e a Leal Mídia
+    // sempre vê, que é o que permite liberar cliente a cliente. Mesmo padrão da
+    // IA Vendedora.
+    //
+    // ⚠️ ESTA LINHA É METADE DA TRAVA. A outra metade é `bolsao` estar em
+    // ClientInstance::DEFAULT_OFF_FEATURES no backend: o endpoint público
+    // resolve chave AUSENTE como `true`, então sem a lista de lá o cliente
+    // receberia `bolsao: true`, a guarda daqui passaria e o menu apareceria
+    // para todo mundo — que foi exatamente o furo em 25/08/2026. Mexeu numa,
+    // confira a outra.
+    id: 'customer-bolsao',
+    name: 'Bolsão',
+    href: '/bolsao',
+    icon: Inbox,
+    resource: 'bolsao_leads',
+    action: 'read',
+    clientToggleKey: 'bolsao',
+    subItems: [
+      {
+        name: 'Pegar leads',
+        href: '/bolsao',
+        icon: Hand,
+        resource: 'bolsao_leads',
+        action: 'read',
+      },
+      {
+        name: 'Listas e regras',
+        href: '/bolsao/listas',
+        icon: ListChecks,
+        resource: 'bolsao_batches',
+        action: 'read',
+      },
+    ],
   },
   {
     name: 'Disparos',
