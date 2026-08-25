@@ -293,7 +293,9 @@ export default function PushCentral() {
             {data?.rules.map(rule => (
               <div
                 key={rule.id}
-                className="rounded-lg border p-4 flex items-start justify-between gap-4"
+                className={`rounded-lg border p-4 flex items-start justify-between gap-4 ${
+                  rule.superseded ? 'border-dashed opacity-70' : ''
+                }`}
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -306,6 +308,11 @@ export default function PushCentral() {
                       ),
                     )}
                     <Badge variant="outline">{rule.audience_label}</Badge>
+                    {rule.superseded && (
+                      <Badge variant="outline" className="border-amber-500/50 text-amber-300">
+                        não dispara mais
+                      </Badge>
+                    )}
                     <Badge variant="outline">
                       {rule.tenant_scope === 'all'
                         ? 'Todos os clientes'
@@ -315,9 +322,26 @@ export default function PushCentral() {
                   <p className="text-sm text-muted-foreground mt-2 break-words">
                     <span className="font-medium text-foreground">{rule.title}</span> — {rule.body}
                   </p>
+                  {/*
+                    Dizer a verdade em vez de mostrar "ligada" para uma regra muda.
+                    Push para a equipe do cliente passou a ter dono único — a aba
+                    Notificações — porque dois donos faziam o corretor receber o
+                    mesmo lead duas vezes, e desligar na lista dele não adiantava.
+                  */}
+                  {rule.superseded && (
+                    <p className="text-xs text-amber-300/90 mt-2">
+                      Push para a equipe do cliente agora vive na aba{' '}
+                      <strong>Notificações</strong> — esta regra está guardada, mas não envia mais
+                      nada. O que ela avisava está em: {rule.superseded_by.join(', ')}.
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Switch checked={rule.is_active} onCheckedChange={() => toggle(rule)} />
+                  <Switch
+                    checked={rule.is_active && !rule.superseded}
+                    disabled={rule.superseded}
+                    onCheckedChange={() => toggle(rule)}
+                  />
                   <Button variant="ghost" size="sm" onClick={() => openEdit(rule)}>
                     <Pencil className="w-4 h-4" />
                   </Button>
@@ -536,6 +560,19 @@ export default function PushCentral() {
                   </option>
                 ))}
               </select>
+              {/*
+                A opção continua na lista porque as regras antigas ainda a usam e
+                precisam abrir para edição. Mas criar uma nova assim não avisa
+                ninguém, e a tela precisa dizer isso ANTES de a pessoa escrever o
+                título e o corpo achando que vai funcionar.
+              */}
+              {form.audience === 'client' && (
+                <p className="text-xs text-amber-300/90 mt-1">
+                  Regra automática para a equipe do cliente não dispara mais: esses avisos vivem na
+                  aba <strong>Notificações</strong>. Aqui só continua valendo o push para a Leal
+                  Mídia — e o disparo manual, na aba "Disparo manual".
+                </p>
+              )}
             </div>
 
             <div>
