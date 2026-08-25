@@ -159,13 +159,20 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     //
     // ⚠️ O gate daqui tem que casar com o do PermissionRoute da rota, senão o
     // corretor vê o item e cai em /unauthorized.
+    //
+    // clientToggleKey, e NÃO featureKey: `featureKey` só esconde quando a chave
+    // vale exatamente false, ou seja AUSÊNCIA = LIGADO — o Bolsão estrearia para
+    // todas as imobiliárias no primeiro deploy. Com `clientToggleKey` o cliente
+    // só vê quando a chave vale true (ausência = desligado) e a Leal Mídia
+    // sempre vê, que é o que permite liberar cliente a cliente. Mesmo padrão da
+    // IA Vendedora.
     id: 'customer-bolsao',
     name: 'Bolsão',
     href: '/bolsao',
     icon: Inbox,
     resource: 'bolsao_leads',
     action: 'read',
-    featureKey: 'bolsao',
+    clientToggleKey: 'bolsao',
     subItems: [
       {
         name: 'Pegar leads',
