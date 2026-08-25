@@ -56,6 +56,7 @@ export default function Sidebar({
     '/conversations': 'Principal',
     '/contacts': 'Principal',
     '/pipelines': 'Principal',
+    '/bolsao': 'Principal',
     '/disparos': 'Comercial',
     '/ia-vendedora': 'Comercial',
     '/equipe': 'Comercial',

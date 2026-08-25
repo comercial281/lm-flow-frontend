@@ -14,6 +14,8 @@ import {
   Channels,
   ChatPage,
   Pipelines,
+  Bolsao,
+  BolsaoBatches,
   Disparos,
   TeamAccess,
   AccountSettings,
@@ -540,6 +542,30 @@ const AppRouter = () => {
               element={
                 <PermissionRoute resource="pipelines" action="read">
                   <Pipelines />
+                </PermissionRoute>
+              }
+            />
+
+            {/* Bolsão — a lista de leads sem dono.
+                Duas telas e dois cargos: /bolsao é do CORRETOR (ver e puxar) e
+                /bolsao/listas é do GESTOR (subir planilha, regras, histórico).
+                A rota mais específica vem primeiro; e o gate de cada uma tem que
+                casar com o do menu, senão o corretor vê o item e cai em
+                /unauthorized. */}
+            <Route
+              path="/bolsao/listas"
+              element={
+                <PermissionRoute resource="bolsao_batches" action="read">
+                  <BolsaoBatches />
+                </PermissionRoute>
+              }
+            />
+
+            <Route
+              path="/bolsao"
+              element={
+                <PermissionRoute resource="bolsao_leads" action="read">
+                  <Bolsao />
                 </PermissionRoute>
               }
             />

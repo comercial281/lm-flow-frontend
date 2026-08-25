@@ -7,6 +7,9 @@ import {
   MessageSquare,
   Contact,
   SquareKanban,
+  Inbox,
+  ListChecks,
+  Hand,
   Bot,
   Layers,
   PieChart,
@@ -143,6 +146,42 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     resource: 'pipelines',
     action: 'read',
     featureKey: 'pipelines',
+  },
+  {
+    // Bolsão — a lista de leads sem dono que o corretor se serve.
+    //
+    // Fica no grupo Principal, ao lado do funil, porque é tela de uso DIÁRIO do
+    // corretor: é o que ele abre no dia em que não caiu lead nenhum.
+    //
+    // O pai usa `bolsao_leads.read` (o cargo do corretor); "Listas e regras" tem
+    // gate próprio de gestor. Como o pai some quando nenhum sub-item sobrevive,
+    // quem não tem nenhum dos dois não vê o menu.
+    //
+    // ⚠️ O gate daqui tem que casar com o do PermissionRoute da rota, senão o
+    // corretor vê o item e cai em /unauthorized.
+    id: 'customer-bolsao',
+    name: 'Bolsão',
+    href: '/bolsao',
+    icon: Inbox,
+    resource: 'bolsao_leads',
+    action: 'read',
+    featureKey: 'bolsao',
+    subItems: [
+      {
+        name: 'Pegar leads',
+        href: '/bolsao',
+        icon: Hand,
+        resource: 'bolsao_leads',
+        action: 'read',
+      },
+      {
+        name: 'Listas e regras',
+        href: '/bolsao/listas',
+        icon: ListChecks,
+        resource: 'bolsao_batches',
+        action: 'read',
+      },
+    ],
   },
   {
     name: 'Disparos',
