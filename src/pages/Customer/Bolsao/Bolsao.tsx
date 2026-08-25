@@ -17,7 +17,7 @@ import {
   Hand,
   Loader2,
   Lock,
-  MessageSquare,
+  UserRound,
   RefreshCw,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
@@ -97,9 +97,24 @@ export default function Bolsao() {
     setClaiming(lead.id);
     try {
       const result = await bolsaoService.claim(lead.id);
-      setJustClaimed(result.lead);
       setQuota(result.quota);
       setLeads(prev => prev.filter(l => l.id !== lead.id));
+
+      // O lead vira card no funil na hora — é PRA LÁ que o corretor tem que ir.
+      // Antes daqui saía uma ida pra caixa de conversas com nada selecionado, e
+      // não havia o que selecionar: o Bolsão cria contato e card, nunca conversa.
+      // Mesmo endereço que o "Copiar link do card" monta; a tela do funil abre o
+      // card sozinha ao ver o ?card=.
+      if (result.pipeline_id && result.pipeline_item_id) {
+        toast.success('Lead é seu. Abrindo o card…');
+        navigate(`/pipelines/${result.pipeline_id}?card=${result.pipeline_item_id}`);
+        return;
+      }
+
+      // Plano B: cliente sem funil configurado, então não nasceu card nenhum.
+      // O cartão abaixo é o único lugar onde o telefone revelado aparece — sem
+      // ele o corretor puxaria o lead e ficaria sem o número.
+      setJustClaimed(result.lead);
       toast.success('Lead é seu. Fale com ele agora.');
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Não consegui puxar esse lead.'));
@@ -124,8 +139,18 @@ export default function Bolsao() {
 
       <QuotaBanner quota={quota} blocked={blocked} countdown={countdown} onRefresh={() => load()} />
 
+      {/* Só aparece quando o lead NÃO virou card (cliente sem funil configurado):
+          o caminho normal já levou o corretor pro card. */}
       {justClaimed && (
-        <ClaimedCard lead={justClaimed} onOpen={() => navigate('/conversations')} onDismiss={() => setJustClaimed(null)} />
+        <ClaimedCard
+          lead={justClaimed}
+          onOpen={
+            justClaimed.contact_id
+              ? () => navigate(`/contacts/${justClaimed.contact_id}`)
+              : undefined
+          }
+          onDismiss={() => setJustClaimed(null)}
+        />
       )}
 
       <div className="relative max-w-md">
@@ -287,13 +312,16 @@ function LeadCard({
   );
 }
 
+// Plano B do "puxar": o lead é do corretor mas não nasceu card nenhum, então
+// este é o ÚNICO lugar onde o telefone revelado aparece. Some sozinho no caminho
+// normal, em que a tela já levou o corretor pro card.
 function ClaimedCard({
   lead,
   onOpen,
   onDismiss,
 }: {
   lead: BolsaoLead;
-  onOpen: () => void;
+  onOpen?: () => void;
   onDismiss: () => void;
 }) {
   return (
@@ -307,9 +335,11 @@ function ClaimedCard({
           </p>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" onClick={onOpen}>
-            <MessageSquare className="h-4 w-4 mr-2" /> Abrir conversa
-          </Button>
+          {onOpen && (
+            <Button size="sm" onClick={onOpen}>
+              <UserRound className="h-4 w-4 mr-2" /> Abrir contato
+            </Button>
+          )}
           <Button size="sm" variant="ghost" onClick={onDismiss}>
             Fechar
           </Button>

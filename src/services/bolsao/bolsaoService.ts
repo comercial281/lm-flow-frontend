@@ -44,7 +44,9 @@ export interface BolsaoBatch {
   name: string;
   source: 'planilha' | 'teste';
   is_test: boolean;
-  status: 'preview' | 'importing' | 'ready' | 'paused' | 'failed';
+  // 'archived' é a saída definitiva da lista, e é SOFT: nada some do servidor.
+  // Não existe apagar — ver archiveBatch.
+  status: 'preview' | 'importing' | 'ready' | 'paused' | 'failed' | 'archived';
   file_name: string | null;
   uploaded_by: { id: string | null; name: string | null };
   mapping: Record<string, string>;
@@ -78,6 +80,10 @@ export interface BolsaoSummary {
 export interface BolsaoClaimResult {
   lead: BolsaoLead;
   contact_id: string | null;
+  // Os DOIS são necessários pra abrir o card recém-criado: o endereço do card é
+  // /pipelines/<funil>?card=<card>. Não existe conversation_id: o Bolsão cria
+  // contato e card, nunca conversa.
+  pipeline_id: string | null;
   pipeline_item_id: string | null;
   quota: BolsaoQuota;
 }
@@ -177,8 +183,18 @@ export const bolsaoService = {
     return (res.data as Envelope<BolsaoBatch>).data;
   },
 
-  async deleteBatch(id: string): Promise<void> {
-    await api.delete(`${BATCHES}/${id}`);
+  // Arquivar é a ÚNICA saída da lista, e não apaga nada: apagar levava junto o
+  // "quem pegou o quê", então o servidor recusava toda lista que já tivesse tido
+  // retirada — quase todas — e a lixeira era decorativa.
+  async archiveBatch(id: string): Promise<BolsaoBatch> {
+    const res = await api.post(`${BATCHES}/${id}/archive`);
+    return (res.data as Envelope<BolsaoBatch>).data;
+  },
+
+  // Volta PAUSADA, não ao ar — quem religa a torneira é o "Voltar ao ar".
+  async unarchiveBatch(id: string): Promise<BolsaoBatch> {
+    const res = await api.post(`${BATCHES}/${id}/unarchive`);
+    return (res.data as Envelope<BolsaoBatch>).data;
   },
 
   async claims(params: { batch_id?: string; user_id?: string; include_test?: boolean } = {}): Promise<{

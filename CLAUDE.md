@@ -182,6 +182,49 @@ Armadilhas:
    linha e cria os contatos na hora — no Bolsão o lead só vira contato quando
    alguém puxa.
 
+### Depois de puxar: o card, o histórico e a saída da lista (desde 2026-08-25)
+
+O dono do produto: "abrir card no pipeline, não conversa; histórico no card;
+origem bolsão no card; poder apagar listas". As quatro tinham o mesmo tema —
+depois que o corretor puxava, o lead sumia de vista.
+
+O que mudou na tela:
+
+- **Puxar leva direto para o card no funil.** O botão antigo dizia "Abrir
+  conversa" e caía na caixa de conversas com **nada selecionado** — e não havia o
+  que selecionar: o Bolsão cria contato e card, **nunca** conversa. Agora a tela
+  abre o card recém-criado, com telefone e e-mail à mostra. O endereço é o mesmo
+  que o botão *Copiar link do card* monta, e o quadro do funil já sabe abrir o
+  card sozinho ao recebê-lo.
+- **O cartão verde "Fulano agora é seu" virou plano B.** Ele só aparece quando o
+  lead não virou card (cliente sem funil configurado) — é o único lugar onde o
+  telefone revelado aparece, então sumir com ele deixaria o corretor sem o
+  número. O botão dele agora abre a **ficha do contato**, não a caixa de conversas.
+- **O card conta que o lead veio do Bolsão.** Na aba *Origem*, selo próprio e a
+  linha *Lista do Bolsão* com o nome da planilha. No painel *Histórico*, a linha
+  **"Puxado do Bolsão"** com a lista, quem puxou e quanto tempo o lead esperou.
+- **A lixeira das listas virou *Arquivar*.** Ela quase nunca funcionava: o
+  servidor recusava apagar qualquer lista que já tivesse tido retirada — quase
+  todas — para não levar junto o *Quem pegou o quê*. Arquivar **não apaga nada**:
+  a lista para de oferecer leads, desce para a seção recolhida **Arquivadas** no
+  fim da aba *Listas*, e volta pelo botão **Reabrir**.
+- **Reabrir traz a lista PAUSADA, não ao ar.** Lista arquivada há meses voltando
+  a distribuir leads velhos sem o gestor confirmar é a surpresa que o resto do
+  Bolsão evita — quem religa a torneira continua sendo *Voltar ao ar*.
+
+Armadilhas desta leva:
+
+5. **A tela precisa do FUNIL, não só do card.** O endereço do card é
+   `/pipelines/<funil>?card=<card>`; a resposta do "puxar" devolve os dois. Sem o
+   funil não dá para montar o endereço, e o corretor cai no plano B sem motivo.
+6. **Não existe mais apagar lista** — o `deleteBatch` saiu do serviço junto com a
+   rota no backend. Uma saída só, senão voltam a existir duas verdades sobre
+   "tirar a lista da frente".
+7. **`archived` é estado da lista, não campo novo.** No backend ele entrou na
+   lista de estados válidos e nada some do banco. Se aparecer estado novo por lá,
+   o rótulo dele precisa entrar no mapa de estados desta tela, senão o selo da
+   lista sai em branco.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,

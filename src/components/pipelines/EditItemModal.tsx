@@ -103,6 +103,10 @@ const historyDotColor = (id: string): string => {
   if (id.startsWith('roleta-aceite-')) return 'bg-emerald-500';
   if (id.startsWith('roleta-repasse-') || id.startsWith('roleta-prazo-')) return 'bg-amber-500';
   if (id.startsWith('roleta-diag-')) return 'bg-red-500';
+  // "Puxado do Bolsão": conta de qual lista o lead veio, quem o puxou e quanto
+  // tempo ele esperou sem dono. Mesma razão da cor da roleta — é a linha que
+  // responde "de onde saiu esse lead?" no meio de dezenas de mensagens.
+  if (id.startsWith('bolsao-')) return 'bg-indigo-500';
   return 'bg-primary';
 };
 
@@ -1101,9 +1105,16 @@ export default function EditItemModal({
                 landing_name: 'Landing', landing_slug: 'Slug', landing_url: 'Link da landing',
                 // Origem universal (manual / orgânico / tracking interno)
                 inbox_name: 'Caixa de entrada', added_by_name: 'Adicionado por',
+                // Bolsão: de qual planilha o lead saiu. Vive separado do texto de
+                // origem informada porque aquele é editável — reescrever "veio por
+                // indicação" apagava a rastreabilidade da lista.
+                bolsao_lista: 'Lista do Bolsão',
               };
               // manual_origin sai da lista genérica: tem campo editável próprio no topo.
-              const HIDDEN = new Set(['thumbnail_url', 'source', 'entered_via', 'added_by_id', 'channel_type', MANUAL_ORIGIN_KEY]);
+              // bolsao_batch_id/bolsao_lead_id são identificadores internos: quem
+              // lê o card quer o NOME da lista, que sai em bolsao_lista.
+              const HIDDEN = new Set(['thumbnail_url', 'source', 'entered_via', 'added_by_id', 'channel_type',
+                'bolsao_batch_id', 'bolsao_lead_id', MANUAL_ORIGIN_KEY]);
               // Rótulo + cor por origem. Todo lead tem origem (nunca "sem dados"):
               // anúncio, formulário, landing, UTM, WhatsApp orgânico, manual ou não identificada.
               const SOURCE_META: Record<string, { label: string; cls: string }> = {
@@ -1113,6 +1124,7 @@ export default function EditItemModal({
                 utm:              { label: 'Campanha (UTM)', cls: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
                 organic_whatsapp: { label: 'WhatsApp orgânico', cls: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
                 manual:           { label: 'Adicionado manualmente', cls: 'bg-slate-500/15 text-slate-600 dark:text-slate-300' },
+                bolsao:           { label: '🗃️ Bolsão de Leads', cls: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400' },
                 unknown:          { label: 'Origem não identificada', cls: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' },
               };
               const source = (ar as any).source as string | undefined;
