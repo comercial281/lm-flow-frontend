@@ -37,6 +37,12 @@ export interface CatalogEvent {
   group: string;
   channels: NotificationChannel[];
   defaults: NotificationChannel[];
+  /**
+   * Aviso de lead: só sai depois de o lead ENTRAR no funil. A tela mostra a regra
+   * em vez de escondê-la — sem isso, ligar o aviso e não receber nada parece
+   * defeito, quando é a barreira de origem do cliente fazendo o que deve.
+   */
+  requires_pipeline?: boolean;
   params: CatalogParam[];
 }
 

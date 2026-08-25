@@ -110,6 +110,34 @@ chaves de aviso próprias (corretor, gestor, grupo, grupo no repasse) que valem
 *junto* com a lista — as duas precisam estar ligadas para a mensagem sair. Não
 está quebrado, mas são dois lugares para procurar.
 
+### O aviso acompanha o responsável (desde 2026-08-25)
+
+Um corretor recebeu *"Fulano agora é seu"* sem lead nenhum ter caído. A barreira
+de origem (o que pode entrar no funil) decidia só se o CARD nascia — os avisos
+corriam por fora dela. E a chegada avisava **todos os gestores** em paralelo à
+roleta: um lead sorteado para um corretor fazia o aparelho da diretoria inteira
+tocar junto.
+
+O que mudou na tela:
+
+- **Avisos de lead ganharam a linha "Só avisa depois que o lead entra no funil"**,
+  logo abaixo da descrição. A regra fica à vista de propósito: quem liga o aviso,
+  manda uma mensagem de teste de um número qualquer e não recebe nada conclui que
+  está quebrado — quando é a barreira dele funcionando.
+- **Os quatro avisos de CHEGADA nascem desligados.** Quem conta que o lead chegou
+  é *"Lead virou seu"*, que vai só para o dono.
+- **Aviso novo: "Lead entrou e ficou sem responsável"**, por WhatsApp de fábrica
+  (não push — push passa batido, e este é o aviso que ninguém está esperando).
+- **"Você foi sorteado para um lead" passou a chegar no app.** A chave de Push
+  dessa linha existia e **não entregava nada**: a oferta saía só no WhatsApp da
+  roleta. Enquanto a chegada avisava os gestores isso não aparecia; agora que o
+  aviso é só do responsável, corretor sem WhatsApp cadastrado ficaria sem nada.
+
+**Ainda aberto:** *Mencionaram você* e os quatro de *Tarefa* podem avisar quem
+não consegue abrir o que foi avisado (corretor marcado numa conversa de outro, ou
+com tarefa num card que não é dele). Ali o conserto certo é o inverso — dar
+acesso a quem foi deliberadamente envolvido, não calar o aviso.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,

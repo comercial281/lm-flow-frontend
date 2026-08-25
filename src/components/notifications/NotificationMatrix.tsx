@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Bell, Mail, MessageCircle, RotateCcw, Smartphone } from 'lucide-react';
+import { Bell, Filter, Mail, MessageCircle, RotateCcw, Smartphone } from 'lucide-react';
 import { Badge, Checkbox, Input, Switch } from '@/components/ui/ds';
 import type {
   CatalogEvent,
@@ -129,6 +129,20 @@ export default function NotificationMatrix({
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">{event.description}</p>
+                    {/*
+                      A regra fica À VISTA. Um gestor que liga o aviso, manda uma
+                      mensagem de teste de um número qualquer e não recebe nada
+                      conclui que está quebrado — quando é a barreira de origem
+                      dele funcionando. Foi exatamente essa confusão que levou à
+                      varredura de 2026-08-25.
+                    */}
+                    {event.requires_pipeline && (
+                      <p className="text-[11px] text-muted-foreground/80 mt-1 inline-flex items-start gap-1">
+                        <Filter className="h-3 w-3 mt-[2px] shrink-0" />
+                        Só avisa depois que o lead entra no funil — respeita a regra de origem deste
+                        cliente.
+                      </p>
+                    )}
                     {event.params.length > 0 && (
                       <button
                         onClick={() => onExpand(expanded === event.key ? null : event.key)}
