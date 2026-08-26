@@ -44,7 +44,11 @@ const SYNC_URL = `${API_BASE}/super/pooled_tenants/sync_feature_catalog`;
 const SERVICE_TOKEN = process.env.LM_FLOW_SYNC_TOKEN;
 
 const GATE_KEY_RE = /(?:featureKey|clientToggleKey)\s*:\s*['"]([a-z0-9_]+)['"]/g;
-const HOOK_KEY_RE = /useFeature\(\s*['"]([a-z0-9_]+)['"]\s*\)/g;
+// useClientToggle = semântica "default OFF, a Leal Mídia libera cliente a
+// cliente" (ver TenantFeaturesContext). Precisa ser varrido junto com o
+// useFeature, senão a chave gateada por ele nunca entra no catálogo — e no
+// deploy seguinte o sync REMOVE a chave por achar que ninguém a usa.
+const HOOK_KEY_RE = /(?:useFeature|useClientToggle)\(\s*['"]([a-z0-9_]+)['"]\s*\)/g;
 
 function walk(dir, files = []) {
   for (const entry of readdirSync(dir)) {

@@ -146,3 +146,21 @@ export function useFeature(key?: string): boolean {
   if (!key) return true;
   return features[key] !== false;
 }
+
+// Helper para funcionalidade que a Leal Mídia libera CLIENTE A CLIENTE: só liga
+// quando a chave vale explicitamente `true`. É a mesma semântica do
+// `clientToggleKey` do menu (ver shouldShowMenuItem), e o OPOSTO do useFeature
+// acima — trocar um pelo outro por engano estreia a funcionalidade para todo
+// cliente no primeiro deploy.
+//
+// A chave precisa estar em ClientInstance::DEFAULT_OFF_FEATURES no backend,
+// porque `resolved_features` devolve `true` para chave AUSENTE.
+//
+// ⚠️ O nome deste helper é lido por REGEX por scripts/sync-feature-catalog.mjs e
+// scripts/audit-feature-catalog.mjs. Se renomear, atualize os dois — senão a
+// chave some do catálogo no deploy seguinte e o painel de Funções deixa de
+// oferecer o botão de liberar, sem aviso nenhum.
+export function useClientToggle(key: string): boolean {
+  const { features } = useTenantFeatures();
+  return features[key] === true;
+}

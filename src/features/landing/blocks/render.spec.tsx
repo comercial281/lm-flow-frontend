@@ -35,7 +35,9 @@ describe('BlockRenderer', () => {
 
   it('finance simulator computes a monthly value from sale price', () => {
     render(<BlockRenderer blocks={[createBlock('finance_simulator')]} property={property} />);
-    expect(screen.getByText('Simulador de Financiamento')).toBeInTheDocument();
+    // O título do bloco virou "Plano de Pagamento" quando ele ganhou a barra
+    // segmentada; o teste ficou para trás e essa era a única falha da suíte.
+    expect(screen.getByText('Plano de Pagamento')).toBeInTheDocument();
     // base 800k, entrada 10% default -> entrada 80.000
     expect(screen.getByText('R$ 80.000')).toBeInTheDocument();
   });

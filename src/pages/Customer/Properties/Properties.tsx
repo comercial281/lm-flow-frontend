@@ -44,7 +44,6 @@ import {
   Link as LinkIcon,
   Film,
   Megaphone,
-  LayoutTemplate,
   Check,
   ChevronDown,
   FileText,
@@ -705,12 +704,10 @@ export default function Properties() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="icon" disabled title="Landings (em breve)" aria-label="Landings (em breve)">
-              <Megaphone className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" disabled title="Página de imóvel (em breve)" aria-label="Página de imóvel (em breve)">
-              <LayoutTemplate className="h-4 w-4" />
-            </Button>
+            {/* Os dois botões "em breve" daqui saíram em 2026-08-26: a lista de
+                landings e o template da página de imóvel viraram abas do Site
+                Builder. O megafone de cada cartão (abaixo) continua — ele faz
+                outra coisa: a landing DAQUELE imóvel. */}
             <Button variant="outline" size="icon" title="Ver no mapa" aria-label="Ver no mapa" onClick={() => navigate('/properties/map')}>
               <MapPin className="h-4 w-4" />
             </Button>
