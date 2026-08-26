@@ -14,6 +14,10 @@ import { toLandingPhotos } from '@/services/landingPages/landingDataAdapters';
 import { propertiesService } from '@/services/properties/propertiesService';
 import { propertyPhotosService } from '@/services/propertyPhotos/propertyPhotosService';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
+import PublishLandingButton from '@/features/landing/manage/PublishLandingButton';
+
+// Endereço da aba de landings dentro do Site Builder — a casa da funcionalidade.
+const LANDINGS_TAB = '/settings/site-builder?tab=landings';
 
 /** Editor for a landing page by its id — standalone (no property) or linked. */
 export default function LandingByIdEditorPage() {
@@ -23,6 +27,11 @@ export default function LandingByIdEditorPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [siteId, setSiteId] = useState<string | null>(null);
+  const [siteSlug, setSiteSlug] = useState('');
+  // Endereço e estado de publicação vivem aqui porque o botão de publicar na
+  // barra do editor precisa dos dois.
+  const [pageSlug, setPageSlug] = useState('');
+  const [pageActive, setPageActive] = useState(false);
   const [blocks, setBlocks] = useState<BlockInstance[]>([]);
   const [property, setProperty] = useState<LandingProperty | null>(null);
   const [theme, setThemeState] = useState<Partial<LandingTheme>>({});
@@ -37,7 +46,7 @@ export default function LandingByIdEditorPage() {
         const sites = await siteBuilderService.listSites();
         if (!active) return;
         if (!sites.length) {
-          setError('Nenhum site configurado para este cliente.');
+          setError('Nenhum site configurado para este cliente. Crie o site em Configurações → Site Builder, aba Configurações.');
           setLoading(false);
           return;
         }
@@ -54,6 +63,9 @@ export default function LandingByIdEditorPage() {
           prop = toLandingProperty(p, toLandingPhotos(photos));
         }
         setSiteId(site.id);
+        setSiteSlug(site.slug);
+        setPageSlug(lp.dto.slug);
+        setPageActive(lp.dto.active);
         setBlocks(lp.blocks);
         setProperty(prop);
         setThemeState(lp.theme);
@@ -85,6 +97,14 @@ export default function LandingByIdEditorPage() {
     }
   };
 
+  // Publicar salva o que está na tela primeiro; sem isto o link do anúncio
+  // apontaria para a versão anterior da página.
+  const saveCurrent = async () => {
+    const { blocks: current, markSaved } = useLandingEditorStore.getState();
+    await handleSave(current);
+    markSaved();
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-neutral-950 text-neutral-400">
@@ -99,7 +119,7 @@ export default function LandingByIdEditorPage() {
         <p className="max-w-md">{error}</p>
         <button
           type="button"
-          onClick={() => navigate('/landings')}
+          onClick={() => navigate(LANDINGS_TAB)}
           className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white"
         >
           Voltar
@@ -118,7 +138,19 @@ export default function LandingByIdEditorPage() {
         initialBrandMode={brandMode}
         saving={saving}
         onSave={handleSave}
-        onBack={() => navigate('/landings')}
+        onBack={() => navigate(LANDINGS_TAB)}
+        headerActions={
+          siteId && pageId ? (
+            <PublishLandingButton
+              siteId={siteId}
+              pageId={pageId}
+              siteSlug={siteSlug}
+              initialSlug={pageSlug}
+              initialActive={pageActive}
+              onSaveBeforePublish={saveCurrent}
+            />
+          ) : null
+        }
       />
     </div>
   );

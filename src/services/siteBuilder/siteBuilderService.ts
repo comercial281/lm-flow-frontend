@@ -116,6 +116,10 @@ export interface SitePage {
   site_id: string;
   title: string;
   slug: string;
+  /** 'portal_static' = página do portal; 'ad_landing' = landing de anúncio.
+   *  A aba Páginas do Site Builder filtra por isto: a landing é feita de blocos
+   *  e o editor simples de título/HTML salvaria POR CIMA dela. */
+  page_kind?: 'portal_static' | 'ad_landing' | string;
   content?: string | null;
   meta_title?: string | null;
   meta_description?: string | null;

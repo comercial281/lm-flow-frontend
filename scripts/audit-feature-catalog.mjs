@@ -20,7 +20,11 @@ import { fileURLToPath } from 'node:url';
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 const CATALOG_URL = 'https://api.lmflow.com.br/api/public/v1/tenant_features?slug=mybroker';
 const GATE_KEY_RE = /(?:featureKey|clientToggleKey)\s*:\s*['"]([a-z0-9_]+)['"]/g;
-const HOOK_KEY_RE = /useFeature\(\s*['"]([a-z0-9_]+)['"]\s*\)/g;
+// useClientToggle = semântica "default OFF, a Leal Mídia libera cliente a
+// cliente" (ver TenantFeaturesContext). Precisa ser varrido junto com o
+// useFeature, senão a chave gateada por ele nunca entra no catálogo — e no
+// deploy seguinte o sync REMOVE a chave por achar que ninguém a usa.
+const HOOK_KEY_RE = /(?:useFeature|useClientToggle)\(\s*['"]([a-z0-9_]+)['"]\s*\)/g;
 
 function walk(dir, files = []) {
   for (const entry of readdirSync(dir)) {

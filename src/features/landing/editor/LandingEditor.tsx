@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { ArrowLeft, Redo2, Save, Undo2 } from 'lucide-react';
 import type {
   BlockInstance,
@@ -22,6 +22,8 @@ export interface LandingEditorProps {
   saving?: boolean;
   onSave: (blocks: BlockInstance[]) => void;
   onBack?: () => void;
+  /** Ações extras na barra de cima, à esquerda do Salvar (ex: Publicar). */
+  headerActions?: ReactNode;
 }
 
 /** Two-column landing editor: live phone preview + config panel.
@@ -36,6 +38,7 @@ export function LandingEditor({
   saving = false,
   onSave,
   onBack,
+  headerActions,
 }: LandingEditorProps) {
   const load = useLandingEditorStore((s) => s.load);
   const blocks = useLandingEditorStore((s) => s.blocks);
@@ -94,6 +97,7 @@ export function LandingEditor({
           >
             <Redo2 size={18} />
           </button>
+          {headerActions}
           <button
             type="button"
             onClick={handleSave}

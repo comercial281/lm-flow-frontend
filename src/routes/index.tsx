@@ -95,7 +95,6 @@ const LeadAdsForms = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadA
 const FollowupSequences = lazyWithRetry(() => import('@/pages/Customer/Settings/FollowupSequences').then(m => ({ default: m.FollowupSequences })));
 const LandingPageEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingPageEditorPage'));
 const LandingByIdEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingByIdEditorPage'));
-const LandingsList = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingsListPage'));
 const PropertyTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/PropertyTemplateEditor/PropertyTemplateEditorPage'));
 const SimulatorDemo = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/SimulatorDemoPage'));
 const LandingPublic = lazyWithRetry(() => import('@/pages/Public/LandingPublicPage'));
@@ -964,7 +963,10 @@ const AppRouter = () => {
 
             <Route path="/properties/map" element={<PropertiesMap />} />
 
-            <Route path="/landings" element={<LandingsList />} />
+            {/* A lista de landings virou aba do Site Builder (é uma página do
+                site do cliente, e é lá que o site nasce). Rota antiga mantida
+                como redirect pra não quebrar link salvo. */}
+            <Route path="/landings" element={<Navigate to="/settings/site-builder?tab=landings" replace />} />
 
             <Route path="/visits" element={<Visits />} />
 

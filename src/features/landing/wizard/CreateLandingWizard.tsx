@@ -8,6 +8,9 @@ import { landingTemplatesService, type LandingTemplateDTO } from '@/services/lan
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import { safeParsePageBlocks } from '@/features/landing/blocks';
+// Mesmo conversor da lista e do editor: o endereço mostrado aqui tem que ser
+// idêntico ao que a página vai receber ao publicar.
+import { slugifyLandingName } from '@/features/landing/manage/landingUrl';
 
 interface Opt {
   id: string;
@@ -15,16 +18,6 @@ interface Opt {
 }
 
 type Base = 'blank' | 'property' | 'template';
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
-}
 
 /**
  * Assistente de criação de landing (Fatia 1): monta a landing já reusando o que
@@ -67,7 +60,7 @@ export default function CreateLandingWizard({
   const [labelId, setLabelId] = useState('');
   const [routingLoading, setRoutingLoading] = useState(false);
 
-  const slug = useMemo(() => slugify(name), [name]);
+  const slug = useMemo(() => slugifyLandingName(name), [name]);
 
   // Busca de imóveis (debounce simples) quando base = property.
   useEffect(() => {

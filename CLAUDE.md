@@ -225,6 +225,77 @@ Armadilhas desta leva:
    o rótulo dele precisa entrar no mapa de estados desta tela, senão o selo da
    lista sai em branco.
 
+## Landing Pages de anúncio (desde 2026-08-26)
+
+O construtor de página de anúncio a partir do imóvel **já existia inteiro** e
+nunca foi desligado por chave nenhuma: ele só não tinha porta de entrada. Os dois
+botões no topo da tela de *Imóveis* estavam travados com *"em breve"* e sem ação
+por trás, e não havia item de menu. Quem digitava o endereço chegava numa tela
+funcionando.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **A porta é a aba *Landings de anúncio* dentro do Site Builder**, não item de
+  menu próprio. A landing é uma página do site do cliente, e o Site Builder é
+  onde o site nasce — foi isso que fez o *"nenhum site configurado"* deixar de
+  ser beco sem saída: hoje a aba mostra o mesmo estado vazio das outras, com
+  botão para a aba *Configurações*, onde o botão já se chama **Criar site**.
+- **Estreia liberada cliente a cliente.** A aba usa a semântica do
+  `clientToggleKey` (só aparece com a chave valendo `true`; a Leal Mídia sempre
+  vê, com o olho cortado). O gate mora na ABA, **nunca na rota**: quem digita o
+  endereço alcança a tela, como em `/bolsao` e `/ia-vendedora`.
+- **Os dois botões *"em breve"* saíram da tela de Imóveis.** O megafone do
+  cabeçalho ficaria a poucos pixels do megafone de cada cartão, que faz outra
+  coisa (a landing DAQUELE imóvel). E o template da página de imóvel é do SITE,
+  não do imóvel: virou botão na aba *Portal* do Site Builder.
+- **Dá para publicar de dentro do editor.** Antes o *Publicar e gerar link* só
+  existia na lista, então a landing montada a partir do card do imóvel nascia
+  rascunho e nunca ia ao ar. O botão **salva antes de publicar**: o Salvar é
+  outro botão, e publicar com alteração pendente entregaria ao cliente um link de
+  anúncio apontando para a versão anterior da página.
+- **Excluir pede confirmação** e avisa, com todas as letras, quando a landing
+  está publicada — apagar derruba o link que já está rodando no anúncio.
+
+Armadilhas:
+
+1. **A chave do gate é escrita LITERAL na chamada do `useClientToggle`.**
+   `scripts/sync-feature-catalog.mjs` varre o código por REGEX e **remove do
+   catálogo toda chave que não aparece**; `scripts/audit-feature-catalog.mjs`
+   **quebra o build** quando uma chave usada não está no catálogo. Trocar o
+   literal por uma constante tira a chave do catálogo no deploy seguinte, o
+   painel de Funções deixa de oferecer o botão de liberar, e ninguém é avisado.
+   Os dois scanners foram ensinados a enxergar o `useClientToggle` — se renomear
+   o helper, atualize os dois.
+2. **`useFeature` e `useClientToggle` são OPOSTOS.** `useFeature` = ausência
+   LIGA; `useClientToggle` = só liga com `true`. Trocar um pelo outro estreia a
+   funcionalidade para todo cliente.
+3. **A metade do backend é obrigatória e vem PRIMEIRO.** `landing_pages` precisa
+   estar em `ClientInstance::DEFAULT_OFF_FEATURES` no `lm-flow` (branch
+   `saas-multitenant`), porque o endpoint público resolve chave AUSENTE como
+   `true`. Mexeu numa metade, confira a outra.
+4. **A aba *Páginas* do Site Builder filtra `page_kind !== 'ad_landing'`.** Sem o
+   filtro, a landing aparecia lá junto das páginas do portal e o botão *Editar*
+   abria o editor simples de título/HTML, que **salvava por cima** do que o
+   construtor de blocos montou. Isso já acontecia antes desta leva.
+5. **O conversor de nome em endereço mora num arquivo só**
+   (`src/features/landing/manage/landingUrl.ts`) porque é a string que vai
+   **colada num anúncio pago**: lista, editor e assistente têm que mostrar
+   exatamente o mesmo resultado. E o intervalo de acentos é escrito como
+   `\u0300-\u036f`, não com os caracteres combinantes literais — a versão antiga
+   tinha os literais no fonte, que qualquer normalização de editor apaga em
+   silêncio.
+6. **A aba fica no endereço (`?tab=landings`) e grava com `replace`.** Sem o
+   `replace`, o botão Voltar do navegador passa a percorrer as abas em vez de
+   sair da tela.
+
+Ainda **não** resolvido, e é dívida conhecida:
+
+- **Salvar e reusar template só funciona para o administrador da conta.** A
+  permissão nova não chega em cargo que já existe, no backend — gestor e corretor
+  tomam erro de acesso. O botão só aparece para a Leal Mídia por enquanto.
+- **A landing pública e a captura do lead não têm teste automatizado no
+  servidor.** É o caminho por onde a verba de anúncio entra.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,

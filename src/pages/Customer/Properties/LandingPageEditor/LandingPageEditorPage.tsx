@@ -19,6 +19,7 @@ import {
   type PropertyPhoto,
 } from '@/services/propertyPhotos/propertyPhotosService';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
+import PublishLandingButton from '@/features/landing/manage/PublishLandingButton';
 
 // Landing de imóvel nova nasce com um esqueleto pronto (não em branco): as seções
 // já renderizam com os dados reais do imóvel (preço, ficha, fotos, mapa). O corretor
@@ -60,7 +61,13 @@ export default function LandingPageEditorPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [siteId, setSiteId] = useState<string | null>(null);
+  const [siteSlug, setSiteSlug] = useState('');
   const [pageId, setPageId] = useState<string | null>(null);
+  // A landing do imóvel nasce RASCUNHO. Sem estes dois o botão de publicar na
+  // barra do editor não saberia o endereço nem se ela já está no ar — e era
+  // exatamente por não ter esse botão que a página montada aqui nunca ia ao ar.
+  const [pageSlug, setPageSlug] = useState('');
+  const [pageActive, setPageActive] = useState(false);
   const [blocks, setBlocks] = useState<BlockInstance[]>([]);
   const [property, setProperty] = useState<LandingProperty | null>(null);
   const [theme, setThemeState] = useState<Partial<LandingTheme>>({});
@@ -79,7 +86,7 @@ export default function LandingPageEditorPage() {
         ]);
         if (!active) return;
         if (!sites.length) {
-          setError('Nenhum site configurado para este cliente. Crie o site em Configurações → Site primeiro.');
+          setError('Nenhum site configurado para este cliente. Crie o site em Configurações → Site Builder, aba Configurações.');
           setLoading(false);
           return;
         }
@@ -91,7 +98,10 @@ export default function LandingPageEditorPage() {
         });
         if (!active) return;
         setSiteId(site.id);
+        setSiteSlug(site.slug);
         setPageId(lp.dto.id);
+        setPageSlug(lp.dto.slug);
+        setPageActive(lp.dto.active);
         // Landing vazia (recém-criada) → abre já com o esqueleto padrão preenchido.
         setBlocks(lp.blocks.length ? lp.blocks : seedDefaultBlocks());
         setProperty(toLandingProperty(prop, toLandingPhotos(photos)));
@@ -122,6 +132,13 @@ export default function LandingPageEditorPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Publicar salva o que está na tela primeiro (o Salvar é outro botão).
+  const saveCurrent = async () => {
+    const { blocks: current, markSaved } = useLandingEditorStore.getState();
+    await handleSave(current);
+    markSaved();
   };
 
   if (loading) {
@@ -158,6 +175,18 @@ export default function LandingPageEditorPage() {
         saving={saving}
         onSave={handleSave}
         onBack={() => navigate('/properties')}
+        headerActions={
+          siteId && pageId ? (
+            <PublishLandingButton
+              siteId={siteId}
+              pageId={pageId}
+              siteSlug={siteSlug}
+              initialSlug={pageSlug}
+              initialActive={pageActive}
+              onSaveBeforePublish={saveCurrent}
+            />
+          ) : null
+        }
       />
     </div>
   );

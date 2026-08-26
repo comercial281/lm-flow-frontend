@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { formatDateBR } from '@/utils/dateUtils';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
@@ -20,7 +21,7 @@ import {
   Globe, Plus, Edit, Trash2, FileText, Newspaper,
   ExternalLink, Archive, Send, RefreshCw, Users,
   LayoutTemplate, Copy, Check, Home, Building2, Search, MessageCircle,
-  Upload, Loader2, Sparkles, Image as ImageIcon, Lightbulb, X,
+  Upload, Loader2, Sparkles, Image as ImageIcon, Lightbulb, X, Megaphone, EyeOff,
 } from 'lucide-react';
 import { getTenantSlug } from '@/services/core/tenant';
 import { RichTextEditor, type RichTextEditorRef } from '@/components/chat/rich-text-editor';
@@ -41,6 +42,9 @@ import {
   SITE_LEAD_STATUS_COLORS,
 } from '@/services/siteBuilder/siteBuilderService';
 import DomainSettings from './DomainSettings';
+import LandingsPanel from '@/features/landing/manage/LandingsPanel';
+import { useTenantFeatures, useClientToggle } from '@/contexts/TenantFeaturesContext';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 
 const TABS = [
   { key: 'portal', label: 'Portal', icon: LayoutTemplate },
@@ -48,7 +52,35 @@ const TABS = [
   { key: 'pages', label: 'Páginas', icon: FileText },
   { key: 'articles', label: 'Artigos', icon: Newspaper },
   { key: 'leads', label: 'Leads', icon: Users },
+  { key: 'landings', label: 'Landings de anúncio', icon: Megaphone },
 ];
+
+// A landing de anúncio é liberada CLIENTE A CLIENTE pela Leal Mídia. O gate mora
+// na ABA, nunca na rota nem no item de menu: quem digita o endereço alcança a
+// tela, como em todo o resto do produto. O item Site Builder do menu continua
+// com `featureKey: 'site_builder'` e não muda — portal e landing são duas
+// vendas diferentes, por isso são duas chaves.
+//
+// ⚠️ A chave é escrita LITERAL na chamada do useClientToggle abaixo, e não
+// através desta constante, de propósito: scripts/sync-feature-catalog.mjs varre
+// o código por REGEX e só reconhece string literal. Trocar por uma constante
+// tira a chave do catálogo no deploy seguinte — o painel de Funções deixa de
+// oferecer o botão de liberar e ninguém é avisado.
+const LANDINGS_KEY = 'landing_pages';
+
+// Estado vazio comum das abas que dependem do site existir. Antes cada aba
+// repetia essa marcação, e a de landings morria num aviso vermelho sem saída.
+function NoSiteYet({ onGoToConfig }: { onGoToConfig: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+      <Globe className="h-10 w-10 mb-2 opacity-30" />
+      <p className="text-sm">Configure o site primeiro na aba Configurações</p>
+      <Button variant="outline" size="sm" className="mt-3" onClick={onGoToConfig}>
+        Ir para Configurações
+      </Button>
+    </div>
+  );
+}
 
 const SITE_FONTS = ['Inter', 'Space Grotesk', 'Lato', 'Poppins', 'Montserrat', 'Roboto'];
 
@@ -113,9 +145,29 @@ function formatDate(iso: string) {
 }
 
 export default function SiteBuilder() {
+  const navigate = useNavigate();
   const [site, setSite] = useState<Site | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('portal');
+
+  // Aba no endereço pra dar link direto (o "voltar" do editor de landing aponta
+  // pra cá). `replace` de propósito: sem ele o botão Voltar do navegador passa a
+  // percorrer as abas em vez de sair da tela.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') ?? 'portal';
+  const setActiveTab = useCallback((key: string) => {
+    setSearchParams(key === 'portal' ? {} : { tab: key }, { replace: true });
+  }, [setSearchParams]);
+
+  // Gate da aba de landings: default DESLIGADO, a Leal Mídia sempre vê.
+  // `archivedKeys` é a camada acima — tira a aba do ar pra TODO MUNDO, inclusive
+  // a Leal Mídia, enquanto algo estiver em obra (painel Clientes > Arquivados).
+  const { archivedKeys } = useTenantFeatures();
+  const isSuper = useIsSuperAdmin();
+  const landingsToggle = useClientToggle('landing_pages');
+  const canLandings = !archivedKeys?.includes(LANDINGS_KEY) && (isSuper || landingsToggle);
+  // Só o super-admin recebe o selo "oculto pro cliente" — o cliente sem a chave
+  // nem vê a aba, então nunca veria selo.
+  const landingsHiddenFromClient = isSuper && !landingsToggle;
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -209,7 +261,11 @@ export default function SiteBuilder() {
     if (!site) return;
     setPagesLoading(true);
     try {
-      setPages(await siteBuilderService.listPages(site.id));
+      // Só as páginas do PORTAL. A landing de anúncio é feita de blocos e tem
+      // aba própria — listada aqui, o botão Editar abria o editor simples de
+      // título/HTML e salvava por cima do que o construtor montou.
+      const all = await siteBuilderService.listPages(site.id);
+      setPages(all.filter(p => p.page_kind !== 'ad_landing'));
     } catch {
       toast.error('Erro ao carregar páginas');
     } finally {
@@ -599,7 +655,7 @@ export default function SiteBuilder() {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border mb-6">
-        {TABS.map(tab => {
+        {TABS.filter(tab => tab.key !== 'landings' || canLandings).map(tab => {
           const Icon = tab.icon;
           return (
             <button
@@ -613,6 +669,12 @@ export default function SiteBuilder() {
             >
               <Icon className="h-4 w-4" />
               {tab.label}
+              {tab.key === 'landings' && landingsHiddenFromClient && (
+                <EyeOff
+                  className="h-3.5 w-3.5 text-amber-500"
+                  aria-label="Oculto pro cliente"
+                />
+              )}
             </button>
           );
         })}
@@ -700,6 +762,12 @@ export default function SiteBuilder() {
                 <a href="/properties" className="inline-flex items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted">
                   <Building2 className="mr-1.5 h-4 w-4" /> Gerenciar imóveis
                 </a>
+                {/* O template vale pra TODOS os imóveis publicados do portal —
+                    por isso mora aqui, e não na tela de Imóveis, onde o botão
+                    fazia parecer configuração de um imóvel só. */}
+                <Button variant="outline" size="sm" onClick={() => navigate('/properties/template-imovel')}>
+                  <LayoutTemplate className="mr-1.5 h-4 w-4" /> Editar o template da página de imóvel
+                </Button>
               </div>
             </section>
           </div>
@@ -1208,6 +1276,13 @@ export default function SiteBuilder() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Landings de anúncio tab */}
+      {activeTab === 'landings' && canLandings && (
+        site
+          ? <LandingsPanel siteId={site.id} siteSlug={site.slug} />
+          : <NoSiteYet onGoToConfig={() => setActiveTab('config')} />
       )}
 
       {/* Page modal */}
