@@ -35,6 +35,10 @@ export default function LandingByIdEditorPage() {
   const [blocks, setBlocks] = useState<BlockInstance[]>([]);
   const [property, setProperty] = useState<LandingProperty | null>(null);
   const [theme, setThemeState] = useState<Partial<LandingTheme>>({});
+  // page.settings inteiro: guarda o Pixel, o desvio do desqualificado e o
+  // destino por resposta. Vai e volta completo porque o servidor substitui a
+  // coluna toda a cada gravação.
+  const [settings, setSettings] = useState<Record<string, unknown>>({});
   const [brandMode, setBrandModeState] = useState<BrandMode>('client');
   const [title, setTitle] = useState('Landing Page');
 
@@ -69,6 +73,7 @@ export default function LandingByIdEditorPage() {
         setBlocks(lp.blocks);
         setProperty(prop);
         setThemeState(lp.theme);
+        setSettings((lp.dto.settings ?? {}) as Record<string, unknown>);
         setBrandModeState((lp.dto.brand_mode as BrandMode) ?? 'client');
         setTitle(lp.dto.title || 'Landing Page');
         setLoading(false);
@@ -87,8 +92,8 @@ export default function LandingByIdEditorPage() {
     if (!siteId || !pageId) return;
     setSaving(true);
     try {
-      const { theme: t, brandMode: bm } = useLandingEditorStore.getState();
-      await landingPageService.saveBlocks(siteId, pageId, next, t, bm);
+      const { theme: t, brandMode: bm, settings: st } = useLandingEditorStore.getState();
+      await landingPageService.saveBlocks(siteId, pageId, next, t, bm, st);
       toast.success('Landing page salva');
     } catch {
       toast.error('Erro ao salvar a landing page');
@@ -107,7 +112,7 @@ export default function LandingByIdEditorPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-neutral-950 text-neutral-400">
+      <div className="flex h-screen items-center justify-center bg-background text-muted-foreground">
         Carregando editor…
       </div>
     );
@@ -115,12 +120,12 @@ export default function LandingByIdEditorPage() {
 
   if (error) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-neutral-950 px-6 text-center text-neutral-300">
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center text-foreground">
         <p className="max-w-md">{error}</p>
         <button
           type="button"
           onClick={() => navigate(LANDINGS_TAB)}
-          className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
         >
           Voltar
         </button>
@@ -136,6 +141,7 @@ export default function LandingByIdEditorPage() {
         property={property}
         initialTheme={theme}
         initialBrandMode={brandMode}
+        initialSettings={settings}
         saving={saving}
         onSave={handleSave}
         onBack={() => navigate(LANDINGS_TAB)}

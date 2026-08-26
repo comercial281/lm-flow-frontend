@@ -32,14 +32,14 @@ export function AppearancePanel() {
   return (
     <div className="space-y-4">
       <div>
-        <span className="mb-1 block text-xs text-neutral-400">Aplicar template</span>
+        <span className="mb-1 block text-xs text-muted-foreground">Aplicar template</span>
         <div className="grid grid-cols-2 gap-2">
           {LANDING_TEMPLATES.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setTheme(t.theme)}
-              className="flex items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800 px-2 py-2 text-left text-xs text-neutral-100 hover:border-violet-500"
+              className="flex items-center gap-2 rounded-lg border border-border bg-background px-2 py-2 text-left text-xs text-foreground hover:border-primary"
             >
               <span className="flex-none rounded-full" style={{ width: 14, height: 14, background: t.theme.primary, boxShadow: `0 0 0 2px ${t.theme.bgEnd}` }} />
               <span className="truncate">{t.name}</span>
@@ -49,11 +49,11 @@ export function AppearancePanel() {
       </div>
 
       <div>
-        <span className="mb-1 block text-xs text-neutral-400">Fonte da marca</span>
+        <span className="mb-1 block text-xs text-muted-foreground">Fonte da marca</span>
         <select
           value={brandMode}
           onChange={(e) => setBrandMode(e.target.value as BrandMode)}
-          className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-violet-500"
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
         >
           {BRAND_MODES.map((m) => (
             <option key={m} value={m}>
@@ -64,11 +64,11 @@ export function AppearancePanel() {
       </div>
 
       <div>
-        <span className="mb-1 block text-xs text-neutral-400">Fonte</span>
+        <span className="mb-1 block text-xs text-muted-foreground">Fonte</span>
         <select
           value={currentFont}
           onChange={(e) => setTheme({ fontFamily: `${e.target.value}, sans-serif` })}
-          className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-violet-500"
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
         >
           {FONTS.map((f) => (
             <option key={f} value={f}>
@@ -87,9 +87,9 @@ export function AppearancePanel() {
                 type="color"
                 value={value}
                 onChange={(e) => setTheme({ [f.key]: e.target.value })}
-                className="h-7 w-9 flex-none cursor-pointer rounded border border-neutral-700 bg-transparent"
+                className="h-7 w-9 flex-none cursor-pointer rounded border border-border bg-transparent"
               />
-              <span className="text-xs text-neutral-300">{f.label}</span>
+              <span className="text-xs text-foreground">{f.label}</span>
             </label>
           );
         })}

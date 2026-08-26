@@ -109,33 +109,43 @@ export default function LandingPublicPage() {
 
   // Grava o lead do formulário multi-step no CRM (com respostas + tracking).
   const onSubmitLead = async (payload: LeadSubmitPayload) => {
-    if (!tenant || !slug) return;
+    if (!tenant || !slug) return { failed: true };
     const base = import.meta.env.VITE_API_URL as string;
     const params = new URLSearchParams(window.location.search);
-    const res = await fetch(`${base}/api/public/v1/landing/${encodeURIComponent(slug)}/leads`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
-      body: JSON.stringify({
-        lead: {
-          name: payload.name,
-          phone: payload.phone,
-          email: payload.email,
-          source: 'landing',
-          utm_source: params.get('utm_source') ?? undefined,
-          utm_medium: params.get('utm_medium') ?? undefined,
-          utm_campaign: params.get('utm_campaign') ?? undefined,
-          utm_term: params.get('utm_term') ?? undefined,
-          utm_content: params.get('utm_content') ?? undefined,
-          form_data: {
-            answers: payload.answers,
-            fbp: cookie('_fbp') ?? null,
-            fbc: cookie('_fbc') ?? null,
-            referrer: document.referrer || null,
-            landing_url: window.location.href,
+    let res: Response;
+    try {
+      res = await fetch(`${base}/api/public/v1/landing/${encodeURIComponent(slug)}/leads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
+        body: JSON.stringify({
+          lead: {
+            name: payload.name,
+            phone: payload.phone,
+            email: payload.email,
+            source: 'landing',
+            utm_source: params.get('utm_source') ?? undefined,
+            utm_medium: params.get('utm_medium') ?? undefined,
+            utm_campaign: params.get('utm_campaign') ?? undefined,
+            utm_term: params.get('utm_term') ?? undefined,
+            utm_content: params.get('utm_content') ?? undefined,
+            form_data: {
+              answers: payload.answers,
+              fbp: cookie('_fbp') ?? null,
+              fbc: cookie('_fbc') ?? null,
+              referrer: document.referrer || null,
+              landing_url: window.location.href,
+            },
           },
-        },
-      }),
-    });
+        }),
+      });
+    } catch {
+      // Rede caiu: o lead NÃO foi gravado. Devolver falha faz o formulário
+      // mostrar erro e oferecer tentar de novo — antes ele agradecia igual, e
+      // o lead pago sumia sem ninguém saber.
+      return { failed: true };
+    }
+    if (!res.ok) return { failed: true };
+
     // Retorna a qualificação computada no backend pra a tela final ramificar.
     try {
       const json = (await res.json()) as { data?: { qualification?: 'qualified' | 'disqualified' } };
@@ -157,6 +167,9 @@ export default function LandingPublicPage() {
       }
       return { qualification };
     } catch {
+      // O lead FOI gravado (a resposta veio ok); só não deu pra ler o corpo.
+      // Segue pra tela de agradecimento — recusar aqui pediria um segundo
+      // cadastro de quem já está no CRM.
       return {};
     }
   };

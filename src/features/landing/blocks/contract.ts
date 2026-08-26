@@ -182,45 +182,162 @@ const apartmentTypesConfig = z.object({
     .default([]),
 });
 
+/* ------------------------------------------------------------------ */
+/* Formulário de lead: perguntas, opções e desvio                      */
+/* ------------------------------------------------------------------ */
+
+/** Para onde o formulário vai depois que o lead escolhe esta resposta.
+ *  Só desvio PARA FRENTE: pular pra uma pergunta anterior prenderia o lead num
+ *  laço. O editor só oferece perguntas abaixo, e o formulário ignora salto pra
+ *  pergunta desconhecida (cai no "próxima"). */
+export const optionNextSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('next') }),
+  z.object({ kind: z.literal('question'), id: z.string() }),
+  z.object({ kind: z.literal('contact') }),
+  z.object({ kind: z.literal('finish'), screen: z.enum(['thankyou', 'disqualified']) }),
+]);
+
+export type OptionNext = z.infer<typeof optionNextSchema>;
+
+/** Uma alternativa de resposta. Tem IDENTIDADE (`id`) porque o peso, a
+ *  desqualificação e o destino do lead se penduram nela: enquanto isso era
+ *  casado pelo TEXTO, reescrever a alternativa desligava a regra em silêncio. */
+export const leadFormOptionSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  weight: z.number().optional(),
+  disqualifies: z.boolean().optional(),
+  next: optionNextSchema.optional(),
+});
+
+export type LeadFormOption = z.infer<typeof leadFormOptionSchema>;
+
+export const leadFormStepSchema = z.object({
+  id: z.string(),
+  question: z.string(),
+  options: z.array(leadFormOptionSchema).default([]),
+});
+
+export type LeadFormStep = z.infer<typeof leadFormStepSchema>;
+
+/** Id estável derivado do texto: uma landing gravada no formato antigo tem de
+ *  chegar SEMPRE aos mesmos ids, senão o destino gravado em settings (indexado
+ *  por id) apontaria pro vazio a cada carregamento. */
+export function derivedOptionId(stepIndex: number, optionIndex: number, text: string): string {
+  const slug = text
+    .normalize('NFD')
+    // Intervalo escrito em escape de propósito: acento combinante literal no
+    // fonte some em qualquer normalização de editor, sem ninguém perceber.
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  return `q${stepIndex + 1}o${optionIndex + 1}${slug ? `-${slug}` : ''}`;
+}
+
+export function derivedStepId(stepIndex: number): string {
+  return `q${stepIndex + 1}`;
+}
+
+/** Aceita os dois formatos gravados e devolve sempre o novo:
+ *
+ *    antigo: { question, options: ['Sim', 'Não'] } + answerWeights/
+ *            disqualifyingAnswers casados pelo texto, no nível do config
+ *    novo:   { id, question, options: [{ id, text, weight, disqualifies, next }] }
+ *
+ *  Landing publicada antes desta leva continua abrindo, pontuando e capturando
+ *  igual — o editor regrava nos dois formatos ao salvar. */
+function normalizeSteps(raw: unknown, cfg: Record<string, unknown>): LeadFormStep[] {
+  if (!Array.isArray(raw)) return [];
+  const weights = (cfg.answerWeights ?? {}) as Record<string, number>;
+  const disq = Array.isArray(cfg.disqualifyingAnswers) ? (cfg.disqualifyingAnswers as string[]) : [];
+
+  return raw.flatMap((step, si) => {
+    if (typeof step !== 'object' || step === null) return [];
+    const s = step as Record<string, unknown>;
+    const question = typeof s.question === 'string' ? s.question : '';
+    const rawOptions = Array.isArray(s.options) ? s.options : [];
+
+    const options: LeadFormOption[] = rawOptions.flatMap((opt: unknown, oi: number): LeadFormOption[] => {
+      if (typeof opt === 'string') {
+        return [{
+          id: derivedOptionId(si, oi, opt),
+          text: opt,
+          weight: typeof weights[opt] === 'number' ? weights[opt] : undefined,
+          disqualifies: disq.includes(opt) ? true : undefined,
+        }];
+      }
+      if (typeof opt !== 'object' || opt === null) return [];
+      const o = opt as Record<string, unknown>;
+      const text = typeof o.text === 'string' ? o.text : '';
+      const id = typeof o.id === 'string' && o.id ? o.id : derivedOptionId(si, oi, text);
+      const next = optionNextSchema.safeParse(o.next);
+      return [{
+        id,
+        text,
+        weight: typeof o.weight === 'number' ? o.weight : (typeof weights[text] === 'number' ? weights[text] : undefined),
+        disqualifies: typeof o.disqualifies === 'boolean' ? o.disqualifies : (disq.includes(text) ? true : undefined),
+        next: next.success ? next.data : undefined,
+      }];
+    });
+
+    return [{
+      id: typeof s.id === 'string' && s.id ? s.id : derivedStepId(si),
+      question,
+      options,
+    }];
+  });
+}
+
 /** Perguntas de qualificação padrão (as do VGV Elite). Exportado pra o editor
  *  usar de fallback quando o bloco ainda não tem `steps` no config gravado. */
-export const DEFAULT_LEAD_FORM_STEPS: { question: string; options: string[] }[] = [
-  {
-    question: 'Quando você pretende comprar?',
-    options: [
-      'Quero fechar o quanto antes',
-      'Nos próximos 30 dias',
-      'Em até 3 meses',
-      'Em 6 meses ou mais',
-      'Ainda estou pesquisando',
-    ],
-  },
-  {
-    question: 'Como pretende pagar?',
-    options: [
-      'Já tenho financiamento aprovado',
-      'Vou pagar à vista',
-      'Estou em processo de aprovação',
-      'Ainda não sei',
-    ],
-  },
-];
+export const DEFAULT_LEAD_FORM_STEPS: LeadFormStep[] = normalizeSteps(
+  [
+    {
+      question: 'Quando você pretende comprar?',
+      options: [
+        'Quero fechar o quanto antes',
+        'Nos próximos 30 dias',
+        'Em até 3 meses',
+        'Em 6 meses ou mais',
+        'Ainda estou pesquisando',
+      ],
+    },
+    {
+      question: 'Como pretende pagar?',
+      options: [
+        'Já tenho financiamento aprovado',
+        'Vou pagar à vista',
+        'Estou em processo de aprovação',
+        'Ainda não sei',
+      ],
+    },
+  ],
+  {},
+);
 
-const leadFormConfig = z.object({
+const leadFormShape = z.object({
   title: z.string().max(160).default('Preencha o formulário para falar com o especialista'),
   /** Nome do corretor/especialista mostrado no header e na tela final. */
   specialistName: z.string().max(60).optional(),
   ctaLabel: z.string().max(40).default('Falar com Especialista'),
+  /** Número do botão "Fura a fila" da tela final. Vazio = o botão não aparece:
+   *  ele existia sem número nenhum atrás e não abria conversa alguma, sendo o
+   *  botão mais chamativo que o lead vê depois de se cadastrar. */
+  whatsappPhone: z.string().max(30).optional(),
   /** "X pessoas estão interessadas nesse imóvel" na tela de obrigado. */
   interestedCount: z.number().int().min(0).default(14),
-  /** Perguntas de qualificação (default = as do VGV Elite). */
-  steps: z
-    .array(z.object({ question: z.string(), options: z.array(z.string()) }))
-    .default(DEFAULT_LEAD_FORM_STEPS),
-  /* --- Qualificação (Fatia 2a). Design não-quebra: opções seguem strings; a
-     qualificação vem por mapas paralelos, casados pelo texto da resposta. --- */
+  /** Perguntas de qualificação (default = as do VGV Elite). Já chegam
+   *  normalizadas pelo preprocess abaixo — ver normalizeSteps. */
+  steps: z.array(leadFormStepSchema).default(DEFAULT_LEAD_FORM_STEPS),
   /** Nota de corte: score abaixo disso = desqualificado. */
   cutoff: z.number().int().default(0),
+  /* --- Mapas LEGADOS da qualificação, casados pelo TEXTO da alternativa. O
+     peso e a desqualificação moram hoje DENTRO da opção (que tem id); estes
+     dois continuam sendo gravados junto (dual-write) para que um servidor ou
+     uma landing publicada antes desta leva sigam pontuando igual. Não são
+     servidos ao público. --- */
   /** Respostas que, escolhidas, desqualificam o lead na hora. */
   disqualifyingAnswers: z.array(z.string()).default([]),
   /** Peso (pontos) por resposta, somado no score. Chave = texto da opção. */
@@ -240,6 +357,30 @@ const leadFormConfig = z.object({
   thankyouTitle: z.string().max(120).default('Recebemos suas informações!'),
   thankyouMessage: z.string().max(400).default('Em breve um especialista entrará em contato com você. Fique de olho no seu WhatsApp.'),
 });
+
+/** As perguntas são normalizadas ANTES da validação porque a conversão do
+ *  formato antigo precisa enxergar os mapas paralelos que estão ao lado delas,
+ *  no mesmo config. */
+const leadFormConfig = z.preprocess((raw) => {
+  if (typeof raw !== 'object' || raw === null) return raw;
+  const cfg = raw as Record<string, unknown>;
+  if (cfg.steps === undefined) return cfg;
+  return { ...cfg, steps: normalizeSteps(cfg.steps, cfg) };
+}, leadFormShape);
+
+/** Reescreve os mapas legados a partir das opções — o editor chama isto ao
+ *  salvar, para que os dois formatos nunca discordem. */
+export function withLegacyQualificationMaps(config: BlockConfig<'lead_form'>): BlockConfig<'lead_form'> {
+  const answerWeights: Record<string, number> = {};
+  const disqualifyingAnswers: string[] = [];
+  for (const step of config.steps) {
+    for (const opt of step.options) {
+      if (typeof opt.weight === 'number' && opt.weight !== 0) answerWeights[opt.text] = opt.weight;
+      if (opt.disqualifies && !disqualifyingAnswers.includes(opt.text)) disqualifyingAnswers.push(opt.text);
+    }
+  }
+  return { ...config, answerWeights, disqualifyingAnswers };
+}
 
 const stickyCtaConfig = z.object({
   label: z.string().max(40).default('Falar com Especialista'),

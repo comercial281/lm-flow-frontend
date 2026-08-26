@@ -10,7 +10,7 @@ import { useLandingEditorStore } from './landingEditorStore';
 const CATEGORY_ORDER: BlockCategory[] = ['destaque', 'imovel', 'conversao', 'midia', 'prova'];
 
 /** Library of blocks the user can add, grouped by category. */
-export function BlockLibrary() {
+export function BlockLibrary({ onAdded }: { onAdded?: () => void } = {}) {
   const addBlock = useLandingEditorStore((s) => s.addBlock);
 
   return (
@@ -20,7 +20,7 @@ export function BlockLibrary() {
         if (!items.length) return null;
         return (
           <div key={cat}>
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {BLOCK_CATEGORY_LABELS[cat]}
             </h4>
             <div className="grid grid-cols-2 gap-2">
@@ -31,11 +31,12 @@ export function BlockLibrary() {
                   onClick={() => {
                     addBlock(meta.type);
                     toast.success(`Seção "${meta.label}" adicionada`);
+                    onAdded?.();
                   }}
                   title={meta.description}
-                  className="flex items-center gap-1.5 rounded-lg border border-neutral-700 bg-neutral-800 px-2 py-2 text-left text-xs text-neutral-100 hover:border-violet-500"
+                  className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-2 text-left text-xs text-foreground hover:border-primary"
                 >
-                  <Plus size={14} className="flex-none text-violet-400" />
+                  <Plus size={14} className="flex-none text-primary" />
                   <span className="truncate">{meta.label}</span>
                 </button>
               ))}

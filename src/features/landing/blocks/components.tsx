@@ -565,38 +565,102 @@ function Confetti() {
 
 function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'lead_form'>) {
   const specialist = config.specialistName || property?.responsibleName || 'nosso especialista';
-  const totalSteps = config.steps.length + 1; // quiz + contato
-  const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<{ question: string; answer: string }[]>([]);
+  const steps = config.steps;
+  // `path` é o caminho REALMENTE percorrido (índices das perguntas), não um
+  // contador: com desvio, a pergunta 1 pode levar direto à 4. Voltar é
+  // desempilhar daqui — só assim o "← Voltar" devolve a pergunta que a pessoa
+  // viu, e não a de cima na lista.
+  const [path, setPath] = useState<number[]>(steps.length ? [0] : []);
+  const [onContact, setOnContact] = useState(steps.length === 0);
+  const [forcedScreen, setForcedScreen] = useState<'thankyou' | 'disqualified' | null>(null);
+  const [answers, setAnswers] = useState<
+    { question: string; answer: string; questionId: string; optionId: string }[]
+  >([]);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneErr, setPhoneErr] = useState(false);
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendErr, setSendErr] = useState(false);
   const [done, setDone] = useState(false);
   const [resultQual, setResultQual] = useState<string | undefined>();
 
-  const progress = done ? 100 : ((step + 1) / totalSteps) * 100;
+  const currentIndex = path.length ? path[path.length - 1] : -1;
+  const currentStep = !onContact && currentIndex >= 0 ? steps[currentIndex] : undefined;
 
-  const pickOption = (question: string, answer: string) => {
-    setAnswers((prev) => [...prev.filter((a) => a.question !== question), { question, answer }]);
-    setStep((s) => s + 1);
+  // Com desvio configurado, "Passo 3 de 5" seria mentira: caminhos diferentes
+  // têm tamanhos diferentes. Sem desvio nenhum, o contador continua como era.
+  const hasBranching = useMemo(
+    () => steps.some((s) => s.options.some((o) => o.next && o.next.kind !== 'next')),
+    [steps],
+  );
+  const totalSteps = steps.length + 1; // quiz + contato
+  const progress = done || onContact ? 100 : (path.length / totalSteps) * 100;
+
+  const finish = (screen: 'thankyou' | 'disqualified') => {
+    setForcedScreen(screen);
+    setOnContact(true);
   };
+
+  const pickOption = (
+    step: (typeof steps)[number],
+    option: (typeof steps)[number]['options'][number],
+  ) => {
+    setAnswers((prev) => [
+      ...prev.filter((a) => a.questionId !== step.id),
+      { question: step.question, answer: option.text, questionId: step.id, optionId: option.id },
+    ]);
+
+    const next = option.next ?? { kind: 'next' as const };
+    if (next.kind === 'contact') return setOnContact(true);
+    if (next.kind === 'finish') return finish(next.screen);
+
+    let targetIndex = currentIndex + 1;
+    if (next.kind === 'question') {
+      const found = steps.findIndex((s) => s.id === next.id);
+      // Só desvio PARA FRENTE. Salto pra pergunta anterior (ou pra uma que foi
+      // apagada) prenderia o lead num laço — cai no "próxima".
+      targetIndex = found > currentIndex ? found : currentIndex + 1;
+    }
+    if (targetIndex >= steps.length) return setOnContact(true);
+    setPath((prev) => [...prev, targetIndex]);
+  };
+
+  const back = () => {
+    if (onContact) {
+      setOnContact(false);
+      setForcedScreen(null);
+      if (!path.length && steps.length) setPath([0]);
+      return;
+    }
+    setPath((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
+  };
+
+  const canGoBack = onContact ? steps.length > 0 : path.length > 1;
 
   const submit = async () => {
     if (!name.trim()) return;
     if (!isValidBrPhone(phone)) { setPhoneErr(true); return; }
     setSending(true);
+    setSendErr(false);
     try {
       const res = await onSubmitLead?.({ name: name.trim(), phone, email: email.trim() || undefined, answers });
-      setResultQual(res?.qualification);
+      // Falha de envio NÃO pode virar tela de agradecimento: o lead de anúncio
+      // se perdia em silêncio, sem erro e sem chance de tentar de novo.
+      if (res?.failed) {
+        setSendErr(true);
+        return;
+      }
+      setResultQual(forcedScreen === 'disqualified' ? 'disqualified' : res?.qualification);
       setDone(true);
+    } catch {
+      setSendErr(true);
     } finally {
       setSending(false);
     }
   };
 
-  const isContact = step >= config.steps.length;
+  const whatsappPhone = (config.whatsappPhone ?? '').replace(/\D/g, '');
 
   return (
     <Section>
@@ -620,11 +684,15 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
                   <p className="mx-auto mt-1 max-w-xs text-sm opacity-70">
                     O corretor {specialist} entrará em contato em breve. {config.interestedCount} pessoas estão interessadas nesse imóvel.
                   </p>
-                  <button type="button" data-lp-action="whatsapp"
-                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 font-semibold text-white"
-                    style={{ background: '#16A34A' }}>
-                    <WhatsAppIcon size={18} /> Fura a fila e fale direto no WhatsApp
-                  </button>
+                  {/* Só aparece com número: sem ele o botão não abria conversa
+                      nenhuma e era o mais chamativo da tela. */}
+                  {whatsappPhone && (
+                    <button type="button" data-lp-action="whatsapp" data-whatsapp-phone={whatsappPhone}
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 font-semibold text-white"
+                      style={{ background: '#16A34A' }}>
+                      <WhatsAppIcon size={18} /> Fura a fila e fale direto no WhatsApp
+                    </button>
+                  )}
                 </>
               )}
               <div className="mt-5 flex items-center gap-3 rounded-xl border p-3 text-left" style={{ borderColor: 'var(--lp-border)' }}>
@@ -651,25 +719,29 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
             <p className="mt-1 text-xs opacity-60">Deixe seus dados e o corretor entrará em contato.</p>
             <div className="mt-3 mb-4 flex items-center gap-3">
               <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--lp-card)' }}>
-                <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: 'var(--lp-text)' }} />
+                <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(progress, 100)}%`, background: 'var(--lp-text)' }} />
               </div>
-              <span className="text-xs opacity-60">Passo {Math.min(step + 1, totalSteps)} de {totalSteps}</span>
+              {!hasBranching && (
+                <span className="text-xs opacity-60">
+                  Passo {Math.min(onContact ? totalSteps : path.length, totalSteps)} de {totalSteps}
+                </span>
+              )}
             </div>
 
-            {!isContact ? (
+            {currentStep ? (
               <div>
-                <h3 className="mb-3 font-semibold">{config.steps[step].question}</h3>
+                <h3 className="mb-3 font-semibold">{currentStep.question}</h3>
                 <div className="space-y-2">
-                  {config.steps[step].options.map((opt) => (
-                    <button key={opt} type="button" onClick={() => pickOption(config.steps[step].question, opt)}
+                  {currentStep.options.map((opt) => (
+                    <button key={opt.id} type="button" onClick={() => pickOption(currentStep, opt)}
                       className="w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-white transition-transform active:scale-[0.99]"
                       style={{ background: '#1F2937' }}>
-                      {opt}
+                      {opt.text}
                     </button>
                   ))}
                 </div>
-                {step > 0 && (
-                  <button type="button" onClick={() => setStep((s) => s - 1)} className="mt-3 text-xs opacity-60">← Voltar</button>
+                {canGoBack && (
+                  <button type="button" onClick={back} className="mt-3 text-xs opacity-60">← Voltar</button>
                 )}
               </div>
             ) : (
@@ -688,12 +760,19 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
                     className="w-full rounded-xl border bg-transparent px-4 py-3 text-sm outline-none focus:border-amber-400"
                     style={{ borderColor: 'var(--lp-border)', color: 'var(--lp-text)' }} />
                 </div>
+                {sendErr && (
+                  <div className="mt-3 rounded-xl border px-3 py-2 text-xs" style={{ borderColor: '#f87171', color: '#f87171' }}>
+                    Não conseguimos enviar seus dados. Confira sua conexão e toque em enviar de novo.
+                  </div>
+                )}
                 <button type="button" onClick={submit} disabled={sending || !name.trim() || !phone.trim()}
                   className="mt-4 flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 font-semibold text-white disabled:opacity-40"
                   style={{ background: '#16A34A' }}>
-                  <WhatsAppIcon size={18} /> {sending ? 'Enviando…' : config.ctaLabel}
+                  <WhatsAppIcon size={18} /> {sending ? 'Enviando…' : sendErr ? 'Tentar de novo' : config.ctaLabel}
                 </button>
-                <button type="button" onClick={() => setStep((s) => s - 1)} className="mt-3 text-xs opacity-60">← Voltar</button>
+                {canGoBack && (
+                  <button type="button" onClick={back} className="mt-3 text-xs opacity-60">← Voltar</button>
+                )}
               </div>
             )}
           </>
