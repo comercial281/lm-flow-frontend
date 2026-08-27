@@ -179,13 +179,21 @@ export interface LeadSubmitPayload {
   name: string;
   phone: string;
   email?: string;
-  answers: { question: string; answer: string }[];
+  /** `questionId`/`optionId` acompanham o texto porque é por eles que o
+   *  servidor acha o peso e o destino da resposta. Ficam opcionais: landing
+   *  publicada antes da lógica condicional não os manda, e ali o servidor
+   *  volta a casar pelo texto. */
+  answers: { question: string; answer: string; questionId?: string; optionId?: string }[];
 }
 
 /** Retorno do envio: a qualificação computada no backend, pra a tela final
  *  ramificar (obrigado x desqualificado). */
 export interface LeadSubmitResult {
   qualification?: 'qualified' | 'disqualified';
+  /** true = o lead NÃO foi gravado. O formulário mostra erro e oferece tentar
+   *  de novo, em vez da tela de agradecimento — antes uma falha de rede virava
+   *  "Recebemos suas informações!" e o lead de anúncio sumia calado. */
+  failed?: boolean;
 }
 
 export interface BlockComponentProps<T extends BlockType = BlockType> {

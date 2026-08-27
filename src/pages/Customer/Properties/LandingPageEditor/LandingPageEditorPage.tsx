@@ -124,8 +124,8 @@ export default function LandingPageEditorPage() {
     if (!siteId || !pageId) return;
     setSaving(true);
     try {
-      const { theme: t, brandMode: bm } = useLandingEditorStore.getState();
-      await landingPageService.saveBlocks(siteId, pageId, next, t, bm);
+      const { theme: t, brandMode: bm, settings: st } = useLandingEditorStore.getState();
+      await landingPageService.saveBlocks(siteId, pageId, next, t, bm, st);
       toast.success('Landing page salva');
     } catch {
       toast.error('Erro ao salvar a landing page');
@@ -143,7 +143,7 @@ export default function LandingPageEditorPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-neutral-950 text-neutral-400">
+      <div className="flex h-screen items-center justify-center bg-background text-muted-foreground">
         Carregando editor…
       </div>
     );
@@ -151,12 +151,12 @@ export default function LandingPageEditorPage() {
 
   if (error) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-neutral-950 px-6 text-center text-neutral-300">
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center text-foreground">
         <p className="max-w-md">{error}</p>
         <button
           type="button"
           onClick={() => navigate('/properties')}
-          className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white"
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
         >
           Voltar para Imóveis
         </button>

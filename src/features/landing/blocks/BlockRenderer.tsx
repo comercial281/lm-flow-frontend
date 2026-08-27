@@ -29,11 +29,22 @@ export interface BlockRendererProps {
   showHidden?: boolean;
   /** Grava o lead do formulário (render público). */
   onSubmitLead?: (payload: LeadSubmitPayload) => Promise<LeadSubmitResult | void> | LeadSubmitResult | void;
+  /** Prévia do editor: destaca a seção selecionada e mostra o nome dela. */
+  selectedBlockId?: string | null;
+  selectedLabel?: string | null;
 }
 
 /** Renders an ordered list of blocks. Shared by the editor preview and the
  *  public SSR renderer. */
-export function BlockRenderer({ blocks, property, theme, showHidden = false, onSubmitLead }: BlockRendererProps) {
+export function BlockRenderer({
+  blocks,
+  property,
+  theme,
+  showHidden = false,
+  onSubmitLead,
+  selectedBlockId,
+  selectedLabel,
+}: BlockRendererProps) {
   const resolved: LandingTheme = { ...DEFAULT_LANDING_THEME, ...theme };
   const vars = themeToCssVars(resolved);
 
@@ -51,9 +62,35 @@ export function BlockRenderer({ blocks, property, theme, showHidden = false, onS
         if (!block.visible && !showHidden) return null;
         const Cmp = BLOCK_COMPONENTS[block.type];
         if (!Cmp) return null;
+        const selected = selectedBlockId === block.id;
         return (
           <BlockBoundary key={block.id}>
-            <div style={!block.visible && showHidden ? { opacity: 0.4 } : undefined}>
+            <div
+              data-block-id={block.id}
+              style={{
+                position: 'relative',
+                ...(!block.visible && showHidden ? { opacity: 0.4 } : {}),
+                ...(selected ? { outline: '2px solid var(--lp-primary)', outlineOffset: '-2px' } : {}),
+              }}
+            >
+              {selected && selectedLabel && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    zIndex: 5,
+                    padding: '2px 8px',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: '#fff',
+                    background: 'var(--lp-primary)',
+                    borderBottomRightRadius: 6,
+                  }}
+                >
+                  {selectedLabel}
+                </span>
+              )}
               <Cmp config={block.config} property={property} theme={resolved} onSubmitLead={onSubmitLead} />
             </div>
           </BlockBoundary>

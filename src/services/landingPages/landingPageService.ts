@@ -1,11 +1,13 @@
 import api from '@/services/core/api';
 import {
+  type BlockConfig,
   type BlockInstance,
   type BrandMode,
   type LandingTheme,
   defaultLandingBlocks,
   parsePageBlocks,
   safeParsePageBlocks,
+  withLegacyQualificationMaps,
 } from '@/features/landing/blocks';
 
 /** Shape returned by Api::V1::PagesController#serialize_page. */
@@ -37,6 +39,18 @@ export interface LandingPage {
   dto: LandingPageDTO;
   blocks: BlockInstance[];
   theme: Partial<LandingTheme>;
+}
+
+/** Grava o formulário nos DOIS formatos: peso e desqualificação dentro da
+ *  opção (que tem id) e, junto, os mapas antigos casados pelo texto. É isso que
+ *  faz a landing continuar pontuando certo num servidor que ainda não subiu, e
+ *  torna a ordem de deploy inofensiva. */
+function withDualWrite(blocks: BlockInstance[]): BlockInstance[] {
+  return blocks.map((b) =>
+    b.type === 'lead_form'
+      ? { ...b, config: withLegacyQualificationMaps(b.config as BlockConfig<'lead_form'>) }
+      : b,
+  );
 }
 
 function unwrap<T>(res: { data: unknown }): T {
@@ -156,18 +170,23 @@ export const landingPageService = {
   },
 
   /** Persist the block arrangement + theme + brand mode from the editor. */
+  /** `settings` vai INTEIRO quando enviado: o update da página substitui a
+   *  coluna toda, então mandar só o pedaço do editor apagaria o Pixel e o
+   *  desvio do desqualificado, gravados pela janela "Destino do lead". */
   async saveBlocks(
     siteId: string,
     pageId: string,
     blocks: BlockInstance[],
     theme?: Partial<LandingTheme>,
     brandMode?: BrandMode,
+    settings?: Record<string, unknown>,
   ): Promise<LandingPage> {
     const res = await api.put(`/sites/${siteId}/pages/${pageId}`, {
       page: {
-        content_blocks: blocks,
+        content_blocks: withDualWrite(blocks),
         ...(theme ? { theme } : {}),
         ...(brandMode ? { brand_mode: brandMode } : {}),
+        ...(settings ? { settings } : {}),
       },
     });
     // Re-validate what the server stored so the editor reloads a clean state.

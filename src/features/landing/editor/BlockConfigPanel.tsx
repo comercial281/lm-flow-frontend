@@ -1,84 +1,7 @@
-import { useRef, useState } from 'react';
-import api from '@/services/core/api';
+import { LeadFormPanel, QuestionPanel } from './LeadFormPanel';
 import { useLandingEditorStore } from './landingEditorStore';
-import { BLOCK_REGISTRY, DEFAULT_LEAD_FORM_STEPS, type BlockInstance } from '@/features/landing/blocks';
-
-/* ── upload genérico (ActiveStorage) → retorna file_url ──────────────── */
-async function uploadFile(file: File): Promise<string> {
-  const fd = new FormData();
-  fd.append('attachment', file);
-  const res = await api.post('/uploads', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-  return (res.data as { data: { file_url: string } }).data.file_url;
-}
-
-/* ── field helpers ──────────────────────────────────────────────────── */
-const inputCls =
-  'w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-violet-500';
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-xs text-neutral-400">{label}</span>
-      {children}
-    </label>
-  );
-}
-function Text({ value, onChange, placeholder }: { value?: string; onChange: (v: string) => void; placeholder?: string }) {
-  return <input className={inputCls} value={value ?? ''} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />;
-}
-function Area({ value, onChange, rows = 4, placeholder }: { value?: string; onChange: (v: string) => void; rows?: number; placeholder?: string }) {
-  return <textarea className={inputCls} rows={rows} value={value ?? ''} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />;
-}
-function Num({ value, onChange, placeholder }: { value?: number; onChange: (v: number | undefined) => void; placeholder?: string }) {
-  return (
-    <input
-      type="number"
-      className={inputCls}
-      value={value ?? ''}
-      placeholder={placeholder}
-      onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
-    />
-  );
-}
-
-/* Upload de arquivo (áudio/imagem) com preview do estado. */
-function Upload({ value, onChange, accept, hint }: { value?: string; onChange: (url: string) => void; accept: string; hint?: string }) {
-  const ref = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState(false);
-  const isAudio = accept.includes('audio');
-  return (
-    <div className="space-y-2">
-      {value && !isAudio && <img src={value} alt="" className="h-20 w-full rounded-lg object-cover" />}
-      {value && isAudio && <audio controls src={value} className="w-full" />}
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => ref.current?.click()}
-          disabled={busy}
-          className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-xs font-medium text-neutral-100 hover:border-violet-500 disabled:opacity-50"
-        >
-          {busy ? 'Enviando…' : value ? 'Trocar arquivo' : 'Enviar arquivo'}
-        </button>
-        {value && <button type="button" onClick={() => onChange('')} className="text-xs text-neutral-500 hover:text-red-400">remover</button>}
-      </div>
-      {err && <p className="text-xs text-red-400">Falha no upload. Tente de novo.</p>}
-      {hint && !err && <p className="text-xs text-neutral-500">{hint}</p>}
-      <input
-        ref={ref}
-        type="file"
-        accept={accept}
-        className="hidden"
-        onChange={async (e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          setBusy(true); setErr(false);
-          try { onChange(await uploadFile(f)); } catch { setErr(true); } finally { setBusy(false); if (ref.current) ref.current.value = ''; }
-        }}
-      />
-    </div>
-  );
-}
+import { BLOCK_REGISTRY, type BlockConfig, type BlockInstance } from '@/features/landing/blocks';
+import { Field, Group, Num, Text, TextArea as Area, Upload, inputCls } from './panelKit';
 
 /* Editor de lista genérico. */
 function Repeater<T>({ items, onChange, empty, addLabel, render }: {
@@ -93,9 +16,9 @@ function Repeater<T>({ items, onChange, empty, addLabel, render }: {
   return (
     <div className="space-y-2">
       {items.map((it, i) => (
-        <div key={i} className="space-y-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-2.5">
+        <div key={i} className="space-y-2 rounded-lg border border-border bg-background p-2.5">
           <div className="flex justify-end">
-            <button type="button" onClick={() => removeAt(i)} className="text-xs text-neutral-500 hover:text-red-400">excluir</button>
+            <button type="button" onClick={() => removeAt(i)} className="text-xs text-muted-foreground hover:text-red-500">excluir</button>
           </div>
           {render(it, (patch) => patchAt(i, patch))}
         </div>
@@ -103,7 +26,7 @@ function Repeater<T>({ items, onChange, empty, addLabel, render }: {
       <button
         type="button"
         onClick={() => onChange([...items, { ...empty }])}
-        className="w-full rounded-lg border border-dashed border-neutral-700 py-2 text-xs font-medium text-neutral-300 hover:border-violet-500"
+        className="w-full rounded-lg border border-dashed border-border py-2 text-xs font-medium text-foreground hover:border-primary"
       >
         + {addLabel}
       </button>
@@ -161,125 +84,10 @@ function Fields({ block }: { block: BlockInstance }) {
           <Field label="Prazo (meses)"><Num value={c.prazoMeses as number} onChange={(v) => set({ prazoMeses: v ?? 1 })} /></Field>
         </>
       );
-    case 'lead_form': {
-      const steps = (Array.isArray(c.steps) ? (c.steps as { question: string; options: string[] }[]) : DEFAULT_LEAD_FORM_STEPS);
-      const weights = (c.answerWeights as Record<string, number>) ?? {};
-      const disq = (c.disqualifyingAnswers as string[]) ?? [];
-      const setWeight = (opt: string, v: number | undefined) =>
-        set({ answerWeights: { ...weights, [opt]: v ?? 0 } });
-      const toggleDisq = (opt: string, on: boolean) =>
-        set({ disqualifyingAnswers: on ? [...disq.filter((o) => o !== opt), opt] : disq.filter((o) => o !== opt) });
-      return (
-        <>
-          <Field label="Título do formulário"><Text value={c.title as string} onChange={(v) => set({ title: v })} /></Field>
-          <Field label="Nome do especialista"><Text value={c.specialistName as string} onChange={(v) => set({ specialistName: v })} /></Field>
-          <Field label="Texto do botão"><Text value={c.ctaLabel as string} onChange={(v) => set({ ctaLabel: v })} /></Field>
-
-          <div className="mt-2 rounded-lg border border-neutral-800 p-3">
-            <p className="mb-1 text-xs font-semibold text-neutral-200">Perguntas do quiz</p>
-            <p className="mb-3 text-xs text-neutral-500">As perguntas de filtragem antes de pedir o contato. Uma opção por linha.</p>
-            <div className="space-y-3">
-              {steps.map((st, si) => (
-                <div key={si} className="rounded-md border border-neutral-800 p-2">
-                  <div className="mb-1.5 flex items-center gap-2">
-                    <input
-                      value={st.question}
-                      placeholder="Pergunta"
-                      onChange={(e) => set({ steps: steps.map((s, i) => (i === si ? { ...s, question: e.target.value } : s)) })}
-                      className={inputCls}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => set({ steps: steps.filter((_, i) => i !== si) })}
-                      className="flex-none text-xs text-neutral-500 hover:text-red-400"
-                      title="Remover pergunta"
-                    >
-                      remover
-                    </button>
-                  </div>
-                  <textarea
-                    value={st.options.join('\n')}
-                    rows={Math.max(2, st.options.length)}
-                    placeholder="Uma opção por linha"
-                    onChange={(e) =>
-                      set({
-                        steps: steps.map((s, i) =>
-                          i === si ? { ...s, options: e.target.value.split('\n').map((o) => o.trim()).filter(Boolean) } : s,
-                        ),
-                      })
-                    }
-                    className={inputCls}
-                  />
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => set({ steps: [...steps, { question: 'Nova pergunta', options: ['Opção 1', 'Opção 2'] }] })}
-              className="mt-2 w-full rounded-lg border border-dashed border-neutral-700 py-2 text-xs font-medium text-neutral-300 hover:border-violet-500"
-            >
-              + pergunta
-            </button>
-          </div>
-
-          <div className="mt-2 rounded-lg border border-neutral-800 p-3">
-            <p className="mb-1 text-xs font-semibold text-neutral-200">Qualificação do lead</p>
-            <p className="mb-3 text-xs text-neutral-500">
-              Dê pontos por resposta e marque as que desqualificam. Score abaixo da nota de corte = desqualificado.
-            </p>
-            <Field label="Nota de corte (score mínimo p/ qualificar)">
-              <Num value={c.cutoff as number} onChange={(v) => set({ cutoff: v ?? 0 })} placeholder="0" />
-            </Field>
-            <div className="mt-2 space-y-3">
-              {steps.map((st, si) => (
-                <div key={si}>
-                  <p className="mb-1 text-xs font-medium text-neutral-300">{st.question}</p>
-                  <div className="space-y-1.5">
-                    {st.options.map((opt) => (
-                      <div key={opt} className="flex items-center gap-2">
-                        <span className="min-w-0 flex-1 truncate text-xs text-neutral-200">{opt}</span>
-                        <input
-                          type="number"
-                          value={weights[opt] ?? ''}
-                          placeholder="0"
-                          onChange={(e) => setWeight(opt, e.target.value === '' ? undefined : Number(e.target.value))}
-                          className="w-16 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-100 outline-none focus:border-violet-500"
-                          title="Pontos dessa resposta"
-                        />
-                        <label className="flex flex-none items-center gap-1 text-xs text-neutral-400" title="Escolher essa resposta desqualifica o lead">
-                          <input type="checkbox" checked={disq.includes(opt)} onChange={(e) => toggleDisq(opt, e.target.checked)} />
-                          desqualifica
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-2 rounded-lg border border-neutral-800 p-3">
-            <p className="mb-1 text-xs font-semibold text-neutral-200">Páginas de resultado</p>
-            <p className="mb-3 text-xs text-neutral-500">Depois de enviar: mostrar na mesma página, ou abrir uma página própria (link separado — o Pixel mede um PageView só dela).</p>
-            <Field label="Modo">
-              <select className={inputCls} value={(c.resultMode as string) ?? 'inline'} onChange={(e) => set({ resultMode: e.target.value })}>
-                <option value="inline">Na mesma página</option>
-                <option value="url">Página própria (URL)</option>
-              </select>
-            </Field>
-            <Field label="Obrigado — título"><Text value={c.thankyouTitle as string} onChange={(v) => set({ thankyouTitle: v })} placeholder="Recebemos suas informações!" /></Field>
-            <Field label="Obrigado — mensagem"><Area value={c.thankyouMessage as string} rows={2} onChange={(v) => set({ thankyouMessage: v })} /></Field>
-          </div>
-
-          <div className="mt-2 rounded-lg border border-neutral-800 p-3">
-            <p className="mb-1 text-xs font-semibold text-neutral-200">Tela do lead desqualificado</p>
-            <p className="mb-3 text-xs text-neutral-500">O que aparece quando o lead cai como desqualificado (em vez da tela de "fura a fila").</p>
-            <Field label="Título"><Text value={c.disqualifiedTitle as string} onChange={(v) => set({ disqualifiedTitle: v })} placeholder="Obrigado pelo seu interesse!" /></Field>
-            <Field label="Mensagem"><Area value={c.disqualifiedMessage as string} rows={3} onChange={(v) => set({ disqualifiedMessage: v })} /></Field>
-          </div>
-        </>
-      );
-    }
+    case 'lead_form':
+      // O formulário tem painel PRÓPRIO: perguntas, respostas, pontos, desvio e
+      // destino não cabem — nem se leem — espremidos junto do resto.
+      return <LeadFormPanel block={block} />;
     case 'sticky_cta':
       return (
         <>
@@ -418,22 +226,47 @@ function Fields({ block }: { block: BlockInstance }) {
         </>
       );
     case 'tech_sheet':
-      return <p className="text-sm text-neutral-400">Preenchida automaticamente com a ficha técnica do imóvel.</p>;
+      return <p className="text-sm text-muted-foreground">Preenchida automaticamente com a ficha técnica do imóvel.</p>;
     case 'gallery':
-      return <p className="text-sm text-neutral-400">Mostra as fotos publicadas do imóvel automaticamente.</p>;
+      return <p className="text-sm text-muted-foreground">Mostra as fotos publicadas do imóvel automaticamente.</p>;
     default:
-      return <p className="text-sm text-neutral-400">Esta seção é preenchida automaticamente a partir do imóvel.</p>;
+      return <p className="text-sm text-muted-foreground">Esta seção é preenchida automaticamente a partir do imóvel.</p>;
   }
 }
 
+/** Painel da direita: mostra SÓ o que está selecionado — uma seção, ou uma
+ *  pergunta do formulário. Antes tudo ficava empilhado numa coluna só (lista de
+ *  seções + configurações + aparência + biblioteca), e nada tinha hierarquia. */
 export function BlockConfigPanel() {
-  const selectedId = useLandingEditorStore((s) => s.selectedId);
-  const block = useLandingEditorStore((s) => s.blocks.find((b) => b.id === selectedId) ?? null);
-  if (!block) return <p className="text-sm text-neutral-400">Selecione uma seção para configurar.</p>;
+  const selection = useLandingEditorStore((s) => s.selection);
+  const blocks = useLandingEditorStore((s) => s.blocks);
+
+  if (!selection || selection.kind === 'appearance') {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Escolha uma seção na lista à esquerda para configurar.
+      </p>
+    );
+  }
+
+  const blockId = selection.kind === 'block' ? selection.id : selection.blockId;
+  const block = blocks.find((b) => b.id === blockId);
+  if (!block) {
+    return <p className="text-sm text-muted-foreground">Esta seção não existe mais.</p>;
+  }
+
+  if (selection.kind === 'question') {
+    const config = block.config as BlockConfig<'lead_form'>;
+    const step = config.steps.find((st) => st.id === selection.stepId);
+    if (!step) return <p className="text-sm text-muted-foreground">Esta pergunta não existe mais.</p>;
+    return <QuestionPanel block={block} step={step} />;
+  }
+
+  if (block.type === 'lead_form') return <LeadFormPanel block={block} />;
+
   return (
-    <div className="space-y-3">
-      <h4 className="text-sm font-semibold text-neutral-100">{BLOCK_REGISTRY[block.type].label}</h4>
+    <Group title={BLOCK_REGISTRY[block.type].label} hint={BLOCK_REGISTRY[block.type].description}>
       <Fields block={block} />
-    </div>
+    </Group>
   );
 }
