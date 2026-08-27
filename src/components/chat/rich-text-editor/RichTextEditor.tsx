@@ -7,6 +7,7 @@ import { history, undo, redo } from 'prosemirror-history';
 import { baseKeymap } from 'prosemirror-commands';
 import { toggleMark } from 'prosemirror-commands';
 import { wrapInList } from 'prosemirror-schema-list';
+import type { Schema } from 'prosemirror-model';
 import { messageSchema } from './schema';
 import { EditorToolbar } from './EditorToolbar';
 
@@ -32,6 +33,13 @@ interface RichTextEditorProps {
    * uma altura menor pra barra ficar enxuta (estilo WhatsApp).
    */
   editorMinHeightClass?: string;
+  /**
+   * Esquema do documento. O padrão é o do compositor do chat — negrito,
+   * itálico, código e lista. A seção de Texto da landing passa um esquema com
+   * LINK; o chat não pode ganhar link por efeito colateral, porque o que se
+   * escreve lá vira mensagem de WhatsApp.
+   */
+  schema?: Schema;
 }
 
 export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
@@ -45,6 +53,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       className = '',
       showToolbar = true,
       editorMinHeightClass = 'min-h-[100px]',
+      schema = messageSchema,
     },
     ref,
   ) => {
@@ -64,7 +73,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       getContent: () => {
         if (!viewRef.current) return '';
         const doc = viewRef.current.state.doc;
-        const serializer = DOMSerializer.fromSchema(messageSchema);
+        const serializer = DOMSerializer.fromSchema(schema);
         const fragment = serializer.serializeFragment(doc.content);
         const div = document.createElement('div');
         div.appendChild(fragment);
@@ -77,9 +86,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
         if (isHtml) {
           const wrapper = document.createElement('div');
           wrapper.innerHTML = content;
-          doc = ProseDOMParser.fromSchema(messageSchema).parse(wrapper);
+          doc = ProseDOMParser.fromSchema(schema).parse(wrapper);
         } else {
-          doc = messageSchema.nodeFromJSON({
+          doc = schema.nodeFromJSON({
             type: 'doc',
             content: content
               ? [{ type: 'paragraph', content: [{ type: 'text', text: content }] }]
@@ -102,7 +111,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       },
       clear: () => {
         if (!viewRef.current) return;
-        const emptyDoc = messageSchema.nodeFromJSON({
+        const emptyDoc = schema.nodeFromJSON({
           type: 'doc',
           content: [],
         });
@@ -120,11 +129,11 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       if (!editorRef.current) return;
 
       const initialDoc = value
-        ? messageSchema.nodeFromJSON({
+        ? schema.nodeFromJSON({
             type: 'doc',
             content: [{ type: 'paragraph', content: [{ type: 'text', text: value }] }],
           })
-        : messageSchema.nodeFromJSON({
+        : schema.nodeFromJSON({
             type: 'doc',
             content: [],
           });
@@ -137,10 +146,10 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
             'Mod-z': undo,
             'Mod-y': redo,
             'Mod-Shift-z': redo,
-            'Mod-b': toggleMark(messageSchema.marks.strong),
-            'Mod-i': toggleMark(messageSchema.marks.em),
-            'Mod-`': toggleMark(messageSchema.marks.code),
-            'Shift-Ctrl-8': wrapInList(messageSchema.nodes.bullet_list),
+            'Mod-b': toggleMark(schema.marks.strong),
+            'Mod-i': toggleMark(schema.marks.em),
+            'Mod-`': toggleMark(schema.marks.code),
+            'Shift-Ctrl-8': wrapInList(schema.nodes.bullet_list),
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             Enter: (_state, _dispatch) => {
               if (onKeyDownRef.current) {
@@ -208,17 +217,39 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
 
       switch (action) {
         case 'bold':
-          toggleMark(messageSchema.marks.strong)(state, dispatch);
+          toggleMark(schema.marks.strong)(state, dispatch);
           break;
         case 'italic':
-          toggleMark(messageSchema.marks.em)(state, dispatch);
+          toggleMark(schema.marks.em)(state, dispatch);
           break;
         case 'code':
-          toggleMark(messageSchema.marks.code)(state, dispatch);
+          toggleMark(schema.marks.code)(state, dispatch);
           break;
         case 'bulletList':
-          wrapInList(messageSchema.nodes.bullet_list)(state, dispatch);
+          wrapInList(schema.nodes.bullet_list)(state, dispatch);
           break;
+        case 'link': {
+          // Só existe quando o esquema recebido tem a marca — o compositor do
+          // chat não tem, então nem o botão aparece lá.
+          const linkMark = schema.marks.link;
+          if (!linkMark) break;
+          const { from, to } = state.selection;
+          if (from === to) break; // sem texto selecionado não há o que virar link
+          if (state.doc.rangeHasMark(from, to, linkMark)) {
+            toggleMark(linkMark)(state, dispatch);
+            break;
+          }
+          const href = window.prompt('Endereço do link', 'https://')?.trim();
+          if (!href) break;
+          // Só endereço de verdade. A página é publicada num anúncio pago, e
+          // `javascript:` gravado ali seria um buraco aberto para quem abrir.
+          if (!/^(https?:\/\/|mailto:|tel:)/i.test(href)) {
+            window.alert('Use um endereço começando com https://, mailto: ou tel:');
+            break;
+          }
+          toggleMark(linkMark, { href })(state, dispatch);
+          break;
+        }
         case 'undo':
           undo(state, dispatch);
           break;

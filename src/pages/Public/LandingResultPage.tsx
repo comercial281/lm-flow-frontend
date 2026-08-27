@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Check } from 'lucide-react';
-import { DEFAULT_LANDING_THEME, themeToCssVars, type LandingTheme } from '@/features/landing/blocks';
+import {
+  DEFAULT_LANDING_THEME,
+  fillTemplate,
+  themeToCssVars,
+  type LandingTheme,
+} from '@/features/landing/blocks';
 
 interface LeadFormCfg {
   specialistName?: string;
@@ -9,6 +14,7 @@ interface LeadFormCfg {
   disqualifiedMessage?: string;
   thankyouTitle?: string;
   thankyouMessage?: string;
+  whatsappLabel?: string;
 }
 interface Block { type: string; config?: Record<string, unknown> }
 interface Pixel { pixel_id?: string | null; events?: { page_view?: boolean } }
@@ -115,9 +121,15 @@ export default function LandingResultPage() {
   const title = disqualified
     ? cfg.disqualifiedTitle || 'Obrigado pelo seu interesse!'
     : cfg.thankyouTitle || 'Recebemos suas informações!';
-  const message = disqualified
-    ? cfg.disqualifiedMessage || 'Recebemos seus dados. Vamos te avisar sobre outras oportunidades.'
-    : cfg.thankyouMessage || `O corretor ${specialist} entrará em contato em breve.`;
+  // Os mesmos textos da tela que aparece dentro da própria página, inclusive o
+  // marcador do nome do corretor: são a mesma mensagem em dois endereços, e
+  // divergir aqui já custou uma landing mostrando duas despedidas diferentes.
+  const message = fillTemplate(
+    disqualified
+      ? cfg.disqualifiedMessage || 'Recebemos seus dados. Vamos te avisar sobre outras oportunidades.'
+      : cfg.thankyouMessage || `O corretor {especialista} entrará em contato em breve.`,
+    { especialista: specialist },
+  );
 
   return (
     <div
@@ -138,7 +150,7 @@ export default function LandingResultPage() {
             className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 font-semibold text-white"
             style={{ background: '#16A34A' }}
           >
-            Fura a fila e fale no WhatsApp
+            {cfg.whatsappLabel || 'Fura a fila e fale direto no WhatsApp'}
           </a>
         )}
       </div>

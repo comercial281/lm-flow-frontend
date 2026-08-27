@@ -1,7 +1,23 @@
 import { LeadFormPanel, QuestionPanel } from './LeadFormPanel';
 import { useLandingEditorStore } from './landingEditorStore';
-import { BLOCK_REGISTRY, type BlockConfig, type BlockInstance } from '@/features/landing/blocks';
-import { Field, Group, Num, Text, TextArea as Area, Upload, inputCls } from './panelKit';
+import {
+  BLOCK_REGISTRY,
+  DEFAULT_BLOCK_LAYOUT,
+  type BlockConfig,
+  type BlockInstance,
+} from '@/features/landing/blocks';
+import {
+  Check,
+  Field,
+  Group,
+  ImageList,
+  Num,
+  RichText,
+  Text,
+  TextArea as Area,
+  Upload,
+  inputCls,
+} from './panelKit';
 
 /* Editor de lista genérico. */
 function Repeater<T>({ items, onChange, empty, addLabel, render }: {
@@ -49,6 +65,9 @@ function Fields({ block }: { block: BlockInstance }) {
           <Field label="Título (vazio = nome do imóvel)"><Text value={c.headline as string} onChange={(v) => set({ headline: v })} /></Field>
           <Field label="Subtítulo"><Text value={c.subheadline as string} onChange={(v) => set({ subheadline: v })} /></Field>
           <Field label="Imagem (vazio = capa do imóvel)"><Upload value={c.imageUrl as string} onChange={(v) => set({ imageUrl: v })} accept="image/*" /></Field>
+          <Field label="Botão sobre a capa" hint="Vazio = sem botão. Preenchido, ele leva o lead direto para o formulário.">
+            <Text value={c.ctaLabel as string} onChange={(v) => set({ ctaLabel: v })} placeholder="Quero saber mais" />
+          </Field>
         </>
       );
     case 'price_band':
@@ -79,9 +98,31 @@ function Fields({ block }: { block: BlockInstance }) {
     case 'finance_simulator':
       return (
         <>
+          <Field
+            label="Valor do imóvel (R$)"
+            hint="Vazio = usa o preço do imóvel vinculado. Sem imóvel vinculado e sem valor aqui, a simulação inteira sai zerada."
+          >
+            <Num value={c.basePrice as number} onChange={(v) => set({ basePrice: v })} placeholder="850000" />
+          </Field>
           <Field label="Entrada (%)"><Num value={c.entradaPct as number} onChange={(v) => set({ entradaPct: v ?? 0 })} /></Field>
           <Field label="Qtd. de reforços"><Num value={c.reforcoQty as number} onChange={(v) => set({ reforcoQty: v ?? 0 })} /></Field>
+          <Field label="Reforços (% do total)"><Num value={c.reforcoPct as number} onChange={(v) => set({ reforcoPct: v ?? 0 })} /></Field>
+          <Field label="Nas chaves (% do total)"><Num value={c.chavesPct as number} onChange={(v) => set({ chavesPct: v ?? 0 })} /></Field>
           <Field label="Prazo (meses)"><Num value={c.prazoMeses as number} onChange={(v) => set({ prazoMeses: v ?? 1 })} /></Field>
+          <Group title="Textos da seção">
+            <Field label="Título"><Text value={c.title as string} onChange={(v) => set({ title: v })} /></Field>
+            <Field label="Linha de apoio"><Text value={c.subtitle as string} onChange={(v) => set({ subtitle: v })} /></Field>
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Entrada"><Text value={c.entradaLabel as string} onChange={(v) => set({ entradaLabel: v })} /></Field>
+              <Field label="Mensais"><Text value={c.mensaisLabel as string} onChange={(v) => set({ mensaisLabel: v })} /></Field>
+              <Field label="Reforços"><Text value={c.reforcosLabel as string} onChange={(v) => set({ reforcosLabel: v })} /></Field>
+              <Field label="Chaves"><Text value={c.chavesLabel as string} onChange={(v) => set({ chavesLabel: v })} /></Field>
+            </div>
+            <Field label="Prazo"><Text value={c.prazoLabel as string} onChange={(v) => set({ prazoLabel: v })} /></Field>
+            <Field label="Aviso do rodapé" hint="Vazio = o aviso não aparece.">
+              <Area value={c.footnote as string} rows={2} onChange={(v) => set({ footnote: v })} />
+            </Field>
+          </Group>
         </>
       );
     case 'lead_form':
@@ -122,6 +163,7 @@ function Fields({ block }: { block: BlockInstance }) {
     case 'construction_progress':
       return (
         <>
+          <Field label="Título da seção"><Text value={c.title as string} onChange={(v) => set({ title: v })} /></Field>
           <Field label="Percentual concluído (%)"><Num value={c.percent as number} onChange={(v) => set({ percent: v ?? 0 })} /></Field>
           <Field label="Marcos da obra">
             <Repeater<{ label: string; date?: string }>
@@ -212,6 +254,23 @@ function Fields({ block }: { block: BlockInstance }) {
       return (
         <>
           <Field label="Título"><Text value={c.title as string} onChange={(v) => set({ title: v })} /></Field>
+          <Field
+            label="Endereço mostrado na página"
+            hint="O que o lead lê. Vazio = o endereço do imóvel vinculado."
+          >
+            <Text value={c.address as string} onChange={(v) => set({ address: v })} placeholder="Rua das Palmeiras, 320 — Centro" />
+          </Field>
+          <Field
+            label="Região do mapa"
+            hint="O mapa mostra a REGIÃO, nunca a rua com número — mesmo que ela esteja no campo de cima. Vazio = bairro e cidade do imóvel."
+          >
+            <Text value={c.region as string} onChange={(v) => set({ region: v })} placeholder="Centro, Porto Belo, SC" />
+          </Field>
+          <Check
+            checked={(c.showMap as boolean) ?? true}
+            onChange={(v) => set({ showMap: v })}
+            label="Mostrar o mapa na página"
+          />
           <Field label="Pontos de interesse (nome → minutos)">
             <Repeater<{ label: string; minutes: number }>
               items={arr('pois')} onChange={(v) => set({ pois: v })} empty={{ label: '', minutes: 0 }} addLabel="ponto"
@@ -226,12 +285,109 @@ function Fields({ block }: { block: BlockInstance }) {
         </>
       );
     case 'tech_sheet':
-      return <p className="text-sm text-muted-foreground">Preenchida automaticamente com a ficha técnica do imóvel.</p>;
+      return (
+        <>
+          <Field label="Título da seção"><Text value={c.title as string} onChange={(v) => set({ title: v })} /></Field>
+          <p className="text-xs text-muted-foreground">Os valores vêm da ficha técnica do imóvel.</p>
+        </>
+      );
     case 'gallery':
-      return <p className="text-sm text-muted-foreground">Mostra as fotos publicadas do imóvel automaticamente.</p>;
+      return (
+        <>
+          <Field label="Título da seção"><Text value={c.title as string} onChange={(v) => set({ title: v })} /></Field>
+          <Field label="De onde vêm as fotos">
+            <select className={inputCls} value={(c.source as string) ?? 'property'} onChange={(e) => set({ source: e.target.value })}>
+              <option value="property">Fotos do imóvel</option>
+              <option value="manual">Fotos que eu enviar</option>
+            </select>
+          </Field>
+          {c.source === 'manual' ? (
+            <Field label="Fotos desta seção" hint="Enviadas aqui mesmo. É o caminho para landing de imóvel que não está cadastrado.">
+              <ImageList
+                items={arr<{ url: string; caption?: string }>('images')}
+                onChange={(v) => set({ images: v })}
+              />
+            </Field>
+          ) : (
+            <p className="text-xs text-muted-foreground">Mostra as fotos publicadas do imóvel.</p>
+          )}
+        </>
+      );
+    case 'rich_text':
+      return (
+        <>
+          <Field label="Título da seção" hint="Vazio = a seção mostra só o texto.">
+            <Text value={c.title as string} onChange={(v) => set({ title: v })} />
+          </Field>
+          <Field label="Texto" hint="Use a barra para negrito, itálico, lista e link. Para criar um link, selecione o trecho e clique no botão de link.">
+            <RichText value={c.html as string} onChange={(v) => set({ html: v })} placeholder="Escreva o texto desta seção…" />
+          </Field>
+          <Field label="Alinhamento">
+            <select className={inputCls} value={(c.align as string) ?? 'left'} onChange={(e) => set({ align: e.target.value })}>
+              <option value="left">À esquerda</option>
+              <option value="center">Centralizado</option>
+            </select>
+          </Field>
+        </>
+      );
     default:
       return <p className="text-sm text-muted-foreground">Esta seção é preenchida automaticamente a partir do imóvel.</p>;
   }
+}
+
+/**
+ * Espaçamento da seção, no fim do painel. Medida em branco = o espaçamento
+ * padrão da página, que é o que o campo mostra como sugestão — por isso os
+ * campos nascem vazios em vez de já virem preenchidos com o padrão.
+ */
+function SpacingGroup({ block }: { block: BlockInstance }) {
+  const setLayout = useLandingEditorStore((s) => s.setLayout);
+  const layout = block.layout ?? {};
+
+  if (block.type === 'sticky_cta') {
+    return (
+      <Group title="Espaçamento">
+        <p className="text-xs text-muted-foreground">
+          O botão fixo flutua sobre a página, sempre no mesmo lugar — não há margem para ajustar.
+        </p>
+      </Group>
+    );
+  }
+
+  const isHero = block.type === 'hero';
+  return (
+    <Group title="Espaçamento" hint="Em pixels. Em branco = o espaçamento padrão da página.">
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Acima">
+          <Num
+            value={layout.top}
+            onChange={(v) => setLayout(block.id, { top: v })}
+            placeholder={String(isHero ? 0 : DEFAULT_BLOCK_LAYOUT.top)}
+          />
+        </Field>
+        <Field label="Abaixo">
+          <Num
+            value={layout.bottom}
+            onChange={(v) => setLayout(block.id, { bottom: v })}
+            placeholder={String(isHero ? 0 : DEFAULT_BLOCK_LAYOUT.bottom)}
+          />
+        </Field>
+      </div>
+      {isHero ? (
+        <p className="text-xs text-muted-foreground">
+          A capa ocupa a largura toda da tela, então não tem margem lateral.
+        </p>
+      ) : (
+        <Field label="Laterais">
+          <Num
+            value={layout.sides}
+            onChange={(v) => setLayout(block.id, { sides: v })}
+            placeholder={String(DEFAULT_BLOCK_LAYOUT.sides)}
+          />
+        </Field>
+      )}
+    </Group>
+  );
 }
 
 /** Painel da direita: mostra SÓ o que está selecionado — uma seção, ou uma
@@ -262,11 +418,24 @@ export function BlockConfigPanel() {
     return <QuestionPanel block={block} step={step} />;
   }
 
-  if (block.type === 'lead_form') return <LeadFormPanel block={block} />;
+  if (block.type === 'lead_form') {
+    return (
+      <div className="space-y-4">
+        <LeadFormPanel block={block} />
+        <SpacingGroup block={block} />
+      </div>
+    );
+  }
 
   return (
-    <Group title={BLOCK_REGISTRY[block.type].label} hint={BLOCK_REGISTRY[block.type].description}>
-      <Fields block={block} />
-    </Group>
+    <div className="space-y-4">
+      <Group title={BLOCK_REGISTRY[block.type].label} hint={BLOCK_REGISTRY[block.type].description}>
+        {/* A `key` troca ao mudar de seção porque o campo de texto com
+            formatação é NÃO-controlado: sem remontar, a caixa continuaria
+            mostrando o texto da seção anterior. */}
+        <Fields key={block.id} block={block} />
+      </Group>
+      <SpacingGroup block={block} />
+    </div>
   );
 }

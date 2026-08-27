@@ -67,6 +67,14 @@ describe('LandingEditor (integração UI)', () => {
     expect(within(painel).getByDisplayValue('Quero fechar o quanto antes')).toBeInTheDocument();
   });
 
+  it('a seção de Texto entra pela biblioteca, no grupo Conteúdo', () => {
+    render(<LandingEditor initialBlocks={[]} onSave={vi.fn()} />);
+    addSection('Texto');
+    const blocks = useLandingEditorStore.getState().blocks;
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].type).toBe('rich_text');
+  });
+
   it('digitar espaço no fim de uma resposta não some mais', () => {
     const block = createBlock('lead_form');
     render(<LandingEditor initialBlocks={[block]} onSave={vi.fn()} />);

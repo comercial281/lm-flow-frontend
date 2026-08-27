@@ -135,6 +135,93 @@ describe('BlockRenderer', () => {
     expect(screen.getByRole('button', { name: /Tentar de novo/ })).toBeInTheDocument();
   });
 
+  /* ---- seções novas e textos configuráveis ---- */
+
+  it('a seção de Texto publica o título e o texto escritos', () => {
+    const blocks = parsePageBlocks([
+      { id: 't', type: 'rich_text', config: { title: 'Por que investir aqui', html: '<p>Valorização de <strong>18%</strong> ao ano.</p>' } },
+    ]);
+    render(<BlockRenderer blocks={blocks} />);
+    expect(screen.getByText('Por que investir aqui')).toBeInTheDocument();
+    expect(screen.getByText(/Valorização de/)).toBeInTheDocument();
+  });
+
+  it('a galeria no modo manual mostra as fotos enviadas, sem imóvel nenhum', () => {
+    const blocks = parsePageBlocks([
+      {
+        id: 'g',
+        type: 'gallery',
+        config: { source: 'manual', images: [{ url: 'https://x/1.jpg', caption: 'Fachada' }] },
+      },
+    ]);
+    render(<BlockRenderer blocks={blocks} />);
+    expect(screen.getByText('Fachada')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Fachada' })).toHaveAttribute('src', 'https://x/1.jpg');
+  });
+
+  it('o mapa busca a REGIÃO, mesmo com rua e número no endereço', () => {
+    const blocks = parsePageBlocks([
+      {
+        id: 'm',
+        type: 'map',
+        config: { address: 'Rua das Palmeiras, 320 — Centro', region: 'Centro, Porto Belo, SC' },
+      },
+    ]);
+    render(<BlockRenderer blocks={blocks} />);
+    // O endereço exato aparece como TEXTO...
+    expect(screen.getByText(/Rua das Palmeiras, 320/)).toBeInTheDocument();
+    // ...e o mapa aponta só para a região: é a decisão de privacidade que a
+    // página de imóvel do site também toma.
+    const src = screen.getByTitle('Mapa da região').getAttribute('src') ?? '';
+    expect(src).toContain(encodeURIComponent('Centro, Porto Belo, SC'));
+    expect(src).not.toContain('Palmeiras');
+  });
+
+  it('o simulador calcula com o valor digitado, sem imóvel vinculado', () => {
+    const blocks = parsePageBlocks([
+      { id: 's', type: 'finance_simulator', config: { basePrice: 500000, entradaPct: 20, title: 'Como pagar' } },
+    ]);
+    render(<BlockRenderer blocks={blocks} />);
+    expect(screen.getByText('Como pagar')).toBeInTheDocument();
+    expect(screen.getByText('R$ 100.000')).toBeInTheDocument();
+  });
+
+  it('o espaçamento escolhido na seção chega à página', () => {
+    const blocks = parsePageBlocks([
+      { id: 'p', type: 'price_band', config: { text: 'Entrada facilitada' }, layout: { top: 4, bottom: 60, sides: 0 } },
+    ]);
+    const { container } = render(<BlockRenderer blocks={blocks} />);
+    const envelope = container.querySelector('[data-block-id="p"]') as HTMLElement;
+    expect(envelope.style.getPropertyValue('--lp-pad-top')).toBe('4px');
+    expect(envelope.style.getPropertyValue('--lp-pad-bottom')).toBe('60px');
+    expect(envelope.style.getPropertyValue('--lp-pad-x')).toBe('0px');
+  });
+
+  it('a tela de obrigado usa o texto gravado, que antes era ignorado', async () => {
+    const onSubmitLead = vi.fn().mockResolvedValue({ qualification: 'qualified' });
+    const blocks = parsePageBlocks([
+      {
+        id: 'f',
+        type: 'lead_form',
+        config: {
+          steps: [],
+          thankyouTitle: 'Deu certo!',
+          thankyouMessage: 'O corretor {especialista} te chama hoje.',
+          specialistName: 'Ana',
+          interestedLabel: '',
+        },
+      },
+    ]);
+    render(<BlockRenderer blocks={blocks} onSubmitLead={onSubmitLead} />);
+    await preencherContato();
+    fireEvent.click(screen.getByRole('button', { name: /Falar com Especialista/ }));
+
+    await waitFor(() => expect(screen.getByText('Deu certo!')).toBeInTheDocument());
+    expect(screen.getByText('O corretor Ana te chama hoje.')).toBeInTheDocument();
+    // O texto que vinha escrito por dentro do componente não aparece mais.
+    expect(screen.queryByText('Recebemos suas informações!')).not.toBeInTheDocument();
+  });
+
   it('renders nothing-but-survives when a block has empty data', () => {
     render(<BlockRenderer blocks={[createBlock('amenities')]} property={property} />);
     // amenities with no items renders null; no crash

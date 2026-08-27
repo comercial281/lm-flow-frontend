@@ -21,6 +21,7 @@ export const BLOCK_TYPES = [
   'price_band',
   'tech_sheet',
   'description',
+  'rich_text',
   'amenities',
   'gallery',
   'map',
@@ -62,6 +63,7 @@ const priceBandConfig = z.object({
 
 const techSheetConfig = z.object({
   source: sourceEnum,
+  title: z.string().max(80).default('Ficha Técnica'),
   fields: z
     .array(
       z.enum([
@@ -85,15 +87,34 @@ const descriptionConfig = z.object({
   html: z.string().optional(),
 });
 
+/** Texto livre da equipe do cliente. Nasce SEM título e com corpo vazio: é uma
+ *  seção que só existe porque alguém a adicionou de propósito, e um título
+ *  padrão apareceria na página sem ninguém ter escrito nada. */
+const richTextConfig = z.object({
+  title: z.string().max(80).optional(),
+  html: z.string().default(''),
+  align: z.enum(['left', 'center']).default('left'),
+});
+
 const amenitiesConfig = z.object({
   title: z.string().max(80).default('Infraestrutura'),
   items: z.array(z.string().max(60)).default([]),
 });
 
 const galleryConfig = z.object({
+  /** 'property' = fotos publicadas do imóvel (como sempre foi).
+   *  'manual'   = as fotos enviadas aqui mesmo, em `images`. Landing de imóvel
+   *  que não está cadastrado não tem foto nenhuma pra puxar. */
   source: sourceEnum,
+  title: z.string().max(80).default('Galeria'),
   /** PropertyPhoto ids to show, in order. Empty = all published photos. */
   photoIds: z.array(z.string()).default([]),
+  /** Fotos enviadas pelo editor. `url` é string solta (e não `.url()`) porque o
+   *  upload pode devolver caminho relativo, e um endereço que não casa com a
+   *  validação derrubaria a configuração inteira da seção. */
+  images: z
+    .array(z.object({ url: z.string(), caption: z.string().max(120).optional() }))
+    .default([]),
 });
 
 const mapConfig = z.object({
@@ -101,6 +122,15 @@ const mapConfig = z.object({
   lat: z.number().optional(),
   lng: z.number().optional(),
   title: z.string().max(80).default('O que tem próximo do imóvel?'),
+  /** O endereço que o lead LÊ na página. Vazio = endereço do imóvel. */
+  address: z.string().max(160).optional(),
+  /** O que o mapa procura. É SEMPRE a região (bairro, cidade) — nunca a rua com
+   *  número, mesmo que ela esteja escrita em `address`: o mapa da página de
+   *  imóvel do site também mostra só a região, para não entregar o endereço
+   *  exato do imóvel a quem só viu o anúncio. Vazio = bairro/cidade/estado do
+   *  imóvel. */
+  region: z.string().max(120).optional(),
+  showMap: z.boolean().default(true),
   pois: z
     .array(z.object({ label: z.string().max(80), minutes: z.number().int().min(0) }))
     .default([]),
@@ -112,17 +142,33 @@ const videoConfig = z.object({
 });
 
 const financeSimulatorConfig = z.object({
-  /** Defaults to the Property sale_price when omitted. */
+  /** Valor sobre o qual a simulação é feita. Vazio = preço do imóvel vinculado.
+   *  Landing de imóvel que não está cadastrado não tem preço pra puxar, e a
+   *  simulação inteira saía zerada, calada. */
   basePrice: z.number().nonnegative().optional(),
   entradaPct: z.number().min(0).max(100).default(10),
   reforcoQty: z.number().int().min(0).default(11),
   reforcoPct: z.number().min(0).max(100).default(0),
   chavesPct: z.number().min(0).max(100).default(0),
   prazoMeses: z.number().int().min(1).max(600).default(120),
+  /* Textos da seção. Os padrões são exatamente o que a página mostrava quando
+     estavam escritos por dentro — landing publicada antes disto não muda. */
+  title: z.string().max(80).default('Plano de Pagamento'),
+  subtitle: z.string().max(120).default('Pagamento direto com a construtora'),
+  entradaLabel: z.string().max(40).default('Entrada'),
+  mensaisLabel: z.string().max(40).default('Mensais'),
+  reforcosLabel: z.string().max(40).default('Reforços'),
+  chavesLabel: z.string().max(40).default('Chaves'),
+  prazoLabel: z.string().max(40).default('Prazo'),
+  footnote: z
+    .string()
+    .max(240)
+    .default('* Simulação ilustrativa. Condições sujeitas à aprovação da incorporadora.'),
 });
 
 const constructionProgressConfig = z.object({
   source: sourceEnum,
+  title: z.string().max(80).default('Progresso de Obra'),
   percent: z.number().min(0).max(100).default(0),
   milestones: z
     .array(z.object({ label: z.string().max(80), date: z.string().max(40).optional() }))
@@ -328,6 +374,28 @@ const leadFormShape = z.object({
   whatsappPhone: z.string().max(30).optional(),
   /** "X pessoas estão interessadas nesse imóvel" na tela de obrigado. */
   interestedCount: z.number().int().min(0).default(14),
+  /* --- Textos das telas do formulário. Cada padrão é EXATAMENTE o texto que a
+     página mostrava enquanto ele estava escrito por dentro do componente: quem
+     não mexer em nada continua vendo a mesma landing. --- */
+  subtitle: z.string().max(160).default('Deixe seus dados e o corretor entrará em contato.'),
+  contactTitle: z.string().max(80).default('Tenho interesse'),
+  namePlaceholder: z.string().max(60).default('Seu nome *'),
+  emailPlaceholder: z.string().max(60).default('E-mail'),
+  backLabel: z.string().max(40).default('← Voltar'),
+  /** `{atual}` e `{total}` são trocados pelos números do passo. Só aparece
+   *  quando o formulário não tem desvio — com desvio, "Passo 3 de 5" é mentira. */
+  stepCounterLabel: z.string().max(60).default('Passo {atual} de {total}'),
+  sendingLabel: z.string().max(40).default('Enviando…'),
+  retryLabel: z.string().max(40).default('Tentar de novo'),
+  sendErrorMessage: z
+    .string()
+    .max(240)
+    .default('Não conseguimos enviar seus dados. Confira sua conexão e toque em enviar de novo.'),
+  whatsappLabel: z.string().max(80).default('Fura a fila e fale direto no WhatsApp'),
+  specialistRole: z.string().max(80).default('Corretor de Imóveis · Alto Padrão'),
+  specialistStatus: z.string().max(80).default('Disponível agora · responde em até 5 minutos'),
+  /** `{n}` vira o número de interessados. Vazio = a linha não aparece. */
+  interestedLabel: z.string().max(120).default('{n} pessoas estão interessadas nesse imóvel.'),
   /** Perguntas de qualificação (default = as do VGV Elite). Já chegam
    *  normalizadas pelo preprocess abaixo — ver normalizeSteps. */
   steps: z.array(leadFormStepSchema).default(DEFAULT_LEAD_FORM_STEPS),
@@ -354,6 +422,10 @@ const leadFormShape = z.object({
      'url' = redireciona pra /lp/<slug>/obrigado|desqualificado (PageView
      próprio pro Pixel). --- */
   resultMode: z.enum(['inline', 'url']).default('inline'),
+  /** Os dois textos abaixo passaram a valer de fato: a tela de obrigado dentro
+   *  da página ignorava o que estava gravado aqui e mostrava um texto escrito
+   *  por dentro do componente, então o campo do editor não fazia nada.
+   *  `{especialista}` é trocado pelo nome do corretor. */
   thankyouTitle: z.string().max(120).default('Recebemos suas informações!'),
   thankyouMessage: z.string().max(400).default('Em breve um especialista entrará em contato com você. Fique de olho no seu WhatsApp.'),
 });
@@ -394,6 +466,7 @@ export const BLOCK_CONFIG_SCHEMAS = {
   price_band: priceBandConfig,
   tech_sheet: techSheetConfig,
   description: descriptionConfig,
+  rich_text: richTextConfig,
   amenities: amenitiesConfig,
   gallery: galleryConfig,
   map: mapConfig,
@@ -418,12 +491,29 @@ export type BlockConfig<T extends BlockType = BlockType> = z.infer<
 /* Block instance + page                                              */
 /* ------------------------------------------------------------------ */
 
+/** Espaçamento da seção, em pixels. Mora na SEÇÃO e não dentro da configuração
+ *  de cada tipo: assim vale para todas as seções de uma vez, e toda seção nova
+ *  já nasce com o recurso. Campo ausente = o espaçamento padrão da landing. */
+export const blockLayoutSchema = z.object({
+  top: z.number().min(0).max(200).optional(),
+  bottom: z.number().min(0).max(200).optional(),
+  sides: z.number().min(0).max(80).optional(),
+});
+
+export type BlockLayout = z.infer<typeof blockLayoutSchema>;
+
+/** Espaçamento padrão das seções, em pixels — o que a página sempre usou
+ *  (`px-5 py-7`). Serve de placeholder nos campos do editor e de valor de
+ *  referência do render. */
+export const DEFAULT_BLOCK_LAYOUT = { top: 28, bottom: 28, sides: 20 } as const;
+
 /** One block as stored in pages.content_blocks. */
 export interface BlockInstance<T extends BlockType = BlockType> {
   id: string;
   type: T;
   visible: boolean;
   config: BlockConfig<T>;
+  layout?: BlockLayout;
   schemaVersion: number;
 }
 
@@ -433,6 +523,7 @@ const blockInstanceSchema = z
     type: z.enum(BLOCK_TYPES),
     visible: z.boolean().default(true),
     config: z.record(z.string(), z.unknown()).default({}),
+    layout: blockLayoutSchema.optional(),
     schemaVersion: z.number().int().default(PAGE_BLOCKS_SCHEMA_VERSION),
   })
   .transform((block) => {

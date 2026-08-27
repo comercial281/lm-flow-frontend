@@ -17,8 +17,10 @@ import { isValidBrPhone } from '@/lib/brPhone';
 import type { BlockType } from './contract';
 import {
   type BlockComponentProps,
+  type LandingPhoto,
   type LandingProperty,
   STAGE_LABELS,
+  fillTemplate as fill,
   formatBRL,
 } from './render-types';
 
@@ -35,8 +37,18 @@ function Section({
 }) {
   return (
     <section
-      className={`w-full px-5 py-7 ${className}`}
-      style={{ background: 'var(--lp-block-bg)', color: 'var(--lp-text)' }}
+      className={`w-full ${className}`}
+      style={{
+        background: 'var(--lp-block-bg)',
+        color: 'var(--lp-text)',
+        // O espaçamento é escolhido seção a seção e chega como variável, posta
+        // no envelope pelo BlockRenderer. Sem escolha, cai no padrão que a
+        // página sempre usou (o antigo px-5 py-7).
+        paddingTop: 'var(--lp-pad-top, 1.75rem)',
+        paddingBottom: 'var(--lp-pad-bottom, 1.75rem)',
+        paddingLeft: 'var(--lp-pad-x, 1.25rem)',
+        paddingRight: 'var(--lp-pad-x, 1.25rem)',
+      }}
     >
       {children}
     </section>
@@ -69,7 +81,18 @@ function HeroBlock({ config, property }: BlockComponentProps<'hero'>) {
     [property?.neighborhood, property?.city, property?.state].filter(Boolean).join(' · ');
 
   return (
-    <div className="relative w-full overflow-hidden" style={{ minHeight: 260 }}>
+    // A capa é sangrada de ponta a ponta, então o espaçamento escolhido para
+    // ela vira MARGEM (e não recuo interno, como nas outras seções): recuo aqui
+    // deixaria uma faixa de fundo por cima da foto. Sem escolha, zero — que é
+    // exatamente como a capa sempre foi.
+    <div
+      className="relative w-full overflow-hidden"
+      style={{
+        minHeight: 260,
+        marginTop: 'var(--lp-pad-top, 0px)',
+        marginBottom: 'var(--lp-pad-bottom, 0px)',
+      }}
+    >
       {img ? (
         <img src={img} alt={headline} className="absolute inset-0 h-full w-full object-cover" />
       ) : (
@@ -90,6 +113,19 @@ function HeroBlock({ config, property }: BlockComponentProps<'hero'>) {
           <p className="mt-1 flex items-center gap-1 text-sm text-white/80">
             <MapPin size={14} /> {location}
           </p>
+        )}
+        {/* Só aparece com texto escrito. O campo já existia na configuração e
+            não tinha botão nenhum atrás: quem preenchesse não via nada mudar.
+            Vazio = a capa continua exatamente como sempre foi. */}
+        {config.ctaLabel && (
+          <button
+            type="button"
+            data-lp-action="open_form"
+            className="mt-3 w-fit rounded-full px-5 py-2.5 text-sm font-semibold text-white"
+            style={{ background: 'var(--lp-primary)' }}
+          >
+            {config.ctaLabel}
+          </button>
         )}
       </div>
     </div>
@@ -150,7 +186,7 @@ function TechSheetBlock({ config, property }: BlockComponentProps<'tech_sheet'>)
   if (!items.length) return null;
   return (
     <Section>
-      <SectionTitle>Ficha Técnica</SectionTitle>
+      <SectionTitle>{config.title}</SectionTitle>
       <div className="grid grid-cols-2 gap-3">
         {items.map((i) => (
           <div
@@ -185,6 +221,33 @@ function DescriptionBlock({ config, property }: BlockComponentProps<'description
   );
 }
 
+/** Texto livre escrito pela equipe da imobiliária. Publica o HTML pelo mesmo
+ *  caminho da seção de Descrição, que já faz isso desde a estreia: o conteúdo é
+ *  escrito por quem administra a conta, nunca pelo visitante da landing.
+ *
+ *  A regra de lista vai inline porque o reset do Tailwind tira marcador e recuo
+ *  de `ul`/`ol`: sem isto a lista que a pessoa monta no editor sai como um
+ *  bloco de linhas soltas na página publicada. */
+function RichTextBlock({ config }: BlockComponentProps<'rich_text'>) {
+  const html = config.html?.trim();
+  if (!config.title && !html) return null;
+  return (
+    <Section>
+      {config.title && <SectionTitle>{config.title}</SectionTitle>}
+      {html && (
+        <>
+          <style>{`.lp-rich-text ul,.lp-rich-text ol{padding-left:1.25rem;margin:.5rem 0}.lp-rich-text ul{list-style:disc}.lp-rich-text ol{list-style:decimal}.lp-rich-text p{margin:.5rem 0}.lp-rich-text a{text-decoration:underline;color:var(--lp-accent)}`}</style>
+          <div
+            className="lp-rich-text text-sm leading-relaxed opacity-90"
+            style={{ textAlign: config.align }}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        </>
+      )}
+    </Section>
+  );
+}
+
 function AmenitiesBlock({ config }: BlockComponentProps<'amenities'>) {
   if (!config.items.length) return null;
   return (
@@ -202,24 +265,32 @@ function AmenitiesBlock({ config }: BlockComponentProps<'amenities'>) {
 }
 
 function GalleryBlock({ config, property }: BlockComponentProps<'gallery'>) {
-  const photos = useMemo(() => {
+  // Duas origens: as fotos publicadas do imóvel (como sempre foi) e as fotos
+  // enviadas aqui mesmo. A segunda existe porque landing de imóvel que não está
+  // cadastrado não tem foto nenhuma pra puxar, e a seção sumia da página.
+  const photos = useMemo<LandingPhoto[]>(() => {
+    if (config.source === 'manual') {
+      return (config.images ?? []).map((img) => ({ url: img.url, alt: img.caption, caption: img.caption }));
+    }
     const all = property?.photos ?? [];
     if (!config.photoIds.length) return all;
     const byId = new Map(all.map((p, i) => [String(i), p] as const));
     return config.photoIds.map((id) => byId.get(id)).filter(Boolean) as typeof all;
-  }, [property?.photos, config.photoIds]);
+  }, [property?.photos, config.photoIds, config.source, config.images]);
   if (!photos.length) return null;
   return (
     <Section>
-      <SectionTitle>Galeria</SectionTitle>
+      <SectionTitle>{config.title}</SectionTitle>
       <div className="flex snap-x gap-3 overflow-x-auto pb-2">
         {photos.map((p, i) => (
-          <img
-            key={i}
-            src={p.thumbnailUrl ?? p.url}
-            alt={p.alt ?? `Foto ${i + 1}`}
-            className="h-40 w-60 flex-none snap-start rounded-xl object-cover"
-          />
+          <figure key={i} className="flex-none snap-start">
+            <img
+              src={p.thumbnailUrl ?? p.url}
+              alt={p.alt ?? `Foto ${i + 1}`}
+              className="h-40 w-60 rounded-xl object-cover"
+            />
+            {p.caption && <figcaption className="mt-1 w-60 text-xs opacity-70">{p.caption}</figcaption>}
+          </figure>
         ))}
       </div>
     </Section>
@@ -227,7 +298,21 @@ function GalleryBlock({ config, property }: BlockComponentProps<'gallery'>) {
 }
 
 function MapBlock({ config, property }: BlockComponentProps<'map'>) {
-  const address = property?.fullAddress ?? [property?.neighborhood, property?.city].filter(Boolean).join(', ');
+  // O que o lead LÊ. Digitado no editor, ou o endereço do imóvel vinculado.
+  const address =
+    config.address?.trim() ||
+    property?.fullAddress ||
+    [property?.neighborhood, property?.city].filter(Boolean).join(', ');
+
+  // O que o MAPA procura. É outra coisa, de propósito: a região, nunca a rua com
+  // número — a página de imóvel do site também mostra só a região, para não
+  // entregar o endereço exato a quem só viu o anúncio. Por isso o campo de cima
+  // jamais é usado aqui, mesmo quando é o único preenchido.
+  const region =
+    config.region?.trim() ||
+    [property?.neighborhood, property?.city, property?.state].filter(Boolean).join(', ');
+  const mapQuery = region ? encodeURIComponent(region) : null;
+
   return (
     <Section>
       <SectionTitle>{config.title}</SectionTitle>
@@ -235,6 +320,18 @@ function MapBlock({ config, property }: BlockComponentProps<'map'>) {
         <p className="mb-3 flex items-center gap-1 text-sm opacity-80">
           <MapPin size={14} style={{ color: 'var(--lp-icon)' }} /> {address}
         </p>
+      )}
+      {config.showMap && mapQuery && (
+        <div className="mb-3 overflow-hidden rounded-xl" style={{ border: '1px solid var(--lp-border)' }}>
+          <iframe
+            title="Mapa da região"
+            width="100%"
+            height="220"
+            loading="lazy"
+            style={{ border: 0, display: 'block' }}
+            src={`https://www.google.com/maps?q=${mapQuery}&z=14&output=embed`}
+          />
+        </div>
       )}
       {config.pois.length > 0 && (
         <ul className="space-y-2 text-sm">
@@ -325,16 +422,16 @@ function FinanceSimulatorBlock({ config, property }: BlockComponentProps<'financ
   const chavesPct = config.chavesPct;
   const mensaisPct = Math.max(0, 100 - entradaPct - reforcoPct - chavesPct);
   const segs = [
-    { label: 'Entrada', pct: entradaPct, color: '#16A34A' },
-    { label: 'Mensais', pct: mensaisPct, color: '#0EA5E9' },
-    { label: 'Reforços', pct: reforcoPct, color: '#F59E0B' },
-    { label: 'Chaves', pct: chavesPct, color: '#94A3B8' },
+    { label: config.entradaLabel, pct: entradaPct, color: '#16A34A' },
+    { label: config.mensaisLabel, pct: mensaisPct, color: '#0EA5E9' },
+    { label: config.reforcosLabel, pct: reforcoPct, color: '#F59E0B' },
+    { label: config.chavesLabel, pct: chavesPct, color: '#94A3B8' },
   ];
 
   return (
     <Section>
-      <SectionTitle>Plano de Pagamento</SectionTitle>
-      <p className="-mt-3 mb-3 text-xs opacity-60">Pagamento direto com a construtora</p>
+      <SectionTitle>{config.title}</SectionTitle>
+      {config.subtitle && <p className="-mt-3 mb-3 text-xs opacity-60">{config.subtitle}</p>}
 
       {/* barra segmentada */}
       <div className="mb-2 flex h-2.5 w-full overflow-hidden rounded-full" style={{ background: 'var(--lp-card)' }}>
@@ -348,30 +445,28 @@ function FinanceSimulatorBlock({ config, property }: BlockComponentProps<'financ
         ))}
       </div>
 
-      <SliderRow label="Entrada" value={entradaPct} min={0} max={50} onChange={setEntradaPct} suffix="%" />
-      <SliderRow label="Reforços" value={reforcoPct} min={0} max={50} onChange={setReforcoPct} suffix="%" />
-      <SliderRow label="Prazo" value={prazo} min={12} max={240} onChange={setPrazo} suffix=" meses" />
+      <SliderRow label={config.entradaLabel} value={entradaPct} min={0} max={50} onChange={setEntradaPct} suffix="%" />
+      <SliderRow label={config.reforcosLabel} value={reforcoPct} min={0} max={50} onChange={setReforcoPct} suffix="%" />
+      <SliderRow label={config.prazoLabel} value={prazo} min={12} max={240} onChange={setPrazo} suffix=" meses" />
       <div className="mt-4 space-y-2 rounded-xl p-4" style={{ background: 'var(--lp-card)' }}>
         <div className="flex justify-between text-sm">
-          <span className="opacity-70">Entrada</span>
+          <span className="opacity-70">{config.entradaLabel}</span>
           <span className="font-semibold">{formatBRL(calc.entrada)}</span>
         </div>
         {config.reforcoQty > 0 && (
           <div className="flex justify-between text-sm">
-            <span className="opacity-70">Reforços ({config.reforcoQty}x)</span>
+            <span className="opacity-70">{config.reforcosLabel} ({config.reforcoQty}x)</span>
             <span className="font-semibold">{formatBRL(calc.reforco)}</span>
           </div>
         )}
         <div className="flex justify-between border-t border-[color:var(--lp-border)] pt-2">
-          <span className="opacity-70">Mensais ({prazo}x)</span>
+          <span className="opacity-70">{config.mensaisLabel} ({prazo}x)</span>
           <span className="text-lg font-bold" style={{ color: 'var(--lp-accent)' }}>
             {formatBRL(calc.mensal)}
           </span>
         </div>
       </div>
-      <p className="mt-2 text-[10px] opacity-50">
-        * Simulação ilustrativa. Condições sujeitas à aprovação da incorporadora.
-      </p>
+      {config.footnote && <p className="mt-2 text-[10px] opacity-50">{config.footnote}</p>}
     </Section>
   );
 }
@@ -379,7 +474,7 @@ function FinanceSimulatorBlock({ config, property }: BlockComponentProps<'financ
 function ConstructionProgressBlock({ config }: BlockComponentProps<'construction_progress'>) {
   return (
     <Section>
-      <SectionTitle>Progresso de Obra</SectionTitle>
+      <SectionTitle>{config.title}</SectionTitle>
       <div className="mb-3 h-3 w-full overflow-hidden rounded-full bg-[color:var(--lp-card)]">
         <div className="h-full rounded-full" style={{ width: `${config.percent}%`, background: 'var(--lp-primary)' }} />
       </div>
@@ -676,13 +771,21 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
               {resultQual === 'disqualified' ? (
                 <>
                   <h2 className="text-xl font-bold">{config.disqualifiedTitle}</h2>
-                  <p className="mx-auto mt-1 max-w-xs text-sm opacity-70">{config.disqualifiedMessage}</p>
+                  <p className="mx-auto mt-1 max-w-xs text-sm opacity-70">
+                    {fill(config.disqualifiedMessage, { especialista: specialist })}
+                  </p>
                 </>
               ) : (
                 <>
-                  <h2 className="text-xl font-bold">Recebemos suas informações!</h2>
+                  {/* Estes dois vinham escritos por dentro e ignoravam o que
+                      estava gravado: o campo existia no editor, a pessoa
+                      preenchia, salvava, e a landing mostrava outra coisa. */}
+                  <h2 className="text-xl font-bold">{config.thankyouTitle}</h2>
                   <p className="mx-auto mt-1 max-w-xs text-sm opacity-70">
-                    O corretor {specialist} entrará em contato em breve. {config.interestedCount} pessoas estão interessadas nesse imóvel.
+                    {fill(config.thankyouMessage, { especialista: specialist })}
+                    {config.interestedLabel
+                      ? ` ${fill(config.interestedLabel, { n: config.interestedCount })}`
+                      : ''}
                   </p>
                   {/* Só aparece com número: sem ele o botão não abria conversa
                       nenhuma e era o mais chamativo da tela. */}
@@ -690,7 +793,7 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
                     <button type="button" data-lp-action="whatsapp" data-whatsapp-phone={whatsappPhone}
                       className="mt-4 flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 font-semibold text-white"
                       style={{ background: '#16A34A' }}>
-                      <WhatsAppIcon size={18} /> Fura a fila e fale direto no WhatsApp
+                      <WhatsAppIcon size={18} /> {config.whatsappLabel}
                     </button>
                   )}
                 </>
@@ -703,9 +806,9 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
                 ) : null}
                 <div className="flex-1">
                   <div className="text-sm font-semibold">{specialist}</div>
-                  <div className="text-xs opacity-60">Corretor de Imóveis · Alto Padrão</div>
+                  <div className="text-xs opacity-60">{config.specialistRole}</div>
                   <div className="mt-1 inline-flex items-center gap-1 text-xs" style={{ color: '#16A34A' }}>
-                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: '#16A34A' }} /> Disponível agora · responde em até 5 minutos
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: '#16A34A' }} /> {config.specialistStatus}
                   </div>
                 </div>
               </div>
@@ -716,14 +819,17 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
             <h2 className="text-base font-bold leading-snug">
               {config.title} {specialist !== 'nosso especialista' ? specialist : ''}
             </h2>
-            <p className="mt-1 text-xs opacity-60">Deixe seus dados e o corretor entrará em contato.</p>
+            {config.subtitle && <p className="mt-1 text-xs opacity-60">{config.subtitle}</p>}
             <div className="mt-3 mb-4 flex items-center gap-3">
               <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--lp-card)' }}>
                 <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(progress, 100)}%`, background: 'var(--lp-text)' }} />
               </div>
-              {!hasBranching && (
+              {!hasBranching && config.stepCounterLabel && (
                 <span className="text-xs opacity-60">
-                  Passo {Math.min(onContact ? totalSteps : path.length, totalSteps)} de {totalSteps}
+                  {fill(config.stepCounterLabel, {
+                    atual: Math.min(onContact ? totalSteps : path.length, totalSteps),
+                    total: totalSteps,
+                  })}
                 </span>
               )}
             </div>
@@ -741,14 +847,14 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
                   ))}
                 </div>
                 {canGoBack && (
-                  <button type="button" onClick={back} className="mt-3 text-xs opacity-60">← Voltar</button>
+                  <button type="button" onClick={back} className="mt-3 text-xs opacity-60">{config.backLabel}</button>
                 )}
               </div>
             ) : (
               <div>
-                <h3 className="mb-3 font-semibold">Tenho interesse</h3>
+                <h3 className="mb-3 font-semibold">{config.contactTitle}</h3>
                 <div className="space-y-2">
-                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome *"
+                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder={config.namePlaceholder}
                     className="w-full rounded-xl border bg-transparent px-4 py-3 text-sm outline-none focus:border-amber-400"
                     style={{ borderColor: 'var(--lp-border)', color: 'var(--lp-text)' }} />
                   <BrPhoneInput value={phone} onChange={(v) => { setPhone(v); if (phoneErr) setPhoneErr(false); }}
@@ -756,22 +862,22 @@ function LeadFormBlock({ config, property, onSubmitLead }: BlockComponentProps<'
                     className="w-full rounded-xl border bg-transparent px-4 py-3 text-sm outline-none focus:border-amber-400"
                     style={{ borderColor: phoneErr ? '#f87171' : 'var(--lp-border)', color: 'var(--lp-text)' }} />
                   {phoneErr && <p className="text-xs text-red-500">Digite um telefone válido com DDD.</p>}
-                  <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-mail" inputMode="email"
+                  <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={config.emailPlaceholder} inputMode="email"
                     className="w-full rounded-xl border bg-transparent px-4 py-3 text-sm outline-none focus:border-amber-400"
                     style={{ borderColor: 'var(--lp-border)', color: 'var(--lp-text)' }} />
                 </div>
                 {sendErr && (
                   <div className="mt-3 rounded-xl border px-3 py-2 text-xs" style={{ borderColor: '#f87171', color: '#f87171' }}>
-                    Não conseguimos enviar seus dados. Confira sua conexão e toque em enviar de novo.
+                    {config.sendErrorMessage}
                   </div>
                 )}
                 <button type="button" onClick={submit} disabled={sending || !name.trim() || !phone.trim()}
                   className="mt-4 flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 font-semibold text-white disabled:opacity-40"
                   style={{ background: '#16A34A' }}>
-                  <WhatsAppIcon size={18} /> {sending ? 'Enviando…' : sendErr ? 'Tentar de novo' : config.ctaLabel}
+                  <WhatsAppIcon size={18} /> {sending ? config.sendingLabel : sendErr ? config.retryLabel : config.ctaLabel}
                 </button>
                 {canGoBack && (
-                  <button type="button" onClick={back} className="mt-3 text-xs opacity-60">← Voltar</button>
+                  <button type="button" onClick={back} className="mt-3 text-xs opacity-60">{config.backLabel}</button>
                 )}
               </div>
             )}
@@ -818,6 +924,7 @@ export const BLOCK_COMPONENTS: Record<BlockType, React.ComponentType<BlockCompon
   price_band: PriceBandBlock,
   tech_sheet: TechSheetBlock,
   description: DescriptionBlock,
+  rich_text: RichTextBlock,
   amenities: AmenitiesBlock,
   gallery: GalleryBlock,
   map: MapBlock,

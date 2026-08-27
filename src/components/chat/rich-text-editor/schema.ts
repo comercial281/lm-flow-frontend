@@ -66,3 +66,31 @@ export const messageSchema = new Schema({
     },
   },
 });
+
+/**
+ * O mesmo esquema das notas privadas, mais a marca de LINK. Vive separado de
+ * propósito: o compositor do chat NÃO pode ganhar link por efeito colateral —
+ * o que se escreve lá vira mensagem de WhatsApp, onde âncora não existe e o
+ * endereço teria de aparecer como texto.
+ *
+ * Quem usa é a seção de Texto da landing, onde o link é conteúdo legítimo da
+ * página (o portal, um PDF de plantas, a conversa no WhatsApp).
+ */
+export const landingTextSchema = new Schema({
+  nodes: messageSchema.spec.nodes,
+  marks: messageSchema.spec.marks.addToEnd('link', {
+    attrs: { href: {} },
+    inclusive: false,
+    parseDOM: [
+      {
+        tag: 'a[href]',
+        getAttrs: (dom: HTMLElement | string) => ({
+          href: typeof dom === 'string' ? dom : (dom.getAttribute('href') ?? ''),
+        }),
+      },
+    ],
+    toDOM(mark) {
+      return ['a', { href: mark.attrs.href as string, target: '_blank', rel: 'noopener noreferrer' }, 0];
+    },
+  }),
+});
