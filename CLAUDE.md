@@ -288,6 +288,66 @@ Armadilhas:
    `replace`, o botão Voltar do navegador passa a percorrer as abas em vez de
    sair da tela.
 
+### Seções mais ricas, textos editáveis e margens (desde 2026-08-27)
+
+O dono do produto montou uma landing de verdade no editor novo e listou seis
+limites. Nenhum deles tinha metade de backend: o servidor guarda as seções como
+lista livre e não valida tipo de seção, então tudo é tela.
+
+O que mudou:
+
+- **Seção *Texto*** (grupo novo **Conteúdo**, primeiro na lista de adicionar),
+  com negrito, itálico, lista e link.
+- **A *Galeria de Fotos* aceita foto enviada na hora.** Ganhou o seletor *De onde
+  vêm as fotos*: as do imóvel (como sempre) ou as que o gestor enviar ali mesmo,
+  com legenda e reordenação. É o caminho para landing de imóvel que não está
+  cadastrado, que não tinha foto nenhuma pra puxar.
+- **O *Mapa* passa a mostrar mapa.** Dois campos: *Endereço mostrado na página*
+  (o que o lead lê) e *Região do mapa* (o que o mapa busca).
+- **Espaçamento acima, abaixo e nas laterais em cada seção**, com o padrão da
+  página como sugestão no campo.
+- **O *Simulador* ganhou o campo *Valor do imóvel*** (mais reforços e chaves em
+  %). Sem imóvel cadastrado, a simulação inteira saía zerada, calada.
+- **Todos os textos fixos viraram campo** — formulário inteiro, simulador, e os
+  títulos de Ficha Técnica, Galeria e Progresso de Obra. O *Botão sobre a capa*
+  do Hero também passou a existir de fato.
+- **O selo da seção selecionada na prévia** é preto com borda branca, sempre.
+  Usava a cor da landing e sumia nos temas claros, que são a maioria.
+
+**Duas mudanças aparecem em landing JÁ PUBLICADA, e são de propósito:**
+
+1. **A tela de obrigado passa a mostrar o texto gravado.** Os campos *Quando o
+   lead é aprovado* e *Mensagem* não faziam nada: a tela tinha o texto escrito
+   por dentro e ignorava o que estava salvo. Quem preencheu aquilo algum dia vai
+   ver o próprio texto aparecer agora.
+2. **A seção de mapa passa a mostrar o mapa**, onde antes havia só uma linha de
+   endereço.
+
+Todo o resto nasce com o texto e o espaçamento de hoje como padrão.
+
+Armadilhas desta leva:
+
+7. **O mapa busca SÓ a região, nunca a rua com número** — mesmo quando a rua é o
+   único campo preenchido. É a mesma decisão de privacidade que a página de
+   imóvel do site toma, e existe teste para ela. Quem "consertar" isso passando o
+   endereço completo para o mapa entrega o endereço exato a quem só viu o anúncio.
+8. **O editor de texto é COMPARTILHADO com o compositor do chat** e com os
+   artigos do Site Builder. Ele recebe o conjunto de formatações por parâmetro, e
+   o padrão é o do chat: o link só existe onde a landing pede. O botão de link
+   nem se desenha quando o conjunto em uso não tem a marca — no chat o texto vira
+   mensagem de WhatsApp, onde link formatado não existe.
+9. **A margem mora na SEÇÃO, não na configuração de cada tipo de seção.** É o que
+   faz o recurso valer para as 19 de uma vez e nascer junto com toda seção nova.
+   Medida em branco = usa o padrão; gravar zero por engano cola a seção na de cima.
+10. **A capa usa a margem como espaço EXTERNO**, e não interno: ela é sangrada de
+    ponta a ponta, e recuo interno deixaria uma faixa de fundo por cima da foto.
+    O botão fixo não tem margem nenhuma — ele flutua.
+11. **Texto novo tem de nascer com o texto de hoje como padrão.** Um padrão
+    diferente muda a página de quem nunca pediu nada.
+12. **O campo de texto com formatação é não-controlado.** Ele é semeado uma vez e
+    depois só lido. Quem montar painel com ele precisa trocar a identidade do
+    campo ao mudar de seção, senão a caixa continua mostrando o texto da anterior.
+
 Ainda **não** resolvido, e é dívida conhecida:
 
 - **Salvar e reusar template só funciona para o administrador da conta.** A

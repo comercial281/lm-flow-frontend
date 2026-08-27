@@ -7,7 +7,7 @@ import {
 } from '@/features/landing/blocks';
 import { useLandingEditorStore } from './landingEditorStore';
 
-const CATEGORY_ORDER: BlockCategory[] = ['destaque', 'imovel', 'conversao', 'midia', 'prova'];
+const CATEGORY_ORDER: BlockCategory[] = ['conteudo', 'destaque', 'imovel', 'conversao', 'midia', 'prova'];
 
 /** Library of blocks the user can add, grouped by category. */
 export function BlockLibrary({ onAdded }: { onAdded?: () => void } = {}) {

@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from 'react';
+import { Component, type CSSProperties, type ReactNode } from 'react';
 import type { BlockInstance } from './contract';
 import { BLOCK_COMPONENTS } from './components';
 import {
@@ -50,6 +50,7 @@ export function BlockRenderer({
 
   return (
     <div
+      className={showHidden ? 'lp-editor-preview' : undefined}
       style={{
         ...vars,
         background: `linear-gradient(var(--lp-bg-start), var(--lp-bg-end))`,
@@ -58,6 +59,10 @@ export function BlockRenderer({
         paddingBottom: '5.5rem', // espaço pro CTA fixo não cobrir o conteúdo
       }}
     >
+      {/* Na PRÉVIA do editor, mapa e vídeo não podem capturar o clique nem a
+          rolagem: quem clica numa seção está escolhendo o que editar, e a
+          moldura do mapa engoliria o clique e a rolagem da página inteira. */}
+      {showHidden && <style>{`.lp-editor-preview iframe{pointer-events:none}`}</style>}
       {blocks.map((block) => {
         if (!block.visible && !showHidden) return null;
         const Cmp = BLOCK_COMPONENTS[block.type];
@@ -69,9 +74,20 @@ export function BlockRenderer({
               data-block-id={block.id}
               style={{
                 position: 'relative',
+                // Espaçamento escolhido nesta seção. Só entra a medida que foi
+                // escolhida: as demais continuam caindo no padrão declarado
+                // dentro do componente Section.
+                ...(block.layout?.top != null ? { '--lp-pad-top': `${block.layout.top}px` } : {}),
+                ...(block.layout?.bottom != null ? { '--lp-pad-bottom': `${block.layout.bottom}px` } : {}),
+                ...(block.layout?.sides != null ? { '--lp-pad-x': `${block.layout.sides}px` } : {}),
                 ...(!block.visible && showHidden ? { opacity: 0.4 } : {}),
-                ...(selected ? { outline: '2px solid var(--lp-primary)', outlineOffset: '-2px' } : {}),
-              }}
+                // Contorno em DUAS camadas: a de dentro escura, a de fora clara.
+                // Uma cor só (era a cor da landing) desaparecia toda vez que o
+                // tema da página tinha a mesma cor por perto.
+                ...(selected
+                  ? { outline: '2px solid #0B0B0C', outlineOffset: '-2px', boxShadow: 'inset 0 0 0 4px rgba(255,255,255,0.9)' }
+                  : {}),
+              } as CSSProperties}
             >
               {selected && selectedLabel && (
                 <span
@@ -83,8 +99,13 @@ export function BlockRenderer({
                     padding: '2px 8px',
                     fontSize: 11,
                     fontWeight: 600,
+                    // Preto sólido com borda branca, sempre — o selo usava a cor
+                    // da landing e sumia nos temas claros, que são a maioria.
                     color: '#fff',
-                    background: 'var(--lp-primary)',
+                    background: '#0B0B0C',
+                    border: '1px solid rgba(255,255,255,0.9)',
+                    borderTop: 'none',
+                    borderLeft: 'none',
                     borderBottomRightRadius: 6,
                   }}
                 >

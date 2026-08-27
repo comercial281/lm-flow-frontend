@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   type BlockConfig,
   type BlockInstance,
+  type BlockLayout,
   type BlockType,
   type BrandMode,
   type LandingTheme,
@@ -66,6 +67,8 @@ interface LandingEditorState {
   toggleVisible: (id: string) => void;
   reorder: (blocks: BlockInstance[]) => void;
   updateConfig: <T extends BlockType>(id: string, patch: Partial<BlockConfig<T>>) => void;
+  /** Espaçamento da seção. Medida vazia = herda o padrão da página. */
+  setLayout: (id: string, patch: Partial<BlockLayout>) => void;
   /* --- perguntas e opções do formulário de lead --- */
   addStep: (blockId: string) => void;
   updateStep: (blockId: string, stepId: string, patch: Partial<LeadFormStep>) => void;
@@ -167,6 +170,21 @@ export const useLandingEditorStore = create<LandingEditorState>((set, get) => {
         get().blocks.map((b) =>
           b.id === id ? { ...b, config: { ...b.config, ...patch } } : b,
         ),
+      ),
+
+    setLayout: (id, patch) =>
+      commit(
+        get().blocks.map((b) => {
+          if (b.id !== id) return b;
+          const layout = { ...b.layout, ...patch };
+          // Campo apagado sai do objeto, e objeto vazio some: ausência é o que
+          // significa "usa o espaçamento padrão da página", e um zero gravado
+          // por engano colaria a seção na de cima.
+          for (const key of Object.keys(layout) as (keyof typeof layout)[]) {
+            if (layout[key] == null) delete layout[key];
+          }
+          return Object.keys(layout).length ? { ...b, layout } : { ...b, layout: undefined };
+        }),
       ),
 
     addStep: (blockId) =>

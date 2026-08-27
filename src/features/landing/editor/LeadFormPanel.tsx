@@ -311,11 +311,46 @@ export function LeadFormPanel({ block }: { block: BlockInstance }) {
         <Field label="Título do formulário">
           <Text value={config.title} onChange={(v) => set({ title: v })} />
         </Field>
+        <Field label="Linha embaixo do título" hint="Vazio = a linha não aparece.">
+          <Text value={config.subtitle} onChange={(v) => set({ subtitle: v })} />
+        </Field>
         <Field label="Nome do especialista">
           <Text value={config.specialistName} onChange={(v) => set({ specialistName: v })} />
         </Field>
         <Field label="Texto do botão de envio">
           <Text value={config.ctaLabel} onChange={(v) => set({ ctaLabel: v })} />
+        </Field>
+      </Group>
+
+      <Group title="Tela dos dados de contato">
+        <Field label="Título">
+          <Text value={config.contactTitle} onChange={(v) => set({ contactTitle: v })} />
+        </Field>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Campo do nome">
+            <Text value={config.namePlaceholder} onChange={(v) => set({ namePlaceholder: v })} />
+          </Field>
+          <Field label="Campo do e-mail">
+            <Text value={config.emailPlaceholder} onChange={(v) => set({ emailPlaceholder: v })} />
+          </Field>
+        </div>
+        <Field label="Botão de voltar" hint="Vazio = o botão continua aparecendo, sem texto. Para tirá-lo, apague o texto e o espaço.">
+          <Text value={config.backLabel} onChange={(v) => set({ backLabel: v })} />
+        </Field>
+        <Field
+          label="Contador de passos"
+          hint="Use {atual} e {total}. Vazio = o contador não aparece. Ele já some sozinho quando alguma resposta desvia o formulário."
+        >
+          <Text value={config.stepCounterLabel} onChange={(v) => set({ stepCounterLabel: v })} />
+        </Field>
+        <Field label="Enquanto envia">
+          <Text value={config.sendingLabel} onChange={(v) => set({ sendingLabel: v })} />
+        </Field>
+        <Field label="Botão quando o envio falha">
+          <Text value={config.retryLabel} onChange={(v) => set({ retryLabel: v })} />
+        </Field>
+        <Field label="Aviso quando o envio falha">
+          <TextArea rows={2} value={config.sendErrorMessage} onChange={(v) => set({ sendErrorMessage: v })} />
         </Field>
       </Group>
 
@@ -339,12 +374,24 @@ export function LeadFormPanel({ block }: { block: BlockInstance }) {
         </Field>
       </Group>
 
-      <Group title="Depois do envio">
+      <Group
+        title="Depois do envio"
+        hint="Estes textos passaram a valer de verdade: a tela de obrigado mostrava um texto fixo e ignorava o que estava gravado aqui."
+      >
         <Field label="Quando o lead é aprovado">
           <Text value={config.thankyouTitle} onChange={(v) => set({ thankyouTitle: v })} />
         </Field>
-        <Field label="Mensagem">
+        <Field label="Mensagem" hint="Use {especialista} para o nome do corretor.">
           <TextArea rows={2} value={config.thankyouMessage} onChange={(v) => set({ thankyouMessage: v })} />
+        </Field>
+        <Field
+          label="Linha de quantos estão interessados"
+          hint="Use {n} para o número. Vazio = a linha não aparece."
+        >
+          <Text value={config.interestedLabel} onChange={(v) => set({ interestedLabel: v })} />
+        </Field>
+        <Field label="Número de interessados">
+          <Num value={config.interestedCount} onChange={(v) => set({ interestedCount: v ?? 0 })} />
         </Field>
         <Field
           label="WhatsApp do botão “Fura a fila”"
@@ -356,10 +403,21 @@ export function LeadFormPanel({ block }: { block: BlockInstance }) {
             onChange={(v) => set({ whatsappPhone: v })}
           />
         </Field>
+        <Field label="Texto do botão do WhatsApp">
+          <Text value={config.whatsappLabel} onChange={(v) => set({ whatsappLabel: v })} />
+        </Field>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Cargo do corretor">
+            <Text value={config.specialistRole} onChange={(v) => set({ specialistRole: v })} />
+          </Field>
+          <Field label="Linha de disponibilidade">
+            <Text value={config.specialistStatus} onChange={(v) => set({ specialistStatus: v })} />
+          </Field>
+        </div>
         <Field label="Quando o lead é desqualificado">
           <Text value={config.disqualifiedTitle} onChange={(v) => set({ disqualifiedTitle: v })} />
         </Field>
-        <Field label="Mensagem">
+        <Field label="Mensagem" hint="Use {especialista} para o nome do corretor.">
           <TextArea rows={3} value={config.disqualifiedMessage} onChange={(v) => set({ disqualifiedMessage: v })} />
         </Field>
         <Field

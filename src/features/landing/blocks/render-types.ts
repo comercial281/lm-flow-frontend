@@ -204,6 +204,17 @@ export interface BlockComponentProps<T extends BlockType = BlockType> {
   onSubmitLead?: (payload: LeadSubmitPayload) => Promise<LeadSubmitResult | void> | LeadSubmitResult | void;
 }
 
+/** Troca os marcadores de um texto configurável — `{especialista}`, `{atual}`,
+ *  `{total}`, `{n}`. Marcador desconhecido fica como está, à vista: apagá-lo
+ *  esconderia o erro de digitação de quem escreveu o texto.
+ *
+ *  Mora aqui, e não junto dos componentes, porque as DUAS telas de resultado
+ *  (a que aparece na própria página e a de endereço próprio) mostram os mesmos
+ *  textos — e elas já divergiram uma vez. */
+export function fillTemplate(template: string, vars: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in vars ? String(vars[key]) : match));
+}
+
 /** pt-BR currency. Coerces string decimals (Rails serializes decimal as string). */
 export function formatBRL(value?: number | string | null): string {
   if (value == null) return '';

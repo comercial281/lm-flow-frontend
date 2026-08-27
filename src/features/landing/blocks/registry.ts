@@ -13,7 +13,7 @@ import {
  * presentation only (labels in pt-BR, icons, grouping).
  */
 
-export type BlockCategory = 'destaque' | 'imovel' | 'midia' | 'prova' | 'conversao';
+export type BlockCategory = 'conteudo' | 'destaque' | 'imovel' | 'midia' | 'prova' | 'conversao';
 
 export interface BlockMeta {
   type: BlockType;
@@ -58,6 +58,14 @@ export const BLOCK_REGISTRY: Record<BlockType, BlockMeta> = {
     icon: 'AlignLeft',
     category: 'imovel',
     autoFill: true,
+  },
+  rich_text: {
+    type: 'rich_text',
+    label: 'Texto',
+    description: 'Texto livre, com negrito, itálico, lista e link.',
+    icon: 'Type',
+    category: 'conteudo',
+    autoFill: false,
   },
   amenities: {
     type: 'amenities',
@@ -177,6 +185,7 @@ export const BLOCK_REGISTRY: Record<BlockType, BlockMeta> = {
 export const BLOCK_LIBRARY: BlockMeta[] = BLOCK_TYPES.map((t) => BLOCK_REGISTRY[t]);
 
 export const BLOCK_CATEGORY_LABELS: Record<BlockCategory, string> = {
+  conteudo: 'Conteúdo',
   destaque: 'Destaque',
   imovel: 'Imóvel',
   midia: 'Mídia',

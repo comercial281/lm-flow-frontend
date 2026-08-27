@@ -1,7 +1,7 @@
 import React from 'react';
 import { EditorState } from 'prosemirror-state';
 import { Button } from '@evoapi/design-system/button';
-import { Bold, Italic, Code, List, Undo, Redo } from 'lucide-react';
+import { Bold, Italic, Code, Link2, List, Undo, Redo } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 
 interface EditorToolbarProps {
@@ -72,6 +72,21 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
       >
         <List className="h-4 w-4" />
       </Button>
+
+      {/* Só aparece quando o esquema em uso tem a marca de link — o compositor
+          do chat não tem, e o botão simplesmente não existe lá. */}
+      {editorState?.schema.marks.link && (
+        <Button
+          variant={isMarkActive('link') ? 'default' : 'outline'}
+          size="icon"
+          onClick={() => onAction('link')}
+          disabled={disabled}
+          title="Transformar a seleção em link"
+          className="h-8 w-8"
+        >
+          <Link2 className="h-4 w-4" />
+        </Button>
+      )}
 
       <div className="w-px h-6 mx-1 bg-border" />
 

@@ -65,6 +65,25 @@ describe('landingEditorStore', () => {
     expect(s().canUndo()).toBe(false);
   });
 
+  it('grava o espaçamento da seção e desfaz junto com o resto', () => {
+    s().addBlock('price_band');
+    const id = s().blocks[0].id;
+    s().setLayout(id, { top: 8, sides: 0 });
+    expect(s().blocks[0].layout).toEqual({ top: 8, sides: 0 });
+    s().undo();
+    expect(s().blocks[0].layout).toBeUndefined();
+  });
+
+  it('apagar a medida devolve a seção ao espaçamento padrão', () => {
+    s().addBlock('price_band');
+    const id = s().blocks[0].id;
+    s().setLayout(id, { top: 8 });
+    // Campo esvaziado sai do objeto: ausência é o que significa "usa o padrão",
+    // e um zero gravado por engano colaria a seção na de cima.
+    s().setLayout(id, { top: undefined });
+    expect(s().blocks[0].layout).toBeUndefined();
+  });
+
   it('a new mutation clears the redo stack', () => {
     s().addBlock('hero');
     s().addBlock('price_band');
