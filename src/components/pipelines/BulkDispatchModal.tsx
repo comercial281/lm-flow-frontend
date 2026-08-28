@@ -293,6 +293,13 @@ export default function BulkDispatchModal({
       toast.error('Monte a sequência antes de salvar o modelo.');
       return;
     }
+    // Continua sendo a caixinha do navegador de propósito: o substituto
+    // (usePergunta) é um Dialog, e este componente já É o conteúdo de um.
+    //
+    // Dialog dentro de Dialog mexe com armadilha de foco e com empilhamento —
+    // e aqui há um campo de texto que precisa receber o foco pra funcionar,
+    // justamente o que a armadilha do diálogo de fora disputa. Não se confere
+    // lendo código: precisa de navegador.
     const name = window.prompt('Nome do modelo:')?.trim();
     if (!name) return;
     try {

@@ -80,6 +80,11 @@ export function useOAuthFlow(options: UseOAuthFlowOptions): UseOAuthFlowReturn {
       if (integrationId === 'shopify') {
         // For Shopify, we need the shop domain which should be provided separately
         // This is a simplified example - in practice you'd get the shop domain from user input
+        // Continua sendo a caixinha do navegador porque aqui não há onde pendurar
+        // o substituto: usePergunta devolve JSX pra renderizar, e isto é um hook
+        // sem árvore própria. Quem chama é que teria de montar o diálogo e passar
+        // o domínio pra cá como parâmetro — mudança de assinatura, não troca de
+        // caixinha.
         const shopDomain = prompt(
           'Digite o domínio da sua loja Shopify (exemplo: minhaloja.myshopify.com):',
         );

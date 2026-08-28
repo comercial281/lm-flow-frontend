@@ -133,6 +133,14 @@ export default function PipelineTaskItem({
   };
 
   const handleCheckboxChange = (checked: boolean) => {
+    // As duas confirmações abaixo continuam sendo a caixinha do navegador de
+    // propósito: o substituto (useConfirmacao) é um Dialog, e este item é
+    // renderizado dentro do EditItemModal.
+    //
+    // Dialog dentro de Dialog mexe com armadilha de foco e com empilhamento, e
+    // isso não se confere lendo código: precisa de navegador. Estas duas não
+    // apagam nada — concluem e reabrem tarefa — mas confirmação que não volta
+    // resposta trava o passo de qualquer jeito.
     if (checked && task.status === 'pending') {
       if (confirm(t('tasks.messages.completeConfirm'))) {
         onComplete(task.id);

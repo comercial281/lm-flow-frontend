@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -75,6 +75,20 @@ export function useConfirmacao(): Retorno {
       responder.current = resolve;
     });
   }, []);
+
+  // Se a tela sumir com um pedido no ar, quem chamou fica esperando uma Promise
+  // que ninguém mais vai resolver — o `await confirmar(...)` nunca volta e o
+  // resto da função nunca roda. Acontece de verdade em menu flutuante que se
+  // fecha ao clicar fora: o clique que abre o diálogo é o mesmo que desmonta
+  // quem está esperando. Desmontou, a resposta é `false` — que é exatamente o
+  // que o `window.confirm` devolvia quando a pessoa desistia.
+  useEffect(
+    () => () => {
+      responder.current?.(false);
+      responder.current = null;
+    },
+    [],
+  );
 
   const fechar = useCallback((resposta: boolean) => {
     responder.current?.(resposta);

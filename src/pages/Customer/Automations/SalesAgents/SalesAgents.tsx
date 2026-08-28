@@ -41,6 +41,7 @@ import inboxesService from '@/services/channels/inboxesService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { usePergunta } from '@/hooks/usePergunta';
 type Tab = 'config' | 'resultados' | 'knowledge' | 'learning' | 'test' | 'diagnostico';
 
 interface InboxOption {
@@ -2718,6 +2719,7 @@ function persistScenarios(list: TestScenario[]) {
 }
 
 function TestTab({ agent }: { agent: SalesAgent }) {
+  const { perguntar, dialogoDePergunta } = usePergunta();
   const [history, setHistory] = useState<TestTurn[]>([]);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -2754,8 +2756,14 @@ function TestTab({ agent }: { agent: SalesAgent }) {
     setMediaShownFor(null);
   };
 
-  const saveCurrentScenario = () => {
-    const label = window.prompt('Nome do cenário:')?.trim();
+  const saveCurrentScenario = async () => {
+    const label = await perguntar({
+      titulo: 'Salvar cenário',
+      descricao: 'A conversa da tela vira o histórico do cenário, pra você poder repetir este caso depois.',
+      rotuloDoCampo: 'Nome do cenário',
+      placeholder: 'Ex.: lead frio que some no meio',
+      rotuloDaAcao: 'Salvar cenário',
+    });
     if (!label) return;
 
     const scenario: TestScenario = {
@@ -2894,7 +2902,7 @@ function TestTab({ agent }: { agent: SalesAgent }) {
           <div className="flex items-center gap-2 text-sm font-medium">
             <Zap className="h-4 w-4" /> Cenários
           </div>
-          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={saveCurrentScenario}>
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => void saveCurrentScenario()}>
             Salvar o atual
           </Button>
         </div>
@@ -3051,6 +3059,8 @@ function TestTab({ agent }: { agent: SalesAgent }) {
           {last.lead_summary && <div>Resumo: {last.lead_summary}</div>}
         </div>
       )}
+
+      {dialogoDePergunta}
     </div>
   );
 }
