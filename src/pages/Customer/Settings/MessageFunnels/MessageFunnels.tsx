@@ -38,6 +38,16 @@ export default function MessageFunnels() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<MessageFunnel | null>(null);
   const [toDelete, setToDelete] = useState<MessageFunnel | null>(null);
+
+  // Pastas: criar, renomear e excluir usavam window.prompt/confirm — as caixinhas
+  // do navegador, que congelam a aba, ignoram o tema e mostram o endereço do site
+  // no cabeçalho. Esta MESMA página já sabia fazer melhor: o "Excluir funil" logo
+  // abaixo já é Dialog do design system. Agora as pastas usam o mesmo.
+  const [pastaEmEdicao, setPastaEmEdicao] = useState<MessageFunnelFolder | 'nova' | null>(null);
+  const [nomeDaPasta, setNomeDaPasta] = useState('');
+  const [salvandoPasta, setSalvandoPasta] = useState(false);
+  const [pastaParaExcluir, setPastaParaExcluir] = useState<MessageFunnelFolder | null>(null);
+  const [excluindoPasta, setExcluindoPasta] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
@@ -111,37 +121,59 @@ export default function MessageFunnels() {
     }
   };
 
-  const createFolder = async () => {
-    const name = window.prompt('Nome da pasta:');
-    if (!name?.trim()) return;
+  const abrirNovaPasta = () => {
+    setNomeDaPasta('');
+    setPastaEmEdicao('nova');
+  };
+
+  const abrirRenomearPasta = (f: MessageFunnelFolder, ev: MouseEvent) => {
+    ev.stopPropagation();
+    setNomeDaPasta(f.name);
+    setPastaEmEdicao(f);
+  };
+
+  const abrirExcluirPasta = (f: MessageFunnelFolder, ev: MouseEvent) => {
+    ev.stopPropagation();
+    setPastaParaExcluir(f);
+  };
+
+  const nomeDaPastaValido =
+    nomeDaPasta.trim().length > 0 &&
+    !(pastaEmEdicao !== 'nova' && nomeDaPasta.trim() === pastaEmEdicao?.name);
+
+  const salvarPasta = async () => {
+    if (!pastaEmEdicao || !nomeDaPastaValido) return;
+    const nome = nomeDaPasta.trim();
+    setSalvandoPasta(true);
     try {
-      await messageFunnelFoldersService.create({ name: name.trim() });
+      if (pastaEmEdicao === 'nova') {
+        await messageFunnelFoldersService.create({ name: nome });
+        toast.success('Pasta criada');
+      } else {
+        await messageFunnelFoldersService.update(pastaEmEdicao.id, { name: nome });
+        toast.success('Pasta renomeada');
+      }
+      setPastaEmEdicao(null);
       load();
     } catch {
-      toast.error('Erro ao criar pasta');
+      toast.error(pastaEmEdicao === 'nova' ? 'Erro ao criar pasta' : 'Erro ao renomear pasta');
+    } finally {
+      setSalvandoPasta(false);
     }
   };
 
-  const renameFolder = async (f: MessageFunnelFolder, ev: MouseEvent) => {
-    ev.stopPropagation();
-    const name = window.prompt('Novo nome da pasta:', f.name);
-    if (!name?.trim() || name.trim() === f.name) return;
+  const confirmarExcluirPasta = async () => {
+    if (!pastaParaExcluir) return;
+    setExcluindoPasta(true);
     try {
-      await messageFunnelFoldersService.update(f.id, { name: name.trim() });
-      load();
-    } catch {
-      toast.error('Erro ao renomear pasta');
-    }
-  };
-
-  const deleteFolder = async (f: MessageFunnelFolder, ev: MouseEvent) => {
-    ev.stopPropagation();
-    if (!window.confirm(`Excluir a pasta "${f.name}"? Os funis de dentro voltam pra "Sem pasta".`)) return;
-    try {
-      await messageFunnelFoldersService.destroy(f.id);
+      await messageFunnelFoldersService.destroy(pastaParaExcluir.id);
+      toast.success('Pasta excluída');
+      setPastaParaExcluir(null);
       load();
     } catch {
       toast.error('Erro ao excluir pasta');
+    } finally {
+      setExcluindoPasta(false);
     }
   };
 
@@ -188,17 +220,17 @@ export default function MessageFunnels() {
                 </div>
               </button>
               <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-                <button onClick={ev => renameFolder(f, ev)} title="Renomear" className="p-1 rounded hover:bg-accent">
+                <button onClick={ev => abrirRenomearPasta(f, ev)} title="Renomear" className="p-1 rounded hover:bg-accent">
                   <Pencil className="h-3 w-3 text-muted-foreground" />
                 </button>
-                <button onClick={ev => deleteFolder(f, ev)} title="Excluir pasta" className="p-1 rounded hover:bg-accent">
+                <button onClick={ev => abrirExcluirPasta(f, ev)} title="Excluir pasta" className="p-1 rounded hover:bg-accent">
                   <Trash2 className="h-3 w-3 text-muted-foreground" />
                 </button>
               </div>
             </div>
           ))}
           <button
-            onClick={createFolder}
+            onClick={abrirNovaPasta}
             className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
           >
             <FolderPlus className="h-4 w-4" /> Nova pasta
@@ -248,6 +280,55 @@ export default function MessageFunnels() {
         onSaved={() => load()}
         defaultFolderId={pendingFolderId}
       />
+
+      {/* Pasta: criar e renomear — mesmo Dialog, dois modos */}
+      <Dialog open={!!pastaEmEdicao} onOpenChange={open => !open && setPastaEmEdicao(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{pastaEmEdicao === 'nova' ? 'Nova pasta' : 'Renomear pasta'}</DialogTitle>
+            <DialogDescription>
+              Pasta é lugar, não filtro: os funis ficam dentro dela.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={nomeDaPasta}
+            onChange={e => setNomeDaPasta(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && nomeDaPastaValido && !salvandoPasta) void salvarPasta(); }}
+            placeholder="Nome da pasta"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPastaEmEdicao(null)} disabled={salvandoPasta}>
+              Cancelar
+            </Button>
+            <Button onClick={() => void salvarPasta()} disabled={!nomeDaPastaValido || salvandoPasta}>
+              {salvandoPasta ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pasta: excluir */}
+      <Dialog open={!!pastaParaExcluir} onOpenChange={open => !open && setPastaParaExcluir(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir pasta</DialogTitle>
+            <DialogDescription>
+              Excluir a pasta <strong>{pastaParaExcluir?.name}</strong>? Os{' '}
+              {pastaParaExcluir?.funnels_count ?? 0} funis de dentro voltam pra &ldquo;Sem pasta&rdquo; —
+              nenhum funil é apagado.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPastaParaExcluir(null)} disabled={excluindoPasta}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={() => void confirmarExcluirPasta()} disabled={excluindoPasta}>
+              {excluindoPasta ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirm */}
       <Dialog open={!!toDelete} onOpenChange={open => !open && setToDelete(null)}>
