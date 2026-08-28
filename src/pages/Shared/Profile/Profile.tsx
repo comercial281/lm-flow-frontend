@@ -557,7 +557,7 @@ const Profile = () => {
       toast.success(t('audio.updated'));
     } catch (error) {
       console.error('Error saving audio settings:', error);
-      toast.error('Error saving audio settings');
+      toast.error(t('audio.updateError'));
     }
   };
 

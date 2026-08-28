@@ -407,7 +407,10 @@
         "heading": "Não foi possível abrir o aplicativo",
         "invalidUrl": "Endereço inválido",
         "notFound": "Aplicativo não encontrado",
-        "title": "Erro"
+        "title": "Erro",
+        "missingParams": "Endereço incompleto — faltou dizer qual aplicativo abrir",
+        "invalidType": "Este aplicativo não abre nesta tela",
+        "loadFailed": "Não foi possível carregar o aplicativo"
       },
       "poweredBy": "Fornecido por"
     }
