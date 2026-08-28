@@ -75,7 +75,7 @@ export default function ViewTokenModal({
 
           {/* Token ID */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Token ID</label>
+            <label className="text-sm font-medium">{t('viewModal.labels.tokenId')}</label>
             <div className="flex gap-2">
               <Input
                 value={token.id}
@@ -86,7 +86,7 @@ export default function ViewTokenModal({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => handleCopy(token.id, 'Token ID')}
+                onClick={() => handleCopy(token.id, t('viewModal.labels.tokenId'))}
               >
                 <Copy className="h-4 w-4" />
               </Button>
@@ -142,17 +142,17 @@ export default function ViewTokenModal({
                   </Badge>
                 ))
               ) : (
-                <span className="text-sm text-muted-foreground">No scopes configured</span>
+                <span className="text-sm text-muted-foreground">{t('viewModal.descriptions.noScopes')}</span>
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Permissions that this token has access to
+              {t('viewModal.descriptions.scopes')}
             </p>
           </div>
 
           {/* Token Details */}
           <div className="space-y-4 p-4 bg-muted rounded-lg">
-            <h4 className="font-medium">Token Details</h4>
+            <h4 className="font-medium">{t('viewModal.sections.tokenDetails')}</h4>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -160,23 +160,23 @@ export default function ViewTokenModal({
                 <p className="text-sm">{new Date(token.created_at).toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
+                <p className="text-sm font-medium text-muted-foreground">{t('viewModal.labels.updatedAt')}</p>
                 <p className="text-sm">{new Date(token.updated_at).toLocaleString()}</p>
               </div>
             </div>
 
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Owner ID</p>
+              <p className="text-sm font-medium text-muted-foreground">{t('viewModal.labels.ownerId')}</p>
               <p className="text-sm font-mono">{token.owner_id}</p>
             </div>
           </div>
 
           {/* Exemplo de uso da API */}
           <div className="space-y-4 p-4 bg-muted rounded-lg">
-            <h4 className="font-medium">Exemplo de uso da API</h4>
+            <h4 className="font-medium">{t('viewModal.sections.apiUsage')}</h4>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">Exemplo com cURL</label>
+              <label className="text-sm font-medium">{t('viewModal.examples.curl')}</label>
               <div className="flex gap-2">
                 <Input
                   value={`curl -H "api_access_token: ${token.token}" https://api.example.com/v1/endpoint`}
@@ -187,7 +187,7 @@ export default function ViewTokenModal({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleCopy(`curl -H "api_access_token: ${token.token}" https://api.example.com/v1/endpoint`, 'cURL Example')}
+                  onClick={() => handleCopy(`curl -H "api_access_token: ${token.token}" https://api.example.com/v1/endpoint`, t('viewModal.examples.curl'))}
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
@@ -195,7 +195,7 @@ export default function ViewTokenModal({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">JavaScript Example</label>
+              <label className="text-sm font-medium">{t('viewModal.examples.javascript')}</label>
               <div className="flex gap-2">
                 <Input
                   value={`fetch('https://api.example.com/v1/endpoint', { headers: { 'Authorization': 'Bearer ${token.token}' } })`}
@@ -206,7 +206,7 @@ export default function ViewTokenModal({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleCopy(`fetch('https://api.example.com/v1/endpoint', { headers: { 'Authorization': 'Bearer ${token.token}' } })`, 'JavaScript Example')}
+                  onClick={() => handleCopy(`fetch('https://api.example.com/v1/endpoint', { headers: { 'Authorization': 'Bearer ${token.token}' } })`, t('viewModal.examples.javascript'))}
                 >
                   <Copy className="h-4 w-4" />
                 </Button>

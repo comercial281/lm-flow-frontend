@@ -214,5 +214,10 @@ export function getTaxIdLabel(country: string, type: 'person' | 'company'): stri
     CA: { person: 'SIN', company: 'BN' },
   };
 
-  return labels[country]?.[type] || (type === 'person' ? 'Tax ID / SSN' : 'Tax ID / EIN');
+  // Reserva para país fora da lista. Era 'Tax ID / SSN' e 'Tax ID / EIN' —
+  // documentos AMERICANOS, em inglês, num sistema vendido para imobiliária
+  // brasileira. Bastava o contato ter telefone de um país não listado (Portugal,
+  // Chile) pra tela pedir "SSN" ao corretor. O que cabe aqui é o nome genérico
+  // em português, que é o mesmo dos campos do TaxIdInput.
+  return labels[country]?.[type] || (type === 'person' ? 'Documento' : 'Documento da empresa');
 }

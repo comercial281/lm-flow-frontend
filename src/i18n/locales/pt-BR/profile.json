@@ -161,7 +161,8 @@
       "playWhenInactive": "Reproduzir apenas quando a aba estiver inativa",
       "alertUnread": "Alertar se existirem conversas não lidas atribuídas"
     },
-    "updated": "Configurações de áudio atualizadas"
+    "updated": "Configurações de áudio atualizadas",
+    "updateError": "Não foi possível salvar as configurações de áudio"
   },
   "twoFactor": {
     "title": "Autenticação de Dois Fatores",

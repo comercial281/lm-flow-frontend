@@ -22,7 +22,7 @@ export default function DashboardAppPage() {
   useEffect(() => {
     async function loadApp() {
       if (!appId) {
-        setError('Missing required parameters');
+        setError(t('dashboardApps.page.error.missingParams'));
         setLoading(false);
         return;
       }
@@ -35,14 +35,14 @@ export default function DashboardAppPage() {
         const foundApp = response.data.find(a => a.id === appId);
 
         if (!foundApp) {
-          setError('Dashboard app not found');
+          setError(t('dashboardApps.page.error.notFound'));
           setLoading(false);
           return;
         }
 
         // Verify it's a sidebar type app
         if (foundApp.display_type !== 'sidebar') {
-          setError('Invalid app type');
+          setError(t('dashboardApps.page.error.invalidType'));
           setLoading(false);
           return;
         }
@@ -50,14 +50,14 @@ export default function DashboardAppPage() {
         setApp(foundApp);
       } catch (err) {
         console.error('Error loading dashboard app:', err);
-        setError('Failed to load dashboard app');
+        setError(t('dashboardApps.page.error.loadFailed'));
       } finally {
         setLoading(false);
       }
     }
 
     loadApp();
-  }, [appId]);
+  }, [appId, t]);
 
   // Loading state
   if (loading) {
