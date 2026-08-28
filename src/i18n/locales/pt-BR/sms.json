@@ -61,6 +61,19 @@
         "label": "Token de autenticação",
         "placeholder": "Auth Token do Twilio",
         "helpText": "Chave da API gerada no Twilio"
+      },
+      "advancedAuth": {
+        "apiKeySid": {
+          "placeholder": "SK..."
+        }
+      },
+      "phoneConfig": {
+        "messagingServiceSid": {
+          "helpText": "Use quando o envio for por um serviço de mensagens, em vez de um número fixo"
+        }
+      },
+      "phoneNumber": {
+        "helpText": "O número comprado na Twilio, com código do país"
       }
     },
     "phoneConfig": {

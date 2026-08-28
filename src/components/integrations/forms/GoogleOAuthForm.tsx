@@ -14,14 +14,14 @@ export function GoogleOAuthForm({ config, onConfigChange }: IntegrationFormProps
     <div className="space-y-4">
       <FormField
         id="GOOGLE_OAUTH_CLIENT_ID"
-        label={t('integrations.googleOAuth.clientId') || 'Google Client ID'}
+        label={t('googleOAuth.clientId') || 'Google Client ID'}
         value={getValue('googleOauthClientId')}
         onChange={(value) => onConfigChange('googleOauthClientId', value)}
         placeholder="xxx.apps.googleusercontent.com"
       />
       <FormField
         id="GOOGLE_OAUTH_CLIENT_SECRET"
-        label={t('integrations.googleOAuth.clientSecret') || 'Google Client Secret'}
+        label={t('googleOAuth.clientSecret') || 'Google Client Secret'}
         value={getValue('googleOauthClientSecret')}
         onChange={(value) => onConfigChange('googleOauthClientSecret', value)}
         placeholder="GOCSPX-xxx"
@@ -29,28 +29,28 @@ export function GoogleOAuthForm({ config, onConfigChange }: IntegrationFormProps
       />
       <FormField
         id="GOOGLE_OAUTH_CALLBACK_URL"
-        label={t('integrations.googleOAuth.callbackUrl') || 'Callback URL'}
+        label={t('googleOAuth.callbackUrl') || 'Callback URL'}
         value={getValue('googleOauthCallbackUrl')}
         onChange={(value) => onConfigChange('googleOauthCallbackUrl', value)}
         placeholder="https://your-domain.com/auth/google/callback"
         type="url"
-        description={t('integrations.googleOAuth.callbackUrlDescription') || 'Callback URL configured in Google Cloud Console'}
+        description={t('googleOAuth.callbackUrlDescription') || 'Callback URL configured in Google Cloud Console'}
       />
       <FormField
         id="GCP_PROJECT_ID"
-        label={t('integrations.googleOAuth.gcpProjectId') || 'GCP Project ID'}
+        label={t('googleOAuth.gcpProjectId') || 'GCP Project ID'}
         value={getValue('gcpProjectId')}
         onChange={(value) => onConfigChange('gcpProjectId', value)}
         placeholder="id-do-seu-projeto"
-        description={t('integrations.googleOAuth.gcpProjectIdDescription') || 'ID do projeto no Google Cloud, usado na integração Pub/Sub do Gmail'}
+        description={t('googleOAuth.gcpProjectIdDescription') || 'ID do projeto no Google Cloud, usado na integração Pub/Sub do Gmail'}
       />
       <FormField
         id="GMAIL_PUBSUB_TOPIC"
-        label={t('integrations.googleOAuth.gmailPubsubTopic') || 'Gmail Pub/Sub Topic'}
+        label={t('googleOAuth.gmailPubsubTopic') || 'Gmail Pub/Sub Topic'}
         value={getValue('gmailPubsubTopic')}
         onChange={(value) => onConfigChange('gmailPubsubTopic', value)}
         placeholder="gmail-topic"
-        description={t('integrations.googleOAuth.gmailPubsubTopicDescription') || 'Gmail Pub/Sub topic name for receiving email notifications'}
+        description={t('googleOAuth.gmailPubsubTopicDescription') || 'Gmail Pub/Sub topic name for receiving email notifications'}
       />
     </div>
   );

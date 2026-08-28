@@ -263,11 +263,13 @@
       },
       "instanceId": {
         "label": "ID da instância",
-        "placeholder": "Seu Instance ID da Z-API"
+        "placeholder": "Seu Instance ID da Z-API",
+        "helpText": "Aparece no painel da Z-API, na instância que você criou"
       },
       "token": {
         "label": "Token",
-        "placeholder": "Seu token da Z-API"
+        "placeholder": "Seu token da Z-API",
+        "helpText": "O token da instância, no mesmo painel da Z-API"
       },
       "clientToken": {
         "label": "Token do cliente",
@@ -338,7 +340,8 @@
     },
     "help": {
       "title": "Ajuda - Twilio WhatsApp"
-    }
+    },
+    "useApiKey": "Usar chave de API em vez do token da conta"
   },
   "evolutionGoForm": {
     "title": "Evolution Go API",
@@ -468,7 +471,9 @@
     },
     "errors": {
       "loginCanceled": "Login no Facebook cancelado",
-      "connectionCanceled": "Conexão com Facebook cancelada"
+      "connectionCanceled": "Conexão com Facebook cancelada",
+      "connectionFailed": "Não foi possível conectar com o WhatsApp",
+      "sdkNotLoaded": "A biblioteca do Facebook não carregou. Recarregue a página e tente de novo."
     }
   },
   "validation": {

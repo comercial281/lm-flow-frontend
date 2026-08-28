@@ -250,11 +250,17 @@
       "whatsappMessage": "Você só pode responder a esta conversa usando um modelo de mensagem devido a",
       "cannotReply": "Você não pode responder porque",
       "linkText": "Restrições de janela de mensagem de 24 horas",
-      "zapiDisconnected": "WhatsApp desconectado. Conecte o número para enviar mensagens."
+      "zapiDisconnected": "WhatsApp desconectado. Conecte o número para enviar mensagens.",
+      "whatsappDisconnected": "O WhatsApp deste canal está desconectado. As mensagens não serão entregues até reconectar."
     },
     "errors": {
       "loadMessages": "Erro ao carregar mensagens",
       "tryAgain": "Tentar novamente"
+    },
+    "messageInput": {
+      "defaultPlaceholder": "Escreva uma mensagem...",
+      "pendingPlaceholder": "Aguardando o canal conectar...",
+      "restrictedPlaceholder": "Você não tem permissão para responder nesta conversa"
     }
   },
   "chatHeader": {
@@ -284,7 +290,8 @@
     "contactNoName": "Contato sem nome",
     "status": "Status:",
     "openConversation": "Abrir Conversa",
-    "closeConversation": "Fechar conversa"
+    "closeConversation": "Fechar conversa",
+    "openContactInfo": "Ver dados do contato"
   },
   "chatSidebar": {
     "searchPlaceholder": "Buscar conversas...",
@@ -946,5 +953,80 @@
       "contactsEmpty": "Nenhum contato encontrado",
       "messagesEmpty": "Nenhuma mensagem encontrada"
     }
+  },
+  "channelDiagnostic": {
+    "close": "Fechar",
+    "description": "Esta conversa está ligada a um canal que não está respondendo. Enquanto isso, as mensagens não entram nem saem.",
+    "inboxId": "ID da caixa de entrada:",
+    "possibleSolutions": "O que costuma resolver:",
+    "settings": "Abrir configurações do canal",
+    "solutions": {
+      "checkChannel": "Conferir se o canal ainda está conectado",
+      "checkWebhooks": "Conferir se o recebimento de mensagens está configurado",
+      "confirmCredentials": "Conferir se as credenciais continuam válidas",
+      "testConnectivity": "Testar a conexão com o provedor"
+    },
+    "title": "Problema no canal desta conversa"
+  },
+  "filters": {
+    "assignee": {
+      "options": {
+        "all": {
+          "description": "Todas as conversas, de qualquer responsável",
+          "label": "Todas"
+        },
+        "me": {
+          "description": "Só as conversas atribuídas a você",
+          "label": "Minhas"
+        },
+        "unassigned": {
+          "description": "Conversas que ainda não têm responsável",
+          "label": "Sem responsável"
+        }
+      },
+      "showAll": "Ver todas",
+      "title": "Responsável"
+    },
+    "inbox": {
+      "options": {
+        "all": "Todos os canais",
+        "email": "E-mail",
+        "telegram": "Telegram",
+        "website": "Chat do site",
+        "whatsapp": "WhatsApp"
+      },
+      "showAll": "Ver todos",
+      "title": "Canal"
+    },
+    "status": {
+      "clearFilters": "Limpar filtros",
+      "options": {
+        "all": "Todas",
+        "open": "Abertas",
+        "pending": "Pendentes",
+        "resolved": "Resolvidas",
+        "snoozed": "Adiadas"
+      },
+      "title": "Situação"
+    }
+  },
+  "richTextEditor": {
+    "toolbar": {
+      "bold": "Negrito",
+      "bulletList": "Lista",
+      "code": "Código",
+      "italic": "Itálico",
+      "redo": "Refazer",
+      "undo": "Desfazer"
+    }
+  },
+  "typingIndicator": {
+    "multiple": "{{count}} pessoas estão digitando...",
+    "single": "{{name}} está digitando...",
+    "two": "{{first}} e {{second}} estão digitando..."
+  },
+  "webSocketStatus": {
+    "connected": "Conectado",
+    "reconnecting": "Reconectando..."
   }
 }

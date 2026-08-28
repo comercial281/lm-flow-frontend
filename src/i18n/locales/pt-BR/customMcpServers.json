@@ -94,7 +94,8 @@
       "outputModes": "Modos de Saída:",
       "tags": "Etiquetas:",
       "noTools": "Nenhuma ferramenta descoberta",
-      "noToolsDescription": "Execute um teste para descobrir as ferramentas disponíveis"
+      "noToolsDescription": "Execute um teste para descobrir as ferramentas disponíveis",
+      "testPrompt": "Testar ferramenta"
     },
     "headers": {
       "title": "Cabeçalhos HTTP",
@@ -102,6 +103,12 @@
     },
     "tags": {
       "title": "Etiquetas"
+    },
+    "sections": {
+      "basicInfo": "Informações básicas",
+      "headers": "Cabeçalhos HTTP",
+      "tags": "Etiquetas",
+      "tools": "Ferramentas"
     }
   },
   "form": {
@@ -175,7 +182,8 @@
       "tools": "Ferramentas",
       "timeout": "Tempo limite",
       "createdAt": "Criado em",
-      "actions": "Teste"
+      "actions": "Teste",
+      "test": "Teste"
     },
     "custom": "Personalizado",
     "noDescription": "Sem descrição",
@@ -186,6 +194,16 @@
     "emptyMessage": "Nenhum servidor MCP personalizado encontrado",
     "emptyTitle": "Nenhum servidor MCP personalizado criado",
     "emptyDescription": "Crie servidores MCP personalizados para expandir as capacidades dos agentes.",
-    "emptyAction": "Criar servidor MCP personalizado"
+    "emptyAction": "Criar servidor MCP personalizado",
+    "actions": {
+      "delete": "Excluir",
+      "edit": "Editar"
+    },
+    "empty": {
+      "action": "Adicionar servidor",
+      "description": "Servidores MCP permitem que os agentes usem ferramentas de fora do sistema.",
+      "message": "Nenhum servidor cadastrado",
+      "title": "Nenhum servidor MCP"
+    }
   }
 }

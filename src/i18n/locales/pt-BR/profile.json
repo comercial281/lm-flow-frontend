@@ -233,7 +233,8 @@
       "complete": "Concluir Configuração",
       "remaining": "{{count}} códigos restantes",
       "regenerate": "Regenerar",
-      "regenerated": "Novos códigos de backup gerados"
+      "regenerated": "Novos códigos de backup gerados",
+      "regenerateDescription": "Gerar novos códigos invalida os anteriores. Guarde os novos em lugar seguro."
     },
     "disable": {
       "title": "Desativar Autenticação de Dois Fatores",

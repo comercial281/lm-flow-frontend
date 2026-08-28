@@ -65,7 +65,11 @@
     "emailTranscriptError": "Falha ao enviar histórico por email. Tente novamente.",
     "conversationEnded": "Conversa encerrada com sucesso!",
     "newConversationStarted": "Nova conversa iniciada!",
-    "uploadFailed": "Falha no envio do arquivo"
+    "uploadFailed": "Falha no envio do arquivo",
+    "conversationNotFound": "Conversa não encontrada",
+    "conversationResolved": "Conversa encerrada",
+    "errorEndingConversation": "Não foi possível encerrar a conversa",
+    "featureDisabled": "Esta função está desativada"
   },
   "buttons": {
     "sendEmailTranscript": "Enviar histórico por email",

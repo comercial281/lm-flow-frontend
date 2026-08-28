@@ -115,7 +115,8 @@
       "identify": "Identificação",
       "track": "Rastreamento",
       "page": "Página",
-      "screen": "Tela"
+      "screen": "Tela",
+      "segment": "Segmento"
     },
     "names": {
       "all": "Todos os eventos",
@@ -160,7 +161,9 @@
       "pipeline_added": "Adicionado ao pipeline \"{{pipeline_name}}\" no estágio \"{{pipeline_stage_name}}\"",
       "pipeline_stage_changed": "Pipeline \"{{pipeline_name}}\": movido de \"{{old_stage_name}}\" para \"{{new_stage_name}}\"",
       "pipeline_custom_fields": "Campos personalizados do pipeline \"{{pipeline_name}}\" atualizados (valor total: {{value}})",
-      "system": "Evento do sistema"
+      "system": "Evento do sistema",
+      "segment_entered": "O contato passou a fazer parte de um segmento",
+      "segment_exited": "O contato deixou de fazer parte de um segmento"
     },
     "card": {
       "properties": "Propriedades ({{count}})",
@@ -208,7 +211,11 @@
       "channelType": "Canal: {{type}}",
       "labelUnknown": "Etiqueta desconhecida",
       "yes": "Sim",
-      "no": "Não"
+      "no": "Não",
+      "segment": {
+        "entered": "Entrou no segmento",
+        "exited": "Saiu do segmento"
+      }
     }
   },
   "export": {
@@ -394,7 +401,8 @@
       "phoneInvalid": "Telefone inválido",
       "taxIdInvalidPerson": "CPF inválido (máximo 11 dígitos)",
       "taxIdInvalidCompany": "CNPJ inválido (máximo 14 dígitos)",
-      "websiteInvalid": "URL inválida. Use http:// ou https://"
+      "websiteInvalid": "URL inválida. Use http:// ou https://",
+      "taxIdInvalid": "Documento inválido"
     },
     "actions": {
       "cancel": "Cancelar",
@@ -677,7 +685,9 @@
     "emptyDescription": "Crie uma nova ação agendada para começar",
     "pagination": "Página {{page}} de {{totalPages}} ({{total}} total)",
     "messages": {
-      "noChannelsConfigured": "Nenhum canal de mensagens configurado. Por favor, configure primeiro um canal de WhatsApp, SMS, Email ou Telegram nas configurações de Canais."
+      "noChannelsConfigured": "Nenhum canal de mensagens configurado. Por favor, configure primeiro um canal de WhatsApp, SMS, Email ou Telegram nas configurações de Canais.",
+      "bulkCancelled": "{{count}} ações agendadas foram canceladas",
+      "cancelled": "Ação agendada cancelada"
     },
     "errors": {
       "loadFailed": "Erro ao carregar ações agendadas",
@@ -761,5 +771,8 @@
     "contact": "Contato",
     "contactPlaceholder": "Buscar um contato...",
     "noContactsFound": "Nenhum contato encontrado"
+  },
+  "pipelines": {
+    "morePipelines": "+{{count}} pipeline"
   }
 }

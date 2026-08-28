@@ -106,5 +106,8 @@
       "integrations": "Integrações",
       "accessTokens": "Tokens de Acesso"
     }
+  },
+  "common": {
+    "loading": "Carregando..."
   }
 }

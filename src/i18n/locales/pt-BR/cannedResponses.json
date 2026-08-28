@@ -87,7 +87,13 @@
     "deleteSuccess": "Resposta rápida deletada com sucesso",
     "deleteError": "Erro ao deletar resposta rápida",
     "bulkDeleteSuccess": "{{count}} resposta(s) automática(s) deletada(s) com sucesso",
-    "bulkDeleteError": "Erro ao deletar respostas automáticas"
+    "bulkDeleteError": "Erro ao deletar respostas automáticas",
+    "permissionDenied": {
+      "create": "Você não tem permissão para criar respostas prontas",
+      "delete": "Você não tem permissão para excluir respostas prontas",
+      "read": "Você não tem permissão para ver respostas prontas",
+      "update": "Você não tem permissão para editar respostas prontas"
+    }
   },
   "dialog": {
     "delete": {

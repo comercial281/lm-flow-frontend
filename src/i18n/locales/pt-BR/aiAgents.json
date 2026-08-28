@@ -98,7 +98,8 @@
     "maxTokens": "Tokens Máximos",
     "topP": "Top P (diversidade)",
     "frequencyPenalty": "Penalidade de Frequência",
-    "presencePenalty": "Penalidade de Presença"
+    "presencePenalty": "Penalidade de Presença",
+    "loadingModels": "Carregando modelos..."
   },
   "a2aConfig": {
     "title": "Configuração Agent-to-Agent",
@@ -114,7 +115,17 @@
     "timeout": "Timeout (segundos)",
     "retries": "Tentativas",
     "headers": "Cabeçalhos HTTP",
-    "addHeader": "Adicionar Cabeçalho"
+    "addHeader": "Adicionar Cabeçalho",
+    "allowlist": "Domínios permitidos",
+    "allowlistDescription": "Só estes domínios poderão chamar este agente. Um por linha.",
+    "allowlistPlaceholder": "parceiro.com.br\noutro-sistema.com",
+    "callbackUrl": "Endereço de retorno",
+    "callbackUrlDescription": "Para onde o agente envia a resposta quando termina. Precisa ser HTTPS.",
+    "callbackUrlPlaceholder": "https://seusistema.com.br/retorno",
+    "externalSharingDescription": "Permite que sistemas de fora chamem este agente. Só ligue se souber quem vai chamar.",
+    "externalSharingTitle": "Compartilhar com sistemas externos",
+    "publishState": "Publicar o estado do agente",
+    "publishStateDescription": "Envia o andamento do agente para o endereço de retorno, não só o resultado final."
   },
   "advancedBot": {
     "title": "Configurações Avançadas",
@@ -235,7 +246,8 @@
       "subtitle": "Outros agentes que podem ser invocados como ferramentas",
       "selectAgents": "Selecionar Agentes",
       "noAgents": "Nenhum agente selecionado",
-      "addAgent": "Adicionar Agente"
+      "addAgent": "Adicionar Agente",
+      "description": "Escolha as ferramentas que este agente pode usar durante a conversa"
     },
     "mcpServers": {
       "title": "Servidores MCP",
@@ -503,7 +515,10 @@
     "minValue": "Valor mínimo é {{min}}",
     "maxValue": "Valor máximo é {{max}}",
     "required": "Este campo é obrigatório",
-    "invalidApiKey": "Chave API inválida"
+    "invalidApiKey": "Chave API inválida",
+    "allowlistRequired": "Informe pelo menos um domínio permitido",
+    "httpsRequired": "O endereço precisa começar com https://",
+    "instructionMinLength": "As instruções precisam ter pelo menos {{count}} caracteres"
   },
   "messages": {
     "saveSuccess": "Agente salvo com sucesso",
