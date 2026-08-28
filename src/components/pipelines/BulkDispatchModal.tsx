@@ -58,6 +58,7 @@ import MessageSequenceEditor, {
   newSequenceItem,
 } from '@/components/messaging/MessageSequenceEditor';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 interface BulkDispatchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -145,6 +146,7 @@ export default function BulkDispatchModal({
   pipelineName,
   stages,
 }: BulkDispatchModalProps) {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [view, setView] = useState<View>('new');
   const [step, setStep] = useState<Step>('audience');
 
@@ -479,8 +481,13 @@ export default function BulkDispatchModal({
 
   const setStatus = async (c: BroadcastCampaign, action: 'pause' | 'resume' | 'cancel') => {
     try {
-      if (action === 'cancel' && !window.confirm('Cancelar este disparo? As mensagens ainda não enviadas não sairão.'))
-        return;
+      if (action === 'cancel' && !(await confirmar({
+        titulo: 'Cancelar disparo',
+        descricao: 'As mensagens ainda não enviadas não sairão.',
+        rotuloDaAcao: 'Cancelar disparo',
+        rotuloDeCancelar: 'Voltar',
+        destrutivo: true,
+      }))) return;
       const fn = action === 'pause' ? broadcastsService.pause : action === 'resume' ? broadcastsService.resume : broadcastsService.cancel;
       await fn.call(broadcastsService, c.id);
       await refreshList();
@@ -492,6 +499,7 @@ export default function BulkDispatchModal({
   const stepIndex = ['audience', 'messages', 'cadence', 'review'].indexOf(step);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
         <DialogHeader>
@@ -1230,5 +1238,7 @@ export default function BulkDispatchModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+      {dialogoDeConfirmacao}
+    </>
   );
 }

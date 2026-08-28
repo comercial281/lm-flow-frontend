@@ -11,6 +11,7 @@ import {
   SiteDomainStatus,
 } from '@/services/siteBuilder/siteBuilderService';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 const POLL_INTERVAL_MS = 15_000;
 
 const PENDING: SiteDomainStatus[] = ['pending_dns', 'pending_verification'];
@@ -72,6 +73,7 @@ function RecordRow({ label, type, name, value }: { label: string; type: string; 
 }
 
 export default function DomainSettings({ siteId }: { siteId: string }) {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [state, setState] = useState<SiteDomainState | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -127,8 +129,13 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
     run(() => siteBuilderService.connectDomain(siteId, domain), 'Domínio conectado — agora aponte o DNS');
   };
 
-  const disconnect = () => {
-    if (!window.confirm(`Desconectar ${state?.domain}? O portal volta a responder só pelo endereço padrão.`)) return;
+  const disconnect = async () => {
+    if (!(await confirmar({
+      titulo: 'Desconectar domínio',
+      descricao: <>Desconectar <strong>{state?.domain}</strong>? O portal volta a responder só pelo endereço padrão.</>,
+      rotuloDaAcao: 'Desconectar',
+      destrutivo: true,
+    }))) return;
     run(() => siteBuilderService.disconnectDomain(siteId), 'Domínio desconectado');
     setInput('');
   };
@@ -148,6 +155,7 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
   const isPending = PENDING.includes(status);
 
   return (
+    <>
     <section className="rounded-xl border border-border bg-card p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-base font-semibold">
@@ -339,5 +347,7 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
         </div>
       )}
     </section>
+      {dialogoDeConfirmacao}
+    </>
   );
 }

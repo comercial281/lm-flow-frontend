@@ -68,6 +68,7 @@ const DEFAULT_REPASSE_PREVIEW =
   'Lead: {{nome}}\nTelefone: {{telefone}}\n\nPrazo de aceite: {{prazo}} min.';
 import type { User } from '@/types/users';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 const STATUS_COLOR: Record<string, string> = {
   pending:  'bg-orange-100 text-orange-700',
   accepted: 'bg-emerald-100 text-emerald-700',
@@ -158,6 +159,7 @@ function mkInstance(i?: Partial<RoletaInstance>): InstanceRow {
 }
 
 export default function RoletaConfigPage() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [configs, setConfigs]         = useState<RoletaConfig[]>([]);
   const [users, setUsers]             = useState<User[]>([]);
   const [loading, setLoading]         = useState(false);
@@ -745,7 +747,12 @@ export default function RoletaConfigPage() {
   }
 
   async function deleteConfig(id: string) {
-    if (!window.confirm('Excluir esta configuracao de roleta?')) return;
+    if (!(await confirmar({
+      titulo: 'Excluir roleta',
+      descricao: 'Excluir esta configuração de roleta?',
+      rotuloDaAcao: 'Excluir',
+      destrutivo: true,
+    }))) return;
     try {
       await roletaConfigService.destroy(id);
       toast.success('Removida');
@@ -951,6 +958,7 @@ export default function RoletaConfigPage() {
   const diagnosticosVisiveis = showHidden ? diagnostics : diagnostics.filter(d => !hiddenIds.includes(d.id));
 
   return (
+    <>
     <div className="p-6 space-y-6 max-w-4xl">
       <div className="flex items-center justify-between">
         <div>
@@ -2274,5 +2282,7 @@ export default function RoletaConfigPage() {
         </DialogContent>
       </Dialog>
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }

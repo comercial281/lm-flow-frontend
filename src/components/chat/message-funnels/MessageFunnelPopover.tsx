@@ -16,6 +16,7 @@ import type {
 } from '@/types/messageFunnels';
 import type { Conversation } from '@/types/chat/api';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 // Mesma assinatura do MessageInput#onSendMessage — reusamos a pipeline existente do LM Flow
 // pra cada step. O backend Rails do LM Flow é quem fala com a Evolution (via attachments
 // multipart), evitando o gotcha de "Evolution não consegue baixar URL externa".
@@ -234,6 +235,7 @@ interface MessageFunnelPopoverProps {
 export default function MessageFunnelPopover({
   isOpen, onClose, conversation, onSendMessage,
 }: MessageFunnelPopoverProps) {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [funnels, setFunnels] = useState<MessageFunnel[]>([]);
   const [customVars, setCustomVars] = useState<TenantTemplateVariable[]>([]);
   const [loading, setLoading] = useState(false);
@@ -333,7 +335,12 @@ export default function MessageFunnelPopover({
   }
 
   async function handleDelete(funnel: MessageFunnel) {
-    if (!window.confirm(`Excluir o funil "${funnel.name}"? Esta ação não pode ser desfeita.`)) return;
+    if (!(await confirmar({
+      titulo: 'Excluir funil',
+      descricao: <>Excluir o funil <strong>{funnel.name}</strong>? Esta ação não pode ser desfeita.</>,
+      rotuloDaAcao: 'Excluir',
+      destrutivo: true,
+    }))) return;
     try {
       await messageFunnelsService.destroy(funnel.id);
       toast.success(`Funil "${funnel.name}" excluído`);
@@ -346,6 +353,7 @@ export default function MessageFunnelPopover({
   if (!isOpen) return null;
 
   return (
+    <>
     <Card className="absolute bottom-full left-0 right-0 mb-2 shadow-lg border-border z-50 animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
       <CardContent className="p-0">
         {/* Header */}
@@ -553,5 +561,7 @@ export default function MessageFunnelPopover({
         onSaved={() => { setEditorOpen(false); loadFunnels(); }}
       />
     </Card>
+      {dialogoDeConfirmacao}
+    </>
   );
 }

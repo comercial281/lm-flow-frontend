@@ -19,7 +19,9 @@ import {
 } from '@/services/properties/propertiesService';
 import PropertyBookDialog from '@/components/properties/PropertyBookDialog';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 export default function PropertyBooks() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [properties, setProperties] = useState<Property[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -55,7 +57,12 @@ export default function PropertyBooks() {
   }, [load]);
 
   const handleRemove = useCallback(async (p: Property) => {
-    if (!window.confirm(`Remover o book de "${p.title}"? Esta ação não pode ser desfeita.`)) return;
+    if (!(await confirmar({
+      titulo: 'Remover book',
+      descricao: <>Remover o book de <strong>{p.title}</strong>? Esta ação não pode ser desfeita.</>,
+      rotuloDaAcao: 'Remover',
+      destrutivo: true,
+    }))) return;
     setRemovingId(p.id);
     try {
       await propertiesService.removeBook(p.id);
@@ -66,9 +73,10 @@ export default function PropertyBooks() {
     } finally {
       setRemovingId(null);
     }
-  }, [load, search]);
+  }, [confirmar, load, search]);
 
   return (
+    <>
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="border-b bg-background/95 backdrop-blur px-6 py-4">
@@ -210,6 +218,8 @@ export default function PropertyBooks() {
         />
       )}
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }
 

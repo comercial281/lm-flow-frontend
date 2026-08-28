@@ -37,6 +37,7 @@ import type { PipelineStage } from '@/types/analytics';
 import MessageTemplateForm from '@/components/channels/settings/MessageTemplateForm';
 import BulkDispatchModal from '@/components/pipelines/BulkDispatchModal';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 type Tab = 'disparos' | 'templates' | 'canais' | 'cadencias' | 'metricas';
 
 const STATUS_META: Record<BroadcastCampaign['status'], { label: string; cls: string }> = {
@@ -56,6 +57,7 @@ const TABS: { id: Tab; label: string; icon: typeof Megaphone }[] = [
 ];
 
 export default function Disparos() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('disparos');
 
@@ -142,7 +144,13 @@ export default function Disparos() {
 
   const setStatus = async (c: BroadcastCampaign, action: 'pause' | 'resume' | 'cancel') => {
     try {
-      if (action === 'cancel' && !window.confirm('Cancelar este disparo? As mensagens ainda não enviadas não sairão.')) return;
+      if (action === 'cancel' && !(await confirmar({
+        titulo: 'Cancelar disparo',
+        descricao: 'As mensagens ainda não enviadas não sairão.',
+        rotuloDaAcao: 'Cancelar disparo',
+        rotuloDeCancelar: 'Voltar',
+        destrutivo: true,
+      }))) return;
       const fn = action === 'pause' ? broadcastsService.pause : action === 'resume' ? broadcastsService.resume : broadcastsService.cancel;
       await fn.call(broadcastsService, c.id);
       loadCampaigns(pipelineId);
@@ -155,6 +163,7 @@ export default function Disparos() {
   const selectedTplChannel = channels.find(o => o.inbox_id === tplInboxId) || channels[0];
 
   return (
+    <>
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
       <div className="flex items-start gap-3">
         <div
@@ -624,5 +633,7 @@ export default function Disparos() {
         </div>
       )}
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }
