@@ -17,6 +17,9 @@ import OnboardingForms from '../OnboardingForms';
 import CustomerFeedbacks from '../CustomerFeedbacks';
 import AdminAtividade from '@/pages/Admin/Area/Auditoria';
 
+import { toast } from 'sonner';
+
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 type ViewTab =
   | 'clients'
   | 'dashboard'
@@ -208,24 +211,31 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
   };
 
   const removeMember = async (m: Member) => {
+    // ⚠️ ESTE window.confirm FICA, POR ORA — e o motivo não é esquecimento.
+    // Os outros do painel viraram `useConfirmacao` (Dialog do design system),
+    // mas este roda DENTRO de um modal que já é Dialog. Diálogo sobre diálogo
+    // mexe com armadilha de foco e empilhamento, e isso não se confere lendo
+    // código: precisa de navegador. Numa tela onde a confirmação guarda ação
+    // destrutiva em cliente pagante, uma confirmação quebrada é pior que uma
+    // feia. Trocar exige abrir e testar.
     if (!window.confirm(`Remover o acesso de ${m.email}? Ele não conseguirá mais logar neste CRM.`)) return;
     setSavingId(m.id);
     try {
       await api.post(`/super/pooled_tenants/${tenant.id}/remove_member`, { user_id: m.id });
       setMembers(prev => prev.filter(x => x.id !== m.id));
-    } catch (e: any) { alert(e?.response?.data?.error || 'Falha ao remover.'); }
+    } catch (e: any) { toast.error(e?.response?.data?.error || 'Falha ao remover.'); }
     finally { setSavingId(null); }
   };
 
   const setPassword = async (m: Member) => {
     const pwd = window.prompt(`Nova senha para ${m.email} (min. 8 caracteres):`);
     if (!pwd) return;
-    if (pwd.length < 8) { alert('Senha precisa de ao menos 8 caracteres.'); return; }
+    if (pwd.length < 8) { toast.error('Senha precisa de ao menos 8 caracteres.'); return; }
     setSavingId(m.id);
     try {
       await api.post(`/super/pooled_tenants/${tenant.id}/set_password`, { user_id: m.id, password: pwd });
       setMembers(prev => prev.map(x => x.id === m.id ? { ...x, plain_password: pwd } : x));
-    } catch { alert('Falha ao trocar a senha.'); }
+    } catch { toast.error('Falha ao trocar a senha.'); }
     finally { setSavingId(null); }
   };
 
@@ -362,7 +372,7 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
       setFeatures(r.data?.data?.features || {});
     } catch {
       setFeatures(f => ({ ...f, [key]: !next })); // reverte
-      alert('Falha ao salvar a função.');
+      toast.error('Falha ao salvar a função.');
     } finally { setSavingKey(null); }
   };
 
@@ -395,7 +405,7 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
       });
     } catch {
       setSources(prev);
-      alert('Falha ao salvar a regra de entrada no funil.');
+      toast.error('Falha ao salvar a regra de entrada no funil.');
     } finally { setSavingSource(null); }
   };
 
@@ -414,7 +424,7 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
       await api.patch(`/super/pooled_tenants/${tenant.id}`, { name: tenant.name, broker_isolation: next });
     } catch {
       setBrokerIsolation(prev);
-      alert('Falha ao salvar o isolamento por corretor.');
+      toast.error('Falha ao salvar o isolamento por corretor.');
     } finally { setSavingIsolation(false); }
   };
 
@@ -435,7 +445,7 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
       await api.patch(`/super/pooled_tenants/${tenant.id}`, { name: tenant.name, campaign_only_inbox: next });
     } catch {
       setCampaignOnly(prev);
-      alert('Falha ao salvar o inbox só-campanha.');
+      toast.error('Falha ao salvar o inbox só-campanha.');
     } finally { setSavingCampaignOnly(false); }
   };
 
@@ -447,6 +457,13 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
   const [demoMode, setDemoMode] = useState<boolean>(tenant.settings?.demo_mode === true);
   const [savingDemo, setSavingDemo] = useState(false);
   const saveDemoMode = async (next: boolean) => {
+    // ⚠️ ESTE window.confirm FICA, POR ORA — e o motivo não é esquecimento.
+    // Os outros do painel viraram `useConfirmacao` (Dialog do design system),
+    // mas este roda DENTRO de um modal que já é Dialog. Diálogo sobre diálogo
+    // mexe com armadilha de foco e empilhamento, e isso não se confere lendo
+    // código: precisa de navegador. Numa tela onde a confirmação guarda ação
+    // destrutiva em cliente pagante, uma confirmação quebrada é pior que uma
+    // feia. Trocar exige abrir e testar.
     if (next && !window.confirm(
       `Ligar o modo demonstração em "${tenant.name}"?\n\n` +
       'A partir daí este cliente só manda WhatsApp para quem escrever para o número dele, ' +
@@ -461,7 +478,7 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
       await api.patch(`/super/pooled_tenants/${tenant.id}`, { name: tenant.name, demo_mode: next });
     } catch {
       setDemoMode(prev);
-      alert('Falha ao salvar o modo demonstração.');
+      toast.error('Falha ao salvar o modo demonstração.');
     } finally { setSavingDemo(false); }
   };
 
@@ -472,6 +489,13 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
   const [seeding, setSeeding] = useState(false);
   const [seedInfo, setSeedInfo] = useState<string | null>(null);
   const seedDemo = async () => {
+    // ⚠️ ESTE window.confirm FICA, POR ORA — e o motivo não é esquecimento.
+    // Os outros do painel viraram `useConfirmacao` (Dialog do design system),
+    // mas este roda DENTRO de um modal que já é Dialog. Diálogo sobre diálogo
+    // mexe com armadilha de foco e empilhamento, e isso não se confere lendo
+    // código: precisa de navegador. Numa tela onde a confirmação guarda ação
+    // destrutiva em cliente pagante, uma confirmação quebrada é pior que uma
+    // feia. Trocar exige abrir e testar.
     if (!window.confirm(
       `Semear a imobiliária fictícia em "${tenant.name}"?\n\n` +
       'Cria equipe, carteira de imóveis, leads, conversas e funil, com datas de hoje. ' +
@@ -492,7 +516,7 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
       // em português — mostrar a mensagem dele é mais útil que um erro genérico.
       const motivo = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
       setSeedInfo(null);
-      alert(motivo || 'Falha ao semear a demonstração.');
+      toast.error(motivo || 'Falha ao semear a demonstração.');
     } finally { setSeeding(false); }
   };
 
@@ -509,7 +533,7 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
       await api.patch(`/super/pooled_tenants/${tenant.id}`, { name: tenant.name, demo_photo_urls: lista });
       setSeedInfo(`${lista.length} foto(s) guardada(s). Semeie de novo para a carteira usá-las.`);
     } catch {
-      alert('Falha ao salvar as fotos da demonstração.');
+      toast.error('Falha ao salvar as fotos da demonstração.');
     } finally { setSavingPhotos(false); }
   };
 
@@ -535,7 +559,7 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
       setSeedInfo(`Recomeçada: ${d.leads} leads, ${d.cards} cards, ${d.visitas} visitas, ${d.propostas} propostas.`);
     } catch (e) {
       const motivo = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      alert(motivo || 'Falha ao recomeçar a demonstração.');
+      toast.error(motivo || 'Falha ao recomeçar a demonstração.');
     } finally { setResetting(false); }
   };
 
@@ -551,7 +575,7 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
       setAudit(r.data?.data || null);
     } catch (e) {
       const motivo = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      alert(motivo || 'Falha ao vistoriar a demonstração.');
+      toast.error(motivo || 'Falha ao vistoriar a demonstração.');
     } finally { setAuditing(false); }
   };
 
@@ -571,7 +595,7 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
         max_whatsapp_channels: maxWa,
       });
     } catch {
-      alert('Falha ao salvar o limite de canais.');
+      toast.error('Falha ao salvar o limite de canais.');
     } finally { setSavingMax(false); }
   };
 
@@ -598,7 +622,7 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
         ai_lead_overage_price_brl: aiPrice.trim() === '' ? null : Math.max(0, parseFloat(aiPrice.replace(',', '.')) || 0),
       });
     } catch {
-      alert('Falha ao salvar a franquia de IA.');
+      toast.error('Falha ao salvar a franquia de IA.');
     } finally { setSavingAi(false); }
   };
 
@@ -837,6 +861,7 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
 }
 
 export default function PooledClients() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [tenants, setTenants] = useState<PooledTenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [entering, setEntering] = useState<string | null>(null);
@@ -882,12 +907,31 @@ export default function PooledClients() {
 
   // Arquivar a partir do card de métrica (id do ClientInstance, não do Tenant pooled).
   const handleArchiveCI = async (id: number) => {
-    if (!window.confirm('Arquivar este cliente das métricas?')) return;
-    try { await clientInstancesService.archive(id); loadDashboard(); } catch { alert('Falha ao arquivar.'); }
+    if (!(await confirmar({
+      titulo: 'Arquivar cliente',
+      descricao: 'Ele sai das métricas. O CRM dele continua no ar.',
+      rotuloDaAcao: 'Arquivar',
+      destrutivo: true,
+    }))) return;
+    try { await clientInstancesService.archive(id); loadDashboard(); } catch { toast.error('Falha ao arquivar.'); }
   };
 
   const handleSyncAll = async () => {
-    if (!window.confirm('Vai fazer redeploy Vercel de TODOS os tenants ativos. Continuar?')) return;
+    // A ação mais cara do painel inteiro: mexe em TODOS os clientes pagantes de
+    // uma vez. Enquanto foi window.confirm, o aviso disputava espaço com o
+    // endereço do site no cabeçalho da caixinha do navegador.
+    if (!(await confirmar({
+      titulo: 'Redeploy de TODOS os tenants',
+      descricao: (
+        <>
+          Isso dispara redeploy na Vercel de <strong>todos os tenants ativos</strong>, de uma vez.
+          Não é por cliente.
+        </>
+      ),
+      rotuloDaAcao: 'Redeployar todos',
+      rotuloDeCancelar: 'Voltar',
+      destrutivo: true,
+    }))) return;
     setSyncingAll(true);
     try {
       const res = await clientInstancesService.syncAllFrontends();
@@ -897,15 +941,15 @@ export default function PooledClients() {
       let msg = res.data.message;
       if (ok) msg += `\nOK: ${ok}`;
       if (fail) msg += `\nFalhou:\n${fail}`;
-      alert(msg);
-    } catch (e: any) { alert(e?.response?.data?.error ?? 'Erro ao sincronizar todos'); }
+      toast.error(msg);
+    } catch (e: any) { toast.error(e?.response?.data?.error ?? 'Erro ao sincronizar todos'); }
     finally { setSyncingAll(false); }
   };
 
   const doAction = async (t: PooledTenant, action: 'suspend' | 'unsuspend' | 'archive' | 'unarchive') => {
     setBusyId(t.id);
     try { await api.post(`/super/pooled_tenants/${t.id}/${action}`); await load(); }
-    catch (e: any) { alert(e?.response?.data?.error || 'Falha na ação.'); }
+    catch (e: any) { toast.error(e?.response?.data?.error || 'Falha na ação.'); }
     finally { setBusyId(null); }
   };
 
@@ -915,7 +959,7 @@ export default function PooledClients() {
     try {
       await api.delete(`/super/pooled_tenants/${confirmDelete.id}`, { data: { confirm_slug: deleteText.trim() } });
       setConfirmDelete(null); setDeleteText(''); await load();
-    } catch (e: any) { alert(e?.response?.data?.error || 'Falha ao excluir.'); }
+    } catch (e: any) { toast.error(e?.response?.data?.error || 'Falha ao excluir.'); }
     finally { setBusyId(null); }
   };
 
@@ -936,12 +980,13 @@ export default function PooledClients() {
       const r = await api.post(`/super/pooled_tenants/${t.id}/sso`);
       const url = r.data?.data?.url;
       if (url) window.open(url, '_blank');
-      else alert('Falha ao gerar acesso.');
-    } catch { alert('Falha ao entrar no CRM do cliente.'); }
+      else toast.error('Falha ao gerar acesso.');
+    } catch { toast.error('Falha ao entrar no CRM do cliente.'); }
     finally { setEntering(null); }
   };
 
   return (
+    <>
     <div className="flex flex-col h-full">
       <div className="px-6 pt-6 shrink-0">
         <div className="flex items-center justify-between mb-4">
@@ -1158,5 +1203,7 @@ export default function PooledClients() {
         </div>
       )}
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }

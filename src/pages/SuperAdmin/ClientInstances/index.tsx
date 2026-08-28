@@ -20,6 +20,8 @@ import DashboardView from './DashboardView';
 import LogsView from './LogsView';
 import UserMetricsView from './UserMetricsView';
 
+import { toast } from 'sonner';
+
 type ViewTab = 'list' | 'dashboard' | 'logs' | 'metrics';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -63,7 +65,7 @@ function InstanceCard({ instance, onDelete, onArchive, onRefresh }: {
       window.open(buildMasterSsoUrl(frontend_url, token, name), '_blank');
     } catch (e) {
       console.error('Falha no SSO master:', e);
-      alert('Falha ao entrar no CRM do cliente.');
+      toast.error('Falha ao entrar no CRM do cliente.');
     } finally {
       setEntering(false);
     }
@@ -80,10 +82,10 @@ function InstanceCard({ instance, onDelete, onArchive, onRefresh }: {
     setSyncing(true);
     try {
       const res = await clientInstancesService.syncFrontend(instance.id);
-      alert(`Deploy iniciado: ${res.data.message}`);
+      toast.error(`Deploy iniciado: ${res.data.message}`);
     } catch (e: any) {
       const msg = e?.response?.data?.error ?? 'Erro ao iniciar deploy';
-      alert(`Falha: ${msg}`);
+      toast.error(`Falha: ${msg}`);
     } finally {
       setSyncing(false);
     }
@@ -377,9 +379,9 @@ export default function ClientInstances() {
       let msg = res.data.message;
       if (ok)   msg += `\nOK: ${ok}`;
       if (fail) msg += `\nFalhou:\n${fail}`;
-      alert(msg);
+      toast.error(msg);
     } catch (e: any) {
-      alert(e?.response?.data?.error ?? 'Erro ao sincronizar todos');
+      toast.error(e?.response?.data?.error ?? 'Erro ao sincronizar todos');
     } finally {
       setSyncingAll(false);
     }

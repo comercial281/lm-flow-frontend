@@ -26,6 +26,7 @@ import {
   type FeedbackStatus,
 } from '@/services/superAdmin/customerFeedbackService';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 const STATUS_OPTIONS: FeedbackStatus[] = ['new', 'in_review', 'resolved'];
 const PAGE_SIZE = 8;
 
@@ -68,6 +69,7 @@ const STATUS_STYLES: Record<
  * (aberto → em análise → resolvido) e arquiva. Cada novo envio dispara e-mail.
  */
 export default function CustomerFeedbacks() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [items, setItems] = useState<CustomerFeedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [kindFilter, setKindFilter] = useState<FeedbackKind | 'all'>('all');
@@ -108,7 +110,11 @@ export default function CustomerFeedbacks() {
   };
 
   const remove = async (item: CustomerFeedback) => {
-    if (!window.confirm('Arquivar este feedback?')) return;
+    if (!(await confirmar({
+      titulo: 'Arquivar feedback',
+      descricao: 'Ele sai da lista.',
+      rotuloDaAcao: 'Arquivar',
+    }))) return;
     try {
       await customerFeedbackService.remove(item.id);
       setItems(prev => prev.filter(i => i.id !== item.id));
@@ -178,6 +184,7 @@ export default function CustomerFeedbacks() {
   };
 
   return (
+    <>
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       <header className="space-y-1">
         <div className="flex items-center gap-2">
@@ -337,5 +344,7 @@ export default function CustomerFeedbacks() {
         </>
       )}
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }
