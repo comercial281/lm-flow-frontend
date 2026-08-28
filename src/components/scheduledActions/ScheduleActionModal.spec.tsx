@@ -30,6 +30,31 @@ vi.mock('@/services/contacts', () => ({
   },
 }));
 
+// ⚠️ ESTE MOCK EXISTE PRA IMPEDIR QUE A SUÍTE VOLTE A CONGELAR.
+//
+// O modal chama messageFunnelsService.list() e tenantTemplateVariablesService.list()
+// ao montar. Sem mock, o axios dispara XHR de verdade — e como a variável de
+// ambiente da API não existe em teste, a URL sai como `undefined/api/v1/...`,
+// que o jsdom resolve contra http://127.0.0.1:3000.
+//
+// Nesta máquina o socket é RECUSADO na hora e vira só ruído no stderr. Numa
+// máquina onde ele PENDURE em vez de recusar (proxy, firewall que descarta em
+// silêncio, algo escutando na 3000), a requisição nunca se resolve e o arquivo
+// nunca termina — que é exatamente como este spec já ficou travado antes.
+//
+// Rede em teste unitário é sempre isso: ou está mockada, ou é uma bomba-relógio
+// que depende de como a máquina de quem roda trata uma porta fechada.
+vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({
+  messageFunnelsService: {
+    list: vi.fn().mockResolvedValue([]),
+    get: vi.fn().mockResolvedValue(null),
+    create: vi.fn().mockResolvedValue({}),
+  },
+  tenantTemplateVariablesService: {
+    list: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 vi.mock('@/services/scheduledActions/scheduledActionsService', () => ({
   scheduledActionsService: {
     create: vi.fn(),
