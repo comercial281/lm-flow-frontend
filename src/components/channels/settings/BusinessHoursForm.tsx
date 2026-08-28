@@ -28,6 +28,15 @@ import {
   getDefaultTimezone,
 } from './helpers/businessHours';
 
+// Referência ESTÁVEL para o caso "sem horário configurado".
+//
+// ⚠️ NÃO troque por `workingHours = []` no parâmetro. Valor padrão de parâmetro
+// cria um array NOVO a cada render; o efeito abaixo depende de `workingHours`,
+// então o efeito rodava a cada render, mexia no estado, causava outro render —
+// laço infinito, "Maximum update depth exceeded", aba do navegador travada.
+// Acontecia de verdade: a aba Horários de um canal com `working_hours` nulo.
+const SEM_HORARIOS: unknown[] = [];
+
 interface BusinessHoursFormProps {
   inboxId: string;
   workingHoursEnabled?: boolean;
@@ -45,7 +54,7 @@ interface BusinessHoursFormProps {
 export default function BusinessHoursForm({
   workingHoursEnabled = false,
   outOfOfficeMessage = '',
-  workingHours = [],
+  workingHours = SEM_HORARIOS,
   timezone,
   onUpdate,
 }: BusinessHoursFormProps) {
@@ -58,6 +67,9 @@ export default function BusinessHoursForm({
   const [isUpdating, setIsUpdating] = useState(false);
   const dayNames = getDayNames();
   const timeZoneOptions = getTimeZoneOptions();
+
+  // Conteúdo de `workingHours`, para o efeito não depender da REFERÊNCIA do array.
+  const workingHoursChave = JSON.stringify(workingHours ?? SEM_HORARIOS);
 
   // Initialize data when props change
   useEffect(() => {
@@ -75,7 +87,13 @@ export default function BusinessHoursForm({
     const tzOptions = getTimeZoneOptions();
     const foundTimeZone = tzOptions.find(tz => tz.value === timezone);
     setSelectedTimeZone(foundTimeZone || getDefaultTimezone());
-  }, [workingHoursEnabled, outOfOfficeMessage, workingHours, timezone]);
+    // `workingHoursChave` é o CONTEÚDO de `workingHours`, não a referência.
+    // Depender da referência fazia o efeito rodar a cada render quando quem
+    // chama monta o array na hora (`workingHours={... : []}`) — laço infinito.
+    // O array tem no máximo 7 posições: serializar é mais barato que o render
+    // que ele evita.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workingHoursEnabled, outOfOfficeMessage, workingHoursChave, timezone]);
 
   // Check if there are validation errors
   const hasErrors = timeSlots.some(slot => slot.from && slot.to && !slot.valid);

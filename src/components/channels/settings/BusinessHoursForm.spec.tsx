@@ -48,17 +48,17 @@ vi.mock('./helpers/businessHours', async () => {
   };
 });
 
-vi.mock('@evoapi/design-system', async () => {
-  const actual = await vi.importActual('@evoapi/design-system');
-  return {
-    ...actual,
-    Switch: ({ checked }: { checked: boolean }) => (
-      <div role="switch" aria-checked={checked} data-testid="switch">
-        {checked ? 'ON' : 'OFF'}
-      </div>
-    ),
-  };
-});
+// ⚠️ AQUI HAVIA UM vi.mock('@evoapi/design-system') COM vi.importActual, E ELE
+// CONGELAVA A SUÍTE INTEIRA — o arquivo nunca terminava, nem imprimia o banner
+// de coleta. Ficou assim por tempo indeterminado; a suíte completa nunca rodou
+// neste repositório por causa dele.
+//
+// O mock existia pra trocar o Switch por um <div>, porque o Switch de verdade
+// estourava "Maximum update depth exceeded". Mas o Switch não era o culpado: o
+// BusinessHoursForm entrava em laço infinito sozinho, e o Radix só era onde o
+// contador de React estourava. A causa está consertada no componente.
+//
+// Medido: Switch de verdade, sozinho, renderiza em 47ms sem laço.
 
 describe('BusinessHoursForm', () => {
   const mockOnUpdate = vi.fn().mockResolvedValue(undefined);

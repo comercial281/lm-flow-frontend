@@ -5,10 +5,11 @@ import type { Inbox } from '@/types/channels/inbox';
 import InboxesService from '@/services/channels/inboxesService';
 import { ScheduleActionModal } from './ScheduleActionModal';
 
-vi.mock('lucide-react', () => ({
-  Search: () => null,
-  Loader2: () => null,
-}));
+// ⚠️ AQUI HAVIA UM vi.mock('lucide-react') SUBSTITUINDO O PACOTE INTEIRO POR
+// DOIS ÍCONES (Search e Loader2), E ELE CONGELAVA A SUÍTE — o arquivo nunca
+// terminava. O lucide-react é importado por centenas de módulos do projeto:
+// trocar o pacote inteiro deixa `undefined` todo ícone que alguém no grafo
+// importe e que não esteja na lista. Ícone de verdade renderiza em jsdom.
 
 vi.mock('@/hooks/useLanguage', () => ({
   useLanguage: () => ({
@@ -88,6 +89,7 @@ vi.mock('@evoapi/design-system', () => {
     DialogContent: passthrough,
     DialogHeader: passthrough,
     DialogTitle: passthrough,
+    DialogDescription: passthrough,
     DialogFooter: passthrough,
     Button: ({ children }: { children?: React.ReactNode }) => <button type="button">{children}</button>,
     Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
