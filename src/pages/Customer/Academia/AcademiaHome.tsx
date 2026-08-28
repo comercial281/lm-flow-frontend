@@ -21,12 +21,14 @@ import CourseForm from './CourseForm';
 import ModuleForm from './ModuleForm';
 import { GERAL_COURSE_ID } from './_lib';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 interface Props {
   canEdit: boolean;
   embedded?: boolean; // true = dentro da aba do app (sem chrome de tela cheia)
 }
 
 export default function AcademiaHome({ canEdit, embedded }: Props) {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const navigate = useNavigate();
   const { data: courses = [], isLoading: loadingCourses } = useCourses();
   const { data: modules = [], isLoading: loadingModules } = useModules();
@@ -106,6 +108,7 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
   }
 
   return (
+    <>
     <div className={embedded ? 'flex-1 overflow-y-auto' : ''}>
       <div className="max-w-6xl mx-auto px-5 py-6 md:px-8 md:py-8">
         {/* Ações admin */}
@@ -186,8 +189,18 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
                     onEdit={canEdit ? () => setCourseForm({ editing: c }) : undefined}
                     onDelete={
                       canEdit
-                        ? () => {
-                            if (window.confirm(`Excluir o curso "${c.titulo}"? Os módulos ficam soltos (Geral), não são apagados.`)) {
+                        ? async () => {
+                            if (await confirmar({
+                              titulo: 'Excluir curso',
+                              descricao: (
+                                <>
+                                  Excluir o curso <strong>{c.titulo}</strong>? Os módulos ficam
+                                  soltos em Geral — nenhum é apagado.
+                                </>
+                              ),
+                              rotuloDaAcao: 'Excluir',
+                              destrutivo: true,
+                            })) {
                               deleteCourse.mutate(c.id);
                             }
                           }
@@ -213,5 +226,7 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
         )}
       </div>
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }

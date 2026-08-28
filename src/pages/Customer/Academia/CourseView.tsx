@@ -31,11 +31,13 @@ import CoverPicker from './CoverPicker';
 import { GERAL_COURSE_ID } from './_lib';
 import { toast } from 'sonner';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 interface Props {
   onBack: () => void;
 }
 
 export default function CourseView({ onBack }: Props) {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const { courseId = '' } = useParams();
   const [params, setParams] = useSearchParams();
   const canEdit = useIsSuperAdmin();
@@ -122,6 +124,7 @@ export default function CourseView({ onBack }: Props) {
   const title = isGeral ? 'Geral' : course?.titulo ?? 'Curso';
 
   return (
+    <>
     <div className="flex-1 flex flex-col min-h-0">
       <TopBar
         title={title}
@@ -208,8 +211,13 @@ export default function CourseView({ onBack }: Props) {
               canEdit={canEdit}
               onSelectLesson={setSelectedId}
               onEditModule={() => setModuleForm({ editing: m })}
-              onDeleteModule={() => {
-                if (window.confirm(`Excluir o módulo "${m.titulo}" e todas as aulas dentro?`)) {
+              onDeleteModule={async () => {
+                if (await confirmar({
+                  titulo: 'Excluir módulo',
+                  descricao: <>Excluir o módulo <strong>{m.titulo}</strong> e todas as aulas dentro?</>,
+                  rotuloDaAcao: 'Excluir',
+                  destrutivo: true,
+                })) {
                   deleteModule.mutate(m.id);
                 }
               }}
@@ -221,6 +229,8 @@ export default function CourseView({ onBack }: Props) {
         </aside>
       </div>
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }
 
@@ -412,6 +422,7 @@ function LessonPanel({
 
 // ── Ações admin por aula (editar / reordenar / excluir) ──────────────────────
 function LessonAdminActions({ lesson, lessons, onDeleted }: { lesson: KnowledgeLesson; lessons: KnowledgeLesson[]; onDeleted: () => void }) {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const del = useDeleteLesson();
   const update = useUpdateLesson();
   const [editing, setEditing] = useState(false);
@@ -433,12 +444,20 @@ function LessonAdminActions({ lesson, lessons, onDeleted }: { lesson: KnowledgeL
         <button onClick={() => move(-1)} disabled={idx <= 0} className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-border hover:border-primary/40 disabled:opacity-30" type="button"><ChevronUp size={12} /> Subir</button>
         <button onClick={() => move(1)} disabled={idx >= lessons.length - 1} className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-border hover:border-primary/40 disabled:opacity-30" type="button"><ChevronDown size={12} /> Descer</button>
         <button
-          onClick={() => { if (window.confirm(`Excluir aula "${lesson.titulo}"?`)) { del.mutate(lesson.id); onDeleted(); } }}
+          onClick={async () => {
+            if (await confirmar({
+              titulo: 'Excluir aula',
+              descricao: <>Excluir a aula <strong>{lesson.titulo}</strong>?</>,
+              rotuloDaAcao: 'Excluir',
+              destrutivo: true,
+            })) { del.mutate(lesson.id); onDeleted(); }
+          }}
           className="flex items-center gap-1 px-2 py-1 text-[11px] text-red-500 rounded-md border border-red-500/30 hover:bg-red-500/10"
           type="button"
         ><Trash2 size={12} /> Excluir aula</button>
       </div>
       {editing && <EditLessonForm lesson={lesson} onClose={() => setEditing(false)} />}
+      {dialogoDeConfirmacao}
     </div>
   );
 }

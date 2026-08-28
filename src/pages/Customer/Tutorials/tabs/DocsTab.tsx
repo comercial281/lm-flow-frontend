@@ -14,12 +14,14 @@ import {
   type KnowledgeDoc,
 } from '@/hooks/useKnowledge';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 interface Props {
   categoryId: string | null;
   canEdit: boolean;
 }
 
 export default function DocsTab({ categoryId, canEdit }: Props) {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const { data: docs = [], isLoading } = useDocs(categoryId);
   const createMut = useCreateDoc();
   const updateMut = useUpdateDoc();
@@ -76,8 +78,13 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
                   <Pencil size={12} /> Editar
                 </button>
                 <button
-                  onClick={() => {
-                    if (window.confirm(`Excluir "${selected.titulo}"?`)) {
+                  onClick={async () => {
+                    if (await confirmar({
+                      titulo: 'Excluir documento',
+                      descricao: <>Excluir <strong>{selected.titulo}</strong>?</>,
+                      rotuloDaAcao: 'Excluir',
+                      destrutivo: true,
+                    })) {
                       deleteMut.mutate(selected.id);
                       setSelected(null);
                     }
@@ -158,6 +165,7 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
   }
 
   return (
+    <>
     <div className="flex-1 flex flex-col">
       <div className="flex items-center justify-between px-6 py-3 border-b border-border">
         <span className="text-xs text-muted-foreground">
@@ -255,5 +263,7 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
         </div>
       </div>
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }

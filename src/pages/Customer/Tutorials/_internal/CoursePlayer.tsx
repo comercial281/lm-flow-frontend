@@ -40,6 +40,7 @@ import VideoEmbed from './VideoEmbed';
 import CommentsSection from './CommentsSection';
 import { toast } from 'sonner';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 interface Props {
   module: KnowledgeModule;
   onBack: () => void;
@@ -251,6 +252,7 @@ function LessonAdminActions({
   lessons: KnowledgeLesson[];
   onDeleted: () => void;
 }) {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const del = useDeleteLesson();
   const update = useUpdateLesson();
   const [editing, setEditing] = useState(false);
@@ -294,8 +296,13 @@ function LessonAdminActions({
           <ChevronDown size={12} /> Descer
         </button>
         <button
-          onClick={() => {
-            if (window.confirm(`Excluir aula "${lesson.titulo}"?`)) {
+          onClick={async () => {
+            if (await confirmar({
+              titulo: 'Excluir aula',
+              descricao: <>Excluir a aula <strong>{lesson.titulo}</strong>?</>,
+              rotuloDaAcao: 'Excluir',
+              destrutivo: true,
+            })) {
               del.mutate(lesson.id);
               onDeleted();
             }
@@ -308,6 +315,7 @@ function LessonAdminActions({
       </div>
 
       {editing && <LessonEditForm key={lesson.id} lesson={lesson} onClose={() => setEditing(false)} />}
+      {dialogoDeConfirmacao}
     </div>
   );
 }
