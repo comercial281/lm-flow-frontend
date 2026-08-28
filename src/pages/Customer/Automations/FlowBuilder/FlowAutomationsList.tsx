@@ -9,10 +9,12 @@ import type { FlowAutomation, FlowAutomationFolder } from '@/types/flowAutomatio
 import { FLOW_TRIGGER_LABELS } from '@/types/flowAutomations';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { usePergunta } from '@/hooks/usePergunta';
 // Lista de fluxos — mirror da grade de cards da aba Automações do Hub (12/08):
 // filete colorido, selo de estado, menu de ações. Pasta é lugar (entra), não filtro.
 export default function FlowAutomationsList() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  const { perguntar, dialogoDePergunta } = usePergunta();
   const navigate = useNavigate();
   const [automations, setAutomations] = useState<FlowAutomation[]>([]);
   const [folders, setFolders] = useState<FlowAutomationFolder[]>([]);
@@ -94,10 +96,15 @@ export default function FlowAutomationsList() {
   };
 
   const createFolder = async () => {
-    const name = window.prompt('Nome da pasta:');
-    if (!name?.trim()) return;
+    const name = await perguntar({
+      titulo: 'Nova pasta',
+      rotuloDoCampo: 'Nome da pasta',
+      placeholder: 'Ex.: Campanhas de retomada',
+      rotuloDaAcao: 'Criar',
+    });
+    if (!name) return;
     try {
-      await flowAutomationFoldersService.create({ name: name.trim() });
+      await flowAutomationFoldersService.create({ name });
       load();
     } catch {
       toast.error('Erro ao criar pasta');
@@ -106,10 +113,15 @@ export default function FlowAutomationsList() {
 
   const renameFolder = async (f: FlowAutomationFolder, ev: MouseEvent) => {
     ev.stopPropagation();
-    const name = window.prompt('Novo nome da pasta:', f.name);
-    if (!name?.trim() || name.trim() === f.name) return;
+    const name = await perguntar({
+      titulo: 'Renomear pasta',
+      rotuloDoCampo: 'Novo nome',
+      valorInicial: f.name,
+      rotuloDaAcao: 'Renomear',
+    });
+    if (!name || name === f.name) return;
     try {
-      await flowAutomationFoldersService.update(f.id, { name: name.trim() });
+      await flowAutomationFoldersService.update(f.id, { name });
       load();
     } catch {
       toast.error('Erro ao renomear pasta');
@@ -227,6 +239,7 @@ export default function FlowAutomationsList() {
       </div>
     </div>
       {dialogoDeConfirmacao}
+      {dialogoDePergunta}
     </>
   );
 }
