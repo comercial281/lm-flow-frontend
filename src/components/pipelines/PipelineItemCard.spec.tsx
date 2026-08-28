@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import PipelineItemCard from './PipelineItemCard';
+import type { PipelineItem } from '@/types/analytics';
 
 const openLeadConversation = vi.fn();
 
@@ -33,24 +34,16 @@ vi.mock('@evoapi/design-system', () => ({
   DropdownMenuSeparator: () => <hr />,
 }));
 
-vi.mock('lucide-react', () => ({
-  Edit: () => <span data-testid="icon-edit" />,
-  Trash2: () => <span data-testid="icon-trash" />,
-  MoreVertical: () => <span data-testid="icon-more" />,
-  Phone: () => <span data-testid="icon-phone" />,
-  Mail: () => <span data-testid="icon-mail" />,
-  MessageSquare: () => <span data-testid="icon-message" />,
-  User: () => <span data-testid="icon-user" />,
-  Clock: () => <span data-testid="icon-clock" />,
-  AlertCircle: () => <span data-testid="icon-alert" />,
-  ListTodo: () => <span data-testid="icon-list" />,
-  CheckCircle2: () => <span data-testid="icon-check" />,
-  GripVertical: () => <span data-testid="icon-grip" />,
-  GitBranch: () => <span data-testid="icon-branch" />,
-  Megaphone: () => <span data-testid="icon-megaphone" />,
-  Home: () => <span data-testid="icon-home" />,
-  Calendar: () => <span data-testid="icon-calendar" />,
-}));
+// ⚠️ AQUI HAVIA UM vi.mock('lucide-react') SUBSTITUINDO O PACOTE INTEIRO POR UMA
+// LISTA DE ÍCONES, E ELE CONGELAVA A SUÍTE — o arquivo nunca terminava. Medido:
+// sem ele os testes deste arquivo passam em menos de 100ms.
+//
+// O lucide-react é importado por centenas de módulos do projeto. Trocar o pacote
+// inteiro por um punhado de ícones deixa como `undefined` todo ícone que alguém
+// no grafo importe e que não esteja na lista — e a lista envelhece sozinha, a
+// cada ícone novo que qualquer tela usar.
+//
+// Ícone de verdade renderiza normalmente em jsdom. Não há o que mockar aqui.
 
 const renderCard = (ui: React.ReactElement) => render(ui, { wrapper: MemoryRouter });
 
@@ -60,7 +53,7 @@ const baseItem = {
   stage_id: 'stage-1',
   contact: { name: 'João Silva', phone_number: '+5511999999999' },
   entered_at: Date.now() / 1000,
-} as any;
+} as unknown as PipelineItem;
 
 describe('PipelineItemCard', () => {
   beforeEach(() => {
