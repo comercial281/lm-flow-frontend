@@ -10,6 +10,7 @@ import { portalsService, PortalDetail } from '@/services/portals/portalsService'
 import { PortalLogo } from '@/components/portals/PortalLogo';
 import PortalPropertiesSelector from './PortalPropertiesSelector';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 function CopyRow({ label, value, icon: Icon }: { label: string; value: string; icon: typeof Copy }) {
   const copy = async () => {
     await navigator.clipboard.writeText(value);
@@ -35,6 +36,7 @@ function CopyRow({ label, value, icon: Icon }: { label: string; value: string; i
 // Configuração de um portal: conectar, URL do feed pra colar no painel do
 // portal, webhook de leads e seleção de imóveis/destaques.
 export default function PortalDetailPage() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const navigate = useNavigate();
   const { portalKey = '' } = useParams();
   const [portal, setPortal] = useState<PortalDetail | null>(null);
@@ -90,7 +92,12 @@ export default function PortalDetailPage() {
   };
 
   const handleRegenerateToken = async () => {
-    if (!window.confirm('Rotacionar o token invalida a URL atual do feed — será preciso atualizar no painel do portal. Continuar?')) return;
+    if (!(await confirmar({
+      titulo: 'Rotacionar o token',
+      descricao: 'Isso invalida a URL atual do feed — será preciso atualizar no painel do portal.',
+      rotuloDaAcao: 'Rotacionar',
+      destrutivo: true,
+    }))) return;
     try {
       await portalsService.regenerateToken(portalKey);
       toast.success('Token rotacionado — atualize a URL no painel do portal');
@@ -109,6 +116,7 @@ export default function PortalDetailPage() {
   }
 
   return (
+    <>
     <div className="flex flex-col h-full">
       <div className="border-b bg-background/95 backdrop-blur p-6">
         <button
@@ -212,5 +220,7 @@ export default function PortalDetailPage() {
         )}
       </div>
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }

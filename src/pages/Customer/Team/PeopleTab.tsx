@@ -17,6 +17,7 @@ import { useUserPermissions } from '@/hooks/useUserPermissions';
 import type { CustomRole } from '@/types/customRoles';
 import type { TeamAccessInbox, TeamAccessMember } from '@/types/teamAccess';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 /* Aba "Pessoas" da tela de Equipe — o gestor controla, por pessoa e num lugar
    só: cadastrar, cargo, quais instâncias (WhatsApp) ela atende, enviar o acesso
    e remover do time.
@@ -39,6 +40,7 @@ const cargoColor = (key?: string) =>
       : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
 
 export default function PeopleTab() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const { can } = useUserPermissions();
   const canManage = can('users', 'update');
   const canCreate = can('users', 'create');
@@ -197,7 +199,12 @@ export default function PeopleTab() {
   };
 
   const removeUser = async (member: TeamAccessMember) => {
-    if (!window.confirm(`Remover ${member.name} do time? Ele perde o acesso ao CRM.`)) return;
+    if (!(await confirmar({
+      titulo: 'Remover do time',
+      descricao: <>Remover <strong>{member.name}</strong> do time? A pessoa perde o acesso ao CRM.</>,
+      rotuloDaAcao: 'Remover',
+      destrutivo: true,
+    }))) return;
     setSaving(true);
     try {
       await usersService.deleteUser(member.id);
@@ -227,6 +234,7 @@ export default function PeopleTab() {
   };
 
   return (
+    <>
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
@@ -452,5 +460,7 @@ export default function PeopleTab() {
         </DialogContent>
       </Dialog>
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }

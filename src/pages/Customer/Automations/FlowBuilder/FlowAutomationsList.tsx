@@ -8,9 +8,11 @@ import { flowAutomationsService, flowAutomationFoldersService } from '@/services
 import type { FlowAutomation, FlowAutomationFolder } from '@/types/flowAutomations';
 import { FLOW_TRIGGER_LABELS } from '@/types/flowAutomations';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 // Lista de fluxos — mirror da grade de cards da aba Automações do Hub (12/08):
 // filete colorido, selo de estado, menu de ações. Pasta é lugar (entra), não filtro.
 export default function FlowAutomationsList() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const navigate = useNavigate();
   const [automations, setAutomations] = useState<FlowAutomation[]>([]);
   const [folders, setFolders] = useState<FlowAutomationFolder[]>([]);
@@ -76,7 +78,12 @@ export default function FlowAutomationsList() {
   };
 
   const destroy = async (a: FlowAutomation) => {
-    if (!window.confirm(`Excluir "${a.name}"? Essa ação não pode ser desfeita.`)) return;
+    if (!(await confirmar({
+      titulo: 'Excluir automação',
+      descricao: <>Excluir <strong>{a.name}</strong>? Essa ação não pode ser desfeita.</>,
+      rotuloDaAcao: 'Excluir',
+      destrutivo: true,
+    }))) return;
     try {
       await flowAutomationsService.destroy(a.id);
       toast.success('Fluxo removido');
@@ -111,7 +118,12 @@ export default function FlowAutomationsList() {
 
   const deleteFolder = async (f: FlowAutomationFolder, ev: MouseEvent) => {
     ev.stopPropagation();
-    if (!window.confirm(`Excluir a pasta "${f.name}"? Os fluxos de dentro voltam pra "Sem pasta".`)) return;
+    if (!(await confirmar({
+      titulo: 'Excluir pasta',
+      descricao: <>Excluir a pasta <strong>{f.name}</strong>? Os fluxos de dentro voltam pra &ldquo;Sem pasta&rdquo; — nenhum fluxo é apagado.</>,
+      rotuloDaAcao: 'Excluir',
+      destrutivo: true,
+    }))) return;
     try {
       await flowAutomationFoldersService.destroy(f.id);
       load();
@@ -121,6 +133,7 @@ export default function FlowAutomationsList() {
   };
 
   return (
+    <>
     <div className="h-full flex flex-col p-4">
       <div className="flex items-center gap-2 mb-2">
         <GitBranch className="h-5 w-5 text-primary" />
@@ -213,5 +226,7 @@ export default function FlowAutomationsList() {
         ))}
       </div>
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }

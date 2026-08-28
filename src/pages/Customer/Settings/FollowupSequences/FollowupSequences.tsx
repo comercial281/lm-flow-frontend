@@ -45,6 +45,7 @@ import {
 } from './delayConversion';
 import { FollowupEnrollment } from '@/pages/Customer/Automations/FollowupEnrollment/FollowupEnrollment';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 // Backend (Followup::SendStep#move_stage_if_configured) deriva o slug a partir do
 // nome do stage e NORMALIZA os dois lados: transliterate + downcase + strip + '-'.
 // Espelhamos exatamente isso aqui — com acento, 'follow-up-automatico' nao casava
@@ -368,6 +369,7 @@ const STATUS_STYLE: Record<string, { label: string; className: string }> = {
 };
 
 export default function FollowupSequences() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [sequences, setSequences] = useState<FollowupSequence[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -606,9 +608,18 @@ export default function FollowupSequences() {
   const removeSequence = async (seq: FollowupSequence) => {
     const disparos = seq.jobs_count ?? 0;
     const aviso = disparos > 0
-      ? `\n\nO histórico deste funil vai junto: ${disparos} disparo(s) registrados serão apagados.`
+      ? ` O histórico deste funil vai junto: ${disparos} disparo(s) registrados serão apagados.`
       : '';
-    if (!window.confirm(`Excluir o funil "${seq.name}"?${aviso}\n\nNão dá pra desfazer.`)) return;
+    if (!(await confirmar({
+      titulo: 'Excluir funil',
+      descricao: (
+        <>
+          Excluir o funil <strong>{seq.name}</strong>?{aviso} Não dá pra desfazer.
+        </>
+      ),
+      rotuloDaAcao: 'Excluir',
+      destrutivo: true,
+    }))) return;
 
     try {
       await followupSequencesService.delete(seq.id);
@@ -642,6 +653,7 @@ export default function FollowupSequences() {
   };
 
   return (
+    <>
     <div className="flex flex-col gap-6 p-6">
       <header className="flex items-start justify-between gap-4">
         <div>
@@ -1303,5 +1315,7 @@ export default function FollowupSequences() {
         </DialogContent>
       </Dialog>
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }

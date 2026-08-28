@@ -40,6 +40,7 @@ import { WEEKDAYS } from '@/components/schedule/scheduleWindows';
 import inboxesService from '@/services/channels/inboxesService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 type Tab = 'config' | 'resultados' | 'knowledge' | 'learning' | 'test' | 'diagnostico';
 
 interface InboxOption {
@@ -64,6 +65,7 @@ const TEMP_LABEL: Record<string, string> = {
 };
 
 export default function SalesAgents() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [agents, setAgents] = useState<SalesAgent[]>([]);
   const [selected, setSelected] = useState<SalesAgent | null>(null);
   const [inboxes, setInboxes] = useState<InboxOption[]>([]);
@@ -187,7 +189,12 @@ export default function SalesAgents() {
   };
 
   const deleteAgent = async (agent: SalesAgent) => {
-    if (!window.confirm(`Excluir a IA "${agent.name}"?`)) return;
+    if (!(await confirmar({
+      titulo: 'Excluir IA',
+      descricao: <>Excluir a IA <strong>{agent.name}</strong>?</>,
+      rotuloDaAcao: 'Excluir',
+      destrutivo: true,
+    }))) return;
     try {
       await salesAgentsService.destroy(agent.id);
       toast.success('Excluído');
@@ -199,6 +206,7 @@ export default function SalesAgents() {
   };
 
   return (
+    <>
     <div className="flex h-full">
       {/* Lista */}
       <aside className="w-72 shrink-0 border-r border-sidebar-border p-4 overflow-auto">
@@ -309,6 +317,8 @@ export default function SalesAgents() {
         )}
       </main>
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }
 
