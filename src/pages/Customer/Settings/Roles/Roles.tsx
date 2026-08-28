@@ -6,6 +6,7 @@ import { customRolesService } from '@/services/customRoles/customRolesService';
 import type { CustomRole, PermissionSection } from '@/types/customRoles';
 import RoleEditorModal from './RoleEditorModal';
 import RoleAuditModal from './RoleAuditModal';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 
 interface RolesPageProps {
   /* Dentro da aba Cargos da tela de Equipe, o título da página já está acima.
@@ -21,6 +22,8 @@ export default function RolesPage({ embedded = false }: RolesPageProps) {
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<CustomRole | null>(null);
+
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditingRole, setAuditingRole] = useState<CustomRole | null>(null);
@@ -70,11 +73,18 @@ export default function RolesPage({ embedded = false }: RolesPageProps) {
       toast.error('Cargo do sistema não pode ser deletado');
       return;
     }
-    if (role.users_count > 0) {
-      if (!confirm(`Este cargo está em uso por ${role.users_count} usuário(s). Eles ficarão sem cargo definido. Continuar?`)) return;
-    } else {
-      if (!confirm(`Deletar cargo '${role.name}'?`)) return;
-    }
+    const emUso = role.users_count > 0;
+    if (
+      !(await confirmar({
+        titulo: `Deletar cargo '${role.name}'?`,
+        descricao: emUso
+          ? `Este cargo está em uso por ${role.users_count} usuário(s). Eles ficarão sem cargo definido.`
+          : undefined,
+        rotuloDaAcao: 'Deletar',
+        destrutivo: true,
+      }))
+    )
+      return;
     try {
       await customRolesService.destroy(role.id);
       toast.success('Cargo removido');
@@ -224,6 +234,8 @@ export default function RolesPage({ embedded = false }: RolesPageProps) {
         onClose={() => setAuditOpen(false)}
         role={auditingRole}
       />
+
+      {dialogoDeConfirmacao}
     </div>
   );
 }

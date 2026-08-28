@@ -97,6 +97,14 @@ const PipelineTasksList = forwardRef<PipelineTasksListRef, PipelineTasksListProp
       }) || `Esta tarefa tem ${task?.subtask_count} subtarefa(s). Deletar todas?`;
     }
     
+    // Continua sendo a caixinha do navegador de propósito: o substituto
+    // (useConfirmacao) é um Dialog, e esta lista é renderizada dentro do
+    // EditItemModal.
+    //
+    // Dialog dentro de Dialog mexe com armadilha de foco e com empilhamento, e
+    // isso não se confere lendo código: precisa de navegador. Numa ação que
+    // apaga dado de cliente pagante, confirmação quebrada é pior que
+    // confirmação feia.
     if (confirm(confirmMessage)) {
       await deleteTask(taskId);
     }

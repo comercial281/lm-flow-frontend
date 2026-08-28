@@ -240,6 +240,16 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
             toggleMark(linkMark)(state, dispatch);
             break;
           }
+          // Continua sendo a caixinha do navegador de propósito, e o motivo é o
+          // ProseMirror, não o desenho: o `state` acima foi capturado de forma
+          // síncrona, e o estado do editor é imutável. Depois de um `await`, ele
+          // seria um retrato velho — despachar transação em cima dele quebra o
+          // documento em vez de inserir um link.
+          //
+          // O substituto (usePergunta) é assíncrono. Trocar aqui exige reler o
+          // `viewRef.current.state` depois da resposta E conferir se a seleção
+          // sobreviveu ao foco indo pro campo do diálogo — e isso não se confere
+          // lendo código: precisa de navegador.
           const href = window.prompt('Endereço do link', 'https://')?.trim();
           if (!href) break;
           // Só endereço de verdade. A página é publicada num anúncio pago, e

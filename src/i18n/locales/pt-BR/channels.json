@@ -1033,7 +1033,8 @@
               "reconnectError": "Erro ao reconectar a instância"
             },
             "reconnect": "Reconectar",
-            "confirmReconnect": "Reconectar reconstrói a conexão do zero e gera um código novo. Use quando o QR Code não estiver pareando. Deseja continuar?"
+            "confirmReconnect": "Reconectar reconstrói a conexão do zero e gera um código novo. Use quando o QR Code não estiver pareando. Deseja continuar?",
+            "confirmReconnectTitle": "Reconectar a instância?"
           },
           "qrExpiresIn": "Este código expira em {{seconds}}s",
           "qrExpired": "O código expirou",
