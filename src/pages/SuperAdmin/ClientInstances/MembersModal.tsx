@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+
 import {
   Plus, Loader2, Users, Trash2, Eye, EyeOff, RotateCw, KeyRound, Check, Copy, AlertTriangle,
   MessageCircle, XCircle,
@@ -345,14 +347,14 @@ export default function MembersModal({ instance, open, onClose }: Props) {
     try {
       await clientInstancesService.removeMember(instance.id, u.id);
       setMembers(prev => prev.filter(m => m.id !== u.id));
-    } catch (e) { alert(pickError(e)); }
+    } catch (e) { toast.error(pickError(e)); }
   };
 
   const handleRoleChange = async (u: TenantUser, newRole: string) => {
     try {
       const r = await clientInstancesService.updateMember(instance.id, u.id, { chave_role: newRole });
       setMembers(prev => prev.map(m => (m.id === u.id ? { ...r.data.data, generated_password: m.generated_password } : m)));
-    } catch (e) { alert(pickError(e)); }
+    } catch (e) { toast.error(pickError(e)); }
   };
 
   return (

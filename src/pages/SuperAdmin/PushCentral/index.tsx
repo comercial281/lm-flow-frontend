@@ -24,6 +24,7 @@ import pushCentralService, {
 } from '@/services/push/pushCentralService';
 import NotificationsTab from './NotificationsTab';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 /**
  * Central de Push (Área do Admin).
  *
@@ -71,6 +72,7 @@ const STATUS_CLASS: Record<PushLog['status'], string> = {
 };
 
 export default function PushCentral() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [tab, setTab] = useState<Tab>('rules');
   const [data, setData] = useState<PushIndexData | null>(null);
   const [logs, setLogs] = useState<PushLog[]>([]);
@@ -183,7 +185,12 @@ export default function PushCentral() {
   };
 
   const remove = async (rule: PushRule) => {
-    if (!window.confirm(`Excluir a regra "${rule.name}"?`)) return;
+    if (!(await confirmar({
+      titulo: 'Excluir regra',
+      descricao: <>Excluir a regra <strong>{rule.name}</strong>?</>,
+      rotuloDaAcao: 'Excluir',
+      destrutivo: true,
+    }))) return;
     try {
       await pushCentralService.remove(rule.id);
       toast.success('Regra excluída');
@@ -225,6 +232,7 @@ export default function PushCentral() {
   const options = data?.options;
 
   return (
+    <>
     <div className="flex flex-col h-full">
       <div className="px-6 pt-6 shrink-0">
         <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -618,5 +626,7 @@ export default function PushCentral() {
         </DialogContent>
       </Dialog>
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }
