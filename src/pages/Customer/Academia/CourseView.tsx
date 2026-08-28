@@ -29,6 +29,7 @@ import ModuleForm from './ModuleForm';
 import CourseForm from './CourseForm';
 import CoverPicker from './CoverPicker';
 import { GERAL_COURSE_ID } from './_lib';
+import { toast } from 'sonner';
 
 interface Props {
   onBack: () => void;
@@ -456,17 +457,17 @@ function EditLessonForm({ lesson, onClose }: { lesson: KnowledgeLesson; onClose:
   const busy = update.isPending || replaceVideo.isPending;
 
   async function submit() {
-    if (!titulo.trim()) { window.alert('Dê um título à aula.'); return; }
+    if (!titulo.trim()) { toast.error('Dê um título à aula.'); return; }
     const dur = duracao ? parseInt(duracao, 10) : null;
 
     // Valida o vídeo ANTES de qualquer escrita.
     let videoPatch: Record<string, unknown> = {};
     if (videoMode === 'link') {
       const parsed = parseVideoUrl(videoUrl);
-      if (!videoUrl.trim() || !parsed) { window.alert('Cole um link válido do YouTube ou Vimeo.'); return; }
+      if (!videoUrl.trim() || !parsed) { toast.error('Cole um link válido do YouTube ou Vimeo.'); return; }
       videoPatch = { video_url: videoUrl.trim(), video_provider: parsed.provider, video_id: parsed.id, storage_path: null };
     }
-    if (videoMode === 'upload' && !file) { window.alert('Selecione o novo arquivo de vídeo.'); return; }
+    if (videoMode === 'upload' && !file) { toast.error('Selecione o novo arquivo de vídeo.'); return; }
 
     if (videoMode === 'upload' && file) {
       await replaceVideo.mutateAsync({ id: lesson.id, file });
@@ -546,10 +547,10 @@ function AddLessonForm({ moduleId, onDone }: { moduleId: string; onDone: () => v
     if (!titulo.trim()) return;
     const dur = duracao ? parseInt(duracao, 10) : undefined;
     if (mode === 'embed') {
-      if (!videoUrl.trim() || !parseVideoUrl(videoUrl)) { window.alert('Cole um link válido do YouTube ou Vimeo.'); return; }
+      if (!videoUrl.trim() || !parseVideoUrl(videoUrl)) { toast.error('Cole um link válido do YouTube ou Vimeo.'); return; }
       await createLesson.mutateAsync({ module_id: moduleId, titulo: titulo.trim(), video_url: videoUrl.trim(), duracao_min: dur });
     } else {
-      if (!file) { window.alert('Selecione um arquivo de vídeo.'); return; }
+      if (!file) { toast.error('Selecione um arquivo de vídeo.'); return; }
       await uploadLesson.mutateAsync({ module_id: moduleId, titulo: titulo.trim(), file, duracao_min: dur });
     }
     onDone();

@@ -11,6 +11,7 @@ import {
   Label,
 } from '@/components/ui/ds';
 import { Upload, Trash2, FileText, Download } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ContactImportModalProps {
   open: boolean;
@@ -37,12 +38,12 @@ export default function ContactImportModal({
     if (file) {
       // Validate file type
       if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-        alert(t('import.errors.invalidType'));
+        toast.error(t('import.errors.invalidType'));
         return;
       }
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert(t('import.errors.maxSize'));
+        toast.error(t('import.errors.maxSize'));
         return;
       }
       setSelectedFile(file);

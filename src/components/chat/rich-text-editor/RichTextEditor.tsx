@@ -10,6 +10,7 @@ import { wrapInList } from 'prosemirror-schema-list';
 import type { Schema } from 'prosemirror-model';
 import { messageSchema } from './schema';
 import { EditorToolbar } from './EditorToolbar';
+import { toast } from 'sonner';
 
 export interface RichTextEditorRef {
   focus: () => void;
@@ -244,7 +245,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
           // Só endereço de verdade. A página é publicada num anúncio pago, e
           // `javascript:` gravado ali seria um buraco aberto para quem abrir.
           if (!/^(https?:\/\/|mailto:|tel:)/i.test(href)) {
-            window.alert('Use um endereço começando com https://, mailto: ou tel:');
+            toast.error('Use um endereço começando com https://, mailto: ou tel:');
             break;
           }
           toggleMark(linkMark, { href })(state, dispatch);
