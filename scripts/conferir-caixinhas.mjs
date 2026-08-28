@@ -18,8 +18,10 @@
 //   - arquivos de teste
 //
 // USO
-//   node scripts/conferir-caixinhas.mjs            lista e conta
-//   node scripts/conferir-caixinhas.mjs --teto N   sai 1 se o CLIENTE passar de N
+//   node scripts/conferir-caixinhas.mjs                    conta, e lista as do cliente
+//   node scripts/conferir-caixinhas.mjs --tudo             lista as do SuperAdmin também
+//   node scripts/conferir-caixinhas.mjs --teto N           sai 1 se o CLIENTE passar de N
+//   node scripts/conferir-caixinhas.mjs --teto-super N     sai 1 se o SUPERADMIN passar de N
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
@@ -68,25 +70,53 @@ for (const area of ['cliente', 'superadmin']) {
   );
 }
 
+const listar = area => {
+  const daArea = achados.filter(x => x.area === area).sort((x, y) => x.onde.localeCompare(y.onde));
+  if (!daArea.length) return;
+  console.log(`\nna tela do ${area === 'cliente' ? 'cliente' : 'SuperAdmin'}:`);
+  for (const a of daArea) console.log(`  ${a.tipo.padEnd(8)} ${a.onde}`);
+};
+
 const naTelaDoCliente = conta('cliente');
-if (naTelaDoCliente) {
-  console.log('\nna tela do cliente:');
-  for (const a of achados.filter(x => x.area === 'cliente').sort((x, y) => x.onde.localeCompare(y.onde))) {
-    console.log(`  ${a.tipo.padEnd(8)} ${a.onde}`);
-  }
+const noSuperAdmin = conta('superadmin');
+
+listar('cliente');
+// O SuperAdmin só sai com --tudo porque a lista do cliente é a que se olha
+// todo dia; despejar as duas sempre faz a que importa rolar pra fora da tela.
+// Mas contar sem conseguir listar obriga quem for consertar a sair grepando à
+// mão — que é exatamente o erro que este script veio substituir.
+if (process.argv.includes('--tudo')) listar('superadmin');
+
+// Duas catracas, não uma. A do cliente existe pelo argumento de ilusão de
+// produto: caixinha do navegador entrega que ali não é o produto. A do
+// SuperAdmin existe por outro motivo — o que aquelas telas guardam. Redeploy de
+// TODOS os tenants, semear dado fictício dentro de um cliente real, ligar o modo
+// demonstração (que faz o cliente parar de falar com os leads dele). Julgar pelo
+// público deixou essas de fora duas vezes; a pergunta certa é o que a
+// confirmação está segurando.
+const tetoDe = flag => {
+  const i = process.argv.indexOf(flag);
+  return i === -1 ? null : Number(process.argv[i + 1]);
+};
+
+const reprovar = (area, quantas, teto) => {
+  console.error(
+    `\n✗ ${quantas} caixinhas na tela do ${area}, e o teto é ${teto}.\n` +
+      `  Use o useConfirmacao (src/hooks/useConfirmacao.tsx) pra confirmação,\n` +
+      `  e o toast do sonner pra aviso. Se o teto tiver que subir, suba junto\n` +
+      `  com a razão — teto que sobe sozinho não é teto.`,
+  );
+  process.exit(1);
+};
+
+const tetoSuper = tetoDe('--teto-super');
+if (tetoSuper !== null) {
+  if (noSuperAdmin > tetoSuper) reprovar('SuperAdmin', noSuperAdmin, tetoSuper);
+  console.log(`\n✓ ${noSuperAdmin} no SuperAdmin, dentro do teto de ${tetoSuper}.`);
 }
 
-const i = process.argv.indexOf('--teto');
-if (i !== -1) {
-  const teto = Number(process.argv[i + 1]);
-  if (naTelaDoCliente > teto) {
-    console.error(
-      `\n✗ ${naTelaDoCliente} caixinhas na tela do cliente, e o teto é ${teto}.\n` +
-        `  Use o useConfirmacao (src/hooks/useConfirmacao.tsx) pra confirmação,\n` +
-        `  e o toast do sonner pra aviso. Se o teto tiver que subir, suba junto\n` +
-        `  com a razão — teto que sobe sozinho não é teto.`,
-    );
-    process.exit(1);
-  }
+const teto = tetoDe('--teto');
+if (teto !== null) {
+  if (naTelaDoCliente > teto) reprovar('cliente', naTelaDoCliente, teto);
   console.log(`\n✓ ${naTelaDoCliente} na tela do cliente, dentro do teto de ${teto}.`);
 }

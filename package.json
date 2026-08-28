@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/sync-feature-catalog.mjs && node scripts/audit-feature-catalog.mjs && node scripts/conferir-i18n.mjs && node scripts/conferir-caixinhas.mjs --teto 20 && tsc -b && vite build",
+    "build": "node scripts/sync-feature-catalog.mjs && node scripts/audit-feature-catalog.mjs && node scripts/conferir-i18n.mjs && node scripts/conferir-caixinhas.mjs --teto 20 --teto-super 7 && tsc -b && vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
