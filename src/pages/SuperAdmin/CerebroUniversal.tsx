@@ -8,6 +8,7 @@ import {
   type GlobalKnowledgeDoc,
   type GlobalLesson,
 } from '@/services/superAdmin/globalBrainService';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 
 type Tab = 'conhecimento' | 'escola';
 
@@ -74,6 +75,7 @@ function TabButton({
 // ─────────────────────────── Base de Conhecimento ───────────────────────────
 
 function KnowledgeTab() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [docs, setDocs] = useState<GlobalKnowledgeDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState('');
@@ -143,7 +145,15 @@ function KnowledgeTab() {
   };
 
   const remove = async (doc: GlobalKnowledgeDoc) => {
-    if (!confirm(`Remover "${doc.title}" do cérebro universal?`)) return;
+    if (
+      !(await confirmar({
+        titulo: 'Remover do cérebro universal?',
+        descricao: <>O documento <strong>{doc.title}</strong> sai do cérebro de todos os CRMs.</>,
+        rotuloDaAcao: 'Remover',
+        destrutivo: true,
+      }))
+    )
+      return;
     try {
       await globalBrainService.deleteDoc(doc.id);
       setDocs(prev => prev.filter(d => d.id !== doc.id));
@@ -237,6 +247,8 @@ function KnowledgeTab() {
           </ul>
         )}
       </div>
+
+      {dialogoDeConfirmacao}
     </div>
   );
 }
@@ -244,6 +256,7 @@ function KnowledgeTab() {
 // ─────────────────────────── Escola de Vendas ───────────────────────────
 
 function LessonsTab() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [lessons, setLessons] = useState<GlobalLesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [kind, setKind] = useState<GlobalLesson['kind']>('rule');
@@ -286,7 +299,15 @@ function LessonsTab() {
   };
 
   const remove = async (l: GlobalLesson) => {
-    if (!confirm('Remover esta lição do cérebro universal?')) return;
+    if (
+      !(await confirmar({
+        titulo: 'Remover esta lição?',
+        descricao: 'Ela sai da escola de vendas de todos os CRMs.',
+        rotuloDaAcao: 'Remover',
+        destrutivo: true,
+      }))
+    )
+      return;
     try {
       await globalBrainService.deleteLesson(l.id);
       setLessons(prev => prev.filter(x => x.id !== l.id));
@@ -370,6 +391,8 @@ function LessonsTab() {
           </ul>
         )}
       </div>
+
+      {dialogoDeConfirmacao}
     </div>
   );
 }

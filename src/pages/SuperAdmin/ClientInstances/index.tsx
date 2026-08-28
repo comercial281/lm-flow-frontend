@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Input, Label } from '@/components/ui/ds';
 import IconActionButton from '@/components/base/IconActionButton';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import clientInstancesService, {
   ClientInstance, CreateClientInstancePayload, DashboardData,
 } from '@/services/clientInstances/clientInstancesService';
@@ -296,6 +297,7 @@ function NewClientModal({ open, onClose, onCreate }: {
 }
 
 export default function ClientInstances() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const { user } = useAuth();
   const [tab, setTab]               = useState<ViewTab>('list');
   const [showArchived, setShowArchived] = useState(false);
@@ -346,13 +348,28 @@ export default function ClientInstances() {
   }, [instances, loadList]);
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Remover esta instancia? Isso nao apaga o Railway/Vercel, so o registro.')) return;
+    if (
+      !(await confirmar({
+        titulo: 'Remover esta instância?',
+        descricao: 'Isso apaga só o registro aqui. O Railway e a Vercel do cliente continuam de pé.',
+        rotuloDaAcao: 'Remover registro',
+        destrutivo: true,
+      }))
+    )
+      return;
     await clientInstancesService.delete(id);
     loadList();
   };
 
   const handleArchive = async (id: number) => {
-    if (!confirm('Arquivar este cliente? Ele some da lista principal mas pode ser restaurado.')) return;
+    if (
+      !(await confirmar({
+        titulo: 'Arquivar este cliente?',
+        descricao: 'Ele some da lista principal, mas pode ser restaurado depois.',
+        rotuloDaAcao: 'Arquivar',
+      }))
+    )
+      return;
     await clientInstancesService.archive(id);
     loadList();
     if (tab === 'dashboard') loadDashboard();
@@ -369,7 +386,17 @@ export default function ClientInstances() {
   };
 
   const handleSyncAll = async () => {
-    if (!confirm('Vai fazer redeploy Vercel de TODOS os tenants ativos. Continuar?')) return;
+    if (
+      !(await confirmar({
+        titulo: 'Redeploy de TODOS os tenants ativos?',
+        descricao:
+          'A Vercel vai reconstruir o front de cada cliente ativo. É a ação de maior alcance deste painel.',
+        rotuloDaAcao: 'Fazer redeploy de todos',
+        rotuloDeCancelar: 'Voltar',
+        destrutivo: true,
+      }))
+    )
+      return;
     setSyncingAll(true);
     try {
       const res = await clientInstancesService.syncAllFrontends();
@@ -583,6 +610,8 @@ export default function ClientInstances() {
         open={accessCfgOpen}
         onClose={() => setAccessCfgOpen(false)}
       />
+
+      {dialogoDeConfirmacao}
     </div>
   );
 }

@@ -228,6 +228,13 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
   };
 
   const setPassword = async (m: Member) => {
+    // Continua sendo a caixinha do navegador de propósito: o substituto é um
+    // Dialog do design system, e este componente já roda dentro de um.
+    //
+    // Dialog dentro de Dialog mexe com armadilha de foco e com empilhamento, e
+    // isso não se confere lendo código: precisa de navegador — e aqui o
+    // agravante é que a caixinha tem CAMPO, que precisa receber o foco pra
+    // funcionar, justamente o que a armadilha do diálogo de fora disputa.
     const pwd = window.prompt(`Nova senha para ${m.email} (min. 8 caracteres):`);
     if (!pwd) return;
     if (pwd.length < 8) { toast.error('Senha precisa de ao menos 8 caracteres.'); return; }
@@ -543,6 +550,17 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
   // de novo. Confirmação por digitação, igual à de apagar cliente.
   const [resetting, setResetting] = useState(false);
   const resetDemo = async () => {
+    // Continua sendo a caixinha do navegador de propósito: o substituto é um
+    // Dialog do design system, e este componente já roda dentro de um.
+    //
+    // Dialog dentro de Dialog mexe com armadilha de foco e com empilhamento, e
+    // isso não se confere lendo código: precisa de navegador — e aqui o
+    // agravante é que a caixinha tem CAMPO, que precisa receber o foco pra
+    // funcionar, justamente o que a armadilha do diálogo de fora disputa.
+    //
+    // Esta é a confirmação por digitação — a pessoa escreve o slug do
+    // cliente pra provar que leu. Trocar por Dialog sem navegador arrisca
+    // justamente a trava mais forte do painel.
     const digitado = window.prompt(
       `Recomeçar a demonstração de "${tenant.name}"?\n\n` +
       'Apaga leads, conversas, funil, visitas e propostas, e gera tudo de novo com datas de hoje. ' +

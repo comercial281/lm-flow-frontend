@@ -63,6 +63,13 @@ function PasswordCell({
   };
 
   const reset = async () => {
+    // Continua sendo a caixinha do navegador de propósito: o substituto é um
+    // Dialog do design system, e este componente já roda dentro de um.
+    //
+    // Dialog dentro de Dialog mexe com armadilha de foco e com empilhamento, e
+    // isso não se confere lendo código: precisa de navegador. Numa tela onde a
+    // confirmação guarda ação destrutiva em cliente pagante, confirmação
+    // quebrada é pior que confirmação feia.
     if (!confirm(`Gerar nova senha temporária para ${user.email}? A atual será invalidada.`)) return;
     setLoading(true); setError('');
     try {
@@ -343,6 +350,13 @@ export default function MembersModal({ instance, open, onClose }: Props) {
   };
 
   const handleRemove = async (u: TenantUser) => {
+    // Continua sendo a caixinha do navegador de propósito: o substituto é um
+    // Dialog do design system, e este componente já roda dentro de um.
+    //
+    // Dialog dentro de Dialog mexe com armadilha de foco e com empilhamento, e
+    // isso não se confere lendo código: precisa de navegador. Numa tela onde a
+    // confirmação guarda ação destrutiva em cliente pagante, confirmação
+    // quebrada é pior que confirmação feia.
     if (!confirm(`Remover ${u.email} do CRM ${instance.name}? Essa ação é definitiva.`)) return;
     try {
       await clientInstancesService.removeMember(instance.id, u.id);

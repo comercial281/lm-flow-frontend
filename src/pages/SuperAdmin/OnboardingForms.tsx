@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Input, Label } from '@/components/ui/ds';
 import { toast } from 'sonner';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { FileText, Plus, Trash2, Copy, Link2, Files, Archive, Eye, X, ArrowUp, ArrowDown, Pencil, Download } from 'lucide-react';
 import {
   onboardingFormsService,
@@ -107,6 +108,7 @@ export default function OnboardingForms() {
 }
 
 function FormEditor({ formId, onChanged, onDeleted }: { formId: string; onChanged: () => void; onDeleted: () => void }) {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [form, setForm] = useState<OnboardingForm | null>(null);
   const [tab, setTab] = useState<'campos' | 'respostas'>('campos');
   const [subs, setSubs] = useState<OnboardingSubmission[]>([]);
@@ -250,7 +252,14 @@ function FormEditor({ formId, onChanged, onDeleted }: { formId: string; onChange
   };
 
   const archive = async () => {
-    if (!confirm('Arquivar este formulário?')) return;
+    if (
+      !(await confirmar({
+        titulo: 'Arquivar este formulário?',
+        descricao: 'Ele sai da lista, mas as respostas já recebidas continuam guardadas.',
+        rotuloDaAcao: 'Arquivar',
+      }))
+    )
+      return;
     try {
       await onboardingFormsService.archive(formId);
       toast.success('Arquivado.');
@@ -261,7 +270,15 @@ function FormEditor({ formId, onChanged, onDeleted }: { formId: string; onChange
   };
 
   const remove = async () => {
-    if (!confirm('Excluir de vez este formulário e todas as respostas?')) return;
+    if (
+      !(await confirmar({
+        titulo: 'Excluir de vez este formulário?',
+        descricao: 'Todas as respostas já recebidas vão junto. Não tem como desfazer.',
+        rotuloDaAcao: 'Excluir tudo',
+        destrutivo: true,
+      }))
+    )
+      return;
     try {
       await onboardingFormsService.remove(formId);
       toast.success('Excluído.');
@@ -429,6 +446,8 @@ function FormEditor({ formId, onChanged, onDeleted }: { formId: string; onChange
           )}
         </div>
       )}
+
+      {dialogoDeConfirmacao}
     </div>
   );
 }
