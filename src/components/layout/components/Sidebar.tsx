@@ -59,9 +59,15 @@ export default function Sidebar({
     '/bolsao': 'Principal',
     '/disparos': 'Comercial',
     '/ia-vendedora': 'Comercial',
+    // Espaço e Portais NÃO estavam aqui. Sem entrada no mapa, o item herda em
+    // silêncio o cabeçalho do vizinho de cima — funcionava por acidente de
+    // posição no menuItems.ts, e mudaria sozinho no dia em que alguém
+    // reordenasse aquele arquivo.
+    '/espaco': 'Comercial',
     '/equipe': 'Comercial',
     '/properties': 'Imobiliário',
     '/books': 'Imobiliário',
+    '/settings/portals': 'Imobiliário',
     '/visits': 'Imobiliário',
     '/proposals': 'Imobiliário',
     '/contracts': 'Imobiliário',
@@ -72,6 +78,20 @@ export default function Sidebar({
     '/automations': 'Inteligência',
     '/marketplace': 'Inteligência',
   };
+  // Os rótulos só fazem sentido se cada grupo estiver INTEIRO e junto na lista.
+  //
+  // ⚠️ A lista que chega aqui NÃO é a do menuItems.ts: o MainLayout passa o
+  // resultado do applyMenuPrefs, que sobe os favoritos pro topo e aplica a ordem
+  // manual do usuário. Basta favoritar um item de Imobiliário pra lista chegar
+  // intercalada — e aí o código anterior, que só suprimia repetição CONSECUTIVA,
+  // desenhava "Imobiliário" duas vezes.
+  //
+  // Quando isso acontece, o rótulo passou a mentir sobre o que está embaixo
+  // dele. Então ele sai inteiro, em vez de sair errado: menu personalizado é
+  // menu sem cabeçalho, que é o que o usuário pediu ao personalizar.
+  const gruposNaOrdem = mainMenuItems.map(i => GROUP_BY_HREF[i.href] || '');
+  const corridas = gruposNaOrdem.filter((g, i) => g && g !== gruposNaOrdem[i - 1]);
+  const agrupamentoIntacto = corridas.length === new Set(corridas).size;
   let lastSidebarGroup = '';
 
   return (
@@ -90,7 +110,8 @@ export default function Sidebar({
           <nav className="space-y-1.5 flex-1 min-h-0 overflow-y-auto px-2 py-4">
             {mainMenuItems.flatMap(item => {
               const group = GROUP_BY_HREF[item.href] || '';
-              const showHeader = !!group && group !== lastSidebarGroup && !isCollapsed;
+              const showHeader =
+                agrupamentoIntacto && !!group && group !== lastSidebarGroup && !isCollapsed;
               if (group) lastSidebarGroup = group;
               const menuNode = (
                 <MenuItem
