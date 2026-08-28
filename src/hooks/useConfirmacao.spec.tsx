@@ -61,4 +61,34 @@ describe('useConfirmacao', () => {
     expect(aoConfirmar).not.toHaveBeenCalled();
     expect(screen.getByText('Excluir imóvel')).toBeInTheDocument();
   });
+
+  // Este caso saiu do PropertyMenu: um menu flutuante que se fecha ao clicar
+  // fora. O clique que abriria o diálogo é o mesmo que desmonta o menu — e sem
+  // a limpeza no desmonte, o `await confirmar(...)` nunca voltava. Promise
+  // pendurada não quebra tela nem estoura no console: só some com o passo
+  // seguinte, em silêncio.
+  it('desmontar com um pedido no ar responde `false` em vez de pendurar a Promise', async () => {
+    const usuario = userEvent.setup();
+    let resposta: boolean | 'ainda esperando' = 'ainda esperando';
+
+    function TelaQueSomeem() {
+      const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+      const perguntar = async () => {
+        resposta = await confirmar({ titulo: 'Excluir a propriedade?' });
+      };
+      return (
+        <>
+          <button onClick={() => void perguntar()}>Excluir</button>
+          {dialogoDeConfirmacao}
+        </>
+      );
+    }
+
+    const { unmount } = render(<TelaQueSomeem />);
+    await usuario.click(screen.getByText('Excluir'));
+    expect(resposta).toBe('ainda esperando');
+
+    unmount();
+    await waitFor(() => expect(resposta).toBe(false));
+  });
 });

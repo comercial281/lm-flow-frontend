@@ -105,6 +105,14 @@ export default function PropertyMenu({ property, onClose, onDeleted }: Props) {
 
   function remove() {
     if (property.type === 'title') return
+    // Continua sendo a caixinha do navegador de propósito, e aqui o motivo é
+    // outro: este menu é um popover que se fecha ao clicar fora. Abrir um
+    // Dialog por dentro dele pode desmontar justamente quem está esperando a
+    // resposta — e aí a Promise nunca volta.
+    //
+    // Confirmar isso exige navegador. Numa ação que apaga propriedade de
+    // banco de dados do cliente, confirmação quebrada é pior que confirmação
+    // feia.
     if (!confirm(`Excluir a propriedade "${property.name}"?`)) return
     deleteProp.mutate(
       { id: property.id, database_id: property.database_id },

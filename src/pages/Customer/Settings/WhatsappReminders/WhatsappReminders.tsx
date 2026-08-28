@@ -34,6 +34,7 @@ import {
 } from '@/types/automation';
 import api from '@/services/core/api';
 import { extractData } from '@/utils/apiHelpers';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 
 interface InboxOption {
   id: number;
@@ -57,6 +58,7 @@ const EMPTY_FORM: CreateReminderData = {
 };
 
 export default function WhatsappReminders() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [items, setItems] = useState<WhatsappReminder[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -168,7 +170,15 @@ export default function WhatsappReminders() {
   };
 
   const remove = async (r: WhatsappReminder) => {
-    if (!confirm(`Apagar lembrete "${r.name}"?`)) return;
+    if (
+      !(await confirmar({
+        titulo: 'Apagar lembrete',
+        descricao: `O lembrete "${r.name}" será removido. Esta ação não pode ser desfeita.`,
+        rotuloDaAcao: 'Apagar',
+        destrutivo: true,
+      }))
+    )
+      return;
     try {
       await whatsappRemindersService.remove(r.id);
       toast.success('Lembrete apagado');
@@ -497,6 +507,8 @@ export default function WhatsappReminders() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {dialogoDeConfirmacao}
     </div>
   );
 }

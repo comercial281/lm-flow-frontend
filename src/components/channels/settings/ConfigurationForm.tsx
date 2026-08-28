@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import {
   Card,
   CardContent,
@@ -580,6 +581,7 @@ const EvolutionWhatsAppConfig: React.FC<{
   onUpdate: (data: any) => void;
 }> = ({ inbox, onUpdate }) => {
   const { t } = useLanguage('channels');
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [instanceSettings, setInstanceSettings] = useState({
     rejectCall: true,
     msgCall: 'Não aceito chamadas',
@@ -1035,7 +1037,13 @@ const EvolutionWhatsAppConfig: React.FC<{
   };
 
   const handleRemoveProfilePicture = async () => {
-    if (!confirm(t('settings.configuration.whatsapp.instance.profile.confirmRemovePicture')))
+    if (
+      !(await confirmar({
+        titulo: t('settings.configuration.whatsapp.instance.profile.confirmRemovePicture'),
+        rotuloDaAcao: t('settings.configuration.whatsapp.instance.profile.remove'),
+        destrutivo: true,
+      }))
+    )
       return;
 
     setIsLoading(true);
@@ -1073,7 +1081,15 @@ const EvolutionWhatsAppConfig: React.FC<{
   const handleRecreate = async () => {
     // Endpoint só existe na Evolution (o botão também só aparece lá).
     if (inbox.provider === 'evolution_go') return;
-    if (!confirm(t('settings.configuration.whatsapp.instance.actions.confirmReconnect'))) return;
+    if (
+      !(await confirmar({
+        titulo: t('settings.configuration.whatsapp.instance.actions.confirmReconnectTitle'),
+        descricao: t('settings.configuration.whatsapp.instance.actions.confirmReconnect'),
+        rotuloDaAcao: t('settings.configuration.whatsapp.instance.actions.reconnect'),
+        destrutivo: true,
+      }))
+    )
+      return;
 
     const identifier = getIdentifier();
     if (!identifier) {
@@ -1100,7 +1116,14 @@ const EvolutionWhatsAppConfig: React.FC<{
   };
 
   const handleLogout = async () => {
-    if (!confirm(t('settings.configuration.whatsapp.instance.actions.confirmDisconnect'))) return;
+    if (
+      !(await confirmar({
+        titulo: t('settings.configuration.whatsapp.instance.actions.confirmDisconnect'),
+        rotuloDaAcao: t('settings.configuration.whatsapp.instance.actions.disconnect'),
+        destrutivo: true,
+      }))
+    )
+      return;
 
     setIsLoading(true);
     try {
@@ -1564,6 +1587,8 @@ const EvolutionWhatsAppConfig: React.FC<{
           </div>
         </CardContent>
       </Card>
+
+      {dialogoDeConfirmacao}
     </div>
   );
 };
@@ -1812,6 +1837,7 @@ const ZapiWhatsAppConfig: React.FC<{
   inbox: any;
   onUpdate: (data: any) => void;
 }> = ({ inbox }) => {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [instanceStatus, setInstanceStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -2236,7 +2262,14 @@ const ZapiWhatsAppConfig: React.FC<{
   const handleRestart = async () => {
     if (!instanceId) return;
 
-    if (!confirm('Tem certeza que deseja reiniciar a instância?')) return;
+    if (
+      !(await confirmar({
+        titulo: 'Reiniciar a instância?',
+        descricao: 'A conexão do WhatsApp cai por alguns segundos enquanto a instância sobe de novo.',
+        rotuloDaAcao: 'Reiniciar',
+      }))
+    )
+      return;
 
     try {
       setIsLoading(true);
@@ -2253,7 +2286,15 @@ const ZapiWhatsAppConfig: React.FC<{
   const handleDisconnect = async () => {
     if (!instanceId) return;
 
-    if (!confirm('Tem certeza que deseja desconectar a instância?')) return;
+    if (
+      !(await confirmar({
+        titulo: 'Desconectar a instância?',
+        descricao: 'O canal para de enviar e receber mensagens até alguém ler o QR Code de novo.',
+        rotuloDaAcao: 'Desconectar',
+        destrutivo: true,
+      }))
+    )
+      return;
 
     try {
       setIsLoading(true);
@@ -2526,6 +2567,8 @@ const ZapiWhatsAppConfig: React.FC<{
           </div>
         </DialogContent>
       </Dialog>
+
+      {dialogoDeConfirmacao}
     </div>
   );
 };
