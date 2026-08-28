@@ -142,7 +142,7 @@ export default function AccessTokensTable({
       sortOrder={sortOrder}
       onSort={onSort}
       getRowKey={(token) => token.id}
-      emptyMessage="No access tokens found"
+      emptyMessage="Nenhum token de acesso encontrado"
     />
   );
 }

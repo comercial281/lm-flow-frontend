@@ -106,7 +106,7 @@
     "phoneNumber": "Número de Telefone",
     "email": "Email",
     "webhook": "Webhook",
-    "apiKey": "API Key",
+    "apiKey": "Chave de API",
     "token": "Token",
     "lastMessage": "Última Mensagem",
     "conversations": "Conversas",
@@ -174,10 +174,10 @@
     "providers": {
       "badges": {
         "recommended": "Recomendado",
-        "popular": "Popular"
+        "popular": "Mais usado"
       },
       "whatsappCloud": {
-        "name": "WhatsApp Business API (Cloud)",
+        "name": "WhatsApp Business API (nuvem)",
         "description": "API oficial do WhatsApp com integração direta"
       },
       "evolution": {
@@ -198,7 +198,7 @@
       },
       "twilio": {
         "name": "Twilio",
-        "description": "Twilio WhatsApp Business API"
+        "description": "WhatsApp Business API pela Twilio"
       },
       "twilioSms": {
         "name": "Twilio SMS",
@@ -251,6 +251,59 @@
       "connectDescription": "Conecte a oferecer suporte a seus clientes pelo {{channelName}}",
       "apiProvider": "Provedor de API",
       "facebookIntegrationDescription": "Conecte sua conta do Facebook para preencher automaticamente as informações do WhatsApp Business"
+    },
+    "forms": {
+      "telegramForm": {
+        "backButton": "Voltar",
+        "commands": {
+          "description": "Comandos que o bot reconhece na conversa:",
+          "list": "/start — inicia a conversa\n/help — mostra a ajuda\n/stop — encerra o atendimento",
+          "title": "Comandos do bot"
+        },
+        "createButton": "Criar canal do Telegram",
+        "creating": "Criando canal...",
+        "description": "Conecte um bot do Telegram para atender por lá.",
+        "errors": {
+          "createError": "Não foi possível criar o canal do Telegram"
+        },
+        "fields": {
+          "basicInfo": "Informações básicas",
+          "botConfiguration": "Configuração do bot",
+          "botToken": {
+            "helpText": "O token que o BotFather envia quando o bot é criado",
+            "label": "Token do bot",
+            "placeholder": "123456789:ABC-DEF..."
+          },
+          "name": {
+            "label": "Nome do canal",
+            "placeholder": "Ex.: Atendimento no Telegram"
+          }
+        },
+        "instructions": {
+          "step1": "Abra o Telegram e procure por @BotFather",
+          "step2": "Envie o comando /newbot",
+          "step3": "Escolha um nome e um usuário para o bot",
+          "step4": "Copie o token que o BotFather enviar",
+          "step5": "Cole o token no campo acima",
+          "step6": "Clique em criar canal — pronto",
+          "title": "Como conseguir o token"
+        },
+        "success": {
+          "created": "Canal do Telegram criado"
+        },
+        "title": "Telegram",
+        "validation": {
+          "botTokenFormat": "O token não está no formato esperado",
+          "botTokenRequired": "Informe o token do bot",
+          "fillAllFields": "Preencha todos os campos",
+          "nameRequired": "Informe o nome do canal"
+        },
+        "webhook": {
+          "description": "O endereço abaixo é registrado automaticamente no Telegram para receber as mensagens.",
+          "note": "Não é preciso configurar nada no Telegram: o sistema faz isso ao criar o canal.",
+          "title": "Recebimento de mensagens"
+        }
+      }
     }
   },
   "settings": {
@@ -279,6 +332,29 @@
         "loginCancelled": "Login cancelado",
         "pageNotFound": "Página não encontrada",
         "emailRequired": "Email é obrigatório para reconexão"
+      },
+      "facebook": {
+        "button": "Conectar com o Facebook",
+        "description": "A autorização do Facebook venceu ou nunca foi concedida. Sem ela, este canal para de receber e enviar mensagens.",
+        "title": "Autorização do Facebook pendente"
+      },
+      "google": {
+        "button": "Conectar com o Google",
+        "description": "A autorização do Google venceu ou nunca foi concedida. Sem ela, este canal para de receber e enviar mensagens.",
+        "title": "Autorização do Google pendente"
+      },
+      "instagram": {
+        "duplicate": {
+          "description": "Esta conta do Instagram já está conectada em outro canal. Manter as duas ativas faz a mesma mensagem chegar duas vezes.",
+          "detailsButton": "Ver detalhes",
+          "resolveButton": "Resolver",
+          "title": "Esta conta já está conectada em outro canal"
+        }
+      },
+      "microsoft": {
+        "button": "Conectar com a Microsoft",
+        "description": "A autorização da Microsoft venceu ou nunca foi concedida. Sem ela, este canal para de receber e enviar mensagens.",
+        "title": "Autorização da Microsoft pendente"
       }
     },
     "breadcrumb": {
@@ -505,6 +581,9 @@
       "disabled": {
         "title": "Horário de Funcionamento Desabilitado",
         "description": "O horário de funcionamento está desabilitado. Todas as mensagens serão processadas normalmente."
+      },
+      "errors": {
+        "updateError": "Não foi possível salvar o horário de atendimento"
       }
     },
     "businessDay": {
@@ -512,14 +591,17 @@
       "twentyFourHours": "24 horas",
       "enableDay": "Habilitar {{day}}",
       "open24Hours": "Aberto 24 horas",
-      "startPlaceholder": "Início"
+      "startPlaceholder": "Início",
+      "endPlaceholder": "Fim",
+      "timeError": "O horário de término precisa ser depois do de início"
     },
     "csat": {
       "title": "Pesquisa de Satisfação (CSAT)",
       "description": "Configure pesquisas de satisfação para coletar feedback dos clientes",
       "displayType": {
         "label": "Tipo de Exibição",
-        "help": "Como a pesquisa será apresentada ao cliente"
+        "help": "Como a pesquisa será apresentada ao cliente",
+        "starLabel": "Estrelas"
       },
       "message": {
         "label": "Mensagem da Pesquisa",
@@ -789,7 +871,8 @@
         "htmlPreview": "Visualização HTML",
         "htmlPreviewDescription": "Este template foi criado com HTML. Você pode editá-lo visualmente no editor abaixo.",
         "startVisualEdit": "Começar Edição Visual"
-      }
+      },
+      "newTemplate": "Novo modelo de mensagem"
     },
     "configuration": {
       "api": {
@@ -1088,7 +1171,7 @@
           "authentication": "Autenticação",
           "authOptions": {
             "login": "Login",
-            "plain": "Plain",
+            "plain": "Simples",
             "cramMd5": "CRAM-MD5"
           },
           "enableStarttls": "Habilitar STARTTLS"
@@ -1179,6 +1262,13 @@
           "title": "Avatar do Agente de IA",
           "description": "Exibir avatar do agente de IA nas mensagens automáticas"
         }
+      },
+      "language": {
+        "helpText": "Idioma em que o chat aparece para quem visita o site",
+        "label": "Idioma do chat",
+        "options": {
+          "accountDefault": "Usar o idioma da conta"
+        }
       }
     },
     "senderSettings": {
@@ -1203,6 +1293,10 @@
         "label": "Nome da Empresa",
         "placeholder": "Digite o nome da sua empresa",
         "save": "Salvar"
+      },
+      "errors": {
+        "saveBusinessNameError": "Não foi possível salvar o nome da empresa",
+        "updateSenderTypeError": "Não foi possível alterar quem assina as mensagens"
       }
     },
     "widgetHelpers": {
@@ -1251,7 +1345,7 @@
         "number": "Número",
         "url": "URL",
         "date": "Data",
-        "checkbox": "Checkbox",
+        "checkbox": "Caixa de seleção",
         "select": "Seleção",
         "textarea": "Área de texto"
       },
@@ -1268,7 +1362,7 @@
         "type": "Tipo",
         "required": "Obrigatório",
         "label": "Rótulo",
-        "placeholder": "Placeholder"
+        "placeholder": "Texto de exemplo"
       },
       "emptyState": "Nenhum campo configurado",
       "instructions": {
@@ -1286,7 +1380,7 @@
           "description": "Texto que será exibido como label do campo"
         },
         "placeholder": {
-          "title": "Placeholder",
+          "title": "Texto de exemplo",
           "description": "Texto de exemplo que aparece no campo vazio"
         }
       },
@@ -1365,10 +1459,16 @@
       },
       "footer": {
         "teamOnline": "Equipe Online",
-        "startConversation": "Iniciar Conversa"
+        "startConversation": "Iniciar Conversa",
+        "messagePlaceholder": "Escreva sua mensagem...",
+        "teamOffline": "Estamos fora do horário de atendimento. Deixe sua mensagem que respondemos assim que voltarmos."
       },
       "container": {
         "poweredBy": "Desenvolvido por"
+      },
+      "body": {
+        "agentMessage": "Olá! Como posso ajudar?",
+        "userMessage": "Oi, gostaria de mais informações"
       }
     },
     "timestamp": {
@@ -1441,6 +1541,67 @@
       "success": {
         "channelCreated": "Canal criado com sucesso"
       }
+    },
+    "moderation": {
+      "actions": {
+        "approve": "Aprovar",
+        "blockUser": "Bloquear pessoa",
+        "deleteComment": "Excluir comentário",
+        "regenerate": "Gerar outra resposta",
+        "reject": "Recusar",
+        "sendResponse": "Enviar resposta"
+      },
+      "approvedBy": "Aprovado por {{name}} em {{date}}",
+      "commentId": "ID do comentário",
+      "conversation": "Conversa",
+      "description": "Revise e modere os comentários do Facebook que precisam de aprovação",
+      "empty": {
+        "description": "Nenhuma moderação corresponde aos filtros escolhidos.",
+        "title": "Nenhuma moderação encontrada"
+      },
+      "errors": {
+        "approveError": "Erro ao aprovar a moderação",
+        "loadError": "Erro ao carregar as moderações",
+        "regenerateError": "Erro ao gerar outra resposta",
+        "rejectError": "Erro ao recusar a moderação"
+      },
+      "filters": {
+        "all": "Todas",
+        "allTypes": "Todos os tipos",
+        "approved": "Aprovadas",
+        "pending": "Pendentes",
+        "rejected": "Recusadas",
+        "status": "Situação",
+        "type": "Tipo"
+      },
+      "generatedResponse": "Resposta gerada",
+      "originalComment": "Comentário original",
+      "pagination": {
+        "next": "Próxima",
+        "page": "Página {{current}} de {{total}}",
+        "previous": "Anterior"
+      },
+      "rejectedBy": "Recusado por {{name}} em {{date}}",
+      "rejectionReason": "Motivo da recusa",
+      "rejectionReasonLabel": "Motivo da recusa (opcional)",
+      "rejectionReasonPlaceholder": "Escreva o motivo da recusa...",
+      "status": {
+        "approved": "Aprovada",
+        "pending": "Pendente",
+        "rejected": "Recusada"
+      },
+      "success": {
+        "approved": "Moderação aprovada",
+        "regenerated": "Nova resposta gerada",
+        "rejected": "Moderação recusada"
+      },
+      "title": "Moderação de comentários",
+      "totalCount": "Total: {{count}}",
+      "types": {
+        "explicitWords": "Palavras impróprias",
+        "offensiveSentiment": "Tom ofensivo",
+        "responseApproval": "Aprovação de resposta"
+      }
     }
   },
   "deleteDialog": {
@@ -1451,5 +1612,23 @@
     "cancel": "Cancelar",
     "confirm": "Excluir Canal",
     "deleting": "Excluindo..."
+  },
+  "preChatForm": {
+    "message": "Mensagem",
+    "messagePlaceholder": "Escreva sua mensagem...",
+    "provideDetails": "Preencha os dados abaixo para começar",
+    "selectOption": "Escolha uma opção",
+    "startConversation": "Iniciar conversa",
+    "starting": "Iniciando...",
+    "validation": {
+      "invalidDate": "Data inválida",
+      "invalidEmail": "E-mail inválido",
+      "invalidFormat": "Formato inválido",
+      "invalidNumber": "Número inválido",
+      "invalidPhone": "Telefone inválido",
+      "invalidUrl": "Endereço inválido",
+      "messageRequired": "Escreva uma mensagem",
+      "required": "Campo obrigatório"
+    }
   }
 }

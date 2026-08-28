@@ -11,7 +11,7 @@
     "completedPipelines": "Pipelines Completados"
   },
   "viewMode": {
-    "cards": "Cards",
+    "cards": "Cartões",
     "table": "Tabela"
   },
   "empty": {
@@ -262,7 +262,14 @@
     },
     "cancel": "Cancelar",
     "deleting": "Deletando...",
-    "delete": "Deletar Etapa"
+    "delete": "Deletar Etapa",
+    "deletionWill": {
+      "removeConversations": "Tirar do pipeline as conversas que estão nesta etapa",
+      "removeStage": "Excluir a etapa em definitivo",
+      "reorderStages": "Reordenar as etapas que sobrarem"
+    },
+    "deletionWillLabel": "Ao excluir, o sistema vai:",
+    "importantLabel": "Atenção"
   },
   "duplicatePipeline": {
     "title": "Duplicar Pipeline",
@@ -280,7 +287,16 @@
     "noConversations": "As conversas não serão copiadas. O novo pipeline iniciará vazio.",
     "cancel": "Cancelar",
     "duplicating": "Duplicando...",
-    "duplicate": "Duplicar Pipeline"
+    "duplicate": "Duplicar Pipeline",
+    "copied": {
+      "settings": "As configurações do pipeline",
+      "stages": "Todas as etapas, na mesma ordem",
+      "structure": "A estrutura completa"
+    },
+    "copySuffix": "(cópia)",
+    "noteLabel": "Observação",
+    "noteMessage": "Os cards não são copiados — a cópia nasce vazia, só com a estrutura.",
+    "whatWillBeCopied": "O que vai ser copiado:"
   },
   "editItem": {
     "title": "Editar Lead no Pipeline",
@@ -511,7 +527,7 @@
     "contact": "Contato:",
     "id": "ID:",
     "status": "Status:",
-    "inbox": "Inbox:",
+    "inbox": "Caixa de entrada:",
     "note": "O lead será apenas removido do pipeline, mas continuará existindo no sistema.",
     "cancel": "Cancelar",
     "removing": "Removendo...",
@@ -526,7 +542,7 @@
     "contact": "Contato:",
     "id": "ID:",
     "status": "Status:",
-    "inbox": "Inbox:",
+    "inbox": "Caixa de entrada:",
     "note": "O lead será apenas removido do pipeline, mas continuará existindo no sistema.",
     "cancel": "Cancelar",
     "removing": "Removendo...",
@@ -581,7 +597,8 @@
       "call": "Ligar",
       "schedule": "Agendar",
       "whatsapp": "WhatsApp",
-      "openChat": "Abrir conversa"
+      "openChat": "Abrir conversa",
+      "arrivedAt": "Chegou em"
     },
     "conversation": {
       "unknownUser": "Usuário Desconhecido",
@@ -595,7 +612,9 @@
         "unknown": "Desconhecido"
       },
       "valueLabel": "Valor Total:",
-      "system": "Sistema"
+      "system": "Sistema",
+      "incoming": "Recebida",
+      "outgoing": "Enviada"
     },
     "messages": {
       "itemMoved": "Lead movido com sucesso",
@@ -620,7 +639,8 @@
       "conversationRemoved": "Lead removido do pipeline com sucesso",
       "conversationRemoveError": "Erro ao remover lead do pipeline",
       "conversationUpdated": "Lead atualizado com sucesso",
-      "conversationUpdateError": "Erro ao atualizar lead"
+      "conversationUpdateError": "Erro ao atualizar lead",
+      "notInPipeline": "Este contato ainda não está em nenhum pipeline"
     },
     "tasks": {
       "pending": "pendentes",
@@ -660,7 +680,8 @@
       "pending": "Pendente",
       "completed": "Concluída",
       "cancelled": "Cancelada",
-      "overdue": "Atrasada"
+      "overdue": "Atrasada",
+      "dueSoon": "Vence em breve"
     },
     "dueDates": {
       "today": "Hoje",
@@ -735,8 +756,11 @@
       "moveSuccess": "Tarefa movida com sucesso",
       "moveError": "Erro ao mover tarefa",
       "addSubtaskSuccess": "Subtarefa adicionada com sucesso",
-      "addSubtaskError": "Erro ao adicionar subtarefa"
-    }
+      "addSubtaskError": "Erro ao adicionar subtarefa",
+      "deleteWithSubtasksConfirm": "Esta tarefa tem subtarefas. Excluir apaga todas elas junto. Confirma?"
+    },
+    "delete": "Excluir",
+    "edit": "Editar"
   },
   "dialog": {
     "deletePipeline": {

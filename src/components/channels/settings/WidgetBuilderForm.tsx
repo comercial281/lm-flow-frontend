@@ -469,7 +469,7 @@ export default function WidgetBuilderForm({ inboxId, inbox, onUpdate }: WidgetBu
                       </h5>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">SDK Bubble</span>
+                      <span className="text-xs font-medium text-muted-foreground">Balão pelo SDK</span>
                       <Button
                         type="button"
                         variant="outline"
@@ -505,15 +505,15 @@ export default function WidgetBuilderForm({ inboxId, inbox, onUpdate }: WidgetBu
                         size="sm"
                         onClick={async () => {
                           if (!widgetIframeEmbed) {
-                            toast.error('No iframe embed available to copy');
+                            toast.error('Nenhum código de incorporação disponível para copiar');
                             return;
                           }
                           try {
                             await navigator.clipboard.writeText(widgetIframeEmbed);
-                            toast.success('Iframe code copied to clipboard!');
+                            toast.success('Código de incorporação copiado!');
                           } catch (error) {
                             console.error('Failed to copy iframe code:', error);
-                            toast.error('Failed to copy iframe code');
+                            toast.error('Não foi possível copiar o código de incorporação');
                           }
                         }}
                         disabled={!widgetIframeEmbed}

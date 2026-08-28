@@ -171,12 +171,12 @@ export default function ViewTokenModal({
             </div>
           </div>
 
-          {/* API Usage Example */}
+          {/* Exemplo de uso da API */}
           <div className="space-y-4 p-4 bg-muted rounded-lg">
-            <h4 className="font-medium">API Usage Example</h4>
+            <h4 className="font-medium">Exemplo de uso da API</h4>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">cURL Example</label>
+              <label className="text-sm font-medium">Exemplo com cURL</label>
               <div className="flex gap-2">
                 <Input
                   value={`curl -H "api_access_token: ${token.token}" https://api.example.com/v1/endpoint`}

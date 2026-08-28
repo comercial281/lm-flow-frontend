@@ -20,9 +20,9 @@
     "title": "Detalhes da Ferramenta",
     "sections": {
       "basicInfo": "Informações Básicas",
-      "tags": "Tags",
+      "tags": "Etiquetas",
       "examples": "Exemplos",
-      "headers": "Headers HTTP",
+      "headers": "Cabeçalhos HTTP",
       "inputOutput": "Modos de Entrada e Saída"
     },
     "fields": {
@@ -30,7 +30,7 @@
       "description": "Descrição",
       "method": "Método HTTP",
       "createdAt": "Criado em",
-      "endpoint": "Endpoint",
+      "endpoint": "Endereço da API",
       "inputModes": "Modos de Entrada",
       "outputModes": "Modos de Saída",
       "notSpecified": "Não especificado"
@@ -54,7 +54,7 @@
     "sections": {
       "basicInfo": "Informações Básicas",
       "httpConfig": "Configuração HTTP",
-      "tags": "Tags",
+      "tags": "Etiquetas",
       "examples": "Exemplos"
     },
     "fields": {
@@ -73,12 +73,12 @@
         "required": true
       },
       "endpoint": {
-        "label": "Endpoint",
+        "label": "Endereço da API",
         "placeholder": "https://api.example.com/endpoint",
         "required": true
       },
       "headers": {
-        "label": "Headers HTTP (JSON)",
+        "label": "Cabeçalhos HTTP (JSON)",
         "placeholder": "{\"Authorization\": \"Bearer token\", \"Content-Type\": \"application/json\"}",
         "hint": "Configure os headers HTTP necessários para autenticação e comunicação"
       },
@@ -108,7 +108,7 @@
         "hint": "Configure as configurações de tratamento de erros: timeout (segundos), retry_count e fallback_response"
       },
       "tags": {
-        "label": "Tags",
+        "label": "Etiquetas",
         "placeholder": "api, http, webhook",
         "hint": "Separe as tags com vírgulas para organizar e categorizar a ferramenta"
       },
@@ -156,8 +156,8 @@
     "columns": {
       "tool": "Ferramenta",
       "description": "Descrição",
-      "endpoint": "Endpoint",
-      "tags": "Tags",
+      "endpoint": "Endereço da API",
+      "tags": "Etiquetas",
       "createdAt": "Criado em",
       "test": "Teste"
     },

@@ -156,7 +156,7 @@ export default function GoogleCallback() {
 
         {/* Footer */}
         <div className="text-center text-xs text-muted-foreground">
-          <p>Gmail Integration</p>
+          <p>Integração com o Gmail</p>
         </div>
       </div>
     </div>

@@ -16,8 +16,8 @@
       "description": "Descrição"
     },
     "tags": {
-      "title": "Tags",
-      "count": "Tags ({{count}})",
+      "title": "Etiquetas",
+      "count": "Etiquetas ({{count}})",
       "empty": "Nenhuma tag disponível"
     },
     "modes": {
@@ -51,7 +51,7 @@
   "table": {
     "columns": {
       "tool": "Ferramenta",
-      "tags": "Tags",
+      "tags": "Etiquetas",
       "examples": "Exemplos",
       "input": "Entrada",
       "output": "Saída"

@@ -268,7 +268,7 @@ export const OAuthLogin: React.FC = () => {
                       <strong>OAuth URL:</strong> {new URL(oauthUrl).origin}
                     </p>
                     <p>
-                      <strong>Client ID:</strong>{' '}
+                      <strong>ID do cliente:</strong>{' '}
                       {new URLSearchParams(new URL(oauthUrl).search)
                         .get('client_id')
                         ?.substring(0, 8)}
@@ -278,7 +278,7 @@ export const OAuthLogin: React.FC = () => {
                 ) : returnTo ? (
                   <>
                     <p>
-                      <strong>Return URL:</strong> {new URL(returnTo).origin}
+                      <strong>Endereço de retorno:</strong> {new URL(returnTo).origin}
                     </p>
                     <p>
                       <strong>Client ID:</strong>{' '}

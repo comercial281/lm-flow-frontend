@@ -72,8 +72,8 @@
   },
   "types": {
     "llm": "LLM",
-    "a2a": "Agent-to-Agent",
-    "workflow": "Workflow",
+    "a2a": "Agente para agente",
+    "workflow": "Fluxo de trabalho",
     "task": "Tarefa"
   },
   "actions": {

@@ -51,8 +51,8 @@ const McpServers = () => {
         setServers(data);
       } catch (error) {
         console.error('Erro ao carregar servidores MCP:', error);
-        setError(t('mcpServers.messages.loadError'));
-        toast.error(t('mcpServers.messages.loadError'));
+        setError(t('messages.loadError'));
+        toast.error(t('messages.loadError'));
       } finally {
         setIsLoading(false);
       }

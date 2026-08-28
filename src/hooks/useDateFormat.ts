@@ -31,22 +31,16 @@ export function useDateFormat() {
   const { currentLanguage } = useLanguage();
 
   /**
-   * Mapeia o locale do i18n para o locale do Intl.DateTimeFormat
+   * Locale usado pelo Intl.DateTimeFormat.
+   *
+   * O sistema passou a ter um idioma só (pt-BR), então isto deixou de ser um
+   * mapa de vários idiomas. Fica como constante em vez de literal espalhado
+   * pelo arquivo: se um dia voltar a ter mais de um idioma, o ponto de troca
+   * é aqui e só aqui.
    */
   const getLocale = useMemo((): string => {
-    switch (currentLanguage) {
-      case 'pt-BR':
-      case 'pt':
-        return 'pt-BR';
-      case 'es':
-        return 'es-ES';
-      case 'fr':
-        return 'fr-FR';
-      case 'it':
-        return 'it-IT';
-      default:
-        return 'en-US';
-    }
+    void currentLanguage;
+    return 'pt-BR';
   }, [currentLanguage]);
 
   /**

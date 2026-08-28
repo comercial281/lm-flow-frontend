@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/sync-feature-catalog.mjs && node scripts/audit-feature-catalog.mjs && tsc -b && vite build",
+    "build": "node scripts/sync-feature-catalog.mjs && node scripts/audit-feature-catalog.mjs && node scripts/conferir-i18n.mjs && tsc -b && vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
     "test": "vitest run",
     "audit:features": "node scripts/audit-feature-catalog.mjs",
-    "sync:features": "node scripts/sync-feature-catalog.mjs"
+    "sync:features": "node scripts/sync-feature-catalog.mjs",
+    "conferir:i18n": "node scripts/conferir-i18n.mjs"
   },
   "dependencies": {
     "@blocknote/core": "^0.51.4",

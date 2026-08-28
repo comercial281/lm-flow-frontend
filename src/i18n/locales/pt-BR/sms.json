@@ -31,12 +31,12 @@
       "description": "Configure API Key como alternativa ao Auth Token",
       "useApiKey": "Usar API Key (ao invés de Auth Token)",
       "apiKeySid": {
-        "label": "API Key SID",
+        "label": "SID da chave de API",
         "placeholder": "SK...",
         "helpText": "Chave da API gerada no Twilio"
       },
       "apiKeySecret": {
-        "label": "API Key Secret",
+        "label": "Segredo da chave de API",
         "placeholder": "...",
         "helpText": "Secreto da API Key"
       }
@@ -53,14 +53,27 @@
         "helpText": "Gerado automaticamente do nome de exibição"
       },
       "accountSid": {
-        "label": "Account SID",
+        "label": "SID da conta",
         "placeholder": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
         "helpText": "Seu Account SID do Twilio"
       },
       "authToken": {
-        "label": "Auth Token",
+        "label": "Token de autenticação",
         "placeholder": "Auth Token do Twilio",
         "helpText": "Chave da API gerada no Twilio"
+      },
+      "advancedAuth": {
+        "apiKeySid": {
+          "placeholder": "SK..."
+        }
+      },
+      "phoneConfig": {
+        "messagingServiceSid": {
+          "helpText": "Use quando o envio for por um serviço de mensagens, em vez de um número fixo"
+        }
+      },
+      "phoneNumber": {
+        "helpText": "O número comprado na Twilio, com código do país"
       }
     },
     "phoneConfig": {
@@ -68,7 +81,7 @@
       "description": "Configure o número ou serviço de mensagens",
       "useMessagingService": "Usar Messaging Service",
       "messagingServiceSid": {
-        "label": "Messaging Service SID",
+        "label": "SID do serviço de mensagens",
         "placeholder": "MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
         "helpText": "Se você usa Messaging Service no Twilio"
       }
@@ -76,7 +89,7 @@
     "bandwidth": {
       "displayName": {
         "label": "Nome de Exibição",
-        "placeholder": "SMS Bandwidth",
+        "placeholder": "SMS pela Bandwidth",
         "helpText": "Nome amigável para identificação"
       },
       "channelName": {
@@ -94,15 +107,15 @@
         "placeholder": "API Token do Bandwidth"
       },
       "apiSecret": {
-        "label": "API Secret",
+        "label": "Segredo da API",
         "placeholder": "API Secret do Bandwidth"
       },
       "applicationId": {
-        "label": "Application ID",
+        "label": "ID do aplicativo",
         "placeholder": "Application ID do Bandwidth"
       },
       "accountId": {
-        "label": "Account ID",
+        "label": "ID da conta",
         "placeholder": "Account ID do Bandwidth"
       },
       "info": {
@@ -111,6 +124,11 @@
         "applicationIdInfo": "ID da aplicação configurada no Bandwidth",
         "accountIdInfo": "ID da conta no Bandwidth"
       }
+    },
+    "name": {
+      "label": "Nome do canal",
+      "placeholder": "SMS {{provider}}",
+      "required": "True"
     }
   },
   "providers": {

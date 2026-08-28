@@ -48,7 +48,7 @@ const availableProviders = [
   { value: 'perplexity', label: 'Perplexity' },
   { value: 'bedrock', label: 'AWS Bedrock' },
   { value: 'vertex_ai', label: 'Google Vertex AI' },
-  { value: CUSTOM_OPENAI_PROVIDER, label: 'Custom (OpenAI-compatible)' },
+  { value: CUSTOM_OPENAI_PROVIDER, label: 'Personalizado (compatível com OpenAI)' },
 ];
 
 export function ApiKeysModal({ open, onOpenChange, onApiKeysChange }: ApiKeysModalProps) {

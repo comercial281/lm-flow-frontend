@@ -6,11 +6,6 @@ import {
   Alert,
   AlertTitle,
   AlertDescription,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { login, register, forgotPassword } from '@/services/auth';
@@ -25,10 +20,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, Globe, ArrowRight, ChevronLeft, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, ArrowRight, ChevronLeft, Eye, EyeOff } from 'lucide-react';
 
 import { ApiError } from '@/types/auth';
-import { type Locale } from '@/i18n/config';
 import { useGlobalConfig } from '@/contexts/GlobalConfigContext';
 import { AppLogo } from '@/components/AppLogo';
 import FlowBackground from './FlowBackground';
@@ -127,7 +121,7 @@ export const Auth: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { executeRecaptcha } = useRecaptcha({ autoLoad: false });
-  const { t, currentLanguage, changeLanguage } = useLanguage('auth');
+  const { t } = useLanguage('auth');
   const globalConfig = useGlobalConfig();
 
   const enableAccountSignup = globalConfig.enableAccountSignup === true;
@@ -295,23 +289,6 @@ export const Auth: React.FC = () => {
         className="flex-1 flex flex-col min-h-screen relative"
         style={{ background: 'rgba(15,5,32,0.92)', borderLeft: '1px solid rgba(124,58,237,0.12)' }}
       >
-        {/* Language picker */}
-        <div className="absolute top-5 right-5 z-20">
-          <Select value={currentLanguage} onValueChange={v => changeLanguage(v as Locale)}>
-            <SelectTrigger className="h-8 gap-1.5 border-0 bg-white/5 text-white/60 text-xs hover:bg-white/10">
-              <Globe className="h-3.5 w-3.5" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pt-BR">{t('language.selector.portuguese')}</SelectItem>
-              <SelectItem value="en">{t('language.selector.english')}</SelectItem>
-              <SelectItem value="es">{t('language.selector.spanish')}</SelectItem>
-              <SelectItem value="fr">{t('language.selector.french')}</SelectItem>
-              <SelectItem value="it">{t('language.selector.italian')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Mobile logo */}
         <div className="lg:hidden pt-10 px-8">
           <AppLogo className="h-7" />

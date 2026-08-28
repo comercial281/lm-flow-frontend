@@ -103,6 +103,11 @@
       "manageUsers": "Gerenciar Usuários",
       "edit": "Editar",
       "delete": "Deletar"
+    },
+    "empty": {
+      "action": "Criar equipe",
+      "description": "Equipes agrupam pessoas para distribuir e acompanhar o atendimento.",
+      "title": "Nenhuma equipe criada"
     }
   },
   "messages": {
@@ -140,7 +145,7 @@
     "summary": "{{selected}} de {{total}} usuários selecionados",
     "table": {
       "select": "Selecionar",
-      "user": "Usuário", 
+      "user": "Usuário",
       "email": "E-mail",
       "status": {
         "online": "Online",
@@ -169,7 +174,7 @@
     "bulkDelete": {
       "title": "Deletar Equipes",
       "description": "Tem certeza que deseja deletar {{count}} equipes selecionadas? Esta ação não pode ser desfeita.",
-      "cancel": "Cancelar", 
+      "cancel": "Cancelar",
       "confirm": "Deletar Todas",
       "deleting": "Deletando..."
     }

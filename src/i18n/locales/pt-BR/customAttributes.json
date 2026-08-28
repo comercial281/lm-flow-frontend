@@ -84,12 +84,13 @@
       },
       "attributeKey": {
         "label": "Chave do atributo",
-        "placeholder": "Ex: customer_priority",
+        "placeholder": "Ex.: prioridade_do_cliente",
         "required": true,
         "hint": "A chave será usada para identificar este atributo na API. Use apenas letras minúsculas, números e sublinhados.",
         "errors": {
           "required": "Chave do atributo é obrigatória",
-          "invalid": "Chave deve conter apenas letras minúsculas, números e sublinhados"
+          "invalid": "Chave deve conter apenas letras minúsculas, números e sublinhados",
+          "duplicate": "Já existe um campo com esta chave"
         }
       },
       "description": {
@@ -145,7 +146,7 @@
       "type": "Tipo",
       "description": "Descrição",
       "values": "Valores",
-      "regex": "Regex",
+      "regex": "Expressão regular",
       "createdAt": "Criado em",
       "actions": "Ações",
       "model": {
@@ -254,7 +255,13 @@
     "deleteSuccess": "Atributo personalizado deletado com sucesso",
     "deleteError": "Erro ao deletar atributo personalizado",
     "bulkDeleteSuccess": "{{count}} atributo(s) personalizado(s) deletado(s) com sucesso",
-    "bulkDeleteError": "Erro ao deletar atributos personalizados"
+    "bulkDeleteError": "Erro ao deletar atributos personalizados",
+    "permissionDenied": {
+      "create": "Você não tem permissão para criar campos",
+      "delete": "Você não tem permissão para excluir campos",
+      "read": "Você não tem permissão para ver campos",
+      "update": "Você não tem permissão para editar campos"
+    }
   },
   "dialog": {
     "delete": {

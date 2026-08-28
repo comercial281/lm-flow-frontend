@@ -22,7 +22,7 @@
     },
     "item": {
       "someTimeAgo": "Há algum tempo",
-      "noAssignee": "NA",
+      "noAssignee": "Sem responsável",
       "noContent": "Sem conteúdo",
       "markAsRead": "Marcar como lido",
       "open": "Abrir"
@@ -106,5 +106,8 @@
       "integrations": "Integrações",
       "accessTokens": "Tokens de Acesso"
     }
+  },
+  "common": {
+    "loading": "Carregando..."
   }
 }

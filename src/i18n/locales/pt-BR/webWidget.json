@@ -19,7 +19,7 @@
     "displayNamePlaceholder": "WhatsApp Atendimento",
     "channelName": "Nome do Canal",
     "channelNamePlaceholder": "whatsapp-atendimento",
-    "websiteUrl": "Website URL",
+    "websiteUrl": "Endereço do site",
     "websiteUrlPlaceholder": "https://meusite.com",
     "widgetColor": "Cor do Widget",
     "welcomeTitle": "Título de Boas-vindas",
@@ -56,7 +56,7 @@
       "expanded": "Expandido"
     },
     "viewOptions": {
-      "preview": "Preview",
+      "preview": "Prévia",
       "script": "Código"
     },
     "replyTime": {

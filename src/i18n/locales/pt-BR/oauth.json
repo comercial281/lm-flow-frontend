@@ -104,5 +104,106 @@
     "common": {
       "error": "Erro"
     }
+  },
+  "authorize": {
+    "appInfo": {
+      "description": "Descrição",
+      "name": "Aplicativo",
+      "redirectUri": "Endereço de retorno",
+      "requestedScope": "Permissões pedidas",
+      "user": "Conta"
+    },
+    "buttons": {
+      "authorize": "Autorizar",
+      "authorizing": "Autorizando...",
+      "deny": "Recusar",
+      "goToLogin": "Ir para o login"
+    },
+    "descriptions": {
+      "invalidParams": "O pedido de autorização veio incompleto ou com dados inválidos.",
+      "needLogin": "Entre na sua conta para autorizar este aplicativo.",
+      "requestingAccess": "Este aplicativo está pedindo acesso à sua conta."
+    },
+    "errors": {
+      "authorizationFailed": "Não foi possível concluir a autorização",
+      "missingParams": "Faltam dados no pedido de autorização",
+      "missingParamsOrAuth": "Faltam dados no pedido, ou você não está autenticado",
+      "userDenied": "Autorização recusada"
+    },
+    "footer": {
+      "disclaimer": "Ao autorizar, este aplicativo passa a acessar sua conta dentro das permissões acima.",
+      "revoke": "Você pode revogar o acesso a qualquer momento nas configurações."
+    },
+    "titles": {
+      "authorizeApp": "Autorizar aplicativo",
+      "invalidRequest": "Pedido inválido",
+      "loginRequired": "É preciso entrar"
+    }
+  },
+  "callback": {
+    "errors": {
+      "invalidCallback": "O retorno da autorização veio inválido",
+      "oauthError": "Erro na autorização",
+      "title": "Não deu certo"
+    },
+    "footer": {
+      "canClose": "Você já pode fechar esta janela."
+    },
+    "loading": {
+      "processing": "Concluindo a autorização..."
+    },
+    "success": {
+      "message": "Autorização concluída. Volte para o sistema para continuar.",
+      "title": "Tudo certo"
+    },
+    "title": "Autorização"
+  },
+  "common": {
+    "error": "Erro"
+  },
+  "login": {
+    "accounts": {
+      "available": "Contas disponíveis"
+    },
+    "applicationDetails": {
+      "clientId": "ID do cliente",
+      "redirectUri": "Endereço de retorno",
+      "scope": "Permissões",
+      "title": "Detalhes do aplicativo"
+    },
+    "buttons": {
+      "continueToAuthorization": "Continuar",
+      "loginToAuthorize": "Entrar para autorizar",
+      "redirecting": "Redirecionando..."
+    },
+    "descriptions": {
+      "loginRequired": "Entre na sua conta para continuar a autorização.",
+      "redirecting": "Levando você para a tela de autorização...",
+      "selectAccount": "Escolha com qual conta deseja autorizar."
+    },
+    "errors": {
+      "failedToCreateApp": "Não foi possível registrar o aplicativo",
+      "failedToLoadAccounts": "Não foi possível carregar as contas",
+      "failedToRedirect": "Não foi possível redirecionar",
+      "missingOAuthParams": "Faltam dados de autorização no endereço",
+      "missingOAuthUrl": "Falta o endereço de autorização",
+      "missingOAuthUrlDirect": "Falta o endereço de autorização direta",
+      "missingParameters": "Faltam dados obrigatórios",
+      "missingUrlForAuth": "Falta o endereço para autenticar",
+      "noAccounts": "Nenhuma conta disponível para autorizar"
+    },
+    "footer": {
+      "disclaimer": "Ao continuar, este aplicativo passa a acessar sua conta dentro das permissões acima.",
+      "revoke": "Você pode revogar o acesso a qualquer momento nas configurações."
+    },
+    "loading": {
+      "processingAuthorization": "Processando a autorização...",
+      "redirectingToAuthorization": "Levando você para a autorização..."
+    },
+    "titles": {
+      "loginRequired": "É preciso entrar",
+      "redirecting": "Redirecionando",
+      "selectAccount": "Escolha a conta"
+    }
   }
 }

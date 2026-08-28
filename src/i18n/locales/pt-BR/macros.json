@@ -107,7 +107,14 @@
     "bulkDeleteSuccess": "{{count}} macro(s) deletada(s) com sucesso",
     "bulkDeleteError": "Erro ao deletar macros",
     "executeSuccess": "Macro \"{{name}}\" executada com sucesso",
-    "executeError": "Erro ao executar macro"
+    "executeError": "Erro ao executar macro",
+    "permissionDenied": {
+      "create": "Você não tem permissão para criar macros",
+      "delete": "Você não tem permissão para excluir macros",
+      "execute": "Você não tem permissão para executar macros",
+      "read": "Você não tem permissão para ver macros",
+      "update": "Você não tem permissão para editar macros"
+    }
   },
   "dialog": {
     "delete": {

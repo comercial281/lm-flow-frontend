@@ -9,7 +9,8 @@
       "downloadStarted": "Download iniciado",
       "audioFallback": "Áudio",
       "playbackError": "Erro ao reproduzir áudio",
-      "playbackErrorDescription": "Não foi possível reproduzir este arquivo de áudio"
+      "playbackErrorDescription": "Não foi possível reproduzir este arquivo de áudio",
+      "transcription": "Transcrição"
     },
     "messageBubble": {
       "contextMenu": {
@@ -249,11 +250,17 @@
       "whatsappMessage": "Você só pode responder a esta conversa usando um modelo de mensagem devido a",
       "cannotReply": "Você não pode responder porque",
       "linkText": "Restrições de janela de mensagem de 24 horas",
-      "zapiDisconnected": "WhatsApp desconectado. Conecte o número para enviar mensagens."
+      "zapiDisconnected": "WhatsApp desconectado. Conecte o número para enviar mensagens.",
+      "whatsappDisconnected": "O WhatsApp deste canal está desconectado. As mensagens não serão entregues até reconectar."
     },
     "errors": {
       "loadMessages": "Erro ao carregar mensagens",
       "tryAgain": "Tentar novamente"
+    },
+    "messageInput": {
+      "defaultPlaceholder": "Escreva uma mensagem...",
+      "pendingPlaceholder": "Aguardando o canal conectar...",
+      "restrictedPlaceholder": "Você não tem permissão para responder nesta conversa"
     }
   },
   "chatHeader": {
@@ -274,12 +281,17 @@
       "assignTag": "Atribuir etiqueta",
       "unassignAgent": "Desvincular corretor",
       "unassignTeam": "Desvincular equipe",
-      "deleteConversation": "Deletar conversa"
+      "deleteConversation": "Deletar conversa",
+      "archiveConversation": "Arquivar conversa",
+      "pinConversation": "Fixar conversa",
+      "unarchiveConversation": "Desarquivar conversa",
+      "unpinConversation": "Desafixar conversa"
     },
     "contactNoName": "Contato sem nome",
     "status": "Status:",
     "openConversation": "Abrir Conversa",
-    "closeConversation": "Fechar conversa"
+    "closeConversation": "Fechar conversa",
+    "openContactInfo": "Ver dados do contato"
   },
   "chatSidebar": {
     "searchPlaceholder": "Buscar conversas...",
@@ -346,6 +358,14 @@
         "channel": "Canal:",
         "assigned": "Atribuído:",
         "assignedTo": "Atendente #{{id}}"
+      },
+      "contactAttributes": {
+        "description": "Campos personalizados, editáveis",
+        "title": "Campos do contato"
+      },
+      "conversationAttributes": {
+        "description": "Campos personalizados, editáveis",
+        "title": "Campos da conversa"
       }
     },
     "contactHeader": {
@@ -522,8 +542,8 @@
     "channelDiagnostic": {
       "title": "Diagnóstico de Canal",
       "description": "As mensagens estão falhando, possivelmente devido à configuração do canal.",
-      "inboxId": "Inbox ID:",
-      "accountId": "Account ID:",
+      "inboxId": "ID da caixa de entrada:",
+      "accountId": "ID da conta:",
       "possibleSolutions": "Possíveis Soluções:",
       "solutions": {
         "checkChannel": "Verificar se o canal WhatsApp/Telegram está configurado",
@@ -533,6 +553,20 @@
       },
       "settings": "Configurações",
       "close": "Fechar"
+    },
+    "conversationAttributes": {
+      "no": "Não",
+      "noAttributes": "Nenhum campo de conversa configurado",
+      "updateError": "Erro ao salvar os campos da conversa",
+      "updateSuccess": "Campos da conversa salvos",
+      "yes": "Sim"
+    },
+    "customAttributes": {
+      "no": "Não",
+      "noAttributes": "Nenhum campo personalizado configurado",
+      "updateError": "Erro ao salvar os campos",
+      "updateSuccess": "Campos salvos",
+      "yes": "Sim"
     }
   },
   "replyModeToggle": {
@@ -556,7 +590,13 @@
         "markAsPending": "Erro ao marcar como pendente",
         "assignAgent": "Erro ao atribuir atendente",
         "assignTeam": "Erro ao atribuir time",
-        "assignLabels": "Erro ao atribuir etiquetas"
+        "assignLabels": "Erro ao atribuir etiquetas",
+        "archiveConversation": "Erro ao arquivar a conversa",
+        "archiveNotSupported": "Arquivar não está disponível",
+        "archiveNotSupportedDescription": "O servidor ainda não oferece o arquivamento de conversas.",
+        "pinConversation": "Erro ao fixar a conversa",
+        "pinNotSupported": "Fixar não está disponível",
+        "pinNotSupportedDescription": "O servidor ainda não oferece a fixação de conversas."
       },
       "success": {
         "statusChanged": "Status alterado para: {{status}}",
@@ -570,7 +610,11 @@
         "agentRemoved": "Atendente removido com sucesso",
         "teamAssigned": "Time atribuído com sucesso",
         "teamRemoved": "Time removido com sucesso",
-        "labelsAssigned": "Etiquetas atribuídas com sucesso"
+        "labelsAssigned": "Etiquetas atribuídas com sucesso",
+        "archived": "Conversa arquivada",
+        "pinned": "Conversa fixada",
+        "unarchived": "Conversa desarquivada",
+        "unpinned": "Conversa desafixada"
       },
       "statusNames": {
         "open": "Aberta",
@@ -641,7 +685,7 @@
         "text": "texto",
         "audio": "áudio",
         "video": "vídeo",
-        "word": "Word"
+        "word": "Documento do Word"
       },
       "errors": {
         "fileTooLarge": "Arquivo muito grande",
@@ -805,7 +849,12 @@
     "assignAgent": "Atribuir atendente",
     "assignTeam": "Atribuir time",
     "assignTag": "Atribuir etiqueta",
-    "deleteConversation": "Excluir conversa"
+    "deleteConversation": "Excluir conversa",
+    "archiveConversation": "Arquivar conversa",
+    "management": "Gerenciar",
+    "pinConversation": "Fixar conversa",
+    "unarchiveConversation": "Desarquivar conversa",
+    "unpinConversation": "Desafixar conversa"
   },
   "conversationBadges": {
     "priority": {
@@ -904,5 +953,80 @@
       "contactsEmpty": "Nenhum contato encontrado",
       "messagesEmpty": "Nenhuma mensagem encontrada"
     }
+  },
+  "channelDiagnostic": {
+    "close": "Fechar",
+    "description": "Esta conversa está ligada a um canal que não está respondendo. Enquanto isso, as mensagens não entram nem saem.",
+    "inboxId": "ID da caixa de entrada:",
+    "possibleSolutions": "O que costuma resolver:",
+    "settings": "Abrir configurações do canal",
+    "solutions": {
+      "checkChannel": "Conferir se o canal ainda está conectado",
+      "checkWebhooks": "Conferir se o recebimento de mensagens está configurado",
+      "confirmCredentials": "Conferir se as credenciais continuam válidas",
+      "testConnectivity": "Testar a conexão com o provedor"
+    },
+    "title": "Problema no canal desta conversa"
+  },
+  "filters": {
+    "assignee": {
+      "options": {
+        "all": {
+          "description": "Todas as conversas, de qualquer responsável",
+          "label": "Todas"
+        },
+        "me": {
+          "description": "Só as conversas atribuídas a você",
+          "label": "Minhas"
+        },
+        "unassigned": {
+          "description": "Conversas que ainda não têm responsável",
+          "label": "Sem responsável"
+        }
+      },
+      "showAll": "Ver todas",
+      "title": "Responsável"
+    },
+    "inbox": {
+      "options": {
+        "all": "Todos os canais",
+        "email": "E-mail",
+        "telegram": "Telegram",
+        "website": "Chat do site",
+        "whatsapp": "WhatsApp"
+      },
+      "showAll": "Ver todos",
+      "title": "Canal"
+    },
+    "status": {
+      "clearFilters": "Limpar filtros",
+      "options": {
+        "all": "Todas",
+        "open": "Abertas",
+        "pending": "Pendentes",
+        "resolved": "Resolvidas",
+        "snoozed": "Adiadas"
+      },
+      "title": "Situação"
+    }
+  },
+  "richTextEditor": {
+    "toolbar": {
+      "bold": "Negrito",
+      "bulletList": "Lista",
+      "code": "Código",
+      "italic": "Itálico",
+      "redo": "Refazer",
+      "undo": "Desfazer"
+    }
+  },
+  "typingIndicator": {
+    "multiple": "{{count}} pessoas estão digitando...",
+    "single": "{{name}} está digitando...",
+    "two": "{{first}} e {{second}} estão digitando..."
+  },
+  "webSocketStatus": {
+    "connected": "Conectado",
+    "reconnecting": "Reconectando..."
   }
 }

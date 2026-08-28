@@ -65,10 +65,10 @@ const TAX_ID_CONFIG: Record<string, {
   // Default: no mask (free text)
   DEFAULT: {
     person: {
-      placeholder: 'Tax ID / SSN',
+      placeholder: 'Documento de identificação',
     },
     company: {
-      placeholder: 'Tax ID / EIN',
+      placeholder: 'Documento da empresa',
     },
   },
 };
