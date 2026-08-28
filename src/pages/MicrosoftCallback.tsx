@@ -156,7 +156,7 @@ export default function MicrosoftCallback() {
 
         {/* Footer */}
         <div className="text-center text-xs text-muted-foreground">
-          <p>Outlook Integration</p>
+          <p>Integração com o Outlook</p>
         </div>
       </div>
     </div>

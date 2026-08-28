@@ -249,7 +249,7 @@ export default function PropertyInterests() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <th className="font-medium px-4 py-3 w-20">Match</th>
+                    <th className="font-medium px-4 py-3 w-20">Aderência</th>
                     <th className="font-medium px-4 py-3">Lead</th>
                     <th className="font-medium px-4 py-3">Imóvel</th>
                     <th className="font-medium px-4 py-3">Estágio</th>
@@ -263,7 +263,7 @@ export default function PropertyInterests() {
                         <div className={`text-xl font-bold leading-none ${SCORE_COLOR(interest.match_score)}`}>
                           {interest.match_score}
                         </div>
-                        <div className="text-[11px] text-muted-foreground">match</div>
+                        <div className="text-[11px] text-muted-foreground">aderência</div>
                       </td>
                       <td className="px-4 py-3">
                         {interest.contact ? (

@@ -26,8 +26,8 @@
     "sequential": "Agente Sequencial",
     "parallel": "Agente Paralelo",
     "loop": "Agente Loop",
-    "workflow": "Workflow",
-    "task": "Task",
+    "workflow": "Fluxo de trabalho",
+    "task": "Tarefa",
     "external": "Integração Externa"
   },
   "agentTypeDescriptions": {
@@ -37,11 +37,11 @@
     "sequentialDescription": "Executa agentes em sequência",
     "parallel": "Paralelo",
     "parallelDescription": "Executa agentes simultaneamente",
-    "loop": "Loop",
+    "loop": "Repetição",
     "loopDescription": "Executa agentes em loop",
-    "workflow": "Workflow",
+    "workflow": "Fluxo de trabalho",
     "workflowDescription": "Fluxo de trabalho personalizado",
-    "task": "Task",
+    "task": "Tarefa",
     "taskDescription": "Agente para tarefas específicas",
     "external": "Integração Externa",
     "externalDescription": "Agente que integra com providers externos (Flowise, N8N, Typebot, Dify, OpenAI)",
@@ -60,12 +60,12 @@
     "goalPlaceholder": "Descreva o objetivo principal deste agente",
     "types": {
       "llm": "LLM (Modelo de Linguagem)",
-      "a2a": "Agent-to-Agent",
-      "workflow": "Workflow",
+      "a2a": "Agente para agente",
+      "workflow": "Fluxo de trabalho",
       "task": "Tarefa",
       "sequential": "Sequencial",
       "parallel": "Paralelo",
-      "loop": "Loop",
+      "loop": "Repetição",
       "external": "Integração Externa",
       "externalDescription": "Agente que integra com providers externos"
     }
@@ -96,7 +96,7 @@
     "outputKeyDescription": "Identificador único usado para referenciar este agente em workflows",
     "temperature": "Temperatura",
     "maxTokens": "Tokens Máximos",
-    "topP": "Top P",
+    "topP": "Top P (diversidade)",
     "frequencyPenalty": "Penalidade de Frequência",
     "presencePenalty": "Penalidade de Presença"
   },
@@ -226,7 +226,7 @@
       "createDescription": "Crie ferramentas HTTP personalizadas para integrar APIs externas",
       "defaultDescription": "Ferramenta HTTP personalizada",
       "name": "Nome",
-      "endpoint": "Endpoint",
+      "endpoint": "Endereço da API",
       "method": "Método",
       "actions": "Ações"
     },
@@ -277,8 +277,8 @@
     "schemaType": "Tipo de Schema",
     "types": {
       "object": "Objeto",
-      "array": "Array",
-      "string": "String",
+      "array": "Lista",
+      "string": "Texto",
       "number": "Número",
       "boolean": "Booleano"
     },
@@ -344,7 +344,7 @@
     "types": {
       "conversation": "Conversação",
       "summary": "Resumo",
-      "buffer": "Buffer",
+      "buffer": "Memória contínua",
       "windowBuffer": "Buffer com Janela"
     },
     "maxMessages": "Máximo de Mensagens",
@@ -410,10 +410,10 @@
       "namePlaceholder": "Ex: Servidor de Dados",
       "description": "Descrição",
       "descriptionPlaceholder": "Descreva o servidor MCP",
-      "endpoint": "Endpoint",
+      "endpoint": "Endereço da API",
       "endpointPlaceholder": "https://api.exemplo.com/mcp",
       "searchPlaceholder": "Buscar por nome, descrição, URL ou tags...",
-      "timeout": "timeout",
+      "timeout": "tempo limite",
       "retries": "tentativas",
       "more": "mais",
       "createFirst": "Crie seu primeiro servidor MCP personalizado",
@@ -454,7 +454,7 @@
       "configureDescription": "Configure as opções da ferramenta {{name}}",
       "name": "Nome da Ferramenta",
       "description": "Descrição",
-      "endpoint": "Endpoint",
+      "endpoint": "Endereço da API",
       "method": "Método HTTP",
       "headers": "Cabeçalhos",
       "addHeader": "Adicionar Cabeçalho",
@@ -629,7 +629,7 @@
           "providerSelector": {
             "title": "Provider de Integração",
             "subtitle": "Selecione o provider externo que este agente utilizará",
-            "label": "Provider",
+            "label": "Provedor",
             "placeholder": "Selecione um provider",
             "providers": {
               "flowise": {
@@ -666,32 +666,32 @@
             },
             "dify": {
               "apiUrl": "URL da API *",
-              "apiKey": "API Key *",
+              "apiKey": "Chave de API *",
               "botType": "Tipo de Bot",
               "botTypes": {
                 "chatBot": "Chat Bot",
-                "textGenerator": "Text Generator",
+                "textGenerator": "Gerador de texto",
                 "agent": "Agente"
               }
             },
             "openai": {
-              "apiKey": "API Key *",
+              "apiKey": "Chave de API *",
               "botType": "Tipo de Bot",
               "botTypes": {
-                "assistant": "Assistant API",
-                "chatCompletion": "Chat Completion API"
+                "assistant": "API de assistente",
+                "chatCompletion": "API de conversa"
               },
-              "assistantId": "Assistant ID *",
-              "model": "Model *",
-              "maxTokens": "Max Tokens"
+              "assistantId": "ID do assistente *",
+              "model": "Modelo *",
+              "maxTokens": "Máximo de tokens"
             },
             "typebot": {
               "url": "URL *",
               "typebotId": "ID do Typebot *",
               "apiVersion": "Versão da API",
               "apiVersions": {
-                "latest": "Latest",
-                "legacy": "Legacy"
+                "latest": "Mais recente",
+                "legacy": "Antiga"
               }
             }
           },
@@ -745,7 +745,10 @@
         "instructionsPlaceholder": "Quando o cliente quiser falar sobre tal assunto...",
         "addRule": "Adicionar regra de transferência",
         "modalTitle": "Regras de Transferência",
-        "modalDescription": "Configure quando e como o agente deve transferir conversas para humanos ou times."
+        "modalDescription": "Configure quando e como o agente deve transferir conversas para humanos ou times.",
+        "anAgent": "Agente",
+        "selectAgent": "Escolha o agente:",
+        "selectAgentPlaceholder": "Escolha um agente"
       },
       "pipelineRules": {
         "description": "Configure instruções para o agente manipular pipelines e atribuir conversas a estágios específicos.",
@@ -802,7 +805,7 @@
     "knowledge": {
       "title": "Configuração de Knowledge Base",
       "subtitle": "Selecione qual knowledge base este agente utilizará para buscar conhecimento",
-      "selectConfig": "Knowledge Base",
+      "selectConfig": "Base de conhecimento",
       "configDescription": "Se nenhuma configuração for selecionada, o agente usará a configuração padrão ativa da conta.",
       "selectedConfig": "Configuração selecionada",
       "useDefault": "Usar configuração padrão da conta",
@@ -850,7 +853,7 @@
       "elevenlabs": {
         "description": "Com ElevenLabs você da a capacidade do seu agente responder seus clientes em áudio, tornando ainda mais humanizado.",
         "configTitle": "Configurar ElevenLabs",
-        "apiKey": "API Key",
+        "apiKey": "Chave de API",
         "apiKeyPlaceholder": "Insira sua API Key do ElevenLabs",
         "whenToRespond": "Quando responder em áudio:",
         "whenToRespondDescription": "Defina em quais momentos o agente vai mandar em áudio a resposta.",
@@ -992,21 +995,21 @@
         "disconnect": "Desconectar"
       },
       "github": {
-        "description": "Com GitHub seu agente será capaz de acessar repositórios, issues, pull requests e outras informações do GitHub.",
-        "configTitle": "Configurar GitHub",
-        "connectTitle": "Conectar com GitHub",
-        "connectDescription": "Conecte sua conta GitHub para permitir que o agente acesse repositórios e informações de código",
-        "connectButton": "Conectar com GitHub",
-        "connecting": "Conectando...",
+        "description": "Integre seu agente com GitHub para acessar repositórios e informações de código.",
+        "configTitle": "Configurar o GitHub",
+        "connectButton": "Conectar com o GitHub",
+        "connectDescription": "Conecte sua conta do GitHub para o agente acessar repositórios e informações de código",
+        "connectTitle": "Conectar com o GitHub",
         "connected": "Conectado",
         "connectedAs": "Conectado como",
-        "connectedDescription": "Sua conta GitHub está conectada e o agente pode acessar seus repositórios.",
-        "toolsTitle": "Ferramentas Disponíveis",
-        "toolsDescription": "Selecione quais ferramentas do GitHub o agente poderá usar",
-        "selectAll": "Selecionar todas",
+        "connectedDescription": "Sua conta do GitHub está conectada e o agente pode acessar seus repositórios.",
+        "connecting": "Conectando...",
+        "disconnect": "Desconectar",
         "noTools": "Nenhuma ferramenta disponível",
         "saveConfig": "SALVAR CONFIGURAÇÕES",
-        "disconnect": "Desconectar"
+        "selectAll": "Selecionar tudo",
+        "toolsDescription": "Escolha quais ferramentas do GitHub o agente pode usar",
+        "toolsTitle": "Ferramentas disponíveis"
       },
       "gmail": {
         "description": "Conecte seu agente ao Gmail para enviar e receber emails automaticamente."
@@ -1150,9 +1153,6 @@
         "saveConfig": "SALVAR CONFIGURAÇÕES",
         "disconnect": "Desconectar"
       },
-      "github": {
-        "description": "Integre seu agente com GitHub para acessar repositórios e informações de código."
-      },
       "canva": {
         "description": "Com Canva seu agente será capaz de criar e editar designs, apresentações e materiais visuais.",
         "configTitle": "Configurar Canva",
@@ -1245,7 +1245,7 @@
       "model": "Modelo",
       "subAgents": "Sub-agentes",
       "taskConfig": "Configuração",
-      "provider": "Provider",
+      "provider": "Provedor",
       "configuration": "Configuração",
       "completed": "Concluído"
     },
@@ -1272,15 +1272,15 @@
           "description": "Automação de tarefas específicas"
         },
         "sequential": {
-          "label": "Sequential",
+          "label": "Em sequência",
           "description": "Executa agentes em sequência"
         },
         "parallel": {
-          "label": "Parallel",
+          "label": "Em paralelo",
           "description": "Executa agentes em paralelo"
         },
         "loop": {
-          "label": "Loop",
+          "label": "Repetição",
           "description": "Executa agentes em loop"
         },
         "external": {
@@ -1326,7 +1326,7 @@
         "contentPlaceholder": "Clique para expandir e editar",
         "expectedOutput": "Saída Esperada",
         "expectedOutputLabel": "Saída Esperada",
-        "expectedOutputPlaceholder": "Ex: report_data, analysis_result",
+        "expectedOutputPlaceholder": "Ex.: dados_do_relatorio, resultado_da_analise",
         "enabledTools": "Ferramentas Habilitadas",
         "selectedTools": "Ferramentas Selecionadas",
         "configureTools": "Configurar Ferramentas",
@@ -1411,19 +1411,24 @@
       "buttons": {
         "cancel": "Cancelar",
         "generate": "Gerar Prompt",
-        "generating": "Gerando..."
+        "generating": "Gerando...",
+        "review": "Revisar instruções",
+        "reviewing": "Revisando..."
       },
       "messages": {
         "accountIdNotFound": "ID da conta não encontrado",
         "fillAtLeastOne": "Preencha pelo menos um campo para gerar o prompt",
         "success": "Prompt gerado com sucesso!",
-        "error": "Erro ao gerar prompt"
+        "error": "Erro ao gerar prompt",
+        "fillPromptToReview": "Escreva as instruções antes de revisar",
+        "reviewError": "Erro ao revisar as instruções",
+        "reviewSuccess": "Instruções revisadas com sucesso!"
       }
     },
     "step6": {
       "title": "Modelo de IA",
       "subtitle": "Escolha qual inteligência artificial vai alimentar seu agente",
-      "apiKeyLabel": "API Key",
+      "apiKeyLabel": "Chave de API",
       "apiKeyDescription": "Chave de autenticação - filtra os modelos disponíveis",
       "apiKeyPlaceholder": "Selecione uma API key",
       "manageButton": "Gerenciar",
@@ -1493,9 +1498,6 @@
     },
     "notion": {
       "description": "Acesse e atualize páginas, databases e blocos do Notion."
-    },
-    "stripe": {
-      "description": "Gerencie pagamentos, assinaturas e informações de clientes no Stripe."
     },
     "stripe": {
       "description": "Gerencie pagamentos, assinaturas e informações de clientes no Stripe."

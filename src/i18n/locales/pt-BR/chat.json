@@ -9,7 +9,8 @@
       "downloadStarted": "Download iniciado",
       "audioFallback": "Áudio",
       "playbackError": "Erro ao reproduzir áudio",
-      "playbackErrorDescription": "Não foi possível reproduzir este arquivo de áudio"
+      "playbackErrorDescription": "Não foi possível reproduzir este arquivo de áudio",
+      "transcription": "Transcrição"
     },
     "messageBubble": {
       "contextMenu": {
@@ -274,7 +275,11 @@
       "assignTag": "Atribuir etiqueta",
       "unassignAgent": "Desvincular corretor",
       "unassignTeam": "Desvincular equipe",
-      "deleteConversation": "Deletar conversa"
+      "deleteConversation": "Deletar conversa",
+      "archiveConversation": "Arquivar conversa",
+      "pinConversation": "Fixar conversa",
+      "unarchiveConversation": "Desarquivar conversa",
+      "unpinConversation": "Desafixar conversa"
     },
     "contactNoName": "Contato sem nome",
     "status": "Status:",
@@ -346,6 +351,14 @@
         "channel": "Canal:",
         "assigned": "Atribuído:",
         "assignedTo": "Atendente #{{id}}"
+      },
+      "contactAttributes": {
+        "description": "Campos personalizados, editáveis",
+        "title": "Campos do contato"
+      },
+      "conversationAttributes": {
+        "description": "Campos personalizados, editáveis",
+        "title": "Campos da conversa"
       }
     },
     "contactHeader": {
@@ -522,8 +535,8 @@
     "channelDiagnostic": {
       "title": "Diagnóstico de Canal",
       "description": "As mensagens estão falhando, possivelmente devido à configuração do canal.",
-      "inboxId": "Inbox ID:",
-      "accountId": "Account ID:",
+      "inboxId": "ID da caixa de entrada:",
+      "accountId": "ID da conta:",
       "possibleSolutions": "Possíveis Soluções:",
       "solutions": {
         "checkChannel": "Verificar se o canal WhatsApp/Telegram está configurado",
@@ -533,6 +546,20 @@
       },
       "settings": "Configurações",
       "close": "Fechar"
+    },
+    "conversationAttributes": {
+      "no": "Não",
+      "noAttributes": "Nenhum campo de conversa configurado",
+      "updateError": "Erro ao salvar os campos da conversa",
+      "updateSuccess": "Campos da conversa salvos",
+      "yes": "Sim"
+    },
+    "customAttributes": {
+      "no": "Não",
+      "noAttributes": "Nenhum campo personalizado configurado",
+      "updateError": "Erro ao salvar os campos",
+      "updateSuccess": "Campos salvos",
+      "yes": "Sim"
     }
   },
   "replyModeToggle": {
@@ -556,7 +583,13 @@
         "markAsPending": "Erro ao marcar como pendente",
         "assignAgent": "Erro ao atribuir atendente",
         "assignTeam": "Erro ao atribuir time",
-        "assignLabels": "Erro ao atribuir etiquetas"
+        "assignLabels": "Erro ao atribuir etiquetas",
+        "archiveConversation": "Erro ao arquivar a conversa",
+        "archiveNotSupported": "Arquivar não está disponível",
+        "archiveNotSupportedDescription": "O servidor ainda não oferece o arquivamento de conversas.",
+        "pinConversation": "Erro ao fixar a conversa",
+        "pinNotSupported": "Fixar não está disponível",
+        "pinNotSupportedDescription": "O servidor ainda não oferece a fixação de conversas."
       },
       "success": {
         "statusChanged": "Status alterado para: {{status}}",
@@ -570,7 +603,11 @@
         "agentRemoved": "Atendente removido com sucesso",
         "teamAssigned": "Time atribuído com sucesso",
         "teamRemoved": "Time removido com sucesso",
-        "labelsAssigned": "Etiquetas atribuídas com sucesso"
+        "labelsAssigned": "Etiquetas atribuídas com sucesso",
+        "archived": "Conversa arquivada",
+        "pinned": "Conversa fixada",
+        "unarchived": "Conversa desarquivada",
+        "unpinned": "Conversa desafixada"
       },
       "statusNames": {
         "open": "Aberta",
@@ -641,7 +678,7 @@
         "text": "texto",
         "audio": "áudio",
         "video": "vídeo",
-        "word": "Word"
+        "word": "Documento do Word"
       },
       "errors": {
         "fileTooLarge": "Arquivo muito grande",
@@ -805,7 +842,12 @@
     "assignAgent": "Atribuir atendente",
     "assignTeam": "Atribuir time",
     "assignTag": "Atribuir etiqueta",
-    "deleteConversation": "Excluir conversa"
+    "deleteConversation": "Excluir conversa",
+    "archiveConversation": "Arquivar conversa",
+    "management": "Gerenciar",
+    "pinConversation": "Fixar conversa",
+    "unarchiveConversation": "Desarquivar conversa",
+    "unpinConversation": "Desafixar conversa"
   },
   "conversationBadges": {
     "priority": {

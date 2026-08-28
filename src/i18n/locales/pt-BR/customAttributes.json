@@ -84,7 +84,7 @@
       },
       "attributeKey": {
         "label": "Chave do atributo",
-        "placeholder": "Ex: customer_priority",
+        "placeholder": "Ex.: prioridade_do_cliente",
         "required": true,
         "hint": "A chave será usada para identificar este atributo na API. Use apenas letras minúsculas, números e sublinhados.",
         "errors": {
@@ -145,7 +145,7 @@
       "type": "Tipo",
       "description": "Descrição",
       "values": "Valores",
-      "regex": "Regex",
+      "regex": "Expressão regular",
       "createdAt": "Criado em",
       "actions": "Ações",
       "model": {

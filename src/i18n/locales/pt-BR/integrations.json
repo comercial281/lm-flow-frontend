@@ -34,7 +34,7 @@
       "description": "Configure a integração com Google Dialogflow"
     },
     "googleTranslate": {
-      "name": "Google Translate",
+      "name": "Google Tradutor",
       "description": "Configure a integração com Google Translate"
     },
     "hubspot": {
@@ -65,6 +65,10 @@
     "paypal": {
       "name": "PayPal",
       "description": "Integre com PayPal para gerenciar pagamentos, transações e informações de clientes"
+    },
+    "canva": {
+      "description": "Crie e edite designs, apresentações e materiais visuais com o Canva",
+      "name": "Canva"
     }
   },
   "messages": {
@@ -112,7 +116,7 @@
   },
   "connection": {
     "account": "Conta:",
-    "workspace": "Workspace:",
+    "workspace": "Espaço de trabalho:",
     "lastSync": "Última sincronização:",
     "permissions": "Permissões:",
     "permissionsConfigured": "{{count}} configuradas",
@@ -232,7 +236,7 @@
       "title": "Configuração",
       "edit": "Editar",
       "remove": "Remover",
-      "apiKey": "API Key",
+      "apiKey": "Chave de API",
       "notConfigured": "Não configurada",
       "contactSync": "Sincronizar Contatos",
       "labelSync": "Sincronizar Etiquetas",
@@ -265,9 +269,9 @@
       "deleteSuccess": "Integração BMS removida com sucesso",
       "deleteError": "Erro ao remover integração BMS"
     },
-    "name": "BMS Email Provider",
+    "name": "BMS (provedor de e-mail)",
     "description": "Provider de email transacional via BMS API",
-    "apiKey": "BMS API Key",
+    "apiKey": "Chave de API do BMS",
     "ipPool": "BMS IP Pool (Opcional)",
     "senderEmail": "Email do Remetente",
     "ipPoolDescription": "Pool de IPs para envio de emails. Padrão: evoapicloud",
@@ -307,14 +311,14 @@
           "label": "Tipo de Exibição",
           "conversation": "Conversa",
           "conversationDescription": "Aparece na área de conversa",
-          "sidebar": "Sidebar",
+          "sidebar": "Barra lateral",
           "sidebarDescription": "Aparece na barra lateral"
         },
         "sidebarMenu": {
           "label": "Menu da Sidebar",
           "conversations": "Conversas",
           "contacts": "Contatos",
-          "pipelines": "Pipelines",
+          "pipelines": "Funis",
           "automation": "Automação",
           "agents": "Agentes",
           "channels": "Canais",
@@ -347,7 +351,7 @@
         "createdAt": "Criado em"
       },
       "displayType": {
-        "sidebar": "Sidebar",
+        "sidebar": "Barra lateral",
         "conversation": "Conversa"
       },
       "position": {
@@ -395,6 +399,17 @@
       "createError": "Erro ao criar aplicação do dashboard",
       "updateSuccess": "Aplicação do dashboard atualizada com sucesso",
       "updateError": "Erro ao atualizar aplicação do dashboard"
+    },
+    "page": {
+      "error": {
+        "description": "O aplicativo pedido não foi encontrado, ou você não tem permissão para acessá-lo.",
+        "goBack": "Voltar",
+        "heading": "Não foi possível abrir o aplicativo",
+        "invalidUrl": "Endereço inválido",
+        "notFound": "Aplicativo não encontrado",
+        "title": "Erro"
+      },
+      "poweredBy": "Fornecido por"
     }
   },
   "googleTranslate": {
@@ -406,7 +421,7 @@
       "translationOptions": "Opções de Tradução",
       "fields": {
         "projectId": {
-          "label": "Google Cloud Project ID",
+          "label": "ID do projeto no Google Cloud",
           "placeholder": "Insira o ID do seu projeto Google Cloud",
           "hint": "ID do projeto Google Cloud com API Translate habilitada",
           "required": "Project ID é obrigatório"
@@ -459,17 +474,17 @@
       "activitySettings": "Configurações de Atividades",
       "fields": {
         "accessKey": {
-          "label": "Access Key",
+          "label": "Chave de acesso",
           "placeholder": "Insira seu Access Key",
           "required": "Access Key é obrigatória"
         },
         "secretKey": {
-          "label": "Secret Key",
+          "label": "Chave secreta",
           "placeholder": "Insira seu Secret Key",
           "required": "Secret Key é obrigatória"
         },
         "endpointUrl": {
-          "label": "Endpoint URL",
+          "label": "Endereço da API",
           "placeholder": "https://api.leadsquared.com"
         },
         "appUrl": {
@@ -477,7 +492,7 @@
           "placeholder": "https://app.leadsquared.com"
         },
         "timezone": {
-          "label": "Timezone",
+          "label": "Fuso horário",
           "placeholder": "Selecione o timezone"
         },
         "conversationActivity": {
@@ -537,7 +552,7 @@
           "invalid": "URI de redirecionamento inválida"
         },
         "scopes": {
-          "label": "Scopes",
+          "label": "Escopos",
           "placeholder": "read:conversations write:messages",
           "hint": "Permissões separadas por espaço. Ex: read:conversations write:messages",
           "required": "Pelo menos um scope é obrigatório"
@@ -563,8 +578,8 @@
     "table": {
       "columns": {
         "application": "Aplicação",
-        "clientId": "Client ID",
-        "scopes": "Scopes",
+        "clientId": "ID do cliente",
+        "scopes": "Escopos",
         "status": "Status",
         "createdAt": "Criado em"
       },
@@ -588,8 +603,8 @@
     },
     "credentials": {
       "title": "Credenciais",
-      "clientId": "Client ID",
-      "clientSecret": "Client Secret"
+      "clientId": "ID do cliente",
+      "clientSecret": "Chave secreta do cliente"
     },
     "deleteDialog": {
       "title": "Deletar Aplicação OAuth",
@@ -636,6 +651,11 @@
           "hint": "Digite sua chave da API do OpenAI para configurar a integração",
           "required": "API Key é obrigatória",
           "invalid": "API Key deve começar com \"sk-\""
+        },
+        "enableAudioTranscription": {
+          "description": "Transcreve automaticamente os áudios recebidos usando a API Whisper da OpenAI",
+          "hint": "Quando estiver ligado, todo áudio recebido é transcrito automaticamente e aparece junto do player",
+          "label": "Transcrever áudios automaticamente"
         }
       },
       "features": {
@@ -674,7 +694,7 @@
       },
       "configuration": {
         "title": "Configuração",
-        "apiKey": "API Key",
+        "apiKey": "Chave de API",
         "notConfigured": "Não configurada",
         "actions": {
           "edit": "Editar",
@@ -709,8 +729,8 @@
     "name": "OpenAI",
     "description": "Integração com OpenAI",
     "apiUrl": "OpenAI API URL",
-    "apiKey": "OpenAI API Key",
-    "model": "OpenAI Model",
+    "apiKey": "Chave de API da OpenAI",
+    "model": "Modelo da OpenAI",
     "customPrompts": "Prompts Personalizados",
     "customPromptsDescription": "Configure os prompts para diferentes funcionalidades do OpenAI",
     "enableAudioTranscription": "Habilitar Transcrição de Áudio",
@@ -804,8 +824,8 @@
     },
     "name": "Slack",
     "description": "Integração com Slack",
-    "clientId": "Slack Client ID",
-    "clientSecret": "Slack Client Secret",
+    "clientId": "ID do cliente do Slack",
+    "clientSecret": "Chave secreta do cliente do Slack",
     "placeholders": {
       "clientId": "Digite o Client ID do Slack",
       "clientSecret": "Digite o Client Secret do Slack"
@@ -1009,11 +1029,11 @@
     "environment": "Ambiente",
     "environments": {
       "production": "Produção",
-      "sandbox": "Sandbox"
+      "sandbox": "Ambiente de teste"
     },
     "environmentDescription": "Selecione o ambiente do PayPal. Use Sandbox para testes, Produção para transações reais.",
-    "clientId": "PayPal Client ID",
-    "clientSecret": "PayPal Client Secret",
+    "clientId": "ID do cliente do PayPal",
+    "clientSecret": "Chave secreta do cliente do PayPal",
     "clientIdDescription": "Client ID da sua aplicação OAuth do PayPal",
     "clientSecretDescription": "Client Secret da sua aplicação OAuth do PayPal",
     "redirectUriDescription": "URL do FRONTEND onde o PayPal vai redirecionar após autenticação. Configure esta URL exata no PayPal OAuth App settings."
@@ -1021,7 +1041,7 @@
   "canva": {
     "name": "Canva",
     "description": "Crie e edite designs, apresentações e materiais visuais com o Canva",
-    "redirectUri": "Redirect URI",
+    "redirectUri": "URI de redirecionamento",
     "redirectUriDescription": "URL do FRONTEND onde o Canva vai redirecionar após autenticação. Configure esta URL exata no Canva OAuth App settings.",
     "placeholders": {
       "redirectUri": "Ex: https://seu-dominio.com/canva/callback"
@@ -1060,9 +1080,9 @@
     "name": "Facebook Messenger",
     "description": "Conecte com seus clientes através do Facebook Messenger",
     "appId": "App ID",
-    "appSecret": "App Secret",
-    "verifyToken": "Webhook Verify Token",
-    "apiVersion": "Facebook API Version",
+    "appSecret": "Chave secreta do aplicativo",
+    "verifyToken": "Token de verificação do webhook",
+    "apiVersion": "Versão da API do Facebook",
     "placeholders": {
       "appId": "Digite o App ID do Facebook",
       "appSecret": "Digite o App Secret",
@@ -1074,10 +1094,10 @@
     "name": "WhatsApp",
     "description": "Integração com WhatsApp Business API",
     "appId": "WhatsApp App ID",
-    "appSecret": "App Secret",
-    "configId": "WhatsApp Config ID",
-    "verifyToken": "Webhook Verify Token",
-    "apiVersion": "WhatsApp API Version",
+    "appSecret": "Chave secreta do aplicativo",
+    "configId": "ID da configuração do WhatsApp",
+    "verifyToken": "Token de verificação do webhook",
+    "apiVersion": "Versão da API do WhatsApp",
     "placeholders": {
       "appId": "Digite o App ID do WhatsApp",
       "appSecret": "Digite o App Secret",
@@ -1090,12 +1110,12 @@
     "name": "Instagram",
     "description": "Responda mensagens diretas do Instagram",
     "appId": "Instagram App ID",
-    "appSecret": "Instagram App Secret",
-    "verifyToken": "Instagram Verify Token",
-    "apiVersion": "Instagram API Version",
+    "appSecret": "Chave secreta do aplicativo do Instagram",
+    "verifyToken": "Token de verificação do Instagram",
+    "apiVersion": "Versão da API do Instagram",
     "redirectUri": "URI de Redirecionamento",
     "redirectUriDescription": "URL do FRONTEND onde o Instagram vai redirecionar após autenticação. Configure esta URL exata nas configurações do seu App Instagram (Facebook Developer Console).",
-    "enableHumanAgent": "Enable Human Agent",
+    "enableHumanAgent": "Permitir atendimento humano",
     "enableHumanAgentDescription": "Habilita agente humano para canal Instagram para período de resposta mais longo.",
     "placeholders": {
       "appId": "ID da conta do Instagram Business",
@@ -1120,8 +1140,8 @@
     "description": "Integração com Evolution Go API",
     "apiUrl": "Evolution Go API URL",
     "adminToken": "Evolution Go Admin Token",
-    "instanceId": "Instance ID",
-    "instanceToken": "Instance Token",
+    "instanceId": "ID da instância",
+    "instanceToken": "Token da instância",
     "placeholders": {
       "apiUrl": "URL da API do Evolution Go",
       "adminToken": "Digite o Admin Token",
@@ -1132,10 +1152,10 @@
   "linear": {
     "name": "Linear",
     "description": "Crie e gerencie tickets no Linear",
-    "clientId": "Client ID",
-    "clientSecret": "Client Secret",
+    "clientId": "ID do cliente",
+    "clientSecret": "Chave secreta do cliente",
     "redirectUri": "Redirect URI (Integração Geral)",
-    "mcpRedirectUri": "Redirect URI (MCP)",
+    "mcpRedirectUri": "URI de redirecionamento (MCP)",
     "clientIdDescription": "Client ID da aplicação OAuth do Linear",
     "clientSecretDescription": "Client Secret da aplicação OAuth do Linear",
     "redirectUriDescription": "URL do FRONTEND onde o Linear vai redirecionar após autenticação para integração geral. Configure esta URL exata no Linear OAuth App settings.",
@@ -1150,8 +1170,8 @@
   "shopify": {
     "name": "Shopify",
     "description": "Integração com sua loja Shopify",
-    "clientId": "Shopify Client ID",
-    "clientSecret": "Shopify Client Secret",
+    "clientId": "ID do cliente do Shopify",
+    "clientSecret": "Chave secreta do cliente do Shopify",
     "placeholders": {
       "clientId": "Digite o Client ID da Shopify",
       "clientSecret": "Digite o Client Secret da Shopify"
@@ -1160,13 +1180,13 @@
   "googleOAuth": {
     "name": "Google OAuth (Gmail)",
     "description": "Autenticação OAuth com Google para Gmail e login",
-    "clientId": "Google Client ID",
-    "clientSecret": "Google Client Secret",
-    "callbackUrl": "Callback URL",
+    "clientId": "ID do cliente do Google",
+    "clientSecret": "Chave secreta do cliente do Google",
+    "callbackUrl": "URL de retorno",
     "callbackUrlDescription": "URL de callback configurada no Google Cloud Console",
-    "gcpProjectId": "GCP Project ID",
+    "gcpProjectId": "ID do projeto no Google Cloud",
     "gcpProjectIdDescription": "ID do Projeto do Google Cloud Platform para integração Gmail Pub/Sub",
-    "gmailPubsubTopic": "Gmail Pub/Sub Topic",
+    "gmailPubsubTopic": "Tópico Pub/Sub do Gmail",
     "gmailPubsubTopicDescription": "Nome do tópico Pub/Sub do Gmail para receber notificações de email",
     "placeholders": {
       "clientId": "Digite o Client ID do Google",
@@ -1179,9 +1199,9 @@
   "googleCalendar": {
     "name": "Google Calendar",
     "description": "Integração OAuth com Google Calendar para agentes",
-    "clientId": "Google Calendar Client ID",
-    "clientSecret": "Google Calendar Client Secret",
-    "redirectUri": "Redirect URI",
+    "clientId": "ID do cliente do Google Agenda",
+    "clientSecret": "Chave secreta do cliente do Google Agenda",
+    "redirectUri": "URI de redirecionamento",
     "clientIdDescription": "Client ID da aplicação OAuth do Google Calendar",
     "clientSecretDescription": "Client Secret da aplicação OAuth do Google Calendar",
     "redirectUriDescription": "URL do FRONTEND onde o Google vai redirecionar após autenticação do Calendar. Configure esta URL exata no Google Cloud Console.",
@@ -1194,9 +1214,9 @@
   "googleSheets": {
     "name": "Google Sheets",
     "description": "Integração OAuth com Google Sheets para agentes",
-    "clientId": "Google Sheets Client ID",
-    "clientSecret": "Google Sheets Client Secret",
-    "redirectUri": "Redirect URI",
+    "clientId": "ID do cliente do Google Planilhas",
+    "clientSecret": "Chave secreta do cliente do Google Planilhas",
+    "redirectUri": "URI de redirecionamento",
     "clientIdDescription": "Client ID da aplicação OAuth do Google Sheets",
     "clientSecretDescription": "Client Secret da aplicação OAuth do Google Sheets",
     "redirectUriDescription": "URL do FRONTEND onde o Google vai redirecionar após autenticação do Sheets. Configure esta URL exata no Google Cloud Console.",
@@ -1209,8 +1229,8 @@
   "microsoft": {
     "name": "Microsoft Azure",
     "description": "Integração com Microsoft Azure para autenticação e email",
-    "appId": "Azure App ID",
-    "appSecret": "Azure App Secret",
+    "appId": "ID do aplicativo no Azure",
+    "appSecret": "Chave secreta do aplicativo no Azure",
     "placeholders": {
       "appId": "Digite o App ID do Azure",
       "appSecret": "Digite o App Secret do Azure"
@@ -1219,10 +1239,10 @@
   "hubspot": {
     "name": "HubSpot",
     "description": "Autenticação OAuth com HubSpot para integração MCP",
-    "clientId": "HubSpot Client ID",
-    "clientSecret": "HubSpot Client Secret",
-    "redirectUri": "Redirect URI",
-    "mcpRedirectUri": "MCP Redirect URI",
+    "clientId": "ID do cliente do HubSpot",
+    "clientSecret": "Chave secreta do cliente do HubSpot",
+    "redirectUri": "URI de redirecionamento",
+    "mcpRedirectUri": "URI de redirecionamento do MCP",
     "clientIdDescription": "Client ID da sua aplicação OAuth do HubSpot",
     "clientSecretDescription": "Client Secret da sua aplicação OAuth do HubSpot",
     "redirectUriDescription": "URL do FRONTEND onde o HubSpot vai redirecionar após autenticação. Configure esta URL exata no HubSpot OAuth App settings.",
@@ -1237,9 +1257,9 @@
   "github": {
     "name": "GitHub",
     "description": "Autenticação OAuth com GitHub para integração MCP",
-    "clientId": "GitHub Client ID",
-    "clientSecret": "GitHub Client Secret",
-    "redirectUri": "Redirect URI",
+    "clientId": "ID do cliente do GitHub",
+    "clientSecret": "Chave secreta do cliente do GitHub",
+    "redirectUri": "URI de redirecionamento",
     "clientIdDescription": "Client ID da aplicação OAuth do GitHub",
     "clientSecretDescription": "Client Secret da aplicação OAuth do GitHub",
     "redirectUriDescription": "URL do FRONTEND onde o GitHub vai redirecionar após autenticação. Configure esta URL exata no GitHub OAuth App settings.",
@@ -1252,9 +1272,9 @@
   "notion": {
     "name": "Notion",
     "description": "Autenticação OAuth com Notion para integração MCP",
-    "clientId": "Notion Client ID",
-    "clientSecret": "Notion Client Secret",
-    "redirectUri": "Redirect URI",
+    "clientId": "ID do cliente do Notion",
+    "clientSecret": "Chave secreta do cliente do Notion",
+    "redirectUri": "URI de redirecionamento",
     "clientIdDescription": "Client ID da aplicação OAuth do Notion",
     "clientSecretDescription": "Client Secret da aplicação OAuth do Notion",
     "redirectUriDescription": "URL do FRONTEND onde o Notion vai redirecionar após autenticação. Configure esta URL exata no Notion OAuth App settings.",
@@ -1267,9 +1287,9 @@
   "stripe": {
     "name": "Stripe",
     "description": "Autenticação OAuth com Stripe para integração MCP",
-    "clientId": "Stripe Client ID",
-    "clientSecret": "Stripe Client Secret",
-    "redirectUri": "Redirect URI",
+    "clientId": "ID do cliente do Stripe",
+    "clientSecret": "Chave secreta do cliente do Stripe",
+    "redirectUri": "URI de redirecionamento",
     "authorizationUrl": "URL de Autorização (Modo Teste)",
     "clientIdDescription": "Client ID da aplicação OAuth do Stripe",
     "clientSecretDescription": "Client Secret da aplicação OAuth do Stripe",
@@ -1279,13 +1299,13 @@
       "clientId": "Digite o Client ID do Stripe",
       "clientSecret": "Digite o Client Secret do Stripe",
       "redirectUri": "Ex: https://seu-dominio.com/stripe/callback",
-      "authorizationUrl": "Ex: https://marketplace.stripe.com/oauth/v2/..."
+      "authorizationUrl": "Ex.: https://marketplace.stripe.com/oauth/v2/..."
     }
   },
   "monday": {
     "name": "Monday.com",
     "description": "Autenticação OAuth com Monday.com para integração MCP",
-    "redirectUri": "Redirect URI",
+    "redirectUri": "URI de redirecionamento",
     "redirectUriDescription": "URL do FRONTEND onde o Monday.com vai redirecionar após autenticação. Configure esta URL exata no Monday.com OAuth App settings.",
     "placeholders": {
       "redirectUri": "Ex: https://seu-dominio.com/monday/callback"
@@ -1294,7 +1314,7 @@
   "atlassian": {
     "name": "Atlassian",
     "description": "Autenticação OAuth com Atlassian para integração MCP",
-    "redirectUri": "Redirect URI",
+    "redirectUri": "URI de redirecionamento",
     "redirectUriDescription": "URL do FRONTEND onde o Atlassian vai redirecionar após autenticação. Configure esta URL exata no Atlassian OAuth App settings.",
     "placeholders": {
       "redirectUri": "Ex: https://seu-dominio.com/atlassian/callback"
@@ -1303,7 +1323,7 @@
   "asana": {
     "name": "Asana",
     "description": "Autenticação OAuth com Asana para integração MCP",
-    "redirectUri": "Redirect URI",
+    "redirectUri": "URI de redirecionamento",
     "redirectUriDescription": "URL do FRONTEND onde o Asana vai redirecionar após autenticação. Configure esta URL exata no Asana OAuth App settings.",
     "placeholders": {
       "redirectUri": "Ex: https://seu-dominio.com/asana/callback"
@@ -1312,14 +1332,14 @@
   "supabase": {
     "name": "Supabase",
     "description": "Autenticação OAuth com Supabase para integração MCP",
-    "redirectUri": "Redirect URI",
+    "redirectUri": "URI de redirecionamento",
     "redirectUriDescription": "URL do FRONTEND onde o Supabase vai redirecionar após autenticação. Configure esta URL exata no Supabase OAuth App settings. Nota: Supabase só precisa de redirect_uri, não requer client_id/secret. A URL de autorização e o endpoint MCP são descobertos automaticamente.",
     "placeholders": {
       "redirectUri": "Ex: https://seu-dominio.com/supabase/callback"
     }
   },
   "livechat": {
-    "name": "Live Chat",
+    "name": "Chat ao vivo",
     "description": "Widget de chat ao vivo para seu site"
   },
   "email": {

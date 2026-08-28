@@ -122,10 +122,10 @@
       "days": "dias"
     },
     "appInitializer": {
-      "initializing": "Initializing application...",
-      "initError": "Initialization Error",
-      "errorMessage": "Failed to initialize application",
-      "reload": "Reload Application"
+      "initializing": "Iniciando o sistema...",
+      "initError": "Erro ao iniciar",
+      "errorMessage": "Não foi possível iniciar o sistema",
+      "reload": "Recarregar"
     },
     "errorBoundary": {
       "title": "Ops! Algo deu errado",

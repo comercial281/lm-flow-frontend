@@ -11,7 +11,7 @@
     "completedPipelines": "Pipelines Completados"
   },
   "viewMode": {
-    "cards": "Cards",
+    "cards": "Cartões",
     "table": "Tabela"
   },
   "empty": {
@@ -511,7 +511,7 @@
     "contact": "Contato:",
     "id": "ID:",
     "status": "Status:",
-    "inbox": "Inbox:",
+    "inbox": "Caixa de entrada:",
     "note": "O lead será apenas removido do pipeline, mas continuará existindo no sistema.",
     "cancel": "Cancelar",
     "removing": "Removendo...",
@@ -526,7 +526,7 @@
     "contact": "Contato:",
     "id": "ID:",
     "status": "Status:",
-    "inbox": "Inbox:",
+    "inbox": "Caixa de entrada:",
     "note": "O lead será apenas removido do pipeline, mas continuará existindo no sistema.",
     "cancel": "Cancelar",
     "removing": "Removendo...",

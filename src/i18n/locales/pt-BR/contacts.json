@@ -35,7 +35,7 @@
       "company": "Empresa",
       "location": "Localização",
       "description": "Descrição",
-      "timeline": "Timeline",
+      "timeline": "Linha do tempo",
       "linkedCompanies": "Empresas Vinculadas",
       "linkedPersons": "Contatos Vinculados"
     },
@@ -50,7 +50,7 @@
       "createdAt": "Criado em",
       "lastActivity": "Última atividade",
       "taxId": "CPF/CNPJ",
-      "website": "Website",
+      "website": "Site",
       "industry": "Setor"
     },
     "notImplemented": {
@@ -204,7 +204,7 @@
         "assignee_last_seen_at": "Última visualização do atendente",
         "generic": "Campo \"{{field}}\" foi modificado"
       },
-      "inbox": "Inbox: {{name}}",
+      "inbox": "Caixa de entrada: {{name}}",
       "channelType": "Canal: {{type}}",
       "labelUnknown": "Etiqueta desconhecida",
       "yes": "Sim",
@@ -298,7 +298,7 @@
         "placeholderCompany": "Digite o CNPJ"
       },
       "website": {
-        "label": "Website",
+        "label": "Site",
         "placeholder": "https://exemplo.com.br"
       },
       "industry": {
@@ -404,7 +404,7 @@
     }
   },
   "viewMode": {
-    "cards": "Cards",
+    "cards": "Cartões",
     "table": "Tabela"
   },
   "empty": {
@@ -532,7 +532,7 @@
       "created_at": "Data de Criação",
       "last_activity_at": "Última Atividade",
       "type": "Tipo de Contato",
-      "labels": "Tags",
+      "labels": "Etiquetas",
       "city": "Cidade",
       "company": "Empresa"
     },
@@ -589,7 +589,7 @@
     "columns": {
       "contact": "Contato",
       "type": "Tipo",
-      "tags": "Tags",
+      "tags": "Etiquetas",
       "status": "Status",
       "pipelines": "Pipelines"
     },

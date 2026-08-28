@@ -232,7 +232,7 @@ export default function WhatsappReminders() {
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-left p-3">Nome</th>
-                <th className="text-left p-3">Trigger</th>
+                <th className="text-left p-3">Gatilho</th>
                 <th className="text-left p-3">Destino</th>
                 <th className="text-left p-3">Instância</th>
                 <th className="text-left p-3">Status</th>

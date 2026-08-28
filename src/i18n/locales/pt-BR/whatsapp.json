@@ -4,7 +4,7 @@
   "providers": {
     "badges": {
       "recommended": "Recomendado",
-      "popular": "Popular"
+      "popular": "Mais usado"
     },
     "cloud": {
       "name": "WhatsApp Cloud",
@@ -78,11 +78,11 @@
         "placeholder": "Token de acesso permanente"
       },
       "phoneNumberId": {
-        "label": "Phone Number ID",
+        "label": "ID do número de telefone",
         "placeholder": "ID do número no WhatsApp Business"
       },
       "businessAccountId": {
-        "label": "Business Account ID",
+        "label": "ID da conta comercial",
         "placeholder": "ID da conta empresarial na Meta"
       },
       "wabaId": {
@@ -133,7 +133,7 @@
         "helpText": "URL da sua instalação Evolution API"
       },
       "apiKey": {
-        "label": "API Key",
+        "label": "Chave de API",
         "placeholder": "Sua chave API",
         "helpText": "Chave de acesso à Evolution API"
       }
@@ -262,7 +262,7 @@
         "helpText": "Inclua o código do país (ex: +55 para Brasil)"
       },
       "instanceId": {
-        "label": "Instance ID",
+        "label": "ID da instância",
         "placeholder": "Seu Instance ID da Z-API"
       },
       "token": {
@@ -270,7 +270,7 @@
         "placeholder": "Seu token da Z-API"
       },
       "clientToken": {
-        "label": "Client Token",
+        "label": "Token do cliente",
         "placeholder": "Seu Client Token da Z-API",
         "helpText": "Token separado usado para autenticação em alguns endpoints da Z-API"
       }
@@ -278,7 +278,7 @@
     "help": {
       "title": "Ajuda - Z-API",
       "instanceId": {
-        "title": "Instance ID",
+        "title": "ID da instância",
         "description": "Encontre em sua conta Z-API"
       },
       "token": {
@@ -286,7 +286,7 @@
         "description": "Token de acesso da Z-API"
       },
       "clientToken": {
-        "title": "Client Token",
+        "title": "Token do cliente",
         "description": "Token separado usado para autenticação em alguns endpoints da Z-API. Configure no painel da Z-API."
       },
       "webhook": {
@@ -314,11 +314,11 @@
         "helpText": "Gerado automaticamente do nome de exibição"
       },
       "accountSid": {
-        "label": "Account SID",
+        "label": "SID da conta",
         "placeholder": "Seu Account SID do Twilio"
       },
       "authToken": {
-        "label": "Auth Token",
+        "label": "Token de autenticação",
         "placeholder": "Seu Auth Token do Twilio"
       },
       "phoneNumber": {
@@ -327,12 +327,12 @@
       },
       "useApiKey": "Usar API Key (ao invés de Auth Token)",
       "apiKeySid": {
-        "label": "API Key SID",
+        "label": "SID da chave de API",
         "placeholder": "SK..."
       },
       "useMessagingService": "Usar Messaging Service",
       "messagingServiceSid": {
-        "label": "Messaging Service SID",
+        "label": "SID do serviço de mensagens",
         "placeholder": "MG..."
       }
     },
@@ -392,7 +392,7 @@
     "help": {
       "title": "Ajuda - Evolution Go",
       "performance": {
-        "title": "Performance",
+        "title": "Desempenho",
         "description": "API moderna baseada em Go com alta performance"
       },
       "stability": {
@@ -425,18 +425,20 @@
     "fields": {
       "channelName": {
         "label": "Nome do Canal",
-        "placeholder": "Ex: whatsapp-atendimento"
+        "placeholder": "Ex: whatsapp-atendimento",
+        "helpText": "Gerado automaticamente a partir do nome de exibição"
       },
       "displayName": {
         "label": "Nome de Exibição",
-        "placeholder": "Ex: WhatsApp Atendimento"
+        "placeholder": "Ex: WhatsApp Atendimento",
+        "helpText": "Nome amigável, para você identificar o canal"
       },
       "phoneNumber": {
         "label": "Número de Telefone",
         "placeholder": "+5511999999999"
       },
       "phoneNumberId": {
-        "label": "Phone Number ID",
+        "label": "ID do número de telefone",
         "placeholder": "ID do número no WhatsApp Business"
       },
       "wabaId": {
@@ -444,11 +446,11 @@
         "placeholder": "ID da conta do WhatsApp Business"
       },
       "businessAccountId": {
-        "label": "Business Account ID",
+        "label": "ID da conta comercial",
         "placeholder": "ID da conta de negócios do Meta"
       },
       "apiKey": {
-        "label": "Access Token",
+        "label": "Token de acesso",
         "placeholder": "Token de acesso permanente"
       }
     },

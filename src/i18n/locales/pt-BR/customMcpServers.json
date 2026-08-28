@@ -8,7 +8,7 @@
   },
   "errors": {
     "accountNotFound": "Conta não encontrada",
-    "accountIdNotAvailable": "Account ID not available",
+    "accountIdNotAvailable": "ID da conta indisponível",
     "loadError": "Erro ao carregar servidores MCP personalizados",
     "applyFiltersError": "Erro ao aplicar filtros",
     "deleteError": "Erro ao deletar servidor MCP personalizado",
@@ -71,7 +71,7 @@
     "noDescription": "Sem descrição",
     "noName": "Sem nome",
     "tools": "ferramentas",
-    "timeout": "Timeout: {{timeout}}s",
+    "timeout": "Tempo limite: {{timeout}}s",
     "retries": "Tentativas: {{count}}",
     "createdAt": "Criado em {{date}}",
     "moreTools": "+{{count}}"
@@ -84,7 +84,7 @@
       "name": "Nome",
       "description": "Descrição",
       "url": "URL",
-      "timeout": "Timeout",
+      "timeout": "Tempo limite",
       "retries": "Tentativas",
       "createdAt": "Criado em"
     },
@@ -92,16 +92,16 @@
       "title": "Ferramentas ({{count}})",
       "inputModes": "Modos de Entrada:",
       "outputModes": "Modos de Saída:",
-      "tags": "Tags:",
+      "tags": "Etiquetas:",
       "noTools": "Nenhuma ferramenta descoberta",
       "noToolsDescription": "Execute um teste para descobrir as ferramentas disponíveis"
     },
     "headers": {
-      "title": "Headers HTTP",
+      "title": "Cabeçalhos HTTP",
       "noHeaders": "Nenhum header HTTP configurado"
     },
     "tags": {
-      "title": "Tags"
+      "title": "Etiquetas"
     }
   },
   "form": {
@@ -115,17 +115,17 @@
       "name": "Nome",
       "description": "Descrição",
       "url": "URL do Servidor",
-      "headers": "Headers HTTP (JSON)",
+      "headers": "Cabeçalhos HTTP (JSON)",
       "timeout": "Timeout (segundos)",
       "retries": "Tentativas",
-      "tags": "Tags"
+      "tags": "Etiquetas"
     },
     "placeholders": {
       "name": "Nome do servidor MCP personalizado",
       "description": "Descrição do servidor MCP personalizado...",
       "url": "https://example.com/mcp",
       "headers": "{\"Authorization\": \"Bearer token\", \"Content-Type\": \"application/json\"}",
-      "tags": "api, search, database"
+      "tags": "api, busca, banco"
     },
     "hints": {
       "headers": "Configure os headers HTTP necessários para autenticação e comunicação",
@@ -173,7 +173,7 @@
       "description": "Descrição",
       "url": "URL",
       "tools": "Ferramentas",
-      "timeout": "Timeout",
+      "timeout": "Tempo limite",
       "createdAt": "Criado em",
       "actions": "Teste"
     },

@@ -41,8 +41,8 @@ export function GoogleOAuthForm({ config, onConfigChange }: IntegrationFormProps
         label={t('integrations.googleOAuth.gcpProjectId') || 'GCP Project ID'}
         value={getValue('gcpProjectId')}
         onChange={(value) => onConfigChange('gcpProjectId', value)}
-        placeholder="your-project-id"
-        description={t('integrations.googleOAuth.gcpProjectIdDescription') || 'Google Cloud Platform Project ID for Gmail Pub/Sub integration'}
+        placeholder="id-do-seu-projeto"
+        description={t('integrations.googleOAuth.gcpProjectIdDescription') || 'ID do projeto no Google Cloud, usado na integração Pub/Sub do Gmail'}
       />
       <FormField
         id="GMAIL_PUBSUB_TOPIC"

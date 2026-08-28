@@ -106,7 +106,7 @@
     "phoneNumber": "Número de Telefone",
     "email": "Email",
     "webhook": "Webhook",
-    "apiKey": "API Key",
+    "apiKey": "Chave de API",
     "token": "Token",
     "lastMessage": "Última Mensagem",
     "conversations": "Conversas",
@@ -174,10 +174,10 @@
     "providers": {
       "badges": {
         "recommended": "Recomendado",
-        "popular": "Popular"
+        "popular": "Mais usado"
       },
       "whatsappCloud": {
-        "name": "WhatsApp Business API (Cloud)",
+        "name": "WhatsApp Business API (nuvem)",
         "description": "API oficial do WhatsApp com integração direta"
       },
       "evolution": {
@@ -198,7 +198,7 @@
       },
       "twilio": {
         "name": "Twilio",
-        "description": "Twilio WhatsApp Business API"
+        "description": "WhatsApp Business API pela Twilio"
       },
       "twilioSms": {
         "name": "Twilio SMS",
@@ -789,7 +789,8 @@
         "htmlPreview": "Visualização HTML",
         "htmlPreviewDescription": "Este template foi criado com HTML. Você pode editá-lo visualmente no editor abaixo.",
         "startVisualEdit": "Começar Edição Visual"
-      }
+      },
+      "newTemplate": "Novo modelo de mensagem"
     },
     "configuration": {
       "api": {
@@ -1088,7 +1089,7 @@
           "authentication": "Autenticação",
           "authOptions": {
             "login": "Login",
-            "plain": "Plain",
+            "plain": "Simples",
             "cramMd5": "CRAM-MD5"
           },
           "enableStarttls": "Habilitar STARTTLS"
@@ -1251,7 +1252,7 @@
         "number": "Número",
         "url": "URL",
         "date": "Data",
-        "checkbox": "Checkbox",
+        "checkbox": "Caixa de seleção",
         "select": "Seleção",
         "textarea": "Área de texto"
       },
@@ -1268,7 +1269,7 @@
         "type": "Tipo",
         "required": "Obrigatório",
         "label": "Rótulo",
-        "placeholder": "Placeholder"
+        "placeholder": "Texto de exemplo"
       },
       "emptyState": "Nenhum campo configurado",
       "instructions": {
@@ -1286,7 +1287,7 @@
           "description": "Texto que será exibido como label do campo"
         },
         "placeholder": {
-          "title": "Placeholder",
+          "title": "Texto de exemplo",
           "description": "Texto de exemplo que aparece no campo vazio"
         }
       },
@@ -1440,6 +1441,67 @@
     "general": {
       "success": {
         "channelCreated": "Canal criado com sucesso"
+      }
+    },
+    "moderation": {
+      "actions": {
+        "approve": "Aprovar",
+        "blockUser": "Bloquear pessoa",
+        "deleteComment": "Excluir comentário",
+        "regenerate": "Gerar outra resposta",
+        "reject": "Recusar",
+        "sendResponse": "Enviar resposta"
+      },
+      "approvedBy": "Aprovado por {{name}} em {{date}}",
+      "commentId": "ID do comentário",
+      "conversation": "Conversa",
+      "description": "Revise e modere os comentários do Facebook que precisam de aprovação",
+      "empty": {
+        "description": "Nenhuma moderação corresponde aos filtros escolhidos.",
+        "title": "Nenhuma moderação encontrada"
+      },
+      "errors": {
+        "approveError": "Erro ao aprovar a moderação",
+        "loadError": "Erro ao carregar as moderações",
+        "regenerateError": "Erro ao gerar outra resposta",
+        "rejectError": "Erro ao recusar a moderação"
+      },
+      "filters": {
+        "all": "Todas",
+        "allTypes": "Todos os tipos",
+        "approved": "Aprovadas",
+        "pending": "Pendentes",
+        "rejected": "Recusadas",
+        "status": "Situação",
+        "type": "Tipo"
+      },
+      "generatedResponse": "Resposta gerada",
+      "originalComment": "Comentário original",
+      "pagination": {
+        "next": "Próxima",
+        "page": "Página {{current}} de {{total}}",
+        "previous": "Anterior"
+      },
+      "rejectedBy": "Recusado por {{name}} em {{date}}",
+      "rejectionReason": "Motivo da recusa",
+      "rejectionReasonLabel": "Motivo da recusa (opcional)",
+      "rejectionReasonPlaceholder": "Escreva o motivo da recusa...",
+      "status": {
+        "approved": "Aprovada",
+        "pending": "Pendente",
+        "rejected": "Recusada"
+      },
+      "success": {
+        "approved": "Moderação aprovada",
+        "regenerated": "Nova resposta gerada",
+        "rejected": "Moderação recusada"
+      },
+      "title": "Moderação de comentários",
+      "totalCount": "Total: {{count}}",
+      "types": {
+        "explicitWords": "Palavras impróprias",
+        "offensiveSentiment": "Tom ofensivo",
+        "responseApproval": "Aprovação de resposta"
       }
     }
   },

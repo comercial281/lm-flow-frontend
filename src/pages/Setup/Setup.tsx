@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { AlertCircle, Globe } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 import {
   Button,
@@ -12,15 +12,9 @@ import {
   Label,
   Alert,
   AlertDescription,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/components/ui/ds';
 
 import { useLanguage } from '@/hooks/useLanguage';
-import { type Locale } from '@/i18n/config';
 import { setupService } from '@/services/setup/setupService';
 import { clearSetupCache } from '@/contexts/GlobalConfigContext';
 
@@ -36,7 +30,7 @@ type SetupFormData = {
 
 const Setup: React.FC = () => {
   const navigate = useNavigate();
-  const { t, currentLanguage, changeLanguage } = useLanguage('setup');
+  const { t } = useLanguage('setup');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -118,28 +112,8 @@ const Setup: React.FC = () => {
     }
   };
 
-  const handleLanguageChange = (lng: string) => {
-    changeLanguage(lng as Locale);
-  };
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-t from-primary/20 via-background/95 to-background">
-      <div className="absolute top-4 right-4">
-        <Select value={currentLanguage} onValueChange={handleLanguageChange}>
-          <SelectTrigger>
-            <Globe className="h-4 w-4 text-primary" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pt-BR">{t('language.portuguese')}</SelectItem>
-            <SelectItem value="en">{t('language.english')}</SelectItem>
-            <SelectItem value="es">{t('language.spanish')}</SelectItem>
-            <SelectItem value="fr">{t('language.french')}</SelectItem>
-            <SelectItem value="it">{t('language.italian')}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
       <div className="w-full max-w-md space-y-6">
         <div className="flex flex-col items-center space-y-4">
           <AppLogo className="h-10" />

@@ -183,7 +183,7 @@ function InstanceCard({ instance, onDelete, onArchive, onRefresh }: {
         <div className="mt-3 border-t pt-3 space-y-2">
           {instance.backend_url && (
             <div className="text-xs">
-              <span className="text-muted-foreground">Backend: </span>
+              <span className="text-muted-foreground">Servidor: </span>
               <span className="font-mono">{instance.backend_url}</span>
             </div>
           )}
