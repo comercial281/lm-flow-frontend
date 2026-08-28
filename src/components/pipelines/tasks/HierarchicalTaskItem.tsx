@@ -33,6 +33,7 @@ import type { PipelineTask } from '@/types/analytics';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 interface HierarchicalTaskItemProps {
   task: PipelineTask;
   depth?: number;
@@ -58,6 +59,7 @@ export default function HierarchicalTaskItem({
   disabled = false,
   allTasks = [],
 }: HierarchicalTaskItemProps) {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const { t } = useLanguage('pipelines');
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -170,16 +172,18 @@ export default function HierarchicalTaskItem({
     return descendants;
   };
 
-  const handleCheckboxChange = (checked: boolean) => {
+  const handleCheckboxChange = async (checked: boolean) => {
     if (checked) {
       // Count ALL descendants (not just direct subtasks)
       const allDescendants = getAllDescendants(task);
       const pendingDescendants = allDescendants.filter(d => d.status !== 'completed').length;
       
       if (pendingDescendants > 0) {
-        const confirmed = window.confirm(
-          t('tasks.messages.completeWithAllDescendantsConfirm', { count: pendingDescendants })
-        );
+        const confirmed = await confirmar({
+          titulo: t('tasks.messages.completeWithAllDescendantsTitle'),
+          descricao: t('tasks.messages.completeWithAllDescendantsConfirm', { count: pendingDescendants }),
+          rotuloDaAcao: t('tasks.messages.completeWithAllDescendantsAction'),
+        });
         if (!confirmed) return;
       }
       onComplete(task.id);
@@ -189,9 +193,11 @@ export default function HierarchicalTaskItem({
       const completedDescendants = allDescendants.filter(d => d.status === 'completed').length;
       
       if (completedDescendants > 0) {
-        const confirmed = window.confirm(
-          t('tasks.messages.reopenWithAllDescendantsConfirm', { count: completedDescendants })
-        );
+        const confirmed = await confirmar({
+          titulo: t('tasks.messages.reopenWithAllDescendantsTitle'),
+          descricao: t('tasks.messages.reopenWithAllDescendantsConfirm', { count: completedDescendants }),
+          rotuloDaAcao: t('tasks.messages.reopenWithAllDescendantsAction'),
+        });
         if (!confirmed) return;
       }
       onReopen(task.id);
@@ -254,6 +260,7 @@ export default function HierarchicalTaskItem({
   };
 
   return (
+    <>
     <div className={cn('space-y-1', depth > 0 && 'ml-6')}>
       {/* Main Task Card */}
       <div
@@ -497,5 +504,7 @@ export default function HierarchicalTaskItem({
         </div>
       )}
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }

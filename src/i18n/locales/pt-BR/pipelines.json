@@ -757,7 +757,11 @@
       "moveError": "Erro ao mover tarefa",
       "addSubtaskSuccess": "Subtarefa adicionada com sucesso",
       "addSubtaskError": "Erro ao adicionar subtarefa",
-      "deleteWithSubtasksConfirm": "Esta tarefa tem subtarefas. Excluir apaga todas elas junto. Confirma?"
+      "deleteWithSubtasksConfirm": "Esta tarefa tem subtarefas. Excluir apaga todas elas junto. Confirma?",
+      "completeWithAllDescendantsTitle": "Concluir com as descendentes",
+      "completeWithAllDescendantsAction": "Concluir todas",
+      "reopenWithAllDescendantsTitle": "Reabrir com as descendentes",
+      "reopenWithAllDescendantsAction": "Reabrir todas"
     },
     "delete": "Excluir",
     "edit": "Editar"
