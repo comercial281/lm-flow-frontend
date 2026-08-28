@@ -36,6 +36,7 @@ import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import LabelMultiSelect from '@/components/labels/LabelMultiSelect';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 // Etiqueta de marketing padrão de todo lead de formulário (igual ao backend).
 const PAID_TAG = 'tráfego pago';
 
@@ -98,6 +99,7 @@ const decodeAssignTo = (assignTo: string): { default_assignee_id: string | null;
 };
 
 export default function LeadAdsForms() {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const resources = useAutomationResources(true);
 
   const [configs, setConfigs] = useState<LeadAdsFormConfig[]>([]);
@@ -294,9 +296,17 @@ export default function LeadAdsForms() {
   const toggleAcceptUnconfigured = async (page: MetaPage) => {
     const turningOn = !page.accept_unconfigured_forms;
     if (turningOn) {
-      const ok = window.confirm(
-        `Esta página vai voltar a aceitar lead de QUALQUER formulário, inclusive dos que não estão cadastrados aqui.\n\nPágina: ${page.page_name}\n\nConfirmar?`,
-      );
+      const ok = await confirmar({
+        titulo: 'Aceitar qualquer formulário',
+        descricao: (
+          <>
+            A página <strong>{page.page_name}</strong> vai voltar a aceitar lead de{' '}
+            <strong>qualquer</strong> formulário, inclusive dos que não estão cadastrados aqui.
+          </>
+        ),
+        rotuloDaAcao: 'Aceitar todos',
+        destrutivo: true,
+      });
       if (!ok) return;
     }
 
@@ -327,10 +337,23 @@ export default function LeadAdsForms() {
         toast.success('Nenhuma etiqueta antiga pra limpar 🎉');
         return;
       }
-      const names = preview.labels.map(l => `• ${l.title}`).join('\n');
-      const ok = window.confirm(
-        `Vão ser apagadas ${preview.count} etiqueta(s) criadas automaticamente:\n\n${names}\n\nConfirmar? Esta ação não pode ser desfeita.`,
-      );
+      // A lista vai como JSX: no window.confirm ela era uma parede de texto com
+      // `\n`, e com dezenas de etiquetas a caixinha do navegador cortava o fim.
+      const ok = await confirmar({
+        titulo: `Apagar ${preview.count} etiqueta(s)`,
+        descricao: (
+          <>
+            Estas etiquetas foram criadas automaticamente e serão apagadas. Não dá pra desfazer.
+            <span className="mt-2 block max-h-48 overflow-auto text-xs">
+              {preview.labels.map(l => (
+                <span key={l.title} className="block">• {l.title}</span>
+              ))}
+            </span>
+          </>
+        ),
+        rotuloDaAcao: 'Apagar',
+        destrutivo: true,
+      });
       if (!ok) return;
 
       const result = await leadAdsFormsService.cleanupFormLabels(true);
@@ -524,6 +547,7 @@ export default function LeadAdsForms() {
   };
 
   return (
+    <>
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -1402,5 +1426,7 @@ export default function LeadAdsForms() {
         </DialogContent>
       </Dialog>
     </div>
+      {dialogoDeConfirmacao}
+    </>
   );
 }

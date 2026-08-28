@@ -21,6 +21,7 @@ import {
   type KnowledgeCategory,
 } from '@/hooks/useKnowledge';
 
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -46,6 +47,7 @@ function buildTree(items: KnowledgeCategory[]): TreeNode[] {
 }
 
 export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Props) {
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const { data: cats = [], isLoading } = useCategories();
   const createMut = useCreateCategory();
   const updateMut = useUpdateCategory();
@@ -165,11 +167,19 @@ export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Prop
                     <Plus size={11} /> Subcategoria
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (
-                        window.confirm(
-                          `Excluir "${node.nome}"? Apenas categorias vazias podem ser removidas.`,
-                        )
+                        await confirmar({
+                          titulo: 'Excluir categoria',
+                          descricao: (
+                            <>
+                              Excluir <strong>{node.nome}</strong>? Apenas categorias vazias podem
+                              ser removidas.
+                            </>
+                          ),
+                          rotuloDaAcao: 'Excluir',
+                          destrutivo: true,
+                        })
                       ) {
                         deleteMut.mutate(node.id);
                       }
@@ -209,6 +219,7 @@ export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Prop
   }
 
   return (
+    <>
     <aside className="w-64 shrink-0 border-r border-border bg-muted/30 flex flex-col">
       <div className="flex items-center justify-between px-3 py-3 border-b border-border">
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
@@ -255,5 +266,7 @@ export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Prop
         {tree.map((node) => renderNode(node, 0))}
       </div>
     </aside>
+      {dialogoDeConfirmacao}
+    </>
   );
 }
