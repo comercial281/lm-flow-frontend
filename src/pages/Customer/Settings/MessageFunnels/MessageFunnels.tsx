@@ -12,12 +12,20 @@ import {
 } from '@/components/ui/ds';
 import {
   Rocket, Search, Plus, Edit2, Trash2, Type, Mic, Image as ImageIcon,
-  Video, FileText, Pause, Archive, ArchiveRestore, Clock, Contact as ContactIcon, Sticker, Folder, FolderPlus, Pencil,
+  Video, FileText, Pause, Archive, ArchiveRestore, Clock, Contact as ContactIcon, Sticker, Folder, FolderPlus, Pencil, Tag,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import MessageFunnelEditor from '@/components/messageFunnels/MessageFunnelEditor';
-import { messageFunnelsService, messageFunnelFoldersService } from '@/services/messageFunnels/messageFunnelsService';
-import type { MessageFunnel, FunnelItemKind, MessageFunnelFolder } from '@/types/messageFunnels';
+import {
+  messageFunnelsService,
+  messageFunnelFoldersService,
+  messageFunnelTagsService,
+} from '@/services/messageFunnels/messageFunnelsService';
+import type { MessageFunnel, FunnelItemKind, MessageFunnelFolder, MessageFunnelTag } from '@/types/messageFunnels';
+
+// Paleta das etiquetas. Fixa de propósito: seletor de cor livre produz etiqueta
+// ilegível no tema escuro e ninguém percebe até o cliente reclamar.
+const CORES_DE_ETIQUETA = ['#2563eb', '#16a34a', '#ca8a04', '#dc2626', '#9333ea', '#0891b2'] as const;
 
 const KIND_ICONS: Record<FunnelItemKind, typeof Type> = {
   text: Type, audio: Mic, image: ImageIcon, video: Video, document: FileText, delay: Clock,
@@ -31,6 +39,13 @@ const KIND_COLORS: Record<FunnelItemKind, string> = {
 export default function MessageFunnels() {
   const [funnels, setFunnels] = useState<MessageFunnel[]>([]);
   const [folders, setFolders] = useState<MessageFunnelFolder[]>([]);
+
+  // Etiqueta é FILTRO (o funil pode ter várias), pasta é LUGAR (entra numa só).
+  // Por isso a etiqueta filtra a lista em vez de navegar, e o filtro é aplicado
+  // pelo BACKEND — `tag_id` já existe no controller, não é filtro de tela.
+  const [tags, setTags] = useState<MessageFunnelTag[]>([]);
+  const [tagId, setTagId] = useState<string | null>(null);
+  const [gerenciandoTags, setGerenciandoTags] = useState(false);
   // undefined = mostrando a grade de pastas; null = "Sem pasta"; string = dentro de uma pasta.
   const [folderId, setFolderId] = useState<string | null | undefined>(undefined);
   const [loading, setLoading] = useState(false);
@@ -54,7 +69,10 @@ export default function MessageFunnels() {
     setLoading(true);
     try {
       const [list, fldrs] = await Promise.all([
-        messageFunnelsService.list(folderId !== undefined ? { folderId } : {}),
+        messageFunnelsService.list({
+          ...(folderId !== undefined ? { folderId } : {}),
+          ...(tagId ? { tagId } : {}),
+        }),
         messageFunnelFoldersService.list(),
       ]);
       setFunnels(list);
@@ -64,11 +82,27 @@ export default function MessageFunnels() {
     } finally {
       setLoading(false);
     }
-  }, [folderId]);
+  }, [folderId, tagId]);
+
+  // Etiquetas carregam à parte, e o erro NÃO derruba a página: se este endpoint
+  // falhar, a lista de funis continua funcionando exatamente como antes — a
+  // barra de etiquetas simplesmente não aparece. Funcionalidade nova não pode
+  // quebrar o que já funcionava.
+  const carregarTags = useCallback(async () => {
+    try {
+      setTags(await messageFunnelTagsService.list());
+    } catch {
+      setTags([]);
+    }
+  }, []);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    void carregarTags();
+  }, [carregarTags]);
 
   const filtered = search.trim()
     ? funnels.filter(f =>
@@ -118,6 +152,70 @@ export default function MessageFunnels() {
       await load();
     } catch {
       toast.error('Erro ao arquivar funil');
+    }
+  };
+
+  // ── Etiquetas ──────────────────────────────────────────────────────────────
+  // Mesmo desenho das pastas: Dialog do design system, nunca window.prompt.
+  const [tagEmEdicao, setTagEmEdicao] = useState<MessageFunnelTag | 'nova' | null>(null);
+  const [nomeDaTag, setNomeDaTag] = useState('');
+  const [corDaTag, setCorDaTag] = useState<string>(CORES_DE_ETIQUETA[0]);
+  const [salvandoTag, setSalvandoTag] = useState(false);
+  const [tagParaExcluir, setTagParaExcluir] = useState<MessageFunnelTag | null>(null);
+  const [excluindoTag, setExcluindoTag] = useState(false);
+
+  const abrirNovaTag = () => {
+    setNomeDaTag('');
+    setCorDaTag(CORES_DE_ETIQUETA[0]);
+    setTagEmEdicao('nova');
+  };
+
+  const abrirEditarTag = (tag: MessageFunnelTag) => {
+    setNomeDaTag(tag.name);
+    setCorDaTag(tag.color || CORES_DE_ETIQUETA[0]);
+    setTagEmEdicao(tag);
+  };
+
+  const nomeDaTagValido = nomeDaTag.trim().length > 0;
+
+  const salvarTag = async () => {
+    if (!tagEmEdicao || !nomeDaTagValido) return;
+    const nome = nomeDaTag.trim();
+    setSalvandoTag(true);
+    try {
+      if (tagEmEdicao === 'nova') {
+        await messageFunnelTagsService.create({ name: nome, color: corDaTag });
+        toast.success('Etiqueta criada');
+      } else {
+        await messageFunnelTagsService.update(tagEmEdicao.id, { name: nome, color: corDaTag });
+        toast.success('Etiqueta salva');
+      }
+      setTagEmEdicao(null);
+      await carregarTags();
+      load();
+    } catch {
+      toast.error('Erro ao salvar etiqueta');
+    } finally {
+      setSalvandoTag(false);
+    }
+  };
+
+  const confirmarExcluirTag = async () => {
+    if (!tagParaExcluir) return;
+    setExcluindoTag(true);
+    try {
+      await messageFunnelTagsService.destroy(tagParaExcluir.id);
+      toast.success('Etiqueta excluída');
+      // Se a etiqueta excluída era o filtro ativo, volta pra lista inteira —
+      // senão a tela ficaria filtrando por algo que não existe mais.
+      if (tagId === tagParaExcluir.id) setTagId(null);
+      setTagParaExcluir(null);
+      await carregarTags();
+      load();
+    } catch {
+      toast.error('Erro ao excluir etiqueta');
+    } finally {
+      setExcluindoTag(false);
     }
   };
 
@@ -207,6 +305,54 @@ export default function MessageFunnels() {
         />
       </div>
 
+      {/* Etiquetas — FILTRO (fica na lista), ao contrário da pasta, que é LUGAR
+          (entra). O filtro é do backend (`tag_id` no controller), não da tela. */}
+      <div className="flex flex-wrap items-center gap-1.5 mb-4">
+        {tags.length > 0 && (
+          <>
+            <button
+              type="button"
+              onClick={() => setTagId(null)}
+              aria-pressed={tagId === null}
+              className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                tagId === null
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
+              }`}
+            >
+              Todas
+            </button>
+            {tags.map(tag => {
+              const ativa = tagId === tag.id;
+              return (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => setTagId(ativa ? null : tag.id)}
+                  aria-pressed={ativa}
+                  className="rounded-full border px-2.5 py-1 text-xs transition-colors"
+                  style={
+                    ativa
+                      ? { backgroundColor: tag.color, borderColor: tag.color, color: '#fff' }
+                      : { borderColor: tag.color, color: tag.color }
+                  }
+                  title={`${tag.usage_count} ${tag.usage_count === 1 ? 'funil' : 'funis'}`}
+                >
+                  {tag.name}
+                </button>
+              );
+            })}
+          </>
+        )}
+        <button
+          type="button"
+          onClick={() => setGerenciandoTags(true)}
+          className="flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+        >
+          <Tag className="h-3 w-3" /> {tags.length > 0 ? 'Etiquetas' : 'Criar etiqueta'}
+        </button>
+      </div>
+
       {/* Pastas — pasta é LUGAR (entra), não filtro (mesma regra do Hub, 14/08) */}
       {folderId === undefined && !search.trim() && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
@@ -263,6 +409,7 @@ export default function MessageFunnels() {
               <FunnelCard
                 key={funnel.id}
                 funnel={funnel}
+                tags={tags}
                 onEdit={() => handleEdit(funnel)}
                 onDelete={() => handleDelete(funnel)}
                 onToggleArchive={() => handleToggleArchive(funnel)}
@@ -280,6 +427,107 @@ export default function MessageFunnels() {
         onSaved={() => load()}
         defaultFolderId={pendingFolderId}
       />
+
+      {/* Etiquetas: lista e gerenciamento */}
+      <Dialog open={gerenciandoTags} onOpenChange={setGerenciandoTags}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Etiquetas</DialogTitle>
+            <DialogDescription>
+              Etiqueta é filtro: um funil pode ter várias, e elas não o tiram da pasta.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-1.5 max-h-72 overflow-auto">
+            {tags.length === 0 && (
+              <p className="text-sm text-muted-foreground py-2">Nenhuma etiqueta ainda.</p>
+            )}
+            {tags.map(tag => (
+              <div key={tag.id} className="flex items-center gap-2 rounded-md border border-border p-2">
+                <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm">{tag.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {tag.usage_count} {tag.usage_count === 1 ? 'funil' : 'funis'}
+                  </div>
+                </div>
+                <button onClick={() => abrirEditarTag(tag)} title="Editar" className="p-1 rounded hover:bg-accent">
+                  <Pencil className="h-3 w-3 text-muted-foreground" />
+                </button>
+                <button onClick={() => setTagParaExcluir(tag)} title="Excluir etiqueta" className="p-1 rounded hover:bg-accent">
+                  <Trash2 className="h-3 w-3 text-muted-foreground" />
+                </button>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGerenciandoTags(false)}>Fechar</Button>
+            <Button onClick={abrirNovaTag}>Nova etiqueta</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Etiqueta: criar e editar — mesmo Dialog, dois modos */}
+      <Dialog open={!!tagEmEdicao} onOpenChange={open => !open && setTagEmEdicao(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{tagEmEdicao === 'nova' ? 'Nova etiqueta' : 'Editar etiqueta'}</DialogTitle>
+            <DialogDescription>Nome e cor. A cor aparece no filtro e no card do funil.</DialogDescription>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={nomeDaTag}
+            onChange={e => setNomeDaTag(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && nomeDaTagValido && !salvandoTag) void salvarTag(); }}
+            placeholder="Nome da etiqueta"
+          />
+          <div className="flex flex-wrap gap-2 pt-1" role="radiogroup" aria-label="Cor da etiqueta">
+            {CORES_DE_ETIQUETA.map(cor => (
+              <button
+                key={cor}
+                type="button"
+                role="radio"
+                aria-checked={corDaTag === cor}
+                aria-label={`Cor ${cor}`}
+                onClick={() => setCorDaTag(cor)}
+                className={`h-6 w-6 rounded-full border-2 transition-transform ${
+                  corDaTag === cor ? 'border-foreground scale-110' : 'border-transparent'
+                }`}
+                style={{ backgroundColor: cor }}
+              />
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTagEmEdicao(null)} disabled={salvandoTag}>
+              Cancelar
+            </Button>
+            <Button onClick={() => void salvarTag()} disabled={!nomeDaTagValido || salvandoTag}>
+              {salvandoTag ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Etiqueta: excluir */}
+      <Dialog open={!!tagParaExcluir} onOpenChange={open => !open && setTagParaExcluir(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir etiqueta</DialogTitle>
+            <DialogDescription>
+              Excluir <strong>{tagParaExcluir?.name}</strong>? Ela some de{' '}
+              {tagParaExcluir?.usage_count ?? 0}{' '}
+              {(tagParaExcluir?.usage_count ?? 0) === 1 ? 'funil' : 'funis'} — nenhum funil é apagado.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTagParaExcluir(null)} disabled={excluindoTag}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={() => void confirmarExcluirTag()} disabled={excluindoTag}>
+              {excluindoTag ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Pasta: criar e renomear — mesmo Dialog, dois modos */}
       <Dialog open={!!pastaEmEdicao} onOpenChange={open => !open && setPastaEmEdicao(null)}>
@@ -357,12 +605,15 @@ export default function MessageFunnels() {
 
 interface FunnelCardProps {
   funnel: MessageFunnel;
+  /** Catálogo inteiro. O funil só traz `tag_ids`; o nome e a cor moram aqui. */
+  tags: MessageFunnelTag[];
   onEdit: () => void;
   onDelete: () => void;
   onToggleArchive: () => void;
 }
 
-function FunnelCard({ funnel, onEdit, onDelete, onToggleArchive }: FunnelCardProps) {
+function FunnelCard({ funnel, tags, onEdit, onDelete, onToggleArchive }: FunnelCardProps) {
+  const etiquetas = tags.filter(t => funnel.tag_ids?.includes(t.id));
   return (
     <div className="border border-border rounded-lg p-4 hover:border-primary/40 transition-colors flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
@@ -378,6 +629,19 @@ function FunnelCard({ funnel, onEdit, onDelete, onToggleArchive }: FunnelCardPro
           </div>
           {funnel.description && (
             <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{funnel.description}</p>
+          )}
+          {etiquetas.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {etiquetas.map(tag => (
+                <span
+                  key={tag.id}
+                  className="rounded-full border px-1.5 py-0.5 text-[10px] leading-none"
+                  style={{ borderColor: tag.color, color: tag.color }}
+                >
+                  {tag.name}
+                </span>
+              ))}
+            </div>
           )}
         </div>
         <div className="flex items-center gap-0.5 shrink-0">

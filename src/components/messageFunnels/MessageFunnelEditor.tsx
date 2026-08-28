@@ -21,10 +21,16 @@ import type {
   MessageFunnel,
   MessageFunnelItem,
   MessageFunnelFolder,
+  MessageFunnelTag,
   FunnelPayload,
   TemplateVariable,
 } from '@/types/messageFunnels';
-import { messageFunnelsService, tenantTemplateVariablesService, messageFunnelFoldersService } from '@/services/messageFunnels/messageFunnelsService';
+import {
+  messageFunnelsService,
+  tenantTemplateVariablesService,
+  messageFunnelFoldersService,
+  messageFunnelTagsService,
+} from '@/services/messageFunnels/messageFunnelsService';
 import MessageSequenceEditor, {
   type SequenceDraftItem,
   newSequenceItem,
@@ -71,10 +77,13 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved, de
   const [saving, setSaving] = useState(false);
   const [variables, setVariables] = useState<TemplateVariable[]>([]);
   const [folders, setFolders] = useState<MessageFunnelFolder[]>([]);
+  const [tags, setTags] = useState<MessageFunnelTag[]>([]);
+  const [tagIds, setTagIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open) return;
     messageFunnelFoldersService.list().then(setFolders).catch(() => setFolders([]));
+    messageFunnelTagsService.list().then(setTags).catch(() => setTags([]));
   }, [open]);
 
   // Carrega vars do tenant (built-in + custom manual) só uma vez ao abrir.
@@ -120,6 +129,7 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved, de
       setDescription(funnel.description ?? '');
       setActive(funnel.active);
       setFolderId(funnel.folder_id ?? null);
+      setTagIds(funnel.tag_ids ?? []);
       setHumanize(funnel.humanize ?? true);
       setItems(
         funnel.items.length > 0
@@ -131,6 +141,7 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved, de
       setDescription('');
       setActive(true);
       setFolderId(defaultFolderId);
+      setTagIds([]);
       setHumanize(true);
       setItems([newSequenceItem()]);
     }
@@ -171,6 +182,7 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved, de
         active,
         shared: true,
         folder_id: folderId,
+        tag_ids: tagIds,
         humanize,
         items: items.map((it, idx) => ({
           // Manda o id do item existente pro backend fazer upsert e PRESERVAR a
@@ -208,8 +220,10 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved, de
       toast.success(funnel ? 'Funil atualizado' : 'Funil criado');
       onSaved?.(refreshed);
       onClose();
-    } catch (e: any) {
-      const msg = e?.response?.data?.error?.message ?? e?.message ?? 'Falha ao salvar';
+    } catch (e: unknown) {
+      const comoErroDaApi = e as { response?: { data?: { error?: { message?: string } } }; message?: string };
+      const msg =
+        comoErroDaApi?.response?.data?.error?.message ?? comoErroDaApi?.message ?? 'Falha ao salvar';
       toast.error(msg);
     } finally {
       setSaving(false);
@@ -263,6 +277,44 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved, de
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Etiquetas — pasta é LUGAR (o funil fica DENTRO de uma), etiqueta é
+                FILTRO (o funil pode ter várias, e elas não o tiram do lugar).
+                Mesma regra que a página já seguia pras pastas.
+
+                A lista só aparece quando existe etiqueta cadastrada: sem isso,
+                seria um rótulo em cima de um vazio. Quem cria etiqueta é a
+                própria página de Funis, no botão "Etiquetas". */}
+            {tags.length > 0 && (
+              <div className="space-y-1.5">
+                <UILabel>Etiquetas (opcional)</UILabel>
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map(tag => {
+                    const marcada = tagIds.includes(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        aria-pressed={marcada}
+                        onClick={() =>
+                          setTagIds(atuais =>
+                            marcada ? atuais.filter(id => id !== tag.id) : [...atuais, tag.id],
+                          )
+                        }
+                        className="rounded-full border px-2.5 py-1 text-xs transition-colors"
+                        style={
+                          marcada
+                            ? { backgroundColor: tag.color, borderColor: tag.color, color: '#fff' }
+                            : { borderColor: tag.color, color: tag.color }
+                        }
+                      >
+                        {tag.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <label className="flex items-center gap-2 cursor-pointer pt-1">
               <input
                 type="checkbox"
