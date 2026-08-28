@@ -38,6 +38,7 @@ import {
 import { parseVideoUrl, formatDuration } from './lib';
 import VideoEmbed from './VideoEmbed';
 import CommentsSection from './CommentsSection';
+import { toast } from 'sonner';
 
 interface Props {
   module: KnowledgeModule;
@@ -328,15 +329,15 @@ function LessonEditForm({ lesson, onClose }: { lesson: KnowledgeLesson; onClose:
 
   async function save() {
     if (!titulo.trim()) {
-      window.alert('O título não pode ficar vazio.');
+      toast.error('O título não pode ficar vazio.');
       return;
     }
     if (videoMode === 'embed' && (!videoUrl.trim() || !parseVideoUrl(videoUrl))) {
-      window.alert('Cole um link válido do YouTube ou Vimeo.');
+      toast.error('Cole um link válido do YouTube ou Vimeo.');
       return;
     }
     if (videoMode === 'upload' && !file) {
-      window.alert('Selecione um arquivo de vídeo.');
+      toast.error('Selecione um arquivo de vídeo.');
       return;
     }
 
@@ -491,7 +492,7 @@ function AdminBar({ moduleId, lessons }: { moduleId: string; lessons: KnowledgeL
     const dur = duracao ? parseInt(duracao, 10) : undefined;
     if (mode === 'embed') {
       if (!videoUrl.trim() || !parseVideoUrl(videoUrl)) {
-        window.alert('Cole um link válido do YouTube ou Vimeo.');
+        toast.error('Cole um link válido do YouTube ou Vimeo.');
         return;
       }
       await createLesson.mutateAsync({
@@ -503,7 +504,7 @@ function AdminBar({ moduleId, lessons }: { moduleId: string; lessons: KnowledgeL
       });
     } else {
       if (!file) {
-        window.alert('Selecione um arquivo de vídeo.');
+        toast.error('Selecione um arquivo de vídeo.');
         return;
       }
       await uploadLesson.mutateAsync({

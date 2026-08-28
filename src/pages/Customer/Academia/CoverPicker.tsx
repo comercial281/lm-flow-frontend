@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import { PlayCircle, ImagePlus, Loader2, X } from 'lucide-react';
 import { useUploadModuleCover } from '@/hooks/useKnowledge';
+import { toast } from 'sonner';
 
 interface Props {
   value: string;
@@ -16,7 +17,7 @@ export default function CoverPicker({ value, onChange }: Props) {
   async function handleFile(file: File | null) {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      window.alert('Selecione um arquivo de imagem.');
+      toast.error('Selecione um arquivo de imagem.');
       return;
     }
     try {

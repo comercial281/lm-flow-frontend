@@ -16,6 +16,7 @@ import {
   type KnowledgeAttachment,
 } from '@/hooks/useKnowledge';
 import { formatBytes } from './_lib';
+import { toast } from 'sonner';
 
 interface Props {
   lessonId: string;
@@ -163,7 +164,7 @@ function LinkForm({ lessonId, onDone }: { lessonId: string; onDone: () => void }
   const [url, setUrl] = useState('');
 
   async function submit() {
-    if (!url.trim()) { window.alert('Cole a URL do link.'); return; }
+    if (!url.trim()) { toast.error('Cole a URL do link.'); return; }
     await add.mutateAsync({ lesson_id: lessonId, name, url });
     onDone();
   }
@@ -192,7 +193,7 @@ function TextForm({ lessonId, onDone }: { lessonId: string; onDone: () => void }
   const [content, setContent] = useState('');
 
   async function submit() {
-    if (!content.trim()) { window.alert('Escreva o texto.'); return; }
+    if (!content.trim()) { toast.error('Escreva o texto.'); return; }
     await add.mutateAsync({ lesson_id: lessonId, name, content });
     onDone();
   }

@@ -3,6 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import { PaperclipIcon, ImageIcon } from 'lucide-react';
 import { validateFile } from '@/types/core';
 import { useLanguage } from '@/hooks/useLanguage';
+import { toast } from 'sonner';
 
 interface ChatAttachmentProps {
   onFileUpload: (file: File) => void;
@@ -23,7 +24,7 @@ export const ChatAttachment: React.FC<ChatAttachmentProps> = ({
       // Validate file
       const validation = validateFile(file);
       if (!validation.valid) {
-        alert(t('attachment.error', { error: validation.error }));
+        toast.error(t('attachment.error', { error: validation.error }));
         return;
       }
 
