@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useGlobalConfig } from '@/contexts/GlobalConfigContext';
 import { markBootstrapPhaseEnd, markBootstrapPhaseStart } from '@/utils/requestMonitor';
+import { getSubdomainSlug } from '@/services/core/tenant';
 
 interface RouterGuardProps {
   children: React.ReactNode;
@@ -90,7 +91,28 @@ const RouterGuard: React.FC<RouterGuardProps> = ({ children }) => {
       // For protected routes, validate authentication
       if (!isLoading) {
         if (!isAuthenticated || !user) {
-          navigate('/login', {
+          // A Área de Membros aberta num endereço que não é de CLIENTE nenhum
+          // (o apex, o app da Leal Mídia) é a única exceção: ali a conta da
+          // pessoa não existe, e mandá-la para o login é o "erro ao entrar na
+          // conta" que quem clicava no link da aula tomava. Quem decide o que
+          // mostrar nesse caso é o AcademiaRoute — a porta de entrada, que
+          // pergunta o e-mail e encaminha para o app da imobiliária dela.
+          //
+          // Só este caso escapa: dentro do app de um cliente o login continua
+          // sendo o caminho, e é por isso que a checagem inclui o endereço.
+          const ehPortaDaAreaDeMembros =
+            location.pathname.startsWith('/academia') && getSubdomainSlug() === null;
+          if (ehPortaDaAreaDeMembros) return;
+
+          // O destino vai na QUERY, não só no `state`. Quem lê depois do login
+          // é o `returnUrl` (ver Auth.tsx, que ainda valida se é caminho
+          // interno) — e esta guarda é a ÚLTIMA a navegar: ela roda no efeito
+          // do pai, depois do <Navigate> das rotas filhas, então um /login sem
+          // returnUrl aqui APAGA o que PrivateRoute, CustomerRoute e
+          // AcademiaRoute tinham acabado de preservar. Era por isso que quem
+          // abria o link da aula logava e caía na aba de conversas.
+          const destino = `${location.pathname}${location.search}`;
+          navigate(`/login?returnUrl=${encodeURIComponent(destino)}`, {
             state: { from: location },
             replace: true,
           });
