@@ -104,7 +104,15 @@ const RouterGuard: React.FC<RouterGuardProps> = ({ children }) => {
             location.pathname.startsWith('/academia') && getSubdomainSlug() === null;
           if (ehPortaDaAreaDeMembros) return;
 
-          navigate('/login', {
+          // O destino vai na QUERY, não só no `state`. Quem lê depois do login
+          // é o `returnUrl` (ver Auth.tsx, que ainda valida se é caminho
+          // interno) — e esta guarda é a ÚLTIMA a navegar: ela roda no efeito
+          // do pai, depois do <Navigate> das rotas filhas, então um /login sem
+          // returnUrl aqui APAGA o que PrivateRoute, CustomerRoute e
+          // AcademiaRoute tinham acabado de preservar. Era por isso que quem
+          // abria o link da aula logava e caía na aba de conversas.
+          const destino = `${location.pathname}${location.search}`;
+          navigate(`/login?returnUrl=${encodeURIComponent(destino)}`, {
             state: { from: location },
             replace: true,
           });
