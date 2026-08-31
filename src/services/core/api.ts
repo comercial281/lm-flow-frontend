@@ -176,17 +176,34 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 403) {
-      // Chamada de fundo não grita. O aviso existe para o clique do usuário —
-      // quando é o app que busca sozinho algo que o cargo não lê (lista de
-      // instâncias, de equipes), o corretor levava um erro vermelho na cara sem
-      // ter feito nada, e às vezes por cima de uma tela que funcionava.
+      // Escape hatch explícito: escrita de fundo que não deve gritar.
       if ((error.config as { silentForbidden?: boolean } | undefined)?.silentForbidden) {
         return Promise.reject(error);
       }
 
-      // O backend agora valida o cargo (CustomRole) em toda a API, não só na
-      // tela. Sem este aviso um 403 vira "não aconteceu nada" e parece bug do
-      // sistema em vez de permissão faltando.
+      // LEITURA RECUSADA NÃO GRITA. O aviso é para o CLIQUE.
+      //
+      // O corretor entrava no CRM e levava uma sequência de erros vermelhos sem
+      // ter tocado em nada: o backend passou a conferir o cargo em TODA a API, e
+      // aqui toda recusa virava toast — inclusive a dos pedidos que a própria
+      // tela dispara sozinha pra se montar. Só de abrir o app, a busca dos
+      // aplicativos do painel (chave que só o Administrador tem) já pintava um
+      // vermelho em cima de uma tela que estava funcionando.
+      //
+      // A regra por VERBO, e não uma marca por chamada, é de propósito: o cargo
+      // Corretor é uma lista fixa no servidor, então cada tela nova que ganha um
+      // botão nasce com uma chave que ele não tem. Marcar chamada por chamada
+      // consertaria as de hoje e a próxima tela recriaria o problema.
+      //
+      // GET recusado = aquele pedaço da tela simplesmente não aparece, que é o
+      // que o app já faz com o item de menu e com os blocos de gestão do
+      // dashboard. Escrita recusada continua avisando: sem o aviso, o botão "não
+      // faz nada" e vira chamado de suporte.
+      const metodo = (error.config?.method ?? 'get').toLowerCase();
+      if (metodo === 'get' || metodo === 'head' || metodo === 'options') {
+        return Promise.reject(error);
+      }
+
       const required = error.response?.data?.required_permission;
       toast.error(
         required
