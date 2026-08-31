@@ -469,6 +469,48 @@ Armadilhas:
    arquivo de novo depois de cancelar não dispara evento nenhum e o botão parece
    morto.
 
+## A IA Vendedora responde em várias mensagens (desde 2026-08-31)
+
+A IA mandava uma mensagem só, e quando se estendia o lead recebia um parágrafo
+grande de uma vez. Agora ela responde em até 3 mensagens curtas, com
+*digitando...* entre elas e uma pausa proporcional ao tamanho da próxima.
+
+O que aparece na tela:
+
+- **Chave *Responder em várias mensagens*** em *IA Vendedora → Configuração →
+  Recepção inicial*, colada no campo *Tempo de espera antes de responder*. Os
+  dois falam de ritmo: aquele é o tempo de ESPERA (juntar o que o lead mandou),
+  este é o ritmo da RESPOSTA (espalhar o que a IA vai mandar). Separá-los faria
+  procurar em dois lugares a mesma coisa.
+- **Campo *No máximo quantas mensagens por resposta*** (2 a 4, padrão 3), que só
+  aparece com a chave ligada.
+- **A aba *Testar* empilha uma bolha por mensagem**, igual ao que o lead recebe.
+- **Na caixa de conversas nada mudou** — ela já desenha uma bolha por mensagem, e
+  passou a mostrar as mesmas que o lead viu, sem nenhuma alteração de código.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Estreia LIGADA em toda imobiliária.** A chave existe para DESLIGAR em quem não
+  quiser, não para liberar aos poucos. Não é `clientToggleKey` nem `featureKey`:
+  é campo do agente, não módulo — os scanners do catálogo de funcionalidades não
+  entram nesta história.
+- **Se o lead escreve no meio, a IA termina de mandar** e responde depois.
+- **O teto de 4 não é enfeite.** Rajada de mensagens é a assinatura que mais faz o
+  WhatsApp tratar um número como robô, e a abertura já manda print e áudio junto.
+
+Armadilhas:
+
+1. **Os dois campos PRECISAM estar na lista do `saveAgent`.** Ela monta o PATCH
+   campo a campo, e o que não estiver ali é descartado sem erro nenhum: a tela
+   mostra o valor, o toast diz *Salvo*, e nada foi salvo. É o que já acontece com
+   os dois campos do book do imóvel.
+2. **A aba *Testar* mostraria UMA bolha** se lesse só o texto inteiro da resposta.
+   Quem ligasse a chave e testasse ali concluiria que não funciona — por isso ela
+   lê a lista de mensagens, com o texto inteiro como reserva.
+3. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): a tela lê a chave e o teto de lá. Sem ela, a chave aparece
+   no padrão e não guarda nada.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
