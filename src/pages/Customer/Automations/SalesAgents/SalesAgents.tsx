@@ -33,6 +33,7 @@ import {
   type SalesAgentPropertyLink,
   type TestHistoryItem,
   type TestMediaItem,
+  type HandoffMode,
 } from '@/services/salesAgents/salesAgentsService';
 import { DOCUMENT_TOPICS } from '@/features/salesAgents/documentTopics';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
@@ -158,6 +159,7 @@ export default function SalesAgents() {
         escalate_on_ai_detected: patch.escalate_on_ai_detected ?? selected.escalate_on_ai_detected,
         ai_limits: patch.ai_limits ?? selected.ai_limits,
         crm_policy: patch.crm_policy ?? selected.crm_policy,
+        transfer_config: patch.transfer_config ?? selected.transfer_config,
         ask_google_review: patch.ask_google_review ?? selected.ask_google_review,
         google_review_link: patch.google_review_link ?? selected.google_review_link,
         cross_sell_enabled: patch.cross_sell_enabled ?? selected.cross_sell_enabled,
@@ -1436,6 +1438,121 @@ function RecepcaoSection({
   );
 }
 
+// ---------------- Quando ela passa para um corretor ----------------
+
+/**
+ * O cenário de repasse: a única coisa que a imobiliária tem para dizer QUANDO a IA
+ * entrega o lead a um humano. Até aqui quem decidia era a IA sozinha, a cada resposta.
+ *
+ * Cartões, e não uma lista suspensa, porque cada opção muda o volume de lead que cai no
+ * colo do corretor — a consequência precisa estar visível na hora de escolher, não
+ * escondida atrás de um clique.
+ *
+ * O primeiro cartão é "Como está hoje" e é o que fica marcado em toda imobiliária que já
+ * existe: cenário novo não muda o comportamento de quem nunca escolheu nada.
+ */
+const HANDOFF_OPTIONS: { value: HandoffMode | ''; title: string; desc: string }[] = [
+  {
+    value: '',
+    title: 'Como está hoje',
+    desc: 'Ela passa quando julgar necessário. É o que já estava valendo.',
+  },
+  {
+    value: 'duvida',
+    title: 'Ao menor sinal de dúvida',
+    desc: 'Qualquer insegurança dela vira repasse. O corretor recebe bastante lead, e cedo.',
+  },
+  {
+    value: 'temperatura',
+    title: 'Só quando o lead estiver quente',
+    desc: 'Ela conduz sozinha — qualifica, manda material, oferece a visita — e só entrega o lead depois que ele esquenta.',
+  },
+  {
+    value: 'sem_resposta',
+    title: 'Só se ela não souber responder',
+    desc: 'Repassa quando a resposta não está no que você deu a ela, ou quando as Instruções mandam passar aquele caso.',
+  },
+  {
+    value: 'pos_visita',
+    title: 'Só depois de agendar a visita',
+    desc: 'O mais autônomo: ela só entrega com a visita marcada, ou quando bate numa objeção que tentou contornar e não conseguiu.',
+  },
+];
+
+function HandoffPolicySection({ agent, onSave }: {
+  agent: SalesAgent;
+  onSave: (patch: Partial<SalesAgent>) => void;
+}) {
+  const cfg = agent.transfer_config ?? {};
+  const mode = cfg.mode ?? '';
+  const minTemp = cfg.min_temperature ?? 'hot';
+
+  // Trocar de cenário LIMPA a temperatura mínima do cenário anterior, de propósito: ela
+  // só significa alguma coisa dentro do cenário da temperatura, e deixá-la pendurada
+  // faria o cartão voltar com uma escolha antiga que ninguém lembra de ter feito.
+  const pick = (value: HandoffMode | '') => {
+    if (value === '') { onSave({ transfer_config: {} }); return; }
+    onSave({ transfer_config: value === 'temperatura' ? { mode: value, min_temperature: minTemp } : { mode: value } });
+  };
+
+  return (
+    <div>
+      <div className="text-sm font-medium mb-1">Quando ela passa para um corretor</div>
+      <div className="text-xs text-muted-foreground mb-2">
+        Escolha um cenário. Ele vale para todos os leads deste atendimento.
+      </div>
+
+      <div className="space-y-2">
+        {HANDOFF_OPTIONS.map((opt) => {
+          const escolhido = mode === opt.value;
+          return (
+            <div
+              key={opt.value || 'padrao'}
+              className={`rounded-md border p-3 transition-colors ${escolhido ? 'border-primary bg-primary/5' : 'border-sidebar-border'}`}
+            >
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="handoff_mode"
+                  className="mt-1"
+                  checked={escolhido}
+                  onChange={() => pick(opt.value)}
+                />
+                <div>
+                  <div className="text-sm font-medium">{opt.title}</div>
+                  <div className="text-xs text-muted-foreground">{opt.desc}</div>
+                </div>
+              </label>
+
+              {/* A partir de que temperatura ela entrega. Só aparece dentro do cartão
+                  escolhido: solto, o campo pareceria valer para os outros cenários. */}
+              {opt.value === 'temperatura' && escolhido && (
+                <div className="mt-2 ml-7">
+                  <Label htmlFor="handoff_min_temperature">A partir de</Label>
+                  <select
+                    id="handoff_min_temperature"
+                    value={minTemp}
+                    onChange={(e) => onSave({
+                      transfer_config: { mode: 'temperatura', min_temperature: e.target.value as 'hot' | 'warm' },
+                    })}
+                    className="mt-1 w-full rounded-md border border-sidebar-border bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="hot">Lead quente</option>
+                    <option value="warm">Lead morno ou quente</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    É a mesma leitura que aparece no painel <em>O que a IA entendeu</em>, dentro da conversa.
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function IntelligenceSection({
   agent, onChange, onSave,
 }: {
@@ -1461,9 +1578,15 @@ function IntelligenceSection({
         <Toggle on={agent.locacao_enabled !== false} onChange={(v) => onSave({ locacao_enabled: v })} />
       </div>
 
+      {/* Cenário de repasse: a decisão grande vem ANTES das exceções dela. */}
+      <HandoffPolicySection agent={agent} onSave={onSave} />
+
       {/* Escalação: passar pro humano */}
       <div>
         <div className="text-sm font-medium mb-1">Passar pro humano na hora quando…</div>
+        <div className="text-xs text-muted-foreground mb-1">
+          Estes três valem em qualquer cenário escolhido acima — inclusive lead irritado.
+        </div>
         <CheckRow checked={agent.escalate_on_frustration !== false} onChange={(v) => onSave({ escalate_on_frustration: v })}
           title="O lead se irritar" desc="Detecta frustração/reclamação e passa pro corretor com jeito." />
         <CheckRow checked={agent.escalate_on_human_request !== false} onChange={(v) => onSave({ escalate_on_human_request: v })}

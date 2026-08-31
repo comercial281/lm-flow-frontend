@@ -47,7 +47,7 @@ export interface SalesAgent {
   instructions: string | null;
   greeting: string | null;
   qualification_questions: string[];
-  transfer_config: Record<string, unknown>;
+  transfer_config: TransferConfig;
   handoff_message: string | null;
   model: string;
   temperature: number;
@@ -201,6 +201,20 @@ export interface CrmPolicy {
   invalid?: boolean;
 }
 
+/**
+ * O cenário de repasse: quando a IA entrega o lead a um corretor.
+ *
+ * `mode` ausente = "como está hoje", e é o que vale em toda imobiliária que já existe:
+ * cenário novo não muda o comportamento de quem nunca escolheu nada. `min_temperature`
+ * só é lido no cenário da temperatura.
+ */
+export type HandoffMode = 'duvida' | 'temperatura' | 'sem_resposta' | 'pos_visita';
+
+export interface TransferConfig {
+  mode?: HandoffMode;
+  min_temperature?: 'hot' | 'warm';
+}
+
 export interface VisitConfig {
   days?: number[]; // 0=dom .. 6=sáb
   start?: string;
@@ -287,6 +301,7 @@ export interface SalesAgentPayload {
   escalate_on_ai_detected?: boolean;
   ai_limits?: AiLimits;
   crm_policy?: CrmPolicy;
+  transfer_config?: TransferConfig;
   ask_google_review?: boolean;
   google_review_link?: string | null;
   cross_sell_enabled?: boolean;
