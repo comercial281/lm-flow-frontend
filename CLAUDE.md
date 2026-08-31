@@ -563,7 +563,12 @@ Armadilhas:
    exceção estreita ali — `/academia` com host sem cliente — e um teste que
    reprova se ela sumir. Rota nova que precise ser vista por quem não tem conta
    NESTE endereço tem que passar por lá também.
-2. A tela do "abrindo em..." fica ~1,6s no ar de propósito, com o "não é você?"
+2. **Quem manda para o login por último é o `RouterGuard`**, no efeito do PAI —
+   depois do `<Navigate>` das rotas filhas. Um `/login` sem `returnUrl` ali APAGA
+   o destino que `PrivateRoute`, `CustomerRoute` e `AcademiaRoute` acabaram de
+   preservar: era por isso que quem abria o link da aula logava e caía na aba de
+   conversas. Hoje ele leva o destino na query como os outros, e há teste.
+3. A tela do "abrindo em..." fica ~1,6s no ar de propósito, com o "não é você?"
    à mostra. Sem essa pausa, quem usasse o aparelho de outra pessoa ficaria
    preso no app errado sem chance de trocar.
 
