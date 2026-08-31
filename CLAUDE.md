@@ -399,6 +399,12 @@ Decisões (não reabrir sem o dono pedir):
   com o aviso de que ele foi escolhido antes. Os selecionados são derivados da
   lista exibida: escondê-lo o tiraria do disparo e do padrão calado.
 
+- **Cada grupo mostra PARA ONDE o link dele vai** ("abre em fulano.lmflow.com.br"),
+  e grupo de que não se sabe a imobiliária **não pode ser marcado**. Foi assim que
+  o primeiro disparo quebrou: quem não tinha grupo cadastrado recebia um endereço
+  fixo, o app da Leal Mídia, onde o cliente não tem conta — e tomava erro ao
+  entrar. Destino invisível é destino que ninguém confere.
+
 Armadilhas:
 
 1. **O texto guardado tem VARIÁVEIS dentro, e é assim que ele é enviado.** Colar
