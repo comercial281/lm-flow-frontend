@@ -979,7 +979,14 @@ export default function PooledClients() {
     try {
       await api.delete(`/super/pooled_tenants/${confirmDelete.id}`, { data: { confirm_slug: deleteText.trim() } });
       setConfirmDelete(null); setDeleteText(''); await load();
-    } catch (e: any) { toast.error(e?.response?.data?.error || 'Falha ao excluir.'); }
+    } catch (e: any) {
+      // 409 = o servidor paralisou o cliente mas nao conseguiu apagar (o banco
+      // dele ainda estava em uso). Ele saiu da lista ativa e esta em Arquivados:
+      // manter a janela aberta e a lista velha faria parecer que nada aconteceu.
+      const busy = e?.response?.status === 409;
+      toast.error(e?.response?.data?.error || 'Falha ao excluir.', busy ? { duration: 8000 } : undefined);
+      if (busy) { setConfirmDelete(null); setDeleteText(''); await load(); }
+    }
     finally { setBusyId(null); }
   };
 
@@ -1213,6 +1220,9 @@ export default function PooledClients() {
             <div className="px-5 py-4 space-y-3">
               <p className="text-sm text-white/80">
                 Isso <strong>apaga permanentemente</strong> o CRM de <strong>{confirmDelete.name}</strong> e <strong>todos os dados</strong> (conversas, leads, pipeline). Não tem volta.
+              </p>
+              <p className="text-xs text-white/50">
+                O cliente é <strong>paralisado antes</strong> (automações e webhooks desligados). Se a exclusão não terminar, ele fica em <strong>Arquivados</strong> e você tenta de novo.
               </p>
               <p className="text-xs text-white/50">Pra confirmar, digite o slug exato: <code className="text-red-300">{confirmDelete.slug}</code></p>
               <input value={deleteText} onChange={e => setDeleteText(e.target.value)} placeholder={confirmDelete.slug} autoFocus

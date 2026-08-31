@@ -510,6 +510,27 @@ Armadilhas:
    à mostra. Sem essa pausa, quem usasse o aparelho de outra pessoa ficaria
    preso no app errado sem chance de trocar.
 
+## Excluir cliente: paralisa antes de apagar (desde 2026-08-31)
+
+O botão *Excluir definitivamente* devolvia um erro de banco na tela
+("deadlock detected") e o cliente continuava na lista. O motivo é do servidor —
+apagar o CRM do cliente exige que ninguém esteja usando aquele banco, e uma
+mensagem chegando no WhatsApp dele no mesmo segundo já derrubava a exclusão.
+
+O que mudou na tela:
+
+- **A janela de confirmação avisa que o cliente é paralisado antes**
+  (automações e webhooks desligados) e que, se a exclusão não terminar, ele fica
+  em **Arquivados** para tentar de novo. Antes o texto só falava do apagar.
+- **Quando a exclusão não conclui**, a janela fecha, a lista recarrega e o aviso
+  fica mais tempo no ar. Manter a janela aberta com a lista velha fazia parecer
+  que nada tinha acontecido — quando na verdade o cliente já tinha saído da lista
+  ativa e ido para Arquivados.
+
+Armadilha: **o cliente que "falhou ao excluir" NÃO está intacto** — ele está
+paralisado, na aba Arquivados. Quem quiser desistir da exclusão religa pelo
+*Reabrir*, e a lista volta pausada, como qualquer arquivado.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
