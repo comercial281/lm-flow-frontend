@@ -38,6 +38,7 @@ import {
   Espaco,
 } from './lazyPages';
 import PrivateRoute from './PrivateRoute';
+import AcademiaRoute from './AcademiaRoute';
 import PublicRoute from './PublicRoute';
 import CustomerRoute from './CustomerRoute';
 import SmartRedirect from './SmartRedirect';
@@ -1141,21 +1142,17 @@ const AppRouter = () => {
           <Route
             path="/academia"
             element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <AcademiaHomePage />
-                </CustomerRoute>
-              </PrivateRoute>
+              <AcademiaRoute>
+                <AcademiaHomePage />
+              </AcademiaRoute>
             }
           />
           <Route
             path="/academia/curso/:courseId"
             element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <AcademiaCoursePage />
-                </CustomerRoute>
-              </PrivateRoute>
+              <AcademiaRoute>
+                <AcademiaCoursePage />
+              </AcademiaRoute>
             }
           />
 
