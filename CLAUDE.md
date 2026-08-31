@@ -410,6 +410,59 @@ Armadilhas:
    aba *Aulas* do Tutorial e pela tela cheia da Área de Membros. Mexeu ali, vale
    para as duas.
 
+## Levar um funil de follow-up de um CRM pro outro (desde 2026-08-31)
+
+O dono do produto pediu para montar UM funil — com foto, vídeo, áudio, figurinha
+e texto — e plugá-lo em todos os clientes. Cada cliente é um CRM separado, então
+não existe "o mesmo funil" visível de dois lugares: o que atravessa é um arquivo.
+
+O que aparece na tela:
+
+- **Botão *Exportar*, em cada funil** da tela de Follow-up (ao lado de *Histórico*
+  e *Testar*). Ele baixa um arquivo com as mensagens, os tempos, as opções e **a
+  mídia junto** — a foto, o vídeo, o áudio e a figurinha vão dentro do arquivo.
+- **Botão *Importar funil*, no topo da mesma tela.** Escolhido o arquivo, abre uma
+  janela que mostra o que vai entrar **antes** de criar qualquer coisa: o nome do
+  funil, quantas mensagens, quantas mídias, quantas entradas e de qual cliente ele
+  saiu. Só depois de confirmar é que o funil é criado.
+- **No painel raiz, *Aplicar funil de follow-up nos clientes*** (o ícone ao lado
+  do *Comunicado*). Escolhe a origem — um funil de qualquer cliente, ou um arquivo
+  — marca os clientes de destino e aplica em todos de uma vez, com *criado* ou
+  *falhou* em cada linha.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **O funil chega DESLIGADO em todo cliente que recebe.** Quem liga é uma pessoa
+  que abriu o CRM e leu as mensagens. As portas de entrada vêm junto, do jeito que
+  estavam: com o funil desligado nada dispara, então sobra **uma chave só** a virar
+  depois da conferência.
+- **A prévia antes de importar é obrigatória**, pelo mesmo motivo da prévia do
+  modelo pronto: o arquivo pode ter vindo de qualquer lugar, e ninguém deve
+  descobrir o que entrou depois de já estar no CRM.
+- **O que não coube vira lista, não silêncio.** Coluna que não existe neste
+  cliente, mídia que não pôde ser trazida: tudo aparece numa janela própria no fim
+  da importação — e no painel raiz, agrupado por cliente. Toast some antes de
+  alguém anotar; isto é uma lista de coisas a fazer.
+- **Nenhum cliente vem marcado no painel raiz.** O *Comunicado* marca todos porque
+  aviso a mais é barulho; aqui cada marca cria um funil que alguém teria que
+  apagar à mão se foi engano.
+- **O cliente de origem nunca aparece como destino.**
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória.** Exportar, importar e aplicar em massa
+   falam com o servidor da API (`lm-flow`, branch `saas-multitenant`); sem ela os
+   botões existem e não fazem nada.
+2. **O arquivo é lido no navegador com `FileReader`, nunca com `File.text()`.**
+   O segundo não existe em todo ambiente (nem no que roda os testes), e a falha
+   dele é indistinguível de "arquivo corrompido" — o que manda a pessoa procurar
+   problema no arquivo certo.
+3. **O funil lido fica guardado, e o arquivo não é lido duas vezes.** Reler na
+   hora de enviar é a chance de a prévia mostrar uma coisa e o envio mandar outra.
+4. **O campo de arquivo é limpo a cada escolha.** Sem isso, escolher o MESMO
+   arquivo de novo depois de cancelar não dispara evento nenhum e o botão parece
+   morto.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,

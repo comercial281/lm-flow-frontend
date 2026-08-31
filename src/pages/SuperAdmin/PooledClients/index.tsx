@@ -1,10 +1,11 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, Eye, EyeOff, MessageCircle, XCircle, Bot, Radio, UserCog, ClipboardList, MessageSquarePlus, Activity } from 'lucide-react';
+import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, Eye, EyeOff, MessageCircle, XCircle, Bot, Radio, UserCog, ClipboardList, MessageSquarePlus, Activity, Workflow } from 'lucide-react';
 import api from '@/services/core/api';
 import IconActionButton from '@/components/base/IconActionButton';
 import NewTenantWizard from './NewTenantWizard';
 import ClientBroadcastModal from './ClientBroadcastModal';
+import ClientFollowupRolloutModal from './ClientFollowupRolloutModal';
 import MemberAccessConfigModal from '../ClientInstances/MemberAccessConfigModal';
 import clientInstancesService, { DashboardData, CentralInstance, WhatsappSendResult } from '@/services/clientInstances/clientInstancesService';
 import DashboardView from '../ClientInstances/DashboardView';
@@ -887,6 +888,7 @@ export default function PooledClients() {
   const [featuresOf, setFeaturesOf] = useState<PooledTenant | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [showBroadcast, setShowBroadcast] = useState(false);
+  const [showFollowupRollout, setShowFollowupRollout] = useState(false);
   const [showAccessCfg, setShowAccessCfg] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -1038,6 +1040,12 @@ export default function PooledClients() {
                   label="Comunicado — enviar aviso para os clientes"
                   icon={<Megaphone className="h-4 w-4" />}
                   onClick={() => setShowBroadcast(true)}
+                  disabled={tenants.length === 0}
+                />
+                <IconActionButton
+                  label="Funil de follow-up — aplicar o mesmo funil (mensagens e mídia) em vários clientes de uma vez"
+                  icon={<Workflow className="h-4 w-4" />}
+                  onClick={() => setShowFollowupRollout(true)}
                   disabled={tenants.length === 0}
                 />
                 <IconActionButton
@@ -1194,6 +1202,7 @@ export default function PooledClients() {
       {featuresOf && <FeaturesModal tenant={featuresOf} onClose={() => setFeaturesOf(null)} />}
       {showWizard && <NewTenantWizard onClose={() => setShowWizard(false)} onCreated={load} />}
       {showBroadcast && <ClientBroadcastModal tenants={tenants} onClose={() => setShowBroadcast(false)} />}
+      {showFollowupRollout && <ClientFollowupRolloutModal tenants={tenants} onClose={() => setShowFollowupRollout(false)} />}
       {showAccessCfg && <MemberAccessConfigModal open={showAccessCfg} onClose={() => setShowAccessCfg(false)} />}
       {confirmDelete && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={() => setConfirmDelete(null)}>
