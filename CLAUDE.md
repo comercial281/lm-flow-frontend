@@ -469,6 +469,63 @@ Armadilhas:
    arquivo de novo depois de cancelar não dispara evento nenhum e o botão parece
    morto.
 
+## O bloco de Follow-up dentro do card (desde 2026-08-31)
+
+Queixa do dono do produto: o card mostrava *"Ativar follow-up"* — desligado —
+logo acima de uma linha do tempo com uma mensagem enviada e sete agendadas.
+
+As duas metades do bloco liam fontes diferentes. O botão olhava a **etiqueta**
+`follow-up` da conversa; a lista olhava a **fila de disparos**. A etiqueta é um
+dos gatilhos de ENTRADA, não o estado: quem entra arrastando o card, ou pela
+etiqueta de tráfego pago, nunca a recebe — e quem responde a perde, com a fila
+ainda cheia. Fora isso, *Pausar* só punha outra etiqueta que ninguém lia, e
+*Desativar* também: o lead seguia recebendo o que alguém tinha mandado parar.
+
+O que aparece na tela hoje:
+
+- **Selo do estado** — *Rodando*, *Pausado*, *Funil concluído* ou *Sem
+  follow-up* —, o nome do funil, *"3 de 8 mensagens"* e a data da próxima.
+- **Pausar, Retomar, Parar e Iniciar follow-up**, no lugar do antigo par
+  ativar/pausar. *Retomar* avisa que os horários são empurrados pelo tempo
+  parado, para ninguém esperar um despejo de mensagens vencidas.
+- **Iniciar não aparece com funil rodando**: começar por cima cancela a fila e
+  reagenda tudo. O caminho é *Parar* e começar. Com mais de um funil ativo, a
+  tela pede qual.
+- **Passos cancelados saem da lista**, atrás de um contador que os reabre. Lead
+  re-enrolado acumulava fila cancelada e empurrava o que importa para baixo.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Estado, botões e linha do tempo são UM componente, com UMA fonte.** Enquanto
+  o botão morava no painel do card e a lista aqui, as duas metades discordavam na
+  cara do corretor. Não separar de novo.
+- **Quais botões existem quem diz é o servidor**, não a tela. Botão que aparece e
+  não faz nada é exatamente o que este bloco tinha.
+- **A prévia troca `{{nome}}` pelo nome do lead — e é SÓ prévia.** Cru, o card
+  mostrava "Oi {{nome}}, tudo bem?" e parecia mensagem quebrada. Quem substitui
+  de verdade, no envio, é o servidor: montar a mensagem final aqui é o mesmo erro
+  do exemplo de etiqueta do editor de funil, que passou a vir pronto do backend.
+- **Erro de acesso aparece como erro de acesso.** Engolir o 403 e mostrar "sem
+  passos de follow-up" era indistinguível de lead sem follow-up — e era o que
+  corretor e gestor viam em cliente antigo, com a fila cheia.
+- **O bloco não depende de haver conversa de WhatsApp.** Lead de formulário e de
+  anúncio pode não ter uma, e o follow-up é do LEAD. O aviso *"disponível apenas
+  para leads com conversa"* escondia o bloco de quem mais precisa dele.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): o estado, os quatro comandos e as permissões
+   reaproveitadas moram lá. Sem ela o bloco abre vazio.
+2. **As permissões do servidor são REAPROVEITADAS de propósito** (as do quadro e
+   as do card). Chave nova não chega a cargo que já existe, e era por isso que a
+   linha do tempo subia 403 para corretor e gestor — só o administrador via.
+3. **Estado novo do disparo precisa de rótulo aqui.** *Pausado* entrou junto com
+   esta leva; se aparecer outro no servidor sem rótulo nesta tela, o selo do
+   passo sai em branco. Mesma armadilha do estado das listas do Bolsão.
+4. **Não voltar a derivar estado de etiqueta**, nem "só para não fazer uma
+   chamada". É a origem dos quatro defeitos desta leva.
+
 ## A porta de entrada da Área de Membros (desde 2026-08-31)
 
 A Área de Membros **não é um site separado**. Ela é uma tela dentro do app de
