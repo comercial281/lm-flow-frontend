@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
 const mocks = vi.hoisted(() => ({
   isAuthenticated: false,
@@ -29,6 +29,13 @@ vi.mock('@/services/core/tenant', () => ({ getSubdomainSlug: () => mocks.slug })
 
 import RouterGuard from './RouterGuard';
 
+// A tela de login mostra o destino que recebeu, para o teste conferir que ele
+// sobreviveu ao redirecionamento.
+function LoginFalso() {
+  const { search } = useLocation();
+  return <div>tela-de-login{search}</div>;
+}
+
 function renderEm(caminho: string) {
   return render(
     <MemoryRouter initialEntries={[caminho]}>
@@ -36,7 +43,7 @@ function renderEm(caminho: string) {
         <Routes>
           <Route path="/academia/curso/:id" element={<div>conteudo-da-aula</div>} />
           <Route path="/conversations" element={<div>conversas</div>} />
-          <Route path="/login" element={<div>tela-de-login</div>} />
+          <Route path="/login" element={<LoginFalso />} />
         </Routes>
       </RouterGuard>
     </MemoryRouter>,
@@ -56,7 +63,7 @@ describe('RouterGuard — Área de Membros', () => {
   it('não manda para o login quem abre a aula FORA de um cliente', () => {
     renderEm('/academia/curso/7');
 
-    expect(screen.queryByText('tela-de-login')).not.toBeInTheDocument();
+    expect(screen.queryByText(/tela-de-login/)).not.toBeInTheDocument();
     expect(screen.getByText('conteudo-da-aula')).toBeInTheDocument();
   });
 
@@ -64,12 +71,23 @@ describe('RouterGuard — Área de Membros', () => {
     mocks.slug = 'apto-premium';
     renderEm('/academia/curso/7');
 
-    expect(screen.getByText('tela-de-login')).toBeInTheDocument();
+    expect(screen.getByText(/tela-de-login/)).toBeInTheDocument();
   });
 
   it('rota protegida comum segue indo para o login', () => {
     renderEm('/conversations');
 
-    expect(screen.getByText('tela-de-login')).toBeInTheDocument();
+    expect(screen.getByText(/tela-de-login/)).toBeInTheDocument();
+  });
+
+  // Esta guarda é a ÚLTIMA a navegar (efeito do pai, depois do <Navigate> das
+  // rotas filhas), então um /login sem returnUrl aqui apaga o destino que as
+  // rotas tinham preservado. Foi o que fez quem abria o link da aula logar e
+  // cair na aba de conversas em vez da aula.
+  it('leva o destino junto para o login, para voltar à aula depois de entrar', () => {
+    mocks.slug = 'apto-premium';
+    renderEm('/academia/curso/7');
+
+    expect(screen.getByText(/returnUrl=%2Facademia%2Fcurso%2F7/)).toBeInTheDocument();
   });
 });
