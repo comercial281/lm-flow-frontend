@@ -11,12 +11,15 @@ export interface AnnounceGroup {
   name: string;
 }
 
-// Grupo que a instância enxerga, já cruzado com o cadastro dos clientes.
-// `client_group` diz QUAL grupo daquele cliente é (lembretes / logs internos).
+// Grupo que a instância enxerga. `matches_rule` diz se o nome dele segue o
+// padrão dos grupos de cliente (termina em "Leal Mídia"). `client` e
+// `client_group` vêm do cadastro da imobiliária quando o grupo está lá — são
+// rótulo, não critério de quem aparece.
 export interface AvailableGroup extends AnnounceGroup {
   client: string | null;
   client_slug: string | null;
   client_group: string | null;
+  matches_rule: boolean;
   selected: boolean;
 }
 
@@ -74,8 +77,8 @@ export const academyAnnouncementsService = {
   saveConfig: (payload: Partial<Pick<AnnounceConfig, 'template' | 'instance' | 'enabled' | 'groups'>>) =>
     apiClient.put<{ data: AnnounceConfig }>(base, payload),
 
-  // Só os grupos de CLIENTE (mais os que já estavam salvos como destino).
-  // `hidden` conta os que o número enxerga e não são de cliente nenhum.
+  // Só os grupos de CLIENTE — os que terminam em "Leal Mídia" — mais os que já
+  // estavam salvos como destino. `hidden` conta os que ficaram de fora.
   groups: (instance?: string) =>
     apiClient.get<{ data: AvailableGroup[]; hidden: number }>(`${base}/groups`, {
       params: instance ? { instance } : {},

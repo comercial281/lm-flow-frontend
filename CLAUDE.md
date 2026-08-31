@@ -371,11 +371,12 @@ O que aparece na tela:
   que são preenchidos na hora do envio. O botão *Salvar como padrão* guarda o
   texto, o número e os grupos para a próxima aula — a janela já abre preenchida.
 - **A lista mostra só os grupos dos CLIENTES.** Ela vem do WhatsApp do número
-  escolhido, mas filtrada pelos grupos que estão no cadastro das imobiliárias —
-  com o nome do cliente e qual grupo dele é (lembretes ou logs internos) embaixo
-  do nome do grupo. Tem busca e marcar/desmarcar. Embaixo da lista, o aviso de
-  quantos grupos daquele número ficaram de fora por não estarem em cadastro
-  nenhum: sem esse número, "meu grupo não está aqui" vira chamado de suporte.
+  escolhido, filtrada pelo NOME: entra o grupo que termina em *Leal Mídia*, que é
+  como os grupos das imobiliárias são batizados. Tem busca e marcar/desmarcar, e
+  onde o grupo também está no cadastro do cliente aparece o nome da imobiliária e
+  qual grupo dele é (lembretes ou logs internos). Embaixo da lista, o aviso de
+  quantos grupos daquele número ficaram de fora: sem esse número, "meu grupo não
+  está aqui" vira chamado de suporte.
 - **Depois de enviar, cada grupo mostra *enviado* ou *falhou*** na própria lista, e
   o rodapé *Ver os últimos avisos* conta o que já saiu, quando e para quantos.
 
@@ -390,7 +391,11 @@ Decisões (não reabrir sem o dono pedir):
   vezes o reenvio é de propósito. Mas ninguém manda duas vezes sem saber.
 - **A quantidade de grupos escolhidos fica no botão de enviar.** Disparo para
   grupo de cliente é irreversível; o número precisa estar embaixo do dedo.
-- **Grupo já salvo como destino continua na lista mesmo sem cliente vinculado**,
+- **Filtrar pelo cadastro do cliente NÃO funcionou** e foi trocado no mesmo dia:
+  escondia grupo de cliente real que ninguém tinha cadastrado — a maioria,
+  incluindo o do APTO PREMIUM. O cadastro virou rótulo; quem decide quem aparece
+  é o nome do grupo.
+- **Grupo já salvo como destino continua na lista mesmo fora do padrão de nome**,
   com o aviso de que ele foi escolhido antes. Os selecionados são derivados da
   lista exibida: escondê-lo o tiraria do disparo e do padrão calado.
 
