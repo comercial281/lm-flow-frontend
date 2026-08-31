@@ -416,6 +416,38 @@ Armadilhas:
    aba *Aulas* do Tutorial e pela tela cheia da Área de Membros. Mexeu ali, vale
    para as duas.
 
+## A porta de entrada da Área de Membros (desde 2026-08-31)
+
+A Área de Membros **não é um site separado**. Ela é uma tela dentro do app de
+cada imobiliária, atrás do login de sempre — o que é compartilhado é só o
+conteúdo das aulas. Por isso o link da aula muda de cliente para cliente.
+
+Quem abre o link da aula num endereço que **não é de cliente nenhum** (o app da
+Leal Mídia, o apex) via a tela de login e tomava erro: ali a conta dele não
+existe. Era o "erro ao entrar na conta" relatado por quem clicou no aviso de
+WhatsApp. Agora essa pessoa vê a **porta de entrada**: uma tela que pede o e-mail
+de acesso, descobre o app da imobiliária dela e a encaminha para a MESMA aula lá
+dentro. O aparelho lembra, então da segunda vez o link abre direto — com um
+"não é você?" para trocar.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Não foi criado endereço novo.** A porta é o próprio endereço que os links já
+  enviados usam, então todo link que já está nos grupos passou a funcionar
+  sozinho, sem reenviar nada.
+- **Quem decide "estou fora de um cliente" é o HOST aberto**
+  (`getSubdomainSlug()` devolve null no apex e nos subdomínios reservados, `app`
+  incluído), não uma variável de build. É o que faz a correção valer para
+  qualquer link antigo.
+- **Dentro do app de um cliente nada mudou**: quem não está logado continua indo
+  para o login com o destino preservado.
+- **Pede o e-mail, não mostra uma lista de imobiliárias.** A lista exporia a
+  carteira de clientes para qualquer um que abrisse o link.
+
+Armadilha: a tela do "abrindo em..." fica ~1,6s no ar de propósito, com o "não é
+você?" à mostra. Sem essa pausa, quem usasse o aparelho de outra pessoa ficaria
+preso no app errado sem chance de trocar.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
