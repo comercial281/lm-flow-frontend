@@ -431,7 +431,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             <Badge variant="outline" className="h-4 px-1 text-[10px] font-medium bg-primary/10 text-primary border border-primary/30 dark:bg-primary/20 dark:text-primary dark:border-primary/50">
               {t('messages.messageBubble.agent.badge')}
             </Badge>
-            {agentDisplayName || t('messages.messageBubble.agent.fallback')}
+            {/* Sem nome, fica só o selo. O texto de reserva era a MESMA palavra do
+                selo, então mensagem automática saía como "Atendente Atendente" —
+                hoje isso valeria para todo o follow-up, não só para a IA Vendedora. */}
+            {agentDisplayName}
           </div>
         )}
 

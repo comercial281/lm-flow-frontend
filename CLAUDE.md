@@ -635,6 +635,34 @@ Armadilhas:
    `saas-multitenant`): a tela lê a chave e o teto de lá. Sem ela, a chave aparece
    no padrão e não guarda nada.
 
+## Mensagem automática não leva nome de gente (desde 2026-08-31)
+
+Queixa do dono do produto: o follow-up disparado sozinho aparecia na caixa de
+conversas como se uma PESSOA tivesse escrito e mandado — o selo *Atendente* com o
+nome de um corretor (na prática, o primeiro administrador da conta) ao lado.
+
+A tela já sabia esconder esse nome desde que a mensagem chegasse marcada como
+automática. O que faltava era do lado do servidor: a marca nunca era gravada.
+Corrigido lá; aqui sobrou uma consequência de exibição.
+
+O que mudou na tela:
+
+- **Disparo automático aparece só como *Atendente*.** Vale para o follow-up, para
+  as automações de lead e para o disparo agendado — a IA Vendedora já era assim.
+- **O selo deixou de aparecer duplicado.** Sem nome, o texto de reserva ao lado do
+  selo era a MESMA palavra dele, então a linha saía *"Atendente Atendente"*. Hoje,
+  sem nome, fica só o selo.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): quem grava a marca de automática é o servidor. Sem ela a
+   tela volta a mostrar o nome de quem não escreveu.
+2. **Mensagem JÁ enviada continua mostrando o nome antigo.** A marca só existe nas
+   mensagens novas; o histórico não é reescrito.
+3. **Não voltar a derivar "quem escreveu" do autor gravado.** O autor de uma
+   mensagem automática é um detalhe de como ela foi criada, não a assinatura dela.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
