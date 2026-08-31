@@ -356,6 +356,49 @@ Ainda **não** resolvido, e é dívida conhecida:
 - **A landing pública e a captura do lead não têm teste automatizado no
   servidor.** É o caminho por onde a verba de anúncio entra.
 
+## Aviso de aula nova da Área de Membros (desde 2026-08-31)
+
+Saiu aula nova no Tutorial e agora dá para avisar os clientes no WhatsApp, pelo
+número operacional da Leal Mídia, sem sair da aula.
+
+O que aparece na tela:
+
+- **Botão *Avisar clientes*** na barra de ações da aula (ao lado de *Editar aula*
+  e *Excluir aula*), só para a Leal Mídia. Ele abre uma janela com quatro coisas:
+  a mensagem, como ela vai chegar no grupo, por qual número sai e para quais
+  grupos vai.
+- **A mensagem é editável e tem trechos entre chaves** ({aula}, {curso}, {link}…)
+  que são preenchidos na hora do envio. O botão *Salvar como padrão* guarda o
+  texto, o número e os grupos para a próxima aula — a janela já abre preenchida.
+- **A lista de grupos vem do próprio WhatsApp** do número escolhido, com busca e
+  marcar/desmarcar. Onde o grupo já está cadastrado no cliente, o nome da
+  imobiliária aparece embaixo do nome do grupo.
+- **Depois de enviar, cada grupo mostra *enviado* ou *falhou*** na própria lista, e
+  o rodapé *Ver os últimos avisos* conta o que já saiu, quando e para quantos.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **A prévia (*Como vai chegar no grupo*) vem do servidor**, não é montada aqui.
+  Quem monta a mensagem de verdade é ele, e cada grupo recebe o link da aula no
+  endereço da imobiliária DELE — uma prévia montada na tela mostraria um texto que
+  ninguém vai receber, e um texto já pronto mandaria todo mundo para o app de um
+  cliente só.
+- **A janela avisa quando a aula JÁ foi avisada**, com a data. Não bloqueia: às
+  vezes o reenvio é de propósito. Mas ninguém manda duas vezes sem saber.
+- **A quantidade de grupos escolhidos fica no botão de enviar.** Disparo para
+  grupo de cliente é irreversível; o número precisa estar embaixo do dedo.
+
+Armadilhas:
+
+1. **O texto guardado tem VARIÁVEIS dentro, e é assim que ele é enviado.** Colar
+   na caixa um texto já resolvido (com o link pronto) manda todos os clientes para
+   o app de um só.
+2. **A metade do backend é obrigatória.** O botão fala com o servidor da API
+   (`lm-flow`, branch `saas-multitenant`); sem ela a janela abre vazia e não envia.
+3. **A janela existe dentro da experiência de curso**, que é a mesma usada pela
+   aba *Aulas* do Tutorial e pela tela cheia da Área de Membros. Mexeu ali, vale
+   para as duas.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,

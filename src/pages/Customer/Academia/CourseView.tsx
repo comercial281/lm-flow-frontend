@@ -9,7 +9,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
   ArrowLeft, PlayCircle, CheckCircle2, Circle, Clock, ChevronLeft, ChevronRight,
-  Lock, Plus, Pencil, Trash2, ChevronUp, ChevronDown, X, Link2, Upload, FolderPlus,
+  Lock, Plus, Pencil, Trash2, ChevronUp, ChevronDown, X, Link2, Upload, FolderPlus, Megaphone,
 } from 'lucide-react';
 import {
   useCourses, useModules, useAllLessons, useProgress, useToggleProgress,
@@ -26,6 +26,7 @@ import LockOverlay, { LockCta } from './LockOverlay';
 import LessonAttachments from './LessonAttachments';
 import StarRating from './StarRating';
 import ModuleForm from './ModuleForm';
+import AnnounceLessonModal from './AnnounceLessonModal';
 import CourseForm from './CourseForm';
 import CoverPicker from './CoverPicker';
 import { GERAL_COURSE_ID } from './_lib';
@@ -178,6 +179,9 @@ export default function CourseView({ onBack }: Props) {
               lessons={openLessons}
               index={selectedIdx}
               canEdit={canEdit}
+              courseId={courseId}
+              courseTitle={title}
+              moduleTitle={modules.find((m) => m.id === selected.module_id)?.titulo ?? ''}
               onSelect={setSelectedId}
               onDeleted={() => setSelectedId(null)}
             />
@@ -344,12 +348,15 @@ function ModuleSection({
 
 // ── Painel da aula selecionada (player + ações + anexos + avaliação + comentários) ─
 function LessonPanel({
-  lesson, lessons, index, canEdit, onSelect, onDeleted,
+  lesson, lessons, index, canEdit, courseId, courseTitle, moduleTitle, onSelect, onDeleted,
 }: {
   lesson: KnowledgeLesson;
   lessons: KnowledgeLesson[];
   index: number;
   canEdit: boolean;
+  courseId: string;
+  courseTitle: string;
+  moduleTitle: string;
   onSelect: (id: string) => void;
   onDeleted: () => void;
 }) {
@@ -405,7 +412,16 @@ function LessonPanel({
         </div>
       </div>
 
-      {canEdit && <LessonAdminActions lesson={lesson} lessons={lessons} onDeleted={onDeleted} />}
+      {canEdit && (
+        <LessonAdminActions
+          lesson={lesson}
+          lessons={lessons}
+          courseId={courseId}
+          courseTitle={courseTitle}
+          moduleTitle={moduleTitle}
+          onDeleted={onDeleted}
+        />
+      )}
 
       {lesson.descricao_md && (
         <article className="prose prose-sm max-w-none dark:prose-invert mt-4">
@@ -420,12 +436,22 @@ function LessonPanel({
   );
 }
 
-// ── Ações admin por aula (editar / reordenar / excluir) ──────────────────────
-function LessonAdminActions({ lesson, lessons, onDeleted }: { lesson: KnowledgeLesson; lessons: KnowledgeLesson[]; onDeleted: () => void }) {
+// ── Ações admin por aula (editar / reordenar / avisar clientes / excluir) ────
+function LessonAdminActions({
+  lesson, lessons, courseId, courseTitle, moduleTitle, onDeleted,
+}: {
+  lesson: KnowledgeLesson;
+  lessons: KnowledgeLesson[];
+  courseId: string;
+  courseTitle: string;
+  moduleTitle: string;
+  onDeleted: () => void;
+}) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const del = useDeleteLesson();
   const update = useUpdateLesson();
   const [editing, setEditing] = useState(false);
+  const [announcing, setAnnouncing] = useState(false);
   const idx = lessons.findIndex((l) => l.id === lesson.id);
 
   async function move(dir: -1 | 1) {
@@ -443,6 +469,7 @@ function LessonAdminActions({ lesson, lessons, onDeleted }: { lesson: KnowledgeL
         <button onClick={() => setEditing((v) => !v)} className={`flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border ${editing ? 'border-primary/40 text-primary bg-primary/10' : 'border-primary/40 text-primary hover:bg-primary/10'}`} type="button"><Pencil size={12} /> Editar aula</button>
         <button onClick={() => move(-1)} disabled={idx <= 0} className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-border hover:border-primary/40 disabled:opacity-30" type="button"><ChevronUp size={12} /> Subir</button>
         <button onClick={() => move(1)} disabled={idx >= lessons.length - 1} className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-border hover:border-primary/40 disabled:opacity-30" type="button"><ChevronDown size={12} /> Descer</button>
+        <button onClick={() => setAnnouncing(true)} className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10" type="button" title="Manda no WhatsApp dos grupos dos clientes que saiu aula nova"><Megaphone size={12} /> Avisar clientes</button>
         <button
           onClick={async () => {
             if (await confirmar({
@@ -457,6 +484,20 @@ function LessonAdminActions({ lesson, lessons, onDeleted }: { lesson: KnowledgeL
         ><Trash2 size={12} /> Excluir aula</button>
       </div>
       {editing && <EditLessonForm lesson={lesson} onClose={() => setEditing(false)} />}
+      {announcing && (
+        <AnnounceLessonModal
+          lesson={{
+            id: lesson.id,
+            titulo: lesson.titulo,
+            curso: courseTitle,
+            modulo: moduleTitle,
+            descricao: lesson.descricao_md ?? '',
+            duracao: lesson.duracao_min,
+          }}
+          courseId={courseId}
+          onClose={() => setAnnouncing(false)}
+        />
+      )}
       {dialogoDeConfirmacao}
     </div>
   );
