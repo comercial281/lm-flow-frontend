@@ -1,8 +1,7 @@
 import { useState, useCallback, Suspense } from 'react';
 import { Button } from '@/components/ui/ds';
 import {
-  Loader2, Calendar, Trash2, Move, CheckSquare, Square,
-  PauseCircle, PlayCircle, BotOff, Bot, AlertCircle,
+  Loader2, Calendar, Trash2, Move, BotOff, Bot, AlertCircle,
   Trophy, XCircle, CalendarPlus, HelpCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -34,8 +33,6 @@ interface CardActionsPanelProps {
   onRemoved?: () => void;
 }
 
-const FOLLOW_UP_LABEL = 'follow-up';
-
 export default function CardActionsPanel({
   item,
   stages,
@@ -53,19 +50,10 @@ export default function CardActionsPanel({
         ? String((item as any).whatsapp_conversation_id)
         : null;
   const contactId = item.contact?.id ?? (item.conversation as any)?.contact?.id;
-
-  // Derive initial state from conversation labels
-  const convLabels: string[] = (() => {
-    const raw = (item.conversation as any)?.labels ?? [];
-    return Array.isArray(raw)
-      ? raw.map((l: any) => (typeof l === 'string' ? l : l?.title ?? ''))
-      : [];
-  })();
-
-  const [followUpActive, setFollowUpActive] = useState(convLabels.includes(FOLLOW_UP_LABEL));
-  const [followUpPaused, setFollowUpPaused] = useState(convLabels.includes('follow-up-pausado'));
-
-  const [togglingFollowUp, setTogglingFollowUp] = useState(false);
+  // Só pra prévia do texto do funil no card: as mensagens têm {{nome}} dentro, e
+  // cru isso fazia a linha do tempo parecer quebrada. Nunca vai ao servidor.
+  const leadName: string | null =
+    item.contact?.name ?? (item.conversation as any)?.contact?.name ?? null;
 
   // Estado da IA Vendedora neste lead. Chega pronto do backend no card; guardamos
   // local só pra refletir o toggle na hora, sem recarregar o board inteiro.
@@ -126,46 +114,6 @@ export default function CardActionsPanel({
   // Detecta colunas de Ganho/Perdido pelo nome (template padrao: "Venda" / "Desqualificado").
   const wonStage = stages.find(s => /vend|ganho|ganhou|fechad/i.test(s.name));
   const lostStage = stages.find(s => /desqualific|perdid|perda|perdeu|descart/i.test(s.name));
-
-  const toggleFollowUp = useCallback(async () => {
-    if (!convId) return;
-    setTogglingFollowUp(true);
-    try {
-      if (followUpActive) {
-        await conversationAPI.removeLabels(convId, [FOLLOW_UP_LABEL]);
-        setFollowUpActive(false);
-        toast.success('Follow-up desativado');
-      } else {
-        await conversationAPI.addLabels(convId, [FOLLOW_UP_LABEL]);
-        setFollowUpActive(true);
-        toast.success('Follow-up ativado');
-      }
-    } catch {
-      toast.error('Erro ao alterar follow-up');
-    } finally {
-      setTogglingFollowUp(false);
-    }
-  }, [convId, followUpActive]);
-
-  const toggleFollowUpPause = useCallback(async () => {
-    if (!convId) return;
-    setTogglingFollowUp(true);
-    try {
-      if (followUpPaused) {
-        await conversationAPI.removeLabels(convId, ['follow-up-pausado']);
-        setFollowUpPaused(false);
-        toast.success('Follow-up retomado');
-      } else {
-        await conversationAPI.addLabels(convId, ['follow-up-pausado']);
-        setFollowUpPaused(true);
-        toast.success('Follow-up pausado');
-      }
-    } catch {
-      toast.error('Erro ao pausar follow-up');
-    } finally {
-      setTogglingFollowUp(false);
-    }
-  }, [convId, followUpPaused]);
 
   const handleMoveStage = useCallback(async (toStageId: string) => {
     if (!currentStageId || toStageId === currentStageId) return;
@@ -229,52 +177,25 @@ export default function CardActionsPanel({
 
   return (
     <div className="space-y-4">
-      {/* Follow-up */}
+      {/* Follow-up.
+
+          O bloco inteiro (estado, botões e linha do tempo) vem do componente
+          abaixo, que lê tudo da FILA de disparos do lead. Antes o botão morava
+          aqui e olhava a etiqueta `follow-up` da conversa, enquanto a linha do
+          tempo olhava a fila: as duas metades discordavam na tela, e o card
+          dizia "Ativar follow-up" com sete mensagens já agendadas embaixo.
+
+          Não depende de `convId`: lead de formulário e de anúncio pode não ter
+          conversa de WhatsApp, e o follow-up é do LEAD. O aviso antigo de
+          "disponível apenas para leads com conversa" escondia o botão desses
+          justamente nos que mais precisam de follow-up. */}
       <div className="rounded-lg border border-border p-3 space-y-2">
         <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Follow-up</h5>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            size="sm"
-            variant={followUpActive ? 'default' : 'outline'}
-            className="h-7 text-xs gap-1.5"
-            onClick={toggleFollowUp}
-            disabled={togglingFollowUp || !convId}
-          >
-            {togglingFollowUp ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : followUpActive ? (
-              <CheckSquare className="h-3.5 w-3.5" />
-            ) : (
-              <Square className="h-3.5 w-3.5" />
-            )}
-            {followUpActive ? 'Follow-up ativo' : 'Ativar follow-up'}
-          </Button>
-
-          {followUpActive && (
-            <Button
-              size="sm"
-              variant={followUpPaused ? 'destructive' : 'outline'}
-              className="h-7 text-xs gap-1.5"
-              onClick={toggleFollowUpPause}
-              disabled={togglingFollowUp || !convId}
-            >
-              {followUpPaused ? (
-                <PlayCircle className="h-3.5 w-3.5" />
-              ) : (
-                <PauseCircle className="h-3.5 w-3.5" />
-              )}
-              {followUpPaused ? 'Retomar' : 'Pausar'}
-            </Button>
-          )}
-        </div>
-        {!convId && (
-          <p className="text-[10px] text-muted-foreground">Disponível apenas para leads com conversa WhatsApp.</p>
-        )}
-        {/* Linha do tempo dos passos do follow-up (o que o robô já mandou e o que falta) */}
-        <div className="pt-1 border-t border-border/60 mt-1">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Linha do tempo</p>
-          <FollowupTimeline contactId={contactId ? String(contactId) : null} conversationId={convId} />
-        </div>
+        <FollowupTimeline
+          contactId={contactId ? String(contactId) : null}
+          conversationId={convId}
+          leadName={leadName}
+        />
       </div>
 
       {/* IA Vendedora.
