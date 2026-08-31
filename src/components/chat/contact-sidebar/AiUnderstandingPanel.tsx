@@ -99,6 +99,10 @@ export default function AiUnderstandingPanel({ conversation }: Props) {
   const humor = texto(attrs.sales_agent_sentiment);
   const transferiu = attrs.sales_agent_handoff === true;
   const motivoTransferencia = texto(attrs.sales_agent_handoff_reason);
+  // A IA QUIS passar o lead e o cenário de repasse escolhido segurou. Sem esta linha o
+  // pedido some: a resposta ao lead já foi enviada quando a decisão acontece, então ele
+  // pode estar esperando uma pessoa que a IA prometeu e o corretor não faz ideia.
+  const repasseSegurado = transferiu ? '' : texto(attrs.sales_agent_handoff_blocked_reason);
 
   const coletadoBruto = (attrs.sales_agent_collected ?? {}) as Record<string, unknown>;
   const coletado = COLETADO.map(c => ({ ...c, valor: texto(coletadoBruto[c.chave]) })).filter(c => c.valor);
@@ -114,6 +118,7 @@ export default function AiUnderstandingPanel({ conversation }: Props) {
     Boolean(etapa) ||
     coletado.length > 0 ||
     transferiu ||
+    Boolean(repasseSegurado) ||
     temLog;
 
   if (!temLeitura) return null;
@@ -200,6 +205,15 @@ export default function AiUnderstandingPanel({ conversation }: Props) {
                 <span>
                   Passou para um corretor
                   {motivoTransferencia ? `: ${motivoTransferencia}` : '.'}
+                </span>
+              </div>
+            )}
+
+            {repasseSegurado && (
+              <div className="flex items-start gap-1.5 text-xs text-muted-foreground mt-1">
+                <ArrowRightLeft className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                <span>
+                  A IA quis passar este lead e o cenário escolhido segurou: {repasseSegurado}.
                 </span>
               </div>
             )}
