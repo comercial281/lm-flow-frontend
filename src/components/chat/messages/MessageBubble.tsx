@@ -29,6 +29,7 @@ import MessageLocation from '@/components/chat/messages/MessageLocation';
 import MessageStatus from '@/components/chat/messages/MessageStatus';
 import SystemMessage from '@/components/chat/messages/SystemMessage';
 import ReplyPreview from '@/components/chat/messages/ReplyPreview';
+import MessageReactions from '@/components/chat/messages/MessageReactions';
 import { FacebookCommentModeration } from '@/types/channels/inbox';
 
 interface MessageBubbleProps {
@@ -349,6 +350,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             </div>,
           )}
 
+          {/* Curtidas grudadas na bolha — vêm do servidor, dentro da própria mensagem. */}
+          <MessageReactions message={message} />
+
           {/* Timestamp estilo Facebook - abaixo do bubble, alinhado à esquerda */}
           {showTimestamp && (
             <div className="mt-1 text-xs text-muted-foreground">
@@ -509,6 +513,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             )}
           </div>,
         )}
+
+        {/* Curtidas grudadas na bolha — vêm do servidor, dentro da própria mensagem. */}
+        <MessageReactions message={message} isOwn={isOwn} />
       </div>
 
       {/* Alert Dialog para confirmação de exclusão */}

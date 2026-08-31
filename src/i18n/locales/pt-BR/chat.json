@@ -96,6 +96,11 @@
       "locationAttachment": "📍 Localização",
       "noContent": "Mensagem sem conteúdo",
       "userFallback": "Usuário"
+    },
+    "reactions": {
+      "byAgent": "Curtido pela IA",
+      "byContact": "Curtido pelo cliente",
+      "byUser": "Curtido pela equipe"
     }
   },
   "assignment": {

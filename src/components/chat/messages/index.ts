@@ -6,5 +6,6 @@ export { default as MessageFile } from '@/components/chat/messages/MessageFile';
 export { default as MessageAudio } from '@/components/chat/messages/MessageAudio';
 export { default as MessageVideo } from '@/components/chat/messages/MessageVideo';
 export { default as MessageLocation } from '@/components/chat/messages/MessageLocation';
+export { default as MessageReactions } from '@/components/chat/messages/MessageReactions';
 export { default as MessageStatus } from '@/components/chat/messages/MessageStatus';
 export { default as SystemMessage } from '@/components/chat/messages/SystemMessage';

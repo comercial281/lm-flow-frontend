@@ -108,6 +108,15 @@ export interface SalesAgent {
   send_property_book_enabled?: boolean;
   /** Regra escrita uma vez, valendo pro book de QUALQUER imóvel. */
   book_send_rule?: string | null;
+  /**
+   * A IA pode CURTIR mensagens do lead — a reação com emoji que aparece grudada
+   * na mensagem, no aparelho dele. Nasce desligada em todo cliente.
+   */
+  reaction_enabled?: boolean;
+  /** Os únicos emojis que ela pode usar. O servidor devolve a lista já resolvida. */
+  reaction_emojis?: string[];
+  /** Teto de curtidas por conversa. */
+  reaction_max_per_conversation?: number | null;
   documents_count: number;
   created_at: string;
   updated_at: string;
