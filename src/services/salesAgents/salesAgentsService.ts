@@ -102,6 +102,14 @@ export interface SalesAgent {
   /** Deixa a IA consultar o catálogo real de imóveis pra oferecer alternativa. */
   catalog_search_enabled: boolean;
   /**
+   * A IA responde em VÁRIAS mensagens curtas, com "digitando..." entre elas, em vez
+   * de um parágrafo único. Quem quebra é a própria IA; o servidor tem uma regra
+   * automática de segurança pra quando ela mandar um bloco grande.
+   */
+  message_split_enabled: boolean;
+  /** Teto de mensagens por resposta. É teto, não meta: resposta curta sai numa só. */
+  message_split_max_parts: number;
+  /**
    * A IA pode mandar sozinha o book que já está cadastrado no imóvel — sem precisar
    * subir o mesmo PDF de novo na aba de arquivos, e valendo pros imóveis futuros.
    */
@@ -316,6 +324,9 @@ export interface SalesAgentPayload {
   out_of_hours_reply?: boolean;
   out_of_hours_message?: string | null;
   catalog_search_enabled?: boolean;
+  /** A IA responde em várias mensagens curtas em vez de um parágrafo único. */
+  message_split_enabled?: boolean;
+  message_split_max_parts?: number;
   /** A IA pode mandar sozinha o book cadastrado no imóvel. */
   send_property_book_enabled?: boolean;
   /** Regra escrita uma vez, valendo pro book de QUALQUER imóvel. */
@@ -393,7 +404,14 @@ export interface TestMediaItem {
 }
 
 export interface SalesAgentTestResult {
+  /** O texto inteiro da resposta. Continua existindo pra tudo que lê "a resposta". */
   reply: string;
+  /**
+   * As mensagens na ordem em que o lead as receberia, quando a quebra está ligada.
+   * Sem isto o painel Testar mostraria UMA bolha mesmo com a chave ligada, e quem
+   * testasse concluiria que a funcionalidade não funciona.
+   */
+  reply_parts?: string[];
   media?: TestMediaItem[];
   temperature: 'hot' | 'warm' | 'cold' | 'unknown';
   should_transfer: boolean;

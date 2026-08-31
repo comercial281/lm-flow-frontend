@@ -176,6 +176,11 @@ export default function SalesAgents() {
         followup_respect_active_hours: patch.followup_respect_active_hours ?? selected.followup_respect_active_hours,
         out_of_hours_reply: patch.out_of_hours_reply ?? selected.out_of_hours_reply,
         catalog_search_enabled: patch.catalog_search_enabled ?? selected.catalog_search_enabled,
+        // ⚠️ Campo novo PRECISA entrar nesta lista. Ela monta o PATCH campo a
+        // campo, e o que não estiver aqui é descartado sem erro nenhum: a tela
+        // mostra o valor, o toast diz "Salvo", e nada foi salvo.
+        message_split_enabled: patch.message_split_enabled ?? selected.message_split_enabled,
+        message_split_max_parts: patch.message_split_max_parts ?? selected.message_split_max_parts,
         // `in` e não `??`: aqui null quer dizer "apagar o texto e voltar pro
         // automático", e `??` trataria isso como "não mexeu", tornando o campo
         // impossível de limpar depois de preenchido uma vez.
@@ -1329,6 +1334,40 @@ function RecepcaoSection({
         <p className="text-xs text-muted-foreground mt-1">
           A IA espera esse tempo pra juntar mensagens antes de responder. Se o lead manda 2-3 mensagens seguidas, ela lê todas e responde uma vez, com contexto. Vazio/0 = padrão de 10s.
         </p>
+      </div>
+
+      {/*
+        Fica colado no campo acima de propósito: os dois falam do ritmo da conversa.
+        Aquele é o tempo de ESPERA (juntar o que o lead mandou); este é o ritmo da
+        RESPOSTA (espalhar o que a IA vai mandar). Separá-los faria procurar em
+        dois lugares a mesma coisa.
+      */}
+      <div className="rounded-md border p-3 space-y-3">
+        <CheckRow
+          checked={agent.message_split_enabled !== false}
+          onChange={(v) => { onChange({ ...agent, message_split_enabled: v }); onSave({ message_split_enabled: v }); }}
+          title="Responder em várias mensagens"
+          desc="A IA divide a resposta em mensagens curtas, com 'digitando...' entre elas, como um corretor no WhatsApp. Desligada, ela manda tudo numa mensagem só."
+        />
+        {agent.message_split_enabled !== false && (
+          <div>
+            <Label htmlFor="message_split_max_parts">No máximo quantas mensagens por resposta</Label>
+            <Input
+              id="message_split_max_parts"
+              type="number"
+              min={2}
+              max={4}
+              placeholder="3"
+              value={agent.message_split_max_parts ?? ''}
+              onChange={(e) => onChange({ ...agent, message_split_max_parts: e.target.value === '' ? 0 : Number(e.target.value) })}
+              onBlur={() => onSave({ message_split_max_parts: Math.min(4, Math.max(2, Number(agent.message_split_max_parts) || 3)) })}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              É teto, não meta: resposta curta continua saindo numa mensagem só. O limite de 4 existe porque
+              rajada de mensagens é o que mais faz o WhatsApp tratar um número como robô.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3">
@@ -2936,7 +2975,19 @@ function TestTab({ agent }: { agent: SalesAgent }) {
       const firstTimeForThisProperty = mediaShownFor !== code;
       const media = firstTimeForThisProperty ? result.media ?? [] : [];
       if (media.length > 0) setMediaShownFor(code);
-      setHistory([...newHistory, { role: 'assistant', content: result.reply, media }]);
+      // Uma bolha por MENSAGEM, não por turno: é assim que o lead recebe quando a
+      // quebra está ligada. Mostrar uma bolha só faria quem liga a chave e testa
+      // aqui concluir que ela não funciona. A mídia fica pendurada na última,
+      // porque no atendimento real ela sai depois de todo o texto.
+      const parts = result.reply_parts?.length ? result.reply_parts : [result.reply];
+      setHistory([
+        ...newHistory,
+        ...parts.map((content, i) => ({
+          role: 'assistant' as const,
+          content,
+          media: i === parts.length - 1 ? media : [],
+        })),
+      ]);
       setLast(result);
     } catch {
       toast.error('Erro no teste (verifique se a chave da IA está configurada)');
