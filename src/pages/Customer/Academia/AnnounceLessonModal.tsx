@@ -335,11 +335,13 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                       </span>
                       <span className="flex-1 min-w-0">
                         <span className="block text-xs truncate">{g.name}</span>
-                        <span className="block text-[10px] text-muted-foreground truncate">
-                          {g.client
-                            ? `Cliente: ${g.client}${g.client_group ? ` · grupo de ${g.client_group}` : ''}`
-                            : 'Escolhido antes — não está cadastrado em nenhum cliente'}
-                        </span>
+                        {(g.client || !g.matches_rule) && (
+                          <span className="block text-[10px] text-muted-foreground truncate">
+                            {g.client
+                              ? `Cliente: ${g.client}${g.client_group ? ` · grupo de ${g.client_group}` : ''}`
+                              : 'Escolhido antes — o nome não termina em Leal Mídia'}
+                          </span>
+                        )}
                       </span>
                       {res && (
                         <span className={`text-[10px] shrink-0 ${res.sent ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -353,17 +355,17 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                   <p className="px-3 py-6 text-center text-[11px] text-muted-foreground">
                     {buscandoGrupos
                       ? 'Procurando os grupos...'
-                      : 'Nenhum grupo de cliente neste número. Cadastre o grupo da imobiliária no cliente para ele aparecer aqui.'}
+                      : 'Nenhum grupo terminado em "Leal Mídia" neste número.'}
                   </p>
                 )}
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Só aparecem os grupos cadastrados em algum cliente.
+                Só aparecem os grupos cujo nome termina em <strong>Leal Mídia</strong> — é assim que
+                se reconhece o grupo de uma imobiliária.
                 {foraDaLista > 0 && (
                   <>
                     {' '}
-                    Outros <strong>{foraDaLista}</strong> grupo(s) deste número ficaram de fora por não
-                    estarem no cadastro de nenhuma imobiliária.
+                    Outros <strong>{foraDaLista}</strong> grupo(s) deste número ficaram de fora.
                   </>
                 )}
               </p>
