@@ -41,6 +41,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
   const [instancia, setInstancia] = useState('');
   const [instancias, setInstancias] = useState<CentralInstance[]>([]);
   const [grupos, setGrupos] = useState<AvailableGroup[]>([]);
+  const [foraDaLista, setForaDaLista] = useState(0);
   const [buscandoGrupos, setBuscandoGrupos] = useState(false);
   const [escolhidos, setEscolhidos] = useState<string[]>([]);
   const [busca, setBusca] = useState('');
@@ -62,6 +63,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
     try {
       const r = await academyAnnouncementsService.groups(nomeInstancia);
       setGrupos(r.data.data ?? []);
+      setForaDaLista(r.data.hidden ?? 0);
     } catch {
       toast.error('Não deu para ler os grupos do WhatsApp agora.');
     } finally {
@@ -287,7 +289,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs font-semibold flex items-center gap-1.5">
-                  <Users size={13} /> Grupos que vão receber ({selecionados.length} de {grupos.length})
+                  <Users size={13} /> Grupos dos clientes ({selecionados.length} de {grupos.length})
                 </p>
                 <div className="flex items-center gap-2">
                   <button onClick={alternarTodos} className="text-[11px] text-primary hover:underline" type="button">
@@ -333,11 +335,11 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                       </span>
                       <span className="flex-1 min-w-0">
                         <span className="block text-xs truncate">{g.name}</span>
-                        {g.client && (
-                          <span className="block text-[10px] text-muted-foreground truncate">
-                            Cliente: {g.client}
-                          </span>
-                        )}
+                        <span className="block text-[10px] text-muted-foreground truncate">
+                          {g.client
+                            ? `Cliente: ${g.client}${g.client_group ? ` · grupo de ${g.client_group}` : ''}`
+                            : 'Escolhido antes — não está cadastrado em nenhum cliente'}
+                        </span>
                       </span>
                       {res && (
                         <span className={`text-[10px] shrink-0 ${res.sent ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -349,13 +351,21 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                 })}
                 {visiveis.length === 0 && (
                   <p className="px-3 py-6 text-center text-[11px] text-muted-foreground">
-                    {buscandoGrupos ? 'Procurando os grupos...' : 'Nenhum grupo encontrado neste número.'}
+                    {buscandoGrupos
+                      ? 'Procurando os grupos...'
+                      : 'Nenhum grupo de cliente neste número. Cadastre o grupo da imobiliária no cliente para ele aparecer aqui.'}
                   </p>
                 )}
               </div>
               <p className="text-[11px] text-muted-foreground">
-                A lista vem do próprio WhatsApp do número escolhido. Onde o grupo já está cadastrado
-                no cliente, o nome da imobiliária aparece embaixo.
+                Só aparecem os grupos cadastrados em algum cliente.
+                {foraDaLista > 0 && (
+                  <>
+                    {' '}
+                    Outros <strong>{foraDaLista}</strong> grupo(s) deste número ficaram de fora por não
+                    estarem no cadastro de nenhuma imobiliária.
+                  </>
+                )}
               </p>
             </div>
 

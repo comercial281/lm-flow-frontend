@@ -12,9 +12,11 @@ export interface AnnounceGroup {
 }
 
 // Grupo que a instância enxerga, já cruzado com o cadastro dos clientes.
+// `client_group` diz QUAL grupo daquele cliente é (lembretes / logs internos).
 export interface AvailableGroup extends AnnounceGroup {
   client: string | null;
   client_slug: string | null;
+  client_group: string | null;
   selected: boolean;
 }
 
@@ -72,8 +74,12 @@ export const academyAnnouncementsService = {
   saveConfig: (payload: Partial<Pick<AnnounceConfig, 'template' | 'instance' | 'enabled' | 'groups'>>) =>
     apiClient.put<{ data: AnnounceConfig }>(base, payload),
 
+  // Só os grupos de CLIENTE (mais os que já estavam salvos como destino).
+  // `hidden` conta os que o número enxerga e não são de cliente nenhum.
   groups: (instance?: string) =>
-    apiClient.get<{ data: AvailableGroup[] }>(`${base}/groups`, { params: instance ? { instance } : {} }),
+    apiClient.get<{ data: AvailableGroup[]; hidden: number }>(`${base}/groups`, {
+      params: instance ? { instance } : {},
+    }),
 
   // A prévia vem do SERVIDOR de propósito: é ele quem interpola na hora do
   // envio, e um texto montado aqui mostraria uma mensagem que ninguém recebe.
