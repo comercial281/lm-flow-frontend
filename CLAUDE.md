@@ -370,9 +370,12 @@ O que aparece na tela:
 - **A mensagem é editável e tem trechos entre chaves** ({aula}, {curso}, {link}…)
   que são preenchidos na hora do envio. O botão *Salvar como padrão* guarda o
   texto, o número e os grupos para a próxima aula — a janela já abre preenchida.
-- **A lista de grupos vem do próprio WhatsApp** do número escolhido, com busca e
-  marcar/desmarcar. Onde o grupo já está cadastrado no cliente, o nome da
-  imobiliária aparece embaixo do nome do grupo.
+- **A lista mostra só os grupos dos CLIENTES.** Ela vem do WhatsApp do número
+  escolhido, mas filtrada pelos grupos que estão no cadastro das imobiliárias —
+  com o nome do cliente e qual grupo dele é (lembretes ou logs internos) embaixo
+  do nome do grupo. Tem busca e marcar/desmarcar. Embaixo da lista, o aviso de
+  quantos grupos daquele número ficaram de fora por não estarem em cadastro
+  nenhum: sem esse número, "meu grupo não está aqui" vira chamado de suporte.
 - **Depois de enviar, cada grupo mostra *enviado* ou *falhou*** na própria lista, e
   o rodapé *Ver os últimos avisos* conta o que já saiu, quando e para quantos.
 
@@ -387,6 +390,9 @@ Decisões (não reabrir sem o dono pedir):
   vezes o reenvio é de propósito. Mas ninguém manda duas vezes sem saber.
 - **A quantidade de grupos escolhidos fica no botão de enviar.** Disparo para
   grupo de cliente é irreversível; o número precisa estar embaixo do dedo.
+- **Grupo já salvo como destino continua na lista mesmo sem cliente vinculado**,
+  com o aviso de que ele foi escolhido antes. Os selecionados são derivados da
+  lista exibida: escondê-lo o tiraria do disparo e do padrão calado.
 
 Armadilhas:
 
