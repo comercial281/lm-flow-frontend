@@ -125,19 +125,25 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
     );
   }, [grupos, busca]);
 
+  // Só entra no disparo o grupo com endereço de app conhecido: o link é o
+  // endereço da imobiliária, e sem saber qual é a mensagem sairia apontando
+  // para o app de outra — quem clicasse tomaria erro ao entrar na conta.
   const selecionados = useMemo(
-    () => grupos.filter((g) => escolhidos.includes(g.jid)),
+    () => grupos.filter((g) => escolhidos.includes(g.jid) && g.link_host),
     [grupos, escolhidos],
   );
 
-  const todosVisiveisMarcados = visiveis.length > 0 && visiveis.every((g) => escolhidos.includes(g.jid));
+  const semEndereco = useMemo(() => grupos.filter((g) => !g.link_host), [grupos]);
+
+  const marcaveis = visiveis.filter((g) => g.link_host);
+  const todosVisiveisMarcados = marcaveis.length > 0 && marcaveis.every((g) => escolhidos.includes(g.jid));
 
   function alternar(jid: string) {
     setEscolhidos((atual) => (atual.includes(jid) ? atual.filter((x) => x !== jid) : [...atual, jid]));
   }
 
   function alternarTodos() {
-    const jids = visiveis.map((g) => g.jid);
+    const jids = visiveis.filter((g) => g.link_host).map((g) => g.jid);
     setEscolhidos((atual) =>
       todosVisiveisMarcados ? atual.filter((x) => !jids.includes(x)) : [...new Set([...atual, ...jids])],
     );
@@ -261,7 +267,12 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
 
             {/* Prévia */}
             <div className="space-y-1.5">
-              <p className="text-xs font-semibold">Como vai chegar no grupo</p>
+              <p className="text-xs font-semibold">
+                Como vai chegar no grupo{' '}
+                <span className="font-normal text-muted-foreground">
+                  (o link do exemplo muda por grupo — o de cada um está na lista abaixo)
+                </span>
+              </p>
               <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs whitespace-pre-wrap min-h-[64px]">
                 {previa || <span className="text-muted-foreground">Escreva a mensagem para ver a prévia.</span>}
               </div>
@@ -322,8 +333,11 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                   return (
                     <button
                       key={g.jid}
-                      onClick={() => alternar(g.jid)}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-left ${marcado ? 'bg-primary/5' : ''}`}
+                      onClick={() => g.link_host && alternar(g.jid)}
+                      disabled={!g.link_host}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-left ${marcado ? 'bg-primary/5' : ''} ${
+                        g.link_host ? '' : 'opacity-70 cursor-not-allowed'
+                      }`}
                       type="button"
                     >
                       <span
@@ -335,11 +349,15 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                       </span>
                       <span className="flex-1 min-w-0">
                         <span className="block text-xs truncate">{g.name}</span>
-                        {(g.client || !g.matches_rule) && (
+                        {g.link_host ? (
                           <span className="block text-[10px] text-muted-foreground truncate">
-                            {g.client
-                              ? `Cliente: ${g.client}${g.client_group ? ` · grupo de ${g.client_group}` : ''}`
-                              : 'Escolhido antes — o nome não termina em Leal Mídia'}
+                            {g.client}
+                            {g.client_group ? ` · grupo de ${g.client_group}` : ''} · abre em{' '}
+                            {g.link_host.replace('https://', '')}
+                          </span>
+                        ) : (
+                          <span className="block text-[10px] text-amber-600 dark:text-amber-400 truncate">
+                            Sem cliente identificado — cadastre este grupo na imobiliária para poder avisar
                           </span>
                         )}
                       </span>
@@ -361,11 +379,19 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
               </div>
               <p className="text-[11px] text-muted-foreground">
                 Só aparecem os grupos cujo nome termina em <strong>Leal Mídia</strong> — é assim que
-                se reconhece o grupo de uma imobiliária.
+                se reconhece o grupo de uma imobiliária. Cada grupo recebe o link no endereço do app
+                do cliente dele.
                 {foraDaLista > 0 && (
                   <>
                     {' '}
                     Outros <strong>{foraDaLista}</strong> grupo(s) deste número ficaram de fora.
+                  </>
+                )}
+                {semEndereco.length > 0 && (
+                  <>
+                    {' '}
+                    <strong>{semEndereco.length}</strong> grupo(s) não puderam ser marcados porque não
+                    dá para saber de qual imobiliária são — sem isso o link levaria ao app errado.
                   </>
                 )}
               </p>

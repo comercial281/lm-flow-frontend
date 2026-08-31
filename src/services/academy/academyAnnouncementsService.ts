@@ -19,6 +19,11 @@ export interface AvailableGroup extends AnnounceGroup {
   client: string | null;
   client_slug: string | null;
   client_group: string | null;
+  // 'cadastro' = o grupo está gravado no cliente · 'nome' = deduzido do nome do grupo
+  client_source: 'cadastro' | 'nome' | null;
+  // Endereço do app para onde o link deste grupo vai levar. null = não deu para
+  // identificar o cliente, e então NÃO dá para avisar esse grupo.
+  link_host: string | null;
   matches_rule: boolean;
   selected: boolean;
 }
