@@ -497,9 +497,18 @@ Decisões (não reabrir sem o dono pedir):
 - **Pede o e-mail, não mostra uma lista de imobiliárias.** A lista exporia a
   carteira de clientes para qualquer um que abrisse o link.
 
-Armadilha: a tela do "abrindo em..." fica ~1,6s no ar de propósito, com o "não é
-você?" à mostra. Sem essa pausa, quem usasse o aparelho de outra pessoa ficaria
-preso no app errado sem chance de trocar.
+Armadilhas:
+
+1. **A guarda geral do roteador (`RouterGuard`) roda ANTES das rotas** e manda
+   para o login todo endereço que não esteja na lista de públicos. Foi ela que
+   engoliu a porta de entrada na primeira tentativa: o `AcademiaRoute` nunca
+   chegava a ser desenhado, e o link continuava caindo no login. Hoje há uma
+   exceção estreita ali — `/academia` com host sem cliente — e um teste que
+   reprova se ela sumir. Rota nova que precise ser vista por quem não tem conta
+   NESTE endereço tem que passar por lá também.
+2. A tela do "abrindo em..." fica ~1,6s no ar de propósito, com o "não é você?"
+   à mostra. Sem essa pausa, quem usasse o aparelho de outra pessoa ficaria
+   preso no app errado sem chance de trocar.
 
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
