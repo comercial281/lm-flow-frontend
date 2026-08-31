@@ -19,15 +19,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/ds';
-import { Clock, Edit, Send, ToggleLeft, ToggleRight, Trash2, Plus, GripVertical, Upload, Loader2, Mic, Square, Sparkles, History, LayoutGrid, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
+import { Clock, Edit, Send, ToggleLeft, ToggleRight, Trash2, Plus, GripVertical, Upload, Loader2, Mic, Square, Sparkles, History, LayoutGrid, MessageSquare, ChevronDown, ChevronRight, Download, FileUp, AlertTriangle } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import {
   followupSequencesService,
   followupAdminService,
+  readFollowupPackage,
   FollowupSequence,
   FollowupStep,
   FollowupTemplate,
   FollowupHistory,
+  FollowupPackageSummary,
   MESSAGE_TYPE_LABELS,
   formatDelay,
 } from '@/services/followupSequences/followupSequencesService';
@@ -402,6 +404,18 @@ export default function FollowupSequences() {
   const [creatingTemplate, setCreatingTemplate] = useState<string | null>(null);
   const [previewKey, setPreviewKey] = useState<string | null>(null);
 
+  // Levar o funil de um CRM pro outro. O arquivo é lido AQUI antes de subir, pra
+  // a pessoa ver o que vai entrar — importar às cegas o que veio de outro cliente
+  // é o mesmo problema que escolher modelo pronto sem ver o texto.
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importSummary, setImportSummary] = useState<FollowupPackageSummary | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  // O que não deu pra trazer pro CRM: coluna que não existe aqui, mídia que não
+  // veio. Fica numa janela própria depois de importar, porque some num toast.
+  const [pendencias, setPendencias] = useState<{ name: string; itens: string[] } | null>(null);
+
   // Histórico do funil.
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState<FollowupHistory | null>(null);
@@ -637,6 +651,51 @@ export default function FollowupSequences() {
     } catch { toast.error('Falha ao alternar.'); }
   };
 
+  const exportSequence = async (seq: FollowupSequence) => {
+    setExportingId(seq.id);
+    try {
+      await followupSequencesService.exportToFile(seq);
+      toast.success('Arquivo do funil baixado. Ele leva as mensagens e a mídia junto.');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Falha ao exportar o funil.'));
+    } finally {
+      setExportingId(null);
+    }
+  };
+
+  const pickImportFile = async (file: File | undefined) => {
+    // O input guarda o último arquivo escolhido: sem limpar, escolher o MESMO
+    // arquivo de novo (depois de cancelar) não dispara evento nenhum e o botão
+    // parece morto.
+    if (importInputRef.current) importInputRef.current.value = '';
+    if (!file) return;
+
+    const { summary, error } = await readFollowupPackage(file);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    setImportFile(file);
+    setImportSummary(summary);
+  };
+
+  const confirmImport = async () => {
+    if (!importFile) return;
+    setImporting(true);
+    try {
+      const out = await followupSequencesService.importFromFile(importFile);
+      setImportFile(null);
+      setImportSummary(null);
+      toast.success(`Funil "${out.sequence.name}" importado — ele chegou DESLIGADO.`);
+      if (out.pendencias?.length) setPendencias({ name: out.sequence.name, itens: out.pendencias });
+      load();
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Falha ao importar o funil.'));
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const openTest = (seqId: string) => {
     setTestSeqId(seqId);
     setTestPhone('');
@@ -664,6 +723,20 @@ export default function FollowupSequences() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {/* Levar um funil pronto de um CRM pro outro: exporta lá, importa aqui.
+              O arquivo leva a mídia dentro, então funciona mesmo entre clientes
+              que não têm nada em comum. */}
+          <input
+            ref={importInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={e => pickImportFile(e.target.files?.[0])}
+          />
+          <Button variant="outline" onClick={() => importInputRef.current?.click()}>
+            <FileUp className="mr-1 h-4 w-4" />
+            Importar funil
+          </Button>
           <Button variant="outline" onClick={openTemplates}>
             <Sparkles className="mr-1 h-4 w-4" />
             Usar modelo pronto
@@ -747,6 +820,18 @@ export default function FollowupSequences() {
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="sm" onClick={() => toggle(seq)}>
                     {seq.is_active ? <ToggleRight className="h-4 w-4 text-green-500" /> : <ToggleLeft className="h-4 w-4 text-red-500" />}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    title="Baixar este funil como arquivo, com as mensagens e a mídia, pra usar em outro CRM"
+                    disabled={exportingId === seq.id}
+                    onClick={() => exportSequence(seq)}
+                  >
+                    {exportingId === seq.id
+                      ? <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      : <Download className="mr-1 h-3 w-3" />}
+                    Exportar
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => openHistory(seq)}>
                     <History className="mr-1 h-3 w-3" /> Histórico
@@ -1095,6 +1180,98 @@ export default function FollowupSequences() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setTestDialogOpen(false)}>Cancelar</Button>
             <Button onClick={fireTest} disabled={!testPhone}>Disparar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmar a importação. A prévia existe pelo mesmo motivo da prévia do
+          modelo pronto: o arquivo pode ter vindo de qualquer lugar, e ninguém
+          deve descobrir o que entrou depois de já estar no CRM. */}
+      <Dialog open={!!importSummary} onOpenChange={(o) => { if (!o) { setImportFile(null); setImportSummary(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Importar funil</DialogTitle>
+            <DialogDescription>
+              O funil entra neste CRM <strong>desligado</strong>. Confira as mensagens e só
+              então ligue — assim nenhum lead recebe nada antes de você ler o que vai sair.
+            </DialogDescription>
+          </DialogHeader>
+
+          {importSummary && (
+            <div className="space-y-3 text-sm">
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <p className="font-medium">{importSummary.name}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <Badge variant="outline">{importSummary.stepsCount} mensagens</Badge>
+                  {importSummary.mediaCount > 0 && (
+                    <Badge variant="outline">
+                      {importSummary.mediaCount === 1 ? '1 mídia' : `${importSummary.mediaCount} mídias`}
+                    </Badge>
+                  )}
+                  {importSummary.entriesCount > 0 && (
+                    <Badge variant="outline">
+                      {importSummary.entriesCount === 1 ? '1 entrada' : `${importSummary.entriesCount} entradas`}
+                    </Badge>
+                  )}
+                </div>
+                {importSummary.exportedFrom && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Exportado de: {importSummary.exportedFrom}
+                  </p>
+                )}
+              </div>
+
+              {/* As colunas e etiquetas do funil viajam pelo NOME. O que não
+                  existir aqui é listado depois de importar — dizer isso antes
+                  evita a impressão de que veio tudo. */}
+              <p className="text-xs text-muted-foreground">
+                As fotos, vídeos, áudios e figurinhas vêm dentro do arquivo. Já as colunas e
+                etiquetas são procuradas pelo nome neste CRM: o que não existir aqui aparece
+                numa lista no fim da importação.
+              </p>
+
+              {importSummary.warnings.length > 0 && (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+                  <p className="flex items-center gap-1.5 font-medium text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="h-4 w-4" /> Avisos deste arquivo
+                  </p>
+                  <ul className="mt-1 list-disc pl-5 text-xs text-amber-700 dark:text-amber-300">
+                    {importSummary.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setImportFile(null); setImportSummary(null); }}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmImport} disabled={importing}>
+              {importing && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+              Importar funil
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* O que não deu pra trazer. Janela própria, e não toast: é uma lista de
+          coisas pra fazer, e toast some antes de alguém anotar. */}
+      <Dialog open={!!pendencias} onOpenChange={(o) => !o && setPendencias(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Funil importado, com pendências</DialogTitle>
+            <DialogDescription>
+              <strong>{pendencias?.name}</strong> já está na lista, desligado. Estes pontos
+              não puderam ser trazidos deste arquivo para este CRM — resolva antes de ligar
+              o funil:
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="list-disc space-y-1 pl-5 text-sm">
+            {pendencias?.itens.map((p, i) => <li key={i}>{p}</li>)}
+          </ul>
+          <DialogFooter>
+            <Button onClick={() => setPendencias(null)}>Entendi</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
