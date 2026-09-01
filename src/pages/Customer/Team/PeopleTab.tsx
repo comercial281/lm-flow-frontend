@@ -55,6 +55,17 @@ export default function PeopleTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // O WhatsApp da pessoa, editável aqui.
+  //
+  // Até 2026-09-01 o único jeito de corrigir o número de alguém era o modal
+  // "Enviar acesso" — que TROCA A SENHA junto. A tela que editava o campo
+  // (a antiga de Usuários) virou código morto quando /settings/users passou a
+  // redirecionar para cá. Agora a roleta avisa o corretor pelo número do
+  // cadastro, então não poder corrigi-lo deixaria o corretor sem aviso e sem
+  // saída.
+  const [whatsappRascunho, setWhatsappRascunho] = useState('');
+  const [salvandoWhatsapp, setSalvandoWhatsapp] = useState(false);
+
   // Enviar acesso por WhatsApp (1 clique por pessoa)
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [sendPhone, setSendPhone] = useState('');
@@ -129,6 +140,31 @@ export default function PeopleTab() {
       toast.error(e?.response?.data?.error?.message ?? 'Erro ao enviar o acesso.');
     } finally {
       setSendBusy(false);
+    }
+  };
+
+  // O campo é semeado ao ABRIR a pessoa, e não a cada render: semear no render
+  // apagaria o que o gestor está digitando a cada atualização da lista.
+  const abrirPessoa = (id: string) => {
+    setWhatsappRascunho(members.find(m => m.id === id)?.whatsapp_number ?? '');
+    setEditingId(id);
+  };
+
+  const salvarWhatsapp = async (member: TeamAccessMember) => {
+    const novo = whatsappRascunho.trim();
+    if (novo === (member.whatsapp_number ?? '').trim()) return;
+
+    setSalvandoWhatsapp(true);
+    try {
+      // Só o WhatsApp: mandar mais campos aqui reabriria a porta do "Enviar
+      // acesso", que troca a senha sem a pessoa pedir.
+      await usersService.updateUser(member.id, { whatsapp_number: novo });
+      setMembers(prev => prev.map(m => (m.id === member.id ? { ...m, whatsapp_number: novo } : m)));
+      toast.success(novo ? 'WhatsApp atualizado' : 'WhatsApp removido');
+    } catch {
+      toast.error('Não consegui salvar o WhatsApp');
+    } finally {
+      setSalvandoWhatsapp(false);
     }
   };
 
@@ -308,9 +344,23 @@ export default function PeopleTab() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      {member.confirmed
-                        ? <Badge variant="outline" className="text-xs text-emerald-500">Ativo</Badge>
-                        : <Badge variant="outline" className="text-xs text-amber-600">Convite pendente</Badge>}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {member.confirmed
+                          ? <Badge variant="outline" className="text-xs text-emerald-500">Ativo</Badge>
+                          : <Badge variant="outline" className="text-xs text-amber-600">Convite pendente</Badge>}
+                        {/* Quem está sem número é justamente quem recebe lead
+                            sorteado e não é avisado no WhatsApp. Precisa ser
+                            visível sem abrir pessoa por pessoa. */}
+                        {!(member.whatsapp_number ?? '').trim() && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs text-amber-600"
+                            title="Sem WhatsApp no cadastro: os avisos da distribuição de leads não chegam por WhatsApp"
+                          >
+                            Sem WhatsApp
+                          </Badge>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -324,7 +374,7 @@ export default function PeopleTab() {
                         >
                           <MessageCircle className="h-3.5 w-3.5" /> Enviar acesso
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => setEditingId(member.id)} disabled={!canManage} className="h-8 text-xs">
+                        <Button variant="outline" size="sm" onClick={() => abrirPessoa(member.id)} disabled={!canManage} className="h-8 text-xs">
                           Gerenciar acesso
                         </Button>
                       </div>
@@ -390,6 +440,40 @@ export default function PeopleTab() {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* WhatsApp da pessoa.
+                  É por este número que a distribuição de leads avisa o corretor
+                  ("chegou um lead pra você", com o link de aceite). Fica aqui —
+                  e não só dentro de cada roleta — porque é o número DELA: antes,
+                  quem estava em três roletas tinha o número digitado três vezes,
+                  e corrigi-lo só era possível pelo "Enviar acesso", que troca a
+                  senha junto. */}
+              <div className="border-t border-border py-3">
+                <UILabel className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
+                  <MessageCircle className="h-4 w-4" /> WhatsApp
+                </UILabel>
+                <div className="flex gap-2">
+                  <Input
+                    value={whatsappRascunho}
+                    onChange={e => setWhatsappRascunho(e.target.value)}
+                    onBlur={() => salvarWhatsapp(editing)}
+                    placeholder="Ex.: 11 94087 1974"
+                    disabled={saving || salvandoWhatsapp}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => salvarWhatsapp(editing)}
+                    disabled={saving || salvandoWhatsapp
+                      || whatsappRascunho.trim() === (editing.whatsapp_number ?? '').trim()}
+                  >
+                    Salvar
+                  </Button>
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  É por aqui que a distribuição de leads avisa {editing.name} quando um lead cai
+                  para ele. Sem número, ele recebe a oferta só pelo app.
+                </p>
               </div>
 
               {/* Instâncias */}

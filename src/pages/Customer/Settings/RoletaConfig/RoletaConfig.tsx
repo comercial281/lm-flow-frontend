@@ -12,11 +12,11 @@ import {
   Gavel, Hand, Wifi, Send, Loader2, Eye, EyeOff, AlertTriangle,
 } from 'lucide-react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
-import { roletaFormProblems, backendProblems } from './roletaFormChecks';
+import { roletaFormProblems, roletaFormWarnings, backendProblems } from './roletaFormChecks';
 import {
   roletaConfigService, RoletaConfig, RoletaMember, RoletaInstance, BrokerAssignment, DistributionMode,
   RoletaDiagnostic, RepairOwnersResult, RepairInboxAccessResult, RoletaQueue,
-  RoletaHoursWindow, RoletaBusinessHours,
+  RoletaHoursWindow, RoletaBusinessHours, RoletaDefaults,
 } from '@/services/roletaConfig/roletaConfigService';
 import RemoveFromRoletaDialog from '@/components/roleta/RemoveFromRoletaDialog';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
@@ -133,6 +133,10 @@ function mkLocal(m?: Partial<RoletaMember>): MemberRow {
     is_active: m?.is_active ?? true,
     position: m?.position ?? 0,
     personal_whatsapp_number: m?.personal_whatsapp_number ?? '',
+    // O número que está no CADASTRO da pessoa (Equipe). Não é editável aqui —
+    // serve para a tela mostrar de onde vem o aviso quando o campo acima está
+    // vazio, em vez de deixar parecer que o corretor está sem WhatsApp.
+    whatsapp_from_profile: m?.whatsapp_from_profile ?? '',
     // Em qual número este corretor atende. Vazio = a instância de entrada.
     inbox_id: m?.inbox_id ?? '',
   };
@@ -166,7 +170,12 @@ export default function RoletaConfigPage() {
   const [saving, setSaving]           = useState(false);
   const [modalOpen, setModalOpen]     = useState(false);
   const [editing, setEditing]         = useState<RoletaConfig | null>(null);
-  const [tab, setTab]                 = useState<'configs' | 'assignments' | 'diagnostico'>('configs');
+  const [tab, setTab]                 = useState<'configs' | 'padroes' | 'assignments' | 'diagnostico'>('configs');
+  // Os padrões da casa: o que a roleta NOVA já vem preenchida.
+  // ⚠️ Herdar aqui é SEMEAR — o valor vira dado da roleta no momento em que ela
+  // nasce. Roleta que já existe não muda nada, hoje nem quando o padrão mudar.
+  const [padroes, setPadroes]         = useState<RoletaDefaults>({});
+  const [salvandoPadroes, setSalvandoPadroes] = useState(false);
 
   // Painel "Por que este lead não entrou na roleta?". Existe porque cada portão
   // do caminho formulário → roleta falhava calado num log do servidor: o gestor
@@ -449,7 +458,18 @@ export default function RoletaConfigPage() {
     }
   }, []);
 
-  useEffect(() => { loadConfigs(); loadUsers(); loadInboxes(); loadAccount(); }, [loadConfigs, loadUsers, loadInboxes, loadAccount]);
+  const loadDefaults = useCallback(async () => {
+    try {
+      setPadroes(await roletaConfigService.getDefaults());
+    } catch {
+      // Leitura de fundo recusada não grita — quem não alcança os padrões
+      // simplesmente não os vê. É a regra do app desde 31/08/2026.
+    }
+  }, []);
+
+  useEffect(() => {
+    loadConfigs(); loadUsers(); loadInboxes(); loadAccount(); loadDefaults();
+  }, [loadConfigs, loadUsers, loadInboxes, loadAccount, loadDefaults]);
   // Depende dos ids concatenados, não do array: `instances` é recriado a cada
   // tecla digitada num rótulo, e depender dele relançaria as requisições sem
   // que nenhuma instância tivesse mudado.
@@ -507,6 +527,37 @@ export default function RoletaConfigPage() {
     if (tab === 'diagnostico') loadQueue();
   }, [tab, loadQueue]);
 
+  // Joga os padrões da casa nos campos do formulário.
+  //
+  // A tela preenche para o gestor VER o que vai ser gravado; o servidor semeia
+  // de novo no salvamento, como rede de segurança para quem cria a roleta por
+  // outra porta (o atalho do quadro de funil).
+  const aplicarPadroes = useCallback((d: RoletaDefaults) => {
+    if (d.gestor_whatsapp_number != null) setGestorNum(d.gestor_whatsapp_number);
+    if (d.gestor_group_jid != null) setGestorGroupJid(d.gestor_group_jid);
+    if (d.notification_inbox_id != null) setNotifInboxId(d.notification_inbox_id);
+    if (d.timeout_minutes != null) setTimeoutMin(d.timeout_minutes);
+    if (d.msg_corretor_template != null) setMsgCorretor(d.msg_corretor_template);
+    if (d.msg_gestor_template != null) setMsgGestor(d.msg_gestor_template);
+    if (d.msg_grupo_template != null) setMsgGrupo(d.msg_grupo_template);
+    if (d.msg_grupo_repasse_template != null) setMsgRepasse(d.msg_grupo_repasse_template);
+    // `!== undefined` e não `??`: `false` é escolha (aviso desligado), e um `??`
+    // ou um `||` o trocaria pelo ligado. É a mesma armadilha que o servidor
+    // trava do lado dele.
+    if (d.msg_corretor_enabled !== undefined) setMsgCorretorOn(d.msg_corretor_enabled);
+    if (d.msg_gestor_enabled !== undefined) setMsgGestorOn(d.msg_gestor_enabled);
+    if (d.msg_grupo_enabled !== undefined) setMsgGrupoOn(d.msg_grupo_enabled);
+    if (d.msg_grupo_repasse_enabled !== undefined) setMsgRepasseOn(d.msg_grupo_repasse_enabled);
+
+    const h = d.business_hours_config;
+    if (h && h.mode === 'custom') {
+      setHorarioOn(true);
+      setJanelas(h.windows?.length ? h.windows : [DEFAULT_WINDOW]);
+      setPlantaoInboxId(h.after_hours_inbox_id ?? '');
+      setAutoNaAbertura(!!h.auto_distribute_on_open);
+    }
+  }, []);
+
   function openCreate() {
     setEditing(null);
     setNome('');
@@ -528,6 +579,8 @@ export default function RoletaConfigPage() {
     setMultiFromConfig(false);
     setGroups([]);
     setSaveErrors([]);
+    // Os padrões DEPOIS dos zeros: eles é que ficam na tela.
+    aplicarPadroes(padroes);
     setModalOpen(true);
   }
 
@@ -656,7 +709,11 @@ export default function RoletaConfigPage() {
       return;
     }
     setSaveErrors([]);
-    const membersValid = members.filter(m => m.user_id && m.personal_whatsapp_number);
+    // Só o corretor escolhido importa. O número deixou de ser obrigatório aqui:
+    // quando o campo está vazio, o servidor usa o do cadastro da pessoa. Antes
+    // esta linha DESCARTAVA em silêncio quem não tivesse número digitado nesta
+    // roleta — o corretor sumia da lista depois de um "Salvo" com sucesso.
+    const membersValid = members.filter(m => m.user_id);
 
     setSaving(true);
     try {
@@ -710,7 +767,9 @@ export default function RoletaConfigPage() {
           weight:                   m.weight,
           is_active:                m.is_active,
           position:                 i,
-          personal_whatsapp_number: m.personal_whatsapp_number,
+          // Vazio vai como null: é assim que o servidor entende "usa o do
+          // cadastro". String vazia gravada seria uma exceção em branco.
+          personal_whatsapp_number: (m.personal_whatsapp_number ?? '').trim() || null,
           // Em qual número ele atende. É por aqui que o backend amarra o membro
           // à instância — sem isso ele cairia na de entrada, ou seja, no número
           // de outra pessoa.
@@ -797,18 +856,33 @@ export default function RoletaConfigPage() {
     return opts;
   }, [membersByInbox, members, users, inboxId]);
 
+  // O número que a pessoa tem no CADASTRO (Equipe).
+  //
+  // ⚠️ FUNDE as duas fontes, não escolhe uma. O código anterior fazia
+  // `pool.find(...) ?? users.find(...)` e nunca chegava ao fallback: `??` só cai
+  // com null/undefined, e a lista de membros da instância devolve um objeto
+  // VERDADEIRO — só que sem o número. Resultado: o preenchimento automático
+  // existia e nunca funcionou, e o gestor redigitava o número toda vez.
+  // Reordenar não bastaria: o pool pode ter alguém que a lista de usuários não
+  // tem, e vice-versa.
+  const cadastroDe = useCallback((userId: string) => {
+    const pool = Object.values(membersByInbox).flat() as (User & { whatsapp_number?: string })[];
+    const daLista = users.find(x => x.id === userId) as (User & { whatsapp_number?: string }) | undefined;
+    const doPool  = pool.find(x => x.id === userId);
+    return String(daLista?.whatsapp_number ?? doPool?.whatsapp_number ?? '').trim();
+  }, [membersByInbox, users]);
+
   function selectCorretor(localId: string, userId: string) {
-    const pool = Object.values(membersByInbox).flat();
-    const u = (pool.find(x => x.id === userId) ?? users.find(x => x.id === userId)) as
-      (User & { whatsapp_number?: string; custom_attributes?: { whatsapp_number?: string } }) | undefined;
-    const registered = String(u?.whatsapp_number ?? u?.custom_attributes?.whatsapp_number ?? '').trim();
+    const registered = cadastroDe(userId);
     setMembers(prev => prev.map(m => {
       if (m.localId !== localId) return m;
-      const next: MemberRow = { ...m, user_id: userId };
-      if (registered && !String(m.personal_whatsapp_number ?? '').trim()) {
-        next.personal_whatsapp_number = registered;
-      }
-      return next;
+      // O campo da roleta NÃO é preenchido com o número do cadastro: ele é a
+      // exceção ("me avise em outro número neste caso"), e preenchê-lo faria
+      // toda linha virar exceção — o corretor que trocasse de celular teria que
+      // ser corrigido roleta por roleta, que é exatamente o problema de origem.
+      // O cadastro fica visível ao lado, e é o servidor que o usa quando o campo
+      // está vazio.
+      return { ...m, user_id: userId, whatsapp_from_profile: registered };
     }));
   }
 
@@ -844,13 +918,104 @@ export default function RoletaConfigPage() {
   // As conferências em si moram fora do componente (roletaFormChecks), porque
   // são o miolo da resposta "o que falta preencher?" e precisam ser testáveis
   // sem montar o formulário inteiro.
-  const problemasDoFormulario = useCallback((): string[] => roletaFormProblems({
+  const userName = useCallback(
+    (id: string) => users.find(u => u.id === id)?.name ?? 'o corretor escolhido',
+    [users],
+  );
+
+  const entradaDasConferencias = useCallback(() => ({
     inboxId, multiEnabled, configs, editingId: editing?.id ?? null,
     instances, members, mode, gestorNum, horarioOn, janelas,
     instanceLabel: instanceName,
-    userName: id => users.find(u => u.id === id)?.name ?? 'o corretor escolhido',
+    userName,
   }), [inboxId, multiEnabled, configs, editing, instances, members, mode,
-       gestorNum, horarioOn, janelas, instanceName, users]);
+       gestorNum, horarioOn, janelas, instanceName, userName]);
+
+  const problemasDoFormulario = useCallback(
+    (): string[] => roletaFormProblems(entradaDasConferencias()),
+    [entradaDasConferencias],
+  );
+
+  // O que merece aviso mas NÃO impede salvar — hoje, corretor sem WhatsApp em
+  // lugar nenhum. Ele entra na roleta e recebe a oferta pelo app; barrar o
+  // salvamento por isso impediria uma configuração legítima.
+  const avisosDoFormulario = useCallback(
+    (): string[] => roletaFormWarnings(entradaDasConferencias()),
+    [entradaDasConferencias],
+  );
+
+  // O que está no formulário AGORA, na forma dos padrões da casa.
+  //
+  // Salvar daqui (e não numa tela separada) é o que faz o grupo de avisos caber:
+  // ele só pode ser escolhido depois de haver uma instância, e o seletor de
+  // grupos vive neste formulário. Uma tela de padrões isolada teria que
+  // reconstruir isso e mostraria uma lista vazia.
+  const padroesDoFormulario = useCallback((): RoletaDefaults => ({
+    gestor_whatsapp_number: gestorNum.trim() || null,
+    gestor_group_jid:       gestorGroupJid || null,
+    gestor_group_instance:  gestorGroupJid ? CENTRAL_GROUP_INSTANCE : null,
+    notification_inbox_id:  notifInboxId || null,
+    timeout_minutes:        timeoutMin,
+    business_hours_config:  horarioOn
+      ? {
+          mode: 'custom' as const,
+          tz: 'America/Sao_Paulo',
+          windows: janelas,
+          after_hours_inbox_id: plantaoInboxId || null,
+          auto_distribute_on_open: autoNaAbertura,
+        }
+      : null,
+    msg_corretor_template:  msgCorretor.trim() || null,
+    msg_gestor_template:    msgGestor.trim() || null,
+    msg_grupo_template:     msgGrupo.trim() || null,
+    msg_grupo_repasse_template: msgRepasse.trim() || null,
+    msg_corretor_enabled:   msgCorretorOn,
+    msg_gestor_enabled:     msgGestorOn,
+    msg_grupo_enabled:      msgGrupoOn,
+    msg_grupo_repasse_enabled: msgRepasseOn,
+  }), [gestorNum, gestorGroupJid, notifInboxId, timeoutMin, horarioOn, janelas,
+       plantaoInboxId, autoNaAbertura, msgCorretor, msgGestor, msgGrupo, msgRepasse,
+       msgCorretorOn, msgGestorOn, msgGrupoOn, msgRepasseOn]);
+
+  async function salvarComoPadrao() {
+    setSalvandoPadroes(true);
+    try {
+      setPadroes(await roletaConfigService.saveDefaults(padroesDoFormulario()));
+      toast.success('Padrões salvos. Toda roleta NOVA já vem assim — as que existem não mudam.');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não consegui salvar os padrões.'));
+    } finally {
+      setSalvandoPadroes(false);
+    }
+  }
+
+  async function limparPadroes() {
+    const ok = await confirmar({
+      titulo: 'Apagar os padrões da casa?',
+      descricao: 'As roletas que já existem não mudam nada — elas guardam os próprios valores. '
+        + 'O que muda é que a próxima roleta nova vai nascer com os campos em branco.',
+      rotuloDaAcao: 'Apagar padrões',
+      destrutivo: true,
+    });
+    if (!ok) return;
+
+    setSalvandoPadroes(true);
+    try {
+      // Todo campo em branco: é assim que o servidor entende "apagar o padrão".
+      const vazio: RoletaDefaults = {
+        gestor_whatsapp_number: null, gestor_group_jid: null, gestor_group_instance: null,
+        notification_inbox_id: null, timeout_minutes: null, business_hours_config: null,
+        msg_corretor_template: null, msg_gestor_template: null,
+        msg_grupo_template: null, msg_grupo_repasse_template: null,
+      };
+      setPadroes(await roletaConfigService.saveDefaults(vazio));
+      toast.success('Padrões apagados.');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não consegui apagar os padrões.'));
+    } finally {
+      setSalvandoPadroes(false);
+    }
+  }
 
   // 1 clique joga a variável no texto do aviso focado (na posição do cursor).
   function insertVar(v: string) {
@@ -978,7 +1143,7 @@ export default function RoletaConfigPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b">
-        {(['configs', 'assignments', 'diagnostico'] as const).map(t => (
+        {(['configs', 'padroes', 'assignments', 'diagnostico'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -988,7 +1153,9 @@ export default function RoletaConfigPage() {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            {t === 'configs' ? 'Configuracoes' : t === 'assignments' ? 'Atribuicoes Recentes' : 'Diagnóstico'}
+            {t === 'configs' ? 'Configuracoes'
+              : t === 'padroes' ? 'Padrões'
+              : t === 'assignments' ? 'Atribuicoes Recentes' : 'Diagnóstico'}
           </button>
         ))}
       </div>
@@ -1049,6 +1216,72 @@ export default function RoletaConfigPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* PADRÕES DA CASA.
+          O que toda roleta NOVA já vem preenchida, para o gestor parar de
+          redigitar o número dele, o grupo, o prazo e os quatro textos a cada
+          roleta. Não é uma tela de edição: os valores são capturados do
+          formulário de uma roleta (botão "Salvar como padrão"), porque o grupo
+          de avisos só pode ser escolhido depois de haver uma instância — e o
+          seletor de grupos vive lá. Uma tela isolada mostraria lista vazia. */}
+      {tab === 'padroes' && (
+        <div className="space-y-4">
+          <div className="rounded-lg border p-4 space-y-2">
+            <h2 className="font-medium">O que a roleta nova já vem preenchida</h2>
+            <p className="text-sm text-muted-foreground">
+              Estes valores são copiados para toda distribuição <strong>nova</strong> que você criar.
+              As que já existem <strong>não mudam</strong> — nem agora, nem quando você trocar os
+              padrões: cada uma guarda os próprios valores.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Para definir: abra uma distribuição (ou crie uma), deixe os campos do jeito que você
+              quer que os próximos nasçam, e clique em <strong>Salvar como padrão</strong> no fim do
+              formulário.
+            </p>
+          </div>
+
+          {Object.keys(padroes).length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhum padrão definido ainda. Toda distribuição nova nasce com os campos em branco.
+            </p>
+          ) : (
+            <div className="rounded-lg border divide-y">
+              {([
+                ['Número do gestor', padroes.gestor_whatsapp_number],
+                ['Grupo de avisos', padroes.gestor_group_jid],
+                ['Instância que envia os avisos',
+                  inboxes.find(i => i.id === padroes.notification_inbox_id)?.name ?? padroes.notification_inbox_id],
+                ['Prazo de aceite', padroes.timeout_minutes != null ? `${padroes.timeout_minutes} min` : null],
+                ['Horário de funcionamento',
+                  padroes.business_hours_config?.mode === 'custom' ? 'Faixa própria' : null],
+                ['Aviso do corretor', padroes.msg_corretor_enabled === false ? 'desligado' : null],
+                ['Aviso do gestor', padroes.msg_gestor_enabled === false ? 'desligado' : null],
+                ['Aviso do grupo', padroes.msg_grupo_enabled === false ? 'desligado' : null],
+                ['Aviso de repasse no grupo', padroes.msg_grupo_repasse_enabled === false ? 'desligado' : null],
+                ['Textos próprios', [
+                  padroes.msg_corretor_template && 'corretor',
+                  padroes.msg_gestor_template && 'gestor',
+                  padroes.msg_grupo_template && 'grupo',
+                  padroes.msg_grupo_repasse_template && 'repasse',
+                ].filter(Boolean).join(', ') || null],
+              ] as [string, string | null | undefined][])
+                .filter(([, valor]) => valor)
+                .map(([rotulo, valor]) => (
+                  <div key={rotulo} className="flex items-center justify-between gap-4 p-3 text-sm">
+                    <span className="text-muted-foreground">{rotulo}</span>
+                    <span className="font-medium text-right break-all">{valor}</span>
+                  </div>
+                ))}
+            </div>
+          )}
+
+          {Object.keys(padroes).length > 0 && (
+            <Button variant="outline" onClick={limparPadroes} disabled={salvandoPadroes}>
+              Apagar padrões
+            </Button>
+          )}
         </div>
       )}
 
@@ -2235,14 +2468,35 @@ export default function RoletaConfigPage() {
                           className="mt-1"
                         />
                       </div>
+                      {/* O número deixou de ser obrigatório aqui: ele vem do
+                          cadastro da pessoa em Equipe. Este campo é a EXCEÇÃO
+                          ("neste caso me avise em outro número"). Mostrar o
+                          número do cadastro embaixo é o que impede o campo
+                          vazio de parecer "corretor sem WhatsApp" — que é a
+                          leitura errada que fazia todo mundo redigitar. */}
                       <div>
-                        <UILabel className="text-xs">WhatsApp pessoal * (com DDI)</UILabel>
+                        <UILabel className="text-xs">WhatsApp pessoal</UILabel>
                         <Input
                           value={m.personal_whatsapp_number}
                           onChange={e => updateMember(m.localId, 'personal_whatsapp_number', e.target.value)}
-                          placeholder="5511999990000"
+                          placeholder={(m.whatsapp_from_profile ?? '').trim() || 'Ex.: 11 99999-0000'}
                           className="mt-1"
                         />
+                        {m.user_id && !((m.personal_whatsapp_number ?? '').trim()) && (
+                          (m.whatsapp_from_profile ?? '').trim()
+                            ? (
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Vem do cadastro de {userName(m.user_id)}. Preencha só se ele deve ser
+                                avisado em outro número nesta roleta.
+                              </p>
+                            )
+                            : (
+                              <p className="mt-1 text-xs text-amber-500">
+                                Sem WhatsApp aqui e no cadastro dele. Ele entra na roleta e recebe a
+                                oferta pelo app, mas não recebe o aviso no WhatsApp.
+                              </p>
+                            )
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2273,11 +2527,41 @@ export default function RoletaConfigPage() {
             </div>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button onClick={save} disabled={saving} className="bg-[#7c3aed] hover:bg-[#6d28d9] text-white gap-2">
-              {saving ? 'Salvando...' : <><Save className="h-4 w-4" /> Salvar</>}
-            </Button>
+          {/* AVISO, não impedimento. Corretor sem WhatsApp em lugar nenhum é
+              configuração legítima — ele entra na roleta e recebe a oferta pelo
+              app. Barrar o salvamento por isso impediria quem ainda não
+              cadastrou o número de todo mundo de configurar a roleta. */}
+          {avisosDoFormulario().length > 0 && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+              <div className="flex items-center gap-2 font-medium text-amber-300">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                Dá para salvar, mas confira
+              </div>
+              <ul className="mt-2 space-y-1 pl-6 text-amber-200/90 list-disc">
+                {avisosDoFormulario().map((aviso, i) => <li key={i}>{aviso}</li>)}
+              </ul>
+            </div>
+          )}
+
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
+            {/* Os padrões ficam à ESQUERDA, separados do Salvar: eles não salvam
+                esta roleta, e o gestor não pode achar que salvou clicando aqui. */}
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={salvarComoPadrao} disabled={salvandoPadroes}>
+                {salvandoPadroes ? 'Salvando...' : 'Salvar como padrão'}
+              </Button>
+              {editing && Object.keys(padroes).length > 0 && (
+                <Button variant="ghost" onClick={() => aplicarPadroes(padroes)}>
+                  Preencher com os padrões
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
+              <Button onClick={save} disabled={saving} className="bg-[#7c3aed] hover:bg-[#6d28d9] text-white gap-2">
+                {saving ? 'Salvando...' : <><Save className="h-4 w-4" /> Salvar</>}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
