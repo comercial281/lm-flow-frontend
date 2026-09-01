@@ -807,6 +807,72 @@ Armadilhas:
    um follow-up que não dispara nada, calado — o servidor recusa e o motivo aparece
    no Diagnóstico, mas a tela nem deve oferecer.
 
+## A IA aponta melhorias e manda o relatório da semana (desde 2026-09-01)
+
+Duas abas novas dentro de *IA Vendedora*: **Sugestões** e **Relatórios**. Estreiam
+invisíveis e são liberadas imobiliária por imobiliária.
+
+**Sugestões** — a IA relê as conversas que ela atendeu e aponta o que se repete:
+a objeção que derruba lead, a pergunta que ela não soube responder, onde a conversa
+morre. Botão *Analisar agora* com período de 7/30/90 dias, e uma chave opcional de
+rodar sozinha toda semana. Cada sugestão é um cartão com selo de categoria, o que a
+IA observou, **em quantas conversas** aquilo apareceu e as frases reais como prova.
+
+**Relatórios** — o resumo da semana em dois blocos (o que a IA entregou e o que o
+time fez), o texto que vai no WhatsApp editável antes de mandar, os destinos, o
+botão *Enviar agora* e a chave de *Enviar toda semana*. Sai pelo número operacional
+da Leal Mídia.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Quem decide se existe o botão *Aplicar* é o SERVIDOR**, não a tela. Sugestão
+  sobre o time mostra o selo *Recado para o time* e **não desenha o botão**: a lição
+  é injetada no comando da IA, e um recado de time virando lição faria ela repetir
+  *"o corretor demora a responder"* para o **lead**.
+- **A análise roda no botão**, e a chave de automático nasce desligada: cada análise
+  é uma consulta paga.
+- **O rodapé mostra quantas lições a IA tem ativas contra o teto que ela de fato lê.**
+  Sem isso, quem aplica trinta sugestões e não vê nada mudar conclui que a
+  funcionalidade não funciona — quando é o comando dela que só comporta as mais
+  recentes.
+- **A aba Relatórios NÃO recebe o agente.** O relatório é do cliente e é o mesmo em
+  qualquer IA que você abrir; duas IAs no mesmo cliente fariam o gestor receber a
+  semana duas vezes.
+- **Prévia e envio são a mesma coisa.** O texto que você leu e editou é o que sai no
+  WhatsApp. Relatório já enviado não é editável — o que está ali é o que chegou.
+- **A contagem de destinos fica DENTRO do botão Enviar.** Disparo em grupo de cliente
+  é irreversível; o número precisa estar embaixo do dedo. Depois do envio, cada
+  destino mostra se recebeu ou falhou, com o motivo.
+- **Semana FECHADA** (segunda a domingo anteriores), para uma semana poder ser
+  comparada com a outra.
+
+Armadilhas:
+
+1. **A chave `ia_insights` vai LITERAL na chamada do `useClientToggle`.** Os dois
+   scanners do catálogo varrem o código por regex: trocar o literal por uma constante
+   tira a chave do catálogo no deploy seguinte, o painel de Funções deixa de oferecer
+   o botão de liberar, e ninguém é avisado. Mesma armadilha das Landings.
+2. **`useFeature` e `useClientToggle` são OPOSTOS.** `useFeature` = ausência LIGA;
+   `useClientToggle` = só liga com `true`. Trocar um pelo outro estreia as duas abas
+   para todo cliente — e aqui isso gasta IA paga e manda mensagem.
+3. **O gate fica na ABA, nunca na rota.** Quem digita o endereço alcança a tela — é o
+   padrão da casa (`/bolsao`, `/ia-vendedora`, as Landings).
+4. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`). O auditor do catálogo **quebra o build** enquanto
+   `ia_insights` não existir no catálogo servido pela API — então o merge aqui só
+   depois de o backend estar no ar. E confira o token de sincronização do catálogo no
+   Vercel antes: o auditor é fail-closed, e quem põe a chave no catálogo é o
+   sincronizador, que é fail-open e depende dele.
+5. **Nenhum campo novo passa pelo `saveAgent`.** A chave da análise automática e a
+   configuração do relatório têm endpoints próprios, de propósito: campo fora daquela
+   lista campo-a-campo é descartado em silêncio — a tela mostra o valor e o aviso diz
+   *Salvo*.
+6. **Só o grupo DESTA imobiliária aparece na lista de destinos.** Quem filtra é o
+   servidor; a tela nunca recebe a lista completa. A lista inteira ali entregaria a
+   carteira de clientes da Leal Mídia para qualquer imobiliária que abrisse a aba.
+7. **Leitura de fundo não grita.** As duas abas buscam sozinhas ao abrir; recusa ali
+   só esconde o pedaço. Quando a pessoa clicou, o motivo em português vem do servidor.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
