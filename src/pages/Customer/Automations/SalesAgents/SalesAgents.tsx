@@ -167,6 +167,11 @@ export default function SalesAgents() {
           'followup_return_stage_id' in patch ? patch.followup_return_stage_id : selected.followup_return_stage_id,
         followup_sequence_slug:
           'followup_sequence_slug' in patch ? patch.followup_sequence_slug : selected.followup_sequence_slug,
+        followup_drip_enabled: patch.followup_drip_enabled ?? selected.followup_drip_enabled,
+        followup_drip_min_leads: patch.followup_drip_min_leads ?? selected.followup_drip_min_leads,
+        followup_drip_max_leads: patch.followup_drip_max_leads ?? selected.followup_drip_max_leads,
+        followup_drip_min_minutes: patch.followup_drip_min_minutes ?? selected.followup_drip_min_minutes,
+        followup_drip_max_minutes: patch.followup_drip_max_minutes ?? selected.followup_drip_max_minutes,
         audio_enabled: patch.audio_enabled ?? selected.audio_enabled,
         audio_mode: patch.audio_mode ?? selected.audio_mode,
         audio_voice_id: patch.audio_voice_id ?? selected.audio_voice_id,
@@ -2030,6 +2035,8 @@ function FollowupSection({
         <div className="mt-3 space-y-3 pl-7">
           <FollowupActionPicker agent={agent} onSave={onSave} />
 
+          <FollowupDripRow agent={agent} onChange={onChange} onSave={onSave} />
+
           <div className="flex items-end gap-3">
             <div>
               <Label htmlFor="fu_min" className="text-xs">A cada (mín. dias)</Label>
@@ -2085,6 +2092,81 @@ function FollowupSection({
       )}
     </div>
   );
+}
+
+function FollowupDripRow({
+  agent, onChange, onSave,
+}: {
+  agent: SalesAgent;
+  onChange: (a: SalesAgent) => void;
+  onSave: (patch: Partial<SalesAgent>) => void;
+}) {
+  const on = agent.followup_drip_enabled !== false;
+  const num = (v: number | undefined, padrao: number) => (v === undefined || v === null ? padrao : v);
+
+  return (
+    <div className="rounded-md border border-sidebar-border p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-medium">Ir aos poucos, como gente</div>
+          <div className="text-xs text-muted-foreground">
+            Em vez de mandar todo mundo de uma vez, a IA pega um punhado de leads, espera, pega
+            outro punhado. O tempo de espera muda a cada vez — ritmo certinho denuncia robô tanto
+            quanto rajada.
+          </div>
+        </div>
+        <Toggle on={on} onChange={(v) => onSave({ followup_drip_enabled: v })} />
+      </div>
+
+      {on ? (
+        <div className="mt-3 space-y-2 pl-1">
+          <div className="flex flex-wrap items-end gap-2">
+            <span className="text-sm pb-2">Pega de</span>
+            <Input type="number" min={1} max={20} aria-label="mínimo de leads por vez"
+              className="w-16" value={num(agent.followup_drip_min_leads, 2)}
+              onChange={(e) => onChange({ ...agent, followup_drip_min_leads: Number(e.target.value) })}
+              onBlur={() => onSave({ followup_drip_min_leads: Math.min(20, Math.max(1, Number(agent.followup_drip_min_leads) || 2)) })} />
+            <span className="text-sm pb-2">a</span>
+            <Input type="number" min={1} max={20} aria-label="máximo de leads por vez"
+              className="w-16" value={num(agent.followup_drip_max_leads, 3)}
+              onChange={(e) => onChange({ ...agent, followup_drip_max_leads: Number(e.target.value) })}
+              onBlur={() => onSave({ followup_drip_max_leads: Math.min(20, Math.max(Number(agent.followup_drip_min_leads) || 1, Number(agent.followup_drip_max_leads) || 3)) })} />
+            <span className="text-sm pb-2">leads por vez, esperando de</span>
+            <Input type="number" min={1} max={240} aria-label="pausa mínima em minutos"
+              className="w-16" value={num(agent.followup_drip_min_minutes, 3)}
+              onChange={(e) => onChange({ ...agent, followup_drip_min_minutes: Number(e.target.value) })}
+              onBlur={() => onSave({ followup_drip_min_minutes: Math.min(240, Math.max(1, Number(agent.followup_drip_min_minutes) || 3)) })} />
+            <span className="text-sm pb-2">a</span>
+            <Input type="number" min={1} max={240} aria-label="pausa máxima em minutos"
+              className="w-16" value={num(agent.followup_drip_max_minutes, 5)}
+              onChange={(e) => onChange({ ...agent, followup_drip_max_minutes: Number(e.target.value) })}
+              onBlur={() => onSave({ followup_drip_max_minutes: Math.min(240, Math.max(Number(agent.followup_drip_min_minutes) || 1, Number(agent.followup_drip_max_minutes) || 5)) })} />
+            <span className="text-sm pb-2">minutos entre um e outro.</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Dá cerca de <strong>{estimativaPorDia(agent)} leads por dia</strong>, das 9h às 20h.
+            Aumente a espera para ir mais devagar — número novo, ou primeira vez ligando num
+            cliente com muito lead parado, pede calma.
+          </p>
+        </div>
+      ) : (
+        <p className="mt-2 text-xs text-amber-600">
+          Desligado, a IA entrega todos os leads vencidos de uma vez — até 200 a cada passada. Ao
+          ligar a chave num cliente com muito lead parado, isso vira uma enxurrada de mensagens
+          saindo do mesmo número.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Conta de padeiro para o gestor enxergar o ritmo antes de salvar: 11 horas de
+// janela (9h às 20h), punhado médio dividido pela pausa média.
+function estimativaPorDia(agent: SalesAgent): number {
+  const leads = ((Number(agent.followup_drip_min_leads) || 2) + (Number(agent.followup_drip_max_leads) || 3)) / 2;
+  const pausa = ((Number(agent.followup_drip_min_minutes) || 3) + (Number(agent.followup_drip_max_minutes) || 5)) / 2;
+  if (pausa <= 0) return 0;
+  return Math.round(((11 * 60) / pausa) * leads);
 }
 
 // As três saídas do follow-up. As duas de baixo não consomem IA: as mensagens do

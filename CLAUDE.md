@@ -807,6 +807,45 @@ Armadilhas:
    um follow-up que não dispara nada, calado — o servidor recusa e o motivo aparece
    no Diagnóstico, mas a tela nem deve oferecer.
 
+## O follow-up vai aos poucos (desde 2026-09-01)
+
+Antes de ligar o follow-up sem IA nos clientes, apareceu a conta: a varredura de
+lead calado não tem data de corte. Ligar a chave num cliente que já roda há meses
+deixa todo lead parado dos últimos 120 dias vencido no mesmo instante — dava mais
+de mil mensagens por hora saindo do mesmo número, que é como o WhatsApp derruba um
+número. E os limites da aba Limites não valem para o follow-up.
+
+O que aparece na tela, dentro de *IA Vendedora → Configuração → Follow-up
+automático*:
+
+- **Chave *Ir aos poucos, como gente***, logo abaixo do bloco *Quando o lead sumir*.
+- Ligada, uma frase editável: **"Pega de 2 a 3 leads por vez, esperando de 3 a 5
+  minutos entre um e outro."** Os quatro números são campos.
+- **A conta de padeiro embaixo**: *"dá cerca de N leads por dia, das 9h às 20h"*,
+  recalculada enquanto o gestor digita.
+- Desligada, um aviso em âmbar do que acontece: até 200 leads entregues de uma vez.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Estreia LIGADA em toda imobiliária.** Exceção consciente à regra da casa, a
+  mesma da quebra de mensagem: ir aos poucos só atrasa entrega, nunca manda mais.
+  A chave existe para DESLIGAR em quem quiser o comportamento antigo.
+- **A espera é SORTEADA dentro da faixa, não fixa.** Ritmo certinho denuncia robô
+  tanto quanto rajada — e é por isso que a tela pede uma FAIXA e não um número.
+- **A conta de padeiro não é enfeite.** Sem ela o gestor escolhe "2 a 3 leads a
+  cada 3 minutos" achando que é pouco, quando são ~400 leads por dia num número só.
+
+Armadilhas:
+
+1. **Os cinco campos PRECISAM estar na lista do `saveAgent`.** Entram com `??`
+   (nenhum deles é limpável para null), diferente das colunas do bloco de cima.
+2. **A chave é lida com `!== false`**, e não `=== true`: cliente cuja coluna ainda
+   não chegou do servidor precisa aparecer LIGADO, senão a tela mostra desligado e
+   o gestor "liga" algo que já estava ligado.
+3. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): quem goteja é o relógio do servidor.
+4. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente, não módulo.
+
 ## A IA aponta melhorias e manda o relatório da semana (desde 2026-09-01)
 
 Duas abas novas dentro de *IA Vendedora*: **Sugestões** e **Relatórios**. Estreiam

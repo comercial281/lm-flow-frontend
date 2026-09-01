@@ -76,6 +76,14 @@ export interface SalesAgent {
   /** Coluna de volta quando o lead responde. Vazia = a primeira coluna do funil. */
   followup_return_stage_id: string | null;
   followup_sequence_slug: string | null;
+  /** Gotejamento: a IA entrega um punhado de leads por vez, com pausa sorteada
+   *  entre um punhado e o próximo. Sem ele saem até 200 de uma vez, e o funil
+   *  despeja até 100 mensagens a cada 5 min — é assim que um número é derrubado. */
+  followup_drip_enabled: boolean;
+  followup_drip_min_leads: number;
+  followup_drip_max_leads: number;
+  followup_drip_min_minutes: number;
+  followup_drip_max_minutes: number;
   audio_enabled: boolean;
   audio_mode: 'mirror' | 'always' | 'never';
   audio_voice_id: string | null;
@@ -328,6 +336,11 @@ export interface SalesAgentPayload {
   followup_stage_id?: string | null;
   followup_return_stage_id?: string | null;
   followup_sequence_slug?: string | null;
+  followup_drip_enabled?: boolean;
+  followup_drip_min_leads?: number;
+  followup_drip_max_leads?: number;
+  followup_drip_min_minutes?: number;
+  followup_drip_max_minutes?: number;
   audio_enabled?: boolean;
   audio_mode?: 'mirror' | 'always' | 'never';
   audio_voice_id?: string | null;
