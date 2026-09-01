@@ -756,6 +756,57 @@ Armadilhas:
 4. **Não é `featureKey` nem `clientToggleKey`**: é campo do agente, não módulo. Os
    scanners do catálogo de funcionalidades não entram nesta história.
 
+## O follow-up da IA sem gastar IA (desde 2026-09-01)
+
+Cada cutucada de follow-up escrita pela IA é uma chamada paga ao modelo, e a
+cadência nasce infinita: o lead que nunca mais responde custa a cada 2 ou 3 dias,
+pra sempre. As mensagens do funil de follow-up já estão escritas e custam zero.
+
+O que aparece na tela, em *IA Vendedora → Configuração → Follow-up automático*:
+
+- **Um bloco novo, *Quando o lead sumir***, com três opções:
+  - **A IA escreve a mensagem** (como sempre foi, e a única que consome IA);
+  - **Mover o card para uma coluna** — a IA leva o card e sai de cena; quem manda
+    a mensagem é o funil que aquela coluna dispara;
+  - **Disparar um funil pronto** — coloca o lead no funil escolhido sem mexer no
+    card, pra quem não usa o quadro.
+- Na opção do card, dois seletores: **Coluna para o lead que sumiu** e **Quando ele
+  voltar a responder, o card vai para** (que já vem em *Primeira coluna do funil*).
+- **O teto de follow-ups some** nas duas opções sem IA: entregando ao funil ela age
+  uma vez e sai; quem tem número de mensagens dali em diante é o funil.
+- O texto ao lado dos dias muda junto: com IA é *"espera um tempo aleatório entre
+  cada follow-up"*; sem IA é *"quanto tempo de silêncio até entregar o lead"*.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Estreia em "A IA escreve"**, que é como sempre funcionou. Qualquer outro padrão
+  mudaria o comportamento de quem já tem follow-up ligado por efeito de deploy.
+- **As colunas saem do funil já escolhido em *Mover o card no funil***, logo acima
+  no mesmo painel. Um segundo seletor de funil aqui criaria duas verdades sobre
+  onde a IA age no quadro, e trocar um sem o outro deixaria o card num funil e a
+  coluna no outro. Sem funil escolhido, o bloco aponta pra lá em vez de mostrar
+  uma lista vazia.
+- **A tela avisa que a coluna precisa ter entrada de funil** (*Card entrou numa
+  coluna*, em Automações → Follow-up). Sem ela o card muda de lugar e ninguém fala
+  com o lead — e isso é indistinguível de "quebrou".
+- **A trava "a IA só empurra o card pra frente" fica escrita ali**, porque é a
+  primeira dúvida de quem escolhe uma coluna do meio do funil.
+- **Não é `featureKey` nem `clientToggleKey`**: é campo do agente, não módulo. Os
+  scanners do catálogo de funcionalidades não entram nesta história.
+
+Armadilhas:
+
+1. **Os quatro campos PRECISAM estar na lista do `saveAgent`**, e as três colunas/o
+   funil entram com `in`, não com `??`: limpar a escolha manda `null`, e o `??`
+   trocaria o null pelo valor antigo — a tela mostraria "não escolhido", o toast
+   diria *Salvo*, e o servidor continuaria com a coluna velha.
+2. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): a escolha, o movimento do card e a devolução moram lá. Sem
+   ela a opção aparece no padrão e não guarda nada.
+3. **A opção de funil lista só os ATIVOS.** Funil desativado escolhido aqui viraria
+   um follow-up que não dispara nada, calado — o servidor recusa e o motivo aparece
+   no Diagnóstico, mas a tela nem deve oferecer.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,

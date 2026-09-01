@@ -67,6 +67,15 @@ export interface SalesAgent {
   followup_min_days: number;
   followup_max_days: number;
   followup_max_attempts: number;
+  /** O que a IA faz quando o lead some. 'ai' = ela escreve a mensagem (o único
+   *  caminho que consome IA); 'pipeline' = move o card pra coluna do silêncio e
+   *  quem manda a mensagem é o funil que aquela coluna dispara; 'sequence' =
+   *  dispara o funil escolhido direto, sem mexer no card. */
+  followup_action: SalesAgentFollowupAction;
+  followup_stage_id: string | null;
+  /** Coluna de volta quando o lead responde. Vazia = a primeira coluna do funil. */
+  followup_return_stage_id: string | null;
+  followup_sequence_slug: string | null;
   audio_enabled: boolean;
   audio_mode: 'mirror' | 'always' | 'never';
   audio_voice_id: string | null;
@@ -236,6 +245,8 @@ export interface CrmPolicy {
  * cenário novo não muda o comportamento de quem nunca escolheu nada. `min_temperature`
  * só é lido no cenário da temperatura.
  */
+export type SalesAgentFollowupAction = 'ai' | 'pipeline' | 'sequence';
+
 export type HandoffMode = 'duvida' | 'temperatura' | 'sem_resposta' | 'pos_visita';
 
 export interface TransferConfig {
@@ -313,6 +324,10 @@ export interface SalesAgentPayload {
   followup_min_days?: number;
   followup_max_days?: number;
   followup_max_attempts?: number;
+  followup_action?: SalesAgentFollowupAction;
+  followup_stage_id?: string | null;
+  followup_return_stage_id?: string | null;
+  followup_sequence_slug?: string | null;
   audio_enabled?: boolean;
   audio_mode?: 'mirror' | 'always' | 'never';
   audio_voice_id?: string | null;
