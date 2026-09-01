@@ -110,6 +110,17 @@ export interface SalesAgent {
   /** Teto de mensagens por resposta. É teto, não meta: resposta curta sai numa só. */
   message_split_max_parts: number;
   /**
+   * A IA move o card do lead no funil conforme a conversa anda, e o movimento fica
+   * assinado por ela no histórico do card. Nasce DESLIGADA em todo cliente.
+   */
+  pipeline_move_enabled?: boolean;
+  /**
+   * Mapa "etapa da IA -> coluna do funil": { agendado: '<id da coluna>' }.
+   * Etapa AUSENTE = a IA não mexe no card naquela etapa. O servidor devolve o mapa
+   * já limpo (só etapas que existem, só colunas preenchidas).
+   */
+  pipeline_stage_map?: Record<string, string>;
+  /**
    * A IA pode mandar sozinha o book que já está cadastrado no imóvel — sem precisar
    * subir o mesmo PDF de novo na aba de arquivos, e valendo pros imóveis futuros.
    */
@@ -336,6 +347,10 @@ export interface SalesAgentPayload {
   /** A IA responde em várias mensagens curtas em vez de um parágrafo único. */
   message_split_enabled?: boolean;
   message_split_max_parts?: number;
+  /** A IA move o card do lead no funil conforme a conversa anda. */
+  pipeline_move_enabled?: boolean;
+  /** Mapa "etapa da IA -> coluna do funil". Etapa ausente = não move. */
+  pipeline_stage_map?: Record<string, string>;
   /** A IA pode mandar sozinha o book cadastrado no imóvel. */
   send_property_book_enabled?: boolean;
   /** Regra escrita uma vez, valendo pro book de QUALQUER imóvel. */

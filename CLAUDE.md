@@ -707,6 +707,55 @@ Armadilhas:
    o **Assumir lead** do modo leilão. Todas continuam recusadas; a diferença é que
    agora só avisam quando alguém clica. Ficou para depois, por decisão do dono.
 
+## A IA Vendedora move o card no funil (desde 2026-09-01)
+
+A IA já sabia, a cada mensagem, em que pé a conversa estava — e isso não saía da
+conversa. O card ficava parado na coluna de entrada até alguém arrastar, então o
+quadro mostrava "leads novos" que já tinham visita marcada.
+
+O que aparece na tela:
+
+- **Chave *Mover o card no funil***, em *IA Vendedora → Configuração*, logo abaixo
+  de *Quem vai pro CRM*. As duas respondem à mesma pergunta — o que a IA faz
+  dentro do CRM: a de cima decide quem entra, esta decide para onde vai depois.
+- Ligada, ela pede **em qual funil** e, para cada momento da conversa
+  (*Descobrindo o que o lead quer*, *Qualificando*, *Pronto para visita*,
+  *Combinando dia e hora*, *Visita agendada*, *Passou pro corretor*), **qual
+  coluna**. Momento em *— não mover —* é momento em que a IA não mexe no card.
+- **No histórico do card, o movimento aparece como *Por: IA Vendedora***, com a
+  coluna de onde saiu, para onde foi e o motivo.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Estreia DESLIGADA em toda imobiliária.** Cards andando sozinhos no quadro de
+  quem nunca pediu é mudança de comportamento por efeito de deploy.
+- **Quem escolhe a coluna é o gestor, não a IA.** Cada imobiliária batiza as
+  colunas do jeito dela; deixar a IA adivinhar pelo nome faria o card parar de
+  andar em silêncio no dia em que alguém renomeasse uma coluna.
+- **A IA só empurra o card pra frente.** Se o corretor já levou o lead para uma
+  coluna mais adiantada, ela não puxa de volta — senão ele arrastaria o mesmo card
+  todo dia. A tela diz isso embaixo do mapa, porque é a primeira dúvida de quem
+  liga a chave.
+- **Trocar o funil limpa o mapa.** As colunas escolhidas são de outro funil e o
+  servidor as recusaria uma a uma: o gestor veria as escolhas guardadas e nenhum
+  card andando.
+
+Armadilhas:
+
+1. **Os campos PRECISAM estar na lista do `saveAgent`.** Ela monta o PATCH campo a
+   campo, e o que não estiver ali é descartado sem erro nenhum: a tela mostra o
+   valor, o toast diz *Salvo*, e nada foi salvo. O mapa entra com `in` e não com
+   `??` — tirar a última coluna deixa o mapa vazio, que é escolha legítima.
+2. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): a chave, o mapa e quem move o card moram lá. Sem ela a
+   chave aparece no padrão e não guarda nada.
+3. **O histórico do card mostra só as TRÊS primeiras informações da linha.** Foi
+   por isso que o servidor passou a mandar *De / Para / Por* antes do nome do
+   funil — com o funil na frente, o "Por" caía fora e a linha não dizia quem
+   moveu.
+4. **Não é `featureKey` nem `clientToggleKey`**: é campo do agente, não módulo. Os
+   scanners do catálogo de funcionalidades não entram nesta história.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
