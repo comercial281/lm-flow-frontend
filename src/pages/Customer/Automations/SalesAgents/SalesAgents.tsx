@@ -611,6 +611,7 @@ function ConfigTab({
       <ScheduleSection agent={agent} onSave={onSave} />
       <LimitsSection agent={agent} onChange={onChange} onSave={onSave} />
       <AudioSection agent={agent} onChange={onChange} onSave={onSave} />
+      <ReactionSection agent={agent} onSave={onSave} />
       <FollowupSection agent={agent} onChange={onChange} onSave={onSave} />
       <AdvancedSection agent={agent} onChange={onChange} onSave={onSave} />
 
@@ -648,6 +649,94 @@ const AUDIO_MODE_OPTIONS: { value: 'mirror' | 'always' | 'never'; label: string 
   { value: 'always', label: 'Sempre em áudio' },
   { value: 'never', label: 'Nunca (só texto)' },
 ];
+
+/**
+ * Curtir mensagem do cliente.
+ *
+ * A curtida SAI no WhatsApp do lead — não é marca interna —, então a lista de
+ * emojis é decisão de marca da imobiliária, não do modelo. Nasce desligada:
+ * ligar por padrão faria a IA começar a reagir no WhatsApp de leads de quem
+ * nunca pediu.
+ */
+const REACTION_EMOJI_OPTIONS = ['👍', '❤️', '😂', '🙏', '🔥', '👏', '😍', '✅', '🎉', '😉'];
+
+function ReactionSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
+  const on = !!agent.reaction_enabled;
+  const selecionados = agent.reaction_emojis ?? [];
+  const teto = agent.reaction_max_per_conversation ?? 3;
+
+  const alternar = (emoji: string) => {
+    const proxima = selecionados.includes(emoji)
+      ? selecionados.filter((e) => e !== emoji)
+      : [...selecionados, emoji];
+    // Lista vazia volta a valer o padrão de fábrica no servidor — nunca "nenhum
+    // emoji", que seria indistinguível de a curtida estar quebrada.
+    onSave({ reaction_emojis: proxima });
+  };
+
+  return (
+    <div className="pt-2 border-t border-sidebar-border">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-medium">Curtir mensagens do cliente</div>
+          <div className="text-xs text-muted-foreground">
+            A IA reage com emoji na mensagem do lead, como uma pessoa faz. A curtida aparece no
+            WhatsApp dele. Serve pra fechar conversa sem esticar: um "obrigado, até amanhã!" recebe
+            um 👍 em vez de mais uma mensagem.
+          </div>
+        </div>
+        <Toggle on={on} onChange={(v) => onSave({ reaction_enabled: v })} />
+      </div>
+
+      {on && (
+        <div className="mt-3 space-y-3 pl-1">
+          <div>
+            <Label className="text-xs">Emojis que ela pode usar</Label>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {REACTION_EMOJI_OPTIONS.map((emoji) => {
+                const ativo = selecionados.includes(emoji);
+                return (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => alternar(emoji)}
+                    aria-pressed={ativo}
+                    className={`h-9 w-9 rounded-md border text-lg leading-none transition ${
+                      ativo
+                        ? 'border-primary bg-primary/10'
+                        : 'border-sidebar-border bg-background opacity-50 hover:opacity-100'
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Nenhum marcado = a IA usa a lista padrão (👍 ❤️ 😂 🙏 🔥).
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="reaction_max" className="text-xs">No máximo quantas curtidas por conversa</Label>
+            <Input
+              id="reaction_max"
+              type="number"
+              min={0}
+              max={20}
+              value={teto}
+              onChange={(e) => onSave({ reaction_max_per_conversation: Number(e.target.value) })}
+              className="mt-1 w-28"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Curtida demais deixa de ser gentileza e vira ruído. Zero desliga a curtida.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function AudioSection({ agent, onChange, onSave }: {
   agent: SalesAgent;
