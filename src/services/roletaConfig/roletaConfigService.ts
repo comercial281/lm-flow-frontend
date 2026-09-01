@@ -43,11 +43,44 @@ export interface RoletaMember {
   weight: number;
   is_active: boolean;
   position: number;
+  // O número desta roleta é a EXCEÇÃO ("me avise em outro número neste caso").
+  // Vazio = usa o do cadastro da pessoa, em Equipe.
   personal_whatsapp_number: string;
+  // O que está no cadastro dele — a tela mostra como sugestão no campo vazio.
+  whatsapp_from_profile?: string | null;
+  // O que o servidor vai usar de verdade, já com DDI. Nulo = ninguém será avisado.
+  whatsapp_effective?: string | null;
+  // Por que não há número utilizável: 'sem_numero' ou 'numero_da_conta'.
+  whatsapp_reason?: string | null;
   // Por qual número ESTE corretor atende. O backend devolve os dois; no envio
   // só `inbox_id` importa (é o que ele usa para amarrar a instância).
   roleta_instance_id?: string | null;
   inbox_id?: string | null;
+}
+
+/**
+ * Os PADRÕES DA CASA — respondidos uma vez, herdados por toda roleta NOVA.
+ *
+ * ⚠️ Herdar é SEMEAR: o valor vira dado da roleta no momento em que ela nasce.
+ * Roleta que já existe não muda nada, nem hoje nem quando o padrão for editado.
+ * Foi decisão do dono do produto, e é o que garante que as imobiliárias que já
+ * rodam não sentem nada.
+ */
+export interface RoletaDefaults {
+  gestor_whatsapp_number?: string | null;
+  gestor_group_jid?: string | null;
+  gestor_group_instance?: string | null;
+  notification_inbox_id?: string | null;
+  timeout_minutes?: number | null;
+  business_hours_config?: RoletaBusinessHours | null;
+  msg_corretor_template?: string | null;
+  msg_gestor_template?: string | null;
+  msg_grupo_template?: string | null;
+  msg_grupo_repasse_template?: string | null;
+  msg_corretor_enabled?: boolean;
+  msg_gestor_enabled?: boolean;
+  msg_grupo_enabled?: boolean;
+  msg_grupo_repasse_enabled?: boolean;
 }
 
 // Modo de distribuição. A RoletaConfig é a FONTE ÚNICA: modo + quem + prazo + gestor.
@@ -162,7 +195,14 @@ export interface RoletaConfigPayload {
   // Lista vazia = "não mexe nas instâncias". O backend nunca deixa a roleta sem
   // nenhuma, porque sem instância o sorteio morre calado.
   instances?: Omit<RoletaInstance, 'id' | 'inbox_name' | 'display_name' | 'shared_with'>[];
-  members: Omit<RoletaMember, 'id' | 'user_name' | 'user_avatar' | 'roleta_instance_id'>[];
+  // `personal_whatsapp_number` vai como `null` quando o campo está vazio: é
+  // assim que o servidor entende "usa o do cadastro da pessoa". Os campos
+  // derivados (`whatsapp_from_profile`, `whatsapp_effective`, `whatsapp_reason`)
+  // são só de LEITURA — o servidor os calcula, a tela não os manda de volta.
+  members: (Omit<RoletaMember,
+    'id' | 'user_name' | 'user_avatar' | 'roleta_instance_id'
+    | 'personal_whatsapp_number' | 'whatsapp_from_profile' | 'whatsapp_effective' | 'whatsapp_reason'
+  > & { personal_whatsapp_number: string | null })[];
 }
 
 export interface BrokerAssignment {
@@ -420,6 +460,20 @@ export const roletaConfigService = {
   async getQueue(): Promise<RoletaQueue> {
     const res = await api.get(`${BASE}/queue`);
     return (res.data as { data: RoletaQueue }).data;
+  },
+
+  // Os padrões da casa: o que toda roleta NOVA já vem preenchida.
+  async getDefaults(): Promise<RoletaDefaults> {
+    const res = await api.get(`${BASE}/defaults`);
+    return (res.data as { data: RoletaDefaults }).data ?? {};
+  },
+
+  // ⚠️ Campo em branco APAGA o padrão daquele campo — é a única forma de o
+  // gestor desfazer um padrão que não quer mais. Quem não quiser mexer num
+  // campo não deve mandá-lo no payload.
+  async saveDefaults(payload: RoletaDefaults): Promise<RoletaDefaults> {
+    const res = await api.put(`${BASE}/defaults`, payload);
+    return (res.data as { data: RoletaDefaults }).data ?? {};
   },
 
   async getAssignments(status?: string): Promise<BrokerAssignment[]> {

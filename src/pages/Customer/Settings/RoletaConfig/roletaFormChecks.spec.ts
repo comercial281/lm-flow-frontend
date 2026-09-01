@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { roletaFormProblems, splitBackendProblems, backendProblems, type RoletaFormCheckInput } from './roletaFormChecks';
+import { roletaFormProblems, roletaFormWarnings, splitBackendProblems, backendProblems, type RoletaFormCheckInput } from './roletaFormChecks';
 
 // "Preenchi tudo direitinho e deu erro" — 07/08/2026.
 //
@@ -97,13 +97,26 @@ describe('roletaFormProblems', () => {
     expect(p.some(x => x.includes('ao menos um corretor'))).toBe(true);
   });
 
-  // Antes esta linha era descartada em silêncio: salvava com sucesso e o
-  // corretor simplesmente não aparecia na roleta.
-  it('acusa o corretor escolhido sem WhatsApp, pelo nome', () => {
+  // ⚠️ ESTE EXEMPLO JÁ TESTOU O OPOSTO, e a inversão é deliberada.
+  //
+  // A linha sem WhatsApp era descartada em silêncio; a correção da época foi
+  // BARRAR o salvamento. Desde 2026-09-01 o número vem do cadastro da pessoa
+  // (Equipe) quando o campo da roleta está vazio, e o corretor sem número em
+  // lugar nenhum ENTRA na roleta — ele recebe a oferta pelo app. Barrar aqui
+  // impediria de configurar a roleta quem ainda não cadastrou o número de todo
+  // mundo. Virou aviso; ver roletaFormWarnings.
+  it('NÃO barra o corretor sem WhatsApp no campo da roleta', () => {
     const p = roletaFormProblems(form({
       members: [{ user_id: 'u1', personal_whatsapp_number: '  ' }],
     }));
-    expect(p.some(x => x.includes('Falta o WhatsApp de João'))).toBe(true);
+    expect(p.some(x => x.includes('WhatsApp de João'))).toBe(false);
+  });
+
+  it('não cobra WhatsApp de quem tem número no cadastro da Equipe', () => {
+    const p = roletaFormProblems(form({
+      members: [{ user_id: 'u1', personal_whatsapp_number: '', whatsapp_from_profile: '11940871974' }],
+    }));
+    expect(p).toEqual([]);
   });
 
   it('acusa a linha com WhatsApp e sem corretor', () => {
@@ -211,5 +224,36 @@ describe('backendProblems', () => {
   it('prefere a mensagem quando ela é específica', () => {
     const p = backendProblems('Prazo de aceite: maior que zero', [{ field: 'timeout_minutes' }]);
     expect(p).toEqual(['Prazo de aceite: maior que zero']);
+  });
+});
+
+// AVISO, não impedimento: o corretor sem WhatsApp entra na roleta e recebe a
+// oferta pelo app. O que não sai é o aviso no WhatsApp — e o gestor precisa
+// saber disso sem ser barrado.
+describe('roletaFormWarnings', () => {
+  it('avisa sobre quem não tem número nem aqui nem no cadastro', () => {
+    const avisos = roletaFormWarnings(form({
+      members: [{ user_id: 'u1', personal_whatsapp_number: '' }],
+    }));
+    expect(avisos.some(x => x.includes('João'))).toBe(true);
+    expect(avisos.some(x => x.includes('pelo app'))).toBe(true);
+  });
+
+  it('cala quando o número está no cadastro da Equipe', () => {
+    const avisos = roletaFormWarnings(form({
+      members: [{ user_id: 'u1', personal_whatsapp_number: '', whatsapp_from_profile: '11940871974' }],
+    }));
+    expect(avisos).toEqual([]);
+  });
+
+  it('cala quando o número está no campo da roleta', () => {
+    expect(roletaFormWarnings(form())).toEqual([]);
+  });
+
+  it('ignora linha sem corretor escolhido — quem cobra isso é a lista de problemas', () => {
+    const avisos = roletaFormWarnings(form({
+      members: [{ user_id: '', personal_whatsapp_number: '' }],
+    }));
+    expect(avisos).toEqual([]);
   });
 });
