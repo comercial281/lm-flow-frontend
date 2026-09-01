@@ -593,6 +593,76 @@ Armadilha: **o cliente que "falhou ao excluir" NÃO está intacto** — ele est�
 paralisado, na aba Arquivados. Quem quiser desistir da exclusão religa pelo
 *Reabrir*, e a lista volta pausada, como qualquer arquivado.
 
+## A IA Vendedora responde em várias mensagens (desde 2026-08-31)
+
+A IA mandava uma mensagem só, e quando se estendia o lead recebia um parágrafo
+grande de uma vez. Agora ela responde em até 3 mensagens curtas, com
+*digitando...* entre elas e uma pausa proporcional ao tamanho da próxima.
+
+O que aparece na tela:
+
+- **Chave *Responder em várias mensagens*** em *IA Vendedora → Configuração →
+  Recepção inicial*, colada no campo *Tempo de espera antes de responder*. Os
+  dois falam de ritmo: aquele é o tempo de ESPERA (juntar o que o lead mandou),
+  este é o ritmo da RESPOSTA (espalhar o que a IA vai mandar). Separá-los faria
+  procurar em dois lugares a mesma coisa.
+- **Campo *No máximo quantas mensagens por resposta*** (2 a 4, padrão 3), que só
+  aparece com a chave ligada.
+- **A aba *Testar* empilha uma bolha por mensagem**, igual ao que o lead recebe.
+- **Na caixa de conversas nada mudou** — ela já desenha uma bolha por mensagem, e
+  passou a mostrar as mesmas que o lead viu, sem nenhuma alteração de código.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Estreia LIGADA em toda imobiliária.** A chave existe para DESLIGAR em quem não
+  quiser, não para liberar aos poucos. Não é `clientToggleKey` nem `featureKey`:
+  é campo do agente, não módulo — os scanners do catálogo de funcionalidades não
+  entram nesta história.
+- **Se o lead escreve no meio, a IA termina de mandar** e responde depois.
+- **O teto de 4 não é enfeite.** Rajada de mensagens é a assinatura que mais faz o
+  WhatsApp tratar um número como robô, e a abertura já manda print e áudio junto.
+
+Armadilhas:
+
+1. **Os dois campos PRECISAM estar na lista do `saveAgent`.** Ela monta o PATCH
+   campo a campo, e o que não estiver ali é descartado sem erro nenhum: a tela
+   mostra o valor, o toast diz *Salvo*, e nada foi salvo. É o que já acontece com
+   os dois campos do book do imóvel.
+2. **A aba *Testar* mostraria UMA bolha** se lesse só o texto inteiro da resposta.
+   Quem ligasse a chave e testasse ali concluiria que não funciona — por isso ela
+   lê a lista de mensagens, com o texto inteiro como reserva.
+3. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): a tela lê a chave e o teto de lá. Sem ela, a chave aparece
+   no padrão e não guarda nada.
+
+## Mensagem automática não leva nome de gente (desde 2026-08-31)
+
+Queixa do dono do produto: o follow-up disparado sozinho aparecia na caixa de
+conversas como se uma PESSOA tivesse escrito e mandado — o selo *Atendente* com o
+nome de um corretor (na prática, o primeiro administrador da conta) ao lado.
+
+A tela já sabia esconder esse nome desde que a mensagem chegasse marcada como
+automática. O que faltava era do lado do servidor: a marca nunca era gravada.
+Corrigido lá; aqui sobrou uma consequência de exibição.
+
+O que mudou na tela:
+
+- **Disparo automático aparece só como *Atendente*.** Vale para o follow-up, para
+  as automações de lead e para o disparo agendado — a IA Vendedora já era assim.
+- **O selo deixou de aparecer duplicado.** Sem nome, o texto de reserva ao lado do
+  selo era a MESMA palavra dele, então a linha saía *"Atendente Atendente"*. Hoje,
+  sem nome, fica só o selo.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): quem grava a marca de automática é o servidor. Sem ela a
+   tela volta a mostrar o nome de quem não escreveu.
+2. **Mensagem JÁ enviada continua mostrando o nome antigo.** A marca só existe nas
+   mensagens novas; o histórico não é reescrito.
+3. **Não voltar a derivar "quem escreveu" do autor gravado.** O autor de uma
+   mensagem automática é um detalhe de como ela foi criada, não a assinatura dela.
+
 ## Aviso de permissão é para o CLIQUE (desde 2026-08-31)
 
 Queixa do dono do produto: todo corretor que entrava no CRM levava uma sequência de
