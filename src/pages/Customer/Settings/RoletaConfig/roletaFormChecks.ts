@@ -37,7 +37,11 @@ export interface RoletaFormCheckInput {
   /** Nulo ao criar; o id da roleta ao editar (ela não conflita consigo mesma). */
   editingId: string | null;
   instances: { inbox_id: string; is_active: boolean; answers_direct_inbound?: boolean }[];
-  members: { user_id: string; personal_whatsapp_number: string }[];
+  /**
+   * `whatsapp_from_profile` é o número do CADASTRO da pessoa (Equipe). O campo
+   * da roleta é a exceção; vazio nos dois é que significa "sem WhatsApp".
+   */
+  members: { user_id: string; personal_whatsapp_number: string; whatsapp_from_profile?: string | null }[];
   mode: DistributionMode;
   gestorNum: string;
   horarioOn: boolean;
@@ -96,18 +100,26 @@ export function roletaFormProblems(f: RoletaFormCheckInput): string[] {
     p.push('Preencha o número do gestor (é quem recebe os avisos da roleta).');
   }
 
+  // O número tem DUAS fontes: o campo desta roleta (que é a exceção) e o
+  // cadastro da pessoa em Equipe. Só falta WhatsApp quando as duas estão vazias.
+  const temNumero = (m: { user_id: string; personal_whatsapp_number?: string; whatsapp_from_profile?: string | null }) =>
+    !!(m.personal_whatsapp_number?.trim() || (m.whatsapp_from_profile ?? '').trim());
+
   // No modo Manual o gerente distribui na mão, então não precisa de corretor.
-  const completos = f.members.filter(m => m.user_id && m.personal_whatsapp_number?.trim());
+  const completos = f.members.filter(m => m.user_id && temNumero(m));
   if (f.mode !== 'manual' && completos.length === 0) {
     p.push('Adicione ao menos um corretor com número de WhatsApp.');
   }
 
-  // Linha pela metade era DESCARTADA no silêncio: o gestor escolhia o corretor,
-  // esquecia o WhatsApp, salvava com sucesso — e o corretor não estava lá.
+  // ⚠️ Corretor SEM número não é mais impedimento.
+  //
+  // Antes ele era descartado em silêncio no salvamento — o gestor escolhia,
+  // esquecia o WhatsApp, via "Salvo", e o corretor não estava lá. A correção da
+  // época foi barrar o save. Agora ele ENTRA na roleta e recebe a oferta pelo
+  // app; o que não sai é o aviso no WhatsApp. Barrar o save aqui voltaria a
+  // impedir a configuração legítima de quem ainda não cadastrou o número de
+  // todo mundo. Vira AVISO (ver roletaFormWarnings), não impedimento.
   f.members.forEach((m, i) => {
-    if (m.user_id && !m.personal_whatsapp_number?.trim()) {
-      p.push(`Falta o WhatsApp de ${f.userName(m.user_id)} — sem ele o corretor não entra na roleta.`);
-    }
     if (!m.user_id && m.personal_whatsapp_number?.trim()) {
       p.push(`A linha ${i + 1} de corretores tem WhatsApp mas nenhum corretor escolhido.`);
     }
@@ -137,6 +149,30 @@ export function roletaFormProblems(f: RoletaFormCheckInput): string[] {
   }
 
   return p;
+}
+
+/**
+ * O que merece um aviso mas NÃO impede o salvamento.
+ *
+ * Separado dos problemas de propósito: a lista de cima é "não dá para salvar
+ * assim"; esta é "salva, mas fica sabendo". Misturar as duas foi o que fez o
+ * corretor sem WhatsApp virar um bloqueio — quando ele é uma configuração
+ * legítima, só incompleta.
+ */
+export function roletaFormWarnings(f: RoletaFormCheckInput): string[] {
+  const avisos: string[] = [];
+
+  f.members.forEach(m => {
+    if (!m.user_id) return;
+    const naRoleta  = m.personal_whatsapp_number?.trim();
+    const noCadastro = (m.whatsapp_from_profile ?? '').trim();
+    if (naRoleta || noCadastro) return;
+
+    avisos.push(`${f.userName(m.user_id)} está sem WhatsApp aqui e no cadastro dele em Equipe. `
+      + 'Ele entra na roleta e recebe a oferta pelo app, mas não vai receber o aviso no WhatsApp.');
+  });
+
+  return avisos;
 }
 
 /**
