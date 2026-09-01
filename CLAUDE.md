@@ -663,6 +663,50 @@ Armadilhas:
 3. **Não voltar a derivar "quem escreveu" do autor gravado.** O autor de uma
    mensagem automática é um detalhe de como ela foi criada, não a assinatura dela.
 
+## Aviso de permissão é para o CLIQUE (desde 2026-08-31)
+
+Queixa do dono do produto: todo corretor que entrava no CRM levava uma sequência de
+avisos vermelhos de permissão no canto superior direito, **sem ter clicado em nada**.
+
+O servidor passou a conferir o cargo em TODA a API, e aqui qualquer recusa virava
+aviso vermelho — inclusive a dos pedidos que a própria tela dispara sozinha para se
+montar. Só de abrir o app, a busca dos *aplicativos do painel* (aqueles atalhos do
+menu lateral, permissão que só o Administrador tem) já pintava um vermelho por cima
+de uma tela que estava funcionando. Abrir uma conversa pintava mais dois.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Leitura recusada não grita.** Quando o cargo não alcança algo que a tela buscou
+  sozinha, aquele pedaço simplesmente não aparece — é o que o app já faz com item de
+  menu e com os blocos de gestão do dashboard.
+- **Escrita recusada continua avisando.** Sem o aviso, o botão bloqueado "não faz
+  nada" e vira chamado de suporte. Foi escolha explícita do dono.
+- **A regra é por VERBO, num lugar só**, e não uma marca em cada chamada. O cargo
+  Corretor é uma lista FIXA no servidor (o Gerente herda chave nova sozinho, ele
+  não), então toda tela que ganha um botão nasce com uma chave que ele não tem —
+  marcar chamada por chamada consertaria as de hoje e a próxima tela recriaria o
+  problema.
+- **As duas ações que a tela dispara ao abrir uma conversa** (marcar como lida e ler
+  o estado da IA) foram consertadas no servidor, reaproveitando permissão que o
+  Corretor já tem. Calá-las aqui deixaria a bolinha de não-lida voltando para sempre
+  e o cabeçalho mentindo que a IA está desligada.
+
+Armadilhas:
+
+1. **Não voltar a emitir aviso em leitura de fundo**, nem "só nesta tela". É a
+   origem exata do problema, e existe teste que reprova.
+2. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`). Sem ela, marcar como lida continua recusado — calado, mas
+   recusado.
+3. **As guardas que perguntam antes** (se o cargo lê instâncias e equipes, no boot e
+   no popup de filtros) continuam valendo: elas evitam a requisição inútil, não só o
+   toast.
+4. **Ainda há ~38 permissões que faltam no cargo Corretor** — silenciar conversa,
+   marcar como não lida, ver anexos, prioridade, reenviar mensagem que falhou, mandar
+   o book, anotação no card, prévia de resposta rápida, seletor de lead na visita, e
+   o **Assumir lead** do modo leilão. Todas continuam recusadas; a diferença é que
+   agora só avisam quando alguém clica. Ficou para depois, por decisão do dono.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
