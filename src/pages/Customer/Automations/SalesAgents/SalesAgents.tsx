@@ -4,7 +4,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon, Zap, AlertTriangle } from 'lucide-react';
+import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon, Zap, AlertTriangle, Lightbulb, CalendarDays, Users, MessageSquare, Sparkles, X } from 'lucide-react';
 import AiResultsPanel from '@/components/salesAgents/AiResultsPanel';
 import type { AgentPerformance } from '@/types/aiResults';
 import {
@@ -35,8 +35,14 @@ import {
   type TestMediaItem,
   type HandoffMode,
   type SalesAgentFollowupAction,
+  type SalesAgentSuggestion,
+  type SuggestionsPayload,
+  type WeeklyReport,
+  type WeeklyReportConfig,
+  type WeeklyReportTargets,
 } from '@/services/salesAgents/salesAgentsService';
 import { DOCUMENT_TOPICS } from '@/features/salesAgents/documentTopics';
+import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { WEEKDAYS } from '@/components/schedule/scheduleWindows';
 import inboxesService from '@/services/channels/inboxesService';
@@ -45,7 +51,7 @@ import { followupSequencesService } from '@/services/followupSequences/followupS
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { usePergunta } from '@/hooks/usePergunta';
-type Tab = 'config' | 'resultados' | 'knowledge' | 'learning' | 'test' | 'diagnostico';
+type Tab = 'config' | 'resultados' | 'sugestoes' | 'relatorios' | 'knowledge' | 'learning' | 'test' | 'diagnostico';
 
 interface InboxOption {
   id: string | number;
@@ -76,6 +82,11 @@ export default function SalesAgents() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<Tab>('config');
+  // ⚠️ A chave vai LITERAL aqui. Os dois scanners do catálogo de funcionalidades
+  // (sync e audit) leem o código por regex: trocar o literal por uma constante
+  // tira a chave do catálogo no deploy seguinte, o painel de Funções deixa de
+  // oferecer o botão de liberar, e ninguém é avisado.
+  const insightsLiberado = useClientToggle('ia_insights');
 
   const loadAgents = useCallback(async () => {
     setLoading(true);
@@ -323,7 +334,18 @@ export default function SalesAgents() {
 
             {/* Abas */}
             <div className="flex gap-1 border-b border-sidebar-border mb-4">
-              {([['config', 'Configuração'], ['resultados', 'Resultados'], ['knowledge', 'Base de Conhecimento'], ['learning', 'Aprendizado'], ['test', 'Testar'], ['diagnostico', 'Diagnóstico']] as [Tab, string][]).map(
+              {(([
+                ['config', 'Configuração'],
+                ['resultados', 'Resultados'],
+                // As duas abaixo são liberadas imobiliária por imobiliária. O gate
+                // fica na ABA, nunca na rota — quem digitar o endereço chega na
+                // tela, que é o padrão da casa (ver /bolsao e as Landings).
+                ...(insightsLiberado ? ([['sugestoes', 'Sugestões'], ['relatorios', 'Relatórios']] as [Tab, string][]) : []),
+                ['knowledge', 'Base de Conhecimento'],
+                ['learning', 'Aprendizado'],
+                ['test', 'Testar'],
+                ['diagnostico', 'Diagnóstico'],
+              ] as [Tab, string][])).map(
                 ([key, label]) => (
                   <button
                     key={key}
@@ -342,6 +364,8 @@ export default function SalesAgents() {
               <ConfigTab agent={selected} inboxes={inboxes} saving={saving} onChange={setSelected} onSave={saveAgent} />
             )}
             {tab === 'resultados' && <ResultsTab agent={selected} />}
+            {tab === 'sugestoes' && insightsLiberado && <SuggestionsTab agent={selected} />}
+            {tab === 'relatorios' && insightsLiberado && <ReportsTab />}
             {tab === 'knowledge' && <KnowledgeTab agent={selected} onCountChange={loadAgents} />}
             {tab === 'learning' && <LearningTab agent={selected} />}
             {tab === 'test' && <TestTab agent={selected} />}
@@ -3679,6 +3703,613 @@ function TestMediaBubble({ item }: { item: TestMediaItem }) {
       <a href={item.url} target="_blank" rel="noreferrer" className="text-xs underline break-all">
         {item.url}
       </a>
+    </div>
+  );
+}
+
+// ---------------- Sugestões (a IA relê as conversas e propõe melhorias) ----------------
+
+const SUGGESTION_PERIODS: [number, string][] = [[7, '7 dias'], [30, '30 dias'], [90, '90 dias']];
+
+const WEEKDAY_OPTIONS: [number, string][] = [
+  [1, 'Segunda'], [2, 'Terça'], [3, 'Quarta'], [4, 'Quinta'], [5, 'Sexta'], [6, 'Sábado'], [7, 'Domingo'],
+];
+
+// Selo por categoria. A cor separa o que é da IA do que é recado para gente.
+const SUGGESTION_STYLE: Record<string, string> = {
+  objecao: 'bg-amber-500/10 text-amber-600',
+  pergunta: 'bg-blue-500/10 text-blue-600',
+  travamento: 'bg-red-500/10 text-red-500',
+  operacao: 'bg-violet-500/10 text-violet-500',
+};
+
+function SuggestionsTab({ agent }: { agent: SalesAgent }) {
+  const [data, setData] = useState<SuggestionsPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [days, setDays] = useState(30);
+  const [mostrarDescartadas, setMostrarDescartadas] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      setData(await salesAgentsService.listSuggestions(agent.id));
+    } catch {
+      // Leitura que a própria tela dispara ao abrir não grita: o pedaço
+      // simplesmente não aparece. Aviso é para quando a pessoa clicou.
+    } finally {
+      setLoading(false);
+    }
+  }, [agent.id]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const analisar = async () => {
+    setAnalyzing(true);
+    try {
+      const novo = await salesAgentsService.analyzeSuggestions(agent.id, days);
+      setData(novo);
+      toast.success(novo.created ? `${novo.created} sugestão(ões) nova(s)` : 'Nenhum padrão novo desta vez');
+    } catch (e) {
+      // Aqui a pessoa CLICOU: o motivo em português vem do servidor.
+      const msg = (e as { response?: { data?: { error?: { message?: string } } } })
+        ?.response?.data?.error?.message;
+      toast.error(msg || 'Não consegui analisar agora.');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const aplicar = async (s: SalesAgentSuggestion) => {
+    setBusyId(s.id);
+    try {
+      await salesAgentsService.applySuggestion(agent.id, s.id);
+      toast.success('Aplicada — virou lição na aba Aprendizado');
+      await load();
+    } catch {
+      toast.error('Não consegui transformar em lição.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const descartar = async (s: SalesAgentSuggestion) => {
+    setBusyId(s.id);
+    try {
+      await salesAgentsService.dismissSuggestion(agent.id, s.id);
+      await load();
+    } catch {
+      toast.error('Não consegui descartar.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const salvarAuto = async (patch: { auto?: boolean; weekday?: number; hour?: number }) => {
+    try {
+      const auto = await salesAgentsService.saveSuggestionConfig(agent.id, patch);
+      setData((prev) => (prev ? { ...prev, auto } : prev));
+      toast.success('Salvo');
+    } catch {
+      toast.error('Erro ao salvar');
+    }
+  };
+
+  const todas = data?.suggestions ?? [];
+  const visiveis = mostrarDescartadas ? todas : todas.filter((s) => s.status !== 'dismissed');
+  const descartadas = todas.length - todas.filter((s) => s.status !== 'dismissed').length;
+  const noTeto = (data?.lessons_active ?? 0) >= (data?.lessons_cap ?? 12);
+
+  return (
+    <div className="space-y-5">
+      <p className="text-sm text-muted-foreground">
+        A IA relê as conversas que ela atendeu e aponta o que se repete: a objeção que derruba
+        lead, a pergunta que ela não soube responder, onde a conversa morre. O que é sobre o jeito
+        de ela falar você aplica com um clique e vira lição. O que é sobre o time fica como recado.
+      </p>
+
+      {/* Analisar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1">
+          {SUGGESTION_PERIODS.map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setDays(value)}
+              className={`px-3 py-1.5 rounded-md text-sm border transition-colors ${
+                days === value
+                  ? 'bg-primary/10 text-primary border-primary/40 font-medium'
+                  : 'border-sidebar-border text-muted-foreground hover:bg-accent'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <Button size="sm" onClick={() => void analisar()} disabled={analyzing} className="ml-auto">
+          {analyzing
+            ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Lendo as conversas…</>
+            : <><Sparkles className="h-4 w-4 mr-1" /> Analisar agora</>}
+        </Button>
+      </div>
+
+      {/* Automático */}
+      <div className="rounded-lg border border-sidebar-border bg-sidebar p-4 space-y-2">
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={data?.auto.auto ?? false}
+            onChange={(e) => void salvarAuto({ auto: e.target.checked })}
+          />
+          Analisar sozinha toda semana
+        </label>
+        <p className="text-xs text-muted-foreground">
+          Cada análise é uma consulta paga à IA. Desligada, ela só roda quando você clica em
+          <span className="font-medium"> Analisar agora</span>.
+        </p>
+        {data?.auto.auto && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <select
+              value={data.auto.weekday}
+              onChange={(e) => void salvarAuto({ weekday: Number(e.target.value) })}
+              className="rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
+            >
+              {WEEKDAY_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+            <span className="text-sm text-muted-foreground">às</span>
+            <select
+              value={data.auto.hour}
+              onChange={(e) => void salvarAuto({ hour: Number(e.target.value) })}
+              className="rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
+            >
+              {Array.from({ length: 24 }, (_, h) => (
+                <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Lista */}
+      {loading && !data ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+      ) : visiveis.length === 0 ? (
+        <p className="text-sm text-muted-foreground rounded-lg border border-sidebar-border bg-sidebar p-4">
+          Nenhuma sugestão ainda. Clique em <span className="font-medium">Analisar agora</span> — a IA
+          precisa de conversas atendidas no período para encontrar um padrão.
+        </p>
+      ) : (
+        <ul className="space-y-3">
+          {visiveis.map((s) => (
+            <SuggestionCard
+              key={s.id}
+              suggestion={s}
+              busy={busyId === s.id}
+              onApply={() => void aplicar(s)}
+              onDismiss={() => void descartar(s)}
+            />
+          ))}
+        </ul>
+      )}
+
+      {descartadas > 0 && (
+        <button
+          type="button"
+          onClick={() => setMostrarDescartadas((v) => !v)}
+          className="text-xs text-muted-foreground hover:text-foreground"
+        >
+          {mostrarDescartadas ? 'Esconder' : 'Ver'} {descartadas} descartada(s)
+        </button>
+      )}
+
+      {/* Rodapé: o que já custou e quanto a IA de fato lê */}
+      {data && (
+        <div className="pt-3 border-t border-sidebar-border text-xs text-muted-foreground space-y-1">
+          {data.last_analysis_at && (
+            <p>
+              Última análise em {new Date(data.last_analysis_at).toLocaleDateString('pt-BR')}
+              {data.last_analysis_cost_usd > 0 && ` — custou US$ ${data.last_analysis_cost_usd.toFixed(4)}`}
+            </p>
+          )}
+          <p className={noTeto ? 'text-amber-600' : undefined}>
+            {data.lessons_active} lição(ões) ativa(s).
+            {noTeto
+              ? ` A IA lê no máximo ${data.lessons_cap} de cada tipo: aplicar mais não muda o comportamento dela. Remova as que já não valem, na aba Aprendizado.`
+              : ` Ela lê até ${data.lessons_cap} de cada tipo.`}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SuggestionCard({
+  suggestion, busy, onApply, onDismiss,
+}: {
+  suggestion: SalesAgentSuggestion;
+  busy: boolean;
+  onApply: () => void;
+  onDismiss: () => void;
+}) {
+  const conversas = suggestion.evidence?.conversations ?? 0;
+  const citacoes = suggestion.evidence?.quotes ?? [];
+  const aplicada = suggestion.status === 'applied';
+  const descartada = suggestion.status === 'dismissed';
+
+  return (
+    <li className={`rounded-lg border border-sidebar-border p-4 space-y-2 ${descartada ? 'opacity-50' : ''}`}>
+      <div className="flex items-start gap-2">
+        <span className={`text-xs px-2 py-0.5 rounded shrink-0 ${SUGGESTION_STYLE[suggestion.category] ?? 'bg-primary/10 text-primary'}`}>
+          {suggestion.category_label}
+        </span>
+        {/* ⚠️ O selo do time não é enfeite: ele explica por que não existe botão
+            de aplicar. Recado para gente virando lição faria a IA repetir isso
+            para o lead. */}
+        {suggestion.target === 'equipe' && (
+          <span className="text-xs px-2 py-0.5 rounded shrink-0 bg-sidebar text-muted-foreground border border-sidebar-border">
+            <Users className="h-3 w-3 inline mr-1" />Recado para o time
+          </span>
+        )}
+        {aplicada && (
+          <span className="text-xs px-2 py-0.5 rounded shrink-0 bg-green-500/10 text-green-600">
+            <Check className="h-3 w-3 inline mr-1" />Aplicada
+          </span>
+        )}
+        <span className="flex-1" />
+        {conversas > 0 && (
+          <span className="text-xs text-muted-foreground shrink-0" title="Em quantas conversas isso apareceu">
+            <MessageSquare className="h-3 w-3 inline mr-1" />{conversas}
+          </span>
+        )}
+      </div>
+
+      <div className="text-sm font-medium">{suggestion.title}</div>
+      {suggestion.body && <p className="text-sm text-muted-foreground">{suggestion.body}</p>}
+
+      {citacoes.length > 0 && (
+        <ul className="space-y-1 pt-1">
+          {citacoes.map((q, i) => (
+            <li key={i} className="text-xs text-muted-foreground border-l-2 border-sidebar-border pl-2 italic">
+              “{q}”
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {suggestion.appliable && suggestion.lesson_content && (
+        <div className="text-xs rounded-md bg-sidebar border border-sidebar-border p-2">
+          <span className="text-muted-foreground">Vira esta lição: </span>
+          {suggestion.lesson_content}
+        </div>
+      )}
+
+      {!descartada && (
+        <div className="flex gap-2 pt-1">
+          {/* Quem manda no botão é o servidor (`appliable`), não uma dedução da tela. */}
+          {suggestion.appliable && !aplicada && (
+            <Button size="sm" onClick={onApply} disabled={busy}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Lightbulb className="h-4 w-4 mr-1" /> Aplicar</>}
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={onDismiss} disabled={busy}>
+            <X className="h-4 w-4 mr-1" /> Descartar
+          </Button>
+        </div>
+      )}
+    </li>
+  );
+}
+
+// ---------------- Relatórios (do CLIENTE, não da IA) ----------------
+
+// ⚠️ Esta aba mora dentro da tela da IA, mas o relatório é do CLIENTE: ele não
+// recebe `agent`, e a configuração é a mesma em qualquer IA que você abrir. Duas
+// IAs no mesmo cliente fariam o gestor receber a semana duas vezes.
+function ReportsTab() {
+  const [payload, setPayload] = useState<{ config: WeeklyReportConfig; current: WeeklyReport | null; history: WeeklyReport[] } | null>(null);
+  const [targets, setTargets] = useState<WeeklyReportTargets>({ groups: [], managers: [] });
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<'preview' | 'send' | 'text' | null>(null);
+  const [texto, setTexto] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [dados, alvos] = await Promise.all([
+        salesAgentsService.weeklyReport(),
+        salesAgentsService.weeklyReportTargets().catch(() => ({ groups: [], managers: [] })),
+      ]);
+      setPayload(dados);
+      setTargets(alvos);
+      setTexto(dados.current?.text ?? '');
+    } catch {
+      // Leitura de fundo não grita.
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const salvarConfig = async (patch: Partial<WeeklyReportConfig>) => {
+    try {
+      const config = await salesAgentsService.saveWeeklyReportConfig(patch);
+      setPayload((prev) => (prev ? { ...prev, config } : prev));
+      toast.success('Salvo');
+    } catch {
+      toast.error('Erro ao salvar');
+    }
+  };
+
+  const gerarPrevia = async () => {
+    setBusy('preview');
+    try {
+      const report = await salesAgentsService.weeklyReportPreview();
+      setPayload((prev) => (prev ? { ...prev, current: report } : prev));
+      setTexto(report.text ?? '');
+      toast.success('Prévia gerada');
+    } catch (e) {
+      const msg = (e as { response?: { data?: { error?: { message?: string } } } })
+        ?.response?.data?.error?.message;
+      toast.error(msg || 'Não consegui montar a prévia.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const salvarTexto = async () => {
+    setBusy('text');
+    try {
+      const report = await salesAgentsService.weeklyReportSaveText(texto);
+      setPayload((prev) => (prev ? { ...prev, current: report } : prev));
+      toast.success('Texto salvo');
+    } catch {
+      toast.error('Erro ao salvar o texto');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const enviar = async () => {
+    setBusy('send');
+    try {
+      const report = await salesAgentsService.weeklyReportSendNow();
+      setPayload((prev) => (prev ? { ...prev, current: report } : prev));
+      if (report.delivered_count > 0) toast.success(`Enviado para ${report.delivered_count} destino(s)`);
+      else toast.error('Nenhum destino recebeu. Confira a lista abaixo.');
+      await load();
+    } catch (e) {
+      const msg = (e as { response?: { data?: { error?: { message?: string } } } })
+        ?.response?.data?.error?.message;
+      toast.error(msg || 'Não consegui enviar agora.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const config = payload?.config;
+  const atual = payload?.current;
+  const jaEnviado = atual?.status === 'sent';
+  const destinos = (config?.group_jids.length ?? 0) + (config?.user_ids.length ?? 0);
+
+  const alternar = (lista: string[], valor: string) =>
+    lista.includes(valor) ? lista.filter((v) => v !== valor) : [...lista, valor];
+
+  if (loading && !payload) {
+    return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">
+        O resumo da semana dos atendimentos — o que a IA entregou e o que o time fez — enviado no
+        WhatsApp pelo número operacional da Leal Mídia. Monte a prévia, confira, edite o texto e mande.
+      </p>
+
+      {/* Prévia */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" variant="outline" onClick={() => void gerarPrevia()} disabled={busy !== null}>
+          {busy === 'preview' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+          Gerar prévia
+        </Button>
+        {atual && <span className="text-sm text-muted-foreground">Semana de {atual.period_label}</span>}
+      </div>
+
+      {atual && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <StatsBlock
+              titulo="A IA"
+              icone={<Bot className="h-4 w-4" />}
+              linhas={[
+                ['Leads atendidos', atual.stats?.ia?.attended ?? 0],
+                ['Responderam', atual.stats?.ia?.answered ?? 0],
+                ['Qualificados', atual.stats?.ia?.qualified ?? 0],
+                ['Visitas marcadas', atual.stats?.ia?.visits ?? 0],
+                ['Passados para corretor', atual.stats?.ia?.handoffs ?? 0],
+              ]}
+            />
+            <StatsBlock
+              titulo="O time"
+              icone={<Users className="h-4 w-4" />}
+              linhas={[
+                ['Leads novos', Number((atual.stats?.equipe as Record<string, unknown>)?.new_leads ?? 0)],
+                ['Reativados', Number((atual.stats?.equipe as Record<string, unknown>)?.reactivated ?? 0)],
+                ['Follow-ups enviados', Number((atual.stats?.equipe as Record<string, unknown>)?.followups_sent ?? 0)],
+                ['Mensagens enviadas', Number((atual.stats?.equipe as Record<string, unknown>)?.messages_sent ?? 0)],
+                ['Mensagens recebidas', Number((atual.stats?.equipe as Record<string, unknown>)?.messages_received ?? 0)],
+              ]}
+            />
+          </div>
+
+          <div>
+            <Label>O texto que vai no WhatsApp</Label>
+            <Textarea
+              rows={12}
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              disabled={jaEnviado}
+              className="font-mono text-xs"
+            />
+            {jaEnviado ? (
+              <p className="text-xs text-muted-foreground mt-1">
+                Este relatório já foi enviado — o que está aqui é o que chegou no WhatsApp.
+              </p>
+            ) : (
+              <Button size="sm" variant="outline" className="mt-2" onClick={() => void salvarTexto()} disabled={busy !== null}>
+                {busy === 'text' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+                Salvar texto
+              </Button>
+            )}
+          </div>
+
+          {atual.results.length > 0 && (
+            <ul className="space-y-1">
+              {atual.results.map((r, i) => (
+                <li key={i} className="text-xs flex items-center gap-2">
+                  <span className={r.ok ? 'text-green-600' : 'text-red-500'}>{r.ok ? '✓' : '✕'}</span>
+                  <span>{r.label}</span>
+                  {r.detail && <span className="text-muted-foreground">— {r.detail}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+
+      {/* Destinos */}
+      <div className="pt-2 border-t border-sidebar-border space-y-3">
+        <Label>Para quem vai</Label>
+
+        <div>
+          <p className="text-xs text-muted-foreground mb-1">Grupos de WhatsApp desta imobiliária</p>
+          {targets.groups.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhum grupo desta imobiliária foi encontrado no número operacional. Você ainda pode
+              mandar para os gestores abaixo.
+            </p>
+          ) : (
+            targets.groups.map((g) => (
+              <label key={g.jid} className="flex items-center gap-2 text-sm cursor-pointer py-0.5">
+                <input
+                  type="checkbox"
+                  checked={config?.group_jids.includes(g.jid) ?? false}
+                  onChange={() => void salvarConfig({ group_jids: alternar(config?.group_jids ?? [], g.jid) })}
+                />
+                {g.name}
+              </label>
+            ))
+          )}
+        </div>
+
+        <div>
+          <p className="text-xs text-muted-foreground mb-1">Gestores</p>
+          {targets.managers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhum gestor com WhatsApp cadastrado. O número sai do cadastro da pessoa, em
+              Configurações → Equipe.
+            </p>
+          ) : (
+            targets.managers.map((m) => (
+              <label key={m.id} className="flex items-center gap-2 text-sm cursor-pointer py-0.5">
+                <input
+                  type="checkbox"
+                  checked={config?.user_ids.includes(String(m.id)) ?? false}
+                  onChange={() => void salvarConfig({ user_ids: alternar(config?.user_ids ?? [], String(m.id)) })}
+                />
+                {m.name} <span className="text-xs text-muted-foreground">{m.phone_masked}</span>
+              </label>
+            ))
+          )}
+        </div>
+
+        {/* A contagem fica embaixo do dedo: disparo em grupo de cliente é irreversível. */}
+        <Button onClick={() => void enviar()} disabled={busy !== null || !atual || jaEnviado || destinos === 0}>
+          {busy === 'send' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
+          Enviar agora {destinos > 0 && `(${destinos})`}
+        </Button>
+      </div>
+
+      {/* Automático */}
+      <div className="pt-2 border-t border-sidebar-border space-y-2">
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={config?.enabled ?? false}
+            onChange={(e) => void salvarConfig({ enabled: e.target.checked })}
+          />
+          Enviar toda semana, sozinho
+        </label>
+        {config?.enabled && (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <select
+                value={config.weekday}
+                onChange={(e) => void salvarConfig({ weekday: Number(e.target.value) })}
+                className="rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
+              >
+                {WEEKDAY_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+              <span className="text-sm text-muted-foreground">às</span>
+              <select
+                value={config.hour}
+                onChange={(e) => void salvarConfig({ hour: Number(e.target.value) })}
+                className="rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
+              >
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                ))}
+              </select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              O relatório sempre cobre a semana fechada anterior (segunda a domingo), para uma
+              semana poder ser comparada com a outra. Sai uma vez só, mesmo que o horário passe batido.
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* Histórico */}
+      {(payload?.history.length ?? 0) > 0 && (
+        <div className="pt-2 border-t border-sidebar-border">
+          <Label>Últimos envios</Label>
+          <ul className="space-y-1 mt-2">
+            {payload!.history.map((r) => (
+              <li key={r.id} className="text-sm flex items-center gap-2">
+                <span className="text-muted-foreground">{r.period_label}</span>
+                {r.status === 'sent' ? (
+                  <span className="text-xs text-green-600">
+                    enviado para {r.delivered_count}{r.failed_count > 0 && `, ${r.failed_count} falhou`}
+                  </span>
+                ) : r.status === 'failed' ? (
+                  <span className="text-xs text-red-500">falhou</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">rascunho</span>
+                )}
+                {r.automatic && <span className="text-xs text-muted-foreground">(automático)</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatsBlock({ titulo, icone, linhas }: { titulo: string; icone: React.ReactNode; linhas: [string, number][] }) {
+  return (
+    <div className="rounded-lg border border-sidebar-border bg-sidebar p-4">
+      <div className="text-sm font-medium flex items-center gap-2 mb-2">{icone} {titulo}</div>
+      <ul className="space-y-1">
+        {linhas.map(([rotulo, valor]) => (
+          <li key={rotulo} className="flex justify-between text-sm">
+            <span className="text-muted-foreground">{rotulo}</span>
+            <span className="font-medium">{valor}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
