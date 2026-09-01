@@ -183,6 +183,13 @@ export default function SalesAgents() {
         message_split_max_parts: patch.message_split_max_parts ?? selected.message_split_max_parts,
         pipeline_move_enabled: patch.pipeline_move_enabled ?? selected.pipeline_move_enabled,
         pipeline_id: patch.pipeline_id ?? selected.pipeline_id,
+        // A curtida ESTREOU sem estas três linhas, e foi exatamente o defeito que o
+        // aviso acima descreve: a chave ficava imóvel na tela e o toast dizia "Salvo".
+        // `??` serve para as três — lista vazia e zero não são nulos, então
+        // "desmarquei todos os emojis" e "teto zero" chegam ao servidor como escolha.
+        reaction_enabled: patch.reaction_enabled ?? selected.reaction_enabled,
+        reaction_emojis: patch.reaction_emojis ?? selected.reaction_emojis,
+        reaction_max_per_conversation: patch.reaction_max_per_conversation ?? selected.reaction_max_per_conversation,
         // `in` e não `??`: o mapa vazio ({}) é uma escolha legítima ("tirei todas
         // as colunas"), e `??` só trata null/undefined — mas a etapa REMOVIDA some
         // do objeto, então mandar o mapa antigo aqui ressuscitaria a coluna que o
@@ -670,7 +677,25 @@ const REACTION_EMOJI_OPTIONS = ['👍', '❤️', '😂', '🙏', '🔥', '👏'
 function ReactionSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
   const on = !!agent.reaction_enabled;
   const selecionados = agent.reaction_emojis ?? [];
-  const teto = agent.reaction_max_per_conversation ?? 3;
+
+  // O teto tem estado PRÓPRIO enquanto se digita, e só grava ao sair do campo.
+  // Gravando a cada tecla, digitar "10" salvava 1 e depois 10; e apagar a caixa
+  // pra redigitar salvava ZERO, que aqui quer dizer DESLIGAR a curtida.
+  const [teto, setTeto] = useState(String(agent.reaction_max_per_conversation ?? 3));
+  useEffect(() => {
+    setTeto(String(agent.reaction_max_per_conversation ?? 3));
+  }, [agent.id, agent.reaction_max_per_conversation]);
+
+  // Caixa vazia ao sair = "não mexi", nunca zero: zero é uma escolha destrutiva
+  // (desliga a curtida) e ninguém a faz apagando um campo pra redigitar.
+  const gravarTeto = () => {
+    const texto = teto.trim();
+    if (texto === '' || Number.isNaN(Number(texto))) {
+      setTeto(String(agent.reaction_max_per_conversation ?? 3));
+      return;
+    }
+    onSave({ reaction_max_per_conversation: Number(texto) });
+  };
 
   const alternar = (emoji: string) => {
     const proxima = selecionados.includes(emoji)
@@ -732,7 +757,8 @@ function ReactionSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
               min={0}
               max={20}
               value={teto}
-              onChange={(e) => onSave({ reaction_max_per_conversation: Number(e.target.value) })}
+              onChange={(e) => setTeto(e.target.value)}
+              onBlur={gravarTeto}
               className="mt-1 w-28"
             />
             <p className="text-xs text-muted-foreground mt-1">

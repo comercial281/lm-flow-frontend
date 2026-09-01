@@ -355,6 +355,12 @@ export interface SalesAgentPayload {
   send_property_book_enabled?: boolean;
   /** Regra escrita uma vez, valendo pro book de QUALQUER imóvel. */
   book_send_rule?: string | null;
+  /** A IA pode CURTIR mensagens do lead: a reação com emoji, no aparelho dele. */
+  reaction_enabled?: boolean;
+  /** Os únicos emojis que ela pode usar. Lista vazia = volta ao padrão de fábrica. */
+  reaction_emojis?: string[];
+  /** Teto de curtidas por conversa. Zero desliga a curtida. */
+  reaction_max_per_conversation?: number | null;
 }
 
 export interface SalesAgentDocument {
