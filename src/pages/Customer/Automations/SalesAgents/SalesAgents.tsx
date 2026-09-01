@@ -34,12 +34,14 @@ import {
   type TestHistoryItem,
   type TestMediaItem,
   type HandoffMode,
+  type SalesAgentFollowupAction,
 } from '@/services/salesAgents/salesAgentsService';
 import { DOCUMENT_TOPICS } from '@/features/salesAgents/documentTopics';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { WEEKDAYS } from '@/components/schedule/scheduleWindows';
 import inboxesService from '@/services/channels/inboxesService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
+import { followupSequencesService } from '@/services/followupSequences/followupSequencesService';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { usePergunta } from '@/hooks/usePergunta';
@@ -145,6 +147,15 @@ export default function SalesAgents() {
         followup_min_days: patch.followup_min_days ?? selected.followup_min_days,
         followup_max_days: patch.followup_max_days ?? selected.followup_max_days,
         followup_max_attempts: patch.followup_max_attempts ?? selected.followup_max_attempts,
+        // As colunas e o funil entram com `in`, e não com `??`: limpar a escolha
+        // manda `null`, e o `??` trocaria o null pelo valor antigo — a tela
+        // mostraria "não escolhido" e o servidor continuaria com a coluna velha.
+        followup_action: patch.followup_action ?? selected.followup_action,
+        followup_stage_id: 'followup_stage_id' in patch ? patch.followup_stage_id : selected.followup_stage_id,
+        followup_return_stage_id:
+          'followup_return_stage_id' in patch ? patch.followup_return_stage_id : selected.followup_return_stage_id,
+        followup_sequence_slug:
+          'followup_sequence_slug' in patch ? patch.followup_sequence_slug : selected.followup_sequence_slug,
         audio_enabled: patch.audio_enabled ?? selected.audio_enabled,
         audio_mode: patch.audio_mode ?? selected.audio_mode,
         audio_voice_id: patch.audio_voice_id ?? selected.audio_voice_id,
@@ -1977,7 +1988,7 @@ function FollowupSection({
         <div>
           <div className="text-sm font-medium">Follow-up automático</div>
           <div className="text-xs text-muted-foreground">
-            Se o lead sumir, a IA volta sozinha com uma mensagem personalizada (baseada em toda a conversa e no imóvel), na cadência que você definir. Infinito por padrão. Desligado = não dispara nada.
+            Se o lead sumir, a IA volta sozinha na cadência que você definir. Infinito por padrão. Desligado = não dispara nada.
           </div>
           {/* Os dois follow-ups do produto NÃO se sobrepõem, e a diferença nunca
               esteve escrita em lugar nenhum: aqui só entra quem já respondeu
@@ -1993,6 +2004,8 @@ function FollowupSection({
 
       {on && (
         <div className="mt-3 space-y-3 pl-7">
+          <FollowupActionPicker agent={agent} onSave={onSave} />
+
           <div className="flex items-end gap-3">
             <div>
               <Label htmlFor="fu_min" className="text-xs">A cada (mín. dias)</Label>
@@ -2006,15 +2019,24 @@ function FollowupSection({
                 onChange={(e) => onChange({ ...agent, followup_max_days: Number(e.target.value) })}
                 onBlur={() => onSave({ followup_max_days: Math.max(Number(agent.followup_min_days) || 1, Number(agent.followup_max_days) || 3) })} />
             </div>
-            <p className="text-xs text-muted-foreground pb-2">A IA espera um tempo aleatório nessa faixa entre cada follow-up.</p>
+            <p className="text-xs text-muted-foreground pb-2">
+              {agent.followup_action === 'ai'
+                ? 'A IA espera um tempo aleatório nessa faixa entre cada follow-up.'
+                : 'Quanto tempo de silêncio até a IA entregar o lead ao funil.'}
+            </p>
           </div>
 
-          <div>
-            <Label htmlFor="fu_max_att" className="text-xs">Máximo de follow-ups (0 = infinito, para sempre)</Label>
-            <Input id="fu_max_att" type="number" min={0} value={agent.followup_max_attempts ?? 0} className="mt-1 w-40"
-              onChange={(e) => onChange({ ...agent, followup_max_attempts: Number(e.target.value) })}
-              onBlur={() => onSave({ followup_max_attempts: Math.max(0, Number(agent.followup_max_attempts) || 0) })} />
-          </div>
+          {/* O teto de cutucadas só faz sentido quando é a IA que cutuca. Entregando
+              ao funil ela age UMA vez e sai de cena — quem manda dali em diante é o
+              funil, com o número de mensagens que ele tem. */}
+          {agent.followup_action === 'ai' && (
+            <div>
+              <Label htmlFor="fu_max_att" className="text-xs">Máximo de follow-ups (0 = infinito, para sempre)</Label>
+              <Input id="fu_max_att" type="number" min={0} value={agent.followup_max_attempts ?? 0} className="mt-1 w-40"
+                onChange={(e) => onChange({ ...agent, followup_max_attempts: Number(e.target.value) })}
+                onBlur={() => onSave({ followup_max_attempts: Math.max(0, Number(agent.followup_max_attempts) || 0) })} />
+            </div>
+          )}
 
           {/* O follow-up nunca olhou o horário de atuação: um agente configurado
               pra atender "só fora do comercial" cutucava lead às 14h. Virou
@@ -2035,6 +2057,133 @@ function FollowupSection({
               </div>
             </div>
           </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// As três saídas do follow-up. As duas de baixo não consomem IA: as mensagens do
+// funil já estão escritas, então cutucar o lead deixa de custar por lead e por vez.
+const FOLLOWUP_ACTIONS: [SalesAgentFollowupAction, string, string][] = [
+  ['ai', 'A IA escreve a mensagem',
+   'Personalizada com base na conversa inteira e no imóvel de interesse. É a que mais converte — e a única que consome IA a cada envio.'],
+  ['pipeline', 'Mover o card para uma coluna',
+   'A IA leva o card para a coluna que você escolher e sai de cena. Quem manda a mensagem é o funil de follow-up que essa coluna dispara. Não consome IA.'],
+  ['sequence', 'Disparar um funil pronto',
+   'A IA coloca o lead no funil escolhido, sem mexer no card. Para quem não usa o quadro de funil. Não consome IA.'],
+];
+
+function FollowupActionPicker({
+  agent, onSave,
+}: {
+  agent: SalesAgent;
+  onSave: (patch: Partial<SalesAgent>) => void;
+}) {
+  const [stages, setStages] = useState<StageOpt[]>([]);
+  const [funis, setFunis] = useState<{ slug: string; name: string }[]>([]);
+  const acao = agent.followup_action ?? 'ai';
+  const pipeline = agent.pipeline_id ?? '';
+
+  // As colunas são as do funil já escolhido em "Mover o card no funil", logo
+  // acima: um segundo seletor de funil aqui criaria duas verdades sobre onde a IA
+  // age no quadro, e trocar uma sem a outra deixaria o card num funil e a coluna
+  // no outro.
+  useEffect(() => {
+    if (acao !== 'pipeline' || !pipeline) { setStages([]); return; }
+    pipelinesService.getPipelineStages(pipeline)
+      .then((res: unknown) => {
+        const raw = (res as { data?: StageOpt[] }).data ?? (Array.isArray(res) ? (res as StageOpt[]) : []);
+        setStages(raw.map((st) => ({ id: String(st.id), name: st.name })));
+      })
+      .catch(() => setStages([]));
+  }, [acao, pipeline]);
+
+  useEffect(() => {
+    if (acao !== 'sequence') { setFunis([]); return; }
+    followupSequencesService.getAll()
+      .then((lista) => setFunis(lista.filter((f) => f.is_active).map((f) => ({ slug: f.slug, name: f.name }))))
+      .catch(() => setFunis([]));
+  }, [acao]);
+
+  return (
+    <div className="space-y-2">
+      <div className="text-xs font-medium">Quando o lead sumir</div>
+      {FOLLOWUP_ACTIONS.map(([valor, titulo, ajuda]) => (
+        <label key={valor} className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="radio"
+            className="mt-1"
+            name={`followup_action_${agent.id}`}
+            checked={acao === valor}
+            onChange={() => onSave({ followup_action: valor })}
+          />
+          <div>
+            <div className="text-sm">{titulo}</div>
+            <div className="text-xs text-muted-foreground">{ajuda}</div>
+          </div>
+        </label>
+      ))}
+
+      {acao === 'pipeline' && (
+        <div className="mt-2 space-y-2 pl-7">
+          {!pipeline ? (
+            <p className="text-xs text-amber-600">
+              Escolha antes o funil em <strong>Mover o card no funil</strong>, logo acima — é dele que
+              saem as colunas.
+            </p>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 text-sm">Coluna para o lead que sumiu</div>
+                <select
+                  value={agent.followup_stage_id ?? ''}
+                  onChange={(e) => onSave({ followup_stage_id: e.target.value || null })}
+                  className="w-52 shrink-0 rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
+                >
+                  <option value="">— escolha a coluna —</option>
+                  {stages.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
+                </select>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 text-sm">Quando ele voltar a responder, o card vai para</div>
+                <select
+                  value={agent.followup_return_stage_id ?? ''}
+                  onChange={(e) => onSave({ followup_return_stage_id: e.target.value || null })}
+                  className="w-52 shrink-0 rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
+                >
+                  <option value="">Primeira coluna do funil (Novo)</option>
+                  {stages.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
+                </select>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Quem manda a mensagem é o funil que essa coluna dispara — configure a entrada
+                <em> Card entrou numa coluna</em> em Automações → Follow-up, senão o card muda de
+                lugar e ninguém fala com o lead. A IA só empurra o card para a frente: card que o
+                corretor já levou para uma coluna adiantada ela não puxa de volta.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
+      {acao === 'sequence' && (
+        <div className="mt-2 space-y-2 pl-7">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 text-sm">Qual funil</div>
+            <select
+              value={agent.followup_sequence_slug ?? ''}
+              onChange={(e) => onSave({ followup_sequence_slug: e.target.value || null })}
+              className="w-52 shrink-0 rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
+            >
+              <option value="">— escolha o funil —</option>
+              {funis.map((f) => <option key={f.slug} value={f.slug}>{f.name}</option>)}
+            </select>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Só aparecem os funis ativos. O card não é movido neste modo — se você usa o quadro,
+            prefira a opção de cima, que também deixa o lead sumido visível numa coluna.
+          </p>
         </div>
       )}
     </div>
