@@ -899,9 +899,16 @@ Armadilhas:
 4. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
    `saas-multitenant`). O auditor do catálogo **quebra o build** enquanto
    `ia_insights` não existir no catálogo servido pela API — então o merge aqui só
-   depois de o backend estar no ar. E confira o token de sincronização do catálogo no
-   Vercel antes: o auditor é fail-closed, e quem põe a chave no catálogo é o
-   sincronizador, que é fail-open e depende dele.
+   depois de o backend estar no ar. Foi exatamente o que aconteceu no primeiro build
+   deste PR, e o auditor estava fazendo o trabalho dele.
+
+   ⚠️ E o sincronizador **não roda neste projeto Vercel**: falta o token, então todo
+   build loga `LM_FLOW_SYNC_TOKEN não configurado neste projeto Vercel — pulando
+   sync` e segue. Ou seja, ao contrário do que a seção do Bolsão sugere, **quem põe a
+   chave no catálogo hoje é o YAML do backend**, não o build do front — e ele só vale
+   enquanto o override guardado estiver vazio. Antes de contar com uma coisa ou com a
+   outra, olhe o log do build: ele diz qual dos dois casos é o seu.
+
 5. **Nenhum campo novo passa pelo `saveAgent`.** A chave da análise automática e a
    configuração do relatório têm endpoints próprios, de propósito: campo fora daquela
    lista campo-a-campo é descartado em silêncio — a tela mostra o valor e o aviso diz
