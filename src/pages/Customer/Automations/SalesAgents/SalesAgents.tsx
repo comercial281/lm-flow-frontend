@@ -4114,11 +4114,16 @@ function ReportsTab() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const salvarConfig = async (patch: Partial<WeeklyReportConfig>) => {
+  // `quiet` para as marcações de destino: ali quem confirma é a própria caixinha
+  // mudando de estado. Um aviso "Salvo" por clique vira cachoeira quando o gestor
+  // marca meia dúzia de destinos seguidos — o mesmo motivo pelo qual a lista do
+  // Bolsão não emite aviso a cada atualização de fundo. Erro continua avisando
+  // sempre: aí a caixinha mente, e a pessoa precisa saber.
+  const salvarConfig = async (patch: Partial<WeeklyReportConfig>, { quiet = false } = {}) => {
     try {
       const config = await salesAgentsService.saveWeeklyReportConfig(patch);
       setPayload((prev) => (prev ? { ...prev, config } : prev));
-      toast.success('Salvo');
+      if (!quiet) toast.success('Salvo');
     } catch {
       toast.error('Erro ao salvar');
     }
@@ -4277,7 +4282,7 @@ function ReportsTab() {
                 <input
                   type="checkbox"
                   checked={config?.group_jids.includes(g.jid) ?? false}
-                  onChange={() => void salvarConfig({ group_jids: alternar(config?.group_jids ?? [], g.jid) })}
+                  onChange={() => void salvarConfig({ group_jids: alternar(config?.group_jids ?? [], g.jid) }, { quiet: true })}
                 />
                 {g.name}
               </label>
@@ -4298,7 +4303,7 @@ function ReportsTab() {
                 <input
                   type="checkbox"
                   checked={config?.user_ids.includes(String(m.id)) ?? false}
-                  onChange={() => void salvarConfig({ user_ids: alternar(config?.user_ids ?? [], String(m.id)) })}
+                  onChange={() => void salvarConfig({ user_ids: alternar(config?.user_ids ?? [], String(m.id)) }, { quiet: true })}
                 />
                 {m.name} <span className="text-xs text-muted-foreground">{m.phone_masked}</span>
               </label>
