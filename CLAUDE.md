@@ -904,10 +904,12 @@ Armadilhas:
 
    ⚠️ E o sincronizador **não roda neste projeto Vercel**: falta o token, então todo
    build loga `LM_FLOW_SYNC_TOKEN não configurado neste projeto Vercel — pulando
-   sync` e segue. Ou seja, ao contrário do que a seção do Bolsão sugere, **quem põe a
-   chave no catálogo hoje é o YAML do backend**, não o build do front — e ele só vale
-   enquanto o override guardado estiver vazio. Antes de contar com uma coisa ou com a
-   outra, olhe o log do build: ele diz qual dos dois casos é o seu.
+   sync` e segue. Isso travou a estreia destas abas por um dia: a cópia do catálogo
+   no servidor estava congelada desde 26/08 e substituía o arquivo versionado, então
+   chave nova não entrava de jeito nenhum. **Desde 2026-09-01 o arquivo do servidor é
+   PISO** e a chave nova entra sozinha — ver *"Nenhuma funcionalidade nova conseguia
+   estrear"* no CLAUDE.md do `lm-flow`. Configurar o token continua valendo, para a
+   cópia seguir refletindo o menu real; os dois se somam.
 
 5. **Nenhum campo novo passa pelo `saveAgent`.** A chave da análise automática e a
    configuração do relatório têm endpoints próprios, de propósito: campo fora daquela

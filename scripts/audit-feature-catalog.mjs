@@ -86,7 +86,16 @@ async function main() {
   console.error('\n[audit-feature-catalog] FALHOU — chave(s) usada(s) em featureKey/clientToggleKey/useFeature sem entrada no catálogo do backend:');
   for (const k of missing) console.error(`  - ${k}  (${used.get(k)})`);
   console.error('\nAdicione a chave em config/lm_flow_features.yml (repo lm-flow, branch saas-multitenant) antes de mergear.');
-  console.error('Sem isso o menu correspondente fica escondido de TODO cliente, sempre, sem aviso.\n');
+  console.error('Sem isso o menu correspondente fica escondido de TODO cliente, sempre, sem aviso.');
+  // Falhar aqui COM a chave já no YAML e no ar significa que o catálogo servido
+  // vem da cópia gravada (FEATURE_CATALOG_OVERRIDE) e ela está desatualizada.
+  // Custou um dia em 2026-09-01: o sync acima é pulado por falta de token, então
+  // a cópia congelou e chave nova nunca mais entrava. Desde então o YAML é PISO
+  // no backend — se ainda assim falhar, é deploy do backend que não subiu.
+  console.error('\nJá está no YAML e o backend já subiu? Então o catálogo servido veio da cópia');
+  console.error('gravada, e ela está velha. Desde 2026-09-01 o YAML é PISO no backend — confira se');
+  console.error('o deploy do servidor com a chave realmente foi ao ar. Ver a seção "Nenhuma');
+  console.error('funcionalidade nova conseguia estrear" no CLAUDE.md do repo lm-flow.\n');
   // process.exitCode (não process.exit) deixa o processo terminar sozinho depois
   // que os handles do fetch/timer drenam — process.exit() nesse ponto crasha no
   // Windows (libuv assertion em async.c) com um handle de abort ainda fechando.
