@@ -3797,6 +3797,27 @@ const WEEKDAY_OPTIONS: [number, string][] = [
   [1, 'Segunda'], [2, 'Terça'], [3, 'Quarta'], [4, 'Quinta'], [5, 'Sexta'], [6, 'Sábado'], [7, 'Domingo'],
 ];
 
+/**
+ * O motivo que o servidor mandou, em português, seja qual for o formato.
+ *
+ * ⚠️ A API tem DOIS formatos de erro, e ler só um esconde metade das falhas. O
+ * padrão é `error.message`; a recusa por cargo devolve `error` como TEXTO e a
+ * explicação em `message`, no nível de cima. Lendo só o primeiro, um "seu cargo não
+ * permite esta ação" chegava na tela como a frase genérica de fallback — que manda
+ * procurar o problema no lugar errado.
+ */
+function motivoDoServidor(e: unknown): string | null {
+  const data = (e as { response?: { data?: unknown } })?.response?.data as
+    | { error?: unknown; message?: unknown }
+    | undefined;
+  if (!data) return null;
+
+  const doErro = (data.error as { message?: unknown } | undefined)?.message;
+  if (typeof doErro === 'string' && doErro.trim()) return doErro;
+  if (typeof data.message === 'string' && data.message.trim()) return data.message;
+  return null;
+}
+
 // Selo por categoria. A cor separa o que é da IA do que é recado para gente.
 const SUGGESTION_STYLE: Record<string, string> = {
   objecao: 'bg-amber-500/10 text-amber-600',
@@ -3827,20 +3848,66 @@ function SuggestionsTab({ agent }: { agent: SalesAgent }) {
 
   useEffect(() => { void load(); }, [load]);
 
+  /**
+   * ⚠️ O botão COMEÇA a análise; ele não espera por ela.
+   *
+   * A IA lê as conversas do período e escreve as sugestões: 30 a 90 segundos. O
+   * servidor derruba qualquer requisição que passe de 15, e a requisição derrubada
+   * volta SEM motivo dentro — foi por isso que este botão só sabia dizer "Não
+   * consegui analisar agora", que é a frase que não explica nada. Agora o servidor
+   * responde na hora e a tela pergunta o estado até terminar.
+   */
   const analisar = async () => {
     setAnalyzing(true);
     try {
-      const novo = await salesAgentsService.analyzeSuggestions(agent.id, days);
-      setData(novo);
-      toast.success(novo.created ? `${novo.created} sugestão(ões) nova(s)` : 'Nenhum padrão novo desta vez');
+      const inicio = await salesAgentsService.analyzeSuggestions(agent.id, days);
+      setData(inicio);
+      const quantasAntes = inicio.suggestions.length;
+      if (!inicio.analyzing) {
+        finalizarAnalise(inicio, quantasAntes);
+        return;
+      }
+      await acompanharAnalise(quantasAntes);
     } catch (e) {
       // Aqui a pessoa CLICOU: o motivo em português vem do servidor.
-      const msg = (e as { response?: { data?: { error?: { message?: string } } } })
-        ?.response?.data?.error?.message;
-      toast.error(msg || 'Não consegui analisar agora.');
-    } finally {
+      toast.error(motivoDoServidor(e) || 'Não consegui analisar agora.');
       setAnalyzing(false);
     }
+  };
+
+  /**
+   * Pergunta ao servidor de 4 em 4 segundos até a análise sair do ar. O teto de ~4
+   * minutos é rede de segurança para o processo que morre no meio (deploy): sem ele
+   * a tela ficaria "Analisando..." para sempre. A reserva do servidor expira sozinha
+   * em 10 minutos, então o botão nunca fica travado de verdade.
+   */
+  const acompanharAnalise = async (quantasAntes: number) => {
+    for (let tentativa = 0; tentativa < 60; tentativa += 1) {
+      await new Promise((r) => setTimeout(r, 4000));
+      try {
+        const atual = await salesAgentsService.listSuggestions(agent.id);
+        setData(atual);
+        if (!atual.analyzing) {
+          finalizarAnalise(atual, quantasAntes);
+          return;
+        }
+      } catch {
+        // Oscilação de rede no meio da espera não é motivo para desistir da
+        // análise, que continua rodando no servidor. Tenta de novo no próximo ciclo.
+      }
+    }
+    setAnalyzing(false);
+    toast.message('A análise está demorando mais que o normal. Recarregue a aba em instantes.');
+  };
+
+  const finalizarAnalise = (payload: SuggestionsPayload, quantasAntes: number) => {
+    setAnalyzing(false);
+    if (payload.analysis_error) {
+      toast.error(payload.analysis_error);
+      return;
+    }
+    const novas = payload.suggestions.length - quantasAntes;
+    toast.success(novas > 0 ? `${novas} sugestão(ões) nova(s)` : 'Nenhum padrão novo desta vez');
   };
 
   const aplicar = async (s: SalesAgentSuggestion) => {
@@ -4129,20 +4196,48 @@ function ReportsTab() {
     }
   };
 
+  /**
+   * ⚠️ O botão COMEÇA a prévia; ele não espera por ela. Montar o texto é uma
+   * consulta à IA, e o servidor derruba requisição que passe de 15 segundos — a
+   * requisição derrubada volta sem motivo dentro, e a tela mostrava a frase genérica
+   * como se fosse a explicação. Mesma mecânica da aba Sugestões.
+   */
   const gerarPrevia = async () => {
     setBusy('preview');
     try {
-      const report = await salesAgentsService.weeklyReportPreview();
-      setPayload((prev) => (prev ? { ...prev, current: report } : prev));
-      setTexto(report.text ?? '');
-      toast.success('Prévia gerada');
+      await salesAgentsService.weeklyReportPreview();
+      await acompanharPrevia();
     } catch (e) {
-      const msg = (e as { response?: { data?: { error?: { message?: string } } } })
-        ?.response?.data?.error?.message;
-      toast.error(msg || 'Não consegui montar a prévia.');
-    } finally {
+      toast.error(motivoDoServidor(e) || 'Não consegui montar a prévia.');
       setBusy(null);
     }
+  };
+
+  // Pergunta de 4 em 4 segundos até a prévia sair do ar. O teto de ~2 minutos é rede
+  // para o processo que morre no meio; a reserva do servidor expira sozinha em 10.
+  const acompanharPrevia = async () => {
+    for (let tentativa = 0; tentativa < 30; tentativa += 1) {
+      let atual: WeeklyReportPayload | null = null;
+      try {
+        atual = await salesAgentsService.weeklyReport();
+      } catch {
+        // Oscilação de rede não cancela a prévia, que segue no servidor.
+      }
+
+      if (atual) {
+        setPayload(atual);
+        setTexto(atual.current?.text ?? '');
+        if (!atual.building) {
+          setBusy(null);
+          if (atual.preview_error) toast.error(atual.preview_error);
+          else toast.success('Prévia gerada');
+          return;
+        }
+      }
+      await new Promise((r) => setTimeout(r, 4000));
+    }
+    setBusy(null);
+    toast.message('A prévia está demorando mais que o normal. Recarregue a aba em instantes.');
   };
 
   const salvarTexto = async () => {
