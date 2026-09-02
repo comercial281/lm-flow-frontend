@@ -37,8 +37,8 @@ import {
   type SalesAgentFollowupAction,
   type SalesAgentSuggestion,
   type SuggestionsPayload,
-  type WeeklyReport,
   type WeeklyReportConfig,
+  type WeeklyReportPayload,
   type WeeklyReportTargets,
 } from '@/services/salesAgents/salesAgentsService';
 import { DOCUMENT_TOPICS } from '@/features/salesAgents/documentTopics';
@@ -4156,7 +4156,10 @@ function SuggestionCard({
 // recebe `agent`, e a configuração é a mesma em qualquer IA que você abrir. Duas
 // IAs no mesmo cliente fariam o gestor receber a semana duas vezes.
 function ReportsTab() {
-  const [payload, setPayload] = useState<{ config: WeeklyReportConfig; current: WeeklyReport | null; history: WeeklyReport[] } | null>(null);
+  // O tipo do serviço, e não uma cópia escrita à mão: a cópia não conhecia os campos
+  // que dizem se a prévia ainda está sendo montada, e campo que a tela não conhece é
+  // campo que ela ignora em silêncio.
+  const [payload, setPayload] = useState<WeeklyReportPayload | null>(null);
   const [targets, setTargets] = useState<WeeklyReportTargets>({ groups: [], managers: [] });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<'preview' | 'send' | 'text' | null>(null);
