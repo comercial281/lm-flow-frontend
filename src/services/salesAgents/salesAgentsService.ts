@@ -530,6 +530,101 @@ export interface SalesAgentPropertyLink {
   property: { id: string; code: string; title: string } | null;
 }
 
+// --- sugestões da IA e relatório semanal ---
+
+export type SuggestionStatus = 'pending' | 'applied' | 'dismissed';
+export type SuggestionTarget = 'ia' | 'equipe';
+export type SuggestionCategory = 'objecao' | 'pergunta' | 'travamento' | 'operacao';
+
+export interface SalesAgentSuggestion {
+  id: string;
+  status: SuggestionStatus;
+  /**
+   * ⚠️ `ia` vira lição; `equipe` NUNCA vira. Lição é injetada no comando da IA, e
+   * um recado de time virando lição faz ela repetir "o corretor demora a
+   * responder" para o LEAD. Quem manda no botão é `appliable`, que vem do
+   * servidor — a tela não deduz isso.
+   */
+  target: SuggestionTarget;
+  category: SuggestionCategory;
+  category_label: string;
+  title: string;
+  body: string | null;
+  evidence: { conversations?: number; quotes?: string[] };
+  appliable: boolean;
+  lesson_kind: SalesAgentLessonKind | null;
+  lesson_content: string | null;
+  applied_lesson_id: string | null;
+  batch_id: string;
+  created_at: string;
+}
+
+export interface SuggestionAutoConfig {
+  auto: boolean;
+  weekday: number;
+  hour: number;
+}
+
+export interface SuggestionsPayload {
+  suggestions: SalesAgentSuggestion[];
+  /** Quantas lições a IA tem ativas, e quantas ela de fato lê (teto por tipo). */
+  lessons_active: number;
+  lessons_cap: number;
+  last_analysis_at: string | null;
+  last_analysis_cost_usd: number;
+  auto: SuggestionAutoConfig;
+  created?: number;
+  cost_usd?: number;
+}
+
+export interface WeeklyReportConfig {
+  enabled: boolean;
+  weekday: number;
+  hour: number;
+  group_jids: string[];
+  user_ids: string[];
+}
+
+export interface WeeklyReportResult {
+  kind: string;
+  label: string;
+  ok: boolean;
+  detail: string | null;
+}
+
+export interface WeeklyReport {
+  id: string;
+  period_start: string;
+  period_end: string;
+  period_label: string;
+  status: 'draft' | 'sent' | 'failed';
+  automatic: boolean;
+  text: string | null;
+  stats: {
+    ia?: Record<string, number>;
+    equipe?: Record<string, unknown>;
+  };
+  destinations: { kind: string; label: string }[];
+  results: WeeklyReportResult[];
+  delivered_count: number;
+  failed_count: number;
+  cost_usd: number;
+  sent_at: string | null;
+  created_at: string;
+}
+
+export interface WeeklyReportPayload {
+  config: WeeklyReportConfig;
+  current: WeeklyReport | null;
+  history: WeeklyReport[];
+}
+
+export interface WeeklyReportTargets {
+  /** Só os grupos DESTE cliente. O servidor nunca devolve os dos outros. */
+  groups: { jid: string; name: string; source: 'cadastro' | 'nome' }[];
+  managers: { id: string; name: string; phone_masked: string }[];
+}
+
 const BASE = '/sales_agents';
 
 export const salesAgentsService = {
@@ -764,6 +859,71 @@ export const salesAgentsService = {
 
   async destroyLesson(agentId: string, lessonId: string): Promise<void> {
     await api.delete(`${BASE}/${agentId}/lessons/${lessonId}`);
+  },
+
+  // --- sugestões da IA (ela relê as conversas e propõe melhorias) ---
+
+  async listSuggestions(agentId: string): Promise<SuggestionsPayload> {
+    const res = await api.get(`${BASE}/${agentId}/suggestions`);
+    return (res.data as { data: SuggestionsPayload }).data;
+  },
+
+  async analyzeSuggestions(agentId: string, days = 30): Promise<SuggestionsPayload> {
+    const res = await api.post(`${BASE}/${agentId}/suggestions/analyze`, { days });
+    return (res.data as { data: SuggestionsPayload }).data;
+  },
+
+  async applySuggestion(agentId: string, id: string): Promise<SalesAgentSuggestion> {
+    const res = await api.post(`${BASE}/${agentId}/suggestions/${id}/apply`);
+    return (res.data as { data: SalesAgentSuggestion }).data;
+  },
+
+  async dismissSuggestion(agentId: string, id: string): Promise<SalesAgentSuggestion> {
+    const res = await api.post(`${BASE}/${agentId}/suggestions/${id}/dismiss`);
+    return (res.data as { data: SalesAgentSuggestion }).data;
+  },
+
+  /**
+   * A chave "analisar sozinha toda semana". Endpoint PRÓPRIO, e não um campo do
+   * agente: campo do agente precisa entrar na lista campo-a-campo do `saveAgent`,
+   * e o que fica de fora é descartado em silêncio — a tela mostra o valor, o
+   * toast diz "Salvo", e nada foi salvo.
+   */
+  async saveSuggestionConfig(agentId: string, patch: Partial<SuggestionAutoConfig>): Promise<SuggestionAutoConfig> {
+    const res = await api.patch(`${BASE}/${agentId}/suggestions/config`, patch);
+    return (res.data as { data: SuggestionAutoConfig }).data;
+  },
+
+  // --- relatório semanal (é do CLIENTE, não de uma IA: rota fora de /sales_agents) ---
+
+  async weeklyReport(): Promise<WeeklyReportPayload> {
+    const res = await api.get('/weekly_reports');
+    return (res.data as { data: WeeklyReportPayload }).data;
+  },
+
+  async weeklyReportTargets(): Promise<WeeklyReportTargets> {
+    const res = await api.get('/weekly_reports/targets');
+    return (res.data as { data: WeeklyReportTargets }).data;
+  },
+
+  async weeklyReportPreview(weekStart?: string): Promise<WeeklyReport> {
+    const res = await api.post('/weekly_reports/preview', { week_start: weekStart || undefined });
+    return (res.data as { data: WeeklyReport }).data;
+  },
+
+  async weeklyReportSaveText(text: string): Promise<WeeklyReport> {
+    const res = await api.patch('/weekly_reports/text', { text });
+    return (res.data as { data: WeeklyReport }).data;
+  },
+
+  async weeklyReportSendNow(): Promise<WeeklyReport> {
+    const res = await api.post('/weekly_reports/send_now');
+    return (res.data as { data: WeeklyReport }).data;
+  },
+
+  async saveWeeklyReportConfig(patch: Partial<WeeklyReportConfig>): Promise<WeeklyReportConfig> {
+    const res = await api.patch('/weekly_reports/config', patch);
+    return (res.data as { data: WeeklyReportConfig }).data;
   },
 };
 
