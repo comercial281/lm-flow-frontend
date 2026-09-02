@@ -112,7 +112,18 @@ export interface SalesAgent {
   /** Desempate quando o mesmo canal tem mais de um agente (maior ganha). */
   priority: number;
   /** Follow-up respeita TAMBÉM o horário de atuação, além da janela diurna fixa. */
-  followup_respect_active_hours: boolean;
+  /**
+   * O horário PRÓPRIO do follow-up: quando a IA pode ir atrás de quem sumiu.
+   * Mesmo formato do `active_hours`, e `mode` é sempre 'custom'.
+   *
+   * ⚠️ Vem sempre RESOLVIDO do servidor — vazio no banco significa o padrão de
+   * fábrica (09h às 17h, seg a sáb), nunca 24 horas.
+   *
+   * Substituiu a chave "Seguir também o horário de atuação", que era
+   * write-only-true: o servidor nunca a devolvia, então marcar gravava e
+   * recarregar mostrava desmarcado, sem caminho de volta.
+   */
+  followup_hours: ActiveHours;
   /** Avisar o lead que estamos fora do horário (uma vez por conversa por dia). */
   out_of_hours_reply: boolean;
   out_of_hours_message: string | null;
@@ -368,7 +379,7 @@ export interface SalesAgentPayload {
   opening_audio_url?: string | null;
   openings?: SalesAgentOpening[];
   priority?: number;
-  followup_respect_active_hours?: boolean;
+  followup_hours?: ActiveHours;
   out_of_hours_reply?: boolean;
   out_of_hours_message?: string | null;
   catalog_search_enabled?: boolean;

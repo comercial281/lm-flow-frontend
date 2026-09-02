@@ -45,6 +45,10 @@ import { DOCUMENT_TOPICS } from '@/features/salesAgents/documentTopics';
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { WEEKDAYS } from '@/components/schedule/scheduleWindows';
+import type { ScheduleWindow } from '@/components/schedule/scheduleWindows';
+import {
+  DEFAULT_FOLLOWUP_WINDOW, estimativaPorDia, janelaDoFollowup, minutosPorDia, resumoDaJanela,
+} from '@/features/salesAgents/followupHours';
 import inboxesService from '@/services/channels/inboxesService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { followupSequencesService } from '@/services/followupSequences/followupSequencesService';
@@ -172,6 +176,10 @@ export default function SalesAgents() {
         followup_drip_max_leads: patch.followup_drip_max_leads ?? selected.followup_drip_max_leads,
         followup_drip_min_minutes: patch.followup_drip_min_minutes ?? selected.followup_drip_min_minutes,
         followup_drip_max_minutes: patch.followup_drip_max_minutes ?? selected.followup_drip_max_minutes,
+        // O horário próprio do follow-up. Entra com `??` e não com `in`: ele nunca
+        // é limpável — o servidor devolve sempre resolvido e o editor garante ao
+        // menos uma janela. Vazio aqui não é escolha, é o padrão de fábrica.
+        followup_hours: patch.followup_hours ?? selected.followup_hours,
         audio_enabled: patch.audio_enabled ?? selected.audio_enabled,
         audio_mode: patch.audio_mode ?? selected.audio_mode,
         audio_voice_id: patch.audio_voice_id ?? selected.audio_voice_id,
@@ -200,7 +208,6 @@ export default function SalesAgents() {
         opening_audio_url: patch.opening_audio_url ?? selected.opening_audio_url,
         openings: patch.openings ?? selected.openings,
         priority: patch.priority ?? selected.priority,
-        followup_respect_active_hours: patch.followup_respect_active_hours ?? selected.followup_respect_active_hours,
         out_of_hours_reply: patch.out_of_hours_reply ?? selected.out_of_hours_reply,
         catalog_search_enabled: patch.catalog_search_enabled ?? selected.catalog_search_enabled,
         // ⚠️ Campo novo PRECISA entrar nesta lista. Ela monta o PATCH campo a
@@ -2035,6 +2042,8 @@ function FollowupSection({
         <div className="mt-3 space-y-3 pl-7">
           <FollowupActionPicker agent={agent} onSave={onSave} />
 
+          <FollowupHoursRow agent={agent} onSave={onSave} />
+
           <FollowupDripRow agent={agent} onChange={onChange} onSave={onSave} />
 
           <div className="flex items-end gap-3">
@@ -2069,16 +2078,6 @@ function FollowupSection({
             </div>
           )}
 
-          {/* O follow-up nunca olhou o horário de atuação: um agente configurado
-              pra atender "só fora do comercial" cutucava lead às 14h. Virou
-              escolha — desligado é como sempre funcionou. */}
-          <CheckRow
-            checked={!!agent.followup_respect_active_hours}
-            onChange={(v) => onSave({ followup_respect_active_hours: v })}
-            title="Seguir também o horário de atuação"
-            desc="Desligado, o follow-up sai em qualquer dia entre 9h e 20h. Ligado, respeita os dias e as janelas que você configurou acima."
-          />
-
           <label className="flex items-start gap-3 cursor-pointer">
             <input type="checkbox" className="mt-1" checked={agent.followup_only} onChange={(e) => onSave({ followup_only: e.target.checked })} />
             <div>
@@ -2089,6 +2088,64 @@ function FollowupSection({
             </div>
           </label>
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Quando a IA pode ir atrás de quem sumiu.
+ *
+ * NÃO tem chave de liga/desliga, de propósito: a faixa sempre existe. Um toggle
+ * criaria um terceiro estado ("desligado = 24h? = padrão?") que é justamente o
+ * que esta tela veio matar — antes o horário era fixo no servidor, ninguém
+ * escolhia e ninguém via.
+ */
+function FollowupHoursRow({
+  agent, onSave,
+}: {
+  agent: SalesAgent;
+  onSave: (patch: Partial<SalesAgent>) => void;
+}) {
+  const windows = janelaDoFollowup(agent);
+  const entregaAoFunil = agent.followup_action === 'pipeline' || agent.followup_action === 'sequence';
+
+  // `tz` sempre explícito: em branco, servidor e tela discordariam no dia em que
+  // o padrão de um dos dois mudasse.
+  const gravar = (next: ScheduleWindow[]) =>
+    onSave({ followup_hours: { mode: 'custom', tz: 'America/Sao_Paulo', windows: next } });
+
+  return (
+    <div className="rounded-md border border-sidebar-border p-3">
+      <div className="text-sm font-medium">Quando o follow-up pode sair</div>
+      <div className="text-xs text-muted-foreground">
+        É diferente do <em>Horário de atuação</em>, ali em cima: aquele é quando a IA responde
+        quem escreve, este é quando ela vai atrás de quem sumiu. Responder de madrugada tudo bem —
+        cutucar de madrugada, não.
+      </div>
+
+      <div className="mt-2">
+        <button
+          type="button"
+          className="text-xs text-primary hover:underline"
+          onClick={() => gravar([{ ...DEFAULT_FOLLOWUP_WINDOW }])}
+        >
+          Aplicar o padrão (09h às 17h, seg a sáb)
+        </button>
+      </div>
+
+      {/* Mesmo editor do Horário de atuação e da Roleta — duas cópias da regra de
+          dias e de janela que vira a meia-noite divergiriam em silêncio.
+          ⚠️ idPrefix DIFERENTE de "ia_win": as duas seções vivem na mesma aba, e
+          prefixo repetido faz o rótulo de uma focar o campo da outra. */}
+      <WeeklyWindowsEditor value={windows} idPrefix="fu_win" onChange={gravar} />
+
+      {entregaAoFunil && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Neste modo o horário acima decide <strong>quando a IA entrega o lead</strong>. As
+          mensagens dali em diante saem no horário do <em>funil</em>, que tem o relógio dele
+          (a chave <em>Só enviar em horário comercial</em>, em Automações → Follow-up).
+        </p>
       )}
     </div>
   );
@@ -2143,11 +2200,21 @@ function FollowupDripRow({
               onBlur={() => onSave({ followup_drip_max_minutes: Math.min(240, Math.max(Number(agent.followup_drip_min_minutes) || 1, Number(agent.followup_drip_max_minutes) || 5)) })} />
             <span className="text-sm pb-2">minutos entre um e outro.</span>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Dá cerca de <strong>{estimativaPorDia(agent)} leads por dia</strong>, das 9h às 20h.
-            Aumente a espera para ir mais devagar — número novo, ou primeira vez ligando num
-            cliente com muito lead parado, pede calma.
-          </p>
+          {minutosPorDia(janelaDoFollowup(agent)) > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Dá cerca de <strong>{estimativaPorDia(agent)} leads por dia</strong>,{' '}
+              {resumoDaJanela(janelaDoFollowup(agent))}. Aumente a espera para ir mais devagar —
+              número novo, ou primeira vez ligando num cliente com muito lead parado, pede calma.
+            </p>
+          ) : (
+            /* Janela de duração zero (início igual ao fim) fecha o dia inteiro no
+               servidor. Sem este aviso, "configurei e o follow-up parou" vira
+               chamado de suporte com a configuração parecendo certa. */
+            <p className="text-xs text-amber-600">
+              O horário logo acima não tem duração nenhuma, então nada sai. Para valer o dia
+              inteiro, use <strong>00:00</strong> às <strong>23:59</strong>.
+            </p>
+          )}
         </div>
       ) : (
         <p className="mt-2 text-xs text-amber-600">
@@ -2158,15 +2225,6 @@ function FollowupDripRow({
       )}
     </div>
   );
-}
-
-// Conta de padeiro para o gestor enxergar o ritmo antes de salvar: 11 horas de
-// janela (9h às 20h), punhado médio dividido pela pausa média.
-function estimativaPorDia(agent: SalesAgent): number {
-  const leads = ((Number(agent.followup_drip_min_leads) || 2) + (Number(agent.followup_drip_max_leads) || 3)) / 2;
-  const pausa = ((Number(agent.followup_drip_min_minutes) || 3) + (Number(agent.followup_drip_max_minutes) || 5)) / 2;
-  if (pausa <= 0) return 0;
-  return Math.round(((11 * 60) / pausa) * leads);
 }
 
 // As três saídas do follow-up. As duas de baixo não consomem IA: as mensagens do
