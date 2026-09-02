@@ -7,12 +7,13 @@ import {
 } from '@/components/ui/ds';
 import { NativeSelect } from '@/components/ui/native-select';
 import {
-  Shuffle, Plus, Trash2, GripVertical, Save, Phone,
+  Shuffle, Plus, Trash2, Save, Phone,
   Clock, Bell, ToggleLeft, ToggleRight, Users, BarChart2,
-  Gavel, Hand, Wifi, Send, Loader2, Eye, EyeOff, AlertTriangle,
+  Gavel, Hand, Wifi, Send, Loader2, Eye, EyeOff, AlertTriangle, Copy,
 } from 'lucide-react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { roletaFormProblems, roletaFormWarnings, backendProblems } from './roletaFormChecks';
+import { instanciasComAcesso } from './roletaEquipe';
 import {
   roletaConfigService, RoletaConfig, RoletaMember, RoletaInstance, BrokerAssignment, DistributionMode,
   RoletaDiagnostic, RepairOwnersResult, RepairInboxAccessResult, RoletaQueue,
@@ -21,7 +22,7 @@ import {
 import RemoveFromRoletaDialog from '@/components/roleta/RemoveFromRoletaDialog';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { DEFAULT_WINDOW } from '@/components/schedule/scheduleWindows';
-import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import usersService from '@/services/users/usersService';
 import { leadAutomationService, WaGroup } from '@/services/leadAutomation/leadAutomationService';
 import inboxesService from '@/services/channels/inboxesService';
@@ -120,6 +121,10 @@ const MODE_LABEL: Record<string, string> = Object.fromEntries(MODES.map(m => [m.
 // Ocultar lead do Diagnóstico é preferência de quem olha, não estado do lead:
 // mora no navegador de propósito.
 const HIDDEN_KEY = 'roleta:diagnostico:ocultos';
+
+// Todo corretor entra com o mesmo peso. É o mesmo valor que o campo já usava de
+// default — o que mudou é que ele deixou de ser uma pergunta na tela.
+const PESO_PADRAO = 10;
 
 interface MemberRow extends Omit<RoletaMember, 'id'> {
   localId: string;
@@ -334,11 +339,31 @@ export default function RoletaConfigPage() {
   // app usa. Antes ela só chegava pelo payload da config, e `openCreate` a
   // zerava: criar uma roleta nova nunca mostrava o bloco de números, só editar
   // uma existente mostrava.
-  const multiFeature = useFeature('roleta_multi_instancia');
+  // ⚠️ `useClientToggle`, não `useFeature`. Os dois são OPOSTOS: `useFeature`
+  // trata chave AUSENTE como ligada, e esta é a única chave `DEFAULT_OFF` do
+  // repo que era lida assim. Funcionava porque o servidor devolve `false`
+  // explícito — mas quando a busca de funcionalidades FALHA o fallback é `{}`,
+  // e aí o bloco de números aparecia para quem não tem a liberação (o servidor
+  // recusava com 422, então o sintoma era um erro sem sentido na tela).
+  const multiFeature = useClientToggle('roleta_multi_instancia');
   // O payload continua valendo como reforço: é a verdade do backend, e cobre o
-  // super-admin no domínio raiz, onde não há slug de tenant para resolver.
+  // super-admin no domínio raiz, onde não há slug de tenant para resolver — e
+  // onde, com o `useClientToggle`, a chave nunca chegaria.
   const [multiFromConfig, setMultiFromConfig]   = useState(false);
   const multiEnabled = multiFeature || multiFromConfig;
+
+  // O MODELO desta roleta: um número compartilhado por todos, ou um número por
+  // corretor.
+  //
+  // ⚠️ É a FORMA DA TELA, não um tipo guardado. Quem sabe qual é o modelo
+  // continua sendo a quantidade de números ativos — guardar um campo criaria
+  // duas verdades (uma roleta dizendo "sou compartilhada" com três números), e
+  // trocar de modelo depois viraria migração. Ao editar, ele é DERIVADO do que
+  // está lá.
+  const [modeloMulti, setModeloMulti] = useState(false);
+  // O bloco de números só existe no modelo de um número por corretor — e só
+  // para quem tem a liberação.
+  const mostrarNumeros = multiEnabled && modeloMulti;
   const [groups, setGroups]                 = useState<WaGroup[]>([]);
   const [loadingGroups, setLoadingGroups]   = useState(false);
   const [crmName, setCrmName]               = useState('');
@@ -375,11 +400,26 @@ export default function RoletaConfigPage() {
   // 422") em vez do motivo que o backend mandava junto. Criar roleta podia
   // falhar duas vezes seguidas sem que a tela dissesse uma palavra sobre o quê.
   const [saveErrors, setSaveErrors]         = useState<string[]>([]);
+  // A lista de corretores: busca, peso escondido e quem está sendo liberado.
+  //
+  // O peso fica ATRÁS de um link quando todo mundo é igual — que é o caso de
+  // quase toda roleta. Ele só se abre sozinho quando os pesos JÁ são diferentes,
+  // senão quem usa distribuição desigual abriria a tela sem ver a própria
+  // configuração.
+  const [buscaCorretor, setBuscaCorretor]   = useState('');
+  const [mostrarPesos, setMostrarPesos]     = useState(false);
+  const [liberandoId, setLiberandoId]       = useState<string | null>(null);
 
   const loadConfigs = useCallback(async () => {
     setLoading(true);
     try {
-      setConfigs(await roletaConfigService.getAll());
+      const lista = await roletaConfigService.getAll();
+      setConfigs(lista);
+      // Se QUALQUER roleta deste cliente diz que o multinúmero está liberado, ele
+      // está — é a resposta do próprio servidor, e não um chute. Cobre o
+      // super-admin no domínio raiz na hora de CRIAR, onde antes só o editar
+      // sabia (o `openCreate` zera a flag vinda do payload).
+      if (lista.some(c => c.multi_instance_enabled)) setMultiFromConfig(true);
     } catch {
       toast.error('Erro ao carregar configuracoes da roleta');
     } finally {
@@ -495,13 +535,13 @@ export default function RoletaConfigPage() {
   // número de entrada.
   useEffect(() => {
     if (!modalOpen || instances.length > 0) return;
-    if (multiEnabled) {
+    if (mostrarNumeros) {
       setInstances([mkInstance({ inbox_id: inboxId, weight: 10, position: 0 })]);
       return;
     }
     if (!inboxId) return;
     setInstances([mkInstance({ inbox_id: inboxId, weight: 10, position: 0 })]);
-  }, [modalOpen, inboxId, instances.length, multiEnabled]);
+  }, [modalOpen, inboxId, instances.length, mostrarNumeros]);
 
   // Com o bloco de números visível, o seletor separado de instância some — então
   // a ENTRADA passa a ser a primeira linha do bloco, e é dela que sai o
@@ -510,10 +550,10 @@ export default function RoletaConfigPage() {
   // Só ao CRIAR: numa roleta que já existe, trocar o inbox mudaria a chave, e o
   // seletor da primeira linha fica travado justamente por isso.
   useEffect(() => {
-    if (!modalOpen || editing || !multiEnabled) return;
+    if (!modalOpen || editing || !mostrarNumeros) return;
     const entrada = instances[0]?.inbox_id;
     if (entrada && entrada !== inboxId) setInboxId(entrada);
-  }, [modalOpen, editing, multiEnabled, instances, inboxId]);
+  }, [modalOpen, editing, mostrarNumeros, instances, inboxId]);
 
   useEffect(() => { if (tab === 'assignments') loadAssignments(); }, [tab, loadAssignments]);
 
@@ -574,9 +614,19 @@ export default function RoletaConfigPage() {
     setMsgCorretorOn(true); setMsgGestorOn(true); setMsgGrupoOn(true); setMsgRepasseOn(true);
     // Roleta nova nasce 24h — o campo nem vai no payload.
     setHorarioOn(false); setJanelas([DEFAULT_WINDOW]); setPlantaoInboxId(''); setAutoNaAbertura(false);
-    setMembers([mkLocal()]);
+    // Nasce VAZIA: a lista de marcar mostra a equipe, e nenhuma linha em branco
+    // pedindo para ser preenchida.
+    setMembers([]);
+    setBuscaCorretor('');
+    setMostrarPesos(false);
     setInstances([]);
-    setMultiFromConfig(false);
+    // Toda roleta nasce no modelo de NÚMERO COMPARTILHADO, que é o de quase
+    // todas. Quem quer um número por corretor escolhe no cartão.
+    setModeloMulti(false);
+    // NÃO zera `multiFromConfig`: desde que ele passou a significar "este
+    // CLIENTE tem o multinúmero liberado" (e não "esta roleta é multinúmero"),
+    // zerar aqui esconderia o bloco de números justamente na criação — que é o
+    // defeito que a flag foi criada para consertar.
     setGroups([]);
     setSaveErrors([]);
     // Os padrões DEPOIS dos zeros: eles é que ficam na tela.
@@ -615,7 +665,17 @@ export default function RoletaConfigPage() {
     setJanelas(bh.windows?.length ? bh.windows : [DEFAULT_WINDOW]);
     setPlantaoInboxId(bh.after_hours_inbox_id ?? '');
     setAutoNaAbertura(!!bh.auto_distribute_on_open);
-    setMembers(c.members.length ? c.members.map(m => mkLocal(m)) : [mkLocal()]);
+    const membros = c.members.map(m => mkLocal(m));
+    setMembers(membros);
+    setBuscaCorretor('');
+    // O peso só se abre sozinho quando JÁ é desigual — senão quem usa
+    // distribuição desigual abriria a tela sem ver a própria configuração.
+    // Abre sozinho quando QUALQUER peso já é desigual — o do corretor no modelo
+    // compartilhado, o do número no de um por corretor. Senão o gestor abriria a
+    // tela sem ver a própria configuração.
+    const numeros = (c.instances ?? []).filter(i => i.is_active).map(i => i.weight);
+    setMostrarPesos(new Set(membros.map(m => m.weight)).size > 1
+      || new Set(numeros).size > 1);
     // Roleta antiga (antes das instâncias) chega sem `instances`: monta a de
     // entrada a partir do próprio inbox dela, que é o que o backfill fez no banco.
     setInstances(
@@ -623,9 +683,52 @@ export default function RoletaConfigPage() {
         ? c.instances.map(i => mkInstance(i))
         : [mkInstance({ inbox_id: c.inbox_id, weight: 10, position: 0 })],
     );
-    setMultiFromConfig(!!c.multi_instance_enabled);
+    // Só LIGA, nunca desliga: uma roleta de um número só neste cliente não
+    // prova que o cliente perdeu a liberação.
+    if (c.multi_instance_enabled) setMultiFromConfig(true);
+    // O modelo é DERIVADO do que está gravado — nunca de um campo. Mais de um
+    // número ativo = um número por corretor.
+    setModeloMulti((c.instances ?? []).filter(i => i.is_active).length > 1);
     setSaveErrors([]);
     setModalOpen(true);
+  }
+
+  // "Criar a partir de": abre a Nova distribuição já preenchida com o que se
+  // REPETE de uma roleta para a outra — modo, prazo, horário, avisos e textos.
+  //
+  // Não copia o número nem os corretores de propósito: são as duas únicas coisas
+  // que necessariamente mudam, e trazê-las faria a roleta nova nascer
+  // distribuindo para a equipe da antiga sem ninguém ter escolhido — e, pior,
+  // apontando para uma instância que já tem roleta (o servidor recusaria, ou
+  // o gestor salvaria duas roletas no mesmo número sem perceber).
+  //
+  // Reaproveita o `openCreate` para não repetir a lista de zeros: os `set` daqui
+  // são enfileirados DEPOIS e é o valor deles que fica na tela. Os padrões da
+  // casa também são sobrescritos — quem manda "a partir de" está dizendo que a
+  // referência é aquela roleta, não o padrão.
+  function openDuplicate(c: RoletaConfig) {
+    openCreate();
+    setMode(c.distribution_mode ?? 'rodizio');
+    setTimeoutMin(c.timeout_minutes);
+    setGestorNum(c.gestor_whatsapp_number ?? '');
+    setGestorGroupJid(c.gestor_group_jid ?? '');
+    setNotifInboxId(c.notification_inbox_id ?? '');
+    setMsgCorretor(c.msg_corretor_template ?? '');
+    setMsgGestor(c.msg_gestor_template ?? '');
+    setMsgGrupo(c.msg_grupo_template ?? '');
+    setMsgRepasse(c.msg_grupo_repasse_template ?? '');
+    // `!== false` pelo mesmo motivo do `openEdit`: roleta salva antes das chaves
+    // existirem volta sem o campo, e o estado real dela é LIGADO.
+    setMsgCorretorOn(c.msg_corretor_enabled !== false);
+    setMsgGestorOn(c.msg_gestor_enabled !== false);
+    setMsgGrupoOn(c.msg_grupo_enabled !== false);
+    setMsgRepasseOn(c.msg_grupo_repasse_enabled !== false);
+    const bh: RoletaBusinessHours = c.business_hours_config ?? {};
+    setHorarioOn(bh.mode === 'custom');
+    setJanelas(bh.windows?.length ? bh.windows : [DEFAULT_WINDOW]);
+    setPlantaoInboxId(bh.after_hours_inbox_id ?? '');
+    setAutoNaAbertura(!!bh.auto_distribute_on_open);
+    toast.info('Copiei os ajustes. Falta escolher o número e os corretores.');
   }
 
   // Busca os grupos da central Operacional (onde vive o grupo interno do cliente,
@@ -821,40 +924,28 @@ export default function RoletaConfigPage() {
     }
   }
 
-  function addMember() {
-    setMembers(prev => [...prev, mkLocal()]);
-  }
-
   function updateMember(localId: string, key: keyof MemberRow, value: string | number | boolean) {
     setMembers(prev => prev.map(m => m.localId === localId ? { ...m, [key]: value } : m));
   }
 
-  // Ao escolher o corretor, puxa o WhatsApp cadastrado dele (se tiver e o campo
-  // estiver vazio). Sem cadastro, deixa em branco pra preencher na mão.
-  // Opções do seletor de corretor: os membros da instância escolhida. Quem já
-  // está salvo mas perdeu o acesso continua aparecendo, marcado — some-lo faria
-  // a linha ficar em branco sem explicar por quê, e é justamente o caso que
-  // precisa ser visto e corrigido.
   // Em qual número este corretor atende. Vazio cai na instância de entrada —
   // que é o que toda roleta de um número só tem.
   const memberInbox = useCallback((m: MemberRow) => m.inbox_id || inboxId, [inboxId]);
 
-  // As opções mudam POR INSTÂNCIA: no número do João só aparece quem foi
-  // liberado no número do João. Quem já está salvo mas perdeu o acesso continua
-  // aparecendo, marcado — sumir com ele deixaria a linha em branco sem explicar
-  // por quê, e é justamente o caso que precisa ser visto e corrigido.
-  const corretorOptionsFor = useCallback((targetInbox: string) => {
-    const opts = (membersByInbox[targetInbox] ?? []).map(u => ({ id: u.id, name: u.name, hasAccess: true }));
-    const seen = new Set(opts.map(o => o.id));
-    members.forEach(m => {
-      if (!m.user_id || seen.has(m.user_id)) return;
-      if ((m.inbox_id || inboxId) !== targetInbox) return;
-      seen.add(m.user_id);
-      const known = users.find(u => u.id === m.user_id);
-      opts.push({ id: m.user_id, name: known?.name ?? m.user_id, hasAccess: false });
-    });
-    return opts;
-  }, [membersByInbox, members, users, inboxId]);
+  // A quais NÚMEROS DESTA ROLETA a pessoa tem acesso liberado.
+  //
+  // É o que permite não perguntar "atende pelo quê?" quando não há dúvida: com
+  // acesso a um número só, o sistema resolve. A relação já existe no sistema
+  // (a equipe de cada instância); a tela antiga a usava ao contrário, obrigando
+  // a escolher o número primeiro para só então filtrar a gente.
+  const instanciasDoCorretor = useCallback(
+    (userId: string) => instanciasComAcesso(userId, {
+      instances,
+      inboxDeEntrada: inboxId,
+      membrosPorInstancia: membersByInbox,
+    }),
+    [instances, membersByInbox, inboxId],
+  );
 
   // O número que a pessoa tem no CADASTRO (Equipe).
   //
@@ -872,22 +963,66 @@ export default function RoletaConfigPage() {
     return String(daLista?.whatsapp_number ?? doPool?.whatsapp_number ?? '').trim();
   }, [membersByInbox, users]);
 
-  function selectCorretor(localId: string, userId: string) {
-    const registered = cadastroDe(userId);
-    setMembers(prev => prev.map(m => {
-      if (m.localId !== localId) return m;
-      // O campo da roleta NÃO é preenchido com o número do cadastro: ele é a
-      // exceção ("me avise em outro número neste caso"), e preenchê-lo faria
-      // toda linha virar exceção — o corretor que trocasse de celular teria que
-      // ser corrigido roleta por roleta, que é exatamente o problema de origem.
-      // O cadastro fica visível ao lado, e é o servidor que o usa quando o campo
-      // está vazio.
-      return { ...m, user_id: userId, whatsapp_from_profile: registered };
-    }));
-  }
+  // MARCAR / DESMARCAR uma pessoa na roleta.
+  //
+  // Substituiu a linha-a-linha (Adicionar → escolher na lista → escolher o
+  // número → conferir o peso, N vezes). O peso entra no padrão e o número em
+  // que ela atende é RESOLVIDO quando não há dúvida: com acesso a um número só,
+  // não há o que perguntar.
+  //
+  // ⚠️ O campo de WhatsApp da roleta NÃO é preenchido com o do cadastro: ele é a
+  // exceção ("me avise em outro número neste caso"), e preenchê-lo faria toda
+  // linha virar exceção — quem trocasse de celular teria que ser corrigido
+  // roleta por roleta, que é o problema de origem. O cadastro fica à vista, e é
+  // o servidor que o usa quando o campo está vazio.
+  const marcarCorretor = useCallback((userId: string, on: boolean) => {
+    setMembers(prev => {
+      if (!on) return prev.filter(m => m.user_id !== userId);
+      if (prev.some(m => m.user_id === userId)) return prev;
 
-  function removeMember(localId: string) {
-    setMembers(prev => prev.filter(m => m.localId !== localId));
+      const acessos = instanciasDoCorretor(userId);
+      return [...prev, mkLocal({
+        user_id: userId,
+        weight: PESO_PADRAO,
+        is_active: true,
+        position: prev.length,
+        whatsapp_from_profile: cadastroDe(userId),
+        // Um acesso só = resolvido. Vários = fica em branco e a tela pergunta.
+        inbox_id: acessos.length === 1 ? acessos[0] : '',
+      })];
+    });
+  }, [instanciasDoCorretor, cadastroDe]);
+
+  // Liberar o acesso à instância SEM sair da tela.
+  //
+  // A barreira de 30/07/2026 continua de pé (só quem foi liberado por um humano
+  // recebe lead); o que muda é que o humano não precisa mais ir até a equipe do
+  // número, liberar, e voltar.
+  //
+  // ⚠️ O endpoint SUBSTITUI a lista inteira de atendentes do número. Mandar só o
+  // id novo REMOVERIA todos os outros. Por isso lê a lista atual e acrescenta.
+  async function liberarEAdicionar(userId: string, inboxAlvo: string) {
+    const nome = userName(userId);
+    const numero = instanceName(inboxAlvo);
+    if (!(await confirmar({
+      titulo: 'Liberar acesso e adicionar',
+      descricao: `${nome} vai passar a atender pelo número ${numero} — e a receber lead da roleta por ele.`,
+      rotuloDaAcao: 'Liberar e adicionar',
+    }))) return;
+
+    setLiberandoId(userId);
+    try {
+      const atuais = await inboxMembersService.get(inboxAlvo);
+      const ids = Array.from(new Set([...atuais.map(a => String(a.id)), userId]));
+      await inboxMembersService.update(inboxAlvo, ids);
+      await loadInboxMembers(instanceInboxKey ? instanceInboxKey.split(',') : []);
+      marcarCorretor(userId, true);
+      toast.success(`${nome} liberado em ${numero} e adicionado à roleta.`);
+    } catch (e) {
+      toast.error(apiErrorMessage(e, `Não consegui liberar o acesso de ${nome}.`));
+    } finally {
+      setLiberandoId(null);
+    }
   }
 
   function addInstance() {
@@ -1087,11 +1222,69 @@ export default function RoletaConfigPage() {
   // divergir do que o backend vê.
   const activeInstances = useMemo(() => instances.filter(i => i.is_active && i.inbox_id), [instances]);
   const isMulti = activeInstances.length > 1;
+
+  // A EQUIPE, já com o que a tela precisa saber de cada pessoa: se ela está na
+  // roleta, a quais números da roleta ela tem acesso, e se está de fora por
+  // falta de acesso.
+  //
+  // ⚠️ Inclui quem está GRAVADO na roleta mas não aparece mais na equipe (saiu
+  // do CRM, ou o cargo mudou). Sem isso ele sumiria da lista e continuaria no
+  // payload — invisível e sendo salvo, que é a falha muda que esta tela já
+  // tinha com a linha descartada em silêncio.
+  const equipeFiltrada = useMemo(() => {
+    const porId = new Map(users.map(u => [u.id, u.name] as const));
+    const ids = [
+      ...users.map(u => u.id),
+      ...members.map(m => m.user_id).filter(id => id && !porId.has(id)),
+    ];
+    const busca = buscaCorretor.trim().toLowerCase();
+
+    return ids.map(id => {
+      const membro = members.find(m => m.user_id === id);
+      const acessos = instanciasDoCorretor(id);
+      return {
+        id,
+        name: porId.get(id) ?? 'Fora da equipe',
+        membro,
+        acessos,
+        semAcesso: acessos.length === 0,
+      };
+    }).filter(u => !busca || u.name.toLowerCase().includes(busca));
+  }, [users, members, buscaCorretor, instanciasDoCorretor]);
   // O sorteio de instância só existe no rodízio. Em leilão e disponibilidade o
   // critério já É o corretor (quem responde primeiro / quem está online), então
   // o número é derivado do escolhido — mostrar peso de instância ali seria
   // prometer um controle que o motor não tem.
-  const showInstanceWeights = isMulti && mode === 'rodizio';
+  // ⚠️ `mostrarPesos` na conta: antes o peso do número aparecia SEMPRE no modelo
+  // de um número por corretor, enquanto o do corretor só saía atrás do "Ajustar
+  // quanto cada um recebe". Eram dois critérios para a mesma pergunta, e o campo
+  // que aparecia sozinho era justo o que quase ninguém precisa mexer. Quem já
+  // tem peso desigual não perde nada: o `openEdit` abre os pesos por conta
+  // própria nesse caso.
+  const showInstanceWeights = isMulti && mode === 'rodizio' && mostrarPesos;
+
+  // O peso que a linha do corretor edita: o do NÚMERO dele no modelo de um
+  // número por corretor, o dele mesmo no compartilhado.
+  //
+  // ⚠️ Não é preferência de layout. No modelo de um número por corretor o peso
+  // do CORRETOR não faz nada: ele está sozinho no número dele, então a fatia
+  // dele DENTRO do número é sempre 100% — quem decide quantos leads ele recebe é
+  // o peso do NÚMERO. Editar o do corretor ali era mexer no que não tem efeito.
+  // O campo da linha do número continua existindo e edita o mesmo valor: número
+  // sem nenhum corretor marcado não tem outra porta.
+  const pesoDe = useCallback((m: MemberRow) => {
+    if (!mostrarNumeros) return m.weight;
+    return activeInstances.find(i => i.inbox_id === memberInbox(m))?.weight ?? m.weight;
+  }, [mostrarNumeros, activeInstances, memberInbox]);
+
+  const setPesoDe = useCallback((m: MemberRow, valor: number) => {
+    if (!mostrarNumeros) {
+      setMembers(prev => prev.map(x => (x.localId === m.localId ? { ...x, weight: valor } : x)));
+      return;
+    }
+    const alvo = memberInbox(m);
+    setInstances(prev => prev.map(i => (i.inbox_id === alvo ? { ...i, weight: valor } : i)));
+  }, [mostrarNumeros, memberInbox]);
 
   // Percentual EFETIVO: (peso da instância / Σ) × (peso do corretor / Σ da
   // instância dele). Sem isso o gestor configura pesos e lê números que não
@@ -1196,6 +1389,16 @@ export default function RoletaConfigPage() {
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => openEdit(c)}>
                     Editar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => openDuplicate(c)}
+                    title="Cria uma distribuição nova com os mesmos ajustes desta — sem o número e sem os corretores"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Criar a partir de
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => deleteConfig(c.id)} className="text-red-600 hover:text-red-700">
                     <Trash2 className="h-4 w-4" />
@@ -1670,7 +1873,51 @@ export default function RoletaConfigPage() {
                 existindo no dado — `roleta_configs.inbox_id` é a chave da roleta
                 (o `for_inbox` procura por ele antes das secundárias) — só deixa
                 de ser perguntado em separado. */}
-            {!multiEnabled && (
+            {/* COMO ESTA ROLETA FUNCIONA — só na criação, e só para quem tem a
+                roleta multinúmero liberada.
+                Ao EDITAR não aparece: o modelo é derivado do que está gravado, e
+                trocá-lo ali seria apagar ou criar números por baixo. Quem quiser
+                mudar mexe direto no bloco de números.
+                Sem a liberação também não aparece: existiria um cartão só, e
+                cartão único não é escolha — é enfeite. */}
+            {!editing && multiEnabled && (
+              <div className="lg:col-span-2">
+                <UILabel className="mb-2 flex items-center gap-1.5">
+                  <Shuffle className="h-4 w-4" />
+                  Como esta roleta funciona *
+                </UILabel>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {([
+                    {
+                      v: false,
+                      titulo: 'Número compartilhado',
+                      texto: 'Um WhatsApp só, e vários corretores atendendo por ele.',
+                    },
+                    {
+                      v: true,
+                      titulo: 'Um número por corretor',
+                      texto: 'Cada corretor atende pelo WhatsApp dele. A roleta sorteia entre eles.',
+                    },
+                  ] as const).map(op => (
+                    <button
+                      key={String(op.v)}
+                      type="button"
+                      onClick={() => setModeloMulti(op.v)}
+                      className={`rounded-lg border p-3 text-left transition-colors ${
+                        modeloMulti === op.v
+                          ? 'border-[#7c3aed] bg-[#7c3aed]/5'
+                          : 'border-border hover:border-[#7c3aed]/50'
+                      }`}
+                    >
+                      <span className="block text-sm font-medium">{op.titulo}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">{op.texto}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!mostrarNumeros && (
             <div className="lg:col-span-2">
               <UILabel>Instância (WhatsApp) *</UILabel>
               <div className="mt-1">
@@ -1697,7 +1944,7 @@ export default function RoletaConfigPage() {
             {/* Números da roleta.
                 Com a flag desligada isto não aparece e a tela é exatamente a de
                 antes — o cliente de número compartilhado não vê nada novo. */}
-            {multiEnabled && (
+            {mostrarNumeros && (
               <div className="border rounded-lg p-3 lg:col-span-2">
                 <div className="flex items-center justify-between mb-2">
                   <UILabel className="flex items-center gap-2">
@@ -2341,167 +2588,217 @@ export default function RoletaConfigPage() {
               )}
             </div>
 
-            {/* Corretores */}
+            {/* QUEM ENTRA NA ROLETA — lista de marcar.
+                Substituiu a linha-a-linha (Adicionar → escolher na lista →
+                escolher o número → conferir o peso, uma vez por pessoa). O
+                gestor marca os nomes e acabou: o peso entra no padrão e o
+                número em que cada um atende é resolvido quando não há dúvida.
+                A lista mostra a EQUIPE INTEIRA, com quem não tem acesso ao
+                número em cinza — mostrar só quem já tem acesso é o que fazia o
+                corretor "sumir" da lista sem o gestor entender por quê. */}
             <div className="lg:col-span-2">
               <div className="flex items-center justify-between mb-2">
                 <UILabel className="flex items-center gap-1.5">
                   <Users className="h-4 w-4" />
-                  Corretores da roleta
+                  Quem entra na roleta
                 </UILabel>
-                <button
-                  type="button"
-                  onClick={addMember}
-                  className="text-xs text-[#7c3aed] hover:underline flex items-center gap-1"
-                >
-                  <Plus className="h-3 w-3" /> Adicionar
-                </button>
-              </div>
-
-              {totalWeight > 0 && (
-                <div className="text-xs text-muted-foreground mb-2">
-                  {/* Percentual EFETIVO: com dois números ele é o produto das
-                      duas fatias. Mostrar só peso/soma faria o gestor ler
-                      números que não acontecem. */}
-                  {isMulti ? 'Distribuição real (número × corretor):' : 'Distribuição real (peso / soma):'}
-                  {members.filter(m => m.is_active && m.user_id).map(m => {
-                    const pct = effectivePct(m);
-                    const u = users.find(u => u.id === m.user_id);
-                    const nome = u?.name ?? m.user_id;
-                    if (pct === null) return ` ${nome} —`;
-                    return isMulti
-                      ? ` ${nome} (${instanceName(memberInbox(m))}) ${pct.toFixed(0)}%`
-                      : ` ${nome} ${pct.toFixed(0)}%`;
-                  })}
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-muted-foreground">
+                    {members.length} {members.length === 1 ? 'escolhido' : 'escolhidos'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarPesos(v => !v)}
+                    className="text-[#7c3aed] hover:underline"
+                  >
+                    {mostrarPesos ? 'Ocultar pesos' : 'Ajustar peso'}
+                  </button>
                 </div>
-              )}
-
-              <div className="space-y-3">
-                {members.map((m, idx) => (
-                  <div key={m.localId} className="border rounded-lg p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-xs font-medium text-muted-foreground">#{idx + 1}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => updateMember(m.localId, 'is_active', !m.is_active)}
-                          className={m.is_active ? 'text-green-500' : 'text-red-500'}
-                        >
-                          {m.is_active
-                            ? <ToggleRight className="h-5 w-5" />
-                            : <ToggleLeft className="h-5 w-5" />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeMember(m.localId)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Os campos do corretor numa grade só: empilhados no
-                        celular, lado a lado no monitor. Sem `isMulti` são três
-                        campos, então a grade fecha em 3 colunas para não sobrar
-                        um buraco na linha. */}
-                    <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${isMulti ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
-                      <div>
-                        <UILabel className="text-xs">Corretor *</UILabel>
-                        <div className="mt-1">
-                          <NativeSelect
-                            value={m.user_id}
-                            onChange={e => selectCorretor(m.localId, e.target.value)}
-                          >
-                            <option value="">
-                              {!inboxId ? 'Escolha a instância primeiro...' : 'Selecione...'}
-                            </option>
-                            {corretorOptionsFor(memberInbox(m)).map(o => (
-                              <option key={o.id} value={o.id}>
-                                {o.hasAccess ? o.name : `${o.name} — sem acesso à instância`}
-                              </option>
-                            ))}
-                          </NativeSelect>
-                        </div>
-                        {/* A mensagem é POR INSTÂNCIA: com números diferentes,
-                            "ninguém tem acesso" precisa dizer a QUAL número, senão
-                            manda o gestor liberar acesso no inbox errado. */}
-                        {memberInbox(m) && !loadingMembers
-                          && (membersByInbox[memberInbox(m)]?.length ?? 0) === 0 && (
-                          <p className="mt-1 text-xs text-destructive">
-                            Nenhum corretor tem acesso a {instanceName(memberInbox(m))}. Libere o acesso
-                            na equipe do inbox — só quem tem acesso pode receber lead da roleta.
-                          </p>
-                        )}
-                      </div>
-                      {/* Em qual número ELE atende. Só aparece quando há mais de
-                          um: com uma instância só a pergunta não existe. Trocar o
-                          número limpa o corretor, porque a lista de quem pode ser
-                          escolhido é outra — manter o antigo selecionado deixaria
-                          um corretor sem acesso gravado sem ninguém perceber. */}
-                      {isMulti && (
-                        <div>
-                          <UILabel className="text-xs">Atende pelo número</UILabel>
-                          <div className="mt-1">
-                            <NativeSelect
-                              value={memberInbox(m)}
-                              onChange={e => setMembers(prev => prev.map(x => (
-                                x.localId === m.localId ? { ...x, inbox_id: e.target.value, user_id: '' } : x
-                              )))}
-                            >
-                              {activeInstances.map(i => (
-                                <option key={i.inbox_id} value={i.inbox_id}>{instanceName(i.inbox_id)}</option>
-                              ))}
-                            </NativeSelect>
-                          </div>
-                        </div>
-                      )}
-                      <div>
-                        <UILabel className="text-xs">Peso (probabilidade relativa)</UILabel>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={m.weight}
-                          onChange={e => updateMember(m.localId, 'weight', parseInt(e.target.value) || 0)}
-                          className="mt-1"
-                        />
-                      </div>
-                      {/* O número deixou de ser obrigatório aqui: ele vem do
-                          cadastro da pessoa em Equipe. Este campo é a EXCEÇÃO
-                          ("neste caso me avise em outro número"). Mostrar o
-                          número do cadastro embaixo é o que impede o campo
-                          vazio de parecer "corretor sem WhatsApp" — que é a
-                          leitura errada que fazia todo mundo redigitar. */}
-                      <div>
-                        <UILabel className="text-xs">WhatsApp pessoal</UILabel>
-                        <Input
-                          value={m.personal_whatsapp_number}
-                          onChange={e => updateMember(m.localId, 'personal_whatsapp_number', e.target.value)}
-                          placeholder={(m.whatsapp_from_profile ?? '').trim() || 'Ex.: 11 99999-0000'}
-                          className="mt-1"
-                        />
-                        {m.user_id && !((m.personal_whatsapp_number ?? '').trim()) && (
-                          (m.whatsapp_from_profile ?? '').trim()
-                            ? (
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                Vem do cadastro de {userName(m.user_id)}. Preencha só se ele deve ser
-                                avisado em outro número nesta roleta.
-                              </p>
-                            )
-                            : (
-                              <p className="mt-1 text-xs text-amber-500">
-                                Sem WhatsApp aqui e no cadastro dele. Ele entra na roleta e recebe a
-                                oferta pelo app, mas não recebe o aviso no WhatsApp.
-                              </p>
-                            )
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
               </div>
+
+              {!inboxId ? (
+                <p className="text-sm text-muted-foreground">
+                  Escolha o número da roleta primeiro — a lista mostra quem atende por ele.
+                </p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      value={buscaCorretor}
+                      onChange={e => setBuscaCorretor(e.target.value)}
+                      placeholder="Buscar pessoa..."
+                      className="max-w-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => equipeFiltrada
+                        .filter(u => !u.semAcesso && !u.membro)
+                        .forEach(u => marcarCorretor(u.id, true))}
+                      className="text-xs text-[#7c3aed] hover:underline"
+                    >
+                      Marcar todos
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMembers([])}
+                      className="text-xs text-muted-foreground hover:underline"
+                    >
+                      Limpar
+                    </button>
+                  </div>
+
+                  {loadingMembers && (
+                    <p className="mt-2 text-xs text-muted-foreground">Carregando a equipe...</p>
+                  )}
+
+                  <div className="mt-2 max-h-80 overflow-y-auto rounded-lg border divide-y">
+                    {equipeFiltrada.length === 0 && (
+                      <p className="p-3 text-sm text-muted-foreground">
+                        {buscaCorretor.trim() ? 'Ninguém com esse nome.' : 'Nenhuma pessoa na equipe.'}
+                      </p>
+                    )}
+                    {equipeFiltrada.map(u => {
+                      const m = u.membro;
+                      return (
+                        <div key={u.id} className="p-3">
+                          <div className="flex items-start gap-3">
+                            <input
+                              type="checkbox"
+                              className="mt-1 h-4 w-4 accent-[#7c3aed]"
+                              checked={!!m}
+                              disabled={u.semAcesso && !m}
+                              onChange={e => marcarCorretor(u.id, e.target.checked)}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className={`text-sm ${u.semAcesso && !m ? 'text-muted-foreground' : ''}`}>
+                                  {u.name}
+                                </span>
+                                {m && !m.is_active && (
+                                  <span className="text-xs text-amber-500">pausado</span>
+                                )}
+                              </div>
+                              {/* Uma linha só, dizendo o que já está resolvido —
+                                  ou o que impede. */}
+                              <p className="mt-0.5 text-xs text-muted-foreground">
+                                {u.semAcesso && !m
+                                  ? `Sem acesso a ${instanceName(inboxId)} — não pode receber lead por ele.`
+                                  : m
+                                    ? [
+                                      isMulti ? `atende pelo ${instanceName(memberInbox(m))}` : null,
+                                      (m.personal_whatsapp_number ?? '').trim()
+                                        ? `avisado no ${(m.personal_whatsapp_number ?? '').trim()}`
+                                        : (m.whatsapp_from_profile ?? '').trim()
+                                          ? `avisado no ${(m.whatsapp_from_profile ?? '').trim()} (do cadastro)`
+                                          : 'sem WhatsApp — recebe a oferta pelo app',
+                                    ].filter(Boolean).join(' · ')
+                                    : 'Tem acesso ao número. Marque para incluir na roleta.'}
+                              </p>
+                            </div>
+
+                            <div className="flex shrink-0 items-center gap-2">
+                              {u.semAcesso && !m && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  disabled={liberandoId === u.id}
+                                  onClick={() => liberarEAdicionar(u.id, inboxId)}
+                                >
+                                  {liberandoId === u.id ? 'Liberando...' : 'Liberar e adicionar'}
+                                </Button>
+                              )}
+                              {m && (
+                                <button
+                                  type="button"
+                                  title={m.is_active ? 'Pausar (fica na roleta e para de receber)' : 'Voltar a receber'}
+                                  onClick={() => updateMember(m.localId, 'is_active', !m.is_active)}
+                                  className={m.is_active ? 'text-green-500' : 'text-amber-500'}
+                                >
+                                  {m.is_active
+                                    ? <ToggleRight className="h-5 w-5" />
+                                    : <ToggleLeft className="h-5 w-5" />}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Só aparece o que ainda é PERGUNTA: o número, quando
+                              a pessoa tem acesso a mais de um; o peso, quando o
+                              gestor abriu os pesos. */}
+                          {m && (u.acessos.length > 1 || mostrarPesos) && (
+                            <div className="mt-2 grid grid-cols-1 gap-3 pl-7 sm:grid-cols-2">
+                              {u.acessos.length > 1 && (
+                                <div>
+                                  <UILabel className="text-xs">Atende pelo número</UILabel>
+                                  <div className="mt-1">
+                                    <NativeSelect
+                                      value={memberInbox(m)}
+                                      onChange={e => updateMember(m.localId, 'inbox_id', e.target.value)}
+                                    >
+                                      {u.acessos.map(id => (
+                                        <option key={id} value={id}>{instanceName(id)}</option>
+                                      ))}
+                                    </NativeSelect>
+                                  </div>
+                                </div>
+                              )}
+                              {mostrarPesos && (
+                                <div>
+                                  <UILabel className="text-xs">
+                                    {mostrarNumeros ? 'Peso do número dele' : 'Peso'}
+                                  </UILabel>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    value={pesoDe(m)}
+                                    onChange={e => setPesoDe(m, parseInt(e.target.value) || 0)}
+                                    className="mt-1"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* O WhatsApp da roleta é a EXCEÇÃO. Fica atrás dos
+                              pesos porque quase ninguém precisa dele: o número
+                              vem do cadastro da pessoa, em Equipe. */}
+                          {m && mostrarPesos && (
+                            <div className="mt-2 pl-7">
+                              <UILabel className="text-xs">
+                                Avisar em outro número (só nesta roleta)
+                              </UILabel>
+                              <Input
+                                value={m.personal_whatsapp_number}
+                                onChange={e => updateMember(m.localId, 'personal_whatsapp_number', e.target.value)}
+                                placeholder={(m.whatsapp_from_profile ?? '').trim() || 'Ex.: 11 99999-0000'}
+                                className="mt-1 max-w-xs"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {totalWeight > 0 && members.length > 1 && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      {/* Percentual EFETIVO: com dois números ele é o produto
+                          das duas fatias. Mostrar só peso/soma faria o gestor
+                          ler números que não acontecem. */}
+                      {isMulti ? 'Distribuição real (número × corretor):' : 'Distribuição real:'}
+                      {members.filter(m => m.is_active && m.user_id).map(m => {
+                        const pct = effectivePct(m);
+                        const nome = userName(m.user_id);
+                        if (pct === null) return ` ${nome} —`;
+                        return isMulti
+                          ? ` ${nome} (${instanceName(memberInbox(m))}) ${pct.toFixed(0)}%`
+                          : ` ${nome} ${pct.toFixed(0)}%`;
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
 
