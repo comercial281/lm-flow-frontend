@@ -7,12 +7,13 @@ import {
 } from '@/components/ui/ds';
 import { NativeSelect } from '@/components/ui/native-select';
 import {
-  Shuffle, Plus, Trash2, GripVertical, Save, Phone,
+  Shuffle, Plus, Trash2, Save, Phone,
   Clock, Bell, ToggleLeft, ToggleRight, Users, BarChart2,
   Gavel, Hand, Wifi, Send, Loader2, Eye, EyeOff, AlertTriangle,
 } from 'lucide-react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { roletaFormProblems, roletaFormWarnings, backendProblems } from './roletaFormChecks';
+import { instanciasComAcesso } from './roletaEquipe';
 import {
   roletaConfigService, RoletaConfig, RoletaMember, RoletaInstance, BrokerAssignment, DistributionMode,
   RoletaDiagnostic, RepairOwnersResult, RepairInboxAccessResult, RoletaQueue,
@@ -120,6 +121,10 @@ const MODE_LABEL: Record<string, string> = Object.fromEntries(MODES.map(m => [m.
 // Ocultar lead do Diagnóstico é preferência de quem olha, não estado do lead:
 // mora no navegador de propósito.
 const HIDDEN_KEY = 'roleta:diagnostico:ocultos';
+
+// Todo corretor entra com o mesmo peso. É o mesmo valor que o campo já usava de
+// default — o que mudou é que ele deixou de ser uma pergunta na tela.
+const PESO_PADRAO = 10;
 
 interface MemberRow extends Omit<RoletaMember, 'id'> {
   localId: string;
@@ -375,6 +380,15 @@ export default function RoletaConfigPage() {
   // 422") em vez do motivo que o backend mandava junto. Criar roleta podia
   // falhar duas vezes seguidas sem que a tela dissesse uma palavra sobre o quê.
   const [saveErrors, setSaveErrors]         = useState<string[]>([]);
+  // A lista de corretores: busca, peso escondido e quem está sendo liberado.
+  //
+  // O peso fica ATRÁS de um link quando todo mundo é igual — que é o caso de
+  // quase toda roleta. Ele só se abre sozinho quando os pesos JÁ são diferentes,
+  // senão quem usa distribuição desigual abriria a tela sem ver a própria
+  // configuração.
+  const [buscaCorretor, setBuscaCorretor]   = useState('');
+  const [mostrarPesos, setMostrarPesos]     = useState(false);
+  const [liberandoId, setLiberandoId]       = useState<string | null>(null);
 
   const loadConfigs = useCallback(async () => {
     setLoading(true);
@@ -574,7 +588,11 @@ export default function RoletaConfigPage() {
     setMsgCorretorOn(true); setMsgGestorOn(true); setMsgGrupoOn(true); setMsgRepasseOn(true);
     // Roleta nova nasce 24h — o campo nem vai no payload.
     setHorarioOn(false); setJanelas([DEFAULT_WINDOW]); setPlantaoInboxId(''); setAutoNaAbertura(false);
-    setMembers([mkLocal()]);
+    // Nasce VAZIA: a lista de marcar mostra a equipe, e nenhuma linha em branco
+    // pedindo para ser preenchida.
+    setMembers([]);
+    setBuscaCorretor('');
+    setMostrarPesos(false);
     setInstances([]);
     setMultiFromConfig(false);
     setGroups([]);
@@ -615,7 +633,12 @@ export default function RoletaConfigPage() {
     setJanelas(bh.windows?.length ? bh.windows : [DEFAULT_WINDOW]);
     setPlantaoInboxId(bh.after_hours_inbox_id ?? '');
     setAutoNaAbertura(!!bh.auto_distribute_on_open);
-    setMembers(c.members.length ? c.members.map(m => mkLocal(m)) : [mkLocal()]);
+    const membros = c.members.map(m => mkLocal(m));
+    setMembers(membros);
+    setBuscaCorretor('');
+    // O peso só se abre sozinho quando JÁ é desigual — senão quem usa
+    // distribuição desigual abriria a tela sem ver a própria configuração.
+    setMostrarPesos(new Set(membros.map(m => m.weight)).size > 1);
     // Roleta antiga (antes das instâncias) chega sem `instances`: monta a de
     // entrada a partir do próprio inbox dela, que é o que o backfill fez no banco.
     setInstances(
@@ -821,40 +844,28 @@ export default function RoletaConfigPage() {
     }
   }
 
-  function addMember() {
-    setMembers(prev => [...prev, mkLocal()]);
-  }
-
   function updateMember(localId: string, key: keyof MemberRow, value: string | number | boolean) {
     setMembers(prev => prev.map(m => m.localId === localId ? { ...m, [key]: value } : m));
   }
 
-  // Ao escolher o corretor, puxa o WhatsApp cadastrado dele (se tiver e o campo
-  // estiver vazio). Sem cadastro, deixa em branco pra preencher na mão.
-  // Opções do seletor de corretor: os membros da instância escolhida. Quem já
-  // está salvo mas perdeu o acesso continua aparecendo, marcado — some-lo faria
-  // a linha ficar em branco sem explicar por quê, e é justamente o caso que
-  // precisa ser visto e corrigido.
   // Em qual número este corretor atende. Vazio cai na instância de entrada —
   // que é o que toda roleta de um número só tem.
   const memberInbox = useCallback((m: MemberRow) => m.inbox_id || inboxId, [inboxId]);
 
-  // As opções mudam POR INSTÂNCIA: no número do João só aparece quem foi
-  // liberado no número do João. Quem já está salvo mas perdeu o acesso continua
-  // aparecendo, marcado — sumir com ele deixaria a linha em branco sem explicar
-  // por quê, e é justamente o caso que precisa ser visto e corrigido.
-  const corretorOptionsFor = useCallback((targetInbox: string) => {
-    const opts = (membersByInbox[targetInbox] ?? []).map(u => ({ id: u.id, name: u.name, hasAccess: true }));
-    const seen = new Set(opts.map(o => o.id));
-    members.forEach(m => {
-      if (!m.user_id || seen.has(m.user_id)) return;
-      if ((m.inbox_id || inboxId) !== targetInbox) return;
-      seen.add(m.user_id);
-      const known = users.find(u => u.id === m.user_id);
-      opts.push({ id: m.user_id, name: known?.name ?? m.user_id, hasAccess: false });
-    });
-    return opts;
-  }, [membersByInbox, members, users, inboxId]);
+  // A quais NÚMEROS DESTA ROLETA a pessoa tem acesso liberado.
+  //
+  // É o que permite não perguntar "atende pelo quê?" quando não há dúvida: com
+  // acesso a um número só, o sistema resolve. A relação já existe no sistema
+  // (a equipe de cada instância); a tela antiga a usava ao contrário, obrigando
+  // a escolher o número primeiro para só então filtrar a gente.
+  const instanciasDoCorretor = useCallback(
+    (userId: string) => instanciasComAcesso(userId, {
+      instances,
+      inboxDeEntrada: inboxId,
+      membrosPorInstancia: membersByInbox,
+    }),
+    [instances, membersByInbox, inboxId],
+  );
 
   // O número que a pessoa tem no CADASTRO (Equipe).
   //
@@ -872,22 +883,66 @@ export default function RoletaConfigPage() {
     return String(daLista?.whatsapp_number ?? doPool?.whatsapp_number ?? '').trim();
   }, [membersByInbox, users]);
 
-  function selectCorretor(localId: string, userId: string) {
-    const registered = cadastroDe(userId);
-    setMembers(prev => prev.map(m => {
-      if (m.localId !== localId) return m;
-      // O campo da roleta NÃO é preenchido com o número do cadastro: ele é a
-      // exceção ("me avise em outro número neste caso"), e preenchê-lo faria
-      // toda linha virar exceção — o corretor que trocasse de celular teria que
-      // ser corrigido roleta por roleta, que é exatamente o problema de origem.
-      // O cadastro fica visível ao lado, e é o servidor que o usa quando o campo
-      // está vazio.
-      return { ...m, user_id: userId, whatsapp_from_profile: registered };
-    }));
-  }
+  // MARCAR / DESMARCAR uma pessoa na roleta.
+  //
+  // Substituiu a linha-a-linha (Adicionar → escolher na lista → escolher o
+  // número → conferir o peso, N vezes). O peso entra no padrão e o número em
+  // que ela atende é RESOLVIDO quando não há dúvida: com acesso a um número só,
+  // não há o que perguntar.
+  //
+  // ⚠️ O campo de WhatsApp da roleta NÃO é preenchido com o do cadastro: ele é a
+  // exceção ("me avise em outro número neste caso"), e preenchê-lo faria toda
+  // linha virar exceção — quem trocasse de celular teria que ser corrigido
+  // roleta por roleta, que é o problema de origem. O cadastro fica à vista, e é
+  // o servidor que o usa quando o campo está vazio.
+  const marcarCorretor = useCallback((userId: string, on: boolean) => {
+    setMembers(prev => {
+      if (!on) return prev.filter(m => m.user_id !== userId);
+      if (prev.some(m => m.user_id === userId)) return prev;
 
-  function removeMember(localId: string) {
-    setMembers(prev => prev.filter(m => m.localId !== localId));
+      const acessos = instanciasDoCorretor(userId);
+      return [...prev, mkLocal({
+        user_id: userId,
+        weight: PESO_PADRAO,
+        is_active: true,
+        position: prev.length,
+        whatsapp_from_profile: cadastroDe(userId),
+        // Um acesso só = resolvido. Vários = fica em branco e a tela pergunta.
+        inbox_id: acessos.length === 1 ? acessos[0] : '',
+      })];
+    });
+  }, [instanciasDoCorretor, cadastroDe]);
+
+  // Liberar o acesso à instância SEM sair da tela.
+  //
+  // A barreira de 30/07/2026 continua de pé (só quem foi liberado por um humano
+  // recebe lead); o que muda é que o humano não precisa mais ir até a equipe do
+  // número, liberar, e voltar.
+  //
+  // ⚠️ O endpoint SUBSTITUI a lista inteira de atendentes do número. Mandar só o
+  // id novo REMOVERIA todos os outros. Por isso lê a lista atual e acrescenta.
+  async function liberarEAdicionar(userId: string, inboxAlvo: string) {
+    const nome = userName(userId);
+    const numero = instanceName(inboxAlvo);
+    if (!(await confirmar({
+      titulo: 'Liberar acesso e adicionar',
+      descricao: `${nome} vai passar a atender pelo número ${numero} — e a receber lead da roleta por ele.`,
+      rotuloDaAcao: 'Liberar e adicionar',
+    }))) return;
+
+    setLiberandoId(userId);
+    try {
+      const atuais = await inboxMembersService.get(inboxAlvo);
+      const ids = Array.from(new Set([...atuais.map(a => String(a.id)), userId]));
+      await inboxMembersService.update(inboxAlvo, ids);
+      await loadInboxMembers(instanceInboxKey ? instanceInboxKey.split(',') : []);
+      marcarCorretor(userId, true);
+      toast.success(`${nome} liberado em ${numero} e adicionado à roleta.`);
+    } catch (e) {
+      toast.error(apiErrorMessage(e, `Não consegui liberar o acesso de ${nome}.`));
+    } finally {
+      setLiberandoId(null);
+    }
   }
 
   function addInstance() {
@@ -1087,6 +1142,35 @@ export default function RoletaConfigPage() {
   // divergir do que o backend vê.
   const activeInstances = useMemo(() => instances.filter(i => i.is_active && i.inbox_id), [instances]);
   const isMulti = activeInstances.length > 1;
+
+  // A EQUIPE, já com o que a tela precisa saber de cada pessoa: se ela está na
+  // roleta, a quais números da roleta ela tem acesso, e se está de fora por
+  // falta de acesso.
+  //
+  // ⚠️ Inclui quem está GRAVADO na roleta mas não aparece mais na equipe (saiu
+  // do CRM, ou o cargo mudou). Sem isso ele sumiria da lista e continuaria no
+  // payload — invisível e sendo salvo, que é a falha muda que esta tela já
+  // tinha com a linha descartada em silêncio.
+  const equipeFiltrada = useMemo(() => {
+    const porId = new Map(users.map(u => [u.id, u.name] as const));
+    const ids = [
+      ...users.map(u => u.id),
+      ...members.map(m => m.user_id).filter(id => id && !porId.has(id)),
+    ];
+    const busca = buscaCorretor.trim().toLowerCase();
+
+    return ids.map(id => {
+      const membro = members.find(m => m.user_id === id);
+      const acessos = instanciasDoCorretor(id);
+      return {
+        id,
+        name: porId.get(id) ?? 'Fora da equipe',
+        membro,
+        acessos,
+        semAcesso: acessos.length === 0,
+      };
+    }).filter(u => !busca || u.name.toLowerCase().includes(busca));
+  }, [users, members, buscaCorretor, instanciasDoCorretor]);
   // O sorteio de instância só existe no rodízio. Em leilão e disponibilidade o
   // critério já É o corretor (quem responde primeiro / quem está online), então
   // o número é derivado do escolhido — mostrar peso de instância ali seria
@@ -2341,167 +2425,215 @@ export default function RoletaConfigPage() {
               )}
             </div>
 
-            {/* Corretores */}
+            {/* QUEM ENTRA NA ROLETA — lista de marcar.
+                Substituiu a linha-a-linha (Adicionar → escolher na lista →
+                escolher o número → conferir o peso, uma vez por pessoa). O
+                gestor marca os nomes e acabou: o peso entra no padrão e o
+                número em que cada um atende é resolvido quando não há dúvida.
+                A lista mostra a EQUIPE INTEIRA, com quem não tem acesso ao
+                número em cinza — mostrar só quem já tem acesso é o que fazia o
+                corretor "sumir" da lista sem o gestor entender por quê. */}
             <div className="lg:col-span-2">
               <div className="flex items-center justify-between mb-2">
                 <UILabel className="flex items-center gap-1.5">
                   <Users className="h-4 w-4" />
-                  Corretores da roleta
+                  Quem entra na roleta
                 </UILabel>
-                <button
-                  type="button"
-                  onClick={addMember}
-                  className="text-xs text-[#7c3aed] hover:underline flex items-center gap-1"
-                >
-                  <Plus className="h-3 w-3" /> Adicionar
-                </button>
-              </div>
-
-              {totalWeight > 0 && (
-                <div className="text-xs text-muted-foreground mb-2">
-                  {/* Percentual EFETIVO: com dois números ele é o produto das
-                      duas fatias. Mostrar só peso/soma faria o gestor ler
-                      números que não acontecem. */}
-                  {isMulti ? 'Distribuição real (número × corretor):' : 'Distribuição real (peso / soma):'}
-                  {members.filter(m => m.is_active && m.user_id).map(m => {
-                    const pct = effectivePct(m);
-                    const u = users.find(u => u.id === m.user_id);
-                    const nome = u?.name ?? m.user_id;
-                    if (pct === null) return ` ${nome} —`;
-                    return isMulti
-                      ? ` ${nome} (${instanceName(memberInbox(m))}) ${pct.toFixed(0)}%`
-                      : ` ${nome} ${pct.toFixed(0)}%`;
-                  })}
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-muted-foreground">
+                    {members.length} {members.length === 1 ? 'escolhido' : 'escolhidos'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarPesos(v => !v)}
+                    className="text-[#7c3aed] hover:underline"
+                  >
+                    {mostrarPesos ? 'Ocultar pesos' : 'Ajustar peso'}
+                  </button>
                 </div>
-              )}
-
-              <div className="space-y-3">
-                {members.map((m, idx) => (
-                  <div key={m.localId} className="border rounded-lg p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-xs font-medium text-muted-foreground">#{idx + 1}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => updateMember(m.localId, 'is_active', !m.is_active)}
-                          className={m.is_active ? 'text-green-500' : 'text-red-500'}
-                        >
-                          {m.is_active
-                            ? <ToggleRight className="h-5 w-5" />
-                            : <ToggleLeft className="h-5 w-5" />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeMember(m.localId)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Os campos do corretor numa grade só: empilhados no
-                        celular, lado a lado no monitor. Sem `isMulti` são três
-                        campos, então a grade fecha em 3 colunas para não sobrar
-                        um buraco na linha. */}
-                    <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${isMulti ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
-                      <div>
-                        <UILabel className="text-xs">Corretor *</UILabel>
-                        <div className="mt-1">
-                          <NativeSelect
-                            value={m.user_id}
-                            onChange={e => selectCorretor(m.localId, e.target.value)}
-                          >
-                            <option value="">
-                              {!inboxId ? 'Escolha a instância primeiro...' : 'Selecione...'}
-                            </option>
-                            {corretorOptionsFor(memberInbox(m)).map(o => (
-                              <option key={o.id} value={o.id}>
-                                {o.hasAccess ? o.name : `${o.name} — sem acesso à instância`}
-                              </option>
-                            ))}
-                          </NativeSelect>
-                        </div>
-                        {/* A mensagem é POR INSTÂNCIA: com números diferentes,
-                            "ninguém tem acesso" precisa dizer a QUAL número, senão
-                            manda o gestor liberar acesso no inbox errado. */}
-                        {memberInbox(m) && !loadingMembers
-                          && (membersByInbox[memberInbox(m)]?.length ?? 0) === 0 && (
-                          <p className="mt-1 text-xs text-destructive">
-                            Nenhum corretor tem acesso a {instanceName(memberInbox(m))}. Libere o acesso
-                            na equipe do inbox — só quem tem acesso pode receber lead da roleta.
-                          </p>
-                        )}
-                      </div>
-                      {/* Em qual número ELE atende. Só aparece quando há mais de
-                          um: com uma instância só a pergunta não existe. Trocar o
-                          número limpa o corretor, porque a lista de quem pode ser
-                          escolhido é outra — manter o antigo selecionado deixaria
-                          um corretor sem acesso gravado sem ninguém perceber. */}
-                      {isMulti && (
-                        <div>
-                          <UILabel className="text-xs">Atende pelo número</UILabel>
-                          <div className="mt-1">
-                            <NativeSelect
-                              value={memberInbox(m)}
-                              onChange={e => setMembers(prev => prev.map(x => (
-                                x.localId === m.localId ? { ...x, inbox_id: e.target.value, user_id: '' } : x
-                              )))}
-                            >
-                              {activeInstances.map(i => (
-                                <option key={i.inbox_id} value={i.inbox_id}>{instanceName(i.inbox_id)}</option>
-                              ))}
-                            </NativeSelect>
-                          </div>
-                        </div>
-                      )}
-                      <div>
-                        <UILabel className="text-xs">Peso (probabilidade relativa)</UILabel>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={m.weight}
-                          onChange={e => updateMember(m.localId, 'weight', parseInt(e.target.value) || 0)}
-                          className="mt-1"
-                        />
-                      </div>
-                      {/* O número deixou de ser obrigatório aqui: ele vem do
-                          cadastro da pessoa em Equipe. Este campo é a EXCEÇÃO
-                          ("neste caso me avise em outro número"). Mostrar o
-                          número do cadastro embaixo é o que impede o campo
-                          vazio de parecer "corretor sem WhatsApp" — que é a
-                          leitura errada que fazia todo mundo redigitar. */}
-                      <div>
-                        <UILabel className="text-xs">WhatsApp pessoal</UILabel>
-                        <Input
-                          value={m.personal_whatsapp_number}
-                          onChange={e => updateMember(m.localId, 'personal_whatsapp_number', e.target.value)}
-                          placeholder={(m.whatsapp_from_profile ?? '').trim() || 'Ex.: 11 99999-0000'}
-                          className="mt-1"
-                        />
-                        {m.user_id && !((m.personal_whatsapp_number ?? '').trim()) && (
-                          (m.whatsapp_from_profile ?? '').trim()
-                            ? (
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                Vem do cadastro de {userName(m.user_id)}. Preencha só se ele deve ser
-                                avisado em outro número nesta roleta.
-                              </p>
-                            )
-                            : (
-                              <p className="mt-1 text-xs text-amber-500">
-                                Sem WhatsApp aqui e no cadastro dele. Ele entra na roleta e recebe a
-                                oferta pelo app, mas não recebe o aviso no WhatsApp.
-                              </p>
-                            )
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
               </div>
+
+              {!inboxId ? (
+                <p className="text-sm text-muted-foreground">
+                  Escolha o número da roleta primeiro — a lista mostra quem atende por ele.
+                </p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      value={buscaCorretor}
+                      onChange={e => setBuscaCorretor(e.target.value)}
+                      placeholder="Buscar pessoa..."
+                      className="max-w-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => equipeFiltrada
+                        .filter(u => !u.semAcesso && !u.membro)
+                        .forEach(u => marcarCorretor(u.id, true))}
+                      className="text-xs text-[#7c3aed] hover:underline"
+                    >
+                      Marcar todos
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMembers([])}
+                      className="text-xs text-muted-foreground hover:underline"
+                    >
+                      Limpar
+                    </button>
+                  </div>
+
+                  {loadingMembers && (
+                    <p className="mt-2 text-xs text-muted-foreground">Carregando a equipe...</p>
+                  )}
+
+                  <div className="mt-2 max-h-80 overflow-y-auto rounded-lg border divide-y">
+                    {equipeFiltrada.length === 0 && (
+                      <p className="p-3 text-sm text-muted-foreground">
+                        {buscaCorretor.trim() ? 'Ninguém com esse nome.' : 'Nenhuma pessoa na equipe.'}
+                      </p>
+                    )}
+                    {equipeFiltrada.map(u => {
+                      const m = u.membro;
+                      return (
+                        <div key={u.id} className="p-3">
+                          <div className="flex items-start gap-3">
+                            <input
+                              type="checkbox"
+                              className="mt-1 h-4 w-4 accent-[#7c3aed]"
+                              checked={!!m}
+                              disabled={u.semAcesso && !m}
+                              onChange={e => marcarCorretor(u.id, e.target.checked)}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className={`text-sm ${u.semAcesso && !m ? 'text-muted-foreground' : ''}`}>
+                                  {u.name}
+                                </span>
+                                {m && !m.is_active && (
+                                  <span className="text-xs text-amber-500">pausado</span>
+                                )}
+                              </div>
+                              {/* Uma linha só, dizendo o que já está resolvido —
+                                  ou o que impede. */}
+                              <p className="mt-0.5 text-xs text-muted-foreground">
+                                {u.semAcesso && !m
+                                  ? `Sem acesso a ${instanceName(inboxId)} — não pode receber lead por ele.`
+                                  : m
+                                    ? [
+                                      isMulti ? `atende pelo ${instanceName(memberInbox(m))}` : null,
+                                      (m.personal_whatsapp_number ?? '').trim()
+                                        ? `avisado no ${(m.personal_whatsapp_number ?? '').trim()}`
+                                        : (m.whatsapp_from_profile ?? '').trim()
+                                          ? `avisado no ${(m.whatsapp_from_profile ?? '').trim()} (do cadastro)`
+                                          : 'sem WhatsApp — recebe a oferta pelo app',
+                                    ].filter(Boolean).join(' · ')
+                                    : 'Tem acesso ao número. Marque para incluir na roleta.'}
+                              </p>
+                            </div>
+
+                            <div className="flex shrink-0 items-center gap-2">
+                              {u.semAcesso && !m && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  disabled={liberandoId === u.id}
+                                  onClick={() => liberarEAdicionar(u.id, inboxId)}
+                                >
+                                  {liberandoId === u.id ? 'Liberando...' : 'Liberar e adicionar'}
+                                </Button>
+                              )}
+                              {m && (
+                                <button
+                                  type="button"
+                                  title={m.is_active ? 'Pausar (fica na roleta e para de receber)' : 'Voltar a receber'}
+                                  onClick={() => updateMember(m.localId, 'is_active', !m.is_active)}
+                                  className={m.is_active ? 'text-green-500' : 'text-amber-500'}
+                                >
+                                  {m.is_active
+                                    ? <ToggleRight className="h-5 w-5" />
+                                    : <ToggleLeft className="h-5 w-5" />}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Só aparece o que ainda é PERGUNTA: o número, quando
+                              a pessoa tem acesso a mais de um; o peso, quando o
+                              gestor abriu os pesos. */}
+                          {m && (u.acessos.length > 1 || mostrarPesos) && (
+                            <div className="mt-2 grid grid-cols-1 gap-3 pl-7 sm:grid-cols-2">
+                              {u.acessos.length > 1 && (
+                                <div>
+                                  <UILabel className="text-xs">Atende pelo número</UILabel>
+                                  <div className="mt-1">
+                                    <NativeSelect
+                                      value={memberInbox(m)}
+                                      onChange={e => updateMember(m.localId, 'inbox_id', e.target.value)}
+                                    >
+                                      {u.acessos.map(id => (
+                                        <option key={id} value={id}>{instanceName(id)}</option>
+                                      ))}
+                                    </NativeSelect>
+                                  </div>
+                                </div>
+                              )}
+                              {mostrarPesos && (
+                                <div>
+                                  <UILabel className="text-xs">Peso</UILabel>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    value={m.weight}
+                                    onChange={e => updateMember(m.localId, 'weight', parseInt(e.target.value) || 0)}
+                                    className="mt-1"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* O WhatsApp da roleta é a EXCEÇÃO. Fica atrás dos
+                              pesos porque quase ninguém precisa dele: o número
+                              vem do cadastro da pessoa, em Equipe. */}
+                          {m && mostrarPesos && (
+                            <div className="mt-2 pl-7">
+                              <UILabel className="text-xs">
+                                Avisar em outro número (só nesta roleta)
+                              </UILabel>
+                              <Input
+                                value={m.personal_whatsapp_number}
+                                onChange={e => updateMember(m.localId, 'personal_whatsapp_number', e.target.value)}
+                                placeholder={(m.whatsapp_from_profile ?? '').trim() || 'Ex.: 11 99999-0000'}
+                                className="mt-1 max-w-xs"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {totalWeight > 0 && members.length > 1 && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      {/* Percentual EFETIVO: com dois números ele é o produto
+                          das duas fatias. Mostrar só peso/soma faria o gestor
+                          ler números que não acontecem. */}
+                      {isMulti ? 'Distribuição real (número × corretor):' : 'Distribuição real:'}
+                      {members.filter(m => m.is_active && m.user_id).map(m => {
+                        const pct = effectivePct(m);
+                        const nome = userName(m.user_id);
+                        if (pct === null) return ` ${nome} —`;
+                        return isMulti
+                          ? ` ${nome} (${instanceName(memberInbox(m))}) ${pct.toFixed(0)}%`
+                          : ` ${nome} ${pct.toFixed(0)}%`;
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
 
