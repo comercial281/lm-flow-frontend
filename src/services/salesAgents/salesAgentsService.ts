@@ -586,6 +586,14 @@ export interface SuggestionsPayload {
   auto: SuggestionAutoConfig;
   created?: number;
   cost_usd?: number;
+  /**
+   * A análise NÃO termina dentro da chamada do botão: o servidor derruba qualquer
+   * requisição que passe de 15s e a IA leva de 30 a 90 lendo as conversas. O botão
+   * só COMEÇA a análise; estes dois campos são como a tela acompanha até o fim.
+   */
+  analyzing?: boolean;
+  /** Motivo em português quando a análise parou. Vem pronto do servidor. */
+  analysis_error?: string | null;
 }
 
 export interface WeeklyReportConfig {
@@ -628,6 +636,14 @@ export interface WeeklyReportPayload {
   config: WeeklyReportConfig;
   current: WeeklyReport | null;
   history: WeeklyReport[];
+  /**
+   * A prévia NÃO fica pronta dentro da chamada do botão: montá-la é uma consulta à
+   * IA, e o servidor derruba requisição que passe de 15s. O botão só COMEÇA; estes
+   * dois campos são como a tela acompanha até o fim. Mesma mecânica das Sugestões.
+   */
+  building?: boolean;
+  /** Motivo em português quando a prévia parou. Vem pronto do servidor. */
+  preview_error?: string | null;
 }
 
 export interface WeeklyReportTargets {
@@ -917,9 +933,13 @@ export const salesAgentsService = {
     return (res.data as { data: WeeklyReportTargets }).data;
   },
 
-  async weeklyReportPreview(weekStart?: string): Promise<WeeklyReport> {
+  /**
+   * COMEÇA a montar a prévia — não espera ficar pronta. Quem acompanha é
+   * `weeklyReport()`, pelo campo `building`. Ver a nota em WeeklyReportPayload.
+   */
+  async weeklyReportPreview(weekStart?: string): Promise<WeeklyReport | null> {
     const res = await api.post('/weekly_reports/preview', { week_start: weekStart || undefined });
-    return (res.data as { data: WeeklyReport }).data;
+    return (res.data as { data: WeeklyReport | null }).data ?? null;
   },
 
   async weeklyReportSaveText(text: string): Promise<WeeklyReport> {

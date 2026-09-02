@@ -921,6 +921,48 @@ Armadilhas:
 7. **Leitura de fundo não grita.** As duas abas buscam sozinhas ao abrir; recusa ali
    só esconde o pedaço. Quando a pessoa clicou, o motivo em português vem do servidor.
 
+## Botão que chama a IA não espera a IA (desde 2026-09-02)
+
+No primeiro clique em *Analisar agora*, na estreia das abas da IA, deu **"Não
+consegui analisar agora"** — que é o texto de reserva DESTA tela, não uma
+explicação do servidor.
+
+A causa é do servidor e está contada por lá: ele derruba qualquer requisição que
+passe de 15 segundos, e a IA lê as conversas em 30 a 90. Requisição derrubada assim
+volta **sem motivo dentro**, então a tela mostrava a frase genérica como se fosse o
+diagnóstico — e mandava procurar o problema no lugar errado.
+
+O que mudou na tela:
+
+- **O botão agora acompanha.** Ele começa a análise e fica em *Analisando...*
+  perguntando ao servidor de 4 em 4 segundos até terminar. Só então aparece
+  "N sugestão(ões) nova(s)", "Nenhum padrão novo desta vez", ou o motivo real.
+- **O mesmo vale para *Gerar prévia*** na aba Relatórios: montar o texto também é
+  uma consulta à IA e estava na mesma parede.
+- **Erro de cargo passa a aparecer como erro de cargo.** A API tem dois formatos de
+  resposta de erro e esta tela só lia um; "seu cargo não permite esta ação" chegava
+  como a frase genérica.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Quem diz se terminou é o servidor**, não um cronômetro na tela.
+- **A espera tem teto** (~4 min na análise, ~2 min na prévia) só como rede para o
+  servidor que reinicia no meio. Passando disso, a tela pede para recarregar em vez
+  de girar para sempre — a reserva do lado de lá expira sozinha em 10 minutos.
+- **Oscilação de rede no meio da espera não cancela nada.** O trabalho continua no
+  servidor; a tela tenta de novo no ciclo seguinte, calada.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): quem enfileira e quem responde "ainda estou rodando" mora
+   lá. Sem ela, o botão volta na hora dizendo que terminou sem ter feito nada.
+2. **Botão novo que dispare consulta à IA nasce com o mesmo problema.** Se a ação
+   pode passar de 15 segundos, ela não cabe numa requisição — precisa da mesma
+   mecânica de começar e acompanhar.
+3. **Não voltar a ler só `error.message`** ao mostrar o motivo de uma falha: é isso
+   que faz a recusa por cargo virar frase genérica.
+
 ## O follow-up da IA ganhou horário próprio (desde 2026-09-02)
 
 Preocupação do dono do produto: *"imagina eu deixar lá 24h, o follow-up vai
