@@ -9,7 +9,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import {
   Shuffle, Plus, Trash2, Save, Phone,
   Clock, Bell, ToggleLeft, ToggleRight, Users, BarChart2,
-  Gavel, Hand, Wifi, Send, Loader2, Eye, EyeOff, AlertTriangle,
+  Gavel, Hand, Wifi, Send, Loader2, Eye, EyeOff, AlertTriangle, Copy,
 } from 'lucide-react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { roletaFormProblems, roletaFormWarnings, backendProblems } from './roletaFormChecks';
@@ -22,7 +22,7 @@ import {
 import RemoveFromRoletaDialog from '@/components/roleta/RemoveFromRoletaDialog';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { DEFAULT_WINDOW } from '@/components/schedule/scheduleWindows';
-import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import usersService from '@/services/users/usersService';
 import { leadAutomationService, WaGroup } from '@/services/leadAutomation/leadAutomationService';
 import inboxesService from '@/services/channels/inboxesService';
@@ -339,11 +339,31 @@ export default function RoletaConfigPage() {
   // app usa. Antes ela só chegava pelo payload da config, e `openCreate` a
   // zerava: criar uma roleta nova nunca mostrava o bloco de números, só editar
   // uma existente mostrava.
-  const multiFeature = useFeature('roleta_multi_instancia');
+  // ⚠️ `useClientToggle`, não `useFeature`. Os dois são OPOSTOS: `useFeature`
+  // trata chave AUSENTE como ligada, e esta é a única chave `DEFAULT_OFF` do
+  // repo que era lida assim. Funcionava porque o servidor devolve `false`
+  // explícito — mas quando a busca de funcionalidades FALHA o fallback é `{}`,
+  // e aí o bloco de números aparecia para quem não tem a liberação (o servidor
+  // recusava com 422, então o sintoma era um erro sem sentido na tela).
+  const multiFeature = useClientToggle('roleta_multi_instancia');
   // O payload continua valendo como reforço: é a verdade do backend, e cobre o
-  // super-admin no domínio raiz, onde não há slug de tenant para resolver.
+  // super-admin no domínio raiz, onde não há slug de tenant para resolver — e
+  // onde, com o `useClientToggle`, a chave nunca chegaria.
   const [multiFromConfig, setMultiFromConfig]   = useState(false);
   const multiEnabled = multiFeature || multiFromConfig;
+
+  // O MODELO desta roleta: um número compartilhado por todos, ou um número por
+  // corretor.
+  //
+  // ⚠️ É a FORMA DA TELA, não um tipo guardado. Quem sabe qual é o modelo
+  // continua sendo a quantidade de números ativos — guardar um campo criaria
+  // duas verdades (uma roleta dizendo "sou compartilhada" com três números), e
+  // trocar de modelo depois viraria migração. Ao editar, ele é DERIVADO do que
+  // está lá.
+  const [modeloMulti, setModeloMulti] = useState(false);
+  // O bloco de números só existe no modelo de um número por corretor — e só
+  // para quem tem a liberação.
+  const mostrarNumeros = multiEnabled && modeloMulti;
   const [groups, setGroups]                 = useState<WaGroup[]>([]);
   const [loadingGroups, setLoadingGroups]   = useState(false);
   const [crmName, setCrmName]               = useState('');
@@ -393,7 +413,13 @@ export default function RoletaConfigPage() {
   const loadConfigs = useCallback(async () => {
     setLoading(true);
     try {
-      setConfigs(await roletaConfigService.getAll());
+      const lista = await roletaConfigService.getAll();
+      setConfigs(lista);
+      // Se QUALQUER roleta deste cliente diz que o multinúmero está liberado, ele
+      // está — é a resposta do próprio servidor, e não um chute. Cobre o
+      // super-admin no domínio raiz na hora de CRIAR, onde antes só o editar
+      // sabia (o `openCreate` zera a flag vinda do payload).
+      if (lista.some(c => c.multi_instance_enabled)) setMultiFromConfig(true);
     } catch {
       toast.error('Erro ao carregar configuracoes da roleta');
     } finally {
@@ -509,13 +535,13 @@ export default function RoletaConfigPage() {
   // número de entrada.
   useEffect(() => {
     if (!modalOpen || instances.length > 0) return;
-    if (multiEnabled) {
+    if (mostrarNumeros) {
       setInstances([mkInstance({ inbox_id: inboxId, weight: 10, position: 0 })]);
       return;
     }
     if (!inboxId) return;
     setInstances([mkInstance({ inbox_id: inboxId, weight: 10, position: 0 })]);
-  }, [modalOpen, inboxId, instances.length, multiEnabled]);
+  }, [modalOpen, inboxId, instances.length, mostrarNumeros]);
 
   // Com o bloco de números visível, o seletor separado de instância some — então
   // a ENTRADA passa a ser a primeira linha do bloco, e é dela que sai o
@@ -524,10 +550,10 @@ export default function RoletaConfigPage() {
   // Só ao CRIAR: numa roleta que já existe, trocar o inbox mudaria a chave, e o
   // seletor da primeira linha fica travado justamente por isso.
   useEffect(() => {
-    if (!modalOpen || editing || !multiEnabled) return;
+    if (!modalOpen || editing || !mostrarNumeros) return;
     const entrada = instances[0]?.inbox_id;
     if (entrada && entrada !== inboxId) setInboxId(entrada);
-  }, [modalOpen, editing, multiEnabled, instances, inboxId]);
+  }, [modalOpen, editing, mostrarNumeros, instances, inboxId]);
 
   useEffect(() => { if (tab === 'assignments') loadAssignments(); }, [tab, loadAssignments]);
 
@@ -594,7 +620,13 @@ export default function RoletaConfigPage() {
     setBuscaCorretor('');
     setMostrarPesos(false);
     setInstances([]);
-    setMultiFromConfig(false);
+    // Toda roleta nasce no modelo de NÚMERO COMPARTILHADO, que é o de quase
+    // todas. Quem quer um número por corretor escolhe no cartão.
+    setModeloMulti(false);
+    // NÃO zera `multiFromConfig`: desde que ele passou a significar "este
+    // CLIENTE tem o multinúmero liberado" (e não "esta roleta é multinúmero"),
+    // zerar aqui esconderia o bloco de números justamente na criação — que é o
+    // defeito que a flag foi criada para consertar.
     setGroups([]);
     setSaveErrors([]);
     // Os padrões DEPOIS dos zeros: eles é que ficam na tela.
@@ -638,7 +670,12 @@ export default function RoletaConfigPage() {
     setBuscaCorretor('');
     // O peso só se abre sozinho quando JÁ é desigual — senão quem usa
     // distribuição desigual abriria a tela sem ver a própria configuração.
-    setMostrarPesos(new Set(membros.map(m => m.weight)).size > 1);
+    // Abre sozinho quando QUALQUER peso já é desigual — o do corretor no modelo
+    // compartilhado, o do número no de um por corretor. Senão o gestor abriria a
+    // tela sem ver a própria configuração.
+    const numeros = (c.instances ?? []).filter(i => i.is_active).map(i => i.weight);
+    setMostrarPesos(new Set(membros.map(m => m.weight)).size > 1
+      || new Set(numeros).size > 1);
     // Roleta antiga (antes das instâncias) chega sem `instances`: monta a de
     // entrada a partir do próprio inbox dela, que é o que o backfill fez no banco.
     setInstances(
@@ -646,9 +683,52 @@ export default function RoletaConfigPage() {
         ? c.instances.map(i => mkInstance(i))
         : [mkInstance({ inbox_id: c.inbox_id, weight: 10, position: 0 })],
     );
-    setMultiFromConfig(!!c.multi_instance_enabled);
+    // Só LIGA, nunca desliga: uma roleta de um número só neste cliente não
+    // prova que o cliente perdeu a liberação.
+    if (c.multi_instance_enabled) setMultiFromConfig(true);
+    // O modelo é DERIVADO do que está gravado — nunca de um campo. Mais de um
+    // número ativo = um número por corretor.
+    setModeloMulti((c.instances ?? []).filter(i => i.is_active).length > 1);
     setSaveErrors([]);
     setModalOpen(true);
+  }
+
+  // "Criar a partir de": abre a Nova distribuição já preenchida com o que se
+  // REPETE de uma roleta para a outra — modo, prazo, horário, avisos e textos.
+  //
+  // Não copia o número nem os corretores de propósito: são as duas únicas coisas
+  // que necessariamente mudam, e trazê-las faria a roleta nova nascer
+  // distribuindo para a equipe da antiga sem ninguém ter escolhido — e, pior,
+  // apontando para uma instância que já tem roleta (o servidor recusaria, ou
+  // o gestor salvaria duas roletas no mesmo número sem perceber).
+  //
+  // Reaproveita o `openCreate` para não repetir a lista de zeros: os `set` daqui
+  // são enfileirados DEPOIS e é o valor deles que fica na tela. Os padrões da
+  // casa também são sobrescritos — quem manda "a partir de" está dizendo que a
+  // referência é aquela roleta, não o padrão.
+  function openDuplicate(c: RoletaConfig) {
+    openCreate();
+    setMode(c.distribution_mode ?? 'rodizio');
+    setTimeoutMin(c.timeout_minutes);
+    setGestorNum(c.gestor_whatsapp_number ?? '');
+    setGestorGroupJid(c.gestor_group_jid ?? '');
+    setNotifInboxId(c.notification_inbox_id ?? '');
+    setMsgCorretor(c.msg_corretor_template ?? '');
+    setMsgGestor(c.msg_gestor_template ?? '');
+    setMsgGrupo(c.msg_grupo_template ?? '');
+    setMsgRepasse(c.msg_grupo_repasse_template ?? '');
+    // `!== false` pelo mesmo motivo do `openEdit`: roleta salva antes das chaves
+    // existirem volta sem o campo, e o estado real dela é LIGADO.
+    setMsgCorretorOn(c.msg_corretor_enabled !== false);
+    setMsgGestorOn(c.msg_gestor_enabled !== false);
+    setMsgGrupoOn(c.msg_grupo_enabled !== false);
+    setMsgRepasseOn(c.msg_grupo_repasse_enabled !== false);
+    const bh: RoletaBusinessHours = c.business_hours_config ?? {};
+    setHorarioOn(bh.mode === 'custom');
+    setJanelas(bh.windows?.length ? bh.windows : [DEFAULT_WINDOW]);
+    setPlantaoInboxId(bh.after_hours_inbox_id ?? '');
+    setAutoNaAbertura(!!bh.auto_distribute_on_open);
+    toast.info('Copiei os ajustes. Falta escolher o número e os corretores.');
   }
 
   // Busca os grupos da central Operacional (onde vive o grupo interno do cliente,
@@ -1175,7 +1255,36 @@ export default function RoletaConfigPage() {
   // critério já É o corretor (quem responde primeiro / quem está online), então
   // o número é derivado do escolhido — mostrar peso de instância ali seria
   // prometer um controle que o motor não tem.
-  const showInstanceWeights = isMulti && mode === 'rodizio';
+  // ⚠️ `mostrarPesos` na conta: antes o peso do número aparecia SEMPRE no modelo
+  // de um número por corretor, enquanto o do corretor só saía atrás do "Ajustar
+  // quanto cada um recebe". Eram dois critérios para a mesma pergunta, e o campo
+  // que aparecia sozinho era justo o que quase ninguém precisa mexer. Quem já
+  // tem peso desigual não perde nada: o `openEdit` abre os pesos por conta
+  // própria nesse caso.
+  const showInstanceWeights = isMulti && mode === 'rodizio' && mostrarPesos;
+
+  // O peso que a linha do corretor edita: o do NÚMERO dele no modelo de um
+  // número por corretor, o dele mesmo no compartilhado.
+  //
+  // ⚠️ Não é preferência de layout. No modelo de um número por corretor o peso
+  // do CORRETOR não faz nada: ele está sozinho no número dele, então a fatia
+  // dele DENTRO do número é sempre 100% — quem decide quantos leads ele recebe é
+  // o peso do NÚMERO. Editar o do corretor ali era mexer no que não tem efeito.
+  // O campo da linha do número continua existindo e edita o mesmo valor: número
+  // sem nenhum corretor marcado não tem outra porta.
+  const pesoDe = useCallback((m: MemberRow) => {
+    if (!mostrarNumeros) return m.weight;
+    return activeInstances.find(i => i.inbox_id === memberInbox(m))?.weight ?? m.weight;
+  }, [mostrarNumeros, activeInstances, memberInbox]);
+
+  const setPesoDe = useCallback((m: MemberRow, valor: number) => {
+    if (!mostrarNumeros) {
+      setMembers(prev => prev.map(x => (x.localId === m.localId ? { ...x, weight: valor } : x)));
+      return;
+    }
+    const alvo = memberInbox(m);
+    setInstances(prev => prev.map(i => (i.inbox_id === alvo ? { ...i, weight: valor } : i)));
+  }, [mostrarNumeros, memberInbox]);
 
   // Percentual EFETIVO: (peso da instância / Σ) × (peso do corretor / Σ da
   // instância dele). Sem isso o gestor configura pesos e lê números que não
@@ -1280,6 +1389,16 @@ export default function RoletaConfigPage() {
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => openEdit(c)}>
                     Editar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => openDuplicate(c)}
+                    title="Cria uma distribuição nova com os mesmos ajustes desta — sem o número e sem os corretores"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Criar a partir de
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => deleteConfig(c.id)} className="text-red-600 hover:text-red-700">
                     <Trash2 className="h-4 w-4" />
@@ -1754,7 +1873,51 @@ export default function RoletaConfigPage() {
                 existindo no dado — `roleta_configs.inbox_id` é a chave da roleta
                 (o `for_inbox` procura por ele antes das secundárias) — só deixa
                 de ser perguntado em separado. */}
-            {!multiEnabled && (
+            {/* COMO ESTA ROLETA FUNCIONA — só na criação, e só para quem tem a
+                roleta multinúmero liberada.
+                Ao EDITAR não aparece: o modelo é derivado do que está gravado, e
+                trocá-lo ali seria apagar ou criar números por baixo. Quem quiser
+                mudar mexe direto no bloco de números.
+                Sem a liberação também não aparece: existiria um cartão só, e
+                cartão único não é escolha — é enfeite. */}
+            {!editing && multiEnabled && (
+              <div className="lg:col-span-2">
+                <UILabel className="mb-2 flex items-center gap-1.5">
+                  <Shuffle className="h-4 w-4" />
+                  Como esta roleta funciona *
+                </UILabel>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {([
+                    {
+                      v: false,
+                      titulo: 'Número compartilhado',
+                      texto: 'Um WhatsApp só, e vários corretores atendendo por ele.',
+                    },
+                    {
+                      v: true,
+                      titulo: 'Um número por corretor',
+                      texto: 'Cada corretor atende pelo WhatsApp dele. A roleta sorteia entre eles.',
+                    },
+                  ] as const).map(op => (
+                    <button
+                      key={String(op.v)}
+                      type="button"
+                      onClick={() => setModeloMulti(op.v)}
+                      className={`rounded-lg border p-3 text-left transition-colors ${
+                        modeloMulti === op.v
+                          ? 'border-[#7c3aed] bg-[#7c3aed]/5'
+                          : 'border-border hover:border-[#7c3aed]/50'
+                      }`}
+                    >
+                      <span className="block text-sm font-medium">{op.titulo}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">{op.texto}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!mostrarNumeros && (
             <div className="lg:col-span-2">
               <UILabel>Instância (WhatsApp) *</UILabel>
               <div className="mt-1">
@@ -1781,7 +1944,7 @@ export default function RoletaConfigPage() {
             {/* Números da roleta.
                 Com a flag desligada isto não aparece e a tela é exatamente a de
                 antes — o cliente de número compartilhado não vê nada novo. */}
-            {multiEnabled && (
+            {mostrarNumeros && (
               <div className="border rounded-lg p-3 lg:col-span-2">
                 <div className="flex items-center justify-between mb-2">
                   <UILabel className="flex items-center gap-2">
@@ -2582,12 +2745,14 @@ export default function RoletaConfigPage() {
                               )}
                               {mostrarPesos && (
                                 <div>
-                                  <UILabel className="text-xs">Peso</UILabel>
+                                  <UILabel className="text-xs">
+                                    {mostrarNumeros ? 'Peso do número dele' : 'Peso'}
+                                  </UILabel>
                                   <Input
                                     type="number"
                                     min={0}
-                                    value={m.weight}
-                                    onChange={e => updateMember(m.localId, 'weight', parseInt(e.target.value) || 0)}
+                                    value={pesoDe(m)}
+                                    onChange={e => setPesoDe(m, parseInt(e.target.value) || 0)}
                                     className="mt-1"
                                   />
                                 </div>
