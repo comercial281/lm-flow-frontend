@@ -36,12 +36,19 @@ export interface RoletaFormCheckInput {
   }[];
   /** Nulo ao criar; o id da roleta ao editar (ela não conflita consigo mesma). */
   editingId: string | null;
-  instances: { inbox_id: string; is_active: boolean; answers_direct_inbound?: boolean }[];
+  instances: { inbox_id: string; is_active: boolean; answers_direct_inbound?: boolean; shared?: boolean }[];
   /**
    * `whatsapp_from_profile` é o número do CADASTRO da pessoa (Equipe). O campo
    * da roleta é a exceção; vazio nos dois é que significa "sem WhatsApp".
+   * `inbox_id` é o número em que o corretor atende (vazio = o de entrada).
    */
-  members: { user_id: string; personal_whatsapp_number: string; whatsapp_from_profile?: string | null }[];
+  members: {
+    user_id: string;
+    personal_whatsapp_number: string;
+    whatsapp_from_profile?: string | null;
+    inbox_id?: string | null;
+    is_active?: boolean;
+  }[];
   mode: DistributionMode;
   gestorNum: string;
   horarioOn: boolean;
@@ -90,6 +97,20 @@ export function roletaFormProblems(f: RoletaFormCheckInput): string[] {
   if (repetido) {
     p.push(`O número "${f.instanceLabel(repetido)}" está em duas linhas de "Números que atendem". Deixe só uma.`);
   }
+
+  // Número EXCLUSIVO atende por UM corretor. Dois na mesma linha é um número
+  // compartilhado que ninguém marcou — o lead que escrevesse nele cairia em
+  // oferta em vez de ir direto, calado. O backend recusa igual (mesma frase).
+  const entrada = f.instances.find(i => i.inbox_id)?.inbox_id || f.inboxId;
+  f.instances
+    .filter(i => i.inbox_id && i.is_active && i.shared === false)
+    .forEach(i => {
+      const nele = f.members.filter(m => m.user_id && m.is_active !== false
+        && (m.inbox_id || entrada) === i.inbox_id);
+      if (nele.length <= 1) return;
+      p.push(`O número "${f.instanceLabel(i.inbox_id)}" é exclusivo e atende por um corretor só. `
+        + 'Marque-o como compartilhado para ter vários corretores nele.');
+    });
 
   if (!f.multiEnabled && f.instances.filter(i => i.is_active && i.inbox_id).length > 1) {
     p.push('A roleta com mais de um número não está liberada para este cliente. '

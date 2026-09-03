@@ -132,6 +132,11 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
         timeout_minutes: timeoutMin,
         gestor_whatsapp_number: gestorNum.trim(),
         notification_inbox_id: null,
+        // O número é EXCLUSIVO (um corretor: quem escreve nele vai direto a ele)
+        // ou COMPARTILHADO (vários: quem escreve nele entra na oferta). O atalho
+        // não pergunta — deduz do que o gestor marcou; a tela completa da roleta
+        // permite trocar.
+        instances: [{ inbox_id: inboxId, weight: 10, is_active: true, position: 0, shared: members.length > 1 }],
         members,
       });
       // o create às vezes não devolve inbox_name — completa pro select mostrar bonito

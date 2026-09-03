@@ -963,70 +963,75 @@ Armadilhas:
 3. **Não voltar a ler só `error.message`** ao mostrar o motivo de uma falha: é isso
    que faz a recusa por cargo virar frase genérica.
 
-## Roleta: o aceite define o responsável — Fase 0 (desde 2026-09-03)
+## Roleta: o aceite define o responsável (desde 2026-09-03)
 
 O dono do produto quer que o lead só vire do corretor quando ele ACEITA: o
 sorteio cria o card sem dono, oferta com prazo, e é o aceite que grava o
-responsável e leva o lead para o número dele ("um corretor, um número"). O plano
-tem quatro fases e está no CLAUDE.md do `lm-flow`; esta é a de preparação —
-**nada muda no fluxo para o cliente**, mas a tela ganha as peças que a Fase 1 vai
-precisar e conserta o que já estava errado.
+responsável e leva o lead para o número dele — "um corretor, um número". A
+mecânica mora no servidor (ver o CLAUDE.md do `lm-flow`); aqui está o que a
+tela ganhou, em quatro fases num PR só (#300) para testar tudo de uma vez.
 
 O que aparece na tela:
 
 - **Selo *Aguardando seu aceite · N min* com *Aceitar* / *Recusar*** onde o lead
-  aparece para o corretor ofertado: no card do funil (no lugar do responsável, que
-  ainda não existe), na linha da lista (no lugar de *Sem responsável*), no card
-  aberto (acima de *Roleta de atendimento*) e na conversa (no lugar da faixa do
-  Leilão). Só quem tem oferta em aberto vê; para os outros, nada muda.
-- **A faixa amarela do topo continua** (*Fulano está esperando seu aceite*), agora
-  lendo da mesma lista.
-- **A tela da roleta deixou de oferecer quem só tem acesso automático** ao número
-  (a pessoa virou dona de um lead ali). Esse acesso não a torna elegível e o
-  servidor recusava ao salvar — a tela oferecia, o salvamento rejeitava. O atalho
-  *+ Criar roleta* do card aplica a mesma regra (desabilita quem não tem acesso ao
-  número escolhido, com o motivo escrito).
-- **O botão *Liberar e adicionar* não promove mais os acessos automáticos** daquele
-  número a acesso completo por efeito colateral.
+  aparece para o corretor ofertado: no card do funil (no lugar do responsável,
+  que ainda não existe), na linha da lista (no lugar de *Sem responsável*), no
+  card aberto (acima de *Roleta de atendimento*) e na conversa (no lugar da
+  faixa do Leilão). Só quem tem oferta em aberto vê; para os outros, nada muda.
+  A faixa amarela do topo continua, lendo da mesma lista.
+- **A tela de aceite diz o que o aceite faz**: "você vira o responsável e o
+  atendimento sai pelo seu número".
+- **Cada número da roleta é *Exclusivo* ou *Compartilhado***, gravado. Na roleta
+  de um número só, dois botões abaixo do seletor da instância; na de vários
+  números, um botão por linha (*Exclusivo · 1 corretor* / *Compartilhado*). Os
+  dois cartões da criação (*Número compartilhado* / *Um número por corretor*)
+  viraram atalho que grava a marca de cada número. O atalho *+ Criar roleta* do
+  card deduz do que foi marcado (mais de um corretor = compartilhado).
+- **O peso do número saiu.** A roleta sorteia entre os corretores pelo peso de
+  cada um; a *Distribuição real* é a fatia do corretor entre todos os ativos.
+  O texto do bloco de números explica: exclusivo entrega direto, compartilhado
+  sorteia entre os corretores daquele número.
+- **A conferência "número exclusivo com dois corretores"** barra o salvamento
+  com a mesma frase do servidor: "marque-o como compartilhado".
+- **A tela da roleta deixou de oferecer quem só tem acesso automático** ao
+  número; *Liberar e adicionar* não promove mais os acessos automáticos.
 
 Decisões (não reabrir sem o dono pedir):
 
 - **Uma lista de ofertas para o app inteiro** (`PendingOffersContext`, montado no
   layout principal): a faixa, o card, a lista, o card aberto e a conversa
-  perguntam "tenho oferta para este lead?" a UMA resposta. Cada um com o próprio
-  poll seria quatro requisições por minuto e quatro chances de discordarem.
+  perguntam "tenho oferta para este lead?" a UMA resposta.
 - **O casamento oferta↔lead é pelo CONTATO primeiro** (`pendingOffersMatch.ts`),
-  porque o lead de formulário/anúncio não tem conversa. A conversa e o número
-  de exibição são reserva. A API passou a mandar `contact_id` na fila própria
-  justamente por isso.
+  porque o lead de formulário/anúncio não tem conversa.
 - **Aceitar/Recusar reaproveitam as duas chamadas da tela de aceite.** Não existe
-  segunda porta; a tela de aceite continua sendo o destino do link do WhatsApp e
-  do sininho.
+  segunda porta.
 - **Sem oferta minha, a conversa sem dono mostra a faixa do Leilão** como antes
-  (`fallback` do `OfferActions`). O componente decide sozinho: quem o monta não
-  precisa de hook nem de estado.
+  (`fallback` do `OfferActions`).
 - **Sem chave de funcionalidade no front.** A UI deriva das ofertas pendentes e
-  vale nos dois modos (dono no sorteio hoje; dono no aceite na Fase 1). O
-  interruptor do fluxo novo é do servidor e do painel raiz.
+  vale nos dois modos; o interruptor do fluxo novo é do servidor e do painel
+  raiz (`roleta_aceite_define_dono`, ausente = ligado).
+- **`shared` é campo da instância, não módulo**: nem `featureKey` nem
+  `clientToggleKey`; os scanners do catálogo não entram nesta história.
 
 Armadilhas:
 
 1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
-   `saas-multitenant`): `contact_id` na fila de ofertas, a visibilidade do card e
-   da conversa para quem tem oferta pendente, e o aceite pela resposta no CRM
-   moram lá. Sem ela o selo não casa com o card do lead de formulário.
-2. **O prazo mostrado é medido no aparelho contra o `deadline` do servidor**
-   (`minutesLeft`), não o `minutes_remaining` que chegou — ele envelhece entre um
-   ciclo e outro do poll (60 s).
-3. **Os cliques do selo param a propagação**: o card inteiro é clicável e abre a
-   ficha; sem isso Aceitar abriria o card por baixo.
-4. **`usePendingOffers` funciona sem provider** (lista vazia, nada desenhado). É o
-   que deixa o card e a conversa serem montados em teste e em tela fora do layout
-   sem quebrar.
-5. **`auto_granted` na lista de membros é o que separa explícito de automático.**
-   `instanciasComAcesso` ignora `auto_granted === true`; quem trocar a fonte da
-   lista precisa preservar a marca, senão a tela volta a oferecer quem o servidor
-   recusa.
+   `saas-multitenant`). Sem ela: o selo não casa com o card do lead de
+   formulário, e a marca exclusivo/compartilhado é descartada (o servidor
+   antigo não conhece `shared`).
+2. **`shared` vai SEMPRE no payload da instância.** Chave ausente faz o servidor
+   deduzir pela contagem de corretores (regra de compatibilidade para tela
+   antiga) — a escolha do gestor só vale se viajar.
+3. **O prazo mostrado é medido no aparelho contra o `deadline` do servidor**
+   (`minutesLeft`), não o `minutes_remaining` que chegou.
+4. **Os cliques do selo param a propagação**: o card inteiro é clicável.
+5. **`usePendingOffers` funciona sem provider** (lista vazia, nada desenhado).
+6. **`auto_granted` na lista de membros separa explícito de automático.**
+   `instanciasComAcesso` ignora `auto_granted === true`.
+7. **A marca padrão de um número NOVO depende de onde ele nasce**: o número
+   único da roleta nasce compartilhado; a linha adicionada em *Números que
+   atendem* nasce exclusiva; os cartões da criação regravam todas as linhas.
+   Roleta antiga que chega sem instâncias deduz pela contagem de corretores.
 
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
