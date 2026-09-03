@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Input, Label } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Bot, ChevronDown, Power, Clock, MessageSquare, Loader2, Coins, Brain, Sparkles, Wand2 } from 'lucide-react';
+import { Bot, ChevronDown, Power, Clock, MessageSquare, Loader2, Coins, Brain, Sparkles, Wand2, ShieldCheck } from 'lucide-react';
 import {
   superAgentsService,
   MODE_LABELS,
@@ -13,14 +13,19 @@ import {
 import CerebroUniversal from './CerebroUniversal';
 import ResultadosIA from './ResultadosIA';
 import SdrRefinement from './SdrRefinement';
+import PrincipiosIA from './PrincipiosIA';
 
-type HubTab = 'agentes' | 'cerebro' | 'resultados' | 'aperfeicoamento';
+type HubTab = 'agentes' | 'cerebro' | 'resultados' | 'aperfeicoamento' | 'principios';
 
 const HUB_TABS: { id: HubTab; label: string; Icon: typeof Bot }[] = [
   { id: 'agentes', label: 'Agentes', Icon: Bot },
   { id: 'cerebro', label: 'Cérebro Universal', Icon: Brain },
   { id: 'resultados', label: 'Resultados', Icon: Sparkles },
   { id: 'aperfeicoamento', label: 'Aperfeiçoamento', Icon: Wand2 },
+  // Os princípios do comando dela: o que vale em toda imobiliária. É a quinta
+  // face da mesma IA — como ela SE COMPORTA, ao lado do que ela sabe e do que
+  // ela produziu.
+  { id: 'principios', label: 'Princípios', Icon: ShieldCheck },
 ];
 
 /**
@@ -100,7 +105,9 @@ export default function SuperAgents() {
         ))}
       </div>
 
-      {hubTab === 'cerebro' ? (
+      {hubTab === 'principios' ? (
+        <PrincipiosIA />
+      ) : hubTab === 'cerebro' ? (
         <CerebroUniversal />
       ) : hubTab === 'resultados' ? (
         <ResultadosIA />

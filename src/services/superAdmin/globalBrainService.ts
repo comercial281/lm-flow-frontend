@@ -96,3 +96,39 @@ export const KIND_LABELS: Record<GlobalLesson['kind'], string> = {
   good_example: 'Bom exemplo',
   bad_example: 'Mau exemplo',
 };
+
+/**
+ * Um PRINCÍPIO do comando da IA — as regras que valem em toda imobiliária (não
+ * recomeçar a conversa, não prometer material que não existe, o jeito de escrever
+ * no WhatsApp, a triagem do contato).
+ *
+ * Endereçados pela CHAVE, não por id: a linha só nasce quando alguém edita, e a
+ * tela precisa falar dos blocos desde o primeiro acesso — inclusive dos que ainda
+ * estão no padrão de fábrica.
+ */
+export interface PlaybookPrinciple {
+  key: string;
+  label: string;
+  content: string;
+  factory_default: string;
+  customized: boolean;
+  enabled: boolean;
+  updated_at: string | null;
+}
+
+const PRINCIPLES_BASE = '/super/ai_playbook_blocks';
+
+export const playbookPrinciplesService = {
+  async list(): Promise<PlaybookPrinciple[]> {
+    const res = await api.get(PRINCIPLES_BASE);
+    return (res.data as { data: PlaybookPrinciple[] }).data;
+  },
+
+  // Conteúdo em BRANCO devolve o bloco ao padrão de fábrica — é o "voltar ao
+  // padrão", e é o mesmo significado que vazio tem em toda a plataforma: herda,
+  // nunca "desliga".
+  async update(key: string, content: string): Promise<PlaybookPrinciple> {
+    const res = await api.patch(`${PRINCIPLES_BASE}/${key}`, { content });
+    return (res.data as { data: PlaybookPrinciple }).data;
+  },
+};
