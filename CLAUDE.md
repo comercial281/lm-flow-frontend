@@ -1036,6 +1036,134 @@ Armadilhas:
    ela o bloco aparece no padrão e não guarda nada.
 7. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente, não módulo. Os
    scanners do catálogo de funcionalidades não entram nesta história.
+## Roleta: o aceite define o responsável (desde 2026-09-03)
+
+O dono do produto quer que o lead só vire do corretor quando ele ACEITA: o
+sorteio cria o card sem dono, oferta com prazo, e é o aceite que grava o
+responsável e leva o lead para o número dele — "um corretor, um número". A
+mecânica mora no servidor (ver o CLAUDE.md do `lm-flow`); aqui está o que a
+tela ganhou, em quatro fases num PR só (#300) para testar tudo de uma vez.
+
+O que aparece na tela:
+
+- **Selo *Aguardando seu aceite · N min* com *Aceitar* / *Recusar*** onde o lead
+  aparece para o corretor ofertado: no card do funil (no lugar do responsável,
+  que ainda não existe), na linha da lista (no lugar de *Sem responsável*), no
+  card aberto (acima de *Roleta de atendimento*) e na conversa (no lugar da
+  faixa do Leilão). Só quem tem oferta em aberto vê; para os outros, nada muda.
+  A faixa amarela do topo continua, lendo da mesma lista.
+- **A tela de aceite diz o que o aceite faz**: "você vira o responsável e o
+  atendimento sai pelo seu número".
+- **Cada número da roleta é *Exclusivo* ou *Compartilhado***, gravado. Na roleta
+  de um número só, dois botões abaixo do seletor da instância; na de vários
+  números, um botão por linha (*Exclusivo · 1 corretor* / *Compartilhado*). Os
+  dois cartões da criação (*Número compartilhado* / *Um número por corretor*)
+  viraram atalho que grava a marca de cada número. O atalho *+ Criar roleta* do
+  card deduz do que foi marcado (mais de um corretor = compartilhado).
+- **O peso do número saiu.** A roleta sorteia entre os corretores pelo peso de
+  cada um; a *Distribuição real* é a fatia do corretor entre todos os ativos.
+  O texto do bloco de números explica: exclusivo entrega direto, compartilhado
+  sorteia entre os corretores daquele número.
+- **A conferência "número exclusivo com dois corretores"** barra o salvamento
+  com a mesma frase do servidor: "marque-o como compartilhado".
+- **A tela da roleta deixou de oferecer quem só tem acesso automático** ao
+  número; *Liberar e adicionar* não promove mais os acessos automáticos.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Uma lista de ofertas para o app inteiro** (`PendingOffersContext`, montado no
+  layout principal): a faixa, o card, a lista, o card aberto e a conversa
+  perguntam "tenho oferta para este lead?" a UMA resposta.
+- **O casamento oferta↔lead é pelo CONTATO primeiro** (`pendingOffersMatch.ts`),
+  porque o lead de formulário/anúncio não tem conversa.
+- **Aceitar/Recusar reaproveitam as duas chamadas da tela de aceite.** Não existe
+  segunda porta.
+- **Sem oferta minha, a conversa sem dono mostra a faixa do Leilão** como antes
+  (`fallback` do `OfferActions`).
+- **Sem chave de funcionalidade no front.** A UI deriva das ofertas pendentes e
+  vale nos dois modos; o interruptor do fluxo novo é do servidor e do painel
+  raiz (`roleta_aceite_define_dono`, ausente = ligado).
+- **`shared` é campo da instância, não módulo**: nem `featureKey` nem
+  `clientToggleKey`; os scanners do catálogo não entram nesta história.
+- **Número exclusivo tem UM corretor atendendo** (regra do dono, 2026-09-03).
+  Quem fica com um lead parado no número exclusivo de outro não ganha acesso ao
+  número alheio: a conversa é movida para o número dele, no servidor. Por isso
+  a tela de *Colaboradores* de um número exclusivo deve ter só o dono marcado —
+  e o acesso automático que já existia nesses números some sozinho nos eventos
+  seguintes; o explícito só sai na mão.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`). Sem ela: o selo não casa com o card do lead de
+   formulário, e a marca exclusivo/compartilhado é descartada (o servidor
+   antigo não conhece `shared`).
+2. **`shared` vai SEMPRE no payload da instância.** Chave ausente faz o servidor
+   deduzir pela contagem de corretores (regra de compatibilidade para tela
+   antiga) — a escolha do gestor só vale se viajar.
+3. **O prazo mostrado é medido no aparelho contra o `deadline` do servidor**
+   (`minutesLeft`), não o `minutes_remaining` que chegou.
+4. **Os cliques do selo param a propagação**: o card inteiro é clicável.
+5. **`usePendingOffers` funciona sem provider** (lista vazia, nada desenhado).
+6. **`auto_granted` na lista de membros separa explícito de automático.**
+   `instanciasComAcesso` ignora `auto_granted === true`.
+7. **A marca padrão de um número NOVO depende de onde ele nasce**: o número
+   único da roleta nasce compartilhado; a linha adicionada em *Números que
+   atendem* nasce exclusiva; os cartões da criação regravam todas as linhas.
+   Roleta antiga que chega sem instâncias deduz pela contagem de corretores.
+
+## A janela de Funções ficou organizada por tema (desde 2026-09-03)
+
+O dono do produto, montando o CRM de um cliente novo: *"podíamos dar uma
+organizada nesse menu de funções, separar por tema cada chave pra ficar menos
+confuso"*. Eram ~60 interruptores um debaixo do outro, sem título nenhum
+separando — *Dashboard*, *Conversas*, *Enviar áudio*, *Emoji*, *Template
+WhatsApp*, tudo na mesma pilha.
+
+O que aparece na tela (painel raiz → Clientes → **Funções**):
+
+- **Sete temas recolhíveis**: *Visão geral*, *Atendimento*, *Funil e vendas*,
+  *Imóveis*, *Automações e IA*, *Site e captação* e *Extras e configurações*.
+  Cada um mostra **"N de M"** ligadas antes de ser aberto.
+- **Dentro do tema, um bloco por menu do CRM**: o interruptor do menu vem
+  destacado com o selo **menu inteiro** (desligar esconde o menu todo do
+  cliente) e as funções daquele menu ficam indentadas abaixo dele.
+- **Ligar tudo deste tema / desligar tudo**, dentro de cada tema.
+- **Busca no topo**: filtra pelo nome que aparece na tela e também pelo nome
+  técnico da chave, e abre sozinha os temas com resultado.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Quem decide o tema é o SERVIDOR** (`lm-flow`, branch `saas-multitenant`). A
+  tela tem um mapa de reserva só para a janela de deploy em que o servidor ainda
+  é o antigo — sem ele, o painel voltaria a ser lista corrida logo depois de
+  publicar, que é o pior momento para isso.
+- **Nada some por causa da arrumação.** Chave de um menu que ninguém mapeou cai
+  em *Outras funções*, no fim; função que aponta para um menu inexistente entra
+  solta no fim do tema. Interruptor escondido é funcionalidade que ninguém
+  consegue liberar para o cliente — bem pior que interruptor fora de lugar.
+- **Temas recolhidos por padrão.** Aberto tudo é a parede que esta leva veio
+  desfazer; o contador de ligadas responde a pergunta do dia a dia ("liguei o
+  Bolsão para esse cliente?") sem precisar abrir.
+- **As duas telas de Funções usam a MESMA arrumação** (o painel raiz e a janela
+  do painel de Instâncias). Cada uma com a sua viraria duas verdades sobre onde
+  uma função mora.
+- **Ligar/desligar um tema inteiro é UMA requisição**, não uma por interruptor:
+  rede caindo no meio deixaria o cliente meio ligado.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): o tema de cada chave mora lá. Sem ela, valem os temas de
+   reserva desta tela — e chave nova que o servidor antigo não conhece aparece em
+   *Outras funções*.
+2. **As chaves escritas no mapa de temas NÃO são gate de funcionalidade.** Os dois
+   scanners do catálogo só enxergam `featureKey:`, `clientToggleKey:`,
+   `useFeature('...')` e `useClientToggle('...')` — nenhuma linha daquele arquivo
+   entra nem sai do catálogo. Não trocar a forma dessas chamadas por lá.
+3. **Tema novo no servidor sem rótulo aqui** aparece com o nome técnico
+   "humanizado" e vai para o fim da lista. Mesma armadilha do estado das listas do
+   Bolsão: quando o servidor ganhar um tema, o rótulo e a ordem dele entram aqui.
 
 ## O roteiro da conversa da IA virou tela (desde 2026-09-03)
 

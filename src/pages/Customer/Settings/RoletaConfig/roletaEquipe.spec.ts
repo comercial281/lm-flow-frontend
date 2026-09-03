@@ -25,6 +25,15 @@ describe('instanciasComAcesso', () => {
     expect(instanciasComAcesso('pedro', form())).toEqual([]);
   });
 
+  // O acesso AUTOMÁTICO (a pessoa virou dona de um lead daquele número) serve
+  // para ela abrir o lead dela, não para receber lead novo. O servidor recusa a
+  // roleta que a inclua — e a tela oferecia, para o salvamento depois rejeitar.
+  it('acesso automático não conta como liberado — só o que um humano concedeu', () => {
+    const f = form({ membrosPorInstancia: { [N1]: [{ id: 'joao', auto_granted: true }, { id: 'maria', auto_granted: false }] } });
+    expect(instanciasComAcesso('joao', f)).toEqual([]);
+    expect(instanciasComAcesso('maria', f)).toEqual([N1]);
+  });
+
   it('devolve os dois quando a pessoa atende pelos dois números', () => {
     const f = form({
       instances: [{ inbox_id: N1, is_active: true }, { inbox_id: N2, is_active: true }],

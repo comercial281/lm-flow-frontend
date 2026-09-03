@@ -88,6 +88,11 @@ export interface FeatureCatalogItem {
   key: string;
   label: string;
   group: 'menus' | 'settings' | string;
+  // Tema em que a chave aparece no painel de Funções (config/lm_flow_feature_themes.yml
+  // no backend). Opcional porque backend antigo não manda — a tela tem mapa de
+  // reserva para não voltar a ser lista corrida na janela de deploy.
+  theme?: string;
+  theme_label?: string;
 }
 
 export interface AutomationItem {

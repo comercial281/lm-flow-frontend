@@ -13,6 +13,13 @@ export interface BrokerAssignmentDetail {
   corretor: string | null;
   conversation_id: string | null;
   conversation_display_id: number | null;
+  // De QUAL lead é a oferta. É com isto que o card e a conversa desenham
+  // "Aguardando seu aceite": o lead de formulário não tem conversa, então só
+  // o conversation_id não casava com o card.
+  contact_id?: string | null;
+  pipeline_item_id?: string | null;
+  roleta_instance_id?: string | null;
+  instance_name?: string | null;
 }
 
 const BASE = '/broker_assignments';

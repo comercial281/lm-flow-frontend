@@ -22,8 +22,16 @@ export interface EquipeInput {
   instances: InstanciaDaRoleta[];
   /** O número de entrada — é o que vale quando a roleta ainda não tem lista. */
   inboxDeEntrada: string;
-  /** Quem foi liberado em cada número: `{ [inbox_id]: [{ id }] }`. */
-  membrosPorInstancia: Record<string, { id: string }[]>;
+  /**
+   * Quem está em cada número: `{ [inbox_id]: [{ id, auto_granted? }] }`.
+   *
+   * `auto_granted` é a marca do acesso AUTOMÁTICO — o sistema liberou a pessoa
+   * para ela abrir um lead que já é dela naquele número. Esse acesso NÃO a torna
+   * elegível a receber lead novo (é a barreira de 30/07/2026), e o servidor
+   * recusa a roleta que a inclua. Contar esse acesso aqui era o que fazia a
+   * tela oferecer gente que o salvamento depois rejeitava.
+   */
+  membrosPorInstancia: Record<string, { id: string; auto_granted?: boolean }[]>;
 }
 
 /**
@@ -41,7 +49,9 @@ export function instanciasComAcesso(userId: string, f: EquipeInput): string[] {
   // quem responde é o número de entrada.
   const alvos = ativas.length ? ativas : [f.inboxDeEntrada];
 
-  return alvos.filter(id => !!id && (f.membrosPorInstancia[id] ?? []).some(u => u.id === userId));
+  return alvos.filter(id =>
+    !!id && (f.membrosPorInstancia[id] ?? []).some(u => u.id === userId && u.auto_granted !== true),
+  );
 }
 
 /**

@@ -163,6 +163,9 @@ function mkInstance(i?: Partial<RoletaInstance>): InstanceRow {
     // direto naquele número não pode ser trocado por um efeito colateral de
     // adicionar uma linha. O backend recusa a segunda marcação de qualquer jeito.
     answers_direct_inbound: i?.answers_direct_inbound ?? false,
+    // Exclusivo (um corretor) ou compartilhado (vários). Ausente = exclusivo,
+    // que é o padrão do servidor.
+    shared: i?.shared ?? false,
     shared_with: i?.shared_with ?? [],
   };
 }
@@ -535,12 +538,14 @@ export default function RoletaConfigPage() {
   // número de entrada.
   useEffect(() => {
     if (!modalOpen || instances.length > 0) return;
+    // A marca de cada número segue o modelo escolhido: "um número por
+    // corretor" nasce exclusivo; o número único da roleta nasce compartilhado.
     if (mostrarNumeros) {
-      setInstances([mkInstance({ inbox_id: inboxId, weight: 10, position: 0 })]);
+      setInstances([mkInstance({ inbox_id: inboxId, weight: 10, position: 0, shared: false })]);
       return;
     }
     if (!inboxId) return;
-    setInstances([mkInstance({ inbox_id: inboxId, weight: 10, position: 0 })]);
+    setInstances([mkInstance({ inbox_id: inboxId, weight: 10, position: 0, shared: true })]);
   }, [modalOpen, inboxId, instances.length, mostrarNumeros]);
 
   // Com o bloco de números visível, o seletor separado de instância some — então
@@ -670,18 +675,14 @@ export default function RoletaConfigPage() {
     setBuscaCorretor('');
     // O peso só se abre sozinho quando JÁ é desigual — senão quem usa
     // distribuição desigual abriria a tela sem ver a própria configuração.
-    // Abre sozinho quando QUALQUER peso já é desigual — o do corretor no modelo
-    // compartilhado, o do número no de um por corretor. Senão o gestor abriria a
-    // tela sem ver a própria configuração.
-    const numeros = (c.instances ?? []).filter(i => i.is_active).map(i => i.weight);
-    setMostrarPesos(new Set(membros.map(m => m.weight)).size > 1
-      || new Set(numeros).size > 1);
+    // Só o peso do CORRETOR conta: o do número saiu do sorteio (2026-09-03).
+    setMostrarPesos(new Set(membros.map(m => m.weight)).size > 1);
     // Roleta antiga (antes das instâncias) chega sem `instances`: monta a de
     // entrada a partir do próprio inbox dela, que é o que o backfill fez no banco.
     setInstances(
       c.instances?.length
         ? c.instances.map(i => mkInstance(i))
-        : [mkInstance({ inbox_id: c.inbox_id, weight: 10, position: 0 })],
+        : [mkInstance({ inbox_id: c.inbox_id, weight: 10, position: 0, shared: membros.length > 1 })],
     );
     // Só LIGA, nunca desliga: uma roleta de um número só neste cliente não
     // prova que o cliente perdeu a liberação.
@@ -864,6 +865,9 @@ export default function RoletaConfigPage() {
           // Quem atende quem escreve DIRETO neste número. Só faz diferença
           // quando o número está em mais de uma roleta.
           answers_direct_inbound: i.answers_direct_inbound ?? false,
+          // Exclusivo (um corretor; quem escreve nele vai direto) ou
+          // compartilhado (vários; quem escreve nele entra na oferta).
+          shared:    i.shared ?? false,
         })),
         members:                membersValid.map((m, i) => ({
           user_id:                  m.user_id,
@@ -1013,7 +1017,13 @@ export default function RoletaConfigPage() {
     setLiberandoId(userId);
     try {
       const atuais = await inboxMembersService.get(inboxAlvo);
-      const ids = Array.from(new Set([...atuais.map(a => String(a.id)), userId]));
+      // Só os EXPLÍCITOS + o novo. O endpoint promove a explícito todo id que
+      // receber, então mandar a lista inteira transformava cada acesso
+      // automático daquele número (gente que só vê o próprio lead) em acesso
+      // completo — e em candidato a receber lead novo — por efeito colateral
+      // de liberar UMA pessoa.
+      const explicitos = atuais.filter(a => a.auto_granted !== true).map(a => String(a.id));
+      const ids = Array.from(new Set([...explicitos, userId]));
       await inboxMembersService.update(inboxAlvo, ids);
       await loadInboxMembers(instanceInboxKey ? instanceInboxKey.split(',') : []);
       marcarCorretor(userId, true);
@@ -1253,61 +1263,29 @@ export default function RoletaConfigPage() {
   }, [users, members, buscaCorretor, instanciasDoCorretor]);
   // O sorteio de instância só existe no rodízio. Em leilão e disponibilidade o
   // critério já É o corretor (quem responde primeiro / quem está online), então
-  // o número é derivado do escolhido — mostrar peso de instância ali seria
-  // prometer um controle que o motor não tem.
-  // ⚠️ `mostrarPesos` na conta: antes o peso do número aparecia SEMPRE no modelo
-  // de um número por corretor, enquanto o do corretor só saía atrás do "Ajustar
-  // quanto cada um recebe". Eram dois critérios para a mesma pergunta, e o campo
-  // que aparecia sozinho era justo o que quase ninguém precisa mexer. Quem já
-  // tem peso desigual não perde nada: o `openEdit` abre os pesos por conta
-  // própria nesse caso.
-  const showInstanceWeights = isMulti && mode === 'rodizio' && mostrarPesos;
-
-  // O peso que a linha do corretor edita: o do NÚMERO dele no modelo de um
-  // número por corretor, o dele mesmo no compartilhado.
-  //
-  // ⚠️ Não é preferência de layout. No modelo de um número por corretor o peso
-  // do CORRETOR não faz nada: ele está sozinho no número dele, então a fatia
-  // dele DENTRO do número é sempre 100% — quem decide quantos leads ele recebe é
-  // o peso do NÚMERO. Editar o do corretor ali era mexer no que não tem efeito.
-  // O campo da linha do número continua existindo e edita o mesmo valor: número
-  // sem nenhum corretor marcado não tem outra porta.
-  const pesoDe = useCallback((m: MemberRow) => {
-    if (!mostrarNumeros) return m.weight;
-    return activeInstances.find(i => i.inbox_id === memberInbox(m))?.weight ?? m.weight;
-  }, [mostrarNumeros, activeInstances, memberInbox]);
+  // O peso do NÚMERO saiu do sorteio (decisão do dono do produto, 2026-09-03):
+  // a roleta sorteia entre corretores, pelo peso de cada um, e o número é
+  // consequência de quem aceita. O campo continua existindo no dado (o servidor
+  // o aceita e ignora), mas a tela não o oferece mais — editar o que não tem
+  // efeito é o erro que este bloco tinha antes, só que invertido.
+  const pesoDe = useCallback((m: MemberRow) => m.weight, []);
 
   const setPesoDe = useCallback((m: MemberRow, valor: number) => {
-    if (!mostrarNumeros) {
-      setMembers(prev => prev.map(x => (x.localId === m.localId ? { ...x, weight: valor } : x)));
-      return;
-    }
-    const alvo = memberInbox(m);
-    setInstances(prev => prev.map(i => (i.inbox_id === alvo ? { ...i, weight: valor } : i)));
-  }, [mostrarNumeros, memberInbox]);
+    setMembers(prev => prev.map(x => (x.localId === m.localId ? { ...x, weight: valor } : x)));
+  }, []);
 
-  // Percentual EFETIVO: (peso da instância / Σ) × (peso do corretor / Σ da
-  // instância dele). Sem isso o gestor configura pesos e lê números que não
-  // batem — com dois números, um corretor sozinho no seu número recebe metade
-  // dos leads mesmo com peso 10 contra 90.
-  const totalInstanceWeight = activeInstances.reduce((s, i) => s + (i.weight || 0), 0);
+  // Percentual EFETIVO: a fatia do corretor entre TODOS os corretores ativos
+  // da roleta. Com o sorteio em um andar é isso que acontece — o número em que
+  // ele atende não entra na conta.
   const effectivePct = useCallback((m: MemberRow): number | null => {
     if (!m.is_active || !m.user_id) return null;
-    const alvo = memberInbox(m);
-    const doMesmoNumero = members.filter(x => x.is_active && x.user_id && memberInbox(x) === alvo);
-    const somaNumero = doMesmoNumero.reduce((s, x) => s + (x.weight || 0), 0);
+    const ativos = members.filter(x => x.is_active && x.user_id);
+    const soma = ativos.reduce((s, x) => s + (x.weight || 0), 0);
     // Peso zero em todo mundo é configuração válida ("desligamos os pesos"): o
     // motor cai no primeiro, então dividir igualmente é a leitura honesta.
-    const fatiaCorretor = somaNumero > 0 ? (m.weight || 0) / somaNumero : 1 / (doMesmoNumero.length || 1);
-    if (!isMulti) return fatiaCorretor * 100;
-
-    const inst = activeInstances.find(i => i.inbox_id === alvo);
-    if (!inst) return null;
-    const fatiaInstancia = totalInstanceWeight > 0
-      ? (inst.weight || 0) / totalInstanceWeight
-      : 1 / activeInstances.length;
-    return fatiaInstancia * fatiaCorretor * 100;
-  }, [members, memberInbox, isMulti, activeInstances, totalInstanceWeight]);
+    const fatia = soma > 0 ? (m.weight || 0) / soma : 1 / (ativos.length || 1);
+    return fatia * 100;
+  }, [members]);
 
   // Quantos dos registros CARREGADOS estão ocultos — não o tamanho do localStorage,
   // que acumula ids de leads que já saíram da janela do diagnóstico e faria o botão
@@ -1896,13 +1874,20 @@ export default function RoletaConfigPage() {
                     {
                       v: true,
                       titulo: 'Um número por corretor',
-                      texto: 'Cada corretor atende pelo WhatsApp dele. A roleta sorteia entre eles.',
+                      texto: 'Cada corretor atende pelo WhatsApp dele. Quem escreve num número vai direto ao corretor dele.',
                     },
                   ] as const).map(op => (
                     <button
                       key={String(op.v)}
                       type="button"
-                      onClick={() => setModeloMulti(op.v)}
+                      onClick={() => {
+                        setModeloMulti(op.v);
+                        // O cartão é um ATALHO que grava a marca de cada número:
+                        // "número compartilhado" = vários corretores no mesmo
+                        // WhatsApp; "um número por corretor" = cada número
+                        // exclusivo. A linha de cada número deixa trocar depois.
+                        setInstances(prev => prev.map(i => ({ ...i, shared: !op.v })));
+                      }}
                       className={`rounded-lg border p-3 text-left transition-colors ${
                         modeloMulti === op.v
                           ? 'border-[#7c3aed] bg-[#7c3aed]/5'
@@ -1938,6 +1923,34 @@ export default function RoletaConfigPage() {
               <p className="text-xs text-muted-foreground mt-1">
                 A caixa de entrada (número de WhatsApp) que essa roleta distribui.
               </p>
+              {/* EXCLUSIVO ou COMPARTILHADO — gravado, não adivinhado contando
+                  corretores. É a marca que decide se quem escreve neste número
+                  vai DIRETO ao corretor dele (exclusivo) ou entra na oferta
+                  com prazo (compartilhado). */}
+              {inboxId && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {([
+                    { v: true,  titulo: 'Compartilhado', texto: 'vários corretores; quem escreve entra na oferta' },
+                    { v: false, titulo: 'Exclusivo',     texto: 'um corretor; quem escreve vai direto a ele' },
+                  ] as const).map(op => (
+                    <button
+                      key={String(op.v)}
+                      type="button"
+                      onClick={() => setInstances(prev => (prev.length
+                        ? prev.map((i, idx) => (idx === 0 ? { ...i, shared: op.v } : i))
+                        : [mkInstance({ inbox_id: inboxId, weight: 10, position: 0, shared: op.v })]))}
+                      className={`rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors ${
+                        (instances[0]?.shared ?? false) === op.v
+                          ? 'border-[#7c3aed] bg-[#7c3aed]/5'
+                          : 'border-border hover:border-[#7c3aed]/50'
+                      }`}
+                    >
+                      <span className="font-medium">{op.titulo}</span>
+                      <span className="text-muted-foreground"> · {op.texto}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             )}
 
@@ -1961,8 +1974,10 @@ export default function RoletaConfigPage() {
                 </div>
 
                 <p className="text-xs text-muted-foreground mb-3">
-                  Com mais de um número, a roleta sorteia primeiro o número e depois o corretor
-                  daquele número — o lead é atendido pelo WhatsApp de quem ganhou.
+                  A roleta sorteia entre os corretores, pelo peso de cada um; o lead é atendido pelo
+                  WhatsApp de quem aceitar. Quem escreve num número <strong>exclusivo</strong> vai
+                  direto ao corretor dele; quem escreve num número <strong>compartilhado</strong> é
+                  sorteado entre os corretores daquele número.
                 </p>
 
                 {/* Uma linha por número. No celular os campos empilham (as 12
@@ -1975,7 +1990,7 @@ export default function RoletaConfigPage() {
                       key={inst.localId}
                       className="grid grid-cols-1 items-start gap-2 rounded-md border border-border p-3 sm:grid-cols-12 sm:border-0 sm:p-0"
                     >
-                      <div className="sm:col-span-5">
+                      <div className="sm:col-span-4">
                         {/* A primeira linha é a instância de ENTRADA — a que vira
                             `roleta_configs.inbox_id`. Marcada porque, ao editar,
                             ela não pode mudar: trocá-la mudaria a chave da roleta. */}
@@ -2005,30 +2020,33 @@ export default function RoletaConfigPage() {
                           ))}
                         </NativeSelect>
                       </div>
-                      <div className="sm:col-span-4 sm:pt-[22px]">
+                      <div className="sm:col-span-3 sm:pt-[22px]">
                         <Input
                           value={inst.label ?? ''}
                           onChange={e => updateInstance(inst.localId, 'label', e.target.value)}
                           placeholder="Apelido (ex: WhatsApp do João)"
                         />
                       </div>
-                      {showInstanceWeights && (
-                        <div className="sm:col-span-2 sm:pt-[22px]">
-                          <Input
-                            type="number"
-                            min={0}
-                            value={inst.weight}
-                            onChange={e => updateInstance(inst.localId, 'weight', parseInt(e.target.value) || 0)}
-                            placeholder="Peso"
-                            aria-label="Peso do número"
-                          />
-                        </div>
-                      )}
-                      <div
-                        className={`flex items-center gap-3 sm:gap-1 sm:pt-[26px] ${
-                          showInstanceWeights ? 'sm:col-span-1' : 'sm:col-span-3'
-                        }`}
-                      >
+                      {/* EXCLUSIVO ou COMPARTILHADO. É a marca — não a contagem
+                          de corretores — que decide se quem escreve neste número
+                          vai direto ao corretor dele ou entra na oferta. */}
+                      <div className="sm:col-span-3 sm:pt-[26px]">
+                        <button
+                          type="button"
+                          onClick={() => updateInstance(inst.localId, 'shared', !inst.shared)}
+                          className={`flex items-center gap-1.5 text-xs ${inst.shared ? 'text-amber-400' : 'text-[#7c3aed]'}`}
+                          title={inst.shared
+                            ? 'Compartilhado: vários corretores; quem escreve entra na oferta'
+                            : 'Exclusivo: um corretor; quem escreve vai direto a ele'}
+                          aria-label={inst.shared ? 'Número compartilhado' : 'Número exclusivo'}
+                        >
+                          {inst.shared
+                            ? <Users className="h-4 w-4" />
+                            : <Hand className="h-4 w-4" />}
+                          {inst.shared ? 'Compartilhado' : 'Exclusivo · 1 corretor'}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3 sm:gap-1 sm:pt-[26px] sm:col-span-2">
                         <button
                           type="button"
                           onClick={() => updateInstance(inst.localId, 'is_active', !inst.is_active)}
@@ -2745,9 +2763,7 @@ export default function RoletaConfigPage() {
                               )}
                               {mostrarPesos && (
                                 <div>
-                                  <UILabel className="text-xs">
-                                    {mostrarNumeros ? 'Peso do número dele' : 'Peso'}
-                                  </UILabel>
+                                  <UILabel className="text-xs">Peso</UILabel>
                                   <Input
                                     type="number"
                                     min={0}
@@ -2783,10 +2799,9 @@ export default function RoletaConfigPage() {
 
                   {totalWeight > 0 && members.length > 1 && (
                     <div className="mt-2 text-xs text-muted-foreground">
-                      {/* Percentual EFETIVO: com dois números ele é o produto
-                          das duas fatias. Mostrar só peso/soma faria o gestor
-                          ler números que não acontecem. */}
-                      {isMulti ? 'Distribuição real (número × corretor):' : 'Distribuição real:'}
+                      {/* Percentual EFETIVO entre todos os corretores ativos:
+                          o número não entra no sorteio, só o peso de cada um. */}
+                      Distribuição real:
                       {members.filter(m => m.is_active && m.user_id).map(m => {
                         const pct = effectivePct(m);
                         const nome = userName(m.user_id);

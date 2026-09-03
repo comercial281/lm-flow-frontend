@@ -7,6 +7,7 @@ import {
 import clientInstancesService, {
   ClientInstance, FeatureCatalogItem,
 } from '@/services/clientInstances/clientInstancesService';
+import { groupCatalogByTheme, itemLabel, type CatalogItem } from '../featureCatalog';
 
 interface Props {
   instance: ClientInstance;
@@ -14,29 +15,6 @@ interface Props {
   onClose: () => void;
   onSaved?: (updated: ClientInstance) => void;
 }
-
-// Cada key aqui = um grupo do catálogo (config/lm_flow_features.yml no backend),
-// e cada grupo = um MENU real do CRM. O label é o nome do menu como o cliente vê.
-const GROUP_LABELS: Record<string, string> = {
-  dashboard:           'Dashboard',
-  conversations:       'Conversas',
-  contacts:            'Contatos',
-  pipelines:           'Pipelines',
-  properties:          'Imóveis',
-  visits:              'Agenda de Visitas',
-  proposals:           'Propostas',
-  contracts:           'Contratos',
-  property_capture:    'Captação',
-  property_interests:  'Interesses',
-  ai_agents:           'Robôs e Integrações',
-  channels:            'Canais',
-  automations:         'Automações',
-  marketplace:         'Marketplace',
-  disparos:            'Disparos',
-  espaco:              'Espaço',
-  tutorials:           'Tutoriais',
-  settings:            'Configurações (sem menu próprio)',
-};
 
 function pickError(e: any): string {
   const d = e?.response?.data;
@@ -100,15 +78,11 @@ export default function FeaturesModal({ instance, open, onClose, onSaved }: Prop
     }
   }, [open, load]);
 
-  const grouped = useMemo(() => {
-    const map = new Map<string, FeatureCatalogItem[]>();
-    for (const item of catalog) {
-      const g = item.group || 'outros';
-      if (!map.has(g)) map.set(g, []);
-      map.get(g)!.push(item);
-    }
-    return Array.from(map.entries());
-  }, [catalog]);
+  // TEMA > menu > funções daquele menu. Quem decide o tema é o servidor; a
+  // organização é a mesma do painel raiz de propósito — as duas telas ligam as
+  // mesmas chaves, e cada uma com sua arrumação vira duas verdades sobre onde
+  // uma função mora.
+  const seções = useMemo(() => groupCatalogByTheme(catalog), [catalog]);
 
   const totalOn = useMemo(
     () => catalog.filter(f => features[f.key] !== false).length,
@@ -118,12 +92,11 @@ export default function FeaturesModal({ instance, open, onClose, onSaved }: Prop
   const toggle = (key: string, val: boolean) =>
     setFeatures(prev => ({ ...prev, [key]: val }));
 
-  const setAll = (val: boolean, group?: string) => {
+  // Sem lista de chaves = o catálogo inteiro (o "Ligar tudo" do topo).
+  const setAll = (val: boolean, keys?: string[]) => {
     setFeatures(prev => {
       const next = { ...prev };
-      for (const f of catalog) {
-        if (!group || f.group === group) next[f.key] = val;
-      }
+      for (const key of keys ?? catalog.map(f => f.key)) next[key] = val;
       return next;
     });
   };
@@ -151,10 +124,11 @@ export default function FeaturesModal({ instance, open, onClose, onSaved }: Prop
             Funções de {instance.name}
           </DialogTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Liga ou desliga o que o cliente vê no CRM dele. Cada seção é um menu do CRM: o toggle
-            destacado com <span className="text-primary font-medium">menu inteiro</span> esconde o
-            menu todo, os de baixo são funções específicas dentro dele. Mudanças propagam quando o
-            cliente recarrega a página (cache de até 5 minutos).
+            Liga ou desliga o que o cliente vê no CRM dele. Cada seção é um tema, e dentro dela
+            cada bloco é um menu do CRM: o toggle destacado com{' '}
+            <span className="text-primary font-medium">menu inteiro</span> esconde o menu todo, os
+            de baixo são funções específicas dentro dele. Mudanças propagam quando o cliente
+            recarrega a página (cache de até 5 minutos).
           </p>
         </DialogHeader>
 
@@ -185,80 +159,83 @@ export default function FeaturesModal({ instance, open, onClose, onSaved }: Prop
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-5 py-2 -mx-1 px-1">
-              {grouped.map(([group, items]) => (
-                <section key={group}>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-semibold text-foreground">
-                      {GROUP_LABELS[group] ?? group}
-                    </h4>
-                    <div className="flex gap-2 text-xs">
-                      <button
-                        type="button"
-                        className="text-muted-foreground hover:text-primary"
-                        onClick={() => setAll(true, group)}
-                      >ligar grupo</button>
-                      <span className="text-muted-foreground">·</span>
-                      <button
-                        type="button"
-                        className="text-muted-foreground hover:text-destructive"
-                        onClick={() => setAll(false, group)}
-                      >desligar grupo</button>
+              {seções.map(secao => {
+                const chaves = secao.all.map(i => i.key);
+                const ligadas = chaves.filter(k => features[k] !== false).length;
+
+                const renderRow = (item: CatalogItem, opts: { indent?: boolean; border?: boolean; strong?: boolean }) => {
+                  const on = features[item.key] !== false;
+                  const id = `feat-${item.key}`;
+                  return (
+                    <div
+                      key={item.key}
+                      className={`flex items-center justify-between py-2 pr-3 ${
+                        opts.indent ? 'pl-7' : 'pl-3'
+                      } ${opts.border ? 'border-t' : ''} ${opts.strong ? 'bg-muted/40' : ''}`}
+                    >
+                      <Label htmlFor={id} className={`cursor-pointer flex-1 text-sm ${opts.strong ? 'font-medium' : ''}`}>
+                        {itemLabel(item)}
+                        {opts.strong && (
+                          <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                            menu inteiro
+                          </span>
+                        )}
+                        <span className="ml-2 text-[10px] text-muted-foreground font-mono">
+                          {item.key}
+                        </span>
+                      </Label>
+                      <Switch
+                        id={id}
+                        checked={on}
+                        onCheckedChange={(v: boolean) => toggle(item.key, v)}
+                      />
                     </div>
-                  </div>
+                  );
+                };
 
-                  <div className="space-y-1 rounded-md border bg-card">
-                    {(() => {
-                      // Convenção do catálogo: o primeiro item de cada grupo cuja key bate
-                      // com o nome do grupo é o toggle do MENU INTEIRO (ex: group "conversations"
-                      // → item key "conversations"). O resto são funções de dentro do menu.
-                      const menuToggle = items.find(i => i.key === group);
-                      const subItems = menuToggle ? items.filter(i => i.key !== group) : items;
+                return (
+                  <section key={secao.key}>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-semibold text-foreground">
+                        {secao.label}
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">
+                          {ligadas} de {chaves.length}
+                        </span>
+                      </h4>
+                      <div className="flex gap-2 text-xs">
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-primary"
+                          onClick={() => setAll(true, chaves)}
+                        >ligar tema</button>
+                        <span className="text-muted-foreground">·</span>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-destructive"
+                          onClick={() => setAll(false, chaves)}
+                        >desligar tema</button>
+                      </div>
+                    </div>
+                    {secao.hint && (
+                      <p className="text-xs text-muted-foreground mb-2 -mt-1">{secao.hint}</p>
+                    )}
 
-                      const renderRow = (item: FeatureCatalogItem, opts: { indent?: boolean; border?: boolean; strong?: boolean }) => {
-                        const on = features[item.key] !== false;
-                        const id = `feat-${item.key}`;
-                        return (
-                          <div
-                            key={item.key}
-                            className={`flex items-center justify-between py-2 pr-3 ${
-                              opts.indent ? 'pl-7' : 'pl-3'
-                            } ${opts.border ? 'border-t' : ''} ${opts.strong ? 'bg-muted/40' : ''}`}
-                          >
-                            <Label htmlFor={id} className={`cursor-pointer flex-1 text-sm ${opts.strong ? 'font-medium' : ''}`}>
-                              {item.label}
-                              {opts.strong && (
-                                <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                                  menu inteiro
-                                </span>
-                              )}
-                              <span className="ml-2 text-[10px] text-muted-foreground font-mono">
-                                {item.key}
-                              </span>
-                            </Label>
-                            <Switch
-                              id={id}
-                              checked={on}
-                              onCheckedChange={(v: boolean) => toggle(item.key, v)}
-                            />
-                          </div>
-                        );
-                      };
-
-                      return (
-                        <>
-                          {menuToggle && renderRow(menuToggle, { strong: true })}
-                          {subItems.map((item, idx) =>
+                    <div className="space-y-3">
+                      {secao.menus.map(menu => (
+                        <div key={`${secao.key}-${menu.key}`} className="space-y-1 rounded-md border bg-card">
+                          {menu.all.map((item, idx) =>
                             renderRow(item, {
-                              indent: !!menuToggle,
-                              border: menuToggle ? true : idx > 0,
+                              strong: !!menu.toggle && item.key === menu.toggle.key,
+                              indent: !!menu.toggle && item.key !== menu.toggle.key,
+                              border: idx > 0,
                             })
                           )}
-                        </>
-                      );
-                    })()}
-                  </div>
-                </section>
-              ))}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
 
             {error && (

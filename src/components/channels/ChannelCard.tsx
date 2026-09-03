@@ -10,7 +10,10 @@ import { cn } from '@/lib/utils';
 type ChannelCardProps = {
   inbox: Inbox;
   isDeleting?: string | null;
-  onSettings: (inbox: Inbox) => void;
+  // `tab` abre a tela de configurações já na aba pedida. É o que separa
+  // "Reconectar" (vai direto ao QR Code) de "Configurar" (cai nas
+  // Configurações básicas, como em qualquer canal no ar).
+  onSettings: (inbox: Inbox, tab?: string) => void;
   onDelete: (inbox: Inbox) => void;
 };
 
@@ -76,30 +79,35 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete }:
         )}
       </div>
 
-      {/* Rodapé: badge do tipo + Configurar + excluir */}
-      <div className="relative flex items-center justify-between gap-2 mt-auto pt-1">
+      {/* Rodapé: badge do tipo + Reconectar/Configurar + excluir */}
+      <div className="relative flex flex-wrap items-center justify-between gap-2 mt-auto pt-1">
         <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-sidebar-border text-sidebar-foreground/70">
           {typeName}
         </Badge>
         <div className="flex items-center gap-1">
-          {/* Com a instância caída o botão passa a dizer o que a pessoa precisa
-              fazer — é a mesma tela (é lá que mora o QR Code), mas "Configurar"
-              não conta a ninguém que dali sai a reconexão. */}
+          {/* Com a instância caída entra o botão que diz o que a pessoa precisa
+              fazer — ele abre direto o QR Code, porque "Configurar" não conta a
+              ninguém que dali sai a reconexão. Mas o Configurar CONTINUA ao lado:
+              atendentes, horário, nome e o resto funcionam com o número fora do
+              ar, e um card que só oferece "Reconectar" faz parecer que não. */}
+          {isDown && (
+            <Button
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => onSettings(inbox, 'configuration')}
+            >
+              <RefreshCw className="h-3.5 w-3.5 mr-1" />
+              {t('actions.reconnect')}
+            </Button>
+          )}
           <Button
             size="sm"
-            variant={isDown ? 'default' : 'outline'}
-            className={cn(
-              'h-8 text-xs',
-              !isDown && 'bg-sidebar border-sidebar-border hover:bg-sidebar-accent',
-            )}
+            variant="outline"
+            className="h-8 text-xs bg-sidebar border-sidebar-border hover:bg-sidebar-accent"
             onClick={() => onSettings(inbox)}
           >
-            {isDown ? (
-              <RefreshCw className="h-3.5 w-3.5 mr-1" />
-            ) : (
-              <Settings className="h-3.5 w-3.5 mr-1" />
-            )}
-            {isDown ? t('actions.reconnect') : t('actions.configure')}
+            <Settings className="h-3.5 w-3.5 mr-1" />
+            {t('actions.configure')}
           </Button>
           <Button
             size="sm"

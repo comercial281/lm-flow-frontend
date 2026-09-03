@@ -136,7 +136,10 @@ export default function AcceptLeadPage() {
               <div className={`text-4xl font-bold tabular-nums ${expired ? 'text-red-300' : 'text-white'}`}>
                 {fmtMMSS(secsLeft)}
               </div>
-              <div className="text-white/50 text-xs mt-1">Se não aceitar, o lead passa para o próximo.</div>
+              <div className="text-white/50 text-xs mt-1">
+                Ao aceitar, você vira o responsável e o atendimento sai pelo seu número.
+                Se não aceitar, o lead passa para o próximo.
+              </div>
             </div>
 
             {/* Dados do lead */}

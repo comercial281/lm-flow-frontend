@@ -60,6 +60,7 @@ import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import { lazyWithRetry } from '@/utils/chunkReload';
 // Card do board, sempre visível de cara — import estático de propósito.
 import PipelineItemCard from './PipelineItemCard';
+import OfferActions from '@/components/roleta/OfferActions';
 import {
   itemPos,
   itemTagInfos,
@@ -1560,7 +1561,14 @@ export default function PipelineKanban() {
                               </span>
                             </>
                           ) : (
-                            <span className="text-muted-foreground/50">Sem responsável</span>
+                            // Sem responsável — mas se a roleta ofertou o lead a MIM, a
+                            // linha diz isso e deixa aceitar daqui.
+                            <OfferActions
+                              contactId={item.contact?.id ?? item.conversation?.contact?.id}
+                              conversationId={item.conversation?.id}
+                              compact
+                              fallback={<span className="text-muted-foreground/50">Sem responsável</span>}
+                            />
                           )}
                         </div>
                         {item.roleta && (

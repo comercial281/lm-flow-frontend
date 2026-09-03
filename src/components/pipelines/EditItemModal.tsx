@@ -59,6 +59,7 @@ import { labelsService } from '@/services/contacts/labelsService';
 import { contactsService } from '@/services/contacts/contactsService';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { brokerAssignmentsService, type BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
+import OfferActions from '@/components/roleta/OfferActions';
 import { toast } from 'sonner';
 import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
@@ -886,6 +887,14 @@ export default function EditItemModal({
                     Roleta de atendimento
                     {assigningRoleta && <Loader2 className="h-3 w-3 animate-spin" />}
                   </Label>
+                  {/* A oferta que espera o PRÓPRIO usuário — o corretor aceita daqui,
+                      sem procurar o link no WhatsApp. Diferente do bloco "No sorteio
+                      agora" abaixo, que é de gestão (só quem manda na roleta vê). */}
+                  <OfferActions
+                    contactId={item.contact?.id ?? (item.conversation as { contact?: { id?: string } } | undefined)?.contact?.id}
+                    conversationId={item.conversation?.id}
+                    onAccepted={() => onLabelsChanged?.()}
+                  />
                   {item.roleta && !roletas.some(r => r.id === item.roleta!.id) && (
                     <p className="text-[11px] text-muted-foreground">
                       Veio da roleta <span className="font-medium text-foreground">{roletaLabel(item.roleta)}</span>{' '}
