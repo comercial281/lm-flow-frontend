@@ -1,4 +1,4 @@
-import { ConversationFilter, ConversationListParams } from '@/types/chat/api';
+import { ConversationFilter, ConversationListParams, FilterRequest } from '@/types/chat/api';
 
 /**
  * Converte filtros do modal para o formato da API do CRM Chat (POST /conversations/filter)
@@ -199,4 +199,36 @@ export const combineSearchWithFilters = (
     ...filterParams,
     ...searchParams,
   };
+};
+
+/**
+ * A PÁGINA N da lista com os filtros e a busca ATUAIS.
+ *
+ * O "carregar mais" pedia `{ page: N }` e nada mais: a segunda página vinha
+ * SEM o filtro (instância, responsável, roleta, período) e era colada no fim
+ * da lista filtrada — quem filtrava pelo número do corretor rolava a lista e
+ * via os leads de todo mundo (03/09/2026). A página seguinte tem que ser
+ * pedida do MESMO jeito que a primeira: mesmos filtros, mesma busca, mesmo
+ * endpoint (GET simples ou POST /filter), só o número da página muda.
+ */
+export type PagedListRequest =
+  | { kind: 'get'; params: ConversationListParams }
+  | { kind: 'post'; body: FilterRequest & { q?: string } };
+
+export const buildPagedRequest = (
+  filters: ConversationFilter[],
+  page: number,
+  searchTerm = '',
+): PagedListRequest => {
+  const q = searchTerm.trim();
+
+  if (filters.length > 0 && shouldUseAdvancedFilters(filters)) {
+    return {
+      kind: 'post',
+      body: { ...convertFiltersToApiFormat(filters), page, ...(q ? { q } : {}) },
+    };
+  }
+
+  const params: ConversationListParams = filters.length > 0 ? convertFiltersToUrlParams(filters) : {};
+  return { kind: 'get', params: { ...params, ...(q ? { q } : {}), page } };
 };

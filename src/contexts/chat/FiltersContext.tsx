@@ -6,6 +6,7 @@ import { ConversationFilter, QuickFilterTab, Conversation } from '@/types/chat/a
 import { PaginationMeta } from '@/types/core';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
+  buildPagedRequest,
   convertFiltersToApiFormat,
   convertFiltersToUrlParams,
   shouldUseAdvancedFilters,
@@ -90,6 +91,12 @@ interface FiltersContextValue {
   ) => Promise<void>;
   setQuickFilter: (tab: QuickFilterTab) => void;
   setSearchTerm: (term: string) => void;
+  /**
+   * A página N da lista com os filtros e a busca ATUAIS — é o que o
+   * "carregar mais" usa. Pedir só `{ page: N }` trazia a página seguinte
+   * sem filtro nenhum e a colava no fim da lista filtrada.
+   */
+  loadPage: (page: number) => Promise<{ conversations: Conversation[]; pagination: PaginationMeta }>;
 
   // Computed values
   hasActiveFilters: boolean;
@@ -223,6 +230,20 @@ export function FiltersProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SET_QUICK_FILTER_TAB', payload: tab });
   }, []);
 
+  // Mesmos filtros, mesma busca, mesmo endpoint da primeira página — só o
+  // número da página muda. Ver `buildPagedRequest`.
+  const loadPage = useCallback(
+    async (page: number) => {
+      const request = buildPagedRequest(state.activeFilters, page, state.searchTerm);
+      const response =
+        request.kind === 'post'
+          ? await chatService.filterConversations(request.body)
+          : await chatService.getConversations(request.params);
+      return extractConversationsData(response);
+    },
+    [state.activeFilters, state.searchTerm],
+  );
+
   const setSearchTerm = useCallback((term: string) => {
     dispatch({ type: 'SET_SEARCH_TERM', payload: term });
   }, []);
@@ -238,6 +259,7 @@ export function FiltersProvider({ children }: { children: React.ReactNode }) {
     applySearch,
     setQuickFilter,
     setSearchTerm,
+    loadPage,
     hasActiveFilters,
     hasSearch,
   };

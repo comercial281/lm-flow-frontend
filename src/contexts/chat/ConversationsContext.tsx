@@ -211,6 +211,12 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     [findConversationByAnyId, t],
   );
 
+  // Cola a página seguinte no fim da lista. Quem busca a página é quem sabe
+  // com quais filtros a lista foi montada (FiltersContext.loadPage).
+  const appendConversations = useCallback((conversations: Conversation[], pagination: PaginationMeta) => {
+    dispatch({ type: 'APPEND_CONVERSATIONS', payload: { conversations, pagination } });
+  }, []);
+
   const setConversations = useCallback(
     (conversations: Conversation[], pagination: PaginationMeta) => {
       dispatch({ type: 'SET_CONVERSATIONS', payload: { conversations, pagination } });
@@ -888,6 +894,7 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     loadConversations,
     loadMoreConversations,
     setConversations,
+    appendConversations,
     loadSpecificConversation,
     selectConversation,
     updateConversationStatus,
