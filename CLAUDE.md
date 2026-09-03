@@ -1085,6 +1085,12 @@ Decisões (não reabrir sem o dono pedir):
   raiz (`roleta_aceite_define_dono`, ausente = ligado).
 - **`shared` é campo da instância, não módulo**: nem `featureKey` nem
   `clientToggleKey`; os scanners do catálogo não entram nesta história.
+- **Número exclusivo tem UM corretor atendendo** (regra do dono, 2026-09-03).
+  Quem fica com um lead parado no número exclusivo de outro não ganha acesso ao
+  número alheio: a conversa é movida para o número dele, no servidor. Por isso
+  a tela de *Colaboradores* de um número exclusivo deve ter só o dono marcado —
+  e o acesso automático que já existia nesses números some sozinho nos eventos
+  seguintes; o explícito só sai na mão.
 
 Armadilhas:
 
