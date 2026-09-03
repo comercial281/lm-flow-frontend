@@ -6,6 +6,7 @@ import {
 import { toast } from 'sonner';
 import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon, Zap, AlertTriangle, Lightbulb, CalendarDays, Users, MessageSquare, Sparkles, X } from 'lucide-react';
 import AiResultsPanel from '@/components/salesAgents/AiResultsPanel';
+import PlaybookSection from '@/components/salesAgents/PlaybookSection';
 import type { AgentPerformance } from '@/types/aiResults';
 import {
   salesAgentsService,
@@ -204,6 +205,13 @@ export default function SalesAgents() {
         reply_delay_seconds: patch.reply_delay_seconds ?? selected.reply_delay_seconds,
         default_origin: patch.default_origin ?? selected.default_origin,
         intent_question: patch.intent_question ?? selected.intent_question,
+        // ⚠️ Entra com `in`, NÃO com `??`: apagar um bloco do roteiro manda `{}`
+        // (ou o objeto sem aquela chave), e o `??` só troca `null`/`undefined` —
+        // mas um objeto vazio é escolha LEGÍTIMA aqui: significa "voltei tudo pro
+        // padrão de fábrica". Com `??` funcionaria por acaso hoje e quebraria no
+        // dia em que alguém mandasse `null` pra limpar. Mesmo cuidado do
+        // `pipeline_stage_map` e das colunas do follow-up.
+        playbook: 'playbook' in patch ? patch.playbook : selected.playbook,
         opening_image_url: patch.opening_image_url ?? selected.opening_image_url,
         opening_audio_url: patch.opening_audio_url ?? selected.opening_audio_url,
         openings: patch.openings ?? selected.openings,
@@ -492,6 +500,10 @@ function ConfigTab({
 }) {
   const questionsText = (agent.qualification_questions ?? []).join('\n');
   const [wizardOpen, setWizardOpen] = useState(false);
+  // Estreia fechada e liberada imobiliária por imobiliária: quem reescreve um
+  // bloco muda como a IA atende TODOS os leads daquele cliente. A Leal Mídia
+  // sempre vê, mesmo com a chave desligada.
+  const roteiroLiberado = useClientToggle('ia_playbook');
 
   return (
     <div className="space-y-5">
@@ -667,6 +679,15 @@ function ConfigTab({
 
       <BantSection agent={agent} onChange={onChange} onSave={onSave} />
       <RecepcaoSection agent={agent} onChange={onChange} onSave={onSave} />
+      {/*
+        ⚠️ A chave vai LITERAL na chamada do useClientToggle. Os dois scanners do
+        catálogo varrem o código por regex: trocar por uma constante tira a chave
+        do catálogo no deploy seguinte, o painel de Funções deixa de oferecer o
+        botão de liberar, e ninguém é avisado. Mesma armadilha das Landings.
+      */}
+      {roteiroLiberado && (
+        <PlaybookSection agentId={agent.id} playbook={agent.playbook} onSave={onSave} />
+      )}
       <VisitSection agent={agent} onChange={onChange} onSave={onSave} />
       <IntelligenceSection agent={agent} onChange={onChange} onSave={onSave} />
       <ScheduleSection agent={agent} onSave={onSave} />

@@ -1165,6 +1165,74 @@ Armadilhas:
    "humanizado" e vai para o fim da lista. Mesma armadilha do estado das listas do
    Bolsão: quando o servidor ganhar um tema, o rótulo e a ordem dele entram aqui.
 
+## O roteiro da conversa da IA virou tela (desde 2026-09-03)
+
+Queixa do dono do produto: a IA repetia *"você tá procurando pra você e sua família
+morarem, ou é mais um investimento?"* no meio da conversa, **mesmo depois de ele ter
+configurado diferente em todos os campos que a tela oferecia**.
+
+A pergunta tinha **cinco fontes** e só uma era editável — o campo *Pergunta de
+intenção*, em Recepção inicial, que muda a REDAÇÃO e não a existência dela. As outras
+quatro viviam dentro do servidor, sem tela nenhuma: a ordem da abertura (*"é a
+pergunta mais importante, sempre faça ela"*), o roteiro que ramifica em
+moradia/investimento/sondando **em todo turno**, o método consultivo que a traz
+literal, e a ficha que a IA preenche a cada resposta.
+
+Ampliando: o comando da IA tem ~32 blocos, ~10 deles texto fixo sem tela. E ele **não
+é neutro** — assume lançamento na planta ("empreendimento", "plantão", "decorado",
+visita como ápice sempre). Quem vende usado, loteamento ou locação rodava o roteiro
+errado.
+
+O que aparece na tela:
+
+- **Seção *Roteiro da conversa***, em *IA Vendedora → Configuração*, logo abaixo de
+  *Recepção inicial* — e ali de propósito: é onde mora a redação da pergunta, e o
+  seletor que decide SE ela existe tem que estar perto dela. Separados, a pessoa muda
+  um e procura o outro em outro lugar.
+- No topo dela, **Perguntar se é moradia ou investimento**: *Sempre* / *Só na
+  abertura* / *Nunca*. Governa as cinco fontes de uma vez.
+- Abaixo, os blocos do comando, cada um já preenchido com o padrão da casa e com selo
+  *reescrito* + *Voltar ao padrão* onde alguém mexeu.
+- **Aba *Princípios*** no painel raiz, dentro de *IA Vendedora*: as regras que valem
+  em toda imobiliária. Editadas ali, valem em todos os clientes.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **ROTEIRO é do cliente, PRINCÍPIO é da Leal Mídia, e são duas telas diferentes.**
+  Misturar faria uma melhoria de método sobrescrever a peculiaridade de uma
+  imobiliária, e vice-versa. O servidor recusa princípio para chave de roteiro.
+- **Estreia FECHADA** (`ia_playbook`), liberada imobiliária por imobiliária: quem
+  reescreve um bloco muda como a IA atende TODOS os leads daquele cliente. É a
+  configuração de maior alcance do produto. A Leal Mídia sempre vê.
+- **Campo em branco VOLTA AO PADRÃO, nunca "desliga"** — a doutrina de toda a
+  plataforma. Gravar texto vazio tiraria o bloco do comando, e uma IA sem "regras
+  invioláveis" é pior do que uma com as de fábrica.
+- **Trocar o modo RECARREGA os blocos.** O modo muda o texto de fábrica de cinco
+  deles; sem recarregar, a tela seguiria mostrando o roteiro do modo anterior como se
+  fosse o que a IA recebe — a divergência que a seção veio acabar.
+- **O modelo de roteiro (escolher de qual partir na criação da IA) fica para depois**,
+  e será PONTO DE PARTIDA — cópia na criação, não herança viva.
+
+Armadilhas:
+
+1. **`playbook` entrou na lista campo-a-campo do `saveAgent` com `in`, não com `??`.**
+   Objeto vazio é escolha legítima ("voltei tudo pro padrão"), e o `??` o trocaria
+   pelo valor antigo. Há spec que reprova as duas coisas.
+2. **A chave do gate vai LITERAL na chamada do `useClientToggle`.** Os dois scanners
+   do catálogo varrem por regex; uma constante tiraria a chave do catálogo no deploy
+   seguinte, calada. Mesma armadilha das Landings. Spec reprova.
+3. **Leitura de fundo NÃO grita**: falha ao carregar o roteiro esconde a seção, não
+   pinta toast vermelho.
+4. **A tela de Princípios lê os DOIS formatos de erro da API** — o padrão
+   (`error.message`) e a recusa por cargo (`error` como texto). Ler só o primeiro faz
+   a recusa virar frase genérica.
+5. **O componente do roteiro mora em arquivo próprio.** A tela do cliente já tem
+   ~4.800 linhas e 45 componentes num arquivo só.
+6. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`,
+   `saas-multitenant`): as três camadas, a chave e os endpoints moram lá. E o auditor
+   do catálogo REPROVA este build enquanto `ia_playbook` não existir no catálogo
+   servido pela API — foi o que aconteceu aqui, e ele estava fazendo o trabalho dele.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,

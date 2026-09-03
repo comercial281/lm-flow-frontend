@@ -109,6 +109,15 @@ export interface SalesAgent {
   opening_image_url: string | null;
   opening_audio_url: string | null;
   openings: SalesAgentOpening[];
+  /**
+   * O ROTEIRO desta IA: os blocos do comando que alguém reescreveu para ESTE
+   * cliente, mais `intent_question_mode` (sempre / só na abertura / nunca).
+   *
+   * Chave AUSENTE não é "bloco vazio": é "usa o padrão de fábrica". Quem lê o
+   * texto em uso de cada bloco é o endpoint `playbook`, não este campo — aqui só
+   * viaja o que foi reescrito.
+   */
+  playbook?: Record<string, string>;
   /** Desempate quando o mesmo canal tem mais de um agente (maior ganha). */
   priority: number;
   /** Follow-up respeita TAMBÉM o horário de atuação, além da janela diurna fixa. */
@@ -304,6 +313,27 @@ export interface UsageLimits {
   daily_budget_usd?: number | null;
 }
 
+/**
+ * Um bloco do comando da IA. `content` é o que ela recebe HOJE (o reescrito, ou
+ * o de fábrica); `factory_default` é o que o "voltar ao padrão" restaura.
+ */
+export interface PlaybookBlock {
+  key: string;
+  label: string;
+  content: string;
+  factory_default: string;
+  customized: boolean;
+}
+
+/** sempre / só na abertura / nunca. */
+export type IntentQuestionMode = 'always' | 'opening_only' | 'never';
+
+export interface AgentPlaybook {
+  intent_question_mode: IntentQuestionMode;
+  intent_question_modes: IntentQuestionMode[];
+  blocks: PlaybookBlock[];
+}
+
 // Config gerada pelo formulário (o dono responde perguntas e o Claude monta).
 export interface GeneratedAgentConfig {
   persona_role: string;
@@ -400,6 +430,8 @@ export interface SalesAgentPayload {
   reaction_emojis?: string[];
   /** Teto de curtidas por conversa. Zero desliga a curtida. */
   reaction_max_per_conversation?: number | null;
+  /** O roteiro reescrito para este cliente. `{}` = tudo no padrão de fábrica. */
+  playbook?: Record<string, string>;
 }
 
 export interface SalesAgentDocument {
@@ -783,6 +815,14 @@ export const salesAgentsService = {
   async testPrompt(id: string, message?: string): Promise<PromptPreview> {
     const res = await api.post(`${BASE}/${id}/test_prompt`, { message: message || undefined });
     return (res.data as { data: PromptPreview }).data;
+  },
+
+  // O ROTEIRO desta IA, bloco a bloco: o texto em uso, o padrão de fábrica ao lado
+  // e se alguém já reescreveu aquele bloco. É o que a seção "Roteiro da conversa"
+  // desenha, e é o que dá o "voltar ao padrão".
+  async playbook(id: string): Promise<AgentPlaybook> {
+    const res = await api.get(`${BASE}/${id}/playbook`);
+    return (res.data as { data: AgentPlaybook }).data;
   },
 
   // --- base de conhecimento ---
