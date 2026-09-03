@@ -34,6 +34,44 @@ describe('roletaFormProblems', () => {
     expect(roletaFormProblems(form())).toEqual([]);
   });
 
+  // Número EXCLUSIVO é de um corretor só (decisão de 2026-09-03: "o corretor é
+  // uma unidade"). Dois nele é um compartilhado que ninguém marcou.
+  it('reclama de dois corretores num número exclusivo', () => {
+    const problemas = roletaFormProblems(form({
+      instances: [{ inbox_id: INBOX_A, is_active: true, shared: false }],
+      members: [
+        { user_id: 'u1', personal_whatsapp_number: '5511999998888' },
+        { user_id: 'u2', personal_whatsapp_number: '5511999997777' },
+      ],
+    }));
+
+    expect(problemas.some(m => m.includes('Vendas 01') && m.includes('exclusivo'))).toBe(true);
+  });
+
+  it('aceita vários corretores num número compartilhado', () => {
+    expect(roletaFormProblems(form({
+      instances: [{ inbox_id: INBOX_A, is_active: true, shared: true }],
+      members: [
+        { user_id: 'u1', personal_whatsapp_number: '5511999998888' },
+        { user_id: 'u2', personal_whatsapp_number: '5511999997777' },
+      ],
+    }))).toEqual([]);
+  });
+
+  it('conta só os corretores DAQUELE número', () => {
+    expect(roletaFormProblems(form({
+      multiEnabled: true,
+      instances: [
+        { inbox_id: INBOX_A, is_active: true, shared: false },
+        { inbox_id: INBOX_B, is_active: true, shared: false },
+      ],
+      members: [
+        { user_id: 'u1', personal_whatsapp_number: '5511999998888', inbox_id: INBOX_A },
+        { user_id: 'u2', personal_whatsapp_number: '5511999997777', inbox_id: INBOX_B },
+      ],
+    }))).toEqual([]);
+  });
+
   // ⚠️ Compartilhar o número entre roletas é PERMITIDO desde 07/08/2026 (duas
   // campanhas, fontes diferentes, mesmo WhatsApp). Este exemplo trava a
   // permissão: se voltar a acusar erro aqui, a funcionalidade regrediu.

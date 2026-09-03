@@ -31,6 +31,12 @@ export interface RoletaInstance {
    * marcado num número compartilhado, quem escreve direto não entra em roleta.
    */
   answers_direct_inbound?: boolean;
+  /**
+   * Este número é COMPARTILHADO (vários corretores; quem escreve nele entra na
+   * oferta) ou EXCLUSIVO (um corretor; quem escreve nele vai direto a ele)?
+   * Gravado, não adivinhado contando corretores. Ausente = exclusivo.
+   */
+  shared?: boolean;
   /** Nome das OUTRAS roletas que atendem por este mesmo número (só leitura). */
   shared_with?: string[];
 }

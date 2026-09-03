@@ -6,6 +6,7 @@ import { PipelineItem, Pipeline, PipelineStage } from '@/types/analytics';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import SalesAgentBadge from '@/components/salesAgents/SalesAgentBadge';
+import OfferActions from '@/components/roleta/OfferActions';
 
 interface PipelineItemCardProps {
   item: PipelineItem;
@@ -449,13 +450,23 @@ export default function PipelineItemCard({
             Lendo só de item.conversation.assignee, lead de formulário/anúncio
             — que não tem conversa — aparecia SEMPRE sem responsável, mesmo com
             a roleta tendo gravado o dono direitinho. */}
-        {(item.assignee ?? item.conversation?.assignee) && (
+        {(item.assignee ?? item.conversation?.assignee) ? (
           <div className="flex items-center space-x-1 text-muted-foreground">
             <User className="w-3 h-3" />
             <span className="truncate max-w-20">
               {(item.assignee ?? item.conversation?.assignee)?.name}
             </span>
           </div>
+        ) : (
+          // Sem responsável: se a roleta ofertou este lead a MIM, o card diz
+          // isso e deixa aceitar aqui mesmo. Sem oferta minha, nada — é o
+          // comportamento de sempre.
+          <OfferActions
+            contactId={item.contact?.id ?? item.conversation?.contact?.id}
+            conversationId={item.conversation?.id}
+            compact
+            onAccepted={() => onView?.(item)}
+          />
         )}
       </div>
 

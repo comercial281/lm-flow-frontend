@@ -31,6 +31,7 @@ import MenuCustomizer from './components/MenuCustomizer';
 import InstallAppPrompt from './components/InstallAppPrompt';
 import ClientModeBar from './ClientModeBar';
 import PendingOffersBanner from '@/components/roleta/PendingOffersBanner';
+import { PendingOffersProvider } from '@/contexts/PendingOffersContext';
 import { WelcomeTourModal } from '@/components/WelcomeTourModal';
 import GlobalCommandPalette from '@/components/command-palette/GlobalCommandPalette';
 import FeedbackWidget from '@/components/feedback/FeedbackWidget';
@@ -165,6 +166,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     // variável é 0px e a conta vira 100dvh, idêntico ao que era.
     // Sem transição na altura de propósito: animar faria a barra chegar
     // atrasada em relação ao teclado (`transition-colors` só afeta cores).
+    <PendingOffersProvider>
     <div className="flex flex-col h-[calc(100dvh-var(--keyboard-inset,0px))] bg-background transition-colors duration-150 ease-in-out">
 
       {/* Barra do Modo Cliente (super-admin) — só aparece quando ativo */}
@@ -250,5 +252,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
         <MenuCustomizer items={permittedMenuItems} onClose={() => setShowMenuCustomizer(false)} />
       )}
     </div>
+    </PendingOffersProvider>
   );
 }
