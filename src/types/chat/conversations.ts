@@ -56,6 +56,7 @@ export interface ConversationsContextValue {
   loadConversations: (params?: ConversationListParams) => Promise<void>;
   loadMoreConversations: () => Promise<void>;
   setConversations: (conversations: Conversation[], pagination: PaginationMeta) => void;
+  appendConversations: (conversations: Conversation[], pagination: PaginationMeta) => void;
   loadSpecificConversation: (conversationId: string) => Promise<Conversation | null>;
   selectConversation: (conversationId: string | null) => void;
   updateConversationStatus: (

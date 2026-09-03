@@ -701,9 +701,40 @@ function useChatIntegration() {
     saveState,
   ]);
 
+  // "Carregar mais" COM os filtros e a busca em vigor.
+  //
+  // O contexto de conversas não sabe com que filtro a lista foi montada (quem
+  // aplica o filtro é o FiltersContext, direto no serviço), então o seu
+  // `loadMoreConversations` pedia só `{ page: N }` — a segunda página vinha
+  // sem filtro nenhum e era colada no fim da lista filtrada. Quem filtrava
+  // pelo número de um corretor rolava a lista e via os leads de todo mundo
+  // (03/09/2026). Aqui, onde os dois contextos se encontram, a página seguinte
+  // é pedida do mesmo jeito que a primeira.
+  const loadMoreWithFilters = useCallback(async () => {
+    const hasFilters = filters.state.activeFilters.length > 0 || filters.state.searchTerm.trim().length > 0;
+    if (!hasFilters) {
+      await conversations.loadMoreConversations();
+      return;
+    }
+
+    const pagination = conversations.state.conversationsPagination;
+    const currentPage = pagination?.page || 1;
+    const totalPages = pagination?.total_pages || 1;
+    const hasNextPage = pagination?.has_next_page ?? currentPage < totalPages;
+    if (!hasNextPage) return;
+
+    const next = await filters.loadPage(currentPage + 1);
+    conversations.appendConversations(next.conversations, next.pagination);
+  }, [conversations, filters]);
+
+  const conversationsWithPagedLoadMore = useMemo<ConversationsContextValue>(
+    () => ({ ...conversations, loadMoreConversations: loadMoreWithFilters }),
+    [conversations, loadMoreWithFilters],
+  );
+
   return {
     messages,
-    conversations,
+    conversations: conversationsWithPagedLoadMore,
     filters,
     websocket,
     ui,
