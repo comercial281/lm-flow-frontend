@@ -130,9 +130,13 @@ export default function Channels() {
     setTotalPages(Math.ceil(filteredInboxes.length / perPage));
   }, [filteredInboxes.length, perPage]);
 
+  // `tab` é opcional: sem ela a tela abre nas Configurações básicas, como
+  // sempre. O "Reconectar" do card caído manda a aba do QR Code — é o mesmo
+  // atalho que o fluxo de criar canal já usava para parear o WhatsApp.
   const openChannelSettings = useCallback(
-    (inbox: Inbox) => {
-      navigate(`/channels/${inbox.id}/settings`);
+    (inbox: Inbox, tab?: string) => {
+      const destino = `/channels/${inbox.id}/settings`;
+      navigate(tab ? `${destino}?tab=${tab}` : destino);
     },
     [navigate],
   );
