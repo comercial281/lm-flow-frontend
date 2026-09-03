@@ -963,6 +963,79 @@ Armadilhas:
 3. **Não voltar a ler só `error.message`** ao mostrar o motivo de uma falha: é isso
    que faz a recusa por cargo virar frase genérica.
 
+## O follow-up da IA ganhou horário próprio (desde 2026-09-02)
+
+Preocupação do dono do produto: *"imagina eu deixar lá 24h, o follow-up vai
+começar a mandar sempre 2 da manhã pra um lead mensagem, aí não dá"*.
+
+O medo estava certo, o diagnóstico não: o follow-up **já** tinha horário — 9h às
+20h —, só que ele era fixo no servidor. **Ninguém escolhia e ninguém via.** Ele
+também não olhava dia da semana: domingo 9h da manhã saía cutucada igual a terça.
+E a chave *"Seguir também o horário de atuação"* nunca funcionou — o servidor não
+devolvia o valor, então ela marcava, salvava e **reabria desmarcada**, sem jeito
+de desmarcar de volta.
+
+O que aparece na tela, em *IA Vendedora → Configuração → Follow-up automático*:
+
+- **Bloco *Quando o follow-up pode sair***, entre *Quando o lead sumir* e *Ir aos
+  poucos, como gente*. Ordem de leitura: primeiro o que a IA faz, depois quando
+  ela pode fazer, e só então o ritmo — cuja conta de padeiro cita a janela logo
+  acima.
+- **Faixa de horário e dias da semana**, no mesmo editor de pílulas do *Horário de
+  atuação* e da *Roleta*. Aceita mais de uma janela (a pausa do almoço) e a que
+  vira a meia-noite.
+- **Link *Aplicar o padrão (09h às 17h, seg a sáb)***.
+- **A chave *"Seguir também o horário de atuação"* sumiu.** Virou o próprio
+  horário.
+- **A conta *"dá cerca de N leads por dia"* passou a citar a janela real.** Antes
+  dizia sempre "das 9h às 20h" e calculava em cima de 11 horas fixas, mesmo com
+  outro horário configurado.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **O bloco NÃO tem chave de liga/desliga.** A faixa sempre existe. Um toggle
+  criaria o terceiro estado ("desligado = 24h? = padrão?") que esta tela veio
+  matar.
+- **A faixa escolhida MANDA.** Não há piso por baixo no servidor: configurou
+  madrugada, sai de madrugada. É escolha explícita do dono — a alternativa
+  produziria o pior defeito possível, a tela mostrando um horário e o follow-up
+  saindo em outro.
+- **Padrão de fábrica 09h às 17h, de segunda a sábado**, com os dias marcados de
+  verdade nas pílulas. Domingo calado.
+- **A tela avisa que são DOIS relógios** nos modos *Mover o card* e *Disparar um
+  funil pronto*: este horário decide quando a IA **entrega** o lead; as mensagens
+  dali em diante saem no horário do **funil** (a chave *Só enviar em horário
+  comercial*, em Automações → Follow-up, que continua com janela fixa e
+  invisível). Sem esse aviso, "configurei madrugada e a mensagem saiu de manhã"
+  parece defeito.
+
+Armadilhas:
+
+1. **`followup_hours` PRECISA estar na lista do `saveAgent`**, com `??` e não com
+   `in`: ele nunca é limpável — o servidor devolve sempre resolvido e o editor
+   garante ao menos uma janela. Vazio ali não é escolha, é o padrão de fábrica.
+   (Diferente das colunas do bloco de cima, onde `null` significa "não escolhi
+   coluna nenhuma".)
+2. **O `idPrefix` do editor é `fu_win`, nunca `ia_win`.** O *Horário de atuação*
+   usa esse último e as duas seções vivem na MESMA aba — prefixo repetido faz o
+   rótulo *Das* de uma focar o campo da outra.
+3. **`00:00`–`00:00` não é 24 horas, é NADA** — o intervalo é `[início, fim)` e o
+   servidor fecha o dia inteiro. A tela mostra aviso em âmbar no lugar da conta de
+   padeiro quando isso acontece; sem ele, "configurei e o follow-up parou" vira
+   chamado de suporte com a configuração parecendo certa. O dia inteiro se escreve
+   `00:00` às `23:59`.
+4. **A janela sai de um arquivo só** (`src/features/salesAgents/followupHours.ts`).
+   Ela estava escrita TRÊS vezes — o texto "das 9h às 20h", a descrição da chave
+   de horário e um `11 * 60` dentro do cálculo. Bastava mudar uma para o gestor
+   ler um horário e receber a conta de outro.
+5. **O padrão de fábrica da tela tem que bater com o do servidor.** Divergir faz a
+   tela mostrar um horário e o follow-up sair em outro, calado, em todo cliente
+   que ainda não salvou o campo.
+6. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): a coluna, o padrão e quem obedece ao horário moram lá. Sem
+   ela o bloco aparece no padrão e não guarda nada.
+7. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente, não módulo. Os
+   scanners do catálogo de funcionalidades não entram nesta história.
 ## Roleta: o aceite define o responsável (desde 2026-09-03)
 
 O dono do produto quer que o lead só vire do corretor quando ele ACEITA: o
