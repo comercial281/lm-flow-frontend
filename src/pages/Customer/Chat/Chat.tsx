@@ -10,6 +10,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useConversationPresence } from '@/hooks/useConversationPresence';
 import ClaimLeadBanner from '@/components/chat/assignment/ClaimLeadBanner';
+import OfferActions from '@/components/roleta/OfferActions';
 
 // Hooks customizados
 import { useConversationHandlers } from '@/hooks/chat/useConversationHandlers';
@@ -745,11 +746,23 @@ const Chat = () => {
                 unreadCount={conversations.getUnreadCount(selectedConversation.id) || 0}
               />
 
-              {/* Leilão — lead sem dono, quem assumir primeiro leva */}
+              {/* Lead sem dono. Se a roleta ofertou este lead a MIM, a faixa é a
+                  da oferta (Aceitar/Recusar com prazo); sem oferta minha, fica a
+                  faixa do Leilão — quem assumir primeiro leva. */}
               {!selectedConversation.assignee_id && (
-                <ClaimLeadBanner
+                <OfferActions
                   conversationId={String(selectedConversation.id)}
-                  onClaimed={() => conversations.loadSpecificConversation(String(selectedConversation.id))}
+                  conversationDisplayId={selectedConversation.display_id}
+                  contactId={selectedConversation.contact?.id ?? selectedConversation.meta?.sender?.id}
+                  className="px-4 py-2 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800"
+                  onAccepted={() => conversations.loadSpecificConversation(String(selectedConversation.id))}
+                  onRefused={() => conversations.loadSpecificConversation(String(selectedConversation.id))}
+                  fallback={(
+                    <ClaimLeadBanner
+                      conversationId={String(selectedConversation.id)}
+                      onClaimed={() => conversations.loadSpecificConversation(String(selectedConversation.id))}
+                    />
+                  )}
                 />
               )}
 

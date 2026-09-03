@@ -1013,7 +1013,13 @@ export default function RoletaConfigPage() {
     setLiberandoId(userId);
     try {
       const atuais = await inboxMembersService.get(inboxAlvo);
-      const ids = Array.from(new Set([...atuais.map(a => String(a.id)), userId]));
+      // Só os EXPLÍCITOS + o novo. O endpoint promove a explícito todo id que
+      // receber, então mandar a lista inteira transformava cada acesso
+      // automático daquele número (gente que só vê o próprio lead) em acesso
+      // completo — e em candidato a receber lead novo — por efeito colateral
+      // de liberar UMA pessoa.
+      const explicitos = atuais.filter(a => a.auto_granted !== true).map(a => String(a.id));
+      const ids = Array.from(new Set([...explicitos, userId]));
       await inboxMembersService.update(inboxAlvo, ids);
       await loadInboxMembers(instanceInboxKey ? instanceInboxKey.split(',') : []);
       marcarCorretor(userId, true);

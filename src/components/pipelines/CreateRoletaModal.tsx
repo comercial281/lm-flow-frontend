@@ -17,6 +17,7 @@ import {
 import { Loader2, Shuffle } from 'lucide-react';
 import { toast } from 'sonner';
 import InboxesService from '@/services/channels/inboxesService';
+import inboxMembersService from '@/services/channels/inboxMembersService';
 import { getMessagingInboxes } from '@/components/scheduledActions/scheduledActionChannelUtils';
 import type { Inbox } from '@/types/channels/inbox';
 import type { User } from '@/types/users';
@@ -49,6 +50,23 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
   // user_id -> whatsapp (marcado quando presente no map)
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  // Quem um humano liberou no número escolhido. Só esses podem entrar na
+  // roleta (o servidor recusa os demais); o acesso automático — a pessoa virou
+  // dona de um lead ali — não conta. `null` = ainda não sabemos (sem número
+  // escolhido, ou carregando): a lista inteira aparece, como antes.
+  const [liberados, setLiberados] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    if (!inboxId) { setLiberados(null); return; }
+    let cancelled = false;
+    inboxMembersService.get(inboxId)
+      .then(list => {
+        if (cancelled) return;
+        setLiberados(new Set(list.filter(m => m.auto_granted !== true).map(m => String(m.id))));
+      })
+      .catch(() => { if (!cancelled) setLiberados(null); });
+    return () => { cancelled = true; };
+  }, [inboxId]);
 
   useEffect(() => {
     if (!open) return;
@@ -184,16 +202,21 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
               )}
               {users.map(u => {
                 const checked = u.id in selected;
+                const semAcesso = liberados !== null && !liberados.has(String(u.id));
                 return (
                   <div key={u.id} className="p-2.5 space-y-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label className={`flex items-center gap-2 ${semAcesso ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                       <input
                         type="checkbox"
                         checked={checked}
+                        disabled={semAcesso}
                         onChange={() => toggleMember(u)}
                         className="h-4 w-4 accent-primary"
                       />
                       <span className="text-sm font-medium truncate">{u.name}</span>
+                      {semAcesso && (
+                        <span className="text-[10px] text-muted-foreground">sem acesso a este número</span>
+                      )}
                     </label>
                     {checked && (
                       <Input
