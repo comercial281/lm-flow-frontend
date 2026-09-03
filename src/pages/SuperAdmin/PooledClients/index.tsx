@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, Eye, EyeOff, MessageCircle, XCircle, Bot, Radio, UserCog, ClipboardList, MessageSquarePlus, Activity, Workflow } from 'lucide-react';
+import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, Eye, EyeOff, MessageCircle, XCircle, Bot, Radio, UserCog, ClipboardList, MessageSquarePlus, Activity, Workflow, Search, ChevronRight } from 'lucide-react';
 import api from '@/services/core/api';
 import IconActionButton from '@/components/base/IconActionButton';
 import NewTenantWizard from './NewTenantWizard';
@@ -17,6 +17,7 @@ import ClientMode from '../ClientMode';
 import OnboardingForms from '../OnboardingForms';
 import CustomerFeedbacks from '../CustomerFeedbacks';
 import AdminAtividade from '@/pages/Admin/Area/Auditoria';
+import { groupCatalogByTheme, itemLabel, matchesQuery, type CatalogItem } from '../featureCatalog';
 
 import { toast } from 'sonner';
 
@@ -357,19 +358,28 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
   );
 }
 
-interface FeatureItem { key: string; label?: string; name?: string; description?: string; category?: string; }
+type FeatureItem = CatalogItem;
 
 function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () => void }) {
   const [catalog, setCatalog] = useState<FeatureItem[]>([]);
   const [features, setFeatures] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  // Busca e seções recolhidas: são ~60 chaves em 7 temas. Aberto tudo de uma
+  // vez é a parede de interruptores que esta tela tinha; recolhido, o tema já
+  // diz quantas funções tem e quantas estão ligadas antes de alguém abrir.
+  const [query, setQuery] = useState('');
+  const [abertos, setAbertos] = useState<Record<string, boolean>>({});
+  const [savingTheme, setSavingTheme] = useState<string | null>(null);
 
   useEffect(() => {
     api.get(`/super/pooled_tenants/${tenant.id}/features`)
       .then(r => { setCatalog(r.data?.data?.catalog || []); setFeatures(r.data?.data?.features || {}); })
       .finally(() => setLoading(false));
   }, [tenant.id]);
+
+  // Ausência de chave = LIGADO (mesma regra do resolved_features no servidor).
+  const isOn = useCallback((key: string) => features[key] !== false, [features]);
 
   const toggle = async (key: string) => {
     const next = !features[key];
@@ -383,6 +393,38 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
       toast.error('Falha ao salvar a função.');
     } finally { setSavingKey(null); }
   };
+
+  // Liga/desliga um tema inteiro numa requisição só: o endpoint aceita várias
+  // chaves de uma vez, e uma chamada por interruptor deixaria o cliente meio
+  // ligado se a rede caísse no meio.
+  const toggleTheme = async (themeKey: string, keys: string[], next: boolean) => {
+    if (!keys.length) return;
+    const prev = features;
+    const patch: Record<string, boolean> = {};
+    for (const k of keys) patch[k] = next;
+    setSavingTheme(themeKey);
+    setFeatures(f => ({ ...f, ...patch }));
+    try {
+      const r = await api.patch(`/super/pooled_tenants/${tenant.id}/update_features`, { features: patch });
+      setFeatures(r.data?.data?.features || {});
+    } catch {
+      setFeatures(prev);
+      toast.error('Falha ao salvar as funções deste tema.');
+    } finally { setSavingTheme(null); }
+  };
+
+  // Durante a busca tudo fica aberto: recolhido, o resultado ficaria escondido
+  // atrás de um clique — e quem digitou já disse o que procura.
+  const buscando = query.trim().length > 0;
+  const seções = groupCatalogByTheme(catalog)
+    .map(s => ({
+      ...s,
+      menus: s.menus
+        .map(m => ({ ...m, all: m.all.filter(i => matchesQuery(i, query)) }))
+        .filter(m => m.all.length > 0),
+      all: s.all.filter(i => matchesQuery(i, query)),
+    }))
+    .filter(s => s.all.length > 0);
 
   // Regra de ENTRADA no funil por ORIGEM (tenant.settings.pipe_entry_sources): o
   // cliente escolhe quais origens de lead entram automático no pipeline. Fallback
@@ -856,23 +898,102 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
           )}
           {loading ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-violet-400" /></div>
-          ) : catalog.map(f => {
-            const on = features[f.key] !== false;
-            return (
-              <div key={f.key} className="flex items-center gap-3 px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-white/90 truncate">{f.label || f.name || f.key}</div>
-                  {f.description && <div className="text-xs text-white/40 truncate">{f.description}</div>}
-                </div>
-                <button onClick={() => toggle(f.key)} disabled={savingKey === f.key}
-                  className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${on ? 'bg-violet-600' : 'bg-white/15'}`}>
-                  {savingKey === f.key
-                    ? <Loader2 className="w-3 h-3 animate-spin text-white absolute top-1.5 left-3.5" />
-                    : <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${on ? 'left-5' : 'left-1'}`} />}
-                </button>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                <Search className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+                <input value={query} onChange={e => setQuery(e.target.value)}
+                  placeholder="Procurar função (ex: áudio, follow-up, bolsão)"
+                  className="flex-1 bg-transparent text-sm text-white placeholder:text-white/30 outline-none" />
+                {buscando && (
+                  <button onClick={() => setQuery('')} className="text-white/40 hover:text-white/80 flex-shrink-0">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
-            );
-          })}
+
+              {seções.length === 0 && (
+                <div className="px-3 py-6 text-center text-xs text-white/40">
+                  Nenhuma função com esse nome.
+                </div>
+              )}
+
+              {seções.map(secao => {
+                const chaves = secao.all.map(i => i.key);
+                const ligadas = chaves.filter(isOn).length;
+                const aberto = buscando || !!abertos[secao.key];
+                const salvandoTema = savingTheme === secao.key;
+
+                return (
+                  <div key={secao.key} className="rounded-lg overflow-hidden"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <button
+                      onClick={() => setAbertos(a => ({ ...a, [secao.key]: !a[secao.key] }))}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-white/[0.03]">
+                      <ChevronRight
+                        className={`w-3.5 h-3.5 text-white/40 flex-shrink-0 transition-transform ${aberto ? 'rotate-90' : ''}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm text-white/90">{secao.label}</div>
+                        {secao.hint && <div className="text-[11px] text-white/35 truncate">{secao.hint}</div>}
+                      </div>
+                      <span className={`text-[11px] flex-shrink-0 ${ligadas === 0 ? 'text-white/25' : 'text-white/45'}`}>
+                        {ligadas} de {chaves.length}
+                      </span>
+                    </button>
+
+                    {aberto && (
+                      <div className="px-2 pb-2 space-y-1.5">
+                        <div className="flex items-center gap-2 px-1 pb-0.5">
+                          {salvandoTema
+                            ? <Loader2 className="w-3 h-3 animate-spin text-violet-300" />
+                            : (
+                              <>
+                                <button onClick={() => toggleTheme(secao.key, chaves, true)}
+                                  className="text-[11px] text-violet-300 hover:text-violet-200">ligar tudo deste tema</button>
+                                <span className="text-white/20 text-[11px]">·</span>
+                                <button onClick={() => toggleTheme(secao.key, chaves, false)}
+                                  className="text-[11px] text-white/40 hover:text-red-300">desligar tudo</button>
+                              </>
+                            )}
+                        </div>
+
+                        {secao.menus.map(menu => (
+                          <div key={`${secao.key}-${menu.key}`} className="rounded-md overflow-hidden"
+                            style={{ background: 'rgba(0,0,0,0.20)' }}>
+                            {menu.all.map(f => {
+                              const éMenu = !!menu.toggle && f.key === menu.toggle.key;
+                              const on = isOn(f.key);
+                              return (
+                                <div key={f.key}
+                                  className={`flex items-center gap-3 py-2 pr-3 ${éMenu ? 'pl-3' : menu.toggle ? 'pl-7' : 'pl-3'}`}
+                                  style={éMenu ? { background: 'rgba(124,58,237,0.10)' } : undefined}>
+                                  <div className="flex-1 min-w-0">
+                                    <div className={`text-sm truncate ${éMenu ? 'text-white/90 font-medium' : 'text-white/75'}`}>
+                                      {itemLabel(f)}
+                                      {éMenu && (
+                                        <span className="ml-2 text-[10px] uppercase tracking-wide text-violet-300/80">menu inteiro</span>
+                                      )}
+                                    </div>
+                                    {f.description && <div className="text-xs text-white/40 truncate">{f.description}</div>}
+                                  </div>
+                                  <button onClick={() => toggle(f.key)} disabled={savingKey === f.key}
+                                    className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${on ? 'bg-violet-600' : 'bg-white/15'}`}>
+                                    {savingKey === f.key
+                                      ? <Loader2 className="w-3 h-3 animate-spin text-white absolute top-1.5 left-3.5" />
+                                      : <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${on ? 'left-5' : 'left-1'}`} />}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
       </div>
     </div>
