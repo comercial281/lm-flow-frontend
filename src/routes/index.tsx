@@ -31,6 +31,7 @@ import {
   PropertyInterests,
   AutomationsLayout,
   SalesAgents,
+  AssistenteIA,
   PortalsList,
   DashboardAppPage,
   Tutorials,
@@ -1180,6 +1181,23 @@ const AppRouter = () => {
               <PrivateRoute>
                 <CustomerRoute>
                   <LandingByIdEditor />
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
+
+          {/* Assistente de configuração da IA Vendedora: tela cheia, por etapas,
+              sem o menu lateral — o mesmo padrão dos editores de landing. Grava
+              direto nos campos da IA; quem quer configurar na mão sai pelo
+              "Configurar depois" e cai na tela de sempre. */}
+          <Route
+            path="/ia-vendedora/:id/assistente"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <Suspense fallback={outletSuspenseFallback}>
+                    <AssistenteIA />
+                  </Suspense>
                 </CustomerRoute>
               </PrivateRoute>
             }

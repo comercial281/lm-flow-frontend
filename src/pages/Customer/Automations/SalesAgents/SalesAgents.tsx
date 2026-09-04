@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Button, Input, Label, Textarea,
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -14,7 +15,6 @@ import {
   type SalesAgentDocument,
   type SalesAgentMode,
   type SalesMethod,
-  type GeneratedAgentConfig,
   type ActiveHours,
   type ActiveHoursMode,
   type ActiveHoursWindow,
@@ -44,6 +44,7 @@ import {
 } from '@/services/salesAgents/salesAgentsService';
 import { DOCUMENT_TOPICS } from '@/features/salesAgents/documentTopics';
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { WEEKDAYS } from '@/components/schedule/scheduleWindows';
 import type { ScheduleWindow } from '@/components/schedule/scheduleWindows';
@@ -91,19 +92,35 @@ export default function SalesAgents() {
   // (sync e audit) leem o código por regex: trocar o literal por uma constante
   // tira a chave do catálogo no deploy seguinte, o painel de Funções deixa de
   // oferecer o botão de liberar, e ninguém é avisado.
-  const insightsLiberado = useClientToggle('ia_insights');
+  // `isSuper ||`: a Leal Mídia sempre vê, como a aba de Landings. Sem isso a chave
+  // escondia as abas até de quem libera — o comentário dizia o contrário do código.
+  const isSuper = useIsSuperAdmin();
+  const insightsToggle = useClientToggle('ia_insights');
+  const insightsLiberado = isSuper || insightsToggle;
+
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const loadAgents = useCallback(async () => {
     setLoading(true);
     try {
       const list = await salesAgentsService.list();
       setAgents(list);
-      setSelected((prev) => (prev ? list.find((a) => a.id === prev.id) ?? null : null));
+      // `?agent=<id>` é como o assistente (tela cheia, rota própria) devolve a
+      // pessoa para a IA certa: as abas daqui são estado local, sem endereço.
+      // Lido uma vez e apagado da URL, senão o Voltar do navegador reabre a IA.
+      const wanted = searchParams.get('agent');
+      setSelected((prev) => {
+        if (wanted) return list.find((a) => a.id === wanted) ?? prev ?? null;
+        return prev ? list.find((a) => a.id === prev.id) ?? null : null;
+      });
+      if (wanted) setSearchParams({}, { replace: true });
     } catch {
       toast.error('Erro ao carregar os agentes');
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- searchParams é lido só no mount
   }, []);
 
   useEffect(() => {
@@ -117,6 +134,9 @@ export default function SalesAgents() {
       .catch(() => setInboxes([]));
   }, [loadAgents]);
 
+  // Cria a IA (desligada) e abre o assistente em tela cheia. Quem preferir
+  // configurar na mão sai por "Configurar depois" lá dentro e volta para cá com a
+  // IA nova selecionada — a IA existe nos dois caminhos.
   const createAgent = async () => {
     try {
       const agent = await salesAgentsService.create({
@@ -125,10 +145,7 @@ export default function SalesAgents() {
         enabled: false,
         qualification_questions: ['Orçamento', 'Prazo de compra', 'Região de interesse', 'Precisa de financiamento'],
       });
-      toast.success('Agente criado');
-      await loadAgents();
-      setSelected(agent);
-      setTab('config');
+      navigate(`/ia-vendedora/${agent.id}/assistente`);
     } catch {
       toast.error('Erro ao criar o agente');
     }
@@ -245,8 +262,16 @@ export default function SalesAgents() {
       setSelected(updated);
       setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
       toast.success('Salvo');
-    } catch {
-      toast.error('Erro ao salvar');
+    } catch (e) {
+      // O servidor sabe explicar (ex.: bloco do roteiro com marcador que ele não
+      // recebe). Os dois formatos de erro da API, e o de validação do modelo.
+      const r = (e as { response?: { data?: { error?: unknown; message?: string; errors?: unknown } } }).response?.data;
+      const detalhe =
+        (typeof r?.error === 'object' && (r.error as { message?: string })?.message) ||
+        (typeof r?.error === 'string' ? r.error : null) ||
+        (Array.isArray(r?.errors) ? (r.errors as unknown[]).map(String).join(' ') : null) ||
+        r?.message;
+      toast.error(detalhe ? `Não salvou: ${detalhe}` : 'Erro ao salvar');
     } finally {
       setSaving(false);
     }
@@ -401,93 +426,9 @@ export default function SalesAgents() {
 
 // ---------------- Config ----------------
 
-// Formulário -> JSON: o dono responde e o Claude monta a config. Aplica no agente.
-const WIZARD_QUESTIONS: { key: string; label: string; placeholder: string }[] = [
-  { key: 'nome_da_imobiliaria', label: 'Nome da imobiliária / da IA', placeholder: 'Ex: Imobiliária Aurora' },
-  { key: 'o_que_vende', label: 'O que vocês vendem/alugam e onde', placeholder: 'Ex: apartamentos de 2 e 3 quartos na zona sul de SP' },
-  { key: 'tom_de_voz', label: 'Tom de voz da marca', placeholder: 'Ex: amigável, direto, próximo' },
-  { key: 'diferenciais', label: 'Diferenciais', placeholder: 'Ex: atendimento rápido, visita no fim de semana' },
-  { key: 'faz_locacao', label: 'Trabalham com locação?', placeholder: 'Ex: não, só venda' },
-  { key: 'prova_social', label: 'Prova social / cases (opcional)', placeholder: 'Ex: a família Souza fechou em 2 semanas' },
-];
-
-function ConfigWizard({ onClose, onApply }: { onClose: () => void; onApply: (patch: Partial<SalesAgent>) => void }) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<GeneratedAgentConfig | null>(null);
-
-  const generate = async () => {
-    setLoading(true);
-    try {
-      const cfg = await salesAgentsService.generateConfig(answers);
-      setResult(cfg);
-    } catch {
-      toast.error('Não consegui gerar. Verifique a chave de IA e tente de novo.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const apply = () => {
-    if (!result) return;
-    onApply({
-      persona_role: result.persona_role,
-      persona_goal: result.persona_goal,
-      instructions: result.instructions,
-      greeting: result.greeting,
-      social_proof: result.social_proof,
-      sales_method: result.sales_method,
-      qualification_questions: result.qualification_questions,
-    });
-    toast.success('Config aplicada');
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-background rounded-lg border border-sidebar-border w-full max-w-lg max-h-[85vh] overflow-auto p-5 space-y-4"
-        onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold">Configurar a IA por formulário</h3>
-          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">✕</button>
-        </div>
-        {!result ? (
-          <>
-            <p className="text-xs text-muted-foreground">Responda o básico e a IA monta a persona, o tom, as instruções e as perguntas sozinha.</p>
-            {WIZARD_QUESTIONS.map((q) => (
-              <div key={q.key}>
-                <Label htmlFor={`w_${q.key}`} className="text-xs">{q.label}</Label>
-                <Textarea id={`w_${q.key}`} rows={2} placeholder={q.placeholder} value={answers[q.key] ?? ''}
-                  onChange={(e) => setAnswers((a) => ({ ...a, [q.key]: e.target.value }))} />
-              </div>
-            ))}
-            <div className="flex justify-end">
-              <Button type="button" onClick={generate} disabled={loading}>
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar config'}
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="text-xs text-muted-foreground">Revise o que a IA montou. Ao aplicar, substitui a persona, instruções e perguntas do agente.</p>
-            <div className="text-sm space-y-2">
-              <div><span className="font-medium">Persona:</span> {result.persona_role}</div>
-              <div><span className="font-medium">Objetivo:</span> {result.persona_goal}</div>
-              <div><span className="font-medium">Saudação:</span> {result.greeting}</div>
-              <div><span className="font-medium">Instruções:</span> <span className="text-muted-foreground">{result.instructions}</span></div>
-              <div><span className="font-medium">Perguntas:</span> {result.qualification_questions.join(' · ')}</div>
-              {result.social_proof && <div><span className="font-medium">Prova social:</span> {result.social_proof}</div>}
-            </div>
-            <div className="flex justify-between">
-              <Button type="button" variant="outline" onClick={() => setResult(null)}>Refazer</Button>
-              <Button type="button" onClick={apply}>Aplicar no agente</Button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
+// O antigo "Configurar a IA por formulário" (seis perguntas num modal, tudo
+// gerado pela IA) saiu em 2026-09-04: virou o assistente em tela cheia, por
+// etapas, que grava direto nos campos (`assistente/AssistenteIA.tsx`).
 
 function ConfigTab({
   agent, inboxes, saving, onChange, onSave,
@@ -499,20 +440,22 @@ function ConfigTab({
   onSave: (patch: Partial<SalesAgent>) => void;
 }) {
   const questionsText = (agent.qualification_questions ?? []).join('\n');
-  const [wizardOpen, setWizardOpen] = useState(false);
+  const navigate = useNavigate();
   // Estreia fechada e liberada imobiliária por imobiliária: quem reescreve um
   // bloco muda como a IA atende TODOS os leads daquele cliente. A Leal Mídia
-  // sempre vê, mesmo com a chave desligada.
-  const roteiroLiberado = useClientToggle('ia_playbook');
+  // sempre vê, mesmo com a chave desligada (`isSuper ||`, como a aba de Landings —
+  // sem ele a seção ficava escondida até de quem libera).
+  const isSuper = useIsSuperAdmin();
+  const roteiroToggle = useClientToggle('ia_playbook');
+  const roteiroLiberado = isSuper || roteiroToggle;
 
   return (
     <div className="space-y-5">
       <div className="flex justify-end">
-        <Button type="button" variant="outline" size="sm" onClick={() => setWizardOpen(true)}>
-          Configurar por formulário
+        <Button type="button" variant="outline" size="sm" onClick={() => navigate(`/ia-vendedora/${agent.id}/assistente`)}>
+          <Sparkles className="h-3.5 w-3.5" /> Abrir o assistente
         </Button>
       </div>
-      {wizardOpen && <ConfigWizard onClose={() => setWizardOpen(false)} onApply={onSave} />}
       <div>
         <Label>Como a IA atua</Label>
         <div className="grid grid-cols-1 gap-2 mt-1">
