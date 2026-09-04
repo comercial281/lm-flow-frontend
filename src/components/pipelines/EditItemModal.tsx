@@ -1016,14 +1016,25 @@ export default function EditItemModal({
                           <div className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${historyDotColor(ev.id)}`} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-1">
-                              <span className="font-medium truncate">{ev.eventName}</span>
+                              <span className="font-medium break-words">{ev.eventName}</span>
                               <span className="text-[10px] text-muted-foreground shrink-0 whitespace-nowrap">
                                 {new Date(ev.occurredAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
                             {ev.properties && Object.keys(ev.properties).length > 0 && (
-                              <p className="text-muted-foreground truncate">
-                                {Object.entries(ev.properties).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                              // Quebra as linhas em vez de cortar com reticências. O subtítulo é a
+                              // ÚNICA explicação de eventos como o "fora do horário" e o "ninguém
+                              // assumiu" da roleta — o texto do servidor tem uma frase inteira ali
+                              // ("O lead chegou fora do horário... ele NÃO volta sozinho para o
+                              // sorteio"), e com `truncate` ela morria no primeiro terço, sem
+                              // tooltip e sem nenhuma outra tela onde lê-la.
+                              //
+                              // Pelo mesmo motivo caiu o limite de 3 propriedades: ele existia
+                              // porque só cabia uma linha. A ORDEM continua importando (o servidor
+                              // manda De / Para / Por antes do nome do funil), agora só para
+                              // decidir o que se lê primeiro, não o que se lê.
+                              <p className="text-muted-foreground whitespace-pre-wrap break-words">
+                                {Object.entries(ev.properties).map(([k, v]) => `${k}: ${v}`).join(' · ')}
                               </p>
                             )}
                           </div>
