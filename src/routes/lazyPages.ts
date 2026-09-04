@@ -38,6 +38,7 @@ export const PropertyCaptureRequests = lazyWithRetry(() => import('@/pages/Custo
 export const PropertyInterests = lazyWithRetry(() => import('@/pages/Customer/PropertyInterests').then(m => ({ default: m.PropertyInterests })));
 export const AutomationsLayout = lazyWithRetry(() => import('@/pages/Customer/Automations/AutomationsLayout'));
 export const SalesAgents = lazyWithRetry(() => import('@/pages/Customer/Automations/SalesAgents/SalesAgents'));
+export const AssistenteIA = lazyWithRetry(() => import('@/pages/Customer/Automations/SalesAgents/assistente/AssistenteIA'));
 export const PortalsList = lazyWithRetry(() => import('../pages/Customer/Settings/Portals/PortalsList'));
 export const DashboardAppPage = lazyWithRetry(() => import('../pages/Customer/DashboardApp'));
 export const Tutorials = lazyWithRetry(() => import('@/pages/Customer/Tutorials'));

@@ -1300,6 +1300,86 @@ Armadilhas:
 só persona, tom e perguntas de qualificação — não os pontos-chave. As 20 perguntas
 combinadas com o dono são a segunda metade desta leva.
 
+## O assistente da IA Vendedora: tela cheia, por etapas (desde 2026-09-04)
+
+O dono do produto olhou o *Configurar a IA por formulário* — seis perguntas num
+modal, tudo gerado pela IA, sete campos aplicados — e disse: *"é horrível; o
+ideal seria algo na tela toda, com etapas, mais premium e mais detalhado, para
+compor todo esse perfil único da IA"*. E decidiu duas coisas: **grava direto nos
+campos** (a IA só entra para redigir texto, a pedido, com revisão) e **abre na
+criação, mas tem que dar para criar sem**.
+
+O que aparece na tela:
+
+- **O `+` cria a IA (desligada) e abre o assistente**, em tela cheia, sem o menu
+  lateral. Quem quiser configurar na mão sai por *Configurar depois, na mão* e
+  cai na tela de sempre com a IA nova selecionada. A IA existe nos dois caminhos.
+- **O botão *Configurar por formulário* virou *Abrir o assistente*** e abre a
+  mesma tela PREENCHIDA com o que a IA já tem.
+- **Seis etapas**, num trilho à esquerda com progresso: *Quem é a IA*, *O que
+  vocês vendem*, *O rumo da conversa*, *Limites*, *Operação* e *Revisão*. Rodapé
+  *Voltar / Continuar*; a última é *Concluir e gravar*.
+- **A IA aparece UMA vez**, no botão *Redigir com IA* da primeira etapa: manda o
+  que a pessoa contou (imobiliária, o que vende, tom, diferenciais) e preenche
+  só os quatro textos de apresentação, para revisar nos próprios campos. Custo é
+  escolha.
+- **Rascunho no navegador, por IA.** Fechar a aba no passo 4 não perde os três
+  anteriores; ao voltar, a faixa *Retomamos de onde você parou* oferece recomeçar
+  do que está gravado. Apagado no *Concluir* e no *Configurar depois*.
+- **A Revisão mostra tudo por etapa**, com *Editar* voltando ao passo, e diz o que
+  está no padrão de fábrica em itálico. Ao concluir: *"Perfil salvo. A IA continua
+  desligada — ligue quando quiser testar."*
+
+Decisões (não reabrir sem o dono pedir):
+
+- **UM PATCH no Concluir, direto no serviço.** O payload é montado por função
+  PURA (respostas → campos), testada sozinha, e **não passa pelo `saveAgent`** da
+  tela — aquela lista campo-a-campo descarta o que não está nela, e é exatamente
+  o que este assistente não pode sofrer.
+- **Só viaja o que MUDOU.** Campo igual ao gravado não entra; numa IA nova, campo
+  em branco NÃO é gravado (vazio herda o padrão). Apagar um texto que existia
+  grava `null` de propósito.
+- **O `playbook` vai INTEIRO**, mesclado por cima do que a IA já tem. Só o modo
+  da pergunta de intenção, o termo do imóvel e os pontos-chave são trocados;
+  bloco reescrito na seção *Roteiro da conversa* atravessa intacto.
+- **Tipo de venda `lancamento` e próximo passo `visita` não são gravados**, nem
+  o termo que já é o padrão do tipo — mesma regra da seção Roteiro.
+- **O assistente não liga ninguém.** Ligar continua sendo o interruptor da tela
+  de configuração.
+- **A rota fica FORA do layout principal** (só `PrivateRoute > CustomerRoute`),
+  como o editor de landing. Não tem chave de funcionalidade: é a porta de
+  entrada de uma tela que já existe.
+- **O rumo volta pela query `?agent=<id>`**, lida uma vez no mount da tela de
+  IAs e apagada da URL com `replace`. As abas daquela tela são estado local, sem
+  endereço; sem isso, quem saía do assistente caía na lista sem IA selecionada.
+
+Armadilhas:
+
+1. **Campo novo no assistente entra no mapeamento, não na tela.** Quem adicionar
+   uma pergunta escreve a regra "o que vira gravação" em
+   `assistente/assistenteMapping.ts` e o caso no spec ao lado — é lá que mora
+   "vazio não grava" e "igual não grava".
+2. **Os dois editores de horário na etapa de Operação têm prefixos próprios**
+   (`as_win` e `as_fu_win`). Prefixo repetido faz o rótulo *Das* de um focar o
+   campo do outro. Spec reprova.
+3. **Trocar o funil LIMPA o mapa de momentos e as duas colunas do follow-up.**
+   São colunas de outro funil; o servidor as recusaria uma a uma e a pessoa veria
+   as escolhas guardadas e nenhum card andando.
+4. **A carga do roteiro é opcional.** Contra servidor antigo, rótulos, dicas,
+   tipos de venda e próximos passos vêm de listas de reserva desta tela — que
+   precisam bater com o servidor.
+5. **O que a pessoa contou da imobiliária não tem campo próprio na IA.** Se ela
+   não redigir nem escrever as Instruções, aquilo vira as Instruções em prosa
+   simples na gravação — rede para não perder o que foi contado, não redação.
+6. **A conta de padeiro da etapa de Operação usa o ritmo que a IA já tem** (o
+   gotejamento não é editado no assistente) sobre a janela que está sendo
+   escolhida.
+
+**Fora desta leva, por decisão do dono:** a frase de abertura no modo *Nunca* (o
+campo *Como ela pergunta* some e não existe campo para a pergunta aberta — quem
+quiser a frase exata reescreve o bloco da abertura na seção Roteiro); e os dois
+campos do book do imóvel que a tela mostra e não salva.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
