@@ -9,9 +9,17 @@ import {
   type LeadSubmitPayload,
 } from '@/features/landing/blocks';
 
+/** Rastreio já RESOLVIDO pelo servidor: o pixel efetivo (que pode ser o cadastrado
+ *  em Pixel e CAPI) e o NOME de cada evento — a página não deduz nada e não tem
+ *  mais nome de evento escrito dentro dela. Vazio = não dispara aquele momento. */
 interface LandingPixel {
   pixel_id?: string | null;
-  events?: { page_view?: boolean; lead?: boolean; qualified?: boolean; disqualified?: boolean };
+  events?: {
+    page_view?: boolean;
+    submit?: string | null;
+    qualified?: string | null;
+    disqualified?: string | null;
+  };
 }
 
 interface PublicLandingDTO {
@@ -81,10 +89,30 @@ export default function LandingPublicPage() {
   const [property, setProperty] = useState<LandingProperty | null>(null);
   const [pixel, setPixel] = useState<LandingPixel | null>(null);
 
-  // Dispara um evento no Pixel Meta (se carregado). standard = track, custom = trackCustom.
-  const trackPixel = (event: string, custom = false) => {
+  // Eventos padrão da Meta vão em `track`; o resto é evento personalizado e vai
+  // em `trackCustom` — mandar um pelo caminho do outro faz a Meta descartar.
+  const META_STANDARD_EVENTS = [
+    'PageView', 'Lead', 'Contact', 'Schedule', 'Purchase', 'CompleteRegistration',
+    'SubmitApplication', 'ViewContent', 'Search', 'AddToCart', 'InitiateCheckout',
+  ];
+
+  // Dispara um evento no Pixel Meta (se carregado). O `eventID` é o MESMO que
+  // vai para o servidor na captura: é ele que faz a Meta juntar os dois envios e
+  // contar uma conversão só.
+  const trackPixel = (event: string, eventId?: string) => {
     const fbq = (window as unknown as { fbq?: (...a: unknown[]) => void }).fbq;
-    if (fbq) fbq(custom ? 'trackCustom' : 'track', event);
+    if (!fbq || !event) return;
+    const method = META_STANDARD_EVENTS.includes(event) ? 'track' : 'trackCustom';
+    fbq(method, event, {}, eventId ? { eventID: eventId } : undefined);
+  };
+
+  // Identificador do envio, gerado uma vez e mandado junto do lead. `randomUUID`
+  // não existe em contexto sem HTTPS nem em navegador antigo — e sem ele o
+  // evento sairia sem par, que é o mesmo lead contado duas vezes.
+  const newEventId = () => {
+    const c = window.crypto as Crypto | undefined;
+    if (c?.randomUUID) return `lp-${c.randomUUID()}`;
+    return `lp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   };
 
   const cookie = (name: string) =>
@@ -112,6 +140,7 @@ export default function LandingPublicPage() {
     if (!tenant || !slug) return { failed: true };
     const base = import.meta.env.VITE_API_URL as string;
     const params = new URLSearchParams(window.location.search);
+    const eventId = newEventId();
     let res: Response;
     try {
       res = await fetch(`${base}/api/public/v1/landing/${encodeURIComponent(slug)}/leads`, {
@@ -132,6 +161,12 @@ export default function LandingPublicPage() {
               answers: payload.answers,
               fbp: cookie('_fbp') ?? null,
               fbc: cookie('_fbc') ?? null,
+              // Quem chega pelo anúncio com cookie bloqueado ainda carrega o
+              // clique no endereço — é a última chance de atribuição.
+              fbclid: params.get('fbclid') ?? null,
+              // O servidor manda a conversão com ESTE identificador, o mesmo dos
+              // eventos abaixo: sem ele, o mesmo lead contaria duas vezes.
+              event_id: eventId,
               referrer: document.referrer || null,
               landing_url: window.location.href,
             },
@@ -150,12 +185,16 @@ export default function LandingPublicPage() {
     try {
       const json = (await res.json()) as { data?: { qualification?: 'qualified' | 'disqualified' } };
       const qualification = json?.data?.qualification;
-      // Eventos de conversão no Pixel.
+      // Eventos de conversão no Pixel. Os nomes vêm do servidor — é ele quem
+      // sabe o que o gestor escolheu, e é ele que manda os mesmos pela API de
+      // Conversões com estes identificadores.
       const ev = pixel?.events ?? {};
       if (pixel?.pixel_id) {
-        if (ev.lead !== false) trackPixel('Lead');
-        if (qualification === 'qualified' && ev.qualified !== false) trackPixel('LeadQualificado', true);
-        if (qualification === 'disqualified' && ev.disqualified) trackPixel('LeadDesqualificado', true);
+        if (ev.submit) trackPixel(ev.submit, eventId);
+        if (qualification === 'qualified' && ev.qualified) trackPixel(ev.qualified, `${eventId}-qualified`);
+        if (qualification === 'disqualified' && ev.disqualified) {
+          trackPixel(ev.disqualified, `${eventId}-disqualified`);
+        }
       }
       // Fatia 4b: se a landing usa páginas de resultado com URL própria,
       // redireciona (PageView próprio no Pixel) em vez da tela in-page.

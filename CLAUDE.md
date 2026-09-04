@@ -1380,6 +1380,71 @@ campo *Como ela pergunta* some e não existe campo para a pergunta aberta — qu
 quiser a frase exata reescreve o bloco da abertura na seção Roteiro); e os dois
 campos do book do imóvel que a tela mostra e não salva.
 
+## A landing avisa a Meta pelos DOIS caminhos (desde 2026-09-04)
+
+Pergunta do dono do produto: *"nas LPs que a gente cria, o cara preenche o forms
+e cai no CRM, mas o Facebook recebe o lead?"* — recebia **só pelo navegador**
+dele, e só com o Pixel preenchido em *Destino do lead*. Bloqueador, iOS e aba
+fechada no meio do redirecionamento somem com a conversão, e não havia segunda
+via: a conversão pelo servidor (API de Conversões) só saía quando o card **muda
+de coluna** no funil, então quem não arrasta card nunca teve conversão pelo
+caminho confiável. E os cookies do clique que a página já coletava chegavam ao
+servidor e ninguém lia — o evento por coluna casa só por telefone/e-mail, sem
+atribuição ao anúncio.
+
+O que aparece na tela, no botão **Destino do lead** (no cartão da landing, na aba
+*Landings de anúncio* do Site Builder), seção **Rastreio (Pixel Meta)**:
+
+- **Dropdown *Enviar para***, no lugar do campo de ID solto: *Não rastrear esta
+  landing* / *Pixel do CRM — <número>* / *Outro pixel (só desta landing)*. O do
+  CRM é o cadastrado em *Automações → Pixel e CAPI*, que é onde vive o Token —
+  escolhendo ele, não há nada a digitar.
+- **Três seletores de evento**, no lugar das quatro caixinhas: ao enviar o
+  formulário, quando a régua aprova e quando ela reprova. A lista é a MESMA de
+  *Pixel e CAPI* — antes a landing disparava *LeadQualificado* e
+  *LeadDesqualificado* (nomes inventados) enquanto o CRM mandava *Qualificado* e
+  *Desqualificado*: para a Meta eram quatro coisas diferentes, e o aprendizado se
+  dividia em quatro pilhas pequenas.
+- **Botão *Testar conexão***, que manda um lead de amostra pelo pixel escolhido e
+  responde em português se a Meta aceitou. É a mesma conferência da tela de Pixel
+  e CAPI — reaproveitada de propósito.
+- A caixinha do PageView continua.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Cada evento sai pelos DOIS caminhos, sempre**, com o mesmo identificador: a
+  Meta junta e conta uma conversão só. Não virou pergunta na tela porque não é
+  escolha — o servidor é o que continua chegando quando o navegador falha.
+- **Os dois campos de qualificação nascem em *Não disparar nada*.** Marcar ali o
+  mesmo evento que o corretor usa no card faz o mesmo lead entrar duas vezes no
+  público de semelhantes, e o segundo (que vale mais) se dilui. A tela avisa isso
+  embaixo do campo; quem quiser separar usa um nome próprio para o formulário.
+- **Landing publicada não muda de comportamento.** Sem os campos novos, o pixel
+  preenchido continua valendo como *outro pixel* e as caixinhas antigas viram os
+  MESMOS nomes que a página disparava (inclusive o desqualificado desligado, como
+  a caixinha nascia). Trocar o nome de um evento em produção zera o aprendizado da
+  campanha que roda em cima dele.
+- **Campo do pixel vazio continua sendo "não rastreia"**, nunca "usa o do CRM":
+  virar isso ligaria rastreio em landing que ninguém configurou.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`,
+   `saas-multitenant`): o envio pelo servidor, o rastreio resolvido e o teste
+   moram lá. Contra o servidor antigo a página não recebe os nomes de evento e
+   **não dispara nada** — o formato que ela lê mudou.
+2. **A página NÃO tem mais nome de evento escrito dentro dela.** Quem diz o que
+   disparar é o servidor, que é quem manda os mesmos eventos pela API de
+   Conversões — nome montado aqui seria a divergência de sempre.
+3. **O identificador do envio é gerado uma vez e viaja junto do lead.** Gerar de
+   novo, ou esquecer de mandá-lo, faz o mesmo lead contar duas vezes.
+4. **Evento personalizado vai por `trackCustom`, evento padrão por `track`.**
+   Trocar um pelo outro faz a Meta descartar em silêncio.
+5. **A leitura da configuração de Pixel e CAPI é de fundo e não grita**: cargo sem
+   acesso a ela só não vê a opção de herdar o pixel — a janela continua inteira.
+6. **Isto não é `featureKey` nem `clientToggleKey`** — é configuração da landing.
+   Os scanners do catálogo não entram nesta história.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
