@@ -1233,6 +1233,73 @@ Armadilhas:
    do catálogo REPROVA este build enquanto `ia_playbook` não existir no catálogo
    servido pela API — foi o que aconteceu aqui, e ele estava fazendo o trabalho dele.
 
+## Os pontos-chave da venda: a IA vira a SUA IA (desde 2026-09-04)
+
+Depois de a seção *Roteiro da conversa* subir, o dono do produto apontou o que
+faltava: *"o modelo deve ter a fundação da venda consultiva implantada, mas as
+variáveis vão precisar existir e serem consideradas pro agente ser de fato
+personalizado"*. O método da casa não tinha um encaixe sequer — todos os exemplos
+eram texto fixo, inclusive *"tá procurando pra morar ou investir?"* — e o que a
+imobiliária preenchia em *Perguntas de qualificação* entrava em OUTRO lugar do
+comando, numa segunda lista. A IA recebia os dois e escolhia.
+
+O que mudou na tela, em *IA Vendedora → Configuração → Roteiro da conversa*:
+
+- **Bloco *Pontos-chave da venda***, logo abaixo do seletor de moradia/investimento:
+  *Tipo de venda*, *Próximo passo que a IA busca*, *Perguntas que seus corretores
+  fazem primeiro* (uma por linha), *O que dói no seu cliente-tipo*, *Quando o lead
+  está pronto pro próximo passo*, e *Objeções e como vocês respondem* (lista de
+  pares, com as seis de fábrica como referência). É o caminho NORMAL de
+  personalizar. Cada campo entra no lugar de um exemplo de fábrica DENTRO do
+  método; vazio = o exemplo da casa.
+- **Os blocos do comando passaram a ser mostrados como a IA vai LER** (com os
+  pontos-chave já no lugar), em leitura. O botão *Reescrever* abre o texto cru,
+  com as pílulas do que aquele bloco aceita entre chaves.
+- **Marcador que o bloco não aceita é recusado ao salvar**, com o motivo vindo do
+  servidor no aviso — antes ia literal para a IA (`{termo_imovel}` como texto).
+- **A aba *Princípios* do painel raiz lista os TREZE blocos**, em dois grupos: *O
+  alicerce da venda* (o método, a condução, as objeções, a visita) e *Regras da
+  casa*. Editado ali, vale em todo cliente; os encaixes ficam à mostra porque
+  apagar um tira o ponto-chave de TODO cliente.
+- **Conserto que veio junto:** a seção e as abas *Sugestões/Relatórios* ficavam
+  escondidas da própria Leal Mídia sem a chave ligada, ao contrário do que o
+  comentário e este arquivo diziam. Agora é `isSuper || useClientToggle(...)`,
+  como a aba de Landings. Há spec.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Os pontos-chave viajam DENTRO do `playbook`** (`vars`), pelo mesmo campo que já
+  entra no `saveAgent` com `in`. Nada novo na lista campo-a-campo — e por isso
+  mesmo há spec que reprova quem os mover para campo solto.
+- **Tipo de venda e próximo passo em `lancamento`/`visita` NÃO são gravados**: são o
+  padrão de fábrica, e gravar o padrão faria a tela mostrar "escolhido" onde nada
+  foi escolhido.
+- **A lista de objeções vazia mostra as seis de fábrica pelo nome**, não um campo
+  em branco: campo em branco parece "sem objeção nenhuma", e a IA continua com as
+  seis.
+- **O texto resolvido vem do servidor.** A tela não monta o comando; mostrá-lo
+  montado aqui seria a divergência que a seção veio acabar.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`,
+   `saas-multitenant`): o `GET playbook` novo devolve `resolved`, `allowed_markers`,
+   `vars` e `slot_defaults`. Contra o servidor antigo, a seção abre com os blocos em
+   branco e sem os pontos-chave.
+2. **`commitVars` limpa antes de comparar.** Sem isso, sair de um campo sem mudar
+   nada gravaria o mesmo hash e recarregaria a seção — e apagar a última objeção
+   deixaria `objecoes: []` no banco em vez de tirar a chave (que é o que significa
+   "voltei às de fábrica").
+3. **O `resolved` de cada bloco é `<pre>` com `whitespace-pre-wrap`**, não Textarea
+   desabilitada: o texto tem recuo que importa (as camadas do SPIN) e o campo
+   precisa ser visivelmente de leitura.
+4. **Objeção sem resposta (ou vice-versa) some ao salvar** — o servidor descarta o
+   par incompleto. A tela deixa escrever pela metade, mas não grava.
+
+**Dívida conhecida:** o *Configurar por formulário* ainda tem 6 perguntas e preenche
+só persona, tom e perguntas de qualificação — não os pontos-chave. As 20 perguntas
+combinadas com o dono são a segunda metade desta leva.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,

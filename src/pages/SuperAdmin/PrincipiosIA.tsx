@@ -5,17 +5,18 @@ import { Loader2, RotateCcw, ShieldCheck } from 'lucide-react';
 import { playbookPrinciplesService, type PlaybookPrinciple } from '@/services/superAdmin/globalBrainService';
 
 /**
- * Os PRINCÍPIOS do comando da IA Vendedora — as regras que valem em TODA
- * imobiliária: não recomeçar a conversa, não prometer material que não existe, o
- * jeito de escrever no WhatsApp, a triagem do contato.
+ * O COMANDO da IA Vendedora, editável pela Leal Mídia — os TREZE blocos.
  *
- * Editados aqui, valem em todos os clientes de uma vez. Imobiliária nenhuma
- * alcança este texto.
+ * Desde 2026-09-04 entram aqui também os blocos de ROTEIRO (o método de venda, a
+ * condução, as objeções, a doutrina de visita): o alicerce é ativo da casa. O que
+ * é de cada imobiliária são os PONTOS-CHAVE — as perguntas dela, as objeções dela,
+ * o tipo de venda — que preenchem os encaixes do texto ({situacao},
+ * {lista_objecoes}, {lead_pronto}...). Esses moram na tela da IA Vendedora de
+ * cada cliente. Editado aqui, vale em todos os clientes de uma vez.
  *
- * O ROTEIRO de venda (o que perguntar, como ramificar, qual o próximo passo) NÃO
- * mora aqui: ele é de cada cliente e vive na tela da IA Vendedora dele. A
- * separação é estrutural — misturar as duas faria uma melhoria de método
- * sobrescrever a peculiaridade de uma imobiliária, e vice-versa.
+ * A separação que ficou: a Leal Mídia manda no TEXTO, a imobiliária manda no
+ * RECHEIO. Por isso os encaixes ficam à mostra aqui — são o que precisa ser
+ * preservado ao reescrever; apagar um encaixe tira o ponto-chave de TODO cliente.
  *
  * Antes desta tela, todo este texto era código: mudar uma vírgula exigia deploy,
  * e não havia como sequer LER o que a IA recebe.
@@ -63,8 +64,13 @@ export default function PrincipiosIA() {
       setBlocks((prev) => (prev ?? []).map((b) => (b.key === block.key ? updated : b)));
       setDraft((d) => { const c = { ...d }; delete c[block.key]; return c; });
       toast.success(content ? 'Princípio salvo — vale em todos os clientes.' : 'Voltou ao padrão da casa.');
-    } catch {
-      toast.error('Não consegui salvar esse princípio.');
+    } catch (e) {
+      const r = (e as { response?: { data?: { error?: unknown; message?: string } } }).response?.data;
+      const detalhe =
+        (typeof r?.error === 'object' && (r.error as { message?: string })?.message) ||
+        (typeof r?.error === 'string' ? r.error : null) ||
+        r?.message;
+      toast.error(detalhe ? `Não salvou: ${detalhe}` : 'Não consegui salvar esse bloco.');
     } finally {
       setSavingKey(null);
     }
@@ -94,13 +100,19 @@ export default function PrincipiosIA() {
           <ShieldCheck className="h-4 w-4" /> Valem em todos os clientes
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          São as regras que não mudam de imobiliária pra imobiliária. O roteiro de venda — o que
-          perguntar, como conduzir, qual o próximo passo — é de cada cliente e fica na tela da IA
-          Vendedora dele. Campo em branco volta ao padrão da casa.
+          O alicerce da venda e as regras da casa. Os trechos entre chaves são os encaixes
+          que cada imobiliária preenche na tela da IA Vendedora dela (as perguntas dela, as
+          objeções dela, o tipo de venda) — apagar um encaixe tira o ponto-chave de TODO
+          cliente. Campo em branco volta ao padrão da casa.
         </p>
       </div>
 
-      {(blocks ?? []).map((block) => {
+      {(['flow', 'principle'] as const).map((kind) => (
+        <div key={kind} className="space-y-4">
+          <p className="text-sm font-semibold">
+            {kind === 'flow' ? 'O alicerce da venda' : 'Regras da casa'}
+          </p>
+          {(blocks ?? []).filter((b) => (b.kind ?? 'principle') === kind).map((block) => {
         const value = draft[block.key] ?? block.content;
 
         return (
@@ -131,13 +143,24 @@ export default function PrincipiosIA() {
               onChange={(e) => setDraft((d) => ({ ...d, [block.key]: e.target.value }))}
               onBlur={(e) => { void save(block, e.target.value); }}
             />
+            {(block.allowed_markers ?? []).length > 0 && (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Este bloco aceita:{' '}
+                {block.allowed_markers.map((m) => (
+                  <code key={m} className="mr-1 rounded bg-muted px-1 py-0.5 text-[10px]">{`{${m}}`}</code>
+                ))}
+              </p>
+            )}
           </div>
         );
-      })}
+          })}
+        </div>
+      ))}
 
       <p className="text-[11px] text-muted-foreground">
-        Os trechos entre chaves são preenchidos na hora da conversa. Apagá-los tira a informação
-        do texto que a IA recebe.
+        Os trechos entre chaves são preenchidos na hora da conversa — pelos pontos-chave da
+        imobiliária ou pelo exemplo de fábrica. Marcador que o bloco não aceita é recusado ao
+        salvar, porque iria como texto literal para a IA.
       </p>
     </div>
   );

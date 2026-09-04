@@ -117,7 +117,7 @@ export interface SalesAgent {
    * texto em uso de cada bloco é o endpoint `playbook`, não este campo — aqui só
    * viaja o que foi reescrito.
    */
-  playbook?: Record<string, string>;
+  playbook?: AgentPlaybookConfig;
   /** Desempate quando o mesmo canal tem mais de um agente (maior ganha). */
   priority: number;
   /** Follow-up respeita TAMBÉM o horário de atuação, além da janela diurna fixa. */
@@ -314,23 +314,72 @@ export interface UsageLimits {
 }
 
 /**
- * Um bloco do comando da IA. `content` é o que ela recebe HOJE (o reescrito, ou
- * o de fábrica); `factory_default` é o que o "voltar ao padrão" restaura.
+ * Um bloco do comando da IA.
+ *
+ * `content` é o texto EM USO ainda com os encaixes ({situacao}, {lista_objecoes}...)
+ * — é o que se reescreve. `resolved` é o que a IA de fato lê, com os pontos-chave
+ * desta imobiliária já no lugar. `factory_default` (cru, com os encaixes) é o que
+ * o "voltar ao padrão" restaura. `allowed_markers` é o que o bloco aceita entre
+ * chaves — marcador fora da lista é recusado pelo servidor.
  */
 export interface PlaybookBlock {
   key: string;
   label: string;
   content: string;
+  resolved: string;
   factory_default: string;
   customized: boolean;
+  allowed_markers: string[];
 }
+
+export interface PlaybookObjection {
+  objecao: string;
+  resposta: string;
+}
+
+/**
+ * Os PONTOS-CHAVE da venda desta imobiliária — o que preenche os encaixes do
+ * alicerce. Chave ausente = exemplo de fábrica.
+ */
+export interface PlaybookVars {
+  tipo_venda?: string;
+  perguntas_situacao?: string[];
+  dor_tipica?: string;
+  lead_pronto?: string;
+  proximo_passo?: string;
+  objecoes?: PlaybookObjection[];
+}
+
+/**
+ * O que viaja no campo `playbook` do agente: os blocos reescritos (texto), o
+ * modo da pergunta de intenção e os pontos-chave em `vars`.
+ */
+export type AgentPlaybookConfig = Record<string, string | PlaybookVars | undefined>;
 
 /** sempre / só na abertura / nunca. */
 export type IntentQuestionMode = 'always' | 'opening_only' | 'never';
 
+export interface PlaybookOption {
+  value: string;
+  label: string;
+}
+
 export interface AgentPlaybook {
   intent_question_mode: IntentQuestionMode;
   intent_question_modes: IntentQuestionMode[];
+  vars: PlaybookVars;
+  slot_defaults: {
+    tipo_venda: string;
+    perguntas_situacao: string;
+    dor_tipica: string;
+    lead_pronto: string;
+    proximo_passo: string;
+    objecoes: PlaybookObjection[];
+  };
+  var_labels: Record<string, string>;
+  var_hints: Record<string, string>;
+  sale_types: PlaybookOption[];
+  next_steps: PlaybookOption[];
   blocks: PlaybookBlock[];
 }
 
@@ -431,7 +480,7 @@ export interface SalesAgentPayload {
   /** Teto de curtidas por conversa. Zero desliga a curtida. */
   reaction_max_per_conversation?: number | null;
   /** O roteiro reescrito para este cliente. `{}` = tudo no padrão de fábrica. */
-  playbook?: Record<string, string>;
+  playbook?: AgentPlaybookConfig;
 }
 
 export interface SalesAgentDocument {
