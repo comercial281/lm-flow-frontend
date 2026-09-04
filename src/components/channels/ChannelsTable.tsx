@@ -11,11 +11,14 @@ export default function ChannelsTable({
   loading,
   onSettings,
   onDelete,
+  canDelete = true,
 }: {
   channels: Inbox[];
   loading?: boolean;
   onSettings?: (inbox: Inbox) => void;
   onDelete: (inbox: Inbox) => void;
+  // Ver ChannelCard: excluir canal é do gestor.
+  canDelete?: boolean;
 }) {
   const { t } = useLanguage('channels');
 
@@ -74,7 +77,9 @@ export default function ChannelsTable({
 
   const actions: TableAction<Inbox>[] = [
     ...(onSettings ? [{ label: t('actions.configure'), onClick: onSettings, icon: <Settings className="h-4 w-4" /> }] : []),
-    { label: t('actions.delete'), onClick: onDelete, icon: <Trash2 className="h-4 w-4" />, variant: 'destructive' },
+    ...(canDelete
+      ? [{ label: t('actions.delete'), onClick: onDelete, icon: <Trash2 className="h-4 w-4" />, variant: 'destructive' }]
+      : []),
   ] as TableAction<Inbox>[];
 
   return (

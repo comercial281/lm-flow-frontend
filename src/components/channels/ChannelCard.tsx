@@ -15,9 +15,13 @@ type ChannelCardProps = {
   // Configurações básicas, como em qualquer canal no ar).
   onSettings: (inbox: Inbox, tab?: string) => void;
   onDelete: (inbox: Inbox) => void;
+  // Excluir canal é do gestor. Quem só ATENDE no número abre a tela para ver o
+  // estado e religar — mostrar a lixeira para ele seria um botão vermelho que
+  // só sabe recusar.
+  canDelete?: boolean;
 };
 
-export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete }: ChannelCardProps) {
+export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete, canDelete = true }: ChannelCardProps) {
   const { t } = useLanguage('channels');
   const typeName = inbox.channel_type
     ? getChannelDisplayName(inbox.channel_type, inbox.provider)
@@ -109,15 +113,17 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete }:
             <Settings className="h-3.5 w-3.5 mr-1" />
             {t('actions.configure')}
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 px-2 text-red-500 hover:text-red-400 hover:bg-red-500/10"
-            disabled={isDeleting === inbox.id}
-            onClick={() => onDelete(inbox)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {canDelete && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2 text-red-500 hover:text-red-400 hover:bg-red-500/10"
+              disabled={isDeleting === inbox.id}
+              onClick={() => onDelete(inbox)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     </Card>

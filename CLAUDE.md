@@ -1233,6 +1233,69 @@ Armadilhas:
    do catálogo REPROVA este build enquanto `ia_playbook` não existir no catálogo
    servido pela API — foi o que aconteceu aqui, e ele estava fazendo o trabalho dele.
 
+## O corretor vê e religa o número dele (desde 2026-09-04)
+
+O dono do produto: *"o corretor atribuído de verdade e não automático consegue
+ver o canal e religar ele, configurar ele — porém com um pouco menos de opção,
+pra não ser totalmente zaralhado ali pro corretor"*.
+
+Antes, o item **Canais** não aparecia no menu do corretor, e quem digitasse o
+endereço da configuração de um canal caía em `/unauthorized`: a rota exigia a
+permissão de **CRIAR** canal. Então o corretor cujo WhatsApp caía não tinha como
+nem ver o estado, nem ler o QR code — sendo que o celular é dele.
+
+O que aparece na tela:
+
+- **Canais entrou no menu do corretor**, com os números em que ELE atende. Só
+  isso: o vínculo que um gestor concedeu na aba *Colaboradores* daquele canal. O
+  acesso automático — o que o sistema dá quando um lead cai no número de outro
+  corretor — **não** faz o número do colega aparecer para ele.
+- **Dentro do canal ele vê UMA aba: *Configuração***. Estado do número, QR code,
+  *Reconectar*, *Desconectar*, perfil do WhatsApp (nome, recado, foto),
+  privacidade e ajustes do aparelho. Com uma aba só, a barra de abas nem se
+  desenha.
+- **Ficam de fora**: *Colaboradores* (quem atende no número é decisão do
+  gestor), *Horário de atendimento*, *Pesquisa de satisfação*, *Modelos de
+  mensagem*, *Moderação*, o nome e a foto do canal no CRM, e a lixeira.
+- **A lixeira some do card e da tabela** para quem não pode excluir canal.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Desconectar o próprio número: PODE.** É o caminho de trocar de aparelho, e
+  quem religa lendo o QR é ele mesmo.
+- **Quem decide tela cheia × tela enxuta é `can('inboxes', 'update')`** — o MESMO
+  sinal que o servidor usa para responder "vejo qualquer canal". Dois sinais
+  diferentes fariam a tela oferecer o que a API recusa (ou esconder o que ela
+  permite), que é o defeito mais caro deste tipo de recorte.
+- **Enquanto o cargo ainda não chegou, vale a versão enxuta.** Mostrar demais e
+  recolher depois pisca opções que a pessoa não tem.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`). Sem ela o corretor vê o item de menu e toma recusa em
+   tudo: as chaves do cargo, o recorte da lista e a guarda de "este número é
+   dele" moram lá.
+2. **A aba inicial não pode ser fixa.** O estado nasce em *Configurações
+   básicas*, que é a primeira aba do GESTOR e não existe para o corretor — sem a
+   correção ele abria a tela com a barra mostrando *Configuração* e o conteúdo em
+   branco embaixo, indistinguível de tela quebrada.
+3. **A rota da configuração usa `channels.read`, não `channels.create`.** Era
+   `create`, e por isso o corretor caía em `/unauthorized` ao clicar no card.
+   Criar canal continua sendo do gestor — quem gateia isso é o botão *Novo
+   canal*, não a rota da tela de um canal que já existe.
+4. **Canal sem aba nenhuma mostra uma explicação**, não uma página em branco:
+   acontece com quem só atende num canal que não é de sessão (e-mail com
+   provedor, redes sociais), onde não há conexão para ver nem religar.
+5. **Não é `featureKey` nem `clientToggleKey`** — é cargo, não módulo. Os
+   scanners do catálogo de funcionalidades não entram nesta história.
+
+E o motivo de tudo isto: **quando o número cai, agora o servidor avisa** — por
+sininho e push, para quem atende naquele número e para os gestores, cinco minutos
+depois da queda (instância que pisca e volta não avisa ninguém), com um segundo
+aviso quando ele volta ao ar. O clique do aviso abre exatamente esta tela, na aba
+de conexão. Ver o CLAUDE.md do `lm-flow`.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
