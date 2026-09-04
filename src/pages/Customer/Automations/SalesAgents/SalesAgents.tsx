@@ -44,6 +44,7 @@ import {
 } from '@/services/salesAgents/salesAgentsService';
 import { DOCUMENT_TOPICS } from '@/features/salesAgents/documentTopics';
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { WEEKDAYS } from '@/components/schedule/scheduleWindows';
 import type { ScheduleWindow } from '@/components/schedule/scheduleWindows';
@@ -91,7 +92,11 @@ export default function SalesAgents() {
   // (sync e audit) leem o código por regex: trocar o literal por uma constante
   // tira a chave do catálogo no deploy seguinte, o painel de Funções deixa de
   // oferecer o botão de liberar, e ninguém é avisado.
-  const insightsLiberado = useClientToggle('ia_insights');
+  // `isSuper ||`: a Leal Mídia sempre vê, como a aba de Landings. Sem isso a chave
+  // escondia as abas até de quem libera — o comentário dizia o contrário do código.
+  const isSuper = useIsSuperAdmin();
+  const insightsToggle = useClientToggle('ia_insights');
+  const insightsLiberado = isSuper || insightsToggle;
 
   const loadAgents = useCallback(async () => {
     setLoading(true);
@@ -245,8 +250,16 @@ export default function SalesAgents() {
       setSelected(updated);
       setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
       toast.success('Salvo');
-    } catch {
-      toast.error('Erro ao salvar');
+    } catch (e) {
+      // O servidor sabe explicar (ex.: bloco do roteiro com marcador que ele não
+      // recebe). Os dois formatos de erro da API, e o de validação do modelo.
+      const r = (e as { response?: { data?: { error?: unknown; message?: string; errors?: unknown } } }).response?.data;
+      const detalhe =
+        (typeof r?.error === 'object' && (r.error as { message?: string })?.message) ||
+        (typeof r?.error === 'string' ? r.error : null) ||
+        (Array.isArray(r?.errors) ? (r.errors as unknown[]).map(String).join(' ') : null) ||
+        r?.message;
+      toast.error(detalhe ? `Não salvou: ${detalhe}` : 'Erro ao salvar');
     } finally {
       setSaving(false);
     }
@@ -502,8 +515,11 @@ function ConfigTab({
   const [wizardOpen, setWizardOpen] = useState(false);
   // Estreia fechada e liberada imobiliária por imobiliária: quem reescreve um
   // bloco muda como a IA atende TODOS os leads daquele cliente. A Leal Mídia
-  // sempre vê, mesmo com a chave desligada.
-  const roteiroLiberado = useClientToggle('ia_playbook');
+  // sempre vê, mesmo com a chave desligada (`isSuper ||`, como a aba de Landings —
+  // sem ele a seção ficava escondida até de quem libera).
+  const isSuper = useIsSuperAdmin();
+  const roteiroToggle = useClientToggle('ia_playbook');
+  const roteiroLiberado = isSuper || roteiroToggle;
 
   return (
     <div className="space-y-5">

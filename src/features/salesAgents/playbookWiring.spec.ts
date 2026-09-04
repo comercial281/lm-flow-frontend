@@ -37,4 +37,19 @@ describe('roteiro da IA na tela do cliente', () => {
   it('a chave do gate vai LITERAL, para os scanners do catálogo a enxergarem', () => {
     expect(src).toContain("useClientToggle('ia_playbook')");
   });
+
+  // O comentário dizia "a Leal Mídia sempre vê" e o código não fazia isso: a seção
+  // ficava escondida até de quem libera a chave. A aba de Landings é a régua.
+  it('e a Leal Mídia sempre vê, como a aba de Landings', () => {
+    expect(src).toContain('isSuper || roteiroToggle');
+    expect(src).toContain('isSuper || insightsToggle');
+  });
+
+  // Os pontos-chave viajam DENTRO do `playbook`, como `vars`. Se alguém um dia os
+  // mover para campo próprio, ele precisa entrar na lista do PATCH — senão a tela
+  // mostra, o aviso diz "Salvo", e nada foi salvo.
+  it('os pontos-chave viajam dentro do playbook (vars), não em campo solto', () => {
+    const secao = read('src/components/salesAgents/PlaybookSection.tsx');
+    expect(secao).toContain('next_config.vars = cleaned');
+  });
 });

@@ -109,11 +109,16 @@ export const KIND_LABELS: Record<GlobalLesson['kind'], string> = {
 export interface PlaybookPrinciple {
   key: string;
   label: string;
+  /** Texto em uso, COM os encaixes ({situacao}, {lista_objecoes}...). */
   content: string;
   factory_default: string;
   customized: boolean;
   enabled: boolean;
   updated_at: string | null;
+  /** O que este bloco aceita entre chaves; marcador fora da lista é recusado. */
+  allowed_markers: string[];
+  /** `flow` = roteiro de venda (o alicerce); `principle` = regra da casa. */
+  kind: 'flow' | 'principle';
 }
 
 const PRINCIPLES_BASE = '/super/ai_playbook_blocks';
