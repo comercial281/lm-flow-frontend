@@ -32,6 +32,10 @@ import { useFeature } from '@/contexts/TenantFeaturesContext';
 
 export default function Channels() {
   const { can, isReady: permissionsReady, loading: permissionsLoading } = useUserPermissions();
+  // Excluir canal é do gestor. Sem isto o corretor — que passou a alcançar esta
+  // lista (04/09/2026) — veria a lixeira vermelha em cada número e levaria um
+  // aviso de permissão ao clicar. Botão que só sabe recusar é chamado de suporte.
+  const podeExcluir = permissionsReady && can('channels', 'delete');
   const { t } = useLanguage('channels');
   const canConnect = useFeature('channels_connect');
 
@@ -273,6 +277,7 @@ export default function Channels() {
                 isDeleting={isDeleting}
                 onSettings={openChannelSettings}
                 onDelete={openDeleteModal}
+                canDelete={podeExcluir}
               />
             ))}
           </div>
@@ -282,6 +287,7 @@ export default function Channels() {
             loading={isInitialLoading}
             onSettings={openChannelSettings}
             onDelete={openDeleteModal}
+            canDelete={podeExcluir}
           />
         )}
       </div>

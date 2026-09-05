@@ -697,7 +697,8 @@
       "loadLabelsError": "Erro ao carregar etiquetas"
     },
     "info": {
-      "tabSpecificSave": "Use a ação de atualização dentro desta aba."
+      "tabSpecificSave": "Use a ação de atualização dentro desta aba.",
+      "noTabsForRole": "Este canal não tem conexão para acompanhar aqui. Fale com o gestor se precisar mexer em alguma configuração dele."
     },
     "messageTemplates": {
       "title": "Templates de Mensagem",

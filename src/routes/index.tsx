@@ -908,10 +908,17 @@ const AppRouter = () => {
               }
             />
 
+            {/*
+              `read` e não `create`: desde 04/09/2026 o corretor abre o canal em
+              que ELE atende, para ver o estado e religar o número lendo o QR
+              code. Com `create` ele clicava no card e caía em /unauthorized —
+              criar canal continua sendo do gestor, e a tela só desenha para ele
+              o que o cargo dele alcança (ver ChannelSettings).
+            */}
             <Route
               path="/channels/:id/settings"
               element={
-                <PermissionRoute resource="channels" action="create">
+                <PermissionRoute resource="channels" action="read">
                   <ChannelSettings />
                 </PermissionRoute>
               }

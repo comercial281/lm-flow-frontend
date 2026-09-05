@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
+import { usePermissions } from '@/contexts/PermissionsContext';
 
 import InboxesService from '@/services/channels/inboxesService';
 import { Inbox } from '@/types/channels/inbox';
@@ -291,6 +292,18 @@ export default function ChannelSettings() {
 
   const inboxHook = useInbox(inbox);
 
+  // Quem ADMINISTRA canais vê a tela inteira; quem só ATENDE no número vê a aba
+  // de conexão — o estado, o QR code, o Reconectar, o Desconectar, o perfil do
+  // WhatsApp e os ajustes do aparelho.
+  //
+  // O sinal é o MESMO que o servidor usa para decidir "vejo qualquer canal"
+  // (`inboxes.update`): dois sinais diferentes fariam a tela oferecer o que a
+  // API recusa, ou esconder o que ela permite. Enquanto o cargo ainda não
+  // chegou (`isReady` falso) a tela mostra a versão enxuta — mostrar demais e
+  // recolher depois pisca opções que a pessoa não tem.
+  const { can, isReady: permissionsReady } = usePermissions();
+  const managesChannels = permissionsReady && can('inboxes', 'update');
+
   const [formData, setFormData] = useState<ChannelSettingsData>({
     name: '',
     display_name: '',
@@ -314,16 +327,23 @@ export default function ChannelSettings() {
 
   // Tab configuration based on inbox type
   const tabs = useMemo(() => {
-    const baseTabs = [
-      { key: 'inbox_settings', name: t('settings.tabs.inbox_settings'), icon: Settings },
-      { key: 'collaborators', name: t('settings.tabs.collaborators'), icon: Users },
-      { key: 'businesshours', name: t('settings.tabs.businesshours'), icon: Clock },
-      { key: 'csat', name: t('settings.tabs.csat'), icon: Star },
-      { key: 'messageTemplates', name: t('settings.tabs.messageTemplates'), icon: MessageSquare },
-    ];
+    // Quem só atende no número vê UMA aba: a de conexão. As outras decidem
+    // coisas do CRM que são do gestor — quem atende naquele WhatsApp, horário de
+    // atendimento, pesquisa de satisfação, modelos de mensagem, o nome e a foto
+    // do canal. O corretor abre esta tela para uma coisa só: ver se o número
+    // está no ar e religar quando não estiver.
+    const baseTabs = managesChannels
+      ? [
+          { key: 'inbox_settings', name: t('settings.tabs.inbox_settings'), icon: Settings },
+          { key: 'collaborators', name: t('settings.tabs.collaborators'), icon: Users },
+          { key: 'businesshours', name: t('settings.tabs.businesshours'), icon: Clock },
+          { key: 'csat', name: t('settings.tabs.csat'), icon: Star },
+          { key: 'messageTemplates', name: t('settings.tabs.messageTemplates'), icon: MessageSquare },
+        ]
+      : [];
 
     // Web Widget specific tabs
-    if (inboxHook.isAWebWidgetInbox) {
+    if (managesChannels && inboxHook.isAWebWidgetInbox) {
       baseTabs.push(
         { key: 'preChatForm', name: t('settings.tabs.preChatForm'), icon: MessageSquare },
         { key: 'widgetBuilder', name: t('settings.tabs.widgetBuilder'), icon: Globe },
@@ -357,14 +377,16 @@ export default function ChannelSettings() {
     // já existe o campo "Instância do WhatsApp que ela opera".
 
     // Moderation tab (available for all channel types)
-    baseTabs.push({
-      key: 'moderation',
-      name: t('settings.tabs.moderation'),
-      icon: Shield,
-    });
+    if (managesChannels) {
+      baseTabs.push({
+        key: 'moderation',
+        name: t('settings.tabs.moderation'),
+        icon: Shield,
+      });
+    }
 
     return baseTabs;
-  }, [inboxHook, inbox?.provider, t]);
+  }, [inboxHook, inbox?.provider, managesChannels, t]);
 
   // Abre a aba pedida pela URL (?tab=configuration), usada pelo fluxo de criar
   // canal → parear o WhatsApp. Precisa ser efeito e não estado inicial porque
@@ -376,6 +398,18 @@ export default function ChannelSettings() {
     if (!tabs.some(tab => tab.key === pedida)) return;
     setActiveTab(pedida);
   }, [searchParams, tabs, activeTab]);
+
+  // A aba inicial é a primeira que ESTA pessoa tem.
+  //
+  // O estado nasce em `inbox_settings`, que é a primeira aba do gestor — e não
+  // existe para quem só atende no número. Sem esta correção o corretor abria a
+  // tela com a lista de abas mostrando só *Configuração* e o conteúdo em branco
+  // embaixo, que é indistinguível de tela quebrada.
+  useEffect(() => {
+    if (tabs.length === 0) return;
+    if (tabs.some(tab => tab.key === activeTab)) return;
+    setActiveTab(tabs[0].key);
+  }, [tabs, activeTab]);
 
   // Inbox name with channel info
   const inboxName = useMemo(() => {
@@ -602,9 +636,26 @@ export default function ChannelSettings() {
             />
           </div>
 
+          {/*
+            Canal sem nada para esta pessoa: acontece com quem só atende no
+            número quando o canal não é de sessão (e-mail com provedor, redes
+            sociais) — não há conexão para ver nem religar. Dizer isso é melhor
+            do que a página em branco, que parece defeito.
+          */}
+          {tabs.length === 0 && (
+            <Card>
+              <CardContent className="p-6 text-sm text-muted-foreground">
+                {t('settings.info.noTabsForRole')}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="flex flex-wrap justify-start gap-1 bg-transparent p-0 h-auto">
+            {/* Uma aba só não é escolha: a barra viraria enfeite. */}
+            <TabsList
+              className={`flex flex-wrap justify-start gap-1 bg-transparent p-0 h-auto ${tabs.length < 2 ? 'hidden' : ''}`}
+            >
               {tabs.map(tab => {
                 const Icon = tab.icon;
                 return (
