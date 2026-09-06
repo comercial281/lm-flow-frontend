@@ -1508,6 +1508,52 @@ depois da queda (instância que pisca e volta não avisa ninguém), com um segun
 aviso quando ele volta ao ar. O clique do aviso abre exatamente esta tela, na aba
 de conexão. Ver o CLAUDE.md do `lm-flow`.
 
+## A automação de lead vale só num funil (desde 2026-09-06)
+
+O dono do produto, montando a automação *Início da IA Clelia*: *"preciso poder ter
+um gatilho de automação em cima de um pipeline específico, assim como a IA tem o
+filtro"*. O gatilho *Lead criado* valia para todo lead novo do CRM — não dava para
+ligar a IA só no funil de lançamento e deixar o de locação quieto.
+
+O que aparece na tela (*Automações → Automações de Lead*, janela da automação):
+
+- **Campo *Funil (opcional)***, no mesmo quadro cinza do filtro de *Origem do
+  lead*, logo abaixo dele. Em branco = todo lead do CRM; escolhendo um funil, a
+  automação só roda para o lead cujo card está nele.
+- Vale em **todos os gatilhos**, menos *Card mudou de etapa* — ali a etapa
+  escolhida já diz de qual funil ela é.
+- Na lista de automações, a condição aparece como **"Funil: Lançamento"**, e o
+  contador de condições passa a contar as duas (a origem e o funil).
+- **O *Testar* passou a dizer em que funil o lead-cobaia está**, pelo nome, e
+  "nenhum — o lead ainda não tem card". Sem isso a linha do filtro comparava dois
+  códigos e não explicava nada.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **É filtro do LEAD, não do gatilho.** Por isso ele fica ao lado da origem em vez
+  de no lugar dela: as duas perguntas convivem ("lead de formulário, no funil de
+  lançamento").
+- **Trocar para um gatilho que não aceita o filtro APAGA o funil escolhido.**
+  Gravado e invisível, ele seguiria barrando a automação sem nada na tela dizendo
+  por quê.
+- **No gatilho *Lead criado*, a tela avisa que a automação espera o card
+  aparecer** (cerca de meio minuto). O lead de anúncio e de landing entra no funil
+  logo depois de nascer; sem o aviso, "configurei o funil e a mensagem demorou"
+  parece defeito. Sem funil escolhido nada muda: dispara na hora.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): quem publica o funil do lead e quem espera o card nascer
+   moram lá. Contra o servidor antigo o campo aparece, salva, e a automação nunca
+   dispara — porque o filtro nunca casa.
+2. **As duas condições viajam no MESMO array.** Cada editor mexe só na sua: um
+   editor que escreva o array inteiro faz escolher o funil apagar a origem. E a
+   validação de "esse gatilho exige uma condição" olha só a condição do GATILHO —
+   senão escolher um funil faria uma regra de etiqueta subir sem etiqueta nenhuma.
+3. **Não é `featureKey` nem `clientToggleKey`** — é campo da automação, não módulo.
+   Os scanners do catálogo de funcionalidades não entram nesta história.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,

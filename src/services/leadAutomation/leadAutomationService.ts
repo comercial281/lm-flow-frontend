@@ -136,6 +136,10 @@ export interface AutomationTestResult {
     campaign_name?: string;
     ad_name?: string;
   };
+  // Em qual funil o card do lead está. Nulo = o lead ainda não entrou em funil
+  // nenhum — que é diferente de "está em outro funil", e é a diferença que
+  // explica por que uma regra filtrada por funil não disparou.
+  funil?: { id: string; nome: string | null } | null;
   // Se um lead igual a este entrasse agora, a regra dispararia sozinha?
   dispararia_sozinho: boolean;
   condicoes: Array<{
