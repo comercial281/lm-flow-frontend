@@ -35,7 +35,10 @@ import {
 import {
   useAutomationResources,
   triggerNeedsCondition,
+  triggerAcceptsPipelineFilter,
+  isPipelineCondition,
   ConditionEditor,
+  PipelineFilterEditor,
   ActionEditor,
   validateRule,
   formatConditionSummary,
@@ -317,15 +320,35 @@ export default function LeadAutomations() {
     }
   };
 
+  // As condições viajam num array só, mas são DUAS perguntas diferentes: a do
+  // gatilho ("qual origem?", "qual etiqueta?") e a do funil ("em qual funil o
+  // lead está?"). Cada editor mexe só na sua — escrever o array inteiro faria
+  // escolher o funil apagar a origem, e vice-versa.
+  const triggerConditions = (list: LeadAutomationCondition[]) =>
+    list.filter(c => !isPipelineCondition(c));
+  const pipelineCondition = (list: LeadAutomationCondition[]) =>
+    list.find(isPipelineCondition) ?? null;
+
   const setTrigger = (trigger: string) =>
-    setForm(f => ({
-      ...f,
-      trigger,
-      conditions: triggerNeedsCondition(trigger) ? f.conditions : [],
-    }));
+    setForm(f => {
+      // Filtro que o gatilho novo não oferece precisa SAIR: gravado e invisível,
+      // ele seguiria barrando a automação sem nada na tela dizendo por quê.
+      const funil = triggerAcceptsPipelineFilter(trigger) ? pipelineCondition(f.conditions) : null;
+      const doGatilho = triggerNeedsCondition(trigger) ? triggerConditions(f.conditions) : [];
+      return { ...f, trigger, conditions: [...doGatilho, ...(funil ? [funil] : [])] };
+    });
 
   const setCondition = (next: LeadAutomationCondition | null) =>
-    setForm(f => ({ ...f, conditions: next ? [next] : [] }));
+    setForm(f => {
+      const funil = pipelineCondition(f.conditions);
+      return { ...f, conditions: [...(next ? [next] : []), ...(funil ? [funil] : [])] };
+    });
+
+  const setPipelineCondition = (next: LeadAutomationCondition | null) =>
+    setForm(f => ({
+      ...f,
+      conditions: [...triggerConditions(f.conditions), ...(next ? [next] : [])],
+    }));
 
   const addAction = () =>
     setForm(f => ({
@@ -700,13 +723,21 @@ export default function LeadAutomations() {
               </div>
             </div>
 
-            {/* Condição do gatilho (dinâmica) */}
-            {triggerNeedsCondition(form.trigger) && (
-              <div className="rounded-lg border border-border bg-muted/20 p-3">
-                <ConditionEditor
+            {/* Condição do gatilho (dinâmica) + filtro de funil */}
+            {(triggerNeedsCondition(form.trigger) || triggerAcceptsPipelineFilter(form.trigger)) && (
+              <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-3">
+                {triggerNeedsCondition(form.trigger) && (
+                  <ConditionEditor
+                    trigger={form.trigger}
+                    condition={form.conditions.find(c => !isPipelineCondition(c)) ?? null}
+                    onChange={setCondition}
+                    resources={resources}
+                  />
+                )}
+                <PipelineFilterEditor
                   trigger={form.trigger}
-                  condition={form.conditions[0] ?? null}
-                  onChange={setCondition}
+                  condition={form.conditions.find(isPipelineCondition) ?? null}
+                  onChange={setPipelineCondition}
                   resources={resources}
                 />
               </div>

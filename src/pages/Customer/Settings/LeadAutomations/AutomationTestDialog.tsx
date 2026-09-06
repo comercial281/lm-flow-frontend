@@ -137,6 +137,14 @@ export default function AutomationTestDialog({ rule, open, onOpenChange }: Props
                     {result.origem.form_name ? ` · formulário: ${result.origem.form_name}` : ''}
                     {result.origem.campaign_name ? ` · campanha: ${result.origem.campaign_name}` : ''}
                   </p>
+                  {/* O filtro de funil compara identificadores; sem o nome aqui a
+                      linha do filtro abaixo vira código contra código. */}
+                  <p className="text-muted-foreground mt-1">
+                    Funil em que o card dele está:{' '}
+                    <strong className="text-foreground">
+                      {result.funil?.nome ?? (result.funil ? 'funil sem nome' : 'nenhum — o lead ainda não tem card')}
+                    </strong>
+                  </p>
                 </>
               )}
             </section>

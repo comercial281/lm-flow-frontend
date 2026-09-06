@@ -451,6 +451,74 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
 }
 
 // ============================================================================
+// PipelineFilterEditor — "vale só para os leads deste funil"
+// ============================================================================
+
+// A condição de funil é SEPARADA da condição do gatilho: ela responde uma
+// pergunta sobre o LEAD ("em qual funil ele está?"), não sobre o evento. Por
+// isso ela vive lado a lado com a origem, e não no lugar dela.
+export const isPipelineCondition = (c: LeadAutomationCondition): boolean =>
+  c.field === 'pipeline_id';
+
+// "Card mudou de etapa" já escolhe a ETAPA, e etapa já diz de qual funil é.
+// Oferecer o funil ali criaria duas verdades sobre a mesma coisa — e um filtro
+// contraditório (etapa de um funil, funil de outro) nunca dispararia.
+export const triggerAcceptsPipelineFilter = (trigger: string): boolean =>
+  trigger !== 'lead.stage_changed';
+
+interface PipelineFilterEditorProps {
+  trigger: string;
+  condition: LeadAutomationCondition | null;
+  onChange: (next: LeadAutomationCondition | null) => void;
+  resources: AutomationResources;
+}
+
+export function PipelineFilterEditor({
+  trigger, condition, onChange, resources,
+}: PipelineFilterEditorProps) {
+  if (!triggerAcceptsPipelineFilter(trigger)) return null;
+
+  const value = typeof condition?.value === 'string' ? condition.value : '';
+
+  return (
+    <div>
+      <UILabel>Funil (opcional)</UILabel>
+      <select
+        value={value}
+        onChange={e =>
+          onChange(e.target.value
+            ? { field: 'pipeline_id', operator: 'eq', value: e.target.value }
+            : null)
+        }
+        className={baseSelectClass}
+      >
+        <option value="">Qualquer funil</option>
+        {resources.pipelines.map(p => (
+          <option key={p.id} value={p.id}>{p.name}</option>
+        ))}
+      </select>
+      <p className="text-xs text-muted-foreground mt-1">
+        Em branco = vale para todo lead do CRM. Escolhendo um funil, essa automação
+        só roda para o lead cujo card está nele — é assim que o mesmo CRM tem uma IA
+        no funil de lançamento e outra no de locação.
+        {trigger === 'lead.created' && (
+          <>
+            {' '}O lead de anúncio e de landing entra no funil logo depois de nascer,
+            então essa automação espera o card aparecer antes de disparar (cerca de
+            meio minuto). Sem funil escolhido, nada muda: dispara na hora.
+          </>
+        )}
+      </p>
+      {resources.pipelines.length === 0 && !resources.loading && (
+        <p className="text-xs text-muted-foreground mt-1">
+          Nenhum funil cadastrado ainda.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // ActionEditor — params específicos por action.type
 // ============================================================================
 
@@ -1124,10 +1192,15 @@ export function validateRule(
       trigger === 'lead.message_received' ||
       trigger === 'lead.created' ||
       trigger === 'lead.campaign_received';
+    // Só a condição do GATILHO conta aqui. O filtro de funil viaja no mesmo
+    // array e é sempre opcional — sem esta separação, escolher um funil faria
+    // um gatilho que EXIGE condição (etiqueta, etapa) passar pela validação sem
+    // ela, e a regra subiria sem o que a faz disparar.
+    const triggerCondition = conditions.find(c => !isPipelineCondition(c));
     const hasValue =
-      conditions.length > 0 &&
-      conditions[0].value !== '' &&
-      conditions[0].value !== undefined;
+      triggerCondition !== undefined &&
+      triggerCondition.value !== '' &&
+      triggerCondition.value !== undefined;
     if (!hasValue && !isOptional) {
       return {
         ok: false,
@@ -1161,6 +1234,12 @@ export function formatConditionSummary(
   condition: LeadAutomationCondition,
   resources: AutomationResources,
 ): string {
+  // Antes do gatilho: o filtro de funil vale em qualquer um deles, e sem esta
+  // linha a lista mostraria o identificador cru do funil na tela.
+  if (isPipelineCondition(condition)) {
+    const funil = resources.pipelines.find(p => p.id === condition.value);
+    return `Funil: ${funil?.name ?? condition.value}`;
+  }
   if (trigger === 'lead.created') {
     if (condition.field === 'form_id') {
       const ids = Array.isArray(condition.value) ? condition.value : [condition.value];
