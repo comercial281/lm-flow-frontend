@@ -84,6 +84,9 @@ export interface SalesAgent {
   followup_drip_max_leads: number;
   followup_drip_min_minutes: number;
   followup_drip_max_minutes: number;
+  /** DE QUAIS leads ela vai atrás. Lista VAZIA = todos os leads do número dela,
+   *  que é o comportamento de sempre — não é "nenhum funil, não sai nada". */
+  followup_pipeline_ids: string[];
   audio_enabled: boolean;
   audio_mode: 'mirror' | 'always' | 'never';
   audio_voice_id: string | null;
@@ -431,6 +434,7 @@ export interface SalesAgentPayload {
   followup_drip_max_leads?: number;
   followup_drip_min_minutes?: number;
   followup_drip_max_minutes?: number;
+  followup_pipeline_ids?: string[];
   audio_enabled?: boolean;
   audio_mode?: 'mirror' | 'always' | 'never';
   audio_voice_id?: string | null;
