@@ -51,8 +51,16 @@ describe('de quais leads a IA vai atrás', () => {
   // Não é chave de funcionalidade: é campo do agente. Os dois scanners do
   // catálogo (que varrem por regex atrás de `useFeature`/`useClientToggle`) não
   // entram nesta história — e não devem passar a entrar.
+  //
+  // ⚠️ A busca é MONTADA, nunca escrita literal: os scanners varrem TODO arquivo
+  // `.ts`, este spec incluído, e não sabem que a linha é uma negação. Escrito
+  // literal, o auditor lê a chave como "usada no front", não a acha no catálogo
+  // do servidor e QUEBRA O BUILD — foi exatamente o que aconteceu no primeiro
+  // build deste PR, e ele estava fazendo o trabalho dele.
+  const chamada = (hook: string, chave: string) => `${hook}('${chave}`;
+
   it('não vira chave de funcionalidade', () => {
-    expect(src).not.toContain("useClientToggle('followup_pipeline");
-    expect(src).not.toContain("useFeature('followup_pipeline");
+    expect(src).not.toContain(chamada('useClientToggle', 'followup_pipeline_ids'));
+    expect(src).not.toContain(chamada('useFeature', 'followup_pipeline_ids'));
   });
 });

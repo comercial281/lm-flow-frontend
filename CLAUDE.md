@@ -1652,6 +1652,12 @@ Armadilhas:
    servidor antigo o bloco aparece, salva, e a IA continua indo atrás de todos.
 3. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente, não módulo. Os
    scanners do catálogo de funcionalidades não entram nesta história.
+4. **Nem o spec pode ESCREVER o literal do gate**, nem para negá-lo. Os dois
+   scanners varrem todo arquivo `.ts` — o spec incluído — e não sabem que a linha
+   é uma negação: o auditor leu `useClientToggle('followup_pipeline` de dentro de
+   um `expect(...).not.toContain(...)`, não achou a chave no catálogo do servidor
+   e QUEBROU O BUILD. A busca é montada em pedaços; escrita literal, ela vira uma
+   chave usada.
 
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
