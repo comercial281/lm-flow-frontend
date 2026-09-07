@@ -1554,6 +1554,65 @@ Armadilhas:
 3. **Não é `featureKey` nem `clientToggleKey`** — é campo da automação, não módulo.
    Os scanners do catálogo de funcionalidades não entram nesta história.
 
+## As respostas do formulário da landing aparecem no card (desde 2026-09-07)
+
+Queixa do dono do produto: *"os leads que preenchem formulário ali na landing page
+não consigo ver as respostas dos forms deles"*.
+
+A aba *Origem* do card **já tinha** o bloco *Respostas do formulário*, e o servidor
+**já mandava** as respostas. O problema era o formato: o formulário do Meta chega
+como pares soltos (pergunta → resposta), e a landing manda todas as perguntas
+dentro de uma chave só, como lista. A tela imprimia essa lista direto, então saía
+uma linha escrita **"[object Object]"** — e, ao lado dela, o identificador do envio
+e os cookies do anúncio (*event id*, *fbp*, *fbc*, *link da landing*) listados como
+se fossem respostas do lead. Quem abria o card via lixo e nenhuma resposta.
+
+O que aparece na tela agora:
+
+- **Uma linha por pergunta**, com o texto da pergunta à esquerda e o que o lead
+  respondeu à direita. Múltipla escolha vira uma linha só, separada por vírgula.
+- **O rastreio do anúncio sumiu do bloco.** Ele nunca foi resposta de ninguém —
+  serve para a conversão da Meta e continua guardado no servidor.
+- **Selo do resultado da régua**, ao lado do selo *Landing Page*: *Qualificado* em
+  verde ou *Desqualificado* em vermelho, com a nota. O card já recebia esse
+  resultado desde a captura e não o mostrava em lugar nenhum — a única tela que o
+  exibiria é uma aba escondida. Sem ele, as respostas contam metade da história:
+  dá para ler o que o lead respondeu sem saber se aquilo passou no corte.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **A leitura entende os DOIS formatos**, e isso não é dívida: é o que faz o lead
+  **já capturado** voltar a ficar legível. O servidor passou a gravar no formato
+  do Meta, mas quem preencheu a landing antes disso está gravado no formato
+  antigo — consertar por reescrita mexeria no contato de todo cliente para arrumar
+  exibição.
+- **Objeto solto nunca vira linha.** É a origem exata do `[object Object]`; a
+  normalização descarta em vez de imprimir, e há teste para isso.
+- **A normalização mora em arquivo próprio, com teste**, e não dentro da tela do
+  card: aquele arquivo tem ~4.800 linhas e o bloco vive dentro de uma função
+  anônima no meio do JSX, onde nada é testável.
+
+Armadilhas:
+
+1. **A metade do backend vem PRIMEIRO** (`lm-flow`, branch `saas-multitenant`):
+   é lá que a resposta do lead novo passa a ser gravada em pares. Sem ela, valem
+   só os leads antigos — que a tela já mostra, porque entende os dois formatos.
+2. **Chave de rastreio nova precisa entrar nas DUAS listas** (aqui e no servidor).
+   Numa só, ela some do card do lead novo e continua aparecendo como resposta no
+   lead antigo — ou o contrário.
+3. **Não voltar a imprimir o valor cru com `String(v)`.** Foi o que produziu o
+   `[object Object]`, e o defeito é MUDO: nada quebra, a linha só fica ilegível.
+4. **O selo do resultado sai do card, não do contato** (o servidor grava a
+   qualificação e a nota no card na hora da captura). Lead de outra origem não tem
+   isso e o selo simplesmente não aparece.
+5. **Não é `featureKey` nem `clientToggleKey`** — é exibição do card. Os scanners
+   do catálogo de funcionalidades não entram nesta história.
+
+**Ainda não existe, e é dívida conhecida:** uma lista de "leads desta landing".
+A aba *Leads* do Site Builder mostra os leads do site sem dizer de qual landing
+vieram, sem as respostas e sem a qualificação — e hoje só o administrador da conta
+a alcança.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,

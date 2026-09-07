@@ -60,6 +60,7 @@ import { contactsService } from '@/services/contacts/contactsService';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { brokerAssignmentsService, type BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
 import OfferActions from '@/components/roleta/OfferActions';
+import { normalizeFormAnswers, landingVerdict } from '@/components/pipelines/formAnswers';
 import { toast } from 'sonner';
 import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
@@ -1158,14 +1159,37 @@ export default function EditItemModal({
                 ?? (item.contact as any)?.additional_attributes?.form_answers
                 ?? (item.conversation as any)?.custom_attributes?.form_answers
                 ?? (item.conversation as any)?.additional_attributes?.form_answers;
-              const extra = ((ar as any).extra_fields && typeof (ar as any).extra_fields === 'object' ? (ar as any).extra_fields : null)
-                ?? (formAnswers && typeof formAnswers === 'object' && Object.keys(formAnswers).length ? formAnswers : null);
-              const hasTrackedData = entries.length > 0 || !!extra || !!meta;
+              // A landing manda as perguntas dentro de UMA chave, como lista, com os
+              // cookies do anúncio soltos ao lado — cru, isso virava "[object Object]"
+              // por pergunta. A normalização entende os dois formatos e vale também
+              // para o lead que já foi capturado. Ver formAnswers.ts.
+              const extraRows = normalizeFormAnswers((ar as Record<string, unknown>).extra_fields);
+              const answerRows = extraRows.length > 0 ? extraRows : normalizeFormAnswers(formAnswers);
+              // Resultado da régua da landing, gravado no card na captura.
+              const verdict = landingVerdict(item.custom_fields);
+              const hasTrackedData = entries.length > 0 || answerRows.length > 0 || !!meta || !!verdict;
               return (
                 <div className="space-y-4">
-                  {meta && (
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${meta.cls}`}>
-                      <span>{meta.label}</span>
+                  {(meta || verdict) && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {meta && (
+                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${meta.cls}`}>
+                          <span>{meta.label}</span>
+                        </div>
+                      )}
+                      {/* Resultado da régua do formulário: sem ele, as respostas
+                          não dizem se o lead passou no corte configurado. */}
+                      {verdict && (
+                        <div
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            verdict.approved
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                          }`}
+                        >
+                          <span>{verdict.label}{verdict.score != null ? ` · nota ${verdict.score}` : ''}</span>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1210,14 +1234,14 @@ export default function EditItemModal({
                       </div>
                     ))}
                   </div>
-                  {extra && Object.keys(extra).length > 0 && (
+                  {answerRows.length > 0 && (
                     <div>
                       <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Respostas do formulário</h4>
                       <div className="grid gap-2">
-                        {Object.entries(extra).map(([k, v]) => (
-                          <div key={k} className="flex items-start justify-between gap-3 text-sm border-b border-border/50 pb-1.5">
-                            <span className="text-muted-foreground shrink-0 capitalize">{k.replace(/_/g, ' ')}</span>
-                            <span className="text-right font-medium break-all">{String(v)}</span>
+                        {answerRows.map((row, i) => (
+                          <div key={`${row.label}-${i}`} className="flex items-start justify-between gap-3 text-sm border-b border-border/50 pb-1.5">
+                            <span className="text-muted-foreground shrink-0 capitalize">{row.label}</span>
+                            <span className="text-right font-medium break-all">{row.value}</span>
                           </div>
                         ))}
                       </div>
