@@ -1613,6 +1613,52 @@ A aba *Leads* do Site Builder mostra os leads do site sem dizer de qual landing
 vieram, sem as respostas e sem a qualificação — e hoje só o administrador da conta
 a alcança.
 
+## O follow-up da IA pode valer só em alguns funis (desde 2026-09-07)
+
+Pedido do dono do produto, olhando a aba de follow-up: poder definir se a IA vai
+atrás de **todos os leads daquele número** ou só dos que estão no funil X ou Y.
+
+Antes disto não havia escolha: ligar o follow-up ligava para todo lead calado do
+número. Numa imobiliária com um funil por produto (lançamento, locação, o do
+Bolsão), quem não queria cutucada no de locação simplesmente não ligava a chave.
+
+O que aparece na tela, em *IA Vendedora → Configuração → Follow-up automático*:
+
+- **Bloco *De quais leads ela vai atrás***, o PRIMEIRO de dentro do follow-up.
+  Duas opções: *Todos os leads deste número* (como sempre foi) e *Só os leads que
+  estão nestes funis*, que abre a lista de funis do CRM para marcar.
+- Marcado ao menos um funil, a tela lembra que vale o funil em que o card está
+  **hoje** e que **card arquivado não conta**.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Nenhum funil marcado = todos os leads.** É o padrão e o comportamento de
+  sempre: ninguém muda de comportamento por efeito de deploy. Por isso o aviso em
+  âmbar quando a pessoa escolhe *só destes funis* e não marca nenhum — sem ele,
+  ela sai da tela achando que recortou, e a IA vai atrás de todo mundo, calada.
+- **A ordem do bloco é DE QUEM → o que faz → quando pode → em que ritmo.** Escolher
+  o público antes do resto é como a pergunta se faz.
+- **Lead sem card fica de fora quando há recorte**, e a tela diz isso: o lead que
+  chegou pelo WhatsApp e nunca entrou em funil é exatamente esse caso.
+
+Armadilhas:
+
+1. **`followup_pipeline_ids` PRECISA estar na lista do `saveAgent`**, com `??` e
+   não com `in`: lista vazia não é `null` — é a escolha *todos os leads*, e o `??`
+   a preserva. (Diferente das colunas do bloco *Quando o lead sumir*, onde `null`
+   significa "não escolhi coluna nenhuma".) Há spec que reprova as duas coisas.
+2. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): a coluna e o recorte da varredura moram lá. Contra o
+   servidor antigo o bloco aparece, salva, e a IA continua indo atrás de todos.
+3. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente, não módulo. Os
+   scanners do catálogo de funcionalidades não entram nesta história.
+4. **Nem o spec pode ESCREVER o literal do gate**, nem para negá-lo. Os dois
+   scanners varrem todo arquivo `.ts` — o spec incluído — e não sabem que a linha
+   é uma negação: o auditor leu `useClientToggle('followup_pipeline` de dentro de
+   um `expect(...).not.toContain(...)`, não achou a chave no catálogo do servidor
+   e QUEBROU O BUILD. A busca é montada em pedaços; escrita literal, ela vira uma
+   chave usada.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,

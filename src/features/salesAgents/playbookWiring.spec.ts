@@ -22,7 +22,11 @@ describe('roteiro da IA na tela do cliente', () => {
   const src = read(TELA);
 
   it('o roteiro entra na lista campo-a-campo do PATCH', () => {
-    const saveAgent = src.slice(src.indexOf('const saveAgent'), src.indexOf('const saveAgent') + 6000);
+    // ⚠️ O corte vai até o FIM do payload (`setSelected(updated)`), não a um
+    // número fixo de caracteres: a lista cresce a cada campo novo, e com a janela
+    // fixa de 6000 este spec passou a reprovar quando o recorte por funil do
+    // follow-up entrou ANTES do roteiro — sem nada de errado com o roteiro.
+    const saveAgent = src.slice(src.indexOf('const saveAgent'), src.indexOf('setSelected(updated)'));
 
     expect(saveAgent).toContain('playbook:');
   });

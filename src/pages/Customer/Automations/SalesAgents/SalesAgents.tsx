@@ -194,6 +194,11 @@ export default function SalesAgents() {
         followup_drip_max_leads: patch.followup_drip_max_leads ?? selected.followup_drip_max_leads,
         followup_drip_min_minutes: patch.followup_drip_min_minutes ?? selected.followup_drip_min_minutes,
         followup_drip_max_minutes: patch.followup_drip_max_minutes ?? selected.followup_drip_max_minutes,
+        // DE QUAIS leads ela vai atrás. Entra com `??` e não com `in`: lista vazia
+        // não é null — é a escolha "todos os leads deste número", que o `??`
+        // preserva. (Diferente das colunas do bloco de cima, onde `null` significa
+        // "não escolhi coluna nenhuma".)
+        followup_pipeline_ids: patch.followup_pipeline_ids ?? selected.followup_pipeline_ids,
         // O horário próprio do follow-up. Entra com `??` e não com `in`: ele nunca
         // é limpável — o servidor devolve sempre resolvido e o editor garante ao
         // menos uma janela. Vazio aqui não é escolha, é o padrão de fábrica.
@@ -2004,6 +2009,10 @@ function FollowupSection({
 
       {on && (
         <div className="mt-3 space-y-3 pl-7">
+          {/* Ordem de leitura: primeiro DE QUEM ela vai atrás, depois o que faz com
+              o lead, depois quando pode fazer, e só então o ritmo. */}
+          <FollowupPipelinesRow agent={agent} onSave={onSave} />
+
           <FollowupActionPicker agent={agent} onSave={onSave} />
 
           <FollowupHoursRow agent={agent} onSave={onSave} />
@@ -2051,6 +2060,128 @@ function FollowupSection({
               </div>
             </div>
           </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * DE QUAIS leads a IA vai atrás.
+ *
+ * Antes disto a varredura pegava todo lead calado do número dela. Num cliente com
+ * um funil por produto (lançamento, locação, o do Bolsão) não havia como ligar o
+ * follow-up num deles e deixar o resto quieto — a única saída era não ligar.
+ *
+ * ⚠️ Nenhum funil marcado = TODOS os leads, que é o comportamento de sempre. Por
+ * isso o aviso em âmbar quando a pessoa escolhe "só destes funis" e não marca
+ * nenhum: sem ele, ela sai da tela achando que recortou e a IA vai atrás de todo
+ * mundo, calada.
+ */
+function FollowupPipelinesRow({
+  agent, onSave,
+}: {
+  agent: SalesAgent;
+  onSave: (patch: Partial<SalesAgent>) => void;
+}) {
+  const [pipelines, setPipelines] = useState<PipelineOpt[]>([]);
+  const escolhidos = agent.followup_pipeline_ids ?? [];
+  // O modo é derivado da lista, com estado local só para o instante entre marcar
+  // "só destes funis" e marcar o primeiro funil — sem ele a lista de funis nem
+  // chegaria a aparecer.
+  const [abrindo, setAbrindo] = useState(false);
+  const recortado = escolhidos.length > 0 || abrindo;
+
+  useEffect(() => { setAbrindo(false); }, [agent.id]);
+
+  useEffect(() => {
+    pipelinesService.getPipelines()
+      .then((res: unknown) => {
+        const raw = (res as { data?: PipelineOpt[] }).data ?? (Array.isArray(res) ? (res as PipelineOpt[]) : []);
+        setPipelines(raw.map((p) => ({ id: String(p.id), name: p.name })));
+      })
+      .catch(() => setPipelines([]));
+  }, []);
+
+  const marcar = (id: string, marcado: boolean) => {
+    const proximo = marcado ? [...escolhidos, id] : escolhidos.filter((x) => x !== id);
+    onSave({ followup_pipeline_ids: proximo });
+  };
+
+  const irParaTodos = () => { setAbrindo(false); if (escolhidos.length) onSave({ followup_pipeline_ids: [] }); };
+
+  return (
+    <div className="rounded-md border border-sidebar-border p-3">
+      <div className="text-sm font-medium">De quais leads ela vai atrás</div>
+      <div className="text-xs text-muted-foreground">
+        Serve para ligar o follow-up só no funil que você quer — o de lançamento, por
+        exemplo — e deixar os outros quietos.
+      </div>
+
+      <div className="mt-2 space-y-1">
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="radio"
+            className="mt-1"
+            name={`followup_escopo_${agent.id}`}
+            checked={!recortado}
+            onChange={irParaTodos}
+          />
+          <div>
+            <div className="text-sm">Todos os leads deste número</div>
+            <div className="text-xs text-muted-foreground">
+              Como sempre funcionou: qualquer lead que já respondeu e sumiu, tendo card ou não.
+            </div>
+          </div>
+        </label>
+
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="radio"
+            className="mt-1"
+            name={`followup_escopo_${agent.id}`}
+            checked={recortado}
+            onChange={() => setAbrindo(true)}
+          />
+          <div>
+            <div className="text-sm">Só os leads que estão nestes funis</div>
+            <div className="text-xs text-muted-foreground">
+              Lead sem card, ou com card em outro funil, fica de fora.
+            </div>
+          </div>
+        </label>
+      </div>
+
+      {recortado && (
+        <div className="mt-2 pl-6 space-y-1">
+          {pipelines.length === 0 && (
+            <div className="text-xs text-muted-foreground">Nenhum funil encontrado neste CRM.</div>
+          )}
+          {pipelines.map((p) => (
+            <label key={p.id} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={escolhidos.includes(p.id)}
+                onChange={(e) => marcar(p.id, e.target.checked)}
+              />
+              <span className="text-sm">{p.name}</span>
+            </label>
+          ))}
+
+          {escolhidos.length === 0 && (
+            <div className="rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-1 text-xs">
+              Marque ao menos um funil. Sem nenhum marcado, ela continua indo atrás de
+              todos os leads deste número.
+            </div>
+          )}
+
+          {/* Card arquivado saiu do quadro por decisão de gente; o follow-up
+              continuar por causa dele seria o card arquivado mandando mensagem. */}
+          {escolhidos.length > 0 && (
+            <div className="text-xs text-muted-foreground pt-1">
+              Vale o funil em que o card do lead está hoje. Card arquivado não conta.
+            </div>
+          )}
         </div>
       )}
     </div>
