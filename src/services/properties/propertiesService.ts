@@ -57,6 +57,12 @@ export interface Property {
   /** Características do imóvel e comodidades do condomínio (slugs do catálogo). */
   features?: string[];
   condo_features?: string[];
+  /**
+   * Campos livres do imóvel. É onde a importação guarda o que não tem campo
+   * próprio — inclusive a observação interna do corretor. NÃO é exposto no site
+   * público, nos feeds dos portais nem no contexto da IA Vendedora.
+   */
+  custom_attributes?: Record<string, unknown> | null;
   /** Tipologias (plantas) do empreendimento — vazio quando o imóvel tem uma só. */
   typologies?: PropertyTypology[];
   /** Faixas prontas (min/max de dorms, área e preço) calculadas pelo backend. */

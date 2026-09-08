@@ -120,6 +120,29 @@ const EMPTY_FORM: PropertyFormData = {
 const formatCurrency = (v?: number | null) =>
   v != null ? `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : null;
 
+/*
+ * Observação interna do corretor trazida por importação (a "nota do corretor" do
+ * Kenlo: "proprietário quer no mínimo X em mãos"). Fica nos campos livres do
+ * imóvel, que NÃO vão para o site público, para os feeds dos portais nem para o
+ * contexto da IA Vendedora — é justamente por isso que ela pode morar ali.
+ *
+ * Lê só ESTAS chaves, de propósito. Os campos livres também guardam as
+ * características que não têm equivalente no catálogo, o empreendimento de
+ * origem e o nome dos corretores da base antiga: despejar tudo na tela viraria
+ * gaveta de bagunça em cima da ficha.
+ */
+const INTERNAL_NOTE_KEYS = ['kenlo_obs_interna', 'obs_interna'] as const;
+
+const internalNoteOf = (p: Property | null): string | null => {
+  const bag = p?.custom_attributes;
+  if (!bag) return null;
+  for (const k of INTERNAL_NOTE_KEYS) {
+    const v = (bag as Record<string, unknown>)[k];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+  }
+  return null;
+};
+
 export default function Properties() {
   const navigate = useNavigate();
   const canCreate      = useFeature('properties_create');
@@ -1216,6 +1239,26 @@ export default function Properties() {
               <Textarea value={f.description} onChange={e => setF({ description: e.target.value })}
                 rows={3} placeholder="Descreva o imóvel..." className="resize-none" />
             </div>
+
+            {/* Observação interna vinda da importação: só leitura, e só quando existe.
+                Fica colada na Descrição de propósito — uma é o que o cliente lê, a
+                outra é o que só a imobiliária vê. */}
+            {internalNoteOf(editing) && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
+                <div className="mb-1 flex items-center gap-2">
+                  <Lock className="h-3.5 w-3.5 text-amber-600" />
+                  <span className="text-sm font-medium text-amber-700 dark:text-amber-500">
+                    Observações internas (importado do Kenlo)
+                  </span>
+                </div>
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                  {internalNoteOf(editing)}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Não aparece no site, não vai para os portais e a IA Vendedora não lê.
+                </p>
+              </div>
+            )}
 
             {/* Flags */}
             <div className="flex flex-wrap gap-x-6 gap-y-2">
