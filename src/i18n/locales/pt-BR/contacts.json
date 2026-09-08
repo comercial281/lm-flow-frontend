@@ -225,27 +225,24 @@
     "format": {
       "title": "Formato do arquivo",
       "csv": "CSV",
-      "excel": "Excel"
+      "excel": "Excel (.xlsx)",
+      "excelHint": "Planilha pronta: colunas ajustadas, cabeçalho fixo e filtro no topo.",
+      "csvHint": "Arquivo de texto, para jogar em outra ferramenta. Abre certo no Excel em português."
     },
     "filters": {
       "title": "Aplicar filtros atuais ({{count}} filtro ativo)",
       "title_other": "Aplicar filtros atuais ({{count}} filtros ativos)"
     },
     "fields": {
-      "title": "Campos para exportar",
-      "name": "Nome",
-      "email": "E-mail",
-      "phone": "Telefone",
-      "identifier": "Identificador",
-      "createdAt": "Data de Criação",
-      "lastActivity": "Última Atividade",
-      "labels": "Etiquetas",
-      "customAttributes": "Atributos Personalizados",
-      "required": "(obrigatório)"
+      "title": "Colunas da planilha",
+      "reset": "Voltar ao padrão",
+      "loading": "Carregando as colunas disponíveis...",
+      "selected": "{{count}} coluna selecionada",
+      "selected_other": "{{count}} colunas selecionadas"
     },
     "download": {
-      "title": "Download automático",
-      "description": "O arquivo será baixado automaticamente após o processamento. Para grandes volumes de dados, você receberá uma notificação quando estiver pronto."
+      "title": "O arquivo baixa aqui mesmo",
+      "description": "Clicou, baixou. Só base muito grande (acima de 20 mil contatos) vai por e-mail, porque não cabe num download direto."
     },
     "actions": {
       "cancel": "Cancelar",
@@ -456,12 +453,13 @@
     "importQueued": "Importação iniciada. Você receberá um email quando o processamento for concluído.",
     "importError": "Erro ao importar contatos",
     "exportSuccess": "Exportação iniciada com sucesso. O arquivo será baixado automaticamente.",
-    "exportQueued": "Exportação iniciada. Você receberá um email com o link para download em breve.",
+    "exportQueued": "Sua base é grande: a planilha vai chegar por e-mail em alguns minutos.",
     "exportError": "Erro ao exportar contatos",
     "filterError": "Erro ao aplicar filtros",
     "conversationStarted": "Conversa iniciada com sucesso",
     "bulkDeleteAllQueued": "Exclusão de {{count}} contato(s) iniciada. O processamento roda em segundo plano e a lista pode levar alguns minutos para refletir.",
-    "mergeNeedsExplicitSelection": "Para mesclar, selecione os contatos um a um — mesclar não funciona com \"todos selecionados\"."
+    "mergeNeedsExplicitSelection": "Para mesclar, selecione os contatos um a um — mesclar não funciona com \"todos selecionados\".",
+    "exportDownloaded": "Planilha baixada."
   },
   "errors": {
     "loadContact": "Erro ao carregar detalhes do contato"
