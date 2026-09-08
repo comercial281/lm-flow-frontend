@@ -14,13 +14,46 @@ import type {
   ContactFormData,
   ContactMergeParams,
   ContactExportParams,
+  ContactExportColumn,
+  ContactExportResult,
   ContactImportResponse,
-  ContactExportResponse,
   ContactNote,
   ContactConversation,
   ContactableInboxes,
   CreditCheckResult,
 } from '@/types/contacts';
+
+/** Lê o conteúdo de um Blob com `FileReader`, nunca com `blob.text()`.
+ *  O segundo não existe em todo ambiente (nem no que roda os testes), e a falha
+ *  dele é indistinguível de "arquivo corrompido" — mesma cicatriz do importador
+ *  de funil de follow-up. */
+function readBlobText(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ''));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
+}
+
+/** Erro cujo corpo veio como Blob (acontece em toda chamada com
+ *  `responseType: 'blob'`) volta a ter `error.response.data` legível — é o que
+ *  permite mostrar o motivo em português que o servidor mandou, inclusive a
+ *  recusa por cargo, que vem em outro formato. */
+async function reviveBlobError(error: unknown): Promise<unknown> {
+  const response = (error as { response?: { data?: unknown } })?.response;
+  const data = response?.data;
+  if (!(data instanceof Blob)) return error;
+
+  try {
+    const text = await readBlobText(data);
+    (response as { data?: unknown }).data = JSON.parse(text);
+  } catch {
+    // Corpo que não é JSON não ajuda ninguém: deixa como estava e a tela cai no
+    // texto de reserva dela.
+  }
+  return error;
+}
 
 class ContactsService {
   // List contacts with pagination and filters
@@ -390,9 +423,64 @@ class ContactsService {
     return extractData<ContactImportResponse>(response);
   }
 
-  async exportContacts(params: ContactExportParams): Promise<ContactExportResponse> {
-    const response = await api.post(`/contacts/export`, params);
-    return extractData<ContactExportResponse>(response);
+  /** As colunas que a janela de exportação oferece vêm do SERVIDOR, nunca de uma
+   *  lista escrita aqui: era a divergência entre as duas (a tela mandava os
+   *  campos com um nome, o servidor lia outro) que fazia o gestor marcar campo e
+   *  o arquivo sair sempre com as mesmas quatro colunas. */
+  async getExportColumns(): Promise<ContactExportColumn[]> {
+    const response = await api.get(`/contacts/export_columns`);
+    const data = extractData<{ columns?: ContactExportColumn[] }>(response);
+    return data?.columns ?? [];
+  }
+
+  /** Baixa a planilha aqui mesmo, no navegador. Base gigante não cabe numa
+   *  requisição: nesse caso o servidor responde JSON com `queued` e o arquivo
+   *  vai por e-mail — a tela avisa em vez de baixar um arquivo quebrado. */
+  async exportContacts(params: ContactExportParams): Promise<ContactExportResult> {
+    let response;
+    try {
+      response = await api.post(`/contacts/export`, params, { responseType: 'blob' });
+    } catch (error) {
+      // Com `responseType: 'blob'` o CORPO do erro também chega como Blob, então
+      // o motivo em português que o servidor mandou fica ilegível para quem lê
+      // `error.response.data.message`. Reabrir como texto é o que faz a recusa
+      // por cargo aparecer como recusa por cargo.
+      throw await reviveBlobError(error);
+    }
+
+    const blob = response.data as Blob;
+    // O tipo vem do cabeçalho e, na falta dele, do próprio arquivo.
+    const contentType = String(response.headers?.['content-type'] ?? blob.type ?? '');
+
+    if (contentType.includes('application/json')) {
+      const parsed = JSON.parse(await readBlobText(blob)) as {
+        data?: { queued?: boolean; count?: number };
+        message?: string;
+      };
+      return {
+        queued: true,
+        count: parsed?.data?.count,
+        message: parsed?.message,
+      };
+    }
+
+    // O servidor manda o nome no cabeçalho; quando o navegador não o expõe
+    // (CORS sem expose-headers), o nome derivado aqui é o mesmo.
+    const header = String(response.headers?.['content-disposition'] ?? '');
+    const fromHeader = /filename="?([^";]+)"?/.exec(header)?.[1];
+    const stamp = new Date().toISOString().slice(0, 10);
+    const filename = fromHeader || `contatos-${stamp}.${params.format === 'xlsx' ? 'xlsx' : 'csv'}`;
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    return { queued: false, filename };
   }
 
   // Merge Contacts

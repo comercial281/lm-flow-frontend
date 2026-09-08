@@ -585,17 +585,18 @@ export default function Contacts() {
     format: 'csv' | 'xlsx';
     fields: string[];
     includeFilters?: boolean;
-    payload?: Record<string, unknown>;
   }
 
   const handleExportModalSubmit = async (params: ExportModalParams) => {
     setState(prev => ({ ...prev, loading: { ...prev.loading, export: true } }));
 
     try {
-      // Build export payload according to ContactExportParams interface
+      // ⚠️ `column_names`, nunca `fields`: é o nome que o servidor lê. Enquanto
+      // isto ia como `fields`, os campos marcados na janela eram descartados em
+      // silêncio e toda exportação saía com as mesmas quatro colunas.
       const exportPayload = {
         format: params.format,
-        fields: params.fields,
+        column_names: params.fields,
         ...(params.includeFilters &&
           activeFilters.length > 0 && {
             payload: generateFilterQuery(activeFilters).reduce(
@@ -608,13 +609,23 @@ export default function Contacts() {
           }),
       };
 
-      await contactsService.exportContacts(exportPayload);
-      toast.success(t('messages.exportQueued'));
+      const resultado = await contactsService.exportContacts(exportPayload);
+      // Base grande demais não cabe numa requisição: o arquivo vai por e-mail e
+      // a tela precisa dizer isso, senão parece que o download falhou.
+      if (resultado.queued) {
+        toast.success(resultado.message || t('messages.exportQueued'));
+      } else {
+        toast.success(t('messages.exportDownloaded'));
+      }
     } catch (error: unknown) {
       console.error('Error exporting contacts:', error);
-      const errorMessage =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        t('messages.exportError');
+      // A API tem DOIS formatos de erro: o padrão (`error.message`) e a recusa
+      // por cargo, que manda `error` como texto e a explicação em `message`, no
+      // nível de cima. Lendo só um, "seu cargo não permite esta ação" chegava
+      // como a frase genérica e mandava procurar o problema no lugar errado.
+      const body = (error as { response?: { data?: { message?: string; error?: { message?: string } } } })
+        ?.response?.data;
+      const errorMessage = body?.error?.message || body?.message || t('messages.exportError');
       toast.error(errorMessage);
     } finally {
       setState(prev => ({ ...prev, loading: { ...prev.loading, export: false } }));

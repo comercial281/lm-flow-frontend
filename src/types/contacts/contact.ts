@@ -367,7 +367,26 @@ export interface ContactMergeParams {
 export interface ContactExportParams {
   payload?: Record<string, ContactFilter>;
   format: 'csv' | 'xlsx';
-  fields: string[];
+  /** ⚠️ O servidor lê `column_names`. Enquanto a tela mandava isto como
+   *  `fields`, os campos marcados na janela eram descartados em silêncio e TODA
+   *  exportação saía com as mesmas quatro colunas. Não renomear de um lado só. */
+  column_names: string[];
+}
+
+/** Uma linha da lista de campos da janela de exportação, servida pelo backend. */
+export interface ContactExportColumn {
+  key: string;
+  label: string;
+  group: string;
+  default: boolean;
+}
+
+export interface ContactExportResult {
+  /** true = a base é grande demais para baixar na hora e o arquivo vai por e-mail. */
+  queued: boolean;
+  count?: number;
+  filename?: string;
+  message?: string;
 }
 
 export interface ContactImportResponse {
