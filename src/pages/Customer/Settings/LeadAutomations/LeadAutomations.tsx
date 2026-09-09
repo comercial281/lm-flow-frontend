@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/ds';
 import {
   Plus, Edit, Trash2, Zap, ChevronDown, ChevronUp, ToggleLeft, ToggleRight,
-  Archive, ArchiveRestore, BookOpen, Lock, Copy, Star, ArrowUp, ArrowDown, FlaskConical,
+  Archive, ArchiveRestore, BookOpen, Lock, Copy, Star, ArrowUp, ArrowDown, FlaskConical, History,
 } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import {
@@ -46,6 +46,7 @@ import {
 } from './LeadAutomationsEditors';
 import AutomationLibraryModal from './AutomationLibraryModal';
 import AutomationTestDialog from './AutomationTestDialog';
+import AutomationHistoryDialog from './AutomationHistoryDialog';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 
@@ -132,6 +133,7 @@ export default function LeadAutomations() {
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [testing, setTesting] = useState<LeadAutomationRule | null>(null);
+  const [history, setHistory] = useState<LeadAutomationRule | null>(null);
 
   const resources = useAutomationResources(canAccess);
 
@@ -565,6 +567,19 @@ export default function LeadAutomations() {
                     <FlaskConical className="h-4 w-4" />
                   </Button>
 
+                  {/* O que aconteceu: o Testar responde sobre um lead-cobaia
+                      forçado; isto responde sobre os leads que entraram de
+                      verdade — inclusive os que a regra nem chegou a considerar,
+                      que é o caso de quem liga a automação e não vê mensagem. */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="O que aconteceu com os últimos leads"
+                    onClick={() => setHistory(rule)}
+                  >
+                    <History className="h-4 w-4" />
+                  </Button>
+
                   <Button
                     variant="ghost"
                     size="icon"
@@ -661,6 +676,12 @@ export default function LeadAutomations() {
         rule={testing}
         open={!!testing}
         onOpenChange={open => { if (!open) setTesting(null); }}
+      />
+
+      <AutomationHistoryDialog
+        rule={history}
+        open={!!history}
+        onOpenChange={open => { if (!open) setHistory(null); }}
       />
 
       {/* Create / Edit Modal */}
