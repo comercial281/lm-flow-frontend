@@ -120,7 +120,30 @@ export const leadAutomationService = {
     const res = await api.post(`${BASE}/${id}/test_run`, contactId ? { contact_id: contactId } : {});
     return (res.data as { data: AutomationTestResult }).data;
   },
+
+  // Botão "O que aconteceu": o que ESTA regra fez com os leads que entraram de
+  // verdade. Diferente do Testar, que responde sobre um lead-cobaia forçado.
+  async getLogs(id: string, limit?: number): Promise<AutomationLog[]> {
+    const res = await api.get(`${BASE}/${id}/logs`, { params: limit ? { limit } : {} });
+    return (res.data as { data?: AutomationLog[] }).data ?? [];
+  },
 };
+
+// Uma linha do histórico da regra. `status` tem TRÊS valores, e é a distinção
+// que faltava: 'fired' (disparou e o quê), 'failed' (tentou e o servidor recusou)
+// e 'skipped' (nem foi considerado — a condição que barrou está na descrição).
+export interface AutomationLog {
+  id: string;
+  status: 'fired' | 'failed' | 'skipped' | string;
+  level: string;
+  occurred_at: string;
+  title: string;
+  description: string | null;
+  lead: string | null;
+  contact_id: string | null;
+  trigger: string | null;
+  deferred?: boolean;
+}
 
 // Resultado do teste de uma regra, como a tela mostra.
 export interface AutomationTestResult {
