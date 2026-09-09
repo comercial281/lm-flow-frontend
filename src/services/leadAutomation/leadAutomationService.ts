@@ -134,7 +134,7 @@ export const leadAutomationService = {
 // e 'skipped' (nem foi considerado — a condição que barrou está na descrição).
 export interface AutomationLog {
   id: string;
-  status: 'fired' | 'failed' | 'skipped' | string;
+  status: 'fired' | 'failed' | 'skipped' | 'tested' | string;
   level: string;
   occurred_at: string;
   title: string;
@@ -143,6 +143,9 @@ export interface AutomationLog {
   contact_id: string | null;
   trigger: string | null;
   deferred?: boolean;
+  // 'failed' aqui é a NÃO-ENTREGA: a mensagem saiu do CRM e o WhatsApp recusou
+  // depois. Pede providência diferente da falha da regra — é o número do canal.
+  delivery?: string | null;
 }
 
 // Resultado do teste de uma regra, como a tela mostra.
