@@ -1703,6 +1703,28 @@ Armadilhas:
 4. **Não é `featureKey` nem `clientToggleKey`** — é tela de automação. Os scanners
    do catálogo de funcionalidades não entram nesta história.
 
+### O selo *Teste* e o selo *Não entregue* (correção do mesmo dia)
+
+Minutos depois de a tela subir, o dono do produto: *"tá mentindo esse 'O que
+aconteceu' — fala que disparou e simplesmente não tem nada da lead"*. Estava
+certo, e a causa era do servidor (ver o CLAUDE.md do `lm-flow`): o botão
+*Testar*, que **simula** tudo que falaria com o lead, se registrava exatamente
+como um envio real — e ele usa o último lead que entrou como cobaia. A lista
+mostrava "Disparou" para um lead que nunca recebeu nada.
+
+O que aparece na tela agora:
+
+- **Selo *Teste*** (cinza, com o frasquinho), na linha que veio do botão
+  *Testar*, e a descrição começa em *SIMULADO, nada foi enviado ao lead*.
+- **Selo *Não entregue*** (vermelho), quando a mensagem saiu do CRM e o WhatsApp
+  recusou depois — com o motivo do provedor. É uma linha SEPARADA da do disparo:
+  o disparo aconteceu (a mensagem está no chat), a entrega é que não. As duas
+  pedem providências diferentes: uma é a regra, a outra é o número do canal.
+
+Armadilha: **selo novo do servidor sem rótulo aqui cai no visual de "Não
+disparou"**, que é outra coisa. Hoje são cinco: disparou, falhou, não disparou,
+teste e não entregue.
+
 ## A landing pode mandar o lead para a roleta (desde 2026-09-09)
 
 Pergunta do dono do produto: *"a nossa roleta não tem como por forms de página,
