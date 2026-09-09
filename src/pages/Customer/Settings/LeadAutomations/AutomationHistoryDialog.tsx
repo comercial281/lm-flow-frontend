@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/ds';
-import { Loader2, CheckCircle2, XCircle, AlertTriangle, History, RefreshCw } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, AlertTriangle, History, RefreshCw, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import {
@@ -25,6 +25,22 @@ const LOOK: Record<string, { label: string; className: string; Icon: typeof Chec
   fired:   { label: 'Disparou',     className: 'text-green-600',   Icon: CheckCircle2 },
   failed:  { label: 'Falhou',       className: 'text-destructive', Icon: XCircle },
   skipped: { label: 'Não disparou', className: 'text-amber-600',   Icon: AlertTriangle },
+  // O TESTE tem selo próprio. Ele simula tudo que falaria com o lead, então
+  // desenhá-lo como "Disparou" é o painel dizendo que o lead recebeu uma
+  // mensagem que nunca saiu — foi exatamente o que aconteceu na estreia desta
+  // tela (09/09/2026).
+  tested:  { label: 'Teste',        className: 'text-muted-foreground', Icon: FlaskConical },
+};
+
+// A entrega é uma pergunta DIFERENTE do disparo, e chega depois: a mensagem é
+// criada no CRM na hora, e o WhatsApp pode recusar segundos depois. Quando isso
+// acontece, a linha diz NÃO ENTREGUE — a providência é o número do canal, não a
+// regra.
+const look = (log: AutomationLog) => {
+  if (log.delivery === 'failed') {
+    return { label: 'Não entregue', className: 'text-destructive', Icon: XCircle };
+  }
+  return LOOK[log.status] ?? LOOK.skipped;
 };
 
 function quando(iso: string): string {
@@ -105,14 +121,14 @@ export default function AutomationHistoryDialog({ rule, open, onOpenChange }: Pr
         {!loading && logs.length > 0 && (
           <ul className="divide-y divide-border text-sm">
             {logs.map(log => {
-              const look = LOOK[log.status] ?? LOOK.skipped;
-              const Icon = look.Icon;
+              const l = look(log);
+              const Icon = l.Icon;
               return (
                 <li key={log.id} className="py-2.5 flex items-start gap-2.5">
-                  <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${look.className}`} />
+                  <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${l.className}`} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-3">
-                      <span className={`font-medium ${look.className}`}>{look.label}</span>
+                      <span className={`font-medium ${l.className}`}>{l.label}</span>
                       <span className="text-xs text-muted-foreground shrink-0">
                         {quando(log.occurred_at)}
                       </span>

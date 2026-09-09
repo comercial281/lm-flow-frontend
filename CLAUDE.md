@@ -1703,6 +1703,84 @@ Armadilhas:
 4. **Não é `featureKey` nem `clientToggleKey`** — é tela de automação. Os scanners
    do catálogo de funcionalidades não entram nesta história.
 
+### O selo *Teste* e o selo *Não entregue* (correção do mesmo dia)
+
+Minutos depois de a tela subir, o dono do produto: *"tá mentindo esse 'O que
+aconteceu' — fala que disparou e simplesmente não tem nada da lead"*. Estava
+certo, e a causa era do servidor (ver o CLAUDE.md do `lm-flow`): o botão
+*Testar*, que **simula** tudo que falaria com o lead, se registrava exatamente
+como um envio real — e ele usa o último lead que entrou como cobaia. A lista
+mostrava "Disparou" para um lead que nunca recebeu nada.
+
+O que aparece na tela agora:
+
+- **Selo *Teste*** (cinza, com o frasquinho), na linha que veio do botão
+  *Testar*, e a descrição começa em *SIMULADO, nada foi enviado ao lead*.
+- **Selo *Não entregue*** (vermelho), quando a mensagem saiu do CRM e o WhatsApp
+  recusou depois — com o motivo do provedor. É uma linha SEPARADA da do disparo:
+  o disparo aconteceu (a mensagem está no chat), a entrega é que não. As duas
+  pedem providências diferentes: uma é a regra, a outra é o número do canal.
+
+Armadilha: **selo novo do servidor sem rótulo aqui cai no visual de "Não
+disparou"**, que é outra coisa. Hoje são cinco: disparou, falhou, não disparou,
+teste e não entregue.
+
+## A landing pode mandar o lead para a roleta (desde 2026-09-09)
+
+Pergunta do dono do produto: *"a nossa roleta não tem como por forms de página,
+né, ou tem?"*. Não tinha — e faltava só o campo. A roleta já distribui lead de
+formulário sem conversa nenhuma: é o que o formulário do Meta e os portais fazem
+há tempos. A landing escolhia funil, coluna e etiqueta, e o lead ficava no card
+sem dono até alguém puxar.
+
+O que aparece na tela, no botão **Destino do lead** (no cartão da landing, na aba
+*Landings de anúncio* do Site Builder), num bloco novo **Quem assume o lead
+(opcional)**, logo abaixo da Tag:
+
+- **Um seletor de roleta**, com *Não distribuir (entra sem responsável)* como
+  primeira opção — e é ela que vem marcada em toda landing que já existe.
+- Escolhida uma roleta, o texto explica o que passa a acontecer: o lead é
+  oferecido a um corretor assim que chega, ele recebe o aviso no WhatsApp e no
+  app, e vira o responsável quando aceita. E as duas regras que geram dúvida:
+  lead que já tem responsável não volta ao sorteio, e fora do horário da roleta
+  quem recebe é o número de plantão dela.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Vazio = não distribui**, e é o padrão. Nenhuma landing publicada muda de
+  comportamento: o lead continua entrando sem responsável para a gestão
+  distribuir na mão.
+- **A roleta já escolhida continua na lista mesmo desativada**, com aviso em
+  âmbar. A lista oferece só as ativas; sem essa exceção, abrir a janela de uma
+  landing cuja roleta foi desativada mostraria "não distribuir" e salvar apagaria
+  a escolha do gestor sem ele ver. Mesma doutrina do evento de pixel que a
+  landing já usa e o CRM não conhece.
+- **A leitura das roletas é de fundo e não grita**: cargo sem acesso a elas só
+  não vê a opção — a janela continua inteira.
+
+⚠️ **Conserto que veio junto, e é o mais importante desta leva:** esta janela
+montava o bloco de configuração da landing DO ZERO e o enviava inteiro, então
+salvar apagava tudo o que ela não conhece. O **destino escolhido dentro de cada
+pergunta do formulário** — que é gravado pelo editor da landing, no mesmo lugar —
+morria aí: sem erro, sem aviso, e só perceptível quando o lead parasse de cair no
+funil certo. Agora ela mescla sobre o que está gravado.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): quem sorteia, quem guarda contra oferta repetida e quem
+   registra o veredito moram lá. Contra o servidor antigo o campo aparece, salva,
+   e nada é distribuído.
+2. **A montagem do que é gravado mora em arquivo próprio, com teste**
+   (`src/features/landing/manage/landingRouting.ts`), e não dentro da janela. A
+   regra que importa — mesclar, nunca substituir — é invisível na tela, e foi
+   justamente ela que faltou por meses.
+3. **Não é `featureKey` nem `clientToggleKey`** — é configuração da landing. Os
+   scanners do catálogo de funcionalidades não entram nesta história.
+4. **A landing não tem mensagem de primeiro contato fora do horário** (aquele
+   campo é do formulário do Meta). Com a roleta fechada o lead vai para o número
+   de plantão e fica em silêncio até ela abrir, como no portal.
+
 ## A lista de etiquetas parava nas 20 primeiras (desde 2026-09-09)
 
 Relato do dono do produto: *"na hora de criar landings não mostra todas as tags"*
