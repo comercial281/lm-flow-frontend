@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Tag } from 'lucide-react';
-import api from '@/services/core/api';
-import { extractData } from '@/utils/apiHelpers';
+import { labelsService } from '@/services/contacts/labelsService';
 
 interface LabelOption {
   id: string;
@@ -19,20 +18,20 @@ interface Props {
  * `meta-ads` etc.). Mesma família dos seletores de instância/IA — some sozinho
  * quando o tenant não tem etiqueta nenhuma cadastrada.
  *
- * `page_size` grande pra trazer tudo numa request só: `/labels` é PAGINADO
- * (20 por página por padrão) — sem isso, um tenant com mais de 20 etiquetas
- * perdia as últimas em ordem alfabética (achado ao vivo: "tráfego" sumia com
- * 37 etiquetas cadastradas e o default de 20).
+ * Quem busca é o serviço de etiquetas, que pede o catálogo COMPLETO: a rota é
+ * PAGINADA (20 por página por padrão) — sem isso, um tenant com mais de 20
+ * etiquetas perdia as últimas em ordem alfabética (achado ao vivo: "tráfego"
+ * sumia com 37 etiquetas cadastradas e o default de 20).
  */
 export const TagPicker: React.FC<Props> = ({ value, onChange }) => {
   const [options, setOptions] = useState<LabelOption[]>([]);
 
   useEffect(() => {
     let alive = true;
-    api.get('/labels', { params: { page_size: 500 } })
+    labelsService.getLabels()
       .then(res => {
         if (!alive) return;
-        const list = extractData<LabelOption[]>(res) ?? [];
+        const list = res.data ?? [];
         setOptions(list.map(l => ({ id: String(l.id), title: l.title, color: l.color })));
       })
       .catch(() => { /* silencioso, igual ao seletor de instância */ });

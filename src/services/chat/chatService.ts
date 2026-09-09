@@ -1,4 +1,5 @@
 import api from '@/services/core/api';
+import { labelsService } from '@/services/contacts/labelsService';
 import { withRetry } from '@/utils/retry/retryHelper';
 import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 import {
@@ -44,8 +45,13 @@ class ChatService {
   // ✅ Novos métodos para carregar opções de filtro
   async getAvailableLabels(): Promise<Label[]> {
     return withRetry(async () => {
-      const response = await api.get('/labels');
-      return response.data;
+      // Pelo serviço de etiquetas, nunca pela rota crua: a lista é PAGINADA (20
+      // por página por padrão) e a seção de etiquetas do filtro de conversas
+      // mostrava só as 20 primeiras, em ordem alfabética, sem nada dizendo por
+      // quê. Devolve o ARRAY — as duas telas que leem isto já aceitavam array ou
+      // envelope, e array é o que o tipo declarado sempre prometeu.
+      const response = await labelsService.getLabels();
+      return (response.data ?? []) as Label[];
     });
   }
 
