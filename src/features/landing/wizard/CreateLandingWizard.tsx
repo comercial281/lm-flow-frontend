@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Building2, Check, LayoutTemplate, Loader2, Megaphone, Search, X } from 'lucide-react';
-import api from '@/services/core/api';
+import { labelsService } from '@/services/contacts/labelsService';
 import { landingPageService } from '@/services/landingPages/landingPageService';
 import { landingTemplatesService, type LandingTemplateDTO } from '@/services/landingPages/landingTemplatesService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
@@ -109,12 +109,14 @@ export default function CreateLandingWizard({
     setRoutingLoading(true);
     (async () => {
       try {
-        const [pRes, lRes] = await Promise.all([pipelinesService.getPipelines(), api.get('/labels')]);
+        // Pelo serviço de etiquetas, nunca pela rota crua: a lista é
+        // PAGINADA (20 por página por padrão), e quem tem mais que isso via o
+        // seletor de Tag cortado no meio do alfabeto, sem nada dizendo por quê.
+        const [pRes, lRes] = await Promise.all([pipelinesService.getPipelines(), labelsService.getLabels()]);
         if (!active) return;
         const ps = (pRes?.data ?? []) as Array<{ id: string; name: string }>;
         setPipelines(ps.map((p) => ({ id: p.id, label: p.name })));
-        const ls = ((lRes.data as { data?: Array<{ id: string; title: string }> })?.data ?? []);
-        setLabels(ls.map((l) => ({ id: l.id, label: l.title })));
+        setLabels((lRes.data ?? []).map((l) => ({ id: String(l.id), label: l.title })));
       } finally {
         if (active) setRoutingLoading(false);
       }

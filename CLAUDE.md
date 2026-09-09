@@ -1703,6 +1703,53 @@ Armadilhas:
 4. **Não é `featureKey` nem `clientToggleKey`** — é tela de automação. Os scanners
    do catálogo de funcionalidades não entram nesta história.
 
+## A landing mostrava só as 20 primeiras etiquetas (desde 2026-09-09)
+
+Relato do dono do produto: *"na hora de criar landings não mostra todas as tags"*.
+
+A lista de etiquetas do CRM aparece em **três** pontos da landing de anúncio: o
+passo *Destino do lead* do assistente de criação, a janela *Destino do lead* do
+cartão da landing (dois seletores ali — o normal e o do ramo desqualificado) e o
+destino por resposta dentro do editor do formulário. Os três pediam a lista de
+etiquetas **crua**, e essa lista é PAGINADA: 20 por página, em ordem alfabética.
+
+Quem tem mais de 20 etiquetas — que é quase todo cliente, porque o marcador de
+progresso do follow-up cria uma etiqueta por mensagem de cada funil — via a
+lista cortada no meio do alfabeto. Nada quebrava, nenhum erro aparecia: a
+etiqueta simplesmente não estava lá.
+
+**Já havia cicatriz desta mesma paginação em duas outras telas** (o seletor de
+etiqueta do dashboard, onde "tráfego" sumiu com 37 etiquetas cadastradas, e a
+tela de etiquetas, onde criar uma que já existia fora da primeira página dava
+erro de validação). Os dois consertos foram locais, então a landing nasceu com o
+defeito de novo.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Quem busca etiqueta é o serviço de etiquetas, nunca a rota crua.** Ele já
+  pede o catálogo COMPLETO e já carrega o motivo escrito ao lado. É o mesmo
+  caminho que os campos de roteamento do Site Builder usam — aqueles nasceram
+  espelhando a landing e, por sorte, espelharam a metade certa.
+- **Nada muda para quem tem poucas etiquetas.** A lista é a mesma; só deixa de
+  ser cortada.
+- **Não houve mudança no servidor.** A rota sempre aceitou o pedido do catálogo
+  inteiro — só ninguém o fazia aqui.
+
+Armadilhas:
+
+1. **O defeito é MUDO e volta fácil.** Etiqueta faltando na lista é
+   indistinguível de etiqueta que não existe. Por isso há spec que reprova
+   qualquer uma das três telas voltando a chamar a rota crua — e ele lê o
+   código-fonte, porque não há tipo nem render que quebre.
+2. **Passar pelo serviço só resolve enquanto ele pedir o catálogo completo.** O
+   mesmo spec trava isso: tirar o pedido de lá devolve as 20 de sempre a todas
+   as telas de uma vez.
+3. **Outras telas seguem chamando a rota crua** (macros, automações de lead e a
+   conta), e continuam sujeitas ao mesmo corte. Ficaram fora desta leva — é
+   dívida conhecida, não descuido.
+4. **Não é `featureKey` nem `clientToggleKey`** — é leitura de lista. Os
+   scanners do catálogo de funcionalidades não entram nesta história.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
