@@ -1781,6 +1781,61 @@ Armadilhas:
    campo é do formulário do Meta). Com a roleta fechada o lead vai para o número
    de plantão e fica em silêncio até ela abrir, como no portal.
 
+## A lista de etiquetas parava nas 20 primeiras (desde 2026-09-09)
+
+Relato do dono do produto: *"na hora de criar landings não mostra todas as tags"*
+— e, ao ver o diagnóstico: *"arruma as outras telas também"*.
+
+A rota de etiquetas é **paginada: 20 por página**, em ordem alfabética. Quem
+pedia a lista sem dizer "manda o catálogo inteiro" recebia só a primeira página.
+Quem tem mais de 20 etiquetas — que é quase todo cliente, porque o marcador de
+progresso do follow-up cria uma etiqueta por mensagem de cada funil — via a lista
+cortada no meio do alfabeto. Nada quebrava, nenhum erro aparecia: a etiqueta
+simplesmente não estava lá, indistinguível de etiqueta que não existe.
+
+**Esta pegadinha já tinha mordido quatro vezes, e todo conserto foi local** — por
+isso ela voltava: a tela de etiquetas (criar uma que já existia fora da primeira
+página dava erro de validação), o seletor de etiqueta do painel inicial
+("tráfego" sumindo com 37 cadastradas), as três telas da landing de anúncio e os
+formulários de macro, automação de conversa e conta.
+
+Onde estava cortando, e foi tudo consertado junto:
+
+- os **três** pontos da landing de anúncio — o passo *Destino do lead* do
+  assistente de criação, a janela *Destino do lead* do cartão (nos DOIS
+  seletores, o normal e o do ramo desqualificado) e o destino por resposta
+  dentro do editor do formulário;
+- os formulários de **macro**, de **automação de conversa** e de **conta**;
+- a seção de etiquetas do **filtro da caixa de conversas**.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Existe UMA porta para buscar etiqueta: o serviço de etiquetas.** Ele pede o
+  catálogo COMPLETO e carrega o motivo escrito ao lado. O seletor do painel
+  inicial, que já pedia a lista grande por conta própria, passou a usar a mesma
+  porta — a correção local dele funcionava e era a segunda verdade sobre o mesmo
+  assunto, além de usar outro nome de parâmetro.
+- **Nada muda para quem tem poucas etiquetas.** A lista é a mesma; só deixa de
+  ser cortada.
+- **Não houve mudança no servidor.** A rota sempre aceitou o pedido do catálogo
+  inteiro — só ninguém o fazia nessas telas.
+
+Armadilhas:
+
+1. **O defeito é MUDO e volta fácil.** Por isso o portão é do REPOSITÓRIO
+   INTEIRO, e não de uma tela: existe spec que varre todo o código e reprova
+   qualquer arquivo que volte a chamar a rota crua, com o conserto escrito na
+   mensagem da reprovação. Ele lê o código-fonte porque não há tipo, render nem
+   build que segure isso.
+2. **Passar pelo serviço só resolve enquanto ele pedir o catálogo completo.** O
+   mesmo spec trava isso: tirar o pedido de lá devolveria as 20 de sempre a
+   todas as telas de uma vez.
+3. **O serviço devolve `{ data }`, não a resposta crua do axios.** Nos três
+   formulários a lista fica fora do `getResultData`, que espera a resposta crua —
+   passar por ele devolveria lista vazia, em silêncio.
+4. **Não é `featureKey` nem `clientToggleKey`** — é leitura de lista. Os
+   scanners do catálogo de funcionalidades não entram nesta história.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,

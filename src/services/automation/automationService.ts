@@ -1,6 +1,7 @@
 import { extractData, extractResponse } from '@/utils/apiHelpers';
 import api from '../core/api';
 import authApi from '@/services/core/apiAuth';
+import { labelsService } from '@/services/contacts/labelsService';
 import type {
   AutomationRule,
   AutomationCondition,
@@ -155,7 +156,10 @@ class AutomationService {
         api.get('/inboxes'),
         authApi.get('/users'),
         api.get('/teams'),
-        api.get('/labels'),
+        // Etiquetas pelo serviço, nunca pela rota crua: a lista é PAGINADA (20
+        // por página por padrão) e o formulário mostrava só as 20 primeiras, em
+        // ordem alfabética, sem nada dizendo por quê.
+        labelsService.getLabels(),
       ]);
 
       const getResultData = (result: PromiseSettledResult<any>, isAuthService = false): any[] => {
@@ -176,7 +180,9 @@ class AutomationService {
         inboxes: getResultData(inboxesRes),
         agents: getResultData(agentsRes, true), // true = isAuthService
         teams: getResultData(teamsRes),
-        labels: getResultData(labelsRes),
+        // O serviço já devolve { data }, então não passa pelo getResultData,
+        // que espera a resposta crua do axios.
+        labels: labelsRes.status === 'fulfilled' ? (labelsRes.value.data ?? []) : [],
         campaigns: [],
         customAttributes: [], // TODO: Implementar busca de custom attributes se necessário
       };

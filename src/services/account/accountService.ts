@@ -1,6 +1,7 @@
 import authApi from '@/services/core/apiAuth';
 import api from '@/services/core/api';
 import { extractData } from '@/utils/apiHelpers';
+import { labelsService } from '@/services/contacts/labelsService';
 import type { Account, UpdateAccount, FormDataOptions, AccountUpdateResponse } from '@/types/settings';
 import { extractError } from '@/utils/apiHelpers';
 import { fetchGlobalConfig } from '@/contexts/GlobalConfigContext';
@@ -34,7 +35,10 @@ class AccountService {
         api.get('/inboxes'),
         authApi.get('/users'),
         api.get('/teams'),
-        api.get('/labels'),
+        // Etiquetas pelo serviço, nunca pela rota crua: a lista é PAGINADA (20
+        // por página por padrão) e o formulário mostrava só as 20 primeiras, em
+        // ordem alfabética, sem nada dizendo por quê.
+        labelsService.getLabels(),
       ]);
 
       const getResultData = (result: PromiseSettledResult<any>, isAuthService = false) => {
@@ -53,7 +57,9 @@ class AccountService {
         inboxes: getResultData(inboxesRes),
         agents: getResultData(agentsRes, true), // true = isAuthService
         teams: getResultData(teamsRes),
-        labels: getResultData(labelsRes),
+        // O serviço já devolve { data }, então não passa pelo getResultData,
+        // que espera a resposta crua do axios.
+        labels: labelsRes.status === 'fulfilled' ? (labelsRes.value.data ?? []) : [],
       };
     } catch (error: any) {
       console.error('Erro ao buscar dados do formulário:', error);

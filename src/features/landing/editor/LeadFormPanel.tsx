@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { GripVertical, Plus, Trash2 } from 'lucide-react';
 import { NativeSelect } from '@/components/ui/native-select';
-import api from '@/services/core/api';
+import { labelsService } from '@/services/contacts/labelsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import type { BlockConfig, BlockInstance, LeadFormStep } from '@/features/landing/blocks';
 import { useLandingEditorStore, type AnswerDestination } from './landingEditorStore';
@@ -31,10 +31,13 @@ function useRoutingOptions() {
     let active = true;
     (async () => {
       try {
-        const [pRes, lRes] = await Promise.all([pipelinesService.getPipelines(), api.get('/labels')]);
+        // Pelo serviço de etiquetas, nunca pela rota crua: a lista é
+        // PAGINADA (20 por página por padrão), e quem tem mais que isso via o
+        // seletor de etiqueta cortado no meio do alfabeto, sem nada dizendo por quê.
+        const [pRes, lRes] = await Promise.all([pipelinesService.getPipelines(), labelsService.getLabels()]);
         const ps = ((pRes?.data ?? []) as Array<{ id: string; name: string }>).map((p) => ({ id: p.id, label: p.name }));
-        const ls = (((lRes.data as { data?: Array<{ id: string; title: string }> })?.data) ?? []).map((l) => ({
-          id: l.id,
+        const ls = (lRes.data ?? []).map((l) => ({
+          id: String(l.id),
           label: l.title,
         }));
         routingCache = { pipelines: ps, labels: ls };

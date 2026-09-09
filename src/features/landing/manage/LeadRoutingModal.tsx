@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Plug, X } from 'lucide-react';
-import api from '@/services/core/api';
+import { labelsService } from '@/services/contacts/labelsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import {
   landingPageService,
@@ -95,15 +95,18 @@ export default function LeadRoutingModal({
     let active = true;
     (async () => {
       try {
+        // Pelo serviço de etiquetas, nunca pela rota crua: a lista é
+        // PAGINADA (20 por página por padrão), e quem tem mais que isso via os
+        // dois seletores de Tag (o normal e o do desqualificado) cortados no meio
+        // do alfabeto, sem nada dizendo por quê.
         const [pRes, lRes] = await Promise.all([
           pipelinesService.getPipelines(),
-          api.get('/labels'),
+          labelsService.getLabels(),
         ]);
         if (!active) return;
         const ps = (pRes?.data ?? []) as Array<{ id: string; name: string }>;
         setPipelines(ps.map((p) => ({ id: p.id, label: p.name })));
-        const ls = ((lRes.data as { data?: Array<{ id: string; title: string }> })?.data ?? []);
-        setLabels(ls.map((l) => ({ id: l.id, label: l.title })));
+        setLabels((lRes.data ?? []).map((l) => ({ id: String(l.id), label: l.title })));
         if (page.lead_pipeline_id) await loadStages(page.lead_pipeline_id, active);
         if (disqInit.pipeline_id) {
           const ss = await fetchStages(disqInit.pipeline_id);
