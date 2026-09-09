@@ -532,6 +532,10 @@ interface ActionEditorProps {
 const MESSAGE_VARS: { label: string; token: string }[] = [
   { label: 'Nome',          token: '{{nome}}' },
   { label: 'Nome completo', token: '{{nome_completo}}' },
+  // Responsável pelo lead. Vazio até alguém assumir — no gatilho do aceite da
+  // roleta já é o corretor que acabou de aceitar.
+  { label: 'Corretor',      token: '{{corretor}}' },
+  { label: 'Corretor (completo)', token: '{{corretor_completo}}' },
   { label: 'Telefone',      token: '{{telefone}}' },
   { label: 'E-mail',        token: '{{email}}' },
   { label: 'Data',          token: '{{data}}' },

@@ -60,6 +60,7 @@ const TRIGGER_HINTS: Record<string, string> = {
   'lead.message_received': 'Dispara quando o lead manda uma mensagem. Filtre por palavra-chave abaixo (opcional).',
   'lead.stage_changed': 'Dispara quando o lead muda de etapa no funil.',
   'lead.no_reply_after': 'Dispara quando o lead não responde após X minutos da última mensagem enviada. Define o tempo na condição abaixo.',
+  'lead.roleta_accepted': 'Dispara quando o corretor clica em Aceitar na oferta da roleta (ou em Assumir lead, no Leilão). NÃO dispara quando o aceite acontece porque ele já respondeu ao lead — ali a mensagem chegaria depois da fala dele. A mensagem sai pelo número do corretor que aceitou.',
 };
 
 const EMPTY_FORM: LeadAutomationRuleFormData = {
