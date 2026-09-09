@@ -1659,6 +1659,50 @@ Armadilhas:
    e QUEBROU O BUILD. A busca é montada em pedaços; escrita literal, ela vira uma
    chave usada.
 
+## "O que aconteceu": a automação passou a dizer por que não disparou (desde 2026-09-09)
+
+Terceiro relato seguido do dono sobre a mesma automação (*Lead criado* + funil da
+landing + mensagem no WhatsApp) não disparar. O problema por trás do ciclo era
+não haver ONDE olhar: automação que dispara deixa rastro, automação que falha
+deixa rastro, automação que **não casa com o lead** não deixava nada.
+
+O que aparece na tela (*Automações → Automações de Lead*):
+
+- **Botão *O que aconteceu*** (o relógio, ao lado do frasquinho de *Testar*), em
+  cada automação. Ele lista os últimos leads que passaram por ela com um dos três
+  selos: **Disparou** (e o que saiu), **Falhou** (e o motivo do servidor) e
+  **Não disparou** — este com a condição que barrou, em português: *"a regra pede
+  funil «Leads LP», e este lead ainda não está em funil nenhum"*.
+- Também no card do lead: o bloco **Respostas do lead**, na aba *Detalhes*,
+  mostrava uma linha *Form Answers → [object Object]*. Ele imprimia a chave que
+  GUARDA as respostas em vez das respostas. Agora usa a mesma leitura da aba
+  *Origem* — uma linha por pergunta, e o rastreio do anúncio fora.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Testar e *O que aconteceu* respondem perguntas diferentes.** O *Testar* força
+  a regra contra um lead-cobaia (o último que entrou) e fura os filtros de
+  propósito; este responde sobre os leads que entraram sozinhos. As duas
+  continuam, lado a lado.
+- **A lista é a partir de agora.** Ela não reconstrói o passado — lead que entrou
+  antes do deploy não aparece. Para esse, quem responde continua sendo o *Testar*.
+- **Recusa por cargo aparece como recusa por cargo.** É clique explícito: aqui o
+  motivo do servidor é mostrado, lendo os DOIS formatos de erro da API.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): quem grava as três linhas e quem serve a lista moram lá.
+   Contra o servidor antigo o botão abre vazio.
+2. **Selo novo do servidor precisa de rótulo aqui**, senão a linha sai com a
+   aparência de "não disparou". Mesma armadilha do estado das listas do Bolsão.
+3. **Não voltar a imprimir valor cru com `String(v)` no bloco de respostas do
+   card** — é o que produzia o `[object Object]`, e o defeito é MUDO: nada quebra,
+   a linha só fica ilegível. A normalização é a mesma da aba *Origem*, num arquivo
+   só, com teste.
+4. **Não é `featureKey` nem `clientToggleKey`** — é tela de automação. Os scanners
+   do catálogo de funcionalidades não entram nesta história.
+
 ## A landing pode mandar o lead para a roleta (desde 2026-09-09)
 
 Pergunta do dono do produto: *"a nossa roleta não tem como por forms de página,

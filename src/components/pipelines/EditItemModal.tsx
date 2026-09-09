@@ -763,8 +763,17 @@ export default function EditItemModal({
                 {/* Respostas do formulário (perguntas personalizadas da campanha) */}
                 {(() => {
                   const ca = ((item.contact as any)?.custom_attributes) ?? {};
-                  const HIDE = new Set(['empreendimento', 'imovel_codigo', 'origem_lead']);
-                  const entries = Object.entries(ca).filter(([k, v]) => !HIDE.has(k) && v != null && v !== '');
+                  const HIDE = new Set(['empreendimento', 'imovel_codigo', 'origem_lead', 'form_answers']);
+                  // As respostas do formulário vivem DENTRO de `form_answers`, e o
+                  // bloco imprimia essa chave inteira com String(v) — uma linha
+                  // "Form Answers: [object Object]" no lugar do que o lead
+                  // respondeu. A mesma normalização da aba Origem abre os pares e
+                  // descarta o rastreio do anúncio, que nunca foi resposta.
+                  const respostas = normalizeFormAnswers(ca.form_answers);
+                  const outras = Object.entries(ca)
+                    .filter(([k, v]) => !HIDE.has(k) && v != null && v !== '' && typeof v !== 'object')
+                    .map(([k, v]) => ({ label: k.replace(/_/g, ' '), value: String(v) }));
+                  const entries = [...respostas, ...outras].map(r => [r.label, r.value] as const);
                   if (entries.length === 0) return null;
                   return (
                     <div className="grid gap-1.5">
@@ -773,10 +782,13 @@ export default function EditItemModal({
                         Respostas do lead
                       </Label>
                       <div className="rounded-lg border border-border/60 bg-muted/20 p-2 space-y-1.5">
-                        {entries.map(([k, v]) => (
-                          <div key={k} className="flex items-start justify-between gap-3 text-xs">
-                            <span className="text-muted-foreground shrink-0 capitalize">{k.replace(/_/g, ' ')}</span>
-                            <span className="text-right font-medium break-words">{String(v)}</span>
+                        {/* A chave leva o índice: pergunta repetida (formulário
+                            copiado de outro) tem o mesmo rótulo, e a segunda
+                            linha sumiria. */}
+                        {entries.map(([k, v], i) => (
+                          <div key={`${k}-${i}`} className="flex items-start justify-between gap-3 text-xs">
+                            <span className="text-muted-foreground shrink-0 capitalize">{k}</span>
+                            <span className="text-right font-medium break-words">{v}</span>
                           </div>
                         ))}
                       </div>
