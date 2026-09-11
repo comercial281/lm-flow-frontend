@@ -103,12 +103,20 @@ export default function UserDetails({
                   {user.name}
                 </DialogTitle>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge
-                    variant={user.availability === 'online' ? "secondary" : "outline"}
-                    className={`text-xs ${getStatusColor(user.availability)}`}
-                  >
-                    {getStatusLabel(user.availability)}
-                  </Badge>
+                  {/* Desativado não tem status de disponibilidade: ele não
+                      entra. "Online" aqui seria a tela mentindo. */}
+                  {user.deactivated ? (
+                    <Badge variant="outline" className="text-xs text-muted-foreground">
+                      {t('table.columns.inactive')}
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant={user.availability === 'online' ? "secondary" : "outline"}
+                      className={`text-xs ${getStatusColor(user.availability)}`}
+                    >
+                      {getStatusLabel(user.availability)}
+                    </Badge>
+                  )}
                   <Badge variant={user.confirmed ? "secondary" : "outline"} className="text-xs">
                     {user.confirmed ? t('details.status.confirmed') : t('details.status.pending')}
                   </Badge>
@@ -204,6 +212,42 @@ export default function UserDetails({
                       {user.confirmed ? t('details.accountStatus.confirmed') : t('details.accountStatus.pending')}
                     </Badge>
                   </div>
+
+                  {/* O REGISTRO da desativação.
+                      Os leads que foram passados não voltam com a reativação —
+                      quem atendeu aquela carteira fez trabalho que não se desfaz
+                      por efeito de um clique. Então esta linha é a resposta para
+                      "para onde foi a carteira do Fulano?", que é a pergunta que
+                      alguém faz uma semana depois. */}
+                  {user.deactivated && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Desativado em</span>
+                        <span>
+                          {user.deactivated_at
+                            ? new Date(user.deactivated_at).toLocaleDateString('pt-BR')
+                            : '—'}
+                        </span>
+                      </div>
+                      {user.deactivation_snapshot?.transfer_to_name && (
+                        <div className="flex justify-between gap-3">
+                          <span className="text-muted-foreground">Os leads dele foram para</span>
+                          <span className="text-right">
+                            {user.deactivation_snapshot.transfer_to_name}
+                          </span>
+                        </div>
+                      )}
+                      {user.deactivation_snapshot?.exclusive_number?.name &&
+                        user.deactivation_snapshot?.disconnect_number && (
+                          <div className="flex justify-between gap-3">
+                            <span className="text-muted-foreground">WhatsApp desconectado</span>
+                            <span className="text-right">
+                              {user.deactivation_snapshot.exclusive_number.name}
+                            </span>
+                          </div>
+                        )}
+                    </>
+                  )}
                 </div>
               </div>
 

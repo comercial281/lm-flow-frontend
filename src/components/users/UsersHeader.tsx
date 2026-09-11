@@ -2,7 +2,6 @@ import {
   Plus,
   Download,
   Mail,
-  Trash2,
 } from 'lucide-react';
 import { BaseHeader, HeaderAction, HeaderFilter } from '@/components/base';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -16,7 +15,6 @@ interface UsersHeaderProps {
   onNewUser: () => void;
   onBulkInvite: () => void;
   onFilter: () => void;
-  onBulkDelete?: () => void;
   onClearSelection?: () => void;
   activeFilters?: HeaderFilter[];
   showFilters?: boolean;
@@ -30,7 +28,6 @@ export default function UsersHeader({
   onNewUser,
   onBulkInvite,
   onFilter,
-  onBulkDelete,
   onClearSelection,
   activeFilters = [],
   showFilters = true,
@@ -61,14 +58,14 @@ export default function UsersHeader({
     },
   ];
 
-  const bulkActions: HeaderAction[] = onBulkDelete && can('users', 'delete') ? [
-    {
-      label: t('header.delete'),
-      icon: <Trash2 className="h-4 w-4" />,
-      onClick: onBulkDelete,
-      variant: 'destructive' as const,
-    },
-  ] : [];
+  // ⚠️ NÃO existe ação em massa aqui, e é de propósito.
+  //
+  // A exclusão em massa chamava o mesmo caminho do *Excluir* individual, que
+  // para quem já atendeu um lead vira uma DESATIVAÇÃO — sem escolher quem fica
+  // com os leads de cada um, e sem ninguém ver o que cada pessoa carregava.
+  // Desativar dez corretores em silêncio é exatamente a meia-desativação que a
+  // janela de confirmação veio impedir.
+  const bulkActions: HeaderAction[] = [];
 
   return (
     <BaseHeader

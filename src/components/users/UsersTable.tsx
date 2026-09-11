@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback, Badge } from '@/components/ui/ds';
-import { Edit, Trash2, Shield } from 'lucide-react';
+import { Edit, Shield, UserCheck, UserX } from 'lucide-react';
 import { User } from '@/types/users';
 import { BaseTable, TableColumn, TableAction } from '@/components/base';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -11,13 +11,14 @@ interface UsersTableProps {
   loading?: boolean;
   onSelectionChange: (users: User[]) => void;
   onEditUser: (user: User) => void;
-  onDeleteUser: (user: User) => void;
+  onDeactivateUser: (user: User) => void;
+  onReactivateUser: (user: User) => void;
   onCreateUser?: () => void;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   onSort?: (column: string) => void;
   getRowKey?: (user: User) => string;
-  canDeleteUser?: (user: User) => boolean;
+  canDeactivateUser?: (user: User) => boolean;
 }
 
 export default function UsersTable({
@@ -26,13 +27,14 @@ export default function UsersTable({
   loading,
   onSelectionChange,
   onEditUser,
-  onDeleteUser,
+  onDeactivateUser,
+  onReactivateUser,
   onCreateUser,
   sortBy,
   sortOrder,
   onSort,
   getRowKey,
-  canDeleteUser,
+  canDeactivateUser,
 }: UsersTableProps) {
   const { can } = useUserPermissions();
   const { t } = useLanguage('users');
@@ -118,16 +120,21 @@ export default function UsersTable({
       key: 'availability_status',
       label: t('table.columns.status'),
       width: '120px',
-      render: user => (
-        <div>
+      // Desativado não tem status de disponibilidade: ele não entra. Mostrar
+      // "Online" para quem perdeu o acesso é a tela mentindo.
+      render: user =>
+        user.deactivated ? (
+          <Badge variant="outline" className="text-xs text-muted-foreground">
+            {t('table.columns.inactive')}
+          </Badge>
+        ) : (
           <Badge
             variant={user.availability === 'online' ? 'secondary' : 'outline'}
             className={`text-xs ${getStatusColor(user.availability)}`}
           >
             {getStatusLabel(user.availability)}
           </Badge>
-        </div>
-      ),
+        ),
     },
     {
       key: 'confirmed',
@@ -166,14 +173,22 @@ export default function UsersTable({
           },
         ]
       : []),
-    ...(can('users', 'delete')
+    // Desativar e Reativar são a MESMA linha em estados opostos: quem está
+    // desativado só pode voltar, e quem está ativo só pode sair.
+    ...(can('users', 'deactivate')
       ? [
           {
-            label: t('table.actions.delete'),
-            icon: <Trash2 className="h-4 w-4" />,
-            onClick: onDeleteUser,
+            label: t('table.actions.deactivate'),
+            icon: <UserX className="h-4 w-4" />,
+            onClick: onDeactivateUser,
             variant: 'destructive' as const,
-            show: canDeleteUser,
+            show: (user: User) => !user.deactivated && (canDeactivateUser?.(user) ?? true),
+          },
+          {
+            label: t('table.actions.reactivate'),
+            icon: <UserCheck className="h-4 w-4" />,
+            onClick: onReactivateUser,
+            show: (user: User) => Boolean(user.deactivated) && (canDeactivateUser?.(user) ?? true),
           },
         ]
       : []),

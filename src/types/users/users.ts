@@ -23,6 +23,59 @@ export interface User {
   created_at: string;
   updated_at: string;
   permissions: string[];
+  /** Corretor DESATIVADO: o perfil continua, a pessoa parou de trabalhar. */
+  deactivated?: boolean;
+  deactivated_at?: string | null;
+  deactivation_reason?: DeactivationReason | null;
+  deactivation_snapshot?: DeactivationSnapshot | null;
+}
+
+export type DeactivationReason = 'ferias' | 'afastamento' | 'saiu';
+
+/** O registro do que aconteceu na desativação — o que a tela conta depois. */
+export interface DeactivationSnapshot {
+  at?: string;
+  reason?: DeactivationReason;
+  transfer_to_id?: string | null;
+  transfer_to_name?: string | null;
+  disconnect_number?: boolean;
+  exclusive_number?: DeactivationNumber | null;
+  cleanup?: {
+    status?: 'pending' | 'done' | 'failed';
+    leads?: { conversations?: number; contacts?: number; failures?: number; skipped?: boolean };
+    offers?: number;
+    number?: { name?: string; logged_out?: boolean; skipped?: boolean; error?: string };
+    error?: string;
+  };
+}
+
+export interface DeactivationNumber {
+  roleta_instance_id?: string;
+  inbox_id?: string;
+  name?: string | null;
+  phone?: string | null;
+}
+
+/**
+ * O que o corretor CARREGA — o estrago que a janela de confirmação mostra antes.
+ * Campo que o servidor não conseguiu contar volta nulo, e a tela não mostra
+ * aquela linha em vez de mostrar zero (que seria mentira).
+ */
+export interface DeactivationPreview {
+  leads: number | null;
+  open_conversations: number | null;
+  pending_offers: number | null;
+  roletas: string[];
+  /** null = ele não tem número exclusivo; a opção de desconectar nem aparece. */
+  exclusive_number: DeactivationNumber | null;
+  shared_numbers: string[];
+  user?: User;
+}
+
+export interface DeactivatePayload {
+  reason: DeactivationReason;
+  transfer_to_id?: string | null;
+  disconnect_number?: boolean;
 }
 
 export interface UsersListParams {
