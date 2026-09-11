@@ -9,7 +9,9 @@
     "actions": {
       "chat": "Conversar",
       "edit": "Editar",
-      "delete": "Deletar"
+      "delete": "Deletar",
+      "deactivate": "Desativar",
+      "reactivate": "Reativar"
     }
   },
   "details": {
@@ -184,11 +186,14 @@
       "confirmation": "Confirmação",
       "id": "ID",
       "confirmed": "Confirmado",
-      "pending": "Pendente"
+      "pending": "Pendente",
+      "inactive": "Inativo"
     },
     "actions": {
       "edit": "Editar",
-      "delete": "Deletar"
+      "delete": "Deletar",
+      "deactivate": "Desativar",
+      "reactivate": "Reativar"
     },
     "empty": {
       "title": "Nenhum atendente encontrado",

@@ -2,21 +2,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { SettingsAgentsTour } from '@/tours';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Button,
-} from '@/components/ui/ds';
+import { Button } from '@/components/ui/ds';
 import { Grid3X3, List, Users as UsersIcon } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useAuthStore } from '@/store/authStore';
 import { usersService } from '@/services/users';
+import { apiErrorMessage } from '@/utils/apiHelpers';
+import { canDeactivate } from '@/features/users/deactivation/deactivationRules';
 import { User, UsersListParams, UsersState } from '@/types/users';
 import { BaseFilter } from '@/types/core';
 import { AppliedFilter } from '@/types/core';
@@ -30,6 +24,7 @@ import {
   BulkInviteModal,
   UsersFilter,
   UserDetails,
+  DeactivateUserDialog,
 } from '@/components/users';
 import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 
@@ -65,9 +60,8 @@ export default function Users() {
   const { currentUser } = useAuthStore();
   const [state, setState] = useState<UsersState>(INITIAL_STATE);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [userToDeactivate, setUserToDeactivate] = useState<User | null>(null);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [bulkInviteModalOpen, setBulkInviteModalOpen] = useState(false);
@@ -259,13 +253,41 @@ export default function Users() {
     setUserModalOpen(true);
   };
 
-  const handleDeleteUser = (user: User) => {
-    if (!can('users', 'delete')) {
+  /**
+   * ⚠️ Isto DESATIVA, não exclui.
+   *
+   * O *Excluir* de antes quase nunca apagava de verdade (um lead atendido já
+   * cria referência): ele renomeava o e-mail da pessoa para um endereço
+   * inventado, randomizava a senha e respondia "excluído com sucesso" — com ela
+   * ainda em todas as roletas, com acesso aos canais, dona dos leads e
+   * recebendo aviso no WhatsApp. Era um "desativar" por acidente, irreversível.
+   */
+  const handleDeactivateUser = (user: User) => {
+    if (!can('users', 'deactivate')) {
       toast.error(t('messages.permissionDenied.delete'));
       return;
     }
-    setUserToDelete(user);
-    setDeleteDialogOpen(true);
+    setUserToDeactivate(user);
+    setDeactivateDialogOpen(true);
+  };
+
+  /**
+   * A volta: devolve o acesso e os canais em que ela atendia. NÃO a recoloca nas
+   * roletas (quem religa a torneira é o gestor) e NÃO traz os leads de volta.
+   */
+  const handleReactivateUser = async (user: User) => {
+    if (!can('users', 'deactivate')) {
+      toast.error(t('messages.permissionDenied.delete'));
+      return;
+    }
+
+    try {
+      await usersService.reactivate(user.id);
+      toast.success(`${user.name} voltou. Ele ainda está fora das roletas — ligue quando quiser.`);
+      loadUsers();
+    } catch (error) {
+      toast.error(apiErrorMessage(error, 'Não consegui reativar agora.'));
+    }
   };
 
   const handleBulkInvite = () => {
@@ -276,21 +298,18 @@ export default function Users() {
     setBulkInviteModalOpen(true);
   };
 
-  // Bulk actions
-  const handleBulkDelete = () => {
-    if (!can('users', 'delete')) {
-      toast.error(t('messages.permissionDenied.delete'));
-      return;
-    }
-    setBulkDeleteDialogOpen(true);
-  };
+  /**
+   * Quem esta pessoa pode desativar: o gestor desativa CORRETOR; gestor e
+   * administrador só o administrador desativa. A mesma régua roda no servidor —
+   * esta existe para a tela não oferecer um botão que a API vai recusar.
+   *
+   * O último administrador continua protegido: sem ele ninguém religa ninguém.
+   */
+  const canDeactivateUser = (user: User) => {
+    const actor = state.users.find(u => u.id === currentUserId) ?? null;
+    if (!canDeactivate(actor, user)) return false;
 
-  const canDeleteUser = (user: User) => {
-    // Não pode deletar a si mesmo
-    if (user.id === currentUserId) return false;
-
-    // Não pode deletar o último administrador
-    const admins = state.users.filter(u => u.role?.key === 'administrator');
+    const admins = state.users.filter(u => u.role?.key === 'administrator' && !u.deactivated);
     if (user.role?.key === 'administrator' && admins.length === 1) {
       return false;
     }
@@ -311,54 +330,10 @@ export default function Users() {
   //   }
   // };
 
-  // Confirm delete single user
-  const confirmDeleteUser = async () => {
-    if (!userToDelete) return;
-
-    setState(prev => ({ ...prev, loading: { ...prev.loading, delete: true } }));
-
-    try {
-      await usersService.deleteUser(userToDelete.id);
-      toast.success(t('messages.deleteSuccess'));
-
-      // Refresh the list
-      loadUsers();
-
-      setDeleteDialogOpen(false);
-      setUserToDelete(null);
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      toast.error(t('messages.deleteError'));
-    } finally {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, delete: false } }));
-    }
-  };
-
-  // Confirm bulk delete
-  const confirmBulkDelete = async () => {
-    if (state.selectedUserIds.length === 0) return;
-
-    setState(prev => ({ ...prev, loading: { ...prev.loading, bulk: true } }));
-
-    try {
-      // Delete users one by one (assuming no bulk delete endpoint)
-      for (const userId of state.selectedUserIds) {
-        await usersService.deleteUser(userId);
-      }
-
-      toast.success(t('messages.bulkDeleteSuccess', { count: state.selectedUserIds.length }));
-
-      // Clear selection and refresh
-      setState(prev => ({ ...prev, selectedUserIds: [] }));
-      loadUsers();
-
-      setBulkDeleteDialogOpen(false);
-    } catch (error) {
-      console.error('Error bulk deleting users:', error);
-      toast.error(t('messages.bulkDeleteError'));
-    } finally {
-      setState(prev => ({ ...prev, loading: { ...prev.loading, bulk: false } }));
-    }
+  const handleDeactivated = () => {
+    setDeactivateDialogOpen(false);
+    setUserToDeactivate(null);
+    loadUsers();
   };
 
   // Handle user form submission
@@ -401,7 +376,6 @@ export default function Users() {
           onNewUser={handleCreateUser}
           onBulkInvite={handleBulkInvite}
           onFilter={handleOpenFilter}
-          onBulkDelete={handleBulkDelete}
           onClearSelection={() => setState(prev => ({ ...prev, selectedUserIds: [] }))}
           activeFilters={appliedFilters}
           showFilters={true}
@@ -454,8 +428,9 @@ export default function Users() {
                 key={user.id}
                 user={user}
                 onEdit={handleEditUser}
-                onDelete={handleDeleteUser}
-                canDelete={canDeleteUser(user)}
+                onDeactivate={handleDeactivateUser}
+                onReactivate={handleReactivateUser}
+                canDeactivate={canDeactivateUser(user)}
               />
             ))}
           </div>
@@ -471,7 +446,8 @@ export default function Users() {
               }))
             }
             onEditUser={handleEditUser}
-            onDeleteUser={handleDeleteUser}
+            onDeactivateUser={handleDeactivateUser}
+            onReactivateUser={handleReactivateUser}
             onCreateUser={handleCreateUser}
             sortBy={state.sortBy}
             sortOrder={state.sortOrder}
@@ -482,7 +458,7 @@ export default function Users() {
               loadUsers({ sort: column as any, order: newOrder });
             }}
             getRowKey={(user: User) => user.id.toString()}
-            canDeleteUser={canDeleteUser}
+            canDeactivateUser={canDeactivateUser}
           />
         )}
       </div>
@@ -502,59 +478,18 @@ export default function Users() {
         </div>
       )}
 
-      {/* Delete User Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('dialog.delete.title')}</DialogTitle>
-            <DialogDescription>
-              {t('dialog.delete.description', { name: userToDelete?.name })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-              disabled={state.loading.delete}
-            >
-              {t('dialog.delete.cancel')}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDeleteUser}
-              disabled={state.loading.delete}
-            >
-              {state.loading.delete ? t('dialog.delete.deleting') : t('dialog.delete.confirm')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bulk Delete Dialog */}
-      <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('dialog.bulkDelete.title')}</DialogTitle>
-            <DialogDescription>
-              {t('dialog.bulkDelete.description', { count: state.selectedUserIds.length })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setBulkDeleteDialogOpen(false)}
-              disabled={state.loading.bulk}
-            >
-              {t('dialog.bulkDelete.cancel')}
-            </Button>
-            <Button variant="destructive" onClick={confirmBulkDelete} disabled={state.loading.bulk}>
-              {state.loading.bulk
-                ? t('dialog.bulkDelete.deleting')
-                : t('dialog.bulkDelete.confirm')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Desativar corretor — a janela mostra o que a pessoa carrega antes de
+          confirmar, e é ela que impede a meia-desativação. */}
+      <DeactivateUserDialog
+        open={deactivateDialogOpen}
+        user={userToDeactivate}
+        users={state.users}
+        onClose={() => {
+          setDeactivateDialogOpen(false);
+          setUserToDeactivate(null);
+        }}
+        onDone={handleDeactivated}
+      />
 
       {/* User Modal */}
       <UserFormModal
@@ -591,7 +526,6 @@ export default function Users() {
           setEditingUser(user);
           setUserModalOpen(true);
         }}
-        canDelete={canDeleteUser}
       />
     </div>
   );

@@ -8,6 +8,8 @@ import type {
   BulkInviteResponse,
   UserFormData,
   User,
+  DeactivationPreview,
+  DeactivatePayload,
 } from '@/types/users';
 
 export interface WhatsappSendResult {
@@ -101,6 +103,36 @@ class UsersService {
   async deleteUser(userId: string): Promise<{ message: string }> {
     const response = await apiAuth.delete(`/users/${userId}`);
     return extractData<{ message: string }>(response);
+  }
+
+  /**
+   * O que a pessoa carrega, para a janela de confirmação mostrar ANTES de
+   * desativar: quantos leads, quantas conversas abertas, quantas ofertas da
+   * roleta esperando resposta dela, em quais roletas ela está e qual o número
+   * exclusivo dela.
+   *
+   * Não é enfeite: "desativar" é um conjunto de portas, e a que ficar de fora
+   * falha em silêncio. A janela que lista o estrago é o que impede a
+   * meia-desativação.
+   */
+  async getDeactivationPreview(userId: string): Promise<DeactivationPreview> {
+    const response = await apiAuth.get(`/users/${userId}/deactivation_preview`);
+    return extractData<DeactivationPreview>(response);
+  }
+
+  /** Desativa: corta o acesso, tira das roletas e para os avisos. */
+  async deactivate(userId: string, payload: DeactivatePayload): Promise<User> {
+    const response = await apiAuth.post(`/users/${userId}/deactivate`, payload);
+    return extractData<User>(response);
+  }
+
+  /**
+   * A volta. Devolve o acesso e os canais em que a pessoa atendia — e mais
+   * nada: ela volta FORA das roletas, e os leads que foram passados não voltam.
+   */
+  async reactivate(userId: string): Promise<User> {
+    const response = await apiAuth.post(`/users/${userId}/reactivate`, {});
+    return extractData<User>(response);
   }
 
   // Bulk invite users

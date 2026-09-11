@@ -1,5 +1,5 @@
 import { Button, Card, CardContent, Avatar, AvatarFallback } from '@/components/ui/ds';
-import { Edit, MessageSquare, Trash2 } from 'lucide-react';
+import { Edit, MessageSquare, UserCheck, UserX } from 'lucide-react';
 import { User } from '@/types/users';
 import UserStatusBadge from './UserStatusBadge';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -8,16 +8,18 @@ type UserCardProps = {
   user: User;
   onStartConversation?: (user: User) => void;
   onEdit?: (user: User) => void;
-  onDelete?: (user: User) => void;
-  canDelete?: boolean;
+  onDeactivate?: (user: User) => void;
+  onReactivate?: (user: User) => void;
+  canDeactivate?: boolean;
 };
 
 export default function UserCard({
   user,
   onStartConversation,
   onEdit,
-  onDelete,
-  canDelete = true,
+  onDeactivate,
+  onReactivate,
+  canDeactivate = true,
 }: UserCardProps) {
   const { t } = useLanguage('users');
 
@@ -65,10 +67,18 @@ export default function UserCard({
               <p className="text-xs text-sidebar-foreground/60 truncate">{user.email}</p>
             )}
           </div>
-          <UserStatusBadge
-            status={user.availability}
-            confirmed={user.confirmed}
-          />
+          {/* Desativado não tem status de disponibilidade: ele não entra. Mostrar
+              "Online" ao lado de quem perdeu o acesso é a tela mentindo. */}
+          {user.deactivated ? (
+            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+              Inativo
+            </span>
+          ) : (
+            <UserStatusBadge
+              status={user.availability}
+              confirmed={user.confirmed}
+            />
+          )}
         </div>
 
         <div className="px-4 py-3 text-xs text-sidebar-foreground/70">
@@ -108,18 +118,35 @@ export default function UserCard({
                 <Edit className="h-4 w-4 mr-2" />
                 {t('card.actions.edit')}
               </Button>
-              {canDelete && onDelete && <div className="w-px bg-sidebar-border" />}
+              {canDeactivate && (onDeactivate || onReactivate) && (
+                <div className="w-px bg-sidebar-border" />
+              )}
             </>
           )}
-          {onDelete && canDelete && (
-            <Button
-              variant="ghost"
-              className="rounded-none h-12 px-4 text-red-500 hover:text-red-400 hover:bg-red-500/10"
-              onClick={() => onDelete(user)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
+          {/* Desativado tem UMA ação: voltar. Desativar de novo não existe. */}
+          {user.deactivated
+            ? onReactivate &&
+              canDeactivate && (
+                <Button
+                  variant="ghost"
+                  className="rounded-none h-12 px-4 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10"
+                  onClick={() => onReactivate(user)}
+                >
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  {t('card.actions.reactivate')}
+                </Button>
+              )
+            : onDeactivate &&
+              canDeactivate && (
+                <Button
+                  variant="ghost"
+                  className="rounded-none h-12 px-4 text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                  onClick={() => onDeactivate(user)}
+                >
+                  <UserX className="h-4 w-4 mr-2" />
+                  {t('card.actions.deactivate')}
+                </Button>
+              )}
         </div>
       </CardContent>
     </Card>
