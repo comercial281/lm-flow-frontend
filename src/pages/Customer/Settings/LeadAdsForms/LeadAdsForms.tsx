@@ -37,6 +37,7 @@ import { propertiesService, type Property } from '@/services/properties/properti
 import LabelMultiSelect from '@/components/labels/LabelMultiSelect';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { connectedPagesFrom } from './connectedPages';
 // Etiqueta de marketing padrão de todo lead de formulário (igual ao backend).
 const PAID_TAG = 'tráfego pago';
 
@@ -483,14 +484,10 @@ export default function LeadAdsForms() {
     return `Formulário ${cfg.form_id}`;
   };
 
-  // Páginas presentes nos formulários sincronizados — a base do filtro.
-  const syncedPages = Array.from(
-    new Map(
-      metaForms
-        .filter(mf => mf.meta_page_id)
-        .map(mf => [mf.meta_page_id as string, mf.page_name || mf.page_id || 'Página']),
-    ).entries(),
-  ).map(([id, name]) => ({ id, name }));
+  // Páginas conectadas (ativas) — a base do filtro. Vêm da lista de páginas, não
+  // dos formulários sincronizados: página sem formulário ou com token falhando
+  // continua aparecendo, em vez de sumir como se não estivesse conectada.
+  const syncedPages = connectedPagesFrom(metaPages, metaForms);
 
   const matchesPageFilter = (mf: MetaForm) => !pageFilter || mf.meta_page_id === pageFilter;
 

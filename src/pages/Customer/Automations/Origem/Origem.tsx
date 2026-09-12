@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { Radio, Megaphone, Globe } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/ds';
 import LeadAdsForms from '@/pages/Customer/Settings/LeadAdsForms';
-import RealEstateIntegrationPage from '@/components/integrations/providers/RealEstateIntegrationPage';
+import MetaPagesPanel from './MetaPagesPanel';
 
 type OrigemTab = 'meta' | 'formularios';
 
 // De onde entram leads no CRM. Hoje só Facebook/Instagram Ads (Meta) — conectar
-// a página + mapear cada formulário pra um pipeline. Site como origem fica pra
-// depois (não é prioridade agora).
+// as páginas (podem ser várias por cliente) + mapear cada formulário pra um
+// pipeline. Site como origem fica pra depois (não é prioridade agora).
 export default function Origem() {
   const [tab, setTab] = useState<OrigemTab>('meta');
 
@@ -26,7 +26,7 @@ export default function Origem() {
         <TabsList className="mb-4 w-fit">
           <TabsTrigger value="meta">
             <Megaphone className="h-4 w-4 mr-1.5" />
-            Página do Facebook
+            Páginas do Facebook
           </TabsTrigger>
           <TabsTrigger value="formularios">Formulários</TabsTrigger>
           <TabsTrigger value="site" disabled>
@@ -35,36 +35,8 @@ export default function Origem() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="meta" className="flex-1 min-h-0">
-          <RealEstateIntegrationPage
-            integrationType="meta_ads"
-            displayName="Meta Ads"
-            description="Conecta a página do Facebook/Instagram pra captar os leads dos formulários de anúncio direto no CRM."
-            logo="📘"
-            icon={Megaphone}
-            onBack={() => setTab('formularios')}
-            configFields={[
-              {
-                key: 'page_id',
-                label: 'Page ID (Facebook)',
-                placeholder: '123456789012345',
-                hint: 'ID numérico da sua página do Facebook. Encontre em Configurações da Página → Informações da Página.',
-              },
-              {
-                key: 'access_token',
-                label: 'Access Token',
-                type: 'password',
-                placeholder: 'EAAxxxxx...',
-                hint: 'Token de acesso permanente gerado no Meta Business Manager para a sua página.',
-              },
-              {
-                key: 'verify_token',
-                label: 'Verify Token (webhook)',
-                placeholder: 'lm_flow_meta',
-                hint: 'Token de verificação do webhook. Use o mesmo valor no Meta Webhook → Verify Token.',
-              },
-            ]}
-          />
+        <TabsContent value="meta" className="flex-1 min-h-0 overflow-y-auto">
+          <MetaPagesPanel onGoToForms={() => setTab('formularios')} />
         </TabsContent>
 
         <TabsContent value="formularios" className="flex-1 min-h-0">
