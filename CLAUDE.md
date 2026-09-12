@@ -1836,6 +1836,65 @@ Armadilhas:
 4. **Não é `featureKey` nem `clientToggleKey`** — é leitura de lista. Os
    scanners do catálogo de funcionalidades não entram nesta história.
 
+## Várias páginas do Facebook por cliente: a lista e o "Adicionar página" (desde 2026-09-12)
+
+Pergunta do dono do produto: *"hoje a gente só consegue colocar uma página do
+Facebook por cliente?"*. O servidor aceita várias há tempos (cada página é um
+registro, cada formulário sabe de qual página veio, a aba *Formulários* filtra
+por página). **O limite era a tela**: a aba *Página do Facebook* era um
+formulário genérico com UM Page ID e UM token — digitar a segunda página até
+conectava por baixo, mas a tela só mostrava a última, sem lista, sem como
+desativar/remover/religar uma página específica, e com um *Desconectar* que
+derrubava todas de uma vez. E ele colava todo Page ID na mão.
+
+O que aparece na tela, em *Automações → Origem → Páginas do Facebook*:
+
+- **A lista das páginas conectadas**, com nome, Page ID e os selos *Ativa /
+  Desativada*, *Recebimento em tempo real: ok / não ativado* (com o motivo do
+  Facebook embaixo), *Token próprio / Token de sistema* e, quando ligada, *Aceita
+  qualquer formulário*.
+- **Botão *Adicionar página*** (só a Leal Mídia): abre a lista das páginas que o
+  acesso da Leal Mídia enxerga, com *Acesso a leads: ok / Sem acesso a leads*, e
+  um *Adicionar* por linha — a já conectada aparece como *Já conectada*. Embaixo,
+  **"Não está na lista? Informar Page ID e token"**, o caminho de sempre, guardado
+  como plano B para página fora do Business Manager da Leal Mídia. Sem token de
+  sistema configurado, a janela já abre no manual.
+- **Por página**: *Religar recebimento*, *Desativar/Ativar* e *Remover* (com
+  confirmação). O cliente vê a lista e não mexe — quem conecta continua sendo a
+  Leal Mídia, por decisão do dono.
+- **O filtro por página da aba *Formulários* passou a vir das páginas
+  conectadas**, não dos formulários sincronizados: página recém-conectada sem
+  formulário (ou com token falhando) aparece na pílula em vez de sumir como se
+  não estivesse conectada.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Quem conecta é só a Leal Mídia**, "da mesma forma que eu já conecto hoje". O
+  critério da tela é o MESMO do servidor (e-mail do super-admin) — dois critérios
+  diferentes fariam a tela oferecer o que a API recusa.
+- **A lista é o caminho normal; o manual é plano B.** Página fora do nosso BM
+  continua entrando por Page ID + token.
+- **O campo *Verify Token* sumiu.** Era decorativo: o webhook lê esse valor de
+  variável de ambiente, nunca da configuração.
+- **A chave *Aceita qualquer formulário* continua com UM dono**, o bloco *Leads
+  ignorados* da aba Formulários (onde a consequência aparece). Aqui é só selo.
+- **Sem mudança de comportamento no servidor** (`lm-flow`): os endereços já
+  existiam; foi só cobertura de teste do que a janela lê.
+
+Armadilhas:
+
+1. **Leitura de fundo não grita.** O Corretor não tem a permissão de ler
+   integrações e a Origem abre para ele: a lista vira um texto discreto, nunca
+   aviso vermelho. Há spec.
+2. **O formulário genérico de integração foi apagado** junto com a pasta
+   `providers` — o único consumidor era a Origem. Quem precisar de "Page ID +
+   token" usa a janela nova, que grava na tabela de páginas e não no jsonb antigo.
+3. **Conectar não basta: o Facebook só MANDA o lead com a página inscrita no
+   app.** Por isso o retorno do *Adicionar* olha `webhook_subscribed` e avisa
+   com o motivo quando falhou; a linha ganha *Religar recebimento*.
+4. **Não é `featureKey` nem `clientToggleKey`** — é cargo, não módulo. Os
+   scanners do catálogo de funcionalidades não entram nesta história.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
