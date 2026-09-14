@@ -48,6 +48,30 @@ export interface AiSetupProposal {
   about_html?: string | null;
 }
 
+/** Foto do banner da home: como o gestor escolhe (viaja no PATCH do site). */
+export type SiteHeroImageMode = 'auto' | 'property' | 'upload';
+
+export interface SiteHeroImageChoice {
+  mode: SiteHeroImageMode;
+  /** Modo `property`: o imóvel e a foto dele. */
+  property_id?: string | null;
+  photo_id?: string | null;
+  /** Modo `upload`: a imagem enviada. */
+  url?: string | null;
+}
+
+/**
+ * Foto do banner como o servidor a RESOLVE: a escolha gravada mais a imagem
+ * que o site vai servir de fato (`url`), o imóvel escolhido (quando ainda
+ * existe) e o motivo quando a escolha deixou de valer. `url` vazia no modo
+ * `property` = o site caiu no automático; `reason` explica.
+ */
+export interface SiteHeroImage extends SiteHeroImageChoice {
+  url?: string | null;
+  property?: { id: string; title: string; code: string } | null;
+  reason?: 'imovel_removido' | 'imovel_despublicado' | 'imovel_sem_foto' | 'erro' | null;
+}
+
 export interface Site {
   id: string;
   name: string;
@@ -59,6 +83,8 @@ export interface Site {
   branding: SiteBranding;
   /** Vídeo do banner da home do portal (armazenado em settings no backend). */
   hero_video_url?: string | null;
+  /** Foto do banner da home, já resolvida pelo servidor (settings no backend). */
+  hero_image?: SiteHeroImage | null;
   /** Seções liga/desliga da home (armazenado em settings no backend). */
   sections?: SiteSections;
   contact: SiteContact;
@@ -159,6 +185,8 @@ export interface SiteFormData {
   accent_color?: string;
   font_family?: string;
   hero_video_url?: string;
+  /** Foto do banner da home. Viaja aninhada; o servidor normaliza antes de gravar. */
+  hero_image?: SiteHeroImageChoice;
   sections?: SiteSections;
   contact_phone?: string;
   contact_whatsapp?: string;

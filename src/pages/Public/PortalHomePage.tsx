@@ -104,7 +104,9 @@ export default function PortalHomePage() {
               className="h-full w-full object-cover"
             />
           ) : (
-            <img src={items[0]?.cover_url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1600&q=80'} alt="" className="h-full w-full object-cover" />
+            // Foto escolhida no Site Builder (de um imóvel ou enviada); sem ela,
+            // a capa do primeiro imóvel da lista, como sempre foi.
+            <img src={site.hero?.image_url || items[0]?.cover_url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1600&q=80'} alt="" className="h-full w-full object-cover" />
           )}
           <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(23,20,15,0.35) 0%, rgba(23,20,15,0.55) 55%, var(--paper) 100%)' }} />
         </div>

@@ -1917,3 +1917,47 @@ Ao explicar o que foi feito, ou ao pedir uma decisão:
 
 Isto não é pedido de resposta curta nem de simplificação do trabalho — o trabalho
 segue igual. É sobre a linguagem da conversa.
+
+## A foto do banner da home pode ser de um imóvel (desde 2026-09-14)
+
+Pergunta do dono do produto: *"preciso poder usar uma foto de um dos imóveis
+como banner principal do site. Tem como selecionar do que já existe?"*. Não
+tinha: o bloco *Banner da home* da aba *Configurações* só aceitava vídeo, e sem
+vídeo o site usava a capa do primeiro imóvel que a lista devolvia, sem escolha
+e trocando sozinha.
+
+O que aparece na tela, no bloco *Banner da home*:
+
+- **Três opções de foto**: *Automático* (o de sempre), *Foto de um imóvel* e
+  *Enviar uma foto*. O vídeo continua ali embaixo, como *Vídeo (opcional)*, e
+  passa por cima da foto quando preenchido.
+- **Foto de um imóvel** abre a janela *Foto de qual imóvel?*: só imóveis
+  publicados no site e com foto, com busca; clicando num imóvel aparecem as
+  fotos publicadas dele e o clique na foto escolhe. A prévia aparece no bloco
+  e vale depois de *Salvar*.
+- **Aviso em âmbar** quando a escolha deixou de valer (imóvel apagado,
+  despublicado ou sem foto publicada): o site já caiu no automático, e a tela
+  diz por quê em vez de mostrar uma prévia vazia.
+- **Enviar uma foto**: upload (máx 8MB) ou endereço colado, com prévia.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Quem diz qual imagem o site serve é o SERVIDOR** (`hero_image.url` no
+  site). A tela só monta a prévia da foto recém-escolhida até salvar; depois
+  passa a mostrar o que o servidor resolveu. Sem isso, a tela mostraria a foto
+  escolhida enquanto o site já tinha caído no automático.
+- **A janela só oferece o que vai aparecer**: imóvel despublicado ou sem foto
+  não entra na lista, porque o servidor o recusaria no banner.
+- **Nada muda para quem não escolheu**: toda imobiliária nasce em *Automático*,
+  e a home pública continua caindo na capa do primeiro imóvel.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): a escolha, a resolução e o `hero.image_url` da home
+   moram lá. Contra o servidor antigo o bloco aparece, salva, e nada muda.
+2. **A tradução mora fora do JSX** (`src/features/siteBuilder/heroImage.ts`,
+   com spec): a escolha gravada vira formulário ali, e o texto dos avisos
+   também. A tela do Site Builder tem ~1.100 linhas; nada testável cabe dentro.
+3. **Não é `featureKey` nem `clientToggleKey`** — é configuração do site. Os
+   scanners do catálogo de funcionalidades não entram nesta história.

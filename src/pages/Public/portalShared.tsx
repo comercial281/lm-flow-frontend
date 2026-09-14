@@ -19,7 +19,8 @@ export interface Branding {
 export interface SiteInfo {
   name?: string;
   branding?: Branding;
-  hero?: { video_url?: string | null };
+  /** Banner da home: vídeo tem prioridade; sem os dois, a capa do primeiro imóvel. */
+  hero?: { video_url?: string | null; image_url?: string | null };
   sections?: { stats?: boolean; lead_capture?: boolean };
   contact?: { whatsapp?: string | null; phone?: string | null };
   seo?: { title?: string | null; description?: string | null };
