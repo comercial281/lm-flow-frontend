@@ -1,17 +1,31 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/ds';
 import {
   ArrowLeft, CheckCircle2, Copy, RefreshCw, Home, Star, Clock, Mail, Webhook,
+  ExternalLink, ChevronDown, ChevronRight, History,
 } from 'lucide-react';
 import api from '@/services/core/api';
-import { portalsService, PortalDetail } from '@/services/portals/portalsService';
+import { portalsService, PortalDetail, PortalFeedAccess } from '@/services/portals/portalsService';
 import { PortalLogo } from '@/components/portals/PortalLogo';
+import { PortalStatusBadge, PortalTypeCounters } from '@/components/portals/PortalBadges';
+import { legadoParaPublicacoes, temTiposDeAnuncio } from '@/features/portals/adPlan';
 import PortalPropertiesSelector from './PortalPropertiesSelector';
-
+import PortalAdPlanCard from './PortalAdPlanCard';
+import PortalSettingsCard from './PortalSettingsCard';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
-function CopyRow({ label, value, icon: Icon }: { label: string; value: string; icon: typeof Copy }) {
+
+function CopyRow({
+  label, value, icon: Icon, href, hrefLabel = 'Abrir',
+}: {
+  label: string;
+  value: string;
+  icon: typeof Copy;
+  /** Quando presente, um botão que abre o endereço em outra aba, ao lado de Copiar. */
+  href?: string;
+  hrefLabel?: string;
+}) {
   const copy = async () => {
     await navigator.clipboard.writeText(value);
     toast.success(`${label} copiada`);
@@ -28,7 +42,74 @@ function CopyRow({ label, value, icon: Icon }: { label: string; value: string; i
           <Copy className="h-3.5 w-3.5 mr-1" />
           Copiar
         </Button>
+        {href && (
+          <Button variant="outline" className="text-xs shrink-0" asChild>
+            <a href={href} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-3.5 w-3.5 mr-1" />
+              {hrefLabel}
+            </a>
+          </Button>
+        )}
       </div>
+    </div>
+  );
+}
+
+const dataHora = (iso: string) =>
+  new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+
+/**
+ * Histórico de cargas: cada vez que o portal baixou o feed, e quantos imóveis
+ * foram. Recolhido por padrão — a pergunta do dia a dia ("o portal está
+ * lendo?") o resumo já responde; a lista é para quando a resposta é "não".
+ */
+function FeedAccessHistory({ log }: { log: PortalFeedAccess[] }) {
+  const [aberto, setAberto] = useState(false);
+  const ordenado = useMemo(
+    () => [...log].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()),
+    [log],
+  );
+  const ultima = ordenado[0];
+  const resumo = ultima
+    ? `${ordenado.length} ${ordenado.length === 1 ? 'leitura' : 'leituras'} · última em ${dataHora(ultima.at)}`
+    : 'O portal ainda não baixou o feed.';
+
+  return (
+    <div className="rounded-xl border bg-card max-w-3xl">
+      <button
+        type="button"
+        onClick={() => setAberto(a => !a)}
+        aria-expanded={aberto}
+        className="w-full flex flex-wrap items-center gap-2 p-6 text-left"
+      >
+        {aberto ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+        <History className="h-4 w-4 text-muted-foreground" />
+        <span className="font-semibold text-sm">Histórico de cargas</span>
+        <span className="text-xs text-muted-foreground ml-auto">{resumo}</span>
+      </button>
+      {aberto && (
+        <div className="px-6 pb-6">
+          {ordenado.length === 0 ? (
+            <p className="text-sm text-muted-foreground">O portal ainda não baixou o feed.</p>
+          ) : (
+            <ul className="divide-y text-sm" aria-label="Leituras do feed">
+              {ordenado.map((entry, i) => (
+                <li key={`${entry.at}-${i}`} className="flex items-center justify-between py-2">
+                  <span className="flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    {dataHora(entry.at)}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {entry.listings} {entry.listings === 1 ? 'imóvel' : 'imóveis'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -43,8 +124,12 @@ export default function PortalDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // O "Carregando..." só na PRIMEIRA leitura. Os três cards recarregam a
+  // página depois de salvar (`onSaved={load}`); trocar tudo pelo aviso a cada
+  // salvar desmontava os cards, voltava a rolagem para o topo e refazia a
+  // busca dos 500 imóveis do seletor. Na recarga os cards ficam no lugar e
+  // ressincronizam pelo que o servidor devolveu.
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       setPortal(await portalsService.get(portalKey));
     } catch {
@@ -54,7 +139,23 @@ export default function PortalDetailPage() {
     }
   }, [portalKey]);
 
-  useEffect(() => { load(); }, [load]);
+  // Trocou de portal (a rota mudou): volta ao "Carregando..." em vez de mostrar
+  // os cards do portal anterior sobre a chave nova até a resposta chegar.
+  useEffect(() => {
+    setPortal(null);
+    setLoading(true);
+    load();
+  }, [load]);
+
+  // Servidor novo manda `publications` (imóvel + tipo); o antigo, as duas listas
+  // de sempre — que viram o mesmo formato aqui. Memoizado por portal: o seletor
+  // reinicia o estado quando esta lista muda de identidade.
+  const adTypes = useMemo(() => (temTiposDeAnuncio(portal) ? portal?.ad_types ?? [] : []), [portal]);
+  const publications = useMemo(() => {
+    if (!portal) return [];
+    if (Array.isArray(portal.publications)) return portal.publications;
+    return legadoParaPublicacoes(portal.property_ids ?? [], portal.featured_property_ids ?? [], adTypes);
+  }, [portal, adTypes]);
 
   const handleConnect = async () => {
     if (!portal) return;
@@ -130,8 +231,9 @@ export default function PortalDetailPage() {
         <div className="flex items-center gap-4">
           <PortalLogo portalKey={portal.portal_key} className="w-14 h-14" />
           <div className="flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold">{portal.name}</h1>
+              <PortalStatusBadge portal={portal} />
               {portal.active ? (
                 <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                   <CheckCircle2 className="h-3 w-3" />
@@ -143,9 +245,21 @@ export default function PortalDetailPage() {
                 </span>
               ) : null}
             </div>
-            <div className="flex items-center gap-5 mt-1 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1"><Home className="h-3.5 w-3.5" />{portal.sent_count} enviados</span>
-              <span className="flex items-center gap-1"><Star className="h-3.5 w-3.5" />{portal.featured_count} em destaque</span>
+            {portal.integration_status === 'adapted' && portal.status_note && (
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{portal.status_note}</p>
+            )}
+            <div className="flex items-center gap-5 mt-1 text-sm text-muted-foreground flex-wrap">
+              {adTypes.length > 0 ? (
+                <span className="flex items-center gap-1.5">
+                  <Home className="h-3.5 w-3.5" />
+                  <PortalTypeCounters adTypes={adTypes} />
+                </span>
+              ) : (
+                <>
+                  <span className="flex items-center gap-1"><Home className="h-3.5 w-3.5" />{portal.sent_count} enviados</span>
+                  <span className="flex items-center gap-1"><Star className="h-3.5 w-3.5" />{portal.featured_count} em destaque</span>
+                </>
+              )}
               {portal.last_accessed_at && (
                 <span className="flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" />
@@ -183,7 +297,13 @@ export default function PortalDetailPage() {
             </div>
 
             {portal.feed_url && (
-              <CopyRow label="URL do feed de imóveis" value={portal.feed_url} icon={Home} />
+              <CopyRow
+                label="URL do feed de imóveis"
+                value={portal.feed_url}
+                icon={Home}
+                href={portal.feed_url}
+                hrefLabel="Abrir feed"
+              />
             )}
             {portal.lead_webhook_url && (
               <CopyRow label="URL de webhook de leads" value={portal.lead_webhook_url} icon={Webhook} />
@@ -209,14 +329,39 @@ export default function PortalDetailPage() {
 
         {portal.connected && (
           <div className="max-w-3xl">
-            <PortalPropertiesSelector
+            <PortalSettingsCard
               portalKey={portal.portal_key}
-              supportsHighlight={portal.capabilities.includes('highlight')}
-              initialSelected={portal.property_ids}
-              initialFeatured={portal.featured_property_ids}
+              settings={portal.settings}
               onSaved={load}
             />
           </div>
+        )}
+
+        {portal.connected && adTypes.length > 0 && (
+          <div className="max-w-3xl">
+            <PortalAdPlanCard
+              portalKey={portal.portal_key}
+              adTypes={adTypes}
+              settings={portal.settings}
+              onSaved={load}
+            />
+          </div>
+        )}
+
+        {portal.connected && (
+          <div className="max-w-3xl">
+            <PortalPropertiesSelector
+              portalKey={portal.portal_key}
+              adTypes={adTypes}
+              initialPublications={publications}
+              supportsHighlight={portal.capabilities.includes('highlight')}
+              onSaved={load}
+            />
+          </div>
+        )}
+
+        {portal.connected && (
+          <FeedAccessHistory log={portal.feed_access_log ?? []} />
         )}
       </div>
     </div>

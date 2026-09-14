@@ -84,7 +84,7 @@ const CATALOG: CatalogEntry[] = [
   {
     type: 'portal_zap',
     name: 'Portais imobiliários',
-    description: 'Publique imóveis no Grupo ZAP, VivaReal, OLX, Imóvel Web, Chaves na Mão e regionais via feed, e receba os leads no funil.',
+    description: 'Publique imóveis no ZAP, Viva Real, OLX (Canal Pro), Imóvel Web, Quinto Andar, Chaves na Mão e regionais via feed',
     category: 'Imobiliário',
     tags: ['portais', 'zap', 'vivareal', 'olx', 'feed', 'leads'],
     configPath: '/settings/portals',

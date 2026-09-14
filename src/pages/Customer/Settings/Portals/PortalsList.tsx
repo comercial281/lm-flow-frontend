@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import { Home, Star, Clock, ChevronRight } from 'lucide-react';
 import { portalsService, Portal } from '@/services/portals/portalsService';
 import { PortalLogo } from '@/components/portals/PortalLogo';
+import { PortalStatusBadge, PortalTypeCounters } from '@/components/portals/PortalBadges';
+import { temTiposDeAnuncio } from '@/features/portals/adPlan';
 
 function lastUpdateLabel(portal: Portal): string {
   if (!portal.last_accessed_at) return 'aguardando portal';
@@ -59,7 +61,10 @@ export default function PortalsList() {
                 <PortalLogo portalKey={portal.portal_key} className="w-12 h-12" />
 
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold truncate">{portal.name}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold truncate">{portal.name}</p>
+                    <PortalStatusBadge portal={portal} />
+                  </div>
                   {!portal.connected && (
                     <p className="text-xs text-muted-foreground">Não conectado — clique para configurar</p>
                   )}
@@ -73,13 +78,21 @@ export default function PortalsList() {
                     </div>
                     <p className="text-[11px] text-muted-foreground">imóveis enviados</p>
                   </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center gap-1.5 text-primary font-bold text-lg">
-                      <Star className="h-4 w-4" />
-                      {portal.featured_count}
+                  {temTiposDeAnuncio(portal) ? (
+                    // Um contador por tipo de anúncio, com o estourado em vermelho.
+                    <div className="text-center">
+                      <PortalTypeCounters adTypes={portal.ad_types ?? []} className="justify-center text-sm font-semibold text-primary" />
+                      <p className="text-[11px] text-muted-foreground">por tipo de anúncio</p>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">em destaque</p>
-                  </div>
+                  ) : (
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1.5 text-primary font-bold text-lg">
+                        <Star className="h-4 w-4" />
+                        {portal.featured_count}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">em destaque</p>
+                    </div>
+                  )}
                   <div className="text-center min-w-32">
                     <div className="flex items-center justify-center gap-1.5 text-primary text-sm font-semibold">
                       <Clock className="h-4 w-4" />

@@ -67,11 +67,18 @@ export function extractError(error: any): ErrorInfo {
       };
     }
 
-    // Legacy format: { error: "message" }
+    // Legacy format: { error: "message" } — e a recusa por cargo do RBAC, que
+    // manda `error` como TEXTO genérico ("Forbidden - Insufficient permissions")
+    // e a explicação em `message`, no nível de cima. Quem lê só o `error`
+    // mostra a frase genérica no lugar de "seu cargo não permite esta ação".
     if (response.data?.error && typeof response.data.error === 'string') {
+      const humano = response.data.message;
       return {
         code: 'UNKNOWN_ERROR',
-        message: response.data.error,
+        message: typeof humano === 'string' && humano.trim() ? humano : response.data.error,
+        details: response.data.required_permission
+          ? { required_permission: response.data.required_permission }
+          : undefined,
       };
     }
 
