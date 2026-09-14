@@ -56,64 +56,68 @@ export default function PortalsList() {
               <button
                 key={portal.portal_key}
                 onClick={() => navigate(`/settings/portals/${portal.portal_key}`)}
-                className="w-full flex items-center gap-4 rounded-xl border bg-card p-5 text-left hover:border-primary/40 hover:shadow-sm transition-all"
+                className="w-full rounded-xl border bg-card p-5 text-left hover:border-primary/40 hover:shadow-sm transition-all"
               >
-                <PortalLogo portalKey={portal.portal_key} className="w-12 h-12" />
+                {/* Linha 1: quem é o portal e em que estado está. O nome tem prioridade
+                    de largura — os contadores moram na linha de baixo, senão com seis
+                    tipos de anúncio eles tomavam a linha inteira e o nome sumia. */}
+                <div className="flex items-center gap-4">
+                  <PortalLogo portalKey={portal.portal_key} className="w-12 h-12" />
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold truncate">{portal.name}</p>
-                    <PortalStatusBadge portal={portal} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold truncate">{portal.name}</p>
+                      <PortalStatusBadge portal={portal} />
+                    </div>
+                    {!portal.connected && (
+                      <p className="text-xs text-muted-foreground">Não conectado — clique para configurar</p>
+                    )}
                   </div>
-                  {!portal.connected && (
-                    <p className="text-xs text-muted-foreground">Não conectado — clique para configurar</p>
-                  )}
-                </div>
 
-                <div className="hidden sm:flex items-center gap-10 shrink-0">
-                  <div className="text-center">
-                    <div className="flex items-center justify-center gap-1.5 text-primary font-bold text-lg">
-                      <Home className="h-4 w-4" />
-                      {portal.sent_count}
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">imóveis enviados</p>
-                  </div>
-                  {temTiposDeAnuncio(portal) ? (
-                    // Um contador por tipo de anúncio, com o estourado em vermelho.
-                    <div className="text-center">
-                      <PortalTypeCounters adTypes={portal.ad_types ?? []} className="justify-center text-sm font-semibold text-primary" />
-                      <p className="text-[11px] text-muted-foreground">por tipo de anúncio</p>
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1.5 text-primary font-bold text-lg">
-                        <Star className="h-4 w-4" />
-                        {portal.featured_count}
-                      </div>
-                      <p className="text-[11px] text-muted-foreground">em destaque</p>
-                    </div>
-                  )}
-                  <div className="text-center min-w-32">
+                  <div className="hidden sm:block text-center shrink-0">
                     <div className="flex items-center justify-center gap-1.5 text-primary text-sm font-semibold">
                       <Clock className="h-4 w-4" />
                       {portal.connected ? lastUpdateLabel(portal) : '—'}
                     </div>
                     <p className="text-[11px] text-muted-foreground">última atualização</p>
                   </div>
+
+                  <span
+                    className={`shrink-0 text-xs font-bold tracking-wide ${
+                      portal.active
+                        ? 'text-green-600 dark:text-green-400'
+                        : portal.connected
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-muted-foreground'
+                    }`}
+                  >
+                    {portal.active ? 'ATIVO' : portal.connected ? 'AGUARDANDO' : 'INATIVO'}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                 </div>
 
-                <span
-                  className={`shrink-0 text-xs font-bold tracking-wide ${
-                    portal.active
-                      ? 'text-green-600 dark:text-green-400'
-                      : portal.connected
-                        ? 'text-amber-600 dark:text-amber-400'
-                        : 'text-muted-foreground'
-                  }`}
-                >
-                  {portal.active ? 'ATIVO' : portal.connected ? 'AGUARDANDO' : 'INATIVO'}
-                </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                {/* Linha 2: os números, alinhados com o texto (logo + gap = 4rem). Os
+                    contadores por tipo quebram linha em vez de espremer o resto. */}
+                <div className="mt-3 sm:pl-16 flex flex-wrap items-center gap-x-6 gap-y-2">
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <Home className="h-4 w-4 text-primary" />
+                    <span className="font-bold text-primary">{portal.sent_count}</span>
+                    <span className="text-muted-foreground">imóveis enviados</span>
+                  </div>
+                  {temTiposDeAnuncio(portal) ? (
+                    // Um contador por tipo de anúncio, com o estourado em vermelho.
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                      <PortalTypeCounters adTypes={portal.ad_types ?? []} className="font-semibold text-primary" />
+                      <span className="text-muted-foreground text-[11px]">por tipo de anúncio</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <Star className="h-4 w-4 text-primary" />
+                      <span className="font-bold text-primary">{portal.featured_count}</span>
+                      <span className="text-muted-foreground">em destaque</span>
+                    </div>
+                  )}
+                </div>
               </button>
             ))}
           </div>
