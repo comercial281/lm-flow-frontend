@@ -5,8 +5,14 @@ import chavesNaMaoLogo from '@/assets/portals/chaves-na-mao.svg';
 import casaMineiraLogo from '@/assets/portals/casa-mineira.svg';
 import metaLogo from '@/assets/portals/meta.svg';
 
+// ZAP, Viva Real e OLX são três portais no catálogo (feed, webhook e plano
+// próprios), mas os três se configuram dentro do Canal Pro — a mesma marca.
+// Os demais portais novos (Quinto Andar, Buskaza, Imóveis Global, Imovel Guide,
+// Homer) não têm logo aqui e caem no globo.
 const PORTAL_LOGO_SRC: Record<string, string> = {
   portal_zap: canalProLogo,
+  portal_vivareal: canalProLogo,
+  portal_olx: canalProLogo,
   portal_imovelweb: imovelwebLogo,
   portal_chaves_na_mao: chavesNaMaoLogo,
   portal_casa_mineira: casaMineiraLogo,
