@@ -1946,6 +1946,61 @@ Armadilhas:
 4. **Não é `featureKey` nem `clientToggleKey`** — é leitura de lista. Os
    scanners do catálogo de funcionalidades não entram nesta história.
 
+## Portais: catálogo completo, tipo de anúncio por imóvel e plano de anúncios (desde 2026-09-14)
+
+O dono do produto fez engenharia reversa do módulo de portais do Kenlo e pediu a
+aba *Configurações → Portais* no mesmo nível: todos os portais que o Kenlo
+lista, tipo de anúncio por imóvel, cota por tipo com aviso de estouro, a tela
+*Configurar* de cada portal e o histórico de cargas.
+
+O que aparece na tela:
+
+- **Selo de formato** em cada portal: *Formato validado* (ZAP, Viva Real, OLX,
+  Imóvel Web) ou *Formato adaptado* (os demais), com a nota do servidor. ZAP,
+  Viva Real e OLX viraram três portais, cada um com feed, webhook e plano.
+- **Seletor de tipo por imóvel** no lugar da estrela (Padrão, Destaque, Super
+  Destaque, Destaque Exclusivo, Destaque Superior, Destaque Triplo no ZAP/Viva
+  Real; Simples/Destaque/Home Destaque no Imóvel Web…). Portal de um tipo só
+  mostra só a caixa de marcar.
+- **Contadores `N / cota` por tipo**, sempre visíveis, em vermelho ao estourar.
+- **Plano de anúncios**: cota por tipo (`0 = ilimitado`) e *Valor mensal do
+  investimento (R$)*.
+- **Estouro avisa e pede confirmação** — decisão do dono, diferente do Kenlo
+  (que só pinta de vermelho e deixa passar): *Salvar* continua habilitado; com
+  estouro abre a janela *Plano de anúncios estourado* listando os tipos, e só
+  envia confirmado. O 422 do servidor (contagem divergente) cai na mesma janela.
+- **Configurar o portal**: dados do anunciante, endereço no anúncio, receber
+  leads sim/não e destino do lead (funil, coluna, roleta, responsável) — um
+  *Salvar configuração* só, uma requisição.
+- **Histórico de cargas** e botão *Abrir feed*.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **A regra de contagem/estouro mora num arquivo puro com teste**
+  (`src/features/portals/adPlan.ts`); o texto do aviso é byte a byte o do
+  servidor — a janela montada na tela e a do 422 dizem a mesma coisa.
+- **Contra o servidor antigo (sem `ad_types`) a tela cai no modo estrela**, sem
+  quebrar. É o que permite publicar o front antes de o backend estar no ar sem
+  tela em branco — mas o merge aqui é só DEPOIS do backend.
+- **Leitura de fundo não grita**: cargo sem acesso a roletas/funis/usuários só
+  não vê aquele seletor; clique mostra o motivo do servidor (`extractError`,
+  os dois formatos de erro).
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): tipos, cotas, configuração e histórico vêm de lá.
+2. **`ad_plan` manda `0` para ilimitado**, e `monthly_investment` vai como
+   `"3593.45"` ou `null`. Trocar o formato aqui faz o servidor descartar a cota
+   em silêncio.
+3. **Trocar o funil LIMPA a coluna** no destino do lead: coluna de outro funil é
+   recusada pelo servidor e a tela mostraria a escolha guardada sem efeito.
+4. **Não é `featureKey` nem `clientToggleKey`** — é configuração de portal. Os
+   scanners do catálogo não entram nesta história. O item de menu *Portais*
+   continua atrás de `properties`.
+5. **`npm ci` neste repo exige `--legacy-peer-deps`** (react-leaflet 4 × React
+   19 no lockfile). Sem isso a instalação falha com ERESOLVE.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
