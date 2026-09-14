@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchAllPortalProperties } from './portalProperties';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — peças compartilhadas (Produto A do LM Flow)
@@ -119,13 +120,16 @@ export function usePortalData(tenant?: string) {
     (async () => {
       if (!tenant) return;
       try {
-        const [siteRes, propsRes] = await Promise.all([
+        // O catálogo vem INTEIRO (todas as páginas), nunca uma página só: o
+        // portal filtra no navegador e monta cidade/bairro do que carregou.
+        // Ver portalProperties.ts — foi uma página de 60 que fez um cliente
+        // com 390 imóveis publicados ver 60 no site.
+        const [siteRes, propsJson] = await Promise.all([
           fetch(`${API}/api/public/v1/site`, { headers: { 'X-Tenant': tenant } }),
-          fetch(`${API}/api/public/v1/site/properties?per_page=60`, { headers: { 'X-Tenant': tenant } }),
+          fetchAllPortalProperties(API, tenant),
         ]);
         if (!active) return;
         const siteJson = siteRes.ok ? ((await siteRes.json()).data as SiteInfo) : {};
-        const propsJson = propsRes.ok ? ((await propsRes.json()).data as PortalProperty[]) : [];
         setSite(siteJson || {});
         setItems(propsJson || []);
         document.title = siteJson?.seo?.title || `${siteJson?.name || 'Imóveis'} — Encontre seu imóvel`;
