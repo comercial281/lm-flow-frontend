@@ -1,4 +1,21 @@
-import type { DeactivationPreview, DeactivatePayload, DeactivationReason, User } from '@/types/users';
+import type { DeactivationPreview, DeactivatePayload, DeactivationReason } from '@/types/users';
+
+/**
+ * Quem pode ser desativado, pelo MÍNIMO que as regras precisam saber.
+ *
+ * Não é `User` de propósito: a tela onde os botões de fato moram (Equipe →
+ * Pessoas) carrega o retrato da equipe, que é outro formato. Amarrar as regras
+ * ao formato de uma das telas obrigaria a segunda a converter — e conversão de
+ * formato no meio do caminho é onde "o cargo some" e o botão passa a aparecer
+ * para quem não pode.
+ */
+export interface DeactivatablePerson {
+  id: string;
+  name: string;
+  deactivated?: boolean;
+  chave_role?: string;
+  role?: { key?: string; chave_role?: string } | null;
+}
 
 /**
  * As regras da janela *Desativar corretor*.
@@ -88,7 +105,10 @@ export function buildDeactivatePayload(
  * própria pessoa que está saindo. Oferecer alguém já desativado passaria a
  * carteira para outro silêncio.
  */
-export function transferCandidates(users: User[], leaving: User | null): User[] {
+export function transferCandidates<T extends DeactivatablePerson>(
+  users: T[],
+  leaving: DeactivatablePerson | null,
+): T[] {
   return users.filter(u => u.id !== leaving?.id && !u.deactivated);
 }
 
@@ -99,12 +119,15 @@ export function transferCandidates(users: User[], leaving: User | null): User[] 
  * A mesma régua roda no servidor — esta aqui existe para a tela não oferecer um
  * botão que a API vai recusar, que é o defeito mais caro deste tipo de recorte.
  */
-export function canDeactivate(actor: User | null, target: User | null): boolean {
+export function canDeactivate(
+  actor: DeactivatablePerson | null,
+  target: DeactivatablePerson | null,
+): boolean {
   if (!actor || !target) return false;
   if (actor.id === target.id) return false;
 
-  const actorRole = actor.chave_role ?? actor.role?.key;
-  const targetRole = target.chave_role ?? target.role?.key;
+  const actorRole = actor.chave_role ?? actor.role?.chave_role ?? actor.role?.key;
+  const targetRole = target.chave_role ?? target.role?.chave_role ?? target.role?.key;
 
   if (actorRole === 'admin' || actorRole === 'administrator') return true;
 
