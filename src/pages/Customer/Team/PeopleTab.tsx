@@ -17,8 +17,9 @@ import BulkInviteModal from '@/components/users/BulkInviteModal';
 // ofertas da roleta, roletas e o WhatsApp exclusivo). É a mesma de sempre: os
 // botões é que estavam na tela errada.
 import DeactivateUserDialog from '@/components/users/DeactivateUserDialog';
-import { canDeactivate } from '@/features/users/deactivation/deactivationRules';
+import { canDeactivate, resolveActor } from '@/features/users/deactivation/deactivationRules';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useAuthStore } from '@/store/authStore';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import type { CustomRole } from '@/types/customRoles';
@@ -56,8 +57,15 @@ const cargoColor = (key?: string) =>
 export default function PeopleTab() {
   const { can } = useUserPermissions();
   const { currentUser } = useAuthStore();
+  const isSuper = useIsSuperAdmin();
   const canManage = can('users', 'update');
   const canCreate = can('users', 'create');
+
+  /* Desativar/reativar: o servidor deixa ADMINISTRADOR passar pelo cargo, fora
+     do RBAC. Exigir só a chave aqui esconderia os dois botões justamente de quem
+     a API sempre aceita — e é o recorte mais caro de errar: a tela oferecendo
+     menos do que o servidor permite. */
+  const podeUsarDesativacao = isSuper || can('users', 'deactivate');
   const [adding, setAdding] = useState(false);
   const [bulkInviting, setBulkInviting] = useState(false);
 
@@ -263,9 +271,14 @@ export default function PeopleTab() {
    * O último administrador continua protegido: sem ele ninguém religa ninguém.
    */
   const podeDesativar = (member: TeamAccessMember) => {
-    if (!can('users', 'deactivate')) return false;
+    if (!podeUsarDesativacao) return false;
 
-    const actor = members.find(m => m.id === String(currentUser?.id ?? '')) ?? null;
+    // Quem clica pode NÃO estar na lista: a Leal Mídia é administradora de todo
+    // CRM e fica escondida da equipe do cliente de propósito.
+    const actor = resolveActor(currentUser?.id, members, {
+      isPlatformOwner: isSuper,
+      name: String(currentUser?.name ?? ''),
+    });
     if (!canDeactivate(actor, member)) return false;
 
     const admins = members.filter(m => m.role.chave_role === 'admin' && !m.deactivated);
@@ -413,7 +426,7 @@ export default function PeopleTab() {
                             variant="outline"
                             size="sm"
                             onClick={() => reativar(member)}
-                            disabled={saving || !can('users', 'deactivate')}
+                            disabled={saving || !podeUsarDesativacao}
                             className="h-8 gap-1 text-xs text-emerald-600 hover:text-emerald-700"
                             title="Devolver o acesso. Ele volta FORA das roletas."
                           >
@@ -601,7 +614,7 @@ export default function PeopleTab() {
                     variant="ghost"
                     className="gap-1.5 text-emerald-600 hover:text-emerald-700"
                     onClick={() => reativar(editing)}
-                    disabled={saving || !can('users', 'deactivate')}
+                    disabled={saving || !podeUsarDesativacao}
                   >
                     <UserCheck className="h-4 w-4" /> Reativar
                   </Button>

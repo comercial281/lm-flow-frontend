@@ -4,6 +4,7 @@ import {
   buildDeactivatePayload,
   canDeactivate,
   canOfferDisconnect,
+  resolveActor,
   transferCandidates,
 } from './deactivationRules';
 import type { DeactivationPreview, User } from '@/types/users';
@@ -132,5 +133,35 @@ describe('quem pode desativar quem', () => {
   it('ninguém desativa o próprio acesso', () => {
     const eu = user({ id: 'a', chave_role: 'admin' });
     expect(canDeactivate(eu, eu)).toBe(false);
+  });
+});
+
+// A Leal Mídia é administradora de TODO CRM e fica escondida da lista da equipe
+// de propósito (senão receberia aviso de lead de toda imobiliária). Procurar quem
+// clicou só na lista fazia o clicador sumir — e o botão *Desativar* nascia
+// desligado justamente para quem pode tudo. Foi o defeito do dia da estreia.
+describe('quem está clicando', () => {
+  const equipe = [
+    user({ id: 'g', name: 'Gestora', chave_role: 'manager' }),
+    user({ id: 'c', name: 'Corretor', chave_role: 'agent' }),
+  ];
+
+  it('vem da lista da equipe quando a pessoa está nela', () => {
+    expect(resolveActor('g', equipe)?.id).toBe('g');
+  });
+
+  it('a Leal Mídia entra como administradora mesmo fora da lista', () => {
+    const actor = resolveActor('super-1', equipe, { isPlatformOwner: true, name: 'Giovani' });
+
+    expect(actor?.chave_role).toBe('admin');
+    expect(canDeactivate(actor, user({ chave_role: 'manager' }))).toBe(true);
+  });
+
+  it('quem não está na lista e não é a Leal Mídia continua sendo NÃO', () => {
+    expect(resolveActor('desconhecido', equipe)).toBeNull();
+  });
+
+  it('sem ninguém logado não há clicador', () => {
+    expect(resolveActor(null, equipe, { isPlatformOwner: true })).toBeNull();
   });
 });
