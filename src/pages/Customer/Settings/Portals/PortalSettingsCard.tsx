@@ -135,6 +135,18 @@ export default function PortalSettingsCard({ portalKey, settings, onSaved }: Pro
     if (pipelineId) setStages(await carregarColunas(pipelineId));
   };
 
+  // Funil gravado que não existe mais (apagado depois da configuração): o
+  // seletor mostra a escolha em vez de ficar em branco com o id preso por baixo
+  // — senão salvar qualquer outro campo devolvia "Funil não encontrado" sem a
+  // tela apontar de onde vinha. Quem escolhe outro funil (ou o padrão) limpa.
+  const pipelineOptions = useMemo<Opt[]>(() => {
+    if (!pipelines) return [];
+    if (form.pipeline_id && !pipelines.some(p => p.id === form.pipeline_id)) {
+      return [...pipelines, { id: form.pipeline_id, label: 'Funil escolhido (não existe mais)' }];
+    }
+    return pipelines;
+  }, [pipelines, form.pipeline_id]);
+
   // A roleta já escolhida continua na lista mesmo desativada: sem ela o campo
   // abriria em "não distribuir" e salvar trocaria a escolha do gestor sem ele ver.
   const roletaOptions = useMemo<Opt[]>(() => {
@@ -334,7 +346,7 @@ export default function PortalSettingsCard({ portalKey, settings, onSaved }: Pro
                     onChange={e => { void onPipeline(e.target.value); }}
                   >
                     <option value="">Funil padrão do CRM</option>
-                    {pipelines.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                    {pipelineOptions.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
                   </NativeSelect>
                 </label>
                 {form.pipeline_id && (

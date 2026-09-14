@@ -82,7 +82,7 @@ function FeedAccessHistory({ log }: { log: PortalFeedAccess[] }) {
         type="button"
         onClick={() => setAberto(a => !a)}
         aria-expanded={aberto}
-        className="w-full flex items-center gap-2 p-6 text-left"
+        className="w-full flex flex-wrap items-center gap-2 p-6 text-left"
       >
         {aberto ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
         <History className="h-4 w-4 text-muted-foreground" />
@@ -124,8 +124,12 @@ export default function PortalDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // O "Carregando..." só na PRIMEIRA leitura. Os três cards recarregam a
+  // página depois de salvar (`onSaved={load}`); trocar tudo pelo aviso a cada
+  // salvar desmontava os cards, voltava a rolagem para o topo e refazia a
+  // busca dos 500 imóveis do seletor. Na recarga os cards ficam no lugar e
+  // ressincronizam pelo que o servidor devolveu.
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       setPortal(await portalsService.get(portalKey));
     } catch {
@@ -135,7 +139,13 @@ export default function PortalDetailPage() {
     }
   }, [portalKey]);
 
-  useEffect(() => { load(); }, [load]);
+  // Trocou de portal (a rota mudou): volta ao "Carregando..." em vez de mostrar
+  // os cards do portal anterior sobre a chave nova até a resposta chegar.
+  useEffect(() => {
+    setPortal(null);
+    setLoading(true);
+    load();
+  }, [load]);
 
   // Servidor novo manda `publications` (imóvel + tipo); o antigo, as duas listas
   // de sempre — que viram o mesmo formato aqui. Memoizado por portal: o seletor

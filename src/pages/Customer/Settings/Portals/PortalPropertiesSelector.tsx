@@ -217,7 +217,7 @@ export default function PortalPropertiesSelector({
             {modoLegado && supportsHighlight ? ` · ${emDestaque} em destaque` : ''}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" className="text-xs" onClick={selectAll}>Selecionar todos</Button>
           <Button variant="outline" className="text-xs" onClick={() => setPublications(new Map())}>
             Limpar
@@ -304,7 +304,7 @@ export default function PortalPropertiesSelector({
                   </p>
                 </div>
                 {comSeletor && isSelected && (
-                  <div className="w-44 shrink-0">
+                  <div className="w-36 sm:w-44 shrink-0">
                     <NativeSelect
                       aria-label={`Tipo de anúncio de ${p.code}`}
                       value={adType}

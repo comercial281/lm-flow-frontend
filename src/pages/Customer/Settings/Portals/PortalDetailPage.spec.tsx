@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import PortalDetailPage from './PortalDetailPage';
@@ -21,7 +21,11 @@ vi.mock('@/services/portals/portalsService', async () => {
 // Os três cards têm spec próprio; aqui a pergunta é só o que a PÁGINA monta.
 vi.mock('./PortalPropertiesSelector', () => ({ default: () => <div data-testid="seletor" /> }));
 vi.mock('./PortalAdPlanCard', () => ({ default: () => <div data-testid="plano" /> }));
-vi.mock('./PortalSettingsCard', () => ({ default: () => <div data-testid="configurar" /> }));
+vi.mock('./PortalSettingsCard', () => ({
+  default: ({ onSaved }: { onSaved?: () => void }) => (
+    <div data-testid="configurar"><button type="button" onClick={onSaved}>salvou</button></div>
+  ),
+}));
 
 vi.mock('sonner', () => ({
   toast: { error: (...a: unknown[]) => mocks.toastError(...a), success: vi.fn(), warning: vi.fn() },
@@ -112,6 +116,23 @@ describe('PortalDetailPage — histórico de cargas e Abrir feed', () => {
     // O webhook só copia — não é endereço para abrir no navegador.
     expect(screen.getAllByRole('link')).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: 'Copiar' })).toHaveLength(2);
+  });
+
+  it('recarregar depois de salvar mantém os cards no lugar, sem voltar ao "Carregando..."', async () => {
+    mocks.get.mockResolvedValue(detalhe({
+      ad_types: [{ key: 'standard', label: 'Padrão', feed_value: 'STANDARD', limit: null, count: 3 }],
+    }));
+    montar();
+    const configurar = await screen.findByTestId('configurar');
+    expect(mocks.get).toHaveBeenCalledTimes(1);
+
+    // O card *Configurar* chama `onSaved` (= recarregar o portal): o mesmo nó
+    // continua montado — desmontar aqui voltaria a rolagem ao topo e refaria a
+    // busca dos imóveis do seletor a cada salvar.
+    await userEvent.setup().click(within(configurar).getByRole('button', { name: 'salvou' }));
+    await waitFor(() => expect(mocks.get).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText('Carregando...')).toBeNull();
+    expect(screen.getByTestId('configurar')).toBe(configurar);
   });
 
   it('com o portal conectado monta Configurar, plano e seletor; desconectado, só o Como ativar', async () => {

@@ -162,6 +162,16 @@ describe('PortalSettingsCard', () => {
     expect(screen.getByText(/Esta roleta está desativada/)).toBeInTheDocument();
   });
 
+  it('funil gravado que não existe mais continua escolhido, com o rótulo de aviso', async () => {
+    montar({ pipeline_id: 'pipe-apagado' });
+    const funil = await screen.findByRole('combobox', { name: 'Funil' });
+
+    // Sem a opção de reserva o seletor ficaria em branco com o id preso por
+    // baixo, e salvar qualquer campo devolveria "Funil não encontrado".
+    expect(funil).toHaveValue('pipe-apagado');
+    expect(screen.getByRole('option', { name: 'Funil escolhido (não existe mais)' })).toBeInTheDocument();
+  });
+
   it('trocar o funil limpa a coluna', async () => {
     const usuario = userEvent.setup();
     montar({ pipeline_id: 'pipe-1', stage_id: 'st-2' });
