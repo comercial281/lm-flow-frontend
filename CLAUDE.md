@@ -1895,6 +1895,57 @@ Armadilhas:
 4. **Não é `featureKey` nem `clientToggleKey`** — é cargo, não módulo. Os
    scanners do catálogo de funcionalidades não entram nesta história.
 
+## O site do cliente mostrava só 60 imóveis (desde 2026-09-14)
+
+Relato do dono do produto: *"a Mais Que Imóveis tem 390 imóveis ativos e ativos
+no site, mas apenas 60 aparecem no site"*.
+
+Não era cadastro nem chave: o portal público pedia ao servidor **uma página de
+60 imóveis** e parava ali. O catálogo é paginado no servidor (20 por padrão,
+100 no máximo), e o site filtra tudo no navegador — cidade, bairro,
+dormitórios, código — e monta as listas dos seletores a partir do que carregou.
+Com 60 de 390, a busca por bairro mostrava metade dos bairros, o contador
+*"imóveis disponíveis"* da home dizia 60, e nenhum erro aparecia em lugar
+nenhum. Mesma família do corte das etiquetas em 20 (09/09): lista paginada
+lida como se fosse inteira.
+
+O que mudou na tela:
+
+- **O portal carrega o catálogo inteiro**: pede a primeira página com o teto
+  do servidor, lê o total e busca as páginas restantes em paralelo. A home, a
+  busca, os seletores de cidade/bairro/tipo e o contador passam a refletir tudo
+  o que está publicado.
+- **A página de busca ganhou *Mostrar mais imóveis*** (30 por vez, com
+  *"Mostrando N de M"*). O título continua dizendo o total filtrado — é ele que
+  responde "quantos tem"; o botão só evita despejar centenas de cards de uma vez.
+  Mudar qualquer filtro volta ao topo da lista.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **A busca do catálogo mora em arquivo próprio, com teste**
+  (`src/pages/Public/portalProperties.ts`). Ela recebe o `fetch` por parâmetro,
+  então o teste não toca no fetch global — que o setup da suíte proíbe.
+- **Repetido entre páginas é descartado por id.** É a rede de segurança para
+  ordem instável no servidor (que também ganhou ordem fixa — ver o CLAUDE.md do
+  `lm-flow`). Sem as duas metades, a página 2 podia repetir imóvel da 1 e
+  esconder outro.
+- **Falha numa página do meio não derruba o portal**: o que chegou é mostrado.
+- **Teto de 20 páginas por visita** (2.000 imóveis). Catálogo acima disso é
+  caso para busca no servidor, não para carregar tudo no navegador.
+
+Armadilhas:
+
+1. **A metade do backend vem PRIMEIRO** (`lm-flow`, `saas-multitenant`): a
+   ordem estável da lista pública. Sem ela, a junção das páginas depende da
+   sorte do Postgres — o descarte por id segura o repetido, mas não traz de
+   volta o que a ordem instável escondeu.
+2. **A página de imóvel continua pedindo 8 "recomendados"** pela mesma rota, de
+   propósito: ali é vitrine, não catálogo.
+3. **Não voltar a pedir "uma página grande" e parar.** 60, 100, 500: qualquer
+   número fixo é o mesmo defeito esperando o cliente com um a mais.
+4. **Não é `featureKey` nem `clientToggleKey`** — é leitura de lista. Os
+   scanners do catálogo de funcionalidades não entram nesta história.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,

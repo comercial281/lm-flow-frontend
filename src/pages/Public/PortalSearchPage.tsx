@@ -1,4 +1,4 @@
-import { useMemo, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import {
   I, Ic, PROPERTY_TYPE_LABEL, PortalFooter, PortalHeader, PropertyCard, Select,
@@ -13,6 +13,13 @@ import {
 ──────────────────────────────────────────────────────────────────────────── */
 
 const TABS: [PortalTab, string][] = [['sale', 'Comprar'], ['rent', 'Alugar'], ['launch', 'Lançamentos']];
+
+/**
+ * Quantos cards aparecem por vez. O catálogo chega INTEIRO (centenas de
+ * imóveis); o "Mostrar mais" evita despejar tudo numa página só. O contador do
+ * título continua sendo o total filtrado — é ele que responde "quantos tem".
+ */
+const RESULTS_PAGE_SIZE = 30;
 
 export default function PortalSearchPage() {
   const { tenant } = useParams<{ tenant: string }>();
@@ -43,6 +50,12 @@ export default function PortalSearchPage() {
 
   const filtered = useMemo(() => filterProperties(items, filters), [items, filters]);
   const hasActiveFilters = !!(filters.type || filters.city || filters.neighborhood || filters.bedrooms || filters.code);
+
+  // Mudou o filtro, a lista recomeça do topo.
+  const [visible, setVisible] = useState(RESULTS_PAGE_SIZE);
+  useEffect(() => { setVisible(RESULTS_PAGE_SIZE); }, [filters]);
+  const shown = filtered.slice(0, visible);
+  const remaining = filtered.length - shown.length;
 
   if (state === 'loading') {
     return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
@@ -110,9 +123,20 @@ export default function PortalSearchPage() {
             Nenhum imóvel com esses filtros. <button type="button" onClick={clearAll} className="font-semibold text-[var(--brand)] underline">Limpar filtros</button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map(p => <PropertyCard key={p.id} tenant={tenant!} p={p} wa={wa} />)}
-          </div>
+          <>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {shown.map(p => <PropertyCard key={p.id} tenant={tenant!} p={p} wa={wa} />)}
+            </div>
+            {remaining > 0 && (
+              <div className="mt-10 flex flex-col items-center gap-2">
+                <button type="button" onClick={() => setVisible(v => v + RESULTS_PAGE_SIZE)}
+                  className="rounded-full px-7 py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--ink)' }}>
+                  Mostrar mais imóveis
+                </button>
+                <span className="text-[13px] text-neutral-500">Mostrando {shown.length} de {filtered.length}</span>
+              </div>
+            )}
+          </>
         )}
       </section>
 
