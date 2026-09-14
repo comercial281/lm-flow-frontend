@@ -25,9 +25,13 @@ export function temTiposDeAnuncio(portal: Pick<Portal, 'ad_types'> | null | unde
   return Array.isArray(portal?.ad_types) && portal.ad_types.length > 0;
 }
 
-/** O tipo base é o PRIMEIRO da lista servida (é a ordem do servidor que manda). */
+/**
+ * O tipo base é o que o servidor marca com `base: true`; sem a marca (servidor
+ * antigo), o PRIMEIRO da lista. A marca existe por causa do Imóvel Web: o
+ * Grátis fica abaixo do Simples na lista e o padrão continua Simples.
+ */
 export function tipoBase(adTypes: PortalAdType[]): PortalAdType | null {
-  return adTypes[0] ?? null;
+  return adTypes.find(t => t.base === true) ?? adTypes[0] ?? null;
 }
 
 /**
@@ -82,18 +86,20 @@ export const LEGADO_DESTAQUE = 'featured';
 
 /**
  * Servidor antigo: a tela só tinha "vai pro portal" e "em destaque". Quem
- * estava em destaque vira o SEGUNDO tipo (o tier logo acima do base, que é o
- * que o backfill do servidor também faz); o resto vira o base. Sem tipos
- * conhecidos, o destaque vira a chave `featured` — o servidor antigo nem lê
- * isto (a tela manda o formato legado), mas a Map precisa de um valor.
+ * estava em destaque vira o tier logo ACIMA do base (o que o backfill do
+ * servidor também faz); o resto vira o base. Sem tipos conhecidos, o destaque
+ * vira a chave `featured` — o servidor antigo nem lê isto (a tela manda o
+ * formato legado), mas a Map precisa de um valor.
  */
 export function legadoParaPublicacoes(
   propertyIds: string[],
   featuredIds: string[],
   adTypes: PortalAdType[],
 ): PortalPublication[] {
-  const base = adTypes[0]?.key ?? LEGADO_BASE;
-  const destaque = adTypes[1]?.key ?? (adTypes.length === 0 ? LEGADO_DESTAQUE : base);
+  const baseTipo = tipoBase(adTypes);
+  const base = baseTipo?.key ?? LEGADO_BASE;
+  const acima = baseTipo ? adTypes[adTypes.indexOf(baseTipo) + 1] : undefined;
+  const destaque = acima?.key ?? (adTypes.length === 0 ? LEGADO_DESTAQUE : base);
   const emDestaque = new Set(featuredIds);
   return propertyIds.map(id => ({
     property_id: id,

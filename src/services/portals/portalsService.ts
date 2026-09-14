@@ -4,13 +4,16 @@ import api from '@/services/core/api';
 
 /**
  * Um tipo de anúncio do portal (Padrão, Destaque, Super Destaque…), na ordem
- * em que o servidor os serve: o PRIMEIRO é o tipo base. `limit` nulo é
- * ilimitado; `count` é quantos imóveis estão gravados naquele tipo hoje.
+ * em que o servidor os serve. O tipo base (o padrão de quem entra na lista) é
+ * o que vem com `base: true`; servidor que ainda não manda `base` tem o
+ * PRIMEIRO como base. `limit` nulo é ilimitado; `count` é quantos imóveis
+ * estão gravados naquele tipo hoje.
  */
 export interface PortalAdType {
   key: string;
   label: string;
   feed_value: string;
+  base?: boolean;
   limit: number | null;
   count: number;
 }
