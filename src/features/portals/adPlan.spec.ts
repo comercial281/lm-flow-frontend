@@ -26,6 +26,14 @@ const tipos: PortalAdType[] = [
   { key: 'super_premium', label: 'Super Destaque', feed_value: 'SUPER_PREMIUM', limit: 1, count: 0 },
 ];
 
+// Ordem do servidor para o Imóvel Web: Grátis ANTES do Simples, mas Simples marcado como base.
+const imovelWeb: PortalAdType[] = [
+  { key: 'gratis', label: 'Grátis', feed_value: 'GRATIS', limit: null, count: 0 },
+  { key: 'simple', label: 'Simples', feed_value: 'SIMPLE', base: true, limit: null, count: 0 },
+  { key: 'destacado', label: 'Destaque', feed_value: 'DESTACADO', limit: 5, count: 0 },
+  { key: 'home', label: 'Home Destaque', feed_value: 'HOME', limit: 1, count: 0 },
+];
+
 const pubs = (pares: Array<[string, string]>) => new Map(pares);
 
 describe('temTiposDeAnuncio / tipoBase', () => {
@@ -36,9 +44,19 @@ describe('temTiposDeAnuncio / tipoBase', () => {
     expect(temTiposDeAnuncio({ ad_types: tipos })).toBe(true);
   });
 
-  it('o tipo base é o PRIMEIRO servido', () => {
+  it('sem a marca `base` (servidor antigo), o tipo base é o PRIMEIRO servido', () => {
     expect(tipoBase(tipos)?.key).toBe('standard');
     expect(tipoBase([])).toBeNull();
+  });
+
+  // Imóvel Web: o Grátis fica abaixo do Simples na lista e o padrão continua
+  // Simples — é a marca do servidor que manda, não a posição.
+  it('com a marca `base`, o tipo base é o marcado, mesmo não sendo o primeiro', () => {
+    expect(tipoBase(imovelWeb)?.key).toBe('simple');
+    expect(legadoParaPublicacoes(['a', 'b'], ['b'], imovelWeb)).toEqual([
+      { property_id: 'a', ad_type: 'simple' },
+      { property_id: 'b', ad_type: 'destacado' },
+    ]);
   });
 });
 

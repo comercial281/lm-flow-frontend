@@ -1993,6 +1993,12 @@ Armadilhas:
 2. **`ad_plan` manda `0` para ilimitado**, e `monthly_investment` vai como
    `"3593.45"` ou `null`. Trocar o formato aqui faz o servidor descartar a cota
    em silêncio.
+2b. **O tipo padrão é o que o servidor marca com `base: true`**, não o
+   primeiro da lista. Desde 2026-09-14 o Imóvel Web tem quatro tipos (Simples,
+   Destaque, Home Destaque, Grátis) e o padrão continua Simples por decisão do
+   dono. Sem a marca (servidor antigo) vale o primeiro. Voltar a ler `[0]`
+   marcaria todo imóvel novo no tipo errado no dia em que o servidor mudar a
+   ordem.
 3. **Trocar o funil LIMPA a coluna** no destino do lead: coluna de outro funil é
    recusada pelo servidor e a tela mostraria a escolha guardada sem efeito.
 4. **Não é `featureKey` nem `clientToggleKey`** — é configuração de portal. Os
