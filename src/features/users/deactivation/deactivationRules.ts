@@ -1,6 +1,35 @@
 import type { DeactivationPreview, DeactivatePayload, DeactivationReason } from '@/types/users';
 
 /**
+ * Quem está CLICANDO, no formato das regras.
+ *
+ * A pessoa vem da lista da equipe quando ela está lá — é de onde sai o cargo de
+ * verdade. Mas a **Leal Mídia não aparece na equipe de cliente nenhum**: o dono
+ * da plataforma é plantado como administrador em TODO CRM e escondido da lista
+ * de propósito (senão receberia aviso de lead de toda imobiliária).
+ *
+ * Sem este degrau quem clica simplesmente some, a régua responde "não pode" e o
+ * botão *Desativar* nasce desligado justamente para quem pode tudo — que é o
+ * defeito relatado no dia da estreia.
+ */
+export function resolveActor<T extends DeactivatablePerson>(
+  currentUserId: string | null | undefined,
+  members: T[],
+  options: { isPlatformOwner?: boolean; name?: string } = {},
+): DeactivatablePerson | null {
+  const id = String(currentUserId ?? '').trim();
+  if (!id) return null;
+
+  const fromTeam = members.find(m => m.id === id);
+  if (fromTeam) return fromTeam;
+
+  // Fora da lista, o único caso legítimo é o dono da plataforma. Qualquer outro
+  // "não achei" continua sendo não — inventar cargo para quem a lista não
+  // conhece é o caminho de dar o botão a quem a API vai recusar.
+  return options.isPlatformOwner ? { id, name: options.name || 'Leal Mídia', chave_role: 'admin' } : null;
+}
+
+/**
  * Quem pode ser desativado, pelo MÍNIMO que as regras precisam saber.
  *
  * Não é `User` de propósito: a tela onde os botões de fato moram (Equipe →
