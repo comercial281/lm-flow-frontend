@@ -43,6 +43,8 @@ import {
 } from '@/services/siteBuilder/siteBuilderService';
 import DomainSettings from './DomainSettings';
 import LandingsPanel from '@/features/landing/manage/LandingsPanel';
+import HeroImagePicker, { type HeroImagePick } from '@/features/siteBuilder/HeroImagePicker';
+import { EMPTY_HERO_IMAGE, HERO_IMAGE_MODE_LABELS, heroImageChoiceFrom, heroImageWarning } from '@/features/siteBuilder/heroImage';
 import { useTenantFeatures, useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 
@@ -92,6 +94,7 @@ const EMPTY_SITE_FORM: SiteFormData = {
   published: false,
   logo_url: '',
   hero_video_url: '',
+  hero_image: { ...EMPTY_HERO_IMAGE },
   sections: { stats: true, lead_capture: true },
   primary_color: '#7C3AED',
   accent_color: '#9333EA',
@@ -183,6 +186,14 @@ export default function SiteBuilder() {
   const bannerVideoInputRef = useRef<HTMLInputElement | null>(null);
   const [bannerVideoUploading, setBannerVideoUploading] = useState(false);
 
+  // Foto do banner da home: escolhida de um imóvel (janela própria) ou enviada.
+  // A prévia da foto de imóvel recém-escolhida fica aqui até salvar; depois de
+  // salvo, quem diz qual imagem o site serve é o servidor (site.hero_image.url).
+  const heroImageInputRef = useRef<HTMLInputElement | null>(null);
+  const [heroImageUploading, setHeroImageUploading] = useState(false);
+  const [heroPickerOpen, setHeroPickerOpen] = useState(false);
+  const [heroPickPreview, setHeroPickPreview] = useState<HeroImagePick | null>(null);
+
   // Preencher com IA (proposta — o usuário revisa e salva)
   const [aiText, setAiText] = useState('');
   const [aiRunning, setAiRunning] = useState(false);
@@ -229,6 +240,7 @@ export default function SiteBuilder() {
           published: s.published,
           logo_url: s.branding.logo_url ?? '',
           hero_video_url: s.hero_video_url ?? '',
+          hero_image: heroImageChoiceFrom(s.hero_image),
           sections: {
             stats: s.sections?.stats ?? true,
             lead_capture: s.sections?.lead_capture ?? true,
@@ -325,6 +337,8 @@ export default function SiteBuilder() {
       if (site) {
         const updated = await siteBuilderService.updateSite(site.id, payload);
         setSite(updated);
+        // Salvo: a prévia do banner passa a vir do servidor (site.hero_image).
+        setHeroPickPreview(null);
         toast.success('Site atualizado');
       } else {
         const created = await siteBuilderService.createSite(payload);
@@ -389,6 +403,32 @@ export default function SiteBuilder() {
     } finally {
       setBannerVideoUploading(false);
     }
+  };
+
+  // Sobe a foto do banner da home (modo "Enviar uma foto"). Fica no form até salvar.
+  const handleHeroImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (heroImageInputRef.current) heroImageInputRef.current.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Envie um arquivo de imagem (JPG, PNG ou WebP).'); return; }
+    if (file.size > 8 * 1024 * 1024) { toast.error('Imagem muito grande (máx 8MB). Comprima antes de enviar.'); return; }
+
+    setHeroImageUploading(true);
+    try {
+      const { url } = await siteBuilderService.uploadAsset(file);
+      setF({ hero_image: { mode: 'upload', url } });
+      toast.success('Foto enviada. Revise a prévia e clique em Salvar.');
+    } catch {
+      toast.error('Falha no upload da foto.');
+    } finally {
+      setHeroImageUploading(false);
+    }
+  };
+
+  const handleHeroPick = (pick: HeroImagePick) => {
+    setHeroPickPreview(pick);
+    setF({ hero_image: { mode: 'property', property_id: pick.property_id, photo_id: pick.photo_id } });
+    setHeroPickerOpen(false);
   };
 
   // IA lê o material colado e devolve os campos NOS LUGARES CERTOS do form.
@@ -907,12 +947,105 @@ export default function SiteBuilder() {
             </div>
           </section>
 
-          {/* Banner da home (vídeo) */}
+          {/* Banner da home: a FOTO (automática, de um imóvel ou enviada) e o vídeo,
+              que quando preenchido passa por cima da foto. */}
           <section className="rounded-xl border border-border bg-card p-5">
             <h2 className="text-base font-semibold mb-1">Banner da home</h2>
             <p className="mb-4 text-xs text-muted-foreground">
-              Envie um vídeo (MP4/WebM, máx 60MB) para tocar como fundo do banner da home do portal —
-              sem som, em loop. Sem vídeo, o banner usa a foto do primeiro imóvel.
+              A imagem que ocupa o topo do site. Com vídeo preenchido, o vídeo passa por cima da foto.
+            </p>
+
+            {(() => {
+              const choice = siteForm.hero_image ?? EMPTY_HERO_IMAGE;
+              const resolved = site?.hero_image;
+              const savedMatches = resolved?.mode === 'property'
+                && resolved.property_id === choice.property_id
+                && (choice.photo_id ?? null) === (resolved.photo_id ?? null);
+              // Prévia: a foto recém-escolhida (ainda não salva) ou a que o servidor serve hoje.
+              const propertyPreviewUrl = heroPickPreview?.url ?? (savedMatches ? resolved?.url : null);
+              const propertyTitle = heroPickPreview?.property_title ?? (savedMatches ? resolved?.property?.title : null);
+              const warning = !heroPickPreview && savedMatches ? heroImageWarning(resolved) : null;
+              const setMode = (mode: typeof choice.mode) => {
+                setHeroPickPreview(null);
+                if (mode === 'auto') setF({ hero_image: { mode: 'auto' } });
+                else if (mode === 'upload') setF({ hero_image: { mode: 'upload', url: resolved?.mode === 'upload' ? resolved.url ?? '' : '' } });
+                // Voltando ao modo imóvel, recupera a escolha já gravada (se houver).
+                else setF({ hero_image: resolved?.mode === 'property' && resolved.property_id
+                  ? heroImageChoiceFrom(resolved)
+                  : { mode: 'property', property_id: null, photo_id: null } });
+              };
+              return (
+                <div className="mb-5 space-y-3">
+                  <UILabel>Foto</UILabel>
+                  <div className="flex flex-wrap gap-2">
+                    {(['auto', 'property', 'upload'] as const).map(mode => (
+                      <label key={mode} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${choice.mode === mode ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                        <input type="radio" name="hero-image-mode" checked={choice.mode === mode} onChange={() => setMode(mode)} />
+                        {HERO_IMAGE_MODE_LABELS[mode]}
+                      </label>
+                    ))}
+                  </div>
+
+                  {choice.mode === 'auto' && (
+                    <p className="text-xs text-muted-foreground">
+                      O site usa a capa do primeiro imóvel da lista. Ela troca sozinha quando outro imóvel entra na frente.
+                    </p>
+                  )}
+
+                  {choice.mode === 'property' && (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button type="button" variant="outline" onClick={() => setHeroPickerOpen(true)}>
+                          <ImageIcon className="mr-1.5 h-4 w-4" /> {choice.property_id ? 'Trocar a foto' : 'Escolher foto de um imóvel'}
+                        </Button>
+                        {propertyTitle && <span className="text-xs text-muted-foreground">Imóvel: {propertyTitle}</span>}
+                      </div>
+                      {!choice.property_id && (
+                        <p className="text-xs text-amber-700">Nenhuma foto escolhida ainda. Até escolher, o site continua no automático.</p>
+                      )}
+                      {warning && <p className="text-xs text-amber-700">{warning}</p>}
+                      {propertyPreviewUrl && (
+                        <img src={propertyPreviewUrl} alt="" className="aspect-video w-full max-w-md rounded-lg border border-border object-cover" />
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Se o imóvel for despublicado ou apagado, o site volta ao automático e esta tela avisa.
+                      </p>
+                    </div>
+                  )}
+
+                  {choice.mode === 'upload' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input value={choice.url ?? ''} onChange={e => setF({ hero_image: { mode: 'upload', url: e.target.value } })}
+                          placeholder="https://... ou envie o arquivo" className="flex-1" />
+                        <input ref={heroImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleHeroImageFile} />
+                        <Button type="button" variant="outline" onClick={() => heroImageInputRef.current?.click()}
+                          disabled={heroImageUploading} className="flex-none">
+                          {heroImageUploading
+                            ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Enviando...</>
+                            : <><Upload className="mr-1.5 h-4 w-4" /> Enviar foto</>}
+                        </Button>
+                      </div>
+                      {choice.url
+                        ? <img src={choice.url} alt="" className="aspect-video w-full max-w-md rounded-lg border border-border object-cover" />
+                        : <p className="text-xs text-amber-700">Sem foto enviada, o site continua no automático.</p>}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            <HeroImagePicker
+              open={heroPickerOpen}
+              onClose={() => setHeroPickerOpen(false)}
+              onPick={handleHeroPick}
+              currentPropertyId={siteForm.hero_image?.property_id}
+              currentPhotoId={siteForm.hero_image?.photo_id}
+            />
+
+            <UILabel>Vídeo (opcional)</UILabel>
+            <p className="mb-2 mt-1 text-xs text-muted-foreground">
+              MP4/WebM, máx 60MB. Toca como fundo do banner, sem som, em loop, por cima da foto.
             </p>
             <div className="flex items-center gap-2">
               <Input value={siteForm.hero_video_url ?? ''} onChange={e => setF({ hero_video_url: e.target.value })}
