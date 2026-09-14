@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { RefreshCw, ShieldCheck, MessageCircle, Search, Sparkles, UserPlus, Mails } from 'lucide-react';
+import { RefreshCw, ShieldCheck, MessageCircle, Search, Sparkles, UserPlus, Mails, UserX, UserCheck } from 'lucide-react';
 import { Button, Input, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, Label as UILabel } from '@/components/ui/ds';
 import IconActionButton from '@/components/base/IconActionButton';
 import { usersService } from '@/services/users';
@@ -13,14 +13,28 @@ import { buildCargoOptions, cargoPayload, isCargoSelected, type CargoOption } fr
 // Vem da tela antiga de Usuários: convidar vários por e-mail de uma vez era uma
 // capacidade real dela, e unificar não pode significar perder função.
 import BulkInviteModal from '@/components/users/BulkInviteModal';
+// A janela que mostra o ESTRAGO antes de desativar (leads, conversas abertas,
+// ofertas da roleta, roletas e o WhatsApp exclusivo). É a mesma de sempre: os
+// botões é que estavam na tela errada.
+import DeactivateUserDialog from '@/components/users/DeactivateUserDialog';
+import { canDeactivate } from '@/features/users/deactivation/deactivationRules';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { useAuthStore } from '@/store/authStore';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import type { CustomRole } from '@/types/customRoles';
 import type { TeamAccessInbox, TeamAccessMember } from '@/types/teamAccess';
 
-import { useConfirmacao } from '@/hooks/useConfirmacao';
 /* Aba "Pessoas" da tela de Equipe — o gestor controla, por pessoa e num lugar
    só: cadastrar, cargo, quais instâncias (WhatsApp) ela atende, enviar o acesso
-   e remover do time.
+   e DESATIVAR / REATIVAR.
+
+   ⚠️ O antigo botão de REMOVER saiu daqui, e não é renomeação: ele chamava o excluir,
+   que quase nunca apagava de verdade (qualquer lead atendido cria referência).
+   O caminho de reserva renomeava o e-mail da pessoa, randomizava a senha e
+   respondia "removido" — com ela ainda em todas as roletas, com acesso aos
+   canais, dona dos leads e recebendo aviso no WhatsApp. Era um "desativar" por
+   acidente: irreversível e incompleto. Quem faz isso direito é o *Desativar*,
+   com a janela que mostra o que a pessoa carrega antes de confirmar.
 
    Duas coisas mudaram aqui e não devem ser desfeitas sem o dono pedir:
 
@@ -40,8 +54,8 @@ const cargoColor = (key?: string) =>
       : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
 
 export default function PeopleTab() {
-  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const { can } = useUserPermissions();
+  const { currentUser } = useAuthStore();
   const canManage = can('users', 'update');
   const canCreate = can('users', 'create');
   const [adding, setAdding] = useState(false);
@@ -54,6 +68,9 @@ export default function PeopleTab() {
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Desativar corretor: o id de quem está na janela de confirmação.
+  const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
 
   // O WhatsApp da pessoa, editável aqui.
   //
@@ -77,6 +94,10 @@ export default function PeopleTab() {
   // mostrando o valor velho até fechar e abrir de novo.
   const editing = useMemo(() => members.find(m => m.id === editingId) ?? null, [members, editingId]);
   const sending = useMemo(() => members.find(m => m.id === sendingId) ?? null, [members, sendingId]);
+  const deactivating = useMemo(
+    () => members.find(m => m.id === deactivatingId) ?? null,
+    [members, deactivatingId],
+  );
 
   // Sempre traz os três de fábrica, mesmo quando o cliente não tem cargo nenhum
   // gravado no banco — que é o caso da maioria (ver cargoOptions).
@@ -234,21 +255,36 @@ export default function PeopleTab() {
     }
   };
 
-  const removeUser = async (member: TeamAccessMember) => {
-    if (!(await confirmar({
-      titulo: 'Remover do time',
-      descricao: <>Remover <strong>{member.name}</strong> do time? A pessoa perde o acesso ao CRM.</>,
-      rotuloDaAcao: 'Remover',
-      destrutivo: true,
-    }))) return;
+  /**
+   * Quem esta pessoa pode desativar: o gestor desativa CORRETOR; gestor e
+   * administrador só o administrador desativa. A mesma régua roda no servidor —
+   * esta existe para a tela não oferecer um botão que a API vai recusar.
+   *
+   * O último administrador continua protegido: sem ele ninguém religa ninguém.
+   */
+  const podeDesativar = (member: TeamAccessMember) => {
+    if (!can('users', 'deactivate')) return false;
+
+    const actor = members.find(m => m.id === String(currentUser?.id ?? '')) ?? null;
+    if (!canDeactivate(actor, member)) return false;
+
+    const admins = members.filter(m => m.role.chave_role === 'admin' && !m.deactivated);
+    return !(member.role.chave_role === 'admin' && admins.length === 1);
+  };
+
+  /**
+   * A volta: devolve o acesso e os canais em que a pessoa atendia. NÃO a
+   * recoloca nas roletas (quem religa a torneira é o gestor) e NÃO traz os leads
+   * que foram passados.
+   */
+  const reativar = async (member: TeamAccessMember) => {
     setSaving(true);
     try {
-      await usersService.deleteUser(member.id);
-      setMembers(prev => prev.filter(m => m.id !== member.id));
-      setEditingId(null);
-      toast.success('Removido do time');
-    } catch {
-      toast.error('Erro ao remover');
+      await usersService.reactivate(member.id);
+      toast.success(`${member.name} voltou. Ele ainda está fora das roletas — ligue quando quiser.`);
+      await load();
+    } catch (error) {
+      toast.error(apiErrorMessage(error, 'Não consegui reativar agora.'));
     } finally {
       setSaving(false);
     }
@@ -345,13 +381,18 @@ export default function PeopleTab() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        {member.confirmed
-                          ? <Badge variant="outline" className="text-xs text-emerald-500">Ativo</Badge>
-                          : <Badge variant="outline" className="text-xs text-amber-600">Convite pendente</Badge>}
+                        {/* Desativado não tem status de convite nem de
+                            disponibilidade: ele não entra. Mostrar "Ativo" ao
+                            lado seria a tela mentindo. */}
+                        {member.deactivated
+                          ? <Badge variant="outline" className="text-xs text-muted-foreground">Inativo</Badge>
+                          : member.confirmed
+                            ? <Badge variant="outline" className="text-xs text-emerald-500">Ativo</Badge>
+                            : <Badge variant="outline" className="text-xs text-amber-600">Convite pendente</Badge>}
                         {/* Quem está sem número é justamente quem recebe lead
                             sorteado e não é avisado no WhatsApp. Precisa ser
                             visível sem abrir pessoa por pessoa. */}
-                        {!(member.whatsapp_number ?? '').trim() && (
+                        {!member.deactivated && !(member.whatsapp_number ?? '').trim() && (
                           <Badge
                             variant="outline"
                             className="text-xs text-amber-600"
@@ -364,16 +405,32 @@ export default function PeopleTab() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openSend(member)}
-                          disabled={!canManage}
-                          className="h-8 gap-1 text-xs text-emerald-600 hover:text-emerald-700"
-                          title="Enviar o acesso (link+login+senha) no WhatsApp da pessoa"
-                        >
-                          <MessageCircle className="h-3.5 w-3.5" /> Enviar acesso
-                        </Button>
+                        {/* Para quem está fora, o botão que importa é a VOLTA.
+                            Mandar o acesso a quem não consegue entrar é um
+                            convite que não funciona. */}
+                        {member.deactivated ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => reativar(member)}
+                            disabled={saving || !can('users', 'deactivate')}
+                            className="h-8 gap-1 text-xs text-emerald-600 hover:text-emerald-700"
+                            title="Devolver o acesso. Ele volta FORA das roletas."
+                          >
+                            <UserCheck className="h-3.5 w-3.5" /> Reativar
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openSend(member)}
+                            disabled={!canManage}
+                            className="h-8 gap-1 text-xs text-emerald-600 hover:text-emerald-700"
+                            title="Enviar o acesso (link+login+senha) no WhatsApp da pessoa"
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" /> Enviar acesso
+                          </Button>
+                        )}
                         <Button variant="outline" size="sm" onClick={() => abrirPessoa(member.id)} disabled={!canManage} className="h-8 text-xs">
                           Gerenciar acesso
                         </Button>
@@ -399,6 +456,18 @@ export default function PeopleTab() {
         isOpen={bulkInviting}
         onClose={() => setBulkInviting(false)}
         onSuccess={load}
+      />
+
+      <DeactivateUserDialog
+        open={!!deactivating}
+        user={deactivating}
+        users={members}
+        onClose={() => setDeactivatingId(null)}
+        onDone={() => {
+          setDeactivatingId(null);
+          setEditingId(null);
+          load();
+        }}
       />
 
       {/* Modal por pessoa */}
@@ -491,10 +560,64 @@ export default function PeopleTab() {
                 />
               </div>
 
+              {/* O REGISTRO da desativação — a resposta para "para onde foi a
+                  carteira do Fulano?", que é a pergunta que alguém faz uma
+                  semana depois. Os leads passados não voltam com a reativação:
+                  quem atendeu aquela carteira fez trabalho que não se desfaz
+                  por efeito de um clique. */}
+              {editing.deactivated && (
+                <div className="space-y-1 rounded-md border border-border bg-muted/30 p-3 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Desativado em</span>
+                    <span className="font-medium">
+                      {editing.deactivated_at
+                        ? new Date(editing.deactivated_at).toLocaleDateString('pt-BR')
+                        : '—'}
+                    </span>
+                  </div>
+                  {editing.deactivation_snapshot?.transfer_to_name && (
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-muted-foreground">Os leads dele foram para</span>
+                      <span className="text-right font-medium">
+                        {editing.deactivation_snapshot.transfer_to_name}
+                      </span>
+                    </div>
+                  )}
+                  {editing.deactivation_snapshot?.disconnect_number
+                    && editing.deactivation_snapshot?.exclusive_number?.name && (
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-muted-foreground">WhatsApp desconectado</span>
+                      <span className="text-right font-medium">
+                        {editing.deactivation_snapshot.exclusive_number.name}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
-                <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={() => removeUser(editing)} disabled={saving}>
-                  Remover do time
-                </Button>
+                {editing.deactivated ? (
+                  <Button
+                    variant="ghost"
+                    className="gap-1.5 text-emerald-600 hover:text-emerald-700"
+                    onClick={() => reativar(editing)}
+                    disabled={saving || !can('users', 'deactivate')}
+                  >
+                    <UserCheck className="h-4 w-4" /> Reativar
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    className="gap-1.5 text-destructive hover:text-destructive"
+                    onClick={() => setDeactivatingId(editing.id)}
+                    disabled={saving || !podeDesativar(editing)}
+                    title={podeDesativar(editing)
+                      ? 'Corta o acesso, tira das roletas e para os avisos. O perfil continua.'
+                      : 'Seu cargo não permite desativar esta pessoa.'}
+                  >
+                    <UserX className="h-4 w-4" /> Desativar
+                  </Button>
+                )}
                 <Button onClick={() => setEditingId(null)} disabled={saving}>Concluir</Button>
               </DialogFooter>
             </>
@@ -544,7 +667,6 @@ export default function PeopleTab() {
         </DialogContent>
       </Dialog>
     </div>
-      {dialogoDeConfirmacao}
     </>
   );
 }

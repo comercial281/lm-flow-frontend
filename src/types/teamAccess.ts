@@ -6,6 +6,8 @@
  * completamente diferente — ali dentro ela só vê os leads dela, não recebe lead
  * novo, e o gestor NÃO consegue tirar pela tela. */
 
+import type { DeactivationReason, DeactivationSnapshot } from '@/types/users';
+
 /** Por que o sistema liberou este número sozinho. */
 export type AutoAccessReason =
   /** é dona de leads que conversam por este número */
@@ -56,6 +58,15 @@ export interface TeamAccessMember {
   auto_inbox_ids: string[];
   /** Motivo de cada número do balde automático, indexado pelo id do número. */
   auto_access: Record<string, AutoAccessDetail>;
+
+  /* Quem foi DESATIVADO continua na lista, com o selo *Inativo* e o botão
+     *Reativar* — é desta tela que sai a volta. Os campos vêm do mesmo serviço
+     que serve a lista de pessoas de Configurações; sem eles a tela não tem como
+     saber quem está fora, e foi assim que o botão estreou invisível. */
+  deactivated?: boolean;
+  deactivated_at?: string | null;
+  deactivation_reason?: DeactivationReason | null;
+  deactivation_snapshot?: DeactivationSnapshot | null;
 }
 
 export interface TeamAccessOverview {

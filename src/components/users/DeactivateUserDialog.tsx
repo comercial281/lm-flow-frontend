@@ -13,19 +13,22 @@ import {
 import { NativeSelect } from '@/components/ui/native-select';
 import { usersService } from '@/services/users';
 import { apiErrorMessage } from '@/utils/apiHelpers';
-import type { DeactivationPreview, DeactivationReason, User } from '@/types/users';
+import type { DeactivationPreview, DeactivationReason } from '@/types/users';
 import {
   blockingReason,
   buildDeactivatePayload,
   canOfferDisconnect,
   transferCandidates,
+  type DeactivatablePerson,
 } from '@/features/users/deactivation/deactivationRules';
 
 interface Props {
   open: boolean;
-  user: User | null;
+  /* Pessoa pelo mínimo que a janela precisa (id e nome), e não `User`: ela é
+     aberta pela tela de Equipe, cujo retrato da equipe é outro formato. */
+  user: DeactivatablePerson | null;
   /** A equipe, para escolher quem fica com os leads. */
-  users: User[];
+  users: DeactivatablePerson[];
   onClose: () => void;
   onDone: () => void;
 }
