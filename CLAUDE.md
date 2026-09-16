@@ -2073,3 +2073,97 @@ Armadilhas:
    também. A tela do Site Builder tem ~1.100 linhas; nada testável cabe dentro.
 3. **Não é `featureKey` nem `clientToggleKey`** — é configuração do site. Os
    scanners do catálogo de funcionalidades não entram nesta história.
+
+## O portal ganhou financiamento e captação de imóvel (desde 2026-09-16)
+
+O dono do produto mandou três referências do site da Mais Que Imóveis e pediu:
+cabeçalho mais bonito, uma página de simulação de financiamento com os logos dos
+bancos a um clique, e uma seção de *anuncie seu imóvel* com uma ficha que o
+proprietário preenche e os donos recebem por e-mail.
+
+O que aparece na tela:
+
+**Cabeçalho (vale em TODAS as páginas do portal)**
+
+- **Barra fina acima do cabeçalho** com o telefone, o e-mail e as redes sociais.
+  Eles já eram cadastrados em *Configurações → Contato* e **não apareciam em
+  lugar nenhum do site** — ficavam gravados e invisíveis. A barra só se desenha
+  quando há o que mostrar.
+- **Na home o cabeçalho é transparente sobre a foto de capa** e vira sólido na
+  rolagem; nas outras páginas ele é sólido desde o topo, como antes.
+- **Logo maior**, e os links novos (*Financiamento*, *Anuncie seu imóvel*) só
+  existem quando o gestor ligou aquela página.
+- **O botão de WhatsApp deixou de sumir no celular**: ele só existia dentro do
+  menu hambúrguer aberto.
+- **A página do imóvel passou a usar o MESMO cabeçalho e rodapé.** Ela tinha os
+  dela, sem menu nenhum — quem caía nela por anúncio não conseguia chegar ao
+  resto do site. É a mudança mais visível da leva, e é de propósito.
+- **No rodapé, o link *"Anuncie"* rolava para o formulário de quem COMPRA.** O
+  proprietário que queria vender caía no formulário contrário. Agora ele aponta
+  para a página de verdade e só existe quando ela está ligada.
+
+**Página *Simule seu financiamento*** — os bancos em círculos coloridos; clicar
+abre o simulador do banco em outra aba.
+
+**Página *Anuncie seu imóvel*** — a ficha em dois passos (*O imóvel*, *Seus
+dados*) e, na tela de obrigado, o botão **Prefere falar no WhatsApp?**.
+
+**Faixa de atalhos na home** — até três cartões (*Financiamento*, *Anuncie seu
+imóvel*, *Imóvel sob encomenda*).
+
+**Site Builder, aba *Configurações*** — dois blocos novos: *Financiamento e
+bancos* (liga/desliga, textos, e os cinco bancos com link e logo) e *Anuncie seu
+imóvel* (liga/desliga, textos, os e-mails que recebem a ficha e o botão **Enviar
+um teste**). Na aba *Leads*, cada ficha mostra o desfecho do envio.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **As duas páginas nascem DESLIGADAS**, e a faixa da home **não tem interruptor
+  próprio**: ela aparece quando existe pelo menos um destino de verdade. Como os
+  dois destinos novos estreiam desligados, nenhum site publicado ganha faixa
+  sozinho no deploy — a doutrina da casa de nada estrear ligado, sem custar mais
+  uma chave para o gestor virar. Com menos de dois destinos ela nem se desenha:
+  um cartão só repetiria, em outra forma, o bloco de captura logo abaixo.
+- **A ficha vai só por e-mail** — não cria contato nem card. Escolha explícita do
+  dono.
+- **Banco sem link de simulação não aparece no site.** Link morto no site de um
+  cliente é pior do que banco faltando, e a tela avisa quantos ficaram de fora.
+- **Os logos dos bancos não são embutidos no nosso código.** Quem tem a relação
+  com o banco (e o direito de usar a arte) é a imobiliária; há um campo de logo
+  por banco. Sem logo, o círculo sai na cor da marca com o nome escrito — nunca
+  vazio.
+- **O botão *Enviar um teste* não é enfeite.** E-mail depende de configuração da
+  plataforma; sem ele, o gestor só descobriria que nada sai quando o primeiro
+  proprietário real preenchesse a ficha e ninguém respondesse.
+- **Erro ao enviar a ficha NÃO apaga o que foi preenchido.** Ela é longa; sumir
+  com ela faz a pessoa não preencher de novo.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): as duas páginas, os cinco bancos e o envio moram lá.
+   Contra o servidor antigo os blocos aparecem, salvam e não guardam nada, e as
+   duas páginas públicas abrem vazias.
+2. **A tradução mora fora do JSX** (`src/features/siteBuilder/portalPages.ts`,
+   com spec): o que o servidor resolveu vira formulário, o formulário vira o que
+   é enviado, e os textos dos avisos saem de lá. A tela do Site Builder já tem
+   ~1.500 linhas.
+3. **Texto igual ao de fábrica NÃO é gravado.** Gravar o padrão faria a tela
+   mostrar "escrito por mim" onde ninguém escreveu nada, e travaria o texto no
+   dia em que o padrão da casa mudasse. Mesma regra do *tipo de venda* no
+   assistente da IA.
+4. **Os cinco bancos de reserva desta tela precisam bater com os do servidor**
+   (chave, nome, cor e ORDEM). Eles existem só para a janela de deploy em que o
+   servidor ainda é o antigo — sem eles o bloco abriria vazio e pareceria
+   quebrado no pior momento, logo depois de publicar.
+5. **O cabeçalho FLUTUA na home**, então ele sai do fluxo: quem mexer no espaço
+   do topo da capa precisa lembrar que o título precisa daquele espaço de volta.
+6. **Não é `featureKey` nem `clientToggleKey`** — é configuração do site, como o
+   banner da home. Os scanners do catálogo de funcionalidades não entram nesta
+   história e nenhuma chave literal nova foi escrita.
+
+**Dívida conhecida:** a aba *Leads*, onde a ficha fica guardada quando o e-mail
+falha, hoje só é alcançada pelo administrador da conta (a chave `sites.leads` não
+está em cargo nenhum — dívida registrada em 07/09). E os cinco links de simulação
+começam vazios: até a imobiliária colá-los, a página de financiamento vai ao ar
+sem banco nenhum, e o bloco avisa isso em âmbar.
