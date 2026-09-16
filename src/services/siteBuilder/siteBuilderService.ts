@@ -72,6 +72,44 @@ export interface SiteHeroImage extends SiteHeroImageChoice {
   reason?: 'imovel_removido' | 'imovel_despublicado' | 'imovel_sem_foto' | 'erro' | null;
 }
 
+/**
+ * As duas páginas extras do portal — *Simule seu financiamento* e
+ * *Anuncie seu imóvel*. Quem resolve é o SERVIDOR (`Sites::PortalPages`): os
+ * cinco bancos, os textos de fábrica e o que o site público pode ver saem de lá.
+ * Aqui só se lê.
+ */
+export interface SiteFinancingBank {
+  key: string;
+  name: string;
+  /** Cor da marca do banco: é o círculo quando não há logo enviado. */
+  color: string;
+  /** Cor do texto sobre o círculo, quando a cor da marca é clara (Banco do Brasil). */
+  ink?: string | null;
+  enabled: boolean;
+  /** Link de simulação. Banco sem link NÃO aparece no site. */
+  url?: string | null;
+  logo_url?: string | null;
+}
+
+export interface SiteFinancingPage {
+  enabled: boolean;
+  title: string;
+  intro: string;
+  footer: string;
+  banks: SiteFinancingBank[];
+}
+
+export interface SiteListingPage {
+  enabled: boolean;
+  title: string;
+  intro: string;
+  whatsapp_text: string;
+  thanks_title: string;
+  thanks_text: string;
+  /** Só chega na tela do Site Builder — o site público NUNCA recebe os e-mails. */
+  emails?: string[];
+}
+
 export interface Site {
   id: string;
   name: string;
@@ -87,6 +125,10 @@ export interface Site {
   hero_image?: SiteHeroImage | null;
   /** Seções liga/desliga da home (armazenado em settings no backend). */
   sections?: SiteSections;
+  /** Página *Simule seu financiamento*, já resolvida pelo servidor. */
+  financiamento?: SiteFinancingPage | null;
+  /** Página *Anuncie seu imóvel*, já resolvida pelo servidor (com os e-mails). */
+  anuncie?: SiteListingPage | null;
   contact: SiteContact;
   social_links?: Record<string, string>;
   seo: SiteSeo;
@@ -188,6 +230,13 @@ export interface SiteFormData {
   /** Foto do banner da home. Viaja aninhada; o servidor normaliza antes de gravar. */
   hero_image?: SiteHeroImageChoice;
   sections?: SiteSections;
+  /**
+   * As duas páginas extras. Viajam ANINHADAS — declaradas escalares no servidor
+   * o Rails descartaria o hash em silêncio, a tela diria *Salvo* e nada mudaria.
+   * Cada uma é gravada sozinha: mandar só o financiamento não apaga o "Anuncie".
+   */
+  financiamento?: SiteFinancingForm;
+  anuncie?: SiteListingForm;
   contact_phone?: string;
   contact_whatsapp?: string;
   contact_email?: string;
@@ -202,6 +251,25 @@ export interface SiteFormData {
   lead_pipeline_id?: string | null;
   lead_stage_id?: string | null;
   lead_label_id?: string | null;
+}
+
+export interface SiteFinancingForm {
+  enabled: boolean;
+  title?: string;
+  intro?: string;
+  footer?: string;
+  /** Por chave de banco: o que o gestor edita (liga/desliga, link e logo). */
+  banks?: Record<string, { enabled?: boolean; url?: string; logo_url?: string }>;
+}
+
+export interface SiteListingForm {
+  enabled: boolean;
+  title?: string;
+  intro?: string;
+  whatsapp_text?: string;
+  thanks_title?: string;
+  thanks_text?: string;
+  emails?: string[];
 }
 
 export interface PageFormData {
@@ -238,6 +306,12 @@ export interface SiteLead {
   contact_id?: string | null;
   property_id?: string | null;
   message?: string | null;
+  /**
+   * Desfecho do e-mail da ficha *Anuncie seu imóvel*: `enviado`,
+   * `sem_email_configurado`, `sem_destinatario` ou `falhou: …`. Só existe nas
+   * fichas de "Anuncie" — é o que impede a falha muda de envio.
+   */
+  email_delivery?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -391,6 +465,12 @@ export const siteBuilderService = {
   },
 
   // Leads
+  /** Manda uma ficha de amostra de *Anuncie seu imóvel* para os e-mails salvos. */
+  async testListingEmail(siteId: string): Promise<{ sent_to: string[] }> {
+    const res = await api.post(`/sites/${siteId}/test_listing_email`);
+    return (res.data as { data: { sent_to: string[] } }).data;
+  },
+
   async listLeads(siteId: string, params: { status?: string; per_page?: number } = {}): Promise<{ data: SiteLead[]; meta: { total: number } }> {
     const res = await api.get(`/sites/${siteId}/leads`, { params });
     return res.data as { data: SiteLead[]; meta: { total: number } };

@@ -105,6 +105,8 @@ const ImovelPublic = lazyWithRetry(() => import('@/pages/Public/ImovelPublicPage
 const PortalHome = lazyWithRetry(() => import('@/pages/Public/PortalHomePage'));
 const PortalSearch = lazyWithRetry(() => import('@/pages/Public/PortalSearchPage'));
 const PortalBlog = lazyWithRetry(() => import('@/pages/Public/PortalBlogPage'));
+const PortalFinanciamento = lazyWithRetry(() => import('@/pages/Public/PortalFinanciamentoPage'));
+const PortalAnuncie = lazyWithRetry(() => import('@/pages/Public/PortalAnunciePage'));
 const PortalArticle = lazyWithRetry(() => import('@/pages/Public/PortalArticlePage'));
 const PortalDetailPage = lazyWithRetry(() => import('../pages/Customer/Settings/Portals/PortalDetailPage'));
 // Gate de rota da Área do Admin: só no deploy raiz (app.lmflow.com.br) E com
@@ -1246,6 +1248,13 @@ const AppRouter = () => {
 
           {/* Público — página dedicada de busca/filtros de imóveis do portal. */}
           <Route path="/portal/:tenant/imoveis" element={<PortalSearch />} />
+
+          {/* Público INDEXÁVEL — as duas páginas extras do portal. Elas existem
+              sempre; quem decide se aparecem no menu (e se respondem de verdade)
+              é a configuração do site, no Site Builder. O gate fica na PÁGINA,
+              nunca na rota — o padrão da casa. */}
+          <Route path="/portal/:tenant/financiamento" element={<PortalFinanciamento />} />
+          <Route path="/portal/:tenant/anuncie" element={<PortalAnuncie />} />
 
           {/* Público INDEXÁVEL — blog do portal (listagem + artigo). */}
           <Route path="/portal/:tenant/blog" element={<PortalBlog />} />
