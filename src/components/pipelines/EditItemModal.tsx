@@ -60,7 +60,7 @@ import { contactsService } from '@/services/contacts/contactsService';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { brokerAssignmentsService, type BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
 import OfferActions from '@/components/roleta/OfferActions';
-import { normalizeFormAnswers, landingVerdict } from '@/components/pipelines/formAnswers';
+import { normalizeFormAnswers, extraAttributeRows, landingVerdict } from '@/components/pipelines/formAnswers';
 import { toast } from 'sonner';
 import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
@@ -763,16 +763,17 @@ export default function EditItemModal({
                 {/* Respostas do formulário (perguntas personalizadas da campanha) */}
                 {(() => {
                   const ca = ((item.contact as any)?.custom_attributes) ?? {};
-                  const HIDE = new Set(['empreendimento', 'imovel_codigo', 'origem_lead', 'form_answers']);
                   // As respostas do formulário vivem DENTRO de `form_answers`, e o
                   // bloco imprimia essa chave inteira com String(v) — uma linha
                   // "Form Answers: [object Object]" no lugar do que o lead
                   // respondeu. A mesma normalização da aba Origem abre os pares e
                   // descarta o rastreio do anúncio, que nunca foi resposta.
                   const respostas = normalizeFormAnswers(ca.form_answers);
-                  const outras = Object.entries(ca)
-                    .filter(([k, v]) => !HIDE.has(k) && v != null && v !== '' && typeof v !== 'object')
-                    .map(([k, v]) => ({ label: k.replace(/_/g, ' '), value: String(v) }));
+                  // O servidor espelha cada resposta solta no contato (é de lá que
+                  // a variável de funil lê), e o bloco imprimia as duas listas em
+                  // sequência: cada pergunta do Meta aparecia duas vezes, uma com
+                  // acento e "?" e outra sem. Ver formAnswers.ts.
+                  const outras = extraAttributeRows(ca, respostas);
                   const entries = [...respostas, ...outras].map(r => [r.label, r.value] as const);
                   if (entries.length === 0) return null;
                   return (

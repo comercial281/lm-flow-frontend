@@ -65,6 +65,55 @@ export function normalizeFormAnswers(raw: unknown): FormAnswerRow[] {
   });
 }
 
+// ⚠️ A MESMA RESPOSTA É GRAVADA EM DOIS LUGARES, e isso é de propósito.
+//
+// O servidor guarda as respostas dentro de `form_answers` (é o que o bloco lê) e
+// ESPELHA cada uma solta, ao lado, com a chave sem acento e sem pontuação — é de
+// lá que o interpolador de funil lê `{{qual_a_renda_familiar_da_sua_casa}}`. O
+// card imprimia as duas listas em sequência, então toda pergunta do formulário do
+// Meta aparecia DUAS vezes no bloco "Respostas do lead": uma com acento e "?",
+// outra sem (relato do dono do produto, 16/09/2026).
+//
+// O espelho não pode sumir do servidor — sem ele a variável de funil para de
+// resolver. Quem decide o que aparece é esta leitura: chave espelhada de uma
+// resposta que JÁ está na lista não vira linha. O que não é espelho (o campo que
+// alguém gravou à mão no contato) continua aparecendo.
+const HIDDEN_ATTRIBUTE_KEYS = new Set([
+  'empreendimento', 'imovel_codigo', 'origem_lead', 'form_answers',
+]);
+
+// "Você está buscando?" e "voce_esta_buscando" têm que virar a MESMA coisa —
+// é a normalização que o servidor usa para criar a chave espelhada. O intervalo
+// de acentos vai escrito como escapes (`\u0300-\u036f`), nunca com os
+// caracteres combinantes literais, que qualquer normalização de editor apaga
+// em silêncio.
+const attributeKey = (raw: string): string =>
+  raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+// Os campos soltos do contato que ainda merecem uma linha no bloco, já sem os
+// espelhos das respostas e sem o rastreio do anúncio.
+export function extraAttributeRows(raw: unknown, answers: FormAnswerRow[]): FormAnswerRow[] {
+  if (!isRecord(raw)) return [];
+
+  const jaListadas = new Set(answers.map((a) => attributeKey(a.label)).filter(Boolean));
+
+  return Object.entries(raw).flatMap(([key, value]) => {
+    const k = key.trim();
+    if (!k || HIDDEN_ATTRIBUTE_KEYS.has(k) || TRACKING_KEYS.has(k.toLowerCase())) return [];
+    if (value == null || value === '' || typeof value === 'object') return [];
+
+    const normalizada = attributeKey(k);
+    if (normalizada && jaListadas.has(normalizada)) return [];
+
+    return [{ label: toLabel(k), value: String(value) }];
+  });
+}
+
 // O resultado da régua de qualificação da landing, gravado no card na captura.
 // Sem ele as respostas contam metade da história: o gestor lê o que o lead
 // respondeu e não sabe se aquilo passou no corte que ele mesmo configurou.

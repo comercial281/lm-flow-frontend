@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeFormAnswers, landingVerdict } from './formAnswers';
+import { normalizeFormAnswers, extraAttributeRows, landingVerdict } from './formAnswers';
 
 describe('normalizeFormAnswers', () => {
   it('lê os pares soltos do formulário do Meta', () => {
@@ -79,6 +79,65 @@ describe('normalizeFormAnswers', () => {
     expect(normalizeFormAnswers(undefined)).toEqual([]);
     expect(normalizeFormAnswers('texto')).toEqual([]);
     expect(normalizeFormAnswers({})).toEqual([]);
+  });
+});
+
+describe('extraAttributeRows', () => {
+  // O caso do print do dono do produto (16/09/2026): o lead do formulário do Meta
+  // mostrava cada pergunta duas vezes — uma com acento e "?", outra sem.
+  it('não repete a resposta que já está listada, mesmo com acento e pontuação', () => {
+    const respostas = normalizeFormAnswers({
+      'Qual a renda familiar da sua casa?': 'entre_r$4.000_e_r$6.000',
+      'Você está buscando um imóvel para morar ou investir?': 'estou_procurando_para_morar',
+    });
+
+    const outras = extraAttributeRows(
+      {
+        form_answers: { 'Qual a renda familiar da sua casa?': 'entre_r$4.000_e_r$6.000' },
+        qual_a_renda_familiar_da_sua_casa: 'entre_r$4.000_e_r$6.000',
+        voce_esta_buscando_um_imovel_para_morar_ou_investir: 'estou_procurando_para_morar',
+      },
+      respostas,
+    );
+
+    expect(outras).toEqual([]);
+    expect(respostas).toHaveLength(2);
+  });
+
+  it('mantém o campo do contato que não é espelho de resposta', () => {
+    const outras = extraAttributeRows(
+      { corretor_preferido: 'Ana', qual_seu_orcamento: 'Até 500 mil' },
+      normalizeFormAnswers({ 'Qual seu orçamento?': 'Até 500 mil' }),
+    );
+
+    expect(outras).toEqual([{ label: 'corretor preferido', value: 'Ana' }]);
+  });
+
+  it('não mostra o rastreio do anúncio nem os campos internos do card', () => {
+    const outras = extraAttributeRows(
+      {
+        fbp: 'fb.1.2.3',
+        event_id: 'lp-123',
+        empreendimento: 'Vista Mar',
+        imovel_codigo: 'AP-10',
+        origem_lead: 'landing',
+        form_answers: { Bairro: 'Centro' },
+      },
+      [],
+    );
+
+    expect(outras).toEqual([]);
+  });
+
+  it('nunca imprime objeto solto nem valor vazio', () => {
+    const outras = extraAttributeRows({ bagunca: { a: 1 }, vazio: '', nulo: null, vale: 'sim' }, []);
+    expect(outras).toEqual([{ label: 'vale', value: 'sim' }]);
+  });
+
+  it('devolve lista vazia quando não há atributos', () => {
+    expect(extraAttributeRows(null, [])).toEqual([]);
+    expect(extraAttributeRows('texto', [])).toEqual([]);
+    expect(extraAttributeRows({}, [])).toEqual([]);
   });
 });
 
