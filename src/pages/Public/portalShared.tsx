@@ -17,14 +17,45 @@ export interface Branding {
   accent_color?: string | null;
   font_family?: string | null;
 }
+/** Banco na página de financiamento. O servidor só manda os que têm link. */
+export interface PortalBank {
+  key: string;
+  name: string;
+  color: string;
+  ink?: string | null;
+  url?: string | null;
+  logo_url?: string | null;
+}
+export interface PortalFinancing {
+  enabled?: boolean;
+  title?: string;
+  intro?: string;
+  footer?: string;
+  banks?: PortalBank[];
+}
+export interface PortalListing {
+  enabled?: boolean;
+  title?: string;
+  intro?: string;
+  whatsapp_text?: string;
+  thanks_title?: string;
+  thanks_text?: string;
+  /* Os e-mails de destino NÃO chegam aqui, de propósito: o endereço do portal é
+     aberto e servi-los entregaria o e-mail do dono a qualquer robô coletor. */
+}
 export interface SiteInfo {
   name?: string;
   branding?: Branding;
   /** Banner da home: vídeo tem prioridade; sem os dois, a capa do primeiro imóvel. */
   hero?: { video_url?: string | null; image_url?: string | null };
   sections?: { stats?: boolean; lead_capture?: boolean };
-  contact?: { whatsapp?: string | null; phone?: string | null };
+  contact?: { whatsapp?: string | null; phone?: string | null; email?: string | null; address?: string | null };
+  social_links?: Record<string, string> | null;
   seo?: { title?: string | null; description?: string | null };
+  /** Página *Simule seu financiamento* (Site Builder). Ausente = desligada. */
+  financiamento?: PortalFinancing | null;
+  /** Página *Anuncie seu imóvel* (Site Builder). Ausente = desligada. */
+  anuncie?: PortalListing | null;
 }
 export interface PortalProperty {
   id: string;
@@ -88,6 +119,10 @@ export const I = {
   wa: 'M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.3A10 10 0 1 0 12 2Zm5.5 14.2c-.2.6-1.2 1.2-1.7 1.2-.9.1-1 .4-3.6-.9-2.6-1.4-4.1-4.1-4.2-4.3-.1-.2-1-1.3-1-2.5s.6-1.8.9-2c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6c-.2.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2 1.3 2.3 1.5.2.1.4.1.5-.1l.7-.8c.2-.2.4-.2.6-.1l1.9.9c.3.1.4.2.5.3.1.2.1.7-.1 1.3Z',
   menu: 'M3 6h18M3 12h18M3 18h18', close: 'M6 6l12 12M18 6L6 18',
   arrow: 'M5 12h14M13 6l6 6-6 6',
+  phone: 'M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z',
+  mail: 'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm18 2-10 7L2 6',
+  bank: 'M3 21h18M4 10h16M5 10V7l7-4 7 4v3M6 10v8M10 10v8M14 10v8M18 10v8',
+  sign: 'M4 3v18M4 5h13l-2.5 3L17 11H4',
 };
 export function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: string }) {
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className={cls}><path d={d} /></svg>;
@@ -301,7 +336,8 @@ export function Stat({ n, label }: { n: string; label: string }) {
 /* ── Header compartilhado (menu do topo funcional) ───────────────────────── */
 type NavItem =
   | { label: string; kind: 'tab'; value: PortalTab }
-  | { label: string; kind: 'section'; value: string };
+  | { label: string; kind: 'section'; value: string }
+  | { label: string; kind: 'page'; value: string };
 
 const NAV: NavItem[] = [
   { label: 'Comprar', kind: 'tab', value: 'sale' },
@@ -311,72 +347,258 @@ const NAV: NavItem[] = [
   { label: 'Contato', kind: 'section', value: 'contato' },
 ];
 
+/** "Financiamento" e "Anuncie seu imóvel" só existem no menu quando o gestor
+ *  ligou a página no Site Builder — link para uma página desligada é beco. */
+export function extraPages(site: SiteInfo): NavItem[] {
+  const out: NavItem[] = [];
+  if (site.financiamento?.enabled) out.push({ label: 'Financiamento', kind: 'page', value: 'financiamento' });
+  if (site.anuncie?.enabled) out.push({ label: 'Anuncie seu imóvel', kind: 'page', value: 'anuncie' });
+  return out;
+}
+
+/** As redes cadastradas no Site Builder, na ordem em que saem na barra fina. */
+const SOCIAL_ORDER = ['instagram', 'facebook', 'youtube', 'linkedin', 'tiktok'] as const;
+const SOCIAL_LABEL: Record<string, string> = {
+  instagram: 'Instagram', facebook: 'Facebook', youtube: 'YouTube',
+  linkedin: 'LinkedIn', tiktok: 'TikTok',
+};
+export function socialEntries(site: SiteInfo): { key: string; label: string; url: string }[] {
+  const links = site.social_links || {};
+  const known = SOCIAL_ORDER.filter(k => (links[k] || '').trim());
+  const rest = Object.keys(links).filter(k => !SOCIAL_ORDER.includes(k as typeof SOCIAL_ORDER[number]) && (links[k] || '').trim());
+  return [...known, ...rest].map(k => ({
+    key: k,
+    label: SOCIAL_LABEL[k] || k.charAt(0).toUpperCase() + k.slice(1),
+    url: links[k].trim(),
+  }));
+}
+
 /**
- * `onHome`: quando true (na home), links de seção (Sobre/Contato) rolam a
- * própria página via âncora `#id`; quando false (na busca), navegam de volta
- * para a home apontando a seção.
+ * Barra fina acima do cabeçalho: telefone, e-mail e redes. Eles já eram
+ * cadastrados no Site Builder e não apareciam em LUGAR NENHUM do site. Ela só
+ * se desenha quando há o que mostrar — faixa vazia é pior que faixa nenhuma.
+ */
+function PortalTopBar({ site }: { site: SiteInfo }) {
+  const phone = site.contact?.phone?.trim();
+  const email = site.contact?.email?.trim();
+  const socials = socialEntries(site);
+  if (!phone && !email && socials.length === 0) return null;
+
+  return (
+    <div className="hidden border-b border-white/10 bg-[var(--ink)] text-white/75 sm:block">
+      <div className="mx-auto flex h-9 max-w-6xl items-center justify-between gap-6 px-4 text-[12.5px] sm:px-6">
+        <div className="flex items-center gap-5">
+          {phone && (
+            <a href={`tel:${onlyDigits(phone)}`} className="inline-flex items-center gap-1.5 transition-colors hover:text-white">
+              <Ic d={I.phone} s={13} /> {phone}
+            </a>
+          )}
+          {email && (
+            <a href={`mailto:${email}`} className="inline-flex items-center gap-1.5 transition-colors hover:text-white">
+              <Ic d={I.mail} s={13} /> {email}
+            </a>
+          )}
+        </div>
+        {socials.length > 0 && (
+          <div className="flex items-center gap-4">
+            {socials.map(sn => (
+              <a key={sn.key} href={sn.url} target="_blank" rel="noreferrer" className="transition-colors hover:text-white">
+                {sn.label}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * `onHome`: na home o cabeçalho é TRANSPARENTE sobre a foto de capa e vira
+ * sólido na rolagem; nas demais páginas ele é sólido desde o topo. Os links de
+ * seção (Sobre/Contato) rolam a própria home via âncora e, fora dela, navegam
+ * de volta apontando a seção.
  */
 export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo; tenant: string; onHome?: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  // Só na home: antes de rolar, o cabeçalho flutua sobre a capa.
+  const [scrolled, setScrolled] = useState(!onHome);
   const wa = site.contact?.whatsapp;
   const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
   const hasBlog = usePublishedArticlesExist(tenant);
 
+  useEffect(() => {
+    if (!onHome) { setScrolled(true); return; }
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [onHome]);
+
   // Seções liga/desliga (Site Builder). Ausência da flag = visível (retrocompat).
   const showStats = site.sections?.stats !== false;
   const showLeadCapture = site.sections?.lead_capture !== false;
-  const nav = NAV.filter(n =>
-    n.value === 'sobre' ? showStats : n.value === 'contato' ? showLeadCapture : true);
+  const nav = [
+    ...NAV.filter(n => (n.value === 'sobre' ? showStats : n.value === 'contato' ? showLeadCapture : true)),
+    ...extraPages(site),
+  ];
 
   const sectionHref = (id: string) => (onHome ? `#${id}` : `/portal/${tenant}#${id}`);
+  // Menu aberto sobre a capa é sempre sólido — texto branco sobre foto some.
+  const floating = onHome && !scrolled && !menuOpen;
 
   const renderLink = (n: NavItem, onClick?: () => void, cls?: string) => {
     if (n.kind === 'tab') {
-      return (
-        <Link key={n.label} to={`/portal/${tenant}/imoveis?tab=${n.value}`} onClick={onClick} className={cls}>{n.label}</Link>
-      );
+      return <Link key={n.label} to={`/portal/${tenant}/imoveis?tab=${n.value}`} onClick={onClick} className={cls}>{n.label}</Link>;
+    }
+    if (n.kind === 'page') {
+      return <Link key={n.label} to={`/portal/${tenant}/${n.value}`} onClick={onClick} className={cls}>{n.label}</Link>;
     }
     return <a key={n.label} href={sectionHref(n.value)} onClick={onClick} className={cls}>{n.label}</a>;
   };
 
-  const desktopCls = 'text-[14px] font-medium text-neutral-600 transition-colors hover:text-[var(--brand)]';
+  const desktopCls = floating
+    ? 'text-[14px] font-medium text-white/85 transition-colors hover:text-white'
+    : 'text-[14px] font-medium text-neutral-600 transition-colors hover:text-[var(--brand)]';
   const mobileCls = 'block py-2.5 text-[15px] font-medium text-neutral-700';
 
   return (
-    <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-[var(--paper)]/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link to={`/portal/${tenant}`} className="flex items-center gap-2.5">
-          {site.branding?.logo_url ? (
-            <img src={site.branding.logo_url} alt={site.name || 'Portal'} className="h-9 w-auto max-w-[160px] object-contain" />
-          ) : (
-            <span className="font-[var(--display)] text-xl font-semibold tracking-tight">{site.name || 'Imóveis'}</span>
-          )}
-        </Link>
+    <div className={floating ? 'absolute inset-x-0 top-0 z-40' : 'sticky top-0 z-40'}>
+      {!floating && <PortalTopBar site={site} />}
+      <header
+        className={`border-b transition-colors duration-300 ${
+          floating
+            ? 'border-white/15 bg-gradient-to-b from-black/40 to-transparent'
+            : 'border-black/[0.06] bg-[var(--paper)]/90 backdrop-blur-md'
+        }`}
+      >
+        <div className="mx-auto flex h-[68px] max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+          <Link to={`/portal/${tenant}`} className="flex items-center gap-2.5">
+            {site.branding?.logo_url ? (
+              <img
+                src={site.branding.logo_url}
+                alt={site.name || 'Portal'}
+                className={`h-11 w-auto max-w-[190px] object-contain ${floating ? 'brightness-0 invert' : ''}`}
+              />
+            ) : (
+              <span className={`font-[var(--display)] text-xl font-semibold tracking-tight ${floating ? 'text-white' : ''}`}>
+                {site.name || 'Imóveis'}
+              </span>
+            )}
+          </Link>
 
-        <nav className="hidden items-center gap-7 md:flex">
-          {nav.map(n => renderLink(n, undefined, desktopCls))}
-          {hasBlog && <Link to={`/portal/${tenant}/blog`} className={desktopCls}>Blog</Link>}
-        </nav>
+          <nav className="hidden items-center gap-6 lg:flex">
+            {nav.map(n => renderLink(n, undefined, desktopCls))}
+            {hasBlog && <Link to={`/portal/${tenant}/blog`} className={desktopCls}>Blog</Link>}
+          </nav>
 
-        <div className="flex items-center gap-2">
-          {waHref && (
-            <a href={waHref} target="_blank" rel="noreferrer" className="hidden items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold text-white sm:inline-flex" style={{ background: '#25D366' }}>
-              <Ic d={I.wa} s={16} /> WhatsApp
-            </a>
-          )}
-          <button type="button" aria-label="Menu" onClick={() => setMenuOpen(o => !o)} className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--ink)] md:hidden">
-            <Ic d={menuOpen ? I.close : I.menu} s={22} />
-          </button>
+          <div className="flex items-center gap-2">
+            {waHref && (
+              <a
+                href={waHref} target="_blank" rel="noreferrer"
+                aria-label="Falar no WhatsApp"
+                className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold text-white sm:px-4"
+                style={{ background: '#25D366' }}
+              >
+                <Ic d={I.wa} s={16} /> <span className="hidden sm:inline">WhatsApp</span>
+              </a>
+            )}
+            <button
+              type="button" aria-label="Menu" aria-expanded={menuOpen}
+              onClick={() => setMenuOpen(o => !o)}
+              className={`inline-flex h-10 w-10 items-center justify-center rounded-full lg:hidden ${floating ? 'text-white' : 'text-[var(--ink)]'}`}
+            >
+              <Ic d={menuOpen ? I.close : I.menu} s={22} />
+            </button>
+          </div>
         </div>
+
+        {menuOpen && (
+          <nav className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 lg:hidden">
+            {nav.map(n => renderLink(n, () => setMenuOpen(false), mobileCls))}
+            {hasBlog && <Link to={`/portal/${tenant}/blog`} onClick={() => setMenuOpen(false)} className={mobileCls}>Blog</Link>}
+            {(site.contact?.phone || site.contact?.email) && (
+              <div className="mt-2 border-t border-black/[0.06] pt-2 text-[13px] text-neutral-500">
+                {site.contact?.phone && (
+                  <a href={`tel:${onlyDigits(site.contact.phone)}`} className="block py-1.5">{site.contact.phone}</a>
+                )}
+                {site.contact?.email && (
+                  <a href={`mailto:${site.contact.email}`} className="block py-1.5">{site.contact.email}</a>
+                )}
+              </div>
+            )}
+          </nav>
+        )}
+      </header>
+    </div>
+  );
+}
+
+/* ── Faixa de atalhos da home ────────────────────────────────────────────── */
+/**
+ * Os três caminhos que não são "quero comprar": financiamento, anunciar o
+ * próprio imóvel e pedir ajuda para achar.
+ *
+ * ⚠️ A faixa NÃO tem interruptor próprio, e é de propósito: ela aparece quando
+ * existe pelo menos um destino de verdade. Como as duas páginas novas nascem
+ * desligadas, nenhum site publicado ganha faixa sozinho no deploy — a doutrina
+ * da casa de nada estrear ligado, sem custar mais uma chave para o gestor virar.
+ */
+export function HomeShortcuts({ site, tenant }: { site: SiteInfo; tenant: string }) {
+  const showLeadCapture = site.sections?.lead_capture !== false;
+
+  const cards = [
+    site.financiamento?.enabled && {
+      key: 'financiamento',
+      icon: I.bank,
+      title: 'Financiamento',
+      desc: 'Simule com os principais bancos e descubra quanto você consegue financiar.',
+      cta: 'Faça uma simulação',
+      to: `/portal/${tenant}/financiamento`,
+    },
+    site.anuncie?.enabled && {
+      key: 'anuncie',
+      icon: I.sign,
+      title: 'Anuncie seu imóvel',
+      desc: 'Tem um imóvel para vender ou alugar? Preencha a ficha e a gente avalia.',
+      cta: 'Cadastre seu imóvel',
+      to: `/portal/${tenant}/anuncie`,
+    },
+    showLeadCapture && {
+      key: 'encomenda',
+      icon: I.search,
+      title: 'Imóvel sob encomenda',
+      desc: 'Descreva o que você procura e avisamos assim que encontrarmos.',
+      cta: 'Encomende seu imóvel',
+      to: '#contato',
+    },
+  ].filter(Boolean) as { key: string; icon: string; title: string; desc: string; cta: string; to: string }[];
+
+  // Só a busca de imóvel ligada não justifica uma faixa: ela repetiria, em
+  // forma de cartão, o bloco de captura que já está logo abaixo na home.
+  if (cards.length < 2) return null;
+
+  return (
+    <section className="border-y border-black/[0.06]" style={{ background: 'var(--ink)' }}>
+      <div className={`mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 ${cards.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+        {cards.map(c => {
+          const inner = (
+            <>
+              <span className="text-white/80"><Ic d={c.icon} s={26} /></span>
+              <h3 className="mt-4 font-[var(--display)] text-[22px] font-semibold text-white">{c.title}</h3>
+              <p className="mt-2 max-w-xs text-[14px] leading-relaxed text-white/70">{c.desc}</p>
+              <span className="mt-5 inline-flex items-center gap-2 border-b-2 border-white/60 pb-1 text-[14px] font-semibold text-white transition-colors group-hover:border-[var(--brand)]">
+                {c.cta} <Ic d={I.arrow} s={16} />
+              </span>
+            </>
+          );
+          const cls = 'group flex flex-col items-start text-left';
+          return c.to.startsWith('#')
+            ? <a key={c.key} href={c.to} className={cls}>{inner}</a>
+            : <Link key={c.key} to={c.to} className={cls}>{inner}</Link>;
+        })}
       </div>
-      {menuOpen && (
-        <nav className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 md:hidden">
-          {nav.map(n => renderLink(n, () => setMenuOpen(false), mobileCls))}
-          {hasBlog && <Link to={`/portal/${tenant}/blog`} onClick={() => setMenuOpen(false)} className={mobileCls}>Blog</Link>}
-          {waHref && <a href={waHref} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-2 rounded-full px-4 py-2 text-[14px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={16} /> Falar no WhatsApp</a>}
-        </nav>
-      )}
-    </header>
+    </section>
   );
 }
 
@@ -417,11 +639,31 @@ export function PortalFooter({ site, tenant, onHome = false }: { site: SiteInfo;
           {showStats && <li><a href={sectionHref('sobre')} className={footerLinkCls}>Sobre nós</a></li>}
           {hasBlog && <li><Link to={`/portal/${tenant}/blog`} className={footerLinkCls}>Blog</Link></li>}
           {showLeadCapture && <li><a href={sectionHref('contato')} className={footerLinkCls}>Contato</a></li>}
-          {showLeadCapture && <li><a href={sectionHref('contato')} className={footerLinkCls}>Anuncie</a></li>}
+          {/* "Anuncie" rolava para o formulário de QUEM COMPRA: o proprietário
+              que queria VENDER caía no formulário contrário. Agora ele só existe
+              quando a página de verdade está ligada, e aponta para ela. */}
+          {site.anuncie?.enabled && (
+            <li><Link to={`/portal/${tenant}/anuncie`} className={footerLinkCls}>Anuncie seu imóvel</Link></li>
+          )}
+          {site.financiamento?.enabled && (
+            <li><Link to={`/portal/${tenant}/financiamento`} className={footerLinkCls}>Financiamento</Link></li>
+          )}
         </FooterCol>
         <div>
           <h4 className="mb-3 text-[12px] font-semibold uppercase tracking-wide text-neutral-500">Contato</h4>
           {waHref && <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold text-white" style={{ background: '#25D366' }}><Ic d={I.wa} s={15} /> WhatsApp</a>}
+          <div className="mt-3 space-y-1.5 text-[13px] text-neutral-600">
+            {site.contact?.phone && <div><a href={`tel:${onlyDigits(site.contact.phone)}`} className="hover:text-[var(--brand)]">{site.contact.phone}</a></div>}
+            {site.contact?.email && <div><a href={`mailto:${site.contact.email}`} className="break-all hover:text-[var(--brand)]">{site.contact.email}</a></div>}
+            {site.contact?.address && <div className="text-neutral-500">{site.contact.address}</div>}
+          </div>
+          {socialEntries(site).length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[13px]">
+              {socialEntries(site).map(sn => (
+                <a key={sn.key} href={sn.url} target="_blank" rel="noreferrer" className={footerLinkCls}>{sn.label}</a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       <div className="border-t border-black/[0.06] py-5 text-center text-[12px] text-neutral-400">

@@ -2116,6 +2116,148 @@ Armadilhas:
 3. **Não é `featureKey` nem `clientToggleKey`** — é configuração do site. Os
    scanners do catálogo de funcionalidades não entram nesta história.
 
+## O portal ganhou financiamento e captação de imóvel (desde 2026-09-16)
+
+O dono do produto mandou três referências do site da Mais Que Imóveis e pediu:
+cabeçalho mais bonito, uma página de simulação de financiamento com os logos dos
+bancos a um clique, e uma seção de *anuncie seu imóvel* com uma ficha que o
+proprietário preenche e os donos recebem por e-mail.
+
+O que aparece na tela:
+
+**Cabeçalho (vale em TODAS as páginas do portal)**
+
+- **Barra fina acima do cabeçalho** com o telefone, o e-mail e as redes sociais.
+  Eles já eram cadastrados em *Configurações → Contato* e **não apareciam em
+  lugar nenhum do site** — ficavam gravados e invisíveis. A barra só se desenha
+  quando há o que mostrar.
+- **Na home o cabeçalho é transparente sobre a foto de capa** e vira sólido na
+  rolagem; nas outras páginas ele é sólido desde o topo, como antes.
+- **Logo maior**, e os links novos (*Financiamento*, *Anuncie seu imóvel*) só
+  existem quando o gestor ligou aquela página.
+- **O botão de WhatsApp deixou de sumir no celular**: ele só existia dentro do
+  menu hambúrguer aberto.
+- **A página do imóvel passou a usar o MESMO cabeçalho e rodapé.** Ela tinha os
+  dela, sem menu nenhum — quem caía nela por anúncio não conseguia chegar ao
+  resto do site. É a mudança mais visível da leva, e é de propósito.
+- **No rodapé, o link *"Anuncie"* rolava para o formulário de quem COMPRA.** O
+  proprietário que queria vender caía no formulário contrário. Agora ele aponta
+  para a página de verdade e só existe quando ela está ligada.
+
+**Página *Simule seu financiamento*** — os bancos em círculos coloridos; clicar
+abre o simulador do banco em outra aba.
+
+**Página *Anuncie seu imóvel*** — a ficha em dois passos (*O imóvel*, *Seus
+dados*) e, na tela de obrigado, o botão **Prefere falar no WhatsApp?**.
+
+**Faixa de atalhos na home** — até três cartões (*Financiamento*, *Anuncie seu
+imóvel*, *Imóvel sob encomenda*).
+
+**Site Builder, aba *Configurações*** — dois blocos novos: *Financiamento e
+bancos* (liga/desliga, textos, e os cinco bancos com link e logo) e *Anuncie seu
+imóvel* (liga/desliga, textos, os e-mails que recebem a ficha e o botão **Enviar
+um teste**). Na aba *Leads*, cada ficha mostra o desfecho do envio.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **As duas páginas nascem DESLIGADAS**, e a faixa da home **não tem interruptor
+  próprio**: ela aparece quando existe pelo menos um destino de verdade. Como os
+  dois destinos novos estreiam desligados, nenhum site publicado ganha faixa
+  sozinho no deploy — a doutrina da casa de nada estrear ligado, sem custar mais
+  uma chave para o gestor virar. Com menos de dois destinos ela nem se desenha:
+  um cartão só repetiria, em outra forma, o bloco de captura logo abaixo.
+- **A ficha vai só por e-mail** — não cria contato nem card. Escolha explícita do
+  dono.
+- **Os cinco já vêm com o simulador oficial de cada banco**, então a página
+  funciona assim que a chave é ligada. Trocar o link só é preciso com endereço de
+  parceria; **apagar o campo volta ao oficial**, e existe o botão *Voltar ao
+  oficial*.
+- **Quem tira um banco da página é a chave dele**, nunca o campo de link em
+  branco — a tela diz isso, porque apagar o link é o que a pessoa tentaria
+  primeiro. O aviso conta quantos bancos estão desligados.
+- **O logo de cada banco é ENVIADO pelo botão *Enviar logo***, e vai para o
+  armazenamento do CRM. Nada de colar o endereço da imagem no site do banco: ela
+  quebra no dia em que ele troca o endereço, e o círculo fica vazio no site do
+  cliente. Sem logo, ele sai na cor da marca com o nome escrito.
+- **O botão *Enviar um teste* não é enfeite.** E-mail depende de configuração da
+  plataforma; sem ele, o gestor só descobriria que nada sai quando o primeiro
+  proprietário real preenchesse a ficha e ninguém respondesse.
+- **Erro ao enviar a ficha NÃO apaga o que foi preenchido.** Ela é longa; sumir
+  com ela faz a pessoa não preencher de novo.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): as duas páginas, os cinco bancos e o envio moram lá.
+   Contra o servidor antigo os blocos aparecem, salvam e não guardam nada, e as
+   duas páginas públicas abrem vazias.
+2. **A tradução mora fora do JSX** (`src/features/siteBuilder/portalPages.ts`,
+   com spec): o que o servidor resolveu vira formulário, o formulário vira o que
+   é enviado, e os textos dos avisos saem de lá. A tela do Site Builder já tem
+   ~1.500 linhas.
+3. **Texto igual ao de fábrica NÃO é gravado.** Gravar o padrão faria a tela
+   mostrar "escrito por mim" onde ninguém escreveu nada, e travaria o texto no
+   dia em que o padrão da casa mudasse. Mesma regra do *tipo de venda* no
+   assistente da IA.
+4. **Os cinco bancos de reserva desta tela precisam bater com os do servidor**
+   (chave, nome, cor, ORDEM **e o link oficial**). Eles existem só para a janela
+   de deploy em que o servidor ainda é o antigo — sem eles o bloco abriria vazio
+   e pareceria quebrado no pior momento, logo depois de publicar. Quem mudar o
+   link de um banco muda nos DOIS lugares.
+5. **O cabeçalho FLUTUA na home**, então ele sai do fluxo: quem mexer no espaço
+   do topo da capa precisa lembrar que o título precisa daquele espaço de volta.
+6. **Não é `featureKey` nem `clientToggleKey`** — é configuração do site, como o
+   banner da home. Os scanners do catálogo de funcionalidades não entram nesta
+   história e nenhuma chave literal nova foi escrita.
+
+**Dívida conhecida:** a aba *Leads*, onde a ficha fica guardada quando o e-mail
+falha, hoje só é alcançada pelo administrador da conta (a chave `sites.leads` não
+está em cargo nenhum — dívida registrada em 07/09).
+
+### O logo do banco é subido UMA VEZ, no painel raiz (desde 2026-09-16)
+
+O logo estreou por cliente: cinco arquivos vezes trinta e uma imobiliárias, e a
+imobiliária nova nascia sem nenhum. O dono do produto mandou os cinco oficiais e
+escolheu subir uma vez só.
+
+O que aparece na tela:
+
+- **Item *Plataforma*** no menu da Área do Admin (só a Leal Mídia), com o bloco
+  *Logos dos bancos*: os cinco em lista, *Enviar logo* / *Trocar* e *Tirar*.
+  Enviado ali, vale em todas as imobiliárias — inclusive nas que ainda nem
+  existem. É o primeiro item de "configuração que vale para todo mundo de uma
+  vez"; o que vier depois mora ali.
+- **No Site Builder de cada cliente**, a linha do banco passa a dizer **"Logo
+  herdado da Leal Mídia"** quando é o caso, e a **lixeira VOLTA A HERDAR** em vez
+  de deixar sem logo. Quem tem arte própria de parceria continua enviando a dela,
+  e a dela ganha.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Vazio no cliente = herda**, nunca "sem logo" — a doutrina de toda a
+  plataforma. Enviar um logo no Site Builder continua sendo a exceção, não o
+  caminho normal.
+- **O painel raiz grava o mapa INTEIRO** a cada ação. Gravar banco a banco
+  deixaria a tela e o servidor discordando se a rede caísse no meio.
+
+Armadilhas:
+
+1. ⚠️ **Logo igual ao herdado NÃO pode viajar no Salvar do Site Builder.** Sem
+   essa regra, bastava um gestor abrir *Configurações* e salvar sem mexer em nada
+   para aquele cliente **congelar** o logo de hoje como escolha dele — e no dia em
+   que a Leal Mídia trocasse a arte ele continuaria com a antiga, **calado**. É a
+   mesma regra que o link oficial já tinha, e há spec dos dois lados.
+2. **A tela precisa distinguir *herdado* de *meu***, e quem responde isso é um
+   lugar só (`bankLogoSource`, no arquivo de tradução). Sem a distinção a lixeira
+   vira "ficar sem logo" e o gestor não entende o que o botão faz.
+3. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): a configuração da plataforma, o logo resolvido e o
+   `default_logo_url` moram lá — e, principalmente, o conserto que faz uma imagem
+   da plataforma CARREGAR dentro do site de um cliente. Contra o servidor antigo a
+   tela nova salva e nada aparece.
+4. **Não é `featureKey` nem `clientToggleKey`** — é configuração de plataforma. Os
+   scanners do catálogo de funcionalidades não entram nesta história.
+
 ## Roleta sem prazo de aceite (desde 2026-09-16)
 
 Pergunta do dono do produto: *"se tivéssemos essa condicional de não ter prazo

@@ -22,6 +22,7 @@ import {
   ExternalLink, Archive, Send, RefreshCw, Users,
   LayoutTemplate, Copy, Check, Home, Building2, Search, MessageCircle,
   Upload, Loader2, Sparkles, Image as ImageIcon, Lightbulb, X, Megaphone, EyeOff,
+  Landmark, Signpost, Mail, AlertTriangle,
 } from 'lucide-react';
 import { getTenantSlug } from '@/services/core/tenant';
 import { RichTextEditor, type RichTextEditorRef } from '@/components/chat/rich-text-editor';
@@ -40,11 +41,17 @@ import {
   ARTICLE_STATUS_COLORS,
   SITE_LEAD_STATUS_LABELS,
   SITE_LEAD_STATUS_COLORS,
+  type SiteFinancingPage,
+  type SiteListingPage,
 } from '@/services/siteBuilder/siteBuilderService';
 import DomainSettings from './DomainSettings';
 import LandingsPanel from '@/features/landing/manage/LandingsPanel';
 import HeroImagePicker, { type HeroImagePick } from '@/features/siteBuilder/HeroImagePicker';
 import { EMPTY_HERO_IMAGE, HERO_IMAGE_MODE_LABELS, heroImageChoiceFrom, heroImageWarning } from '@/features/siteBuilder/heroImage';
+import {
+  bankLogoSource, emailDeliveryLabel, financingFrom, financingPayload, financingWarning,
+  listingFrom, listingPayload, listingWarning, parseEmails,
+} from '@/features/siteBuilder/portalPages';
 import { useTenantFeatures, useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 
@@ -219,6 +226,22 @@ export default function SiteBuilder() {
   // Semente do editor: (re)carrega o HTML no editor a cada abertura do modal.
   const [editorSeed, setEditorSeed] = useState({ html: '', nonce: 0 });
 
+  // As duas páginas extras do portal. Estado PRÓPRIO (e não dentro do
+  // formulário do site) porque o que a tela edita é o RESOLVIDO — os cinco
+  // bancos com nome e cor vêm do servidor — e o que é enviado é outra coisa,
+  // montada por `financingPayload`/`listingPayload` na hora de salvar. Duas
+  // formas para a mesma coisa dentro do mesmo estado é onde nascem as duas
+  // verdades que este repo passa a vida desfazendo.
+  const [financingPage, setFinancingPage] = useState<SiteFinancingPage>(() => financingFrom(null));
+  const [listingPage, setListingPage] = useState<SiteListingPage>(() => listingFrom(null));
+  const [emailsText, setEmailsText] = useState('');
+  const [testingEmail, setTestingEmail] = useState(false);
+  // Qual logo de banco está subindo agora (chave do banco), para o botão daquela
+  // linha girar sem travar as outras quatro.
+  const [bankLogoUploading, setBankLogoUploading] = useState<string | null>(null);
+  const bankLogoInputRef = useRef<HTMLInputElement>(null);
+  const bankLogoTargetRef = useRef<string | null>(null);
+
   // Leads
   const [leads, setLeads] = useState<SiteLead[]>([]);
   const [leadsTotal, setLeadsTotal] = useState(0);
@@ -261,6 +284,11 @@ export default function SiteBuilder() {
           lead_stage_id: s.lead_stage_id ?? null,
           lead_label_id: s.lead_label_id ?? null,
         });
+        const fin = financingFrom(s);
+        const lst = listingFrom(s);
+        setFinancingPage(fin);
+        setListingPage(lst);
+        setEmailsText((lst.emails ?? []).join(', '));
       }
     } catch {
       toast.error('Erro ao carregar site');
@@ -334,11 +362,23 @@ export default function SiteBuilder() {
       // registra o domínio na Vercel). Mandá-lo aqui sobrescreveria o valor.
       const payload: SiteFormData = { ...siteForm };
       delete payload.primary_domain;
+      // As duas páginas extras: o que a tela edita é o resolvido; o que viaja é
+      // o payload enxuto (texto igual ao de fábrica não vai). Cada uma é gravada
+      // sozinha no servidor — salvar uma não apaga a outra.
+      payload.financiamento = financingPayload(financingPage);
+      payload.anuncie = listingPayload({ ...listingPage, emails: parseEmails(emailsText) });
       if (site) {
         const updated = await siteBuilderService.updateSite(site.id, payload);
         setSite(updated);
         // Salvo: a prévia do banner passa a vir do servidor (site.hero_image).
         setHeroPickPreview(null);
+        // E as duas páginas voltam do servidor RESOLVIDAS: é ele quem conhece os
+        // cinco bancos e os textos de fábrica.
+        const savedFin = financingFrom(updated);
+        const savedLst = listingFrom(updated);
+        setFinancingPage(savedFin);
+        setListingPage(savedLst);
+        setEmailsText((savedLst.emails ?? []).join(', '));
         toast.success('Site atualizado');
       } else {
         const created = await siteBuilderService.createSite(payload);
@@ -382,6 +422,34 @@ export default function SiteBuilder() {
       toast.error('Falha no upload da logo.');
     } finally {
       setLogoUploading(false);
+    }
+  };
+
+  // Sobe o logo de um banco da página de financiamento. Vai para o armazenamento
+  // do próprio CRM — logo apontado para o site do banco quebra no dia em que ele
+  // troca o endereço da imagem, e o site do cliente fica com o círculo vazio.
+  const handleBankLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const key = bankLogoTargetRef.current;
+    if (bankLogoInputRef.current) bankLogoInputRef.current.value = '';
+    bankLogoTargetRef.current = null;
+    if (!file || !key) return;
+    if (!file.type.startsWith('image/')) { toast.error('Envie um arquivo de imagem (PNG, JPG, WebP ou SVG).'); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error('Imagem muito grande (máx 2MB).'); return; }
+
+    setBankLogoUploading(key);
+    try {
+      const { url } = await siteBuilderService.uploadAsset(file);
+      setFinancingPage(prev => ({
+        ...prev,
+        banks: prev.banks.map(b => (b.key === key ? { ...b, logo_url: url } : b)),
+      }));
+      setSiteFormDirty(true);
+      toast.success('Logo no ar. Clique em Salvar para valer no site.');
+    } catch {
+      toast.error('Falha no upload do logo.');
+    } finally {
+      setBankLogoUploading(null);
     }
   };
 
@@ -1107,6 +1175,286 @@ export default function SiteBuilder() {
             </div>
           </section>
 
+          {/* Financiamento e bancos — a segunda pergunta de todo lead de imóvel,
+              que até aqui só era respondida no WhatsApp. */}
+          <section className="rounded-xl border border-border bg-card p-5">
+            <div className="mb-1 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="flex items-center gap-2 text-base font-semibold">
+                  <Landmark className="h-4 w-4 text-muted-foreground" /> Financiamento e bancos
+                </h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Uma página no site com os bancos parceiros. O visitante clica no banco
+                  e cai direto no simulador dele.
+                </p>
+              </div>
+              <Switch
+                checked={financingPage.enabled}
+                onCheckedChange={enabled => { setFinancingPage(p => ({ ...p, enabled })); setSiteFormDirty(true); }}
+              />
+            </div>
+
+            {financingPage.enabled && (
+              <div className="mt-4 space-y-4 border-t border-border pt-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <UILabel>Título da página</UILabel>
+                    <Input
+                      value={financingPage.title}
+                      onChange={e => { setFinancingPage(p => ({ ...p, title: e.target.value })); setSiteFormDirty(true); }}
+                    />
+                  </div>
+                  <div>
+                    <UILabel>Chamada acima dos bancos</UILabel>
+                    <Input
+                      value={financingPage.intro}
+                      onChange={e => { setFinancingPage(p => ({ ...p, intro: e.target.value })); setSiteFormDirty(true); }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <UILabel>Texto abaixo dos bancos</UILabel>
+                  <Input
+                    value={financingPage.footer}
+                    onChange={e => { setFinancingPage(p => ({ ...p, footer: e.target.value })); setSiteFormDirty(true); }}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">Deixe em branco para voltar ao texto padrão.</p>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Os cinco já vêm com o <strong>simulador oficial</strong> de cada banco — a página
+                    funciona assim que você liga a chave acima. Trocar o link só é preciso se você tiver
+                    um endereço de parceria; apagando o campo, ele volta ao oficial.
+                    Para <strong>tirar um banco da página, desligue a chave dele</strong>.
+                  </p>
+                  <input
+                    ref={bankLogoInputRef} type="file" accept="image/*" className="hidden"
+                    onChange={handleBankLogoFile}
+                  />
+                  {financingPage.banks.map((bank, i) => (
+                    <div key={bank.key} className="rounded-lg border border-border p-3">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-full text-[9px] font-bold leading-none"
+                          style={{ background: bank.color, color: bank.ink || '#fff' }}
+                        >
+                          {bank.logo_url
+                            ? <img src={bank.logo_url} alt="" className="h-full w-full object-contain p-1" />
+                            : bank.name.slice(0, 3).toUpperCase()}
+                        </span>
+                        <div className="min-w-0 flex-1 text-sm font-medium">{bank.name}</div>
+                        <Switch
+                          checked={bank.enabled !== false}
+                          onCheckedChange={enabled => {
+                            setFinancingPage(p => {
+                              const banks = [...p.banks];
+                              banks[i] = { ...banks[i], enabled };
+                              return { ...p, banks };
+                            });
+                            setSiteFormDirty(true);
+                          }}
+                        />
+                      </div>
+                      {bank.enabled !== false && (
+                        <div className="mt-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              placeholder="Link de simulação (https://...)"
+                              value={bank.url ?? ''}
+                              onChange={e => {
+                                setFinancingPage(p => {
+                                  const banks = [...p.banks];
+                                  banks[i] = { ...banks[i], url: e.target.value };
+                                  return { ...p, banks };
+                                });
+                                setSiteFormDirty(true);
+                              }}
+                            />
+                            {bank.default_url && bank.url !== bank.default_url && (
+                              <Button
+                                type="button" variant="ghost" size="sm" className="flex-none whitespace-nowrap"
+                                onClick={() => {
+                                  setFinancingPage(p => {
+                                    const banks = [...p.banks];
+                                    banks[i] = { ...banks[i], url: bank.default_url ?? '' };
+                                    return { ...p, banks };
+                                  });
+                                  setSiteFormDirty(true);
+                                }}
+                              >
+                                Voltar ao oficial
+                              </Button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button" variant="outline" size="sm"
+                              disabled={bankLogoUploading === bank.key}
+                              onClick={() => {
+                                bankLogoTargetRef.current = bank.key;
+                                bankLogoInputRef.current?.click();
+                              }}
+                            >
+                              {bankLogoUploading === bank.key
+                                ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+                              {bank.logo_url ? 'Trocar logo' : 'Enviar logo'}
+                            </Button>
+                            {/* A lixeira VOLTA A HERDAR quando existe logo da Leal
+                                Mídia — nunca "ficar sem logo". Sem essa distinção
+                                o gestor não entende o que o botão faz. */}
+                            {bankLogoSource(bank) === 'own' && (
+                              <Button
+                                type="button" variant="ghost" size="icon"
+                                title={bank.default_logo_url ? 'Voltar ao logo da Leal Mídia' : 'Remover logo'}
+                                className="flex-none text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  setFinancingPage(p => {
+                                    const banks = [...p.banks];
+                                    banks[i] = { ...banks[i], logo_url: bank.default_logo_url ?? '' };
+                                    return { ...p, banks };
+                                  });
+                                  setSiteFormDirty(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {bankLogoSource(bank) === 'inherited'
+                                ? 'Logo herdado da Leal Mídia. Envie um para usar arte própria.'
+                                : bank.logo_url
+                                  ? 'Sai com o logo no site.'
+                                  : 'Sem logo, o círculo sai na cor do banco com o nome escrito.'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {financingWarning(financingPage) && (
+                  <p className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-none" />
+                    {financingWarning(financingPage)}
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* Anuncie seu imóvel — o proprietário que quer VENDER. Antes, o link
+              "Anuncie" do rodapé rolava para o formulário de quem COMPRA. */}
+          <section className="rounded-xl border border-border bg-card p-5">
+            <div className="mb-1 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="flex items-center gap-2 text-base font-semibold">
+                  <Signpost className="h-4 w-4 text-muted-foreground" /> Anuncie seu imóvel
+                </h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Uma ficha no site para o proprietário oferecer o imóvel dele. Ela chega
+                  por e-mail — não cria contato nem card no CRM.
+                </p>
+              </div>
+              <Switch
+                checked={listingPage.enabled}
+                onCheckedChange={enabled => { setListingPage(p => ({ ...p, enabled })); setSiteFormDirty(true); }}
+              />
+            </div>
+
+            {listingPage.enabled && (
+              <div className="mt-4 space-y-4 border-t border-border pt-4">
+                <div>
+                  <UILabel>Quem recebe a ficha por e-mail</UILabel>
+                  <Input
+                    placeholder="dono@imobiliaria.com, gerente@imobiliaria.com"
+                    value={emailsText}
+                    onChange={e => { setEmailsText(e.target.value); setSiteFormDirty(true); }}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Separe por vírgula (até 5). A ficha também fica guardada na aba Leads.
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button" variant="outline" size="sm"
+                      disabled={testingEmail || !site || siteFormDirty}
+                      onClick={async () => {
+                        if (!site) return;
+                        setTestingEmail(true);
+                        try {
+                          const r = await siteBuilderService.testListingEmail(site.id);
+                          toast.success(`Ficha de teste enviada para ${r.sent_to.join(', ')}.`);
+                        } catch (e) {
+                          toast.error(apiErrorMessage(e, 'Não consegui enviar o teste.'));
+                        } finally {
+                          setTestingEmail(false);
+                        }
+                      }}
+                    >
+                      {testingEmail ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Mail className="mr-1.5 h-3.5 w-3.5" />}
+                      Enviar um teste
+                    </Button>
+                    {siteFormDirty && (
+                      <span className="text-xs text-muted-foreground">Salve as alterações para testar.</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <UILabel>Título da página</UILabel>
+                    <Input
+                      value={listingPage.title}
+                      onChange={e => { setListingPage(p => ({ ...p, title: e.target.value })); setSiteFormDirty(true); }}
+                    />
+                  </div>
+                  <div>
+                    <UILabel>Mensagem do botão de WhatsApp</UILabel>
+                    <Input
+                      value={listingPage.whatsapp_text}
+                      onChange={e => { setListingPage(p => ({ ...p, whatsapp_text: e.target.value })); setSiteFormDirty(true); }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <UILabel>Chamada acima da ficha</UILabel>
+                  <Textarea
+                    rows={2}
+                    value={listingPage.intro}
+                    onChange={e => { setListingPage(p => ({ ...p, intro: e.target.value })); setSiteFormDirty(true); }}
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <UILabel>Título da tela de obrigado</UILabel>
+                    <Input
+                      value={listingPage.thanks_title}
+                      onChange={e => { setListingPage(p => ({ ...p, thanks_title: e.target.value })); setSiteFormDirty(true); }}
+                    />
+                  </div>
+                  <div>
+                    <UILabel>Texto da tela de obrigado</UILabel>
+                    <Input
+                      value={listingPage.thanks_text}
+                      onChange={e => { setListingPage(p => ({ ...p, thanks_text: e.target.value })); setSiteFormDirty(true); }}
+                    />
+                  </div>
+                </div>
+
+                {listingWarning({ ...listingPage, emails: parseEmails(emailsText) }) && (
+                  <p className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-none" />
+                    {listingWarning({ ...listingPage, emails: parseEmails(emailsText) })}
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+
           {/* Contact */}
           <section className="rounded-xl border border-border bg-card p-5">
             <h2 className="text-base font-semibold mb-4">Contato</h2>
@@ -1384,10 +1732,30 @@ export default function SiteBuilder() {
                       <span className={`text-xs px-2 py-0.5 rounded font-medium ${SITE_LEAD_STATUS_COLORS[lead.status] ?? ''}`}>
                         {SITE_LEAD_STATUS_LABELS[lead.status] ?? lead.status}
                       </span>
+                      {lead.form_type === 'anuncie_imovel' && (
+                        <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium">Anuncie seu imóvel</span>
+                      )}
                       {lead.source && (
                         <span className="text-xs text-muted-foreground">via {lead.source}</span>
                       )}
                     </div>
+                    {/* Desfecho do e-mail da ficha de "Anuncie". Sem esta linha,
+                        e-mail não configurado apagaria em silêncio um imóvel que
+                        alguém ofereceu: a ficha fica guardada e ninguém sabe. */}
+                    {(() => {
+                      const d = emailDeliveryLabel(lead.email_delivery);
+                      if (!d) return null;
+                      const tone = d.tone === 'ok'
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : d.tone === 'warn'
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-destructive';
+                      return (
+                        <p className={`mt-1 flex items-center gap-1.5 text-xs ${tone}`}>
+                          <Mail className="h-3 w-3 flex-none" /> {d.text}
+                        </p>
+                      );
+                    })()}
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
                       {lead.email && (
                         <span className="text-xs text-muted-foreground">{lead.email}</span>
