@@ -11,7 +11,7 @@ import {
   Clock, Bell, ToggleLeft, ToggleRight, Users, BarChart2,
   Gavel, Hand, Wifi, Send, Loader2, Eye, EyeOff, AlertTriangle, Copy,
 } from 'lucide-react';
-import { apiErrorMessage } from '@/utils/apiHelpers';
+import { apiErrorMessage, extractError } from '@/utils/apiHelpers';
 import { roletaFormProblems, roletaFormWarnings, backendProblems, timeoutMinutesPayload, senderSelectValue, senderFields, CENTRAL_SENDER_PREFIX } from './roletaFormChecks';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { isNoDeadline, timeoutLabel } from '@/components/roleta/offerDeadline';
@@ -798,12 +798,21 @@ export default function RoletaConfigPage() {
     let cancelled = false;
     roletaConfigService.getCentralInstancesReport()
       .then(r => { if (!cancelled) { setCentralInstances(r.instances); setCentralReason(r.reason); } })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (cancelled) return;
         setCentralInstances([]);
-        // Sem motivo do servidor (recusa, rede): a seção some, mas a Leal
-        // Mídia precisa saber que a lista NÃO chegou — vazio mudo é defeito.
-        setCentralReason('Não consegui carregar as instâncias da Leal Mídia (o servidor não respondeu ou recusou).');
+        // A chamada falhou (recusa, erro, servidor reiniciando, rede). A Leal
+        // Mídia precisa saber QUAL falha: o texto de reserva sozinho mandou o
+        // dono adivinhar na estreia. Leva o código HTTP e o motivo do servidor
+        // nos dois formatos de erro da API.
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        // `extractError` lê a recusa por cargo (`error` como texto) que o
+        // `apiErrorMessage` não lê; sem ela a recusa viraria ponto final.
+        const motivo = (err as { response?: unknown })?.response ? extractError(err).message : '';
+        setCentralReason(
+          `Não consegui carregar a lista${status ? ` (HTTP ${status})` : ' (o servidor não respondeu)'}` +
+            (motivo ? `: ${motivo}` : '.'),
+        );
       });
     return () => { cancelled = true; };
   }, [modalOpen, isSuper]);
