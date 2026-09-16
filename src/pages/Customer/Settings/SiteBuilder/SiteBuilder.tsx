@@ -49,7 +49,7 @@ import LandingsPanel from '@/features/landing/manage/LandingsPanel';
 import HeroImagePicker, { type HeroImagePick } from '@/features/siteBuilder/HeroImagePicker';
 import { EMPTY_HERO_IMAGE, HERO_IMAGE_MODE_LABELS, heroImageChoiceFrom, heroImageWarning } from '@/features/siteBuilder/heroImage';
 import {
-  emailDeliveryLabel, financingFrom, financingPayload, financingWarning,
+  bankLogoSource, emailDeliveryLabel, financingFrom, financingPayload, financingWarning,
   listingFrom, listingPayload, listingWarning, parseEmails,
 } from '@/features/siteBuilder/portalPages';
 import { useTenantFeatures, useClientToggle } from '@/contexts/TenantFeaturesContext';
@@ -1301,15 +1301,18 @@ export default function SiteBuilder() {
                                 : <Upload className="mr-1.5 h-3.5 w-3.5" />}
                               {bank.logo_url ? 'Trocar logo' : 'Enviar logo'}
                             </Button>
-                            {bank.logo_url && (
+                            {/* A lixeira VOLTA A HERDAR quando existe logo da Leal
+                                Mídia — nunca "ficar sem logo". Sem essa distinção
+                                o gestor não entende o que o botão faz. */}
+                            {bankLogoSource(bank) === 'own' && (
                               <Button
                                 type="button" variant="ghost" size="icon"
-                                title="Remover logo"
+                                title={bank.default_logo_url ? 'Voltar ao logo da Leal Mídia' : 'Remover logo'}
                                 className="flex-none text-destructive hover:text-destructive"
                                 onClick={() => {
                                   setFinancingPage(p => {
                                     const banks = [...p.banks];
-                                    banks[i] = { ...banks[i], logo_url: '' };
+                                    banks[i] = { ...banks[i], logo_url: bank.default_logo_url ?? '' };
                                     return { ...p, banks };
                                   });
                                   setSiteFormDirty(true);
@@ -1319,9 +1322,11 @@ export default function SiteBuilder() {
                               </Button>
                             )}
                             <span className="text-xs text-muted-foreground">
-                              {bank.logo_url
-                                ? 'Sai com o logo no site.'
-                                : 'Sem logo, o círculo sai na cor do banco com o nome escrito.'}
+                              {bankLogoSource(bank) === 'inherited'
+                                ? 'Logo herdado da Leal Mídia. Envie um para usar arte própria.'
+                                : bank.logo_url
+                                  ? 'Sai com o logo no site.'
+                                  : 'Sem logo, o círculo sai na cor do banco com o nome escrito.'}
                             </span>
                           </div>
                         </div>

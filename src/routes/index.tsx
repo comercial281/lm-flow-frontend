@@ -160,6 +160,7 @@ const AdminOverview = lazyWithRetry(() => import('@/pages/Admin/Area/Overview'))
 const AdminUso = lazyWithRetry(() => import('@/pages/Admin/Area/Uso'));
 const AdminEquipe = lazyWithRetry(() => import('@/pages/Admin/Area/Equipe'));
 const AdminAcademia = lazyWithRetry(() => import('@/pages/Admin/Area/Academia'));
+const AdminPlataforma = lazyWithRetry(() => import('@/pages/SuperAdmin/Plataforma'));
 const RoletaConfigPage = lazyWithRetry(() => import('@/pages/Customer/Settings/RoletaConfig/RoletaConfig'));
 const AcceptLeadPage = lazyWithRetry(() => import('@/pages/Customer/Roleta/AcceptLeadPage'));
 const AssignmentSettingsPage = lazyWithRetry(() => import('@/pages/Customer/Settings/AssignmentSettings/AssignmentSettings'));
@@ -1086,6 +1087,9 @@ const AppRouter = () => {
             {/* Academia dentro do admin: mesma tela do /tutorials, mas no shell do
                 admin. /tutorials continua sendo por onde o CLIENTE assiste. */}
             <Route path="/admin/academia" element={<AdminAcademia />} />
+            {/* Configuração que vale para TODAS as imobiliárias de uma vez —
+                hoje os logos dos bancos da página de financiamento. */}
+            <Route path="/admin/plataforma" element={<AdminPlataforma />} />
           </Route>
 
           {/*

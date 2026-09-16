@@ -82,12 +82,18 @@ export function financingPayload(page: SiteFinancingPage): SiteFinancingForm {
   out.banks = Object.fromEntries(
     page.banks.map(b => {
       const url = (b.url ?? '').trim();
+      const logo = (b.logo_url ?? '').trim();
       return [b.key, {
         enabled: b.enabled !== false,
         // Link igual ao oficial não viaja: ele já vem de fábrica, e gravá-lo
         // congelaria a página no endereço de hoje se o banco mudar o dele.
         url: url === (b.default_url ?? '') ? '' : url,
-        logo_url: (b.logo_url ?? '').trim(),
+        // ⚠️ Logo igual ao HERDADO da Leal Mídia não viaja, pela mesma razão do
+        // link. Sem esta linha, bastava um gestor abrir *Configurações* e
+        // salvar sem mexer em nada para aquele cliente CONGELAR o logo de hoje
+        // como escolha dele — e no dia em que a Leal Mídia trocasse a arte ele
+        // continuaria com a antiga, calado.
+        logo_url: logo === (b.default_logo_url ?? '') ? '' : logo,
       }];
     }),
   );
@@ -132,6 +138,17 @@ export function financingWarning(page: SiteFinancingPage): string | null {
     return `${off} banco(s) desligado(s) não aparecem no site.`;
   }
   return null;
+}
+
+/**
+ * De onde vem o logo que está aparecendo naquele banco. A tela PRECISA
+ * distinguir os três casos: sem isso a lixeira vira "ficar sem logo" em vez de
+ * "voltar ao da Leal Mídia", e o gestor não entende o que está vendo.
+ */
+export function bankLogoSource(bank: SiteFinancingBank): 'own' | 'inherited' | 'none' {
+  const logo = (bank.logo_url ?? '').trim();
+  if (!logo) return 'none';
+  return logo === (bank.default_logo_url ?? '').trim() ? 'inherited' : 'own';
 }
 
 /** O aviso do bloco do "Anuncie": sem e-mail de destino, a ficha não chega a ninguém. */

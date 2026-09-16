@@ -2170,7 +2170,48 @@ Armadilhas:
 
 **Dívida conhecida:** a aba *Leads*, onde a ficha fica guardada quando o e-mail
 falha, hoje só é alcançada pelo administrador da conta (a chave `sites.leads` não
-está em cargo nenhum — dívida registrada em 07/09). E **o logo é por cliente**:
-os cinco arquivos são enviados no Site Builder de cada imobiliária. Herdar o logo
-do Principal ficou de fora desta leva de propósito, para não inventar uma tela de
-configuração da plataforma por causa de cinco imagens.
+está em cargo nenhum — dívida registrada em 07/09).
+
+### O logo do banco é subido UMA VEZ, no painel raiz (desde 2026-09-16)
+
+O logo estreou por cliente: cinco arquivos vezes trinta e uma imobiliárias, e a
+imobiliária nova nascia sem nenhum. O dono do produto mandou os cinco oficiais e
+escolheu subir uma vez só.
+
+O que aparece na tela:
+
+- **Item *Plataforma*** no menu da Área do Admin (só a Leal Mídia), com o bloco
+  *Logos dos bancos*: os cinco em lista, *Enviar logo* / *Trocar* e *Tirar*.
+  Enviado ali, vale em todas as imobiliárias — inclusive nas que ainda nem
+  existem. É o primeiro item de "configuração que vale para todo mundo de uma
+  vez"; o que vier depois mora ali.
+- **No Site Builder de cada cliente**, a linha do banco passa a dizer **"Logo
+  herdado da Leal Mídia"** quando é o caso, e a **lixeira VOLTA A HERDAR** em vez
+  de deixar sem logo. Quem tem arte própria de parceria continua enviando a dela,
+  e a dela ganha.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Vazio no cliente = herda**, nunca "sem logo" — a doutrina de toda a
+  plataforma. Enviar um logo no Site Builder continua sendo a exceção, não o
+  caminho normal.
+- **O painel raiz grava o mapa INTEIRO** a cada ação. Gravar banco a banco
+  deixaria a tela e o servidor discordando se a rede caísse no meio.
+
+Armadilhas:
+
+1. ⚠️ **Logo igual ao herdado NÃO pode viajar no Salvar do Site Builder.** Sem
+   essa regra, bastava um gestor abrir *Configurações* e salvar sem mexer em nada
+   para aquele cliente **congelar** o logo de hoje como escolha dele — e no dia em
+   que a Leal Mídia trocasse a arte ele continuaria com a antiga, **calado**. É a
+   mesma regra que o link oficial já tinha, e há spec dos dois lados.
+2. **A tela precisa distinguir *herdado* de *meu***, e quem responde isso é um
+   lugar só (`bankLogoSource`, no arquivo de tradução). Sem a distinção a lixeira
+   vira "ficar sem logo" e o gestor não entende o que o botão faz.
+3. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): a configuração da plataforma, o logo resolvido e o
+   `default_logo_url` moram lá — e, principalmente, o conserto que faz uma imagem
+   da plataforma CARREGAR dentro do site de um cliente. Contra o servidor antigo a
+   tela nova salva e nada aparece.
+4. **Não é `featureKey` nem `clientToggleKey`** — é configuração de plataforma. Os
+   scanners do catálogo de funcionalidades não entram nesta história.

@@ -90,7 +90,12 @@ export interface SiteFinancingBank {
   url?: string | null;
   /** O simulador oficial do banco. Vazio no campo da tela = volta para ele. */
   default_url?: string | null;
+  /** Logo já resolvido: o que a imobiliária enviou, ou o da Leal Mídia. */
   logo_url?: string | null;
+  /** O logo subido UMA VEZ pela Leal Mídia e herdado por todos. A tela usa isto
+   *  para dizer *herdado* e para a lixeira voltar a herdar em vez de deixar sem
+   *  logo — e o que é enviado ao salvar não pode repetir este valor. */
+  default_logo_url?: string | null;
 }
 
 export interface SiteFinancingPage {

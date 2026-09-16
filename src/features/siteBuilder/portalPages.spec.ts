@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Site, SiteFinancingPage, SiteListingPage } from '@/services/siteBuilder/siteBuilderService';
+import type { Site, SiteFinancingBank, SiteFinancingPage, SiteListingPage } from '@/services/siteBuilder/siteBuilderService';
 import {
+  bankLogoSource,
   FINANCING_FALLBACK,
   LISTING_FALLBACK,
   emailDeliveryLabel,
@@ -75,6 +76,43 @@ describe('financingPayload', () => {
     const out = financingPayload(base());
     expect(out.banks?.caixa.url).toBe('');
     expect(out.banks?.itau.url).toBe('');
+  });
+
+  // ⚠️ O caso que faz o logo da Leal Mídia valer de verdade: sem isto, bastava
+  // um gestor abrir Configurações e salvar sem mexer em nada para o cliente
+  // CONGELAR o logo de hoje como escolha dele — e a troca de arte na Leal Mídia
+  // nunca mais chegaria nele, calada.
+  it('não manda logo igual ao HERDADO da Leal Mídia', () => {
+    const page = base();
+    page.banks[0].default_logo_url = 'https://cdn.test/plataforma/itau.png';
+    page.banks[0].logo_url = 'https://cdn.test/plataforma/itau.png';
+    expect(financingPayload(page).banks?.itau.logo_url).toBe('');
+  });
+
+  it('manda o logo PRÓPRIO da imobiliária por cima do herdado', () => {
+    const page = base();
+    page.banks[0].default_logo_url = 'https://cdn.test/plataforma/itau.png';
+    page.banks[0].logo_url = ' https://cdn.test/cliente/itau.png ';
+    expect(financingPayload(page).banks?.itau.logo_url).toBe('https://cdn.test/cliente/itau.png');
+  });
+});
+
+describe('bankLogoSource', () => {
+  const bank = (extra: Partial<SiteFinancingBank>): SiteFinancingBank =>
+    ({ key: 'itau', name: 'Itaú', color: '#EC7000', enabled: true, ...extra });
+
+  it('diz HERDADO quando o logo é o mesmo da Leal Mídia — é o que faz a lixeira significar "voltar a herdar"', () => {
+    expect(bankLogoSource(bank({ logo_url: 'https://cdn.test/p.png', default_logo_url: 'https://cdn.test/p.png' })))
+      .toBe('inherited');
+  });
+
+  it('diz MEU quando a imobiliária enviou arte própria', () => {
+    expect(bankLogoSource(bank({ logo_url: 'https://cdn.test/c.png', default_logo_url: 'https://cdn.test/p.png' })))
+      .toBe('own');
+  });
+
+  it('diz NENHUM quando não há logo dos dois lados', () => {
+    expect(bankLogoSource(bank({}))).toBe('none');
   });
 });
 
