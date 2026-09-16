@@ -1,9 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
+  LAST_ADMIN_REFUSAL,
+  ROLE_REFUSAL,
+  SELF_REFUSAL,
   blockingReason,
   buildDeactivatePayload,
   canDeactivate,
   canOfferDisconnect,
+  deactivationRefusal,
+  isLastActiveAdmin,
   resolveActor,
   transferCandidates,
 } from './deactivationRules';
@@ -163,5 +168,73 @@ describe('quem está clicando', () => {
 
   it('sem ninguém logado não há clicador', () => {
     expect(resolveActor(null, equipe, { isPlatformOwner: true })).toBeNull();
+  });
+});
+
+// A proteção do último administrador contava só quem está NA LISTA — e a Leal
+// Mídia fica fora dela. No cliente com um administrador só (a maioria), NINGUÉM
+// conseguia desativá-lo, nem a Leal Mídia, e o botão ainda dizia "seu cargo não
+// permite". Relato do dono do produto em 2026-09-16.
+describe('o último administrador', () => {
+  const dono = user({ id: 'dono', name: 'Dono', chave_role: 'admin' });
+  const gestora = user({ id: 'g', name: 'Gestora', chave_role: 'manager' });
+  const equipe = [dono, gestora];
+
+  it('é protegido quando quem clica é da própria equipe', () => {
+    expect(isLastActiveAdmin(dono, equipe)).toBe(true);
+  });
+
+  it('NÃO é protegido quando quem clica é a Leal Mídia: ela é administradora de todo CRM', () => {
+    expect(isLastActiveAdmin(dono, equipe, { actorIsPlatformOwner: true })).toBe(false);
+  });
+
+  it('deixa de ser o último quando há outro administrador ATIVO', () => {
+    const outro = user({ id: 'a2', name: 'Outro', chave_role: 'admin' });
+    expect(isLastActiveAdmin(dono, [...equipe, outro])).toBe(false);
+  });
+
+  it('administrador desativado não conta como reserva', () => {
+    const fora = user({ id: 'a2', name: 'Fora', chave_role: 'admin', deactivated: true });
+    expect(isLastActiveAdmin(dono, [...equipe, fora])).toBe(true);
+  });
+
+  it('quem não é administrador nunca é "o último administrador"', () => {
+    expect(isLastActiveAdmin(gestora, [gestora])).toBe(false);
+  });
+});
+
+// A tela mostrava "seu cargo não permite" para TODO bloqueio. Quem lia isso
+// como administrador ia procurar o problema no cargo — e o problema era outro.
+describe('o motivo de o botão Desativar estar desligado', () => {
+  const dono = user({ id: 'dono', name: 'Dono', chave_role: 'admin' });
+  const gestora = user({ id: 'g', name: 'Gestora', chave_role: 'manager' });
+  const corretor = user({ id: 'c', name: 'Corretor', chave_role: 'agent' });
+  const equipe = [dono, gestora, corretor];
+
+  it('null quando pode', () => {
+    expect(deactivationRefusal(dono, corretor, equipe)).toBeNull();
+    expect(deactivationRefusal(gestora, corretor, equipe)).toBeNull();
+  });
+
+  it('diz que é o próprio acesso', () => {
+    expect(deactivationRefusal(dono, dono, equipe)).toBe(SELF_REFUSAL);
+  });
+
+  it('diz que é o cargo quando é o cargo', () => {
+    expect(deactivationRefusal(gestora, dono, equipe)).toBe(ROLE_REFUSAL);
+    expect(deactivationRefusal(null, dono, equipe)).toBe(ROLE_REFUSAL);
+  });
+
+  it('diz que é o último administrador quando é isso', () => {
+    const outroAdmin = user({ id: 'a2', name: 'Outro', chave_role: 'admin' });
+    // Dois administradores ativos na lista: um desativa o outro, sobra um.
+    expect(deactivationRefusal(outroAdmin, dono, [...equipe, outroAdmin])).toBeNull();
+    // Na lista só o dono é administrador ativo: a frase é a do último, não a do cargo.
+    expect(deactivationRefusal(outroAdmin, dono, equipe)).toBe(LAST_ADMIN_REFUSAL);
+  });
+
+  it('a Leal Mídia desativa o único administrador do cliente', () => {
+    const lealMidia = resolveActor('super-1', equipe, { isPlatformOwner: true, name: 'Giovani' });
+    expect(deactivationRefusal(lealMidia, dono, equipe, { actorIsPlatformOwner: true })).toBeNull();
   });
 });
