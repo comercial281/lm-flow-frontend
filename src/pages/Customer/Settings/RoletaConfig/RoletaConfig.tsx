@@ -333,6 +333,9 @@ export default function RoletaConfigPage() {
   const [notifInstance, setNotifInstance]   = useState('');
   const isSuper = useIsSuperAdmin();
   const [centralInstances, setCentralInstances] = useState<CentralInstance[]>([]);
+  // Por que a lista da Leal Mídia veio vazia (texto do servidor). Só faz
+  // sentido para o super-admin, que é quem vê a seção.
+  const [centralReason, setCentralReason] = useState<string | null>(null);
   // Horário de funcionamento. Desligado (o default e o estado de TODA roleta
   // existente) = 24h, e o campo nem é enviado no payload.
   const [horarioOn, setHorarioOn]           = useState(false);
@@ -791,11 +794,17 @@ export default function RoletaConfigPage() {
   // Leitura de fundo: recusa ou falha só esconde a seção — a janela continua
   // inteira, e a instância já gravada continua aparecendo pelo valor guardado.
   useEffect(() => {
-    if (!modalOpen || !isSuper) { setCentralInstances([]); return; }
+    if (!modalOpen || !isSuper) { setCentralInstances([]); setCentralReason(null); return; }
     let cancelled = false;
-    roletaConfigService.getCentralInstances()
-      .then(list => { if (!cancelled) setCentralInstances(list); })
-      .catch(() => { if (!cancelled) setCentralInstances([]); });
+    roletaConfigService.getCentralInstancesReport()
+      .then(r => { if (!cancelled) { setCentralInstances(r.instances); setCentralReason(r.reason); } })
+      .catch(() => {
+        if (cancelled) return;
+        setCentralInstances([]);
+        // Sem motivo do servidor (recusa, rede): a seção some, mas a Leal
+        // Mídia precisa saber que a lista NÃO chegou — vazio mudo é defeito.
+        setCentralReason('Não consegui carregar as instâncias da Leal Mídia (o servidor não respondeu ou recusou).');
+      });
     return () => { cancelled = true; };
   }, [modalOpen, isSuper]);
 
@@ -2444,6 +2453,11 @@ export default function RoletaConfigPage() {
                     'O aviso que chegar num número que também é canal daqui vira uma conversa na caixa dele.'
                   : 'Instância que ENVIA os alertas. Se vazio, usa a mesma da roleta.'}
               </p>
+              {isSuper && centralInstances.length === 0 && centralReason && (
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1" data-testid="central-instances-reason">
+                  Instâncias da Leal Mídia: {centralReason}
+                </p>
+              )}
             </div>
 
             {/* Mensagens dos avisos (editáveis) */}

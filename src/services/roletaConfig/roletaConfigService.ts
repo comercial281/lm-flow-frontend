@@ -520,8 +520,16 @@ export const roletaConfigService = {
   // Leal Mídia alcança — para o resto o servidor responde 403, e a tela nem
   // pergunta.
   async getCentralInstances(): Promise<CentralInstance[]> {
+    return (await this.getCentralInstancesReport()).instances;
+  },
+
+  // A lista MAIS o porquê dela estar vazia (`meta.reason`, em português, só
+  // preenchido quando não sobrou instância). Sem o motivo, a seção vazia na
+  // tela é indistinguível de defeito — foi o que aconteceu na estreia.
+  async getCentralInstancesReport(): Promise<CentralInstancesReport> {
     const res = await api.get(`${BASE}/central_instances`);
-    return (res.data as { data: CentralInstance[] }).data ?? [];
+    const body = res.data as { data?: CentralInstance[]; meta?: { reason?: string | null } };
+    return { instances: body.data ?? [], reason: body.meta?.reason ?? null };
   },
 };
 
@@ -529,6 +537,12 @@ export const roletaConfigService = {
 export interface CentralInstance {
   name: string;
   connected: boolean;
+}
+
+export interface CentralInstancesReport {
+  instances: CentralInstance[];
+  /** Por que a lista está vazia, em português. Nulo quando há instância. */
+  reason: string | null;
 }
 
 // Modo Leilão: o corretor assume o lead. Primeiro que assumir leva.
