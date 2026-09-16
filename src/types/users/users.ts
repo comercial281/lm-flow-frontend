@@ -70,6 +70,19 @@ export interface DeactivationPreview {
   exclusive_number: DeactivationNumber | null;
   shared_numbers: string[];
   user?: User;
+  /**
+   * O veredito do *Excluir cadastro*: só o cadastro que nunca foi usado pode
+   * ser apagado de verdade, e quem sabe isso é o servidor. Ausente = servidor
+   * antigo, e a tela NÃO oferece apagar.
+   */
+  erase?: EraseVerdict;
+}
+
+export interface EraseVerdict {
+  allowed: boolean;
+  reason?: string | null;
+  /** "3 leads", "1 conversa"… o que barra, já em português. */
+  blockers: string[];
 }
 
 export interface DeactivatePayload {

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ERASE_UNKNOWN,
   LAST_ADMIN_REFUSAL,
   ROLE_REFUSAL,
   SELF_REFUSAL,
@@ -8,6 +9,7 @@ import {
   canDeactivate,
   canOfferDisconnect,
   deactivationRefusal,
+  eraseVerdict,
   isLastActiveAdmin,
   resolveActor,
   transferCandidates,
@@ -200,6 +202,34 @@ describe('o último administrador', () => {
 
   it('quem não é administrador nunca é "o último administrador"', () => {
     expect(isLastActiveAdmin(gestora, [gestora])).toBe(false);
+  });
+
+  // Um administrador já desativado não é "o último ativo" de nada — contá-lo
+  // barraria o *Excluir cadastro* dele quando sobrou um só administrador ativo.
+  it('administrador já desativado não é protegido', () => {
+    const fora = user({ id: 'a2', name: 'Fora', chave_role: 'admin', deactivated: true });
+    expect(isLastActiveAdmin(fora, [dono, fora])).toBe(false);
+  });
+});
+
+// O *Excluir cadastro* apaga de verdade. Quem sabe se pode é o servidor; sem
+// veredito a resposta é NÃO — a versão antiga do endpoint apagava gente com
+// histórico respondendo "sucesso", e oferecer o botão contra ela repetiria isso.
+describe('o veredito do Excluir cadastro', () => {
+  it('libera quando o servidor libera', () => {
+    expect(eraseVerdict(preview({ erase: { allowed: true, blockers: [] } }))).toEqual({ allowed: true, reason: null });
+  });
+
+  it('barra com a frase do servidor quando ele barra', () => {
+    const v = eraseVerdict(preview({ erase: { allowed: false, reason: 'Fulano já foi usado (3 leads).', blockers: ['3 leads'] } }));
+    expect(v.allowed).toBe(false);
+    expect(v.reason).toBe('Fulano já foi usado (3 leads).');
+  });
+
+  it('sem veredito (servidor antigo ou prévia que falhou) é NÃO', () => {
+    expect(eraseVerdict(preview()).allowed).toBe(false);
+    expect(eraseVerdict(preview()).reason).toBe(ERASE_UNKNOWN);
+    expect(eraseVerdict(null).allowed).toBe(false);
   });
 });
 

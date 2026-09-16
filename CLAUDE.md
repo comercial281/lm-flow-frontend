@@ -2330,6 +2330,45 @@ Armadilha: a régua mora em `deactivationRules.ts`, com spec, e não na tela. A
 tela antiga de *Configurações > Usuários* (código morto, redireciona) ainda tem
 uma cópia da regra antiga — quem a ressuscitar herda o defeito.
 
+### Excluir cadastro: só o que nunca foi usado, e quem decide é o servidor (desde 2026-09-16)
+
+Pergunta do dono do produto: *"excluir um cadastro não dá, né? pra tipo resetar
+ele?"*. Para quem já atendeu, não dá mesmo — o caminho continua sendo
+*Desativar*. Para o cadastro criado errado (e-mail digitado errado no convite,
+pessoa que nunca entrou) entrou o botão **Excluir cadastro**, ao lado do
+*Desativar* / *Reativar* na janela da pessoa.
+
+O que aparece na tela:
+
+- **A janela confere antes de oferecer apagar.** Ela pergunta ao servidor se a
+  pessoa já foi usada (leads, conversas, mensagens, ofertas da roleta, cards,
+  tarefas, visitas…). Nunca usada: *Apagar cadastro*, sem volta, e o e-mail fica
+  livre. Usada: o motivo, com a contagem (*"já foi usado no CRM (3 leads, 1
+  conversa)… Use Desativar"*), e só o botão *Fechar*.
+- **O botão obedece à mesma régua do Desativar** (quem pode mexer em quem):
+  gestor só em corretor, ninguém em si mesmo. Também aparece para pessoa já
+  desativada — um administrador desativado por engano não conta mais como "o
+  último administrador".
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Sem veredito do servidor, a resposta é NÃO.** Servidor antigo ou prévia que
+  falhou: a janela explica e não oferece o botão. Oferecer no escuro contra o
+  endpoint antigo apagaria gente com histórico respondendo "sucesso" — era o
+  que ele fazia (ver o CLAUDE.md do `lm-flow`).
+- **Isto NÃO é a volta do "Remover do time".** A tela não chama o apagar direto;
+  o spec de fonte trava que ele só existe dentro da janela que lê o veredito.
+- **A tradução do veredito mora em `deactivationRules.ts`** (`eraseVerdict`),
+  com spec, e não na janela.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): o veredito na prévia e a recusa com motivo moram lá.
+   Contra o servidor antigo a janela abre e diz que ainda não sabe responder.
+2. **Não é `featureKey` nem `clientToggleKey`** — é cargo, não módulo. Os
+   scanners do catálogo de funcionalidades não entram nesta história.
+
 ## O aviso da roleta pode sair por uma instância da Leal Mídia (desde 2026-09-16)
 
 Testando a roleta multinúmero, o dono do produto pediu que o campo *Número que

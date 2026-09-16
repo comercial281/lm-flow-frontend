@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { RefreshCw, ShieldCheck, MessageCircle, Search, Sparkles, UserPlus, Mails, UserX, UserCheck } from 'lucide-react';
+import { RefreshCw, ShieldCheck, MessageCircle, Search, Sparkles, UserPlus, Mails, UserX, UserCheck, Trash2 } from 'lucide-react';
 import { Button, Input, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, Label as UILabel } from '@/components/ui/ds';
 import IconActionButton from '@/components/base/IconActionButton';
 import { usersService } from '@/services/users';
@@ -17,6 +17,9 @@ import BulkInviteModal from '@/components/users/BulkInviteModal';
 // ofertas da roleta, roletas e o WhatsApp exclusivo). É a mesma de sempre: os
 // botões é que estavam na tela errada.
 import DeactivateUserDialog from '@/components/users/DeactivateUserDialog';
+// A que apaga DE VERDADE — e só o cadastro que nunca foi usado. Quem decide é
+// o servidor, na prévia; a janela nunca oferece apagar sem esse veredito.
+import EraseUserDialog from '@/components/users/EraseUserDialog';
 import { ROLE_REFUSAL, deactivationRefusal, resolveActor } from '@/features/users/deactivation/deactivationRules';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
@@ -79,6 +82,8 @@ export default function PeopleTab() {
 
   // Desativar corretor: o id de quem está na janela de confirmação.
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
+  // Excluir cadastro (apagar de verdade): o id de quem está na janela.
+  const [erasingId, setErasingId] = useState<string | null>(null);
 
   // O WhatsApp da pessoa, editável aqui.
   //
@@ -106,6 +111,7 @@ export default function PeopleTab() {
     () => members.find(m => m.id === deactivatingId) ?? null,
     [members, deactivatingId],
   );
+  const erasing = useMemo(() => members.find(m => m.id === erasingId) ?? null, [members, erasingId]);
 
   // Sempre traz os três de fábrica, mesmo quando o cliente não tem cargo nenhum
   // gravado no banco — que é o caso da maioria (ver cargoOptions).
@@ -484,6 +490,17 @@ export default function PeopleTab() {
         }}
       />
 
+      <EraseUserDialog
+        open={!!erasing}
+        user={erasing}
+        onClose={() => setErasingId(null)}
+        onDone={() => {
+          setErasingId(null);
+          setEditingId(null);
+          load();
+        }}
+      />
+
       {/* Modal por pessoa */}
       <Dialog open={!!editing} onOpenChange={o => !o && setEditingId(null)}>
         <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
@@ -610,27 +627,42 @@ export default function PeopleTab() {
               )}
 
               <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
-                {editing.deactivated ? (
+                <div className="flex flex-wrap items-center gap-1">
+                  {editing.deactivated ? (
+                    <Button
+                      variant="ghost"
+                      className="gap-1.5 text-emerald-600 hover:text-emerald-700"
+                      onClick={() => reativar(editing)}
+                      disabled={saving || !podeUsarDesativacao}
+                    >
+                      <UserCheck className="h-4 w-4" /> Reativar
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      className="gap-1.5 text-destructive hover:text-destructive"
+                      onClick={() => setDeactivatingId(editing.id)}
+                      disabled={saving || !podeDesativar(editing)}
+                      title={motivoBloqueio(editing)
+                        ?? 'Corta o acesso, tira das roletas e para os avisos. O perfil continua.'}
+                    >
+                      <UserX className="h-4 w-4" /> Desativar
+                    </Button>
+                  )}
+                  {/* Apagar DE VERDADE: só o cadastro que nunca foi usado. A janela
+                      pergunta ao servidor antes; aqui vale só a régua de "quem pode
+                      mexer em quem", a mesma do Desativar. */}
                   <Button
                     variant="ghost"
-                    className="gap-1.5 text-emerald-600 hover:text-emerald-700"
-                    onClick={() => reativar(editing)}
-                    disabled={saving || !podeUsarDesativacao}
-                  >
-                    <UserCheck className="h-4 w-4" /> Reativar
-                  </Button>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    className="gap-1.5 text-destructive hover:text-destructive"
-                    onClick={() => setDeactivatingId(editing.id)}
+                    className="gap-1.5 text-muted-foreground hover:text-destructive"
+                    onClick={() => setErasingId(editing.id)}
                     disabled={saving || !podeDesativar(editing)}
                     title={motivoBloqueio(editing)
-                      ?? 'Corta o acesso, tira das roletas e para os avisos. O perfil continua.'}
+                      ?? 'Apaga o cadastro de verdade. Só para quem nunca atendeu ninguém.'}
                   >
-                    <UserX className="h-4 w-4" /> Desativar
+                    <Trash2 className="h-4 w-4" /> Excluir cadastro
                   </Button>
-                )}
+                </div>
                 <Button onClick={() => setEditingId(null)} disabled={saving}>Concluir</Button>
               </DialogFooter>
             </>
