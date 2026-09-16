@@ -10,7 +10,10 @@ import {
   typologySpecs,
   type PropertyTypology,
 } from '@/features/properties/typologies';
-import { PropertyCard, type PortalProperty } from './portalShared';
+import {
+  PortalFooter, PortalHeader, PropertyCard,
+  type PortalProperty, type SiteInfo as PortalSiteInfo,
+} from './portalShared';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — PÁGINA DO IMÓVEL (Produto A). Mesma pegada "Editorial
@@ -31,11 +34,13 @@ interface PropertyDTO {
   typologies?: PropertyTypology[] | null;
   responsible_name?: string; photos?: Photo[];
 }
-interface SiteInfo {
-  name?: string;
-  branding?: { logo_url?: string | null; primary_color?: string | null; accent_color?: string | null; font_family?: string | null };
-  contact?: { whatsapp?: string | null };
-}
+/*
+  O tipo local era estreito de propósito (só logo, cores e WhatsApp) porque esta
+  página tinha cabeçalho PRÓPRIO. Agora ela usa o compartilhado, que precisa do
+  telefone, das redes e das duas páginas extras — tudo já vinha no MESMO endpoint
+  `/api/public/v1/site`, só não era tipado aqui.
+*/
+type SiteInfo = PortalSiteInfo;
 
 const API = import.meta.env.VITE_API_URL as string;
 const TYPE_LABEL: Record<string, string> = { apartment: 'Apartamento', house: 'Casa', condo: 'Casa em condomínio', land: 'Terreno', commercial: 'Comercial', studio: 'Studio', farm: 'Chácara' };
@@ -271,21 +276,12 @@ export default function ImovelPublicPage() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href={fontHref} rel="stylesheet" />
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-[var(--paper)]/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Link to={`/portal/${tenant}`} className="flex items-center gap-2.5">
-            {site.branding?.logo_url
-              ? <img src={site.branding.logo_url} alt={site.name || ''} className="h-9 w-auto max-w-[150px] object-contain" />
-              : <span className="font-[var(--display)] text-xl font-semibold tracking-tight">{site.name || 'Imóveis'}</span>}
-          </Link>
-          {waHref && (
-            <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold text-white" style={{ background: '#25D366' }}>
-              <Ic d={I.wa} s={16} /> <span className="hidden sm:inline">WhatsApp</span>
-            </a>
-          )}
-        </div>
-      </header>
+      {/* Cabeçalho COMPARTILHADO com o resto do portal. Esta página é onde o
+          anúncio pago joga o visitante, e ela era a única sem menu nenhum: quem
+          chegava por anúncio não tinha como alcançar o resto do site. Dois
+          cabeçalhos também garantiam que toda melhoria alcançasse quatro
+          páginas e esquecesse a quinta — justamente a que recebe a verba. */}
+      <PortalHeader site={site} tenant={tenant!} />
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <Link to={`/portal/${tenant}`} className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-neutral-500 hover:text-[var(--brand)]">
@@ -519,9 +515,7 @@ export default function ImovelPublicPage() {
           : <a href="#contato" className="rounded-full px-5 py-2.5 text-[14px] font-semibold text-white" style={{ background: 'var(--brand)' }}>Tenho interesse</a>}
       </div>
 
-      <footer className="border-t border-black/[0.06] bg-white py-6 text-center text-[12px] text-neutral-400">
-        © {site.name || 'Portal'} — feito com LM Flow.
-      </footer>
+      <PortalFooter site={site} tenant={tenant!} />
 
       {/* Lightbox — foto em tela cheia */}
       {lightbox && cover && (

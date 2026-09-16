@@ -7,6 +7,7 @@ import {
   UsersRound,
   Bot,
   DollarSign,
+  Landmark,
 } from 'lucide-react';
 
 /**
@@ -73,6 +74,15 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     href: '/admin/academia',
     icon: GraduationCap,
     description: 'Publicar e gerenciar as aulas e a documentação',
+  },
+  {
+    // O que vale para TODAS as imobiliárias de uma vez. Hoje: os logos dos
+    // bancos da página de financiamento do portal — subidos aqui uma vez, toda
+    // imobiliária os herda, inclusive as que ainda nem existem.
+    name: 'Plataforma',
+    href: '/admin/plataforma',
+    icon: Landmark,
+    description: 'Configuração que vale em todas as imobiliárias de uma vez',
   },
   {
     name: 'Equipe',
