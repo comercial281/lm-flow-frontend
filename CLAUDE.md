@@ -2322,7 +2322,13 @@ O que aparece na tela, no campo *Número que envia os avisos* da roleta:
 
 - **Seção *Instâncias da Leal Mídia (fora deste CRM)***, no fim da lista, só
   para a Leal Mídia. Traz as instâncias soltas do servidor compartilhado (as
-  que não são canal de cliente nenhum), com *(desconectada)* quando for o caso.
+  que não são canal de nenhuma imobiliária — canal do CRM da própria Leal
+  Mídia entra), com *(desconectada)* quando for o caso.
+- **Seção vazia vem com o motivo embaixo do campo**, em âmbar: o servidor diz
+  por que não sobrou instância (não devolveu nenhuma, todas são canal de
+  imobiliária, credencial recusada), e a falha da própria chamada vira um
+  texto fixo. Na estreia a seção apareceu vazia e muda, e isso é
+  indistinguível de defeito.
 - Escolhida uma, o texto embaixo diz o efeito: corretor, gestor e grupo
   recebem os avisos vindos dela — e o aviso que chegar num número que também é
   canal deste CRM vira uma conversa na caixa dele (a guarda de chegada só
