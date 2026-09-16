@@ -113,7 +113,7 @@ export default function PortalHomePage() {
 
         {/* pt maior que antes: o cabeçalho agora FLUTUA sobre a capa (ele sai do
             fluxo), então o título precisa do espaço dele de volta. */}
-        <div className="relative mx-auto max-w-6xl px-4 pb-8 pt-28 sm:px-6 sm:pt-36 md:pb-16 md:pt-40">
+        <div className="relative mx-auto max-w-6xl px-4 pb-8 pt-32 sm:px-6 sm:pt-40 md:pb-16 md:pt-44">
           <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-white/80">{site.name || 'Portal Imobiliário'}</p>
           <h1 className="mt-3 max-w-2xl font-[var(--display)] text-4xl font-semibold leading-[1.05] text-white sm:text-5xl md:text-6xl">
             O imóvel certo pra sua próxima fase.
