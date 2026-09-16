@@ -2007,6 +2007,48 @@ Armadilhas:
 5. **`npm ci` neste repo exige `--legacy-peer-deps`** (react-leaflet 4 × React
    19 no lockfile). Sem isso a instalação falha com ERESOLVE.
 
+## As respostas do formulário apareciam duas vezes no card (desde 2026-09-16)
+
+Print do dono do produto: no bloco **Respostas do lead** (aba *Detalhes* do card),
+cada pergunta do formulário do Meta aparecia **duas vezes** — *"Qual A Renda
+Familiar Da Sua Casa?"* e, logo abaixo, *"Qual A Renda Familiar Da Sua Casa"*;
+*"Você Deseja Falar Com Um Corretor?"* e *"Voce Deseja Falar Com Um Corretor"*.
+Mesma resposta, uma com acento e ponto de interrogação, outra sem.
+
+Não era o lead preenchendo duas vezes, nem defeito da captura: **a mesma resposta
+é gravada em dois lugares, de propósito**. O servidor guarda as respostas juntas,
+que é o que este bloco lê, e ESPELHA cada uma solta no contato — é do espelho que
+a variável de funil lê a resposta do lead nas mensagens automáticas. O bloco
+imprimia as duas listas em sequência.
+
+- **O espelho continua existindo.** Tirá-lo do servidor faria as variáveis de funil
+  pararem de resolver, calado, em toda mensagem que usa resposta de formulário.
+  Quem decide o que aparece é a TELA.
+- **Chave espelhada de uma resposta que já está na lista não vira linha.** A
+  comparação ignora acento, pontuação e maiúscula, que é exatamente o que muda
+  entre as duas versões.
+- **Campo do contato que NÃO é espelho continua aparecendo.** O que alguém gravou
+  à mão no contato não some — a linha só cai quando a mesma resposta já está ali.
+- **Nada muda no servidor e nada é reescrito no banco.** O lead já capturado volta
+  a ficar legível sozinho, sem passo de reparo.
+- **A aba *Origem* nunca teve o problema**: ela lê só as respostas, sem os campos
+  soltos do contato.
+
+Armadilhas:
+
+1. **A regra mora no arquivo da normalização, com teste**
+   (`src/components/pipelines/formAnswers.ts`), nunca dentro da tela do card —
+   aquele arquivo tem ~4.800 linhas e o bloco vive numa função anônima no meio do
+   JSX, onde nada é testável. Mesma decisão da leitura das respostas da landing.
+2. **Não voltar a imprimir os campos soltos do contato sem comparar com as
+   respostas.** O defeito é MUDO: nada quebra, a lista só dobra de tamanho.
+3. **O intervalo de acentos vai escrito como `̀-ͯ`**, nunca com os
+   caracteres combinantes literais — qualquer normalização de editor os apaga em
+   silêncio e a comparação passa a nunca casar. Mesma cicatriz do conversor de
+   nome em endereço da landing.
+4. **Não é `featureKey` nem `clientToggleKey`** — é exibição do card. Os scanners
+   do catálogo de funcionalidades não entram nesta história.
+
 ## ⚠️ Como responder ao dono do produto (vale para TODA conversa neste repo)
 
 **Quem lê a resposta não está com o código aberto.** Escrever nome de variável,
