@@ -162,3 +162,58 @@ export function canDeactivate(
 
   return targetRole === 'agent';
 }
+
+const roleOf = (p: DeactivatablePerson) => p.chave_role ?? p.role?.chave_role ?? p.role?.key;
+const isAdminRole = (role: string | undefined) => role === 'admin' || role === 'administrator';
+
+/**
+ * Esta pessoa é o ÚLTIMO administrador ativo da equipe?
+ *
+ * A proteção existe por um motivo só: sem administrador, ninguém religa
+ * ninguém. Mas ela contava só quem está NA LISTA — e a Leal Mídia é
+ * administradora de todo CRM, escondida da lista de propósito. Resultado: no
+ * cliente com um administrador só (a maioria), NINGUÉM conseguia desativá-lo,
+ * nem a Leal Mídia, e a tela ainda dizia "seu cargo não permite". Com a Leal
+ * Mídia clicando, sempre há outro administrador para religar: a proteção não
+ * se aplica.
+ *
+ * Para o administrador do cliente a régua continua: ele não desativa o único
+ * outro administrador sem promover alguém antes.
+ */
+export function isLastActiveAdmin(
+  target: DeactivatablePerson,
+  members: DeactivatablePerson[],
+  options: { actorIsPlatformOwner?: boolean } = {},
+): boolean {
+  if (options.actorIsPlatformOwner) return false;
+  if (!isAdminRole(roleOf(target))) return false;
+
+  const admins = members.filter(m => isAdminRole(roleOf(m)) && !m.deactivated);
+  return admins.length <= 1;
+}
+
+export const ROLE_REFUSAL = 'Seu cargo não permite desativar esta pessoa.';
+export const SELF_REFUSAL = 'Você não pode desativar o seu próprio acesso.';
+export const LAST_ADMIN_REFUSAL =
+  'É o único administrador ativo: sem ele ninguém religa ninguém. Promova outra pessoa a administrador antes.';
+
+/**
+ * Por que o botão *Desativar* está desligado para esta pessoa — ou null quando
+ * ela pode ser desativada.
+ *
+ * Devolve a FRASE, não um booleano: a tela mostrava "seu cargo não permite"
+ * para todo bloqueio, inclusive o do último administrador, e mandava procurar o
+ * problema no cargo errado.
+ */
+export function deactivationRefusal(
+  actor: DeactivatablePerson | null,
+  target: DeactivatablePerson | null,
+  members: DeactivatablePerson[],
+  options: { actorIsPlatformOwner?: boolean } = {},
+): string | null {
+  if (!actor || !target) return ROLE_REFUSAL;
+  if (actor.id === target.id) return SELF_REFUSAL;
+  if (!canDeactivate(actor, target)) return ROLE_REFUSAL;
+  if (isLastActiveAdmin(target, members, options)) return LAST_ADMIN_REFUSAL;
+  return null;
+}

@@ -2311,6 +2311,25 @@ Armadilhas:
 4. **Não é `featureKey` nem `clientToggleKey`** — é campo da roleta, não
    módulo. Os scanners do catálogo de funcionalidades não entram nesta história.
 
+## O único administrador do cliente pode ser desativado pela Leal Mídia (desde 2026-09-16)
+
+Relato do dono do produto, na tela *Equipe*: *"não dá pra desativar o
+administrador"*. Não era cargo — era a proteção do último administrador, que
+contava só quem está NA LISTA. A Leal Mídia é administradora de todo CRM e fica
+fora da lista de propósito, então no cliente com um administrador só (a maioria)
+NINGUÉM conseguia desativá-lo, nem ela. E o botão ainda dizia *"Seu cargo não
+permite desativar esta pessoa"*, mandando procurar o problema no cargo.
+
+- **Com a Leal Mídia clicando, a proteção não se aplica**: sempre há outro
+  administrador para religar. Para o administrador do cliente a régua continua.
+- **O botão diz o motivo certo**: próprio acesso, cargo, ou último administrador
+  (*"promova outra pessoa a administrador antes"*).
+- **Nada mudou no servidor**: ele nunca teve essa trava; era só a tela.
+
+Armadilha: a régua mora em `deactivationRules.ts`, com spec, e não na tela. A
+tela antiga de *Configurações > Usuários* (código morto, redireciona) ainda tem
+uma cópia da regra antiga — quem a ressuscitar herda o defeito.
+
 ## O aviso da roleta pode sair por uma instância da Leal Mídia (desde 2026-09-16)
 
 Testando a roleta multinúmero, o dono do produto pediu que o campo *Número que

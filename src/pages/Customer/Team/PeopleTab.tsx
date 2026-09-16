@@ -17,7 +17,7 @@ import BulkInviteModal from '@/components/users/BulkInviteModal';
 // ofertas da roleta, roletas e o WhatsApp exclusivo). É a mesma de sempre: os
 // botões é que estavam na tela errada.
 import DeactivateUserDialog from '@/components/users/DeactivateUserDialog';
-import { canDeactivate, resolveActor } from '@/features/users/deactivation/deactivationRules';
+import { ROLE_REFUSAL, deactivationRefusal, resolveActor } from '@/features/users/deactivation/deactivationRules';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useAuthStore } from '@/store/authStore';
@@ -264,14 +264,17 @@ export default function PeopleTab() {
   };
 
   /**
-   * Quem esta pessoa pode desativar: o gestor desativa CORRETOR; gestor e
-   * administrador só o administrador desativa. A mesma régua roda no servidor —
-   * esta existe para a tela não oferecer um botão que a API vai recusar.
+   * Por que esta pessoa NÃO pode ser desativada — ou null quando pode. O gestor
+   * desativa CORRETOR; gestor e administrador só o administrador desativa. A
+   * mesma régua roda no servidor — esta existe para a tela não oferecer um
+   * botão que a API vai recusar, e para dizer o motivo certo no botão.
    *
-   * O último administrador continua protegido: sem ele ninguém religa ninguém.
+   * O último administrador continua protegido (sem ele ninguém religa ninguém),
+   * EXCETO quando quem clica é a Leal Mídia: ela é administradora de todo CRM e
+   * fica fora da lista de propósito, então com ela sempre há quem religue.
    */
-  const podeDesativar = (member: TeamAccessMember) => {
-    if (!podeUsarDesativacao) return false;
+  const motivoBloqueio = (member: TeamAccessMember): string | null => {
+    if (!podeUsarDesativacao) return ROLE_REFUSAL;
 
     // Quem clica pode NÃO estar na lista: a Leal Mídia é administradora de todo
     // CRM e fica escondida da equipe do cliente de propósito.
@@ -279,11 +282,9 @@ export default function PeopleTab() {
       isPlatformOwner: isSuper,
       name: String(currentUser?.name ?? ''),
     });
-    if (!canDeactivate(actor, member)) return false;
-
-    const admins = members.filter(m => m.role.chave_role === 'admin' && !m.deactivated);
-    return !(member.role.chave_role === 'admin' && admins.length === 1);
+    return deactivationRefusal(actor, member, members, { actorIsPlatformOwner: isSuper });
   };
+  const podeDesativar = (member: TeamAccessMember) => motivoBloqueio(member) === null;
 
   /**
    * A volta: devolve o acesso e os canais em que a pessoa atendia. NÃO a
@@ -624,9 +625,8 @@ export default function PeopleTab() {
                     className="gap-1.5 text-destructive hover:text-destructive"
                     onClick={() => setDeactivatingId(editing.id)}
                     disabled={saving || !podeDesativar(editing)}
-                    title={podeDesativar(editing)
-                      ? 'Corta o acesso, tira das roletas e para os avisos. O perfil continua.'
-                      : 'Seu cargo não permite desativar esta pessoa.'}
+                    title={motivoBloqueio(editing)
+                      ?? 'Corta o acesso, tira das roletas e para os avisos. O perfil continua.'}
                   >
                     <UserX className="h-4 w-4" /> Desativar
                   </Button>
