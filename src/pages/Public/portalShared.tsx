@@ -472,13 +472,19 @@ export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo;
             : 'border-black/[0.06] bg-[var(--paper)]/90 backdrop-blur-md'
         }`}
       >
-        <div className="mx-auto flex h-[68px] max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        {/* Logo maior a pedido do dono (2026-09-16): 56px de altura no desktop,
+            48px no celular. A barra cresce junto (84px / 72px) para o logo não
+            encostar nas bordas, e o hero da home compensa esse ganho no
+            padding do topo — o cabeçalho FLUTUA na home, então o título não
+            desce sozinho. Logo horizontal bate primeiro no max-w, por isso a
+            largura sobe na mesma proporção (190 → 260). */}
+        <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-4 px-4 sm:h-[84px] sm:px-6">
           <Link to={`/portal/${tenant}`} className="flex items-center gap-2.5">
             {site.branding?.logo_url ? (
               <img
                 src={site.branding.logo_url}
                 alt={site.name || 'Portal'}
-                className={`h-11 w-auto max-w-[190px] object-contain ${floating ? 'brightness-0 invert' : ''}`}
+                className={`h-12 w-auto max-w-[200px] object-contain sm:h-14 sm:max-w-[260px] ${floating ? 'brightness-0 invert' : ''}`}
               />
             ) : (
               <span className={`font-[var(--display)] text-xl font-semibold tracking-tight ${floating ? 'text-white' : ''}`}>
