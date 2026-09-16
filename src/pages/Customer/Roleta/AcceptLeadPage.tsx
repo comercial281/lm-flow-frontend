@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Check, X, Clock, User, Phone, Loader2 } from 'lucide-react';
 import { brokerAssignmentsService, BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
+import { hasDeadline } from '@/components/roleta/offerDeadline';
 
 function fmtMMSS(totalSec: number): string {
   const s = Math.max(0, Math.floor(totalSec));
@@ -28,7 +29,8 @@ export default function AcceptLeadPage() {
     try {
       const d = await brokerAssignmentsService.get(assignmentId);
       setData(d);
-      setSecsLeft(Math.max(0, Math.floor((new Date(d.deadline).getTime() - Date.now()) / 1000)));
+      // Roleta sem prazo: não há cronômetro, e `deadline` nulo NÃO é "esgotado".
+      setSecsLeft(hasDeadline(d) ? Math.max(0, Math.floor((new Date(d.deadline!).getTime() - Date.now()) / 1000)) : 0);
     } catch {
       setError('Não foi possível carregar este lead.');
     } finally {
@@ -38,12 +40,16 @@ export default function AcceptLeadPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Timer regressivo (só enquanto pendente).
+  // A oferta sem prazo (roleta sem prazo de aceite) não tem cronômetro: nem
+  // timer, nem releitura por "zerou", nem "prazo esgotado".
+  const semPrazo = !!data && !hasDeadline(data);
+
+  // Timer regressivo (só enquanto pendente, e só com prazo).
   useEffect(() => {
-    if (!data || data.status !== 'pending') return;
+    if (!data || data.status !== 'pending' || semPrazo) return;
     tickRef.current = setInterval(() => setSecsLeft(s => Math.max(0, s - 1)), 1000);
     return () => { if (tickRef.current) clearInterval(tickRef.current); };
-  }, [data]);
+  }, [data, semPrazo]);
 
   // Prazo zerado: relê o estado real UMA vez. O contador é local — compara o
   // relógio do aparelho com o deadline do servidor —, então zerar aqui não quer
@@ -51,10 +57,10 @@ export default function AcceptLeadPage() {
   // releitura os botões seguiam clicáveis contra um prazo vencido. O ref evita o
   // laço: se o backend ainda devolver `pending`, o efeito re-dispararia sozinho.
   useEffect(() => {
-    if (secsLeft > 0 || !data || data.status !== 'pending' || expiredRef.current) return;
+    if (semPrazo || secsLeft > 0 || !data || data.status !== 'pending' || expiredRef.current) return;
     expiredRef.current = true;
     load();
-  }, [secsLeft, data, load]);
+  }, [secsLeft, data, load, semPrazo]);
 
   const goToConversation = useCallback((d: BrokerAssignmentDetail) => {
     const cid = d.conversation_display_id ?? d.conversation_id;
@@ -92,7 +98,7 @@ export default function AcceptLeadPage() {
     }
   }
 
-  const expired = secsLeft <= 0;
+  const expired = !semPrazo && secsLeft <= 0;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0F0520] p-4">
@@ -131,14 +137,19 @@ export default function AcceptLeadPage() {
             {/* Timer */}
             <div className={`mb-5 rounded-xl border p-4 text-center ${expired ? 'border-red-500/40 bg-red-500/10' : 'border-[#7C3AED]/40 bg-[#7C3AED]/10'}`}>
               <div className="flex items-center justify-center gap-2 text-white/70 text-xs mb-1">
-                <Clock className="h-4 w-4" /> {expired ? 'Prazo esgotado' : 'Aceite em até'}
+                <Clock className="h-4 w-4" />
+                {semPrazo ? 'Sem prazo de aceite' : expired ? 'Prazo esgotado' : 'Aceite em até'}
               </div>
-              <div className={`text-4xl font-bold tabular-nums ${expired ? 'text-red-300' : 'text-white'}`}>
-                {fmtMMSS(secsLeft)}
-              </div>
+              {!semPrazo && (
+                <div className={`text-4xl font-bold tabular-nums ${expired ? 'text-red-300' : 'text-white'}`}>
+                  {fmtMMSS(secsLeft)}
+                </div>
+              )}
               <div className="text-white/50 text-xs mt-1">
                 Ao aceitar, você vira o responsável e o atendimento sai pelo seu número.
-                Se não aceitar, o lead passa para o próximo.
+                {semPrazo
+                  ? ' O lead é seu até você aceitar ou recusar — ele não passa para outro corretor sozinho.'
+                  : ' Se não aceitar, o lead passa para o próximo.'}
               </div>
             </div>
 

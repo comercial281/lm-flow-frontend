@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { roletaFormProblems, roletaFormWarnings, splitBackendProblems, backendProblems, type RoletaFormCheckInput } from './roletaFormChecks';
+import { roletaFormProblems, roletaFormWarnings, splitBackendProblems, backendProblems, timeoutMinutesPayload, type RoletaFormCheckInput } from './roletaFormChecks';
 
 // "Preenchi tudo direitinho e deu erro" — 07/08/2026.
 //
@@ -293,5 +293,23 @@ describe('roletaFormWarnings', () => {
       members: [{ user_id: '', personal_whatsapp_number: '' }],
     }));
     expect(avisos).toEqual([]);
+  });
+});
+
+// A roleta sem prazo viaja como ZERO, e só pela chave — nunca por campo vazio.
+describe('timeoutMinutesPayload', () => {
+  it('chave ligada manda zero, qualquer que seja o número no campo', () => {
+    expect(timeoutMinutesPayload(true, 30)).toBe(0);
+    expect(timeoutMinutesPayload(true, 0)).toBe(0);
+  });
+
+  it('chave desligada manda o número do campo', () => {
+    expect(timeoutMinutesPayload(false, 45)).toBe(45);
+  });
+
+  it('chave desligada com campo zerado, vazio ou inválido cai em 30 — nunca em "sem prazo" por acidente', () => {
+    expect(timeoutMinutesPayload(false, 0)).toBe(30);
+    expect(timeoutMinutesPayload(false, Number.NaN)).toBe(30);
+    expect(timeoutMinutesPayload(false, -5)).toBe(30);
   });
 });

@@ -300,8 +300,11 @@ export interface RoletaQueueItem {
   instancia: string | null;
   modo: DistributionMode | null;
   atribuido_em: string;
+  // Zero = roleta sem prazo de aceite; aí `minutos_restantes` vem nulo e
+  // `estourou` é sempre falso.
   prazo_minutos: number;
-  minutos_restantes: number;
+  minutos_restantes: number | null;
+  sem_prazo?: boolean;
   // Prazo vencido mas o status ainda é `pending`: o repasse só acontece quando o
   // CheckTimeoutJob roda. É essa janela que o gestor precisa enxergar.
   estourou: boolean;

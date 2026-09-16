@@ -22,6 +22,7 @@ import { getMessagingInboxes } from '@/components/scheduledActions/scheduledActi
 import type { Inbox } from '@/types/channels/inbox';
 import type { User } from '@/types/users';
 import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
+import { timeoutMinutesPayload } from '@/pages/Customer/Settings/RoletaConfig/roletaFormChecks';
 
 interface CreateRoletaModalProps {
   open: boolean;
@@ -46,6 +47,8 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
   // "apto-premium-bernardo-numero-principal" em vez de uma roleta reconhecível.
   const [nome, setNome] = useState('');
   const [timeoutMin, setTimeoutMin] = useState(30);
+  // Roleta sem prazo de aceite: viaja como ZERO, e só por esta chave.
+  const [semPrazo, setSemPrazo] = useState(false);
   const [gestorNum, setGestorNum] = useState('');
   // user_id -> whatsapp (marcado quando presente no map)
   const [selected, setSelected] = useState<Record<string, string>>({});
@@ -74,6 +77,7 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
     setInboxId('');
     setNome('');
     setTimeoutMin(30);
+    setSemPrazo(false);
     setGestorNum('');
     setSelected({});
     setLoadingInboxes(true);
@@ -129,7 +133,7 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
         // Atalho rápido cria no Rodízio. O modo (inclusive Leilão) se troca na
         // tela Automações > Distribuição de Leads.
         distribution_mode: 'rodizio',
-        timeout_minutes: timeoutMin,
+        timeout_minutes: timeoutMinutesPayload(semPrazo, timeoutMin),
         gestor_whatsapp_number: gestorNum.trim(),
         notification_inbox_id: null,
         // O número é EXCLUSIVO (um corretor: quem escreve nele vai direto a ele)
@@ -248,9 +252,14 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
                 type="number"
                 min={1}
                 value={timeoutMin}
+                disabled={semPrazo}
                 onChange={e => setTimeoutMin(Number(e.target.value) || 30)}
                 className="h-9 text-sm"
               />
+              <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                <input type="checkbox" checked={semPrazo} onChange={e => setSemPrazo(e.target.checked)} />
+                Sem prazo de aceite
+              </label>
             </div>
             <div className="grid gap-1.5">
               <Label className="text-xs">WhatsApp do gestor (opcional)</Label>

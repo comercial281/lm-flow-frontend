@@ -247,3 +247,17 @@ export function backendProblems(message: string, details?: BackendErrorDetail[] 
   }
   return splitBackendProblems(message);
 }
+
+// O prazo de aceite que VIAJA no payload da roleta (e dos padrões da casa).
+//
+// A roleta SEM prazo (desde 2026-09-16) é gravada como ZERO — o servidor não
+// aceita nulo, e a coluna nasce com 30. Só a CHAVE "Sem prazo de aceite" produz
+// o zero: o campo numérico em branco continua caindo em 30 (a tela já fazia
+// isso no onChange), senão limpar o campo deixaria a roleta sem prazo sem
+// ninguém ter escolhido. Função pura porque é a regra que mais custa quando
+// falha calada — a tela mostra "sem prazo" e o servidor recebe 30, ou o oposto.
+export function timeoutMinutesPayload(semPrazo: boolean, timeoutMin: number): number {
+  if (semPrazo) return 0;
+  const n = Math.floor(Number(timeoutMin));
+  return Number.isFinite(n) && n > 0 ? n : 30;
+}

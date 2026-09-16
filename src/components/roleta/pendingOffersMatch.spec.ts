@@ -55,4 +55,11 @@ describe('minutesLeft', () => {
   it('nunca fica negativo', () => {
     expect(minutesLeft(oferta({}), new Date('2026-09-03T13:00:00Z').getTime())).toBe(0);
   });
+
+  // Roleta sem prazo: `deadline` vem nulo. Antes, `new Date(null)` virava NaN e
+  // caía em `minutes_remaining ?? 0` → 0 → "prazo esgotado" em todo selo.
+  it('oferta sem prazo devolve null, nunca 0', () => {
+    const semPrazo = oferta({ deadline: null, minutes_remaining: null, timeout_minutes: 0, no_deadline: true });
+    expect(minutesLeft(semPrazo, new Date('2030-01-01T00:00:00Z').getTime())).toBeNull();
+  });
 });
