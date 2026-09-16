@@ -22,6 +22,12 @@ describe('financingFrom', () => {
     expect(page.enabled).toBe(false);
   });
 
+  it('os bancos de reserva já vêm com o simulador oficial', () => {
+    const page = financingFrom(site({}));
+    expect(page.banks.every(b => (b.url ?? '').startsWith('https://'))).toBe(true);
+    expect(page.banks.find(b => b.key === 'caixa')?.url).toContain('caixa.gov.br');
+  });
+
   it('usa o que o servidor resolveu quando ele responde', () => {
     const page = financingFrom(site({
       financiamento: {
@@ -57,13 +63,18 @@ describe('financingPayload', () => {
     expect(out.intro).toBe('Simule agora:');
   });
 
-  it('manda os cinco bancos, com link e logo, mesmo em branco', () => {
+  it('manda os cinco bancos, e o link do gestor por cima do oficial', () => {
     const page = base();
-    page.banks[0].url = ' https://itau.example/simular ';
+    page.banks[0].url = ' https://parceiro.example/itau ';
     const out = financingPayload(page);
     expect(Object.keys(out.banks ?? {})).toHaveLength(5);
-    expect(out.banks?.itau.url).toBe('https://itau.example/simular');
+    expect(out.banks?.itau.url).toBe('https://parceiro.example/itau');
+  });
+
+  it('não manda link igual ao oficial — senão a página congela no endereço de hoje', () => {
+    const out = financingPayload(base());
     expect(out.banks?.caixa.url).toBe('');
+    expect(out.banks?.itau.url).toBe('');
   });
 });
 
@@ -91,14 +102,18 @@ describe('parseEmails', () => {
 });
 
 describe('avisos da tela', () => {
-  it('avisa quando a página de financiamento vai ao ar sem nenhum link', () => {
+  it('não avisa nada com os cinco bancos ligados — todos já têm o link oficial', () => {
     const page: SiteFinancingPage = { ...FINANCING_FALLBACK, enabled: true, banks: FINANCING_FALLBACK.banks.map(b => ({ ...b })) };
-    expect(financingWarning(page)).toMatch(/vazia/);
+    expect(financingWarning(page)).toBeNull();
   });
 
-  it('avisa quantos bancos ficam de fora por falta de link', () => {
-    const banks = FINANCING_FALLBACK.banks.map(b => ({ ...b }));
-    banks[0].url = 'https://x';
+  it('avisa quando todos os bancos foram desligados', () => {
+    const banks = FINANCING_FALLBACK.banks.map(b => ({ ...b, enabled: false }));
+    expect(financingWarning({ ...FINANCING_FALLBACK, enabled: true, banks })).toMatch(/vazia/);
+  });
+
+  it('avisa quantos bancos ficam de fora por estarem desligados', () => {
+    const banks = FINANCING_FALLBACK.banks.map((b, i) => ({ ...b, enabled: i === 0 }));
     expect(financingWarning({ ...FINANCING_FALLBACK, enabled: true, banks })).toMatch(/4 banco/);
   });
 

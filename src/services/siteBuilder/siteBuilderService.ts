@@ -86,8 +86,10 @@ export interface SiteFinancingBank {
   /** Cor do texto sobre o círculo, quando a cor da marca é clara (Banco do Brasil). */
   ink?: string | null;
   enabled: boolean;
-  /** Link de simulação. Banco sem link NÃO aparece no site. */
+  /** Link de simulação já resolvido: o do gestor, ou o oficial do banco. */
   url?: string | null;
+  /** O simulador oficial do banco. Vazio no campo da tela = volta para ele. */
+  default_url?: string | null;
   logo_url?: string | null;
 }
 

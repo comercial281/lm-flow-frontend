@@ -236,6 +236,11 @@ export default function SiteBuilder() {
   const [listingPage, setListingPage] = useState<SiteListingPage>(() => listingFrom(null));
   const [emailsText, setEmailsText] = useState('');
   const [testingEmail, setTestingEmail] = useState(false);
+  // Qual logo de banco está subindo agora (chave do banco), para o botão daquela
+  // linha girar sem travar as outras quatro.
+  const [bankLogoUploading, setBankLogoUploading] = useState<string | null>(null);
+  const bankLogoInputRef = useRef<HTMLInputElement>(null);
+  const bankLogoTargetRef = useRef<string | null>(null);
 
   // Leads
   const [leads, setLeads] = useState<SiteLead[]>([]);
@@ -417,6 +422,34 @@ export default function SiteBuilder() {
       toast.error('Falha no upload da logo.');
     } finally {
       setLogoUploading(false);
+    }
+  };
+
+  // Sobe o logo de um banco da página de financiamento. Vai para o armazenamento
+  // do próprio CRM — logo apontado para o site do banco quebra no dia em que ele
+  // troca o endereço da imagem, e o site do cliente fica com o círculo vazio.
+  const handleBankLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const key = bankLogoTargetRef.current;
+    if (bankLogoInputRef.current) bankLogoInputRef.current.value = '';
+    bankLogoTargetRef.current = null;
+    if (!file || !key) return;
+    if (!file.type.startsWith('image/')) { toast.error('Envie um arquivo de imagem (PNG, JPG, WebP ou SVG).'); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error('Imagem muito grande (máx 2MB).'); return; }
+
+    setBankLogoUploading(key);
+    try {
+      const { url } = await siteBuilderService.uploadAsset(file);
+      setFinancingPage(prev => ({
+        ...prev,
+        banks: prev.banks.map(b => (b.key === key ? { ...b, logo_url: url } : b)),
+      }));
+      setSiteFormDirty(true);
+      toast.success('Logo no ar. Clique em Salvar para valer no site.');
+    } catch {
+      toast.error('Falha no upload do logo.');
+    } finally {
+      setBankLogoUploading(null);
     }
   };
 
@@ -1190,10 +1223,15 @@ export default function SiteBuilder() {
 
                 <div className="space-y-3">
                   <p className="text-xs text-muted-foreground">
-                    Cole o link de simulação de cada banco. <strong>Banco sem link não aparece no site</strong> —
-                    link que não abre nada é pior do que banco faltando. O logo é opcional: sem ele,
-                    o círculo sai na cor do banco com o nome escrito.
+                    Os cinco já vêm com o <strong>simulador oficial</strong> de cada banco — a página
+                    funciona assim que você liga a chave acima. Trocar o link só é preciso se você tiver
+                    um endereço de parceria; apagando o campo, ele volta ao oficial.
+                    Para <strong>tirar um banco da página, desligue a chave dele</strong>.
                   </p>
+                  <input
+                    ref={bankLogoInputRef} type="file" accept="image/*" className="hidden"
+                    onChange={handleBankLogoFile}
+                  />
                   {financingPage.banks.map((bank, i) => (
                     <div key={bank.key} className="rounded-lg border border-border p-3">
                       <div className="flex items-center gap-3">
@@ -1219,31 +1257,73 @@ export default function SiteBuilder() {
                         />
                       </div>
                       {bank.enabled !== false && (
-                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                          <Input
-                            placeholder="Link de simulação (https://...)"
-                            value={bank.url ?? ''}
-                            onChange={e => {
-                              setFinancingPage(p => {
-                                const banks = [...p.banks];
-                                banks[i] = { ...banks[i], url: e.target.value };
-                                return { ...p, banks };
-                              });
-                              setSiteFormDirty(true);
-                            }}
-                          />
-                          <Input
-                            placeholder="Endereço do logo (opcional)"
-                            value={bank.logo_url ?? ''}
-                            onChange={e => {
-                              setFinancingPage(p => {
-                                const banks = [...p.banks];
-                                banks[i] = { ...banks[i], logo_url: e.target.value };
-                                return { ...p, banks };
-                              });
-                              setSiteFormDirty(true);
-                            }}
-                          />
+                        <div className="mt-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              placeholder="Link de simulação (https://...)"
+                              value={bank.url ?? ''}
+                              onChange={e => {
+                                setFinancingPage(p => {
+                                  const banks = [...p.banks];
+                                  banks[i] = { ...banks[i], url: e.target.value };
+                                  return { ...p, banks };
+                                });
+                                setSiteFormDirty(true);
+                              }}
+                            />
+                            {bank.default_url && bank.url !== bank.default_url && (
+                              <Button
+                                type="button" variant="ghost" size="sm" className="flex-none whitespace-nowrap"
+                                onClick={() => {
+                                  setFinancingPage(p => {
+                                    const banks = [...p.banks];
+                                    banks[i] = { ...banks[i], url: bank.default_url ?? '' };
+                                    return { ...p, banks };
+                                  });
+                                  setSiteFormDirty(true);
+                                }}
+                              >
+                                Voltar ao oficial
+                              </Button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button" variant="outline" size="sm"
+                              disabled={bankLogoUploading === bank.key}
+                              onClick={() => {
+                                bankLogoTargetRef.current = bank.key;
+                                bankLogoInputRef.current?.click();
+                              }}
+                            >
+                              {bankLogoUploading === bank.key
+                                ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+                              {bank.logo_url ? 'Trocar logo' : 'Enviar logo'}
+                            </Button>
+                            {bank.logo_url && (
+                              <Button
+                                type="button" variant="ghost" size="icon"
+                                title="Remover logo"
+                                className="flex-none text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  setFinancingPage(p => {
+                                    const banks = [...p.banks];
+                                    banks[i] = { ...banks[i], logo_url: '' };
+                                    return { ...p, banks };
+                                  });
+                                  setSiteFormDirty(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {bank.logo_url
+                                ? 'Sai com o logo no site.'
+                                : 'Sem logo, o círculo sai na cor do banco com o nome escrito.'}
+                            </span>
+                          </div>
                         </div>
                       )}
                     </div>

@@ -20,15 +20,22 @@ import type {
 
 /** Os cinco bancos de reserva, para a janela de deploy em que o servidor ainda
  *  é o antigo e não devolve a lista. Sem eles o bloco abriria vazio e pareceria
- *  quebrado no pior momento — logo depois de publicar. A ORDEM e os nomes têm
- *  que bater com os do servidor. */
+ *  quebrado no pior momento — logo depois de publicar.
+ *
+ *  ⚠️ A ORDEM, os nomes, as cores e os links oficiais têm que bater com os do
+ *  servidor (`Sites::PortalPages::BANKS`): é ele quem manda, isto é só rede. */
 export const FALLBACK_BANKS: SiteFinancingBank[] = [
-  { key: 'itau', name: 'Itaú', color: '#EC7000', enabled: true },
-  { key: 'santander', name: 'Santander', color: '#EC0000', enabled: true },
-  { key: 'bb', name: 'Banco do Brasil', color: '#FFCC29', ink: '#03318C', enabled: true },
-  { key: 'bradesco', name: 'Bradesco', color: '#CC092F', enabled: true },
-  { key: 'caixa', name: 'Caixa', color: '#0070AF', enabled: true },
-];
+  { key: 'itau', name: 'Itaú', color: '#EC7000', enabled: true,
+    default_url: 'https://www.itau.com.br/emprestimos-financiamentos/credito-imobiliario' },
+  { key: 'santander', name: 'Santander', color: '#EC0000', enabled: true,
+    default_url: 'https://www.negociosimobiliarios.santander.com.br/negociosimobiliarios/#/dados-pessoais?goal=3&ic=lpcreditoimob' },
+  { key: 'bb', name: 'Banco do Brasil', color: '#FFCC29', ink: '#03318C', enabled: true,
+    default_url: 'https://cim-simulador-imovelproprio.apps.bb.com.br/simulacao-imobiliario/sobre-imovel' },
+  { key: 'bradesco', name: 'Bradesco', color: '#CC092F', enabled: true,
+    default_url: 'https://banco.bradesco/html/classic/produtos-servicos/emprestimo-e-financiamento/encontre-seu-credito/simuladores-imoveis.shtm#box1-comprar' },
+  { key: 'caixa', name: 'Caixa', color: '#0070AF', enabled: true,
+    default_url: 'https://simuladorhabitacao.caixa.gov.br/home' },
+].map(b => ({ ...b, url: b.default_url }));
 
 export const FINANCING_FALLBACK: SiteFinancingPage = {
   enabled: false,
@@ -73,11 +80,16 @@ export function financingPayload(page: SiteFinancingPage): SiteFinancingForm {
   if (page.intro.trim() && page.intro.trim() !== FINANCING_FALLBACK.intro) out.intro = page.intro.trim();
   if (page.footer.trim() && page.footer.trim() !== FINANCING_FALLBACK.footer) out.footer = page.footer.trim();
   out.banks = Object.fromEntries(
-    page.banks.map(b => [b.key, {
-      enabled: b.enabled !== false,
-      url: (b.url ?? '').trim(),
-      logo_url: (b.logo_url ?? '').trim(),
-    }]),
+    page.banks.map(b => {
+      const url = (b.url ?? '').trim();
+      return [b.key, {
+        enabled: b.enabled !== false,
+        // Link igual ao oficial não viaja: ele já vem de fábrica, e gravá-lo
+        // congelaria a página no endereço de hoje se o banco mudar o dele.
+        url: url === (b.default_url ?? '') ? '' : url,
+        logo_url: (b.logo_url ?? '').trim(),
+      }];
+    }),
   );
   return out;
 }
@@ -113,11 +125,11 @@ export function financingWarning(page: SiteFinancingPage): string | null {
   if (!page.enabled) return null;
   const live = page.banks.filter(b => b.enabled !== false && (b.url ?? '').trim());
   if (live.length === 0) {
-    return 'Nenhum banco tem link de simulação, então a página vai ao ar vazia. Cole o link de cada banco que você quer oferecer.';
+    return 'Todos os bancos estão desligados, então a página vai ao ar vazia. Ligue pelo menos um.';
   }
-  const missing = page.banks.length - live.length;
-  if (missing > 0) {
-    return `${missing} banco(s) sem link não vão aparecer no site — link que não abre nada é pior do que banco faltando.`;
+  const off = page.banks.length - live.length;
+  if (off > 0) {
+    return `${off} banco(s) desligado(s) não aparecem no site.`;
   }
   return null;
 }
