@@ -261,3 +261,39 @@ export function timeoutMinutesPayload(semPrazo: boolean, timeoutMin: number): nu
   const n = Math.floor(Number(timeoutMin));
   return Number.isFinite(n) && n > 0 ? n : 30;
 }
+
+// QUEM ENVIA OS AVISOS — o seletor guarda DUAS coisas num valor só.
+//
+// O campo "Número que envia os avisos" oferece os canais deste CRM e, para a
+// Leal Mídia, as instâncias soltas do servidor Evolution compartilhado (a que
+// não é canal de cliente nenhum — o caso de teste de 2026-09-16). O servidor
+// guarda isso em dois campos: `notification_inbox_id` (canal) e
+// `notification_instance_name` (instância compartilhada), e a instância VENCE.
+// Aqui mora a tradução entre o valor do <select> e os dois campos, como função
+// pura: a falha é MUDA (a tela mostra a Sara e o aviso sai por outro número).
+export const CENTRAL_SENDER_PREFIX = 'central:';
+
+/** O valor do seletor a partir do que está gravado. A instância vence o canal. */
+export function senderSelectValue(
+  inboxId: string | null | undefined,
+  instanceName: string | null | undefined,
+): string {
+  const instancia = (instanceName ?? '').trim();
+  if (instancia) return CENTRAL_SENDER_PREFIX + instancia;
+  return inboxId ?? '';
+}
+
+/** Os dois campos que viajam no payload a partir do valor do seletor. */
+export function senderFields(selectValue: string): {
+  notification_inbox_id: string | null;
+  notification_instance_name: string | null;
+} {
+  const v = (selectValue ?? '').trim();
+  if (v.startsWith(CENTRAL_SENDER_PREFIX)) {
+    const nome = v.slice(CENTRAL_SENDER_PREFIX.length).trim();
+    // Prefixo sem nome não é escolha: cai em "mesma instância da roleta".
+    if (!nome) return { notification_inbox_id: null, notification_instance_name: null };
+    return { notification_inbox_id: null, notification_instance_name: nome };
+  }
+  return { notification_inbox_id: v || null, notification_instance_name: null };
+}

@@ -157,6 +157,10 @@ export interface RoletaConfig {
   msg_grupo_enabled?: boolean;
   msg_grupo_repasse_enabled?: boolean;
   notification_inbox_id: string | null;
+  // A instância do servidor Evolution COMPARTILHADO que envia os avisos, quando
+  // a Leal Mídia escolheu uma que não é canal deste cliente (2026-09-16).
+  // Preenchida, vence o canal acima. Nula em toda roleta que não a escolheu.
+  notification_instance_name?: string | null;
   business_hours_config: RoletaBusinessHours;
   instances?: RoletaInstance[];
   // A FLAG do cliente: pode adicionar um segundo número? Liberada por cliente
@@ -190,6 +194,9 @@ export interface RoletaConfigPayload {
   msg_grupo_enabled?: boolean;
   msg_grupo_repasse_enabled?: boolean;
   notification_inbox_id?: string | null;
+  // Só a Leal Mídia manda esta chave (o servidor recusa outro cargo gravando
+  // um nome). Ausente = não mexe no que está gravado; `null` = volta ao canal.
+  notification_instance_name?: string | null;
   // ⚠️ Faltava aqui, e era por isso que o horário nunca chegava ao backend: a
   // tela recebia o campo no GET e o descartava no save. Opcional porque roleta
   // sem horário (24h) não manda nada — que é o estado de todas elas hoje.
@@ -497,6 +504,7 @@ export const roletaConfigService = {
     target: 'corretor' | 'gestor' | 'grupo';
     inbox_id: string;
     notification_inbox_id?: string | null;
+    notification_instance_name?: string | null;
     gestor_whatsapp_number?: string | null;
     gestor_group_jid?: string | null;
     gestor_group_instance?: string | null;
@@ -506,7 +514,22 @@ export const roletaConfigService = {
     const res = await api.post(`${BASE}/test_notification`, payload);
     return (res.data as { data: { sent_to: string } }).data;
   },
+
+  // As instâncias SOLTAS do servidor Evolution compartilhado (as que não são
+  // canal de cliente nenhum), para o campo "Número que envia os avisos". Só a
+  // Leal Mídia alcança — para o resto o servidor responde 403, e a tela nem
+  // pergunta.
+  async getCentralInstances(): Promise<CentralInstance[]> {
+    const res = await api.get(`${BASE}/central_instances`);
+    return (res.data as { data: CentralInstance[] }).data ?? [];
+  },
 };
+
+// Uma instância do servidor compartilhado, como o servidor a descreve.
+export interface CentralInstance {
+  name: string;
+  connected: boolean;
+}
 
 // Modo Leilão: o corretor assume o lead. Primeiro que assumir leva.
 // 409 = outro corretor assumiu primeiro (trava anti-empate no banco).
