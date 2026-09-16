@@ -12,7 +12,8 @@ import {
   Gavel, Hand, Wifi, Send, Loader2, Eye, EyeOff, AlertTriangle, Copy,
 } from 'lucide-react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
-import { roletaFormProblems, roletaFormWarnings, backendProblems, timeoutMinutesPayload } from './roletaFormChecks';
+import { roletaFormProblems, roletaFormWarnings, backendProblems, timeoutMinutesPayload, senderSelectValue, senderFields, CENTRAL_SENDER_PREFIX } from './roletaFormChecks';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { isNoDeadline, timeoutLabel } from '@/components/roleta/offerDeadline';
 import { instanciasComAcesso } from './roletaEquipe';
 import {
@@ -31,6 +32,7 @@ import inboxMembersService from '@/services/channels/inboxMembersService';
 import type { Inbox } from '@/types/channels/inbox';
 import { accountService } from '@/services/account';
 import { leadAdsFormsService, MetaForm, LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
+import type { CentralInstance } from '@/services/roletaConfig/roletaConfigService';
 
 // Normaliza pra comparar nome de grupo x nome do CRM (ignora acento/pontuação/caixa).
 function normalizeName(s: string): string {
@@ -323,6 +325,14 @@ export default function RoletaConfigPage() {
   const [gestorNum, setGestorNum]           = useState('');
   const [gestorGroupJid, setGestorGroupJid] = useState('');
   const [notifInboxId, setNotifInboxId]     = useState('');
+  // A instância do servidor Evolution COMPARTILHADO que envia os avisos, quando
+  // a Leal Mídia escolheu uma que não é canal deste cliente (2026-09-16).
+  // Preenchida, vence o canal acima — o seletor mostra as duas coisas num
+  // valor só (ver senderSelectValue/senderFields). Só a Leal Mídia vê a seção
+  // e manda a chave no payload; para o gestor do cliente o campo é o de sempre.
+  const [notifInstance, setNotifInstance]   = useState('');
+  const isSuper = useIsSuperAdmin();
+  const [centralInstances, setCentralInstances] = useState<CentralInstance[]>([]);
   // Horário de funcionamento. Desligado (o default e o estado de TODA roleta
   // existente) = 24h, e o campo nem é enviado no payload.
   const [horarioOn, setHorarioOn]           = useState(false);
@@ -625,7 +635,7 @@ export default function RoletaConfigPage() {
     setTimeoutMin(30); setSemPrazo(false);
     setGestorNum('');
     setGestorGroupJid('');
-    setNotifInboxId('');
+    setNotifInboxId(''); setNotifInstance('');
     // setMsgRepasse junto: sem ele o texto de repasse da roleta que acabou de ser
     // editada vazava para a "Nova distribuição".
     setMsgCorretor(''); setMsgGestor(''); setMsgGrupo(''); setMsgRepasse('');
@@ -665,6 +675,7 @@ export default function RoletaConfigPage() {
     setGestorNum(c.gestor_whatsapp_number ?? '');
     setGestorGroupJid(c.gestor_group_jid ?? '');
     setNotifInboxId(c.notification_inbox_id ?? '');
+    setNotifInstance(c.notification_instance_name ?? '');
     setMsgCorretor(c.msg_corretor_template ?? '');
     setMsgGestor(c.msg_gestor_template ?? '');
     setMsgGrupo(c.msg_grupo_template ?? '');
@@ -727,6 +738,7 @@ export default function RoletaConfigPage() {
     setGestorNum(c.gestor_whatsapp_number ?? '');
     setGestorGroupJid(c.gestor_group_jid ?? '');
     setNotifInboxId(c.notification_inbox_id ?? '');
+    setNotifInstance(c.notification_instance_name ?? '');
     setMsgCorretor(c.msg_corretor_template ?? '');
     setMsgGestor(c.msg_gestor_template ?? '');
     setMsgGrupo(c.msg_grupo_template ?? '');
@@ -774,6 +786,18 @@ export default function RoletaConfigPage() {
       .finally(() => { if (!cancelled) setLoadingGroups(false); });
     return () => { cancelled = true; };
   }, [modalOpen, crmName]);
+
+  // As instâncias soltas do servidor compartilhado, só para a Leal Mídia.
+  // Leitura de fundo: recusa ou falha só esconde a seção — a janela continua
+  // inteira, e a instância já gravada continua aparecendo pelo valor guardado.
+  useEffect(() => {
+    if (!modalOpen || !isSuper) { setCentralInstances([]); return; }
+    let cancelled = false;
+    roletaConfigService.getCentralInstances()
+      .then(list => { if (!cancelled) setCentralInstances(list); })
+      .catch(() => { if (!cancelled) setCentralInstances([]); });
+    return () => { cancelled = true; };
+  }, [modalOpen, isSuper]);
 
   // Fontes: carrega os formulários do FB + as configs (só faz sentido editando roleta salva).
   useEffect(() => {
@@ -854,7 +878,11 @@ export default function RoletaConfigPage() {
         msg_gestor_enabled:     msgGestorOn,
         msg_grupo_enabled:      msgGrupoOn,
         msg_grupo_repasse_enabled: msgRepasseOn,
-        notification_inbox_id:  notifInboxId || null,
+        // Canal OU instância compartilhada — a instância vence. A chave da
+        // instância só viaja pela Leal Mídia: o servidor recusa outro cargo
+        // gravando um nome, e omiti-la deixa o que a Leal Mídia gravou em paz.
+        notification_inbox_id:  notifInstance ? null : (notifInboxId || null),
+        ...(isSuper ? { notification_instance_name: notifInstance || null } : {}),
         // Horário de funcionamento. Desligado manda `{ mode: 'always' }` em vez
         // de omitir: omitir num PATCH deixaria o horário antigo gravado, e
         // desligar a chave na tela não desligaria nada — a falha muda de novo.
@@ -1220,7 +1248,10 @@ export default function RoletaConfigPage() {
       await roletaConfigService.testNotification({
         target: destino,
         inbox_id:               inboxId,
-        notification_inbox_id:  notifInboxId || null,
+        notification_inbox_id:  notifInstance ? null : (notifInboxId || null),
+        // O teste sai pela instância compartilhada escolhida, como o aviso de
+        // verdade — testar por outro caminho aprovaria o que nunca é usado.
+        ...(isSuper ? { notification_instance_name: notifInstance || null } : {}),
         gestor_whatsapp_number: gestorNum,
         gestor_group_jid:       gestorGroupJid || null,
         gestor_group_instance:  gestorGroupJid ? CENTRAL_GROUP_INSTANCE : null,
@@ -2375,8 +2406,12 @@ export default function RoletaConfigPage() {
               </UILabel>
               <div className="mt-1">
                 <NativeSelect
-                  value={notifInboxId}
-                  onChange={e => setNotifInboxId(e.target.value)}
+                  value={senderSelectValue(notifInboxId, notifInstance)}
+                  onChange={e => {
+                    const f = senderFields(e.target.value);
+                    setNotifInboxId(f.notification_inbox_id ?? '');
+                    setNotifInstance(f.notification_instance_name ?? '');
+                  }}
                 >
                   <option value="">Mesma instância da roleta</option>
                   {notifInboxId && !inboxes.some(i => i.id === notifInboxId) && (
@@ -2385,10 +2420,29 @@ export default function RoletaConfigPage() {
                   {inboxes.map(i => (
                     <option key={i.id} value={i.id}>{i.name}</option>
                   ))}
+                  {/* As instâncias do servidor compartilhado, só para a Leal
+                      Mídia. A já gravada aparece mesmo fora da lista (ou sem
+                      a lista): sumir com ela faria o próximo Salvar apagar a
+                      escolha, calado. */}
+                  {(isSuper || notifInstance) && (
+                    <optgroup label="Instâncias da Leal Mídia (fora deste CRM)">
+                      {notifInstance && !centralInstances.some(c => c.name === notifInstance) && (
+                        <option value={CENTRAL_SENDER_PREFIX + notifInstance}>{notifInstance}</option>
+                      )}
+                      {centralInstances.map(c => (
+                        <option key={c.name} value={CENTRAL_SENDER_PREFIX + c.name}>
+                          {c.name}{c.connected ? '' : ' (desconectada)'}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </NativeSelect>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Instância que ENVIA os alertas. Se vazio, usa a mesma da roleta.
+                {notifInstance
+                  ? 'Corretor, gestor e grupo recebem os avisos vindos desta instância da Leal Mídia, que não é canal deste CRM. ' +
+                    'O aviso que chegar num número que também é canal daqui vira uma conversa na caixa dele.'
+                  : 'Instância que ENVIA os alertas. Se vazio, usa a mesma da roleta.'}
               </p>
             </div>
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { roletaFormProblems, roletaFormWarnings, splitBackendProblems, backendProblems, timeoutMinutesPayload, type RoletaFormCheckInput } from './roletaFormChecks';
+import { roletaFormProblems, roletaFormWarnings, splitBackendProblems, backendProblems, timeoutMinutesPayload, senderSelectValue, senderFields, type RoletaFormCheckInput } from './roletaFormChecks';
 
 // "Preenchi tudo direitinho e deu erro" — 07/08/2026.
 //
@@ -311,5 +311,43 @@ describe('timeoutMinutesPayload', () => {
     expect(timeoutMinutesPayload(false, 0)).toBe(30);
     expect(timeoutMinutesPayload(false, Number.NaN)).toBe(30);
     expect(timeoutMinutesPayload(false, -5)).toBe(30);
+  });
+});
+
+// O seletor "Número que envia os avisos" guarda canal OU instância compartilhada
+// num valor só (2026-09-16). A tradução é pura porque a falha é muda: a tela
+// mostraria a Sara e o aviso sairia pelo canal.
+describe('senderSelectValue / senderFields', () => {
+  it('a instância compartilhada vence o canal, nos dois sentidos', () => {
+    expect(senderSelectValue('inbox-1', 'Sara')).toBe('central:Sara');
+    expect(senderFields('central:Sara')).toEqual({
+      notification_inbox_id: null,
+      notification_instance_name: 'Sara',
+    });
+  });
+
+  it('sem instância, vale o canal; sem os dois, é a mesma instância da roleta', () => {
+    expect(senderSelectValue('inbox-1', null)).toBe('inbox-1');
+    expect(senderSelectValue(null, '')).toBe('');
+    expect(senderFields('inbox-1')).toEqual({
+      notification_inbox_id: 'inbox-1',
+      notification_instance_name: null,
+    });
+    expect(senderFields('')).toEqual({
+      notification_inbox_id: null,
+      notification_instance_name: null,
+    });
+  });
+
+  it('prefixo sem nome não vira instância vazia', () => {
+    expect(senderFields('central:')).toEqual({
+      notification_inbox_id: null,
+      notification_instance_name: null,
+    });
+  });
+
+  it('nome com espaço ao redor (vindo do servidor) é aparado', () => {
+    expect(senderSelectValue(null, '  Sara ')).toBe('central:Sara');
+    expect(senderFields('central: Sara ').notification_instance_name).toBe('Sara');
   });
 });

@@ -2310,3 +2310,47 @@ Armadilhas:
    gravado sai "sem prazo min". Quem tem roleta sem prazo edita o texto.
 4. **Não é `featureKey` nem `clientToggleKey`** — é campo da roleta, não
    módulo. Os scanners do catálogo de funcionalidades não entram nesta história.
+
+## O aviso da roleta pode sair por uma instância da Leal Mídia (desde 2026-09-16)
+
+Testando a roleta multinúmero, o dono do produto pediu que o campo *Número que
+envia os avisos* aceitasse a instância da Sara — que existe no servidor Evolution
+compartilhado e não é canal deste cliente. A mecânica mora no servidor (ver o
+CLAUDE.md do `lm-flow`); aqui está o que a tela ganhou.
+
+O que aparece na tela, no campo *Número que envia os avisos* da roleta:
+
+- **Seção *Instâncias da Leal Mídia (fora deste CRM)***, no fim da lista, só
+  para a Leal Mídia. Traz as instâncias soltas do servidor compartilhado (as
+  que não são canal de cliente nenhum), com *(desconectada)* quando for o caso.
+- Escolhida uma, o texto embaixo diz o efeito: corretor, gestor e grupo
+  recebem os avisos vindos dela — e o aviso que chegar num número que também é
+  canal deste CRM vira uma conversa na caixa dele (a guarda de chegada só
+  descarta mensagem entre números da própria conta).
+- **O botão *Testar* sai pela mesma instância.**
+- Para o gestor do cliente o campo é o de sempre: só os canais do CRM.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **O seletor guarda canal OU instância num valor só**, e a instância vence.
+  A tradução mora em `senderSelectValue`/`senderFields` (`roletaFormChecks.ts`),
+  função pura com spec — a falha aqui é MUDA (a tela mostra a Sara e o aviso
+  sai pelo canal).
+- **A chave da instância só viaja pela Leal Mídia.** O servidor recusa outro
+  cargo gravando um nome; omitir a chave deixa em paz o que a Leal Mídia gravou
+  quando o gestor do cliente salva a mesma roleta.
+- **A instância já gravada aparece mesmo fora da lista** (ou sem a lista, para
+  quem não a alcança): sumir com ela faria o próximo *Salvar* apagar a escolha,
+  calado. Mesma doutrina da roleta desativada no *Destino do lead* da landing.
+- **A leitura da lista é de fundo e não grita**: recusa ou falha só esconde a
+  seção.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): a coluna, o envio e a lista moram lá. Contra o servidor
+   antigo a seção fica vazia e a chave é descartada no salvamento.
+2. **`notification_inbox_id` vai NULO quando há instância escolhida.** Os dois
+   preenchidos seriam duas verdades sobre o remetente.
+3. **Não é `featureKey` nem `clientToggleKey`** — é campo da roleta, não módulo.
+   Os scanners do catálogo de funcionalidades não entram nesta história.
