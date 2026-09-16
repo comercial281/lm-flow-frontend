@@ -2,7 +2,8 @@ import { useState, type MouseEvent, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Check, Clock, X, Loader2 } from 'lucide-react';
 import { usePendingOffers } from '@/contexts/PendingOffersContext';
-import { minutesLeft, type OfferLookup } from './pendingOffersMatch';
+import { type OfferLookup } from './pendingOffersMatch';
+import { deadlineLabel } from './offerDeadline';
 import type { BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
 
 // O selo "Aguardando seu aceite" com Aceitar/Recusar, onde o lead aparece.
@@ -56,8 +57,8 @@ export default function OfferActions({
   const offer = offerFor({ contactId, conversationId, conversationDisplayId });
   if (!offer) return <>{fallback}</>;
 
-  const left = minutesLeft(offer);
-  const prazo = left > 0 ? `${left} min` : 'prazo esgotado';
+  // "12 min", "prazo esgotado" ou "sem prazo" (roleta sem prazo de aceite).
+  const prazo = deadlineLabel(offer);
 
   // O card inteiro é clicável (abre a ficha): o clique nos botões não pode
   // subir.

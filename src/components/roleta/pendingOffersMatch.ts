@@ -35,7 +35,11 @@ export function offerFor(
 // Quanto falta, em minutos, medido no relógio do aparelho contra o prazo do
 // servidor. O servidor manda `minutes_remaining`, mas ele envelhece entre um
 // carregamento e outro (a lista atualiza a cada 60 s).
-export function minutesLeft(offer: BrokerAssignmentDetail, now: number = Date.now()): number {
+//
+// `null` = oferta SEM prazo (roleta sem prazo de aceite): não há o que contar,
+// e não é zero — zero é "prazo esgotado", que é outra coisa. Ver offerDeadline.ts.
+export function minutesLeft(offer: BrokerAssignmentDetail, now: number = Date.now()): number | null {
+  if (offer.no_deadline || offer.deadline == null) return null;
   const deadline = new Date(offer.deadline).getTime();
   if (Number.isNaN(deadline)) return Math.max(0, offer.minutes_remaining ?? 0);
   return Math.max(0, Math.ceil((deadline - now) / 60_000));

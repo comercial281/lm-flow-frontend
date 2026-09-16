@@ -12,7 +12,8 @@ import {
   Gavel, Hand, Wifi, Send, Loader2, Eye, EyeOff, AlertTriangle, Copy,
 } from 'lucide-react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
-import { roletaFormProblems, roletaFormWarnings, backendProblems } from './roletaFormChecks';
+import { roletaFormProblems, roletaFormWarnings, backendProblems, timeoutMinutesPayload } from './roletaFormChecks';
+import { isNoDeadline, timeoutLabel } from '@/components/roleta/offerDeadline';
 import { instanciasComAcesso } from './roletaEquipe';
 import {
   roletaConfigService, RoletaConfig, RoletaMember, RoletaInstance, BrokerAssignment, DistributionMode,
@@ -315,6 +316,10 @@ export default function RoletaConfigPage() {
   const [isActive, setIsActive]             = useState(true);
   const [mode, setMode]                     = useState<DistributionMode>('rodizio');
   const [timeoutMin, setTimeoutMin]         = useState(30);
+  // Roleta SEM prazo de aceite: a oferta fica com o corretor até ele aceitar
+  // ou recusar. Viaja como ZERO (timeoutMinutesPayload); a chave é a única
+  // porta para o zero — o campo numérico vazio continua caindo em 30.
+  const [semPrazo, setSemPrazo]             = useState(false);
   const [gestorNum, setGestorNum]           = useState('');
   const [gestorGroupJid, setGestorGroupJid] = useState('');
   const [notifInboxId, setNotifInboxId]     = useState('');
@@ -577,11 +582,19 @@ export default function RoletaConfigPage() {
   // A tela preenche para o gestor VER o que vai ser gravado; o servidor semeia
   // de novo no salvamento, como rede de segurança para quem cria a roleta por
   // outra porta (o atalho do quadro de funil).
+  // Zero gravado = chave "Sem prazo" ligada, e o campo numérico guarda o último
+  // prazo positivo (ou 30) para reaparecer preenchido se a chave for desligada.
+  const aplicarPrazo = useCallback((minutos: number) => {
+    const sem = isNoDeadline(minutos);
+    setSemPrazo(sem);
+    setTimeoutMin(sem ? 30 : minutos);
+  }, []);
+
   const aplicarPadroes = useCallback((d: RoletaDefaults) => {
     if (d.gestor_whatsapp_number != null) setGestorNum(d.gestor_whatsapp_number);
     if (d.gestor_group_jid != null) setGestorGroupJid(d.gestor_group_jid);
     if (d.notification_inbox_id != null) setNotifInboxId(d.notification_inbox_id);
-    if (d.timeout_minutes != null) setTimeoutMin(d.timeout_minutes);
+    if (d.timeout_minutes != null) aplicarPrazo(d.timeout_minutes);
     if (d.msg_corretor_template != null) setMsgCorretor(d.msg_corretor_template);
     if (d.msg_gestor_template != null) setMsgGestor(d.msg_gestor_template);
     if (d.msg_grupo_template != null) setMsgGrupo(d.msg_grupo_template);
@@ -601,7 +614,7 @@ export default function RoletaConfigPage() {
       setPlantaoInboxId(h.after_hours_inbox_id ?? '');
       setAutoNaAbertura(!!h.auto_distribute_on_open);
     }
-  }, []);
+  }, [aplicarPrazo]);
 
   function openCreate() {
     setEditing(null);
@@ -609,7 +622,7 @@ export default function RoletaConfigPage() {
     setInboxId('');
     setIsActive(true);
     setMode('rodizio');
-    setTimeoutMin(30);
+    setTimeoutMin(30); setSemPrazo(false);
     setGestorNum('');
     setGestorGroupJid('');
     setNotifInboxId('');
@@ -648,7 +661,7 @@ export default function RoletaConfigPage() {
     setInboxId(c.inbox_id);
     setIsActive(c.is_active);
     setMode(c.distribution_mode ?? 'rodizio');
-    setTimeoutMin(c.timeout_minutes);
+    aplicarPrazo(c.timeout_minutes);
     setGestorNum(c.gestor_whatsapp_number ?? '');
     setGestorGroupJid(c.gestor_group_jid ?? '');
     setNotifInboxId(c.notification_inbox_id ?? '');
@@ -710,7 +723,7 @@ export default function RoletaConfigPage() {
   function openDuplicate(c: RoletaConfig) {
     openCreate();
     setMode(c.distribution_mode ?? 'rodizio');
-    setTimeoutMin(c.timeout_minutes);
+    aplicarPrazo(c.timeout_minutes);
     setGestorNum(c.gestor_whatsapp_number ?? '');
     setGestorGroupJid(c.gestor_group_jid ?? '');
     setNotifInboxId(c.notification_inbox_id ?? '');
@@ -829,7 +842,7 @@ export default function RoletaConfigPage() {
         inbox_id:               inboxId,
         is_active:              isActive,
         distribution_mode:      mode,
-        timeout_minutes:        timeoutMin,
+        timeout_minutes:        timeoutMinutesPayload(semPrazo, timeoutMin),
         gestor_whatsapp_number: gestorNum,
         gestor_group_jid:       gestorGroupJid || null,
         gestor_group_instance:  gestorGroupJid ? CENTRAL_GROUP_INSTANCE : null,
@@ -1100,7 +1113,7 @@ export default function RoletaConfigPage() {
     gestor_group_jid:       gestorGroupJid || null,
     gestor_group_instance:  gestorGroupJid ? CENTRAL_GROUP_INSTANCE : null,
     notification_inbox_id:  notifInboxId || null,
-    timeout_minutes:        timeoutMin,
+    timeout_minutes:        timeoutMinutesPayload(semPrazo, timeoutMin),
     business_hours_config:  horarioOn
       ? {
           mode: 'custom' as const,
@@ -1118,7 +1131,7 @@ export default function RoletaConfigPage() {
     msg_gestor_enabled:     msgGestorOn,
     msg_grupo_enabled:      msgGrupoOn,
     msg_grupo_repasse_enabled: msgRepasseOn,
-  }), [gestorNum, gestorGroupJid, notifInboxId, timeoutMin, horarioOn, janelas,
+  }), [gestorNum, gestorGroupJid, notifInboxId, timeoutMin, semPrazo, horarioOn, janelas,
        plantaoInboxId, autoNaAbertura, msgCorretor, msgGestor, msgGrupo, msgRepasse,
        msgCorretorOn, msgGestorOn, msgGrupoOn, msgRepasseOn]);
 
@@ -1211,7 +1224,7 @@ export default function RoletaConfigPage() {
         gestor_whatsapp_number: gestorNum,
         gestor_group_jid:       gestorGroupJid || null,
         gestor_group_instance:  gestorGroupJid ? CENTRAL_GROUP_INSTANCE : null,
-        timeout_minutes:        timeoutMin,
+        timeout_minutes:        timeoutMinutesPayload(semPrazo, timeoutMin),
         template:               template.trim() || null,
       });
       toast.success(destino === 'grupo'
@@ -1359,7 +1372,7 @@ export default function RoletaConfigPage() {
                     <p className="text-xs text-muted-foreground">
                       {c.distribution_mode === 'manual'
                         ? 'Gerente distribui na mão'
-                        : `Prazo: ${c.timeout_minutes} min`}
+                        : `Prazo: ${timeoutLabel(c.timeout_minutes)}`}
                       {' — Gestor: '}{c.gestor_whatsapp_number || '—'}
                     </p>
                   </div>
@@ -1434,7 +1447,7 @@ export default function RoletaConfigPage() {
                 ['Grupo de avisos', padroes.gestor_group_jid],
                 ['Instância que envia os avisos',
                   inboxes.find(i => i.id === padroes.notification_inbox_id)?.name ?? padroes.notification_inbox_id],
-                ['Prazo de aceite', padroes.timeout_minutes != null ? `${padroes.timeout_minutes} min` : null],
+                ['Prazo de aceite', timeoutLabel(padroes.timeout_minutes)],
                 ['Horário de funcionamento',
                   padroes.business_hours_config?.mode === 'custom' ? 'Faixa própria' : null],
                 ['Aviso do corretor', padroes.msg_corretor_enabled === false ? 'desligado' : null],
@@ -2176,21 +2189,46 @@ export default function RoletaConfigPage() {
               <div>
                 <UILabel className="flex items-center gap-1.5">
                   <Clock className="h-4 w-4" />
-                  {mode === 'leilao' ? 'Prazo do leilão (minutos) *' : 'Tempo limite para aceite (minutos) *'}
+                  {mode === 'leilao' ? 'Prazo do leilão (minutos)' : 'Tempo limite para aceite (minutos)'}
+                  {!semPrazo && ' *'}
                 </UILabel>
-                <Input
-                  type="number"
-                  min={1}
-                  max={1440}
-                  value={timeoutMin}
-                  onChange={e => setTimeoutMin(parseInt(e.target.value) || 30)}
-                  className="mt-1 w-32"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {mode === 'leilao'
-                    ? `Se ninguém assumir em ${timeoutMin} min, o lead cai no rodízio para não ficar sem dono.`
-                    : `Se o corretor não assumir em ${timeoutMin} min, o lead passa para o próximo.`}
-                </p>
+                {!semPrazo && (
+                  <>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={1440}
+                      value={timeoutMin}
+                      onChange={e => setTimeoutMin(parseInt(e.target.value) || 30)}
+                      className="mt-1 w-32"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {mode === 'leilao'
+                        ? `Se ninguém assumir em ${timeoutMin} min, o lead cai no rodízio para não ficar sem dono.`
+                        : `Se o corretor não assumir em ${timeoutMin} min, o lead passa para o próximo.`}
+                    </p>
+                  </>
+                )}
+                {/* Roleta SEM prazo (desde 2026-09-16). Só esta chave produz o zero
+                    no payload — o campo em branco cai em 30, de propósito. */}
+                <label className="mt-2 flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={semPrazo}
+                    onChange={e => setSemPrazo(e.target.checked)}
+                  />
+                  <span className="text-sm">
+                    Sem prazo de aceite
+                    <span className="block text-xs text-muted-foreground">
+                      {mode === 'leilao'
+                        ? 'Todos recebem a oferta e o primeiro que aceitar leva. Não há repasse automático nem ' +
+                          '"ninguém assumiu": o lead não cai no rodízio sozinho.'
+                        : 'A oferta fica com o corretor sorteado até ele aceitar ou recusar. Não há repasse ' +
+                          'automático nem aviso de "ninguém assumiu" — oferta parada se resolve reatribuindo o lead na mão.'}
+                    </span>
+                  </span>
+                </label>
               </div>
             )}
 

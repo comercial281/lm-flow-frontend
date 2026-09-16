@@ -6,9 +6,13 @@ export interface BrokerAssignmentDetail {
   lead_name: string;
   lead_phone: string | null;
   assigned_at: string;
-  deadline: string;
-  minutes_remaining: number;
+  // Roleta SEM prazo de aceite: `deadline` e `minutes_remaining` vêm nulos e
+  // `no_deadline` true. Nunca traduzir nulo como "prazo esgotado" — ver
+  // components/roleta/offerDeadline.ts.
+  deadline: string | null;
+  minutes_remaining: number | null;
   timeout_minutes: number;
+  no_deadline?: boolean;
   round: number;
   corretor: string | null;
   conversation_id: string | null;

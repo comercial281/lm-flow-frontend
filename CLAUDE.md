@@ -2257,3 +2257,56 @@ Armadilhas:
    tela nova salva e nada aparece.
 4. **Não é `featureKey` nem `clientToggleKey`** — é configuração de plataforma. Os
    scanners do catálogo de funcionalidades não entram nesta história.
+
+## Roleta sem prazo de aceite (desde 2026-09-16)
+
+Pergunta do dono do produto: *"se tivéssemos essa condicional de não ter prazo
+pra expirar, como funcionaria a roleta?"* — e o pedido em seguida: *"faz o plano
+pra implementar a roleta SEM PRAZO pra gente"*. A mecânica mora no servidor
+(ver o CLAUDE.md do `lm-flow`); aqui está o que a tela ganhou.
+
+O que aparece na tela:
+
+- **Chave *Sem prazo de aceite***, logo abaixo de *Tempo limite para aceite
+  (minutos)* na roleta (e, compacta, no atalho *+ Criar roleta* do card).
+  Ligada, o campo de minutos some e o texto explica: a oferta fica com o
+  corretor até ele aceitar ou recusar; não há repasse automático nem
+  "ninguém assumiu" — oferta parada se resolve reatribuindo o lead na mão. No
+  Leilão: todos recebem, o primeiro que aceitar leva, e não cai no rodízio.
+- **O selo *Aguardando seu aceite*** (card, lista, card aberto, conversa) e a
+  **faixa amarela do topo** mostram *sem prazo* no lugar dos minutos.
+- **A tela de aceite** perde o cronômetro: cabeçalho *Sem prazo de aceite*, sem
+  contagem, sem "prazo esgotado", e o rodapé diz que o lead não passa para
+  outro corretor sozinho.
+- Nas listas (*Prazo: sem prazo*) e no resumo dos padrões da casa.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Zero é "sem prazo"**, e só a CHAVE produz o zero. O campo numérico em
+  branco continua caindo em 30 (já era assim no `onChange`); a regra mora em
+  `timeoutMinutesPayload` (`roletaFormChecks.ts`), função pura com spec — a
+  falha aqui é MUDA (a tela diz *sem prazo* e o servidor recebe 30, ou o
+  contrário).
+- **`deadline` nulo NÃO é "prazo esgotado".** `minutesLeft` passou a devolver
+  `null` para oferta sem prazo; antes `new Date(null)` virava NaN → 0 →
+  "esgotado" em todo selo. A tradução mora em `offerDeadline.ts`
+  (`hasDeadline`, `deadlineLabel`, `timeoutLabel`, `isNoDeadline`), num lugar
+  só — nada de comparar zero/nulo no JSX.
+- **Roleta existente não muda.** A chave nasce desligada, e a roleta carregada
+  com zero abre com ela ligada (e o campo guardado em 30 para reaparecer se
+  desligar).
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): o servidor antigo recusa zero com "maior que zero" —
+   visível, não mudo — e não manda `no_deadline`. Contra ele a chave aparece e
+   o salvamento falha com o motivo na tela.
+2. **A tela de aceite não pode iniciar o timer sem prazo.** O contador local
+   zerava e disparava a releitura "prazo venceu"; com `deadline` nulo isso
+   virava "Prazo esgotado" em vermelho numa oferta que nunca expira.
+3. **O texto de fábrica do aviso escreve `{{prazo}} min`.** Com a roleta sem
+   prazo o servidor resolve `{{prazo}}` como "sem prazo" — em template já
+   gravado sai "sem prazo min". Quem tem roleta sem prazo edita o texto.
+4. **Não é `featureKey` nem `clientToggleKey`** — é campo da roleta, não
+   módulo. Os scanners do catálogo de funcionalidades não entram nesta história.
