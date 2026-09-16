@@ -84,13 +84,13 @@ const HIDDEN_ATTRIBUTE_KEYS = new Set([
 
 // "Você está buscando?" e "voce_esta_buscando" têm que virar a MESMA coisa —
 // é a normalização que o servidor usa para criar a chave espelhada. O intervalo
-// de acentos vai escrito como escapes (`̀-ͯ`), nunca com os
+// de acentos vai escrito como escapes (`\u0300-\u036f`), nunca com os
 // caracteres combinantes literais, que qualquer normalização de editor apaga
 // em silêncio.
 const attributeKey = (raw: string): string =>
   raw
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');

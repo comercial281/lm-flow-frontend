@@ -2042,7 +2042,7 @@ Armadilhas:
    JSX, onde nada é testável. Mesma decisão da leitura das respostas da landing.
 2. **Não voltar a imprimir os campos soltos do contato sem comparar com as
    respostas.** O defeito é MUDO: nada quebra, a lista só dobra de tamanho.
-3. **O intervalo de acentos vai escrito como `̀-ͯ`**, nunca com os
+3. **O intervalo de acentos vai escrito como `\u0300-\u036f`**, nunca com os
    caracteres combinantes literais — qualquer normalização de editor os apaga em
    silêncio e a comparação passa a nunca casar. Mesma cicatriz do conversor de
    nome em endereço da landing.
