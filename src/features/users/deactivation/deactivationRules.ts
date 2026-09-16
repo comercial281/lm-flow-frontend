@@ -187,6 +187,9 @@ export function isLastActiveAdmin(
 ): boolean {
   if (options.actorIsPlatformOwner) return false;
   if (!isAdminRole(roleOf(target))) return false;
+  // Quem já está desativado não é "o último ativo" de nada: contá-lo aqui
+  // barraria o *Excluir cadastro* de um administrador desativado por engano.
+  if (target.deactivated) return false;
 
   const admins = members.filter(m => isAdminRole(roleOf(m)) && !m.deactivated);
   return admins.length <= 1;
@@ -216,4 +219,24 @@ export function deactivationRefusal(
   if (!canDeactivate(actor, target)) return ROLE_REFUSAL;
   if (isLastActiveAdmin(target, members, options)) return LAST_ADMIN_REFUSAL;
   return null;
+}
+
+export const ERASE_UNKNOWN =
+  'O servidor ainda não sabe dizer se este cadastro pode ser apagado. Tente de novo em alguns minutos.';
+
+/**
+ * O *Excluir cadastro* apaga DE VERDADE, e só o cadastro que nunca foi usado.
+ * Quem sabe se ele foi usado é o SERVIDOR (ele conta leads, conversas,
+ * mensagens, ofertas…); a tela só traduz o veredito.
+ *
+ * Sem veredito (servidor antigo, prévia que falhou) a resposta é NÃO. Oferecer
+ * o botão no escuro e deixar o servidor recusar no clique seria aceitável;
+ * oferecer e o servidor antigo APAGAR alguém com histórico, não — e é isso
+ * que a versão antiga do endpoint fazia.
+ */
+export function eraseVerdict(preview: DeactivationPreview | null): { allowed: boolean; reason: string | null } {
+  const verdict = preview?.erase;
+  if (!verdict) return { allowed: false, reason: ERASE_UNKNOWN };
+  if (verdict.allowed) return { allowed: true, reason: null };
+  return { allowed: false, reason: verdict.reason || 'Este cadastro já foi usado e não pode ser apagado. Use Desativar.' };
 }

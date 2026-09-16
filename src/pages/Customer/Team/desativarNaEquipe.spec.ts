@@ -48,6 +48,21 @@ describe('desativar corretor na tela de Equipe', () => {
     expect(src).not.toContain('Remover do time');
   });
 
+  // Desde 2026-09-16 existe o *Excluir cadastro* — que apaga DE VERDADE, e só o
+  // cadastro que nunca foi usado. Ele NÃO é a volta do "Remover do time": a tela
+  // não chama o apagar direto; passa pela janela, e a janela só oferece o botão
+  // depois de ler o veredito do servidor (`erase` na prévia). Sem isso, um
+  // servidor antigo apagaria gente com histórico respondendo "sucesso".
+  it('o "Excluir cadastro" passa pela janela que pergunta ao servidor antes', () => {
+    expect(src).toContain('<EraseUserDialog');
+    expect(src).toContain('Excluir cadastro');
+
+    const dialog = read('src/components/users/EraseUserDialog.tsx');
+    expect(dialog).toContain('eraseVerdict(');
+    expect(dialog).toContain('getDeactivationPreview(');
+    expect(dialog).toContain('usersService.deleteUser(');
+  });
+
   // Se um dia o endereço voltar a apontar para a tela antiga, os botões somem
   // de novo — e de novo em silêncio.
   it('o endereço da tela antiga de Usuários continua redirecionando para cá', () => {
