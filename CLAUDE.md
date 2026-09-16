@@ -2126,12 +2126,17 @@ Decisões (não reabrir sem o dono pedir):
   um cartão só repetiria, em outra forma, o bloco de captura logo abaixo.
 - **A ficha vai só por e-mail** — não cria contato nem card. Escolha explícita do
   dono.
-- **Banco sem link de simulação não aparece no site.** Link morto no site de um
-  cliente é pior do que banco faltando, e a tela avisa quantos ficaram de fora.
-- **Os logos dos bancos não são embutidos no nosso código.** Quem tem a relação
-  com o banco (e o direito de usar a arte) é a imobiliária; há um campo de logo
-  por banco. Sem logo, o círculo sai na cor da marca com o nome escrito — nunca
-  vazio.
+- **Os cinco já vêm com o simulador oficial de cada banco**, então a página
+  funciona assim que a chave é ligada. Trocar o link só é preciso com endereço de
+  parceria; **apagar o campo volta ao oficial**, e existe o botão *Voltar ao
+  oficial*.
+- **Quem tira um banco da página é a chave dele**, nunca o campo de link em
+  branco — a tela diz isso, porque apagar o link é o que a pessoa tentaria
+  primeiro. O aviso conta quantos bancos estão desligados.
+- **O logo de cada banco é ENVIADO pelo botão *Enviar logo***, e vai para o
+  armazenamento do CRM. Nada de colar o endereço da imagem no site do banco: ela
+  quebra no dia em que ele troca o endereço, e o círculo fica vazio no site do
+  cliente. Sem logo, ele sai na cor da marca com o nome escrito.
 - **O botão *Enviar um teste* não é enfeite.** E-mail depende de configuração da
   plataforma; sem ele, o gestor só descobriria que nada sai quando o primeiro
   proprietário real preenchesse a ficha e ninguém respondesse.
@@ -2153,9 +2158,10 @@ Armadilhas:
    dia em que o padrão da casa mudasse. Mesma regra do *tipo de venda* no
    assistente da IA.
 4. **Os cinco bancos de reserva desta tela precisam bater com os do servidor**
-   (chave, nome, cor e ORDEM). Eles existem só para a janela de deploy em que o
-   servidor ainda é o antigo — sem eles o bloco abriria vazio e pareceria
-   quebrado no pior momento, logo depois de publicar.
+   (chave, nome, cor, ORDEM **e o link oficial**). Eles existem só para a janela
+   de deploy em que o servidor ainda é o antigo — sem eles o bloco abriria vazio
+   e pareceria quebrado no pior momento, logo depois de publicar. Quem mudar o
+   link de um banco muda nos DOIS lugares.
 5. **O cabeçalho FLUTUA na home**, então ele sai do fluxo: quem mexer no espaço
    do topo da capa precisa lembrar que o título precisa daquele espaço de volta.
 6. **Não é `featureKey` nem `clientToggleKey`** — é configuração do site, como o
@@ -2164,6 +2170,7 @@ Armadilhas:
 
 **Dívida conhecida:** a aba *Leads*, onde a ficha fica guardada quando o e-mail
 falha, hoje só é alcançada pelo administrador da conta (a chave `sites.leads` não
-está em cargo nenhum — dívida registrada em 07/09). E os cinco links de simulação
-começam vazios: até a imobiliária colá-los, a página de financiamento vai ao ar
-sem banco nenhum, e o bloco avisa isso em âmbar.
+está em cargo nenhum — dívida registrada em 07/09). E **o logo é por cliente**:
+os cinco arquivos são enviados no Site Builder de cada imobiliária. Herdar o logo
+do Principal ficou de fora desta leva de propósito, para não inventar uma tela de
+configuração da plataforma por causa de cinco imagens.
