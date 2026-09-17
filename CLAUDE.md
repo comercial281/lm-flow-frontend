@@ -2258,6 +2258,51 @@ Armadilhas:
 4. **Não é `featureKey` nem `clientToggleKey`** — é configuração de plataforma. Os
    scanners do catálogo de funcionalidades não entram nesta história.
 
+### A barra de contato rola para fora, e o cabeçalho não salta (2026-09-17)
+
+Relato do dono do produto, no dia seguinte à estreia do cabeçalho novo: *"não
+curti esse número e esse email que ficam aparecendo fixos ao scrollar a tela"*.
+Ele estava vendo DOIS defeitos ao mesmo tempo, no mesmo lugar:
+
+1. **A barra de contato grudava.** Ela era desenhada DENTRO do bloco que prende o
+   cabeçalho no topo, então telefone, e-mail e redes ficavam numa faixa escura
+   presa na tela a rolagem inteira. Na home era pior: ali o cabeçalho é
+   transparente sobre a capa e a barra nem existe — ela **surgia** na primeira
+   rolagem, do nada.
+2. **A home saltava na primeira rolagem.** O cabeçalho estava fora do fluxo sobre
+   a capa e ENTRAVA no fluxo ao rolar, empurrando a página inteira para baixo a
+   altura dele mais a da barra, de uma vez.
+
+O que aparece na tela agora:
+
+- **Nas páginas internas** a barra continua no topo, com telefone, e-mail e
+  redes, e **rola para fora** com o conteúdo. Ao rolar fica só o cabeçalho.
+- **Na home** ela não aparece em momento nenhum: o topo é a capa, e os mesmos
+  contatos continuam no rodapé — que é onde já estavam antes desta barra existir.
+- **O cabeçalho da home não salta mais**: ele flutua sobre a capa e segue
+  flutuando ao rolar, só trocando de transparente para sólido.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **A barra é do TOPO DA PÁGINA, nunca do bloco que gruda.** Ela nasceu em
+  16/09 para dar endereço a telefone e e-mail, que eram cadastrados e invisíveis;
+  isso continua valendo. O que ela não pode é ocupar uma faixa permanente da
+  tela durante a leitura do site inteiro.
+- **Na home ela não entra.** Colocá-la no cabeçalho flutuante a faria flutuar
+  junto — o defeito de volta com outra roupa — e empurrar o título da capa para
+  baixo, que é o espaçamento que o hero compensa na mão.
+
+Armadilhas:
+
+1. **Quem desenhar a barra dentro do bloco que gruda devolve o defeito.** Há spec
+   que reprova (`portalHeader.spec.tsx`): ela confere que o telefone não está
+   dentro de um bloco preso, que na home ele não aparece nem depois de rolar, e
+   que o cabeçalho da home nunca vira `sticky`.
+2. **Na home o cabeçalho é `fixed`, jamais `sticky`.** `sticky` o coloca no fluxo
+   e traz o salto de volta — e o salto só aparece ao rolar de verdade, nunca numa
+   conferência parada.
+3. **Não houve mudança no servidor.** É posicionamento de tela, do começo ao fim.
+
 ## Roleta sem prazo de aceite (desde 2026-09-16)
 
 Pergunta do dono do produto: *"se tivéssemos essa condicional de não ter prazo
