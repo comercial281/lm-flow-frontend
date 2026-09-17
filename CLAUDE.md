@@ -2303,6 +2303,8 @@ Armadilhas:
    conferência parada.
 3. **Não houve mudança no servidor.** É posicionamento de tela, do começo ao fim.
 
+## Roleta sem prazo de aceite (desde 2026-09-16)
+
 Pergunta do dono do produto: *"se tivéssemos essa condicional de não ter prazo
 pra expirar, como funcionaria a roleta?"* — e o pedido em seguida: *"faz o plano
 pra implementar a roleta SEM PRAZO pra gente"*. A mecânica mora no servidor
