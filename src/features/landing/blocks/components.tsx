@@ -12,7 +12,11 @@ import {
   TrendingUp,
   UserRound,
 } from 'lucide-react';
-import { BrPhoneInput } from '@/components/shared';
+// Importado pelo arquivo, não pelo índice de `@/components/shared`: o índice
+// re-exporta o PhoneInput internacional com o CSS dele, e um import de CSS é
+// efeito colateral que o empacotador não descarta — entrava no pacote da
+// landing sem a landing usar.
+import { BrPhoneInput } from '@/components/shared/BrPhoneInput';
 import { isValidBrPhone } from '@/lib/brPhone';
 import type { BlockType } from './contract';
 import {
@@ -71,7 +75,8 @@ const empty = (v: unknown) => v == null || v === '';
 
 function HeroBlock({ config, property }: BlockComponentProps<'hero'>) {
   const cover = property?.photos?.find((p) => p.isCover) ?? property?.photos?.[0];
-  const img = config.imageUrl ?? cover?.url;
+  // A capa redimensionada vence a original: a original é a foto do celular.
+  const img = config.imageUrl ?? cover?.heroUrl ?? cover?.url;
   const badge =
     config.badge ?? (property?.stage ? STAGE_LABELS[property.stage] : undefined);
   const headline = config.headline ?? property?.title ?? 'Empreendimento';
@@ -94,7 +99,15 @@ function HeroBlock({ config, property }: BlockComponentProps<'hero'>) {
       }}
     >
       {img ? (
-        <img src={img} alt={headline} className="absolute inset-0 h-full w-full object-cover" />
+        // A capa é o maior elemento da primeira tela (o LCP do PageSpeed): pede
+        // prioridade alta e nunca é preguiçosa — o resto das imagens é.
+        <img
+          src={img}
+          alt={headline}
+          fetchPriority="high"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
       ) : (
         <div className="absolute inset-0" style={{ background: 'var(--lp-bg-end)' }} />
       )}
@@ -287,6 +300,10 @@ function GalleryBlock({ config, property }: BlockComponentProps<'gallery'>) {
             <img
               src={p.thumbnailUrl ?? p.url}
               alt={p.alt ?? `Foto ${i + 1}`}
+              loading="lazy"
+              decoding="async"
+              width={240}
+              height={160}
               className="h-40 w-60 rounded-xl object-cover"
             />
             {p.caption && <figcaption className="mt-1 w-60 text-xs opacity-70">{p.caption}</figcaption>}
@@ -358,6 +375,7 @@ function VideoBlock({ config }: BlockComponentProps<'video'>) {
         <iframe
           src={config.url}
           title={config.title ?? 'Vídeo'}
+          loading="lazy"
           className="h-full w-full"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
@@ -500,7 +518,7 @@ function ConsultantBlock({ config, property }: BlockComponentProps<'consultant'>
     <Section>
       <div className="flex items-center gap-4">
         {config.photoUrl ? (
-          <img src={config.photoUrl} alt={name} className="h-16 w-16 rounded-full object-cover" />
+          <img src={config.photoUrl} alt={name} loading="lazy" decoding="async" className="h-16 w-16 rounded-full object-cover" />
         ) : (
           <div className="flex h-16 w-16 items-center justify-center rounded-full" style={{ background: 'var(--lp-primary)' }}>
             <UserRound size={26} className="text-white" />
@@ -582,7 +600,7 @@ function TrustBadgesBlock({ config }: BlockComponentProps<'trust_badges'>) {
       <div className="flex flex-wrap items-center justify-center gap-4">
         {config.items.map((b, i) =>
           b.imageUrl ? (
-            <img key={i} src={b.imageUrl} alt={b.label ?? 'Selo'} className="h-12 object-contain" />
+            <img key={i} src={b.imageUrl} alt={b.label ?? 'Selo'} loading="lazy" decoding="async" className="h-12 object-contain" />
           ) : (
             <span key={i} className="inline-flex items-center gap-1 text-sm">
               <BadgeCheck size={16} style={{ color: 'var(--lp-icon)' }} /> {b.label}
@@ -602,7 +620,7 @@ function TrackRecordBlock({ config }: BlockComponentProps<'track_record'>) {
       <div className="flex gap-3 overflow-x-auto pb-2">
         {config.items.map((it, i) => (
           <div key={i} className="w-44 flex-none">
-            {it.imageUrl && <img src={it.imageUrl} alt={it.title} className="mb-2 h-28 w-full rounded-lg object-cover" />}
+            {it.imageUrl && <img src={it.imageUrl} alt={it.title} loading="lazy" decoding="async" className="mb-2 h-28 w-full rounded-lg object-cover" />}
             <div className="text-sm font-semibold">{it.title}</div>
             {it.year && <div className="text-xs opacity-60">{it.year}</div>}
           </div>
@@ -620,7 +638,7 @@ function ApartmentTypesBlock({ config }: BlockComponentProps<'apartment_types'>)
       <div className="space-y-3">
         {config.items.map((it, i) => (
           <div key={i} className="flex items-center gap-3 rounded-xl p-3" style={{ background: 'var(--lp-card)' }}>
-            {it.planUrl && <img src={it.planUrl} alt={it.name} className="h-16 w-16 rounded object-cover" />}
+            {it.planUrl && <img src={it.planUrl} alt={it.name} loading="lazy" decoding="async" className="h-16 w-16 rounded object-cover" />}
             <div className="flex-1">
               <div className="text-sm font-semibold">{it.name}</div>
               {it.areaM2 != null && <div className="text-xs opacity-70">{it.areaM2} m²</div>}

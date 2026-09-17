@@ -12,6 +12,9 @@ import type { BlockConfig, BlockType } from './contract';
 export interface LandingPhoto {
   url: string;
   thumbnailUrl?: string;
+  /** Capa redimensionada para tela (o servidor manda; sem ela vale `url`). A
+   *  original é a foto do celular, com vários MB — é o que decidia o LCP. */
+  heroUrl?: string;
   caption?: string;
   alt?: string;
   isCover?: boolean;
