@@ -15,6 +15,14 @@
       landing carregava. Ver src/lp/main.tsx.
     -->
 
+    <!--
+      Em produção o middleware do Vercel (middleware.ts) troca o marcador
+      abaixo pelo conteúdo da landing já resolvido e pelo preload da capa —
+      ver src/features/landing/public/landingHtml.ts. Sem middleware (preview
+      sem variável, dev, API fora) o marcador fica e a página busca sozinha.
+    -->
+    <!--LM_LANDING_DATA-->
+
     <!-- O servidor da API e o Pixel: abre a conexão antes de o código pedir. -->
     <link rel="preconnect" href="%VITE_API_URL%" crossorigin />
     <link rel="dns-prefetch" href="%VITE_API_URL%" />
@@ -25,9 +33,11 @@
       consome esta promessa (src/features/landing/public/landingLoader.ts) em
       vez de esperar o React montar para só então perguntar ao servidor. Sem
       isto: HTML → código → API → fotos, um esperando o outro.
+      Se o middleware já deixou o conteúdo na janela, não há o que buscar.
     -->
     <script>
       (function () {
+        if (window.__lmLanding) return;
         var m = location.pathname.match(/^\/lp\/([^/]+)\/([^/]+)/);
         if (!m) return;
         var dec = function (s) { try { return decodeURIComponent(s); } catch (e) { return s; } };

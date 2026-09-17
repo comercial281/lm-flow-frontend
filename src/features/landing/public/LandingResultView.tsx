@@ -7,6 +7,7 @@ import {
   type LandingTheme,
 } from '@/features/landing/blocks';
 import { loadLanding } from './landingLoader';
+import { installPixel } from './metaPixel';
 
 interface LeadFormCfg {
   specialistName?: string;
@@ -78,29 +79,12 @@ export function LandingResultView({ tenant, slug, result }: LandingResultViewPro
     };
   }, [tenant, slug]);
 
-  // Pixel: PageView dedicado desta página de resultado.
+  // Pixel: PageView dedicado desta página de resultado (script depois da
+  // página carregar — ver metaPixel.ts).
   useEffect(() => {
     const id = pixel?.pixel_id;
     if (!id) return;
-    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-expressions, prefer-spread -- trecho oficial do Pixel da Meta, mantido como ela publica */
-    const w = window as any;
-    if (!w.fbq) {
-      const n: any = (w.fbq = function (...args: unknown[]) {
-        n.callMethod ? n.callMethod.apply(n, args) : n.queue.push(args);
-      });
-      if (!w._fbq) w._fbq = n;
-      n.push = n;
-      n.loaded = true;
-      n.version = '2.0';
-      n.queue = [];
-      const t = document.createElement('script');
-      t.async = true;
-      t.src = 'https://connect.facebook.net/en_US/fbevents.js';
-      document.head.appendChild(t);
-    }
-    w.fbq('init', id);
-    if (pixel?.events?.page_view !== false) w.fbq('track', 'PageView');
-    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-expressions, prefer-spread */
+    installPixel(id, { pageView: pixel?.events?.page_view !== false });
   }, [pixel?.pixel_id, pixel?.events?.page_view]);
 
   if (state === 'loading') {

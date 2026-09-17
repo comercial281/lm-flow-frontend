@@ -67,11 +67,14 @@ export interface PublicLandingDTO {
   } | null;
 }
 
-/** O que o script inline do lp.html deixa na janela. */
+/** O que fica em `window.__lmLanding` antes de o código chegar: ou a
+ *  PROMESSA da busca que o script inline do lp.html começou, ou o CONTEÚDO
+ *  já resolvido que o middleware do Vercel costurou no HTML (ver landingHtml.ts). */
 export interface EarlyLanding {
   tenant: string;
   slug: string;
-  promise: Promise<Response>;
+  promise?: Promise<Response>;
+  data?: PublicLandingDTO | null;
 }
 
 declare global {
@@ -131,9 +134,11 @@ export interface LoadLandingOptions {
 export async function loadLanding(opts: LoadLandingOptions): Promise<PublicLandingDTO | null> {
   const { tenant, slug, base } = opts;
   const early = opts.early === undefined ? takeEarlyLanding(tenant, slug) : opts.early;
+  // Conteúdo já dentro do HTML: nada a buscar.
+  if (early?.data) return early.data;
   try {
     let res: Response;
-    if (early) {
+    if (early?.promise) {
       try {
         res = await early.promise;
       } catch {
