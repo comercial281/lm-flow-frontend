@@ -1,0 +1,36 @@
+/*
+ * Estilo da entrada enxuta da landing (ver src/lp/main.tsx).
+ *
+ * `source(none)` desliga a varredura automática do Tailwind: sem isso ele
+ * varreria o repositório inteiro e a landing voltaria a carregar o CSS do CRM
+ * todo (367 KB). Só as pastas abaixo geram classes — quem usar uma classe nova
+ * em arquivo fora delas vê a classe não valer NA LANDING PUBLICADA, e só nela
+ * (no editor, dentro do CRM, ela vale). Componente novo usado pelos blocos da
+ * landing entra aqui.
+ */
+@import 'tailwindcss' source(none);
+@source '../features/landing/blocks';
+@source '../features/landing/public';
+@source '../components/shared/BrPhoneInput.tsx';
+@source './main.tsx';
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  /* O mesmo fundo do "Carregando…" e do tema padrão: nada de flash branco
+     entre o HTML chegar e o React montar. */
+  background: #0f0520;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* O CRM pinta toda borda com a cor do tema; fora dele, o preflight do Tailwind
+   usaria a cor do texto. A landing define a borda dos blocos por `--lp-border`. */
+* {
+  border-color: var(--lp-border, rgba(255, 255, 255, 0.1));
+}

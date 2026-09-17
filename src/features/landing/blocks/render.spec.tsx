@@ -27,6 +27,34 @@ describe('BlockRenderer', () => {
     expect(screen.getByText('PRÉ LANÇAMENTO')).toBeInTheDocument();
   });
 
+  // A capa é o LCP da landing: sai com prioridade alta e prefere a versão
+  // redimensionada que o servidor manda; sem ela, a original.
+  it('hero usa a capa redimensionada quando o servidor manda, com prioridade alta', () => {
+    const withHero: LandingProperty = {
+      ...property,
+      photos: [{ url: 'https://x/original.jpg', heroUrl: 'https://x/hero.jpg', isCover: true }],
+    };
+    const { container, rerender } = render(<BlockRenderer blocks={[createBlock('hero')]} property={withHero} />);
+    const img = container.querySelector('img') as HTMLImageElement;
+    expect(img.getAttribute('src')).toBe('https://x/hero.jpg');
+    expect(img.getAttribute('fetchpriority')).toBe('high');
+    expect(img.getAttribute('loading')).toBeNull();
+
+    rerender(<BlockRenderer blocks={[createBlock('hero')]} property={property} />);
+    expect((container.querySelector('img') as HTMLImageElement).getAttribute('src')).toBe('https://x/cover.jpg');
+  });
+
+  it('galeria: as fotos são preguiçosas (só a capa tem prioridade)', () => {
+    const withPhotos: LandingProperty = {
+      ...property,
+      photos: [{ url: 'https://x/1.jpg', thumbnailUrl: 'https://x/1-thumb.jpg' }, { url: 'https://x/2.jpg' }],
+    };
+    const { container } = render(<BlockRenderer blocks={[createBlock('gallery')]} property={withPhotos} />);
+    const imgs = Array.from(container.querySelectorAll('img'));
+    expect(imgs.map((i) => i.getAttribute('src'))).toEqual(['https://x/1-thumb.jpg', 'https://x/2.jpg']);
+    expect(imgs.every((i) => i.getAttribute('loading') === 'lazy')).toBe(true);
+  });
+
   it('renders tech sheet values from the property', () => {
     render(<BlockRenderer blocks={[createBlock('tech_sheet')]} property={property} />);
     expect(screen.getByText('Ficha Técnica')).toBeInTheDocument();

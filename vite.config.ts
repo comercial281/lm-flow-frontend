@@ -1,12 +1,26 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// Em produção o Vercel manda /lp/* para o lp.html (vercel.json). Em dev não há
+// Vercel, então este middleware faz a mesma coisa — senão `npm run dev` abriria
+// a landing pelo CRM inteiro e ninguém veria a entrada enxuta antes do deploy.
+const lpEntryInDev = (): Plugin => ({
+  name: 'lm-flow-lp-entry-in-dev',
+  configureServer(server) {
+    server.middlewares.use((req, _res, next) => {
+      if (req.url && /^\/lp\/[^/]+\/[^/]+/.test(req.url)) req.url = '/lp.html';
+      next();
+    });
+  },
+});
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    lpEntryInDev(),
     react(),
     tailwindcss(),
     VitePWA({
@@ -36,6 +50,12 @@ export default defineConfig({
   ],
   build: {
     rollupOptions: {
+      // Duas entradas: o CRM (index.html) e a landing de anúncio (lp.html), que
+      // NÃO pode carregar o CRM — ver src/lp/main.tsx e vercel.json.
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        lp: path.resolve(__dirname, 'lp.html'),
+      },
       output: {
         manualChunks: undefined,
       },

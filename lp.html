@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Landing de anúncio: nunca indexada (padrão fechado do produto). -->
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0f0520" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <title>Carregando…</title>
+
+    <!--
+      Entrada ENXUTA da landing (/lp/*). O Vercel manda todo /lp/* para este
+      arquivo (vercel.json) — o index.html é o CRM inteiro, e era ele que a
+      landing carregava. Ver src/lp/main.tsx.
+    -->
+
+    <!-- O servidor da API e o Pixel: abre a conexão antes de o código pedir. -->
+    <link rel="preconnect" href="%VITE_API_URL%" crossorigin />
+    <link rel="dns-prefetch" href="%VITE_API_URL%" />
+    <link rel="preconnect" href="https://connect.facebook.net" />
+
+    <!--
+      Busca o conteúdo da landing AGORA, antes de o código chegar: a página
+      consome esta promessa (src/features/landing/public/landingLoader.ts) em
+      vez de esperar o React montar para só então perguntar ao servidor. Sem
+      isto: HTML → código → API → fotos, um esperando o outro.
+    -->
+    <script>
+      (function () {
+        var m = location.pathname.match(/^\/lp\/([^/]+)\/([^/]+)/);
+        if (!m) return;
+        var dec = function (s) { try { return decodeURIComponent(s); } catch (e) { return s; } };
+        var tenant = dec(m[1]);
+        var slug = dec(m[2]);
+        var base = '%VITE_API_URL%'.replace(/\/+$/, '');
+        // O Vite só troca o marcador da variável de ambiente (a linha acima)
+        // quando ela existe no build; sem ela o texto fica literal, começando
+        // em '%', e a busca antecipada apontaria para lixo. Aí é melhor não
+        // antecipar: a página busca do jeito normal.
+        if (!base || base.charAt(0) === '%') return;
+        try {
+          window.__lmLanding = {
+            tenant: tenant,
+            slug: slug,
+            promise: fetch(base + '/api/public/v1/landing/' + encodeURIComponent(slug), {
+              headers: { 'X-Tenant': tenant },
+            }),
+          };
+        } catch (e) {
+          /* sem fetch (navegador muito antigo): a página busca do jeito normal */
+        }
+      })();
+    </script>
+
+    <!--
+      Fonte: UMA família, carregada sem bloquear a pintura (media=print + onload).
+      O texto aparece na fonte do sistema e troca quando a Inter chega. O CRM
+      carrega três famílias de forma bloqueante — aqui não.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    </noscript>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/lp/main.tsx"></script>
+  </body>
+</html>

@@ -2418,3 +2418,80 @@ Armadilhas:
    preenchidos seriam duas verdades sobre o remetente.
 3. **Não é `featureKey` nem `clientToggleKey`** — é campo da roleta, não módulo.
    Os scanners do catálogo de funcionalidades não entram nesta história.
+
+## A landing de anúncio deixou de carregar o CRM inteiro (desde 2026-09-17)
+
+Relato do dono do produto, com o PageSpeed na mão: *"as nossas LPs estão muito
+lentas... precisamos melhorar o carregamento para parar de perder tráfego"*.
+Desempenho 52 no celular, na landing do Bonfiglioli.
+
+**A landing morava dentro do app do CRM.** O endereço `/lp/...` abria o mesmo
+`index.html` do CRM: mais de 1 MB de código, 367 KB de estilo, três famílias de
+fonte do Google carregadas de forma bloqueante, o service worker, o i18n, o
+Sentry — tudo isso ANTES de a página sequer pedir o conteúdo dela ao servidor.
+Só depois vinham o texto e as fotos, e a capa vinha na foto ORIGINAL do celular.
+Quem clicava no anúncio esperava o CRM inteiro para ver uma página de um imóvel.
+
+O que mudou:
+
+- **`/lp/*` passou a ser servido por um HTML próprio** (`lp.html`), que carrega
+  SÓ o que a landing usa: React, os blocos da landing e o estilo deles. Sem
+  roteador, sem os contextos do CRM, sem service worker. O Vercel manda todo
+  `/lp/*` para ele (`vercel.json`); em dev, um middleware no `vite.config.ts`
+  faz o mesmo. Medido no build: **113 KB (gzip) contra 373 KB** da entrada do
+  CRM — e o CRM ainda carregava o pedaço da landing por cima.
+- **O conteúdo é pedido AINDA NO HTML.** Um script inline no `lp.html` começa a
+  busca da landing antes de o código chegar, e a página consome essa resposta
+  (`src/features/landing/public/landingLoader.ts`). Antes era uma fila: HTML →
+  código → API → fotos, cada um esperando o anterior.
+- **A capa tem prioridade e o resto é preguiçoso.** A foto de capa (o maior
+  elemento da primeira tela, o LCP) pede `fetchPriority="high"` e usa a versão
+  REDIMENSIONADA que o servidor passou a mandar; galeria, foto do corretor,
+  selos, plantas e o vídeo carregam só quando se aproximam da tela.
+- **Uma fonte só, carregada sem bloquear a pintura.** O texto aparece na fonte
+  do sistema e troca quando a Inter chega.
+- **Os arquivos de `/assets/` viraram cache imutável** no Vercel (são todos com
+  hash no nome). Vale para o CRM também.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **A view da landing NÃO conhece roteador.** `LandingPublicView` e
+  `LandingResultView` (em `src/features/landing/public/`) recebem tenant, slug
+  e resultado por props. A rota antiga do CRM (`/lp/:tenant/:slug`) continua
+  existindo como rede para navegação interna e monta a MESMA view — mas em
+  produção ninguém cai nela, porque o Vercel resolve antes.
+- **A busca antecipada é consumida uma vez e só quando é da MESMA landing.**
+  O corpo de uma resposta só pode ser lido uma vez, e reaproveitar uma que
+  falhou repetiria a falha. Sem busca antecipada (rota antiga, placeholder não
+  trocado), a página busca do jeito normal — o comportamento de sempre.
+- **Os dois lados se somam, mas não dependem um do outro**: contra o servidor
+  antigo (sem `hero_url`) a capa cai na original, como era; o HTML enxuto
+  sozinho já derruba o carregamento.
+
+Armadilhas:
+
+1. ⚠️ **Nada de `@/components/layout`, `@/contexts`, `@/services` nem design
+   system nos blocos da landing ou nas views públicas.** Cada import desses
+   puxa o CRM de volta pro pacote da landing, e o defeito é MUDO: a página
+   continua funcionando, só volta a ser lenta. Foi por isso que o `BrPhoneInput`
+   passou a ser importado pelo ARQUIVO e não pelo índice de `@/components/shared`
+   — o índice re-exporta o PhoneInput internacional com o CSS dele, e import de
+   CSS é efeito colateral que o empacotador não descarta.
+2. **O estilo da landing é gerado só das pastas listadas em `src/lp/lp.css`**
+   (`source(none)` + `@source`). Classe nova usada por um componente FORA delas
+   vale no editor (dentro do CRM) e NÃO vale na landing publicada. Componente
+   novo usado pelos blocos entra na lista.
+3. **`%VITE_API_URL%` no `lp.html` só é trocado quando a variável existe no
+   build.** Sem ela o texto fica literal; o script inline confere e desiste da
+   busca antecipada (a página busca sozinha). Não confundir com `.env.example`:
+   não há `.env` no repositório, a variável vem do projeto Vercel.
+4. **A rota `/lp/(.*)` no `vercel.json` vem ANTES do curinga.** Invertida, o
+   curinga engole tudo e a landing volta a abrir pelo CRM — calada, com o mesmo
+   PageSpeed de antes.
+5. **Não é `featureKey` nem `clientToggleKey`** — é infraestrutura de carga. Os
+   scanners do catálogo de funcionalidades não entram nesta história.
+
+**Dívida conhecida:** a landing continua sendo montada no navegador (não há
+HTML pré-renderizado com o conteúdo dentro). O próximo degrau, se o PageSpeed
+ainda cobrar, é o servidor devolver o HTML já com o conteúdo — mas isso é outra
+arquitetura de hospedagem, não um ajuste.
