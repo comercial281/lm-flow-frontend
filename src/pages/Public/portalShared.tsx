@@ -377,6 +377,10 @@ export function socialEntries(site: SiteInfo): { key: string; label: string; url
  * Barra fina acima do cabeçalho: telefone, e-mail e redes. Eles já eram
  * cadastrados no Site Builder e não apareciam em LUGAR NENHUM do site. Ela só
  * se desenha quando há o que mostrar — faixa vazia é pior que faixa nenhuma.
+ *
+ * ⚠️ Ela é do TOPO DA PÁGINA e rola para fora com o conteúdo: quem a desenhar
+ * dentro do bloco que gruda no topo devolve o defeito de 17/09 — telefone e
+ * e-mail numa faixa escura presa na tela durante a rolagem inteira.
  */
 function PortalTopBar({ site }: { site: SiteInfo }) {
   const phone = site.contact?.phone?.trim();
@@ -463,80 +467,93 @@ export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo;
   const mobileCls = 'block py-2.5 text-[15px] font-medium text-neutral-700';
 
   return (
-    <div className={floating ? 'absolute inset-x-0 top-0 z-40' : 'sticky top-0 z-40'}>
-      {!floating && <PortalTopBar site={site} />}
-      <header
-        className={`border-b transition-colors duration-300 ${
-          floating
-            ? 'border-white/15 bg-gradient-to-b from-black/40 to-transparent'
-            : 'border-black/[0.06] bg-[var(--paper)]/90 backdrop-blur-md'
-        }`}
-      >
-        {/* Logo maior a pedido do dono (2026-09-16): 56px de altura no desktop,
-            48px no celular. A barra cresce junto (84px / 72px) para o logo não
-            encostar nas bordas, e o hero da home compensa esse ganho no
-            padding do topo — o cabeçalho FLUTUA na home, então o título não
-            desce sozinho. Logo horizontal bate primeiro no max-w, por isso a
-            largura sobe na mesma proporção (190 → 260). */}
-        <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-4 px-4 sm:h-[84px] sm:px-6">
-          <Link to={`/portal/${tenant}`} className="flex items-center gap-2.5">
-            {site.branding?.logo_url ? (
-              <img
-                src={site.branding.logo_url}
-                alt={site.name || 'Portal'}
-                className={`h-12 w-auto max-w-[200px] object-contain sm:h-14 sm:max-w-[260px] ${floating ? 'brightness-0 invert' : ''}`}
-              />
-            ) : (
-              <span className={`font-[var(--display)] text-xl font-semibold tracking-tight ${floating ? 'text-white' : ''}`}>
-                {site.name || 'Imóveis'}
-              </span>
-            )}
-          </Link>
+    <>
+      {/* A barra de contato fica no TOPO DA PÁGINA e rola para fora, nunca
+          gruda. Dentro do bloco que gruda, telefone e e-mail ocupavam uma faixa
+          escura presa na tela o tempo todo — e na home ela SURGIA na primeira
+          rolagem (antes disso o cabeçalho é transparente e ela nem existe), que
+          é quando ninguém pediu por ela. Na home o topo é a capa, então lá ela
+          não entra: os mesmos contatos continuam no rodapé. */}
+      {!onHome && <PortalTopBar site={site} />}
 
-          <nav className="hidden items-center gap-6 lg:flex">
-            {nav.map(n => renderLink(n, undefined, desktopCls))}
-            {hasBlog && <Link to={`/portal/${tenant}/blog`} className={desktopCls}>Blog</Link>}
-          </nav>
+      {/* Na home o cabeçalho NUNCA entra no fluxo — ele flutua sobre a capa e
+          continua flutuando ao rolar, só trocando de roupa. Trocando de fora do
+          fluxo para dentro dele na primeira rolagem, a página inteira saltava
+          para baixo a altura do cabeçalho. */}
+      <div className={onHome ? 'fixed inset-x-0 top-0 z-40' : 'sticky top-0 z-40'}>
+        <header
+          className={`border-b transition-colors duration-300 ${
+            floating
+              ? 'border-white/15 bg-gradient-to-b from-black/40 to-transparent'
+              : 'border-black/[0.06] bg-[var(--paper)]/90 backdrop-blur-md'
+          }`}
+        >
+          {/* Logo maior a pedido do dono (2026-09-16): 56px de altura no
+              desktop, 48px no celular. A barra cresce junto (84px / 72px) para
+              o logo não encostar nas bordas, e o hero da home compensa esse
+              ganho no padding do topo — o cabeçalho FLUTUA na home, então o
+              título não desce sozinho. Logo horizontal bate primeiro no max-w,
+              por isso a largura sobe na mesma proporção (190 → 260). */}
+          <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-4 px-4 sm:h-[84px] sm:px-6">
+            <Link to={`/portal/${tenant}`} className="flex items-center gap-2.5">
+              {site.branding?.logo_url ? (
+                <img
+                  src={site.branding.logo_url}
+                  alt={site.name || 'Portal'}
+                  className={`h-12 w-auto max-w-[200px] object-contain sm:h-14 sm:max-w-[260px] ${floating ? 'brightness-0 invert' : ''}`}
+                />
+              ) : (
+                <span className={`font-[var(--display)] text-xl font-semibold tracking-tight ${floating ? 'text-white' : ''}`}>
+                  {site.name || 'Imóveis'}
+                </span>
+              )}
+            </Link>
 
-          <div className="flex items-center gap-2">
-            {waHref && (
-              <a
-                href={waHref} target="_blank" rel="noreferrer"
-                aria-label="Falar no WhatsApp"
-                className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold text-white sm:px-4"
-                style={{ background: '#25D366' }}
+            <nav className="hidden items-center gap-6 lg:flex">
+              {nav.map(n => renderLink(n, undefined, desktopCls))}
+              {hasBlog && <Link to={`/portal/${tenant}/blog`} className={desktopCls}>Blog</Link>}
+            </nav>
+
+            <div className="flex items-center gap-2">
+              {waHref && (
+                <a
+                  href={waHref} target="_blank" rel="noreferrer"
+                  aria-label="Falar no WhatsApp"
+                  className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold text-white sm:px-4"
+                  style={{ background: '#25D366' }}
+                >
+                  <Ic d={I.wa} s={16} /> <span className="hidden sm:inline">WhatsApp</span>
+                </a>
+              )}
+              <button
+                type="button" aria-label="Menu" aria-expanded={menuOpen}
+                onClick={() => setMenuOpen(o => !o)}
+                className={`inline-flex h-10 w-10 items-center justify-center rounded-full lg:hidden ${floating ? 'text-white' : 'text-[var(--ink)]'}`}
               >
-                <Ic d={I.wa} s={16} /> <span className="hidden sm:inline">WhatsApp</span>
-              </a>
-            )}
-            <button
-              type="button" aria-label="Menu" aria-expanded={menuOpen}
-              onClick={() => setMenuOpen(o => !o)}
-              className={`inline-flex h-10 w-10 items-center justify-center rounded-full lg:hidden ${floating ? 'text-white' : 'text-[var(--ink)]'}`}
-            >
-              <Ic d={menuOpen ? I.close : I.menu} s={22} />
-            </button>
+                <Ic d={menuOpen ? I.close : I.menu} s={22} />
+              </button>
+            </div>
           </div>
-        </div>
 
-        {menuOpen && (
-          <nav className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 lg:hidden">
-            {nav.map(n => renderLink(n, () => setMenuOpen(false), mobileCls))}
-            {hasBlog && <Link to={`/portal/${tenant}/blog`} onClick={() => setMenuOpen(false)} className={mobileCls}>Blog</Link>}
-            {(site.contact?.phone || site.contact?.email) && (
-              <div className="mt-2 border-t border-black/[0.06] pt-2 text-[13px] text-neutral-500">
-                {site.contact?.phone && (
-                  <a href={`tel:${onlyDigits(site.contact.phone)}`} className="block py-1.5">{site.contact.phone}</a>
-                )}
-                {site.contact?.email && (
-                  <a href={`mailto:${site.contact.email}`} className="block py-1.5">{site.contact.email}</a>
-                )}
-              </div>
-            )}
-          </nav>
-        )}
-      </header>
-    </div>
+          {menuOpen && (
+            <nav className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 lg:hidden">
+              {nav.map(n => renderLink(n, () => setMenuOpen(false), mobileCls))}
+              {hasBlog && <Link to={`/portal/${tenant}/blog`} onClick={() => setMenuOpen(false)} className={mobileCls}>Blog</Link>}
+              {(site.contact?.phone || site.contact?.email) && (
+                <div className="mt-2 border-t border-black/[0.06] pt-2 text-[13px] text-neutral-500">
+                  {site.contact?.phone && (
+                    <a href={`tel:${onlyDigits(site.contact.phone)}`} className="block py-1.5">{site.contact.phone}</a>
+                  )}
+                  {site.contact?.email && (
+                    <a href={`mailto:${site.contact.email}`} className="block py-1.5">{site.contact.email}</a>
+                  )}
+                </div>
+              )}
+            </nav>
+          )}
+        </header>
+      </div>
+    </>
   );
 }
 
