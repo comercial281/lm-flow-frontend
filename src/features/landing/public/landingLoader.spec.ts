@@ -60,6 +60,14 @@ describe('loadLanding', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it('conteúdo já costurado no HTML pelo middleware: não busca nada', async () => {
+    const fetchImpl = vi.fn();
+    const dto = { title: 'Pronta', content_blocks: [] };
+    const data = await loadLanding({ tenant: 't', slug: 's', base: 'https://api', fetchImpl, early: { tenant: 't', slug: 's', data: dto } });
+    expect(data).toEqual(dto);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it('sem busca antecipada, busca pelo caminho normal com o X-Tenant', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(ok({ title: 'X', content_blocks: [] }));
     const data = await loadLanding({ tenant: 't', slug: 's', base: 'https://api', fetchImpl, early: null });

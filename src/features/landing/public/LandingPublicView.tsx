@@ -8,6 +8,7 @@ import {
   type LeadSubmitPayload,
 } from '@/features/landing/blocks';
 import { loadLanding, type LandingPixel, type PublicLandingDTO } from './landingLoader';
+import { installPixel } from './metaPixel';
 
 /**
  * A landing de anúncio pública, já com tenant e slug resolvidos. Quem resolve
@@ -218,29 +219,12 @@ export function LandingPublicView({ tenant, slug }: LandingPublicViewProps) {
     };
   }, [tenant, slug]);
 
-  // Injeta o Pixel Meta e dispara PageView (client-side). Só se a landing tem pixel.
+  // Pixel Meta: init e PageView na hora (ficam na fila), o script DEPOIS de a
+  // página carregar — ver metaPixel.ts. Só se a landing tem pixel.
   useEffect(() => {
     const id = pixel?.pixel_id;
     if (!id) return;
-    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-expressions, prefer-spread -- trecho oficial do Pixel da Meta, mantido como ela publica */
-    const w = window as any;
-    if (!w.fbq) {
-      const n: any = (w.fbq = function (...args: unknown[]) {
-        n.callMethod ? n.callMethod.apply(n, args) : n.queue.push(args);
-      });
-      if (!w._fbq) w._fbq = n;
-      n.push = n;
-      n.loaded = true;
-      n.version = '2.0';
-      n.queue = [];
-      const t = document.createElement('script');
-      t.async = true;
-      t.src = 'https://connect.facebook.net/en_US/fbevents.js';
-      document.head.appendChild(t);
-    }
-    w.fbq('init', id);
-    if (pixel?.events?.page_view !== false) w.fbq('track', 'PageView');
-    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-expressions, prefer-spread */
+    installPixel(id, { pageView: pixel?.events?.page_view !== false });
   }, [pixel?.pixel_id, pixel?.events?.page_view]);
 
   if (state === 'loading') {

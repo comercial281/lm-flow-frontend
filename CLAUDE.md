@@ -2540,3 +2540,53 @@ Armadilhas:
 HTML pré-renderizado com o conteúdo dentro). O próximo degrau, se o PageSpeed
 ainda cobrar, é o servidor devolver o HTML já com o conteúdo — mas isso é outra
 arquitetura de hospedagem, não um ajuste.
+
+### A landing chega com o conteúdo dentro, e o Pixel espera a página (desde 2026-09-17)
+
+Segundo PageSpeed do dono do produto, já com a entrada enxuta no ar: a capa
+continuava fora do alcance do navegador até o React montar (*"a solicitação
+não é detectável no documento inicial"*), a corrente crítica ainda terminava
+na chamada à API (mais de um segundo, em outra origem), e o script do Pixel
+da Meta (~250 KB, cache de 20 min que é DELA) disputava rede e processador
+com a primeira tela.
+
+O que mudou:
+
+- **O middleware do Vercel (`middleware.ts`, na raiz) costura o conteúdo no
+  HTML.** Ele busca a landing na API do lado de lá (a um salto), troca o
+  marcador `<!--LM_LANDING_DATA-->` do `lp.html` por `window.__lmLanding`
+  já resolvido e por um `<link rel="preload">` da capa, e cacheia a resposta
+  na borda por um minuto. O visitante não pede nada à API antes da primeira
+  tela, e a capa começa a baixar junto com o código. A costura é função pura
+  com spec (`src/features/landing/public/landingHtml.ts`); o middleware é a
+  casca.
+- **O Pixel entra depois da página carregar** (`metaPixel.ts`): `init` e
+  `PageView` saem na hora pela fila oficial da Meta; o script é baixado no
+  `load` (teto de 3 s). O PageView conta do mesmo jeito.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **O middleware só ACELERA; nunca é o único caminho.** API fora, 404,
+  variável ausente, `lp.html` inalcançável, tempo esgotado: tudo cai no
+  rewrite de sempre e a página busca sozinha. A busca antecipada do script
+  inline continua existindo e pula quando o conteúdo já está na janela.
+- **A capa pré-carregada é a MESMA que o bloco vai mostrar** (`lcpImageUrl`
+  espelha a regra do bloco de capa: imagem do editor, senão a capa
+  redimensionada, senão a original). Divergir baixaria duas fotos e nenhuma
+  mais cedo.
+- **Cache de UM minuto na borda**, com `stale-while-revalidate`: "publiquei e
+  o anúncio ainda mostra o texto velho" dura segundos.
+
+Armadilhas:
+
+1. **O `matcher` do middleware é `/lp/:path*` e NÃO alcança `/lp.html`** — é o
+   próprio middleware que busca `/lp.html` da implantação; um matcher largo
+   entraria em laço.
+2. **JSON dentro de `<script>` vai escapado** (`jsonForScript`): um `</script>`
+   digitado numa seção de texto fecharia a tag e executaria o resto como HTML.
+   Há spec.
+3. **O middleware roda no runtime de borda**: só APIs Web, imports relativos
+   (o apelido `@/` é do Vite) e nada de `@vercel/edge` — o "segue em frente" é
+   o cabeçalho `x-middleware-next`.
+4. **A resposta do middleware leva `x-lm-landing: inline`.** É como se confere,
+   de fora, se a costura aconteceu ou se a página caiu no caminho antigo.
