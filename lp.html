@@ -34,9 +34,10 @@
         var tenant = dec(m[1]);
         var slug = dec(m[2]);
         var base = '%VITE_API_URL%'.replace(/\/+$/, '');
-        // O Vite só troca %VITE_API_URL% quando a variável existe no build; sem
-        // ela o texto fica literal e a busca antecipada apontaria para lixo.
-        // Aí é melhor não antecipar: a página busca do jeito normal.
+        // O Vite só troca o marcador da variável de ambiente (a linha acima)
+        // quando ela existe no build; sem ela o texto fica literal, começando
+        // em '%', e a busca antecipada apontaria para lixo. Aí é melhor não
+        // antecipar: a página busca do jeito normal.
         if (!base || base.charAt(0) === '%') return;
         try {
           window.__lmLanding = {
