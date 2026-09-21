@@ -2666,3 +2666,72 @@ Armadilhas:
    frase genérica dela. Há spec do lado do serviço.
 7. **A espera pergunta SEM `refresh`.** Com ele, cada pergunta reiniciaria a
    conferência e a tela nunca sairia de *conferindo*.
+
+## Para quem a IA passa o lead (desde 2026-09-21)
+
+Pergunta do dono do produto: *"hoje quando a IA passa o lead para um corretor,
+como é o processo? ela escolhe um corretor e fodase?"* — e, com a resposta,
+*"vou precisar disso para casos onde a IA tem que destinar os leads para pessoas
+que estão em outros números"*.
+
+**A IA nunca escolheu nada, e não havia onde escolher.** Ela jogava o lead na
+roleta do NÚMERO em que a conversa estava, e ponto. Número sem roleta, roleta em
+modo manual, roleta fora do horário, ou duas roletas no mesmo número sem nenhuma
+marcada como *atende quem escreve direto*: em todos o lead ficava com a etiqueta
+de atendimento humano, **sem dono e sem ninguém avisado**. A landing e o
+formulário do Meta escolhem a roleta na tela deles desde sempre — só a IA, que é
+quem mais conversa com o lead antes de entregar, não escolhia.
+
+O que aparece na tela, em *IA Vendedora → Configuração*, logo abaixo de
+**Quando ela passa para um corretor**:
+
+- **Bloco *Para quem ela passa o lead***, com três cartões:
+  - **A roleta deste número** — o que já estava valendo, e o que fica marcado em
+    toda imobiliária que já existe;
+  - **Uma roleta específica** — abre a lista de roletas; é o caso de a IA atender
+    num número e os corretores atenderem em outros;
+  - **Um corretor fixo** — abre a lista da equipe; sem roleta nenhuma, para o CRM
+    de um ou dois corretores.
+- **Escolheu o modo e deixou o alvo em branco → aviso em âmbar**, dizendo que o
+  lead vai ficar sem responsável e que a gestão recebe um aviso a cada vez.
+- **O cartão do corretor fixo diz que ele recebe com o botão de aceitar e SEM
+  PRAZO**: a oferta fica com ele até aceitar ou recusar, porque não há para quem
+  repassar.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **O padrão é *A roleta deste número*, e é o primeiro cartão.** Escolha nova não
+  muda o comportamento de quem nunca escolheu nada.
+- **A roleta já escolhida continua na lista mesmo desativada**, com aviso. Sumir
+  com ela faria o próximo *Salvar* apagar a escolha do gestor, calado — a mesma
+  doutrina do *Destino do lead* da landing.
+- **Trocar de modo limpa o alvo do outro**, e é o servidor que manda nisso
+  também: alvo gravado por baixo do modo que não o usa é a segunda verdade sobre
+  quem recebe o lead.
+- **Leitura de fundo não grita.** Cargo sem acesso às roletas ou à equipe só não
+  vê aquele seletor — a seção continua inteira.
+
+Armadilhas:
+
+1. **Os três campos PRECISAM estar na lista do `saveAgent`**, e o modo entra com
+   `??` enquanto os dois ALVOS entram com `in`: voltar para "a roleta deste
+   número" manda `null` para limpar, e o `??` devolveria a roleta velha por baixo
+   — a tela mostrando uma coisa e o lead sendo entregue noutra. Há spec que
+   reprova as duas coisas.
+2. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): as colunas, quem entrega e os dois avisos moram lá.
+   Contra o servidor antigo os cartões aparecem, salvam e nada muda.
+3. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente, não módulo.
+   Os scanners do catálogo de funcionalidades não entram nesta história, e nem o
+   spec pode escrever o literal da chamada deles (o auditor varre todo arquivo
+   `.ts` e não sabe que a linha é uma negação — foi assim que o build quebrou no
+   PR do recorte por funil).
+
+E o que vem junto, do lado do servidor: **quando a IA passa o lead, agora alguém
+fica sabendo.** *"A IA te passou um lead"* vai para o responsável (é o caso do
+CRM de um corretor só, onde antes a IA simplesmente se calava) e *"a IA passou um
+lead e ele ficou sem ninguém"* vai para a gestão, **com o motivo dentro**. E o
+aceite da oferta passou a calar a IA de vez: antes, o corretor que aceitava pelo
+link e ia falar com o lead meia hora depois via a IA responder por cima dele. Ver
+o CLAUDE.md do `lm-flow`.
+
