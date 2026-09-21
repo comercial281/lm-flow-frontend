@@ -45,6 +45,11 @@ import {
   type WeeklyReportTargets,
 } from '@/services/salesAgents/salesAgentsService';
 import { DOCUMENT_TOPICS } from '@/features/salesAgents/documentTopics';
+// ⚠️ "Processando..." fixo é idêntico depois de dois segundos e depois de dois dias.
+// Quem sobe o material e fica olhando não tem como saber se ainda anda ou se parou —
+// foi esse silêncio que virou relato. O texto com o tempo e o aviso saem daqui, com
+// teste, porque esta tela tem ~4.800 linhas e nada testável cabe dentro dela.
+import { processingLabel, processingWarning } from '@/features/salesAgents/documentStatus';
 // ⚠️ O motivo da falha vem daqui, com teste: sem corpo de resposta a tela precisa
 // dizer o CÓDIGO (404, 500, 502, sem resposta) — foi a ausência disso que fez cinco
 // falhas diferentes chegarem ao gestor como a mesma frase genérica.
@@ -3376,7 +3381,7 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
                   )}
                   {d.size_label && <span>{d.size_label}</span>}
                   {d.status === 'ready' && <span>{d.char_count} caracteres</span>}
-                  {d.status === 'pending' && <span>Processando...</span>}
+                  {d.status === 'pending' && <span>{processingLabel(d.created_at)}</span>}
                   {/* Arquivo íntegro, só sem texto: o envio funciona. Pintar de
                       vermelho aqui fazia o dono apagar e subir de novo. */}
                   {d.status === 'no_text' && (
@@ -3384,6 +3389,14 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
                   )}
                   {d.status === 'failed' && <span className="text-red-500">Falhou: {d.error_message}</span>}
                 </div>
+                {/* Espera que passou do normal DIZ isso, em vez de continuar igual.
+                    Sem esta linha, o único desfecho visível de um arquivo travado era
+                    a pessoa concluir que o CRM quebrou. */}
+                {d.status === 'pending' && processingWarning(d.created_at) && (
+                  <div className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                    {processingWarning(d.created_at)}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {/* Também em "Processando", não só em falha: um arquivo cujo
