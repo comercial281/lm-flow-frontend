@@ -2827,3 +2827,81 @@ Armadilhas:
    congela o tempo mostrado.
 5. **Não é `featureKey` nem `clientToggleKey`** — é exibição de lista. Os scanners
    do catálogo de funcionalidades não entram nesta história.
+
+## A IA só passa o lead depois de arrancar as informações (desde 2026-09-21)
+
+Pergunta do dono do produto, olhando o cenário *"Só quando o lead estiver quente"* já
+marcado em *Lead morno ou quente*: como fazer a IA mandar o lead pra roleta ANTES do
+agendamento, *"só após pegar as informações mesmo ali do lead"*. E, ao ver que aquele
+cenário não garante isso: **"o problema é tipo QUANDO o lead fica morno? precisamos
+pelo menos extrair as perguntas iniciais e se certificar disso"**.
+
+Ele estava certo. Aquele cenário é uma **permissão, não um gatilho** — quem decide a
+hora continua sendo a IA, e a instrução que ela recebe manda conduzir até oferecer a
+visita. E "morno" é palpite dela: uma linha de instrução (*interessado sem urgência*),
+sem exigir uma pergunta respondida. Um *"oi, gostei desse aí"* podia liberar a entrega
+no primeiro turno, com a ficha em branco. Pior: as *Perguntas de qualificação* que o
+gestor escreve **nunca eram conferidas** — entram no comando como recado, e ninguém
+olhava se ela tinha descoberto.
+
+O que aparece na tela, em *IA Vendedora → Configuração → Quando ela passa para um
+corretor*:
+
+- **Cartão novo *Só depois de arrancar as informações do lead***, entre *Só quando o
+  lead estiver quente* e *Só se ela não souber responder*.
+- Escolhido, ele abre **a lista das suas *Perguntas de qualificação* com uma caixinha
+  em cada**: as marcadas são as que seguram o lead. Ficha incompleta, a IA não passa e
+  não promete passar — continua conduzindo.
+- **Aviso em âmbar quando nenhuma está marcada**, dizendo que aí TODAS valem e
+  sugerindo marcar só as que realmente importam.
+- **Pergunta obrigatória que saiu da lista continua aparecendo**, marcada e com o selo
+  *(fora da sua lista)*, mais o aviso de que ela ainda segura o lead.
+- **A saída de emergência fica escrita embaixo**: lead que pede a visita, quer marcar
+  dia e hora ou fala em fechar passa na hora, mesmo faltando pergunta — e o irritado,
+  o que pede uma pessoa e o que percebeu que é IA também.
+- **Sem pergunta de qualificação escrita**, o cartão diz que não há o que exigir e que
+  ali a IA entrega como sempre entregou.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Só as perguntas que ele MARCAR seguram** (contra "todas as que eu escrever"):
+  exigir as seis de fábrica travaria quase todo lead no orçamento.
+- **A saída de emergência é regra, não exceção tolerada.** Quem quer avançar não fica
+  refém do questionário.
+- **Nenhum cartão novo muda a IA de ninguém**: o cenário é uma escolha, e toda
+  imobiliária continua no que já estava marcado.
+
+Armadilhas:
+
+1. ⚠️ **Lista de obrigatórias VAZIA significa TODAS no servidor, não nenhuma.** Por
+   isso as caixinhas aparecem todas MARCADAS nesse caso — desenhá-las desmarcadas
+   faria a tela mentir sobre o que está valendo. E desmarcar a partir daí grava as
+   outras EXPLICITAMENTE, senão a lista continuaria vazia e a caixinha voltaria
+   marcada sozinha. Desmarcar a ÚLTIMA é recusado: gravar `[]` religaria todas.
+2. **Obrigatória que saiu da lista NÃO some da tela.** O servidor a mantém segurando o
+   lead (afrouxar o portão em silêncio é o pior desfecho aqui); esconder aqui a
+   tiraria do portão sem ninguém ver.
+3. **O intervalo de acentos vai escrito como `̀-ͯ`**, nunca com os
+   caracteres combinantes literais — qualquer normalização de editor os apaga calado e
+   a comparação passa a nunca casar, deixando a pergunta desmarcada com o portão ainda
+   cobrando. **Este defeito nasceu de fato nesta leva e foi o spec que o pegou**; é a
+   terceira vez da mesma cicatriz (o conversor de endereço da landing e a leitura das
+   respostas do formulário). Há spec que lê o próprio fonte.
+4. **As obrigatórias viajam DENTRO do `transfer_config`**, que já está na lista campo a
+   campo do `saveAgent`. Como campo solto do agente seriam descartadas em silêncio, com
+   a tela dizendo *Salvo*. Há spec de fonte.
+5. **A regra mora fora do JSX** (`src/features/salesAgents/handoffChecklist.ts`, com
+   spec): a tela da IA tem ~4.800 linhas. Mesma decisão da janela do follow-up e do
+   banner da home.
+6. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): o cenário, o portão e o checklist que a IA preenche moram lá.
+   Contra o servidor antigo o cartão aparece, salva, e a IA entrega como antes.
+7. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente, não módulo. Os
+   scanners do catálogo de funcionalidades não entram nesta história, e nenhuma chave
+   literal nova foi escrita.
+
+**Conserto de bônus, no servidor:** o painel raiz **gravava** o cenário de repasse e
+nunca o devolvia — reabrir o agente mostrava "como está hoje" com um cenário ativo por
+baixo, e o PATCH campo a campo podia regravar o vazio por cima. Mesmo defeito
+write-only-true da chave *"seguir o horário de atuação"* do follow-up.
+

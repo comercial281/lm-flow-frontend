@@ -63,6 +63,7 @@ import {
   DEFAULT_FOLLOWUP_WINDOW, estimativaPorDia, janelaDoFollowup, minutosPorDia, resumoDaJanela,
 } from '@/features/salesAgents/followupHours';
 import { antecedenciaResumo } from '@/features/salesAgents/visitWindow';
+import { checklistItems, checklistNotices, toggleRequired } from '@/features/salesAgents/handoffChecklist';
 import inboxesService from '@/services/channels/inboxesService';
 import agentsService from '@/services/channels/agentsService';
 import { roletaConfigService } from '@/services/roletaConfig/roletaConfigService';
@@ -1690,6 +1691,11 @@ const HANDOFF_OPTIONS: { value: HandoffMode | ''; title: string; desc: string }[
     desc: 'Ela conduz sozinha — qualifica, manda material, oferece a visita — e só entrega o lead depois que ele esquenta.',
   },
   {
+    value: 'checklist',
+    title: 'Só depois de arrancar as informações do lead',
+    desc: 'Ela conduz até o lead responder as perguntas que você marcar como obrigatórias. Quem pede a visita ou fala em fechar passa na hora, mesmo faltando pergunta.',
+  },
+  {
     value: 'sem_resposta',
     title: 'Só se ela não souber responder',
     desc: 'Repassa quando a resposta não está no que você deu a ela, ou quando as Instruções mandam passar aquele caso.',
@@ -1708,13 +1714,31 @@ function HandoffPolicySection({ agent, onSave }: {
   const cfg = agent.transfer_config ?? {};
   const mode = cfg.mode ?? '';
   const minTemp = cfg.min_temperature ?? 'hot';
+  const perguntas = agent.qualification_questions ?? [];
+  const obrigatorias = cfg.required_questions;
+  const itensChecklist = checklistItems(perguntas, obrigatorias);
+  const avisosChecklist = checklistNotices(perguntas, obrigatorias);
 
-  // Trocar de cenário LIMPA a temperatura mínima do cenário anterior, de propósito: ela
-  // só significa alguma coisa dentro do cenário da temperatura, e deixá-la pendurada
-  // faria o cartão voltar com uma escolha antiga que ninguém lembra de ter feito.
+  // Trocar de cenário LIMPA o campo do cenário anterior, de propósito: a temperatura
+  // mínima e as perguntas obrigatórias só significam alguma coisa dentro do cenário
+  // delas, e deixá-las penduradas faria o cartão voltar com uma escolha antiga que
+  // ninguém lembra de ter feito.
   const pick = (value: HandoffMode | '') => {
     if (value === '') { onSave({ transfer_config: {} }); return; }
-    onSave({ transfer_config: value === 'temperatura' ? { mode: value, min_temperature: minTemp } : { mode: value } });
+    if (value === 'temperatura') { onSave({ transfer_config: { mode: value, min_temperature: minTemp } }); return; }
+    if (value === 'checklist') {
+      onSave({ transfer_config: { mode: value, required_questions: obrigatorias ?? [] } });
+      return;
+    }
+    onSave({ transfer_config: { mode: value } });
+  };
+
+  // Desmarcar a ÚLTIMA obrigatória devolve null, porque lista vazia significa o OPOSTO
+  // no servidor (todas valem). Quem não quer portão nenhum troca de cenário.
+  const toggle = (text: string) => {
+    const proximas = toggleRequired(perguntas, obrigatorias, text);
+    if (proximas === null) return;
+    onSave({ transfer_config: { mode: 'checklist', required_questions: proximas } });
   };
 
   return (
@@ -1765,6 +1789,52 @@ function HandoffPolicySection({ agent, onSave }: {
                   <p className="text-xs text-muted-foreground mt-1">
                     É a mesma leitura que aparece no painel <em>O que a IA entendeu</em>, dentro da conversa.
                   </p>
+                </div>
+              )}
+
+              {/* As perguntas que seguram o lead. Só aparecem dentro do cartão escolhido,
+                  pelo mesmo motivo da temperatura mínima: soltas, pareceriam valer para
+                  os outros cenários. */}
+              {opt.value === 'checklist' && escolhido && (
+                <div className="mt-2 ml-7">
+                  <div className="text-xs font-medium mb-1">Quais perguntas seguram o lead</div>
+                  {itensChecklist.length > 0 && (
+                    <div className="space-y-1">
+                      {itensChecklist.map((item) => (
+                        <label
+                          key={item.text}
+                          className="flex items-start gap-2 cursor-pointer text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            className="mt-1"
+                            checked={item.required}
+                            onChange={() => toggle(item.text)}
+                          />
+                          <span>
+                            {item.text}
+                            {item.orphan && (
+                              <span className="ml-1 text-xs text-amber-700 dark:text-amber-500">
+                                (fora da sua lista)
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {avisosChecklist.map((aviso) => (
+                    <p
+                      key={aviso.text}
+                      className={`text-xs mt-2 ${
+                        aviso.tone === 'amber'
+                          ? 'text-amber-700 dark:text-amber-500'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      {aviso.text}
+                    </p>
+                  ))}
                 </div>
               )}
             </div>

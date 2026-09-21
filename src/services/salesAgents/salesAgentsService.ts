@@ -287,7 +287,7 @@ export interface CrmPolicy {
  */
 export type SalesAgentFollowupAction = 'ai' | 'pipeline' | 'sequence';
 
-export type HandoffMode = 'duvida' | 'temperatura' | 'sem_resposta' | 'pos_visita';
+export type HandoffMode = 'duvida' | 'temperatura' | 'checklist' | 'sem_resposta' | 'pos_visita';
 
 /**
  * PARA ONDE a IA entrega o lead ao transferir.
@@ -302,6 +302,16 @@ export type SalesAgentHandoffTarget = 'inbox_roleta' | 'roleta' | 'user';
 export interface TransferConfig {
   mode?: HandoffMode;
   min_temperature?: 'hot' | 'warm';
+  /**
+   * As perguntas de qualificação que SEGURAM a entrega do lead, pelo TEXTO delas.
+   * Só é lida no cenário do checklist.
+   *
+   * ⚠️ Lista VAZIA (ou ausente) significa TODAS as perguntas, não nenhuma: o portão
+   * vazio faria o cenário decorativo — a tela dizendo "só entrego com a ficha
+   * preenchida" e o servidor liberando todo lead. Quem decide isso é o servidor; a
+   * tela só precisa DIZER ao gestor que é assim.
+   */
+  required_questions?: string[];
 }
 
 export interface VisitConfig {
