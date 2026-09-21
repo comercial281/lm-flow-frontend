@@ -38,6 +38,7 @@ import {
   type SalesAgentFollowupAction,
   type SalesAgentSuggestion,
   type SuggestionsPayload,
+  type WeeklyReportCheck,
   type WeeklyReportConfig,
   type WeeklyReportPayload,
   type WeeklyReportTargets,
@@ -4317,6 +4318,10 @@ function ReportsTab() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<'preview' | 'send' | 'text' | null>(null);
   const [texto, setTexto] = useState('');
+  // "Por que não está saindo?" — só aparece depois do clique; a conferência é cara
+  // do lado do servidor (ele fala com o WhatsApp operacional para montá-la).
+  const [checks, setChecks] = useState<WeeklyReportCheck[] | null>(null);
+  const [checando, setChecando] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -4353,31 +4358,58 @@ function ReportsTab() {
   };
 
   /**
-   * ⚠️ O botão COMEÇA a prévia; ele não espera por ela. Montar o texto é uma
-   * consulta à IA, e o servidor derruba requisição que passe de 15 segundos — a
-   * requisição derrubada volta sem motivo dentro, e a tela mostrava a frase genérica
-   * como se fosse a explicação. Mesma mecânica da aba Sugestões.
+   * ⚠️ O relatório JÁ VEM PRONTO desta chamada — números e tudo. O que continua em
+   * segundo plano é só a REDAÇÃO da IA, e é ela que o acompanhamento espera.
+   *
+   * Antes o botão só "começava" e o relatório inteiro dependia do segundo plano: um
+   * tropeço ali deixava o gestor sem nada na tela e sem nada explicando, que é
+   * exatamente o "não consigo extrair esse relatório de maneira alguma". Não voltar
+   * a esperar pelo segundo plano para ter o relatório.
    */
   const gerarPrevia = async () => {
     setBusy('preview');
+    setChecks(null);
     try {
-      await salesAgentsService.weeklyReportPreview();
-      await acompanharPrevia();
+      const { report, building, preview_error: erro } = await salesAgentsService.weeklyReportPreview();
+
+      // Os números aparecem AGORA, antes de qualquer espera.
+      if (report) {
+        setPayload((prev) => (prev ? { ...prev, current: report } : prev));
+        setTexto(report.text ?? '');
+      }
+
+      if (!building) {
+        setBusy(null);
+        if (erro) toast.error(erro);
+        else toast.success('Prévia gerada');
+        void load();
+        return;
+      }
+
+      toast.success('Números prontos. A IA está escrevendo o texto...');
+      await acompanharRedacao();
     } catch (e) {
-      toast.error(motivoDoServidor(e) || 'Não consegui montar a prévia.');
+      // Sem corpo de erro = o servidor não chegou a responder. Dizer isso é o mínimo:
+      // a frase antiga ("não consegui montar") mandava procurar o problema na prévia,
+      // que é justamente onde ele não estava.
+      toast.error(motivoDoServidor(e) || 'O servidor não respondeu a este pedido. Use "Por que não está saindo?" abaixo.');
       setBusy(null);
+      void carregarDiagnostico();
     }
   };
 
-  // Pergunta de 4 em 4 segundos até a prévia sair do ar. O teto de ~2 minutos é rede
+  // Pergunta de 4 em 4 segundos até a redação sair do ar. O teto de ~2 minutos é rede
   // para o processo que morre no meio; a reserva do servidor expira sozinha em 10.
-  const acompanharPrevia = async () => {
+  // O relatório já está na tela esse tempo todo — aqui só se espera o texto melhorar.
+  const acompanharRedacao = async () => {
     for (let tentativa = 0; tentativa < 30; tentativa += 1) {
+      await new Promise((r) => setTimeout(r, 4000));
+
       let atual: WeeklyReportPayload | null = null;
       try {
         atual = await salesAgentsService.weeklyReport();
       } catch {
-        // Oscilação de rede não cancela a prévia, que segue no servidor.
+        // Oscilação de rede não cancela a redação, que segue no servidor.
       }
 
       if (atual) {
@@ -4386,14 +4418,24 @@ function ReportsTab() {
         if (!atual.building) {
           setBusy(null);
           if (atual.preview_error) toast.error(atual.preview_error);
-          else toast.success('Prévia gerada');
+          else toast.success('Texto pronto');
           return;
         }
       }
-      await new Promise((r) => setTimeout(r, 4000));
     }
     setBusy(null);
-    toast.message('A prévia está demorando mais que o normal. Recarregue a aba em instantes.');
+    toast.message('A IA está demorando para escrever. O relatório com os números já está aqui — dá para editar e enviar assim mesmo.');
+  };
+
+  const carregarDiagnostico = async () => {
+    setChecando(true);
+    try {
+      setChecks(await salesAgentsService.weeklyReportDiagnostico());
+    } catch (e) {
+      toast.error(motivoDoServidor(e) || 'Não consegui rodar o diagnóstico.');
+    } finally {
+      setChecando(false);
+    }
   };
 
   const salvarTexto = async () => {
@@ -4451,8 +4493,56 @@ function ReportsTab() {
           {busy === 'preview' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
           Gerar prévia
         </Button>
+        {/* A pergunta que esta aba não sabia responder. Fica sempre à mão, e não só
+            depois de um erro: quem chega aqui e não vê relatório precisa dela. */}
+        <Button size="sm" variant="ghost" onClick={() => void carregarDiagnostico()} disabled={checando}>
+          {checando ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+          Por que não está saindo?
+        </Button>
         {atual && <span className="text-sm text-muted-foreground">Semana de {atual.period_label}</span>}
       </div>
+
+      {/* O veredito de cada peça do caminho, em português, vindo do servidor. */}
+      {checks && (
+        <div className="rounded-md border border-sidebar-border p-3 space-y-2">
+          <p className="text-sm font-medium">O caminho do relatório</p>
+          {checks.map((c) => (
+            <div key={c.chave} className="flex gap-2 text-sm">
+              <span
+                className={
+                  c.situacao === 'ok' ? 'text-green-600' : c.situacao === 'alerta' ? 'text-amber-500' : 'text-red-500'
+                }
+              >
+                {c.situacao === 'ok' ? '✓' : c.situacao === 'alerta' ? '!' : '✕'}
+              </span>
+              <span>
+                <span className="font-medium">{c.titulo}</span>
+                <span className="text-muted-foreground"> — {c.detalhe}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ⚠️ Medição quebrada e semana parada produziam a MESMA tela: tudo zero, sem
+          aviso. Estas linhas são o que separa uma coisa da outra. */}
+      {(atual?.avisos?.length ?? 0) > 0 && (
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 space-y-1">
+          {atual?.avisos?.map((aviso, i) => (
+            <p key={i} className="text-sm text-amber-700 dark:text-amber-400">{aviso}</p>
+          ))}
+        </div>
+      )}
+
+      {/* Sem relatório na tela, dizer o que fazer — e não deixar um vazio que parece
+          defeito, que é como esta aba se apresentava quando o botão falhava. */}
+      {!atual && !loading && (
+        <div className="rounded-md border border-dashed border-sidebar-border p-4 text-sm text-muted-foreground">
+          Nenhum relatório montado ainda. Clique em <span className="font-medium">Gerar prévia</span> para
+          montar o da semana fechada mais recente. Se ele não aparecer, o botão{' '}
+          <span className="font-medium">Por que não está saindo?</span> diz em qual ponto travou.
+        </div>
+      )}
 
       {atual && (
         <>

@@ -708,6 +708,13 @@ export interface WeeklyReport {
     ia?: Record<string, number>;
     equipe?: Record<string, unknown>;
   };
+  /**
+   * O que não deu certo ao montar ESTE relatório, em português e pronto do servidor.
+   *
+   * ⚠️ Existe porque medição quebrada e semana parada produziam a mesma tela: tudo
+   * zero, nenhum aviso. Lista vazia = deu tudo certo.
+   */
+  avisos?: string[];
   destinations: { kind: string; label: string }[];
   results: WeeklyReportResult[];
   delivered_count: number;
@@ -722,19 +729,35 @@ export interface WeeklyReportPayload {
   current: WeeklyReport | null;
   history: WeeklyReport[];
   /**
-   * A prévia NÃO fica pronta dentro da chamada do botão: montá-la é uma consulta à
-   * IA, e o servidor derruba requisição que passe de 15s. O botão só COMEÇA; estes
-   * dois campos são como a tela acompanha até o fim. Mesma mecânica das Sugestões.
+   * Os NÚMEROS ficam prontos dentro da chamada do botão; a REDAÇÃO da IA é que
+   * continua em segundo plano (consulta ao modelo, e o servidor derruba requisição
+   * que passe de 15s). Enquanto `building` for true, o relatório já está na tela —
+   * o que falta é o texto ganhar a prosa.
    */
   building?: boolean;
-  /** Motivo em português quando a prévia parou. Vem pronto do servidor. */
+  /** Motivo em português quando a redação parou. Vem pronto do servidor. */
   preview_error?: string | null;
+}
+
+/** O relatório recém-montado, mais o estado da redação que ficou em segundo plano. */
+export interface WeeklyReportPreview {
+  report: WeeklyReport | null;
+  building: boolean;
+  preview_error: string | null;
 }
 
 export interface WeeklyReportTargets {
   /** Só os grupos DESTE cliente. O servidor nunca devolve os dos outros. */
   groups: { jid: string; name: string; source: 'cadastro' | 'nome' }[];
   managers: { id: string; name: string; phone_masked: string }[];
+}
+
+/** Uma peça do caminho do relatório e o veredito dela, em português. */
+export interface WeeklyReportCheck {
+  chave: string;
+  titulo: string;
+  situacao: 'ok' | 'alerta' | 'falha';
+  detalhe: string;
 }
 
 const BASE = '/sales_agents';
@@ -1027,12 +1050,32 @@ export const salesAgentsService = {
   },
 
   /**
-   * COMEÇA a montar a prévia — não espera ficar pronta. Quem acompanha é
-   * `weeklyReport()`, pelo campo `building`. Ver a nota em WeeklyReportPayload.
+   * Monta a prévia e DEVOLVE O RELATÓRIO JÁ PRONTO — os números saem dentro desta
+   * chamada. Só a redação da IA fica em segundo plano; `building` diz se ela ainda
+   * está sendo escrita, e aí quem acompanha é `weeklyReport()`.
+   *
+   * ⚠️ Antes isto devolvia quase sempre `null` ("comecei, pergunte depois"), e a tela
+   * dependia do segundo plano para ter QUALQUER relatório. Não voltar a esperar: um
+   * tropeço na fila deixava o gestor sem nada, sem nada explicando.
    */
-  async weeklyReportPreview(weekStart?: string): Promise<WeeklyReport | null> {
+  async weeklyReportPreview(weekStart?: string): Promise<WeeklyReportPreview> {
     const res = await api.post('/weekly_reports/preview', { week_start: weekStart || undefined });
-    return (res.data as { data: WeeklyReport | null }).data ?? null;
+    const data = (res.data as { data: (WeeklyReport & { building?: boolean; preview_error?: string | null }) | null })
+      ?.data ?? null;
+    return {
+      report: data,
+      building: data?.building ?? false,
+      preview_error: data?.preview_error ?? null,
+    };
+  },
+
+  /**
+   * "Por que não está saindo?" — o veredito de cada peça do caminho, em português.
+   * É CARO do lado do servidor (fala com o WhatsApp operacional), então só de clique.
+   */
+  async weeklyReportDiagnostico(): Promise<WeeklyReportCheck[]> {
+    const res = await api.get('/weekly_reports/diagnostico');
+    return (res.data as { data: { checks: WeeklyReportCheck[] } }).data?.checks ?? [];
   },
 
   async weeklyReportSaveText(text: string): Promise<WeeklyReport> {

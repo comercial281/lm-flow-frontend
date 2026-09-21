@@ -2590,3 +2590,49 @@ Armadilhas:
    o cabeçalho `x-middleware-next`.
 4. **A resposta do middleware leva `x-lm-landing: inline`.** É como se confere,
    de fora, se a costura aconteceu ou se a página caiu no caminho antigo.
+
+## O relatório da semana aparece no clique, e a tela diz o que travou (desde 2026-09-21)
+
+Relato do dono do produto: *"a algum tempo tentamos desenvolver o relatório da IA mas
+simplesmente não consigo extrair esse relatório de maneira alguma"*. Na aba
+*Relatórios*, dentro de *IA Vendedora*, o botão *Gerar prévia* dava aviso vermelho na
+hora — e a frase que aparecia era a de reserva DESTA tela, não uma explicação do
+servidor. Ou seja: a resposta voltava sem motivo nenhum dentro, e a tela mandava
+procurar o problema no lugar errado.
+
+A causa é do servidor e está contada por lá. O que mudou aqui:
+
+- **O relatório aparece no clique.** O botão devolve os números da semana na hora, e
+  a tela já os mostra. O que continua em segundo plano é só a **redação da IA** — o
+  aviso passou a ser *"Números prontos. A IA está escrevendo o texto..."*, e depois
+  *"Texto pronto"*. Antes a tela dependia do segundo plano para ter QUALQUER coisa:
+  um tropeço lá e ela ficava vazia, sem nada explicando.
+- **Botão *Por que não está saindo?***, ao lado de *Gerar prévia*. Ele lista o
+  caminho inteiro com um sinal por peça — onde o relatório é guardado, os números da
+  semana, a redação da IA, o segundo plano, o número que envia e para quem vai — cada
+  uma com o motivo em português, vindo do servidor. É clique explícito: a conferência
+  é cara do lado de lá.
+- **Faixa âmbar com o que não deu certo**, acima dos números. Medição quebrada e
+  semana parada produziam a MESMA tela — tudo zero, nenhum aviso.
+- **Estado vazio que ensina o caminho**, no lugar do nada que parecia defeito.
+- **Sem relatório na tela, a frase mudou**: *"O servidor não respondeu a este pedido.
+  Use 'Por que não está saindo?' abaixo."* — e o diagnóstico é disparado sozinho. A
+  frase antiga ("Não consegui montar a prévia") afirmava algo sobre a prévia que a
+  tela não tinha como saber.
+
+Armadilhas:
+
+1. **Não voltar a esperar o segundo plano para TER o relatório.** É a origem exata do
+   relato, e o defeito é MUDO: a aba fica vazia e nada aparece em lugar nenhum. Há
+   spec que trava isso (`weeklyReportPreview.spec.ts`): o POST devolve o relatório
+   pronto, e falhar a redação não pode custá-lo.
+2. **Frase de reserva da tela nunca deve afirmar a causa.** Quando não há corpo de
+   erro, o que a tela sabe é só que o servidor não respondeu — dizer mais que isso é
+   o que fez este defeito passar semanas apontando para o lado errado.
+3. **O diagnóstico é de CLIQUE, nunca busca de abertura.** Do lado do servidor ele
+   fala com o WhatsApp operacional; chamado ao abrir a aba, seria uma ida à Evolution
+   por visita, em todo cliente.
+4. **Situação nova vinda do servidor precisa de cor aqui.** Hoje são três: ok, alerta
+   e falha. Sem cor, a linha sai com a aparência de falha — que é outra coisa.
+5. **Não é `featureKey` nem `clientToggleKey`** — é a aba que já existe atrás de
+   `ia_insights`. Os scanners do catálogo de funcionalidades não entram nesta história.
