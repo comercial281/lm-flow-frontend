@@ -4427,15 +4427,48 @@ function ReportsTab() {
     toast.message('A IA está demorando para escrever. O relatório com os números já está aqui — dá para editar e enviar assim mesmo.');
   };
 
+  /**
+   * ⚠️ O diagnóstico chega em DUAS levas, e isso não é refinamento: as conferências
+   * de banco e configuração saem na hora, mas as duas que falam com o WhatsApp
+   * operacional não cabem numa requisição — foi assim que o próprio botão falhou na
+   * estreia, com a frase de reserva desta tela. Elas chegam como "conferindo" e são
+   * substituídas na pergunta seguinte.
+   */
   const carregarDiagnostico = async () => {
     setChecando(true);
     try {
-      setChecks(await salesAgentsService.weeklyReportDiagnostico());
+      const primeiro = await salesAgentsService.weeklyReportDiagnostico(true);
+      setChecks(primeiro.checks);
+      if (primeiro.checking) await acompanharDiagnostico();
     } catch (e) {
       toast.error(motivoDoServidor(e) || 'Não consegui rodar o diagnóstico.');
     } finally {
       setChecando(false);
     }
+  };
+
+  // Pergunta de 3 em 3 segundos até a conferência do WhatsApp chegar. O teto de ~90s
+  // é rede para o processo que morre no meio; a reserva do servidor expira sozinha em
+  // 3 minutos. As outras quatro linhas já estão na tela esse tempo todo.
+  const acompanharDiagnostico = async () => {
+    for (let tentativa = 0; tentativa < 30; tentativa += 1) {
+      await new Promise((r) => setTimeout(r, 3000));
+
+      try {
+        const atual = await salesAgentsService.weeklyReportDiagnostico();
+        setChecks(atual.checks);
+        if (!atual.checking) return;
+      } catch {
+        // Oscilação de rede não cancela a conferência, que segue no servidor.
+      }
+    }
+    setChecks((prev) =>
+      (prev ?? []).map((c) =>
+        c.situacao === 'pendente'
+          ? { ...c, situacao: 'alerta', detalhe: 'A conferência do WhatsApp está demorando. Tente de novo em instantes.' }
+          : c,
+      ),
+    );
   };
 
   const salvarTexto = async () => {
@@ -4508,12 +4541,29 @@ function ReportsTab() {
           <p className="text-sm font-medium">O caminho do relatório</p>
           {checks.map((c) => (
             <div key={c.chave} className="flex gap-2 text-sm">
+              {/* ⚠️ Situação nova do servidor sem cor aqui sai com a aparência de
+                  FALHA, que é outra coisa. Hoje são quatro: ok, alerta, falha e a
+                  conferência que ainda está rodando. */}
               <span
                 className={
-                  c.situacao === 'ok' ? 'text-green-600' : c.situacao === 'alerta' ? 'text-amber-500' : 'text-red-500'
+                  c.situacao === 'ok'
+                    ? 'text-green-600'
+                    : c.situacao === 'alerta'
+                      ? 'text-amber-500'
+                      : c.situacao === 'pendente'
+                        ? 'text-muted-foreground'
+                        : 'text-red-500'
                 }
               >
-                {c.situacao === 'ok' ? '✓' : c.situacao === 'alerta' ? '!' : '✕'}
+                {c.situacao === 'pendente' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : c.situacao === 'ok' ? (
+                  '✓'
+                ) : c.situacao === 'alerta' ? (
+                  '!'
+                ) : (
+                  '✕'
+                )}
               </span>
               <span>
                 <span className="font-medium">{c.titulo}</span>

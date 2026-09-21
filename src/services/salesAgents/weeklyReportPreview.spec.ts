@@ -96,10 +96,11 @@ describe('salesAgentsService.weeklyReportDiagnostico', () => {
       data: { data: { checks: [{ chave: 'tabela', titulo: 'Onde o relatório é guardado', situacao: 'ok', detalhe: 'Pronto.' }] } },
     } as never);
 
-    const checks = await salesAgentsService.weeklyReportDiagnostico();
+    const { checks, checking } = await salesAgentsService.weeklyReportDiagnostico();
 
     expect(vi.mocked(api.get).mock.calls[0][0]).toBe('/weekly_reports/diagnostico');
     expect(checks[0].situacao).toBe('ok');
+    expect(checking).toBe(false);
   });
 
   // Uma lista vazia é resposta legítima; quebrar aqui esconderia o diagnóstico
@@ -107,6 +108,40 @@ describe('salesAgentsService.weeklyReportDiagnostico', () => {
   it('devolve lista vazia quando o servidor não manda nada', async () => {
     vi.mocked(api.get).mockResolvedValue({ data: { data: {} } } as never);
 
-    await expect(salesAgentsService.weeklyReportDiagnostico()).resolves.toEqual([]);
+    await expect(salesAgentsService.weeklyReportDiagnostico()).resolves.toEqual({ checks: [], checking: false });
+  });
+
+  /**
+   * ⚠️ A cicatriz da estreia: as duas conferências do WhatsApp não cabem numa
+   * requisição (o servidor derruba aos 15 segundos, sem motivo dentro) e por isso
+   * chegam depois. A tela precisa saber que ainda falta — senão mostra "conferindo"
+   * para sempre, ou pior, dá o diagnóstico por completo pela metade.
+   */
+  it('avisa quando ainda falta conferência chegando', async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: {
+        data: {
+          checking: true,
+          checks: [{ chave: 'numero', titulo: 'O número que envia', situacao: 'pendente', detalhe: 'Conferindo...' }],
+        },
+      },
+    } as never);
+
+    const { checking, checks } = await salesAgentsService.weeklyReportDiagnostico();
+
+    expect(checking).toBe(true);
+    expect(checks[0].situacao).toBe('pendente');
+  });
+
+  // O CLIQUE confere de novo; a espera pergunta sem `refresh`, senão cada pergunta
+  // reiniciaria a conferência que está em andamento.
+  it('só manda conferir de novo no clique', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { data: { checks: [] } } } as never);
+
+    await salesAgentsService.weeklyReportDiagnostico(true);
+    expect(vi.mocked(api.get).mock.calls[0][1]).toEqual({ params: { refresh: 1 } });
+
+    await salesAgentsService.weeklyReportDiagnostico();
+    expect(vi.mocked(api.get).mock.calls[1][1]).toBeUndefined();
   });
 });
