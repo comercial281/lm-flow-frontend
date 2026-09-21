@@ -45,6 +45,10 @@ import {
   type WeeklyReportTargets,
 } from '@/services/salesAgents/salesAgentsService';
 import { DOCUMENT_TOPICS } from '@/features/salesAgents/documentTopics';
+// ⚠️ O motivo da falha vem daqui, com teste: sem corpo de resposta a tela precisa
+// dizer o CÓDIGO (404, 500, 502, sem resposta) — foi a ausência disso que fez cinco
+// falhas diferentes chegarem ao gestor como a mesma frase genérica.
+import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
@@ -4164,26 +4168,6 @@ const WEEKDAY_OPTIONS: [number, string][] = [
   [1, 'Segunda'], [2, 'Terça'], [3, 'Quarta'], [4, 'Quinta'], [5, 'Sexta'], [6, 'Sábado'], [7, 'Domingo'],
 ];
 
-/**
- * O motivo que o servidor mandou, em português, seja qual for o formato.
- *
- * ⚠️ A API tem DOIS formatos de erro, e ler só um esconde metade das falhas. O
- * padrão é `error.message`; a recusa por cargo devolve `error` como TEXTO e a
- * explicação em `message`, no nível de cima. Lendo só o primeiro, um "seu cargo não
- * permite esta ação" chegava na tela como a frase genérica de fallback — que manda
- * procurar o problema no lugar errado.
- */
-function motivoDoServidor(e: unknown): string | null {
-  const data = (e as { response?: { data?: unknown } })?.response?.data as
-    | { error?: unknown; message?: unknown }
-    | undefined;
-  if (!data) return null;
-
-  const doErro = (data.error as { message?: unknown } | undefined)?.message;
-  if (typeof doErro === 'string' && doErro.trim()) return doErro;
-  if (typeof data.message === 'string' && data.message.trim()) return data.message;
-  return null;
-}
 
 // Selo por categoria. A cor separa o que é da IA do que é recado para gente.
 const SUGGESTION_STYLE: Record<string, string> = {
@@ -4237,7 +4221,7 @@ function SuggestionsTab({ agent }: { agent: SalesAgent }) {
       await acompanharAnalise(quantasAntes);
     } catch (e) {
       // Aqui a pessoa CLICOU: o motivo em português vem do servidor.
-      toast.error(motivoDoServidor(e) || 'Não consegui analisar agora.');
+      toast.error(motivoDaFalha(e, 'Não consegui analisar agora.'));
       setAnalyzing(false);
     }
   };
@@ -4605,7 +4589,7 @@ function ReportsTab() {
       // Sem corpo de erro = o servidor não chegou a responder. Dizer isso é o mínimo:
       // a frase antiga ("não consegui montar") mandava procurar o problema na prévia,
       // que é justamente onde ele não estava.
-      toast.error(motivoDoServidor(e) || 'O servidor não respondeu a este pedido. Use "Por que não está saindo?" abaixo.');
+      toast.error(motivoDaFalha(e, 'Não consegui gerar a prévia.'));
       setBusy(null);
       void carregarDiagnostico();
     }
@@ -4640,15 +4624,48 @@ function ReportsTab() {
     toast.message('A IA está demorando para escrever. O relatório com os números já está aqui — dá para editar e enviar assim mesmo.');
   };
 
+  /**
+   * ⚠️ O diagnóstico chega em DUAS levas, e isso não é refinamento: as conferências
+   * de banco e configuração saem na hora, mas as duas que falam com o WhatsApp
+   * operacional não cabem numa requisição — foi assim que o próprio botão falhou na
+   * estreia, com a frase de reserva desta tela. Elas chegam como "conferindo" e são
+   * substituídas na pergunta seguinte.
+   */
   const carregarDiagnostico = async () => {
     setChecando(true);
     try {
-      setChecks(await salesAgentsService.weeklyReportDiagnostico());
+      const primeiro = await salesAgentsService.weeklyReportDiagnostico(true);
+      setChecks(primeiro.checks);
+      if (primeiro.checking) await acompanharDiagnostico();
     } catch (e) {
-      toast.error(motivoDoServidor(e) || 'Não consegui rodar o diagnóstico.');
+      toast.error(motivoDaFalha(e, 'Não consegui rodar o diagnóstico.'));
     } finally {
       setChecando(false);
     }
+  };
+
+  // Pergunta de 3 em 3 segundos até a conferência do WhatsApp chegar. O teto de ~90s
+  // é rede para o processo que morre no meio; a reserva do servidor expira sozinha em
+  // 3 minutos. As outras quatro linhas já estão na tela esse tempo todo.
+  const acompanharDiagnostico = async () => {
+    for (let tentativa = 0; tentativa < 30; tentativa += 1) {
+      await new Promise((r) => setTimeout(r, 3000));
+
+      try {
+        const atual = await salesAgentsService.weeklyReportDiagnostico();
+        setChecks(atual.checks);
+        if (!atual.checking) return;
+      } catch {
+        // Oscilação de rede não cancela a conferência, que segue no servidor.
+      }
+    }
+    setChecks((prev) =>
+      (prev ?? []).map((c) =>
+        c.situacao === 'pendente'
+          ? { ...c, situacao: 'alerta', detalhe: 'A conferência do WhatsApp está demorando. Tente de novo em instantes.' }
+          : c,
+      ),
+    );
   };
 
   const salvarTexto = async () => {
@@ -4721,12 +4738,29 @@ function ReportsTab() {
           <p className="text-sm font-medium">O caminho do relatório</p>
           {checks.map((c) => (
             <div key={c.chave} className="flex gap-2 text-sm">
+              {/* ⚠️ Situação nova do servidor sem cor aqui sai com a aparência de
+                  FALHA, que é outra coisa. Hoje são quatro: ok, alerta, falha e a
+                  conferência que ainda está rodando. */}
               <span
                 className={
-                  c.situacao === 'ok' ? 'text-green-600' : c.situacao === 'alerta' ? 'text-amber-500' : 'text-red-500'
+                  c.situacao === 'ok'
+                    ? 'text-green-600'
+                    : c.situacao === 'alerta'
+                      ? 'text-amber-500'
+                      : c.situacao === 'pendente'
+                        ? 'text-muted-foreground'
+                        : 'text-red-500'
                 }
               >
-                {c.situacao === 'ok' ? '✓' : c.situacao === 'alerta' ? '!' : '✕'}
+                {c.situacao === 'pendente' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : c.situacao === 'ok' ? (
+                  '✓'
+                ) : c.situacao === 'alerta' ? (
+                  '!'
+                ) : (
+                  '✕'
+                )}
               </span>
               <span>
                 <span className="font-medium">{c.titulo}</span>

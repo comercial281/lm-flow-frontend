@@ -774,12 +774,23 @@ export interface WeeklyReportTargets {
   managers: { id: string; name: string; phone_masked: string }[];
 }
 
-/** Uma peça do caminho do relatório e o veredito dela, em português. */
+/**
+ * Uma peça do caminho do relatório e o veredito dela, em português.
+ *
+ * `pendente` é a conferência que ainda está rodando no servidor: as duas do
+ * WhatsApp não cabem numa requisição (ver o serviço abaixo).
+ */
 export interface WeeklyReportCheck {
   chave: string;
   titulo: string;
-  situacao: 'ok' | 'alerta' | 'falha';
+  situacao: 'ok' | 'alerta' | 'falha' | 'pendente';
   detalhe: string;
+}
+
+/** O diagnóstico: o que já foi conferido, e se ainda falta conferência chegando. */
+export interface WeeklyReportDiagnostico {
+  checks: WeeklyReportCheck[];
+  checking: boolean;
 }
 
 const BASE = '/sales_agents';
@@ -1093,11 +1104,21 @@ export const salesAgentsService = {
 
   /**
    * "Por que não está saindo?" — o veredito de cada peça do caminho, em português.
-   * É CARO do lado do servidor (fala com o WhatsApp operacional), então só de clique.
+   *
+   * ⚠️ Vem em DUAS levas, e por obrigação: as conferências de banco e configuração
+   * saem na hora, mas as duas que falam com o WhatsApp operacional esperam até 25
+   * segundos somados no servidor — e ele derruba qualquer requisição aos 15, sem
+   * motivo dentro. Na estreia foi assim que o próprio diagnóstico falhou. Elas
+   * chegam como `pendente` e o servidor as responde numa consulta seguinte;
+   * `checking` diz quando ainda falta.
+   *
+   * `refresh` é o CLIQUE (confere de novo); a espera pergunta sem ele, senão cada
+   * pergunta reiniciaria a conferência que está em andamento.
    */
-  async weeklyReportDiagnostico(): Promise<WeeklyReportCheck[]> {
-    const res = await api.get('/weekly_reports/diagnostico');
-    return (res.data as { data: { checks: WeeklyReportCheck[] } }).data?.checks ?? [];
+  async weeklyReportDiagnostico(refresh = false): Promise<WeeklyReportDiagnostico> {
+    const res = await api.get('/weekly_reports/diagnostico', refresh ? { params: { refresh: 1 } } : undefined);
+    const data = (res.data as { data: { checks?: WeeklyReportCheck[]; checking?: boolean } }).data;
+    return { checks: data?.checks ?? [], checking: data?.checking ?? false };
   },
 
   async weeklyReportSaveText(text: string): Promise<WeeklyReport> {

@@ -2632,10 +2632,40 @@ Armadilhas:
 3. **O diagnóstico é de CLIQUE, nunca busca de abertura.** Do lado do servidor ele
    fala com o WhatsApp operacional; chamado ao abrir a aba, seria uma ida à Evolution
    por visita, em todo cliente.
-4. **Situação nova vinda do servidor precisa de cor aqui.** Hoje são três: ok, alerta
-   e falha. Sem cor, a linha sai com a aparência de falha — que é outra coisa.
+4. **Situação nova vinda do servidor precisa de cor aqui.** Hoje são quatro: ok,
+   alerta, falha e *conferindo*. Sem cor, a linha sai com a aparência de falha — que é
+   outra coisa.
 5. **Não é `featureKey` nem `clientToggleKey`** — é a aba que já existe atrás de
    `ia_insights`. Os scanners do catálogo de funcionalidades não entram nesta história.
+
+### O diagnóstico chega em duas levas (correção de 2026-09-21, no mesmo dia)
+
+Horas depois de a tela subir, o dono do produto: **"Não consegui rodar o
+diagnóstico."** — que é a frase de reserva DESTA tela. O botão *Por que não está
+saindo?* caiu na mesma parede de 15 segundos que ele existe para explicar: do lado do
+servidor, conferir o número operacional e a lista de destinos são duas conversas com o
+WhatsApp que, somadas, esperam mais do que a requisição dura (ver o CLAUDE.md do
+`lm-flow`).
+
+O que aparece na tela agora:
+
+- **As quatro primeiras linhas saem no clique** (onde o relatório é guardado, os
+  números da semana, a redação da IA, o segundo plano).
+- **As duas do WhatsApp aparecem como *conferindo***, com o rodinha no lugar do sinal,
+  e são substituídas pelo veredito quando ele chega — a tela pergunta de 3 em 3
+  segundos, com teto de ~90 segundos. Passando disso, elas dizem que a conferência
+  está demorando, em vez de girar para sempre.
+- **Clicar de novo confere de novo.** As perguntas da espera não reiniciam a
+  conferência em andamento; só o clique manda refazer — senão, quem arruma o número e
+  clica outra vez receberia o veredito de dez minutos atrás.
+
+Armadilhas:
+
+6. **Não voltar a esperar as seis linhas numa resposta só.** É a origem exata do
+   relato, e o defeito é MUDO: a resposta volta sem motivo dentro e a tela mostra a
+   frase genérica dela. Há spec do lado do serviço.
+7. **A espera pergunta SEM `refresh`.** Com ele, cada pergunta reiniciaria a
+   conferência e a tela nunca sairia de *conferindo*.
 
 ## Para quem a IA passa o lead (desde 2026-09-21)
 
@@ -2704,3 +2734,4 @@ lead e ele ficou sem ninguém"* vai para a gestão, **com o motivo dentro**. E o
 aceite da oferta passou a calar a IA de vez: antes, o corretor que aceitava pelo
 link e ia falar com o lead meia hora depois via a IA responder por cima dele. Ver
 o CLAUDE.md do `lm-flow`.
+
