@@ -87,6 +87,15 @@ export interface SalesAgent {
   /** DE QUAIS leads ela vai atrás. Lista VAZIA = todos os leads do número dela,
    *  que é o comportamento de sempre — não é "nenhum funil, não sai nada". */
   followup_pipeline_ids: string[];
+  /** PARA ONDE ela entrega o lead quando passa pro corretor.
+   *
+   *  `inbox_roleta` é a roleta do NÚMERO da conversa — o padrão e o
+   *  comportamento de sempre. `roleta` entrega numa roleta escolhida, inclusive
+   *  de outro número (é o caso "a IA atende no principal, os corretores atendem
+   *  cada um no seu"). `user` entrega a um corretor fixo, sem roleta nenhuma. */
+  handoff_target: SalesAgentHandoffTarget;
+  handoff_roleta_config_id: string | null;
+  handoff_user_id: string | null;
   audio_enabled: boolean;
   audio_mode: 'mirror' | 'always' | 'never';
   audio_voice_id: string | null;
@@ -280,6 +289,16 @@ export type SalesAgentFollowupAction = 'ai' | 'pipeline' | 'sequence';
 
 export type HandoffMode = 'duvida' | 'temperatura' | 'sem_resposta' | 'pos_visita';
 
+/**
+ * PARA ONDE a IA entrega o lead ao transferir.
+ *
+ * `inbox_roleta` é a roleta do número da conversa — o padrão de fábrica e o que
+ * vale em toda imobiliária que já existe. Até esta escolha existir, era a ÚNICA
+ * saída: número sem roleta (ou com duas e nenhuma marcada como "atende quem
+ * escreve direto") deixava o lead sem dono e sem ninguém avisado.
+ */
+export type SalesAgentHandoffTarget = 'inbox_roleta' | 'roleta' | 'user';
+
 export interface TransferConfig {
   mode?: HandoffMode;
   min_temperature?: 'hot' | 'warm';
@@ -440,6 +459,9 @@ export interface SalesAgentPayload {
   followup_drip_min_minutes?: number;
   followup_drip_max_minutes?: number;
   followup_pipeline_ids?: string[];
+  handoff_target?: SalesAgentHandoffTarget;
+  handoff_roleta_config_id?: string | null;
+  handoff_user_id?: string | null;
   audio_enabled?: boolean;
   audio_mode?: 'mirror' | 'always' | 'never';
   audio_voice_id?: string | null;
@@ -757,12 +779,23 @@ export interface WeeklyReportTargets {
   managers: { id: string; name: string; phone_masked: string }[];
 }
 
-/** Uma peça do caminho do relatório e o veredito dela, em português. */
+/**
+ * Uma peça do caminho do relatório e o veredito dela, em português.
+ *
+ * `pendente` é a conferência que ainda está rodando no servidor: as duas do
+ * WhatsApp não cabem numa requisição (ver o serviço abaixo).
+ */
 export interface WeeklyReportCheck {
   chave: string;
   titulo: string;
-  situacao: 'ok' | 'alerta' | 'falha';
+  situacao: 'ok' | 'alerta' | 'falha' | 'pendente';
   detalhe: string;
+}
+
+/** O diagnóstico: o que já foi conferido, e se ainda falta conferência chegando. */
+export interface WeeklyReportDiagnostico {
+  checks: WeeklyReportCheck[];
+  checking: boolean;
 }
 
 const BASE = '/sales_agents';
@@ -1076,11 +1109,21 @@ export const salesAgentsService = {
 
   /**
    * "Por que não está saindo?" — o veredito de cada peça do caminho, em português.
-   * É CARO do lado do servidor (fala com o WhatsApp operacional), então só de clique.
+   *
+   * ⚠️ Vem em DUAS levas, e por obrigação: as conferências de banco e configuração
+   * saem na hora, mas as duas que falam com o WhatsApp operacional esperam até 25
+   * segundos somados no servidor — e ele derruba qualquer requisição aos 15, sem
+   * motivo dentro. Na estreia foi assim que o próprio diagnóstico falhou. Elas
+   * chegam como `pendente` e o servidor as responde numa consulta seguinte;
+   * `checking` diz quando ainda falta.
+   *
+   * `refresh` é o CLIQUE (confere de novo); a espera pergunta sem ele, senão cada
+   * pergunta reiniciaria a conferência que está em andamento.
    */
-  async weeklyReportDiagnostico(): Promise<WeeklyReportCheck[]> {
-    const res = await api.get('/weekly_reports/diagnostico');
-    return (res.data as { data: { checks: WeeklyReportCheck[] } }).data?.checks ?? [];
+  async weeklyReportDiagnostico(refresh = false): Promise<WeeklyReportDiagnostico> {
+    const res = await api.get('/weekly_reports/diagnostico', refresh ? { params: { refresh: 1 } } : undefined);
+    const data = (res.data as { data: { checks?: WeeklyReportCheck[]; checking?: boolean } }).data;
+    return { checks: data?.checks ?? [], checking: data?.checking ?? false };
   },
 
   async weeklyReportSaveText(text: string): Promise<WeeklyReport> {

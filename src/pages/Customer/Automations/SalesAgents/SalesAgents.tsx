@@ -35,6 +35,7 @@ import {
   type TestHistoryItem,
   type TestMediaItem,
   type HandoffMode,
+  type SalesAgentHandoffTarget,
   type SalesAgentFollowupAction,
   type SalesAgentSuggestion,
   type SuggestionsPayload,
@@ -44,6 +45,10 @@ import {
   type WeeklyReportTargets,
 } from '@/services/salesAgents/salesAgentsService';
 import { DOCUMENT_TOPICS } from '@/features/salesAgents/documentTopics';
+// ⚠️ O motivo da falha vem daqui, com teste: sem corpo de resposta a tela precisa
+// dizer o CÓDIGO (404, 500, 502, sem resposta) — foi a ausência disso que fez cinco
+// falhas diferentes chegarem ao gestor como a mesma frase genérica.
+import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
@@ -54,6 +59,8 @@ import {
 } from '@/features/salesAgents/followupHours';
 import { antecedenciaResumo } from '@/features/salesAgents/visitWindow';
 import inboxesService from '@/services/channels/inboxesService';
+import agentsService from '@/services/channels/agentsService';
+import { roletaConfigService } from '@/services/roletaConfig/roletaConfigService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { followupSequencesService } from '@/services/followupSequences/followupSequencesService';
 
@@ -201,6 +208,16 @@ export default function SalesAgents() {
         // preserva. (Diferente das colunas do bloco de cima, onde `null` significa
         // "não escolhi coluna nenhuma".)
         followup_pipeline_ids: patch.followup_pipeline_ids ?? selected.followup_pipeline_ids,
+        // PARA ONDE ela entrega o lead. O modo entra com `??` (ele nunca é
+        // limpável — o servidor devolve sempre um dos três); os dois ALVOS
+        // entram com `in`, porque `null` ali é escolha legítima: voltar para "a
+        // roleta do número" limpa o alvo do modo anterior, e o `??` devolveria a
+        // roleta velha por baixo — a tela mostrando uma coisa e o servidor
+        // entregando o lead noutra.
+        handoff_target: patch.handoff_target ?? selected.handoff_target,
+        handoff_roleta_config_id:
+          'handoff_roleta_config_id' in patch ? patch.handoff_roleta_config_id : selected.handoff_roleta_config_id,
+        handoff_user_id: 'handoff_user_id' in patch ? patch.handoff_user_id : selected.handoff_user_id,
         // O horário próprio do follow-up. Entra com `??` e não com `in`: ele nunca
         // é limpável — o servidor devolve sempre resolvido e o editor garante ao
         // menos uma janela. Vazio aqui não é escolha, é o padrão de fábrica.
@@ -1753,6 +1770,201 @@ function HandoffPolicySection({ agent, onSave }: {
   );
 }
 
+/**
+ * PARA QUEM ela passa o lead — a outra metade da pergunta que o cenário acima
+ * responde pela primeira vez.
+ *
+ * Até aqui a IA não escolhia nada: ela jogava o lead na roleta DO NÚMERO em que
+ * a conversa estava, e ponto. Número sem roleta, roleta em modo manual, roleta
+ * fora do horário, ou duas roletas no mesmo número sem nenhuma marcada como
+ * "atende quem escreve direto": em todos o lead ficava sem dono, com a etiqueta
+ * de atendimento humano, e ninguém era avisado. A landing e o formulário do Meta
+ * escolhem a roleta na tela deles desde sempre — só a IA não escolhia.
+ *
+ * "A roleta deste número" é o primeiro e continua marcado em toda imobiliária
+ * que já existe: escolha nova não muda o comportamento de quem nunca escolheu.
+ */
+const HANDOFF_TARGETS: { value: SalesAgentHandoffTarget; title: string; desc: string }[] = [
+  {
+    value: 'inbox_roleta',
+    title: 'A roleta deste número',
+    desc: 'É o que já estava valendo. Vale a roleta do WhatsApp em que a IA atende.',
+  },
+  {
+    value: 'roleta',
+    title: 'Uma roleta específica',
+    desc: 'Para quando a IA atende num número e os corretores atendem em outros. A roleta sorteia, oferta e o lead vira de quem aceitar.',
+  },
+  {
+    value: 'user',
+    title: 'Um corretor fixo',
+    desc: 'Sem roleta: o lead vai sempre para a mesma pessoa. Ela recebe o aviso com o botão de aceitar, e o lead é dela quando aceitar.',
+  },
+];
+
+function HandoffDestinationSection({ agent, onSave }: {
+  agent: SalesAgent;
+  onSave: (patch: Partial<SalesAgent>) => void;
+}) {
+  const [roletas, setRoletas] = useState<{ id: string; label: string; ativa: boolean }[]>([]);
+  const [pessoas, setPessoas] = useState<{ id: string; name: string }[]>([]);
+
+  const modo: SalesAgentHandoffTarget = agent.handoff_target ?? 'inbox_roleta';
+  const roletaId = agent.handoff_roleta_config_id ?? '';
+  const userId = agent.handoff_user_id ?? '';
+
+  // Leitura de FUNDO: cargo sem acesso a roletas ou à equipe só não vê aquele
+  // seletor — a seção continua inteira, e nada pinta de vermelho.
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const rs = await roletaConfigService.getAll();
+        if (!vivo) return;
+        setRoletas((rs || []).map((r) => ({
+          id: String(r.id),
+          label: r.display_name || r.name || r.inbox_name || 'Roleta sem nome',
+          ativa: r.is_active !== false,
+        })));
+      } catch {
+        /* leitura de fundo não grita */
+      }
+      try {
+        const us = await agentsService.getAll();
+        if (!vivo) return;
+        setPessoas((us || []).map((u) => ({ id: String(u.id), name: u.name || u.email || 'Sem nome' })));
+      } catch {
+        /* leitura de fundo não grita */
+      }
+    })();
+    return () => { vivo = false; };
+  }, []);
+
+  // Trocar de modo LIMPA o alvo do outro, de propósito: alvo gravado por baixo
+  // do modo que não o usa é a segunda verdade sobre quem recebe o lead — e a
+  // primeira leitura torta entregaria para quem o gestor acha que tirou da
+  // jogada. O servidor faz a mesma limpeza; aqui é para a tela não mentir.
+  const trocarModo = (value: SalesAgentHandoffTarget) => {
+    if (value === modo) return;
+    onSave({
+      handoff_target: value,
+      handoff_roleta_config_id: value === 'roleta' ? (roletaId || null) : null,
+      handoff_user_id: value === 'user' ? (userId || null) : null,
+    });
+  };
+
+  // A roleta escolhida continua na lista mesmo desativada ou apagada: sumir com
+  // ela faria o próximo salvamento apagar a escolha do gestor, calado. Mesma
+  // doutrina do Destino do lead da landing.
+  const roletasVisiveis = roletas.filter((r) => r.ativa || r.id === roletaId);
+  const escolhidaSumiu = roletaId !== '' && !roletas.some((r) => r.id === roletaId);
+  const escolhidaDesativada = roletas.some((r) => r.id === roletaId && !r.ativa);
+
+  return (
+    <div>
+      <div className="text-sm font-medium mb-1">Para quem ela passa o lead</div>
+      <div className="text-xs text-muted-foreground mb-2">
+        Quem recebe o lead quando a IA sai de cena. Se ele já tiver responsável, continua com ele — e a
+        pessoa é avisada de que o atendimento passou a ser dela.
+      </div>
+
+      <div className="space-y-2">
+        {HANDOFF_TARGETS.map((opt) => {
+          const escolhido = modo === opt.value;
+          return (
+            <div
+              key={opt.value}
+              className={`rounded-md border p-3 transition-colors ${escolhido ? 'border-primary bg-primary/5' : 'border-sidebar-border'}`}
+            >
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="handoff_target"
+                  className="mt-1"
+                  checked={escolhido}
+                  onChange={() => trocarModo(opt.value)}
+                />
+                <div>
+                  <div className="text-sm font-medium">{opt.title}</div>
+                  <div className="text-xs text-muted-foreground">{opt.desc}</div>
+                </div>
+              </label>
+
+              {opt.value === 'roleta' && escolhido && (
+                <div className="mt-2 ml-7">
+                  <Label htmlFor="handoff_roleta">Qual roleta</Label>
+                  <select
+                    id="handoff_roleta"
+                    value={roletaId}
+                    onChange={(e) => onSave({ handoff_roleta_config_id: e.target.value || null })}
+                    className="mt-1 w-full rounded-md border border-sidebar-border bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">— escolha a roleta —</option>
+                    {roletasVisiveis.map((r) => (
+                      <option key={r.id} value={r.id}>{r.label}{r.ativa ? '' : ' (desativada)'}</option>
+                    ))}
+                  </select>
+                  {/* Sem este aviso o gestor sai da tela achando que escolheu, e
+                      todo lead que a IA passar fica sem ninguém. */}
+                  {roletaId === '' && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Enquanto nenhuma roleta estiver escolhida, o lead que a IA passar fica sem
+                      responsável — e a gestão recebe um aviso a cada vez.
+                    </p>
+                  )}
+                  {escolhidaDesativada && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Esta roleta está desativada. Enquanto ela estiver assim, o lead fica sem responsável.
+                    </p>
+                  )}
+                  {escolhidaSumiu && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      A roleta escolhida não aparece mais na lista. Escolha outra, ou o lead fica sem responsável.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {opt.value === 'user' && escolhido && (
+                <div className="mt-2 ml-7">
+                  <Label htmlFor="handoff_user">Qual corretor</Label>
+                  <select
+                    id="handoff_user"
+                    value={userId}
+                    onChange={(e) => onSave({ handoff_user_id: e.target.value || null })}
+                    className="mt-1 w-full rounded-md border border-sidebar-border bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">— escolha o corretor —</option>
+                    {pessoas.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ele recebe o lead no WhatsApp e no app, com o botão de aceitar, e <strong>sem prazo</strong>:
+                    a oferta fica com ele até aceitar ou recusar. Não há para quem repassar.
+                  </p>
+                  {userId === '' && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Enquanto ninguém estiver escolhido, o lead que a IA passar fica sem responsável.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {opt.value === 'inbox_roleta' && escolhido && (
+                <p className="text-xs text-muted-foreground mt-2 ml-7">
+                  Se este número não tiver uma roleta ativa, o lead entra sem responsável e a gestão é
+                  avisada com o motivo.
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // A IA move o card do lead no funil conforme a conversa anda.
 //
 // O mapa é "etapa da IA -> coluna DESTA imobiliária", e não a IA escolhendo a
@@ -1903,6 +2115,11 @@ function IntelligenceSection({
 
       {/* Cenário de repasse: a decisão grande vem ANTES das exceções dela. */}
       <HandoffPolicySection agent={agent} onSave={onSave} />
+
+      {/* E PARA QUEM ela passa. Logo abaixo do QUANDO, de propósito: as duas
+          respondem à mesma pergunta, e separá-las faria procurar em dois lugares
+          o que acontece quando a IA sai de cena. */}
+      <HandoffDestinationSection agent={agent} onSave={onSave} />
 
       {/* Escalação: passar pro humano */}
       <div>
@@ -3973,26 +4190,6 @@ const WEEKDAY_OPTIONS: [number, string][] = [
   [1, 'Segunda'], [2, 'Terça'], [3, 'Quarta'], [4, 'Quinta'], [5, 'Sexta'], [6, 'Sábado'], [7, 'Domingo'],
 ];
 
-/**
- * O motivo que o servidor mandou, em português, seja qual for o formato.
- *
- * ⚠️ A API tem DOIS formatos de erro, e ler só um esconde metade das falhas. O
- * padrão é `error.message`; a recusa por cargo devolve `error` como TEXTO e a
- * explicação em `message`, no nível de cima. Lendo só o primeiro, um "seu cargo não
- * permite esta ação" chegava na tela como a frase genérica de fallback — que manda
- * procurar o problema no lugar errado.
- */
-function motivoDoServidor(e: unknown): string | null {
-  const data = (e as { response?: { data?: unknown } })?.response?.data as
-    | { error?: unknown; message?: unknown }
-    | undefined;
-  if (!data) return null;
-
-  const doErro = (data.error as { message?: unknown } | undefined)?.message;
-  if (typeof doErro === 'string' && doErro.trim()) return doErro;
-  if (typeof data.message === 'string' && data.message.trim()) return data.message;
-  return null;
-}
 
 // Selo por categoria. A cor separa o que é da IA do que é recado para gente.
 const SUGGESTION_STYLE: Record<string, string> = {
@@ -4046,7 +4243,7 @@ function SuggestionsTab({ agent }: { agent: SalesAgent }) {
       await acompanharAnalise(quantasAntes);
     } catch (e) {
       // Aqui a pessoa CLICOU: o motivo em português vem do servidor.
-      toast.error(motivoDoServidor(e) || 'Não consegui analisar agora.');
+      toast.error(motivoDaFalha(e, 'Não consegui analisar agora.'));
       setAnalyzing(false);
     }
   };
@@ -4414,7 +4611,7 @@ function ReportsTab() {
       // Sem corpo de erro = o servidor não chegou a responder. Dizer isso é o mínimo:
       // a frase antiga ("não consegui montar") mandava procurar o problema na prévia,
       // que é justamente onde ele não estava.
-      toast.error(motivoDoServidor(e) || 'O servidor não respondeu a este pedido. Use "Por que não está saindo?" abaixo.');
+      toast.error(motivoDaFalha(e, 'Não consegui gerar a prévia.'));
       setBusy(null);
       void carregarDiagnostico();
     }
@@ -4449,15 +4646,48 @@ function ReportsTab() {
     toast.message('A IA está demorando para escrever. O relatório com os números já está aqui — dá para editar e enviar assim mesmo.');
   };
 
+  /**
+   * ⚠️ O diagnóstico chega em DUAS levas, e isso não é refinamento: as conferências
+   * de banco e configuração saem na hora, mas as duas que falam com o WhatsApp
+   * operacional não cabem numa requisição — foi assim que o próprio botão falhou na
+   * estreia, com a frase de reserva desta tela. Elas chegam como "conferindo" e são
+   * substituídas na pergunta seguinte.
+   */
   const carregarDiagnostico = async () => {
     setChecando(true);
     try {
-      setChecks(await salesAgentsService.weeklyReportDiagnostico());
+      const primeiro = await salesAgentsService.weeklyReportDiagnostico(true);
+      setChecks(primeiro.checks);
+      if (primeiro.checking) await acompanharDiagnostico();
     } catch (e) {
-      toast.error(motivoDoServidor(e) || 'Não consegui rodar o diagnóstico.');
+      toast.error(motivoDaFalha(e, 'Não consegui rodar o diagnóstico.'));
     } finally {
       setChecando(false);
     }
+  };
+
+  // Pergunta de 3 em 3 segundos até a conferência do WhatsApp chegar. O teto de ~90s
+  // é rede para o processo que morre no meio; a reserva do servidor expira sozinha em
+  // 3 minutos. As outras quatro linhas já estão na tela esse tempo todo.
+  const acompanharDiagnostico = async () => {
+    for (let tentativa = 0; tentativa < 30; tentativa += 1) {
+      await new Promise((r) => setTimeout(r, 3000));
+
+      try {
+        const atual = await salesAgentsService.weeklyReportDiagnostico();
+        setChecks(atual.checks);
+        if (!atual.checking) return;
+      } catch {
+        // Oscilação de rede não cancela a conferência, que segue no servidor.
+      }
+    }
+    setChecks((prev) =>
+      (prev ?? []).map((c) =>
+        c.situacao === 'pendente'
+          ? { ...c, situacao: 'alerta', detalhe: 'A conferência do WhatsApp está demorando. Tente de novo em instantes.' }
+          : c,
+      ),
+    );
   };
 
   const salvarTexto = async () => {
@@ -4530,12 +4760,29 @@ function ReportsTab() {
           <p className="text-sm font-medium">O caminho do relatório</p>
           {checks.map((c) => (
             <div key={c.chave} className="flex gap-2 text-sm">
+              {/* ⚠️ Situação nova do servidor sem cor aqui sai com a aparência de
+                  FALHA, que é outra coisa. Hoje são quatro: ok, alerta, falha e a
+                  conferência que ainda está rodando. */}
               <span
                 className={
-                  c.situacao === 'ok' ? 'text-green-600' : c.situacao === 'alerta' ? 'text-amber-500' : 'text-red-500'
+                  c.situacao === 'ok'
+                    ? 'text-green-600'
+                    : c.situacao === 'alerta'
+                      ? 'text-amber-500'
+                      : c.situacao === 'pendente'
+                        ? 'text-muted-foreground'
+                        : 'text-red-500'
                 }
               >
-                {c.situacao === 'ok' ? '✓' : c.situacao === 'alerta' ? '!' : '✕'}
+                {c.situacao === 'pendente' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : c.situacao === 'ok' ? (
+                  '✓'
+                ) : c.situacao === 'alerta' ? (
+                  '!'
+                ) : (
+                  '✕'
+                )}
               </span>
               <span>
                 <span className="font-medium">{c.titulo}</span>
