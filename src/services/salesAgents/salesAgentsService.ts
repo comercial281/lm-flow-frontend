@@ -87,6 +87,15 @@ export interface SalesAgent {
   /** DE QUAIS leads ela vai atrás. Lista VAZIA = todos os leads do número dela,
    *  que é o comportamento de sempre — não é "nenhum funil, não sai nada". */
   followup_pipeline_ids: string[];
+  /** PARA ONDE ela entrega o lead quando passa pro corretor.
+   *
+   *  `inbox_roleta` é a roleta do NÚMERO da conversa — o padrão e o
+   *  comportamento de sempre. `roleta` entrega numa roleta escolhida, inclusive
+   *  de outro número (é o caso "a IA atende no principal, os corretores atendem
+   *  cada um no seu"). `user` entrega a um corretor fixo, sem roleta nenhuma. */
+  handoff_target: SalesAgentHandoffTarget;
+  handoff_roleta_config_id: string | null;
+  handoff_user_id: string | null;
   audio_enabled: boolean;
   audio_mode: 'mirror' | 'always' | 'never';
   audio_voice_id: string | null;
@@ -280,6 +289,16 @@ export type SalesAgentFollowupAction = 'ai' | 'pipeline' | 'sequence';
 
 export type HandoffMode = 'duvida' | 'temperatura' | 'sem_resposta' | 'pos_visita';
 
+/**
+ * PARA ONDE a IA entrega o lead ao transferir.
+ *
+ * `inbox_roleta` é a roleta do número da conversa — o padrão de fábrica e o que
+ * vale em toda imobiliária que já existe. Até esta escolha existir, era a ÚNICA
+ * saída: número sem roleta (ou com duas e nenhuma marcada como "atende quem
+ * escreve direto") deixava o lead sem dono e sem ninguém avisado.
+ */
+export type SalesAgentHandoffTarget = 'inbox_roleta' | 'roleta' | 'user';
+
 export interface TransferConfig {
   mode?: HandoffMode;
   min_temperature?: 'hot' | 'warm';
@@ -435,6 +454,9 @@ export interface SalesAgentPayload {
   followup_drip_min_minutes?: number;
   followup_drip_max_minutes?: number;
   followup_pipeline_ids?: string[];
+  handoff_target?: SalesAgentHandoffTarget;
+  handoff_roleta_config_id?: string | null;
+  handoff_user_id?: string | null;
   audio_enabled?: boolean;
   audio_mode?: 'mirror' | 'always' | 'never';
   audio_voice_id?: string | null;
