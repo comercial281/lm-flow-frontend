@@ -44,6 +44,10 @@ import {
   type WeeklyReportTargets,
 } from '@/services/salesAgents/salesAgentsService';
 import { DOCUMENT_TOPICS } from '@/features/salesAgents/documentTopics';
+// ⚠️ O motivo da falha vem daqui, com teste: sem corpo de resposta a tela precisa
+// dizer o CÓDIGO (404, 500, 502, sem resposta) — foi a ausência disso que fez cinco
+// falhas diferentes chegarem ao gestor como a mesma frase genérica.
+import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
@@ -3951,26 +3955,6 @@ const WEEKDAY_OPTIONS: [number, string][] = [
   [1, 'Segunda'], [2, 'Terça'], [3, 'Quarta'], [4, 'Quinta'], [5, 'Sexta'], [6, 'Sábado'], [7, 'Domingo'],
 ];
 
-/**
- * O motivo que o servidor mandou, em português, seja qual for o formato.
- *
- * ⚠️ A API tem DOIS formatos de erro, e ler só um esconde metade das falhas. O
- * padrão é `error.message`; a recusa por cargo devolve `error` como TEXTO e a
- * explicação em `message`, no nível de cima. Lendo só o primeiro, um "seu cargo não
- * permite esta ação" chegava na tela como a frase genérica de fallback — que manda
- * procurar o problema no lugar errado.
- */
-function motivoDoServidor(e: unknown): string | null {
-  const data = (e as { response?: { data?: unknown } })?.response?.data as
-    | { error?: unknown; message?: unknown }
-    | undefined;
-  if (!data) return null;
-
-  const doErro = (data.error as { message?: unknown } | undefined)?.message;
-  if (typeof doErro === 'string' && doErro.trim()) return doErro;
-  if (typeof data.message === 'string' && data.message.trim()) return data.message;
-  return null;
-}
 
 // Selo por categoria. A cor separa o que é da IA do que é recado para gente.
 const SUGGESTION_STYLE: Record<string, string> = {
@@ -4024,7 +4008,7 @@ function SuggestionsTab({ agent }: { agent: SalesAgent }) {
       await acompanharAnalise(quantasAntes);
     } catch (e) {
       // Aqui a pessoa CLICOU: o motivo em português vem do servidor.
-      toast.error(motivoDoServidor(e) || 'Não consegui analisar agora.');
+      toast.error(motivoDaFalha(e, 'Não consegui analisar agora.'));
       setAnalyzing(false);
     }
   };
@@ -4392,7 +4376,7 @@ function ReportsTab() {
       // Sem corpo de erro = o servidor não chegou a responder. Dizer isso é o mínimo:
       // a frase antiga ("não consegui montar") mandava procurar o problema na prévia,
       // que é justamente onde ele não estava.
-      toast.error(motivoDoServidor(e) || 'O servidor não respondeu a este pedido. Use "Por que não está saindo?" abaixo.');
+      toast.error(motivoDaFalha(e, 'Não consegui gerar a prévia.'));
       setBusy(null);
       void carregarDiagnostico();
     }
@@ -4441,7 +4425,7 @@ function ReportsTab() {
       setChecks(primeiro.checks);
       if (primeiro.checking) await acompanharDiagnostico();
     } catch (e) {
-      toast.error(motivoDoServidor(e) || 'Não consegui rodar o diagnóstico.');
+      toast.error(motivoDaFalha(e, 'Não consegui rodar o diagnóstico.'));
     } finally {
       setChecando(false);
     }
