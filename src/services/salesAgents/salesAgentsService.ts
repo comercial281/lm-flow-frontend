@@ -295,6 +295,11 @@ export interface VisitConfig {
   blocked_dates?: string[];
   /** Antes de marcar, checa se já existe outra visita no mesmo imóvel no mesmo horário (padrão: sim). */
   avoid_double_booking?: boolean;
+  /**
+   * Visita para HOJE a IA nunca confirma sozinha: ela passa o lead para o corretor.
+   * Ausente = LIGADO (é a regra, não uma funcionalidade a liberar aos poucos).
+   */
+  same_day_requires_human?: boolean;
 }
 
 export interface BantConfig {
