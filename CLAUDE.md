@@ -2787,3 +2787,43 @@ Armadilhas:
    ~4.800 linhas. Mesma decisão da janela do follow-up.
 5. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente, não módulo.
    Os scanners do catálogo de funcionalidades não entram nesta história.
+
+## "Processando..." que nunca acaba na Base de Conhecimento (desde 2026-09-21)
+
+Print do dono do produto: três arquivos da Base de Conhecimento da IA Vendedora —
+dois de texto pequenos e um book de 8,4 MB — todos em **"Processando..."**, e
+*"não acaba o carregamento"*.
+
+A causa e o conserto são do servidor, e estão contados por lá (em resumo: um
+arquivo cuja leitura travava era retomado para sempre, a cada passada do relógio,
+e ia derrubando junto os arquivos que estavam do lado dele na lista).
+
+O que mudou na tela:
+
+- **O texto passou a dizer há quanto tempo**: *"Processando há 6 min"* no lugar do
+  *"Processando..."* fixo, que é idêntico depois de dois segundos e depois de dois
+  dias. Quem está olhando não tinha como saber se ainda andava ou se tinha parado.
+- **Passados alguns minutos, um aviso em âmbar** embaixo do arquivo: a leitura
+  está demorando mais que o normal, o sistema tenta sozinho, e se passar de 20
+  minutos ele marca como falha e diz o motivo. A espera passou a ter FIM visível.
+- **A mensagem de falha do servidor agora separa as duas causas** — "não chegou a
+  começar" (vale clicar em *Tentar de novo*) e "começou e parou no meio" (o
+  arquivo é o problema; o envio pelo WhatsApp continua, e para a IA aprender vale
+  colar o texto). A tela só mostra o que vem de lá.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): quem retoma o arquivo preso, quem conta as tentativas e
+   quem desiste com motivo moram lá. Contra o servidor antigo a tela mostra o
+   tempo e o aviso, e a espera continua a de antes.
+2. **A leitura do tempo mora fora do JSX**
+   (`src/features/salesAgents/documentStatus.ts`, com spec): esta tela tem ~4.800
+   linhas. Mesma decisão da janela do follow-up e da antecedência da visita.
+3. **O aviso só aparece depois do tempo normal.** Aviso que aparece sempre vira
+   paisagem e ninguém lê.
+4. **A lista já se atualizava sozinha a cada 4 segundos enquanto houvesse arquivo
+   pendente** — é ela que faz o contador de minutos andar. Quem tirar esse ciclo
+   congela o tempo mostrado.
+5. **Não é `featureKey` nem `clientToggleKey`** — é exibição de lista. Os scanners
+   do catálogo de funcionalidades não entram nesta história.
