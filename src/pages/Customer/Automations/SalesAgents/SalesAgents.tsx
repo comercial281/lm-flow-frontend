@@ -57,6 +57,7 @@ import type { ScheduleWindow } from '@/components/schedule/scheduleWindows';
 import {
   DEFAULT_FOLLOWUP_WINDOW, estimativaPorDia, janelaDoFollowup, minutosPorDia, resumoDaJanela,
 } from '@/features/salesAgents/followupHours';
+import { antecedenciaResumo } from '@/features/salesAgents/visitWindow';
 import inboxesService from '@/services/channels/inboxesService';
 import agentsService from '@/services/channels/agentsService';
 import { roletaConfigService } from '@/services/roletaConfig/roletaConfigService';
@@ -1149,6 +1150,27 @@ function VisitWindows({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Pa
           <Input id="vw_max" type="number" min={1} max={365} value={c.max_advance_days ?? 30} className="mt-1 w-24"
             onChange={(e) => patch({ max_advance_days: Number(e.target.value) })} />
         </div>
+      </div>
+      {/* A antecedência era um número solto: ninguém lia "24" e pensava "o primeiro
+          horário que ela oferece é amanhã". O servidor faz essa conta e manda pronto
+          pra IA; a frase aqui é a mesma leitura, pra quem configura. */}
+      <p className="text-xs text-muted-foreground">
+        {antecedenciaResumo(c.min_advance_hours ?? 24)}
+      </p>
+
+      {/* ⚠️ A regra que esta leva veio criar (21/09/2026): a IA vinha confirmando
+          visita para o mesmo dia e chegou a dizer a um lead que já estava no imóvel
+          que havia alguém lá esperando por ele. */}
+      <div className="flex items-center justify-between gap-3 pt-2">
+        <div>
+          <Label className="text-xs">Visita para hoje só com o corretor confirmando</Label>
+          <p className="text-xs text-muted-foreground">
+            A IA nunca marca visita para o mesmo dia por conta própria: ela diz que vai confirmar
+            com o corretor e passa o lead na hora. Ela também nunca afirma que alguém está no local
+            esperando — quem confirma presença é o corretor.
+          </p>
+        </div>
+        <Toggle on={c.same_day_requires_human !== false} onChange={(v) => patch({ same_day_requires_human: v })} />
       </div>
 
       {/* Granularidade de CALENDÁRIO, além do dia da semana recorrente: feriado,

@@ -2735,3 +2735,55 @@ aceite da oferta passou a calar a IA de vez: antes, o corretor que aceitava pelo
 link e ia falar com o lead meia hora depois via a IA responder por cima dele. Ver
 o CLAUDE.md do `lm-flow`.
 
+## A IA não promete visita que não pode (desde 2026-09-21)
+
+Relato do dono do produto: *"a IA vem prometendo visitas para clientes, às vezes
+quando o cliente está no local ela confirma que está lá pra receber ele"*.
+
+A causa é do servidor e está contada por lá: as regras de agendamento existiam e
+estavam certas, mas a resposta era entregue ao lead ANTES de o horário ser
+conferido — quando ele era recusado, o lead ficava com um *"fechou, te espero
+quinta às 15h"* que não existia em agenda nenhuma.
+
+O que aparece na tela, em *IA Vendedora → Configuração → Quando a IA pode marcar
+visita*:
+
+- **Chave *Visita para hoje só com o corretor confirmando***, logo abaixo da
+  antecedência. Ligada (que é como toda IA nasce), a IA nunca marca visita para o
+  mesmo dia por conta própria: ela diz que vai confirmar com o corretor e passa o
+  lead na hora. E nunca afirma que alguém está no local esperando — quem confirma
+  presença é o corretor.
+- **A antecedência mínima ganhou a leitura em português**, embaixo do campo:
+  *"Com 24 horas, o primeiro horário que ela oferece é amanhã."* Era um número
+  solto, e ninguém lia "24" e pensava "amanhã" — que é exatamente o que ele faz.
+
+E o que muda na conversa, sem campo novo: quando o lead pede um horário que não
+cabe na janela, **a IA oferece outro** em vez de confirmar. Ela passou a receber
+do servidor que horas são agora e quais horários estão livres, já calculados.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **A chave nasce LIGADA.** Exceção consciente à regra da casa de estrear
+  desligado, a mesma do gotejamento do follow-up: ela é a REGRA que o dono pediu,
+  e nascer desligada a deixaria decorativa em todo agente que já existe.
+- **O campo de antecedência continua em horas.** Trocar por uma lista de opções
+  ("mesmo dia / 1 dia / 2 dias") tiraria o valor de quem já configurou um número
+  fora da lista; a frase abaixo resolve o que faltava, que era entender o efeito.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): a régua de horário, a conferência antes de a resposta
+   sair e a chave moram lá. Contra o servidor antigo a chave aparece, salva, e a
+   IA continua confirmando visita para hoje.
+2. **A chave é lida com `!== false`**, nunca `=== true`: agente cuja configuração
+   ainda não tem a chave precisa aparecer LIGADO, senão o gestor "liga" algo que
+   já estava valendo. Mesma cicatriz do gotejamento do follow-up.
+3. **Ela viaja dentro do `visit_config`**, que já está na lista campo-a-campo do
+   `saveAgent` — campo fora daquela lista é descartado em silêncio, com a tela
+   dizendo *Salvo*. Há spec de fonte para as duas coisas.
+4. **A leitura da antecedência mora fora do JSX**
+   (`src/features/salesAgents/visitWindow.ts`, com spec): a tela da IA já tem
+   ~4.800 linhas. Mesma decisão da janela do follow-up.
+5. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente, não módulo.
+   Os scanners do catálogo de funcionalidades não entram nesta história.
