@@ -138,6 +138,14 @@ export function checklistNotices(questions: string[], required?: string[]): Chec
     });
   }
 
+  // A ordem destas duas linhas é a ordem da pergunta que o gestor faz: primeiro "o que
+  // acontece quando a ficha fecha?" (é para isso que ele escolheu o cenário), depois
+  // "e quem não terminou de responder?".
+  avisos.push({
+    tone: 'muted',
+    text: 'Respondida a última pergunta marcada, a IA entrega o lead na hora: ela avisa que um corretor vai falar com ele e sai de cena — não oferece visita nem puxa outro assunto.',
+  });
+
   avisos.push({
     tone: 'muted',
     text: 'Lead que pede a visita, quer marcar dia e hora ou fala em fechar passa na hora, mesmo faltando pergunta. Lead irritado, que pede uma pessoa ou que percebeu que é IA também.',

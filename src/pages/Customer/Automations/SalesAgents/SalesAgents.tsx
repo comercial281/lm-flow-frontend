@@ -1693,7 +1693,7 @@ const HANDOFF_OPTIONS: { value: HandoffMode | ''; title: string; desc: string }[
   {
     value: 'checklist',
     title: 'Só depois de arrancar as informações do lead',
-    desc: 'Ela conduz até o lead responder as perguntas que você marcar como obrigatórias. Quem pede a visita ou fala em fechar passa na hora, mesmo faltando pergunta.',
+    desc: 'Ela conduz até o lead responder as perguntas que você marcar como obrigatórias — e, na resposta da última, ENTREGA o lead na hora, sem oferecer visita. Quem pede a visita ou fala em fechar passa antes disso, mesmo faltando pergunta.',
   },
   {
     value: 'sem_resposta',

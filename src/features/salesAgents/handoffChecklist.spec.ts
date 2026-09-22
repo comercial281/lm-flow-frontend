@@ -134,6 +134,20 @@ describe('checklistNotices', () => {
     const avisos = checklistNotices(perguntas, ['Faixa de orçamento']);
     expect(avisos.some((a) => a.text.includes('pede a visita'))).toBe(true);
   });
+
+  // ⚠️ O cenário é GATILHO, não só portão: com a ficha completa o servidor entrega na
+  // hora, mesmo que a IA não tenha pedido. Era o furo relatado no dia seguinte à
+  // estreia (a ficha fechava e ela continuava oferecendo visita), e a tela precisa
+  // dizer isso — quem escolhe o cenário está escolhendo esse desfecho.
+  it('explica o que acontece quando a ficha fecha', () => {
+    const avisos = checklistNotices(perguntas, ['Faixa de orçamento']);
+    expect(avisos.some((a) => a.text.includes('entrega o lead na hora'))).toBe(true);
+  });
+
+  it('não promete entrega quando não há pergunta nenhuma', () => {
+    const avisos = checklistNotices([], []);
+    expect(avisos.some((a) => a.text.includes('entrega o lead na hora'))).toBe(false);
+  });
 });
 
 // A tela monta o PATCH campo a campo e descarta em silêncio o que não estiver na lista do
