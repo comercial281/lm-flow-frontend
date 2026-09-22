@@ -10,6 +10,7 @@ import {
   type AiVisitNoticeConfig,
   type AiVisitNoticeGroups,
 } from '@/services/superAdmin/aiVisitNoticeService';
+import { groupLine, HINT_SEM_MARCA } from './aiVisitNoticeGroups';
 
 /**
  * AVISO DE VISITA DA IA NO GRUPO DO CLIENTE.
@@ -287,6 +288,7 @@ export default function AiVisitNoticeSection() {
                             {info.groups.map(g => {
                               const escolhido = cliente.group_jids.includes(g.jid);
                               const usado = info.selected.includes(g.jid);
+                              const linha = groupLine(g);
                               return (
                                 <label key={g.jid} className="flex items-start gap-2 text-xs">
                                   <input
@@ -303,20 +305,32 @@ export default function AiVisitNoticeSection() {
                                   />
                                   <span className="min-w-0">
                                     <span className="font-medium">{g.name}</span>
+                                    <span
+                                      className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                                        linha.tone === 'client'
+                                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                          : linha.tone === 'internal'
+                                            ? 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                                            : 'bg-muted text-muted-foreground'
+                                      }`}
+                                    >
+                                      {linha.badge}
+                                    </span>
                                     {usado && !escolhido && (
                                       <span className="ml-1.5 text-muted-foreground">
                                         — é para cá que o aviso sai hoje
+                                      </span>
+                                    )}
+                                    {linha.note && (
+                                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                                        {linha.note}
                                       </span>
                                     )}
                                   </span>
                                 </label>
                               );
                             })}
-                            <p className="text-[11px] text-muted-foreground">
-                              Sem marcar nada, o aviso sai no grupo desta imobiliária quando houver
-                              só um. Marque quando ela tiver mais de um, ou quando o grupo certo
-                              não for o reconhecido.
-                            </p>
+                            <p className="text-[11px] text-muted-foreground">{HINT_SEM_MARCA}</p>
                           </div>
                         )}
 

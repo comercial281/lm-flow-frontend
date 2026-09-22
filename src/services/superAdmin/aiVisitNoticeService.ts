@@ -25,6 +25,16 @@ export interface AiVisitNoticeGroup {
   name: string;
   /** 'cadastro' (o JID gravado na imobiliária), 'nome' ou 'escolhido'. */
   source?: string | null;
+  /**
+   * QUAL grupo é este: 'cliente' (o da imobiliária, cadastrado na ficha dela),
+   * 'logs' (o interno da Leal Mídia sobre ela) ou nulo (reconhecido pelo NOME
+   * do grupo). Quem classifica é o servidor — o nome do grupo não serve: um
+   * grupo de cliente pode ter "log" no nome, e o interno pode não ter.
+   */
+  kind?: string | null;
+  kind_label?: string | null;
+  /** false = cadastrado na ficha, mas o número operacional não o listou. */
+  found?: boolean;
 }
 
 export interface AiVisitNoticeGroups {
