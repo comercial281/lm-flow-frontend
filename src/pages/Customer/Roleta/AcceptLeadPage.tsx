@@ -102,8 +102,8 @@ export default function AcceptLeadPage() {
   const expired = !semPrazo && secsLeft <= 0;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0F0520] p-4">
-      <div className="w-full max-w-md rounded-2xl border border-[#2a1a45] bg-[#1A0A2E] p-6 shadow-2xl">
+    <div className="min-h-dvh flex items-center justify-center bg-[#0F0520] px-3 py-6 sm:p-4">
+      <div className="w-full max-w-md rounded-2xl border border-[#2a1a45] bg-[#1A0A2E] p-5 shadow-2xl sm:p-6">
         <div className="flex items-center gap-2 mb-4">
           <span className="text-2xl">🔔</span>
           <h1 className="text-lg font-semibold text-white">Novo lead na sua fila</h1>
@@ -155,17 +155,20 @@ export default function AcceptLeadPage() {
             </div>
 
             {/* Dados do lead */}
-            <div className="space-y-2 mb-6">
-              <div className="flex items-center gap-2 text-white">
-                <User className="h-4 w-4 text-[#9333EA]" /> <span className="font-medium">{data.lead_name}</span>
+            <div className="space-y-2 mb-5">
+              <div className="flex items-start gap-2 text-white">
+                <User className="mt-0.5 h-4 w-4 shrink-0 text-[#9333EA]" />
+                <span className="min-w-0 break-words font-medium">{data.lead_name}</span>
               </div>
               {data.lead_phone && (
-                <div className="flex items-center gap-2 text-white/80">
-                  <Phone className="h-4 w-4 text-[#9333EA]" /> {data.lead_phone}
+                <div className="flex items-start gap-2 text-white/80">
+                  <Phone className="mt-0.5 h-4 w-4 shrink-0 text-[#9333EA]" />
+                  <span className="min-w-0 break-words">{data.lead_phone}</span>
                 </div>
               )}
-              <div className="flex items-center gap-2 text-white/60 text-sm">
-                <Clock className="h-4 w-4" /> Chegou em {new Date(data.assigned_at).toLocaleString('pt-BR')}
+              <div className="flex items-start gap-2 text-sm text-white/60">
+                <Clock className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="min-w-0 break-words">Chegou em {new Date(data.assigned_at).toLocaleString('pt-BR')}</span>
               </div>
             </div>
 
