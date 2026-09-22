@@ -3002,6 +3002,40 @@ Armadilhas:
    como os logos dos bancos. Os scanners do catálogo de funcionalidades não
    entram nesta história e nenhuma chave literal nova foi escrita.
 
+### A linha mostra os DOIS grupos, e diz qual é qual (2026-09-22)
+
+Print do dono do produto, na linha da Imobiliária Moeda Forte: um grupo só —
+**LM FLOW LOGS**, marcado — e *"conseguimos colocar para aparecer o grupo de logs
+interno e o grupo que definimos como o do cliente?"*. A causa está contada no
+CLAUDE.md do `lm-flow`; aqui está o que mudou na tela.
+
+- **Marcar um grupo deixou de sumir com os outros.** A lista agora é sempre tudo
+  o que se reconhece daquela imobiliária: o grupo dela e o de logs internos, lado
+  a lado, marcado ou não.
+- **Cada grupo leva um selo**: *Grupo do cliente* (verde), *Logs internos*
+  (cinza), *Reconhecido pelo nome* ou *Escolhido à mão*. Sem ele a linha mostra
+  um nome de grupo solto — e "LM FLOW LOGS" não diz nada sobre para onde a
+  mensagem iria, que é a única pergunta de quem está decidindo se liga um
+  disparo irreversível.
+- **O de logs explica o que é**: grupo da Leal Mídia sobre o cliente, e o aviso
+  só sai ali se alguém marcar. O automático nunca o escolhe, e a frase embaixo da
+  lista passou a dizer isso — senão "marquei nada e não sai nada" vira chamado de
+  suporte.
+- **Grupo cadastrado que o número operacional não listou aparece com o aviso**,
+  em vez de sumir.
+
+Armadilhas:
+
+7. **O tipo do grupo vem do SERVIDOR (`kind`), nunca do nome dele.** Deduzir pelo
+   texto chamaria de interno o grupo de uma imobiliária com "log" no nome — e,
+   pior, deixaria o interno passar por grupo do cliente. Há spec.
+8. **A regra mora fora do JSX** (`src/pages/SuperAdmin/aiVisitNoticeGroups.ts`,
+   com spec). Mesma decisão das outras traduções deste repositório.
+9. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): o `kind`, o `found` e a lista completa vêm de lá. Contra
+   o servidor antigo os selos saem como *Reconhecido pelo nome* e a lista volta a
+   ser recortada pelos marcados.
+
 ## O grupo de WhatsApp do cliente pode ser definido depois de criado (desde 2026-09-22)
 
 Pergunta do dono do produto: *"onde eu mudo ou defino o grupo de um cliente?"*.
