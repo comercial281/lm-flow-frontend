@@ -18,6 +18,10 @@ import OnboardingForms from '../OnboardingForms';
 import CustomerFeedbacks from '../CustomerFeedbacks';
 import AdminAtividade from '@/pages/Admin/Area/Auditoria';
 import { groupCatalogByTheme, itemLabel, matchesQuery, type CatalogItem } from '../featureCatalog';
+import {
+  GROUP_KIND_LABEL, groupJidsFrom, groupLabel, groupsPatch, nameRuleHint, sortGroupsForPicker,
+  type ClientGroupJids, type ClientGroupKind, type WaGroup,
+} from './clientGroups';
 
 import { toast } from 'sonner';
 
@@ -360,7 +364,12 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
 
 type FeatureItem = CatalogItem;
 
-function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () => void }) {
+function FeaturesModal({ tenant, onClose, onTenantUpdated }: {
+  tenant: PooledTenant;
+  onClose: () => void;
+  /** A ficha do cliente mudou (grupos de WhatsApp): o pai troca o cliente na lista para o próximo abrir já ver o novo. */
+  onTenantUpdated?: (t: PooledTenant) => void;
+}) {
   const [catalog, setCatalog] = useState<FeatureItem[]>([]);
   const [features, setFeatures] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -426,6 +435,56 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
     }))
     .filter(s => s.all.length > 0);
 
+  // Grupos de WhatsApp do cliente (o do cliente e o de logs internos). Até aqui
+  // eles só nasciam no assistente de criação; a ficha do cliente existente não
+  // tinha campo nenhum para trocar — e os outros blocos desta janela REENVIAM os
+  // dois JIDs em cada PATCH parcial (senão o servidor os apaga). Por isso o valor
+  // vive em ESTADO aqui, e não é lido de `tenant.settings` na hora de reenviar:
+  // lido da ficha velha, trocar o grupo e em seguida mexer em qualquer outro
+  // bloco devolveria o grupo antigo, calado.
+  const [groupJids, setGroupJids] = useState<ClientGroupJids>(() => groupJidsFrom(tenant.settings));
+  // A lista de grupos do número operacional é uma ida à Evolution: só carrega
+  // quando alguém clica em Trocar, nunca ao abrir a janela.
+  const [waGroups, setWaGroups] = useState<WaGroup[] | null>(null);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [groupsError, setGroupsError] = useState<string | null>(null);
+  const [editingGroup, setEditingGroup] = useState<ClientGroupKind | null>(null);
+  const [pickedJid, setPickedJid] = useState<string>('');
+  const [savingGroup, setSavingGroup] = useState(false);
+  const loadWaGroups = async () => {
+    if (waGroups !== null || loadingGroups) return;
+    setLoadingGroups(true);
+    setGroupsError(null);
+    try {
+      const r = await api.get('/super/pooled_tenants/provision_data');
+      setWaGroups(r.data?.data?.whatsapp_groups || []);
+    } catch {
+      setGroupsError('Não consegui listar os grupos do número operacional agora.');
+    } finally { setLoadingGroups(false); }
+  };
+  const startEditGroup = (kind: ClientGroupKind) => {
+    setEditingGroup(kind);
+    setPickedJid(groupJids[kind]);
+    void loadWaGroups();
+  };
+  const saveGroup = async (kind: ClientGroupKind, jid: string) => {
+    const next = { ...groupJids, [kind]: jid };
+    setSavingGroup(true);
+    try {
+      const r = await api.patch(`/super/pooled_tenants/${tenant.id}`, {
+        name: tenant.name,
+        ...groupsPatch(next),
+      });
+      setGroupJids(next);
+      setEditingGroup(null);
+      const updated = r.data?.data as PooledTenant | undefined;
+      if (updated) onTenantUpdated?.(updated);
+      toast.success(jid ? 'Grupo gravado.' : 'Cadastro do grupo limpo — volta a valer o nome do grupo.');
+    } catch {
+      toast.error('Falha ao gravar o grupo de WhatsApp.');
+    } finally { setSavingGroup(false); }
+  };
+
   // Regra de ENTRADA no funil por ORIGEM (tenant.settings.pipe_entry_sources): o
   // cliente escolhe quais origens de lead entram automático no pipeline. Fallback
   // pro legado only_ad_leads (true => só 'ads'; senão todas). Salva via update do
@@ -446,12 +505,10 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
     setSavingSource(key);
     setSources(next);
     try {
-      const s = tenant.settings || {};
       await api.patch(`/super/pooled_tenants/${tenant.id}`, {
         name: tenant.name,
         pipe_entry_sources: next,
-        whatsapp_reminder_group_jid: s.whatsapp_reminder_group_jid || '',
-        whatsapp_logs_group_jid: s.whatsapp_logs_group_jid || '',
+        ...groupsPatch(groupJids),
       });
     } catch {
       setSources(prev);
@@ -651,8 +708,7 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
       await api.patch(`/super/pooled_tenants/${tenant.id}`, {
         name: tenant.name,
         only_ad_leads: !!s.only_ad_leads,
-        whatsapp_reminder_group_jid: s.whatsapp_reminder_group_jid || '',
-        whatsapp_logs_group_jid: s.whatsapp_logs_group_jid || '',
+        ...groupsPatch(groupJids),
         max_whatsapp_channels: maxWa,
       });
     } catch {
@@ -675,10 +731,10 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
       await api.patch(`/super/pooled_tenants/${tenant.id}`, {
         name: tenant.name,
         // Reenviados junto pelo mesmo motivo do bloco de canais: PATCH parcial
-        // aqui já apagou grupo de WhatsApp de cliente antes.
+        // aqui já apagou grupo de WhatsApp de cliente antes. Do ESTADO, não da
+        // ficha velha — ver o bloco de grupos acima.
         only_ad_leads: !!s.only_ad_leads,
-        whatsapp_reminder_group_jid: s.whatsapp_reminder_group_jid || '',
-        whatsapp_logs_group_jid: s.whatsapp_logs_group_jid || '',
+        ...groupsPatch(groupJids),
         ai_leads_included: aiLeads.trim() === '' ? null : Math.max(0, parseInt(aiLeads, 10) || 0),
         ai_lead_overage_price_brl: aiPrice.trim() === '' ? null : Math.max(0, parseFloat(aiPrice.replace(',', '.')) || 0),
       });
@@ -721,6 +777,78 @@ function FeaturesModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () 
                         ? <Loader2 className="w-3 h-3 animate-spin text-white absolute top-1.5 left-3.5" />
                         : <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${on ? 'left-5' : 'left-1'}`} />}
                     </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {/* Grupos de WhatsApp do cliente. Sem cadastro o servidor reconhece o
+              grupo pelo NOME ("Cliente x Leal Mídia"); o cadastro é a exceção
+              para grupo com nome fora do padrão, e vence o nome. */}
+          <div className="px-3 py-2.5 rounded-lg mb-1"
+            style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.25)' }}>
+            <div className="flex items-center gap-2 text-sm text-white/90"><MessageCircle className="w-3.5 h-3.5" /> Grupos WhatsApp</div>
+            <div className="text-xs text-white/40 mb-2 mt-0.5">{nameRuleHint(tenant.name)} Cadastrar aqui só é preciso quando o nome do grupo foge desse padrão — e o cadastro vence o nome.</div>
+            <div className="space-y-2">
+              {(['reminder', 'logs'] as ClientGroupKind[]).map(kind => {
+                const meta = GROUP_KIND_LABEL[kind];
+                const atual = groupLabel(groupJids[kind], waGroups, kind);
+                const editando = editingGroup === kind;
+                const lista = waGroups ? sortGroupsForPicker(waGroups, tenant.name) : [];
+                const gravadoForaDaLista = !!groupJids[kind] && waGroups !== null && !waGroups.some(g => g.jid === groupJids[kind]);
+                return (
+                  <div key={kind} className="rounded-md px-2.5 py-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm text-white/90">{meta.label}</div>
+                        <div className="text-xs text-white/40">{meta.hint}</div>
+                        {!editando && (
+                          <div className={`text-xs mt-1 truncate ${atual.source === 'nome' ? 'text-white/50 italic' : atual.source === 'fora' ? 'text-amber-300' : 'text-emerald-300'}`}
+                            title={groupJids[kind] || undefined}>
+                            {atual.text}
+                          </div>
+                        )}
+                        {!editando && atual.warning && <div className="text-[11px] text-amber-300/80 mt-0.5">{atual.warning}</div>}
+                      </div>
+                      {!editando && (
+                        <button onClick={() => startEditGroup(kind)} disabled={savingGroup}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/10 text-white/90 flex-shrink-0 disabled:opacity-50">
+                          {groupJids[kind] ? 'Trocar' : 'Definir'}
+                        </button>
+                      )}
+                    </div>
+                    {editando && (
+                      <div className="mt-2 space-y-1.5">
+                        {groupsError && <div className="text-xs text-amber-300">{groupsError}</div>}
+                        <select value={pickedJid} onChange={e => setPickedJid(e.target.value)} disabled={loadingGroups}
+                          className="w-full px-2 py-1.5 rounded text-sm text-white outline-none focus:ring-1 focus:ring-violet-500"
+                          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(124,58,237,0.25)' }}>
+                          <option value="" style={{ background: '#150a26' }}>
+                            {loadingGroups ? 'Carregando grupos do número operacional...'
+                              : kind === 'reminder' ? '— sem cadastro (reconhecer pelo nome do grupo) —' : '— sem cadastro —'}
+                          </option>
+                          {/* O grupo gravado que sumiu da lista continua escolhível:
+                              sumir com ele faria o Salvar gravar vazio sem ninguém ver. */}
+                          {gravadoForaDaLista && (
+                            <option value={groupJids[kind]} style={{ background: '#150a26' }}>{groupJids[kind]} (gravado, fora da lista)</option>
+                          )}
+                          {lista.map(g => <option key={g.jid} value={g.jid} style={{ background: '#150a26' }}>{g.name}</option>)}
+                        </select>
+                        {waGroups !== null && waGroups.length === 0 && !loadingGroups && (
+                          <div className="text-xs text-amber-300">O número operacional não devolveu grupo nenhum.</div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => saveGroup(kind, pickedJid)} disabled={savingGroup || loadingGroups}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-600 text-white disabled:opacity-50">
+                            {savingGroup ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvar'}
+                          </button>
+                          <button onClick={() => setEditingGroup(null)} disabled={savingGroup}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/10 text-white/70 disabled:opacity-50">
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1327,7 +1455,19 @@ export default function PooledClients() {
       )}
       </div>
       {membersOf && <MembersModal tenant={membersOf} onClose={() => setMembersOf(null)} />}
-      {featuresOf && <FeaturesModal tenant={featuresOf} onClose={() => setFeaturesOf(null)} />}
+      {featuresOf && (
+        <FeaturesModal
+          tenant={featuresOf}
+          onClose={() => setFeaturesOf(null)}
+          onTenantUpdated={t => {
+            // Só a ficha (settings) muda por aqui; o resto da linha (consumo de
+            // IA, canais usados) não vem no PATCH e ficaria zerado se a linha
+            // fosse substituída inteira.
+            setTenants(prev => prev.map(x => (x.id === t.id ? { ...x, name: t.name, settings: t.settings } : x)));
+            setFeaturesOf(prev => (prev && prev.id === t.id ? { ...prev, settings: t.settings } : prev));
+          }}
+        />
+      )}
       {showWizard && <NewTenantWizard onClose={() => setShowWizard(false)} onCreated={load} />}
       {showBroadcast && <ClientBroadcastModal tenants={tenants} onClose={() => setShowBroadcast(false)} />}
       {showFollowupRollout && <ClientFollowupRolloutModal tenants={tenants} onClose={() => setShowFollowupRollout(false)} />}
