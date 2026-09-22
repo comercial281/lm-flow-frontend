@@ -3014,7 +3014,7 @@ Armadilhas:
 
 1. **A regra mora fora do JSX** (`src/pages/SuperAdmin/PooledClients/clientGroups.ts`,
    com spec): o painel tem ~1.400 linhas. É a mesma decisão das outras traduções.
-2. **O intervalo de acentos vai escrito como `̀-ͯ`**, e há spec que lê
+2. **O intervalo de acentos vai escrito como `\u0300-\u036f`**, e há spec que lê
    o fonte — na estreia deste módulo a ferramenta de escrita converteu o escape
    nos caracteres literais, e foi o spec que pegou. Quarta vez da mesma cicatriz.
 3. **Não é `featureKey` nem `clientToggleKey`** — é ficha do cliente no painel
