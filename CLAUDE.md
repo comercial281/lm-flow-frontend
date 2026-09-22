@@ -2905,6 +2905,41 @@ nunca o devolvia — reabrir o agente mostrava "como está hoje" com um cenário
 baixo, e o PATCH campo a campo podia regravar o vazio por cima. Mesmo defeito
 write-only-true da chave *"seguir o horário de atuação"* do follow-up.
 
+### Ficha completa passou a ENTREGAR na hora (2026-09-22)
+
+Relato do dono no dia seguinte: *"mesmo arrancando as informações ele ainda continua
+insistindo na visita"* — e o diagnóstico dele: *"o problema não é pedir visita, é que o
+lead fica morno e ela não repassa mesmo com as informações; o correto seria já jogar na
+roleta pro corretor ligar confirmar interesse"*.
+
+Ele estava certo. O cenário nasceu como **portão** (*"não passe antes de a ficha
+fechar"*) e nunca como **gatilho** (*"passe quando ela fechar"*): quem decidia a hora
+continuava sendo a IA, e o comando dela manda conduzir até a visita. A causa e o conserto
+são do servidor (ver o CLAUDE.md do `lm-flow`).
+
+O que mudou na tela:
+
+- **O cartão diz o desfecho**, não só a espera: *"Ela conduz até o lead responder as
+  perguntas que você marcar como obrigatórias — e, na resposta da última, ENTREGA o lead
+  na hora, sem oferecer visita"*.
+- **Uma linha nova embaixo da lista**, antes da saída de emergência: respondida a última
+  pergunta marcada, a IA avisa que um corretor vai falar com o lead e **sai de cena** —
+  não oferece visita nem puxa outro assunto.
+- **Sem pergunta de qualificação escrita, essa promessa NÃO aparece** — ali o servidor
+  não dispara nada, e prometer entrega seria mentir na tela.
+
+Armadilhas:
+
+1. **A ordem das duas linhas é a ordem da pergunta que o gestor faz**: primeiro "o que
+   acontece quando a ficha fecha?" (é para isso que ele escolheu o cenário), depois "e
+   quem não terminou de responder?". Há spec para as duas.
+2. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): quem entrega é o servidor, no fim do turno. Contra o servidor
+   antigo o cartão promete a entrega e a IA continua conduzindo — exatamente o defeito
+   relatado.
+3. **Não é `featureKey` nem `clientToggleKey`** — é texto de tela. Os scanners do
+   catálogo de funcionalidades não entram nesta história.
+
 
 ## A visita marcada pela IA avisa o grupo do cliente (desde 2026-09-22)
 
