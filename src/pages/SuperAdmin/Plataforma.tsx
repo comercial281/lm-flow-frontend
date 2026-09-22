@@ -4,14 +4,20 @@ import { AlertTriangle, Landmark, Loader2, RotateCcw, Upload } from 'lucide-reac
 import { Button } from '@/components/ui/ds';
 import { platformBanksService, type PlatformBank } from '@/services/superAdmin/platformBanksService';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
+import AiVisitNoticeSection from './AiVisitNoticeSection';
 
 /**
  * Configuração que vale para TODAS as imobiliárias de uma vez.
  *
- * Hoje só os logos dos bancos da página *Simule seu financiamento*: subidos uma
- * vez aqui, toda imobiliária os mostra — inclusive as que ainda nem existem.
- * É a mesma doutrina de toda configuração da plataforma: o valor do cliente
- * vence, e onde ele está vazio vale o da Leal Mídia.
+ * Dois blocos hoje:
+ *
+ *   • os logos dos bancos da página *Simule seu financiamento*: subidos uma vez
+ *     aqui, toda imobiliária os mostra — inclusive as que ainda nem existem. É a
+ *     doutrina de toda configuração da plataforma: o valor do cliente vence, e
+ *     onde ele está vazio vale o da Leal Mídia;
+ *   • o aviso, no grupo de cada cliente, de que a IA marcou uma visita — esse
+ *     nasce desligado e é ligado imobiliária por imobiliária, porque a mensagem
+ *     cai num grupo com gente de verdade e não dá para desfazer um disparo.
  *
  * Antes disto o logo era enviado no Site Builder de cada cliente: cinco arquivos
  * vezes trinta e uma imobiliárias, e a imobiliária nova nascia sem nenhum. Quem
@@ -174,6 +180,8 @@ export default function Plataforma() {
           </div>
         )}
       </section>
+
+      <AiVisitNoticeSection />
     </div>
   );
 }

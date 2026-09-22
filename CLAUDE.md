@@ -2905,3 +2905,64 @@ nunca o devolvia — reabrir o agente mostrava "como está hoje" com um cenário
 baixo, e o PATCH campo a campo podia regravar o vazio por cima. Mesmo defeito
 write-only-true da chave *"seguir o horário de atuação"* do follow-up.
 
+
+## A visita marcada pela IA avisa o grupo do cliente (desde 2026-09-22)
+
+Pedido do dono do produto: *"quando a IA agenda visita precisamos notificar no
+grupo do cliente"*. O grupo é o que temos com cada imobiliária ("APTO PREMIUM x
+Leal Mídia") — o mesmo do relatório da semana e do aviso de aula nova —, e as
+visitas que contam são **só as que a IA marcou**, não as que o corretor marca à
+mão. As duas escolhas foram dele.
+
+O que aparece na tela, no item **Plataforma** da Área do Admin (só a Leal Mídia),
+num bloco novo *Aviso de visita da IA*:
+
+- **O texto da mensagem**, editável, com os trechos entre chaves preenchidos na
+  hora do envio e um *Voltar ao padrão* quando alguém reescreveu.
+- **A lista das imobiliárias**, com busca e o contador de quantas estão ligadas.
+  Cada linha tem a chave de liga/desliga e abre mostrando **em qual grupo o aviso
+  cairia**.
+- **Aviso em âmbar quando não cairia em lugar nenhum**: a imobiliária tem dois
+  grupos e ninguém escolheu, ou nenhum grupo dela foi reconhecido.
+- **Botão *Mandar um teste***, por imobiliária, que cai no grupo de verdade
+  marcado como teste.
+- **Os últimos avisos**, no rodapé do bloco.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Nasce DESLIGADO em toda imobiliária.** A mensagem cai num grupo com gente de
+  verdade dentro, pelo nosso número institucional, e não há como desfazer um
+  disparo. Ligar é um clique, por cliente.
+- **A lista de clientes vem SEM o grupo resolvido.** Descobrir em qual grupo o
+  aviso cairia é uma conversa com o WhatsApp mais uma varredura no banco daquele
+  cliente; fazer isso para trinta e uma imobiliárias de uma vez não cabe numa
+  requisição, e a resposta voltaria **sem motivo nenhum dentro** — a falha que
+  este produto já diagnosticou errado duas vezes na aba de Relatórios. O grupo de
+  cada cliente só é buscado quando alguém abre aquela linha.
+- **Ligar a chave RELÊ o destino na hora.** Ligar sem saber para onde vai é o
+  pior desfecho aqui: o motivo aparece junto com a chave virando, não depois.
+- **O botão de teste respeita a chave.** Teste é uma mensagem de verdade num
+  grupo de verdade; cliente desligado recebe o motivo em português.
+
+Armadilhas:
+
+1. ⚠️ **A gravação manda SÓ a imobiliária que mudou.** O servidor mescla por
+   cliente. Mandar o mapa inteiro apagaria a imobiliária criada depois de esta
+   tela abrir, **em silêncio** — é exatamente a armadilha da janela *Destino do
+   lead* da landing, que montava o bloco do zero e apagava o que não conhecia.
+2. **O telefone do lead existe como variável e fica FORA do texto padrão**, de
+   propósito: o grupo é compartilhado com a Leal Mídia, e dado pessoal de lead
+   ali é escolha explícita de quem edita o texto.
+3. **Os marcadores vêm do SERVIDOR** (`vars`), não de uma lista escrita aqui.
+   Duas listas divergiriam, e a divergência aparece como "usei o que a tela
+   ofereceu e saiu literal no grupo".
+4. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): o gatilho, o destino, o texto e a entrega moram lá.
+   Contra o servidor antigo o bloco abre com o aviso de que não conseguiu
+   carregar.
+5. **A leitura dos dois formatos de erro da API** está no bloco (o padrão traz
+   `error.message`; a recusa por cargo traz `error` como texto). Ler só o
+   primeiro faz a recusa virar frase genérica.
+6. **Não é `featureKey` nem `clientToggleKey`** — é configuração de plataforma,
+   como os logos dos bancos. Os scanners do catálogo de funcionalidades não
+   entram nesta história e nenhuma chave literal nova foi escrita.
