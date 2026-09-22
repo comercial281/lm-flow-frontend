@@ -3001,3 +3001,73 @@ Armadilhas:
 6. **Não é `featureKey` nem `clientToggleKey`** — é configuração de plataforma,
    como os logos dos bancos. Os scanners do catálogo de funcionalidades não
    entram nesta história e nenhuma chave literal nova foi escrita.
+
+## O corretor recebe o lead com o que a IA descobriu (desde 2026-09-22)
+
+Pergunta do dono do produto: *"quando a IA repassar o lead para o corretor, na
+mensagem conseguimos colocar o resumo do que ela buscou? o mesmo que fica ali na
+aba de conversas?"*.
+
+O dado sempre existiu e aparecia em UM lugar: o bloco *O que a IA entendeu*, na
+lateral da conversa. No repasse, o corretor recebia nome, telefone, prazo e o link
+no WhatsApp, e a **tela de aceite — onde ele decide** — mostrava nome e telefone.
+Ele assumia o lead sem saber que orçamento, região e prazo já estavam anotados, e
+perguntava tudo de novo.
+
+O que aparece na tela:
+
+- **Na tela de aceite (o link do WhatsApp), o bloco *O que a IA já descobriu***,
+  acima dos botões *Recusar* / *Aceitar*: selo de temperatura, etapa da conversa,
+  interesse, como o lead está se sentindo, *Ela já perguntou* com os campos, as
+  *Respostas do lead* (as perguntas obrigatórias da imobiliária, que até agora não
+  apareciam em tela nenhuma), o resumo da conversa e o motivo do repasse. Lead que
+  não passou pela IA — a maioria dos leads da roleta — não ganha bloco nenhum.
+- **No WhatsApp do corretor**, três linhas dentro do mesmo aviso de sempre: a
+  temperatura, até três campos (orçamento, região, prazo) e uma frase do resumo.
+  A ficha inteira fica no link.
+- **Chave *Mandar o resumo da conversa junto com o lead***, em *IA Vendedora →
+  Configuração → Quando ela passa para um corretor*, abaixo dos cartões de
+  cenário. Marcada em toda imobiliária; desmarcar volta ao aviso de antes.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **O que vai no WhatsApp é curto; o que vai na tela de aceite é completo.** Sete
+  linhas de ficha mais o resumo em prosa viram um tijolo no celular; e é na tela
+  de aceite que a decisão acontece.
+- **Quem MONTA o resumo é o servidor**, nos dois lugares. A tela não junta campo
+  nenhum: o mesmo texto alimenta a mensagem do WhatsApp, e duas montagens
+  divergiriam — "o WhatsApp diz uma coisa e a tela diz outra".
+- **A chave estreia LIGADA**, com a mesma doutrina do gotejamento do follow-up:
+  ela só acrescenta informação a um aviso que já sai, e existe para desligar em
+  quem não quiser.
+- **A chave fica FORA dos cartões de cenário**, porque não é de nenhum deles:
+  vale em qualquer um.
+
+Armadilhas:
+
+1. ⚠️ **Trocar o cenário de repasse SUBSTITUI o `transfer_config` inteiro** (de
+   propósito: a temperatura mínima e as perguntas obrigatórias não podem ficar
+   penduradas). A escolha do resumo tem que SOBREVIVER a isso (`keepBriefing`),
+   senão o gestor desliga o resumo, troca o cenário depois e ele volta a sair —
+   calado. Há spec que confere que TODA escrita do cenário passa por lá.
+2. **Ligar REMOVE a chave em vez de gravar `true`**, e a leitura é `!== false`.
+   Gravar o padrão congelaria a escolha de hoje se o padrão da casa mudasse —
+   mesma regra do texto de fábrica do portal e do tipo de venda no assistente.
+3. **A chave viaja DENTRO do `transfer_config`**, que já está na lista campo a
+   campo do `saveAgent`. Como campo solto do agente seria descartada em silêncio,
+   com a tela dizendo *Salvo*. Há spec de fonte.
+4. **O bloco da tela de aceite não desenha cabeçalho sem conteúdo**, e aguenta
+   servidor antigo (campo ausente) e listas ausentes — cabeçalho sozinho parece
+   tela quebrada.
+5. **Rótulo novo de campo do resumo vem do servidor**, não de uma lista escrita
+   aqui. Duas listas divergiriam, e a divergência apareceria como campo que existe
+   no bloco da conversa e não no do aceite.
+6. **A regra mora fora do JSX** (`src/features/salesAgents/handoffBriefing.ts`, e
+   o bloco em `src/components/roleta/OfferAiBriefing.tsx`, os dois com spec): a
+   tela da IA tem ~4.800 linhas e a de aceite é uma página só.
+7. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): quem monta o resumo, quem o manda no WhatsApp e a chave
+   moram lá. Contra o servidor antigo a chave aparece, salva, e nada muda.
+8. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente, não módulo.
+   Os scanners do catálogo de funcionalidades não entram nesta história e nenhuma
+   chave literal nova foi escrita.

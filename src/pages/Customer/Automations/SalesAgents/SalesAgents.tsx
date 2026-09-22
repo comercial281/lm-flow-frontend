@@ -64,6 +64,7 @@ import {
 } from '@/features/salesAgents/followupHours';
 import { antecedenciaResumo } from '@/features/salesAgents/visitWindow';
 import { checklistItems, checklistNotices, toggleRequired } from '@/features/salesAgents/handoffChecklist';
+import { briefingEnabled, keepBriefing, toggleBriefing } from '@/features/salesAgents/handoffBriefing';
 import inboxesService from '@/services/channels/inboxesService';
 import agentsService from '@/services/channels/agentsService';
 import { roletaConfigService } from '@/services/roletaConfig/roletaConfigService';
@@ -1723,14 +1724,21 @@ function HandoffPolicySection({ agent, onSave }: {
   // mínima e as perguntas obrigatórias só significam alguma coisa dentro do cenário
   // delas, e deixá-las penduradas faria o cartão voltar com uma escolha antiga que
   // ninguém lembra de ter feito.
+  //
+  // ⚠️ A escolha do RESUMO sobrevive a essa limpeza (keepBriefing): ela não é do
+  // cenário nenhum, e apagá-la aqui faria o resumo voltar a sair sozinho depois de
+  // o gestor tê-lo desligado, sem nada na tela dizendo isso.
   const pick = (value: HandoffMode | '') => {
-    if (value === '') { onSave({ transfer_config: {} }); return; }
-    if (value === 'temperatura') { onSave({ transfer_config: { mode: value, min_temperature: minTemp } }); return; }
-    if (value === 'checklist') {
-      onSave({ transfer_config: { mode: value, required_questions: obrigatorias ?? [] } });
+    if (value === '') { onSave({ transfer_config: keepBriefing(cfg, {}) }); return; }
+    if (value === 'temperatura') {
+      onSave({ transfer_config: keepBriefing(cfg, { mode: value, min_temperature: minTemp }) });
       return;
     }
-    onSave({ transfer_config: { mode: value } });
+    if (value === 'checklist') {
+      onSave({ transfer_config: keepBriefing(cfg, { mode: value, required_questions: obrigatorias ?? [] }) });
+      return;
+    }
+    onSave({ transfer_config: keepBriefing(cfg, { mode: value }) });
   };
 
   // Desmarcar a ÚLTIMA obrigatória devolve null, porque lista vazia significa o OPOSTO
@@ -1738,7 +1746,7 @@ function HandoffPolicySection({ agent, onSave }: {
   const toggle = (text: string) => {
     const proximas = toggleRequired(perguntas, obrigatorias, text);
     if (proximas === null) return;
-    onSave({ transfer_config: { mode: 'checklist', required_questions: proximas } });
+    onSave({ transfer_config: keepBriefing(cfg, { mode: 'checklist', required_questions: proximas }) });
   };
 
   return (
@@ -1779,7 +1787,9 @@ function HandoffPolicySection({ agent, onSave }: {
                     id="handoff_min_temperature"
                     value={minTemp}
                     onChange={(e) => onSave({
-                      transfer_config: { mode: 'temperatura', min_temperature: e.target.value as 'hot' | 'warm' },
+                      transfer_config: keepBriefing(cfg, {
+                        mode: 'temperatura', min_temperature: e.target.value as 'hot' | 'warm',
+                      }),
                     })}
                     className="mt-1 w-full rounded-md border border-sidebar-border bg-background px-3 py-2 text-sm"
                   >
@@ -1840,6 +1850,19 @@ function HandoffPolicySection({ agent, onSave }: {
             </div>
           );
         })}
+      </div>
+
+      {/* O que ela descobriu vai COM o lead. Sem isto o corretor recebe nome,
+          telefone e prazo, e pergunta orçamento, região e prazo de novo — a IA já
+          tinha anotado tudo. Fica fora dos cartões porque não é do cenário
+          nenhum: vale em qualquer um deles. */}
+      <div className="mt-3 border-t border-sidebar-border pt-3">
+        <CheckRow
+          checked={briefingEnabled(cfg)}
+          onChange={(v) => onSave({ transfer_config: toggleBriefing(cfg, v) })}
+          title="Mandar o resumo da conversa junto com o lead"
+          desc="No WhatsApp do corretor vão três linhas (temperatura, e o que ela descobriu de orçamento, região e prazo). Na tela de aceite vai a ficha completa, com o resumo da conversa — o mesmo que aparece em O que a IA entendeu."
+        />
       </div>
     </div>
   );

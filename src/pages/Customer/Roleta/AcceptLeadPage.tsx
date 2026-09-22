@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Check, X, Clock, User, Phone, Loader2 } from 'lucide-react';
 import { brokerAssignmentsService, BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
 import { hasDeadline } from '@/components/roleta/offerDeadline';
+import OfferAiBriefing from '@/components/roleta/OfferAiBriefing';
 
 function fmtMMSS(totalSec: number): string {
   const s = Math.max(0, Math.floor(totalSec));
@@ -167,6 +168,11 @@ export default function AcceptLeadPage() {
                 <Clock className="h-4 w-4" /> Chegou em {new Date(data.assigned_at).toLocaleString('pt-BR')}
               </div>
             </div>
+
+            {/* O que a IA levantou conversando com este lead. Fica ANTES dos
+                botões de propósito: é informação para a decisão de aceitar, não
+                detalhe para depois. Não aparece em lead que não passou pela IA. */}
+            <OfferAiBriefing briefing={data.ia_briefing} />
 
             {/* Botões */}
             <div className="grid grid-cols-2 gap-3">

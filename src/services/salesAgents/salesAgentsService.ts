@@ -312,6 +312,14 @@ export interface TransferConfig {
    * tela só precisa DIZER ao gestor que é assim.
    */
   required_questions?: string[];
+  /**
+   * Mandar junto com o lead, no repasse, o resumo do que a IA descobriu.
+   *
+   * ⚠️ Lida com `!== false`: agente que nunca viu a chave fica LIGADO — o resumo
+   * estreou em todas as imobiliárias, e a chave existe para desligar em quem não
+   * quiser. Ver features/salesAgents/handoffBriefing.ts.
+   */
+  briefing_enabled?: boolean;
 }
 
 export interface VisitConfig {
