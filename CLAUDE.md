@@ -2966,3 +2966,56 @@ Armadilhas:
 6. **Não é `featureKey` nem `clientToggleKey`** — é configuração de plataforma,
    como os logos dos bancos. Os scanners do catálogo de funcionalidades não
    entram nesta história e nenhuma chave literal nova foi escrita.
+
+## O grupo de WhatsApp do cliente pode ser definido depois de criado (desde 2026-09-22)
+
+Pergunta do dono do produto: *"onde eu mudo ou defino o grupo de um cliente?"*.
+Não havia onde. O servidor reconhece o grupo de uma imobiliária pelo **nome**
+("APTO PREMIUM x Leal Mídia") e, acima disso, pelo **cadastro** na ficha do
+cliente — mas o cadastro só existia no assistente *Novo cliente*. Cliente já
+criado com grupo renomeado, ou com nome fora do padrão, não tinha campo nenhum:
+a ficha só REENVIAVA o valor gravado em cada salvamento, para não apagá-lo.
+
+O que aparece na tela, no painel raiz → Clientes → **Funções** de um cliente,
+bloco novo **Grupos WhatsApp**, logo abaixo de *O que entra no funil*:
+
+- **Duas linhas**: *Grupo do cliente* (lembretes, avisos, relatório da semana) e
+  *Grupo de logs internos* (só a Leal Mídia). Cada uma mostra o que vale hoje:
+  o **nome** do grupo quando há cadastro, *"Sem cadastro — reconhecido pelo nome
+  do grupo"* quando não há, e em âmbar quando o grupo gravado **não aparece
+  mais** entre os grupos do número operacional.
+- **Botão *Definir* / *Trocar***, que carrega os grupos do número operacional
+  (os que começam com o nome do cliente vêm primeiro) e grava. A primeira opção
+  é *sem cadastro*, para voltar a valer o nome.
+- **O texto do bloco diz a regra do nome** com o nome daquele cliente já
+  encaixado, porque cadastrar é a exceção: quase todo cliente funciona só pelo
+  nome, e o cadastro vence.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Os dois grupos viajam SEMPRE juntos**, em todo salvamento desta janela — o
+  servidor apaga a chave que chega vazia, e PATCH parcial já apagou grupo de
+  cliente antes. Quem monta esse pedaço do corpo é um lugar só.
+- **O valor dos grupos vive em estado da janela, não na ficha que abriu a
+  janela.** Os outros blocos (origens do funil, canais, franquia de IA) reenviam
+  os grupos em cada salvamento; lidos da ficha velha, trocar o grupo e em seguida
+  mexer em qualquer outro bloco devolveria o grupo antigo, calado.
+- **O grupo gravado que sumiu da lista NÃO some da tela**: ele fica à vista com
+  aviso, e continua escolhível no seletor. Sumir com ele faria o próximo
+  *Salvar* gravar vazio sem ninguém ver.
+- **A lista de grupos só carrega no clique**, nunca ao abrir a janela — é uma
+  conversa com o WhatsApp operacional.
+- **Só JID de grupo passa**; número de pessoa vira vazio antes de chegar ao
+  servidor, que também recusa.
+- **Nada mudou no servidor**: o endereço que grava os dois grupos já existia e já
+  era usado pelo assistente de criação.
+
+Armadilhas:
+
+1. **A regra mora fora do JSX** (`src/pages/SuperAdmin/PooledClients/clientGroups.ts`,
+   com spec): o painel tem ~1.400 linhas. É a mesma decisão das outras traduções.
+2. **O intervalo de acentos vai escrito como `̀-ͯ`**, e há spec que lê
+   o fonte — na estreia deste módulo a ferramenta de escrita converteu o escape
+   nos caracteres literais, e foi o spec que pegou. Quarta vez da mesma cicatriz.
+3. **Não é `featureKey` nem `clientToggleKey`** — é ficha do cliente no painel
+   raiz. Os scanners do catálogo de funcionalidades não entram nesta história.
