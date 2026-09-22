@@ -1,5 +1,25 @@
 import api from '@/services/core/api';
 
+/**
+ * O que a IA já descobriu deste lead, montado pelo servidor a partir do que ela
+ * gravou a cada mensagem — o mesmo conteúdo do bloco *O que a IA entendeu* da
+ * lateral da conversa.
+ *
+ * Vem NULO quando o lead não passou pela IA (anúncio, formulário, portal,
+ * orgânico), que é a maioria dos leads da roleta.
+ */
+export interface OfferAiBriefing {
+  temperature: string | null;
+  temperature_label: string | null;
+  stage_label: string | null;
+  intent_label: string | null;
+  sentiment_label: string | null;
+  fields: Array<{ key: string; label: string; value: string }>;
+  checklist: Array<{ question: string; answer: string; required: boolean }>;
+  summary: string | null;
+  handoff_reason: string | null;
+}
+
 export interface BrokerAssignmentDetail {
   id: string;
   status: 'pending' | 'accepted' | 'passed' | 'expired' | 'cancelled';
@@ -24,6 +44,9 @@ export interface BrokerAssignmentDetail {
   pipeline_item_id?: string | null;
   roleta_instance_id?: string | null;
   instance_name?: string | null;
+  // Opcional de propósito: contra o servidor antigo a tela simplesmente não
+  // desenha a ficha, e nada mais muda.
+  ia_briefing?: OfferAiBriefing | null;
 }
 
 const BASE = '/broker_assignments';
