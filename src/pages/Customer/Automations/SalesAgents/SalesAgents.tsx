@@ -70,6 +70,9 @@ import inboxesService from '@/services/channels/inboxesService';
 import agentsService from '@/services/channels/agentsService';
 import { roletaConfigService } from '@/services/roletaConfig/roletaConfigService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
+import { leadAdsFormsService } from '@/services/leadAds/leadAdsFormsService';
+import type { LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
+import { formOptions, formTriggerNotice, toggleForm } from '@/features/salesAgents/formTrigger';
 import { followupSequencesService } from '@/services/followupSequences/followupSequencesService';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -2912,6 +2915,7 @@ const TRIGGER_TYPES: { value: SalesAgentTriggerType; label: string }[] = [
   { value: 'pipeline', label: 'É lead (tem card no funil)' },
   { value: 'keyword', label: 'Contém/é igual a palavra' },
   { value: 'origin', label: 'Origem do lead' },
+  { value: 'form', label: 'Veio de um destes formulários' },
   { value: 'property', label: 'Imóvel (código / form)' },
   { value: 'pipeline_stage', label: 'Coluna de pipeline' },
   { value: 'tag', label: 'Tem a tag' },
@@ -2934,6 +2938,7 @@ function newTrigger(type: SalesAgentTriggerType): SalesAgentTrigger {
     // pipeline_id vazio = qualquer funil, que é o caso normal.
     case 'pipeline': return { type, mode: 'any', pipeline_id: '' };
     case 'tag': return { type, value: '' };
+    case 'form': return { type, form_ids: [] };
   }
 }
 
@@ -2941,6 +2946,15 @@ function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
   const triggers = agent.triggers ?? [];
   const [pipelines, setPipelines] = useState<PipelineOpt[]>([]);
   const [stagesByPipeline, setStagesByPipeline] = useState<Record<string, StageOpt[]>>({});
+
+  // Formulários de Origem → Formulários. Leitura de fundo: falha só esconde a lista.
+  const [formConfigs, setFormConfigs] = useState<LeadAdsFormConfig[]>([]);
+  const hasFormTrigger = triggers.some((t) => t.type === 'form');
+  useEffect(() => {
+    if (!hasFormTrigger) return;
+    leadAdsFormsService.getAll().then(setFormConfigs).catch(() => setFormConfigs([]));
+  }, [hasFormTrigger]);
+
 
   useEffect(() => {
     pipelinesService.getPipelines()
@@ -3048,6 +3062,38 @@ function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
                     onChange={(e) => update(i, { code: e.target.value })} onBlur={() => commit(triggers)} />
                 )}
               </>
+            )}
+
+            {t.type === 'form' && (
+              <div className="w-full space-y-1">
+                <div className="text-xs text-muted-foreground">
+                  A IA só entra na conversa do lead que preencheu um dos formulários marcados. Lead de
+                  outra campanha — inclusive anúncio que leva direto ao WhatsApp — fica de fora. Vale
+                  também para o formulário novo que o Facebook cria a cada campanha, desde que ele seja
+                  reconhecido pela palavra-chave do imóvel em Origem → Formulários.
+                </div>
+                <div className="flex flex-col gap-1">
+                  {formOptions(formConfigs, t.form_ids).map((o) => (
+                    <label key={o.formId} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" checked={o.checked}
+                        onChange={() => update(i, { form_ids: toggleForm(t.form_ids, o.formId) })} />
+                      <span>{o.label}</span>
+                      {o.inactive && <span className="text-xs text-muted-foreground">(desativado)</span>}
+                      {o.orphan && <span className="text-xs text-amber-600">(não está mais cadastrado)</span>}
+                    </label>
+                  ))}
+                </div>
+                {matchMode === 'any' && triggers.some((o) => o.type === 'origin' || o.type === 'pipeline' || o.type === 'property') && (
+                  <div className="text-xs text-amber-600">
+                    Atenção: com "Qualquer gatilho ativa (OU)", o gatilho de origem/funil/imóvel desta lista
+                    continua deixando a IA entrar nos leads das outras campanhas. Para valer só estes
+                    formulários, remova aquele gatilho.
+                  </div>
+                )}
+                {formTriggerNotice(t.form_ids, formConfigs.length) && (
+                  <div className="text-xs text-amber-600">{formTriggerNotice(t.form_ids, formConfigs.length)}</div>
+                )}
+              </div>
             )}
 
             {t.type === 'pipeline' && (
