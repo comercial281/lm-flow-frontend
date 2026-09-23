@@ -66,3 +66,15 @@ export function formTriggerNotice(selected: string[] | undefined, configsCount: 
   }
   return null;
 }
+
+// O servidor guardou os formulários marcados? Servidor antigo descarta a lista
+// calado e devolve o gatilho vazio — a caixinha "desmarca sozinha" e ninguém sabe
+// por quê. Compara o que foi enviado com o que voltou, gatilho a gatilho.
+export function formIdsDropped(
+  sent: { type: string; form_ids?: string[] }[] | undefined,
+  saved: { type: string; form_ids?: string[] }[] | undefined,
+): boolean {
+  const s = (sent ?? []).filter((t) => t.type === 'form');
+  const r = (saved ?? []).filter((t) => t.type === 'form');
+  return s.some((t, i) => (t.form_ids ?? []).length > 0 && (r[i]?.form_ids ?? []).length === 0);
+}

@@ -72,7 +72,7 @@ import { roletaConfigService } from '@/services/roletaConfig/roletaConfigService
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { leadAdsFormsService } from '@/services/leadAds/leadAdsFormsService';
 import type { LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
-import { formOptions, formTriggerNotice, toggleForm } from '@/features/salesAgents/formTrigger';
+import { formIdsDropped, formOptions, formTriggerNotice, toggleForm } from '@/features/salesAgents/formTrigger';
 import { followupSequencesService } from '@/services/followupSequences/followupSequencesService';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -297,6 +297,10 @@ export default function SalesAgents() {
       });
       setSelected(updated);
       setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+      if (patch.triggers && formIdsDropped(patch.triggers, updated.triggers)) {
+        toast.error('O servidor não guardou os formulários marcados — ele ainda está numa versão sem este gatilho. Avise o suporte.');
+        return;
+      }
       toast.success('Salvo');
     } catch (e) {
       // O servidor sabe explicar (ex.: bloco do roteiro com marcador que ele não
@@ -2942,7 +2946,7 @@ function newTrigger(type: SalesAgentTriggerType): SalesAgentTrigger {
   }
 }
 
-function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
+export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
   const triggers = agent.triggers ?? [];
   const [pipelines, setPipelines] = useState<PipelineOpt[]>([]);
   const [stagesByPipeline, setStagesByPipeline] = useState<Record<string, StageOpt[]>>({});

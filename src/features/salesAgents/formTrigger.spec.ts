@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { formOptions, formTriggerNotice, toggleForm } from './formTrigger';
+import { formIdsDropped, formOptions, formTriggerNotice, toggleForm } from './formTrigger';
 
 // Gatilho "Veio de um destes formulários" (23/09/2026): a IA só entra na conversa
 // do lead que veio das campanhas escolhidas.
@@ -62,5 +62,15 @@ describe('ligação na tela', () => {
     expect(tela).toContain("{ value: 'form', label:");
     expect(tela).toContain("case 'form': return { type, form_ids: [] }");
     expect(tela).toContain('form_ids: toggleForm(');
+  });
+});
+
+describe('formIdsDropped', () => {
+  it('acusa quando o servidor devolve o gatilho sem a lista', () => {
+    expect(formIdsDropped([{ type: 'form', form_ids: ['1'] }], [{ type: 'form' }])).toBe(true);
+  });
+  it('cala quando guardou, ou quando não havia nada marcado', () => {
+    expect(formIdsDropped([{ type: 'form', form_ids: ['1'] }], [{ type: 'form', form_ids: ['1'] }])).toBe(false);
+    expect(formIdsDropped([{ type: 'form', form_ids: [] }], [{ type: 'form' }])).toBe(false);
   });
 });
