@@ -3158,3 +3158,34 @@ Armadilhas:
 8. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente, não módulo.
    Os scanners do catálogo de funcionalidades não entram nesta história e nenhuma
    chave literal nova foi escrita.
+
+## Roleta: modo Fila (desde 2026-09-23)
+
+Pedido do dono do produto: um quinto modo, **Fila**, que entrega sempre na ordem
+da lista — Corretor 1 → 2 → 3 → volta ao 1. O Rodízio nunca foi fila: é sorteio
+pelo peso, a cada lead. A mecânica mora no servidor (ver o CLAUDE.md do `lm-flow`).
+
+O que aparece na tela (*Distribuição de Leads*):
+
+- **Cartão *Fila*** em *Como o lead é distribuído* (a grade virou 3 colunas no `xl`).
+- **Bloco *Ordem da fila***, acima da lista *Quem entra na roleta*, só com a Fila
+  escolhida: os marcados numerados (1º, 2º, 3º…) com setas ↑/↓. Pausado aparece
+  riscado — ele é pulado e a fila segue.
+- **Na Fila o peso some**: nem campo *Peso*, nem *Distribuição real*. O link
+  *Ajustar peso* vira *Mais ajustes* porque o mesmo bloco guarda o *Avisar em
+  outro número*.
+- **Painel da fila**: selo *próximo* no corretor da vez.
+
+Decisões do dono (não reabrir sem ele pedir): **a vez anda a cada oferta** (quem
+recusa ou deixa o prazo passar perde a vez) e **indisponível pula e segue**.
+
+Armadilhas:
+
+1. **A posição gravada é o índice no array de membros no Salvar** (`position: i`).
+   Por isso reordenar é mover no array (`roletaQueueOrder.ts`, com spec) — não
+   existe campo de posição para editar, e criar um seria a segunda verdade.
+2. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): o servidor antigo recusa `fila` com "modo de distribuição
+   desconhecido", visível na tela.
+3. **Não é `featureKey` nem `clientToggleKey`** — é modo da roleta. Os scanners do
+   catálogo não entram nesta história.
