@@ -3158,3 +3158,32 @@ Armadilhas:
 8. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente, não módulo.
    Os scanners do catálogo de funcionalidades não entram nesta história e nenhuma
    chave literal nova foi escrita.
+
+## Duplicar a IA para outro número (desde 2026-09-23)
+
+Pedido do dono do produto: *"agora que podemos personalizar bastante a IA, eu
+gostaria de poder duplicar ela, para plugar em uma instância e replicar para
+outra de forma fácil"*.
+
+O que aparece na tela, em *IA Vendedora*, no topo da IA aberta:
+
+- **Botão *Duplicar***, ao lado da lixeira. Abre a janela *Duplicar IA* com o
+  **nome da cópia** (já sugerido como "<nome> (cópia)") e o **número em que ela
+  vai atender** (ou *escolher depois*).
+- A cópia leva a configuração inteira, as lições do Aprendizado e a Base de
+  Conhecimento; **não leva o histórico**. Ao terminar, ela vira a IA selecionada,
+  na aba *Configuração*, e o aviso diz o que foi junto.
+- **Nasce DESLIGADA**, sempre — a janela e o aviso dizem isso. Escolher o MESMO
+  número da original mostra um alerta em âmbar.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): quem copia é o servidor, pelas colunas do banco. Contra o
+   servidor antigo o botão responde 404, com o código na tela.
+2. **A cópia NÃO passa pelo `saveAgent`**: é um endpoint próprio, e o servidor
+   copia tudo — inclusive campo que esta tela ainda nem desenha.
+3. **O texto do resultado mora fora do JSX** (`src/features/salesAgents/duplicateAgent.ts`,
+   com spec).
+4. **Não é `featureKey` nem `clientToggleKey`** — é ação da IA, com a permissão de
+   criar IA. Os scanners do catálogo não entram nesta história.

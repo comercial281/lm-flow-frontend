@@ -818,6 +818,11 @@ export interface WeeklyReportDiagnostico {
 
 const BASE = '/sales_agents';
 
+/** O que a duplicação devolve: a IA nova + o que foi copiado junto. */
+export interface DuplicatedSalesAgent extends SalesAgent {
+  duplicated?: { lessons: number; documents: number; warnings: string[] };
+}
+
 export const salesAgentsService = {
   async list(): Promise<SalesAgent[]> {
     const res = await api.get(BASE);
@@ -841,6 +846,19 @@ export const salesAgentsService = {
 
   async destroy(id: string): Promise<void> {
     await api.delete(`${BASE}/${id}`);
+  },
+
+  /**
+   * Cria uma CÓPIA da IA (configuração, lições ativas e base de conhecimento),
+   * sempre DESLIGADA, opcionalmente já no outro número. Quem decide o que viaja é
+   * o servidor — ele copia pelas colunas do banco, então campo novo vai sozinho.
+   */
+  async duplicate(
+    id: string,
+    payload: { name?: string; inbox_id?: string | number | null },
+  ): Promise<DuplicatedSalesAgent> {
+    const res = await api.post(`${BASE}/${id}/duplicate`, payload);
+    return (res.data as { data: DuplicatedSalesAgent }).data;
   },
 
   // Formulário -> JSON: o dono responde perguntas e o Claude monta a config.
