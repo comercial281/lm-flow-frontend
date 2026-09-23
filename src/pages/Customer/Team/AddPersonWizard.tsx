@@ -41,7 +41,6 @@ export default function AddPersonWizard({ open, roles, inboxes, onClose, onCreat
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
-  const [password, setPassword] = useState('');
   const [cargoKey, setCargoKey] = useState<string | null>(null);
   const [inboxIds, setInboxIds] = useState<Set<string>>(new Set());
 
@@ -58,7 +57,7 @@ export default function AddPersonWizard({ open, roles, inboxes, onClose, onCreat
   const roleSeesAll = selectedCargo?.seesAllInboxes ?? false;
 
   const reset = () => {
-    setStep(0); setName(''); setEmail(''); setWhatsapp(''); setPassword('');
+    setStep(0); setName(''); setEmail(''); setWhatsapp('');
     setCargoKey(null); setInboxIds(new Set());
   };
 
@@ -88,7 +87,8 @@ export default function AddPersonWizard({ open, roles, inboxes, onClose, onCreat
         name: name.trim(),
         email: email.trim().toLowerCase(),
         whatsapp_number: whatsapp.replace(/\D/g, ''),
-        ...(password.trim().length >= 6 ? { password: password.trim() } : {}),
+        // Sem senha: quem a define é a própria pessoa, ao abrir o link de
+        // acesso. O servidor gera uma provisória que ninguém precisa saber.
         ...(selectedCargo ? cargoPayload(selectedCargo) : {}),
       } as any);
 
@@ -118,12 +118,10 @@ export default function AddPersonWizard({ open, roles, inboxes, onClose, onCreat
         const phone = whatsapp.replace(/\D/g, '');
         if (phone.length < 10) {
           toast.warning('Pessoa criada. Para enviar o acesso, informe o WhatsApp com DDD em "Enviar acesso".');
-        } else if (password.trim().length < 6) {
-          toast.warning('Pessoa criada. Para enviar o acesso, defina uma senha de ao menos 6 caracteres.');
         } else {
-          const res = await usersService.sendAccess(userId, { whatsapp_number: phone, password: password.trim() });
+          const res = await usersService.sendAccess(userId, { whatsapp_number: phone });
           if (res.whatsapp?.sent) {
-            toast.success(`${name.trim()} criada e acesso enviado no WhatsApp.`);
+            toast.success(`${name.trim()} criada e o link de acesso saiu no WhatsApp dela.`);
           } else {
             toast.warning(`Pessoa criada, mas o WhatsApp não saiu: ${res.whatsapp?.error ?? res.whatsapp?.skipped ?? 'motivo desconhecido'}.`);
           }
@@ -190,11 +188,10 @@ export default function AddPersonWizard({ open, roles, inboxes, onClose, onCreat
               <div>
                 <UILabel className="text-xs">WhatsApp com DDD</UILabel>
                 <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="Ex: 11 94087 1974" className="mt-1" />
-                <p className="mt-1 text-xs text-muted-foreground">É para onde o acesso vai no último passo.</p>
-              </div>
-              <div>
-                <UILabel className="text-xs">Senha (mínimo 6)</UILabel>
-                <Input value={password} onChange={e => setPassword(e.target.value)} placeholder="deixe em branco para gerar automaticamente" className="mt-1" />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  É para onde vai o link de acesso, no último passo. Quem cria a senha é a própria
+                  pessoa, ao abrir o link.
+                </p>
               </div>
             </div>
           )}

@@ -99,7 +99,6 @@ export default function PeopleTab() {
   // Enviar acesso por WhatsApp (1 clique por pessoa)
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [sendPhone, setSendPhone] = useState('');
-  const [sendPwd, setSendPwd] = useState('');
   const [sendBusy, setSendBusy] = useState(false);
 
   // A pessoa aberta vem SEMPRE da lista, nunca de uma cópia no estado: com cópia,
@@ -147,19 +146,17 @@ export default function PeopleTab() {
   const openSend = (member: TeamAccessMember) => {
     setSendingId(member.id);
     setSendPhone(member.whatsapp_number ?? '');
-    // Vem a senha atual de propósito: digitar outra aqui TROCA a senha da pessoa
-    // e derruba quem já estava usando a antiga. Reenviar o acesso não deveria
-    // custar isso.
-    setSendPwd(member.plain_password ?? '');
   };
 
   const doSend = async () => {
     if (!sending) return;
     if (sendPhone.replace(/\D/g, '').length < 10) { toast.error('Informe o WhatsApp com DDD.'); return; }
-    if (sendPwd.trim().length < 6) { toast.error('Defina uma senha de ao menos 6 caracteres.'); return; }
     setSendBusy(true);
     try {
-      const res = await usersService.sendAccess(sending.id, { whatsapp_number: sendPhone, password: sendPwd.trim() });
+      // Sem senha no corpo: a mensagem leva um link, e quem cria a senha é a
+      // própria pessoa ao abri-lo. Mandar senha aqui TROCARIA a de quem já
+      // estava usando o CRM — reenviar o acesso não pode custar isso.
+      const res = await usersService.sendAccess(sending.id, { whatsapp_number: sendPhone });
       const wa = res.whatsapp;
       const who = sending.name;
       setMembers(prev => prev.map(m => (m.id === sending.id ? { ...m, whatsapp_number: sendPhone } : m)));
@@ -687,17 +684,18 @@ export default function PeopleTab() {
                   <UILabel className="text-xs">WhatsApp (com DDD)</UILabel>
                   <Input value={sendPhone} onChange={e => setSendPhone(e.target.value)} placeholder="Ex: 11 94087 1974" className="mt-1" />
                 </div>
-                <div>
-                  <UILabel className="text-xs">Senha que vai na mensagem</UILabel>
-                  <Input value={sendPwd} onChange={e => setSendPwd(e.target.value)} placeholder="defina uma senha (min. 6)" className="mt-1" />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {sending.plain_password
-                      ? 'Vem a senha atual. Se você mudar aqui, a senha de acesso da pessoa é trocada.'
-                      : 'Sem senha salva — defina uma. Ela vira a senha de acesso da pessoa.'}
+                <div className="rounded-md border border-emerald-500/25 bg-emerald-500/5 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    A mensagem leva um <strong>link de acesso</strong>: {sending.name.split(' ')[0]} abre,
+                    cria a senha que quiser e já entra no CRM. Nenhuma senha vai escrita na
+                    conversa, e o link vale <strong>uma vez só, por 24 horas</strong>.
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    A senha de quem já usa o CRM não muda. Passado o prazo, é só enviar de novo.
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Envia link + login + senha pela instância operacional da Leal Mídia.
+                  Sai pela instância operacional da Leal Mídia.
                 </p>
               </div>
 

@@ -14,10 +14,21 @@ interface RouterGuardProps {
 const SPECIAL_ROUTES = {
   // /lp (landing de anuncio) e /imovel (portal) sao publicas — visitante de
   // anuncio NAO pode cair no /login. Sem isso so quem tem acesso ao CRM via.
-  PUBLIC_ROUTES: ['/auth', '/login', '/register', '/widget', '/setup', '/lp', '/imovel', '/portal', '/formulario'],
+  // /lp (landing de anuncio) e /imovel (portal) sao publicas — visitante de
+  // anuncio NAO pode cair no /login. Sem isso so quem tem acesso ao CRM via.
+  //
+  // /acesso é o convite que a pessoa recebe no WhatsApp para CRIAR a senha
+  // dela. Ela ainda não tem senha — mandá-la para o login é o beco sem saída
+  // que o link veio desfazer.
+  PUBLIC_ROUTES: ['/auth', '/login', '/register', '/widget', '/setup', '/lp', '/imovel', '/portal', '/formulario', '/acesso'],
   // Routes that bypass the "redirect authenticated users to /conversations" rule
   // (senao um usuario logado abrindo a landign era jogado pro /conversations).
-  AUTH_EXEMPT_ROUTES: ['/setup/onboarding', '/lp', '/imovel', '/portal'],
+  //
+  // /acesso entra aqui porque o aparelho pode ter a sessão de OUTRA pessoa
+  // aberta (o celular que o gestor emprestou, o computador da imobiliária):
+  // jogar para as conversas esconderia o convite e a pessoa nunca criaria a
+  // senha dela.
+  AUTH_EXEMPT_ROUTES: ['/setup/onboarding', '/lp', '/imovel', '/portal', '/acesso'],
 };
 
 const RouterGuard: React.FC<RouterGuardProps> = ({ children }) => {
