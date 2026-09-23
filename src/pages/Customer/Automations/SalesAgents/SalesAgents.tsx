@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon, Zap, AlertTriangle, Lightbulb, CalendarDays, Users, MessageSquare, Sparkles, X } from 'lucide-react';
 import AiResultsPanel from '@/components/salesAgents/AiResultsPanel';
 import PlaybookSection from '@/components/salesAgents/PlaybookSection';
+import DuplicateAgentDialog from '@/components/salesAgents/DuplicateAgentDialog';
 import type { AgentPerformance } from '@/types/aiResults';
 import {
   salesAgentsService,
@@ -104,6 +105,7 @@ export default function SalesAgents() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<Tab>('config');
+  const [duplicating, setDuplicating] = useState<SalesAgent | null>(null);
   // ⚠️ A chave vai LITERAL aqui. Os dois scanners do catálogo de funcionalidades
   // (sync e audit) leem o código por regex: trocar o literal por uma constante
   // tira a chave do catálogo no deploy seguinte, o painel de Funções deixa de
@@ -403,9 +405,14 @@ export default function SalesAgents() {
                   {selected.enabled ? 'Ativa' : 'Desativada'}
                 </label>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => deleteAgent(selected)}>
-                <Trash2 className="h-4 w-4 text-red-500" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" onClick={() => setDuplicating(selected)} title="Duplicar esta IA">
+                  <Copy className="h-4 w-4 mr-1" /> Duplicar
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => deleteAgent(selected)}>
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </Button>
+              </div>
             </div>
 
             {/* Abas */}
@@ -451,6 +458,21 @@ export default function SalesAgents() {
       </main>
     </div>
       {dialogoDeConfirmacao}
+      {duplicating && (
+        <DuplicateAgentDialog
+          agent={duplicating}
+          inboxes={inboxes}
+          onClose={() => setDuplicating(null)}
+          onDuplicated={(copy) => {
+            // A cópia vira a IA selecionada, na aba de configuração: é lá que se
+            // confere antes de ligar. O loadAgents mantém a seleção pelo id.
+            setDuplicating(null);
+            setSelected(copy);
+            setTab('config');
+            loadAgents();
+          }}
+        />
+      )}
     </>
   );
 }
