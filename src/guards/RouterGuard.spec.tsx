@@ -43,6 +43,7 @@ function renderEm(caminho: string) {
         <Routes>
           <Route path="/academia/curso/:id" element={<div>conteudo-da-aula</div>} />
           <Route path="/conversations" element={<div>conversas</div>} />
+          <Route path="/acesso" element={<div>criar-senha</div>} />
           <Route path="/login" element={<LoginFalso />} />
         </Routes>
       </RouterGuard>
@@ -89,5 +90,34 @@ describe('RouterGuard — Área de Membros', () => {
     renderEm('/academia/curso/7');
 
     expect(screen.getByText(/returnUrl=%2Facademia%2Fcurso%2F7/)).toBeInTheDocument();
+  });
+});
+
+describe('RouterGuard — convite de acesso', () => {
+  beforeEach(() => {
+    mocks.isAuthenticated = false;
+    mocks.slug = null;
+  });
+
+  // Esta guarda roda ANTES das rotas: sem a exceção, o link que a pessoa recebe
+  // no WhatsApp cai no login — que é justamente a tela onde ela não consegue
+  // entrar, e o motivo de o convite existir.
+  it('deixa abrir o convite sem estar logado', () => {
+    mocks.slug = 'apto-premium';
+    renderEm('/acesso?t=um-token');
+
+    expect(screen.queryByText(/tela-de-login/)).not.toBeInTheDocument();
+    expect(screen.getByText('criar-senha')).toBeInTheDocument();
+  });
+
+  // O aparelho pode ter a sessão de OUTRA pessoa (o gestor que abriu o link
+  // para conferir, o celular emprestado). Mandá-la para as conversas engoliria
+  // o convite sem nada explicando.
+  it('não joga para as conversas quem já está logado', () => {
+    mocks.slug = 'apto-premium';
+    mocks.isAuthenticated = true;
+    renderEm('/acesso?t=um-token');
+
+    expect(screen.getByText('criar-senha')).toBeInTheDocument();
   });
 });

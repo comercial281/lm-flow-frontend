@@ -20,9 +20,15 @@ export interface WhatsappSendResult {
   instance?: string;
 }
 
+export interface AccessLinkInfo {
+  /** Quando o convite deixa de valer (ISO). */
+  expires_at?: string;
+}
+
 export interface SendAccessResult {
   user: User;
   whatsapp?: WhatsappSendResult;
+  access_link?: AccessLinkInfo;
 }
 
 class UsersService {
@@ -141,14 +147,28 @@ class UsersService {
     return extractData<BulkInviteResponse>(response);
   }
 
-  // Enviar o acesso (link+login+senha) no WhatsApp da pessoa (tela Equipe)
+  /**
+   * Manda o acesso no WhatsApp da pessoa (tela Equipe).
+   *
+   * Desde 22/09/2026 a mensagem leva um LINK de convite: quem abre cria a
+   * própria senha e já entra. A senha deixou de viajar escrita — copiar uma
+   * senha no celular levava o espaço seguinte junto e o login era recusado com
+   * o campo mostrando a senha certa.
+   *
+   * `password` continua opcional só para o caso de alguém querer definir uma
+   * na mão; a tela não pede mais.
+   */
   async sendAccess(
     userId: string,
-    payload: { whatsapp_number: string; password: string },
+    payload: { whatsapp_number: string; password?: string },
   ): Promise<SendAccessResult> {
     const response = await apiAuth.post(`/users/${userId}/send_access`, payload);
-    const body = (response?.data ?? {}) as { data?: User; whatsapp?: WhatsappSendResult };
-    return { user: body.data as User, whatsapp: body.whatsapp };
+    const body = (response?.data ?? {}) as {
+      data?: User;
+      whatsapp?: WhatsappSendResult;
+      access_link?: AccessLinkInfo;
+    };
+    return { user: body.data as User, whatsapp: body.whatsapp, access_link: body.access_link };
   }
 
   // Get assignable agents for inbox
