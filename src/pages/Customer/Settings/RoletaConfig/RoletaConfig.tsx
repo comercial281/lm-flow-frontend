@@ -10,12 +10,14 @@ import {
   Shuffle, Plus, Trash2, Save, Phone,
   Clock, Bell, ToggleLeft, ToggleRight, Users, BarChart2,
   Gavel, Hand, Wifi, Send, Loader2, Eye, EyeOff, AlertTriangle, Copy,
+  ListOrdered, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { apiErrorMessage, extractError } from '@/utils/apiHelpers';
 import { roletaFormProblems, roletaFormWarnings, backendProblems, timeoutMinutesPayload, senderSelectValue, senderFields, CENTRAL_SENDER_PREFIX } from './roletaFormChecks';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { isNoDeadline, timeoutLabel } from '@/components/roleta/offerDeadline';
 import { instanciasComAcesso } from './roletaEquipe';
+import { moveMember, queueOrdinal } from './roletaQueueOrder';
 import {
   roletaConfigService, RoletaConfig, RoletaMember, RoletaInstance, BrokerAssignment, DistributionMode,
   RoletaDiagnostic, RepairOwnersResult, RepairInboxAccessResult, RoletaQueue,
@@ -90,7 +92,7 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: 'Cancelado',
 };
 
-// Os 4 modos, com nome de gente e explicação do que cada um faz.
+// Os 5 modos, com nome de gente e explicação do que cada um faz.
 // Esta tela é o ÚNICO lugar que configura distribuição de lead.
 const MODES: { value: DistributionMode; label: string; icon: typeof Shuffle; desc: string }[] = [
   {
@@ -116,6 +118,12 @@ const MODES: { value: DistributionMode; label: string; icon: typeof Shuffle; des
     label: 'Por disponibilidade',
     icon: Wifi,
     desc: 'Entrega para o corretor que está Online e tem menos conversas abertas.',
+  },
+  {
+    value: 'fila',
+    label: 'Fila',
+    icon: ListOrdered,
+    desc: 'Entrega sempre na ordem da lista: Corretor 1, depois 2, depois 3, e volta ao primeiro. Quem recusa ou deixa o prazo passar perde a vez.',
   },
 ];
 
@@ -1656,6 +1664,9 @@ export default function RoletaConfigPage() {
                               {m.chance_pct != null && (
                                 <span className="opacity-70">{m.chance_pct}%</span>
                               )}
+                              {m.proximo && (
+                                <span className="rounded bg-[#7c3aed] px-1 text-[10px] font-medium text-white">próximo</span>
+                              )}
                             </span>
                           ))}
                         </div>
@@ -2179,7 +2190,7 @@ export default function RoletaConfigPage() {
                   ))}
                 </div>
 
-                {isMulti && mode !== 'rodizio' && (
+                {isMulti && mode !== 'rodizio' && mode !== 'fila' && (
                   <p className="mt-2 text-xs text-muted-foreground">
                     No modo <strong>{MODE_LABEL[mode]}</strong> o número não é sorteado: quem define é o
                     corretor escolhido, e o lead é atendido pelo WhatsApp dele.
@@ -2202,14 +2213,14 @@ export default function RoletaConfigPage() {
             </div>
 
             {/* Modo de distribuição — o coração da tela.
-                Os quatro cartões em 2×2 a partir de `sm`: empilhados eles
-                sozinhos ocupavam mais de uma tela de altura. */}
+                Os cartões em duas colunas a partir de `sm` (três no `xl`):
+                empilhados eles sozinhos ocupavam mais de uma tela de altura. */}
             <div className="lg:col-span-2">
               <UILabel className="flex items-center gap-1.5 mb-2">
                 <Shuffle className="h-4 w-4" />
                 Como o lead é distribuído *
               </UILabel>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 {MODES.map(opt => {
                   const Icon = opt.icon;
                   const active = mode === opt.value;
@@ -2254,7 +2265,9 @@ export default function RoletaConfigPage() {
                     <p className="text-xs text-muted-foreground mt-1">
                       {mode === 'leilao'
                         ? `Se ninguém assumir em ${timeoutMin} min, o lead cai no rodízio para não ficar sem dono.`
-                        : `Se o corretor não assumir em ${timeoutMin} min, o lead passa para o próximo.`}
+                        : mode === 'fila'
+                          ? `Se o corretor não assumir em ${timeoutMin} min, o lead passa para o próximo da fila.`
+                          : `Se o corretor não assumir em ${timeoutMin} min, o lead passa para o próximo.`}
                     </p>
                   </>
                 )}
@@ -2744,7 +2757,11 @@ export default function RoletaConfigPage() {
                     onClick={() => setMostrarPesos(v => !v)}
                     className="text-[#7c3aed] hover:underline"
                   >
-                    {mostrarPesos ? 'Ocultar pesos' : 'Ajustar peso'}
+                    {/* Na Fila o peso não conta — a ordem manda. O link continua
+                        porque o mesmo bloco guarda o "avisar em outro número". */}
+                    {mode === 'fila'
+                      ? (mostrarPesos ? 'Ocultar ajustes' : 'Mais ajustes')
+                      : (mostrarPesos ? 'Ocultar pesos' : 'Ajustar peso')}
                   </button>
                 </div>
               </div>
@@ -2782,6 +2799,52 @@ export default function RoletaConfigPage() {
 
                   {loadingMembers && (
                     <p className="mt-2 text-xs text-muted-foreground">Carregando a equipe...</p>
+                  )}
+
+                  {/* ORDEM DA FILA. A posição gravada é o índice no array de
+                      membros no Salvar, então reordenar é mover no array. O
+                      servidor entrega na ordem desta lista, pulando quem está
+                      pausado; o peso não conta. */}
+                  {mode === 'fila' && members.length > 0 && (
+                    <div className="mt-2 rounded-lg border border-[#7c3aed]/30 bg-[#7c3aed]/5 p-3">
+                      <p className="text-xs font-medium flex items-center gap-1.5">
+                        <ListOrdered className="h-3.5 w-3.5 text-[#7c3aed]" />
+                        Ordem da fila
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        O lead vai para o 1º, o próximo para o 2º, e assim por diante; depois do último, volta ao 1º.
+                        Quem está pausado é pulado. Na Fila o peso não conta — a ordem manda.
+                      </p>
+                      <ol className="mt-2 space-y-1">
+                        {members.map((m, idx) => (
+                          <li key={m.localId} className="flex items-center gap-2 text-sm">
+                            <span className="w-7 text-xs font-medium text-[#7c3aed]">{queueOrdinal(idx)}</span>
+                            <span className={`flex-1 truncate ${m.is_active ? '' : 'text-muted-foreground line-through'}`}>
+                              {userName(m.user_id)}
+                            </span>
+                            {!m.is_active && <span className="text-xs text-amber-500">pausado</span>}
+                            <button
+                              type="button"
+                              title="Subir na fila"
+                              disabled={idx === 0}
+                              onClick={() => setMembers(prev => moveMember(prev, idx, -1))}
+                              className="p-1 rounded text-muted-foreground hover:bg-muted disabled:opacity-30"
+                            >
+                              <ArrowUp className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Descer na fila"
+                              disabled={idx === members.length - 1}
+                              onClick={() => setMembers(prev => moveMember(prev, idx, 1))}
+                              className="p-1 rounded text-muted-foreground hover:bg-muted disabled:opacity-30"
+                            >
+                              <ArrowDown className="h-3.5 w-3.5" />
+                            </button>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
                   )}
 
                   <div className="mt-2 max-h-80 overflow-y-auto rounded-lg border divide-y">
@@ -2859,7 +2922,7 @@ export default function RoletaConfigPage() {
                           {/* Só aparece o que ainda é PERGUNTA: o número, quando
                               a pessoa tem acesso a mais de um; o peso, quando o
                               gestor abriu os pesos. */}
-                          {m && (u.acessos.length > 1 || mostrarPesos) && (
+                          {m && (u.acessos.length > 1 || (mostrarPesos && mode !== 'fila')) && (
                             <div className="mt-2 grid grid-cols-1 gap-3 pl-7 sm:grid-cols-2">
                               {u.acessos.length > 1 && (
                                 <div>
@@ -2876,7 +2939,7 @@ export default function RoletaConfigPage() {
                                   </div>
                                 </div>
                               )}
-                              {mostrarPesos && (
+                              {mostrarPesos && mode !== 'fila' && (
                                 <div>
                                   <UILabel className="text-xs">Peso</UILabel>
                                   <Input
@@ -2912,7 +2975,7 @@ export default function RoletaConfigPage() {
                     })}
                   </div>
 
-                  {totalWeight > 0 && members.length > 1 && (
+                  {mode !== 'fila' && totalWeight > 0 && members.length > 1 && (
                     <div className="mt-2 text-xs text-muted-foreground">
                       {/* Percentual EFETIVO entre todos os corretores ativos:
                           o número não entra no sorteio, só o peso de cada um. */}

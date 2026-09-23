@@ -91,7 +91,7 @@ export interface RoletaDefaults {
 
 // Modo de distribuição. A RoletaConfig é a FONTE ÚNICA: modo + quem + prazo + gestor.
 // Os nomes aqui são os mesmos que aparecem na tela, de propósito.
-export type DistributionMode = 'rodizio' | 'leilao' | 'manual' | 'disponibilidade';
+export type DistributionMode = 'rodizio' | 'leilao' | 'manual' | 'disponibilidade' | 'fila';
 
 /**
  * Horário de funcionamento da roleta.
@@ -329,6 +329,8 @@ export interface RoletaQueueMember {
   sem_acesso_a_instancia: boolean;
   // Só no rodízio — nos outros modos quem decide é o leilão/disponibilidade/gestor.
   chance_pct: number | null;
+  // Só no modo Fila: é a próxima vez. Servidor antigo não manda.
+  proximo?: boolean;
   segurando_agora: number;
   ultimo_lead_em: string | null;
 }
