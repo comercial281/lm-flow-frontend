@@ -26,6 +26,8 @@ import { ApiError } from '@/types/auth';
 import { useGlobalConfig } from '@/contexts/GlobalConfigContext';
 import { AppLogo } from '@/components/AppLogo';
 import FlowBackground from './FlowBackground';
+import { loginFeedback } from '@/features/auth/loginFeedback';
+import { AVISO_SEM_ARMAZENAMENTO } from '@/features/auth/sessionPersistence';
 
 // Só aceita caminho interno. O `returnUrl` sempre existiu aqui, mas nada o
 // preenchia; agora o PrivateRoute o preenche a cada redirect para o login, então
@@ -203,14 +205,25 @@ export const Auth: React.FC = () => {
       await authLogin(result.response.data.user, { access_token: result.response.data.token?.access_token || result.response.data.token?.token?.access_token });
       const { validityCheck } = useAuthStore.getState();
       await validityCheck();
+      // Entrou — mas o aparelho guardou a sessão? O navegador interno do
+      // WhatsApp (por onde os corretores abrem o link) costuma recusar, e sem
+      // este aviso o defeito volta depois como "me desloga sozinho".
+      if (!useAuthStore.getState().sessionPersisted) {
+        toast.warning('Entrei, mas a sessão não ficou salva', {
+          description: AVISO_SEM_ARMAZENAMENTO,
+          duration: 12000,
+        });
+      }
       const returnUrl = safeReturnUrl(new URLSearchParams(location.search).get('returnUrl'));
       if (returnUrl) window.location.href = returnUrl;
       else navigate('/', { replace: true });
     } catch (error) {
-      const apiError = error as ApiError;
-      const msg = apiError?.response?.data?.message || apiError?.response?.data?.detail || t('auth.notifications.loginError');
-      toast.error(t('auth.login.invalidCredentials'), { description: msg });
-      setLoginError(msg);
+      // O motivo é o que o SERVIDOR disse (senha incorreta, acesso suspenso…).
+      // A frase de reserva nunca afirma a causa: sem resposta, tudo o que a
+      // tela sabe é que o pedido não voltou.
+      const { title, description } = loginFeedback(error);
+      toast.error(title, { description });
+      setLoginError(description);
     } finally { setIsLoading(false); }
   };
 
@@ -327,6 +340,10 @@ export const Auth: React.FC = () => {
                       <Input
                         id="login-email" type="email" placeholder={t('auth.login.email')} disabled={isLoading}
                         autoComplete="username"
+                        // O teclado do celular corrige e capitaliza sozinho. Num
+                        // campo de acesso isso troca o que a pessoa digitou pelo
+                        // que o teclado achou melhor — e ela não vê.
+                        autoCapitalize="none" autoCorrect="off" spellCheck={false}
                         className="bg-white/10 border-white/25 text-white placeholder:text-white/45 focus:border-violet-500/70 focus:ring-violet-500/25"
                         {...loginForm.register('email')}
                       />
@@ -349,6 +366,11 @@ export const Auth: React.FC = () => {
                               placeholder={t('auth.login.password')}
                               disabled={isLoading}
                               autoComplete="current-password"
+                              // ⚠️ Com o olho ABERTO este campo vira campo de
+                              // texto comum, e aí o teclado do iPhone passa a
+                              // corrigir e a pôr maiúscula na primeira letra —
+                              // o que ele nunca faria num campo de senha.
+                              autoCapitalize="none" autoCorrect="off" spellCheck={false}
                               className="bg-white/10 border-white/25 text-white placeholder:text-white/45 focus:border-violet-500/70 focus:ring-violet-500/25 pr-10"
                               {...f}
                             />

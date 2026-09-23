@@ -3,6 +3,11 @@ import { UserResponse, UISettings, UserTour } from '@/types/auth';
 import { validateToken } from '@/services/auth/authService';
 import { tourService } from '@/services/tours/tourService';
 import { useAppDataStore } from './appDataStore';
+import {
+  persistSessionToken,
+  clearSessionToken,
+  readSessionToken,
+} from '@/features/auth/sessionPersistence';
 
 interface ImpersonationData {
   adminUser: UserResponse;
@@ -17,6 +22,12 @@ interface AuthState {
 
   // Token data
   accessToken: string | null;
+
+  // A sessão foi mesmo guardada no aparelho? Falso no navegador que recusa
+  // armazenamento (o embutido do WhatsApp, aba privada, dados bloqueados): a
+  // pessoa entrou, mas sai ao fechar a aba — e a tela precisa DIZER isso em vez
+  // de deixar o defeito aparecer depois como "me desloga sozinho".
+  sessionPersisted: boolean;
 
   impersonation: ImpersonationData | null;
 
@@ -55,7 +66,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
   return {
     currentUser: null,
-    accessToken: localStorage.getItem('access_token') || sessionStorage.getItem('access_token'),
+    // Leitura protegida: em navegador com dados de site bloqueados o simples
+    // acesso ao armazenamento ESTOURA, e isso aqui roda na montagem da store —
+    // derrubaria o app inteiro antes de qualquer tela aparecer.
+    accessToken: readSessionToken(),
+    sessionPersisted: true,
     isLoggedIn: false,
     isLoading: true,
     isFetching: false,
@@ -72,17 +87,22 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     setLoading: loading => set({ isLoading: loading }),
 
+    // ⚠️ Gravar NUNCA estoura. Estourava, e a exceção subia até a tela de login,
+    // que mostrava "Credenciais inválidas" para um login APROVADO pelo servidor
+    // — o caso do navegador interno do WhatsApp, onde os corretores abrem o CRM.
+    // Quem precisa saber se a sessão vai durar lê `sessionPersisted`.
     setAccessToken: (token) => {
-      set({ accessToken: token });
       if (token) {
-        localStorage.setItem('access_token', token);
+        const { persisted } = persistSessionToken(token);
+        set({ accessToken: token, sessionPersisted: persisted });
       } else {
-        localStorage.removeItem('access_token'); sessionStorage.removeItem('access_token');
+        clearSessionToken();
+        set({ accessToken: null, sessionPersisted: true });
       }
     },
 
     getAuthHeader: () => {
-      const token = get().accessToken || localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+      const token = get().accessToken || readSessionToken();
       if (token) {
         return { Authorization: `Bearer ${token}` };
       }
@@ -90,7 +110,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
     },
 
     clearUser: () => {
-      localStorage.removeItem('access_token'); sessionStorage.removeItem('access_token');
+      clearSessionToken();
       set({
         currentUser: null,
         accessToken: null,
