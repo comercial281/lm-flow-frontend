@@ -23,7 +23,7 @@ export interface ActiveHours {
   windows?: ActiveHoursWindow[];
 }
 
-export type SalesAgentTriggerType = 'keyword' | 'origin' | 'property' | 'pipeline_stage' | 'pipeline' | 'tag';
+export type SalesAgentTriggerType = 'keyword' | 'origin' | 'property' | 'pipeline_stage' | 'pipeline' | 'tag' | 'form';
 /** any = QUALQUER gatilho da lista ativa (padrão/OR). all = TODOS precisam bater (AND). */
 export type SalesAgentTriggerMatchMode = 'any' | 'all';
 export interface SalesAgentTrigger {
@@ -34,6 +34,7 @@ export interface SalesAgentTrigger {
   pipeline_id?: string;  // pipeline_stage
   stage_id?: string;     // pipeline_stage
   match_type?: 'contains' | 'equals'; // keyword: contém a palavra ou é exatamente ela
+  form_ids?: string[];   // form: form_id das configs de Origem → Formulários
 }
 
 export interface SalesAgent {

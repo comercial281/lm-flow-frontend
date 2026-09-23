@@ -3309,3 +3309,29 @@ Armadilhas:
    com spec).
 4. **Não é `featureKey` nem `clientToggleKey`** — é ação da IA, com a permissão de
    criar IA. Os scanners do catálogo não entram nesta história.
+
+## A IA pode valer só para alguns formulários (desde 2026-09-23)
+
+Pedido do dono do produto: o cliente roda várias campanhas e só quer a IA nos
+leads de duas delas; as outras chegam no WhatsApp com origem Facebook e a IA
+entrava também.
+
+O que aparece na tela, em *IA Vendedora → Configuração → Gatilhos de ativação*:
+
+- **Tipo novo *Veio de um destes formulários***, com a lista dos formulários
+  cadastrados em *Origem → Formulários* (nome e página) para marcar.
+- **Aviso em âmbar** quando nenhum está marcado (o gatilho não ativa ninguém), quando
+  não há formulário cadastrado, e quando outro gatilho largo (origem, funil, imóvel)
+  na mesma lista, em modo OU, continua deixando as outras campanhas entrarem.
+- Formulário escolhido que deixou de estar cadastrado **continua à mostra**, marcado,
+  com o selo *(não está mais cadastrado)*.
+
+Armadilhas:
+
+1. **A metade do backend vem PRIMEIRO** (`lm-flow`, `saas-multitenant`): quem casa o
+   lead com o formulário é o servidor. Contra o servidor antigo o gatilho é salvo sem a
+   lista e não casa com ninguém.
+2. **A lista viaja DENTRO de `triggers`**, que já está no PATCH do `saveAgent`. Campo
+   solto seria descartado em silêncio. Há spec de fonte.
+3. **A regra mora fora do JSX** (`src/features/salesAgents/formTrigger.ts`, com spec).
+4. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente.
