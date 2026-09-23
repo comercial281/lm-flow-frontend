@@ -52,6 +52,7 @@ import MainLayout from '@/components/layout/MainLayout';
 // Páginas públicas
 import Auth from '@/pages/Auth';
 import SsoEntry from '@/pages/Auth/SsoEntry';
+import AccessInvite from '@/pages/Auth/AccessInvite';
 import EmailConfirmation from '@/components/auth/EmailConfirmation';
 import ResetPassword from '@/components/auth/ResetPassword';
 import InstagramCallback from '@/pages/InstagramCallback';
@@ -250,6 +251,12 @@ const AppRouter = () => {
 
           {/* SaaS: entrada SSO 1-clique (super-admin -> CRM do cliente) */}
           <Route path="/sso" element={<SsoEntry />} />
+
+          {/* Convite de acesso: a pessoa abre o link que recebeu no WhatsApp,
+              cria a senha dela e já entra. Rota NUA (sem PublicRoute), como o
+              /sso e o /espaco: quem já está logado em outra conta no mesmo
+              aparelho precisa alcançar a tela, senão o convite parece morto. */}
+          <Route path="/acesso" element={<AccessInvite />} />
 
           {/* SaaS: cadastro self-serve (apex lmflow.com.br) */}
           <Route

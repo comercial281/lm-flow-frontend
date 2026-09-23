@@ -177,6 +177,10 @@ describe('roletaFormProblems', () => {
     expect(p.some(x => x.includes('João está na lista duas vezes'))).toBe(true);
   });
 
+  it('no modo Fila exige corretor, como o rodízio', () => {
+    expect(roletaFormProblems(form({ mode: 'fila', members: [] })).length).toBeGreaterThan(0);
+  });
+
   it('no modo Manual não exige corretor cadastrado', () => {
     expect(roletaFormProblems(form({ mode: 'manual', members: [] }))).toEqual([]);
   });

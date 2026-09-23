@@ -3159,6 +3159,128 @@ Armadilhas:
    Os scanners do catálogo de funcionalidades não entram nesta história e nenhuma
    chave literal nova foi escrita.
 
+## Roleta: modo Fila (desde 2026-09-23)
+
+Pedido do dono do produto: um quinto modo, **Fila**, que entrega sempre na ordem
+da lista — Corretor 1 → 2 → 3 → volta ao 1. O Rodízio nunca foi fila: é sorteio
+pelo peso, a cada lead. A mecânica mora no servidor (ver o CLAUDE.md do `lm-flow`).
+
+O que aparece na tela (*Distribuição de Leads*):
+
+- **Cartão *Fila*** em *Como o lead é distribuído* (a grade virou 3 colunas no `xl`).
+- **Bloco *Ordem da fila***, acima da lista *Quem entra na roleta*, só com a Fila
+  escolhida: os marcados numerados (1º, 2º, 3º…) com setas ↑/↓. Pausado aparece
+  riscado — ele é pulado e a fila segue.
+- **Na Fila o peso some**: nem campo *Peso*, nem *Distribuição real*. O link
+  *Ajustar peso* vira *Mais ajustes* porque o mesmo bloco guarda o *Avisar em
+  outro número*.
+- **Painel da fila**: selo *próximo* no corretor da vez.
+
+Decisões do dono (não reabrir sem ele pedir): **a vez anda a cada oferta** (quem
+recusa ou deixa o prazo passar perde a vez) e **indisponível pula e segue**.
+
+Armadilhas:
+
+1. **A posição gravada é o índice no array de membros no Salvar** (`position: i`).
+   Por isso reordenar é mover no array (`roletaQueueOrder.ts`, com spec) — não
+   existe campo de posição para editar, e criar um seria a segunda verdade.
+2. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): o servidor antigo recusa `fila` com "modo de distribuição
+   desconhecido", visível na tela.
+3. **Não é `featureKey` nem `clientToggleKey`** — é modo da roleta. Os scanners do
+   catálogo não entram nesta história.
+
+## O acesso vai por LINK, e a senha é criada por quem usa (desde 2026-09-22)
+
+Relato do dono do produto, com print: uma corretora não entrava pelo iPhone —
+*"Credenciais inválidas / Erro ao fazer login"*, com o e-mail e a senha visíveis
+e corretos na tela. Ele testou o MESMO acesso no computador, em aba anônima, e
+entrou normalmente. E não era uma pessoa: *"já aconteceu com outros corretores
+que eu mandei o acesso"*.
+
+Eram **três defeitos empilhados**, e o terceiro é o que fez os outros dois
+passarem meses invisíveis:
+
+1. **A senha viajava escrita numa mensagem de WhatsApp, e era copiada no
+   celular.** No iPhone, o toque duplo que seleciona uma palavra leva **o espaço
+   seguinte junto**, e o teclado acrescenta espaço ao aceitar a sugestão. A senha
+   chegava ao servidor com um espaço no fim — visualmente idêntica à certa.
+2. **O servidor limpava o e-mail e não limpava a senha.** Um espaço a mais
+   bastava para a recusa.
+3. ⚠️ **A tela de login mostrava a MESMA frase para toda falha.** Ela procurava o
+   motivo do servidor no lugar errado, então nunca o encontrava: senha errada,
+   acesso desativado, internet caída, servidor fora do ar e até **login aprovado
+   que travou depois** apareciam como *"Credenciais inválidas"*. Foi o que fez
+   três rodadas de investigação acusarem a senha de quem estava com a senha certa.
+
+A saída escolhida pelo dono (*"pode ser a B pra justamente eles poderem criar,
+faz mt sentido"*): **a senha para de viajar**. A mensagem leva um link; quem abre
+cria a própria senha e já entra.
+
+O que aparece na tela:
+
+- **Tela nova de convite** (o endereço que chega no WhatsApp): saudação com o
+  primeiro nome, o login da pessoa, dois campos de senha e o botão *Criar senha e
+  entrar*. Criada a senha, ela cai direto no CRM — sem passar pelo login.
+- **O botão *Enviar acesso* (tela Equipe) não pede mais senha.** No lugar do
+  campo, a explicação: o link vale **uma vez só, por 24 horas**, e a senha de
+  quem já usa o CRM **não muda**. Passado o prazo, é só enviar de novo.
+- **O assistente *Adicionar pessoa* perdeu o campo de senha** — quem a define é a
+  própria pessoa, ao abrir o link.
+- **A tela de login passou a dizer o motivo de verdade**, quando o servidor manda
+  um. E quando ele não manda, ela diz só o que sabe: *"O servidor não respondeu a
+  este pedido"*.
+- **Aviso novo: "Você entrou, mas este navegador não está guardando sua
+  sessão"**, com o caminho de abrir no Safari/Chrome. É o navegador de dentro do
+  WhatsApp, onde o corretor abre o CRM: ele recusa o armazenamento, a gravação
+  **estourava**, e a exceção subia até a tela — que mostrava *Credenciais
+  inválidas* para um login que o servidor tinha APROVADO.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **A tela NÃO entra sozinha ao abrir o link.** O WhatsApp pré-visualiza links, e
+  um convite consumido no carregamento seria queimado pela pré-visualização antes
+  de a pessoa tocar nele. Abrir é leitura; só o botão consome.
+- **Link de uso único, 24 horas.** Reenviar é um clique; link eterno num grupo ou
+  num print é uma porta aberta para sempre.
+- **A pessoa escolhe a senha dela.** Senha gerada pelo sistema volta ao problema
+  de origem: alguém teria que copiá-la de algum lugar.
+- **Os campos de senha e o login desligam correção e maiúscula automática.** Com o
+  olho aberto, o campo de senha é um campo de texto comum — e o teclado do celular
+  o "corrige".
+
+Armadilhas:
+
+1. ⚠️ **A guarda do roteador roda ANTES das rotas**, e manda para o login todo
+   endereço fora da lista de públicos. `/acesso` entrou nas DUAS listas dela (a
+   de públicas e a de isentas de auth): sem a primeira, o link cai no login — a
+   tela onde a pessoa justamente não consegue entrar; sem a segunda, o aparelho
+   que já tem a sessão de OUTRA pessoa (o gestor conferindo, o celular
+   emprestado) é jogado nas conversas e o convite some. É a mesma cicatriz da
+   porta de entrada da Área de Membros. Há spec.
+2. ⚠️ **O cliente viaja no cabeçalho da requisição.** A pessoa abre o link no
+   endereço da imobiliária dela, mas quem responde é a API — e daquele lado o
+   subdomínio é `api`, que é reservado. Sem o cabeçalho, o servidor procura a
+   pessoa no apartamento errado e recusa o convite como se fosse de outro
+   cliente. O defeito é MUDO: a tela diz "este link não vale mais".
+3. **Gravar a sessão NUNCA pode estourar.** Quem precisa saber se ela vai durar lê
+   o sinal próprio (`sessionPersisted`), e a leitura na montagem também é
+   protegida — com dados de site bloqueados, o simples ACESSO ao armazenamento
+   estoura, e isso roda antes de qualquer tela aparecer.
+4. **Frase de reserva nunca afirma a causa.** Sem motivo do servidor, o que a tela
+   sabe é que o pedido não voltou. Há spec que reprova quem voltar a dizer
+   "credenciais inválidas" ali.
+5. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): o link, a tela de convite e a mensagem do WhatsApp moram
+   lá. Contra o servidor antigo, *Enviar acesso* passa a mandar uma mensagem sem
+   senha e sem link.
+6. **As regras moram fora do JSX, com spec** (a régua da senha, a leitura do erro
+   de login e a gravação da sessão). Mesma decisão das outras traduções deste
+   repositório.
+7. **Não é `featureKey` nem `clientToggleKey`** — é entrada no CRM. Os scanners do
+   catálogo de funcionalidades não entram nesta história e nenhuma chave literal
+   nova foi escrita.
+
 ## Duplicar a IA para outro número (desde 2026-09-23)
 
 Pedido do dono do produto: *"agora que podemos personalizar bastante a IA, eu
