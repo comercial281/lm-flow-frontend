@@ -18,6 +18,7 @@ import {
   blockingReason,
   buildDeactivatePayload,
   canOfferDisconnect,
+  leadDestinationNotice,
   transferCandidates,
   type DeactivatablePerson,
 } from '@/features/users/deactivation/deactivationRules';
@@ -79,6 +80,9 @@ export default function DeactivateUserDialog({ open, user, users, onClose, onDon
   const choice = { reason, transferToId: transferToId || null, disconnectNumber };
   const blocked = blockingReason(choice, preview);
   const offersDisconnect = canOfferDisconnect(preview);
+  // Aviso, nunca bloqueio: quem decide desativar é quem está clicando. Ver
+  // leadDestinationNotice.
+  const leadDestination = leadDestinationNotice(preview);
 
   const confirm = async () => {
     if (!user || blocked) return;
@@ -152,6 +156,13 @@ export default function DeactivateUserDialog({ open, user, users, onClose, onDon
                 )}
               </div>
             )
+          )}
+
+          {leadDestination && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>{leadDestination}</span>
+            </div>
           )}
 
           <label className="block">
