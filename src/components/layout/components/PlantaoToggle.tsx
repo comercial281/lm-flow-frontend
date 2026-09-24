@@ -7,6 +7,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -14,6 +17,7 @@ import {
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { sendTestPush } from '@/services/pushNotificationService';
 import { toast } from 'sonner';
+import { currentPlantaoEnv, plantaoUnsupportedReason, PLANTAO_UNSUPPORTED_TEXT } from './plantaoSupport';
 
 // Modo Plantão: liga/desliga as notificações push (lead novo na hora) NESTE aparelho.
 // Reaproveita o hook usePushNotifications (subscribe/unsubscribe via VAPID + push_subscriptions).
@@ -28,8 +32,32 @@ export default function PlantaoToggle({ compact = false }: { compact?: boolean }
   const { status, subscribe, unsubscribe, isSupported } = usePushNotifications();
   const [testing, setTesting] = useState(false);
 
-  // Navegador sem suporte a push (ex: iOS Safari fora de PWA) — não mostra o botão.
-  if (!isSupported) return null;
+  // Navegador sem suporte a push (iPhone fora do app instalado, navegador de
+  // dentro do WhatsApp): o botão NÃO some — sumir parecia defeito ("o plantão
+  // ficou oculto no celular"). Fica apagado e, no toque, diz o que fazer.
+  if (!isSupported) {
+    const reason = plantaoUnsupportedReason(currentPlantaoEnv(false)) ?? 'browser';
+    const text = PLANTAO_UNSUPPORTED_TEXT[reason];
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size={compact ? 'icon' : 'sm'}
+            aria-label="Modo plantão indisponível neste navegador — toque para ver como ligar"
+            className={compact ? 'cursor-pointer opacity-60' : 'gap-1.5 cursor-pointer opacity-60'}
+          >
+            <BellOff className="h-4 w-4" />
+            {!compact && <span className="hidden lg:inline text-xs">Plantão</span>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-72 text-sm">
+          <p className="font-semibold">{text.title}</p>
+          <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{text.body}</p>
+        </PopoverContent>
+      </Popover>
+    );
+  }
 
   const on = status === 'subscribed';
   const loading = status === 'loading' || testing;

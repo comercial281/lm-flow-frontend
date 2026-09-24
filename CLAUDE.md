@@ -3335,3 +3335,27 @@ Armadilhas:
    solto seria descartado em silêncio. Há spec de fonte.
 3. **A regra mora fora do JSX** (`src/features/salesAgents/formTrigger.ts`, com spec).
 4. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente.
+
+## O Modo Plantão não some mais do celular (desde 2026-09-24)
+
+Relato do dono do produto: *"o modo plantão ficou oculto no celular"*. Nada
+tinha quebrado: o botão **sumia de propósito** quando o navegador não recebe
+notificação — e sumir calado é indistinguível de defeito. Os casos reais são
+dois, e os dois ficaram mais comuns depois que o acesso passou a ir por link no
+WhatsApp (2026-09-22):
+
+- **iPhone fora do app instalado.** A Apple só libera notificação de site para o
+  app adicionado à Tela de Início; no Safari solto não existe push.
+- **Navegador de dentro do WhatsApp/Instagram**, onde o corretor cai ao tocar no
+  link de acesso. Ali não há push em aparelho nenhum.
+
+Hoje o sino fica **apagado** no topo e, no toque, diz qual dos casos é e o que
+fazer (instalar na Tela de Início / abrir no Chrome ou Safari).
+
+Armadilhas:
+
+1. **Não voltar a devolver nada quando não há suporte.** É o defeito relatado.
+2. **O navegador de dentro de outro app vence o caso do iPhone**: instalar dali
+   não funciona, o primeiro passo é sair dele. A regra mora em
+   `plantaoSupport.ts`, com spec.
+3. **Não é `featureKey` nem `clientToggleKey`**, e não há metade de backend.
