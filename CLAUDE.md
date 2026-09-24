@@ -3335,3 +3335,74 @@ Armadilhas:
    solto seria descartado em silêncio. Há spec de fonte.
 3. **A regra mora fora do JSX** (`src/features/salesAgents/formTrigger.ts`, com spec).
 4. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente.
+
+## Imóvel que entrega os leads direto ao responsável (desde 2026-09-24)
+
+Pedido do dono do produto: *"temos 3 imóveis no The House que precisam ser
+direcionados pro Bruno e 2 imóveis no Collinas pro Rene"* — e o desenho foi dele:
+*"uma chave onde você liga falando esse responsável deve receber todos os leads…
+o imóvel que está lá anunciado, por padrão, cai na roleta ou no destino do portal;
+e se essa chave estiver ligada no imóvel X, aí ele direciona especificamente para
+o responsável"*.
+
+Antes disto o campo *Corretor responsável* do imóvel era **cadastro e nada mais**:
+ele não decidia nada. O lead que chegava por um anúncio de portal seguia a regra
+configurada no portal (roleta ou responsável fixo), e o da landing de anúncio
+seguia a roleta escolhida ali — não havia exceção por imóvel.
+
+O que aparece na tela:
+
+- **Chave *Leads deste imóvel vão direto para o responsável***, na ficha do imóvel,
+  **colada embaixo do seletor de Corretor responsável**. Ligada, o lead que chegar
+  por este imóvel (portal ou landing) nasce com aquele corretor, sem passar pela
+  roleta. Desligada — que é como todo imóvel nasce — nada muda.
+- **Aviso em âmbar quando a chave está ligada e não há responsável escolhido**, e o
+  *Salvar* recusa antes de bater na API: o servidor rejeita o cadastro inteiro
+  assim, e descobrir isso no clique transformaria um deslize em erro na cara de
+  quem cadastrou.
+- **No cartão do imóvel, a linha *Leads vão para <nome>***, em violeta. Sem ela, o
+  filtro abaixo mostraria quais imóveis têm regra e não para quem — que é a outra
+  metade da pergunta.
+- **Filtro *Só com destino próprio*** na barra de filtros de *Imóveis*. É o que
+  responde "quais dos 900 têm regra?" — sem ele, achá-los exigiria abrir um a um.
+- **Na janela de *Desativar* uma pessoa, o aviso em âmbar** *"os leads de 3 imóveis
+  (TH302, TH303…) vão direto para ele; desativado, esses leads passam a cair na
+  regra do portal"*. É o silêncio mais caro desta chave: o anúncio continua no
+  portal, o lead continua chegando, e ninguém liga uma coisa à outra.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- ⚠️ **A chave é por IMÓVEL, e é essa a peça central.** Uma chave por cliente
+  ("lead de imóvel vai pro responsável do imóvel") redirecionaria os ~900 da Mais
+  Que Imóveis de uma vez: o campo *Responsável* está preenchido no cadastro há
+  meses e ninguém sabe o que há nele numa base grande (o dono da imobiliária, um
+  corretor que saiu, quem cadastrou). Por imóvel, cada exceção é decisão explícita
+  de alguém e os outros 895 não mudam de comportamento.
+- **A pessoa NÃO é campo novo**: é o *Corretor responsável* que já existe. Um
+  segundo seletor de corretor criaria duas verdades sobre quem é o corretor do
+  imóvel.
+- **O aviso da desativação é AVISO, não bloqueio.** O servidor já protege a entrega
+  (corretor desativado não recebe o lead — ele cai na regra do portal, com o motivo
+  registrado na trilha da roleta); o que faltava era a gestão SABER, no segundo em
+  que decide desativar.
+- **Marcar vários imóveis de uma vez ficou de fora**: a lista de Imóveis não tem
+  seleção em lote, e para 5 imóveis abrir os 5 é aceitável.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`): a chave, a entrega ao responsável nos dois caminhos e a
+   lista de imóveis na prévia da desativação moram lá. Contra o servidor antigo a
+   chave aparece, é descartada no salvamento, e o aviso da desativação não aparece.
+2. **A regra da chave mora fora do JSX** (`src/features/properties/leadDestination.ts`,
+   com spec) e a frase do aviso da desativação em `deactivationRules.ts`. A tela de
+   Imóveis tem ~2.000 linhas; mesma decisão das outras traduções deste repositório.
+3. **A chave só vale quando o portal manda o CÓDIGO do anúncio e ele bate com o
+   cadastro.** Sem isso o lead segue o caminho de sempre, **em silêncio** — é limite
+   estrutural, não defeito. Antes de prometer a um cliente, conferir que os anúncios
+   daqueles imóveis saem com o código do CRM.
+4. **Trocar ou apagar o responsável NÃO desliga a chave.** A tela avisa; desligar
+   por conta própria faria a escolha sumir sem ninguém ver.
+5. **Não é `featureKey` nem `clientToggleKey`** — é campo do imóvel. Os scanners do
+   catálogo de funcionalidades não entram nesta história e nenhuma chave literal
+   nova foi escrita.

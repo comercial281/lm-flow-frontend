@@ -221,6 +221,40 @@ export function deactivationRefusal(
   return null;
 }
 
+/**
+ * "Ele é o destino dos leads de N imóveis" — ou null quando não é de nenhum.
+ *
+ * ⚠️ Isto é AVISO, não bloqueio: o servidor já protege a entrega (corretor
+ * desativado não recebe o lead; ele cai na regra do portal e o motivo fica
+ * registrado na trilha). O que falta é a gestão SABER, no segundo em que decide
+ * desativar — senão o anúncio segue no ar, o lead segue chegando, e ninguém liga
+ * uma coisa à outra.
+ *
+ * Nomeia até três imóveis pelo CÓDIGO (é por ele que o anúncio é achado no
+ * portal); o resto vira "e outros N".
+ */
+export function leadDestinationNotice(preview: DeactivationPreview | null): string | null {
+  const imoveis = preview?.lead_destination_properties;
+  if (!imoveis?.length) return null;
+
+  const nomes = imoveis
+    .map(p => String(p.code ?? '').trim() || String(p.title ?? '').trim())
+    .filter(Boolean);
+  const mostrados = nomes.slice(0, 3);
+  const resto = nomes.length - mostrados.length;
+
+  const contagem = imoveis.length === 1 ? '1 imóvel' : `${imoveis.length} imóveis`;
+  const lista = mostrados.length
+    ? ` (${mostrados.join(', ')}${resto > 0 ? ` e outros ${resto}` : ''})`
+    : '';
+
+  return (
+    `Os leads de ${contagem}${lista} vão direto para ele. ` +
+    'Desativado, esses leads passam a cair na regra do portal — ' +
+    'troque o responsável desses imóveis para quem vai atender.'
+  );
+}
+
 export const ERASE_UNKNOWN =
   'O servidor ainda não sabe dizer se este cadastro pode ser apagado. Tente de novo em alguns minutos.';
 

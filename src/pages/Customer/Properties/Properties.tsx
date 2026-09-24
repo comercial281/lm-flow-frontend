@@ -47,6 +47,7 @@ import {
   Check,
   ChevronDown,
   FileText,
+  UserCheck,
 } from 'lucide-react';
 import {
   propertiesService,
@@ -65,6 +66,11 @@ import {
   typologyName,
   type PropertyTypology,
 } from '@/features/properties/typologies';
+import {
+  LEAD_DESTINATION_HELP,
+  LEAD_DESTINATION_LABEL,
+  leadDestinationWarning,
+} from '@/features/properties/leadDestination';
 import {
   propertyPhotosService,
   PropertyPhoto,
@@ -110,6 +116,7 @@ const EMPTY_FORM: PropertyFormData = {
   ai_enabled: true,
   on_sign: false,
   responsible_id: null,
+  lead_goes_to_responsible: false,
   captor_id: null,
   label_id: null,
   features: [],
@@ -159,6 +166,9 @@ export default function Properties() {
   const [filterStatus, setFilterStatus]       = useState('');
   const [filterType, setFilterType]           = useState('');
   const [filterTransaction, setFilterTransaction] = useState('');
+  // "Só os imóveis com destino próprio": responde "quais dos 900 têm regra?" sem
+  // exigir uma tela de exceções à parte.
+  const [filterLeadDestination, setFilterLeadDestination] = useState(false);
 
   const [modalOpen, setModalOpen]       = useState(false);
   const [importOpen, setImportOpen]     = useState(false);
@@ -210,7 +220,13 @@ export default function Properties() {
 
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const load = useCallback(async (q = search, status = filterStatus, type = filterType, transaction = filterTransaction) => {
+  const load = useCallback(async (
+    q = search,
+    status = filterStatus,
+    type = filterType,
+    transaction = filterTransaction,
+    leadDestination = filterLeadDestination,
+  ) => {
     setLoading(true);
     try {
       const res = await propertiesService.list({
@@ -218,6 +234,7 @@ export default function Properties() {
         status: status || undefined,
         property_type: type || undefined,
         transaction_type: transaction || undefined,
+        lead_goes_to_responsible: leadDestination || undefined,
         per_page: 60,
       });
       setProperties(res.data ?? []);
@@ -227,7 +244,7 @@ export default function Properties() {
     } finally {
       setLoading(false);
     }
-  }, [search, filterStatus, filterType, filterTransaction]);
+  }, [search, filterStatus, filterType, filterTransaction, filterLeadDestination]);
 
   // Recarrega os contadores da barra de status (ativos/reservados/…). Tolerante a falha.
   const loadStats = useCallback(() => {
@@ -263,14 +280,18 @@ export default function Properties() {
   const handleSearch = (val: string) => {
     setSearch(val);
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => load(val, filterStatus, filterType, filterTransaction), 400);
+    searchTimeout.current = setTimeout(
+      () => load(val, filterStatus, filterType, filterTransaction, filterLeadDestination),
+      400,
+    );
   };
 
-  const applyFilter = (s: string, t: string, tr: string) => {
+  const applyFilter = (s: string, t: string, tr: string, ld = filterLeadDestination) => {
     setFilterStatus(s);
     setFilterType(t);
     setFilterTransaction(tr);
-    load(search, s, t, tr);
+    setFilterLeadDestination(ld);
+    load(search, s, t, tr, ld);
   };
 
   const openCreate = () => {
@@ -318,6 +339,9 @@ export default function Properties() {
       ai_enabled: p.ai_enabled ?? true,
       on_sign: p.on_sign ?? false,
       responsible_id: p.responsible?.id ?? p.responsible_id ?? null,
+      // Campo ausente = servidor antigo (a coluna nasce no boot): a chave abre
+      // desligada, que é o comportamento do imóvel sem exceção nenhuma.
+      lead_goes_to_responsible: p.lead_goes_to_responsible === true,
       captor_id: p.captor?.id ?? p.captor_id ?? null,
       owner_contact_id: p.owner_contact_id ?? null,
       label_id: p.label_id ?? null,
@@ -336,6 +360,10 @@ export default function Properties() {
       toast.error('Informe o Valor de venda (obrigatório para imóveis à venda).');
       return;
     }
+    // Chave de destino própio ligada sem responsável: o servidor recusa o
+    // cadastro INTEIRO. Avisa antes de bater na API, como o valor de venda.
+    const destinoSemDono = leadDestinationWarning(form);
+    if (destinoSemDono) { toast.error(destinoSemDono); return; }
     setSaving(true);
     // Linha de tipologia que o corretor adicionou e não preencheu não vai pro
     // backend (ele descartaria de qualquer jeito) — evita gravar planta fantasma.
@@ -793,9 +821,24 @@ export default function Properties() {
             ))}
           </select>
 
-          {(filterStatus || filterType || filterTransaction || search) && (
+          {/* Os imóveis que têm destino próprio são poucos entre centenas — sem
+              este atalho, achá-los exigiria abrir um por um. */}
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={filterLeadDestination}
+              onChange={e => applyFilter(filterStatus, filterType, filterTransaction, e.target.checked)}
+            />
+            Só com destino próprio
+          </label>
+
+          {(filterStatus || filterType || filterTransaction || filterLeadDestination || search) && (
             <button
-              onClick={() => { setSearch(''); setFilterStatus(''); setFilterType(''); setFilterTransaction(''); load('', '', '', ''); }}
+              onClick={() => {
+                setSearch(''); setFilterStatus(''); setFilterType(''); setFilterTransaction('');
+                setFilterLeadDestination(false);
+                load('', '', '', '', false);
+              }}
               className="text-xs text-primary hover:underline"
             >
               Limpar filtros
@@ -1172,6 +1215,29 @@ export default function Properties() {
                   <option value="">Nenhum</option>
                   {tenantUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
+
+                {/* A exceção por IMÓVEL: tira este anúncio da roleta / do destino
+                    do portal e entrega ao responsável acima. Fica COLADA no
+                    seletor de propósito — ela decide sobre a pessoa escolhida
+                    ali, e separá-las faria procurar as duas em lugares
+                    diferentes. */}
+                <label className="mt-2 flex items-start gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={f.lead_goes_to_responsible === true}
+                    onChange={e => setF({ lead_goes_to_responsible: e.target.checked })}
+                  />
+                  <span>
+                    {LEAD_DESTINATION_LABEL}
+                    <span className="mt-0.5 block text-muted-foreground">{LEAD_DESTINATION_HELP}</span>
+                  </span>
+                </label>
+                {leadDestinationWarning(f) && (
+                  <p className="mt-1 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-600 dark:text-amber-400">
+                    {leadDestinationWarning(f)}
+                  </p>
+                )}
               </div>
               <div>
                 <UILabel>Captador</UILabel>
@@ -1755,6 +1821,18 @@ function PropertyCard({
           <p className="mb-2 text-xs text-muted-foreground">
             <span className="font-medium text-foreground">{p.typologies!.length} tipologias</span>
             {typologyHeadline(p.typologies) ? ` · ${typologyHeadline(p.typologies)}` : ''}
+          </p>
+        )}
+
+        {/* Destino próprio: o card DIZ para quem o lead deste anúncio vai. Sem
+            esta linha, o filtro "só com destino próprio" mostraria quais imóveis
+            têm regra e não para quem — que é a outra metade da pergunta. */}
+        {p.lead_goes_to_responsible && (
+          <p className="mb-2 flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400">
+            <UserCheck className="h-3 w-3 flex-shrink-0" />
+            <span className="truncate">
+              Leads vão para {p.responsible?.name || 'o responsável'}
+            </span>
           </p>
         )}
 
