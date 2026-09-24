@@ -48,6 +48,13 @@ export interface Property {
   };
   on_sign?: boolean;
   responsible_id?: string | null;
+  /**
+   * "Leads deste imóvel vão direto para o responsável": tira este anúncio da
+   * roleta / do destino configurado no portal e entrega ao corretor responsável.
+   * Ausente = servidor antigo (a coluna nasce no boot), e o imóvel se comporta
+   * como qualquer outro.
+   */
+  lead_goes_to_responsible?: boolean | null;
   captor_id?: string | null;
   owner_contact_id?: string | null;
   /** Tag do imóvel: aplicada ao lead que entra pela página deste imóvel. */
@@ -115,6 +122,8 @@ export interface PropertyFormData {
   ai_enabled?: boolean;
   on_sign?: boolean;
   responsible_id?: string | null;
+  /** Ver Property#lead_goes_to_responsible. Exige responsável — o servidor recusa sem. */
+  lead_goes_to_responsible?: boolean;
   captor_id?: string | null;
   owner_contact_id?: string | null;
   label_id?: string | null;
@@ -151,6 +160,11 @@ export interface PropertiesListParams {
   city?: string;
   /** Só imóveis que têm book salvo (?has_book=1). */
   has_book?: boolean;
+  /**
+   * Só os imóveis com destino próprio ("leads vão direto para o responsável").
+   * É o que responde "quais dos 900 têm regra?" sem exigir uma tela de exceções.
+   */
+  lead_goes_to_responsible?: boolean;
   page?: number;
   per_page?: number;
 }

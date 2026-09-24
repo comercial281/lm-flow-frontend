@@ -69,6 +69,14 @@ export interface DeactivationPreview {
   /** null = ele não tem número exclusivo; a opção de desconectar nem aparece. */
   exclusive_number: DeactivationNumber | null;
   shared_numbers: string[];
+  /**
+   * Os imóveis marcados com "Leads deste imóvel vão direto para o responsável"
+   * apontando para ELE. Desativar sem dizer isto é o silêncio mais caro daquela
+   * chave: o anúncio continua no portal, o lead continua chegando, e passa a
+   * cair na regra do portal sem ninguém ligar uma coisa à outra.
+   * Ausente = servidor antigo; a janela simplesmente não mostra a linha.
+   */
+  lead_destination_properties?: Array<{ id: string; code?: string | null; title?: string | null }>;
   user?: User;
   /**
    * O veredito do *Excluir cadastro*: só o cadastro que nunca foi usado pode

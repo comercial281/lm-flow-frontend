@@ -11,6 +11,7 @@ import {
   deactivationRefusal,
   eraseVerdict,
   isLastActiveAdmin,
+  leadDestinationNotice,
   resolveActor,
   transferCandidates,
 } from './deactivationRules';
@@ -266,5 +267,54 @@ describe('o motivo de o botão Desativar estar desligado', () => {
   it('a Leal Mídia desativa o único administrador do cliente', () => {
     const lealMidia = resolveActor('super-1', equipe, { isPlatformOwner: true, name: 'Giovani' });
     expect(deactivationRefusal(lealMidia, dono, equipe, { actorIsPlatformOwner: true })).toBeNull();
+  });
+});
+
+describe('leadDestinationNotice', () => {
+  const preview = (
+    imoveis: Array<{ id: string; code?: string | null; title?: string | null }> | undefined,
+  ): DeactivationPreview =>
+    ({
+      leads: 0,
+      open_conversations: 0,
+      pending_offers: 0,
+      roletas: [],
+      exclusive_number: null,
+      shared_numbers: [],
+      lead_destination_properties: imoveis,
+    }) as DeactivationPreview;
+
+  it('cala quando ele não é destino de imóvel nenhum', () => {
+    expect(leadDestinationNotice(preview([]))).toBeNull();
+    // Servidor antigo não manda a chave: a janela simplesmente não mostra a linha.
+    expect(leadDestinationNotice(preview(undefined))).toBeNull();
+    expect(leadDestinationNotice(null)).toBeNull();
+  });
+
+  it('nomeia os imóveis pelo código e diz o que acontece ao desativar', () => {
+    const texto = leadDestinationNotice(preview([
+      { id: '1', code: 'TH302', title: 'The House 302' },
+      { id: '2', code: 'TH303', title: 'The House 303' },
+    ]));
+
+    expect(texto).toContain('2 imóveis');
+    expect(texto).toContain('TH302, TH303');
+    expect(texto).toContain('regra do portal');
+  });
+
+  it('corta em três e conta o resto', () => {
+    const texto = leadDestinationNotice(preview(
+      ['A', 'B', 'C', 'D', 'E'].map((c, i) => ({ id: String(i), code: c })),
+    ));
+
+    expect(texto).toContain('5 imóveis');
+    expect(texto).toContain('A, B, C e outros 2');
+  });
+
+  it('cai no título quando o imóvel não tem código', () => {
+    const texto = leadDestinationNotice(preview([{ id: '1', code: '  ', title: 'Collinas 12' }]));
+
+    expect(texto).toContain('1 imóvel');
+    expect(texto).toContain('Collinas 12');
   });
 });
