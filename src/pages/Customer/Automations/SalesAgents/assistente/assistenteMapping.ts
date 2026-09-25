@@ -40,6 +40,7 @@ import type {
 import type { ScheduleWindow } from '@/components/schedule/scheduleWindows';
 import { DEFAULT_WINDOW } from '@/components/schedule/scheduleWindows';
 import { janelaDoFollowup } from '@/features/salesAgents/followupHours';
+import { keepBriefing } from '@/features/salesAgents/handoffBriefing';
 
 export const TIPO_VENDA_PADRAO = 'lancamento';
 export const PROXIMO_PASSO_PADRAO = 'visita';
@@ -382,11 +383,18 @@ export function payloadFromAnswers(a: AssistenteAnswers, agent: SalesAgent): Par
   if (!iguais(hours, hoursComparavel)) p.active_hours = hours;
 
   const transferAtual: TransferConfig = agent.transfer_config ?? {};
-  const transfer: TransferConfig = a.handoff_mode === ''
+  // keepBriefing: o resumo no repasse e a voz de primeira pessoa não são perguntas
+  // do assistente. Montando o cenário do zero sem ela, concluir o assistente
+  // apagava as duas escolhas, calado.
+  const transfer: TransferConfig = keepBriefing(transferAtual, a.handoff_mode === ''
     ? {}
     : a.handoff_mode === 'temperatura'
       ? { mode: 'temperatura', min_temperature: a.min_temperature }
-      : { mode: a.handoff_mode };
+      // O assistente não edita as perguntas obrigatórias do checklist: sem carregá-las,
+      // concluir o assistente zerava a lista — e lista vazia no servidor é TODAS valem.
+      : a.handoff_mode === 'checklist' && transferAtual.mode === 'checklist' && transferAtual.required_questions
+        ? { mode: 'checklist', required_questions: transferAtual.required_questions }
+        : { mode: a.handoff_mode });
   if (!iguais(transfer, transferAtual)) p.transfer_config = transfer;
 
   if (a.followup_enabled !== (agent.followup_enabled === true)) p.followup_enabled = a.followup_enabled;

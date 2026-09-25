@@ -243,6 +243,19 @@ describe('assistente da IA: respostas → PATCH', () => {
       .toEqual({ mode: 'duvida' });
   });
 
+  // O assistente não pergunta pelo resumo, pela voz do repasse nem pelas perguntas
+  // obrigatórias do checklist. Montando o cenário do zero, concluir o assistente
+  // apagava as três escolhas, calado.
+  it('não apaga o que o assistente não edita no cenário de repasse', () => {
+    const agent = iaNova({
+      transfer_config: { mode: 'checklist', required_questions: ['Orçamento'], briefing_enabled: false, voice: 'first_person' },
+    });
+    const base = answersFromAgent(agent, null);
+    expect(payloadFromAnswers(base, agent).transfer_config).toBeUndefined();
+    expect(payloadFromAnswers({ ...base, handoff_mode: 'duvida' }, agent).transfer_config)
+      .toEqual({ mode: 'duvida', briefing_enabled: false, voice: 'first_person' });
+  });
+
   it('abre preenchido com o que a IA já tem, pontos-chave vindos do endpoint do roteiro', () => {
     // O agente carrega o mesmo `playbook` que o endpoint do roteiro resolve — os
     // dois vêm do mesmo campo no servidor.
