@@ -3430,3 +3430,29 @@ Armadilhas:
 5. **Não é `featureKey` nem `clientToggleKey`** — é campo do imóvel. Os scanners do
    catálogo de funcionalidades não entram nesta história e nenhuma chave literal
    nova foi escrita.
+
+## A IA pode falar como o próprio corretor do número (desde 2026-09-25)
+
+Relato do dono do produto: no WhatsApp de uma corretora, a IA dizia *"deixa eu
+passar tudo pro meu colega do time"*. E quando acertava a voz (*"deixa eu confirmar
+e já te passo as opções"*), não passava o lead. As duas causas eram do comando do
+servidor (ver o CLAUDE.md do `lm-flow`).
+
+O que aparece na tela, em *IA Vendedora → Configuração → Quando ela passa para um
+corretor*, abaixo de *Mandar o resumo da conversa junto com o lead*:
+
+- **Chave *Ela fala como o próprio corretor deste número***. Ligada, ela nunca fala
+  em colega, equipe ou "vou te passar": diz que vai verificar e já retorna, e é
+  nessa hora que o lead é passado. Se perguntarem se é robô, ela não nega.
+
+Armadilhas:
+
+1. **A escolha mora DENTRO do `transfer_config`** (`voice: 'first_person'`), como
+   o resumo. Campo solto seria descartado pelo `saveAgent`. Há spec.
+2. **Trocar o cenário e concluir o assistente montam o `transfer_config` do zero**:
+   os dois passam por `keepBriefing`, que carrega a voz e o resumo. O assistente
+   passou a carregar também as perguntas obrigatórias do checklist, que ele
+   zerava — e lista vazia no servidor é TODAS valem.
+3. **A metade do backend vem PRIMEIRO** (`lm-flow`, `saas-multitenant`). Contra o
+   servidor antigo a chave salva e nada muda.
+4. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente.

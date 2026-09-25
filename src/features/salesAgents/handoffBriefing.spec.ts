@@ -38,6 +38,12 @@ describe('handoffBriefing', () => {
         .toEqual({ mode: 'duvida', briefing_enabled: false });
     });
 
+    // A voz de primeira pessoa também não é de cenário nenhum (handoffVoice.ts).
+    it('carrega a voz de primeira pessoa para o cenário novo', () => {
+      expect(keepBriefing({ voice: 'first_person', mode: 'temperatura', min_temperature: 'warm' }, { mode: 'duvida' }))
+        .toEqual({ mode: 'duvida', voice: 'first_person' });
+    });
+
     it('não inventa a chave quando ninguém desligou', () => {
       expect(keepBriefing({ mode: 'temperatura' }, { mode: 'duvida' })).toEqual({ mode: 'duvida' });
       expect(keepBriefing(undefined, {})).toEqual({});

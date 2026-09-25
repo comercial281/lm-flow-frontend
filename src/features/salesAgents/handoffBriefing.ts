@@ -29,11 +29,19 @@ export function briefingEnabled(cfg?: TransferConfig | null): boolean {
  * junto, em silêncio: o gestor desligava o resumo, trocava o cenário depois e o
  * resumo voltava a sair sem ninguém ver.
  *
+ * Vale também para a voz do repasse (`voice`), pelo mesmo motivo.
+ *
  * Só `false` viaja — é o único valor que é escolha de alguém; `true` é o padrão e
  * gravá-lo congelaria a escolha de hoje se o padrão da casa mudasse.
  */
 export function keepBriefing(cfg: TransferConfig | null | undefined, next: TransferConfig): TransferConfig {
-  return cfg?.briefing_enabled === false ? { ...next, briefing_enabled: false } : next;
+  const out: TransferConfig = cfg?.briefing_enabled === false ? { ...next, briefing_enabled: false } : { ...next };
+  // A VOZ do repasse (features/salesAgents/handoffVoice.ts) também não é de cenário
+  // nenhum e sofreria a mesma limpeza: o gestor marcava "fala como o próprio
+  // corretor", trocava o cenário, e a IA voltava a dizer "vou te passar pra um
+  // colega" sem ninguém ver.
+  if (cfg?.voice === 'first_person') out.voice = 'first_person';
+  return out;
 }
 
 /**

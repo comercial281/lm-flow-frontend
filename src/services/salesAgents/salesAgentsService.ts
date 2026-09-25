@@ -321,6 +321,12 @@ export interface TransferConfig {
    * quiser. Ver features/salesAgents/handoffBriefing.ts.
    */
   briefing_enabled?: boolean;
+  /**
+   * `first_person` = a IA atende no WhatsApp de UM corretor e fala como ele: nunca
+   * "vou te passar pra um colega do time". Ausente = o padrão de sempre. Ver
+   * features/salesAgents/handoffVoice.ts.
+   */
+  voice?: 'first_person';
 }
 
 export interface VisitConfig {

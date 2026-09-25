@@ -66,6 +66,7 @@ import {
 import { antecedenciaResumo } from '@/features/salesAgents/visitWindow';
 import { checklistItems, checklistNotices, toggleRequired } from '@/features/salesAgents/handoffChecklist';
 import { briefingEnabled, keepBriefing, toggleBriefing } from '@/features/salesAgents/handoffBriefing';
+import { speaksAsBroker, toggleVoice } from '@/features/salesAgents/handoffVoice';
 import inboxesService from '@/services/channels/inboxesService';
 import agentsService from '@/services/channels/agentsService';
 import { roletaConfigService } from '@/services/roletaConfig/roletaConfigService';
@@ -1891,6 +1892,15 @@ function HandoffPolicySection({ agent, onSave }: {
           onChange={(v) => onSave({ transfer_config: toggleBriefing(cfg, v) })}
           title="Mandar o resumo da conversa junto com o lead"
           desc="No WhatsApp do corretor vão três linhas (temperatura, e o que ela descobriu de orçamento, região e prazo). Na tela de aceite vai a ficha completa, com o resumo da conversa — o mesmo que aparece em O que a IA entendeu."
+        />
+        {/* A IA no WhatsApp de UM corretor: para o lead ela É esse corretor, então
+            "vou te passar pra um colega do time" não faz sentido. Ligada, ela diz
+            que vai verificar e já retorna — e é nessa frase que o lead é passado. */}
+        <CheckRow
+          checked={speaksAsBroker(cfg)}
+          onChange={(v) => onSave({ transfer_config: toggleVoice(cfg, v) })}
+          title="Ela fala como o próprio corretor deste número"
+          desc="Use quando a IA atende no WhatsApp de um corretor. Ela nunca fala em colega, equipe ou “vou te passar”: diz que vai verificar e já retorna (“deixa eu confirmar as opções e já te passo”), e é nesse momento que o lead é passado (para quem estiver escolhido em Para quem ela passa o lead). Se o lead perguntar se está falando com um robô, ela não nega."
         />
       </div>
     </div>
