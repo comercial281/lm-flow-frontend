@@ -21,6 +21,7 @@ import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
+import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useMenuState } from '@/hooks/useMenuState';
 import { useKeyboardInsetVar } from '@/hooks/useKeyboardInset';
 import { useDashboardApps } from '@/hooks/useDashboardApps';
@@ -45,6 +46,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const { user, logout } = useAuth();
   const { can, canAny, canAll } = usePermissions();
   const { features: tenantFeatures, archivedKeys } = useTenantFeatures();
+  // Suporte da Leal Mídia (Fase 1 — Cargos): vem do servidor, não do e-mail.
+  const isSupport = useIsSuperAdmin();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuPrefsVersion, setMenuPrefsVersion] = useState(0);
@@ -112,14 +115,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // Itens permitidos (filtrados por permissão) — usados pelo editor de menu.
   const permittedMenuItems = useMemo(() => {
     const rawMenuItems = getMenuItems();
-    let finalItems = filterMenuItemsByPermissions(rawMenuItems, can, canAny, canAll, user?.role?.key, user?.email, tenantFeatures, archivedKeys);
+    let finalItems = filterMenuItemsByPermissions(rawMenuItems, can, canAny, canAll, user?.role?.key, user?.email, tenantFeatures, archivedKeys, isSupport);
 
     if (dashboardApps.length > 0) {
       finalItems = injectDashboardAppsIntoMenu(finalItems, dashboardApps);
     }
 
     return finalItems;
-  }, [getMenuItems, can, canAny, canAll, dashboardApps, user?.role?.key, user?.email, tenantFeatures, archivedKeys]);
+  }, [getMenuItems, can, canAny, canAll, dashboardApps, user?.role?.key, user?.email, tenantFeatures, archivedKeys, isSupport]);
 
   // Aplica as preferências do usuário (esconder/favoritar/ordenar) por cima.
   // eslint-disable-next-line react-hooks/exhaustive-deps
