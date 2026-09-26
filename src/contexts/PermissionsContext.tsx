@@ -51,15 +51,22 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
   const [resourceActions, setResourceActions] = useState<ResourceActionsResponse | null>(null);
   const [configLoading, setConfigLoading] = useState(false);
 
-  // Reset loaded flags whenever the logged-in user changes so the next user's
-  // permissions go through the fetch cycle before `isReady` flips back to true.
+  // Troca de pessoa (logout, outro login, impersonação): nada da anterior
+  // sobrevive. O serviço guarda por 30 min num objeto único, e este provider
+  // guardava as duas listas — o corretor que entrava depois do gestor herdava
+  // o menu do gestor (e o metadado que o `can()` usa para validar a chave).
   useEffect(() => {
+    permissionsService.clearCache();
+    setUserPermissions([]);
+    setAccountPermissions([]);
+    setResourceActions(null);
     setUserPermsLoaded(false);
     setAccountPermsLoaded(false);
   }, [user?.id]);
 
   // Load permissions config (metadata)
   useEffect(() => {
+    if (!user?.id) return;
 
     const loadConfig = async () => {
       const isAuthenticated = useAuthStore.getState().isLoggedIn;
@@ -77,7 +84,7 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
     };
 
     loadConfig();
-  }, []);
+  }, [user?.id]);
 
   // Load user permissions
   useEffect(() => {
@@ -116,14 +123,8 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
   useEffect(() => {
     // Verificar autenticação primeiro - precisa ter user também
     const isAuthenticated = useAuthStore.getState().isLoggedIn;
-    if (!isAuthenticated || !user) {
+    if (!isAuthenticated || !user?.id) {
       setAccountPermissions([]);
-      setAccountPermsLoaded(true);
-      return;
-    }
-
-    // ⚡ Proteção: não carregar se já tem permissões (evita recarregar desnecessariamente)
-    if (accountPermissions.length > 0) {
       setAccountPermsLoaded(true);
       return;
     }
@@ -153,7 +154,7 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
     };
 
     loadAccountPermissions();
-  }, [user, accountPermissions.length]);
+  }, [user?.id]);
 
   const createPermission = useCallback((resource: string, action: string): string => {
     return `${resource}.${action}`;
