@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import NoAccessState from '@/components/permissions/NoAccessState';
 
 interface PermissionRouteProps {
   children: React.ReactNode;
@@ -9,7 +10,8 @@ interface PermissionRouteProps {
   action?: string;
   permissions?: string[]; // Array de permissões alternativo
   requireAll?: boolean; // Se true, requer todas as permissões
-  redirectTo?: string; // Rota para redirecionar se não tiver permissão
+  redirectTo?: string; // Rota para redirecionar se não tiver permissão. Sem
+                        // valor, mostra o aviso do cargo no lugar da tela.
   fallback?: React.ReactNode; // Componente alternativo
 }
 
@@ -28,6 +30,11 @@ interface PermissionRouteProps {
  * <PermissionRoute permissions={['users.read', 'teams.read']} requireAll={false}>
  *   <DashboardPage />
  * </PermissionRoute>
+ *
+ * Sem `redirectTo`, a recusa mostra o aviso do cargo (NoAccessState) NO LUGAR
+ * da tela — spec da Fase 1 (Cargos): endereço digitado sem permissão nunca cai
+ * na página genérica de "unauthorized". Só quem passar `redirectTo`
+ * explicitamente continua sendo redirecionado.
  */
 const PermissionRoute: React.FC<PermissionRouteProps> = ({
   children,
@@ -35,7 +42,7 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
   action,
   permissions,
   requireAll = false,
-  redirectTo = '/unauthorized',
+  redirectTo,
   fallback = null,
 }) => {
   const navigate = useNavigate();
@@ -73,14 +80,17 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
 
     return {
       hasAccess: hasPermission,
-      shouldRedirect: !hasPermission && !fallback,
+      // Só redireciona quem passou `redirectTo` explicitamente — sem ele, a
+      // recusa cai no NoAccessState renderizado abaixo, nunca na página
+      // genérica de unauthorized.
+      shouldRedirect: !hasPermission && !fallback && !!redirectTo,
       isLoading: false
     };
-  }, [can, canAny, canAll, permissions, requireAll, resource, action, fallback, loading, isReady, isSuperAdmin]);
+  }, [can, canAny, canAll, permissions, requireAll, resource, action, fallback, redirectTo, loading, isReady, isSuperAdmin]);
 
   // Usar useEffect para navegação para evitar chamadas durante render
   useEffect(() => {
-    if (permissionCheck.shouldRedirect) {
+    if (permissionCheck.shouldRedirect && redirectTo) {
       navigate(redirectTo, { replace: true });
     }
   }, [permissionCheck.shouldRedirect, navigate, redirectTo]);
@@ -103,6 +113,8 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
     if (permissionCheck.shouldRedirect) {
       return null;
     }
+    // Sem fallback e sem redirectTo: o aviso do cargo ocupa o lugar da tela.
+    return <NoAccessState />;
   }
 
   // Usuário tem permissão, renderizar conteúdo

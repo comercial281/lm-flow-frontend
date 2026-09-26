@@ -592,7 +592,14 @@ const AppRouter = () => {
 
             {/* IA Vendedora — item de topo do CRM (URL própria). Antes vivia como
                 sub-aba de Automações (/automations/sales-agents). */}
-            <Route path="/ia-vendedora" element={<SalesAgents />} />
+            <Route
+              path="/ia-vendedora"
+              element={
+                <PermissionRoute resource="sales_agents" action="read">
+                  <SalesAgents />
+                </PermissionRoute>
+              }
+            />
 
             <Route
               path="/pipelines/:pipelineId"
@@ -603,7 +610,14 @@ const AppRouter = () => {
               }
             />
 
-            <Route path="/disparos" element={<Disparos />} />
+            <Route
+              path="/disparos"
+              element={
+                <PermissionRoute resource="broadcasts" action="read">
+                  <Disparos />
+                </PermissionRoute>
+              }
+            />
 
             {/* Automações — aba única com submenu por setor (substitui os itens
                 soltos que viviam em Configurações). As rotas /settings/* antigas
@@ -615,7 +629,7 @@ const AppRouter = () => {
                 path="message-funnels"
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
-                    <PermissionRoute resource="canned_responses" action="read">
+                    <PermissionRoute resource="message_funnels" action="read">
                       <EditorDeFunis />
                     </PermissionRoute>
                   </Suspense>
@@ -625,7 +639,7 @@ const AppRouter = () => {
                 path="flow-builder"
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
-                    <PermissionRoute resource="canned_responses" action="read">
+                    <PermissionRoute resource="flow_automations" action="read">
                       <FlowAutomationsList />
                     </PermissionRoute>
                   </Suspense>
@@ -635,7 +649,7 @@ const AppRouter = () => {
                 path="flow-builder/:id"
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
-                    <PermissionRoute resource="canned_responses" action="read">
+                    <PermissionRoute resource="flow_automations" action="read">
                       <FlowAutomationCanvas />
                     </PermissionRoute>
                   </Suspense>
@@ -658,7 +672,7 @@ const AppRouter = () => {
                 path="origem"
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
-                    <PermissionRoute resource="canned_responses" action="read">
+                    <PermissionRoute resource="lead_ads_form_configs" action="read">
                       <Origem />
                     </PermissionRoute>
                   </Suspense>
@@ -668,7 +682,9 @@ const AppRouter = () => {
                 path="lead-automations"
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
-                    <LeadAutomations />
+                    <PermissionRoute resource="lead_automation_rules" action="read">
+                      <LeadAutomations />
+                    </PermissionRoute>
                   </Suspense>
                 }
               />
@@ -676,7 +692,9 @@ const AppRouter = () => {
                 path="lead-ads-forms"
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
-                    <LeadAdsForms />
+                    <PermissionRoute resource="lead_ads_form_configs" action="read">
+                      <LeadAdsForms />
+                    </PermissionRoute>
                   </Suspense>
                 }
               />
@@ -684,7 +702,9 @@ const AppRouter = () => {
                 path="follow-ups"
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
-                    <FollowupSequences />
+                    <PermissionRoute resource="followup_sequences" action="read">
+                      <FollowupSequences />
+                    </PermissionRoute>
                   </Suspense>
                 }
               />
@@ -699,7 +719,9 @@ const AppRouter = () => {
                 path="whatsapp-reminders"
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
-                    <WhatsappReminders />
+                    <PermissionRoute resource="whatsapp_reminders" action="read">
+                      <WhatsappReminders />
+                    </PermissionRoute>
                   </Suspense>
                 }
               />
@@ -785,7 +807,7 @@ const AppRouter = () => {
             <Route
               path="/settings/message-funnels"
               element={
-                <PermissionRoute resource="canned_responses" action="read">
+                <PermissionRoute resource="message_funnels" action="read">
                   <MessageFunnels />
                 </PermissionRoute>
               }
@@ -800,15 +822,45 @@ const AppRouter = () => {
               }
             />
 
+            {/* Fora da Fase 1 (Cargos): decisão do controlador, não protegida
+                nesta task — ver relatório da task B4. */}
             <Route path="/settings/welcome-automations" element={<WelcomeAutomations />} />
 
-            <Route path="/settings/lead-automations" element={<LeadAutomations />} />
+            <Route
+              path="/settings/lead-automations"
+              element={
+                <PermissionRoute resource="lead_automation_rules" action="read">
+                  <LeadAutomations />
+                </PermissionRoute>
+              }
+            />
 
-            <Route path="/settings/lead-ads-forms" element={<LeadAdsForms />} />
+            <Route
+              path="/settings/lead-ads-forms"
+              element={
+                <PermissionRoute resource="lead_ads_form_configs" action="read">
+                  <LeadAdsForms />
+                </PermissionRoute>
+              }
+            />
 
-            <Route path="/settings/follow-ups" element={<FollowupSequences />} />
+            <Route
+              path="/settings/follow-ups"
+              element={
+                <PermissionRoute resource="followup_sequences" action="read">
+                  <FollowupSequences />
+                </PermissionRoute>
+              }
+            />
 
-            <Route path="/settings/site-builder" element={<SiteBuilder />} />
+            <Route
+              path="/settings/site-builder"
+              element={
+                <PermissionRoute resource="sites" action="read">
+                  <SiteBuilder />
+                </PermissionRoute>
+              }
+            />
 
             <Route
               path="/settings/macros"
@@ -819,17 +871,34 @@ const AppRouter = () => {
               }
             />
 
-            <Route path="/settings/whatsapp-reminders" element={<WhatsappReminders />} />
+            <Route
+              path="/settings/whatsapp-reminders"
+              element={
+                <PermissionRoute resource="whatsapp_reminders" action="read">
+                  <WhatsappReminders />
+                </PermissionRoute>
+              }
+            />
 
             {/* Pixel/CAPI mora agora em Configurações, não em Automações — não usa mais
                 o layout com submenu de setores. Filha simples de Grupo A: já herda
                 PrivateRoute+CustomerRoute+MainLayout do pai, sem guards próprios. */}
-            <Route path="/settings/pixel-capi" element={<PixelCapiConfig />} />
+            <Route
+              path="/settings/pixel-capi"
+              element={
+                <PermissionRoute resource="capi_configs" action="read">
+                  <PixelCapiConfig />
+                </PermissionRoute>
+              }
+            />
 
+            {/* A chave é `portals`, não `integrations` (backend A5, Fase 1 Cargos):
+                integrations.* segue sendo repassada a quem já a tinha, mas a
+                chave nova e específica de Portais é portals.read/update. */}
             <Route
               path="/settings/portals"
               element={
-                <PermissionRoute resource="integrations" action="read">
+                <PermissionRoute resource="portals" action="read">
                   <PortalsList />
                 </PermissionRoute>
               }
@@ -837,7 +906,7 @@ const AppRouter = () => {
             <Route
               path="/settings/portals/:portalKey"
               element={
-                <PermissionRoute resource="integrations" action="read">
+                <PermissionRoute resource="portals" action="read">
                   <PortalDetailPage />
                 </PermissionRoute>
               }
@@ -969,33 +1038,91 @@ const AppRouter = () => {
             {/* Espaço — Notion por tenant (usuário logado). Sem gate de permissão:
                 QUALQUER staff logado do tenant acessa (decisão do Giovani). O
                 controle fino (pausar / visibilidade por seção / links) fica na aba
-                Gerir, que só aparece pra admin (role do backend). */}
+                Gerir, que só aparece pra admin (role do backend).
+                Sem cargo também na Fase 1 (Cargos): o servidor do Espaço não
+                confere cargo (`skip_permission_enforcement!`). */}
             <Route path="/espaco" element={<Espaco mode="auth" />} />
 
             <Route path="/conversations" element={ChatRouteElement} />
 
             <Route path="/conversations/:conversationId" element={ChatRouteElement} />
 
-            <Route path="/properties" element={<Properties />} />
+            <Route
+              path="/properties"
+              element={
+                <PermissionRoute resource="properties" action="read">
+                  <Properties />
+                </PermissionRoute>
+              }
+            />
 
-            <Route path="/books" element={<PropertyBooks />} />
+            <Route
+              path="/books"
+              element={
+                <PermissionRoute resource="properties" action="read">
+                  <PropertyBooks />
+                </PermissionRoute>
+              }
+            />
 
-            <Route path="/properties/map" element={<PropertiesMap />} />
+            <Route
+              path="/properties/map"
+              element={
+                <PermissionRoute resource="properties" action="read">
+                  <PropertiesMap />
+                </PermissionRoute>
+              }
+            />
 
             {/* A lista de landings virou aba do Site Builder (é uma página do
                 site do cliente, e é lá que o site nasce). Rota antiga mantida
                 como redirect pra não quebrar link salvo. */}
             <Route path="/landings" element={<Navigate to="/settings/site-builder?tab=landings" replace />} />
 
-            <Route path="/visits" element={<Visits />} />
+            <Route
+              path="/visits"
+              element={
+                <PermissionRoute resource="visits" action="read">
+                  <Visits />
+                </PermissionRoute>
+              }
+            />
 
-            <Route path="/proposals" element={<Proposals />} />
+            <Route
+              path="/proposals"
+              element={
+                <PermissionRoute resource="proposals" action="read">
+                  <Proposals />
+                </PermissionRoute>
+              }
+            />
 
-            <Route path="/contracts" element={<Contracts />} />
+            <Route
+              path="/contracts"
+              element={
+                <PermissionRoute resource="contracts" action="read">
+                  <Contracts />
+                </PermissionRoute>
+              }
+            />
 
-            <Route path="/property-capture-requests" element={<PropertyCaptureRequests />} />
+            <Route
+              path="/property-capture-requests"
+              element={
+                <PermissionRoute resource="property_capture_requests" action="read">
+                  <PropertyCaptureRequests />
+                </PermissionRoute>
+              }
+            />
 
-            <Route path="/property-interests" element={<PropertyInterests />} />
+            <Route
+              path="/property-interests"
+              element={
+                <PermissionRoute resource="property_interests" action="read">
+                  <PropertyInterests />
+                </PermissionRoute>
+              }
+            />
 
             {/* Settings — roleta de corretores. Montagem antiga da mesma tela de
                 /automations/roleta-config; faltava CustomerRoute e PermissionRoute,
@@ -1208,9 +1335,11 @@ const AppRouter = () => {
             element={
               <PrivateRoute>
                 <CustomerRoute>
-                  <Suspense fallback={outletSuspenseFallback}>
-                    <AssistenteIA />
-                  </Suspense>
+                  <PermissionRoute resource="sales_agents" action="update">
+                    <Suspense fallback={outletSuspenseFallback}>
+                      <AssistenteIA />
+                    </Suspense>
+                  </PermissionRoute>
                 </CustomerRoute>
               </PrivateRoute>
             }
