@@ -127,6 +127,8 @@ export interface UserResponse {
   created_at?: string;
   custom_attributes?: Record<string, unknown>;
   setup_survey_completed?: boolean;
+  /** É da Equipe do painel raiz (suporte completo em qualquer cliente). Vem do servidor. */
+  is_support?: boolean;
   [key: string]: unknown;
 }
 

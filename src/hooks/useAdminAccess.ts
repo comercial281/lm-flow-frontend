@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import { useIsOwner } from '@/hooks/useIsSuperAdmin';
 import superLogsService from '@/services/superLogs/superLogsService';
 
-// Acesso à ÁREA DO ADMIN. Diferente de useIsSuperAdmin (que é o DONO por e-mail,
-// usado pra features do CRM): aqui o dono passa instantâneo E a equipe cadastrada
+// Acesso à ÁREA DO ADMIN. Diferente de useIsSuperAdmin (suporte, vem do
+// servidor): aqui o dono passa instantâneo E a equipe cadastrada
 // (InternalMember.can_access_admin) passa via /super/whoami.
 //
 // Só o gate da Área do Admin usa isto — não mexer no useIsSuperAdmin, que gateia
-// outras coisas por e-mail de propósito.
+// outras coisas por sinal do servidor de propósito.
 
 let cached: boolean | null = null;
 let inflight: Promise<boolean> | null = null;
@@ -33,7 +33,7 @@ export interface AdminAccess {
 }
 
 export function useAdminAccess(): AdminAccess {
-  const isOwner = useIsSuperAdmin(); // dono por e-mail — instantâneo, nunca depende de rede
+  const isOwner = useIsOwner(); // dono por e-mail — instantâneo, nunca depende de rede
   const [state, setState] = useState<AdminAccess>(() =>
     isOwner
       ? { loading: false, isAdmin: true }

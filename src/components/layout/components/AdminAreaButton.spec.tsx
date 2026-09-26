@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/hooks/useIsSuperAdmin', () => ({
   useIsSuperAdmin: () => mocks.isSuper,
+  useIsOwner: () => mocks.isSuper,
   SUPER_ADMIN_EMAIL: 'comercial@lealmidia.com.br',
 }));
 
