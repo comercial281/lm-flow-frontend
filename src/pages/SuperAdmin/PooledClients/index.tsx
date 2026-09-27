@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, MessageCircle, XCircle, Bot, Radio, UserCog, ClipboardList, MessageSquarePlus, Activity, Workflow, Search, ChevronRight, Link2, Send } from 'lucide-react';
+import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, MessageCircle, XCircle, Bot, Radio, UserCog, ClipboardList, MessageSquarePlus, Activity, Workflow, Search, ChevronRight, Link2, Send, Smartphone } from 'lucide-react';
 import api from '@/services/core/api';
 import { copyText } from '@/utils/clipboard';
 import IconActionButton from '@/components/base/IconActionButton';
@@ -17,6 +17,7 @@ import LeadsFeed from '../LeadsFeed';
 import ClientMode from '../ClientMode';
 import OnboardingForms from '../OnboardingForms';
 import CustomerFeedbacks from '../CustomerFeedbacks';
+import NumberOwnership from '../NumberOwnership';
 import AdminAtividade from '@/pages/Admin/Area/Auditoria';
 import { groupCatalogByTheme, itemLabel, matchesQuery, type CatalogItem } from '../featureCatalog';
 import {
@@ -37,7 +38,8 @@ type ViewTab =
   | 'modo-cliente'
   | 'formularios'
   | 'sugestoes-bugs'
-  | 'atividade';
+  | 'atividade'
+  | 'numeros';
 
 // Consumo de IA do mês corrente, já cruzado com a franquia contratada.
 // Vem pronto do backend (SalesAgents::UsageReport) de propósito: a conta do
@@ -1175,7 +1177,7 @@ export default function PooledClients() {
   const [confirmDelete, setConfirmDelete] = useState<PooledTenant | null>(null);
   const [deleteText, setDeleteText] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
-  const VALID_TABS: ViewTab[] = ['clients', 'dashboard', 'logs', 'metrics', 'archived-features', 'leads-ao-vivo', 'modo-cliente', 'formularios', 'sugestoes-bugs', 'atividade'];
+  const VALID_TABS: ViewTab[] = ['clients', 'dashboard', 'logs', 'metrics', 'archived-features', 'leads-ao-vivo', 'modo-cliente', 'formularios', 'sugestoes-bugs', 'atividade', 'numeros'];
   const initialTab = searchParams.get('tab') as ViewTab | null;
   const [tab, setTabState] = useState<ViewTab>(
     initialTab && VALID_TABS.includes(initialTab) ? initialTab : 'clients',
@@ -1359,6 +1361,7 @@ export default function PooledClients() {
             { id: 'metrics', label: 'Métricas de Uso', Icon: Gauge },
             { id: 'archived-features', label: 'Arquivados', Icon: Archive },
             { id: 'leads-ao-vivo', label: 'Leads ao Vivo', Icon: Radio },
+            { id: 'numeros', label: 'Números', Icon: Smartphone },
             { id: 'modo-cliente', label: 'Modo Cliente', Icon: UserCog },
             { id: 'formularios', label: 'Formulários', Icon: ClipboardList },
             { id: 'sugestoes-bugs', label: 'Sugestões/Bugs', Icon: MessageSquarePlus },
@@ -1385,6 +1388,8 @@ export default function PooledClients() {
         <ArchivedFeaturesView />
       ) : tab === 'leads-ao-vivo' ? (
         <LeadsFeed />
+      ) : tab === 'numeros' ? (
+        <NumberOwnership />
       ) : tab === 'modo-cliente' ? (
         <ClientMode />
       ) : tab === 'formularios' ? (
