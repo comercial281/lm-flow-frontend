@@ -3456,3 +3456,118 @@ Armadilhas:
 3. **A metade do backend vem PRIMEIRO** (`lm-flow`, `saas-multitenant`). Contra o
    servidor antigo a chave salva e nada muda.
 4. **Não é `featureKey` nem `clientToggleKey`** — é campo do agente.
+
+## Cargos: o menu e a tela respondem o mesmo que o servidor (desde 2026-09-26)
+
+Fase 1 do programa de usabilidade. O menu conferia a funcionalidade da
+imobiliária, não o cargo: gestor e corretor recebiam os mesmos itens, e o
+gestor abria *IA Vendedora* e lia "Nenhuma IA criada" com duas IAs ligadas —
+o servidor tinha recusado a leitura, e a tela mostrou vazio. A metade do
+servidor está no CLAUDE.md do backend (seção de mesmo nome).
+
+O que aparece na tela:
+
+- **O que o cargo não pode some** — do menu (todo item declara a permissão),
+  das abas de *Automações* e dos botões: *Importar*, *Exportar* e *Disparo em
+  massa* (quadro do funil e Contatos); criar e apagar em IA Vendedora,
+  Disparos, Funis de mensagem e Imóveis. Cada botão responde pelas chaves que
+  o servidor confere no que ELE faz: o *Importar* do quadro cria contato e card
+  (`contacts.create` + `pipeline_items.create`, `boardActions.ts`) — o Corretor
+  tem as duas e continua importando; o *Importar* de Contatos é o importador de
+  planilha (`contacts.import`).
+- **Conectar/Desconectar portal** chamam `POST /portals/:portal_key/connect|disconnect`
+  (`portals.update`), não mais `/integrations` — o Gerente, que opera Portais
+  sem as outras integrações, tomava 403 no botão. Os avisos de erro são os de
+  antes ("Erro ao conectar portal" / "Erro ao desconectar portal").
+- **Permissões que não chegaram** (rede, 5xx em `/permissions`) mostram "Não
+  consegui carregar as permissões." + *Tentar de novo* no lugar da tela — nunca
+  o aviso do cargo. 403 de verdade e lista lida (vazia ou não) seguem como
+  antes.
+- **Login com teto estourado** (429, 10 tentativas em 15 min por e-mail) diz
+  "Muitas tentativas com este e-mail. Espere alguns minutos e tente de novo." em
+  vez da frase de conexão (`loginFeedback(error, { login: true })`; o convite
+  de acesso não passa a opção e fica como era).
+- **Endereço digitado sem permissão** mostra "Seu cargo não tem acesso a esta
+  tela. Quem libera é o administrador da conta." no lugar da tela — nunca mais
+  a página genérica de não autorizado. Automações com todas as abas
+  escondidas pelo cargo mostra o mesmo aviso (o "neste plano" continua só
+  para função desligada no cliente).
+- **Lista recusada pelo servidor** mostra o mesmo aviso, nunca "crie o
+  primeiro": IA Vendedora, Disparos, Portais, Funis, Imóveis, Agenda de
+  Visitas, Propostas, Contratos, Captação, Interesses, Lembretes WhatsApp,
+  Follow-up e Regras de Lead.
+- **Esqueci minha senha** manda o link de criar senha no WhatsApp do cadastro,
+  com a frase fixa "Se esse e-mail tiver conta aqui, mandamos um link pro
+  WhatsApp cadastrado." — exista o e-mail ou não, e também no teto de pedidos.
+- **Copiar link de acesso** na *Equipe* e, no painel raiz, *Enviar/Copiar link
+  de acesso* no lugar do "revelar senha". Senha legível não existe mais em
+  tela nenhuma, e o convite em massa mostra cada e-mail que o servidor recusou
+  com o motivo dele ("Este e-mail é reservado à equipe da Leal Mídia").
+- **Área do Admin → Equipe** ganhou, no fim da página, a conferência do
+  critério novo de suporte (`SUPPORT_BY_TEAM_LIST`, no servidor), cliente a
+  cliente: os @lealmidia.com.br fora da Equipe (deixam de ser suporte quando
+  ele ligar; *Colocar na Equipe* entra SEM acesso ao painel de admin) e as
+  "Contas que passam a ser suporte quando o critério ligar" (e-mail que está
+  na Equipe numa conta do cliente que não é @lealmidia.com.br). A mesma
+  leitura mostra senhas legíveis restantes e clientes sem cargos gravados.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Suporte vem do servidor** (`is_support` do boot; `useIsSuperAdmin`), não do
+  e-mail. O DONO (atalho da Área do Admin) é outra pergunta: `useIsOwner`.
+- **O *Exportar* do quadro some para o Corretor.** Ele gera o CSV no
+  navegador e não chama o servidor — é o único ponto em que o Corretor perdeu
+  algo que funcionava, e foi escolha explícita (26/09/2026).
+- **Espaço e Tutoriais ficam sem cargo** (`MENU_FREE_BY_DESIGN`): o servidor não
+  confere cargo neles. Item novo sem permissão reprova o spec do menu.
+- **"Toda a imobiliária" é do servidor** (`available_modes`); a tela só mostra
+  o que ele oferece. O `ScopePicker.spec` é trava desse contrato.
+- **Um leitor só de 403** (`services/core/forbidden.ts`). Só o 403 é recusa de
+  cargo; rede caída continua sendo erro — culpar o cargo por queda de rede
+  mandaria a pessoa pedir permissão que ela já tem. Vale também para a leitura
+  das PRÓPRIAS permissões: o `permissionsService` engole a falha de
+  `/permissions` e devolve lista vazia (outros chamadores dependem disso), mas
+  deixa a marca (`getPermissionsLoadFailure`); o `PermissionsContext` a expõe
+  como `loadFailure`, e o `PermissionRoute` decide por `permissionGate`
+  (`retry` só com `'failed'`, e vence `redirectTo`/`fallback`).
+
+Armadilhas:
+
+1. **O backend vem primeiro.** Sem `is_support` no boot, a tela cai no critério
+   antigo; sem `portals.*`, Portais some de quem só tinha a chave nova.
+2. **Chave de tela = mesma chave no menu, na rota e no botão.** A fonte é
+   `src/routes/permissionRoutes.ts` (toda rota que confere cargo), e o menu
+   LÊ dela (`permissionFromRoute`) em vez de copiar. O
+   `permissionRoutes.source.spec.ts` reprova o mapa e o `index.tsx`
+   divergindo nos dois sentidos; o `menuItems.spec.ts` reprova menu e mapa
+   divergindo. Rota nova com `<PermissionRoute>` entra no mapa, senão o spec
+   reprova. `permissionFromRoute` LANÇA para href fora do mapa — o spec do
+   menu pega isso no CI, antes de chegar a alguém.
+3. **Rota compartilhada fora do padrão** (`ChatRouteElement`, de `/conversations`)
+   está listada à mão no spec de origem. Um segundo elemento compartilhado
+   precisa entrar lá, senão escapa da trava.
+4. **`useCan` não esconde nada sem provider** — é de propósito, para os specs de
+   tela isolada; no app sempre há provider. Carregando, `ctx.can` devolve
+   `false`: é isso que impede o botão de piscar antes das permissões chegarem
+   (o `contactsHeaderGates` recebe o `ready` explícito; os outros dependem
+   disso).
+5. **O cache de permissões é apagado na troca de pessoa** (`user.id` muda,
+   inclusive para vazio no logout), e resposta atrasada da pessoa anterior é
+   descartada. Quem mexer no `PermissionsContext` não pode voltar a
+   reaproveitar a lista "se já tem alguma".
+6. **Na recusa, só a leitura PRINCIPAL da tela vira aviso.** Chamada auxiliar
+   (canais em Disparos, caixas em Lembretes, filtros) continua como era: um
+   403 ali derrubando a tela inteira esconderia a lista que o cargo pode ver.
+7. **O "revelar senha" não volta.** `plain_password` não existe em tipo
+   nenhum, e há spec de origem que reprova a volta.
+8. **A marca de falha das permissões é zerada na troca de pessoa** (junto com as
+   listas, no corpo do render) e no `clearCache`. Quem mexer no reset do
+   `PermissionsContext` inclui `userLoadFailure`/`accountLoadFailure`, senão o
+   *Tentar de novo* de uma pessoa aparece para a próxima.
+9. **Portal liga/desliga pela porta de Portais** (`portalsService.connect/disconnect`).
+   Voltar a chamar `/integrations` daqui reprova o `PortalDetailPage.spec` (a
+   API crua está dublada para acusar qualquer chamada direta).
+
+**Fora desta fase, de propósito:** os botões das outras telas (fora das áreas
+da fase) continuam sem conferir cargo — viram 403 quando clicados; o texto de
+erro da aba *Esqueci minha senha* ainda fala em "e-mail de recuperação".

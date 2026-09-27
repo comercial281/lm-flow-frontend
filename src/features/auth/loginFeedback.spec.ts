@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { loginFeedback } from './loginFeedback';
+import { loginFeedback, MUITAS_TENTATIVAS_LOGIN } from './loginFeedback';
 
 // Um erro no formato que o axios entrega.
 const doServidor = (data: unknown, status = 401) => ({ response: { status, data } });
@@ -52,5 +52,28 @@ describe('o que a tela de login diz quando não dá para entrar', () => {
 
     expect(r.fromServer).toBe(false);
     expect(r.description).toContain('não respondeu');
+  });
+
+  // O teto do login é por e-mail, e o 429 volta sem corpo JSON ("Retry later"):
+  // sem isto a tela mandava conferir a internet de quem só errou vezes demais.
+  it('429 no login: muitas tentativas com este e-mail, não a frase de conexão', () => {
+    const r = loginFeedback(doServidor('Retry later\n', 429), { login: true });
+
+    expect(r.description).toBe('Muitas tentativas com este e-mail. Espere alguns minutos e tente de novo.');
+    expect(r.description).toBe(MUITAS_TENTATIVAS_LOGIN);
+    expect(r.description).not.toContain('não respondeu');
+  });
+
+  it('429 fora do login (convite de acesso) mantém a frase de sempre', () => {
+    const r = loginFeedback(doServidor('Retry later\n', 429));
+
+    expect(r.description).toContain('não respondeu');
+  });
+
+  it('no login, os outros erros continuam iguais', () => {
+    expect(loginFeedback(new Error('Network Error'), { login: true }).description).toContain('não respondeu');
+    expect(loginFeedback(
+      doServidor({ success: false, error: { code: 'X', message: 'Senha incorreta.' } }), { login: true },
+    ).description).toBe('Senha incorreta.');
   });
 });

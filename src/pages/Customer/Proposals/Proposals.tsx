@@ -39,6 +39,8 @@ import { propertiesService, Property } from '@/services/properties/propertiesSer
 import { LeadCombobox } from '@/components/visits/LeadCombobox';
 import { LeadPickerItem } from '@/services/visits/visitsService';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { isForbiddenError } from '@/services/core/forbidden';
 
 function formatCurrency(value?: number | null): string {
   if (value == null) return '-';
@@ -96,6 +98,7 @@ export default function Proposals() {
   const [saving, setSaving] = useState(false);
   const [rejectModal, setRejectModal] = useState<RejectModalState>({ open: false, proposalId: '', reason: '' });
   const [counterModal, setCounterModal] = useState<CounterModalState>({ open: false, proposalId: '', value: '' });
+  const [recusado, setRecusado] = useState(false);
 
   // Property combobox state (mirrors pattern from Visits.tsx)
   const [propertyQuery, setPropertyQuery] = useState('');
@@ -149,13 +152,15 @@ export default function Proposals() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setRecusado(false);
     try {
       const params: Record<string, string> = {};
       if (statusFilter) params.status = statusFilter;
       const res = await proposalsService.list(params);
       setProposals(res.data);
-    } catch {
+    } catch (e) {
       setProposals([]);
+      if (isForbiddenError(e)) setRecusado(true);
     } finally {
       setLoading(false);
     }
@@ -304,6 +309,8 @@ export default function Proposals() {
     accepted: proposals.filter(p => p.status === 'accepted').length,
     totalValue: proposals.filter(p => p.status === 'accepted').reduce((s, p) => s + (p.offered_value ?? 0), 0),
   };
+
+  if (recusado) return <NoAccessState />;
 
   return (
     <div className="flex flex-col h-full bg-background">

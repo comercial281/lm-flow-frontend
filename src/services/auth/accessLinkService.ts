@@ -64,6 +64,12 @@ export const accessLinkService = {
     });
     return data.data;
   },
+
+  // "Esqueci minha senha": o servidor responde sempre a mesma frase e manda o
+  // link (o mesmo do Enviar acesso) para o WhatsApp do cadastro.
+  requestLink: async (email: string): Promise<void> => {
+    await client.post('/access_link/request', { email });
+  },
 };
 
 export default accessLinkService;

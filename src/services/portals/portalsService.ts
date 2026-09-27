@@ -133,6 +133,22 @@ export const portalsService = {
     return (res.data as { data: PortalDetail }).data;
   },
 
+  /**
+   * Conectar o portal (cria o registro dele na primeira vez). Pela porta de
+   * Portais, que confere `portals.update` — `/integrations` pede
+   * `integrations.*`, e o Gerente tomava 403 no botão. Responde o `show`.
+   */
+  async connect(portalKey: string): Promise<PortalDetail> {
+    const res = await api.post(`/portals/${portalKey}/connect`, { config: {} });
+    return (res.data as { data: PortalDetail }).data;
+  },
+
+  /** Desconectar o portal (`portals.update`). Responde o `show`. */
+  async disconnect(portalKey: string): Promise<PortalDetail> {
+    const res = await api.post(`/portals/${portalKey}/disconnect`);
+    return (res.data as { data: PortalDetail }).data;
+  },
+
   async regenerateToken(portalKey: string): Promise<string | null> {
     const res = await api.post(`/portals/${portalKey}/regenerate_token`);
     return (res.data as { data: { feed_url: string | null } }).data?.feed_url ?? null;

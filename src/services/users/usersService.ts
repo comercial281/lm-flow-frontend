@@ -171,6 +171,16 @@ class UsersService {
     return { user: body.data as User, whatsapp: body.whatsapp, access_link: body.access_link };
   }
 
+  /**
+   * "Copiar link de acesso" (tela Equipe): gera um link novo de uso único
+   * (24h) e o devolve para o gestor mandar por onde quiser. Invalida o anterior.
+   */
+  async accessLink(userId: string): Promise<{ url: string; expires_at?: string }> {
+    const response = await apiAuth.post(`/users/${userId}/access_link`);
+    const body = (response?.data ?? {}) as { data?: { url: string; expires_at?: string } };
+    return body.data as { url: string; expires_at?: string };
+  }
+
   // Get assignable agents for inbox
   async getAssignableAgents(inboxId: string): Promise<UsersResponse> {
     const response = await apiAuth.get(`/inboxes/${inboxId}/assignable_agents`);

@@ -7,16 +7,30 @@ import type { PortalDetail } from '@/services/portals/portalsService';
 
 const mocks = vi.hoisted(() => ({
   get: vi.fn(),
+  connect: vi.fn(),
+  disconnect: vi.fn(),
+  apiPost: vi.fn(),
   toastError: vi.fn(),
+  toastSuccess: vi.fn(),
 }));
 
 vi.mock('@/services/portals/portalsService', async () => {
   const actual = await vi.importActual<Record<string, unknown>>('@/services/portals/portalsService');
   return {
     ...actual,
-    portalsService: { get: (...a: unknown[]) => mocks.get(...a) },
+    portalsService: {
+      get: (...a: unknown[]) => mocks.get(...a),
+      connect: (...a: unknown[]) => mocks.connect(...a),
+      disconnect: (...a: unknown[]) => mocks.disconnect(...a),
+    },
   };
 });
+
+// Conectar/Desconectar NÃO pode passar por /integrations (pede integrations.*,
+// o Gerente tomava 403): qualquer chamada direta à API aqui é regressão.
+vi.mock('@/services/core/api', () => ({
+  default: { post: (...a: unknown[]) => mocks.apiPost(...a), get: vi.fn(), put: vi.fn() },
+}));
 
 // Os três cards têm spec próprio; aqui a pergunta é só o que a PÁGINA monta.
 vi.mock('./PortalPropertiesSelector', () => ({ default: () => <div data-testid="seletor" /> }));
@@ -28,7 +42,11 @@ vi.mock('./PortalSettingsCard', () => ({
 }));
 
 vi.mock('sonner', () => ({
-  toast: { error: (...a: unknown[]) => mocks.toastError(...a), success: vi.fn(), warning: vi.fn() },
+  toast: {
+    error: (...a: unknown[]) => mocks.toastError(...a),
+    success: (...a: unknown[]) => mocks.toastSuccess(...a),
+    warning: vi.fn(),
+  },
 }));
 
 const detalhe = (over: Partial<PortalDetail>): PortalDetail => ({
@@ -155,5 +173,63 @@ describe('PortalDetailPage — histórico de cargas e Abrir feed', () => {
     expect(screen.queryByRole('button', { name: /Histórico de cargas/ })).toBeNull();
     const comoAtivar = screen.getByText('Como ativar').parentElement as HTMLElement;
     expect(within(comoAtivar).getByText('Cadastre a URL do feed no Canal Pro')).toBeInTheDocument();
+  });
+});
+
+describe('PortalDetailPage — Conectar e Desconectar pela porta de Portais', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const desconectado = () => detalhe({ connected: false, integration_id: null, feed_url: null, lead_webhook_url: null });
+
+  it('Conectar portal chama a porta de Portais com a chave do portal e recarrega', async () => {
+    mocks.get.mockResolvedValueOnce(desconectado()).mockResolvedValue(detalhe({}));
+    mocks.connect.mockResolvedValue(detalhe({}));
+    montar();
+
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Conectar portal' }));
+
+    await waitFor(() => expect(mocks.connect).toHaveBeenCalledWith('portal_zap'));
+    expect(mocks.apiPost).not.toHaveBeenCalled();
+    expect(mocks.toastSuccess).toHaveBeenCalledWith('ZAP Imóveis (Canal Pro) conectado');
+    await waitFor(() => expect(mocks.get).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole('button', { name: 'Desconectar' })).toBeInTheDocument();
+  });
+
+  it('Desconectar chama a porta de Portais e recarrega', async () => {
+    mocks.get.mockResolvedValueOnce(detalhe({})).mockResolvedValue(desconectado());
+    mocks.disconnect.mockResolvedValue(desconectado());
+    montar();
+
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Desconectar' }));
+
+    await waitFor(() => expect(mocks.disconnect).toHaveBeenCalledWith('portal_zap'));
+    expect(mocks.apiPost).not.toHaveBeenCalled();
+    expect(mocks.toastSuccess).toHaveBeenCalledWith('ZAP Imóveis (Canal Pro) desconectado');
+    expect(await screen.findByRole('button', { name: 'Conectar portal' })).toBeInTheDocument();
+  });
+
+  it('erro ao conectar continua avisando como antes, e o botão volta', async () => {
+    mocks.get.mockResolvedValue(desconectado());
+    mocks.connect.mockRejectedValue(Object.assign(new Error('403'), { response: { status: 403 } }));
+    montar();
+
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Conectar portal' }));
+
+    await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Erro ao conectar portal'));
+    expect(await screen.findByRole('button', { name: 'Conectar portal' })).not.toBeDisabled();
+    expect(mocks.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('erro ao desconectar continua avisando como antes', async () => {
+    mocks.get.mockResolvedValue(detalhe({}));
+    mocks.disconnect.mockRejectedValue(new Error('rede'));
+    montar();
+
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Desconectar' }));
+
+    await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Erro ao desconectar portal'));
+    expect(mocks.get).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,5 +1,5 @@
 import { LucideIcon } from 'lucide-react';
-import { SUPER_ADMIN_EMAIL } from '@/hooks/useIsSuperAdmin';
+import { permissionForPath } from '@/routes/permissionRoutes';
 import {
   User,
   LogOut,
@@ -97,21 +97,54 @@ export interface ProfileMenuItem {
   onClick?: () => void;
 }
 
+/**
+ * Itens SEM cargo, por decisão registrada: o servidor não confere cargo neles.
+ * Espaço: `skip_permission_enforcement!` ("qualquer staff logado", decisão do
+ * Giovani). Tutoriais: lê o Supabase do LM Hub, não a API do CRM.
+ * Todo o resto declara a permissão — há spec que reprova item novo sem ela.
+ */
+export const MENU_FREE_BY_DESIGN = ['/espaco', '/tutorials'];
+
+/** Setor da aba Automações → a leitura que o servidor exige. Menu e abas usam a mesma tabela. */
+export const AUTOMATION_SECTOR_PERMISSIONS: Record<string, string> = {
+  'lead-automations': 'lead_automation_rules.read',
+  'message-funnels': 'message_funnels.read',
+  'flow-builder': 'flow_automations.read',
+  origem: 'lead_ads_form_configs.read',
+  'follow-ups': 'followup_sequences.read',
+  'whatsapp-reminders': 'whatsapp_reminders.read',
+  'roleta-config': 'roleta_configs.read',
+};
+
+/**
+ * Fonte única de chave (ruling do controlador, Fase 1 — Cargos, task B5): para
+ * todo item cujo `href` tem rota protegida em `ROUTE_PERMISSIONS` (a B4), a
+ * chave vem DAQUELE mapa — nunca uma segunda cópia digitada aqui, que poderia
+ * divergir dele com o tempo. Uso: `{ ...permissionFromRoute('/disparos') }`.
+ * Item sem rota no mapa (ex.: o pai `/automations`, que usa `permissions:`)
+ * não passa por aqui.
+ */
+function permissionFromRoute(href: string): { resource: string; action: string } {
+  const entry = permissionForPath(href);
+  if (!entry) {
+    throw new Error(`menuItems: href "${href}" não está em ROUTE_PERMISSIONS`);
+  }
+  return { resource: entry.resource, action: entry.action };
+}
+
 export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => [
   {
     name: t('menu.customer.dashboard'),
     href: '/dashboard',
     icon: PieChart,
-    resource: 'dashboard',
-    action: 'read',
+    ...permissionFromRoute('/dashboard'),
     featureKey: 'dashboard',
   },
   {
     name: t('menu.customer.conversations'),
     href: '/conversations',
     icon: MessageSquare,
-    resource: 'conversations',
-    action: 'read',
+    ...permissionFromRoute('/conversations'),
     featureKey: 'conversations',
   },
   {
@@ -119,23 +152,20 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: t('menu.customer.contacts'),
     href: '/contacts',
     icon: Contact,
-    resource: 'contacts',
-    action: 'read',
+    ...permissionFromRoute('/contacts'),
     featureKey: 'contacts',
     subItems: [
       {
         name: t('menu.contacts.list'),
         href: '/contacts',
         icon: Contact,
-        resource: 'contacts',
-        action: 'read',
+        ...permissionFromRoute('/contacts'),
       },
       {
         name: t('menu.contacts.scheduledActions'),
         href: '/contacts/scheduled-actions',
         icon: Clock,
-        resource: 'contacts',
-        action: 'read',
+        ...permissionFromRoute('/contacts/scheduled-actions'),
       },
     ],
   },
@@ -143,8 +173,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: t('menu.customer.pipelines'),
     href: '/pipelines',
     icon: SquareKanban,
-    resource: 'pipelines',
-    action: 'read',
+    ...permissionFromRoute('/pipelines'),
     featureKey: 'pipelines',
   },
   {
@@ -177,23 +206,20 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: 'Bolsão',
     href: '/bolsao',
     icon: Inbox,
-    resource: 'bolsao_leads',
-    action: 'read',
+    ...permissionFromRoute('/bolsao'),
     clientToggleKey: 'bolsao',
     subItems: [
       {
         name: 'Pegar leads',
         href: '/bolsao',
         icon: Hand,
-        resource: 'bolsao_leads',
-        action: 'read',
+        ...permissionFromRoute('/bolsao'),
       },
       {
         name: 'Listas e regras',
         href: '/bolsao/listas',
         icon: ListChecks,
-        resource: 'bolsao_batches',
-        action: 'read',
+        ...permissionFromRoute('/bolsao/listas'),
       },
     ],
   },
@@ -201,6 +227,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: 'Disparos',
     href: '/disparos',
     icon: Megaphone,
+    ...permissionFromRoute('/disparos'),
     featureKey: 'disparos',
   },
   {
@@ -210,12 +237,14 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: 'IA Vendedora',
     href: '/ia-vendedora',
     icon: Bot,
+    ...permissionFromRoute('/ia-vendedora'),
     clientToggleKey: 'client_manage_automations',
   },
   {
     // Espaço — Notion por tenant (docs/bases colaborativas). Feature gerenciada
     // pela Leal Mídia: super-admin SEMPRE vê; o cliente só vê se a Leal Mídia
     // ligar o toggle "espaco" nas Funções do CRM (default OFF, como clientToggleKey).
+    // Sem cargo: ver MENU_FREE_BY_DESIGN.
     name: 'Espaço',
     href: '/espaco',
     icon: NotebookPen,
@@ -226,13 +255,13 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: 'Equipe',
     href: '/equipe',
     icon: Users2,
-    resource: 'users',
-    action: 'update',
+    ...permissionFromRoute('/equipe'),
   },
   {
     name: 'Imóveis',
     href: '/properties',
     icon: Building2,
+    ...permissionFromRoute('/properties'),
     featureKey: 'properties',
   },
   {
@@ -240,6 +269,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: 'Books',
     href: '/books',
     icon: FileText,
+    ...permissionFromRoute('/books'),
     featureKey: 'properties',
   },
   {
@@ -247,44 +277,49 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     name: 'Portais',
     href: '/settings/portals',
     icon: Globe,
+    ...permissionFromRoute('/settings/portals'),
     featureKey: 'properties',
   },
   {
     name: 'Agenda de Visitas',
     href: '/visits',
     icon: CalendarClock,
+    ...permissionFromRoute('/visits'),
     featureKey: 'visits',
   },
   {
     name: 'Propostas',
     href: '/proposals',
     icon: FileSignature,
+    ...permissionFromRoute('/proposals'),
     featureKey: 'proposals',
   },
   {
     name: 'Contratos',
     href: '/contracts',
     icon: FileText,
+    ...permissionFromRoute('/contracts'),
     featureKey: 'contracts',
   },
   {
     name: 'Captação',
     href: '/property-capture-requests',
     icon: ClipboardList,
+    ...permissionFromRoute('/property-capture-requests'),
     featureKey: 'property_capture',
   },
   {
     name: 'Interesses',
     href: '/property-interests',
     icon: TrendingUp,
+    ...permissionFromRoute('/property-interests'),
     featureKey: 'property_interests',
   },
   {
     name: t('menu.customer.channels'),
     href: '/channels',
     icon: Layers,
-    resource: 'channels',
-    action: 'read',
+    ...permissionFromRoute('/channels'),
     featureKey: 'channels',
   },
   {
@@ -302,6 +337,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
   // Área do Admin (/admin), num shell próprio. O menu do CRM só tem coisa que o
   // cliente usa — era esse o ponto de separar. Entrada: AdminAreaButton, no Header.
   {
+    // Sem cargo: ver MENU_FREE_BY_DESIGN.
     name: t('menu.customer.tutorials'),
     href: '/tutorials',
     icon: GraduationCap,
@@ -320,8 +356,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         // A rota /settings/account é protegida por accounts.read (PermissionRoute).
         // Gate do menu tem que casar com a rota, senão o corretor vê o item,
         // clica e cai em "Acesso Negado" (/unauthorized).
-        resource: 'accounts',
-        action: 'read',
+        ...permissionFromRoute('/settings/account'),
       },
       // Usuários, Times e Cargos e Permissões saíram daqui: viraram as abas da
       // tela *Equipe*, no menu de cima. Eram quatro endereços mandando em
@@ -332,13 +367,16 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         name: t('menu.settings.labels'),
         href: '/settings/labels',
         icon: Tags,
-        resource: 'labels',
-        action: 'read',
+        ...permissionFromRoute('/settings/labels'),
       },
       {
+        // Sem chave de rota própria (não é rota, é o SHELL de Automações): a
+        // regra é "aparece pra quem tem qualquer um dos setores" — ver
+        // AUTOMATION_SECTOR_PERMISSIONS e AutomationsLayout.
         name: 'Automações',
         href: '/automations',
         icon: Zap,
+        permissions: Object.values(AUTOMATION_SECTOR_PERMISSIONS),
         clientToggleKey: 'client_manage_automations',
         closesSubmenu: true,
       },
@@ -346,6 +384,7 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         name: 'Funis de Mensagem',
         href: '/automations/message-funnels',
         icon: Rocket,
+        ...permissionFromRoute('/automations/message-funnels'),
         featureKey: 'message_funnels',
         closesSubmenu: true,
       },
@@ -353,12 +392,14 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
         name: 'Pixel / CAPI',
         href: '/settings/pixel-capi',
         icon: Target,
+        ...permissionFromRoute('/settings/pixel-capi'),
         featureKey: 'lead_automations',
       },
       {
         name: 'Site Builder',
         href: '/settings/site-builder',
         icon: Globe,
+        ...permissionFromRoute('/settings/site-builder'),
         featureKey: 'site_builder',
       },
       // MACROS OCULTO — habilitar quando pronto
@@ -428,13 +469,6 @@ export function isRootTenantHost(): boolean {
   return h === 'app.lmflow.com.br' || h === 'lmflow.com.br';
 }
 
-// Super-admin Leal Mídia: a conta comercial@ (fantasma em todo tenant). Precisa
-// enxergar e operar todas as funções, mesmo as OFF pro cliente.
-export function isSuperAdminEmail(email?: string): boolean {
-  if (!email) return false;
-  return email.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase();
-}
-
 // Um item aparece pra ele (super) mas está OCULTO pro cliente quando:
 //  - featureKey está explicitamente false (cliente não veria), ou
 //  - clientToggleKey não está true (default OFF — só a Leal Mídia liga).
@@ -455,9 +489,13 @@ export const shouldShowMenuItem = (
   userRoleKey?: string,
   userEmail?: string,
   features?: Record<string, boolean>,
-  archivedKeys?: string[]
+  archivedKeys?: string[],
+  // Suporte da Leal Mídia (Fase 1 — Cargos): vem do SERVIDOR (useIsSuperAdmin),
+  // nunca mais deduzido do e-mail aqui. Suporte vê e opera tudo, mesmo o que
+  // está OFF pro cliente.
+  isSupport = false
 ): boolean => {
-  const isSuper = isSuperAdminEmail(userEmail);
+  const isSuper = isSupport;
 
   // Menu arquivado GLOBALMENTE (painel Clientes > Arquivados) some pra TODO
   // MUNDO, sem exceção pro super-admin — ao contrário dos gates abaixo, que o
@@ -524,22 +562,24 @@ export const filterMenuItemsByPermissions = (
   userRoleKey?: string,
   userEmail?: string,
   features?: Record<string, boolean>,
-  archivedKeys?: string[]
+  archivedKeys?: string[],
+  // Ver o comentário em shouldShowMenuItem.
+  isSupport = false
 ): MenuItem[] => {
-  const isSuper = isSuperAdminEmail(userEmail);
+  const isSuper = isSupport;
   // Só o super-admin recebe o selo "oculto pro cliente"; o cliente nunca vê
   // esses itens (foram filtrados), então nunca vê selo.
   const mark = (item: MenuItem | SubMenuItem) =>
     isSuper ? isHiddenFromClient(item, features) : false;
 
   return items
-    .filter(item => shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features, archivedKeys))
+    .filter(item => shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features, archivedKeys, isSupport))
     .map((item): MenuItem | null => {
       // Se o item tem subitens, filtrar os subitens também
       if (item.subItems && item.subItems.length > 0) {
         const filteredSubItems = item.subItems
           .filter(subItem =>
-            shouldShowMenuItem(subItem, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features, archivedKeys)
+            shouldShowMenuItem(subItem, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features, archivedKeys, isSupport)
           )
           .map(subItem => ({ ...subItem, hiddenFromClient: mark(subItem) }));
 

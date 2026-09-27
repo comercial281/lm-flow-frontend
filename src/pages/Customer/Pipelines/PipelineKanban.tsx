@@ -51,6 +51,8 @@ import {
 // (lazy aqui só adicionaria uma requisição inútil).
 import PipelineSwitcher from '@/components/pipelines/PipelineSwitcher';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { useCan } from '@/hooks/useCan';
+import { boardHeaderActions } from './boardActions';
 import PipelineFiltersPopover, {
   type TimePreset,
   type AbandonedPreset,
@@ -288,11 +290,21 @@ export default function PipelineKanban() {
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [listSortOrder, setListSortOrder] = useState<'desc' | 'asc'>('desc');
 
-  // Feature flags por cliente (super-admin liga/desliga no painel Clientes CRM).
-  const canImport = useFeature('pipeline_import');
-  const canExport = useFeature('pipeline_export');
+  // Função do cliente (super-admin liga/desliga) E cargo. Os literais do
+  // useFeature ficam: os scanners do catálogo leem o código por regex.
+  const pode = useCan();
+  const acoesDoQuadro = boardHeaderActions(
+    {
+      import: useFeature('pipeline_import'),
+      export: useFeature('pipeline_export'),
+      bulkDispatch: useFeature('bulk_campaigns'),
+    },
+    pode,
+  );
+  const canImport = acoesDoQuadro.import;
+  const canExport = acoesDoQuadro.export;
+  const canBulkDispatch = acoesDoQuadro.bulkDispatch;
   const canAddItem = useFeature('pipeline_add_item');
-  const canBulkDispatch = useFeature('bulk_campaigns');
 
   // Load pipeline data
   // silent=true: atualiza em segundo plano sem o spinner de tela cheia (usado

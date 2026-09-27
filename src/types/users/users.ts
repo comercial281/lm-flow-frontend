@@ -18,7 +18,6 @@ export interface User {
   role?: Role;
   chave_role?: CRole; // LM Flow role: agent | manager | admin
   whatsapp_number?: string | null; // WhatsApp p/ receber lembretes de automação
-  plain_password?: string | null; // senha guardada (super-admin/gestor), quando houver
   confirmed: boolean;
   created_at: string;
   updated_at: string;
@@ -145,6 +144,15 @@ export interface BulkInviteResponse {
   failed_invitations: Array<{
     email: string;
     error: string;
+  }>;
+  /**
+   * E-mails que o servidor recusou de propósito antes de tentar convidar
+   * (ex.: e-mail reservado à equipe da Leal Mídia). `message` vem pronta, em
+   * português — é o texto que a tela mostra, verbatim.
+   */
+  refused?: Array<{
+    email: string;
+    message: string;
   }>;
 }
 

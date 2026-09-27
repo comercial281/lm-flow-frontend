@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext';
 import { useAuthStore } from '@/store/authStore';
 import { permissionsService } from '@/services/permissions';
 import type { ResourceActionsResponse } from '@/types/auth';
+import { classifyLoadFailure, type LoadFailure } from '@/services/core/forbidden';
 
 interface PermissionsContextValue {
   // Permissões
@@ -18,6 +19,13 @@ interface PermissionsContextValue {
   loading: boolean;
   isReady: boolean;
   error: string | null;
+  /**
+   * A leitura das permissões FALHOU (rede, 5xx) e as listas estão vazias por
+   * isso — não porque o cargo não tem nada. 'forbidden' = 403 de verdade.
+   * `null` = leu (vazia ou não). O PermissionRoute usa isto para oferecer
+   * "Tentar de novo" em vez do aviso do cargo.
+   */
+  loadFailure: LoadFailure | null;
 
   // Métodos utilitários
   refreshPermissions: () => Promise<void>;
@@ -46,20 +54,52 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
   // window used to flash the Unauthorized page after a fresh login.
   const [userPermsLoaded, setUserPermsLoaded] = useState(false);
   const [accountPermsLoaded, setAccountPermsLoaded] = useState(false);
+  const [userLoadFailure, setUserLoadFailure] = useState<LoadFailure | null>(null);
+  const [accountLoadFailure, setAccountLoadFailure] = useState<LoadFailure | null>(null);
 
   // Config state
   const [resourceActions, setResourceActions] = useState<ResourceActionsResponse | null>(null);
   const [configLoading, setConfigLoading] = useState(false);
 
-  // Reset loaded flags whenever the logged-in user changes so the next user's
-  // permissions go through the fetch cycle before `isReady` flips back to true.
-  useEffect(() => {
+  // Fix round 1 (I1) — janela de 1 render: um useEffect só reage DEPOIS do
+  // commit. Entre o render em que `user` já é a pessoa B e o momento em que
+  // o efeito de reset roda, existiria uma passada inteira em que a tela
+  // computaria `isReady`/`can()` com `user` = B mas as LISTAS ainda sendo as
+  // de A (o corretor "veria", por um instante, o menu do gestor). Por isso o
+  // reset acontece aqui, no CORPO do render — o padrão oficial de "ajustar
+  // estado durante a renderização": ao chamar os setters agora, o React
+  // descarta o cálculo deste render e recomeça do zero com o estado já
+  // resetado, ANTES de o commit acontecer. Nenhum navegador chega a pintar
+  // (nem um teste chega a "ver") a mistura de A com B.
+  const [loadedForId, setLoadedForId] = useState(user?.id);
+  if (loadedForId !== user?.id) {
+    setLoadedForId(user?.id);
+    setUserPermissions([]);
+    setAccountPermissions([]);
+    setResourceActions(null);
     setUserPermsLoaded(false);
     setAccountPermsLoaded(false);
+    setUserLoadFailure(null);
+    setAccountLoadFailure(null);
+  }
+
+  // O singleton do serviço É um efeito colateral de verdade (mutação de um
+  // objeto externo) — isso não pode rodar durante o render (que precisa
+  // continuar puro), então ele fica no único lugar que ainda é um useEffect.
+  useEffect(() => {
+    permissionsService.clearCache();
   }, [user?.id]);
 
   // Load permissions config (metadata)
   useEffect(() => {
+    if (!user?.id) return;
+
+    // Fix round 1 (I2) — resposta atrasada: se a pessoa mudar de novo antes
+    // desta promessa terminar, a limpeza abaixo marca `cancelled` e o
+    // resultado tardio desta chamada (que já não é mais sobre quem está
+    // logado agora) é descartado em vez de sobrescrever o estado da pessoa
+    // NOVA.
+    let cancelled = false;
 
     const loadConfig = async () => {
       const isAuthenticated = useAuthStore.getState().isLoggedIn;
@@ -68,16 +108,22 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
       try {
         setConfigLoading(true);
         const config = await permissionsService.getResourceActions();
+        if (cancelled) return;
         setResourceActions(config);
       } catch (err) {
+        if (cancelled) return;
         console.error('Error loading permissions config:', err);
       } finally {
-        setConfigLoading(false);
+        if (!cancelled) setConfigLoading(false);
       }
     };
 
     loadConfig();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   // Load user permissions
   useEffect(() => {
@@ -87,73 +133,95 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
       return;
     }
 
+    // Fix round 1 (I2): mesma trava de cancelamento — ver o comentário do
+    // efeito de config acima.
+    let cancelled = false;
+
     const loadUserPermissions = async () => {
       try {
         const isAuthenticated = useAuthStore.getState().isLoggedIn;
         if (!isAuthenticated) {
-          setUserPermissions([]);
+          if (!cancelled) setUserPermissions([]);
           return;
         }
 
         setLoading(true);
         setError(null);
         const permissions = await permissionsService.getUserPermissions();
+        if (cancelled) return;
         setUserPermissions(permissions);
+        setUserLoadFailure(permissionsService.getPermissionsLoadFailure());
       } catch (error) {
+        if (cancelled) return;
         console.error('Erro ao carregar permissões do usuário:', error);
         setError('Erro ao carregar permissões do usuário');
         setUserPermissions([]);
+        setUserLoadFailure(classifyLoadFailure(error));
       } finally {
-        setLoading(false);
-        setUserPermsLoaded(true);
+        if (!cancelled) {
+          setLoading(false);
+          setUserPermsLoaded(true);
+        }
       }
     };
 
     loadUserPermissions();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
 
   // Load account permissions (específicas do account baseadas no AccountUser role)
   useEffect(() => {
     // Verificar autenticação primeiro - precisa ter user também
     const isAuthenticated = useAuthStore.getState().isLoggedIn;
-    if (!isAuthenticated || !user) {
+    if (!isAuthenticated || !user?.id) {
       setAccountPermissions([]);
       setAccountPermsLoaded(true);
       return;
     }
 
-    // ⚡ Proteção: não carregar se já tem permissões (evita recarregar desnecessariamente)
-    if (accountPermissions.length > 0) {
-      setAccountPermsLoaded(true);
-      return;
-    }
+    // Fix round 1 (I2): mesma trava de cancelamento — ver o comentário do
+    // efeito de config acima.
+    let cancelled = false;
 
     const loadAccountPermissions = async () => {
       try {
         const isAuthenticated = useAuthStore.getState().isLoggedIn;
 
         if (!isAuthenticated) {
-          setAccountPermissions([]);
+          if (!cancelled) setAccountPermissions([]);
           return;
         }
 
         setLoading(true);
         setError(null);
         const permissions = await permissionsService.getAccountPermissions();
+        if (cancelled) return;
 
         setAccountPermissions(permissions);
+        setAccountLoadFailure(permissionsService.getPermissionsLoadFailure());
       } catch (error) {
+        if (cancelled) return;
         console.error('Erro ao carregar permissões do account:', error);
         setError('Erro ao carregar permissões do account');
         setAccountPermissions([]);
+        setAccountLoadFailure(classifyLoadFailure(error));
       } finally {
-        setLoading(false);
-        setAccountPermsLoaded(true);
+        if (!cancelled) {
+          setLoading(false);
+          setAccountPermsLoaded(true);
+        }
       }
     };
 
     loadAccountPermissions();
-  }, [user, accountPermissions.length]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   const createPermission = useCallback((resource: string, action: string): string => {
     return `${resource}.${action}`;
@@ -239,12 +307,15 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
       // Carregar user permissions
       const userPerms = await permissionsService.getUserPermissions(true);
       setUserPermissions(userPerms);
+      setUserLoadFailure(permissionsService.getPermissionsLoadFailure());
 
       // Carregar account permissions
       const accountPerms = await permissionsService.getAccountPermissions(true);
       setAccountPermissions(accountPerms);
-    } catch {
+      setAccountLoadFailure(permissionsService.getPermissionsLoadFailure());
+    } catch (err) {
       setError('Erro ao recarregar permissões');
+      setAccountLoadFailure(classifyLoadFailure(err));
     } finally {
       setLoading(false);
     }
@@ -256,12 +327,26 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
   // `can()` against empty arrays during the render window between user
   // appearing and the fetch effect firing — that flashed Unauthorized after
   // a fresh login.
+  //
+  // `loadedForId !== user?.id` é defesa extra (fix round 1, I1): o bail-out
+  // no corpo do render já garante que isto nunca é observável de fora, mas
+  // deixar a checagem explícita aqui documenta a invariante e protege contra
+  // alguém reintroduzir um reset assíncrono (por efeito) no futuro sem notar
+  // que `isReady` também precisa saber "para quem" as listas foram carregadas.
   const isReady = useMemo(() => {
     if (!user) return false;
+    if (loadedForId !== user.id) return false;
     if (configLoading) return false;
     if (loading) return false;
     return userPermsLoaded && accountPermsLoaded;
-  }, [configLoading, loading, user, userPermsLoaded, accountPermsLoaded]);
+  }, [configLoading, loading, user, loadedForId, userPermsLoaded, accountPermsLoaded]);
+
+  // Queda de rede em QUALQUER das duas leituras pesa mais que o 403: a lista
+  // vazia daquela leitura não diz nada sobre o cargo.
+  const loadFailure: LoadFailure | null =
+    userLoadFailure === 'failed' || accountLoadFailure === 'failed'
+      ? 'failed'
+      : userLoadFailure ?? accountLoadFailure;
 
   const value: PermissionsContextValue = {
     userPermissions,
@@ -272,6 +357,7 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
     loading: loading || configLoading,
     isReady,
     error,
+    loadFailure,
     refreshPermissions,
     createPermission,
     isValidPermission,

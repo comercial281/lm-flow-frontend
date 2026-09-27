@@ -5,6 +5,7 @@ import { requestMonitor } from '@/utils/requestMonitor';
 import apiAuth from '@/services/core/apiAuth';
 import { applySetupInterceptor } from '@/services/core/setupInterceptor';
 import { getClientModeToken } from '@/store/clientModeStore';
+import { requiredPermissionOf } from '@/services/core/forbidden';
 
 const api = axios.create({
   baseURL: `${import.meta.env.VITE_API_URL}/api/v1`,
@@ -204,7 +205,7 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      const required = error.response?.data?.required_permission;
+      const required = requiredPermissionOf(error);
       toast.error(
         required
           ? `Seu cargo não permite esta ação (${required})`

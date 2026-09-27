@@ -79,9 +79,13 @@ import {
   MAX_UPLOAD_BYTES,
 } from '@/services/propertyPhotos/propertyPhotosService';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { useCan } from '@/hooks/useCan';
+import { propertiesActionGates } from './propertiesActionGates';
 import PropertyImportDialog from './PropertyImportDialog';
 import PropertyBookDialog from '@/components/properties/PropertyBookDialog';
 import { labelsService } from '@/services/contacts/labelsService';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { isForbiddenError } from '@/services/core/forbidden';
 
 const EMPTY_FORM: PropertyFormData = {
   title: '',
@@ -152,7 +156,10 @@ const internalNoteOf = (p: Property | null): string | null => {
 
 export default function Properties() {
   const navigate = useNavigate();
-  const canCreate      = useFeature('properties_create');
+  const pode           = useCan();
+  const acoes          = propertiesActionGates(useFeature('properties_create'), pode);
+  const canCreate      = acoes.create;
+  const canDelete      = acoes.delete;
   const canAiDesc      = useFeature('properties_ai_description');
   const canAiBatch     = useFeature('properties_ai_batch');
   const [properties, setProperties] = useState<Property[]>([]);
@@ -160,6 +167,7 @@ export default function Properties() {
   const [loading, setLoading]       = useState(false);
   const [saving, setSaving]         = useState(false);
   const [deleting, setDeleting]     = useState(false);
+  const [recusado, setRecusado]     = useState(false);
 
   const [searchParams]                        = useSearchParams();
   const [search, setSearch]                   = useState(searchParams.get('q') ?? '');
@@ -228,6 +236,7 @@ export default function Properties() {
     leadDestination = filterLeadDestination,
   ) => {
     setLoading(true);
+    setRecusado(false);
     try {
       const res = await propertiesService.list({
         q: q || undefined,
@@ -239,8 +248,9 @@ export default function Properties() {
       });
       setProperties(res.data ?? []);
       setTotal(res.meta?.total ?? 0);
-    } catch {
-      toast.error('Erro ao carregar imóveis');
+    } catch (e) {
+      if (isForbiddenError(e)) setRecusado(true);
+      else toast.error('Erro ao carregar imóveis');
     } finally {
       setLoading(false);
     }
@@ -736,6 +746,8 @@ export default function Properties() {
     }
   };
 
+  if (recusado) return <NoAccessState />;
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -885,6 +897,7 @@ export default function Properties() {
                 property={property}
                 onEdit={openEdit}
                 onStatusChange={handleStatusChange}
+                canDelete={canDelete}
                 onDelete={p => { setToDelete(p); setDeleteDialogOpen(true); }}
                 onManagePhotos={p => setPhotosProperty(p)}
                 onViewBook={p => setBookProperty(p)}
@@ -1658,6 +1671,7 @@ function PropertyCard({
   property: p,
   onEdit,
   onStatusChange,
+  canDelete,
   onDelete,
   onManagePhotos,
   onViewBook,
@@ -1669,6 +1683,7 @@ function PropertyCard({
   property: Property;
   onEdit: (p: Property) => void;
   onStatusChange: (p: Property, status: string) => void;
+  canDelete: boolean;
   onDelete: (p: Property) => void;
   onManagePhotos: (p: Property) => void;
   onViewBook: (p: Property) => void;
@@ -1777,9 +1792,11 @@ function PropertyCard({
           <Button size="sm" variant="secondary" onClick={() => onLanding(p)} title="Landing Page de anúncio">
             <Megaphone className="h-3.5 w-3.5" />
           </Button>
-          <Button size="sm" variant="destructive" onClick={() => onDelete(p)}>
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          {canDelete && (
+            <Button size="sm" variant="destructive" onClick={() => onDelete(p)}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       </div>
 

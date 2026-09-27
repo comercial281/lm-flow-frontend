@@ -22,6 +22,9 @@ import {
   messageFunnelTagsService,
 } from '@/services/messageFunnels/messageFunnelsService';
 import type { MessageFunnel, FunnelItemKind, MessageFunnelFolder, MessageFunnelTag } from '@/types/messageFunnels';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { isForbiddenError } from '@/services/core/forbidden';
+import { useCan } from '@/hooks/useCan';
 
 // Paleta das etiquetas. Fixa de propósito: seletor de cor livre produz etiqueta
 // ilegível no tema escuro e ninguém percebe até o cliente reclamar.
@@ -37,8 +40,12 @@ const KIND_COLORS: Record<FunnelItemKind, string> = {
 };
 
 export default function MessageFunnels() {
+  const pode = useCan();
   const [funnels, setFunnels] = useState<MessageFunnel[]>([]);
   const [folders, setFolders] = useState<MessageFunnelFolder[]>([]);
+  // Leitura recusada pelo servidor NÃO é "nenhum funil": era assim que o gestor
+  // sem a permissão era mandado criar o primeiro.
+  const [recusado, setRecusado] = useState(false);
 
   // Etiqueta é FILTRO (o funil pode ter várias), pasta é LUGAR (entra numa só).
   // Por isso a etiqueta filtra a lista em vez de navegar, e o filtro é aplicado
@@ -77,8 +84,10 @@ export default function MessageFunnels() {
       ]);
       setFunnels(list);
       setFolders(fldrs);
-    } catch {
-      toast.error('Erro ao carregar funis');
+      setRecusado(false);
+    } catch (e) {
+      if (isForbiddenError(e)) setRecusado(true);
+      else toast.error('Erro ao carregar funis');
     } finally {
       setLoading(false);
     }
@@ -275,6 +284,10 @@ export default function MessageFunnels() {
     }
   };
 
+  // Leitura recusada pelo servidor NÃO é "nenhum funil": era assim que o gestor
+  // sem a permissão era mandado criar o primeiro.
+  if (recusado) return <NoAccessState />;
+
   return (
     <div className="h-full flex flex-col p-4">
       {/* Header */}
@@ -289,9 +302,11 @@ export default function MessageFunnels() {
             Sequências multi-step (texto + áudio + foto + vídeo) que o atendente dispara com 1 clique no chat.
           </p>
         </div>
-        <Button onClick={handleNew} className="gap-2">
-          <Plus size={16} /> Novo Funil
-        </Button>
+        {pode('message_funnels', 'create') && (
+          <Button onClick={handleNew} className="gap-2">
+            <Plus size={16} /> Novo Funil
+          </Button>
+        )}
       </div>
 
       {/* Busca */}
@@ -375,12 +390,14 @@ export default function MessageFunnels() {
               </div>
             </div>
           ))}
-          <button
-            onClick={abrirNovaPasta}
-            className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
-          >
-            <FolderPlus className="h-4 w-4" /> Nova pasta
-          </button>
+          {pode('message_funnel_folders', 'create') && (
+            <button
+              onClick={abrirNovaPasta}
+              className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+            >
+              <FolderPlus className="h-4 w-4" /> Nova pasta
+            </button>
+          )}
         </div>
       )}
       {folderId !== undefined && (
@@ -400,7 +417,7 @@ export default function MessageFunnels() {
             icon={Rocket}
             title="Nenhum funil de mensagem"
             description="Crie funis pra disparar sequências (texto + áudio + mídia) no chat com 1 clique."
-            action={{ label: 'Novo Funil', onClick: handleNew }}
+            action={pode('message_funnels', 'create') ? { label: 'Novo Funil', onClick: handleNew } : undefined}
             className="h-full"
           />
         ) : (
@@ -411,7 +428,7 @@ export default function MessageFunnels() {
                 funnel={funnel}
                 tags={tags}
                 onEdit={() => handleEdit(funnel)}
-                onDelete={() => handleDelete(funnel)}
+                onDelete={pode('message_funnels', 'delete') ? () => handleDelete(funnel) : undefined}
                 onToggleArchive={() => handleToggleArchive(funnel)}
               />
             ))}
@@ -608,7 +625,8 @@ interface FunnelCardProps {
   /** Catálogo inteiro. O funil só traz `tag_ids`; o nome e a cor moram aqui. */
   tags: MessageFunnelTag[];
   onEdit: () => void;
-  onDelete: () => void;
+  /** Ausente quando o cargo não tem `message_funnels.delete` — a lixeira some. */
+  onDelete?: () => void;
   onToggleArchive: () => void;
 }
 
@@ -658,9 +676,11 @@ function FunnelCard({ funnel, tags, onEdit, onDelete, onToggleArchive }: FunnelC
           >
             {funnel.active ? <Archive size={13} /> : <ArchiveRestore size={13} />}
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onDelete} aria-label="Excluir">
-            <Trash2 size={13} />
-          </Button>
+          {onDelete && (
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onDelete} aria-label="Excluir">
+              <Trash2 size={13} />
+            </Button>
+          )}
         </div>
       </div>
 

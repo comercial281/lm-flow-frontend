@@ -1,7 +1,8 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, Eye, EyeOff, MessageCircle, XCircle, Bot, Radio, UserCog, ClipboardList, MessageSquarePlus, Activity, Workflow, Search, ChevronRight } from 'lucide-react';
+import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, MessageCircle, XCircle, Bot, Radio, UserCog, ClipboardList, MessageSquarePlus, Activity, Workflow, Search, ChevronRight, Link2, Send } from 'lucide-react';
 import api from '@/services/core/api';
+import { copyText } from '@/utils/clipboard';
 import IconActionButton from '@/components/base/IconActionButton';
 import NewTenantWizard from './NewTenantWizard';
 import ClientBroadcastModal from './ClientBroadcastModal';
@@ -69,7 +70,7 @@ interface PooledTenant {
   ai_leads_included?: number | null;
   ai_lead_overage_price_brl?: number;
 }
-interface Member { id: string; email: string; name?: string; plain_password?: string; }
+interface Member { id: string; email: string; name?: string; whatsapp_number?: string | null; }
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   active:    { label: 'Ativo',         cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40' },
@@ -166,8 +167,6 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
   const [instances, setInstances] = useState<CentralInstance[]>([]);
   const [instance, setInstance] = useState('');
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
-  const [visiblePwds, setVisiblePwds] = useState<Set<string>>(new Set());
-  const togglePwd = (id: string) => setVisiblePwds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
 
   const loadMembers = () =>
     api.get(`/super/pooled_tenants/${tenant.id}/members`)
@@ -247,9 +246,42 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
     setSavingId(m.id);
     try {
       await api.post(`/super/pooled_tenants/${tenant.id}/set_password`, { user_id: m.id, password: pwd });
-      setMembers(prev => prev.map(x => x.id === m.id ? { ...x, plain_password: pwd } : x));
     } catch { toast.error('Falha ao trocar a senha.'); }
     finally { setSavingId(null); }
+  };
+
+  // "Copiar link de acesso": gera um link novo de uso único (24h) e copia,
+  // para o super-admin mandar por onde quiser.
+  const copiarLink = async (m: Member) => {
+    setSavingId(m.id);
+    try {
+      const r = await api.post(`/super/pooled_tenants/${tenant.id}/access_link`, { user_id: m.id });
+      const url: string | undefined = r.data?.data?.url;
+      if (url && (await copyText(url))) toast.success(`Link de acesso de ${m.email} copiado. Vale uma vez, por 24 horas.`);
+      else if (url) toast.message('Copie o link de acesso:', { description: url });
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Falha ao gerar o link.');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  // "Enviar link de acesso": manda o mesmo link direto no WhatsApp cadastrado.
+  const enviarLink = async (m: Member) => {
+    setSavingId(m.id);
+    try {
+      const r = await api.post(`/super/pooled_tenants/${tenant.id}/send_access_link`, { user_id: m.id, instance: instance || undefined });
+      const wa: WhatsappSendResult | undefined = r.data?.whatsapp;
+      if (wa?.sent) toast.success(`Link enviado no WhatsApp de ${m.email}${wa.instance ? ` (${wa.instance})` : ''}.`);
+      else toast.error(`Não enviou: ${wa?.error ?? wa?.skipped ?? 'motivo desconhecido'}`);
+    } catch (e: any) {
+      const skipped = e?.response?.data?.whatsapp?.skipped;
+      toast.error(skipped === 'sem telefone'
+        ? 'Esta pessoa não tem WhatsApp no cadastro. Use Copiar link de acesso.'
+        : (e?.response?.data?.error || 'Falha ao enviar o link.'));
+    } finally {
+      setSavingId(null);
+    }
   };
 
   return (
@@ -274,16 +306,15 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
                 <div className="text-sm text-white/90 truncate">{m.name || m.email}</div>
                 <div className="text-xs text-white/40 truncate">{m.email}</div>
               </div>
-              {m.plain_password && (
-                <div className="flex items-center gap-1 px-2 py-1.5 rounded-md" style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)' }}>
-                  <span className="text-xs font-mono text-white/70" style={{ minWidth: 60 }}>
-                    {visiblePwds.has(m.id) ? m.plain_password : '••••••••'}
-                  </span>
-                  <button onClick={() => togglePwd(m.id)} className="text-white/40 hover:text-white/80 ml-1">
-                    {visiblePwds.has(m.id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              )}
+              <button onClick={() => enviarLink(m)} disabled={savingId === m.id || !m.whatsapp_number}
+                title={m.whatsapp_number ? 'Manda o link no WhatsApp do cadastro' : 'Sem WhatsApp no cadastro'}
+                className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border border-white/10 text-white/60 hover:text-white hover:border-violet-500/40 disabled:opacity-50">
+                <Send className="w-3.5 h-3.5" /> Enviar link de acesso
+              </button>
+              <button onClick={() => copiarLink(m)} disabled={savingId === m.id}
+                className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border border-white/10 text-white/60 hover:text-white hover:border-violet-500/40 disabled:opacity-50">
+                <Link2 className="w-3.5 h-3.5" /> Copiar link de acesso
+              </button>
               <button onClick={() => setPassword(m)} disabled={savingId === m.id}
                 className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border border-white/10 text-white/60 hover:text-white hover:border-violet-500/40 disabled:opacity-50">
                 {savingId === m.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />}

@@ -3,7 +3,9 @@ import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
 import { Zap, Rocket, Radio, Repeat, Bell, Shuffle, GitBranch } from 'lucide-react';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
-import { isRootTenantHost } from '@/components/layout/config/menuItems';
+import { useCan } from '@/hooks/useCan';
+import { isRootTenantHost, AUTOMATION_SECTOR_PERMISSIONS } from '@/components/layout/config/menuItems';
+import NoAccessState from '@/components/permissions/NoAccessState';
 import type { LucideIcon } from 'lucide-react';
 
 interface Sector {
@@ -89,6 +91,7 @@ const SECTORS: Sector[] = [
 export default function AutomationsLayout() {
   const { features } = useTenantFeatures();
   const isSuper = useIsSuperAdmin();
+  const pode = useCan();
   const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
 
@@ -101,7 +104,7 @@ export default function AutomationsLayout() {
   }, [location.pathname]);
 
   // Espelha a mesma regra de visibilidade do menu lateral (shouldShowMenuItem).
-  const visible = SECTORS.filter(s => {
+  const visibleByPlan = SECTORS.filter(s => {
     if (s.hideOnRoot && isRootTenantHost()) return false;
     // Super-admin (Leal Mídia) NUNCA perde um setor — vê e opera tudo, mesmo o
     // que está OFF pro cliente. O cliente segue os toggles normalmente.
@@ -110,14 +113,31 @@ export default function AutomationsLayout() {
     return true;
   });
 
+  // Mesmo gate do menu: o setor que o cargo não lê some da barra.
+  const visible = visibleByPlan.filter(s => {
+    const perm = AUTOMATION_SECTOR_PERMISSIONS[s.key];
+    if (perm) {
+      const [resource, action] = perm.split('.');
+      if (!pode(resource, action)) return false;
+    }
+    return true;
+  });
+
   // /automations sem setor → manda pro primeiro setor visível.
   if (location.pathname === '/automations' || location.pathname === '/automations/') {
-    if (visible.length === 0) {
+    if (visibleByPlan.length === 0) {
+      // Nenhum setor sobrevive nem antes do cargo — é o plano/feature do
+      // cliente que não tem automação nenhuma, não o cargo da pessoa.
       return (
         <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
           Nenhuma automação disponível neste plano.
         </div>
       );
+    }
+    if (visible.length === 0) {
+      // Havia setor pelo plano, mas o cargo não lê nenhum deles — é o aviso do
+      // cargo, não a mensagem de plano.
+      return <NoAccessState />;
     }
     return <Navigate to={visible[0].path} replace />;
   }

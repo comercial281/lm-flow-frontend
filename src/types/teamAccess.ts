@@ -45,8 +45,6 @@ export interface TeamAccessMember {
   name: string;
   email: string;
   whatsapp_number?: string | null;
-  /** senha atual guardada, para o "Enviar acesso" reenviar sem trocá-la */
-  plain_password?: string | null;
   confirmed: boolean;
   availability: number;
   role: TeamAccessRole;

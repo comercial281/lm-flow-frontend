@@ -57,6 +57,9 @@ import { processingLabel, processingWarning } from '@/features/salesAgents/docum
 import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { classifyLoadFailure, type LoadFailure } from '@/services/core/forbidden';
+import { useCan } from '@/hooks/useCan';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { WEEKDAYS } from '@/components/schedule/scheduleWindows';
 import type { ScheduleWindow } from '@/components/schedule/scheduleWindows';
@@ -110,6 +113,8 @@ export default function SalesAgents() {
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<Tab>('config');
   const [duplicating, setDuplicating] = useState<SalesAgent | null>(null);
+  const [loadFailure, setLoadFailure] = useState<LoadFailure | null>(null);
+  const pode = useCan();
   // ⚠️ A chave vai LITERAL aqui. Os dois scanners do catálogo de funcionalidades
   // (sync e audit) leem o código por regex: trocar o literal por uma constante
   // tira a chave do catálogo no deploy seguinte, o painel de Funções deixa de
@@ -125,6 +130,7 @@ export default function SalesAgents() {
 
   const loadAgents = useCallback(async () => {
     setLoading(true);
+    setLoadFailure(null);
     try {
       const list = await salesAgentsService.list();
       setAgents(list);
@@ -137,8 +143,10 @@ export default function SalesAgents() {
         return prev ? list.find((a) => a.id === prev.id) ?? null : null;
       });
       if (wanted) setSearchParams({}, { replace: true });
-    } catch {
-      toast.error('Erro ao carregar os agentes');
+    } catch (e) {
+      const kind = classifyLoadFailure(e);
+      setLoadFailure(kind);
+      if (kind === 'failed') toast.error('Erro ao carregar os agentes');
     } finally {
       setLoading(false);
     }
@@ -335,6 +343,10 @@ export default function SalesAgents() {
     }
   };
 
+  // Recusa do servidor NÃO é "nenhuma IA criada" — era assim que o gestor sem
+  // a permissão criava uma IA duplicada.
+  if (loadFailure === 'forbidden') return <NoAccessState />;
+
   return (
     <>
     <div className="flex h-full">
@@ -350,9 +362,11 @@ export default function SalesAgents() {
               <Bot className="h-4 w-4 text-primary" /> IA Vendedora
             </h2>
           </div>
-          <Button size="sm" onClick={createAgent}>
-            <Plus className="h-4 w-4" />
-          </Button>
+          {pode('sales_agents', 'create') && (
+            <Button size="sm" onClick={createAgent}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
         </div>
         {loading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
@@ -414,12 +428,16 @@ export default function SalesAgents() {
                 </label>
               </div>
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" onClick={() => setDuplicating(selected)} title="Duplicar esta IA">
-                  <Copy className="h-4 w-4 mr-1" /> Duplicar
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => deleteAgent(selected)}>
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
+                {pode('sales_agents', 'create') && (
+                  <Button variant="ghost" size="sm" onClick={() => setDuplicating(selected)} title="Duplicar esta IA">
+                    <Copy className="h-4 w-4 mr-1" /> Duplicar
+                  </Button>
+                )}
+                {pode('sales_agents', 'delete') && (
+                  <Button variant="ghost" size="sm" onClick={() => deleteAgent(selected)}>
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                )}
               </div>
             </div>
 

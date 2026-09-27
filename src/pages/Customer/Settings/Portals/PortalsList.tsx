@@ -6,6 +6,8 @@ import { portalsService, Portal } from '@/services/portals/portalsService';
 import { PortalLogo } from '@/components/portals/PortalLogo';
 import { PortalStatusBadge, PortalTypeCounters } from '@/components/portals/PortalBadges';
 import { temTiposDeAnuncio } from '@/features/portals/adPlan';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { isForbiddenError } from '@/services/core/forbidden';
 
 function lastUpdateLabel(portal: Portal): string {
   if (!portal.last_accessed_at) return 'aguardando portal';
@@ -21,13 +23,16 @@ export default function PortalsList() {
   const navigate = useNavigate();
   const [portals, setPortals] = useState<Portal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recusado, setRecusado] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setRecusado(false);
     try {
       setPortals(await portalsService.list());
-    } catch {
-      toast.error('Erro ao carregar portais');
+    } catch (e) {
+      if (isForbiddenError(e)) setRecusado(true);
+      else toast.error('Erro ao carregar portais');
     } finally {
       setLoading(false);
     }
@@ -46,7 +51,9 @@ export default function PortalsList() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
-        {loading ? (
+        {recusado ? (
+          <NoAccessState />
+        ) : loading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
             Carregando...
           </div>

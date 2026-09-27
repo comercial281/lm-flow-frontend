@@ -45,6 +45,8 @@ import type { User } from '@/types/users';
 
 import { LeadCombobox } from '@/components/visits/LeadCombobox';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { isForbiddenError } from '@/services/core/forbidden';
 
 const FILTER_TABS = [
   { key: '', label: 'Todas' },
@@ -220,6 +222,7 @@ export default function Visits() {
   const [loading, setLoading]       = useState(false);
   const [activeTab, setActiveTab]   = useState('');
   const [viewMode, setViewMode]     = useState<ViewMode>('calendar');
+  const [recusado, setRecusado]     = useState(false);
 
   const [calDate, setCalDate]       = useState<Date>(new Date());
 
@@ -253,12 +256,14 @@ export default function Visits() {
 
   const load = useCallback(async (status = activeTab) => {
     setLoading(true);
+    setRecusado(false);
     try {
       const res = await visitsService.list({ status: status || undefined, per_page: 500 });
       setVisits(res.data ?? []);
       setTotal(res.meta?.total ?? 0);
-    } catch {
-      toast.error('Erro ao carregar visitas');
+    } catch (e) {
+      if (isForbiddenError(e)) setRecusado(true);
+      else toast.error('Erro ao carregar visitas');
     } finally {
       setLoading(false);
     }
@@ -395,6 +400,8 @@ export default function Visits() {
   };
 
   const grouped = groupByDate(visits);
+
+  if (recusado) return <NoAccessState />;
 
   return (
     <div className="flex flex-col h-full">

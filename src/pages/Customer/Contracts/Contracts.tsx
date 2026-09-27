@@ -11,6 +11,8 @@ import {
   CONTRACT_STATUS_LABELS,
   CONTRACT_STATUS_COLORS,
 } from '@/services/contracts/contractsService';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { isForbiddenError } from '@/services/core/forbidden';
 
 const STATUS_TABS = [
   { key: '', label: 'Todos' },
@@ -36,16 +38,19 @@ export default function Contracts() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [recusado, setRecusado] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setRecusado(false);
     try {
       const params: Record<string, string> = {};
       if (statusFilter) params.status = statusFilter;
       const res = await contractsService.list(params);
       setContracts(res.data);
-    } catch {
+    } catch (e) {
       setContracts([]);
+      if (isForbiddenError(e)) setRecusado(true);
     } finally {
       setLoading(false);
     }
@@ -74,6 +79,8 @@ export default function Contracts() {
 
   const signedCount = contracts.filter(c => c.status === 'signed').length;
   const awaitingCount = contracts.filter(c => c.status === 'awaiting_signature').length;
+
+  if (recusado) return <NoAccessState />;
 
   return (
     <div className="flex flex-col h-full bg-background">

@@ -35,6 +35,8 @@ import {
 import api from '@/services/core/api';
 import { extractData } from '@/utils/apiHelpers';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { isForbiddenError } from '@/services/core/forbidden';
 
 interface InboxOption {
   id: number;
@@ -69,15 +71,21 @@ export default function WhatsappReminders() {
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [executing, setExecuting] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [recusado, setRecusado] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setRecusado(false);
     try {
       const res = await whatsappRemindersService.list({ page: 1, per_page: 50 });
       setItems(res.data || []);
     } catch (e: any) {
-      console.error(e);
-      toast.error('Erro ao carregar lembretes');
+      if (isForbiddenError(e)) {
+        setRecusado(true);
+      } else {
+        console.error(e);
+        toast.error('Erro ao carregar lembretes');
+      }
     } finally {
       setLoading(false);
     }
@@ -210,6 +218,8 @@ export default function WhatsappReminders() {
   const showGroupField = form.destination_type === 'group';
   const showDelayField = form.delivery_mode === 'delayed';
   const showCronField = form.delivery_mode === 'recurring';
+
+  if (recusado) return <NoAccessState />;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
