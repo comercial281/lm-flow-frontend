@@ -12,8 +12,9 @@ import {
 } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import usersService from '@/services/users/usersService';
-import { Loader2, CheckCircle, XCircle, Mail } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Mail, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
+import { parseRefusedInvites, type RefusedInvite } from './bulkInviteRefused';
 
 interface BulkInviteModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export default function BulkInviteModal({ isOpen, onClose, onSuccess }: BulkInvi
   const [result, setResult] = useState<{
     invited: Array<{ email: string; name: string }>;
     failed: Array<{ email: string; error: string }>;
+    refused: RefusedInvite[];
   } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,6 +61,7 @@ export default function BulkInviteModal({ isOpen, onClose, onSuccess }: BulkInvi
       setResult({
         invited: response.invited_users || [],
         failed: response.failed_invitations || [],
+        refused: parseRefusedInvites(response),
       });
 
       const successCount = response.invited_users?.length || 0;
@@ -135,6 +138,25 @@ export default function BulkInviteModal({ isOpen, onClose, onSuccess }: BulkInvi
                       <li key={index} className="text-red-700 dark:text-red-300">
                         <span className="font-medium">{failure.email}</span>
                         <span className="text-red-600 dark:text-red-400"> - {failure.error}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {result.refused.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-amber-600 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  E-mails recusados ({result.refused.length})
+                </h3>
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                  <ul className="text-sm space-y-1">
+                    {result.refused.map((refusal, index) => (
+                      <li key={index} className="text-amber-700 dark:text-amber-300">
+                        <span className="font-medium">{refusal.email}</span>
+                        <span className="text-amber-600 dark:text-amber-400"> - {refusal.message}</span>
                       </li>
                     ))}
                   </ul>

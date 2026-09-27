@@ -145,6 +145,15 @@ export interface BulkInviteResponse {
     email: string;
     error: string;
   }>;
+  /**
+   * E-mails que o servidor recusou de propósito antes de tentar convidar
+   * (ex.: e-mail reservado à equipe da Leal Mídia). `message` vem pronta, em
+   * português — é o texto que a tela mostra, verbatim.
+   */
+  refused?: Array<{
+    email: string;
+    message: string;
+  }>;
 }
 
 // UI State Types
