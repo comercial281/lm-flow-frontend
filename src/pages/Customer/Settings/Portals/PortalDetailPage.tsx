@@ -6,7 +6,6 @@ import {
   ArrowLeft, CheckCircle2, Copy, RefreshCw, Home, Star, Clock, Mail, Webhook,
   ExternalLink, ChevronDown, ChevronRight, History,
 } from 'lucide-react';
-import api from '@/services/core/api';
 import { portalsService, PortalDetail, PortalFeedAccess } from '@/services/portals/portalsService';
 import { PortalLogo } from '@/components/portals/PortalLogo';
 import { PortalStatusBadge, PortalTypeCounters } from '@/components/portals/PortalBadges';
@@ -161,14 +160,9 @@ export default function PortalDetailPage() {
     if (!portal) return;
     setSaving(true);
     try {
-      let id = portal.integration_id;
-      if (!id) {
-        const res = await api.post('/integrations', {
-          integration: { integration_type: portal.portal_key, display_name: portal.name },
-        });
-        id = (res.data as { data: { id: string } }).data.id;
-      }
-      await api.post(`/integrations/${id}/connect`, { config: {} });
+      // Pela porta de Portais (`portals.update`): quem abre Portais liga o
+      // portal sem precisar das outras integrações da conta.
+      await portalsService.connect(portal.portal_key);
       toast.success(`${portal.name} conectado`);
       await load();
     } catch {
@@ -182,7 +176,7 @@ export default function PortalDetailPage() {
     if (!portal?.integration_id) return;
     setSaving(true);
     try {
-      await api.post(`/integrations/${portal.integration_id}/disconnect`);
+      await portalsService.disconnect(portal.portal_key);
       toast.success(`${portal.name} desconectado`);
       await load();
     } catch {
