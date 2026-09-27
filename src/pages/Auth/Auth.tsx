@@ -224,7 +224,7 @@ export const Auth: React.FC = () => {
       // O motivo é o que o SERVIDOR disse (senha incorreta, acesso suspenso…).
       // A frase de reserva nunca afirma a causa: sem resposta, tudo o que a
       // tela sabe é que o pedido não voltou.
-      const { title, description } = loginFeedback(error);
+      const { title, description } = loginFeedback(error, { login: true });
       toast.error(title, { description });
       setLoginError(description);
     } finally { setIsLoading(false); }

@@ -29,6 +29,21 @@ export interface LoginFeedback {
 const SEM_RESPOSTA =
   'O servidor não respondeu a este pedido. Confira sua conexão e tente de novo em alguns instantes.';
 
+// O teto de tentativas do login é POR E-MAIL (10 em 15 min, no servidor). O 429
+// dele volta sem corpo JSON ("Retry later"), então cairia no SEM_RESPOSTA —
+// que manda conferir a internet de quem só errou a senha vezes demais.
+export const MUITAS_TENTATIVAS_LOGIN =
+  'Muitas tentativas com este e-mail. Espere alguns minutos e tente de novo.';
+
+export interface LoginFeedbackOptions {
+  /**
+   * A tela é a de LOGIN: só ali o 429 é o teto por e-mail. Quem reaproveita
+   * esta função para outra porta (o convite de acesso tem teto por origem)
+   * não passa isto, e a frase dela continua a de sempre.
+   */
+  login?: boolean;
+}
+
 /**
  * O servidor chegou a EXPLICAR alguma coisa?
  *
@@ -53,7 +68,12 @@ function explicacaoDoServidor(error: unknown): string {
   return (extractError(error)?.message ?? '').trim();
 }
 
-export function loginFeedback(error: unknown): LoginFeedback {
+export function loginFeedback(error: unknown, options: LoginFeedbackOptions = {}): LoginFeedback {
+  const status = (error as { response?: { status?: number } } | null | undefined)?.response?.status;
+  if (options.login && status === 429) {
+    return { title: 'Não consegui entrar', description: MUITAS_TENTATIVAS_LOGIN, fromServer: true };
+  }
+
   const bruta = explicacaoDoServidor(error);
 
   if (!bruta) {
