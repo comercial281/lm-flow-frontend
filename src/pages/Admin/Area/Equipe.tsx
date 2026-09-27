@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { UsersRound, Loader2, Plus, Trash2, ShieldCheck, EyeOff, Crown } from 'lucide-react';
 import { toast } from 'sonner';
-import superLogsService, { TeamMember } from '@/services/superLogs/superLogsService';
+import superLogsService, { TeamMember, SupportReview, SupportReviewPerson } from '@/services/superLogs/superLogsService';
+import { criterionLabel, tenantsToShow, personDetail, reviewTotals, accountCreatedLabel } from './supportReviewRules';
 
 /**
  * Equipe Leal Mídia. Uma lista que faz duas coisas:
@@ -19,6 +20,8 @@ export default function AdminEquipe() {
   const [canAdmin, setCanAdmin] = useState(true);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [review, setReview] = useState<SupportReview | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -34,6 +37,37 @@ export default function AdminEquipe() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadReview = useCallback(async () => {
+    setReviewLoading(true);
+    try {
+      const r = await superLogsService.supportReview();
+      setReview(r.data.data);
+    } catch {
+      setReview(null);
+    } finally {
+      setReviewLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadReview(); }, [loadReview]);
+
+  // "Colocar na Equipe": a pessoa continua suporte quando o critério novo ligar.
+  // Entra SEM acesso ao painel de admin — dar acesso é outra decisão, no botão
+  // "Dar acesso" da lista de cima.
+  const addFromReview = async (p: SupportReviewPerson) => {
+    setBusyId(p.id);
+    try {
+      await superLogsService.addMember({ email: p.email, name: p.name || undefined, can_access_admin: false });
+      toast.success(`${p.email} agora está na Equipe.`);
+      load();
+      loadReview();
+    } catch (e: unknown) {
+      toast.error((e as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Falha ao adicionar.');
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   const add = async () => {
     if (!email.trim()) { toast.error('Informe o e-mail.'); return; }
@@ -181,6 +215,80 @@ export default function AdminEquipe() {
                   >
                     {busyId === m.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   </button>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Fase 1 (Cargos): quem deixa de ser suporte quando o critério novo ligar */}
+      <div className="mt-8 border-l-4 border-amber-500 pl-3">
+        <h2 className="text-base font-semibold">E-mails @lealmidia.com.br nos clientes, fora desta Equipe</h2>
+        <p className="text-sm text-muted-foreground">
+          Quando o critério novo ligar, estas pessoas deixam de ser suporte e passam a usar só o cargo que têm no cliente.
+          Para cada uma: coloque nesta Equipe, deixe como usuário comum, ou desative pela tela Equipe do próprio cliente.
+        </p>
+      </div>
+      {reviewLoading ? (
+        <div className="flex items-center gap-2 text-muted-foreground py-6 justify-center">
+          <Loader2 className="h-5 w-5 animate-spin" /> Lendo os clientes...
+        </div>
+      ) : !review ? (
+        <p className="py-4 text-sm text-muted-foreground">Não consegui ler os clientes agora.</p>
+      ) : (
+        <div className="mt-3 space-y-3">
+          <p className="text-sm font-medium">{criterionLabel(review.team_list_enabled)}</p>
+          {(() => {
+            const t = reviewTotals(review.tenants);
+            return (
+              <p className="text-xs text-muted-foreground">
+                {t.people} pessoa(s) para decidir · {t.plainPasswords} senha(s) legível(is) guardada(s) ·{' '}
+                {t.withoutRoles} cliente(s) sem cargos gravados · {t.failed} cliente(s) sem leitura
+              </p>
+            );
+          })()}
+          {tenantsToShow(review.tenants).map(tenant => (
+            <div key={tenant.schema} className="rounded-lg border bg-card p-3">
+              <div className="text-sm font-semibold">{tenant.name}</div>
+              {tenant.error ? (
+                <p className="text-xs text-red-500">Não consegui ler este cliente: {tenant.error}</p>
+              ) : (
+                <>
+                  {tenant.people.map(p => (
+                    <div key={p.id} className="mt-2 flex items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm truncate">{p.name || p.email}</div>
+                        <div className="text-xs text-muted-foreground truncate">{p.email} · {personDetail(p)}</div>
+                      </div>
+                      {!p.stays_support && (
+                        <button
+                          onClick={() => addFromReview(p)}
+                          disabled={busyId === p.id}
+                          className="text-xs rounded-md border px-2 py-1 hover:bg-muted disabled:opacity-60"
+                        >
+                          Colocar na Equipe
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {tenant.team_accounts.length > 0 && (
+                    <div className="mt-3 border-t pt-2">
+                      <div className="text-xs font-semibold">Contas que passam a ser suporte quando o critério ligar</div>
+                      <p className="text-xs text-muted-foreground">
+                        Estes e-mails estão na Equipe, mas a conta no cliente não é @lealmidia.com.br. Confira se a conta é mesmo da pessoa antes de ligar.
+                      </p>
+                      {tenant.team_accounts.map(ta => (
+                        <div key={ta.id} className="mt-2 min-w-0">
+                          <div className="text-sm truncate">{ta.name || ta.email}</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {ta.email} · {personDetail(ta)}
+                            {accountCreatedLabel(ta.created_at) && ` · ${accountCreatedLabel(ta.created_at)}`}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
             </div>
