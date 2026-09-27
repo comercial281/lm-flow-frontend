@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { RefreshCw, ShieldCheck, MessageCircle, Search, Sparkles, UserPlus, Mails, UserX, UserCheck, Trash2 } from 'lucide-react';
+import { RefreshCw, ShieldCheck, MessageCircle, Search, Sparkles, UserPlus, Mails, UserX, UserCheck, Trash2, Link2 } from 'lucide-react';
 import { Button, Input, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, Label as UILabel } from '@/components/ui/ds';
 import IconActionButton from '@/components/base/IconActionButton';
 import { usersService } from '@/services/users';
@@ -25,6 +25,7 @@ import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useAuthStore } from '@/store/authStore';
 import { apiErrorMessage } from '@/utils/apiHelpers';
+import { copyText } from '@/utils/clipboard';
 import type { CustomRole } from '@/types/customRoles';
 import type { TeamAccessInbox, TeamAccessMember } from '@/types/teamAccess';
 
@@ -172,6 +173,19 @@ export default function PeopleTab() {
       toast.error(e?.response?.data?.error?.message ?? 'Erro ao enviar o acesso.');
     } finally {
       setSendBusy(false);
+    }
+  };
+
+  // "Copiar link de acesso": gera um link novo de uso único (24h) e copia para
+  // a área de transferência, sem passar pelo WhatsApp — para o gestor mandar
+  // por onde quiser (e-mail, outro app de mensagem, à mão).
+  const copiarLinkDeAcesso = async (member: TeamAccessMember) => {
+    try {
+      const { url } = await usersService.accessLink(member.id);
+      if (await copyText(url)) toast.success('Link de acesso copiado. Ele vale uma vez só, por 24 horas.');
+      else toast.message('Copie o link de acesso:', { description: url });
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error?.message ?? 'Não consegui gerar o link de acesso.');
     }
   };
 
@@ -437,16 +451,28 @@ export default function PeopleTab() {
                             <UserCheck className="h-3.5 w-3.5" /> Reativar
                           </Button>
                         ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openSend(member)}
-                            disabled={!canManage}
-                            className="h-8 gap-1 text-xs text-emerald-600 hover:text-emerald-700"
-                            title="Enviar o acesso (link+login+senha) no WhatsApp da pessoa"
-                          >
-                            <MessageCircle className="h-3.5 w-3.5" /> Enviar acesso
-                          </Button>
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openSend(member)}
+                              disabled={!canManage}
+                              className="h-8 gap-1 text-xs text-emerald-600 hover:text-emerald-700"
+                              title="Enviar o acesso (link+login+senha) no WhatsApp da pessoa"
+                            >
+                              <MessageCircle className="h-3.5 w-3.5" /> Enviar acesso
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copiarLinkDeAcesso(member)}
+                              disabled={!canManage}
+                              className="h-8 gap-1 text-xs"
+                              title="Gera um link novo (vale uma vez, por 24h) para você mandar por onde quiser"
+                            >
+                              <Link2 className="h-3.5 w-3.5" /> Copiar link de acesso
+                            </Button>
+                          </>
                         )}
                         <Button variant="outline" size="sm" onClick={() => abrirPessoa(member.id)} disabled={!canManage} className="h-8 text-xs">
                           Gerenciar acesso
