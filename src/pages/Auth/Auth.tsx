@@ -8,7 +8,8 @@ import {
   AlertDescription,
 } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { login, register, forgotPassword } from '@/services/auth';
+import { login, register } from '@/services/auth';
+import { accessLinkService } from '@/services/auth/accessLinkService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthStore } from '@/store/authStore';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
@@ -28,6 +29,7 @@ import { AppLogo } from '@/components/AppLogo';
 import FlowBackground from './FlowBackground';
 import { loginFeedback } from '@/features/auth/loginFeedback';
 import { AVISO_SEM_ARMAZENAMENTO } from '@/features/auth/sessionPersistence';
+import { FORGOT_PASSWORD_SENT, FORGOT_PASSWORD_HINT, forgotPasswordOutcome } from '@/features/auth/forgotPasswordCopy';
 
 // Só aceita caminho interno. O `returnUrl` sempre existiu aqui, mas nada o
 // preenchia; agora o PrivateRoute o preenche a cada redirect para o login, então
@@ -136,6 +138,7 @@ export const Auth: React.FC = () => {
   const [loginError, setLoginError] = useState('');
   const [registerError, setRegisterError] = useState('');
   const [forgotPasswordError, setForgotPasswordError] = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
 
   const sessionExpiredToastShown = useRef(false);
 
@@ -244,20 +247,22 @@ export const Auth: React.FC = () => {
   };
 
   const onForgotPasswordSubmit = async (data: ForgotPasswordFormData) => {
-    setIsLoading(true); setForgotPasswordError('');
+    setIsLoading(true);
+    setForgotPasswordError('');
+    let failure: unknown = null;
     try {
-      let recaptchaToken: string | null = null;
-      try { recaptchaToken = await executeRecaptcha('forgot_password'); } catch { recaptchaToken = null; }
-      await forgotPassword({ email: data.email, recaptcha_token: recaptchaToken || undefined });
-      toast.success(t('auth.forgotPassword.emailSent'));
-      setActiveTab('login');
+      await accessLinkService.requestLink(data.email.trim());
     } catch (error) {
-      const apiError = error as ApiError & { response?: { status?: number; data?: { error?: string; message?: string; detail?: string; code?: string } } };
-      const isServiceError = apiError?.response?.status === 503 || apiError?.response?.data?.code === 'email_delivery_failed';
-      const msg = apiError?.response?.data?.error || apiError?.response?.data?.message || apiError?.response?.data?.detail || t('auth.notifications.forgotPasswordError');
-      toast.error(isServiceError ? t('auth.forgotPassword.serviceUnavailable') : t('auth.notifications.forgotPasswordError'), { description: msg });
+      failure = error;
+    }
+    if (forgotPasswordOutcome(failure) === 'sent') {
+      setForgotSent(true);
+    } else {
+      const msg = t('auth.notifications.forgotPasswordError');
+      toast.error(msg);
       setForgotPasswordError(msg);
-    } finally { setIsLoading(false); }
+    }
+    setIsLoading(false);
   };
 
   const handleMfaVerification = async (code: string) => {
@@ -402,7 +407,7 @@ export const Auth: React.FC = () => {
                       </label>
                       <button
                         type="button"
-                        onClick={() => setActiveTab('forgot')}
+                        onClick={() => { setForgotSent(false); setActiveTab('forgot'); }}
                         className="text-xs hover:text-violet-400 transition-colors"
                         style={{ color: 'rgba(167,100,250,0.7)' }}
                       >
@@ -532,33 +537,40 @@ export const Auth: React.FC = () => {
                     </Alert>
                   )}
 
-                  <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)} className="space-y-4">
-                    <motion.div custom={1} variants={fadeUpVariant} initial="hidden" animate="visible" className={fieldCls}>
-                      <Label htmlFor="forgot-email" className="text-white/70 text-sm">{t('auth.forgotPassword.email')}</Label>
-                      <Input
-                        id="forgot-email" type="email" placeholder={t('auth.forgotPassword.email')} disabled={isLoading}
-                        className="bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-violet-500/60"
-                        {...forgotPasswordForm.register('email')}
-                      />
-                      {forgotPasswordForm.formState.errors.email && (
-                        <p className={errorCls}>{forgotPasswordForm.formState.errors.email.message}</p>
-                      )}
-                    </motion.div>
-
-                    <motion.div custom={2} variants={fadeUpVariant} initial="hidden" animate="visible">
-                      <motion.button
-                        type="submit" disabled={isLoading}
-                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                        className="lmf-btn-shimmer w-full py-2.5 px-4 rounded-md text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-60"
-                      >
-                        {isLoading ? (
-                          <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{t('auth.forgotPassword.sending')}</>
-                        ) : (
-                          <>{t('auth.forgotPassword.sendInstructions')}<ArrowRight className="w-4 h-4" /></>
+                  {forgotSent ? (
+                    <div role="status" className="space-y-2">
+                      <p className="text-sm text-white/80">{FORGOT_PASSWORD_SENT}</p>
+                      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>{FORGOT_PASSWORD_HINT}</p>
+                    </div>
+                  ) : (
+                    <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)} className="space-y-4">
+                      <motion.div custom={1} variants={fadeUpVariant} initial="hidden" animate="visible" className={fieldCls}>
+                        <Label htmlFor="forgot-email" className="text-white/70 text-sm">{t('auth.forgotPassword.email')}</Label>
+                        <Input
+                          id="forgot-email" type="email" placeholder={t('auth.forgotPassword.email')} disabled={isLoading}
+                          className="bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-violet-500/60"
+                          {...forgotPasswordForm.register('email')}
+                        />
+                        {forgotPasswordForm.formState.errors.email && (
+                          <p className={errorCls}>{forgotPasswordForm.formState.errors.email.message}</p>
                         )}
-                      </motion.button>
-                    </motion.div>
-                  </form>
+                      </motion.div>
+
+                      <motion.div custom={2} variants={fadeUpVariant} initial="hidden" animate="visible">
+                        <motion.button
+                          type="submit" disabled={isLoading}
+                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                          className="lmf-btn-shimmer w-full py-2.5 px-4 rounded-md text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-60"
+                        >
+                          {isLoading ? (
+                            <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{t('auth.forgotPassword.sending')}</>
+                          ) : (
+                            <>{t('auth.forgotPassword.sendInstructions')}<ArrowRight className="w-4 h-4" /></>
+                          )}
+                        </motion.button>
+                      </motion.div>
+                    </form>
+                  )}
                 </motion.div>
               )}
 
