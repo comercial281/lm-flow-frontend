@@ -49,6 +49,8 @@ import AutomationTestDialog from './AutomationTestDialog';
 import AutomationHistoryDialog from './AutomationHistoryDialog';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { isForbiddenError } from '@/services/core/forbidden';
 
 const TRIGGERS = Object.entries(TRIGGER_LABELS).map(([value, label]) => ({ value, label }));
 const ACTION_TYPES = Object.entries(ACTION_TYPE_LABELS).map(([value, label]) => ({ value, label }));
@@ -134,15 +136,18 @@ export default function LeadAutomations() {
   const [editingName, setEditingName] = useState('');
   const [testing, setTesting] = useState<LeadAutomationRule | null>(null);
   const [history, setHistory] = useState<LeadAutomationRule | null>(null);
+  const [recusado, setRecusado] = useState(false);
 
   const resources = useAutomationResources(canAccess);
 
   const load = useCallback(async (which: Tab) => {
     setLoading(true);
+    setRecusado(false);
     try {
       setRules(sortRules(await leadAutomationService.getAll(which === 'archived')));
-    } catch {
-      toast.error('Erro ao carregar automações');
+    } catch (e) {
+      if (isForbiddenError(e)) setRecusado(true);
+      else toast.error('Erro ao carregar automações');
     } finally {
       setLoading(false);
     }
@@ -375,6 +380,8 @@ export default function LeadAutomations() {
     }));
 
   const archivedTab = tab === 'archived';
+
+  if (recusado) return <NoAccessState />;
 
   return (
     <div className="p-6 max-w-4xl mx-auto">

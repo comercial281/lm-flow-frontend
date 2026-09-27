@@ -28,6 +28,8 @@ import {
 import { propertiesService, Property } from '@/services/properties/propertiesService';
 import { contactsService } from '@/services/contacts/contactsService';
 import type { Contact } from '@/types/contacts';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { isForbiddenError } from '@/services/core/forbidden';
 
 const STAGE_FILTERS = [
   { key: '', label: 'Todos' },
@@ -52,6 +54,7 @@ export default function PropertyInterests() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [activeStage, setActiveStage] = useState('');
+  const [recusado, setRecusado] = useState(false);
 
   // Close Lost modal
   const [lostTarget, setLostTarget] = useState<PropertyInterest | null>(null);
@@ -75,14 +78,16 @@ export default function PropertyInterests() {
 
   const load = useCallback(async (stage = activeStage) => {
     setLoading(true);
+    setRecusado(false);
     try {
       const params: Record<string, string> = {};
       if (stage) params.interest_stage = stage;
       const res = await propertyInterestsService.list(params);
       setInterests(res.data);
       setTotal(res.meta?.total ?? res.data.length);
-    } catch {
-      toast.error('Erro ao carregar interesses');
+    } catch (e) {
+      if (isForbiddenError(e)) setRecusado(true);
+      else toast.error('Erro ao carregar interesses');
     } finally {
       setLoading(false);
     }
@@ -187,6 +192,8 @@ export default function PropertyInterests() {
   };
 
   const isClosed = (stage: string) => stage === 'closed_won' || stage === 'closed_lost';
+
+  if (recusado) return <NoAccessState />;
 
   return (
     <div className="flex flex-col h-full">

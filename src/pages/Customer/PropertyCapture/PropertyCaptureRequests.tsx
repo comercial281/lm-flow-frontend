@@ -25,6 +25,8 @@ import {
 } from '@/services/propertyCaptureRequests/propertyCaptureRequestsService';
 import { TRANSACTION_TYPE_LABELS, PROPERTY_TYPE_LABELS } from '@/services/properties/propertiesService';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { isForbiddenError } from '@/services/core/forbidden';
 
 const STATUS_TABS = [
   { key: '', label: 'Todas' },
@@ -64,16 +66,19 @@ export default function PropertyCaptureRequests() {
   });
   const [acting, setActing] = useState<string | null>(null);
   const canApprove = useFeature('property_capture_approve');
+  const [recusado, setRecusado] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setRecusado(false);
     try {
       const params: Record<string, string> = {};
       if (statusFilter) params.status = statusFilter;
       const res = await propertyCaptureRequestsService.list(params);
       setRequests(res.data);
-    } catch {
+    } catch (e) {
       setRequests([]);
+      if (isForbiddenError(e)) setRecusado(true);
     } finally {
       setLoading(false);
     }
@@ -118,6 +123,8 @@ export default function PropertyCaptureRequests() {
     approved: requests.filter(r => r.status === 'approved' || r.status === 'converted').length,
     rejected: requests.filter(r => r.status === 'rejected').length,
   };
+
+  if (recusado) return <NoAccessState />;
 
   return (
     <div className="flex flex-col h-full bg-background">

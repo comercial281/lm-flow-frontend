@@ -46,6 +46,8 @@ import {
   type DelayUnit,
 } from './delayConversion';
 import { FollowupEnrollment } from '@/pages/Customer/Automations/FollowupEnrollment/FollowupEnrollment';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { isForbiddenError } from '@/services/core/forbidden';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 // Backend (Followup::SendStep#move_stage_if_configured) deriva o slug a partir do
@@ -420,13 +422,16 @@ export default function FollowupSequences() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState<FollowupHistory | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [recusado, setRecusado] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setRecusado(false);
     try {
       setSequences(await followupSequencesService.getAll());
-    } catch {
-      toast.error('Erro ao carregar sequências');
+    } catch (e) {
+      if (isForbiddenError(e)) setRecusado(true);
+      else toast.error('Erro ao carregar sequências');
     } finally {
       setLoading(false);
     }
@@ -710,6 +715,8 @@ export default function FollowupSequences() {
       setTestDialogOpen(false);
     } catch { toast.error('Falha ao disparar.'); }
   };
+
+  if (recusado) return <NoAccessState />;
 
   return (
     <>

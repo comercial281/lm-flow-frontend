@@ -82,6 +82,8 @@ import { useFeature } from '@/contexts/TenantFeaturesContext';
 import PropertyImportDialog from './PropertyImportDialog';
 import PropertyBookDialog from '@/components/properties/PropertyBookDialog';
 import { labelsService } from '@/services/contacts/labelsService';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { isForbiddenError } from '@/services/core/forbidden';
 
 const EMPTY_FORM: PropertyFormData = {
   title: '',
@@ -160,6 +162,7 @@ export default function Properties() {
   const [loading, setLoading]       = useState(false);
   const [saving, setSaving]         = useState(false);
   const [deleting, setDeleting]     = useState(false);
+  const [recusado, setRecusado]     = useState(false);
 
   const [searchParams]                        = useSearchParams();
   const [search, setSearch]                   = useState(searchParams.get('q') ?? '');
@@ -228,6 +231,7 @@ export default function Properties() {
     leadDestination = filterLeadDestination,
   ) => {
     setLoading(true);
+    setRecusado(false);
     try {
       const res = await propertiesService.list({
         q: q || undefined,
@@ -239,8 +243,9 @@ export default function Properties() {
       });
       setProperties(res.data ?? []);
       setTotal(res.meta?.total ?? 0);
-    } catch {
-      toast.error('Erro ao carregar imóveis');
+    } catch (e) {
+      if (isForbiddenError(e)) setRecusado(true);
+      else toast.error('Erro ao carregar imóveis');
     } finally {
       setLoading(false);
     }
@@ -735,6 +740,8 @@ export default function Properties() {
       setPdfReading(false);
     }
   };
+
+  if (recusado) return <NoAccessState />;
 
   return (
     <div className="flex flex-col h-full">
