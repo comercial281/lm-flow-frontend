@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/ds';
 import { BaseHeader, HeaderAction, HeaderFilter } from '@/components/base';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { contactsHeaderGates } from './contactsHeaderGates';
 
 interface ContactsHeaderProps {
   totalCount: number;
@@ -60,7 +61,9 @@ export default function ContactsHeader({
     merge: useFeature('contacts_merge'),
   };
 
-  const primaryAction: HeaderAction | undefined = ff.create && isReady && can('contacts', 'create') ? {
+  const gates = contactsHeaderGates(ff, isReady, can);
+
+  const primaryAction: HeaderAction | undefined = gates.create ? {
     label: t('header.newContact'),
     icon: <Plus className="h-4 w-4" />,
     onClick: onNewContact,
@@ -68,14 +71,14 @@ export default function ContactsHeader({
   } : undefined;
 
   const secondaryActions: HeaderAction[] = [
-    ...(ff.export && isReady && can('contacts', 'read') ? [{
+    ...(gates.export ? [{
       label: t('header.export'),
       icon: <Download className="h-4 w-4" />,
       onClick: onExport,
       variant: 'outline' as const,
       iconOnly: true,
     }] : []),
-    ...(ff.import && isReady && can('contacts', 'create') ? [{
+    ...(gates.import ? [{
       label: t('header.import'),
       icon: <Upload className="h-4 w-4" />,
       onClick: onImport,
@@ -87,7 +90,7 @@ export default function ContactsHeader({
   const bulkActions: HeaderAction[] = [
     // Mesclar exige escolher quem fica e quem some, contato a contato — não faz
     // sentido com a base inteira marcada, então some no modo "todos".
-    ...(ff.merge && !allMatchingSelected && selectedCount >= 2 && isReady && can('contacts', 'update')
+    ...(!allMatchingSelected && selectedCount >= 2 && gates.merge
       ? [
           {
             label: t('header.mergeContacts'),
@@ -97,7 +100,7 @@ export default function ContactsHeader({
           },
         ]
       : []),
-    ...(ff.delete && isReady && can('contacts', 'delete') ? [{
+    ...(gates.delete ? [{
       label: allMatchingSelected ? t('header.bulkDeleteAll', { count: totalCount }) : t('header.bulkDelete'),
       icon: <Trash2 className="h-4 w-4" />,
       onClick: onBulkDelete,
