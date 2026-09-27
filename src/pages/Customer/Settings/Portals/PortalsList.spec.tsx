@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import PortalsList from './PortalsList';
 import type { Portal } from '@/services/portals/portalsService';
+import { NO_ACCESS_MESSAGE } from '@/components/permissions/noAccessCopy';
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
@@ -128,5 +129,19 @@ describe('PortalsList', () => {
     montar();
     await screen.findByText('Portais imobiliários');
     await vi.waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Erro ao carregar portais'));
+  });
+
+  it('recusa do servidor mostra o aviso do cargo, sem toast e sem lista', async () => {
+    mocks.list.mockRejectedValue({ response: { status: 403, data: { required_permission: 'portals.read' } } });
+    montar();
+    expect(await screen.findByText(NO_ACCESS_MESSAGE)).toBeInTheDocument();
+    expect(mocks.toastError).not.toHaveBeenCalled();
+  });
+
+  it('queda de rede NÃO culpa o cargo', async () => {
+    mocks.list.mockRejectedValue(new Error('Network Error'));
+    montar();
+    await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Erro ao carregar portais'));
+    expect(screen.queryByText(NO_ACCESS_MESSAGE)).not.toBeInTheDocument();
   });
 });

@@ -36,6 +36,9 @@ import type { MessageFunnel } from '@/types/messageFunnels';
 import type { PipelineStage } from '@/types/analytics';
 import MessageTemplateForm from '@/components/channels/settings/MessageTemplateForm';
 import BulkDispatchModal from '@/components/pipelines/BulkDispatchModal';
+import NoAccessState from '@/components/permissions/NoAccessState';
+import { isForbiddenError } from '@/services/core/forbidden';
+import { useCan } from '@/hooks/useCan';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 type Tab = 'disparos' | 'templates' | 'canais' | 'cadencias' | 'metricas';
@@ -59,7 +62,9 @@ const TABS: { id: Tab; label: string; icon: typeof Megaphone }[] = [
 export default function Disparos() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const navigate = useNavigate();
+  const pode = useCan();
   const [tab, setTab] = useState<Tab>('disparos');
+  const [recusado, setRecusado] = useState(false);
 
   // Canais oficiais (WhatsApp Cloud)
   const [channels, setChannels] = useState<CloudChannelOption[]>([]);
@@ -126,7 +131,10 @@ export default function Disparos() {
       setCampaigns([]);
       return;
     }
-    broadcastsService.list(pid).then(setCampaigns).catch(() => setCampaigns([]));
+    broadcastsService.list(pid).then(list => { setCampaigns(list); setRecusado(false); }).catch(e => {
+      setCampaigns([]);
+      if (isForbiddenError(e)) setRecusado(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -161,6 +169,8 @@ export default function Disparos() {
 
   const selectedPipeline = pipelines.find(p => p.id === pipelineId);
   const selectedTplChannel = channels.find(o => o.inbox_id === tplInboxId) || channels[0];
+
+  if (recusado) return <NoAccessState />;
 
   return (
     <>
@@ -221,9 +231,11 @@ export default function Disparos() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={() => setModalOpen(true)} disabled={!pipelineId}>
-              <Plus className="w-4 h-4 mr-1" /> Novo disparo
-            </Button>
+            {pode('broadcasts', 'create') && (
+              <Button onClick={() => setModalOpen(true)} disabled={!pipelineId}>
+                <Plus className="w-4 h-4 mr-1" /> Novo disparo
+              </Button>
+            )}
           </div>
 
           {campaigns.length === 0 ? (
@@ -298,17 +310,23 @@ export default function Disparos() {
                                 {(c.status === 'running' || c.status === 'paused') && (
                                   <>
                                     {c.status === 'running' ? (
-                                      <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setStatus(c, 'pause')}>
-                                        <Pause className="w-3.5 h-3.5 mr-1" /> Pausar
-                                      </Button>
+                                      pode('broadcasts', 'pause') && (
+                                        <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setStatus(c, 'pause')}>
+                                          <Pause className="w-3.5 h-3.5 mr-1" /> Pausar
+                                        </Button>
+                                      )
                                     ) : (
-                                      <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setStatus(c, 'resume')}>
-                                        <Play className="w-3.5 h-3.5 mr-1" /> Retomar
+                                      pode('broadcasts', 'resume') && (
+                                        <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setStatus(c, 'resume')}>
+                                          <Play className="w-3.5 h-3.5 mr-1" /> Retomar
+                                        </Button>
+                                      )
+                                    )}
+                                    {pode('broadcasts', 'cancel') && (
+                                      <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive" onClick={() => setStatus(c, 'cancel')}>
+                                        <Ban className="w-3.5 h-3.5 mr-1" /> Cancelar
                                       </Button>
                                     )}
-                                    <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive" onClick={() => setStatus(c, 'cancel')}>
-                                      <Ban className="w-3.5 h-3.5 mr-1" /> Cancelar
-                                    </Button>
                                   </>
                                 )}
                               </div>
