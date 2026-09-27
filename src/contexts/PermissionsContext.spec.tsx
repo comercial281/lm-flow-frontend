@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   user: { id: 'gestor' } as { id: string } | null,
   perms: { gestor: ['sales_agents.read'], corretor: ['contacts.read'] } as Record<string, string[]>,
   clearCache: vi.fn(),
+  loadFailure: null as null | 'failed' | 'forbidden',
 }));
 const atuais = () => (mocks.user ? mocks.perms[mocks.user.id] ?? [] : []);
 
@@ -16,6 +17,7 @@ vi.mock('@/services/permissions', () => ({
     getResourceActions: vi.fn(async () => ({ data: { all_permissions: atuais().map(key => ({ key, display_name: key })) } })),
     getUserPermissions: vi.fn(async () => atuais()),
     getAccountPermissions: vi.fn(async () => atuais()),
+    getPermissionsLoadFailure: () => mocks.loadFailure,
   },
 }));
 
@@ -64,6 +66,7 @@ describe('PermissionsProvider na troca de pessoa', () => {
   beforeEach(() => {
     mocks.user = { id: 'gestor' };
     mocks.clearCache.mockClear();
+    mocks.loadFailure = null;
     useAuthStore.setState({ isLoggedIn: true });
     vi.mocked(permissionsService.getUserPermissions).mockImplementation(async () => atuais());
     vi.mocked(permissionsService.getAccountPermissions).mockImplementation(async () => atuais());
@@ -174,5 +177,67 @@ describe('PermissionsProvider na troca de pessoa', () => {
     // checássemos só pelo `can()`.
     expect(screen.queryByText(/sales_agents\.read/)).not.toBeInTheDocument();
     expect(screen.getByText('conta:contacts.read;usuario:contacts.read')).toBeInTheDocument();
+  });
+});
+
+// A leitura de /permissions que CAI (rede, 5xx) devolve lista vazia — o serviço
+// engole o erro. Sem a marca, a lista vazia seria lida como "o cargo não tem
+// nada", e a rota mandaria a pessoa pedir permissão que ela já tem.
+function SondaFalha() {
+  const { isReady, loadFailure, refreshPermissions } = usePermissions();
+  if (!isReady) return <p>carregando</p>;
+  return (
+    <div>
+      <p>falha:{loadFailure ?? 'nenhuma'}</p>
+      <button type="button" onClick={() => { void refreshPermissions(); }}>de novo</button>
+    </div>
+  );
+}
+
+describe('PermissionsProvider quando a leitura das permissões falha', () => {
+  beforeEach(() => {
+    mocks.user = { id: 'gestor' };
+    mocks.loadFailure = null;
+    useAuthStore.setState({ isLoggedIn: true });
+    vi.mocked(permissionsService.getUserPermissions).mockImplementation(async () => (mocks.loadFailure ? [] : atuais()));
+    vi.mocked(permissionsService.getAccountPermissions).mockImplementation(async () => (mocks.loadFailure ? [] : atuais()));
+  });
+
+  it('queda de rede vira loadFailure "failed", e o Tentar de novo refaz a leitura e limpa a marca', async () => {
+    mocks.loadFailure = 'failed';
+    render(<PermissionsProvider><SondaFalha /></PermissionsProvider>);
+    expect(await screen.findByText('falha:failed')).toBeInTheDocument();
+
+    mocks.loadFailure = null;
+    await act(async () => {
+      screen.getByRole('button', { name: 'de novo' }).click();
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+
+    expect(await screen.findByText('falha:nenhuma')).toBeInTheDocument();
+    expect(permissionsService.getAccountPermissions).toHaveBeenCalledWith(true);
+  });
+
+  it('403 de verdade vira "forbidden" (a rota segue com o aviso do cargo)', async () => {
+    mocks.loadFailure = 'forbidden';
+    render(<PermissionsProvider><SondaFalha /></PermissionsProvider>);
+    expect(await screen.findByText('falha:forbidden')).toBeInTheDocument();
+  });
+
+  it('lista lida com sucesso não marca falha nenhuma', async () => {
+    render(<PermissionsProvider><SondaFalha /></PermissionsProvider>);
+    expect(await screen.findByText('falha:nenhuma')).toBeInTheDocument();
+  });
+
+  it('a marca de falha da pessoa anterior não passa para a próxima', async () => {
+    mocks.loadFailure = 'failed';
+    const { rerender } = render(<PermissionsProvider><SondaFalha /></PermissionsProvider>);
+    expect(await screen.findByText('falha:failed')).toBeInTheDocument();
+
+    mocks.loadFailure = null;
+    mocks.user = { id: 'corretor' };
+    rerender(<PermissionsProvider><SondaFalha /></PermissionsProvider>);
+
+    expect(await screen.findByText('falha:nenhuma')).toBeInTheDocument();
   });
 });

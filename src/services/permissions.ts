@@ -1,5 +1,6 @@
 import { apiAuth } from '@/services/core';
 import { extractData } from '@/utils/apiHelpers';
+import { classifyLoadFailure, type LoadFailure } from '@/services/core/forbidden';
 import type {
   ResourceActionsResponse,
   ResourceActionsData,
@@ -27,6 +28,18 @@ class PermissionsService {
   // ⚡ Proteção: Promise em cache para evitar múltiplas requisições simultâneas
   private userPermissionsPromise: Promise<string[]> | null = null;
   private accountPermissionsPromise: Promise<string[]> | null = null;
+
+  // A última leitura de `/permissions` falhou SEM cache para cair — e por isso
+  // devolveu lista vazia. `getUserPermissions`/`getAccountPermissions` engolem o
+  // erro (outros chamadores dependem disso), e sem esta marca a lista vazia de
+  // uma queda de rede seria lida como "o cargo não tem nada": a tela mandaria a
+  // pessoa pedir permissão que ela já tem. 'forbidden' = 403 de verdade.
+  private permissionsLoadFailure: LoadFailure | null = null;
+
+  /** A última leitura de `/permissions` falhou sem cache? `null` = não. */
+  getPermissionsLoadFailure(): LoadFailure | null {
+    return this.permissionsLoadFailure;
+  }
 
   /**
    * Busca todas as configurações de recursos e permissões do backend
@@ -89,6 +102,7 @@ class PermissionsService {
       const responseData = extractData<{ permissions: string[] }>(response);
       this.userPermissionsCache = responseData.permissions || [];
       this.permissionsCacheExpiry = now + this.CACHE_DURATION;
+      this.permissionsLoadFailure = null;
 
         // Limpar Promise após sucesso
         this.userPermissionsPromise = null;
@@ -106,6 +120,7 @@ class PermissionsService {
         return this.userPermissionsCache;
       }
 
+      this.permissionsLoadFailure = classifyLoadFailure(error);
       return [];
     }
     })();
@@ -140,6 +155,7 @@ class PermissionsService {
           permissions,
           expiry: now + this.CACHE_DURATION
         };
+        this.permissionsLoadFailure = null;
 
         // Limpar Promise após sucesso
         this.accountPermissionsPromise = null;
@@ -157,6 +173,7 @@ class PermissionsService {
           return this.accountPermissionsData.permissions;
         }
 
+        this.permissionsLoadFailure = classifyLoadFailure(error);
         return [];
       }
     })();
@@ -248,6 +265,7 @@ class PermissionsService {
     this.userPermissionsPromise = null;
     this.accountPermissionsData = null;
     this.accountPermissionsPromise = null;
+    this.permissionsLoadFailure = null;
   }
 
   /**

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import NoAccessState from '@/components/permissions/NoAccessState';
+import PermissionsRetryState from '@/components/permissions/PermissionsRetryState';
+import { permissionGate } from './permissionGate';
 
 interface PermissionRouteProps {
   children: React.ReactNode;
@@ -35,6 +37,12 @@ interface PermissionRouteProps {
  * da tela — spec da Fase 1 (Cargos): endereço digitado sem permissão nunca cai
  * na página genérica de "unauthorized". Só quem passar `redirectTo`
  * explicitamente continua sendo redirecionado.
+ *
+ * Leitura das permissões que CAIU (rede, 5xx — `loadFailure === 'failed'`)
+ * não é recusa do cargo: no lugar do aviso vai "Não consegui carregar as
+ * permissões." + *Tentar de novo* (refaz a leitura). Vale também para quem
+ * passou `redirectTo`/`fallback`: redirecionar para "sem acesso" por queda de
+ * rede seria o mesmo erro. A decisão mora em `permissionGate` (com spec).
  */
 const PermissionRoute: React.FC<PermissionRouteProps> = ({
   children,
@@ -46,7 +54,7 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
   fallback = null,
 }) => {
   const navigate = useNavigate();
-  const { can, canAny, canAll, isReady, loading } = usePermissions();
+  const { can, canAny, canAll, isReady, loading, loadFailure, refreshPermissions } = usePermissions();
   const isSuperAdmin = useIsSuperAdmin();
 
   // Memoizar verificações de permissão para evitar recálculos desnecessários
@@ -55,38 +63,34 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
     // incluindo as páginas de configuração de integrações (installation_configs).
     // Ele é injetado como super-admin em todo tenant e o backend segue guardando
     // cada mutação; aqui só liberamos a navegação. Não depende de permissões
-    // carregarem, então isenta antes do gate de loading.
-    if (isSuperAdmin) {
-      return { hasAccess: true, shouldRedirect: false, isLoading: false };
-    }
+    // carregarem, então isenta antes do gate de loading (ver permissionGate).
+    const settled = !isSuperAdmin && !loading && isReady;
 
-    if (loading || !isReady) {
-      return { hasAccess: false, shouldRedirect: false, isLoading: true };
-    }
-
-    // Verificar permissões específicas
+    // Verificar permissões específicas (só quando já dá para perguntar)
     let hasPermission = false;
-
-    if (permissions && permissions.length > 0) {
-      // Usar array de permissões
-      hasPermission = requireAll ? canAll(permissions) : canAny(permissions);
-    } else if (resource && action) {
-      // Usar resource.action
-      hasPermission = can(resource, action);
-    } else {
-      // Se não há permissões específicas, permitir acesso para usuários autenticados
-      hasPermission = true;
+    if (settled) {
+      if (permissions && permissions.length > 0) {
+        // Usar array de permissões
+        hasPermission = requireAll ? canAll(permissions) : canAny(permissions);
+      } else if (resource && action) {
+        // Usar resource.action
+        hasPermission = can(resource, action);
+      } else {
+        // Se não há permissões específicas, permitir acesso para usuários autenticados
+        hasPermission = true;
+      }
     }
+
+    const gate = permissionGate({ isSuperAdmin, loading, isReady, hasPermission, loadFailure: loadFailure ?? null });
 
     return {
-      hasAccess: hasPermission,
+      gate,
       // Só redireciona quem passou `redirectTo` explicitamente — sem ele, a
       // recusa cai no NoAccessState renderizado abaixo, nunca na página
       // genérica de unauthorized.
-      shouldRedirect: !hasPermission && !fallback && !!redirectTo,
-      isLoading: false
+      shouldRedirect: gate === 'deny' && !fallback && !!redirectTo,
     };
-  }, [can, canAny, canAll, permissions, requireAll, resource, action, fallback, redirectTo, loading, isReady, isSuperAdmin]);
+  }, [can, canAny, canAll, permissions, requireAll, resource, action, fallback, redirectTo, loading, isReady, isSuperAdmin, loadFailure]);
 
   // Usar useEffect para navegação para evitar chamadas durante render
   useEffect(() => {
@@ -96,7 +100,7 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
   }, [permissionCheck.shouldRedirect, navigate, redirectTo]);
 
   // Mostrar loading enquanto carrega permissões
-  if (permissionCheck.isLoading) {
+  if (permissionCheck.gate === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
@@ -104,8 +108,13 @@ const PermissionRoute: React.FC<PermissionRouteProps> = ({
     );
   }
 
+  // A leitura das permissões caiu: tentar de novo, nunca o aviso do cargo.
+  if (permissionCheck.gate === 'retry') {
+    return <PermissionsRetryState onRetry={() => { void refreshPermissions?.(); }} />;
+  }
+
   // Renderização baseada nas verificações
-  if (!permissionCheck.hasAccess) {
+  if (permissionCheck.gate === 'deny') {
     if (fallback) {
       return <>{fallback}</>;
     }

@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext';
 import { useAuthStore } from '@/store/authStore';
 import { permissionsService } from '@/services/permissions';
 import type { ResourceActionsResponse } from '@/types/auth';
+import { classifyLoadFailure, type LoadFailure } from '@/services/core/forbidden';
 
 interface PermissionsContextValue {
   // Permissões
@@ -18,6 +19,13 @@ interface PermissionsContextValue {
   loading: boolean;
   isReady: boolean;
   error: string | null;
+  /**
+   * A leitura das permissões FALHOU (rede, 5xx) e as listas estão vazias por
+   * isso — não porque o cargo não tem nada. 'forbidden' = 403 de verdade.
+   * `null` = leu (vazia ou não). O PermissionRoute usa isto para oferecer
+   * "Tentar de novo" em vez do aviso do cargo.
+   */
+  loadFailure: LoadFailure | null;
 
   // Métodos utilitários
   refreshPermissions: () => Promise<void>;
@@ -46,6 +54,8 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
   // window used to flash the Unauthorized page after a fresh login.
   const [userPermsLoaded, setUserPermsLoaded] = useState(false);
   const [accountPermsLoaded, setAccountPermsLoaded] = useState(false);
+  const [userLoadFailure, setUserLoadFailure] = useState<LoadFailure | null>(null);
+  const [accountLoadFailure, setAccountLoadFailure] = useState<LoadFailure | null>(null);
 
   // Config state
   const [resourceActions, setResourceActions] = useState<ResourceActionsResponse | null>(null);
@@ -69,6 +79,8 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
     setResourceActions(null);
     setUserPermsLoaded(false);
     setAccountPermsLoaded(false);
+    setUserLoadFailure(null);
+    setAccountLoadFailure(null);
   }
 
   // O singleton do serviço É um efeito colateral de verdade (mutação de um
@@ -138,11 +150,13 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
         const permissions = await permissionsService.getUserPermissions();
         if (cancelled) return;
         setUserPermissions(permissions);
+        setUserLoadFailure(permissionsService.getPermissionsLoadFailure());
       } catch (error) {
         if (cancelled) return;
         console.error('Erro ao carregar permissões do usuário:', error);
         setError('Erro ao carregar permissões do usuário');
         setUserPermissions([]);
+        setUserLoadFailure(classifyLoadFailure(error));
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -187,11 +201,13 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
         if (cancelled) return;
 
         setAccountPermissions(permissions);
+        setAccountLoadFailure(permissionsService.getPermissionsLoadFailure());
       } catch (error) {
         if (cancelled) return;
         console.error('Erro ao carregar permissões do account:', error);
         setError('Erro ao carregar permissões do account');
         setAccountPermissions([]);
+        setAccountLoadFailure(classifyLoadFailure(error));
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -291,12 +307,15 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
       // Carregar user permissions
       const userPerms = await permissionsService.getUserPermissions(true);
       setUserPermissions(userPerms);
+      setUserLoadFailure(permissionsService.getPermissionsLoadFailure());
 
       // Carregar account permissions
       const accountPerms = await permissionsService.getAccountPermissions(true);
       setAccountPermissions(accountPerms);
-    } catch {
+      setAccountLoadFailure(permissionsService.getPermissionsLoadFailure());
+    } catch (err) {
       setError('Erro ao recarregar permissões');
+      setAccountLoadFailure(classifyLoadFailure(err));
     } finally {
       setLoading(false);
     }
@@ -322,6 +341,13 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
     return userPermsLoaded && accountPermsLoaded;
   }, [configLoading, loading, user, loadedForId, userPermsLoaded, accountPermsLoaded]);
 
+  // Queda de rede em QUALQUER das duas leituras pesa mais que o 403: a lista
+  // vazia daquela leitura não diz nada sobre o cargo.
+  const loadFailure: LoadFailure | null =
+    userLoadFailure === 'failed' || accountLoadFailure === 'failed'
+      ? 'failed'
+      : userLoadFailure ?? accountLoadFailure;
+
   const value: PermissionsContextValue = {
     userPermissions,
     accountPermissions,
@@ -331,6 +357,7 @@ export const PermissionsProvider: React.FC<PermissionsProviderProps> = ({ childr
     loading: loading || configLoading,
     isReady,
     error,
+    loadFailure,
     refreshPermissions,
     createPermission,
     isValidPermission,
