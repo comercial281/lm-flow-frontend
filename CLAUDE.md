@@ -3470,7 +3470,23 @@ O que aparece na tela:
 - **O que o cargo não pode some** — do menu (todo item declara a permissão),
   das abas de *Automações* e dos botões: *Importar*, *Exportar* e *Disparo em
   massa* (quadro do funil e Contatos); criar e apagar em IA Vendedora,
-  Disparos, Funis de mensagem e Imóveis.
+  Disparos, Funis de mensagem e Imóveis. Cada botão responde pelas chaves que
+  o servidor confere no que ELE faz: o *Importar* do quadro cria contato e card
+  (`contacts.create` + `pipeline_items.create`, `boardActions.ts`) — o Corretor
+  tem as duas e continua importando; o *Importar* de Contatos é o importador de
+  planilha (`contacts.import`).
+- **Conectar/Desconectar portal** chamam `POST /portals/:portal_key/connect|disconnect`
+  (`portals.update`), não mais `/integrations` — o Gerente, que opera Portais
+  sem as outras integrações, tomava 403 no botão. Os avisos de erro são os de
+  antes ("Erro ao conectar portal" / "Erro ao desconectar portal").
+- **Permissões que não chegaram** (rede, 5xx em `/permissions`) mostram "Não
+  consegui carregar as permissões." + *Tentar de novo* no lugar da tela — nunca
+  o aviso do cargo. 403 de verdade e lista lida (vazia ou não) seguem como
+  antes.
+- **Login com teto estourado** (429, 10 tentativas em 15 min por e-mail) diz
+  "Muitas tentativas com este e-mail. Espere alguns minutos e tente de novo." em
+  vez da frase de conexão (`loginFeedback(error, { login: true })`; o convite
+  de acesso não passa a opção e fica como era).
 - **Endereço digitado sem permissão** mostra "Seu cargo não tem acesso a esta
   tela. Quem libera é o administrador da conta." no lugar da tela — nunca mais
   a página genérica de não autorizado. Automações com todas as abas
@@ -3508,7 +3524,12 @@ Decisões do dono (não reabrir sem ele pedir):
   o que ele oferece. O `ScopePicker.spec` é trava desse contrato.
 - **Um leitor só de 403** (`services/core/forbidden.ts`). Só o 403 é recusa de
   cargo; rede caída continua sendo erro — culpar o cargo por queda de rede
-  mandaria a pessoa pedir permissão que ela já tem.
+  mandaria a pessoa pedir permissão que ela já tem. Vale também para a leitura
+  das PRÓPRIAS permissões: o `permissionsService` engole a falha de
+  `/permissions` e devolve lista vazia (outros chamadores dependem disso), mas
+  deixa a marca (`getPermissionsLoadFailure`); o `PermissionsContext` a expõe
+  como `loadFailure`, e o `PermissionRoute` decide por `permissionGate`
+  (`retry` só com `'failed'`, e vence `redirectTo`/`fallback`).
 
 Armadilhas:
 
@@ -3539,6 +3560,13 @@ Armadilhas:
    403 ali derrubando a tela inteira esconderia a lista que o cargo pode ver.
 7. **O "revelar senha" não volta.** `plain_password` não existe em tipo
    nenhum, e há spec de origem que reprova a volta.
+8. **A marca de falha das permissões é zerada na troca de pessoa** (junto com as
+   listas, no corpo do render) e no `clearCache`. Quem mexer no reset do
+   `PermissionsContext` inclui `userLoadFailure`/`accountLoadFailure`, senão o
+   *Tentar de novo* de uma pessoa aparece para a próxima.
+9. **Portal liga/desliga pela porta de Portais** (`portalsService.connect/disconnect`).
+   Voltar a chamar `/integrations` daqui reprova o `PortalDetailPage.spec` (a
+   API crua está dublada para acusar qualquer chamada direta).
 
 **Fora desta fase, de propósito:** os botões das outras telas (fora das áreas
 da fase) continuam sem conferir cargo — viram 403 quando clicados; o texto de
