@@ -39,6 +39,7 @@ import {
   isPipelineCondition,
   ConditionEditor,
   PipelineFilterEditor,
+  conditionsOnTriggerChange,
   ActionEditor,
   validateRule,
   formatConditionSummary,
@@ -337,14 +338,10 @@ export default function LeadAutomations() {
   const pipelineCondition = (list: LeadAutomationCondition[]) =>
     list.find(isPipelineCondition) ?? null;
 
+  // Filtro que o gatilho novo não oferece precisa SAIR: gravado e invisível,
+  // ele seguiria barrando a automação sem nada na tela dizendo por quê.
   const setTrigger = (trigger: string) =>
-    setForm(f => {
-      // Filtro que o gatilho novo não oferece precisa SAIR: gravado e invisível,
-      // ele seguiria barrando a automação sem nada na tela dizendo por quê.
-      const funil = triggerAcceptsPipelineFilter(trigger) ? pipelineCondition(f.conditions) : null;
-      const doGatilho = triggerNeedsCondition(trigger) ? triggerConditions(f.conditions) : [];
-      return { ...f, trigger, conditions: [...doGatilho, ...(funil ? [funil] : [])] };
-    });
+    setForm(f => ({ ...f, trigger, conditions: conditionsOnTriggerChange(f.trigger, trigger, f.conditions) }));
 
   const setCondition = (next: LeadAutomationCondition | null) =>
     setForm(f => {
@@ -683,6 +680,7 @@ export default function LeadAutomations() {
         rule={testing}
         open={!!testing}
         onOpenChange={open => { if (!open) setTesting(null); }}
+        users={resources.users}
       />
 
       <AutomationHistoryDialog

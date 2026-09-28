@@ -12,6 +12,8 @@ import {
 import { Loader2, CheckCircle2, XCircle, MinusCircle, AlertTriangle, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiErrorMessage } from '@/utils/apiHelpers';
+import type { User } from '@/types/users';
+import { ACCEPTED_BY_FIELD } from './acceptedByFilter';
 import {
   leadAutomationService,
   LeadAutomationRule,
@@ -37,6 +39,7 @@ const FIELD_LABELS: Record<string, string> = {
   contact_city:      'Cidade do lead',
   contact_state:     'Estado do lead',
   no_reply_minutes:  'Minutos sem resposta',
+  [ACCEPTED_BY_FIELD]: 'Quem aceitou',
 };
 
 const STATUS_LOOK: Record<string, { label: string; className: string; Icon: typeof CheckCircle2 }> = {
@@ -46,16 +49,21 @@ const STATUS_LOOK: Record<string, { label: string; className: string; Icon: type
   simulated: { label: 'Simulado', className: 'text-muted-foreground', Icon: MinusCircle },
 };
 
-function humanValue(value: string | string[] | null): string {
+function humanValue(value: string | string[] | null, field?: string, users: User[] = []): string {
   if (value === null || value === undefined || value === '') return '(vazio)';
-  if (Array.isArray(value)) return value.map(v => ORIGIN_LABELS[v] ?? v).join(', ');
-  return ORIGIN_LABELS[value] ?? String(value);
+  // Quem aceitou vem como id de usuário: sem o nome, a linha diria "pede 12, 15".
+  const label = (v: string) => field === ACCEPTED_BY_FIELD
+    ? (users.find(u => String(u.id) === String(v))?.name ?? String(v))
+    : (ORIGIN_LABELS[v] ?? v);
+  if (Array.isArray(value)) return value.map(label).join(', ');
+  return label(String(value));
 }
 
 interface Props {
   rule: LeadAutomationRule | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  users?: User[];
 }
 
 /**
@@ -66,7 +74,7 @@ interface Props {
  * O teste manda o aviso DE VERDADE (é o ponto), marcado como teste na mensagem.
  * O que mexeria no CRM ou falaria com o lead fica simulado.
  */
-export default function AutomationTestDialog({ rule, open, onOpenChange }: Props) {
+export default function AutomationTestDialog({ rule, open, onOpenChange, users = [] }: Props) {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<AutomationTestResult | null>(null);
 
@@ -181,8 +189,8 @@ export default function AutomationTestDialog({ rule, open, onOpenChange }: Props
                         : <XCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />}
                       <span>
                         <strong>{FIELD_LABELS[c.campo] ?? c.campo}</strong>: a regra pede{' '}
-                        <em>{humanValue(c.esperado)}</em> e o lead trouxe{' '}
-                        <em>{humanValue(c.encontrado)}</em>.
+                        <em>{humanValue(c.esperado, c.campo, users)}</em> e o lead trouxe{' '}
+                        <em>{humanValue(c.encontrado, c.campo, users)}</em>.
                       </span>
                     </li>
                   ))}

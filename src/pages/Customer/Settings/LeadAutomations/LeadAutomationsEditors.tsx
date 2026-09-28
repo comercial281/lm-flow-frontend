@@ -23,6 +23,13 @@ import {
   type EvolutionInstance,
 } from '@/services/leadAutomation/leadAutomationService';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import {
+  acceptedByIds,
+  acceptedByCondition,
+  acceptedByOptions,
+  acceptedBySummary,
+  toggleAcceptedBy,
+} from './acceptedByFilter';
 
 // ============================================================================
 // Catálogos por gatilho/ação
@@ -36,6 +43,8 @@ const TRIGGERS_WITH_CONDITION = new Set([
   'lead.message_received',
   'lead.stage_changed',
   'lead.no_reply_after',
+  // Filtro opcional por quem aceitou (ver acceptedByFilter.ts).
+  'lead.roleta_accepted',
 ]);
 
 export const triggerNeedsCondition = (trigger: string): boolean =>
@@ -283,6 +292,52 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
     );
   }
 
+  // --- lead.roleta_accepted ---
+  // Filtro opcional por QUEM aceitou. Backend: context { assigned_user_id, ... }
+  // casa com { assigned_user_id in [ids] }. Nenhum marcado = qualquer corretor.
+  if (trigger === 'lead.roleta_accepted') {
+    const selected = acceptedByIds(condition);
+    const options = acceptedByOptions(resources.users, selected);
+    const toggle = (id: string) => onChange(acceptedByCondition(toggleAcceptedBy(selected, id)));
+
+    return (
+      <div>
+        <UILabel>Só quando quem aceitou for (opcional)</UILabel>
+        <div className="mt-1 max-h-52 overflow-y-auto rounded-md border border-border divide-y divide-border">
+          {options.length === 0 ? (
+            <p className="text-xs text-muted-foreground p-2">
+              {resources.loading ? 'Carregando a equipe…' : 'Nenhum usuário encontrado na conta.'}
+            </p>
+          ) : (
+            options.map(o => (
+              <label
+                key={o.id}
+                className="flex items-center gap-2 px-2.5 py-2 cursor-pointer hover:bg-muted/50 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.includes(o.id)}
+                  onChange={() => toggle(o.id)}
+                  className="h-4 w-4 accent-primary"
+                />
+                <span className="truncate">
+                  {o.name}
+                  {o.deactivated && <span className="text-muted-foreground"> (desativado)</span>}
+                  {o.missing && <span className="text-muted-foreground"> (não está mais na conta)</span>}
+                </span>
+              </label>
+            ))
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Nenhum marcado = vale para o aceite de qualquer corretor. Marque um ou mais para esta
+          automação rodar só quando um deles aceitar — por exemplo, só os corretores que têm a
+          IA Vendedora no próprio número. A mensagem continua saindo pelo número de quem aceitou.
+        </p>
+      </div>
+    );
+  }
+
   // --- lead.campaign_received (Lead Whats Meta / CTWA) ---
   // Funil por anúncio: filtra por ad_id. O Executor resolve ad_id do ad_referral.
   if (trigger === 'lead.campaign_received') {
@@ -465,6 +520,24 @@ export const isPipelineCondition = (c: LeadAutomationCondition): boolean =>
 // contraditório (etapa de um funil, funil de outro) nunca dispararia.
 export const triggerAcceptsPipelineFilter = (trigger: string): boolean =>
   trigger !== 'lead.stage_changed';
+
+// As condições que sobrevivem à troca de gatilho.
+//
+// A do GATILHO é sempre sobre o gatilho antigo (a etiqueta, a etapa, a origem):
+// levada para outro ela fica gravada e invisível — o editor novo não desenha o
+// campo dela — e segue barrando a automação sem nada na tela dizendo por quê.
+// O filtro de funil é sobre o LEAD e atravessa, onde o gatilho novo o oferece.
+export function conditionsOnTriggerChange(
+  prevTrigger: string,
+  nextTrigger: string,
+  conditions: LeadAutomationCondition[],
+): LeadAutomationCondition[] {
+  const funil = triggerAcceptsPipelineFilter(nextTrigger) ? conditions.find(isPipelineCondition) : undefined;
+  const doGatilho = prevTrigger === nextTrigger && triggerNeedsCondition(nextTrigger)
+    ? conditions.filter(c => !isPipelineCondition(c))
+    : [];
+  return [...doGatilho, ...(funil ? [funil] : [])];
+}
 
 interface PipelineFilterEditorProps {
   trigger: string;
@@ -1195,7 +1268,8 @@ export function validateRule(
     const isOptional =
       trigger === 'lead.message_received' ||
       trigger === 'lead.created' ||
-      trigger === 'lead.campaign_received';
+      trigger === 'lead.campaign_received' ||
+      trigger === 'lead.roleta_accepted';
     // Só a condição do GATILHO conta aqui. O filtro de funil viaja no mesmo
     // array e é sempre opcional — sem esta separação, escolher um funil faria
     // um gatilho que EXIGE condição (etiqueta, etapa) passar pela validação sem
@@ -1276,6 +1350,9 @@ export function formatConditionSummary(
   }
   if (trigger === 'lead.no_reply_after') {
     return `Sem resposta por ${condition.value} min`;
+  }
+  if (trigger === 'lead.roleta_accepted') {
+    return acceptedBySummary(acceptedByIds(condition), resources.users);
   }
   return `${condition.field} ${condition.operator} ${JSON.stringify(condition.value)}`;
 }
