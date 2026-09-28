@@ -44,7 +44,7 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     name: 'Clientes',
     href: '/admin/clientes',
     icon: Building2,
-    description: 'Clientes, leads ao vivo, modo cliente, formulários, sugestões/bugs e atividade',
+    description: 'Clientes, números, leads ao vivo, modo cliente, formulários, sugestões/bugs e atividade',
   },
   {
     // Lista as IAs de PRÉ-ATENDIMENTO (sales_agents) de todos os clientes —

@@ -3571,3 +3571,50 @@ Armadilhas:
 **Fora desta fase, de propósito:** os botões das outras telas (fora das áreas
 da fase) continuam sem conferir cargo — viram 403 quando clicados; o texto de
 erro da aba *Esqueci minha senha* ainda fala em "e-mail de recuperação".
+
+## A aba Números do painel raiz: de quem é cada número (desde 2026-09-26)
+
+Fase 2a do programa de usabilidade. Antes de a fase 2b fazer do dono do número a
+única verdade, o painel raiz ganhou uma LEITURA de como os números de WhatsApp de
+cada cliente estão ligados hoje. Só a Leal Mídia vê, e nada é corrigido daqui.
+
+O que aparece na tela, no painel raiz → Clientes → aba **Números**:
+
+- No topo, **"X clientes migram sozinhos · Y precisam conferir · Z não consegui
+  ler"**, e o botão **Atualizar**.
+- Uma linha por cliente em uso, com quantos números, quantos têm dono claro,
+  quantos são compartilhados, quantos precisam conferir e o selo: **Migra
+  sozinho**, **Precisa conferir (N)** ou **Não consegui ler** com o motivo. A
+  linha mostra "lendo…" até a leitura dela chegar. Quem precisa conferir vem
+  primeiro.
+- Clicando na linha: **número por número** (nome, telefone, conectado ou não pelo
+  estado gravado, Responsável, roletas e se é Exclusivo ou Compartilhado em cada
+  uma, liberados à mão, dono sugerido e de onde veio, "celular bate", conflito em
+  português) e **pessoa por pessoa** (números sugeridos; "corretor sem número").
+
+Decisões (não reabrir sem o dono pedir):
+
+- **O servidor decide, a tela só mostra.** Dono sugerido, conflitos e veredito
+  vêm prontos (`Numbers::OwnershipDiagnosis` no backend); aqui só se escolhe
+  palavra, cor e ordem, em `NumberOwnership/numberOwnershipRules.ts`, com spec.
+- **Um cliente por pedido, em lotes de 4** (`loadInBatches.ts`, com spec). Tudo
+  num pedido só estouraria o limite de 15 s do servidor. Cliente cujo pedido
+  falha vira "Não consegui ler: o servidor não respondeu a este cliente" e os
+  outros seguem.
+- **Atualizar lê de novo sem cache** (`?refresh=1`); abrir a aba usa a leitura
+  guardada de até 5 minutos. Leitura antiga que chega depois do Atualizar é
+  descartada.
+- **Linguagem:** "número de WhatsApp", nunca instância, inbox ou canal (há spec).
+
+Armadilhas:
+
+1. **Não é `featureKey` nem `clientToggleKey`** — tela só do painel raiz. Texto
+   literal em pt-BR, como o resto do hub de Clientes: o `conferir-i18n` só olha
+   chave de `t()`.
+2. **A metade do backend vem PRIMEIRO** (`lm-flow`, `saas-multitenant`, PR #336). Contra o
+   servidor antigo a aba mostra "Não consegui carregar a lista de clientes".
+3. **A regra é do servidor, e tem duas escolhas que a spec não fixava:** "Sem
+   roleta e N corretores liberados: de quem é?" só aparece quando o número NÃO
+   tem Responsável (o Responsável é o dono, por decisão do dono do produto), e há
+   um conflito a mais, "O Responsável gravado é uma pessoa que não existe mais
+   neste cliente". A tela não recalcula nada disso — só mostra o texto que vem.
