@@ -7,6 +7,7 @@
  * novo, e o gestor NÃO consegue tirar pela tela. */
 
 import type { DeactivationReason, DeactivationSnapshot } from '@/types/users';
+import type { OwnedNumber } from '@/features/numbers/types';
 
 /** Por que o sistema liberou este número sozinho. */
 export type AutoAccessReason =
@@ -56,6 +57,8 @@ export interface TeamAccessMember {
   auto_inbox_ids: string[];
   /** Motivo de cada número do balde automático, indexado pelo id do número. */
   auto_access: Record<string, AutoAccessDetail>;
+  /** Fase 2b.1: os números de que a pessoa é DONA, o principal primeiro. Vazio sem a regra. */
+  numbers?: OwnedNumber[];
 
   /* Quem foi DESATIVADO continua na lista, com o selo *Inativo* e o botão
      *Reativar* — é desta tela que sai a volta. Os campos vêm do mesmo serviço
@@ -70,4 +73,6 @@ export interface TeamAccessMember {
 export interface TeamAccessOverview {
   inboxes: TeamAccessInbox[];
   members: TeamAccessMember[];
+  /** Fase 2b.1: a regra do dono vale neste cliente? Nulo = o servidor não disse (antigo). */
+  number_owner_rule: boolean | null;
 }
