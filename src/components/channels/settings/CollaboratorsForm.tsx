@@ -6,6 +6,9 @@ import {
 import { Check, Users, Settings, Info, Sparkles, UserCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
+import { apiErrorMessage } from '@/utils/apiHelpers';
+import { useNumberOwnerRule } from '@/features/numbers/useNumberOwnerRule';
+import { OWNER_EXPLANATION, OWNER_TITLE, SHARED_LABEL, withOwner } from '@/features/numbers/numberTexts';
 
 // Services
 import AgentsService from '@/services/channels/agentsService';
@@ -17,10 +20,13 @@ interface CollaboratorsFormProps {
   enableAutoAssignment?: boolean;
   maxAssignmentLimit?: number | null;
   onAutoAssignmentChange?: (enabled: boolean, limit?: number | null) => void;
-  // Corretor dono desta instância (número pessoal dele) — a foto real do
-  // WhatsApp dela vira o avatar de "Responsável" onde ele aparece no CRM.
+  // DONO DO NÚMERO (ex-"Responsável da instância"). Sem a regra da fase 2b.1,
+  // só troca o avatar de responsável no CRM; com ela, é quem recebe o lead que
+  // escreve neste número.
   ownerUserId?: string | null;
   onOwnerChange?: (ownerUserId: string | null) => void | Promise<void>;
+  /** Eco do servidor (`number_owner_rule` do cartão do número). Nulo = usa a chave do cliente. */
+  numberOwnerRule?: boolean | null;
 }
 
 export default function CollaboratorsForm({
@@ -30,8 +36,13 @@ export default function CollaboratorsForm({
   onAutoAssignmentChange,
   ownerUserId = null,
   onOwnerChange,
+  numberOwnerRule = null,
 }: CollaboratorsFormProps) {
   const { t } = useLanguage('channels');
+  // Com a regra, o dono do número está SEMPRE liberado nele (o servidor não o
+  // deixa sair). Sem a regra, ele é um colaborador como outro qualquer.
+  const rule = useNumberOwnerRule(numberOwnerRule);
+  const ownerId = rule && ownerUserId ? String(ownerUserId) : null;
   const [agents, setAgents] = useState<AgentChannel[]>([]);
   const [savingOwner, setSavingOwner] = useState(false);
   const [selectedAgents, setSelectedAgents] = useState<AgentChannel[]>([]);
@@ -115,6 +126,8 @@ export default function CollaboratorsForm({
   }, [initialAutoAssignment, initialMaxLimit]);
 
   const handleAgentToggle = (agent: AgentChannel) => {
+    // O dono não se desmarca aqui: quem tira o dono é o campo Dono do número.
+    if (ownerId && String(agent.id) === ownerId) return;
     setSelectedAgents(prev => {
       // Ensure prev is always an array
       const currentAgents = Array.isArray(prev) ? prev : [];
@@ -134,7 +147,7 @@ export default function CollaboratorsForm({
 
     setIsUpdatingAgents(true);
     try {
-      const agentIds = agents.map(agent => agent.id);
+      const agentIds = withOwner(agents.map(agent => String(agent.id)), ownerId);
       await InboxMembersService.update(inboxId, agentIds);
       toast.success(t('settings.collaborators.success.updated'));
     } catch (error) {
@@ -170,9 +183,14 @@ export default function CollaboratorsForm({
     try {
       await onOwnerChange(value === '__none__' ? null : value);
       toast.success(t('settings.collaborators.owner.success.updated'));
+      // Com a regra o servidor libera o dono novo à mão: a lista precisa mostrar.
+      if (rule) await loadData();
     } catch (error) {
-      console.error('Error updating instance owner:', error);
-      toast.error(t('settings.collaborators.owner.errors.updateError'));
+      console.error('Error updating number owner:', error);
+      // A recusa do servidor tem motivo ("O cadastro de Fulano está desativado:
+      // escolha outra pessoa como dono do número."). Frase genérica aqui
+      // mandaria procurar no lugar errado.
+      toast.error(apiErrorMessage(error, t('settings.collaborators.owner.errors.updateError')));
     } finally {
       setSavingOwner(false);
     }
@@ -224,7 +242,7 @@ export default function CollaboratorsForm({
 
   return (
     <div className="space-y-6">
-      {/* Responsável da instância */}
+      {/* Dono do número */}
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center gap-3 pb-4 border-b border-border">
@@ -236,7 +254,7 @@ export default function CollaboratorsForm({
                 {t('settings.collaborators.owner.title')}
               </h4>
               <p className="text-sm text-muted-foreground">
-                {t('settings.collaborators.owner.description')}
+                {rule ? OWNER_EXPLANATION : t('settings.collaborators.owner.description')}
               </p>
             </div>
           </div>
@@ -251,7 +269,7 @@ export default function CollaboratorsForm({
                 <SelectValue placeholder={t('settings.collaborators.owner.placeholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">{t('settings.collaborators.owner.none')}</SelectItem>
+                <SelectItem value="__none__">{rule ? SHARED_LABEL : t('settings.collaborators.owner.none')}</SelectItem>
                 {agents.map(agent => (
                   <SelectItem key={agent.id} value={String(agent.id)}>{agent.name}</SelectItem>
                 ))}
@@ -305,9 +323,10 @@ export default function CollaboratorsForm({
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {agents.map(agent => {
                 const agentId = String(agent.id);
+                const isOwner = ownerId === agentId;
                 const isSelected =
-                  Array.isArray(selectedAgents) &&
-                  selectedAgents.some(a => String(a.id) === agentId);
+                  isOwner ||
+                  (Array.isArray(selectedAgents) && selectedAgents.some(a => String(a.id) === agentId));
                 return (
                   <div
                     key={agent.id}
@@ -354,10 +373,15 @@ export default function CollaboratorsForm({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h5 className="font-medium text-foreground truncate">{agent.name}</h5>
+                        {isOwner && (
+                          <span className="whitespace-nowrap rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                            {OWNER_TITLE}
+                          </span>
+                        )}
                         {autoGrantedIds.has(agentId) && !isSelected && (
                           <span
                             className="flex items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] font-normal text-muted-foreground"
-                            title="O sistema liberou esta instância para a pessoa conseguir abrir os leads que já são dela. Ela só vê os leads dela aqui e não recebe leads novos. Marque para ela passar a atender esta instância de verdade."
+                            title="O sistema liberou este número para a pessoa conseguir abrir os leads que já são dela. Ela só vê os leads dela aqui e não recebe leads novos. Marque para ela passar a atender este número de verdade."
                           >
                             <Sparkles className="w-3 h-3" /> acesso automático
                           </span>

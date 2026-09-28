@@ -28,6 +28,9 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 
 import InboxesService from '@/services/channels/inboxesService';
 import { Inbox } from '@/types/channels/inbox';
+import NumberCard from '@/components/numbers/NumberCard';
+import numbersService from '@/services/numbers/numbersService';
+import type { NumberCardData } from '@/features/numbers/types';
 import {
   BasicSettingsForm,
   GreetingSettingsForm,
@@ -289,6 +292,9 @@ export default function ChannelSettings() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [emailSignature, setEmailSignature] = useState('');
   const [isSavingSignature, setIsSavingSignature] = useState(false);
+  // "O número tem cara" (fase 2b.1): nome, telefone, conexão, dono, roleta e
+  // IA num lugar só. Leitura de fundo: falha só não mostra o cartão.
+  const [numberCard, setNumberCard] = useState<NumberCardData | null>(null);
 
   const inboxHook = useInbox(inbox);
 
@@ -483,6 +489,21 @@ export default function ChannelSettings() {
     loadChannelData();
   }, [loadChannelData]);
 
+  // Relê quando o dono muda (o `loadChannelData` do onOwnerChange traz o novo
+  // `owner_user_id`), para o cartão e a explicação de Colaboradores andarem juntos.
+  useEffect(() => {
+    if (!inboxId || !inboxHook.isAWhatsAppChannel) {
+      setNumberCard(null);
+      return;
+    }
+    let vivo = true;
+    numbersService
+      .numberCard(inboxId)
+      .then(card => { if (vivo) setNumberCard(card); })
+      .catch(() => { if (vivo) setNumberCard(null); });
+    return () => { vivo = false; };
+  }, [inboxId, inboxHook.isAWhatsAppChannel, inbox?.owner_user_id]);
+
   const handleSave = async () => {
     if (activeTab !== 'inbox_settings') {
       toast.info(t('settings.errors.useTabUpdate'));
@@ -634,6 +655,12 @@ export default function ChannelSettings() {
                 toast.info(t('settings.reauthorize.redirecting', { provider }));
               }}
             />
+
+            {numberCard && (
+              <div className="mt-4 max-w-xl">
+                <NumberCard card={numberCard} />
+              </div>
+            )}
           </div>
 
           {/*
@@ -827,9 +854,10 @@ export default function ChannelSettings() {
                   await loadChannelData(); // Refresh data after update
                 }}
                 ownerUserId={inbox?.owner_user_id ?? null}
+                numberOwnerRule={inboxHook.isAWhatsAppChannel ? (numberCard?.number_owner_rule ?? null) : false}
                 onOwnerChange={async ownerUserId => {
-                  // Dono da instância: pro card do lead mostrar a foto real do
-                  // WhatsApp dele como avatar de responsável.
+                  // Dono do número: com a regra (fase 2b.1) o servidor confere
+                  // quem pode ser dono e o libera à mão; sem ela, só o avatar.
                   await InboxesService.update(inboxId, { owner_user_id: ownerUserId });
                   await loadChannelData(); // Refresh data after update
                 }}
