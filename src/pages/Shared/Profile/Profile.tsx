@@ -40,6 +40,7 @@ import {
   type PasswordChangeData,
 } from '@/services/profile/profileService';
 import PersonalMutes from '@/components/notifications/PersonalMutes';
+import MyNumbersCard from '@/components/numbers/MyNumbersCard';
 import { getAudioSettings, playNotificationSoundPreview } from '@/utils/audioNotificationUtils';
 import { getModifierKey } from '@/utils/platform';
 import { normalizeAvatarUrl } from '@/utils/avatarUrl';
@@ -960,6 +961,9 @@ const Profile = () => {
 
         <TabsContent value="dados" className="space-y-6">
           {renderDadosPessoais()}
+          {/* Fase 2b.1: os números de que a pessoa é dona, com o principal.
+              Some sozinho sem a regra do dono ou quando a leitura falha. */}
+          <MyNumbersCard />
         </TabsContent>
 
         <TabsContent value="interface" className="space-y-6">
