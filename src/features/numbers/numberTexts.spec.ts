@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   CHANGE_IN_CHANNELS, CONNECTION_NOTE, LIBERATED_TITLE, MAKE_PRIMARY, MY_NUMBERS_DESCRIPTION, NOTICE_PHONE_LABEL, NO_AI,
   NO_OWNED_NUMBERS_OTHER, NO_OWNED_NUMBERS_SELF, NO_PHONE, NO_ROLETA, NUMBERS_COLUMN, NUMBERS_TITLE, OWNER_EXPLANATION,
-  OWNER_TITLE, PRIMARY_DONE, PRIMARY_FAILED, PRIMARY_HINT_OTHER, PRIMARY_HINT_SELF, PRINCIPAL, SHARED_LABEL, connectionLabel, formatPhone, liberatedSummary, numberRuleLine, numbersColumnText, ownedNumberLine,
-  ownerLine, ownerLockProblem, ownerLockText, withOwner,
+  OWNER_TITLE, PRIMARY_DONE, PRIMARY_FAILED, PRIMARY_HINT_OTHER, PRIMARY_HINT_SELF, PRINCIPAL, SHARED_LABEL, connectionLabel, formatPhone, liberatedSummary, lockedOwnerId, numberRuleLine, numbersColumnText,
+  ownedNumberLine, ownerLine, ownerLockProblem, ownerLockText, withOwner,
 } from './numberTexts';
 import type { OwnedNumber } from './types';
 
@@ -134,6 +134,37 @@ describe('withOwner — o dono do número nunca sai da lista de Colaboradores', 
     expect(withOwner(['u2'], 'u1')).toEqual(['u2', 'u1']);
     expect(withOwner(['u1', 'u2'], 'u1')).toEqual(['u1', 'u2']);
     expect(withOwner(['u2'], null)).toEqual(['u2']);
+  });
+});
+
+describe('lockedOwnerId — quem fica travado em Colaboradores', () => {
+  const ana = { id: 'u1', name: 'Ana', active: true };
+
+  it('sem a regra, ninguém trava', () => {
+    expect(lockedOwnerId('u1', false, { owner: ana, shared: false })).toBeNull();
+  });
+
+  it('sem dono gravado, nada trava', () => {
+    expect(lockedOwnerId(null, true, { owner: null, shared: true })).toBeNull();
+  });
+
+  it('sem cartão (ainda carregando), trava pelo gravado — comportamento conservador', () => {
+    expect(lockedOwnerId('u1', true, null)).toBe('u1');
+    expect(lockedOwnerId('u1', true, undefined)).toBe('u1');
+  });
+
+  it('com cartão e dono efetivo (ativo, não compartilhado), trava', () => {
+    expect(lockedOwnerId('u1', true, { owner: ana, shared: false })).toBe('u1');
+  });
+
+  // A instrução do coordenador: dono gravado com `shared: true` (conta da Leal
+  // Mídia) não fica travado nem com selo — quem decide o selo é este id.
+  it('dono gravado com shared true (conta da Leal Mídia) não trava', () => {
+    expect(lockedOwnerId('u1', true, { owner: ana, shared: true })).toBeNull();
+  });
+
+  it('dono desativado não trava', () => {
+    expect(lockedOwnerId('u1', true, { owner: { ...ana, active: false }, shared: false })).toBeNull();
   });
 });
 

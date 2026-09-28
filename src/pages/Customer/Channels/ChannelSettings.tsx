@@ -30,6 +30,7 @@ import InboxesService from '@/services/channels/inboxesService';
 import { Inbox } from '@/types/channels/inbox';
 import NumberCard from '@/components/numbers/NumberCard';
 import numbersService from '@/services/numbers/numbersService';
+import { ownerRuleForChannel } from '@/features/numbers/useNumberOwnerRule';
 import type { NumberCardData } from '@/features/numbers/types';
 import {
   BasicSettingsForm,
@@ -854,7 +855,8 @@ export default function ChannelSettings() {
                   await loadChannelData(); // Refresh data after update
                 }}
                 ownerUserId={inbox?.owner_user_id ?? null}
-                numberOwnerRule={inboxHook.isAWhatsAppChannel ? (numberCard?.number_owner_rule ?? null) : false}
+                numberOwnerRule={ownerRuleForChannel(inboxHook.isAWhatsAppChannel, numberCard)}
+                numberCard={numberCard}
                 onOwnerChange={async ownerUserId => {
                   // Dono do número: com a regra (fase 2b.1) o servidor confere
                   // quem pode ser dono e o libera à mão; sem ela, só o avatar.

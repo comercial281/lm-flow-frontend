@@ -18,6 +18,21 @@
 // regex. E ela só aparece AQUI (há spec).
 
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
+import type { NumberCardData } from './types';
+
+/**
+ * O que `ChannelSettings` manda como `numberOwnerRule` de `CollaboratorsForm` e
+ * `NumberCard`. Só canal de WhatsApp promete a regra do dono — um canal de
+ * e-mail ou API mostrando "quem escreve aqui vai direto pro dono" (L11) não
+ * faz sentido nenhum, e o `number_card` só existe para WhatsApp. Fora do JSX
+ * (Global Constraint), com spec.
+ */
+export function ownerRuleForChannel(
+  isWhatsApp: boolean,
+  card: Pick<NumberCardData, 'number_owner_rule'> | null | undefined,
+): boolean | null {
+  return isWhatsApp ? (card?.number_owner_rule ?? null) : false;
+}
 
 export function resolveOwnerRule(serverEcho: boolean | null | undefined, toggle: boolean): boolean {
   return typeof serverEcho === 'boolean' ? serverEcho : toggle;

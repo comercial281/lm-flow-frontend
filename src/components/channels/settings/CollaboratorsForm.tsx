@@ -8,7 +8,8 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { useNumberOwnerRule } from '@/features/numbers/useNumberOwnerRule';
-import { OWNER_EXPLANATION, OWNER_TITLE, SHARED_LABEL, withOwner } from '@/features/numbers/numberTexts';
+import { OWNER_EXPLANATION, OWNER_TITLE, SHARED_LABEL, lockedOwnerId, withOwner } from '@/features/numbers/numberTexts';
+import type { NumberCardData } from '@/features/numbers/types';
 
 // Services
 import AgentsService from '@/services/channels/agentsService';
@@ -27,6 +28,13 @@ interface CollaboratorsFormProps {
   onOwnerChange?: (ownerUserId: string | null) => void | Promise<void>;
   /** Eco do servidor (`number_owner_rule` do cartão do número). Nulo = usa a chave do cliente. */
   numberOwnerRule?: boolean | null;
+  /**
+   * O cartão do número (owner + shared) — decide quem fica TRAVADO como dono
+   * em Colaboradores: só o dono EFETIVO (E1), nunca conta da Leal Mídia ou
+   * desativado gravado como dono. Sem cartão (ainda carregando), mantém o
+   * travamento conservador pelo `ownerUserId` gravado (`lockedOwnerId`).
+   */
+  numberCard?: Pick<NumberCardData, 'owner' | 'shared'> | null;
 }
 
 export default function CollaboratorsForm({
@@ -37,12 +45,14 @@ export default function CollaboratorsForm({
   ownerUserId = null,
   onOwnerChange,
   numberOwnerRule = null,
+  numberCard = null,
 }: CollaboratorsFormProps) {
   const { t } = useLanguage('channels');
-  // Com a regra, o dono do número está SEMPRE liberado nele (o servidor não o
-  // deixa sair). Sem a regra, ele é um colaborador como outro qualquer.
+  // Com a regra, o dono EFETIVO do número está SEMPRE liberado nele (o
+  // servidor não o deixa sair). Conta da Leal Mídia ou desativado gravado como
+  // dono não é efetivo — pode ser desmarcado como qualquer colaborador.
   const rule = useNumberOwnerRule(numberOwnerRule);
-  const ownerId = rule && ownerUserId ? String(ownerUserId) : null;
+  const ownerId = lockedOwnerId(ownerUserId, rule, numberCard);
   const [agents, setAgents] = useState<AgentChannel[]>([]);
   const [savingOwner, setSavingOwner] = useState(false);
   const [selectedAgents, setSelectedAgents] = useState<AgentChannel[]>([]);
@@ -302,7 +312,13 @@ export default function CollaboratorsForm({
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
                 {t('settings.collaborators.agents.selectedCount', {
-                  count: Array.isArray(selectedAgents) ? selectedAgents.length : 0,
+                  // O dono TRAVADO conta mesmo quando ele já está selecionado
+                  // (o normal) e mesmo se, por algum motivo, ainda não estiver
+                  // na lista — withOwner nunca duplica.
+                  count: withOwner(
+                    (Array.isArray(selectedAgents) ? selectedAgents : []).map(a => String(a.id)),
+                    ownerId,
+                  ).length,
                 })}{' '}
                 ({Array.isArray(agents) ? agents.length : 0}{' '}
                 {t('settings.collaborators.agents.total')})

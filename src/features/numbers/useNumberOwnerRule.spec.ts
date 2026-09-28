@@ -11,7 +11,7 @@ vi.mock('@/contexts/TenantFeaturesContext', () => ({
   useClientToggle: (key: string) => toggles.value[key] === true,
 }));
 
-import { ownerRuleFromList, resolveOwnerRule, useNumberOwnerRule } from './useNumberOwnerRule';
+import { ownerRuleForChannel, ownerRuleFromList, resolveOwnerRule, useNumberOwnerRule } from './useNumberOwnerRule';
 
 const CHAVE = ['numero', 'dono', 'unico'].join('_');
 
@@ -37,6 +37,23 @@ describe('ownerRuleFromList', () => {
     expect(ownerRuleFromList([{ number_owner_rule: false }])).toBe(false);
     expect(ownerRuleFromList([{}, { number_owner_rule: null }])).toBeNull();
     expect(ownerRuleFromList(null)).toBeNull();
+  });
+});
+
+describe('ownerRuleForChannel — o que ChannelSettings passa pro cartão', () => {
+  it('em WhatsApp, o eco do cartão', () => {
+    expect(ownerRuleForChannel(true, { number_owner_rule: true })).toBe(true);
+    expect(ownerRuleForChannel(true, { number_owner_rule: false })).toBe(false);
+  });
+
+  it('em WhatsApp sem cartão (ainda carregando), nulo — cai na chave do cliente', () => {
+    expect(ownerRuleForChannel(true, null)).toBeNull();
+    expect(ownerRuleForChannel(true, undefined)).toBeNull();
+  });
+
+  it('fora de WhatsApp (L11), nunca promete a regra — mesmo com o cartão dizendo que sim', () => {
+    expect(ownerRuleForChannel(false, { number_owner_rule: true })).toBe(false);
+    expect(ownerRuleForChannel(false, null)).toBe(false);
   });
 });
 

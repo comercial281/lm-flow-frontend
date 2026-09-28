@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'sonner';
+
+// O Select do design system é Radix (2.2.6): jsdom não implementa estas três
+// APIs de ponteiro, e sem elas abrir o menu/escolher item estoura.
+beforeEach(() => {
+  Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);
+  Element.prototype.releasePointerCapture = Element.prototype.releasePointerCapture ?? (() => {});
+  Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ?? (() => {});
+});
 
 // Canais → Colaboradores com a regra do dono (fase 2b.1). O campo que se
 // chamava "Responsável da instância" é o DONO DO NÚMERO: com a regra ligada ele
@@ -78,5 +87,49 @@ describe('CollaboratorsForm — Dono do número', () => {
 
     await screen.findByRole('heading', { name: 'Ana' });
     expect(container.textContent).not.toMatch(/instância|inbox|caixa de entrada/i);
+  });
+
+  // Revisão da B4, item 1: trava só o dono EFETIVO — o mesmo que o servidor
+  // protege. Dono gravado com `shared: true` (conta da Leal Mídia) não é
+  // efetivo (E1): pode ser desmarcado como qualquer colaborador, e não ganha
+  // o selo "Dono do número".
+  it('com a regra e cartão: dono gravado com shared true (conta da Leal Mídia) não fica travado nem com selo', async () => {
+    getMembers.mockResolvedValue([agente('u-ana', 'Ana'), agente('u-joao', 'João')]);
+    render(
+      <CollaboratorsForm
+        inboxId="inbox-1"
+        ownerUserId="u-ana"
+        numberOwnerRule
+        numberCard={{ owner: { id: 'u-ana', name: 'Ana', active: true }, shared: true }}
+        onOwnerChange={vi.fn()}
+      />,
+    );
+
+    await screen.findByRole('heading', { name: 'Ana' });
+    expect(screen.queryByText('Dono do número')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('heading', { name: 'Ana' }));
+    await userEvent.click(screen.getByRole('button', { name: 'settings.collaborators.agents.buttons.update' }));
+
+    expect(updateMembers).toHaveBeenCalledWith('inbox-1', ['u-joao']);
+  });
+
+  // Revisão da B4, item 4: a recusa do servidor ao escolher dono (ex.: número
+  // que a roleta divide com 2+ corretores) mostra o motivo DELE, não a frase
+  // genérica.
+  it('com a regra: salvar dono com 422 mostra a mensagem do servidor', async () => {
+    const mensagemDoServidor =
+      'Este número está na roleta "Vendas" com 2 corretores. Tire-os da roleta antes de pôr um dono.';
+    const onOwnerChange = vi.fn().mockRejectedValue({
+      response: { data: { error: { message: mensagemDoServidor } } },
+    });
+    render(<CollaboratorsForm inboxId="inbox-1" ownerUserId={null} numberOwnerRule onOwnerChange={onOwnerChange} />);
+
+    await screen.findByRole('heading', { name: 'Ana' });
+    await userEvent.click(screen.getByRole('combobox'));
+    await userEvent.click(await screen.findByRole('option', { name: 'Ana' }));
+
+    await waitFor(() => expect(onOwnerChange).toHaveBeenCalledWith('u-ana'));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(mensagemDoServidor));
   });
 });

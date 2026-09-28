@@ -157,3 +157,25 @@ export function withOwner(ids: string[], ownerId: string | null): string[] {
   if (!ownerId || ids.includes(ownerId)) return ids;
   return [...ids, ownerId];
 }
+
+/**
+ * Quem fica TRAVADO em Colaboradores (não sai da lista, ganha o selo *Dono do
+ * número*): só o dono EFETIVO — o mesmo que o servidor protege (E1: gravado,
+ * ativo, e não é conta da Leal Mídia). Conta da Leal Mídia ou desativado
+ * gravado como dono PODE ser desmarcado: travar ali prometeria uma trava que
+ * o servidor não faz.
+ *
+ * Sem cartão (ainda carregando, ou canal fora de Canais), mantém o
+ * comportamento CONSERVADOR: trava pelo gravado — é o mesmo travamento de
+ * antes desta task, para não piscar destravado enquanto o cartão não chegou.
+ */
+export function lockedOwnerId(
+  ownerUserId: string | null,
+  rule: boolean,
+  card: Pick<NumberCardData, 'owner' | 'shared'> | null | undefined,
+): string | null {
+  if (!rule || !ownerUserId) return null;
+  if (!card) return String(ownerUserId);
+  const efetivo = Boolean(card.owner && card.owner.active && !card.shared);
+  return efetivo ? String(ownerUserId) : null;
+}
