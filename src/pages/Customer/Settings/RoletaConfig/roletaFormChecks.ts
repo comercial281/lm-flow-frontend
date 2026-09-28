@@ -19,7 +19,7 @@
 // daqui e ainda assim for recusado lá aparece no mesmo painel, com o texto dele.
 
 import type { DistributionMode, RoletaHoursWindow } from '@/services/roletaConfig/roletaConfigService';
-import { ownerLockProblem } from '@/features/numbers/numberTexts';
+import { ownerLockText } from '@/features/numbers/numberTexts';
 
 export interface RoletaFormCheckInput {
   /** O WhatsApp de entrada da roleta. */
@@ -121,8 +121,9 @@ export function roletaFormProblems(f: RoletaFormCheckInput): string[] {
     });
 
   // Fase 2b.1: num número com DONO só o dono atende. A MESMA frase da recusa do
-  // servidor (RoletaConfigsController#owner_conflict_error), dita antes da viagem.
-  ownerConflicts(f).forEach(c => p.push(ownerLockProblem(f.instanceLabel(c.inboxId), c.ownerName)));
+  // servidor (RoletaConfigsController#owner_conflict_error, Ruling A8-1/E20),
+  // dita antes da viagem — sem o nome do número, exatamente como o servidor recusa.
+  ownerConflicts(f).forEach(c => p.push(ownerLockText(c.ownerName)));
 
   if (!f.multiEnabled && f.instances.filter(i => i.is_active && i.inbox_id).length > 1) {
     p.push('A roleta com mais de um número não está liberada para este cliente. '

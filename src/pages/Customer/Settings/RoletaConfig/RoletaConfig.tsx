@@ -1181,6 +1181,9 @@ export default function RoletaConfigPage() {
     (id: string) => conflitosDeDono.find(c => c.inboxId === id) ?? null,
     [conflitosDeDono],
   );
+  // Local, calculado uma vez para a roleta de um número só (a seção abaixo usa
+  // duas vezes: a mensagem e a condição que a mostra).
+  const donoTravadoDaEntrada = donoTravado(inboxId);
 
   // O que está no formulário AGORA, na forma dos padrões da casa.
   //
@@ -1968,12 +1971,22 @@ export default function RoletaConfigPage() {
                     {
                       v: false,
                       titulo: 'Número compartilhado',
-                      texto: 'Um WhatsApp só, e vários corretores atendendo por ele.',
+                      // Fase 2b.1: com a regra do dono a marca `shared` nem é
+                      // lida — a frase vira a mesma de "sem dono" que a tela
+                      // já usa em Canais e na lista de números (numberRuleLine).
+                      texto: numberOwnerRule
+                        ? numberRuleLine(null)
+                        : 'Um WhatsApp só, e vários corretores atendendo por ele.',
                     },
                     {
                       v: true,
                       titulo: 'Um número por corretor',
-                      texto: 'Cada corretor atende pelo WhatsApp dele. Quem escreve num número vai direto ao corretor dele.',
+                      // Idem, com um dono de exemplo (nome fictício, como o
+                      // resto do repo) — é a mesma promessa que o cartão do
+                      // número faz quando ele tem dono.
+                      texto: numberOwnerRule
+                        ? numberRuleLine({ id: 'exemplo', name: 'Fulano' })
+                        : 'Cada corretor atende pelo WhatsApp dele. Quem escreve num número vai direto ao corretor dele.',
                     },
                   ] as const).map(op => (
                     <button
@@ -1985,7 +1998,15 @@ export default function RoletaConfigPage() {
                         // "número compartilhado" = vários corretores no mesmo
                         // WhatsApp; "um número por corretor" = cada número
                         // exclusivo. A linha de cada número deixa trocar depois.
-                        setInstances(prev => prev.map(i => ({ ...i, shared: !op.v })));
+                        //
+                        // Fase 2b.1: com a regra do dono, `shared` não é lido
+                        // pelo servidor (quem decide é o dono gravado em
+                        // Canais) — o cartão continua só para escolher o
+                        // MODELO da tela (mostrar a lista de números ou não),
+                        // sem gravar a marca por baixo.
+                        if (!numberOwnerRule) {
+                          setInstances(prev => prev.map(i => ({ ...i, shared: !op.v })));
+                        }
                       }}
                       className={`rounded-lg border p-3 text-left transition-colors ${
                         modeloMulti === op.v
@@ -2028,8 +2049,8 @@ export default function RoletaConfigPage() {
               {inboxId && numberOwnerRule && (
                 <div className="mt-2 space-y-1">
                   <p className="text-xs text-muted-foreground">{numberRuleLine(numberOwners[inboxId] ?? null)}</p>
-                  {donoTravado(inboxId) && (
-                    <p className="text-xs text-amber-600">{ownerLockText(donoTravado(inboxId)!.ownerName)}</p>
+                  {donoTravadoDaEntrada && (
+                    <p className="text-xs text-amber-600">{ownerLockText(donoTravadoDaEntrada.ownerName)}</p>
                   )}
                 </div>
               )}
@@ -2106,7 +2127,11 @@ export default function RoletaConfigPage() {
                     cima porque, empilhado, não dá pra adivinhar o que é cada
                     caixa pela posição. */}
                 <div className="space-y-3 sm:space-y-2">
-                  {instances.map((inst, idx) => (
+                  {instances.map((inst, idx) => {
+                    // Fase 2b.1: local, calculado uma vez por número — usado
+                    // nos dois lugares da trava abaixo (não chamar donoTravado de novo).
+                    const donoTravadoDoNumero = inst.inbox_id ? donoTravado(inst.inbox_id) : null;
+                    return (
                     <div
                       key={inst.localId}
                       className="grid grid-cols-1 items-start gap-2 rounded-md border border-border p-3 sm:grid-cols-12 sm:border-0 sm:p-0"
@@ -2235,9 +2260,9 @@ export default function RoletaConfigPage() {
 
                       {/* Fase 2b.1: número com dono e outro corretor nele — a
                           trava, na linha do número, antes do Salvar. */}
-                      {inst.inbox_id && donoTravado(inst.inbox_id) && (
+                      {donoTravadoDoNumero && (
                         <p className="text-xs text-amber-600 sm:col-span-12 sm:-mt-1">
-                          {ownerLockText(donoTravado(inst.inbox_id)!.ownerName)}
+                          {ownerLockText(donoTravadoDoNumero.ownerName)}
                         </p>
                       )}
 
@@ -2251,7 +2276,8 @@ export default function RoletaConfigPage() {
                         </p>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {isMulti && mode !== 'rodizio' && mode !== 'fila' && (

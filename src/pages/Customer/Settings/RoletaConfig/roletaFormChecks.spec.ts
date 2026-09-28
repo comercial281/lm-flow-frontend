@@ -368,9 +368,10 @@ describe('regra do dono do número', () => {
     { user_id: 'u2', personal_whatsapp_number: '5511999997777' },
   ];
 
+  // Ruling A8-1/E20: EXATAMENTE a frase do servidor, sem o nome do número.
   it('número com dono recusa outro corretor, com a frase do servidor', () => {
     expect(roletaFormProblems(form({ ownerRule: true, owners: { [INBOX_A]: joao }, members: doisNoA })))
-      .toEqual(['Este número (Vendas 01) é de João. Pra dividir, tire o dono em Canais.']);
+      .toEqual(['Este número é de João. Pra dividir, tire o dono em Canais.']);
   });
 
   it('o dono sozinho no número dele passa', () => {
@@ -400,7 +401,7 @@ describe('regra do dono do número', () => {
         { user_id: 'u1', personal_whatsapp_number: '5511999998888', inbox_id: INBOX_B },
         { user_id: 'u2', personal_whatsapp_number: '5511999997777', inbox_id: INBOX_B },
       ],
-    }))).toEqual(['Este número (Vendas 02) é de João. Pra dividir, tire o dono em Canais.']);
+    }))).toEqual(['Este número é de João. Pra dividir, tire o dono em Canais.']);
   });
 
   // Review Focus 4: sem a regra (inclusive depois de desligar), a trava de
