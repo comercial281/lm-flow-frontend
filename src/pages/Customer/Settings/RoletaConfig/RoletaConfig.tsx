@@ -13,7 +13,9 @@ import {
   ListOrdered, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { apiErrorMessage, extractError } from '@/utils/apiHelpers';
-import { roletaFormProblems, roletaFormWarnings, backendProblems, timeoutMinutesPayload, senderSelectValue, senderFields, CENTRAL_SENDER_PREFIX } from './roletaFormChecks';
+import { roletaFormProblems, roletaFormWarnings, backendProblems, timeoutMinutesPayload, senderSelectValue, senderFields, CENTRAL_SENDER_PREFIX, ownerConflicts, numberOwnersMap } from './roletaFormChecks';
+import { ownerRuleFromList, useNumberOwnerRule } from '@/features/numbers/useNumberOwnerRule';
+import { numberRuleLine, ownerLockText } from '@/features/numbers/numberTexts';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { isNoDeadline, timeoutLabel } from '@/components/roleta/offerDeadline';
 import { instanciasComAcesso } from './roletaEquipe';
@@ -422,6 +424,17 @@ export default function RoletaConfigPage() {
   const [loadingForms, setLoadingForms]     = useState(false);
   const [formsError, setFormsError]         = useState<string | null>(null);
   const [inboxes, setInboxes]               = useState<Inbox[]>([]);
+  // Fase 2b.1 — DONO DO NÚMERO. A regra vale neste cliente? O eco vem nas
+  // roletas; sem ele, a chave do cliente. Com ela a roleta para de perguntar
+  // Exclusivo/Compartilhado: cada número mostra de quem é, e número com dono
+  // não aceita outro corretor.
+  const numberOwnerRule = useNumberOwnerRule(ownerRuleFromList(configs));
+  // O dono EFETIVO de cada número (ver numberOwnersMap). O servidor continua a
+  // autoridade: o que passar daqui e ele recusar volta com a mesma frase.
+  const numberOwners = useMemo(
+    () => numberOwnersMap(editing?.instances ?? [], inboxes, users),
+    [editing, inboxes, users],
+  );
   // POR QUE A ROLETA NÃO SALVOU — a lista fica na tela até o gestor resolver.
   //
   // Antes toda recusa virava um toast que sumia em segundos, e a do servidor nem
@@ -1140,8 +1153,10 @@ export default function RoletaConfigPage() {
     instances, members, mode, gestorNum, horarioOn, janelas,
     instanceLabel: instanceName,
     userName,
+    ownerRule: numberOwnerRule,
+    owners: numberOwners,
   }), [inboxId, multiEnabled, configs, editing, instances, members, mode,
-       gestorNum, horarioOn, janelas, instanceName, userName]);
+       gestorNum, horarioOn, janelas, instanceName, userName, numberOwnerRule, numberOwners]);
 
   const problemasDoFormulario = useCallback(
     (): string[] => roletaFormProblems(entradaDasConferencias()),
@@ -1154,6 +1169,17 @@ export default function RoletaConfigPage() {
   const avisosDoFormulario = useCallback(
     (): string[] => roletaFormWarnings(entradaDasConferencias()),
     [entradaDasConferencias],
+  );
+
+  // Fase 2b.1: o número com dono que tem outro corretor neste formulário — a
+  // linha do número mostra a trava na hora, sem esperar o Salvar.
+  const conflitosDeDono = useMemo(
+    () => ownerConflicts({ ownerRule: numberOwnerRule, owners: numberOwners, instances, members, inboxId }),
+    [numberOwnerRule, numberOwners, instances, members, inboxId],
+  );
+  const donoTravado = useCallback(
+    (id: string) => conflitosDeDono.find(c => c.inboxId === id) ?? null,
+    [conflitosDeDono],
   );
 
   // O que está no formulário AGORA, na forma dos padrões da casa.
@@ -1258,7 +1284,7 @@ export default function RoletaConfigPage() {
     // O repasse vai pro mesmo destino do aviso de grupo — só o texto é outro.
     const destino = target === 'repasse' ? 'grupo' : target;
 
-    if (!inboxId.trim()) { toast.error('Selecione a instância da roleta antes de testar'); return; }
+    if (!inboxId.trim()) { toast.error('Selecione o número da roleta antes de testar'); return; }
     if (destino !== 'grupo' && !gestorNum.trim()) { toast.error('Preencha o número do gestor antes de testar'); return; }
     if (destino === 'grupo' && !gestorGroupJid) { toast.error('Selecione o grupo de avisos antes de testar'); return; }
 
@@ -1977,14 +2003,14 @@ export default function RoletaConfigPage() {
 
             {!mostrarNumeros && (
             <div className="lg:col-span-2">
-              <UILabel>Instância (WhatsApp) *</UILabel>
+              <UILabel>Número de WhatsApp *</UILabel>
               <div className="mt-1">
                 <NativeSelect
                   value={inboxId}
                   onChange={e => setInboxId(e.target.value)}
                   disabled={!!editing}
                 >
-                  <option value="">Selecione a instância...</option>
+                  <option value="">Selecione o número...</option>
                   {inboxId && !inboxes.some(i => i.id === inboxId) && (
                     <option value={inboxId}>{inboxId}</option>
                   )}
@@ -1994,13 +2020,24 @@ export default function RoletaConfigPage() {
                 </NativeSelect>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                A caixa de entrada (número de WhatsApp) que essa roleta distribui.
+                O número de WhatsApp que essa roleta distribui.
               </p>
-              {/* EXCLUSIVO ou COMPARTILHADO — gravado, não adivinhado contando
-                  corretores. É a marca que decide se quem escreve neste número
-                  vai DIRETO ao corretor dele (exclusivo) ou entra na oferta
-                  com prazo (compartilhado). */}
-              {inboxId && (
+              {/* Fase 2b.1: com a regra do dono a roleta NÃO pergunta — o número
+                  mostra de quem é (o dono se define em Canais), e a trava
+                  aparece aqui mesmo, antes do Salvar. */}
+              {inboxId && numberOwnerRule && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-muted-foreground">{numberRuleLine(numberOwners[inboxId] ?? null)}</p>
+                  {donoTravado(inboxId) && (
+                    <p className="text-xs text-amber-600">{ownerLockText(donoTravado(inboxId)!.ownerName)}</p>
+                  )}
+                </div>
+              )}
+              {/* Sem a regra do dono: EXCLUSIVO ou COMPARTILHADO — gravado, não
+                  adivinhado contando corretores. É a marca que decide se quem
+                  escreve neste número vai DIRETO ao corretor dele (exclusivo) ou
+                  entra na oferta com prazo (compartilhado). */}
+              {inboxId && !numberOwnerRule && (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {([
                     { v: true,  titulo: 'Compartilhado', texto: 'vários corretores; quem escreve entra na oferta' },
@@ -2048,9 +2085,20 @@ export default function RoletaConfigPage() {
 
                 <p className="text-xs text-muted-foreground mb-3">
                   A roleta sorteia entre os corretores, pelo peso de cada um; o lead é atendido pelo
-                  WhatsApp de quem aceitar. Quem escreve num número <strong>exclusivo</strong> vai
-                  direto ao corretor dele; quem escreve num número <strong>compartilhado</strong> é
-                  sorteado entre os corretores daquele número.
+                  WhatsApp de quem aceitar.{' '}
+                  {numberOwnerRule ? (
+                    <>
+                      Quem escreve num número <strong>com dono</strong> vai direto pro dono; quem escreve
+                      num número <strong>da imobiliária</strong> é sorteado entre os corretores daquele
+                      número. O dono de cada número se define em Canais.
+                    </>
+                  ) : (
+                    <>
+                      Quem escreve num número <strong>exclusivo</strong> vai direto ao corretor dele; quem
+                      escreve num número <strong>compartilhado</strong> é sorteado entre os corretores
+                      daquele número.
+                    </>
+                  )}
                 </p>
 
                 {/* Uma linha por número. No celular os campos empilham (as 12
@@ -2100,25 +2148,33 @@ export default function RoletaConfigPage() {
                           placeholder="Apelido (ex: WhatsApp do João)"
                         />
                       </div>
-                      {/* EXCLUSIVO ou COMPARTILHADO. É a marca — não a contagem
-                          de corretores — que decide se quem escreve neste número
-                          vai direto ao corretor dele ou entra na oferta. */}
-                      <div className="sm:col-span-3 sm:pt-[26px]">
-                        <button
-                          type="button"
-                          onClick={() => updateInstance(inst.localId, 'shared', !inst.shared)}
-                          className={`flex items-center gap-1.5 text-xs ${inst.shared ? 'text-amber-400' : 'text-[#7c3aed]'}`}
-                          title={inst.shared
-                            ? 'Compartilhado: vários corretores; quem escreve entra na oferta'
-                            : 'Exclusivo: um corretor; quem escreve vai direto a ele'}
-                          aria-label={inst.shared ? 'Número compartilhado' : 'Número exclusivo'}
-                        >
-                          {inst.shared
-                            ? <Users className="h-4 w-4" />
-                            : <Hand className="h-4 w-4" />}
-                          {inst.shared ? 'Compartilhado' : 'Exclusivo · 1 corretor'}
-                        </button>
-                      </div>
+                      {/* Sem a regra do dono: EXCLUSIVO ou COMPARTILHADO. É a
+                          marca — não a contagem de corretores — que decide se
+                          quem escreve neste número vai direto ao corretor dele
+                          ou entra na oferta. Com a regra (fase 2b.1) a roleta
+                          não pergunta: mostra de quem é o número. */}
+                      {numberOwnerRule ? (
+                        <div className="text-xs text-muted-foreground sm:col-span-3 sm:pt-[26px]">
+                          {inst.inbox_id ? numberRuleLine(numberOwners[inst.inbox_id] ?? null) : ''}
+                        </div>
+                      ) : (
+                        <div className="sm:col-span-3 sm:pt-[26px]">
+                          <button
+                            type="button"
+                            onClick={() => updateInstance(inst.localId, 'shared', !inst.shared)}
+                            className={`flex items-center gap-1.5 text-xs ${inst.shared ? 'text-amber-400' : 'text-[#7c3aed]'}`}
+                            title={inst.shared
+                              ? 'Compartilhado: vários corretores; quem escreve entra na oferta'
+                              : 'Exclusivo: um corretor; quem escreve vai direto a ele'}
+                            aria-label={inst.shared ? 'Número compartilhado' : 'Número exclusivo'}
+                          >
+                            {inst.shared
+                              ? <Users className="h-4 w-4" />
+                              : <Hand className="h-4 w-4" />}
+                            {inst.shared ? 'Compartilhado' : 'Exclusivo · 1 corretor'}
+                          </button>
+                        </div>
+                      )}
                       <div className="flex items-center gap-3 sm:gap-1 sm:pt-[26px] sm:col-span-2">
                         <button
                           type="button"
@@ -2175,6 +2231,14 @@ export default function RoletaConfigPage() {
                             </p>
                           )}
                         </div>
+                      )}
+
+                      {/* Fase 2b.1: número com dono e outro corretor nele — a
+                          trava, na linha do número, antes do Salvar. */}
+                      {inst.inbox_id && donoTravado(inst.inbox_id) && (
+                        <p className="text-xs text-amber-600 sm:col-span-12 sm:-mt-1">
+                          {ownerLockText(donoTravado(inst.inbox_id)!.ownerName)}
+                        </p>
                       )}
 
                       {/* Número sem ninguém liberado nunca recebe lead. É o erro

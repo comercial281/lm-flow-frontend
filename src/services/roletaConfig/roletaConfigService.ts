@@ -39,6 +39,11 @@ export interface RoletaInstance {
   shared?: boolean;
   /** Nome das OUTRAS roletas que atendem por este mesmo número (só leitura). */
   shared_with?: string[];
+  /**
+   * Fase 2b.1: o DONO do número (efetivo), quando a regra do dono vale neste
+   * cliente; `null` = da imobiliária. Ausente = servidor antigo.
+   */
+  owner?: { id: string; name: string } | null;
 }
 
 export interface RoletaMember {
@@ -170,6 +175,9 @@ export interface RoletaConfig {
   // necessários — um decide se aparece o botão de adicionar, o outro decide se
   // aparecem os pesos por instância.
   multi_instancia?: boolean;
+  // Fase 2b.1: a regra do dono do número vale neste cliente? Com ela, a tela
+  // não pergunta Exclusivo/Compartilhado (o servidor nem lê a marca).
+  number_owner_rule?: boolean;
   members: RoletaMember[];
   created_at: string;
   updated_at: string;

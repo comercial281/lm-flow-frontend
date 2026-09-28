@@ -19,6 +19,7 @@
 // daqui e ainda assim for recusado lá aparece no mesmo painel, com o texto dele.
 
 import type { DistributionMode, RoletaHoursWindow } from '@/services/roletaConfig/roletaConfigService';
+import { ownerLockProblem } from '@/features/numbers/numberTexts';
 
 export interface RoletaFormCheckInput {
   /** O WhatsApp de entrada da roleta. */
@@ -57,6 +58,10 @@ export interface RoletaFormCheckInput {
   instanceLabel: (inboxId: string) => string;
   /** Como o corretor se chama na tela. */
   userName: (userId: string) => string;
+  /** Fase 2b.1: a regra do dono do número vale neste cliente? */
+  ownerRule?: boolean;
+  /** Fase 2b.1: o dono EFETIVO de cada número (inbox_id → pessoa); null = da imobiliária. */
+  owners?: Record<string, { id: string; name: string } | null>;
 }
 
 // Mesmo formato que o backend aceita (HH:MM, 00:00–23:59).
@@ -71,7 +76,7 @@ export function roletaFormProblems(f: RoletaFormCheckInput): string[] {
   if (!f.inboxId.trim()) {
     p.push(f.multiEnabled
       ? 'Escolha o número de entrada na primeira linha de "Números que atendem".'
-      : 'Selecione a instância (WhatsApp) da roleta.');
+      : 'Selecione o número de WhatsApp da roleta.');
   }
 
   // ⚠️ Compartilhar o mesmo WhatsApp entre roletas é PERMITIDO — foi o pedido de
@@ -101,9 +106,12 @@ export function roletaFormProblems(f: RoletaFormCheckInput): string[] {
   // Número EXCLUSIVO atende por UM corretor. Dois na mesma linha é um número
   // compartilhado que ninguém marcou — o lead que escrevesse nele cairia em
   // oferta em vez de ir direto, calado. O backend recusa igual (mesma frase).
+  //
+  // Fase 2b.1: com a regra do dono, "exclusivo" deixa de ser marca da roleta (o
+  // servidor nem a lê) — quem trava é o DONO do número, logo abaixo.
   const entrada = f.instances.find(i => i.inbox_id)?.inbox_id || f.inboxId;
   f.instances
-    .filter(i => i.inbox_id && i.is_active && i.shared === false)
+    .filter(i => !f.ownerRule && i.inbox_id && i.is_active && i.shared === false)
     .forEach(i => {
       const nele = f.members.filter(m => m.user_id && m.is_active !== false
         && (m.inbox_id || entrada) === i.inbox_id);
@@ -111,6 +119,10 @@ export function roletaFormProblems(f: RoletaFormCheckInput): string[] {
       p.push(`O número "${f.instanceLabel(i.inbox_id)}" é exclusivo e atende por um corretor só. `
         + 'Marque-o como compartilhado para ter vários corretores nele.');
     });
+
+  // Fase 2b.1: num número com DONO só o dono atende. A MESMA frase da recusa do
+  // servidor (RoletaConfigsController#owner_conflict_error), dita antes da viagem.
+  ownerConflicts(f).forEach(c => p.push(ownerLockProblem(f.instanceLabel(c.inboxId), c.ownerName)));
 
   if (!f.multiEnabled && f.instances.filter(i => i.is_active && i.inbox_id).length > 1) {
     p.push('A roleta com mais de um número não está liberada para este cliente. '
@@ -296,4 +308,70 @@ export function senderFields(selectValue: string): {
     return { notification_inbox_id: null, notification_instance_name: nome };
   }
   return { notification_inbox_id: v || null, notification_instance_name: null };
+}
+
+// DONO DO NÚMERO (fase 2b.1) — quem trava a roleta é o dono, não a marca.
+//
+// Espelha RoletaConfigsController#owner_conflict_error: cada corretor ATIVO do
+// formulário cai no número dele (ou no de entrada, quando não escolheu) e, se
+// esse número tem dono, só o dono pode estar ali. O servidor continua a
+// autoridade: o que passar daqui e for recusado lá aparece com a mesma frase.
+export interface OwnerConflict {
+  inboxId: string;
+  ownerName: string;
+}
+
+export function ownerConflicts(
+  f: Pick<RoletaFormCheckInput, 'ownerRule' | 'owners' | 'instances' | 'members' | 'inboxId'>,
+): OwnerConflict[] {
+  if (!f.ownerRule || !f.owners) return [];
+  const entrada = f.instances.find(i => i.inbox_id)?.inbox_id || f.inboxId;
+
+  const porNumero = new Map<string, string[]>();
+  f.members.forEach(m => {
+    if (!m.user_id || m.is_active === false) return;
+    const numero = m.inbox_id || entrada;
+    if (!numero) return;
+    porNumero.set(numero, [...(porNumero.get(numero) ?? []), String(m.user_id)]);
+  });
+
+  const conflitos: OwnerConflict[] = [];
+  porNumero.forEach((ids, inboxId) => {
+    const dono = f.owners?.[inboxId];
+    if (!dono) return;
+    if (ids.some(id => id !== String(dono.id))) conflitos.push({ inboxId, ownerName: dono.name });
+  });
+  return conflitos;
+}
+
+/**
+ * O dono EFETIVO de cada número, para a tela da roleta.
+ *
+ * Duas fontes, e a do servidor vence: (1) o `owner` que ele manda em cada
+ * instância da roleta aberta (já efetivo: sem desativado, sem conta da Leal
+ * Mídia — `null` é "da imobiliária"); (2) para número que ainda não está salvo
+ * nesta roleta, o Dono do número gravado em Canais (`owner_user_id`), só se a
+ * pessoa está na equipe, ativa e NÃO é conta da Leal Mídia (E1: suporte não é
+ * dono efetivo — L17). Instância de servidor antigo, sem o campo, não apaga o
+ * que Canais diz.
+ */
+export function numberOwnersMap(
+  serverInstances: ReadonlyArray<{ inbox_id: string; owner?: { id: string; name: string } | null }>,
+  inboxes: ReadonlyArray<{ id: string; owner_user_id?: string | null }>,
+  users: ReadonlyArray<{ id: string; name: string; email?: string; deactivated?: boolean }>,
+): Record<string, { id: string; name: string } | null> {
+  const mapa: Record<string, { id: string; name: string } | null> = {};
+  inboxes.forEach(inbox => {
+    const ownerId = inbox.owner_user_id ? String(inbox.owner_user_id) : '';
+    const pessoa = ownerId
+      ? users.find(u => String(u.id) === ownerId && !u.deactivated
+        && !(u.email ?? '').toLowerCase().endsWith('@lealmidia.com.br'))
+      : undefined;
+    mapa[String(inbox.id)] = pessoa ? { id: String(pessoa.id), name: pessoa.name } : null;
+  });
+  serverInstances.forEach(inst => {
+    if (!inst.inbox_id || inst.owner === undefined) return;
+    mapa[String(inst.inbox_id)] = inst.owner ?? null;
+  });
+  return mapa;
 }
