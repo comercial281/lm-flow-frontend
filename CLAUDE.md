@@ -3618,3 +3618,37 @@ Armadilhas:
    tem Responsável (o Responsável é o dono, por decisão do dono do produto), e há
    um conflito a mais, "O Responsável gravado é uma pessoa que não existe mais
    neste cliente". A tela não recalcula nada disso — só mostra o texto que vem.
+
+## Roleta: o telefone do lead só chega depois do aceite (desde 2026-09-28)
+
+Relato do dono do produto: *"se temos 10 corretores na fila com prazo de 10
+minutos, o primeiro recebe os dados do lead logo na mensagem, e isso nunca é
+apagado mesmo que expire os 10 minutos e outro corretor seja atribuído. Além de
+quebrar nosso sistema, não é justo"*. No Leilão era pior: os dez recebiam o
+número ao mesmo tempo.
+
+A regra mora no SERVIDOR (`Roleta::LeadPrivacy` e `Roleta::WinnerNotice` no
+backend, PR na `saas-multitenant`). Aqui só muda o que a tela explica.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **A oferta vai SEM o telefone** (rodízio, leilão, por disponibilidade e o
+  corretor fixo da IA), com a linha *"O telefone do lead chega aqui assim que
+  você aceitar."*. **No aceite sai uma segunda mensagem, só para quem aceitou**:
+  *"✅ O lead é seu"*, com nome, telefone e o link da conversa.
+- **O Aviso do gestor e o do grupo continuam com o número.** O grupo de avisos,
+  em geral, não tem corretor dentro.
+- **A tela de aceite (o link da mensagem) mostra o número MASCARADO** enquanto a
+  oferta está aberta — `(11) •••••-••34`. É o servidor que manda mascarado; a
+  página continua lendo `lead_phone` sem saber da regra.
+
+Armadilhas:
+
+1. **`{{telefone}}` no *Aviso do corretor* sai mascarado**, não vazio: texto já
+   gravado com "Telefone: {{telefone}}" não pode ficar com a linha em branco. O
+   texto de ajuda embaixo do campo diz isso.
+2. **Desligar o *Aviso do corretor* cala também o "O lead é seu"** (mesma chave
+   no servidor). O aviso amarelo de "desligado" conta isso.
+3. **Dentro do app, o corretor ofertado ainda alcança a conversa antes de
+   aceitar** (o acesso automático da oferta, desde 2026-09-03), e ali o contato
+   aparece inteiro. Dívida conhecida, fora desta leva.

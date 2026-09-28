@@ -2544,12 +2544,23 @@ export default function RoletaConfigPage() {
                   placeholder="Padrão: 🔔 Novo lead na sua fila... + link de aceite"
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
                 />
+                {/* O telefone só sai no aceite, numa segunda mensagem e só para
+                    quem aceitou — quem deixa o prazo estourar não fica com ele.
+                    O servidor mascara o {{telefone}} deste aviso. */}
+                {msgCorretorOn && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Este aviso não leva o telefone do lead: aqui o {'{{telefone}}'} sai
+                    mascarado. O número completo chega numa segunda mensagem, só para
+                    quem aceitar.
+                  </p>
+                )}
                 {/* É este aviso que leva o {{link_aceite}}. Sem ele o corretor não
                     fica sabendo do lead, não aceita, e o prazo estoura sempre. */}
                 {!msgCorretorOn && (
                   <p className="mt-1 text-xs text-amber-600">
                     Sem este aviso o corretor não recebe o link de aceite: ele não vai
-                    saber do lead, o prazo estoura e o lead segue para o próximo.
+                    saber do lead, o prazo estoura e o lead segue para o próximo. E quem
+                    aceitar pelo app também não recebe o telefone do lead no WhatsApp.
                   </p>
                 )}
               </div>
