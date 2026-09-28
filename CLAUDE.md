@@ -3652,3 +3652,39 @@ Armadilhas:
 3. **Dentro do app, o corretor ofertado ainda alcança a conversa antes de
    aceitar** (o acesso automático da oferta, desde 2026-09-03), e ali o contato
    aparece inteiro. Dívida conhecida, fora desta leva.
+
+## A automação do aceite pode valer só para alguns corretores (desde 2026-09-28)
+
+Pedido do dono do produto: IA Vendedora ligada no número de três corretoras, com
+a mensagem de abertura saindo pela automação *Corretor aceitou o lead* e a IA
+assumindo quando o lead responde. Mas o formulário e a roleta são os MESMOS de
+todo o time — funil e roleta não separam nada, e com o número da regra em branco
+ela disparava no aceite de qualquer corretor.
+
+O que aparece na tela, em *Automações de Lead*, no gatilho *Corretor aceitou o
+lead*:
+
+- **Campo *Só quando quem aceitou for (opcional)***, com a equipe para marcar.
+  Nenhum marcado = qualquer corretor, como sempre foi. A mensagem continua saindo
+  pelo número de quem aceitou, então uma regra só serve as três (e `{{corretor}}`
+  já traz o nome de quem aceitou).
+- **Desativado some da lista, a não ser que já esteja marcado**; marcado que saiu
+  da conta continua à mostra com *(não está mais na conta)*.
+- **Na lista das automações**, a condição aparece como *Só quando quem aceitou
+  for: Ana, Bia*; no *Testar*, a linha diz *Quem aceitou* com os nomes.
+
+Armadilhas:
+
+1. **Não tem metade de backend.** O aceite já manda `assigned_user_id` no contexto
+   do gatilho (`Roleta::DetectAcceptanceService#notify_automation!`) e o servidor
+   compara qualquer campo do contexto (`LeadAutomationRule#context_value`). O PR do
+   backend desta leva só traduz o campo no *O que aconteceu*; sem ele, a regra
+   filtra igual.
+2. **Lista vazia vira condição NENHUMA, nunca `in []`**: `in []` não casa com
+   ninguém e a regra pararia calada.
+3. **Trocar de gatilho descarta a condição do gatilho antigo**
+   (`conditionsOnTriggerChange`). Antes ela era levada junto: uma etiqueta de
+   *Etiqueta adicionada* ia para o aceite, ficava gravada sem campo na tela e
+   barrava a regra para sempre. O filtro de funil continua atravessando.
+4. **A regra mora fora do JSX** (`acceptedByFilter.ts`, com spec).
+5. **Não é `featureKey` nem `clientToggleKey`** — é condição da regra.
