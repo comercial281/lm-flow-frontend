@@ -7,8 +7,12 @@
 // Linguagem: "número de WhatsApp", nunca instância, inbox ou canal (há spec).
 
 import type {
-  NumberConnection, OwnershipDiagnosis, OwnershipLiberated, OwnershipNumber, OwnershipRoleta, OwnershipTenant,
+  OwnershipDiagnosis, OwnershipLiberated, OwnershipNumber, OwnershipRoleta, OwnershipTenant,
 } from '@/services/superAdmin/numberOwnershipService';
+// L8: `connectionLabel` é a única implementação (mora em `features/numbers`,
+// a base que a fase 2b.1 usa em toda tela). Esta função delega — nada de
+// manter uma segunda cópia do mesmo switch por estado de conexão.
+import { connectionLabel } from '@/features/numbers/numberTexts';
 
 export type RowState =
   | { kind: 'loading' }
@@ -57,18 +61,7 @@ export function ownerSourceText(n: Pick<OwnershipNumber, 'source' | 'source_role
   }
 }
 
-export function connectionText(connection: NumberConnection): string {
-  switch (connection) {
-    case 'connected':
-      return 'conectado';
-    case 'connecting':
-      return 'conectando';
-    case 'disconnected':
-      return 'desconectado';
-    default:
-      return 'sem estado gravado';
-  }
-}
+export const connectionText = connectionLabel;
 
 export function roletaLine(r: OwnershipRoleta): string {
   const brokers = r.brokers.length ? r.brokers.map(b => b.name).join(', ') : 'sem corretor';
