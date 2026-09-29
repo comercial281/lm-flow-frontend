@@ -34,6 +34,18 @@ const InboxMembersService = {
     });
     return extractData<InboxMembersUpdateResponse>(response);
   },
+
+  /**
+   * Tira agentes específicos de um número (usado pra tirar o dono ANTERIOR
+   * depois de trocar o Dono do número — fase 2b.1 — sem reenviar a lista
+   * inteira de colaboradores).
+   * Endpoint: DELETE /api/v1/inbox_members
+   */
+  async remove(inboxId: string, agentIds: string[]): Promise<void> {
+    await api.delete('/inbox_members', {
+      data: { inbox_id: inboxId, user_ids: agentIds },
+    });
+  },
 };
 
 export default InboxMembersService;

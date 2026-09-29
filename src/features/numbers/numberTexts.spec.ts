@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   CHANGE_IN_CHANNELS, CONNECTION_NOTE, LIBERATED_TITLE, MAKE_PRIMARY, MY_NUMBERS_DESCRIPTION, NOTICE_PHONE_LABEL, NO_AI,
   NO_OWNED_NUMBERS_OTHER, NO_OWNED_NUMBERS_SELF, NO_PHONE, NO_ROLETA, NUMBERS_COLUMN, NUMBERS_TITLE, OWNER_EXPLANATION,
-  OWNER_TITLE, PRIMARY_DONE, PRIMARY_FAILED, PRIMARY_HINT_OTHER, PRIMARY_HINT_SELF, PRINCIPAL, SHARED_LABEL, connectionLabel, formatPhone, liberatedSummary, lockedOwnerId, numberRuleLine, numbersColumnText,
-  ownedNumberLine, ownerLine, ownerLockText, withOwner,
+  OWNER_TITLE, PREVIOUS_OWNER_KEEP, PREVIOUS_OWNER_REMOVE, PRIMARY_DONE, PRIMARY_FAILED, PRIMARY_HINT_OTHER,
+  PRIMARY_HINT_SELF, PRINCIPAL, SHARED_LABEL, connectionLabel, formatPhone, liberatedSummary, lockedOwnerId,
+  numberRuleLine, numbersColumnText, ownedNumberLine, ownerLine, ownerLockText, previousOwnerPrompt, withOwner,
 } from './numberTexts';
 import type { OwnedNumber } from './types';
 
@@ -28,6 +29,14 @@ describe('os textos fixos da spec', () => {
     expect(NOTICE_PHONE_LABEL).toBe('Celular para avisos');
     expect(NUMBERS_COLUMN).toBe('Números');
     expect(LIBERATED_TITLE).toBe('Números liberados');
+    expect(PREVIOUS_OWNER_REMOVE).toBe('Tirar');
+    expect(PREVIOUS_OWNER_KEEP).toBe('Manter liberado');
+  });
+});
+
+describe('previousOwnerPrompt — trocar o dono pergunta sobre o anterior (fase 2b.1)', () => {
+  it('nomeia o anterior nas duas metades da frase, neutro de gênero', () => {
+    expect(previousOwnerPrompt('Ana')).toBe('Ana era dono deste número. Tirar Ana dos Colaboradores também?');
   });
 });
 
@@ -173,7 +182,7 @@ describe('linguagem da tela', () => {
       OWNER_TITLE, OWNER_EXPLANATION, SHARED_LABEL, NUMBERS_TITLE, NUMBERS_COLUMN, LIBERATED_TITLE, PRINCIPAL,
       MAKE_PRIMARY, CHANGE_IN_CHANNELS, NOTICE_PHONE_LABEL, PRIMARY_HINT_SELF, PRIMARY_HINT_OTHER,
       NO_OWNED_NUMBERS_SELF, NO_OWNED_NUMBERS_OTHER, MY_NUMBERS_DESCRIPTION, PRIMARY_DONE, PRIMARY_FAILED, NO_PHONE,
-      NO_ROLETA, NO_AI, CONNECTION_NOTE,
+      NO_ROLETA, NO_AI, CONNECTION_NOTE, PREVIOUS_OWNER_REMOVE, PREVIOUS_OWNER_KEEP, previousOwnerPrompt('X'),
       numberRuleLine(null), numberRuleLine({ id: 'u', name: 'X' }), ownerLockText('X'),
       ownerLine({ number_owner_rule: true, owner: null, shared: true }),
       liberatedSummary({ sees_all_inboxes: false, granted_inbox_ids: [], auto_inbox_ids: [] }),

@@ -16,6 +16,19 @@ export const OWNER_TITLE = 'Dono do número';
 export const OWNER_EXPLANATION =
   'Quem escreve neste número vai direto pro dono. Sem dono, o número é da imobiliária e quem escreve entra na roleta.';
 export const SHARED_LABEL = 'Da imobiliária (compartilhado)';
+export const PREVIOUS_OWNER_REMOVE = 'Tirar';
+export const PREVIOUS_OWNER_KEEP = 'Manter liberado';
+
+/**
+ * Trocar o dono não tira o anterior de Colaboradores sozinho — a escolha é de
+ * quem troca (decisão do Tony, fase 2b.1). A pergunta só aparece com a regra
+ * ligada, depois da troca já ter dado certo no servidor, e só quando havia um
+ * dono anterior diferente do novo (nunca com dono anterior vazio, nem quando
+ * o "novo" é a mesma pessoa). Texto neutro de gênero de propósito.
+ */
+export function previousOwnerPrompt(previousOwnerName: string): string {
+  return `${previousOwnerName} era dono deste número. Tirar ${previousOwnerName} dos Colaboradores também?`;
+}
 export const NUMBERS_TITLE = 'Números de atendimento';
 export const NUMBERS_COLUMN = 'Números';
 export const LIBERATED_TITLE = 'Números liberados';

@@ -3750,6 +3750,12 @@ Decisões (não reabrir sem o dono pedir; a tabela completa está no plano
   e caixinha que desmarca e volta marcada sozinha é a cicatriz desta tela — dono
   desativado, ou dono de um número que a regra tratou como compartilhado, NÃO
   trava nada e pode ser desmarcado e salvo sem ele.
+- **Trocar o dono pergunta pelo ANTERIOR, não tira sozinho.** Com a regra ligada,
+  depois que a troca dá certo no servidor e havia um dono anterior diferente do
+  novo, Colaboradores pergunta ("Fulano era dono deste número. Tirar Fulano dos
+  Colaboradores também?", Dialog da casa) — nunca com dono anterior vazio, nem
+  quando o "novo" é a mesma pessoa, nem com a regra desligada. A escolha é de
+  quem troca: "Tirar" remove só o anterior, "Manter liberado" não faz nada.
 - **A trava da roleta no navegador é cortesia**; quem recusa é o servidor, com a
   mesma frase, sem nome de número junto.
 - **Neutro de gênero:** "Número de Fulano", "é de Fulano".
