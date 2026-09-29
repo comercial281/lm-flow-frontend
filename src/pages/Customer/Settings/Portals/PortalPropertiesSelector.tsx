@@ -26,6 +26,24 @@ import {
   tipoBase,
 } from '@/features/portals/adPlan';
 
+// O index de imóveis entrega no máximo 200 por página (clamp do servidor). Até
+// 2026-09-29 a tela pedia 500 de uma vez, recebia 200 calada e a carteira maior
+// que isso sumia da lista — e do *Selecionar todos*. Agora vem página a página.
+const POR_PAGINA = 200;
+const MAX_PAGINAS = 50; // trava de segurança: 10 mil imóveis ativos
+
+async function carregarAtivos(): Promise<Property[]> {
+  const todos: Property[] = [];
+  for (let page = 1; page <= MAX_PAGINAS; page++) {
+    const res = await propertiesService.list({ status: 'active', per_page: POR_PAGINA, page });
+    const lote = res.data ?? [];
+    todos.push(...lote);
+    const total = res.meta?.total;
+    if (lote.length < POR_PAGINA || (total !== undefined && todos.length >= total)) break;
+  }
+  return todos;
+}
+
 interface Props {
   portalKey: string;
   /** Tipos de anúncio do portal, na ordem do servidor (o primeiro é o base). Vazio = servidor antigo. */
@@ -75,8 +93,7 @@ export default function PortalPropertiesSelector({
     setLoading(true);
     setLoadFailed(false);
     try {
-      const res = await propertiesService.list({ status: 'active', per_page: 500 });
-      setProperties(res.data ?? []);
+      setProperties(await carregarAtivos());
     } catch {
       // Leitura de fundo não grita: a lista mostra o aviso no lugar dos imóveis.
       setLoadFailed(true);
@@ -90,11 +107,21 @@ export default function PortalPropertiesSelector({
     setPublications(new Map(initialPublications.map(p => [p.property_id, p.ad_type])));
   }, [initialPublications]);
 
-  const counts = useMemo(() => contarPorTipo(adTypes, publications), [adTypes, publications]);
+  // Só imóvel ATIVO fica no portal. A publicação de um imóvel que saiu de Ativo
+  // (vendido, alugado, inativo…) continua gravada, mas o feed já não o manda:
+  // aqui ela some da contagem, da cota e do envio — salvar a pausa. Sem a lista
+  // carregada não há como saber quem é ativo, e vale o que veio do servidor.
+  const selecionadas = useMemo(() => {
+    if (loading || loadFailed) return publications;
+    const ativos = new Set(properties.map(p => p.id));
+    return new Map([...publications].filter(([id]) => ativos.has(id)));
+  }, [publications, properties, loading, loadFailed]);
+
+  const counts = useMemo(() => contarPorTipo(adTypes, selecionadas), [adTypes, selecionadas]);
   const estourosLocais = useMemo(() => estouros(adTypes, counts), [adTypes, counts]);
   const emDestaque = useMemo(
-    () => [...publications.values()].filter(t => t === LEGADO_DESTAQUE).length,
-    [publications],
+    () => [...selecionadas.values()].filter(t => t === LEGADO_DESTAQUE).length,
+    [selecionadas],
   );
 
   const filtered = useMemo(() => {
@@ -185,8 +212,8 @@ export default function PortalPropertiesSelector({
     if (modoLegado) {
       setSaving(true);
       try {
-        const ids = [...publications.keys()];
-        const featuredIds = ids.filter(id => publications.get(id) === LEGADO_DESTAQUE);
+        const ids = [...selecionadas.keys()];
+        const featuredIds = ids.filter(id => selecionadas.get(id) === LEGADO_DESTAQUE);
         await portalsService.updatePublicationsLegacy(portalKey, ids, featuredIds);
         toast.success('Publicações atualizadas');
         onSaved?.();
@@ -198,7 +225,7 @@ export default function PortalPropertiesSelector({
       return;
     }
 
-    const pubs: PortalPublication[] = [...publications].map(([property_id, ad_type]) => ({ property_id, ad_type }));
+    const pubs: PortalPublication[] = [...selecionadas].map(([property_id, ad_type]) => ({ property_id, ad_type }));
     let confirmOverflow = false;
     if (estourosLocais.length > 0) {
       if (!(await dialogoDeEstouro(estourosLocais))) return;
@@ -213,7 +240,7 @@ export default function PortalPropertiesSelector({
         <div>
           <h2 className="font-semibold text-sm">Imóveis publicados neste portal</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {publications.size} selecionado(s)
+            {selecionadas.size} selecionado(s)
             {modoLegado && supportsHighlight ? ` · ${emDestaque} em destaque` : ''}
           </p>
         </div>
