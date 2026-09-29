@@ -48,6 +48,11 @@ import {
 import { FollowupEnrollment } from '@/pages/Customer/Automations/FollowupEnrollment/FollowupEnrollment';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
+import SendFromField from '@/components/numbers/SendFromField';
+import { SEND_FROM_WARNING_MS, sendFromOf, sendFromProblem, sendFromWarnings } from '@/features/numbers/sendFrom';
+import { teamNameWarning } from '@/features/numbers/teamNameWarning';
+import usersService from '@/services/users/usersService';
+import type { User } from '@/types/users';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 // Backend (Followup::SendStep#move_stage_if_configured) deriva o slug a partir do
@@ -67,6 +72,8 @@ const slugifyStageName = (name: string): string =>
 const MESSAGE_VARS: { label: string; token: string }[] = [
   { label: 'Nome',          token: '{{nome}}' },
   { label: 'Nome completo', token: '{{nome_completo}}' },
+  // O nome de quem atende o lead (fase 2b.2, E38). Sem corretor, a frase sai.
+  { label: 'Corretor',      token: '{{corretor}}' },
   { label: 'Telefone',      token: '{{telefone}}' },
   { label: 'E-mail',        token: '{{email}}' },
   { label: 'Data',          token: '{{data}}' },
@@ -340,6 +347,10 @@ const NEW_SEQUENCE = (): FollowupSequence => ({
   // Vazio = o card fica onde está quando o lead responder. Funil novo não move
   // card de ninguém sem alguém escolher.
   reply_stage_slug: '',
+  // "Enviar pelo número" (fase 2b.2): funil novo nasce no padrão (o número do
+  // responsável pelo lead, E37).
+  send_from: '',
+  send_from_inbox_id: '',
   steps_count: 0,
   // Funil que ainda não existe não tem disparo nem entrada: as entradas só podem
   // ser criadas depois de salvar, porque cada uma é uma regra apontando pro funil.
@@ -378,6 +389,14 @@ export default function FollowupSequences() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<FollowupSequence | null>(null);
+  // A equipe, só para o aviso de nome fixo no texto (fase 2b.2, E39). Falha =
+  // lista vazia = sem aviso; nunca trava o editor.
+  const [equipe, setEquipe] = useState<User[]>([]);
+  useEffect(() => {
+    usersService.getUsers()
+      .then(res => setEquipe(res.data ?? []))
+      .catch(() => setEquipe([]));
+  }, []);
   const [steps, setSteps] = useState<FollowupStep[]>([]);
   // Quais passos estão com "Mais opções" aberto. Abre sozinho no passo que JÁ tem
   // coluna ou etiqueta configurada — esconder o que o cliente configurou seria pior
@@ -578,6 +597,9 @@ export default function FollowupSequences() {
     if (!editing) return;
     if (!editing.name.trim()) { toast.error('Dê um nome ao funil.'); return; }
 
+    const problemaNumero = sendFromProblem(sendFromOf(editing));
+    if (problemaNumero) { toast.error(problemaNumero); return; }
+
     // `id` vazio = funil novo. O slug NÃO vai no corpo: quem cria só dá o nome, e o
     // backend deriva e desempata o slug (é ele que as regras referenciam por dentro).
     const isNew = !editing.id;
@@ -591,6 +613,8 @@ export default function FollowupSequences() {
       // String vazia (e não undefined) pra conseguir LIMPAR a escolha: undefined
       // some do corpo e o servidor manteria a coluna anterior.
       reply_stage_slug: editing.reply_stage_slug ?? '',
+      // "Enviar pelo número" (fase 2b.2). Vazio LIMPA (volta ao padrão).
+      ...sendFromOf(editing),
       // A tela edita relativo; a API recebe cumulativo. Converter aqui é o que
       // permite guardar do jeito que a retomada e o horário comercial precisam.
       followup_steps_attributes: toCumulativeSteps(steps).map((s, i) => ({ ...s, position: i + 1 })),
@@ -598,6 +622,10 @@ export default function FollowupSequences() {
 
     setSaving(true);
     try {
+      // O servidor devolve o aviso junto do salvar (número desconectado, número
+      // de outra pessoa). Avisa, não barra (E33).
+      const avisar = (avisos: string[]) =>
+        avisos.forEach(aviso => toast.warning(aviso, { duration: SEND_FROM_WARNING_MS }));
       if (isNew) {
         // NÃO fechar o editor aqui. As entradas ("Quando este funil começa") só
         // existem depois que o funil tem identidade, então fechar deixava a pessoa
@@ -608,9 +636,11 @@ export default function FollowupSequences() {
         setSteps(created.steps?.length ? toRelativeSteps(created.steps) : []);
         setStepUnits({});
         toast.success('Funil criado. Agora escolha, logo abaixo, o que faz ele começar.');
+        avisar(sendFromWarnings(created));
       } else {
-        await followupSequencesService.update(editing.id, payload);
+        const saved = await followupSequencesService.update(editing.id, payload);
         toast.success('Sequência salva.');
+        avisar(sendFromWarnings(saved));
         closeEditor();
       }
       load();
@@ -945,6 +975,17 @@ export default function FollowupSequences() {
                 </label>
               </div>
 
+              {/* "Enviar pelo número" (fase 2b.2): por qual número o funil fala
+                  com o lead. Vale também para o Robô Sem Resposta, que usa o
+                  funil (E36). O padrão é o número do responsável (E37). */}
+              <div className="rounded-lg border bg-muted/20 p-3">
+                <SendFromField
+                  scope="followup_sequences"
+                  value={sendFromOf(editing)}
+                  onChange={v => setEditing({ ...editing, ...v })}
+                />
+              </div>
+
               {/* O marcador é o que faz o funil RETOMAR. Sem ele o lead que volta
                   pra coluna recebe a mensagem 1 de novo — foi a queixa do dono do
                   produto. Fica em bloco próprio (e não junto dos dois acima) porque
@@ -1020,6 +1061,7 @@ export default function FollowupSequences() {
                     Boolean(s.move_to_stage_slug) ||
                     (!editing.progress_tagging && Boolean(s.tag_on_send));
                   const advancedOpen = openAdvanced[idx] ?? hasAdvanced;
+                  const avisoNomeDoPasso = teamNameWarning(s.content, equipe);
 
                   return (
                   <div key={idx} className="rounded-lg border p-3">
@@ -1083,6 +1125,7 @@ export default function FollowupSequences() {
                         placeholder="Olá {{nome}}, tudo bem?"
                       />
                       <VariableChips onInsert={tok => updateStep(idx, { content: `${s.content ?? ''}${tok}` })} />
+                      {avisoNomeDoPasso && <p className="text-xs text-amber-600 mt-1">{avisoNomeDoPasso}</p>}
                     </div>
 
                     {s.message_type !== 'text' && (

@@ -28,6 +28,12 @@ export interface FollowupSequence {
   progress_tagging: boolean;
   /** Coluna pra onde o card volta quando o lead responde. Vazio = fica onde está. */
   reply_stage_slug?: string | null;
+  /** "Enviar pelo número" (fase 2b.2): '' = o número do responsável (padrão), ou 'number'. */
+  send_from?: string | null;
+  /** O número escolhido quando `send_from` é 'number'. */
+  send_from_inbox_id?: string | null;
+  /** Avisos do servidor, só na resposta do salvar. */
+  send_from_warnings?: string[];
   /** Exemplo da etiqueta que o funil vai aplicar, vindo do backend. */
   progress_tag_sample?: string | null;
   steps_count: number;
@@ -106,6 +112,9 @@ export interface FollowupSequenceFormData {
   business_hours_only?: boolean;
   progress_tagging?: boolean;
   reply_stage_slug?: string | null;
+  /** String vazia LIMPA a escolha (volta ao padrão). */
+  send_from?: string;
+  send_from_inbox_id?: string;
   followup_steps_attributes?: FollowupStep[];
 }
 
