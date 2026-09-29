@@ -1625,8 +1625,9 @@ Bolsão), quem não queria cutucada no de locação simplesmente não ligava a c
 O que aparece na tela, em *IA Vendedora → Configuração → Follow-up automático*:
 
 - **Bloco *De quais leads ela vai atrás***, o PRIMEIRO de dentro do follow-up.
-  Duas opções: *Todos os leads deste número* (como sempre foi) e *Só os leads que
-  estão nestes funis*, que abre a lista de funis do CRM para marcar.
+  Duas opções: *Todos os leads que ela atendeu* (era *Todos os leads deste número*
+  até 29/09 — ver *"O follow-up da IA só vai atrás de quem ela atendeu"*) e *Só os
+  leads que estão nestes funis*, que abre a lista de funis do CRM para marcar.
 - Marcado ao menos um funil, a tela lembra que vale o funil em que o card está
   **hoje** e que **card arquivado não conta**.
 
@@ -3809,3 +3810,42 @@ Armadilhas:
    pontos foram trocados nesta leva (`roletaFormChecks.ts` e `RoletaConfig.tsx`);
    o resto do vocabulário "instância" espalhado pelo app não foi tocado — não é
    esquecimento desta leva, é escopo.
+
+## O follow-up da IA só vai atrás de quem ela atendeu (desde 2026-09-29)
+
+Pedido do dono do produto: *"follow-up automático precisa ter o mesmo gatilho de
+formulário que a IA tem de ativação"* — e a regra dele, escolhida entre as opções:
+**"follow-up automático apenas nos leads que a IA atendeu e que ainda não foram
+roletados"**.
+
+Com a IA ativando só nos formulários X e Y, o follow-up continuava cutucando todo
+lead calado do número: os das outras campanhas (com quem ela nunca falou) e o que
+já estava com um corretor. A regra nova mora no servidor (ver o CLAUDE.md do
+`lm-flow`) e vale para TODA IA, sem chave.
+
+O que mudou na tela, em *IA Vendedora → Configuração → Follow-up automático*, no
+bloco *De quais leads ela vai atrás*:
+
+- **Uma frase fixa no topo** dizendo o público: ela só vai atrás de quem ela mesma
+  atendeu e que ainda não foi para a roleta — lead de campanha que não ativa a IA,
+  lead já entregue a um corretor e lead em que o corretor desligou a IA ficam de
+  fora.
+- **A primeira opção virou *Todos os leads que ela atendeu*** (era *Todos os leads
+  deste número*, que passou a ser promessa falsa). O recorte por funil continua,
+  por cima desse público.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Não há segunda lista de formulários no follow-up.** Ele segue a marca que o
+  gatilho de ativação grava quando a IA entra na conversa: trocou o formulário na
+  ativação, o follow-up acompanha.
+- **Não é escolha na tela.** O público é regra do servidor; a tela só o descreve.
+
+Armadilhas:
+
+1. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`). Contra o servidor antigo a tela descreve o público novo e
+   a IA continua indo atrás de todo lead do número.
+2. **Não voltar a escrever *Todos os leads deste número*.** Há spec que reprova.
+3. **Não é `featureKey` nem `clientToggleKey`** — é texto de tela. Os scanners do
+   catálogo de funcionalidades não entram nesta história.
