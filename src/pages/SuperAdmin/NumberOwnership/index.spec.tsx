@@ -225,7 +225,7 @@ describe('NumberOwnership — Ligar/Desligar dono do número', () => {
     listTenants.mockResolvedValue(okResponse([tenant('a', 'APTO PREMIUM')]));
     diagnose.mockResolvedValue(okResponse(diagnosis('a', { rule: desligada })));
     enableRule.mockResolvedValue(okResponse(diagnosis('a', {
-      rule: { enabled: true, last: { action: 'enable', at: '2026-09-28T15:04:05-03:00', by: 'tony@x', changed: 1 } },
+      rule: { enabled: true, last: { action: 'enable', at: '2026-09-28T15:04:05-03:00', by: 'fulano@x', changed: 1 } },
     })));
 
     render(<NumberOwnership />);
@@ -237,7 +237,7 @@ describe('NumberOwnership — Ligar/Desligar dono do número', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Ligar' }));
 
     await waitFor(() => expect(enableRule).toHaveBeenCalledWith('a'));
-    expect(await screen.findByText('Ligado em 28/09/2026 15:04 por tony@x · 1 dono gravado')).toBeInTheDocument();
+    expect(await screen.findByText('Ligado em 28/09/2026 15:04 por fulano@x · 1 dono gravado')).toBeInTheDocument();
     expect(toastSuccess).toHaveBeenCalledWith('Dono do número ligado em APTO PREMIUM: 1 dono gravado.');
   });
 
@@ -301,7 +301,7 @@ describe('NumberOwnership — Ligar/Desligar dono do número', () => {
     listTenants.mockResolvedValue(okResponse([tenant('a', 'APTO PREMIUM')]));
     diagnose.mockResolvedValue(okResponse(diagnosis('a', { rule: { enabled: true, last: null } })));
     disableRule.mockResolvedValue(okResponse(diagnosis('a', {
-      rule: { enabled: false, last: { action: 'disable', at: '2026-09-29T09:00:00-03:00', by: 'tony@x', changed: 0 } },
+      rule: { enabled: false, last: { action: 'disable', at: '2026-09-29T09:00:00-03:00', by: 'fulano@x', changed: 0 } },
     })));
 
     render(<NumberOwnership />);
@@ -310,7 +310,7 @@ describe('NumberOwnership — Ligar/Desligar dono do número', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Desligar' }));
 
     await waitFor(() => expect(disableRule).toHaveBeenCalledWith('a'));
-    expect(await screen.findByText('Desligado em 29/09/2026 09:00 por tony@x')).toBeInTheDocument();
+    expect(await screen.findByText('Desligado em 29/09/2026 09:00 por fulano@x')).toBeInTheDocument();
   });
 
   it('servidor antigo (sem a regra): nenhum botão de ligar', async () => {
