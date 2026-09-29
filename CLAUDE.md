@@ -2006,6 +2006,16 @@ Armadilhas:
    continua atrás de `properties`.
 5. **`npm ci` neste repo exige `--legacy-peer-deps`** (react-leaflet 4 × React
    19 no lockfile). Sem isso a instalação falha com ERESOLVE.
+6. **A lista de imóveis do portal vem página a página** (desde 2026-09-29). O
+   `GET /properties` corta em 200 por página (`clamp(1, 200)` no servidor): a
+   tela pedia `per_page: 500`, recebia 200 calada, e a carteira maior sumia da
+   lista e do *Selecionar todos*. Agora `carregarAtivos()` busca de 200 em 200
+   até o `meta.total`. Não voltar a pedir "tudo de uma vez".
+7. **Só imóvel Ativo conta no portal.** Publicação de um imóvel que saiu de
+   Ativo (vendido, alugado, inativo, e também Reservado) continua gravada, mas
+   fica fora do *N selecionado(s)*, dos contadores de cota e do envio — salvar
+   a pausa. Com a lista ainda carregando ou com erro, vale o que o servidor
+   mandou, para não pausar a carteira inteira por uma falha de leitura.
 
 ## As respostas do formulário apareciam duas vezes no card (desde 2026-09-16)
 

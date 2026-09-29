@@ -251,3 +251,62 @@ describe('PortalPropertiesSelector — tipo de anúncio e cota', () => {
     expect(updatePublications).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Carteira inteira e só ativos (2026-09-29). O index de imóveis entrega no
+ * máximo 200 por página: a tela pedia 500, recebia 200 e o resto sumia.
+ */
+describe('PortalPropertiesSelector — carteira completa, só ativos', () => {
+  beforeEach(() => {
+    [list, updatePublications, updatePublicationsLegacy, toastError].forEach(m => m.mockReset());
+    updatePublications.mockResolvedValue({});
+  });
+
+  const montar = (pubs: Array<{ property_id: string; ad_type: string }> = []) =>
+    render(
+      <PortalPropertiesSelector
+        portalKey="portal_zap"
+        adTypes={tipos}
+        initialPublications={pubs}
+        supportsHighlight
+      />,
+    );
+
+  it('busca página a página, só ativos, até trazer o total', async () => {
+    const usuario = userEvent.setup();
+    const pagina1 = Array.from({ length: 200 }, (_, i) => imovel(`p${i}`));
+    list
+      .mockResolvedValueOnce({ data: pagina1, meta: { total: 201, page: 1, per_page: 200 } })
+      .mockResolvedValueOnce({ data: [imovel('ultimo')], meta: { total: 201, page: 2, per_page: 200 } });
+    montar();
+
+    await screen.findByText('Imóvel ultimo');
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(list).toHaveBeenNthCalledWith(1, { status: 'active', per_page: 200, page: 1 });
+    expect(list).toHaveBeenNthCalledWith(2, { status: 'active', per_page: 200, page: 2 });
+
+    await usuario.click(screen.getByRole('button', { name: 'Selecionar todos' }));
+    expect(screen.getByText('201 selecionado(s)')).toBeInTheDocument();
+  });
+
+  it('publicação de imóvel que saiu de Ativo não conta, não gasta cota e é pausada ao salvar', async () => {
+    const usuario = userEvent.setup();
+    list.mockResolvedValue({ data: [imovel('a')], meta: { total: 1, page: 1, per_page: 200 } });
+    montar([
+      { property_id: 'a', ad_type: 'standard' },
+      { property_id: 'vendido', ad_type: 'premium' },
+    ]);
+    await screen.findByText('Imóvel a');
+
+    expect(screen.getByText('1 selecionado(s)')).toBeInTheDocument();
+    expect(screen.getByTestId('contador-premium')).toHaveTextContent('0 / 1');
+
+    await usuario.click(screen.getByRole('button', { name: 'Salvar publicações' }));
+    await waitFor(() => expect(updatePublications).toHaveBeenCalledTimes(1));
+    expect(updatePublications).toHaveBeenCalledWith(
+      'portal_zap',
+      [{ property_id: 'a', ad_type: 'standard' }],
+      { confirmOverflow: false },
+    );
+  });
+});
