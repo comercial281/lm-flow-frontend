@@ -48,6 +48,16 @@ describe('de quais leads a IA vai atrás', () => {
     expect(src).toContain('ela continua indo atrás de');
   });
 
+  // Decisão do dono (29/09/2026): o follow-up só vai atrás de lead que a IA
+  // atendeu e que não foi para a roleta — quem aplica é o servidor, e a tela
+  // tem que DIZER isso. "Todos os leads deste número" voltaria a prometer o
+  // comportamento antigo, que deixou de existir.
+  it('diz que o público é quem a IA atendeu e que não foi para a roleta', () => {
+    expect(src).toContain('Ela só vai atrás de quem ela mesma atendeu e que ainda não foi para a roleta.');
+    expect(src).toContain('Todos os leads que ela atendeu');
+    expect(src).not.toContain('Todos os leads deste número');
+  });
+
   // Não é chave de funcionalidade: é campo do agente. Os dois scanners do
   // catálogo (que varrem por regex atrás de `useFeature`/`useClientToggle`) não
   // entram nesta história — e não devem passar a entrar.

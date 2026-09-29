@@ -85,8 +85,9 @@ export interface SalesAgent {
   followup_drip_max_leads: number;
   followup_drip_min_minutes: number;
   followup_drip_max_minutes: number;
-  /** DE QUAIS leads ela vai atrás. Lista VAZIA = todos os leads do número dela,
-   *  que é o comportamento de sempre — não é "nenhum funil, não sai nada". */
+  /** Recorte por funil do follow-up, por cima do público fixo do servidor (só
+   *  lead que ela atendeu e que não foi para a roleta). Lista VAZIA = todos os
+   *  leads desse público — não é "nenhum funil, não sai nada". */
   followup_pipeline_ids: string[];
   /** PARA ONDE ela entrega o lead quando passa pro corretor.
    *
