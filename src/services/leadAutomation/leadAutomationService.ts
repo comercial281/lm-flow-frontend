@@ -27,6 +27,8 @@ export interface LeadAutomationRule {
   created_by?: { id: string; name: string } | null;
   created_at: string;
   updated_at: string;
+  /** "Enviar pelo número" (fase 2b.2): avisos do servidor, só na resposta do salvar. */
+  send_from_warnings?: string[];
 }
 
 export interface LeadAutomationRuleFormData {

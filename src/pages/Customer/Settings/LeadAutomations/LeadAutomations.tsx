@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
+import { SEND_FROM_WARNING_MS, sendFromWarnings } from '@/features/numbers/sendFrom';
 import {
   Button,
   Dialog,
@@ -203,14 +204,20 @@ export default function LeadAutomations() {
 
     setSaving(true);
     try {
+      // "Enviar pelo número" (fase 2b.2): o servidor devolve o aviso junto do
+      // salvar (número desconectado, número de outra pessoa). Avisa, não barra.
+      const avisar = (avisos: string[]) =>
+        avisos.forEach(aviso => toast.warning(aviso, { duration: SEND_FROM_WARNING_MS }));
       if (editing) {
         const updated = await leadAutomationService.update(editing.id, form);
         setRules(prev => prev.map(r => r.id === updated.id ? updated : r));
         toast.success('Automação atualizada');
+        avisar(sendFromWarnings(updated));
       } else {
         const created = await leadAutomationService.create(form);
         setRules(prev => [...prev, created]);
         toast.success('Automação criada');
+        avisar(sendFromWarnings(created));
       }
       setModalOpen(false);
     } catch (e) {

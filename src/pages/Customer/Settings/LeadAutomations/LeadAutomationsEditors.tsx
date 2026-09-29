@@ -23,6 +23,9 @@ import {
   type EvolutionInstance,
 } from '@/services/leadAutomation/leadAutomationService';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import SendFromField from '@/components/numbers/SendFromField';
+import { applySendFrom, sendFromOf, sendFromProblem } from '@/features/numbers/sendFrom';
+import { teamNameWarning } from '@/features/numbers/teamNameWarning';
 import {
   acceptedByIds,
   acceptedByCondition,
@@ -770,7 +773,13 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       );
 
     // ----- send_whatsapp_message -----
-    case 'send_whatsapp_message':
+    // "Enviar pelo número" (fase 2b.2): por qual número sai. Escolher um número
+    // (ou o do responsável) tira a "Instância de envio (admin)" — o servidor a
+    // ignora com escolha feita, e o campo dela só aparece no automático (E26).
+    // E o texto com o nome fixo de alguém da equipe ganha um aviso (E39).
+    case 'send_whatsapp_message': {
+      const envio = sendFromOf(params);
+      const avisoNome = teamNameWarning(String(params.message ?? ''), resources.users);
       return (
         <>
           <Field label="Mensagem *" hint="Toque numa variável pra inserir. No envio ela vira o dado real do lead.">
@@ -782,8 +791,14 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               className="mt-1 resize-none"
             />
             <VariableChips onInsert={tok => appendToParam('message', tok)} />
+            {avisoNome && <p className="text-xs text-amber-600 mt-1">{avisoNome}</p>}
           </Field>
-          {isSuperAdmin && resources.evolutionInstances.length > 0 && (
+          <SendFromField
+            scope="lead_automation_rules"
+            value={envio}
+            onChange={v => onChange({ ...action, params: applySendFrom(params, v) })}
+          />
+          {isSuperAdmin && resources.evolutionInstances.length > 0 && !envio.send_from && (
             <Field
               label="Instância de envio (admin)"
               hint="Só você vê este campo. Deixe em branco para usar a instância padrão do cliente."
@@ -809,6 +824,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
           )}
         </>
       );
+    }
 
     // ----- send_audio / send_image / send_video -----
     case 'send_audio':
@@ -1297,6 +1313,12 @@ export function validateRule(
           error: `Preencha "${key}" na ação "${action.type}".`,
         };
       }
+    }
+
+    // "Enviar pelo número" (fase 2b.2): "um número específico" sem o número.
+    if (action.type === 'send_whatsapp_message') {
+      const problema = sendFromProblem(sendFromOf(action.params));
+      if (problema) return { ok: false, error: problema };
     }
   }
 
