@@ -31,6 +31,7 @@ import SystemMessage from '@/components/chat/messages/SystemMessage';
 import ReplyPreview from '@/components/chat/messages/ReplyPreview';
 import MessageReactions from '@/components/chat/messages/MessageReactions';
 import { FacebookCommentModeration } from '@/types/channels/inbox';
+import { agentDisplayNameFor } from '@/features/numbers/messageAuthor';
 
 interface MessageBubbleProps {
   message: Message;
@@ -91,7 +92,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   // como se ele estivesse respondendo a si mesmo. A gravação foi corrigida no
   // servidor, mas o histórico já gravado continua apontando para o contato: por
   // isso o descarte é aqui na exibição, e não só no que chega novo.
-  const senderIsContact = String(message.sender?.type || '').toLowerCase() === 'contact';
   // Mensagem AUTOMÁTICA também não leva nome de pessoa.
   //
   // O follow-up grava o eco no chat com um usuário real como autor (o primeiro
@@ -102,8 +102,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   //
   // O descarte é na EXIBIÇÃO, pelo mesmo motivo do caso acima: o que já foi enviado
   // continua gravado com o autor antigo, e também precisa parar de mostrar o nome.
-  const isAutomated = Boolean(message.content_attributes?.automated);
-  const agentDisplayName = senderIsContact || isAutomated ? '' : message.sender?.name;
+  //
+  // As duas regras acima, mais a mensagem digitada no celular de número sem
+  // dono ("· pelo celular", fase 2b.2), moram em features/numbers/messageAuthor.ts.
+  const agentDisplayName = agentDisplayNameFor(message);
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
