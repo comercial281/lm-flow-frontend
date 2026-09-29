@@ -2,6 +2,7 @@ import api from '@/services/core/api';
 import apiAuth from '@/services/core/apiAuth';
 import { extractData } from '@/utils/apiHelpers';
 import type { MyNumbers, NumberCardData, OwnedNumber } from '@/features/numbers/types';
+import { sendNumbersFrom, type SendNumbers, type SendNumbersScope } from '@/features/numbers/sendFrom';
 
 /**
  * DONO DO NÚMERO (fase 2b.1) — o número "com cara" em Canais e os "Números de
@@ -38,6 +39,16 @@ const numbersService = {
     const res = await apiAuth.patch(`/users/${userId}/primary_number`, { inbox_id: inboxId });
     const data = extractData<{ numbers?: OwnedNumber[] }>(res);
     return Array.isArray(data?.numbers) ? data.numbers : [];
+  },
+
+  /**
+   * "Enviar pelo número" (fase 2b.2): os números que a automação de lead ou o
+   * funil de follow-up podem escolher. Uma rota por tela, cada uma com a chave
+   * de leitura da própria tela (backend `send_numbers`).
+   */
+  async sendNumbers(scope: SendNumbersScope): Promise<SendNumbers> {
+    const res = await api.get(`/${scope}/send_numbers`);
+    return sendNumbersFrom(extractData<SendNumbers>(res));
   },
 };
 
