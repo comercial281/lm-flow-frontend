@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { roletaFormProblems, roletaFormWarnings, splitBackendProblems, backendProblems, timeoutMinutesPayload, senderSelectValue, senderFields, type RoletaFormCheckInput } from './roletaFormChecks';
+import { roletaFormProblems, roletaFormWarnings, splitBackendProblems, backendProblems, timeoutMinutesPayload, senderSelectValue, senderFields, ownerConflicts, numberOwnersMap, type RoletaFormCheckInput } from './roletaFormChecks';
 
 // "Preenchi tudo direitinho e deu erro" — 07/08/2026.
 //
@@ -130,7 +130,9 @@ describe('roletaFormProblems', () => {
       members: [{ user_id: '', personal_whatsapp_number: '' }],
     }));
     expect(p.length).toBeGreaterThanOrEqual(3);
-    expect(p.some(x => x.includes('instância'))).toBe(true);
+    // G3: o rótulo do campo virou "número de WhatsApp" — "instância" não existe
+    // mais nesta mensagem, que aponta pro campo que a tela mostra de verdade.
+    expect(p.some(x => x.includes('número de WhatsApp'))).toBe(true);
     expect(p.some(x => x.includes('número do gestor'))).toBe(true);
     expect(p.some(x => x.includes('ao menos um corretor'))).toBe(true);
   });
@@ -353,5 +355,125 @@ describe('senderSelectValue / senderFields', () => {
   it('nome com espaço ao redor (vindo do servidor) é aparado', () => {
     expect(senderSelectValue(null, '  Sara ')).toBe('central:Sara');
     expect(senderFields('central: Sara ').notification_instance_name).toBe('Sara');
+  });
+});
+
+// Fase 2b.1 — DONO DO NÚMERO. Com a regra ligada, a tela para de perguntar
+// Exclusivo/Compartilhado: num número com dono só o dono atende, e a frase é a
+// MESMA da recusa do servidor (dita antes da viagem). Sem a regra, tudo como era.
+describe('regra do dono do número', () => {
+  const joao = { id: 'u1', name: 'João' };
+  const doisNoA = [
+    { user_id: 'u1', personal_whatsapp_number: '5511999998888' },
+    { user_id: 'u2', personal_whatsapp_number: '5511999997777' },
+  ];
+
+  // Ruling A8-1/E20: EXATAMENTE a frase do servidor, sem o nome do número.
+  it('número com dono recusa outro corretor, com a frase do servidor', () => {
+    expect(roletaFormProblems(form({ ownerRule: true, owners: { [INBOX_A]: joao }, members: doisNoA })))
+      .toEqual(['Este número é de João. Pra dividir, tire o dono em Canais.']);
+  });
+
+  it('o dono sozinho no número dele passa', () => {
+    expect(roletaFormProblems(form({ ownerRule: true, owners: { [INBOX_A]: joao } }))).toEqual([]);
+  });
+
+  it('corretor pausado no número do dono não trava', () => {
+    expect(roletaFormProblems(form({
+      ownerRule: true, owners: { [INBOX_A]: joao },
+      members: [doisNoA[0], { ...doisNoA[1], is_active: false }],
+    }))).toEqual([]);
+  });
+
+  it('número SEM dono aceita vários corretores, mesmo com a marca "exclusivo" antiga', () => {
+    expect(roletaFormProblems(form({
+      ownerRule: true, owners: { [INBOX_A]: null },
+      instances: [{ inbox_id: INBOX_A, is_active: true, shared: false }],
+      members: doisNoA,
+    }))).toEqual([]);
+  });
+
+  it('a trava vale por número, também no segundo número da roleta', () => {
+    expect(roletaFormProblems(form({
+      multiEnabled: true, ownerRule: true, owners: { [INBOX_B]: joao },
+      instances: [{ inbox_id: INBOX_A, is_active: true }, { inbox_id: INBOX_B, is_active: true }],
+      members: [
+        { user_id: 'u1', personal_whatsapp_number: '5511999998888', inbox_id: INBOX_B },
+        { user_id: 'u2', personal_whatsapp_number: '5511999997777', inbox_id: INBOX_B },
+      ],
+    }))).toEqual(['Este número é de João. Pra dividir, tire o dono em Canais.']);
+  });
+
+  // Review Focus 4: sem a regra (inclusive depois de desligar), a trava de
+  // sempre volta e o dono gravado não trava nada.
+  it('sem a regra: o dono não trava, e a trava de exclusivo continua', () => {
+    const p = roletaFormProblems(form({
+      ownerRule: false, owners: { [INBOX_A]: joao },
+      instances: [{ inbox_id: INBOX_A, is_active: true, shared: false }],
+      members: doisNoA,
+    }));
+    expect(p.some(m => m.includes('é exclusivo'))).toBe(true);
+    expect(p.some(m => m.includes('tire o dono'))).toBe(false);
+  });
+
+  it('ownerConflicts sem a regra não aponta nada', () => {
+    expect(ownerConflicts({
+      ownerRule: false, owners: { [INBOX_A]: joao }, inboxId: INBOX_A,
+      instances: [{ inbox_id: INBOX_A, is_active: true }], members: doisNoA,
+    })).toEqual([]);
+  });
+});
+
+describe('numberOwnersMap', () => {
+  const inboxes = [
+    { id: INBOX_A, owner_user_id: 'u1' },
+    { id: INBOX_B, owner_user_id: 'u2' },
+    { id: 'inbox-c', owner_user_id: null },
+  ];
+  const users = [
+    { id: 'u1', name: 'João' },
+    { id: 'u2', name: 'Maria', deactivated: true },
+  ];
+
+  it('o dono gravado em Canais, só quando a pessoa está ativa', () => {
+    expect(numberOwnersMap([], inboxes, users)).toEqual({
+      [INBOX_A]: { id: 'u1', name: 'João' },
+      [INBOX_B]: null,
+      'inbox-c': null,
+    });
+  });
+
+  it('o que o servidor mandou na roleta aberta vence — inclusive "sem dono"', () => {
+    const servidor = [
+      { inbox_id: INBOX_A, owner: null },
+      { inbox_id: 'inbox-c', owner: { id: 'u9', name: 'Ana' } },
+    ];
+    expect(numberOwnersMap(servidor, inboxes, users)).toEqual({
+      [INBOX_A]: null,
+      [INBOX_B]: null,
+      'inbox-c': { id: 'u9', name: 'Ana' },
+    });
+  });
+
+  it('instância de servidor antigo (sem o campo) não apaga o que Canais diz', () => {
+    expect(numberOwnersMap([{ inbox_id: INBOX_A }], inboxes, users)[INBOX_A]).toEqual({ id: 'u1', name: 'João' });
+  });
+
+  // E1/L17: conta da Leal Mídia gravada como Dono do número em Canais não é
+  // dona EFETIVA — o número vale como da imobiliária até o servidor decidir
+  // diferente (ele lê a mesma regra do lado de lá).
+  it('conta da Leal Mídia gravada como dono não é dona efetiva', () => {
+    const comSuporte = [
+      { id: INBOX_A, owner_user_id: 'u1' },
+      { id: 'inbox-lm', owner_user_id: 'u-lm' },
+    ];
+    const comLealMidia = [
+      { id: 'u1', name: 'João' },
+      { id: 'u-lm', name: 'Suporte LM', email: 'suporte@lealmidia.com.br' },
+    ];
+    expect(numberOwnersMap([], comSuporte, comLealMidia)).toEqual({
+      [INBOX_A]: { id: 'u1', name: 'João' },
+      'inbox-lm': null,
+    });
   });
 });

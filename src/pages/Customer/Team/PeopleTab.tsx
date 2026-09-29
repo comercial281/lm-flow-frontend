@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { RefreshCw, ShieldCheck, MessageCircle, Search, Sparkles, UserPlus, Mails, UserX, UserCheck, Trash2, Link2 } from 'lucide-react';
+import { RefreshCw, ShieldCheck, MessageCircle, Search, Sparkles, UserPlus, Mails, UserX, UserCheck, Trash2, Link2, Smartphone } from 'lucide-react';
 import { Button, Input, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, Label as UILabel } from '@/components/ui/ds';
 import IconActionButton from '@/components/base/IconActionButton';
 import { usersService } from '@/services/users';
@@ -26,6 +26,13 @@ import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useAuthStore } from '@/store/authStore';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { copyText } from '@/utils/clipboard';
+import OwnedNumbersList from '@/components/numbers/OwnedNumbersList';
+import numbersService from '@/services/numbers/numbersService';
+import { useNumberOwnerRule } from '@/features/numbers/useNumberOwnerRule';
+import {
+  LIBERATED_TITLE, NOTICE_PHONE_LABEL, NO_OWNED_NUMBERS_OTHER, NUMBERS_COLUMN, NUMBERS_TITLE, PRIMARY_DONE, PRIMARY_FAILED,
+  PRIMARY_HINT_OTHER, numbersColumnText,
+} from '@/features/numbers/numberTexts';
 import type { CustomRole } from '@/types/customRoles';
 import type { TeamAccessInbox, TeamAccessMember } from '@/types/teamAccess';
 
@@ -86,6 +93,13 @@ export default function PeopleTab() {
   // Excluir cadastro (apagar de verdade): o id de quem está na janela.
   const [erasingId, setErasingId] = useState<string | null>(null);
 
+  // Fase 2b.1: a regra do dono vale neste cliente? O retrato da equipe traz a
+  // resposta do servidor; sem ela (servidor antigo), vale a chave do cliente.
+  const [ownerRuleEcho, setOwnerRuleEcho] = useState<boolean | null>(null);
+  const numberOwnerRule = useNumberOwnerRule(ownerRuleEcho);
+  // Qual número está virando o principal agora (o botão gira nele).
+  const [primaryBusy, setPrimaryBusy] = useState<string | null>(null);
+
   // O WhatsApp da pessoa, editável aqui.
   //
   // Até 2026-09-01 o único jeito de corrigir o número de alguém era o modal
@@ -128,6 +142,7 @@ export default function PeopleTab() {
       ]);
       setMembers(overview.members);
       setInboxes(overview.inboxes);
+      setOwnerRuleEcho(overview.number_owner_rule ?? null);
       setRoles(roleList);
     } catch {
       toast.error('Erro ao carregar a equipe');
@@ -151,7 +166,7 @@ export default function PeopleTab() {
 
   const doSend = async () => {
     if (!sending) return;
-    if (sendPhone.replace(/\D/g, '').length < 10) { toast.error('Informe o WhatsApp com DDD.'); return; }
+    if (sendPhone.replace(/\D/g, '').length < 10) { toast.error('Informe o celular com DDD.'); return; }
     setSendBusy(true);
     try {
       // Sem senha no corpo: a mensagem leva um link, e quem cria a senha é a
@@ -189,6 +204,22 @@ export default function PeopleTab() {
     }
   };
 
+  // O principal de outra pessoa (users.update). Só desempate: é o número que o
+  // sistema usa quando precisa escolher um dos números dela. O servidor devolve
+  // a lista já na ordem nova.
+  const escolherPrincipal = async (member: TeamAccessMember, inboxId: string) => {
+    setPrimaryBusy(inboxId);
+    try {
+      const numbers = await numbersService.setUserPrimary(member.id, inboxId);
+      setMembers(prev => prev.map(m => (m.id === member.id ? { ...m, numbers } : m)));
+      toast.success(PRIMARY_DONE);
+    } catch (e) {
+      toast.error(apiErrorMessage(e, PRIMARY_FAILED));
+    } finally {
+      setPrimaryBusy(null);
+    }
+  };
+
   // O campo é semeado ao ABRIR a pessoa, e não a cada render: semear no render
   // apagaria o que o gestor está digitando a cada atualização da lista.
   const abrirPessoa = (id: string) => {
@@ -206,9 +237,9 @@ export default function PeopleTab() {
       // acesso", que troca a senha sem a pessoa pedir.
       await usersService.updateUser(member.id, { whatsapp_number: novo });
       setMembers(prev => prev.map(m => (m.id === member.id ? { ...m, whatsapp_number: novo } : m)));
-      toast.success(novo ? 'WhatsApp atualizado' : 'WhatsApp removido');
+      toast.success(novo ? 'Celular atualizado' : 'Celular removido');
     } catch {
-      toast.error('Não consegui salvar o WhatsApp');
+      toast.error('Não consegui salvar o celular');
     } finally {
       setSalvandoWhatsapp(false);
     }
@@ -274,7 +305,7 @@ export default function PeopleTab() {
         };
       }));
     } catch {
-      toast.error('Erro ao mudar a instância');
+      toast.error('Erro ao mudar o número');
     } finally {
       setSaving(false);
     }
@@ -323,25 +354,12 @@ export default function PeopleTab() {
 
   const initials = (name: string) => name.split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 
-  /* "1 liberada · 2 automáticas" em vez de "3 de 5": o número sozinho misturava
-     de novo as duas origens que o resto da tela agora separa. */
-  const accessSummary = (member: TeamAccessMember) => {
-    if (member.sees_all_inboxes) return 'Todas';
-    const granted = member.granted_inbox_ids.length;
-    const auto = member.auto_inbox_ids.length;
-    if (granted === 0 && auto === 0) return 'Nenhuma';
-    const parts = [];
-    if (granted > 0) parts.push(`${granted} liberada${granted > 1 ? 's' : ''}`);
-    if (auto > 0) parts.push(`${auto} automática${auto > 1 ? 's' : ''}`);
-    return parts.join(' · ');
-  };
-
   return (
     <>
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          {members.length} pessoa{members.length !== 1 ? 's' : ''} · cargo e instâncias de cada um
+          {members.length} pessoa{members.length !== 1 ? 's' : ''} · cargo e números de cada um
         </p>
         <div className="flex items-center gap-2">
           <IconActionButton
@@ -378,7 +396,7 @@ export default function PeopleTab() {
                 <tr className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <th className="font-medium px-4 py-3">Membro</th>
                   <th className="font-medium px-4 py-3">Cargo</th>
-                  <th className="font-medium px-4 py-3">Instâncias</th>
+                  <th className="font-medium px-4 py-3">{numberOwnerRule ? NUMBERS_COLUMN : LIBERATED_TITLE}</th>
                   <th className="font-medium px-4 py-3">Status</th>
                   <th className="font-medium px-4 py-3 text-right">Ações</th>
                 </tr>
@@ -404,10 +422,12 @@ export default function PeopleTab() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                       <span className="inline-flex items-center gap-1.5">
-                        {member.auto_inbox_ids.length > 0 && !member.sees_all_inboxes
-                          ? <Sparkles className="h-3.5 w-3.5" />
-                          : <MessageCircle className="h-3.5 w-3.5" />}
-                        {accessSummary(member)}
+                        {numberOwnerRule && (member.numbers?.length ?? 0) > 0
+                          ? <Smartphone className="h-3.5 w-3.5" />
+                          : member.auto_inbox_ids.length > 0 && !member.sees_all_inboxes
+                            ? <Sparkles className="h-3.5 w-3.5" />
+                            : <MessageCircle className="h-3.5 w-3.5" />}
+                        {numbersColumnText(member, numberOwnerRule)}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -574,7 +594,7 @@ export default function PeopleTab() {
                   senha junto. */}
               <div className="border-t border-border py-3">
                 <UILabel className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
-                  <MessageCircle className="h-4 w-4" /> WhatsApp
+                  <MessageCircle className="h-4 w-4" /> {NOTICE_PHONE_LABEL}
                 </UILabel>
                 <div className="flex gap-2">
                   <Input
@@ -594,15 +614,34 @@ export default function PeopleTab() {
                   </Button>
                 </div>
                 <p className="mt-1.5 text-xs text-muted-foreground">
-                  É por aqui que a distribuição de leads avisa {editing.name} quando um lead cai
-                  para ele. Sem número, ele recebe a oferta só pelo app.
+                  O celular pessoal de {editing.name}: é por ele que chegam os avisos da distribuição de
+                  leads e o link de acesso. Não é número de atendimento. Sem ele, a oferta chega só pelo app.
                 </p>
               </div>
 
-              {/* Instâncias */}
+              {/* Números de atendimento (só com a regra do dono, fase 2b.1): os
+                  números de que a pessoa é DONA — só leitura aqui, com o link
+                  para Canais; quem tem mais de um tem o principal escolhido aqui. */}
+              {numberOwnerRule && (
+                <div className="border-t border-border py-3">
+                  <UILabel className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
+                    <Smartphone className="h-4 w-4" /> {NUMBERS_TITLE}
+                  </UILabel>
+                  <OwnedNumbersList
+                    numbers={editing.numbers ?? []}
+                    canChoosePrimary={canManage}
+                    busyId={primaryBusy}
+                    onChoosePrimary={inboxId => escolherPrincipal(editing, inboxId)}
+                    emptyText={NO_OWNED_NUMBERS_OTHER}
+                    hint={PRIMARY_HINT_OTHER}
+                  />
+                </div>
+              )}
+
+              {/* Números liberados (o nome vale com ou sem a regra) */}
               <div className="border-t border-border py-3">
                 <UILabel className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
-                  <MessageCircle className="h-4 w-4" /> Instâncias
+                  <MessageCircle className="h-4 w-4" /> {LIBERATED_TITLE}
                 </UILabel>
                 <InboxAccessList
                   inboxes={inboxes}
@@ -707,7 +746,7 @@ export default function PeopleTab() {
 
               <div className="space-y-3 py-1">
                 <div>
-                  <UILabel className="text-xs">WhatsApp (com DDD)</UILabel>
+                  <UILabel className="text-xs">{NOTICE_PHONE_LABEL} (com DDD)</UILabel>
                   <Input value={sendPhone} onChange={e => setSendPhone(e.target.value)} placeholder="Ex: 11 94087 1974" className="mt-1" />
                 </div>
                 <div className="rounded-md border border-emerald-500/25 bg-emerald-500/5 p-3">
@@ -721,7 +760,7 @@ export default function PeopleTab() {
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Sai pela instância operacional da Leal Mídia.
+                  Sai pelo número operacional da Leal Mídia.
                 </p>
               </div>
 

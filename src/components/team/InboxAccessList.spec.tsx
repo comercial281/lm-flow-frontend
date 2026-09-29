@@ -63,7 +63,26 @@ describe('InboxAccessList', () => {
     );
 
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
-    expect(screen.getByText(/todas as instâncias/i)).toBeInTheDocument();
+    expect(screen.getByText(/todos os números/i)).toBeInTheDocument();
+  });
+
+  // Spec 2b, critério 4: nenhuma tela usa "instância" para falar do número.
+  it('fala número, nunca instância, em nenhum dos estados', () => {
+    const { container, rerender } = render(
+      <InboxAccessList
+        inboxes={inboxes}
+        grantedIds={['ib-1']}
+        autoAccess={{ 'ib-2': { reason: 'leads', leads: 3 } }}
+        onToggle={vi.fn()}
+      />,
+    );
+    expect(container.textContent).not.toMatch(/instância/i);
+
+    rerender(<InboxAccessList inboxes={[]} grantedIds={[]} autoAccess={{}} onToggle={vi.fn()} />);
+    expect(container.textContent).not.toMatch(/instância/i);
+
+    rerender(<InboxAccessList inboxes={inboxes} grantedIds={[]} autoAccess={{}} seesAll onToggle={vi.fn()} />);
+    expect(container.textContent).not.toMatch(/instância/i);
   });
 });
 

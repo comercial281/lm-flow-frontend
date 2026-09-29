@@ -424,7 +424,7 @@
     "collaborators": {
       "agents": {
         "title": "Atendentes",
-        "description": "Gerencie os atendentes que podem atender conversas neste canal",
+        "description": "Quem atende as conversas deste número",
         "selectedCount": "{{count}} atendente selecionado",
         "selectedCount_other": "{{count}} atendentes selecionados",
         "total": "total",
@@ -448,15 +448,15 @@
         }
       },
       "owner": {
-        "title": "Responsável da instância",
-        "description": "O corretor dono deste número — a foto real do WhatsApp dele passa a ser usada como avatar de responsável no CRM",
-        "placeholder": "Selecione o corretor dono deste número",
+        "title": "Dono do número",
+        "description": "A pessoa dona deste número: a foto do WhatsApp dela passa a ser usada como avatar de responsável no CRM",
+        "placeholder": "Selecione a pessoa dona deste número",
         "none": "Nenhum (número compartilhado)",
         "success": {
-          "updated": "Responsável da instância atualizado!"
+          "updated": "Dono do número atualizado!"
         },
         "errors": {
-          "updateError": "Erro ao atualizar o responsável da instância"
+          "updateError": "Erro ao atualizar o dono do número"
         }
       },
       "status": {

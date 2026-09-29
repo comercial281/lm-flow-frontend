@@ -3688,3 +3688,114 @@ Armadilhas:
    barrava a regra para sempre. O filtro de funil continua atravessando.
 4. **A regra mora fora do JSX** (`acceptedByFilter.ts`, com spec).
 5. **Não é `featureKey` nem `clientToggleKey`** — é condição da regra.
+
+## O dono do número (desde 2026-09-28)
+
+Fase 2b.1 do programa de usabilidade. O número de WhatsApp não tinha dono visível:
+o *Responsável da instância* dizia um corretor, a roleta dizia outro, e nenhuma
+tela mostrava telefone, conexão e dono juntos. A regra nova mora no servidor
+(ver *"O dono do número"* no CLAUDE.md do `lm-flow`) e vale **só nos clientes em
+que o painel raiz a ligou**. Aqui está o que a tela ganhou.
+
+O que aparece na tela:
+
+- **Para todos (renomeação pura):** *Responsável da instância* virou **Dono do
+  número** (Canais → Colaboradores); o campo "WhatsApp" da pessoa virou **Celular
+  para avisos** (Equipe e Perfil); a coluna e a seção de acesso da Equipe falam
+  **Números liberados**; e os textos tocados não dizem mais "instância" — exceto o
+  que ficou de propósito para a fase 3 (ver Armadilhas).
+- **Cartão do número**, no topo da configuração de todo número de WhatsApp em
+  Canais: nome, telefone de verdade, conectado ou não, o dono, em qual roleta está
+  e qual IA atende nele. Canal que NÃO é WhatsApp nunca busca nem mostra o cartão
+  nem a explicação do dono — só herda o RÓTULO "Dono do número" (custo aceito,
+  ver Decisões).
+- **Com a regra ligada no cliente:**
+  - Canais explica o dono ("Quem escreve neste número vai direto pro dono. Sem
+    dono, o número é da imobiliária e quem escreve entra na roleta."), a opção
+    sem dono vira **Da imobiliária (compartilhado)**, dono desativado aparece como
+    "Da imobiliária (compartilhado) — o cadastro de Fulano está desativado", e em
+    Colaboradores o dono EFETIVO fica sempre marcado, com o selo *Dono do
+    número* — dono desativado, ou dono de um número que o servidor devolveu como
+    compartilhado (conta da Leal Mídia), não trava a caixinha nem ganha o selo.
+  - Equipe: a coluna vira **Números** ("(11) 91234-1234 · Principal") e a janela
+    da pessoa ganha **Números de atendimento**, com *Tornar principal* e *alterar
+    em Canais*. O Perfil ganha o mesmo bloco.
+  - Roleta: some a escolha Exclusivo/Compartilhado; cada número diz "Número de
+    Fulano: quem escreve nele vai direto pra Fulano" ou "Número da imobiliária:
+    quem escreve entra na roleta"; outro corretor num número com dono trava com
+    "Este número é de Fulano. Pra dividir, tire o dono em Canais." — a MESMA
+    frase da recusa do servidor, sem o nome do número ao lado (era a versão
+    errada da rodada 1, corrigida antes do fim da leva).
+- **Painel raiz → Clientes → aba Números:** o detalhe de cada cliente ganha a
+  barra da regra (ligada/desligada, o último Ligar/Desligar com quem, quando e
+  quantos donos) e o botão **Ligar dono do número** / **Desligar dono do número**,
+  com confirmação pelo Dialog da casa. Cada conflito ganha a dica de como
+  resolver.
+
+Decisões (não reabrir sem o dono pedir; a tabela completa está no plano
+`LM FLOW/plans/2026-09-28-fase-2b1-dono-do-numero.md`):
+
+- **A frase da regra só aparece com a regra.** Dita num cliente desligado ela
+  mentiria: lá o Dono do número ainda só muda o avatar.
+- **A regra vale quando o servidor diz** (`number_owner_rule` nas respostas de
+  Canais, Equipe, Perfil e Roleta) e, na falta dele, pela chave do cliente. O eco
+  cobre os 5 minutos de cache das funcionalidades logo depois do Ligar.
+- **Ligar só no "Migra sozinho", sem conflito nenhum.** "Precisa conferir" mostra
+  o botão desligado e o caminho; quem resolve cada conflito é o gestor, em Canais
+  e na Roleta. Defesa a mais da tela: se o próprio "Migra sozinho" vier com algum
+  número marcado em conflito, o *Ligar* também fica desligado — o servidor já não
+  deveria mandar isso, mas a tela não confia cegamente.
+- **O dono não se desmarca em Colaboradores** com a regra, e a trava é só do dono
+  EFETIVO: o servidor não deixa o dono ATIVO de um número NÃO-compartilhado sair,
+  e caixinha que desmarca e volta marcada sozinha é a cicatriz desta tela — dono
+  desativado, ou dono de um número que a regra tratou como compartilhado, NÃO
+  trava nada e pode ser desmarcado e salvo sem ele.
+- **Trocar o dono pergunta pelo ANTERIOR, não tira sozinho.** Com a regra ligada,
+  depois que a troca dá certo no servidor e havia um dono anterior diferente do
+  novo, Colaboradores pergunta ("O número era de Fulano. Tirar Fulano dos
+  Colaboradores também?", Dialog da casa) — nunca com dono anterior vazio, nem
+  quando o "novo" é a mesma pessoa, nem com a regra desligada. A escolha é de
+  quem troca: "Tirar" remove só o anterior, "Manter liberado" não faz nada.
+- **A trava da roleta no navegador é cortesia**; quem recusa é o servidor, com a
+  mesma frase, sem nome de número junto.
+- **Neutro de gênero:** "Número de Fulano", "é de Fulano".
+- **Canais não-WhatsApp também leem o rótulo "Dono do número"** (o campo
+  renomeado é um só, não um por tipo de canal) — custo aceito: a palavra aparece
+  onde o conceito de dono do número não existe de verdade; mais barato que
+  duplicar o campo por tipo de canal.
+
+Armadilhas:
+
+1. ⚠️ **A chave `numero_dono_unico` só aparece em
+   `src/features/numbers/useNumberOwnerRule.ts`, LITERAL na chamada do
+   `useClientToggle`.** Os scanners do catálogo a acham por regex; constante no
+   lugar dela tira a chave do catálogo no deploy seguinte, calado. Há spec que
+   reprova a chave em qualquer outro arquivo.
+2. **`useClientToggle`, nunca `useFeature`.** A chave nasce desligada; `useFeature`
+   a estrearia para todo cliente.
+3. **Os textos novos são literais em `src/features/numbers/numberTexts.ts`.**
+   Chave nova de `t()` não entra; só se trocam VALORES de chaves que já existem no
+   pt-BR (foi o que se fez com o Dono do número e o Celular para avisos).
+4. **A metade do backend é obrigatória e vem PRIMEIRO** (`lm-flow`, branch
+   `saas-multitenant`). O auditor do catálogo REPROVA este build enquanto
+   `numero_dono_unico` não existir no catálogo servido pela API — é o portão
+   funcionando.
+5. **Ligar/Desligar usa o Dialog da casa (`useConfirmacao`)**, nunca `confirm()`;
+   o `conferir-caixinhas` reprova caixinha nova.
+6. **A recusa do Ligar vem como `{ error: 'texto' }`** (painel raiz), e a recusa
+   por cargo como `{ error: { message } }`. `ruleErrorMessage` lê os dois, em
+   qualquer status — inclusive 500.
+7. **Não é `featureKey` de menu** — a regra muda texto e comportamento de telas
+   que já existem. O painel de Funções mostra a chave (é do catálogo), com o
+   aviso de que ela se liga pela aba Números: ligar por lá pula a gravação dos
+   donos. E **salvar o mapa de Funções com uma leitura velha pode DESLIGAR a
+   regra** sem ninguém ter clicado em *Desligar* — o painel de Funções grava o
+   mapa inteiro de volta. Ligar e desligar sempre pela aba Números; reabrir
+   Funções só depois de confirmar o estado por lá.
+8. **`number_card` é buscado só na tela de configuração de UM número** (efeito em
+   `ChannelSettings.tsx`), nunca por item de uma lista — N números na lista de
+   Canais nunca viram N requisições.
+9. **"instância" que sobrou nos textos tocados fica para a fase 3.** Só dois
+   pontos foram trocados nesta leva (`roletaFormChecks.ts` e `RoletaConfig.tsx`);
+   o resto do vocabulário "instância" espalhado pelo app não foi tocado — não é
+   esquecimento desta leva, é escopo.

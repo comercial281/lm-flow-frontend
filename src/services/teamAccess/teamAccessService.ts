@@ -15,6 +15,7 @@ class TeamAccessService {
     return {
       inboxes: data?.inboxes ?? [],
       members: data?.members ?? [],
+      number_owner_rule: typeof data?.number_owner_rule === 'boolean' ? data.number_owner_rule : null,
     };
   }
 }

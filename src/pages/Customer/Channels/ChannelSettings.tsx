@@ -28,6 +28,11 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 
 import InboxesService from '@/services/channels/inboxesService';
 import { Inbox } from '@/types/channels/inbox';
+import NumberCard from '@/components/numbers/NumberCard';
+import numbersService from '@/services/numbers/numbersService';
+import { ownerRuleForChannel, useNumberOwnerRule } from '@/features/numbers/useNumberOwnerRule';
+import { usePreviousOwnerPrompt } from '@/features/numbers/usePreviousOwnerPrompt';
+import type { NumberCardData } from '@/features/numbers/types';
 import {
   BasicSettingsForm,
   GreetingSettingsForm,
@@ -289,6 +294,9 @@ export default function ChannelSettings() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [emailSignature, setEmailSignature] = useState('');
   const [isSavingSignature, setIsSavingSignature] = useState(false);
+  // "O número tem cara" (fase 2b.1): nome, telefone, conexão, dono, roleta e
+  // IA num lugar só. Leitura de fundo: falha só não mostra o cartão.
+  const [numberCard, setNumberCard] = useState<NumberCardData | null>(null);
 
   const inboxHook = useInbox(inbox);
 
@@ -303,6 +311,13 @@ export default function ChannelSettings() {
   // recolher depois pisca opções que a pessoa não tem.
   const { can, isReady: permissionsReady } = usePermissions();
   const managesChannels = permissionsReady && can('inboxes', 'update');
+
+  // Mesma leitura que o `CollaboratorsForm` usa para o Dono do número
+  // (`useNumberOwnerRule`/`ownerRuleForChannel`), calculada aqui porque é quem
+  // decide se a troca de dono pergunta pelo anterior (fase 2b.1) — ver
+  // `usePreviousOwnerPrompt`.
+  const numberOwnerRule = useNumberOwnerRule(ownerRuleForChannel(inboxHook.isAWhatsAppChannel, numberCard));
+  const ownerPrompt = usePreviousOwnerPrompt(inboxId);
 
   const [formData, setFormData] = useState<ChannelSettingsData>({
     name: '',
@@ -483,6 +498,21 @@ export default function ChannelSettings() {
     loadChannelData();
   }, [loadChannelData]);
 
+  // Relê quando o dono muda (o `loadChannelData` do onOwnerChange traz o novo
+  // `owner_user_id`), para o cartão e a explicação de Colaboradores andarem juntos.
+  useEffect(() => {
+    if (!inboxId || !inboxHook.isAWhatsAppChannel) {
+      setNumberCard(null);
+      return;
+    }
+    let vivo = true;
+    numbersService
+      .numberCard(inboxId)
+      .then(card => { if (vivo) setNumberCard(card); })
+      .catch(() => { if (vivo) setNumberCard(null); });
+    return () => { vivo = false; };
+  }, [inboxId, inboxHook.isAWhatsAppChannel, inbox?.owner_user_id]);
+
   const handleSave = async () => {
     if (activeTab !== 'inbox_settings') {
       toast.info(t('settings.errors.useTabUpdate'));
@@ -566,13 +596,20 @@ export default function ChannelSettings() {
   };
 
   if (isLoading) {
+    // O diálogo de "tirar o dono anterior?" (fase 2b.1) precisa sobreviver a
+    // este branch: `onOwnerChange` chama `loadChannelData()`, que passa por
+    // aqui no meio da troca — sem o diálogo aqui, ele desapareceria junto com
+    // o resto da tela sempre que este spinner aparecer no caminho.
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">{t('settings.loading')}</p>
+      <>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">{t('settings.loading')}</p>
+          </div>
         </div>
-      </div>
+        {ownerPrompt.dialog}
+      </>
     );
   }
 
@@ -634,6 +671,12 @@ export default function ChannelSettings() {
                 toast.info(t('settings.reauthorize.redirecting', { provider }));
               }}
             />
+
+            {numberCard && (
+              <div className="mt-4 max-w-xl">
+                <NumberCard card={numberCard} />
+              </div>
+            )}
           </div>
 
           {/*
@@ -827,11 +870,25 @@ export default function ChannelSettings() {
                   await loadChannelData(); // Refresh data after update
                 }}
                 ownerUserId={inbox?.owner_user_id ?? null}
+                numberOwnerRule={ownerRuleForChannel(inboxHook.isAWhatsAppChannel, numberCard)}
+                numberCard={numberCard}
                 onOwnerChange={async ownerUserId => {
-                  // Dono da instância: pro card do lead mostrar a foto real do
-                  // WhatsApp dele como avatar de responsável.
+                  // Dono do número: com a regra (fase 2b.1) o servidor confere
+                  // quem pode ser dono e o libera à mão; sem ela, só o avatar.
+                  //
+                  // O dono ANTERIOR é lido do cartão do número ANTES do update
+                  // (`numberCard?.owner`, o gravado) — depois da troca, quem
+                  // pergunta se ele sai também de Colaboradores é o
+                  // `usePreviousOwnerPrompt`. Ele roda aqui, nunca dentro do
+                  // `CollaboratorsForm`: `loadChannelData()` desmonta a aba
+                  // inteira (spinner de página), e um diálogo pedido de dentro
+                  // dela ficaria preso numa instância morta.
+                  const previousOwner = numberCard?.owner
+                    ? { id: numberCard.owner.id, name: numberCard.owner.name }
+                    : null;
                   await InboxesService.update(inboxId, { owner_user_id: ownerUserId });
-                  await loadChannelData(); // Refresh data after update
+                  await ownerPrompt.ask({ rule: numberOwnerRule, previousOwner, newOwnerId: ownerUserId });
+                  await loadChannelData(); // Refresh data after update (e depois da pergunta, uma vez só)
                 }}
               />}
             </TabsContent>
@@ -965,6 +1022,8 @@ export default function ChannelSettings() {
           </Tabs>
         </div>
       </div>
+
+      {ownerPrompt.dialog}
     </div>
   );
 }

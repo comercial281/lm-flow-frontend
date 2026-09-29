@@ -50,13 +50,13 @@ export default function InboxAccessList({
   if (seesAll) {
     return (
       <p className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
-        Administrador vê <strong>todas as instâncias</strong> automaticamente — não há o que liberar aqui.
+        Administrador vê <strong>todos os números</strong> automaticamente — não há o que liberar aqui.
       </p>
     );
   }
 
   if (inboxes.length === 0) {
-    return <p className="text-xs text-muted-foreground">Nenhuma instância conectada ainda.</p>;
+    return <p className="text-xs text-muted-foreground">Nenhum número conectado ainda.</p>;
   }
 
   const granted = new Set(grantedIds.map(String));
@@ -68,7 +68,7 @@ export default function InboxAccessList({
     <div className="space-y-4">
       <div>
         <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Instâncias que você liberou
+          Números que você liberou
         </p>
         <div className="space-y-1.5">
           {inboxes.map(ib => {
@@ -93,7 +93,7 @@ export default function InboxAccessList({
           })}
         </div>
         <p className="pt-1.5 text-xs text-muted-foreground">
-          Marcado = atende essa instância e entra na fila para receber leads novos dela.
+          Marcado = atende esse número e entra na fila para receber leads novos dele.
         </p>
       </div>
 
@@ -114,10 +114,10 @@ export default function InboxAccessList({
             ))}
           </div>
           <p className="pt-2 text-xs text-muted-foreground">
-            O sistema liberou sozinho para a pessoa conseguir abrir os leads que já são dela. Dentro dessas
-            instâncias ela <strong>só vê os leads dela</strong> e <strong>não recebe leads novos</strong>. Para
-            tirar o acesso, é preciso passar os leads para outra pessoa — ou marque a instância acima para ela
-            passar a atendê-la de verdade.
+            O sistema liberou sozinho para a pessoa conseguir abrir os leads que já são dela. Nesses
+            números ela <strong>só vê os leads dela</strong> e <strong>não recebe leads novos</strong>. Para
+            tirar o acesso, é preciso passar os leads para outra pessoa — ou marque o número acima para ela
+            passar a atendê-lo de verdade.
           </p>
         </div>
       )}
