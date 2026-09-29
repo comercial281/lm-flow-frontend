@@ -184,8 +184,8 @@ describe('Ligar / Desligar dono do número', () => {
   });
 
   it('o último registro, no horário do servidor (não convertido)', () => {
-    expect(ruleLastLine({ action: 'enable', at: '2026-09-28T15:04:05-03:00', by: 'tony@lealmidia.com.br', changed: 3 }))
-      .toBe('Ligado em 28/09/2026 15:04 por tony@lealmidia.com.br · 3 donos gravados');
+    expect(ruleLastLine({ action: 'enable', at: '2026-09-28T15:04:05-03:00', by: 'fulano@exemplo.com', changed: 3 }))
+      .toBe('Ligado em 28/09/2026 15:04 por fulano@exemplo.com · 3 donos gravados');
     expect(ruleLastLine({ action: 'enable', at: '2026-09-28T15:04:05-03:00', by: 'x', changed: 1 }))
       .toBe('Ligado em 28/09/2026 15:04 por x · 1 dono gravado');
     expect(ruleLastLine({ action: 'disable', at: '2026-09-29T09:00:00-03:00', by: 'x', changed: 0 }))
