@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import type { OwnershipDiagnosis } from '@/services/superAdmin/numberOwnershipService';
 import {
-  FAILED_REQUEST_MESSAGE, connectionText, liberatedLine, ownerSourceText, roletaLine, sortRows, summaryLine,
-  verdictBadge, type TenantRow,
+  FAILED_REQUEST_MESSAGE, RULE_FAILED_MESSAGE, conflictHint, connectionText, liberatedLine, ownerSourceText,
+  roletaLine, ruleAction, ruleConfirmation, ruleDoneText, ruleErrorMessage, ruleLastLine, ruleStatusText, sortRows,
+  summaryLine, verdictBadge, type TenantRow,
 } from './numberOwnershipRules';
 
 // A aba Números do painel raiz responde três perguntas: quem migra sozinho,
@@ -125,5 +126,115 @@ describe('linguagem da tela', () => {
       summaryLine([row('A', { kind: 'loading' })]),
     ];
     for (const texto of textos) expect(texto).not.toMatch(/instância|inbox|canal/i);
+  });
+});
+
+// Fase 2b.1 — o botão que LIGA a regra do dono num cliente. Ligar é escrita em
+// produção: o botão só existe onde o servidor sabe ligar, só fica clicável no
+// "Migra sozinho", e diz o que vai acontecer antes.
+describe('Ligar / Desligar dono do número', () => {
+  const desligada = { enabled: false, last: null };
+
+  it('servidor antigo (sem a regra na resposta): nenhum botão', () => {
+    expect(ruleAction(diagnosis())).toBeNull();
+    expect(ruleStatusText(undefined)).toBe('');
+  });
+
+  it('migra sozinho e desligada: Ligar, clicável', () => {
+    expect(ruleAction(diagnosis({ rule: desligada }))).toEqual({
+      kind: 'enable', label: 'Ligar dono do número', blockedReason: '',
+    });
+  });
+
+  it('precisa conferir: Ligar desligado, com o caminho', () => {
+    const a = ruleAction(diagnosis({ verdict: 'needs_review', rule: desligada }));
+    expect(a?.kind).toBe('enable');
+    expect(a?.blockedReason).toBe(
+      'Precisa conferir antes: resolva cada número abaixo em Canais e na Roleta, e clique em Atualizar.',
+    );
+  });
+
+  it('migra sozinho mas com número em conflito (resposta incoerente): Ligar desligado, com o caminho', () => {
+    const numero = {
+      inbox_id: 'i1', name: 'Do Fulano', phone: null, connection: 'unknown' as const, responsible: null,
+      roletas: [], liberated: [], suggested_owner: null, source: 'shared' as const, source_roleta: null,
+      phone_matches: false, conflicts: ['briga'], conflict_codes: ['support_owner'],
+    };
+    const a = ruleAction(diagnosis({ rule: desligada, numbers: [numero] }));
+    expect(a?.kind).toBe('enable');
+    expect(a?.blockedReason).not.toBe('');
+  });
+
+  it('código que é nome de propriedade do objeto não vira dica', () => {
+    expect(conflictHint('toString')).toBe('');
+    expect(conflictHint('constructor')).toBe('');
+  });
+
+  it('não consegui ler: nenhum botão', () => {
+    expect(ruleAction(diagnosis({ verdict: 'unreadable', rule: desligada }))).toBeNull();
+  });
+
+  it('ligada: Desligar, sempre clicável (mesmo que agora precise conferir)', () => {
+    const ligada = { enabled: true, last: null };
+    expect(ruleAction(diagnosis({ verdict: 'needs_review', rule: ligada }))).toEqual({
+      kind: 'disable', label: 'Desligar dono do número', blockedReason: '',
+    });
+    expect(ruleStatusText(ligada)).toBe('Dono do número: ligado');
+    expect(ruleStatusText(desligada)).toBe('Dono do número: desligado');
+  });
+
+  it('o último registro, no horário do servidor (não convertido)', () => {
+    expect(ruleLastLine({ action: 'enable', at: '2026-09-28T15:04:05-03:00', by: 'tony@lealmidia.com.br', changed: 3 }))
+      .toBe('Ligado em 28/09/2026 15:04 por tony@lealmidia.com.br · 3 donos gravados');
+    expect(ruleLastLine({ action: 'enable', at: '2026-09-28T15:04:05-03:00', by: 'x', changed: 1 }))
+      .toBe('Ligado em 28/09/2026 15:04 por x · 1 dono gravado');
+    expect(ruleLastLine({ action: 'disable', at: '2026-09-29T09:00:00-03:00', by: 'x', changed: 0 }))
+      .toBe('Desligado em 29/09/2026 09:00 por x');
+    expect(ruleLastLine(null)).toBe('');
+  });
+
+  it('a confirmação diz o que vai acontecer, com as contas do cliente', () => {
+    const data = diagnosis({ summary: { numbers: 4, owned: 3, shared: 1, needs_review: 0 }, rule: desligada });
+    expect(ruleConfirmation('enable', 'APTO PREMIUM', data)).toEqual({
+      titulo: 'Ligar dono do número em APTO PREMIUM?',
+      descricao: '3 números com dono claro ganham o dono sugerido gravado (cada dono fica liberado no número dele) '
+        + 'e a regra liga: quem escreve no número de um corretor vai direto pra ele; o número sem dono é da '
+        + 'imobiliária e entra na roleta. Dá para desligar depois, e os donos ficam gravados.',
+      rotuloDaAcao: 'Ligar',
+      destrutivo: false,
+    });
+    expect(ruleConfirmation('disable', 'APTO PREMIUM', data)).toMatchObject({
+      titulo: 'Desligar dono do número em APTO PREMIUM?', rotuloDaAcao: 'Desligar', destrutivo: true,
+    });
+  });
+
+  it('o aviso depois do clique conta o que o servidor gravou', () => {
+    const data = diagnosis({ rule: { enabled: true, last: { action: 'enable', at: '2026-09-28T15:04:05-03:00', by: 'x', changed: 2 } } });
+    expect(ruleDoneText('enable', 'APTO PREMIUM', data)).toBe('Dono do número ligado em APTO PREMIUM: 2 donos gravados.');
+    expect(ruleDoneText('disable', 'APTO PREMIUM', data))
+      .toBe('Dono do número desligado em APTO PREMIUM. Os donos continuam gravados em Canais.');
+  });
+
+  it('a recusa do servidor aparece com o motivo dele, nos dois formatos de erro', () => {
+    expect(ruleErrorMessage({ response: { data: { error: 'Este cliente precisa conferir 1 número antes de ligar.' } } }))
+      .toBe('Este cliente precisa conferir 1 número antes de ligar.');
+    expect(ruleErrorMessage({ response: { data: { error: { message: 'Seu cargo não permite.' } } } }))
+      .toBe('Seu cargo não permite.');
+    expect(ruleErrorMessage(new Error('Network Error'))).toBe(RULE_FAILED_MESSAGE);
+  });
+
+  it('cada código de conflito tem o caminho para resolver; código desconhecido não inventa', () => {
+    expect(conflictHint('support_owner')).toBe('Tire a conta da Leal Mídia do Dono do número em Canais.');
+    expect(conflictHint('responsible_on_shared'))
+      .toBe('Tire o Dono do número em Canais (o número segue dividido) ou deixe só ele na roleta.');
+    expect(conflictHint('codigo_que_nao_existe')).toBe('');
+    for (const code of [
+      'responsible_missing', 'responsible_vs_roleta', 'exclusive_no_broker', 'exclusive_many_brokers',
+      'exclusive_and_shared', 'exclusive_two_roletas', 'shared_single_broker', 'responsible_on_shared',
+      'no_roleta_many_liberated', 'owner_deactivated', 'support_owner',
+    ]) {
+      expect(conflictHint(code)).not.toBe('');
+      expect(conflictHint(code)).not.toMatch(/instância|inbox|canal\b/i);
+    }
   });
 });

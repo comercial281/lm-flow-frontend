@@ -1,19 +1,26 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { AlertTriangle, ChevronDown, ChevronRight, Loader2, RefreshCw, Smartphone } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Power, RefreshCw, Smartphone } from 'lucide-react';
+import { toast } from 'sonner';
 import numberOwnershipService, {
   type OwnershipDiagnosis, type OwnershipSummary,
 } from '@/services/superAdmin/numberOwnershipService';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { loadInBatches } from './loadInBatches';
 import {
-  FAILED_REQUEST_MESSAGE, connectionText, liberatedLine, ownerSourceText, roletaLine, sortRows, summaryLine,
-  verdictBadge, type TenantRow, type Tone,
+  FAILED_REQUEST_MESSAGE, conflictHint, connectionText, liberatedLine, ownerSourceText, roletaLine, ruleAction,
+  ruleConfirmation, ruleDoneText, ruleErrorMessage, ruleLastLine, ruleStatusText, sortRows, summaryLine,
+  verdictBadge, type RuleActionKind, type TenantRow, type Tone,
 } from './numberOwnershipRules';
 
 /**
  * Aba *Números* do painel raiz (Clientes → Números): de quem é cada número de
- * WhatsApp de cada cliente, e quem migra sozinho para a fase 2b. Só leitura.
- * A regra é do servidor (Numbers::OwnershipDiagnosis); as palavras, de
- * ./numberOwnershipRules.
+ * WhatsApp de cada cliente, quem migra sozinho, e — desde a fase 2b.1 — o
+ * botão que LIGA a regra do dono do número naquele cliente. A regra é do
+ * servidor (Numbers::OwnershipDiagnosis / Numbers::OwnershipMigration); as
+ * palavras, de ./numberOwnershipRules.
+ *
+ * Ligar/Desligar é escrita em produção: sempre com o Dialog de confirmação da
+ * casa (useConfirmacao), nunca com a caixinha do navegador.
  */
 const BATCH_SIZE = 4;
 
@@ -52,9 +59,55 @@ function readAtText(iso: string): string {
     : date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-function TenantDetail({ data }: { data: OwnershipDiagnosis }) {
+/** A barra da regra do dono, no topo do detalhe do cliente (fase 2b.1). */
+function RuleBar({
+  data, busy, locked, onRule,
+}: {
+  data: OwnershipDiagnosis;
+  busy: boolean;
+  /** A aba está relendo: a leitura que chegar depois cobriria a resposta do clique. */
+  locked: boolean;
+  onRule: (kind: RuleActionKind) => void;
+}) {
+  const action = ruleAction(data);
+  const status = ruleStatusText(data.rule);
+  if (!status && !action) return null;
+  const last = ruleLastLine(data.rule?.last);
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-background p-3">
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium">{status}</div>
+        {last && <div className="text-xs text-muted-foreground">{last}</div>}
+        {action?.blockedReason && <div className="text-xs text-amber-700 dark:text-amber-300">{action.blockedReason}</div>}
+      </div>
+      {action && (
+        <button
+          type="button"
+          onClick={() => onRule(action.kind)}
+          disabled={busy || locked || !!action.blockedReason}
+          className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm disabled:opacity-50 ${
+            action.kind === 'disable' ? 'text-red-700 dark:text-red-300 hover:bg-red-500/10' : 'hover:bg-muted'
+          }`}
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Power className="h-4 w-4" />} {action.label}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function TenantDetail({
+  data, ruleBusy, ruleLocked, onRule,
+}: {
+  data: OwnershipDiagnosis;
+  ruleBusy: boolean;
+  ruleLocked: boolean;
+  onRule: (kind: RuleActionKind) => void;
+}) {
   return (
     <div className="space-y-4">
+      <RuleBar data={data} busy={ruleBusy} locked={ruleLocked} onRule={onRule} />
+
       <p className="text-xs text-muted-foreground">Leitura das {readAtText(data.read_at)}.</p>
 
       {data.numbers.length === 0 ? (
@@ -86,12 +139,18 @@ function TenantDetail({ data }: { data: OwnershipDiagnosis }) {
               </Line>
               {n.conflicts.length > 0 && (
                 <ul className="mt-1 space-y-1">
-                  {n.conflicts.map(c => (
-                    <li key={c} className="flex gap-1.5 text-xs text-amber-700 dark:text-amber-300">
-                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                      {c}
-                    </li>
-                  ))}
+                  {n.conflicts.map((c, i) => {
+                    const hint = conflictHint(n.conflict_codes?.[i] ?? '');
+                    return (
+                      <li key={`${i}-${c}`} className="flex gap-1.5 text-xs text-amber-700 dark:text-amber-300">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                        <span>
+                          {c}
+                          {hint && <span className="block text-muted-foreground">{hint}</span>}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -131,6 +190,9 @@ export default function NumberOwnership() {
   const [listFailed, setListFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  // O cliente cujo Ligar/Desligar está no ar (o botão gira nele).
+  const [ruleBusyId, setRuleBusyId] = useState<string | null>(null);
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   // Cada leitura ganha um número; resposta de leitura velha é descartada.
   const runRef = useRef(0);
 
@@ -175,6 +237,30 @@ export default function NumberOwnership() {
     };
   }, [load]);
 
+  // Ligar/Desligar dono do número (fase 2b.1). O servidor devolve a leitura
+  // NOVA do cliente, que substitui a linha — quem clicou vê o efeito na hora.
+  const changeRule = useCallback(
+    async (row: TenantRow, data: OwnershipDiagnosis, kind: RuleActionKind) => {
+      if (!(await confirmar(ruleConfirmation(kind, row.tenant.name, data)))) return;
+      setRuleBusyId(row.tenant.id);
+      try {
+        const res = kind === 'enable'
+          ? await numberOwnershipService.enableRule(row.tenant.id)
+          : await numberOwnershipService.disableRule(row.tenant.id);
+        const fresh = res.data.data;
+        setRows(prev =>
+          prev.map((r): TenantRow => (r.tenant.id === row.tenant.id ? { ...r, state: { kind: 'ready', data: fresh } } : r)),
+        );
+        toast.success(ruleDoneText(kind, row.tenant.name, fresh));
+      } catch (error) {
+        toast.error(ruleErrorMessage(error));
+      } finally {
+        setRuleBusyId(null);
+      }
+    },
+    [confirmar],
+  );
+
   const sorted = sortRows(rows);
 
   return (
@@ -191,7 +277,9 @@ export default function NumberOwnership() {
         <button
           type="button"
           onClick={() => void load(true)}
-          disabled={busy}
+          // Com um Ligar/Desligar no ar, reler agora poderia trazer a foto de
+          // antes da escrita e cobrir a leitura nova que o clique devolve.
+          disabled={busy || ruleBusyId !== null}
           className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border hover:bg-muted disabled:opacity-50"
         >
           <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} /> Atualizar
@@ -199,7 +287,9 @@ export default function NumberOwnership() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Só leitura: nada é corrigido daqui. A leitura de cada cliente fica guardada por 5 minutos; Atualizar lê tudo de novo.
+        Nenhum conflito é corrigido daqui: quem resolve é o gestor, em Canais e na Roleta. O que se liga daqui é a
+        regra do dono do número, cliente a cliente. A leitura de cada cliente fica guardada por 5 minutos; Atualizar
+        lê tudo de novo.
       </p>
 
       {listFailed && (
@@ -250,12 +340,18 @@ export default function NumberOwnership() {
                     <td className="px-3 py-2">
                       <Pill tone={badge.tone}>{badge.label}</Pill>
                       {badge.note && <span className="ml-2 text-xs text-muted-foreground">{badge.note}</span>}
+                      {data?.rule?.enabled && <span className="ml-2"><Pill tone="ok">dono do número ligado</Pill></span>}
                     </td>
                   </tr>
                   {isOpen && data && (
                     <tr className="border-t bg-muted/20">
                       <td colSpan={7} className="px-3 py-3">
-                        <TenantDetail data={data} />
+                        <TenantDetail
+                          data={data}
+                          ruleBusy={ruleBusyId === row.tenant.id}
+                          ruleLocked={busy || (ruleBusyId !== null && ruleBusyId !== row.tenant.id)}
+                          onRule={kind => void changeRule(row, data, kind)}
+                        />
                       </td>
                     </tr>
                   )}
@@ -265,6 +361,8 @@ export default function NumberOwnership() {
           </tbody>
         </table>
       </div>
+
+      {dialogoDeConfirmacao}
     </div>
   );
 }

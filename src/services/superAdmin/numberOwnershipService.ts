@@ -2,7 +2,9 @@ import api from '@/services/core/api';
 
 /**
  * CONFERÊNCIA DE NÚMEROS (painel raiz): de quem é cada número de WhatsApp de
- * cada cliente, segundo a regra única do servidor. Só leitura.
+ * cada cliente, segundo a regra única do servidor. Lê — e, desde a fase 2b.1,
+ * LIGA/DESLIGA a regra do dono do número, cliente a cliente (escrita em
+ * produção: só com o ok do dono do produto).
  *
  * Backend: /api/v1/super/number_ownership (Numbers::OwnershipDiagnosis).
  * A lista é barata; o diagnóstico é de UM cliente por pedido (o servidor corta
@@ -56,6 +58,12 @@ export interface OwnershipNumber {
   phone_matches: boolean;
   /** Já em português, escritos pelo servidor. Vazio = sem conflito. */
   conflicts: string[];
+  /**
+   * Fase 2b.1: o código de máquina de cada conflito, na MESMA ordem de
+   * `conflicts`. A tela escolhe a dica pelo código, nunca lendo a frase.
+   * Ausente = servidor antigo.
+   */
+  conflict_codes?: string[];
 }
 
 export interface OwnershipPerson {
@@ -74,6 +82,22 @@ export interface OwnershipSummary {
   needs_review: number;
 }
 
+/** Fase 2b.1: o último Ligar/Desligar deste cliente. */
+export interface OwnershipRuleLast {
+  action: 'enable' | 'disable';
+  /** ISO com o fuso do servidor (ex.: 2026-09-28T15:04:05-03:00). */
+  at: string;
+  by: string;
+  /** Quantos donos o Ligar gravou (0 no Desligar). */
+  changed: number;
+}
+
+/** Fase 2b.1: a regra do dono do número vale neste cliente? */
+export interface OwnershipRule {
+  enabled: boolean;
+  last: OwnershipRuleLast | null;
+}
+
 export interface OwnershipDiagnosis {
   tenant: OwnershipTenant;
   verdict: OwnershipVerdict;
@@ -83,6 +107,8 @@ export interface OwnershipDiagnosis {
   numbers: OwnershipNumber[];
   people: OwnershipPerson[];
   read_at: string;
+  /** Fase 2b.1. Ausente = servidor antigo (a tela não oferece Ligar). */
+  rule?: OwnershipRule | null;
 }
 
 const numberOwnershipService = {
@@ -91,6 +117,12 @@ const numberOwnershipService = {
     api.get<{ data: OwnershipDiagnosis }>(`/super/number_ownership/${tenantId}`, {
       params: refresh ? { refresh: 1 } : {},
     }),
+  /** Ligar dono do número: grava os donos sugeridos e liga a regra. 422 = recusa com motivo. */
+  enableRule: (tenantId: string) =>
+    api.post<{ data: OwnershipDiagnosis }>(`/super/number_ownership/${tenantId}/enable`),
+  /** Desligar dono do número: só desliga a regra (os donos ficam gravados). */
+  disableRule: (tenantId: string) =>
+    api.post<{ data: OwnershipDiagnosis }>(`/super/number_ownership/${tenantId}/disable`),
 };
 
 export default numberOwnershipService;
