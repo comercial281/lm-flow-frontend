@@ -27,7 +27,7 @@ export const PREVIOUS_OWNER_KEEP = 'Manter liberado';
  * o "novo" é a mesma pessoa). Texto neutro de gênero de propósito.
  */
 export function previousOwnerPrompt(previousOwnerName: string): string {
-  return `${previousOwnerName} era dono deste número. Tirar ${previousOwnerName} dos Colaboradores também?`;
+  return `O número era de ${previousOwnerName}. Tirar ${previousOwnerName} dos Colaboradores também?`;
 }
 export const NUMBERS_TITLE = 'Números de atendimento';
 export const NUMBERS_COLUMN = 'Números';

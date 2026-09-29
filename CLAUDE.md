@@ -3752,7 +3752,7 @@ Decisões (não reabrir sem o dono pedir; a tabela completa está no plano
   trava nada e pode ser desmarcado e salvo sem ele.
 - **Trocar o dono pergunta pelo ANTERIOR, não tira sozinho.** Com a regra ligada,
   depois que a troca dá certo no servidor e havia um dono anterior diferente do
-  novo, Colaboradores pergunta ("Fulano era dono deste número. Tirar Fulano dos
+  novo, Colaboradores pergunta ("O número era de Fulano. Tirar Fulano dos
   Colaboradores também?", Dialog da casa) — nunca com dono anterior vazio, nem
   quando o "novo" é a mesma pessoa, nem com a regra desligada. A escolha é de
   quem troca: "Tirar" remove só o anterior, "Manter liberado" não faz nada.

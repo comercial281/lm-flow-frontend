@@ -30,7 +30,8 @@ import InboxesService from '@/services/channels/inboxesService';
 import { Inbox } from '@/types/channels/inbox';
 import NumberCard from '@/components/numbers/NumberCard';
 import numbersService from '@/services/numbers/numbersService';
-import { ownerRuleForChannel } from '@/features/numbers/useNumberOwnerRule';
+import { ownerRuleForChannel, useNumberOwnerRule } from '@/features/numbers/useNumberOwnerRule';
+import { usePreviousOwnerPrompt } from '@/features/numbers/usePreviousOwnerPrompt';
 import type { NumberCardData } from '@/features/numbers/types';
 import {
   BasicSettingsForm,
@@ -311,6 +312,13 @@ export default function ChannelSettings() {
   const { can, isReady: permissionsReady } = usePermissions();
   const managesChannels = permissionsReady && can('inboxes', 'update');
 
+  // Mesma leitura que o `CollaboratorsForm` usa para o Dono do número
+  // (`useNumberOwnerRule`/`ownerRuleForChannel`), calculada aqui porque é quem
+  // decide se a troca de dono pergunta pelo anterior (fase 2b.1) — ver
+  // `usePreviousOwnerPrompt`.
+  const numberOwnerRule = useNumberOwnerRule(ownerRuleForChannel(inboxHook.isAWhatsAppChannel, numberCard));
+  const ownerPrompt = usePreviousOwnerPrompt(inboxId);
+
   const [formData, setFormData] = useState<ChannelSettingsData>({
     name: '',
     display_name: '',
@@ -588,13 +596,20 @@ export default function ChannelSettings() {
   };
 
   if (isLoading) {
+    // O diálogo de "tirar o dono anterior?" (fase 2b.1) precisa sobreviver a
+    // este branch: `onOwnerChange` chama `loadChannelData()`, que passa por
+    // aqui no meio da troca — sem o diálogo aqui, ele desapareceria junto com
+    // o resto da tela sempre que este spinner aparecer no caminho.
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">{t('settings.loading')}</p>
+      <>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">{t('settings.loading')}</p>
+          </div>
         </div>
-      </div>
+        {ownerPrompt.dialog}
+      </>
     );
   }
 
@@ -860,8 +875,20 @@ export default function ChannelSettings() {
                 onOwnerChange={async ownerUserId => {
                   // Dono do número: com a regra (fase 2b.1) o servidor confere
                   // quem pode ser dono e o libera à mão; sem ela, só o avatar.
+                  //
+                  // O dono ANTERIOR é lido do cartão do número ANTES do update
+                  // (`numberCard?.owner`, o gravado) — depois da troca, quem
+                  // pergunta se ele sai também de Colaboradores é o
+                  // `usePreviousOwnerPrompt`. Ele roda aqui, nunca dentro do
+                  // `CollaboratorsForm`: `loadChannelData()` desmonta a aba
+                  // inteira (spinner de página), e um diálogo pedido de dentro
+                  // dela ficaria preso numa instância morta.
+                  const previousOwner = numberCard?.owner
+                    ? { id: numberCard.owner.id, name: numberCard.owner.name }
+                    : null;
                   await InboxesService.update(inboxId, { owner_user_id: ownerUserId });
-                  await loadChannelData(); // Refresh data after update
+                  await ownerPrompt.ask({ rule: numberOwnerRule, previousOwner, newOwnerId: ownerUserId });
+                  await loadChannelData(); // Refresh data after update (e depois da pergunta, uma vez só)
                 }}
               />}
             </TabsContent>
@@ -995,6 +1022,8 @@ export default function ChannelSettings() {
           </Tabs>
         </div>
       </div>
+
+      {ownerPrompt.dialog}
     </div>
   );
 }

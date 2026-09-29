@@ -36,7 +36,7 @@ describe('os textos fixos da spec', () => {
 
 describe('previousOwnerPrompt — trocar o dono pergunta sobre o anterior (fase 2b.1)', () => {
   it('nomeia o anterior nas duas metades da frase, neutro de gênero', () => {
-    expect(previousOwnerPrompt('Ana')).toBe('Ana era dono deste número. Tirar Ana dos Colaboradores também?');
+    expect(previousOwnerPrompt('Ana')).toBe('O número era de Ana. Tirar Ana dos Colaboradores também?');
   });
 });
 

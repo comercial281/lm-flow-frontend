@@ -26,11 +26,8 @@ vi.mock('@/hooks/useLanguage', () => ({
 const getAll = vi.hoisted(() => vi.fn());
 const getMembers = vi.hoisted(() => vi.fn());
 const updateMembers = vi.hoisted(() => vi.fn());
-const removeMembers = vi.hoisted(() => vi.fn());
 vi.mock('@/services/channels/agentsService', () => ({ default: { getAll } }));
-vi.mock('@/services/channels/inboxMembersService', () => ({
-  default: { get: getMembers, update: updateMembers, remove: removeMembers },
-}));
+vi.mock('@/services/channels/inboxMembersService', () => ({ default: { get: getMembers, update: updateMembers } }));
 vi.mock('@/contexts/TenantFeaturesContext', () => ({ useClientToggle: () => false }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -44,7 +41,6 @@ beforeEach(() => {
   getAll.mockReset().mockResolvedValue([agente('u-ana', 'Ana'), agente('u-joao', 'João')]);
   getMembers.mockReset().mockResolvedValue([agente('u-joao', 'João')]);
   updateMembers.mockReset().mockResolvedValue({});
-  removeMembers.mockReset().mockResolvedValue(undefined);
 });
 
 describe('CollaboratorsForm — Dono do número', () => {
@@ -135,70 +131,5 @@ describe('CollaboratorsForm — Dono do número', () => {
 
     await waitFor(() => expect(onOwnerChange).toHaveBeenCalledWith('u-ana'));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith(mensagemDoServidor));
-  });
-
-  // Decisão do Tony (fase 2b.1): trocar o dono deixava o ANTERIOR liberado no
-  // número até alguém desmarcá-lo à mão. Agora, só com a regra e só depois de
-  // a troca dar certo, a tela pergunta — o sistema nunca tira ninguém sozinho.
-  describe('trocar o dono pergunta sobre o anterior (fase 2b.1)', () => {
-    it('com a regra: troca Ana→João pergunta, e "Tirar" remove só a Ana', async () => {
-      const onOwnerChange = vi.fn().mockResolvedValue(undefined);
-      render(<CollaboratorsForm inboxId="inbox-1" ownerUserId="u-ana" numberOwnerRule onOwnerChange={onOwnerChange} />);
-
-      await screen.findByRole('heading', { name: 'Ana' });
-      await userEvent.click(screen.getByRole('combobox'));
-      await userEvent.click(await screen.findByRole('option', { name: 'João' }));
-
-      await waitFor(() => expect(onOwnerChange).toHaveBeenCalledWith('u-joao'));
-      expect(
-        await screen.findByText('Ana era dono deste número. Tirar Ana dos Colaboradores também?'),
-      ).toBeInTheDocument();
-
-      await userEvent.click(screen.getByRole('button', { name: 'Tirar' }));
-
-      await waitFor(() => expect(removeMembers).toHaveBeenCalledWith('inbox-1', ['u-ana']));
-    });
-
-    it('com a regra: "Manter liberado" não chama a remoção', async () => {
-      const onOwnerChange = vi.fn().mockResolvedValue(undefined);
-      render(<CollaboratorsForm inboxId="inbox-1" ownerUserId="u-ana" numberOwnerRule onOwnerChange={onOwnerChange} />);
-
-      await screen.findByRole('heading', { name: 'Ana' });
-      await userEvent.click(screen.getByRole('combobox'));
-      await userEvent.click(await screen.findByRole('option', { name: 'João' }));
-
-      await screen.findByText('Ana era dono deste número. Tirar Ana dos Colaboradores também?');
-      await userEvent.click(screen.getByRole('button', { name: 'Manter liberado' }));
-
-      expect(removeMembers).not.toHaveBeenCalled();
-    });
-
-    it('sem a regra: trocar o dono não pergunta nada', async () => {
-      const onOwnerChange = vi.fn().mockResolvedValue(undefined);
-      render(
-        <CollaboratorsForm inboxId="inbox-1" ownerUserId="u-ana" numberOwnerRule={false} onOwnerChange={onOwnerChange} />,
-      );
-
-      await screen.findByRole('heading', { name: 'Ana' });
-      await userEvent.click(screen.getByRole('combobox'));
-      await userEvent.click(await screen.findByRole('option', { name: 'João' }));
-
-      await waitFor(() => expect(onOwnerChange).toHaveBeenCalledWith('u-joao'));
-      expect(screen.queryByText(/era dono deste número/)).not.toBeInTheDocument();
-      expect(removeMembers).not.toHaveBeenCalled();
-    });
-
-    it('com a regra e sem dono anterior: escolher um dono não pergunta nada', async () => {
-      const onOwnerChange = vi.fn().mockResolvedValue(undefined);
-      render(<CollaboratorsForm inboxId="inbox-1" ownerUserId={null} numberOwnerRule onOwnerChange={onOwnerChange} />);
-
-      await screen.findByRole('heading', { name: 'Ana' });
-      await userEvent.click(screen.getByRole('combobox'));
-      await userEvent.click(await screen.findByRole('option', { name: 'Ana' }));
-
-      await waitFor(() => expect(onOwnerChange).toHaveBeenCalledWith('u-ana'));
-      expect(screen.queryByText(/era dono deste número/)).not.toBeInTheDocument();
-      expect(removeMembers).not.toHaveBeenCalled();
-    });
   });
 });

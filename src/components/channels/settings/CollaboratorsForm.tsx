@@ -7,18 +7,8 @@ import { Check, Users, Settings, Info, Sparkles, UserCircle, Loader2 } from 'luc
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 import { apiErrorMessage } from '@/utils/apiHelpers';
-import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { useNumberOwnerRule } from '@/features/numbers/useNumberOwnerRule';
-import {
-  OWNER_EXPLANATION,
-  OWNER_TITLE,
-  PREVIOUS_OWNER_KEEP,
-  PREVIOUS_OWNER_REMOVE,
-  SHARED_LABEL,
-  lockedOwnerId,
-  previousOwnerPrompt,
-  withOwner,
-} from '@/features/numbers/numberTexts';
+import { OWNER_EXPLANATION, OWNER_TITLE, SHARED_LABEL, lockedOwnerId, withOwner } from '@/features/numbers/numberTexts';
 import type { NumberCardData } from '@/features/numbers/types';
 
 // Services
@@ -58,7 +48,6 @@ export default function CollaboratorsForm({
   numberCard = null,
 }: CollaboratorsFormProps) {
   const { t } = useLanguage('channels');
-  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   // Com a regra, o dono EFETIVO do número está SEMPRE liberado nele (o
   // servidor não o deixa sair). Conta da Leal Mídia ou desativado gravado como
   // dono não é efetivo — pode ser desmarcado como qualquer colaborador.
@@ -200,40 +189,12 @@ export default function CollaboratorsForm({
 
   const handleOwnerChange = async (value: string) => {
     if (!onOwnerChange) return;
-    // Guardado ANTES da troca — depois de salvar, `ownerUserId` (prop) ainda
-    // é o valor antigo até o pai re-renderizar; é ele quem decide se havia
-    // dono anterior e se era outra pessoa.
-    const previousOwnerId = ownerUserId;
-    const newOwnerId = value === '__none__' ? null : value;
     setSavingOwner(true);
     try {
-      await onOwnerChange(newOwnerId);
+      await onOwnerChange(value === '__none__' ? null : value);
       toast.success(t('settings.collaborators.owner.success.updated'));
       // Com a regra o servidor libera o dono novo à mão: a lista precisa mostrar.
       if (rule) await loadData();
-      // Só com a regra, só depois de dar certo, e só havendo dono anterior
-      // DIFERENTE do novo — nunca com dono anterior vazio nem com a mesma
-      // pessoa. O sistema não tira ninguém sozinho: quem troca é quem decide
-      // (decisão do Tony, fase 2b.1).
-      if (rule && previousOwnerId && previousOwnerId !== newOwnerId) {
-        const previousOwnerName =
-          agents.find(agent => String(agent.id) === previousOwnerId)?.name ?? previousOwnerId;
-        const tirar = await confirmar({
-          titulo: OWNER_TITLE,
-          descricao: previousOwnerPrompt(previousOwnerName),
-          rotuloDaAcao: PREVIOUS_OWNER_REMOVE,
-          rotuloDeCancelar: PREVIOUS_OWNER_KEEP,
-        });
-        if (tirar) {
-          try {
-            await InboxMembersService.remove(inboxId, [previousOwnerId]);
-            await loadData();
-          } catch (error) {
-            console.error('Error removing previous number owner:', error);
-            toast.error(apiErrorMessage(error, t('settings.collaborators.errors.updateError')));
-          }
-        }
-      }
     } catch (error) {
       console.error('Error updating number owner:', error);
       // A recusa do servidor tem motivo ("O cadastro de Fulano está desativado:
@@ -547,8 +508,6 @@ export default function CollaboratorsForm({
           </div>
         </CardContent>
       </Card>
-
-      {dialogoDeConfirmacao}
     </div>
   );
 }
