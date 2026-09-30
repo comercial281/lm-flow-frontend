@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useId } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 
 // ── ALTERAÇÃO NÃO SALVA: A TELA AVISA ANTES DE PERDER ───────────────────────
@@ -75,7 +74,6 @@ export const PEDIDO_SAIR_SEM_SALVAR = {
  * Renderize `dialogoDeConfirmacao` junto.
  */
 export function useGuardaDeSaida() {
-  const navigate = useNavigate();
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   const aoClicar = useCallback(
@@ -91,11 +89,15 @@ export function useGuardaDeSaida() {
       e.preventDefault();
       e.stopPropagation();
       if (await confirmar(PEDIDO_SAIR_SEM_SALVAR)) {
+        // Repete o clique no próprio link, já sem pendência: a guarda deixa
+        // passar e o link faz o que faria (navega e roda o onClick dele, que
+        // fecha o menu do celular e abre o submenu de Contatos/Bolsão).
+        // navigate(destino) direto pulava esse onClick.
         limparPendentes();
-        navigate(destino);
+        (link as HTMLElement).click();
       }
     },
-    [confirmar, navigate],
+    [confirmar],
   );
 
   return { aoClicar, dialogoDeConfirmacao };

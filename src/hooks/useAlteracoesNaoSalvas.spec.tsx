@@ -90,6 +90,37 @@ describe('alteração não salva', () => {
     expect(await screen.findByText('chegou na outra')).toBeInTheDocument();
   });
 
+  it('depois de "Sair sem salvar" o clique do link segue normal: o onClick dele roda (fecha o menu do celular)', async () => {
+    const fecharMenu = vi.fn();
+    function MenuDoCelular() {
+      const { aoClicar, dialogoDeConfirmacao } = useGuardaDeSaida();
+      return (
+        <nav onClickCapture={aoClicar}>
+          <Link to="/outra" onClick={fecharMenu}>Outra tela</Link>
+          {dialogoDeConfirmacao}
+        </nav>
+      );
+    }
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <MenuDoCelular />
+        <Routes>
+          <Route path="/" element={<Tela sujo />} />
+          <Route path="/outra" element={<p>chegou na outra</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await userEvent.click(screen.getByText('Outra tela'));
+    await userEvent.click(await screen.findByRole('button', { name: 'Continuar editando' }));
+    expect(fecharMenu).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByText('Outra tela'));
+    await userEvent.click(await screen.findByRole('button', { name: 'Sair sem salvar' }));
+    expect(await screen.findByText('chegou na outra')).toBeInTheDocument();
+    expect(fecharMenu).toHaveBeenCalledTimes(1);
+    expect(temAlteracaoPendente()).toBe(false);
+  });
+
   it('link que só abre submenu passa direto, mesmo com alteração', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
