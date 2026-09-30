@@ -22,4 +22,15 @@ describe('docUploadError', () => {
     expect(docUploadError({ name: 'book.pdf', size: 20 * MB, type: 'application/pdf' })).toBeNull();
     expect(docUploadError({ name: 'book.pdf', size: 26 * MB, type: 'application/pdf' })).toContain('25 MB');
   });
+
+  it('recusa vídeo que não é MP4, mesmo pequeno', () => {
+    const erro = docUploadError({ name: 'tour.mov', size: 5 * MB, type: 'video/quicktime' });
+
+    expect(erro).toContain('MP4');
+    expect(erro).toContain('tour.mov');
+  });
+
+  it('aceita MP4 mesmo quando o navegador manda type vazio', () => {
+    expect(docUploadError({ name: 'TOUR.MP4', size: 5 * MB, type: '' })).toBeNull();
+  });
 });

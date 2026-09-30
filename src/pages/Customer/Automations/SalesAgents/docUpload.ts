@@ -7,13 +7,24 @@ export const DOC_MAX_BYTES = 25 * 1024 * 1024;
 // link quando é grande (decisão do dono): acima disto ele nunca sairia.
 export const VIDEO_MAX_BYTES = 16 * 1024 * 1024;
 
-function isVideo(file: { name: string; type: string }) {
-  return file.type.startsWith('video/') || file.name.toLowerCase().endsWith('.mp4');
+// Video "de aparência" pelo MIME ou pela extensão — cobre o drag-and-drop e o
+// "Todos os arquivos", que não respeitam o DOC_ACCEPT do input.
+function isVideoLike(file: { name: string; type: string }) {
+  return file.type.startsWith('video/') || /\.(mp4|mov|m4v|webm|avi)$/i.test(file.name);
+}
+
+// MP4 de verdade: às vezes o navegador manda type vazio (arrasta de fora), então a
+// extensão sozinha já basta.
+function isMp4(file: { name: string; type: string }) {
+  return file.type === 'video/mp4' || file.name.toLowerCase().endsWith('.mp4');
 }
 
 /** A mensagem pro dono quando o arquivo não pode subir; null quando pode. */
 export function docUploadError(file: { name: string; size: number; type: string }): string | null {
-  if (isVideo(file) && file.size > VIDEO_MAX_BYTES) {
+  if (isVideoLike(file) && !isMp4(file)) {
+    return `"${file.name}" não é MP4. Converta o vídeo para MP4 antes de subir.`;
+  }
+  if (isMp4(file) && file.size > VIDEO_MAX_BYTES) {
     return `"${file.name}" tem mais de 16 MB. Vídeo pesado demais pro WhatsApp: reduza o vídeo antes de subir.`;
   }
   if (file.size > DOC_MAX_BYTES) {
