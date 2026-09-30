@@ -114,6 +114,7 @@ describe('Conta na base da Fase 3', () => {
       }),
     );
     await waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalledWith('Ligada'));
+    expect(mocks.toastSuccess.mock.calls.filter((c: any[]) => c[0] === 'Ligada')).toHaveLength(1);
   });
 
   it('desistir na janela: a chave volta desligada e nada é gravado', async () => {

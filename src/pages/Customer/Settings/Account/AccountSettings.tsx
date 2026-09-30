@@ -332,7 +332,6 @@ export default function AccountSettings() {
       };
       setFormData(prev => ({ ...prev, ...patch }));
       setCarregado(prev => (prev ? { ...prev, ...patch } : prev));
-      toast.success('Ligada');
     } else {
       await accountService.updateAccount({
         auto_resolve_after: null,
