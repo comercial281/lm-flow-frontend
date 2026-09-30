@@ -3954,3 +3954,17 @@ Armadilhas:
    na trilha (ex.: *"A roleta não tem nenhum corretor ativo para sortear."*).
 4. **Os textos moram em `exhaustedText.ts`** (com spec); o bloco é
    `components/roleta/ExhaustedLeadsPanel.tsx`, e a página só passa a lista.
+
+## A IA Vendedora manda fotos e vídeo do imóvel (desde 2026-09-30)
+
+Pedido do dono (29/09/26): a mídia chegava "incongruente". A capa do imóvel saía sozinha, com o link, no momento em que o sistema reconhecia o imóvel, sem ligação com o que a IA estava falando. E só ia a capa, mesmo com 20+ fotos na galeria.
+
+Como ficou:
+- **A IA escolhe a hora.** Ao apresentar um imóvel, ela manda um **pacote de até 5 fotos**: a capa primeiro, depois a ordem da galeria. Vão como foto no WhatsApp, com "Título — Preço" na primeira. **Sem link.** Se o lead pedir mais, vão as próximas 5, sem repetir. Acabou a galeria, ela oferece a visita.
+- **Vídeo: 1, e nunca junto das fotos.** Pode ser o vídeo da galeria do imóvel ou um vídeo subido nos arquivos da IA (**só MP4, até 16 MB**; a tela recusa outro formato ou vídeo maior). Vídeo pesado não vira link: a IA não oferece.
+- Foto marcada como **Ocultar** em *Gerenciar fotos* nunca vai pro lead. É assim que o corretor segura uma foto ruim.
+- O **link da página** do imóvel só vai quando o lead pede ("tem site?", "me manda o anúncio").
+- A opção do agente virou **Mandar fotos e vídeo do imóvel**. Desligada, nada de foto nem vídeo.
+- No **Testar**, digite o código do imóvel: aparecem as miniaturas exatas do pacote. (Ali não há conversa, então "mais fotos" mostra de novo as primeiras.)
+
+Por que a ordem da galeria e não "foto da cozinha, da área de lazer": numa amostra de 30 imóveis de um cliente com 412, as 614 fotos estavam todas com o tipo "Principal" (a importação não preenche e a tela só deixa escolher no upload), e nenhum imóvel tinha vídeo. As 5 primeiras da galeria eram boas. **Não reabrir sem o dono pedir:** classificação por ambiente e "foco" só entram se ficar provado que o lead pede ambiente específico.

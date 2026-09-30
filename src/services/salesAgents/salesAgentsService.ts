@@ -566,7 +566,7 @@ export interface SalesAgentDocument {
   send_caption: string | null;
   send_topics: string[];
   property_codes: string[];
-  media_kind: 'document' | 'image' | 'audio';
+  media_kind: 'document' | 'image' | 'audio' | 'video';
   file_url: string | null;
   byte_size: number;
   size_label: string | null;
@@ -594,17 +594,20 @@ export interface SalesAgentDocumentConfig {
 }
 
 /**
- * Foto e link que o lead REAL receberia junto do texto. No teste não existe canal
- * pra enviar, então em vez de a mídia sumir (e a IA parecer que prometeu e não
- * cumpriu) a tela mostra o que teria ido.
+ * O que o lead REAL receberia junto do texto. No teste não existe canal pra
+ * enviar, então em vez de a mídia sumir (e a IA parecer que prometeu e não
+ * cumpriu) a tela mostra o que teria ido. 'photos' = o pacote de fotos do imóvel,
+ * com as miniaturas exatas, na ordem em que iriam.
  */
 export interface TestMediaItem {
-  type: 'image' | 'link' | 'file';
-  /** Só em foto e link — arquivo não tem endereço no painel, ele só é anunciado. */
+  type: 'image' | 'link' | 'file' | 'photos';
+  /** Só em foto e link. */
   url?: string;
-  caption?: string;
-  // --- só em 'file' ---
-  kind?: 'document' | 'image' | 'audio';
+  /** Só em 'photos': as fotos do pacote, na ordem. */
+  urls?: string[];
+  caption?: string | null;
+  // --- 'file' e 'photos' ---
+  kind?: 'document' | 'image' | 'audio' | 'video';
   title?: string;
   /** Por que ela escolheu mandar agora. Serve pra calibrar a regra. */
   reason?: string | null;
