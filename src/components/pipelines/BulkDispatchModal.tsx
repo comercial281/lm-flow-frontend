@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
-import { plural } from '@/lib/formato';
+import { plural, numero } from '@/lib/formato';
 import {
   Dialog,
   DialogContent,
@@ -709,7 +709,11 @@ export default function BulkDispatchModal({
                     <>
                       <Users className="w-4 h-4 text-primary" />
                       <span>
-                        {plural(recipientCount ?? 0, 'contato com telefone vai receber', 'contatos com telefone vão receber')}.
+                        <strong>{numero(recipientCount ?? 0)}</strong>{' '}
+                        {(recipientCount ?? 0) === 1
+                          ? 'contato com telefone vai receber'
+                          : 'contatos com telefone vão receber'}
+                        .
                       </span>
                     </>
                   )}

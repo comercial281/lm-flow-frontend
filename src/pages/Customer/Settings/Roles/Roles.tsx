@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/ds';
 import { Plus, Copy, Pencil, Trash2, Clock, Shield, Lock } from 'lucide-react';
 import { toast } from 'sonner';
-import { plural } from '@/lib/formato';
+import { plural, numero } from '@/lib/formato';
 import { customRolesService } from '@/services/customRoles/customRolesService';
 import type { CustomRole, PermissionSection } from '@/types/customRoles';
 import RoleEditorModal from './RoleEditorModal';
@@ -182,7 +182,8 @@ export default function RolesPage({ embedded = false }: RolesPageProps) {
                 </span>
                 <span>•</span>
                 <span>
-                  {plural(role.users_count, 'usuário', 'usuários')}
+                  <strong className="text-foreground">{numero(role.users_count)}</strong>{' '}
+                  {role.users_count === 1 ? 'usuário' : 'usuários'}
                 </span>
               </div>
 
