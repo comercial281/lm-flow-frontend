@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
+import { plural } from '@/lib/formato';
 import {
   Dialog,
   DialogContent,
@@ -378,7 +379,7 @@ export default function ImportLeadsModal({
     setErrors(collectedErrors);
     setStep('done');
     if (ok > 0) {
-      toast.success(`${ok} lead(s) importado(s).`);
+      toast.success(`${plural(ok, 'lead importado', 'leads importados')}.`);
       onImported();
     }
   };
@@ -438,7 +439,7 @@ export default function ImportLeadsModal({
             <div className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg">
               <FileText className="h-4 w-4 text-muted-foreground" />
               <span className="flex-1 text-sm truncate">{fileName}</span>
-              <span className="text-xs text-muted-foreground">{rows.length} linha(s)</span>
+              <span className="text-xs text-muted-foreground">{plural(rows.length, 'linha', 'linhas')}</span>
               <Button variant="ghost" size="sm" onClick={resetAll}>
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -582,7 +583,7 @@ export default function ImportLeadsModal({
               <CheckCircle2 className="h-10 w-10 text-green-500" />
               <div className="text-lg font-semibold">Importação concluída</div>
               <div className="text-sm text-muted-foreground">
-                {progress.ok} importado(s){progress.fail > 0 ? `, ${progress.fail} com erro` : ''}.
+                {plural(progress.ok, 'importado', 'importados')}{progress.fail > 0 ? `, ${progress.fail} com erro` : ''}.
               </div>
             </div>
             {errors.length > 0 && (
@@ -604,7 +605,7 @@ export default function ImportLeadsModal({
                 Cancelar
               </Button>
               <Button onClick={handleImport} disabled={!nameMapped || !stageId}>
-                Importar {rows.length} lead(s)
+                Importar {plural(rows.length, 'lead', 'leads')}
               </Button>
             </>
           )}

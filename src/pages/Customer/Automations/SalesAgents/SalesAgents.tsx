@@ -13,7 +13,7 @@ import TestMediaBubble from './TestMediaBubble';
 import SendToMeButton from './SendToMeButton';
 import { DOC_ACCEPT, docUploadError } from './docUpload';
 import type { AgentPerformance } from '@/types/aiResults';
-import { dolar } from '@/lib/formato';
+import { dolar, plural } from '@/lib/formato';
 import {
   salesAgentsService,
   type SalesAgent,
@@ -4482,7 +4482,7 @@ function SuggestionsTab({ agent }: { agent: SalesAgent }) {
       return;
     }
     const novas = payload.suggestions.length - quantasAntes;
-    toast.success(novas > 0 ? `${novas} sugestão(ões) nova(s)` : 'Nenhum padrão novo desta vez');
+    toast.success(novas > 0 ? plural(novas, 'sugestão nova', 'sugestões novas') : 'Nenhum padrão novo desta vez');
   };
 
   const aplicar = async (s: SalesAgentSuggestion) => {
@@ -4623,7 +4623,7 @@ function SuggestionsTab({ agent }: { agent: SalesAgent }) {
           onClick={() => setMostrarDescartadas((v) => !v)}
           className="text-xs text-muted-foreground hover:text-foreground"
         >
-          {mostrarDescartadas ? 'Esconder' : 'Ver'} {descartadas} descartada(s)
+          {mostrarDescartadas ? 'Esconder' : 'Ver'} {plural(descartadas, 'descartada', 'descartadas')}
         </button>
       )}
 
@@ -4637,7 +4637,7 @@ function SuggestionsTab({ agent }: { agent: SalesAgent }) {
             </p>
           )}
           <p className={noTeto ? 'text-amber-600' : undefined}>
-            {data.lessons_active} lição(ões) ativa(s).
+            {plural(data.lessons_active, 'lição ativa', 'lições ativas')}.
             {noTeto
               ? ` A IA lê no máximo ${data.lessons_cap} de cada tipo: aplicar mais não muda o comportamento dela. Remova as que já não valem, na aba Aprendizado.`
               : ` Ela lê até ${data.lessons_cap} de cada tipo.`}
@@ -4910,7 +4910,7 @@ function ReportsTab() {
     try {
       const report = await salesAgentsService.weeklyReportSendNow();
       setPayload((prev) => (prev ? { ...prev, current: report } : prev));
-      if (report.delivered_count > 0) toast.success(`Enviado para ${report.delivered_count} destino(s)`);
+      if (report.delivered_count > 0) toast.success(`Enviado para ${plural(report.delivered_count, 'destino', 'destinos')}`);
       else toast.error('Nenhum destino recebeu. Confira a lista abaixo.');
       await load();
     } catch (e) {

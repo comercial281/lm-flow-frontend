@@ -11,6 +11,7 @@ import {
   Megaphone, X, Send, Loader2, Check, Users, RefreshCw, Save, AlertTriangle, Search, History,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { plural } from '@/lib/formato';
 import {
   academyAnnouncementsService,
   type AnnounceConfig,
@@ -184,8 +185,8 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
       });
       const dados = r.data.data;
       setResultados(dados.results ?? []);
-      if (dados.sent === dados.total) toast.success(`Aviso enviado para ${dados.sent} grupo(s).`);
-      else toast.warning(`Enviado para ${dados.sent} de ${dados.total} grupo(s).`);
+      if (dados.sent === dados.total) toast.success(`Aviso enviado para ${plural(dados.sent, 'grupo', 'grupos')}.`);
+      else toast.warning(`Enviado para ${dados.sent} de ${dados.total} ${dados.total === 1 ? 'grupo' : 'grupos'}.`);
       const cfg = await academyAnnouncementsService.config();
       setHistorico(cfg.data.data.history ?? []);
     } catch (e) {
@@ -243,7 +244,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                 <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
                 <span>
                   Esta aula já foi avisada em <strong>{formatarData(jaAvisada.at)}</strong> para{' '}
-                  {jaAvisada.sent} grupo(s). Enviar de novo faz o cliente receber duas vezes.
+                  {plural(jaAvisada.sent, 'grupo', 'grupos')}. Enviar de novo faz o cliente receber duas vezes.
                 </span>
               </div>
             )}
@@ -384,14 +385,17 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                 {foraDaLista > 0 && (
                   <>
                     {' '}
-                    Outros <strong>{foraDaLista}</strong> grupo(s) deste número ficaram de fora.
+                    Outros <strong>{foraDaLista}</strong> {foraDaLista === 1
+                      ? 'grupo deste número ficou de fora.'
+                      : 'grupos deste número ficaram de fora.'}
                   </>
                 )}
                 {semEndereco.length > 0 && (
                   <>
                     {' '}
-                    <strong>{semEndereco.length}</strong> grupo(s) não puderam ser marcados porque não
-                    dá para saber de qual imobiliária são — sem isso o link levaria ao app errado.
+                    <strong>{semEndereco.length}</strong> {semEndereco.length === 1
+                      ? 'grupo não pôde ser marcado porque não dá para saber de qual imobiliária é — sem isso o link levaria ao app errado.'
+                      : 'grupos não puderam ser marcados porque não dá para saber de qual imobiliária são — sem isso o link levaria ao app errado.'}
                   </>
                 )}
               </p>
@@ -412,7 +416,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                     <div key={`${h.at}-${h.lesson_id}`} className="rounded-lg border border-border px-3 py-2 text-[11px]">
                       <p className="font-medium truncate">{h.titulo || 'Aula sem título'}</p>
                       <p className="text-muted-foreground">
-                        {formatarData(h.at)} · {h.sent} de {h.total} grupo(s) · {h.by}
+                        {formatarData(h.at)} · {h.sent} de {h.total} {h.total === 1 ? 'grupo' : 'grupos'} · {h.by}
                       </p>
                     </div>
                   ))}
@@ -446,7 +450,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
               type="button"
             >
               {enviando ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-              Enviar para {selecionados.length} grupo(s)
+              Enviar para {plural(selecionados.length, 'grupo', 'grupos')}
             </button>
           </div>
         </div>

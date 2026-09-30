@@ -286,7 +286,7 @@ describe('PortalPropertiesSelector — carteira completa, só ativos', () => {
     expect(list).toHaveBeenNthCalledWith(2, { status: 'active', per_page: 200, page: 2 });
 
     await usuario.click(screen.getByRole('button', { name: 'Selecionar todos' }));
-    expect(screen.getByText('201 selecionado(s)')).toBeInTheDocument();
+    expect(screen.getByText('201 selecionados')).toBeInTheDocument();
   });
 
   it('publicação de imóvel que saiu de Ativo não conta, não gasta cota e é pausada ao salvar', async () => {
@@ -298,7 +298,7 @@ describe('PortalPropertiesSelector — carteira completa, só ativos', () => {
     ]);
     await screen.findByText('Imóvel a');
 
-    expect(screen.getByText('1 selecionado(s)')).toBeInTheDocument();
+    expect(screen.getByText('1 selecionado')).toBeInTheDocument();
     expect(screen.getByTestId('contador-premium')).toHaveTextContent('0 / 1');
 
     await usuario.click(screen.getByRole('button', { name: 'Salvar publicações' }));

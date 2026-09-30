@@ -90,7 +90,8 @@
         "stop": "Parar",
         "reset": "Resetar",
         "loading": "Carregando flow...",
-        "errors": "{{count}} erro(s) encontrado(s)"
+        "errors": "{{count}} erro encontrado",
+        "errors_other": "{{count}} erros encontrados"
       },
       "node": {
         "nextStep": "Próximo Passo",

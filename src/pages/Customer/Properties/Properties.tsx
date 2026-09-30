@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, DragEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { dinheiro } from '@/lib/formato';
+import { dinheiro, plural } from '@/lib/formato';
 import {
   Button,
   Input,
@@ -510,7 +510,7 @@ export default function Properties() {
       const results = await propertiesService.batchGenerateDescriptions(Array.from(batchSelected));
       setBatchResults(results);
       const ok = results.filter(r => r.status === 'ok').length;
-      toast.success(`${ok} descrição${ok !== 1 ? 'ões' : ''} gerada${ok !== 1 ? 's' : ''}`);
+      toast.success(plural(ok, 'descrição gerada', 'descrições geradas'));
       load();
     } catch {
       toast.error('Erro na geração em lote');
@@ -764,7 +764,7 @@ export default function Properties() {
                 <Building2 className="h-6 w-6 text-primary" />
                 Imóveis
               </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">{total} imóvel{total !== 1 ? 's' : ''} cadastrado{total !== 1 ? 's' : ''}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{plural(total, 'imóvel cadastrado', 'imóveis cadastrados')}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">

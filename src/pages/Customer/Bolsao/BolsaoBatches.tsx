@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { plural } from '@/lib/formato';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -161,7 +162,7 @@ export default function BolsaoBatches() {
     try {
       const stats = await bolsaoService.cleanupTestLeads();
       toast.success(
-        `Removi ${stats.removed} lead(s) de teste e arquivei ${stats.archived} card(s).`,
+        `Removi ${plural(stats.removed, 'lead de teste', 'leads de teste')} e arquivei ${plural(stats.archived, 'card', 'cards')}.`,
       );
       load(true);
       loadClaims();

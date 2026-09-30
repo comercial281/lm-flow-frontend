@@ -15,6 +15,7 @@ import usersService from '@/services/users/usersService';
 import { Loader2, CheckCircle, XCircle, Mail, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { parseRefusedInvites, type RefusedInvite } from './bulkInviteRefused';
+import { plural } from '@/lib/formato';
 
 interface BulkInviteModalProps {
   isOpen: boolean;
@@ -70,7 +71,9 @@ export default function BulkInviteModal({ isOpen, onClose, onSuccess }: BulkInvi
       if (successCount > 0 && failedCount === 0) {
         toast.success(t('bulkInvite.messages.allSuccess', { count: successCount }));
       } else if (successCount > 0 && failedCount > 0) {
-        toast.success(t('bulkInvite.messages.partialSuccess', { successCount, failedCount }));
+        toast.success(
+          `${plural(successCount, 'convite enviado', 'convites enviados')}, ${plural(failedCount, 'falhou', 'falharam')}`,
+        );
       } else if (failedCount > 0) {
         toast.error(t('bulkInvite.messages.allFailed', { count: failedCount }));
       }

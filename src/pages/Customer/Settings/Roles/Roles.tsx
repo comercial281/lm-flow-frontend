@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/ds';
 import { Plus, Copy, Pencil, Trash2, Clock, Shield, Lock } from 'lucide-react';
 import { toast } from 'sonner';
+import { plural } from '@/lib/formato';
 import { customRolesService } from '@/services/customRoles/customRolesService';
 import type { CustomRole, PermissionSection } from '@/types/customRoles';
 import RoleEditorModal from './RoleEditorModal';
@@ -78,7 +79,7 @@ export default function RolesPage({ embedded = false }: RolesPageProps) {
       !(await confirmar({
         titulo: `Deletar cargo '${role.name}'?`,
         descricao: emUso
-          ? `Este cargo está em uso por ${role.users_count} usuário(s). Eles ficarão sem cargo definido.`
+          ? `Este cargo está em uso por ${plural(role.users_count, 'usuário', 'usuários')}. ${role.users_count === 1 ? 'Ele ficará' : 'Eles ficarão'} sem cargo definido.`
           : undefined,
         rotuloDaAcao: 'Deletar',
         destrutivo: true,
@@ -181,7 +182,7 @@ export default function RolesPage({ embedded = false }: RolesPageProps) {
                 </span>
                 <span>•</span>
                 <span>
-                  <strong className="text-foreground">{role.users_count}</strong> usuário(s)
+                  {plural(role.users_count, 'usuário', 'usuários')}
                 </span>
               </div>
 

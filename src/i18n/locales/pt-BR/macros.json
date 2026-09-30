@@ -8,7 +8,8 @@
     "newMacro": "Nova Macro",
     "bulkDelete": "Deletar",
     "clearSelection": "Limpar Seleção",
-    "selected": "{{count}} selecionada(s)",
+    "selected": "{{count}} selecionada",
+    "selected_other": "{{count}} selecionadas",
     "filter": "Filtrar"
   },
   "empty": {
@@ -104,7 +105,8 @@
     "updateError": "Erro ao atualizar macro",
     "deleteSuccess": "Macro deletada com sucesso",
     "deleteError": "Erro ao deletar macro",
-    "bulkDeleteSuccess": "{{count}} macro(s) deletada(s) com sucesso",
+    "bulkDeleteSuccess": "{{count}} macro deletada com sucesso",
+    "bulkDeleteSuccess_other": "{{count}} macros deletadas com sucesso",
     "bulkDeleteError": "Erro ao deletar macros",
     "executeSuccess": "Macro \"{{name}}\" executada com sucesso",
     "executeError": "Erro ao executar macro",
@@ -126,7 +128,8 @@
     },
     "bulkDelete": {
       "title": "Deletar Macros",
-      "description": "Tem certeza de que deseja deletar {{count}} macro(s) selecionada(s)? Esta ação não pode ser desfeita.",
+      "description": "Tem certeza de que deseja deletar {{count}} macro selecionada? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza de que deseja deletar {{count}} macros selecionadas? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
       "confirm": "Deletar Todos",
       "deleting": "Deletando..."

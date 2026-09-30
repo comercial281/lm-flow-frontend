@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
+import { plural } from '@/lib/formato';
 import {
   Button,
   Dialog,
@@ -213,7 +214,7 @@ export default function LeadAdsForms() {
       const r = await leadAdsFormsService.backfill(backfillDays, dryRun);
       setBackfillPreview(r);
       if (!dryRun) {
-        toast.success(`${r.importados} lead(s) importado(s)`);
+        toast.success(plural(r.importados, 'lead importado', 'leads importados'));
         load();
       }
     } catch {
@@ -268,7 +269,7 @@ export default function LeadAdsForms() {
       } else {
         const pages = new Set(result.data.map(f => f.page_id).filter(Boolean));
         const sufixo = pages.size > 1 ? ` em ${pages.size} páginas` : '';
-        toast.success(`${result.data.length} formulário(s) encontrado(s)${sufixo}`);
+        toast.success(`${plural(result.data.length, 'formulário encontrado', 'formulários encontrados')}${sufixo}`);
       }
     } catch {
       if (!silent) toast.error('Erro ao sincronizar formulários');
@@ -341,7 +342,7 @@ export default function LeadAdsForms() {
       // A lista vai como JSX: no window.confirm ela era uma parede de texto com
       // `\n`, e com dezenas de etiquetas a caixinha do navegador cortava o fim.
       const ok = await confirmar({
-        titulo: `Apagar ${preview.count} etiqueta(s)`,
+        titulo: `Apagar ${plural(preview.count, 'etiqueta', 'etiquetas')}`,
         descricao: (
           <>
             Estas etiquetas foram criadas automaticamente e serão apagadas. Não dá pra desfazer.
@@ -360,7 +361,7 @@ export default function LeadAdsForms() {
       const result = await leadAdsFormsService.cleanupFormLabels(true);
       resources.reloadLabels();
       await load();
-      toast.success(`${result.count} etiqueta(s) removida(s)`);
+      toast.success(plural(result.count, 'etiqueta removida', 'etiquetas removidas'));
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Erro ao limpar etiquetas'));
     } finally {

@@ -32,7 +32,7 @@ export default function CustomAttributesHeader({
   return (
     <BaseHeader
       title={t('header.title')}
-      subtitle={t(totalCount === 1 ? 'header.subtitleSingular' : 'header.subtitle', {
+      subtitle={t('header.subtitle', {
         count: totalCount,
         tabName: currentTab?.name.toLowerCase(),
       })}

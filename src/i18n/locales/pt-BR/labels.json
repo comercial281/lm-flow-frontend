@@ -8,7 +8,8 @@
     "newLabel": "Nova Etiqueta",
     "bulkDelete": "Deletar",
     "clearSelection": "Limpar Seleção",
-    "selected": "{{count}} selecionada(s)"
+    "selected": "{{count}} selecionada",
+    "selected_other": "{{count}} selecionadas"
   },
   "empty": {
     "title": "Nenhuma etiqueta encontrada",
@@ -90,7 +91,8 @@
     "updateError": "Erro ao atualizar etiqueta",
     "deleteSuccess": "Etiqueta deletada com sucesso",
     "deleteError": "Erro ao deletar etiqueta",
-    "bulkDeleteSuccess": "{{count}} etiqueta(s) deletada(s) com sucesso",
+    "bulkDeleteSuccess": "{{count}} etiqueta deletada com sucesso",
+    "bulkDeleteSuccess_other": "{{count}} etiquetas deletadas com sucesso",
     "bulkDeleteError": "Erro ao deletar etiquetas"
   },
   "dialog": {
@@ -103,7 +105,8 @@
     },
     "bulkDelete": {
       "title": "Deletar Etiquetas",
-      "description": "Tem certeza de que deseja deletar {{count}} etiqueta(s) selecionada(s)? Esta ação não pode ser desfeita.",
+      "description": "Tem certeza de que deseja deletar {{count}} etiqueta selecionada? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza de que deseja deletar {{count}} etiquetas selecionadas? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
       "confirm": "Deletar Todas",
       "deleting": "Deletando..."

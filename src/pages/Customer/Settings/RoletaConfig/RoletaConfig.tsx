@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { formatDateTimeBR } from '@/utils/dateUtils';
-import { porcentagem } from '@/lib/formato';
+import { porcentagem, plural, numero } from '@/lib/formato';
 import { toast } from 'sonner';
 import {
   Button, Input, Label as UILabel, Badge,
@@ -280,7 +280,7 @@ export default function RoletaConfigPage() {
       const r = await roletaConfigService.repairOwners(dryRun);
       setRepairPreview(r);
       if (!dryRun) {
-        toast.success(`${r.corrigidos} lead(s) com responsável restaurado`);
+        toast.success(plural(r.corrigidos, 'lead com responsável restaurado', 'leads com responsável restaurado'));
         loadDiagnostics();
       }
     } catch {
@@ -301,7 +301,7 @@ export default function RoletaConfigPage() {
       const r = await roletaConfigService.repairInboxAccess(dryRun);
       setAcessoPreview(r);
       if (!dryRun) {
-        toast.success(`${r.liberados} corretor(es) liberado(s), ${r.total_revogar} vínculo(s) removido(s)`);
+        toast.success(`${plural(r.liberados, 'corretor liberado', 'corretores liberados')}, ${plural(r.total_revogar, 'vínculo removido', 'vínculos removidos')}`);
       }
     } catch {
       toast.error('Erro ao ajustar o acesso às instâncias');
@@ -1786,7 +1786,7 @@ export default function RoletaConfigPage() {
               {ocultosNaLista > 0 && (
                 <Button variant="outline" size="sm" onClick={() => setShowHidden(v => !v)} className="gap-1.5">
                   {showHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                  {showHidden ? 'Esconder de novo' : `Ver ${ocultosNaLista} oculto(s)`}
+                  {showHidden ? 'Esconder de novo' : `Ver ${plural(ocultosNaLista, 'oculto', 'ocultos')}`}
                 </Button>
               )}
               {hiddenIds.length > 0 && (
@@ -1802,8 +1802,10 @@ export default function RoletaConfigPage() {
             <div className="border rounded-lg p-4">
               <p className="text-sm font-medium">
                 {repairPreview.dry_run
-                  ? `${repairPreview.total} lead(s) foram sorteados mas estão sem responsável no card`
-                  : `${repairPreview.corrigidos} corrigido(s), ${repairPreview.falharam} falharam`}
+                  ? (repairPreview.total === 1
+                      ? '1 lead foi sorteado mas está sem responsável no card'
+                      : `${numero(repairPreview.total)} leads foram sorteados mas estão sem responsável no card`)
+                  : `${plural(repairPreview.corrigidos, 'corrigido', 'corrigidos')}, ${plural(repairPreview.falharam, 'falhou', 'falharam')}`}
               </p>
               <div className="mt-2 space-y-1 max-h-56 overflow-y-auto">
                 {repairPreview.leads.map(l => (
@@ -1822,7 +1824,7 @@ export default function RoletaConfigPage() {
                   disabled={repairBusy}
                   onClick={() => runRepair(false)}
                 >
-                  Corrigir os {repairPreview.total} lead(s)
+                  Corrigir os {plural(repairPreview.total, 'lead', 'leads')}
                 </Button>
               )}
             </div>
@@ -1832,8 +1834,8 @@ export default function RoletaConfigPage() {
             <div className="border rounded-lg p-4">
               <p className="text-sm font-medium">
                 {acessoPreview.dry_run
-                  ? `${acessoPreview.total} corretor(es) a liberar e ${acessoPreview.total_revogar} vínculo(s) automático(s) a remover`
-                  : `${acessoPreview.liberados} liberado(s), ${acessoPreview.total_revogar} removido(s), ${acessoPreview.falharam} falharam`}
+                  ? `${plural(acessoPreview.total, 'corretor a liberar', 'corretores a liberar')} e ${plural(acessoPreview.total_revogar, 'vínculo automático a remover', 'vínculos automáticos a remover')}`
+                  : `${plural(acessoPreview.liberados, 'liberado', 'liberados')}, ${plural(acessoPreview.total_revogar, 'removido', 'removidos')}, ${plural(acessoPreview.falharam, 'falhou', 'falharam')}`}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 O vínculo automático dá ao corretor acesso ao número do lead dele — nunca o coloca
@@ -1850,7 +1852,7 @@ export default function RoletaConfigPage() {
                     ) : acessoPreview.corretores.map(c => (
                       <div key={`grant-${c.user_id}`} className="text-xs text-muted-foreground flex flex-wrap gap-x-2">
                         <span className="font-medium text-foreground">{c.corretor ?? c.user_id}</span>
-                        <span>→ {c.instancias.join(', ') || `${c.total_instancias} instância(s)`}</span>
+                        <span>→ {c.instancias.join(', ') || `${plural(c.total_instancias, 'instância', 'instâncias')}`}</span>
                         {c.motivo && <span className="text-red-600">{c.motivo}</span>}
                       </div>
                     ))}
@@ -1865,7 +1867,7 @@ export default function RoletaConfigPage() {
                     ) : acessoPreview.revogacoes.map(c => (
                       <div key={`revoke-${c.user_id}`} className="text-xs text-muted-foreground flex flex-wrap gap-x-2">
                         <span className="font-medium text-foreground">{c.corretor ?? c.user_id}</span>
-                        <span>→ {c.instancias.join(', ') || `${c.total_instancias} instância(s)`}</span>
+                        <span>→ {c.instancias.join(', ') || `${plural(c.total_instancias, 'instância', 'instâncias')}`}</span>
                         {c.motivo && <span className="text-red-600">{c.motivo}</span>}
                       </div>
                     ))}

@@ -41,7 +41,7 @@ import { isForbiddenError } from '@/services/core/forbidden';
 import { useCan } from '@/hooks/useCan';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
-import { dinheiro, dolar } from '@/lib/formato';
+import { dinheiro, dolar, plural } from '@/lib/formato';
 type Tab = 'disparos' | 'templates' | 'canais' | 'cadencias' | 'metricas';
 
 const STATUS_META: Record<BroadcastCampaign['status'], { label: string; cls: string }> = {
@@ -435,7 +435,7 @@ export default function Disparos() {
                       <div className="min-w-0">
                         <div className="text-sm font-medium truncate">{o.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {o.phone_number} · {approved} template(s) aprovado(s) de {o.templates.length}
+                          {o.phone_number} · {plural(approved, 'template aprovado', 'templates aprovados')} de {o.templates.length}
                         </div>
                       </div>
                     </div>
@@ -473,7 +473,7 @@ export default function Disparos() {
                     <div className="min-w-0">
                       <div className="text-sm font-medium truncate">{f.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {(f.items?.length ?? 0)} passo(s)
+                        {plural(f.items?.length ?? 0, 'passo', 'passos')}
                         {f.category ? ` · ${f.category}` : ''}
                       </div>
                     </div>

@@ -143,10 +143,10 @@ describe('Follow-up do card — o estado vem da fila', () => {
 
     render(<FollowupTimeline contactId="c-1" />);
 
-    expect(await screen.findByText('1 cancelado(s)')).toBeInTheDocument();
+    expect(await screen.findByText('1 cancelado')).toBeInTheDocument();
     expect(screen.queryByText('Cancelado')).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByText('1 cancelado(s)'));
+    await userEvent.click(screen.getByText('1 cancelado'));
     expect(screen.getByText('Cancelado')).toBeInTheDocument();
   });
 
