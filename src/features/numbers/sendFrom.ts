@@ -93,7 +93,11 @@ export function sendFromOf(
 ): SendFromValue {
   const mode = String(source?.send_from ?? '').trim();
   if (mode === 'owner') return { send_from: 'owner', send_from_inbox_id: '' };
-  if (mode === 'number') return { send_from: 'number', send_from_inbox_id: String(source?.send_from_inbox_id ?? '').trim() };
+  const inboxId = String(source?.send_from_inbox_id ?? '').trim();
+  // 'number' sem número (gravado por API/importação — a tela nunca produz) vale
+  // o padrão, igual ao `config_from` do servidor: senão o seletor mostraria
+  // "Automático" e o salvar recusaria sem ter o que escolher.
+  if (mode === 'number' && inboxId) return { send_from: 'number', send_from_inbox_id: inboxId };
   return { ...AUTO };
 }
 

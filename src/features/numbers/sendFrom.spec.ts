@@ -28,6 +28,7 @@ describe('sendFromOf — o valor gravado, normalizado', () => {
 
   it('um número específico carrega o número', () => {
     expect(sendFromOf({ send_from: 'number', send_from_inbox_id: ' i1 ' })).toEqual({ send_from: 'number', send_from_inbox_id: 'i1' });
+    expect(sendFromOf({ send_from: 'number', send_from_inbox_id: '  ' })).toEqual({ send_from: '', send_from_inbox_id: '' });
   });
 });
 

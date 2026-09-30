@@ -14,9 +14,12 @@ const pagina = semComentarios(readFileSync(resolve(__dirname, 'LeadAutomations.t
 const mensagem = (params: Record<string, string>) => [{ type: 'send_whatsapp_message', params: { message: 'Oi', ...params } }];
 
 describe('validar a escolha do número', () => {
-  it('"um número específico" sem o número não salva', () => {
-    expect(validateRule('lead.created', [], mensagem({ send_from: 'number', send_from_inbox_id: '' })))
-      .toEqual({ ok: false, error: SEND_FROM_NEEDS_NUMBER });
+  // "um número específico" sem o número só chega por API/importação (a tela não
+  // produz): vale o padrão, igual ao servidor — senão o salvar travaria sem
+  // ter o que escolher (revisão final da 2b.2).
+  it('"um número específico" sem o número vale o automático e salva', () => {
+    expect(validateRule('lead.created', [], mensagem({ send_from: 'number', send_from_inbox_id: '' })).ok).toBe(true);
+    expect(SEND_FROM_NEEDS_NUMBER).toBeTruthy();
   });
 
   it('com o número, com o do responsável ou no automático, salva', () => {
