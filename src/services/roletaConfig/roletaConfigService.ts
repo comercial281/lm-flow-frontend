@@ -363,6 +363,25 @@ export interface RoletaQueue {
   roletas: RoletaQueueConfig[];
 }
 
+// Lead que passou por todos os corretores da roleta, ninguém assumiu, e desde
+// então ninguém sorteou de novo nem atribuiu na mão.
+export interface RoletaExhaustedLead {
+  contact_id: string;
+  lead: string;
+  lead_telefone: string | null;
+  roleta_id: string | null;
+  roleta: string | null;
+  esgotou_em: string;
+  /** Quem recebeu o lead no ciclo que esgotou, na ordem. */
+  passou_por: string[];
+  conversation_id: string | null;
+  conversation_display_id: number | null;
+  pipeline_item_id: string | null;
+  /** Falso quando a roleta está fechada, desativada ou em modo Manual. */
+  pode_sortear: boolean;
+  bloqueio: string | null;
+}
+
 export interface RepairOwnersResult {
   dry_run: boolean;
   total: number;
@@ -506,6 +525,19 @@ export const roletaConfigService = {
     const params = status ? { status } : {};
     const res = await api.get(`${BASE}/assignments`, { params });
     return (res.data as { data: BrokerAssignment[] }).data ?? [];
+  },
+
+  // Leads que esgotaram a roleta e continuam sem responsável.
+  async getExhausted(): Promise<RoletaExhaustedLead[]> {
+    const res = await api.get(`${BASE}/exhausted`);
+    return (res.data as { data: RoletaExhaustedLead[] }).data ?? [];
+  },
+
+  // "Sortear de novo": o lead volta para a mesma roleta, do zero. Devolve o nome
+  // de quem recebeu a oferta.
+  async redistributeExhausted(contactId: string): Promise<{ corretor: string }> {
+    const res = await api.post(`${BASE}/exhausted/${contactId}/redistribute`);
+    return (res.data as { data: { corretor: string } }).data;
   },
 
   // Dispara um aviso de TESTE (corretor/gestor/grupo) com dados fictícios,
