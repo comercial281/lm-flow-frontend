@@ -23,9 +23,10 @@ import { moveMember, queueOrdinal } from './roletaQueueOrder';
 import {
   roletaConfigService, RoletaConfig, RoletaMember, RoletaInstance, BrokerAssignment, DistributionMode,
   RoletaDiagnostic, RepairOwnersResult, RepairInboxAccessResult, RoletaQueue,
-  RoletaHoursWindow, RoletaBusinessHours, RoletaDefaults,
+  RoletaHoursWindow, RoletaBusinessHours, RoletaDefaults, RoletaExhaustedLead,
 } from '@/services/roletaConfig/roletaConfigService';
 import RemoveFromRoletaDialog from '@/components/roleta/RemoveFromRoletaDialog';
+import ExhaustedLeadsPanel from '@/components/roleta/ExhaustedLeadsPanel';
 import { WeeklyWindowsEditor } from '@/components/schedule/WeeklyWindowsEditor';
 import { DEFAULT_WINDOW } from '@/components/schedule/scheduleWindows';
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
@@ -500,6 +501,20 @@ export default function RoletaConfigPage() {
       setLoadingAssign(false);
     }
   }, []);
+
+  // Leads que esgotaram a roleta. Carrega ao abrir a tela, não só na aba: a
+  // contagem na aba é o que faz o gestor entrar nela. Falha fica calada (cargo
+  // sem a chave, rede) — o bloco é alerta, e a aba segue funcionando sem ele.
+  const [exhausted, setExhausted] = useState<RoletaExhaustedLead[]>([]);
+  const loadExhausted = useCallback(async () => {
+    try {
+      setExhausted(await roletaConfigService.getExhausted());
+    } catch {
+      setExhausted([]);
+    }
+  }, []);
+  useEffect(() => { loadExhausted(); }, [loadExhausted]);
+  useEffect(() => { if (tab === 'assignments') loadExhausted(); }, [tab, loadExhausted]);
 
   const loadQueue = useCallback(async () => {
     setLoadingQueue(true);
@@ -1426,6 +1441,14 @@ export default function RoletaConfigPage() {
             {t === 'configs' ? 'Configuracoes'
               : t === 'padroes' ? 'Padrões'
               : t === 'assignments' ? 'Atribuicoes Recentes' : 'Diagnóstico'}
+            {t === 'assignments' && exhausted.length > 0 && (
+              <span
+                className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white"
+                title="Leads que esgotaram a roleta e estão sem responsável"
+              >
+                {exhausted.length}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -1567,6 +1590,10 @@ export default function RoletaConfigPage() {
 
       {tab === 'assignments' && (
         <div className="space-y-2">
+          <ExhaustedLeadsPanel
+            items={exhausted}
+            onChanged={() => { loadExhausted(); loadAssignments(); }}
+          />
           {loadingAssign && <p className="text-sm text-muted-foreground">Carregando...</p>}
           {!loadingAssign && assignments.length === 0 && (
             <div className="border rounded-lg p-12 text-center text-muted-foreground">
