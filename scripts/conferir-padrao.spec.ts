@@ -36,6 +36,21 @@ describe('textosDaTela: o que conta como texto que aparece', () => {
       function Tela() { return <div className="pipeline-tag">{t('pipelines.title')}</div>; }`;
     expect(textos(codigo)).toEqual([]);
   });
+
+  it('comparação e condição de ternário não são texto de tela', () => {
+    // Discriminante de tipo ('label') não conta, nem a condição (tipo === ...)
+    expect(textos(`function T() { return <div>{type === 'label' ? <A /> : <B />}</div>; }`)).toEqual([]);
+
+    // Os ramos (Sim, Não) contam como texto
+    expect(textos(`function T() { return <div>{modo === 'pipeline' ? 'Sim' : 'Não'}</div>; }`)).toEqual(
+      expect.arrayContaining(['Sim', 'Não']),
+    );
+
+    // Operadores que passam texto (&&, ??, +) contam; concatenação trimma espaços
+    expect(textos(`function T() { return <div>{ok && 'Pronto'}{nome ?? 'Sem nome'}{'Olá ' + nome}</div>; }`)).toEqual(
+      expect.arrayContaining(['Pronto', 'Sem nome', 'Olá']),
+    );
+  });
 });
 
 describe('botoesSemNome', () => {

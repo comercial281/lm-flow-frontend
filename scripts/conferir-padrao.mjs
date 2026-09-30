@@ -170,9 +170,28 @@ function destinoDoTexto(no) {
   let atual = no.parent;
   let filho = no;
   while (atual) {
+    if (ts.isConditionalExpression(atual)) {
+      // Operando da condição (type === 'label' ? ...) não é texto de tela,
+      // é discriminante de tipo. Os ramos (true/false) são.
+      if (atual.condition === filho) return false;
+      filho = atual;
+      atual = atual.parent;
+      continue;
+    }
+    if (ts.isBinaryExpression(atual)) {
+      // Só passa texto se o operador o repassar: || ?? + ou && (apenas se filho for right).
+      // Comparação (===, !==, ==, !=, <, >, in, instanceof) ou lado esquerdo de && é código.
+      const op = atual.operatorToken.kind;
+      const ehOuOu = op === ts.SyntaxKind.BarBarToken;
+      const ehCoalescing = op === ts.SyntaxKind.QuestionQuestionToken;
+      const ehConcat = op === ts.SyntaxKind.PlusToken;
+      const ehE = op === ts.SyntaxKind.AmpersandAmpersandToken && atual.right === filho;
+      if (!ehOuOu && !ehCoalescing && !ehConcat && !ehE) return false;
+      filho = atual;
+      atual = atual.parent;
+      continue;
+    }
     if (
-      ts.isConditionalExpression(atual) ||
-      ts.isBinaryExpression(atual) ||
       ts.isParenthesizedExpression(atual) ||
       ts.isTemplateSpan(atual) ||
       ts.isTemplateExpression(atual) ||
