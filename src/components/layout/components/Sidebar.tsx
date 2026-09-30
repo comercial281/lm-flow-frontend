@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/ds';
 import MenuItem from './MenuItem';
+import { useGuardaDeSaida } from '@/hooks/useAlteracoesNaoSalvas';
 import { MenuItem as MenuItemType } from '../config/menuItems';
 
 // Utility function for className merging
@@ -41,6 +42,8 @@ export default function Sidebar({
   const location = useLocation();
   const pathname = location.pathname;
   const { t } = useLanguage('layout');
+  // Fase 3: com alteração não salva na tela, clicar no menu pergunta antes.
+  const { aoClicar: guardarSaida, dialogoDeConfirmacao } = useGuardaDeSaida();
   const currentYear = new Date().getFullYear();
 
   const companyName = t('sidebar.footer.brand');
@@ -107,7 +110,7 @@ export default function Sidebar({
       >
         <TooltipProvider delayDuration={300}>
           {/* Navigation Menu */}
-          <nav className="space-y-1.5 flex-1 min-h-0 overflow-y-auto px-2 py-4">
+          <nav onClickCapture={guardarSaida} className="space-y-1.5 flex-1 min-h-0 overflow-y-auto px-2 py-4">
             {mainMenuItems.flatMap(item => {
               const group = GROUP_BY_HREF[item.href] || '';
               const showHeader =
@@ -233,7 +236,7 @@ export default function Sidebar({
           </div>
 
           {/* Submenu Items */}
-          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          <nav onClickCapture={guardarSaida} className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             {activeSubmenu.subItems?.map(subItem => {
               // For submenu items, check exact match first, then startsWith
               // But if another subitem has a more specific match (longer path), prefer that one
@@ -275,6 +278,7 @@ export default function Sidebar({
           </nav>
         </div>
       )}
+      {dialogoDeConfirmacao}
     </>
   );
 }
