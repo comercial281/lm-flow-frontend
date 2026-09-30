@@ -118,6 +118,7 @@
     "deleteSuccess": "Equipe excluída com sucesso!",
     "bulkDeleteSuccess": "{{count}} equipe excluída com sucesso!",
     "bulkDeleteSuccess_other": "{{count}} equipes excluídas com sucesso!",
+    "bulkDeleteSuccess_zero": "{{count}} equipes excluídas com sucesso!",
     "createError": "Erro ao criar equipe",
     "updateError": "Erro ao atualizar equipe",
     "deleteError": "Erro ao excluir equipe",
@@ -176,6 +177,7 @@
       "title": "Excluir Equipes",
       "description": "Tem certeza que deseja excluir {{count}} equipe selecionada? Esta ação não pode ser desfeita.",
       "description_other": "Tem certeza que deseja excluir {{count}} equipes selecionadas? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza que deseja excluir {{count}} equipes selecionadas? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
       "confirm": "Excluir Todas",
       "deleting": "Excluindo..."

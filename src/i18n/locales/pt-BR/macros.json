@@ -5,6 +5,7 @@
     "title": "Macros",
     "subtitle": "{{count}} macro no total",
     "subtitle_other": "{{count}} macros no total",
+    "subtitle_zero": "{{count}} macros no total",
     "searchPlaceholder": "Buscar macros...",
     "newMacro": "Nova Macro",
     "bulkDelete": "Excluir",

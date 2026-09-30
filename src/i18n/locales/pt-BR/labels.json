@@ -5,6 +5,7 @@
     "title": "Etiquetas",
     "subtitle": "{{count}} etiqueta no total",
     "subtitle_other": "{{count}} etiquetas no total",
+    "subtitle_zero": "{{count}} etiquetas no total",
     "searchPlaceholder": "Buscar etiquetas...",
     "newLabel": "Nova Etiqueta",
     "bulkDelete": "Excluir",
