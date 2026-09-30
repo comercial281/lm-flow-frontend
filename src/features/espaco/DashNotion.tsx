@@ -125,7 +125,7 @@ function DashNotionInner() {
           <div className="flex-1 grid place-items-center">
             <div className="text-center">
               <p className="text-sm text-lm-muted">Nenhuma base ainda</p>
-              <p className="text-xs text-lm-subtle mt-1">Crie uma base ou uma pagina na barra lateral.</p>
+              <p className="text-xs text-lm-subtle mt-1">Crie uma base ou uma página na barra lateral.</p>
             </div>
           </div>
         )}

@@ -150,7 +150,7 @@ export default function PageView({ pageId, mode = 'full', onOpenPage }: PageView
   }, [repositioning, page?.id, updatePage])
 
   if (isLoading) return <div className="p-8 text-sm text-lm-subtle">Carregando...</div>
-  if (!page) return <div className="p-8 text-sm text-lm-subtle">Pagina nao encontrada.</div>
+  if (!page) return <div className="p-8 text-sm text-lm-subtle">Página não encontrada.</div>
 
   const peek = mode === 'peek'
   const coverHeight = peek ? 180 : 240

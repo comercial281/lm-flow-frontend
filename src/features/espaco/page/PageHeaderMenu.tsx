@@ -59,10 +59,10 @@ export default function PageHeaderMenu({ page, onOpenVersions, onArchived }: Pag
       onClick: () => { updatePage.mutate({ id: page.id, small_text: !page.small_text }); close() },
     },
     {
-      key: 'lock', label: page.is_locked ? 'Desbloquear pagina' : 'Bloquear pagina', icon: page.is_locked ? Unlock : Lock,
+      key: 'lock', label: page.is_locked ? 'Desbloquear página' : 'Bloquear página', icon: page.is_locked ? Unlock : Lock,
       onClick: () => { updatePage.mutate({ id: page.id, is_locked: !page.is_locked }); close() },
     },
-    { key: 'versions', label: 'Historico de versoes', icon: History, onClick: () => { onOpenVersions(); close() } },
+    { key: 'versions', label: 'Histórico de versões', icon: History, onClick: () => { onOpenVersions(); close() } },
     // So faz sentido em linha de database: template e modelo de linha nova.
     ...(page.database_id ? [{
       key: 'template',
@@ -90,7 +90,7 @@ export default function PageHeaderMenu({ page, onOpenVersions, onArchived }: Pag
     <div ref={wrapRef} className="relative">
       <button
         type="button"
-        aria-label="Mais opcoes"
+        aria-label="Mais opções"
         onClick={() => setOpen(o => !o)}
         className="rounded-lm-sm p-1.5 text-lm-muted transition hover:bg-lm-card2 hover:text-lm-primary"
       >

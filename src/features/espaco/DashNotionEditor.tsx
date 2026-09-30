@@ -230,7 +230,7 @@ function EditorInterno({
       }
 
       items.push({
-        title: `Criar pagina "${query.trim()}"`,
+        title: `Criar página "${query.trim()}"`,
         icon: <Plus size={16} />,
         group: 'Paginas',
         onItemClick: () => {

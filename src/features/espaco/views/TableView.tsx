@@ -116,7 +116,7 @@ export default function TableView({
 
                   <button
                     type="button"
-                    aria-label={`Opcoes de ${property.name}`}
+                    aria-label={`Opções de ${property.name}`}
                     onClick={() => setMenuProp(menuProp === property.id ? null : property.id)}
                     className="ml-auto rounded-lm-sm p-0.5 text-lm-subtle hover:bg-lm-card2 hover:text-lm-primary"
                   >
@@ -193,7 +193,7 @@ export default function TableView({
                 <div className="sticky right-0 z-10 flex w-10 shrink-0 items-center justify-center border-l border-lm-border bg-lm-deep group-hover:bg-lm-card2">
                   <button
                     type="button"
-                    aria-label="Opcoes da linha"
+                    aria-label="Opções da linha"
                     onClick={() => setMenuRow(menuRow === row.id ? null : row.id)}
                     className="rounded-lm-sm p-1 text-lm-subtle hover:bg-lm-card2 hover:text-lm-primary"
                   >

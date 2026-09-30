@@ -547,7 +547,7 @@ function MenuDaView({
       <button
         ref={btn}
         type="button"
-        aria-label={`Opcoes da view ${view.name}`}
+        aria-label={`Opções da view ${view.name}`}
         onClick={onToggle}
         className="rounded-r-lm-sm py-1.5 pl-0.5 pr-1.5 text-lm-subtle hover:text-lm-primary"
       >

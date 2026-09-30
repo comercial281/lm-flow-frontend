@@ -167,7 +167,7 @@ export default function PropertyMenu({ property, onClose, onDeleted }: Props) {
   if (panel === 'options') {
     return (
       <div ref={rootRef} className={shell}>
-        <Header title="Opcoes" />
+        <Header title="Opções" />
         <div className="max-h-80 space-y-1 overflow-y-auto p-2">
           {options.map((o, i) => (
             <div key={o.id} className="rounded-lm-sm border border-lm-border p-2">
@@ -232,14 +232,14 @@ export default function PropertyMenu({ property, onClose, onDeleted }: Props) {
               ...options,
               {
                 id: crypto.randomUUID(),
-                name: `Opcao ${options.length + 1}`,
+                name: `Opção ${options.length + 1}`,
                 color: COLORS[options.length % COLORS.length],
                 ...(property.type === 'status' ? { group: 'todo' as const } : {}),
               },
             ])}
             className={ROW}
           >
-            <Plus size={14} className="text-lm-neon" /> Adicionar opcao
+            <Plus size={14} className="text-lm-neon" /> Adicionar opção
           </button>
         </div>
       </div>
@@ -285,7 +285,7 @@ export default function PropertyMenu({ property, onClose, onDeleted }: Props) {
         {hasOptions && (
           <button type="button" onClick={() => setPanel('options')} className={ROW}>
             <Plus size={14} className="shrink-0 text-lm-subtle" />
-            <span className="flex-1">Opcoes</span>
+            <span className="flex-1">Opções</span>
             <span className="text-xs text-lm-muted">{options.length}</span>
           </button>
         )}
@@ -322,7 +322,7 @@ export default function PropertyMenu({ property, onClose, onDeleted }: Props) {
               onChange={(e) => patchConfig({ allow_multiple: e.target.checked })}
               className="h-3.5 w-3.5 accent-lm-neon"
             />
-            Permitir varias paginas
+            Permitir várias páginas
           </label>
         </div>
       )}
@@ -346,7 +346,7 @@ export default function PropertyMenu({ property, onClose, onDeleted }: Props) {
             onChange={(v) => patchConfig({ target_property_id: v || null })}
           />
           <div>
-            <label className="mb-1 block text-xs text-lm-muted">Funcao</label>
+            <label className="mb-1 block text-xs text-lm-muted">Função</label>
             <select
               value={rollup.fn ?? 'count'}
               onChange={(e) => patchConfig({ fn: e.target.value as RollupConfig['fn'] })}

@@ -253,7 +253,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
             <Card className="border-orange-200 bg-orange-50/30 dark:border-orange-800 dark:bg-orange-950/20">
               <CardHeader className="pb-2">
                 <CollapsibleHeader
-                  title="Origem do Anuncio"
+                  title="Origem do Anúncio"
                   description={(conversation!.additional_attributes.ad_referral as any)?.title || 'Meta Ads'}
                   icon={<Megaphone className="h-4 w-4 text-orange-500" />}
                   isOpen={showAdReferral}
@@ -270,7 +270,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                       <div className="space-y-2">
                         {ref.title && (
                           <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">Anuncio</span>
+                            <span className="text-muted-foreground">Anúncio</span>
                             <span className="font-medium text-right max-w-[60%] truncate" title={ref.title}>{ref.title}</span>
                           </div>
                         )}
@@ -280,7 +280,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                         </div>
                         {ref.source_id && (
                           <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">ID do Anuncio</span>
+                            <span className="text-muted-foreground">ID do Anúncio</span>
                             <span className="font-mono text-xs text-muted-foreground">{ref.source_id}</span>
                           </div>
                         )}
@@ -297,7 +297,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                             className="flex items-center gap-1 text-xs text-orange-600 hover:underline mt-1"
                           >
                             <ExternalLink className="h-3 w-3" />
-                            Ver anuncio original
+                            Ver anúncio original
                           </a>
                         )}
                       </div>

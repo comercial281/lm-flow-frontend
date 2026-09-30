@@ -241,7 +241,7 @@ function Column({
           <button
             ref={btnMenu}
             type="button"
-            aria-label={`Opcoes da coluna ${option.name}`}
+            aria-label={`Opções da coluna ${option.name}`}
             onClick={() => setMenu(v => !v)}
             className="rounded-lm-sm p-0.5 text-lm-subtle hover:bg-lm-card2 hover:text-lm-primary"
           >

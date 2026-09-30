@@ -465,7 +465,7 @@ export default function RoletaConfigPage() {
       // sabia (o `openCreate` zera a flag vinda do payload).
       if (lista.some(c => c.multi_instance_enabled)) setMultiFromConfig(true);
     } catch {
-      toast.error('Erro ao carregar configuracoes da roleta');
+      toast.error('Erro ao carregar configurações da roleta');
     } finally {
       setLoading(false);
     }
@@ -497,7 +497,7 @@ export default function RoletaConfigPage() {
     try {
       setAssignments(await roletaConfigService.getAssignments());
     } catch {
-      toast.error('Erro ao carregar atribuicoes');
+      toast.error('Erro ao carregar atribuições');
     } finally {
       setLoadingAssign(false);
     }
@@ -1439,9 +1439,9 @@ export default function RoletaConfigPage() {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            {t === 'configs' ? 'Configuracoes'
+            {t === 'configs' ? 'Configurações'
               : t === 'padroes' ? 'Padrões'
-              : t === 'assignments' ? 'Atribuicoes Recentes' : 'Diagnóstico'}
+              : t === 'assignments' ? 'Atribuições Recentes' : 'Diagnóstico'}
             {t === 'assignments' && exhausted.length > 0 && (
               <span
                 className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white"
@@ -1599,7 +1599,7 @@ export default function RoletaConfigPage() {
           {!loadingAssign && assignments.length === 0 && (
             <div className="border rounded-lg p-12 text-center text-muted-foreground">
               <BarChart2 className="h-8 w-8 mx-auto mb-3 opacity-40" />
-              <p>Nenhuma atribuicao recente</p>
+              <p>Nenhuma atribuição recente</p>
             </div>
           )}
           {assignments.map(a => (

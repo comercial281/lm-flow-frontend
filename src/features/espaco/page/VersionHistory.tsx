@@ -68,7 +68,7 @@ export default function VersionHistory({ page, open, onClose, onRestored }: Vers
     try {
       await snapshot.mutateAsync({ page_id: page.id })
       await updatePage.mutateAsync({ id: page.id, title: v.title, content: v.content })
-      toast.success('Versao restaurada')
+      toast.success('Versão restaurada')
       onRestored?.()
       onClose()
     } catch { /* erro ja vira toast nos hooks */ }
@@ -81,7 +81,7 @@ export default function VersionHistory({ page, open, onClose, onRestored }: Vers
       <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
       <aside className="fixed right-0 top-0 z-50 flex h-full w-[420px] flex-col border-l border-lm-border bg-lm-card shadow-lm-modal">
         <header className="flex items-center justify-between border-b border-lm-border px-4 py-3">
-          <h3 className="text-sm font-medium text-heading">Historico de versoes</h3>
+          <h3 className="text-sm font-medium text-heading">Histórico de versões</h3>
           <button
             type="button"
             aria-label="Fechar"
@@ -94,7 +94,7 @@ export default function VersionHistory({ page, open, onClose, onRestored }: Vers
 
         <div className="max-h-[38%] shrink-0 overflow-y-auto border-b border-lm-border py-1">
           {versions.length === 0 && (
-            <p className="px-4 py-3 text-sm text-lm-subtle">Nenhuma versao salva ainda.</p>
+            <p className="px-4 py-3 text-sm text-lm-subtle">Nenhuma versão salva ainda.</p>
           )}
           {versions.map(v => {
             const author = v.member_id ? memberById.get(v.member_id) : undefined
@@ -122,11 +122,11 @@ export default function VersionHistory({ page, open, onClose, onRestored }: Vers
             <>
               <p className="text-lg font-semibold text-heading">{selected.title || 'Sem titulo'}</p>
               <pre className="mt-3 whitespace-pre-wrap break-words font-sans text-sm text-lm-muted">
-                {preview || 'Sem conteudo de texto nesta versao.'}
+                {preview || 'Sem conteúdo de texto nesta versão.'}
               </pre>
             </>
           ) : (
-            <p className="text-sm text-lm-subtle">Selecione uma versao para ver o conteudo.</p>
+            <p className="text-sm text-lm-subtle">Selecione uma versão para ver o conteúdo.</p>
           )}
         </div>
 
@@ -137,7 +137,7 @@ export default function VersionHistory({ page, open, onClose, onRestored }: Vers
               onClick={() => restore(selected)}
               className="w-full rounded-lm-sm bg-lm-neon px-3 py-2 text-sm text-lm-inverse"
             >
-              Restaurar esta versao
+              Restaurar esta versão
             </button>
           </footer>
         )}

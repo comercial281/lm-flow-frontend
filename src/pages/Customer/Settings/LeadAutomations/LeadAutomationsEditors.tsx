@@ -1137,7 +1137,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     case 'assign_via_roleta':
       return (
         <p className="text-sm text-muted-foreground mt-1">
-          Atribui o lead ao proximo corretor disponivel conforme a roleta configurada para o canal.
+          Atribui o lead ao próximo corretor disponível conforme a roleta configurada para o canal.
         </p>
       );
 

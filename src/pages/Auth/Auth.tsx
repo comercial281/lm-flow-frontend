@@ -113,7 +113,7 @@ const LeftPanel: React.FC = () => (
 
     <div className="relative z-10">
       <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-        Leal Midia &copy; {new Date().getFullYear()}
+        Leal Mídia &copy; {new Date().getFullYear()}
       </p>
     </div>
   </div>

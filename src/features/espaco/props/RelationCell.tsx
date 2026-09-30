@@ -114,7 +114,7 @@ export default function RelationCell({
               autoFocus
               value={term}
               onChange={(e) => setTerm(e.target.value)}
-              placeholder="Buscar pagina..."
+              placeholder="Buscar página..."
               className="w-full rounded-lm-sm bg-lm-bg px-2 py-1.5 text-sm text-lm-primary outline-none placeholder:text-lm-subtle focus:ring-1 focus:ring-lm-neon/40"
             />
           </div>
@@ -134,7 +134,7 @@ export default function RelationCell({
               </button>
             ))}
             {filtered.length === 0 && (
-              <div className="px-2 py-3 text-center text-xs text-lm-subtle">Nenhuma pagina</div>
+              <div className="px-2 py-3 text-center text-xs text-lm-subtle">Nenhuma página</div>
             )}
           </div>
         </div>
