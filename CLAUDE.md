@@ -4068,3 +4068,23 @@ Spec e plano: `LM FLOW/specs/2026-09-29-fase-3-base-de-design-e-linguagem-design
   - **D4:** as telas piloto são Conta e Lembretes.
 - **Nunca muda nesta frente:** texto que sai pro lead ou pro corretor por WhatsApp (modelos, `{{variáveis}}`, instruções da IA, mensagens padrão).
 - **Testes com Node 26+:** `NODE_OPTIONS=--no-experimental-webstorage npx vitest run`. Sem isso, o `localStorage` experimental do Node tapa o do jsdom e ~29 arquivos falham na `main` limpa.
+
+### Peças da casa (Fase 3.5)
+
+As regras estão em [GLOSSARIO.md → As peças da casa](GLOSSARIO.md#as-peças-da-casa). O resumo pra quem mexe no código:
+- **`Chave`** é ligar/desligar com efeito na hora.
+  - `aoMudar` devolve `false` pra desistir (volta sem aviso). Se lançar erro, volta e avisa; 403 culpa o cargo.
+  - Trava o duplo clique.
+  - Desligado é cinza no CSS global (`chaveCinza.spec.ts` impede o vermelho de voltar).
+- **`useAlteracoesNaoSalvas(temAlteracao)` + `BarraSalvar`:** a tela declara se tem alteração, compara com `mesmoConteudo(atual, carregado)`, e a barra aparece.
+  - `useGuardaDeSaida` é usado no `Sidebar` (os dois `<nav>` e o bloco de Tutoriais), no `Header` (menu do celular) e nas `Abas`.
+  - Deixam passar: Ctrl/Cmd/Shift/Alt ou botão que não é o esquerdo, e `data-abre-submenu`, que só vai no item com submenu cujo `href` é `'#'`. Contatos e Bolsão navegam **e** têm submenu, então perguntam.
+  - Não aninhe um `<nav>` guardado dentro de outro.
+  - **O "voltar" do navegador NÃO é coberto:** `<BrowserRouter>`, sem `useBlocker`. Migrar pro roteador de dados é outra frente.
+- **`Abas`:** com `para` em todas as abas vira navegação com guarda; sem `para`, é tablist. Estreou em `AutomationsLayout`. O modo tablist **ainda não tem navegação por setas**: o primeiro consumidor acrescenta.
+- **`EmptyState`:** `tipo` pode ser `vazio`, `semResultado` ou `erro`. Erro nunca vira lista vazia.
+- **Telas de referência:** `Settings/Account/AccountSettings.tsx` e `Settings/WhatsappReminders/WhatsappReminders.tsx`. Os specs `*.base.spec.tsx` delas são a régua.
+  - Em Conta, ligar a resolução automática pergunta o tempo e já grava; os ajustes esperam a barra.
+  - Ligar/desligar a resolução atualiza só os campos dela, e alteração não salva de outro campo não se perde. Não chame `loadAccountData()` depois de uma chave: ele apaga o que está na barra.
+  - Em Lembretes, a chave da lista grava só o `enabled`, e o Excluir fica no menu "…".
+- **Botões só-ícone:** os 202 que existiam ganharam `aria-label` + `title` (3.4). Botão novo usa `IconActionButton`, e a trava reprova botão sem nome.
