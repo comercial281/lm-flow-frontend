@@ -10,6 +10,7 @@
 // instância, inbox ou caixa de entrada (há spec). Neutro de gênero (E10/G2):
 // "Número de Fulano", "é de Fulano", "o cadastro de Fulano está desativado".
 
+import { telefone } from '@/lib/formato';
 import type { NumberConnection, NumberCardData, NumberOwnerRef, OwnedNumber } from './types';
 
 export const OWNER_TITLE = 'Dono do número';
@@ -58,17 +59,8 @@ export const CONNECTION_NOTE = 'Conexão pelo último estado gravado.';
  * `+14155552671`. O que não parece telefone brasileiro também volta cru.
  */
 export function formatPhone(phone: string | null | undefined): string {
-  const bruto = (phone ?? '').trim();
-  if (!bruto) return '';
-  const rawDigits = bruto.replace(/\D/g, '');
-  if (bruto.startsWith('+') && !rawDigits.startsWith('55')) return bruto;
-  let digits = rawDigits;
-  if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) digits = digits.slice(2);
-  if (digits.length !== 10 && digits.length !== 11) return bruto;
-  const ddd = digits.slice(0, 2);
-  const resto = digits.slice(2);
-  const corte = resto.length === 9 ? 5 : 4;
-  return `(${ddd}) ${resto.slice(0, corte)}-${resto.slice(corte)}`;
+  // Fase 3: a implementação única mora em `@/lib/formato` (telefone).
+  return telefone(phone);
 }
 
 /**
