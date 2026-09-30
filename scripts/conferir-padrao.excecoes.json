@@ -3,5 +3,6 @@
   { "arquivo": "src/types/analytics/pipelines.ts", "categoria": "formato", "trecho": "'BRL' | 'USD' | 'EUR'", "motivo": "tipo TypeScript, não formatação" },
   { "arquivo": "src/pages/Customer/Automations/PixelCapi/PixelCapiConfig.tsx", "categoria": "formato", "trecho": "useState('BRL')", "motivo": "moeda enviada ao Meta na conversão" },
   { "arquivo": "src/pages/Customer/Automations/PixelCapi/PixelCapiConfig.tsx", "categoria": "formato", "trecho": "c.default_currency || 'BRL'", "motivo": "moeda enviada ao Meta na conversão" },
-  { "arquivo": "src/pages/Customer/Automations/PixelCapi/PixelCapiConfig.tsx", "categoria": "formato", "trecho": "placeholder=\"BRL\"", "motivo": "moeda enviada ao Meta na conversão" }
+  { "arquivo": "src/pages/Customer/Automations/PixelCapi/PixelCapiConfig.tsx", "categoria": "formato", "trecho": "placeholder=\"BRL\"", "motivo": "moeda enviada ao Meta na conversão" },
+  { "arquivo": "src/components/chat/ai-assistance/AIAssistanceButton.tsx", "categoria": "formato", "trecho": "`Confidence: ${((parsed.confidence || 0) * 100).toFixed(1)}%", "motivo": "texto inserido no campo de mensagem; não é texto de tela" }
 ]
