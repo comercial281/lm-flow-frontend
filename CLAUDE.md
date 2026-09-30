@@ -3955,6 +3955,55 @@ Armadilhas:
 4. **Os textos moram em `exhaustedText.ts`** (com spec); o bloco é
    `components/roleta/ExhaustedLeadsPanel.tsx`, e a página só passa a lista.
 
+## A IA Vendedora manda fotos e vídeo do imóvel (desde 2026-09-30)
+
+Pedido do dono (29/09/26): a mídia chegava "incongruente". A capa do imóvel saía sozinha, com o link, no momento em que o sistema reconhecia o imóvel, sem ligação com o que a IA estava falando. E só ia a capa, mesmo com 20+ fotos na galeria.
+
+Como ficou:
+- **A IA escolhe a hora.** Ao apresentar um imóvel, ela manda um **pacote de até 5 fotos**: a capa primeiro, depois a ordem da galeria. Vão como foto no WhatsApp, com "Título — Preço" na primeira. **Sem link.** Se o lead pedir mais, vão as próximas 5, sem repetir. Acabou a galeria, ela oferece a visita.
+- **Vídeo: 1, e nunca junto das fotos.** Pode ser o vídeo da galeria do imóvel ou um vídeo subido nos arquivos da IA (**só MP4, até 16 MB**; a tela recusa outro formato ou vídeo maior). Vídeo pesado não vira link: a IA não oferece.
+- Foto marcada como **Ocultar** em *Gerenciar fotos* nunca vai pro lead. É assim que o corretor segura uma foto ruim.
+- O **link da página** do imóvel só vai quando o lead pede ("tem site?", "me manda o anúncio").
+- A opção do agente virou **Mandar fotos e vídeo do imóvel**. Desligada, nada de foto nem vídeo.
+- No **Testar**, digite o código do imóvel: aparecem as miniaturas exatas do pacote. (Ali não há conversa, então "mais fotos" mostra de novo as primeiras.)
+
+Por que a ordem da galeria e não "foto da cozinha, da área de lazer": numa amostra de 30 imóveis de um cliente com 412, as 614 fotos estavam todas com o tipo "Principal" (a importação não preenche e a tela só deixa escolher no upload), e nenhum imóvel tinha vídeo. As 5 primeiras da galeria eram boas. **Não reabrir sem o dono pedir:** classificação por ambiente e "foco" só entram se ficar provado que o lead pede ambiente específico.
+
+## "Mandar pra mim": teste de envio da mídia da IA Vendedora (desde 2026-09-30)
+
+O painel **Testar** só MOSTRA o que a IA mandaria — nunca deu pra conferir como
+a foto, o vídeo ou o arquivo chegam de verdade no WhatsApp (tamanho, ordem,
+como o app comprime). O botão **Mandar pra mim** fecha essa lacuna: manda a
+mídia pro WhatsApp do próprio dono, pela MESMA rota que o lead real recebe.
+
+Onde aparece:
+- **Testar**, embaixo de cada bolha de foto/vídeo/arquivo que a IA mandaria.
+- **Base de Conhecimento**, na ficha *Como a IA deve usar este arquivo*, num
+  bloco **Ver como chega**, logo abaixo do interruptor *A IA pode enviar este
+  arquivo pro lead* — só aparece com o interruptor ligado.
+
+Como funciona:
+- Primeiro clique pede **Seu WhatsApp (com DDD)**; o navegador guarda o número
+  e não pergunta de novo — um link *trocar* reabre o campo.
+- Vai pelo número do PRÓPRIO agente (o WhatsApp configurado na IA), não por um
+  número da Leal Mídia.
+- **Não cria** contato, conversa nem card no CRM, e **não marca** a mídia como
+  "já enviada" pro lead — é teste, roda fora do fluxo real.
+- **Limite: 10 testes por hora, por agente.** Passou disso, o botão mostra o
+  aviso vindo do servidor e destrava sozinho depois.
+- Sob o botão, sempre o aviso: *"Não responda essa mensagem pelo seu WhatsApp.
+  A resposta (inclusive a automática do WhatsApp Business) entra no CRM como
+  lead."* Se o seu WhatsApp Business tiver resposta automática, ela volta como
+  lead — é só uma mensagem chegando naquele número, o CRM não diferencia bot
+  de pessoa.
+- **Quem pode editar a IA manda de verdade** (mesma permissão que salva o
+  agente). Quem só lê **também vê o botão** — a tela não esconde — mas o
+  clique volta recusado, com o aviso de permissão.
+
+**Não reabrir sem o dono pedir:** o teste sai pelo número do PRÓPRIO agente, não
+por uma instância à parte da Leal Mídia — foi escolha do dono em 30/09/26,
+justamente pra ver a mídia chegando como o lead real veria, no mesmo número.
+
 ## Venda e locação: destinos separados no portal e no site (desde 2026-09-30)
 
 O dono do produto pediu o que o Kenlo faz: o lead de quem quer alugar e o de quem

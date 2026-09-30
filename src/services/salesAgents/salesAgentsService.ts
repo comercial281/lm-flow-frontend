@@ -566,7 +566,7 @@ export interface SalesAgentDocument {
   send_caption: string | null;
   send_topics: string[];
   property_codes: string[];
-  media_kind: 'document' | 'image' | 'audio';
+  media_kind: 'document' | 'image' | 'audio' | 'video';
   file_url: string | null;
   byte_size: number;
   size_label: string | null;
@@ -594,20 +594,29 @@ export interface SalesAgentDocumentConfig {
 }
 
 /**
- * Foto e link que o lead REAL receberia junto do texto. No teste não existe canal
- * pra enviar, então em vez de a mídia sumir (e a IA parecer que prometeu e não
- * cumpriu) a tela mostra o que teria ido.
+ * O que o lead REAL receberia junto do texto. No teste não existe canal pra
+ * enviar, então em vez de a mídia sumir (e a IA parecer que prometeu e não
+ * cumpriu) a tela mostra o que teria ido. 'photos' = o pacote de fotos do imóvel,
+ * com as miniaturas exatas, na ordem em que iriam.
  */
 export interface TestMediaItem {
-  type: 'image' | 'link' | 'file';
-  /** Só em foto e link — arquivo não tem endereço no painel, ele só é anunciado. */
+  type: 'image' | 'link' | 'file' | 'photos';
+  /** Só em foto e link. */
   url?: string;
-  caption?: string;
-  // --- só em 'file' ---
-  kind?: 'document' | 'image' | 'audio';
+  /** Só em 'photos': as fotos do pacote, na ordem. */
+  urls?: string[];
+  caption?: string | null;
+  // --- 'file' e 'photos' ---
+  kind?: 'document' | 'image' | 'audio' | 'video';
   title?: string;
   /** Por que ela escolheu mandar agora. Serve pra calibrar a regra. */
   reason?: string | null;
+  /**
+   * Identifica ESTE item pro botão "Mandar pra mim" (`test_send`) — sem ele a
+   * tela precisaria resolver de novo qual arquivo/pacote é este. Só em 'photos'
+   * e 'file'.
+   */
+  token?: string;
 }
 
 export interface SalesAgentTestResult {
@@ -897,6 +906,29 @@ export const salesAgentsService = {
       property_code: context.propertyCode || undefined,
     });
     return (res.data as { data: SalesAgentTestResult }).data;
+  },
+
+  /**
+   * "Mandar pra mim": entrega a mídia pro WhatsApp do PRÓPRIO dono, pela mesma
+   * SalesAgents::FileDelivery do lead real — a diferença do preview do painel
+   * Testar, que só MOSTRA. Não toca conversa/contato/card nenhum.
+   *
+   * Em erro, joga um Error com a MESMA mensagem do servidor (limite de
+   * teste/telefone inválido etc.), pra tela mostrar a frase certa, não um
+   * texto genérico.
+   */
+  async testSend(
+    id: string,
+    body: { phone: string; token?: string; property_code?: string; document_id?: string },
+  ): Promise<{ message: string }> {
+    try {
+      const res = await api.post(`${BASE}/${id}/test_send`, body);
+      return { message: (res.data as { message: string }).message };
+    } catch (err) {
+      const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };
+      const message = axiosErr.response?.data?.error?.message;
+      throw new Error(message || 'Não consegui mandar o teste agora.');
+    }
   },
 
   /**

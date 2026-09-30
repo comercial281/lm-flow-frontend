@@ -5,10 +5,13 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon, Zap, AlertTriangle, Lightbulb, CalendarDays, Users, MessageSquare, Sparkles, X } from 'lucide-react';
+import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon, Film, Zap, AlertTriangle, Lightbulb, CalendarDays, Users, MessageSquare, Sparkles, X } from 'lucide-react';
 import AiResultsPanel from '@/components/salesAgents/AiResultsPanel';
 import PlaybookSection from '@/components/salesAgents/PlaybookSection';
 import DuplicateAgentDialog from '@/components/salesAgents/DuplicateAgentDialog';
+import TestMediaBubble from './TestMediaBubble';
+import SendToMeButton from './SendToMeButton';
+import { DOC_ACCEPT, docUploadError } from './docUpload';
 import type { AgentPerformance } from '@/types/aiResults';
 import {
   salesAgentsService,
@@ -2321,7 +2324,7 @@ function IntelligenceSection({
         <CheckRow checked={agent.cross_sell_enabled !== false} onChange={(v) => onSave({ cross_sell_enabled: v })}
           title="Oferecer outras opções" desc="Quando não tem o imóvel exato, sugere alternativas reais e não perde o lead." />
         <CheckRow checked={agent.rich_media_enabled !== false} onChange={(v) => onSave({ rich_media_enabled: v })}
-          title="Mandar foto e link do imóvel" desc="Envia mídia do imóvel de interesse no WhatsApp." />
+          title="Mandar fotos e vídeo do imóvel" desc="A IA escolhe a hora e manda até 5 fotos ou 1 vídeo no WhatsApp, sem link." />
         {/* Sem isto, "Oferecer outras opções" era promessa vazia: a IA só
             enxergava o imóvel do anúncio e não tinha como consultar o cadastro. */}
         <CheckRow checked={agent.catalog_search_enabled !== false} onChange={(v) => onSave({ catalog_search_enabled: v })}
@@ -3328,10 +3331,6 @@ function LearningTab({ agent }: { agent: SalesAgent }) {
   );
 }
 
-// Aceitos no upload de arquivo. PDF entrou junto com o envio: é o formato em que a
-// imobiliária tem TODO o material dela (book, planta, memorial) e a base recusava.
-const DOC_ACCEPT = '.pdf,.txt,.md,.csv,.docx,.xlsx,.jpg,.jpeg,.png,.webp';
-const DOC_MAX_BYTES = 25 * 1024 * 1024;
 // De quanto em quanto tempo re-buscar a lista enquanto algum arquivo estiver
 // "Processando". A extração leva segundos; 4s é o mesmo ritmo da importação de imóveis.
 const DOC_POLL_MS = 4000;
@@ -3390,8 +3389,9 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
   };
 
   const upload = async (file: File) => {
-    if (file.size > DOC_MAX_BYTES) {
-      toast.error(`"${file.name}" tem mais de 25 MB. Reduza o arquivo antes de subir.`);
+    const erro = docUploadError(file);
+    if (erro) {
+      toast.error(erro);
       return;
     }
     setBusy(true); setProgress(0);
@@ -3494,6 +3494,7 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
               <div className="min-w-0">
                 <div className="text-sm font-medium truncate flex items-center gap-2">
                   {d.media_kind === 'image' ? <ImageIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    : d.media_kind === 'video' ? <Film className="h-4 w-4 shrink-0 text-muted-foreground" />
                     : <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />}
                   <span className="truncate">{d.title}</span>
                 </div>
@@ -3639,6 +3640,22 @@ function FileConfigDialog({
               <p className="text-xs text-red-500">
                 Arquivo grande demais ({doc.size_label}) e sem endereço público pra oferecer. Reduza o arquivo.
               </p>
+            )}
+            {/* "Ver como chega": manda ESTE arquivo pro WhatsApp do próprio dono,
+                pela mesma rota do lead real — sem isso, só dá pra saber como ele
+                chega esperando um lead de verdade pedir. Some quando o arquivo
+                está BLOQUEADO (grande demais e sem link): não tem como sair,
+                então não tem o que testar. */}
+            {sendable && doc.send_mode !== 'blocked' && (
+              <div className="pt-1">
+                <p className="text-xs font-medium">Ver como chega</p>
+                <SendToMeButton
+                  onSend={(phone) => salesAgentsService.testSend(agentId, { phone, document_id: doc.id }).then((r) => r.message)}
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  O teste usa o que está salvo. Salve antes para ver a legenda nova.
+                </p>
+              </div>
             )}
           </div>
 
@@ -3827,8 +3844,12 @@ function FormAnswerAdder({ onAdd }: { onAdd: (key: string, value: string) => voi
 // ---------------- Test ----------------
 
 // Turno da conversa de teste. `media` é só de exibição — a API recebe apenas
-// role/content, igual antes.
-type TestTurn = TestHistoryItem & { media?: TestMediaItem[] };
+// role/content, igual antes. `propertyCode` viaja junto da mídia: é o código
+// que estava no campo QUANDO esta bolha foi gerada — não o do campo agora.
+// Sem isto, "Mandar pra mim" numa bolha antiga reenviaria com o código ATUAL
+// do campo, e como o token das FOTOS só faz sentido dentro do imóvel que o
+// gerou, o teste sairia com as fotos de OUTRO imóvel.
+type TestTurn = TestHistoryItem & { media?: TestMediaItem[]; propertyCode?: string };
 
 // Cenário de teste: o contexto do lead + a primeira mensagem dele.
 //
@@ -3990,7 +4011,10 @@ function persistScenarios(list: TestScenario[]) {
   }
 }
 
-function TestTab({ agent }: { agent: SalesAgent }) {
+// Exportado só pra teste (mesmo padrão de TriggersSection): renderizar a tela
+// inteira pra testar uma bolha do painel Testar exigiria simular login,
+// tenant e dezenas de outras chamadas sem relação com o bug em questão.
+export function TestTab({ agent }: { agent: SalesAgent }) {
   const { perguntar, dialogoDePergunta } = usePergunta();
   const [history, setHistory] = useState<TestTurn[]>([]);
   const [message, setMessage] = useState('');
@@ -4096,6 +4120,9 @@ function TestTab({ agent }: { agent: SalesAgent }) {
           role: 'assistant' as const,
           content,
           media: i === parts.length - 1 ? media : [],
+          // O código DESTE turno, não o que estiver no campo quando o dono
+          // clicar em "Mandar pra mim" depois.
+          propertyCode: code,
         })),
       ]);
       setLast(result);
@@ -4317,7 +4344,14 @@ function TestTab({ agent }: { agent: SalesAgent }) {
               </div>
               {(h.media ?? []).map((m, j) => (
                 <div key={j} className="flex justify-end">
-                  <TestMediaBubble item={m} />
+                  <TestMediaBubble
+                    item={m}
+                    onSendToMe={(item, phone) => salesAgentsService.testSend(agent.id, {
+                      // O código do TURNO que gerou esta bolha, não o do campo
+                      // agora — o campo pode ter mudado de imóvel desde então.
+                      phone, token: item.token, property_code: h.propertyCode || undefined,
+                    }).then((r) => r.message)}
+                  />
                 </div>
               ))}
             </div>
@@ -4345,51 +4379,6 @@ function TestTab({ agent }: { agent: SalesAgent }) {
       )}
 
       {dialogoDePergunta}
-    </div>
-  );
-}
-
-// A foto/link que o lead REAL receberia. Aqui não há canal pra enviar, então em
-// vez de a mídia sumir — deixando a IA parecer que prometeu "te mando as fotos"
-// e não cumpriu — mostramos o que teria ido, com a foto de verdade.
-function TestMediaBubble({ item }: { item: TestMediaItem }) {
-  if (item.type === 'image') {
-    return (
-      <div className="max-w-[80%] rounded-lg border border-primary/30 bg-primary/5 overflow-hidden">
-        <img src={item.url} alt="Foto do imóvel" className="w-full max-h-48 object-cover" />
-        <div className="px-3 py-2 space-y-1">
-          <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium">
-            <ImageIcon className="h-3 w-3" /> Foto enviada no WhatsApp
-          </div>
-          {item.caption && <p className="text-xs text-muted-foreground whitespace-pre-line">{item.caption}</p>}
-        </div>
-      </div>
-    );
-  }
-
-  // Arquivo que ela MANDARIA. O painel não envia nada — é aqui que dá pra calibrar
-  // as regras de "quando enviar" sem gastar mensagem com lead de verdade.
-  if (item.type === 'file') {
-    return (
-      <div className="max-w-[80%] rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-        <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium mb-0.5">
-          <FileText className="h-3 w-3" /> Arquivo enviado no WhatsApp
-        </div>
-        <div className="text-xs font-medium break-words">{item.title}</div>
-        {item.caption && <p className="text-xs text-muted-foreground whitespace-pre-line">{item.caption}</p>}
-        {item.reason && <p className="text-[11px] text-muted-foreground mt-1 italic">Por quê: {item.reason}</p>}
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-w-[80%] rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-      <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium mb-0.5">
-        <Link2 className="h-3 w-3" /> Link enviado no WhatsApp
-      </div>
-      <a href={item.url} target="_blank" rel="noreferrer" className="text-xs underline break-all">
-        {item.url}
-      </a>
     </div>
   );
 }
