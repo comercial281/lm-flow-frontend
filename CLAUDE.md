@@ -3900,6 +3900,61 @@ Armadilhas:
    verificação, fora desta leva).
 8. **A metade do backend vem PRIMEIRO.**
 
+## Roleta: leads que esgotaram a roleta e o "Sortear de novo" (desde 2026-09-30)
+
+Relato do dono do produto: três leads da madrugada rodaram por dez corretores
+cada (prazo de uns 5 minutos, roleta sem horário de funcionamento) e *"simplesmente
+não andaram mais"*. Não era trava: era o **esgotamento**, que é regra. Passou
+por todo mundo e ninguém assumiu, o lead fica sem responsável, o gestor recebe um
+aviso no WhatsApp e o lead **não volta sozinho**. O furo era que, fora aquele
+aviso das 3h28, o único rastro era uma linha no Diagnóstico misturada a todo o
+resto. Pedido: *"pode acontecer mesmo que esteja no horário de funcionamento.
+Precisamos ter isso"*.
+
+O que aparece na tela, em **Distribuição de Leads → Atribuições Recentes**:
+
+- **Bloco amarelo no topo, *Esgotaram a roleta e estão sem responsável (N)***.
+  Some quando não há nenhum. Cada linha traz o lead, a roleta, quando esgotou e
+  *Passou por 10 corretores: Ana, Bruno, Carla e mais 7* (a lista inteira no
+  passar do mouse), mais *Abrir conversa* e **Sortear de novo**.
+- **Contador amarelo na própria aba**, carregado ao abrir a tela: é ele que faz
+  o gestor entrar na aba.
+- **Sortear todos de novo (N)**, com confirmação, quando há mais de um. Um lead
+  de cada vez; o que não sair ganha o motivo em vermelho na linha dele, e o
+  resumo sai num aviso só.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Entra na lista** o lead que esgotou nos últimos 30 dias, **não recebeu
+  oferta nova depois** (de roleta nenhuma) e **continua sem responsável**.
+  Atribuído na mão ou sorteado de novo, ele sai sozinho. Um lead aparece uma
+  vez só, pelo esgotamento mais recente.
+- **Sortear de novo = o lead volta para a MESMA roleta como se tivesse acabado
+  de chegar**: rodada 1, a lista de quem já recebeu zerada, no modo Fila a partir
+  do próximo da vez.
+- **Não sorteia de novo sozinho.** Sem horário configurado, isso vira um loop de
+  madrugada acordando o time inteiro a cada hora. O conserto da madrugada é o
+  *Horário de funcionamento* da roleta.
+- **Gerente e Diretor podem sortear de novo**, e o Administrador também. Chave `roleta_configs.assign`, a
+  mesma do *Atribuir por uma roleta* do card. Antes da leva, o Gerente de cargo
+  editado à mão e o Diretor tomavam 403 no card, e a tela dizia *"sem membros
+  ativos?"*. Quem não tem a chave vê a lista sem os botões, com a linha *Seu
+  cargo não permite sortear de novo*.
+
+Armadilhas:
+
+1. **O botão trava ANTES do clique, com o motivo na linha**, quando a roleta
+   está fora do horário (*Ela abre em 01/10 às 08:00*), desativada ou em modo
+   Manual. Fora do horário o motor mandaria o lead pro plantão, que pode
+   reenviar a mensagem inicial ao LEAD, a cada clique.
+2. **Não é o `assign` do card**: é `POST /roleta_configs/exhausted/:contact_id/redistribute`,
+   que confere de novo se o lead ainda está na lista (entre abrir a tela e
+   clicar, alguém pode ter atribuído) e devolve 409 se não estiver.
+3. **Quando ninguém é sorteado**, a mensagem é a mesma frase que o motor gravou
+   na trilha (ex.: *"A roleta não tem nenhum corretor ativo para sortear."*).
+4. **Os textos moram em `exhaustedText.ts`** (com spec); o bloco é
+   `components/roleta/ExhaustedLeadsPanel.tsx`, e a página só passa a lista.
+
 ## A IA Vendedora manda fotos e vídeo do imóvel (desde 2026-09-30)
 
 Pedido do dono (29/09/26): a mídia chegava "incongruente". A capa do imóvel saía sozinha, com o link, no momento em que o sistema reconhecia o imóvel, sem ligação com o que a IA estava falando. E só ia a capa, mesmo com 20+ fotos na galeria.
