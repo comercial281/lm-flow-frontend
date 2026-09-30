@@ -46,7 +46,8 @@ export default function LeadDestinationFields({ value, onChange, options, showLa
   const [stages, setStages] = useState<DestinationOpt[]>([]);
 
   useEffect(() => {
-    if (!value.pipeline_id || pipelines === null) { setStages([]); return; }
+    setStages([]);
+    if (!value.pipeline_id || pipelines === null) return;
     let ativo = true;
     pipelinesService.getPipelineStages(value.pipeline_id)
       .then(res => {

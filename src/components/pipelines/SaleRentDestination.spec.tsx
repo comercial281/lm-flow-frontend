@@ -79,6 +79,18 @@ describe('SaleRentDestination', () => {
     expect(estado().sale.pipeline_id).toBe('pipe-1');
   });
 
+  it('trocar o Funil limpa a Coluna na hora, antes da resposta do novo funil chegar', async () => {
+    const usuario = userEvent.setup();
+    render(<Harness />);
+
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Novo' })).toBeInTheDocument());
+
+    mocks.getPipelineStages.mockImplementationOnce(() => new Promise(() => {}));
+    await usuario.selectOptions(screen.getByRole('combobox', { name: 'Funil' }), 'pipe-2');
+
+    expect(screen.queryByRole('option', { name: 'Novo' })).toBeNull();
+  });
+
   it('etiqueta só aparece quando pedida (site)', () => {
     const { unmount } = render(<Harness />);
     expect(screen.queryByRole('combobox', { name: 'Etiqueta' })).toBeNull();
