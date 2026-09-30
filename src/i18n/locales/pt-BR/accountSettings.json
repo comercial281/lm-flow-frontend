@@ -60,9 +60,9 @@
     }
   },
   "buttons": {
-    "save": "Salvar Configurações",
+    "save": "Salvar",
     "saving": "Salvando...",
-    "updateAutoResolve": "Atualizar Auto-Resolução",
+    "updateAutoResolve": "Salvar",
     "deleteAccount": "Excluir Conta",
     "cancelDeletion": "Cancelar Exclusão"
   },
@@ -84,7 +84,7 @@
     },
     "error": {
       "loadFailed": "Não foi possível carregar os dados da conta",
-      "saveFailed": "Erro ao salvar configurações",
+      "saveFailed": "Erro ao salvar",
       "autoResolveDisableFailed": "Erro ao desabilitar auto-resolução",
       "autoResolveSaveFailed": "Erro ao salvar auto-resolução",
       "audioTranscriptionFailed": "Erro ao alterar transcrição de áudio",

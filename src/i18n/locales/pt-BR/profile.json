@@ -18,11 +18,11 @@
       "whatsappNumberHelp": "Seu celular pessoal: é por ele que chegam os avisos, os lembretes e o link de acesso. Não é número de atendimento."
     },
     "actions": {
-      "saveChanges": "Salvar Alterações",
+      "saveChanges": "Salvar",
       "saving": "Salvando..."
     },
     "emailConfirmation": {
-      "pendingChange": "Um email de confirmação foi enviado para {{email}}. Verifique sua caixa de entrada para concluir a alteração.",
+      "pendingChange": "Um email de confirmação foi enviado para {{email}}. Verifique seu e-mail para concluir a alteração.",
       "resend": "Reenviar confirmação",
       "cancel": "Cancelar alteração de email",
       "resendSuccess": "Email de confirmação reenviado com sucesso",
@@ -84,7 +84,7 @@
     },
     "messageSignature": {
       "title": "Assinatura de mensagens pessoais",
-      "description": "Crie uma assinatura de mensagem única para aparecer no final de cada mensagem que você enviar de qualquer caixa de entrada.",
+      "description": "Crie uma assinatura de mensagem única para aparecer no final de cada mensagem que você enviar de qualquer número de WhatsApp.",
       "label": "Assinatura da mensagem",
       "placeholder": "Insira aqui a assinatura de sua mensagem pessoal."
     },

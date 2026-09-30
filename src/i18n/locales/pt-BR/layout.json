@@ -53,7 +53,7 @@
         "conversation_opened": "Conversa Aberta",
         "conversation_closed": "Conversa Fechada",
         "message_updated": "Mensagem Atualizada",
-        "message_deleted": "Mensagem Deletada"
+        "message_deleted": "Mensagem Excluída"
       }
     }
   },
@@ -86,7 +86,7 @@
       "dashboard": "Dashboard",
       "conversations": "Conversas",
       "contacts": "Contatos",
-      "pipelines": "Pipelines",
+      "pipelines": "Funil de vendas",
       "channels": "Canais",
       "tutorials": "Tutoriais",
       "settings": "Configurações"

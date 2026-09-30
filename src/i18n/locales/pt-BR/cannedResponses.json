@@ -5,7 +5,7 @@
     "title": "Respostas Automáticas",
     "searchPlaceholder": "Buscar por código ou conteúdo...",
     "newResponse": "Nova Resposta",
-    "bulkDelete": "Deletar",
+    "bulkDelete": "Excluir",
     "clearSelection": "Limpar Seleção",
     "selected": "{{count}} selecionado",
     "selected_other": "{{count}} selecionados"
@@ -25,7 +25,7 @@
   },
   "actions": {
     "edit": "Editar",
-    "delete": "Deletar",
+    "delete": "Excluir",
     "cancel": "Cancelar",
     "save": "Salvar",
     "create": "Criar",
@@ -84,12 +84,12 @@
     "createError": "Erro ao criar resposta rápida",
     "updateSuccess": "Resposta rápida atualizada com sucesso",
     "updateError": "Erro ao atualizar resposta rápida",
-    "deleteSuccess": "Resposta rápida deletada com sucesso",
-    "deleteError": "Erro ao deletar resposta rápida",
-    "bulkDeleteSuccess": "{{count}} resposta automática deletada com sucesso",
-    "bulkDeleteSuccess_other": "{{count}} respostas automáticas deletadas com sucesso",
-    "bulkDeleteSuccess_zero": "{{count}} respostas automáticas deletadas com sucesso",
-    "bulkDeleteError": "Erro ao deletar respostas automáticas",
+    "deleteSuccess": "Resposta rápida excluída com sucesso",
+    "deleteError": "Erro ao excluir resposta rápida",
+    "bulkDeleteSuccess": "{{count}} resposta automática excluída com sucesso",
+    "bulkDeleteSuccess_other": "{{count}} respostas automáticas excluídas com sucesso",
+    "bulkDeleteSuccess_zero": "{{count}} respostas automáticas excluídas com sucesso",
+    "bulkDeleteError": "Erro ao excluir respostas automáticas",
     "permissionDenied": {
       "create": "Você não tem permissão para criar respostas prontas",
       "delete": "Você não tem permissão para excluir respostas prontas",
@@ -99,20 +99,20 @@
   },
   "dialog": {
     "delete": {
-      "title": "Deletar Resposta Rápida",
-      "description": "Tem certeza de que deseja deletar a resposta rápida \"{{shortCode}}\"? Esta ação não pode ser desfeita.",
+      "title": "Excluir Resposta Rápida",
+      "description": "Tem certeza de que deseja excluir a resposta rápida \"{{shortCode}}\"? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "confirm": "Deletar",
-      "deleting": "Deletando..."
+      "confirm": "Excluir",
+      "deleting": "Excluindo..."
     },
     "bulkDelete": {
-      "title": "Deletar Respostas Automáticas",
-      "description": "Tem certeza de que deseja deletar {{count}} resposta automática selecionada? Esta ação não pode ser desfeita.",
-      "description_other": "Tem certeza de que deseja deletar {{count}} respostas automáticas selecionadas? Esta ação não pode ser desfeita.",
-      "description_zero": "Tem certeza de que deseja deletar {{count}} respostas automáticas selecionadas? Esta ação não pode ser desfeita.",
+      "title": "Excluir Respostas Automáticas",
+      "description": "Tem certeza de que deseja excluir {{count}} resposta automática selecionada? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza de que deseja excluir {{count}} respostas automáticas selecionadas? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja excluir {{count}} respostas automáticas selecionadas? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "confirm": "Deletar Todos",
-      "deleting": "Deletando..."
+      "confirm": "Excluir Todos",
+      "deleting": "Excluindo..."
     }
   }
 }

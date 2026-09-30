@@ -74,11 +74,11 @@
     },
     "step15": {
       "title": "Funil por Etapa",
-      "content": "Acompanhe suas oportunidades ao longo do funil de vendas. Cada barra mostra a quantidade e o valor acumulado em cada etapa do pipeline."
+      "content": "Acompanhe suas oportunidades ao longo do funil de vendas. Cada barra mostra a quantidade e o valor acumulado em cada etapa do funil."
     },
     "step16": {
       "title": "Resumo do Funil",
-      "content": "Métricas consolidadas do funil: percentual de conversas que entraram no pipeline, ticket médio e valor total das oportunidades no período."
+      "content": "Métricas consolidadas do funil: percentual de conversas que entraram no funil, ticket médio e valor total das oportunidades no período."
     },
     "step17": {
       "title": "Desempenho por Canal",
@@ -130,7 +130,7 @@
     },
     "step3": {
       "title": "Filtros Avançados",
-      "content": "Filtre sua base por atributos como e-mail, telefone, tag, pipeline ou qualquer campo customizado."
+      "content": "Filtre sua base por atributos como e-mail, telefone, etiqueta, funil ou qualquer campo customizado."
     },
     "step4": {
       "title": "Modo de Visualização",
@@ -191,20 +191,20 @@
   },
   "pipelines": {
     "step1": {
-      "title": "Gerenciamento de Pipelines",
-      "content": "Aqui você organiza o fluxo de atendimento dos seus contatos em etapas. Use a busca para encontrar um pipeline rapidamente."
+      "title": "Gerenciamento de Funis",
+      "content": "Aqui você organiza o fluxo de atendimento dos seus contatos em etapas. Use a busca para encontrar um funil rapidamente."
     },
     "step2": {
-      "title": "Criar Pipeline",
-      "content": "Clique aqui para criar um novo pipeline. Defina etapas personalizadas para organizar o funil de atendimento da sua equipe."
+      "title": "Criar Funil",
+      "content": "Clique aqui para criar um novo funil. Defina etapas personalizadas para organizar o funil de atendimento da sua equipe."
     },
     "step3": {
       "title": "Modo de Visualização",
       "content": "Alterne entre visualização em cards (grade) ou tabela conforme sua preferência."
     },
     "step4": {
-      "title": "Lista de Pipelines",
-      "content": "Veja todos os seus pipelines aqui. Clique em um pipeline para abrir o kanban com as etapas e contatos. Você também pode editar, duplicar ou excluir pipelines pelo menu de ações."
+      "title": "Lista de Funis",
+      "content": "Veja todos os seus funis aqui. Clique em um funil para abrir o kanban com as etapas e contatos. Você também pode editar, duplicar ou excluir funis pelo menu de ações."
     }
   },
   "settings": {
@@ -278,7 +278,7 @@
   "settingsCustomAttributes": {
     "step1": {
       "title": "Atributos Personalizados",
-      "content": "Crie campos extras para enriquecer informações de conversas, contatos e pipelines."
+      "content": "Crie campos extras para enriquecer informações de conversas, contatos e funis."
     },
     "step2": {
       "title": "Barra de Ferramentas",
@@ -286,7 +286,7 @@
     },
     "step3": {
       "title": "Categorias de Atributos",
-      "content": "Use as abas para filtrar entre atributos de Conversa, Contato ou Pipeline."
+      "content": "Use as abas para filtrar entre atributos de Conversa, Contato ou Funil."
     }
   },
   "settingsCannedResponses": {

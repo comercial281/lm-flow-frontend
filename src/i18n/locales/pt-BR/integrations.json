@@ -39,7 +39,7 @@
     },
     "hubspot": {
       "name": "HubSpot",
-      "description": "Integre com HubSpot CRM para gerenciar contatos, negócios e pipelines"
+      "description": "Integre com HubSpot CRM para gerenciar contatos e negócios"
     },
     "leadsquared": {
       "name": "LeadSquared",
@@ -80,7 +80,7 @@
     "toggleError": "Erro ao alterar status da integração",
     "disconnected": "{{name}} desconectado com sucesso",
     "saveSuccess": "Configurações salvas com sucesso!",
-    "saveError": "Erro ao salvar configurações"
+    "saveError": "Erro ao salvar"
   },
   "actions": {
     "configure": "Configurar",
@@ -177,7 +177,7 @@
     "configureBMS": "Configurar BMS",
     "modal": {
       "title": "Configurar Integração BMS",
-      "updateTitle": "Atualizar Integração BMS",
+      "updateTitle": "Editar Integração BMS",
       "description": "Configure a integração com Brius Message System (BMS) para sincronização de contatos, etiquetas e campanhas.",
       "apiConfig": "Configuração da API",
       "syncOptions": "Opções de Sincronização",
@@ -208,7 +208,7 @@
       "features": {
         "title": "Recursos Disponíveis",
         "bidirectionalSync": "Sincronização bidirectional de contatos",
-        "labelSync": "Sincronização automática de etiquetas e tags",
+        "labelSync": "Sincronização automática de etiquetas",
         "customAttributes": "Integração com atributos personalizados",
         "campaignSync": "Sincronização de campanhas de marketing",
         "centralizedHistory": "Histórico de interações centralizado"
@@ -221,7 +221,7 @@
         "documentation": "Documentação BMS",
         "cancel": "Cancelar",
         "configure": "Configurar Integração",
-        "update": "Atualizar Integração",
+        "update": "Salvar",
         "saving": "Salvando..."
       }
     },
@@ -248,7 +248,7 @@
     "featuresCard": {
       "title": "Recursos Disponíveis",
       "contactSync": "Sincronização de Contatos: Mantenha contatos sincronizados entre sistemas",
-      "labelManagement": "Gestão de Etiquetas: Sincronize tags e categorias automaticamente",
+      "labelManagement": "Gestão de Etiquetas: Sincronize etiquetas e categorias automaticamente",
       "customAttributes": "Atributos Personalizados: Transfira dados customizados entre plataformas",
       "campaigns": "Campanhas Integradas: Conecte campanhas de marketing e comunicação",
       "unifiedHistory": "Histórico Unificado: Veja todo o histórico de interações em um só lugar"
@@ -339,7 +339,7 @@
       "actions": {
         "cancel": "Cancelar",
         "create": "Criar Aplicação",
-        "update": "Atualizar Aplicação",
+        "update": "Salvar",
         "saving": "Salvando..."
       }
     },
@@ -361,7 +361,7 @@
       "actions": {
         "open": "Abrir aplicação",
         "edit": "Editar aplicação",
-        "delete": "Deletar aplicação",
+        "delete": "Excluir aplicação",
         "create": "Criar aplicação"
       },
       "empty": {
@@ -373,32 +373,32 @@
     "header": {
       "searchPlaceholder": "Buscar aplicações...",
       "newApp": "Nova Aplicação",
-      "delete": "Deletar"
+      "delete": "Excluir"
     },
     "deleteDialog": {
-      "title": "Deletar Aplicação do Dashboard",
-      "description": "Tem certeza de que deseja deletar a aplicação \"{{title}}\"? Esta ação não pode ser desfeita.",
+      "title": "Excluir Aplicação do Dashboard",
+      "description": "Tem certeza de que deseja excluir a aplicação \"{{title}}\"? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "delete": "Deletar",
-      "deleting": "Deletando..."
+      "delete": "Excluir",
+      "deleting": "Excluindo..."
     },
     "bulkDeleteDialog": {
-      "title": "Deletar Aplicações do Dashboard",
-      "description": "Tem certeza de que deseja deletar {{count}} aplicação do dashboard selecionada? Esta ação não pode ser desfeita.",
-      "description_other": "Tem certeza de que deseja deletar {{count}} aplicações do dashboard selecionadas? Esta ação não pode ser desfeita.",
-      "description_zero": "Tem certeza de que deseja deletar {{count}} aplicações do dashboard selecionadas? Esta ação não pode ser desfeita.",
+      "title": "Excluir Aplicações do Dashboard",
+      "description": "Tem certeza de que deseja excluir {{count}} aplicação do dashboard selecionada? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza de que deseja excluir {{count}} aplicações do dashboard selecionadas? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja excluir {{count}} aplicações do dashboard selecionadas? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "deleteAll": "Deletar Todas",
-      "deleting": "Deletando..."
+      "deleteAll": "Excluir Todas",
+      "deleting": "Excluindo..."
     },
     "messages": {
       "loadError": "Erro ao carregar aplicações do dashboard",
-      "deleteSuccess": "Aplicação do dashboard deletada com sucesso",
-      "deleteError": "Erro ao deletar aplicação do dashboard",
-      "bulkDeleteSuccess": "{{count}} aplicação deletada com sucesso",
-      "bulkDeleteSuccess_other": "{{count}} aplicações deletadas com sucesso",
-      "bulkDeleteSuccess_zero": "{{count}} aplicações deletadas com sucesso",
-      "bulkDeleteError": "Erro ao deletar aplicações do dashboard",
+      "deleteSuccess": "Aplicação do dashboard excluída com sucesso",
+      "deleteError": "Erro ao excluir aplicação do dashboard",
+      "bulkDeleteSuccess": "{{count}} aplicação excluída com sucesso",
+      "bulkDeleteSuccess_other": "{{count}} aplicações excluídas com sucesso",
+      "bulkDeleteSuccess_zero": "{{count}} aplicações excluídas com sucesso",
+      "bulkDeleteError": "Erro ao excluir aplicações do dashboard",
       "createSuccess": "Aplicação do dashboard criada com sucesso",
       "createError": "Erro ao criar aplicação do dashboard",
       "updateSuccess": "Aplicação do dashboard atualizada com sucesso",
@@ -422,7 +422,7 @@
   "googleTranslate": {
     "modal": {
       "title": "Configurar Integração Google Translate",
-      "updateTitle": "Atualizar Integração Google Translate",
+      "updateTitle": "Editar Integração Google Translate",
       "description": "Configure a integração com Google Translate para tradução automática de mensagens e detecção de idiomas.",
       "apiConfig": "Configuração da API",
       "translationOptions": "Opções de Tradução",
@@ -467,7 +467,7 @@
         "documentation": "Documentação Google Translate",
         "cancel": "Cancelar",
         "configure": "Configurar Integração",
-        "update": "Atualizar Integração",
+        "update": "Salvar",
         "saving": "Salvando..."
       }
     }
@@ -475,7 +475,7 @@
   "leadSquared": {
     "modal": {
       "title": "Configurar Integração LeadSquared",
-      "updateTitle": "Atualizar Integração LeadSquared",
+      "updateTitle": "Editar Integração LeadSquared",
       "description": "Configure a integração com LeadSquared CRM para sincronização de leads e atividades.",
       "apiConfig": "Configuração da API",
       "activitySettings": "Configurações de Atividades",
@@ -527,7 +527,7 @@
         "documentation": "Documentação LeadSquared",
         "cancel": "Cancelar",
         "configure": "Configurar Integração",
-        "update": "Atualizar Integração",
+        "update": "Salvar",
         "saving": "Salvando..."
       }
     }
@@ -538,7 +538,7 @@
       "subtitle": "Configure aplicações OAuth para integração com APIs externas",
       "searchPlaceholder": "Buscar aplicações...",
       "newApp": "Nova Aplicação",
-      "delete": "Deletar"
+      "delete": "Excluir"
     },
     "modal": {
       "title": "Nova Aplicação OAuth",
@@ -578,7 +578,7 @@
       "actions": {
         "cancel": "Cancelar",
         "create": "Criar Aplicação",
-        "update": "Atualizar Aplicação",
+        "update": "Salvar",
         "saving": "Salvando..."
       }
     },
@@ -596,7 +596,7 @@
         "hideSecret": "Ocultar Secret",
         "copySecret": "Copiar Secret",
         "edit": "Editar aplicação",
-        "delete": "Deletar aplicação",
+        "delete": "Excluir aplicação",
         "create": "Criar aplicação"
       },
       "status": {
@@ -614,29 +614,29 @@
       "clientSecret": "Chave secreta do cliente"
     },
     "deleteDialog": {
-      "title": "Deletar Aplicação OAuth",
-      "description": "Tem certeza de que deseja deletar a aplicação \"{{name}}\"? Esta ação não pode ser desfeita.",
+      "title": "Excluir Aplicação OAuth",
+      "description": "Tem certeza de que deseja excluir a aplicação \"{{name}}\"? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "confirm": "Deletar",
-      "deleting": "Deletando..."
+      "confirm": "Excluir",
+      "deleting": "Excluindo..."
     },
     "bulkDeleteDialog": {
-      "title": "Deletar Aplicações OAuth",
-      "description": "Tem certeza de que deseja deletar {{count}} aplicação OAuth selecionada? Esta ação não pode ser desfeita.",
-      "description_other": "Tem certeza de que deseja deletar {{count}} aplicações OAuth selecionadas? Esta ação não pode ser desfeita.",
-      "description_zero": "Tem certeza de que deseja deletar {{count}} aplicações OAuth selecionadas? Esta ação não pode ser desfeita.",
+      "title": "Excluir Aplicações OAuth",
+      "description": "Tem certeza de que deseja excluir {{count}} aplicação OAuth selecionada? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza de que deseja excluir {{count}} aplicações OAuth selecionadas? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja excluir {{count}} aplicações OAuth selecionadas? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "confirm": "Deletar Todas",
-      "deleting": "Deletando..."
+      "confirm": "Excluir Todas",
+      "deleting": "Excluindo..."
     },
     "messages": {
       "loading": "Carregando aplicações OAuth...",
-      "deleteSuccess": "Aplicação OAuth deletada com sucesso",
-      "deleteError": "Erro ao deletar aplicação OAuth",
-      "bulkDeleteSuccess": "{{count}} aplicação OAuth deletada com sucesso",
-      "bulkDeleteSuccess_other": "{{count}} aplicações OAuth deletadas com sucesso",
-      "bulkDeleteSuccess_zero": "{{count}} aplicações OAuth deletadas com sucesso",
-      "bulkDeleteError": "Erro ao deletar aplicações OAuth",
+      "deleteSuccess": "Aplicação OAuth excluída com sucesso",
+      "deleteError": "Erro ao excluir aplicação OAuth",
+      "bulkDeleteSuccess": "{{count}} aplicação OAuth excluída com sucesso",
+      "bulkDeleteSuccess_other": "{{count}} aplicações OAuth excluídas com sucesso",
+      "bulkDeleteSuccess_zero": "{{count}} aplicações OAuth excluídas com sucesso",
+      "bulkDeleteError": "Erro ao excluir aplicações OAuth",
       "createSuccess": "Aplicação OAuth criada com sucesso",
       "createError": "Erro ao criar aplicação OAuth",
       "updateSuccess": "Aplicação OAuth atualizada com sucesso",
@@ -652,7 +652,7 @@
     },
     "modal": {
       "title": "Configurar Integração OpenAI",
-      "updateTitle": "Atualizar Integração OpenAI",
+      "updateTitle": "Editar Integração OpenAI",
       "description": "Integre com a OpenAI para trazer recursos avançados de IA para seu dashboard usando os modelos GPT.",
       "apiConfig": "Configuração da API",
       "fields": {
@@ -685,7 +685,7 @@
         "help": "Precisa de Ajuda?",
         "cancel": "Cancelar",
         "configure": "Configurar Integração",
-        "update": "Atualizar Integração",
+        "update": "Salvar",
         "saving": "Salvando..."
       }
     },
@@ -800,7 +800,7 @@
         "label": "Ativar notificações",
         "description": "Receber notificações de novas mensagens"
       },
-      "saveButton": "Salvar Configuração",
+      "saveButton": "Salvar",
       "saving": "Salvando..."
     },
     "channels": {
@@ -829,7 +829,7 @@
     "messages": {
       "loadError": "Erro ao carregar configuração do Slack",
       "saveSuccess": "Configuração do Slack salva com sucesso",
-      "saveError": "Erro ao salvar configuração do Slack",
+      "saveError": "Erro ao salvar",
       "disconnectSuccess": "Slack desconectado com sucesso",
       "disconnectError": "Erro ao desconectar Slack"
     },
@@ -848,7 +848,7 @@
       "subtitle": "Configure webhooks para receber eventos em tempo real",
       "searchPlaceholder": "Buscar webhooks...",
       "newWebhook": "Novo Webhook",
-      "delete": "Deletar"
+      "delete": "Excluir"
     },
     "modal": {
       "title": "Novo Webhook",
@@ -917,52 +917,52 @@
           "description": "Quando uma mensagem é editada"
         },
         "inbox_created": {
-          "name": "Caixa de Entrada Criada",
-          "description": "Quando uma nova caixa de entrada é criada"
+          "name": "Número de WhatsApp Criado",
+          "description": "Quando um novo número de WhatsApp é criado"
         },
         "inbox_updated": {
-          "name": "Caixa de Entrada Atualizada",
-          "description": "Quando a configuração de uma caixa de entrada é atualizada"
+          "name": "Número de WhatsApp Atualizado",
+          "description": "Quando a configuração de um número de WhatsApp é atualizada"
         },
         "webwidget_triggered": {
           "name": "Web Widget Acionado",
           "description": "Quando um evento de web widget é acionado"
         },
         "pipeline_item.created": {
-          "name": "Item de Pipeline Criado",
-          "description": "Quando um contato ou conversa é adicionado a um pipeline"
+          "name": "Item de Funil Criado",
+          "description": "Quando um contato ou conversa é adicionado a um funil"
         },
         "pipeline_item.updated": {
-          "name": "Item de Pipeline Atualizado",
-          "description": "Quando um item de pipeline (contato ou conversa) é atualizado"
+          "name": "Item de Funil Atualizado",
+          "description": "Quando um item de funil (contato ou conversa) é atualizado"
         },
         "pipeline_item.completed": {
-          "name": "Item de Pipeline Concluído",
-          "description": "Quando um item de pipeline é marcado como concluído"
+          "name": "Item de Funil Concluído",
+          "description": "Quando um item de funil é marcado como concluído"
         },
         "pipeline_item.cancelled": {
-          "name": "Item de Pipeline Cancelado",
-          "description": "Quando um item de pipeline é removido de um pipeline"
+          "name": "Item de Funil Cancelado",
+          "description": "Quando um item de funil é removido de um funil"
         },
         "pipeline_task.created": {
-          "name": "Tarefa de Pipeline Criada",
-          "description": "Quando uma nova tarefa de pipeline é criada"
+          "name": "Tarefa de Funil Criada",
+          "description": "Quando uma nova tarefa de funil é criada"
         },
         "pipeline_task.updated": {
-          "name": "Tarefa de Pipeline Atualizada",
-          "description": "Quando uma tarefa de pipeline é atualizada"
+          "name": "Tarefa de Funil Atualizada",
+          "description": "Quando uma tarefa de funil é atualizada"
         },
         "pipeline_task.completed": {
-          "name": "Tarefa de Pipeline Concluída",
-          "description": "Quando uma tarefa de pipeline é marcada como concluída"
+          "name": "Tarefa de Funil Concluída",
+          "description": "Quando uma tarefa de funil é marcada como concluída"
         },
         "pipeline_task.overdue": {
-          "name": "Tarefa de Pipeline Atrasada",
-          "description": "Quando uma tarefa de pipeline fica atrasada"
+          "name": "Tarefa de Funil Atrasada",
+          "description": "Quando uma tarefa de funil fica atrasada"
         },
         "pipeline_task.cancelled": {
-          "name": "Tarefa de Pipeline Cancelada",
-          "description": "Quando uma tarefa de pipeline é cancelada"
+          "name": "Tarefa de Funil Cancelada",
+          "description": "Quando uma tarefa de funil é cancelada"
         }
       },
       "info": {
@@ -972,7 +972,7 @@
       "actions": {
         "cancel": "Cancelar",
         "create": "Criar Webhook",
-        "update": "Atualizar Webhook",
+        "update": "Salvar",
         "saving": "Salvando..."
       }
     },
@@ -990,7 +990,7 @@
       "actions": {
         "test": "Testar webhook",
         "edit": "Editar webhook",
-        "delete": "Deletar webhook",
+        "delete": "Excluir webhook",
         "create": "Criar webhook"
       },
       "empty": {
@@ -1000,20 +1000,20 @@
       }
     },
     "deleteDialog": {
-      "title": "Deletar Webhook",
-      "description": "Tem certeza de que deseja deletar o webhook \"{{url}}\"? Esta ação não pode ser desfeita.",
+      "title": "Excluir Webhook",
+      "description": "Tem certeza de que deseja excluir o webhook \"{{url}}\"? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "confirm": "Deletar",
-      "deleting": "Deletando..."
+      "confirm": "Excluir",
+      "deleting": "Excluindo..."
     },
     "bulkDeleteDialog": {
-      "title": "Deletar Webhooks",
-      "description": "Tem certeza de que deseja deletar {{count}} webhook selecionado? Esta ação não pode ser desfeita.",
-      "description_other": "Tem certeza de que deseja deletar {{count}} webhooks selecionados? Esta ação não pode ser desfeita.",
-      "description_zero": "Tem certeza de que deseja deletar {{count}} webhooks selecionados? Esta ação não pode ser desfeita.",
+      "title": "Excluir Webhooks",
+      "description": "Tem certeza de que deseja excluir {{count}} webhook selecionado? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza de que deseja excluir {{count}} webhooks selecionados? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja excluir {{count}} webhooks selecionados? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "confirm": "Deletar Todos",
-      "deleting": "Deletando..."
+      "confirm": "Excluir Todos",
+      "deleting": "Excluindo..."
     },
     "messages": {
       "loading": "Carregando webhooks...",
@@ -1022,12 +1022,12 @@
       "createError": "Erro ao criar webhook",
       "updateSuccess": "Webhook atualizado com sucesso",
       "updateError": "Erro ao atualizar webhook",
-      "deleteSuccess": "Webhook deletado com sucesso",
-      "deleteError": "Erro ao deletar webhook",
-      "bulkDeleteSuccess": "{{count}} webhook deletado com sucesso",
-      "bulkDeleteSuccess_other": "{{count}} webhooks deletados com sucesso",
-      "bulkDeleteSuccess_zero": "{{count}} webhooks deletados com sucesso",
-      "bulkDeleteError": "Erro ao deletar webhooks",
+      "deleteSuccess": "Webhook excluído com sucesso",
+      "deleteError": "Erro ao excluir webhook",
+      "bulkDeleteSuccess": "{{count}} webhook excluído com sucesso",
+      "bulkDeleteSuccess_other": "{{count}} webhooks excluídos com sucesso",
+      "bulkDeleteSuccess_zero": "{{count}} webhooks excluídos com sucesso",
+      "bulkDeleteError": "Erro ao excluir webhooks",
       "testSuccess": "Teste de webhook enviado com sucesso",
       "testError": "Erro ao testar webhook"
     }
