@@ -595,8 +595,8 @@ export default function LeadAutomations() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setExpandedId(expandedId === rule.id ? null : rule.id)}
-                    aria-label={expandedId === rule.id ? 'Recolher' : 'Expandir'}
-                    title={expandedId === rule.id ? 'Recolher' : 'Expandir'}
+                    aria-label={expandedId === rule.id ? `Recolher ${rule.name}` : `Expandir ${rule.name}`}
+                    title={expandedId === rule.id ? `Recolher ${rule.name}` : `Expandir ${rule.name}`}
                   >
                     {expandedId === rule.id
                       ? <ChevronUp className="h-4 w-4" />
