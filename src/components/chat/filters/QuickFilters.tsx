@@ -300,13 +300,13 @@ export default function QuickFilters({
               menu"). Um <select> mostra uma linha só, fechado. */}
           <section>
             <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-              Tags
+              Etiquetas
             </p>
             {loadingLabels ? (
               <p className="px-0.5 py-1.5 text-xs text-muted-foreground">Carregando…</p>
             ) : labels.length === 0 ? (
               <p className="px-0.5 py-1.5 text-xs text-muted-foreground">
-                Nenhuma tag criada ainda.
+                Nenhuma etiqueta criada ainda.
               </p>
             ) : (
               <select
@@ -314,7 +314,7 @@ export default function QuickFilters({
                 onChange={e => applyTag(e.target.value || undefined)}
                 className="w-full cursor-pointer rounded border bg-background px-1.5 py-1.5 text-sm text-foreground outline-none focus:border-primary"
               >
-                <option value="">Todas as tags</option>
+                <option value="">Todas as etiquetas</option>
                 {labels.map(l => (
                   <option key={l.id} value={l.title}>
                     {l.title}

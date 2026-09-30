@@ -180,19 +180,19 @@ export default function WhatsappReminders() {
   const remove = async (r: WhatsappReminder) => {
     if (
       !(await confirmar({
-        titulo: 'Apagar lembrete',
-        descricao: `O lembrete "${r.name}" será removido. Esta ação não pode ser desfeita.`,
-        rotuloDaAcao: 'Apagar',
+        titulo: 'Excluir lembrete',
+        descricao: `O lembrete "${r.name}" será excluído. Esta ação não pode ser desfeita.`,
+        rotuloDaAcao: 'Excluir',
         destrutivo: true,
       }))
     )
       return;
     try {
       await whatsappRemindersService.remove(r.id);
-      toast.success('Lembrete apagado');
+      toast.success('Lembrete excluído');
       load();
     } catch {
-      toast.error('Falha ao apagar');
+      toast.error('Falha ao excluir');
     }
   };
 
@@ -286,7 +286,7 @@ export default function WhatsappReminders() {
                     <Button size="sm" variant="ghost" onClick={() => openEdit(r)} title="Editar">
                       <Pencil className="w-4 h-4" />
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => remove(r)} title="Apagar">
+                    <Button size="sm" variant="ghost" onClick={() => remove(r)} title="Excluir">
                       <Trash2 className="w-4 h-4 text-red-500" />
                     </Button>
                   </td>

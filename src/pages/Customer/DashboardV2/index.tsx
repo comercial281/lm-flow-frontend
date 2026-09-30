@@ -175,7 +175,7 @@ const DashboardV2: React.FC = () => {
         {isAvailable(data?.pipeline) ? (
           <PipelineFunnel pipeline={data.pipeline} onSelect={id => setFilters(prev => ({ ...prev, pipelineId: id }))} />
         ) : (
-          <GlassCard title="Funil do pipeline">
+          <GlassCard title="Funil">
             {loading && !data ? <Skeleton height={200} /> : <EmptyBlock block={data?.pipeline} />}
           </GlassCard>
         )}

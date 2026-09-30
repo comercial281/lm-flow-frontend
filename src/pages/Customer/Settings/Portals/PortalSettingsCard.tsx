@@ -276,7 +276,7 @@ export default function PortalSettingsCard({ portalKey, settings, onSaved }: Pro
 
       <div className="flex justify-end">
         <Button className="text-xs" onClick={save} disabled={saving}>
-          {saving ? 'Salvando...' : 'Salvar configuração'}
+          {saving ? 'Salvando...' : 'Salvar'}
         </Button>
       </div>
     </div>

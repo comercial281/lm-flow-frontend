@@ -119,7 +119,7 @@ export default function ContactTagsManager({
       {/* Tags aplicadas */}
       <div className="flex flex-wrap gap-1.5">
         {tags.length === 0 && (
-          <span className="text-xs text-muted-foreground">Nenhuma tag</span>
+          <span className="text-xs text-muted-foreground">Nenhuma etiqueta</span>
         )}
         {tags.map(name => {
           const color = colorOf(name);
@@ -156,7 +156,7 @@ export default function ContactTagsManager({
               void addTag(input);
             }
           }}
-          placeholder="Adicionar ou criar tag..."
+          placeholder="Adicionar ou criar etiqueta..."
           disabled={saving}
           className="flex-1 h-8 rounded-md border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
         />

@@ -1451,7 +1451,7 @@ export default function PipelineKanban() {
                   <div className="flex-1 min-w-0">Lead</div>
                   <div className="hidden md:block w-40 shrink-0">Coluna</div>
                   <div className="hidden xl:block w-44 shrink-0">Responsável</div>
-                  <div className="hidden lg:flex w-48 shrink-0 flex-wrap gap-1">Tags</div>
+                  <div className="hidden lg:flex w-48 shrink-0 flex-wrap gap-1">Etiquetas</div>
                   <button
                     type="button"
                     onClick={() => setListSortOrder(o => (o === 'asc' ? 'desc' : 'asc'))}

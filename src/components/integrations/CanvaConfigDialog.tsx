@@ -335,7 +335,7 @@ const CanvaConfigDialog = ({
 
             <div className="flex flex-col gap-3 pt-4 border-t">
               <Button onClick={handleSave} className="w-full">
-                {t('edit.integrations.canva.saveConfig') || 'SALVAR CONFIGURAÇÕES'}
+                {t('edit.integrations.canva.saveConfig') || 'Salvar'}
               </Button>
 
               {onDisconnect && (

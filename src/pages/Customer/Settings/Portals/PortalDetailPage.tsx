@@ -305,8 +305,8 @@ export default function PortalDetailPage() {
             {portal.capabilities.includes('email_leads') && (
               <p className="text-xs text-muted-foreground flex items-start gap-1.5">
                 <Mail className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                Este portal envia leads por e-mail. Cadastre no portal o e-mail de captação da sua
-                caixa de entrada de leads no LM Flow (recurso em implantação).
+                Este portal envia leads por e-mail. Cadastre no portal o endereço de e-mail de
+                captação de leads do LM Flow (recurso em implantação).
               </p>
             )}
           </div>

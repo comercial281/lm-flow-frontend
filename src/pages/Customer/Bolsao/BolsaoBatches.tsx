@@ -125,7 +125,7 @@ export default function BolsaoBatches() {
         toast.success('Lista de volta ao Bolsão.');
       } else {
         await bolsaoService.pause(batch.id);
-        toast.success('Lista pausada. Ela sumiu do Bolsão, sem apagar nada.');
+        toast.success('Lista pausada. Ela sumiu do Bolsão, sem excluir nada.');
       }
       load(true);
     } catch (e) {
@@ -303,7 +303,7 @@ export default function BolsaoBatches() {
             <AlertDialogDescription>
               Ela sai desta lista e para de oferecer leads: os que ainda estavam esperando saem do
               Bolsão. Quem já foi puxado por um corretor continua com ele, como qualquer outro lead.
-              Nada é apagado — dá para reabrir depois.
+              Nada é excluído — dá para reabrir depois.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

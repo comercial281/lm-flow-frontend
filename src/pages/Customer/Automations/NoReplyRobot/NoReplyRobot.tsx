@@ -101,7 +101,7 @@ export function NoReplyRobot({ embedded = false }: NoReplyRobotProps = {}) {
           </h2>
           <p className="text-sm text-muted-foreground">
             Coloca no follow-up quem recebeu mensagem e não respondeu. Com ele desligado, o
-            follow-up só entra na mão: pela tag ou pelo botão "Ativar follow-up" no card.
+            follow-up só entra na mão: pela etiqueta ou pelo botão "Ativar follow-up" no card.
           </p>
           {/* Contraparte do aviso na tela da IA Vendedora. Os dois follow-ups cobrem
               metades opostas: aqui, quem nunca respondeu (lead_replied? descarta);

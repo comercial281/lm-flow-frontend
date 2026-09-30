@@ -164,7 +164,7 @@ export default function CardActionsPanel({
     setRemoving(true);
     try {
       await pipelinesService.removeItemFromPipeline(item.pipeline_id, item.id);
-      toast.success('Lead removido do pipeline');
+      toast.success('Lead removido do funil');
       onRemoved?.();
       onClose();
     } catch {
@@ -373,7 +373,7 @@ export default function CardActionsPanel({
             ) : (
               <Trash2 className="h-3.5 w-3.5" />
             )}
-            {confirmDelete ? 'Confirmar remoção' : 'Remover do pipeline'}
+            {confirmDelete ? 'Confirmar remoção' : 'Remover do funil'}
           </Button>
           {confirmDelete && (
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setConfirmDelete(false)}>

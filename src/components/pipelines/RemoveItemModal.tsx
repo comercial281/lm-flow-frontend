@@ -75,7 +75,7 @@ export default function RemoveItemModal({
             <span className="font-medium text-foreground">
               {getItemDisplayName()}
             </span>{' '}
-            (#{getItemDisplayId()}) deste pipeline?
+            (#{getItemDisplayId()}) deste funil?
           </p>
 
           <div className="mt-4 p-3 bg-muted/50 rounded-lg border border-border">

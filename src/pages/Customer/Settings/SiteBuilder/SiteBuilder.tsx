@@ -1086,7 +1086,7 @@ export default function SiteBuilder() {
                         <img src={propertyPreviewUrl} alt="" className="aspect-video w-full max-w-md rounded-lg border border-border object-cover" />
                       )}
                       <p className="text-xs text-muted-foreground">
-                        Se o imóvel for despublicado ou apagado, o site volta ao automático e esta tela avisa.
+                        Se o imóvel for despublicado ou excluído, o site volta ao automático e esta tela avisa.
                       </p>
                     </div>
                   )}
@@ -1557,7 +1557,7 @@ export default function SiteBuilder() {
 
           <div className="flex justify-end">
             <Button onClick={handleSaveSite} disabled={saving || !siteFormDirty && !!site}>
-              {saving ? 'Salvando...' : site ? 'Salvar alterações' : 'Criar site'}
+              {saving ? 'Salvando...' : site ? 'Salvar' : 'Criar site'}
             </Button>
           </div>
         </div>

@@ -107,7 +107,7 @@ export default function PropertyInterests() {
       setInterests(prev => prev.map(i => i.id === updated.id ? updated : i));
       toast.success(`Avançado para ${INTEREST_STAGE_LABELS[updated.interest_stage]}`);
     } catch {
-      toast.error('Erro ao avançar estágio');
+      toast.error('Erro ao avançar etapa');
     }
   };
 
@@ -260,7 +260,7 @@ export default function PropertyInterests() {
                     <th className="font-medium px-4 py-3 w-20">Aderência</th>
                     <th className="font-medium px-4 py-3">Lead</th>
                     <th className="font-medium px-4 py-3">Imóvel</th>
-                    <th className="font-medium px-4 py-3">Estágio</th>
+                    <th className="font-medium px-4 py-3">Etapa</th>
                     <th className="font-medium px-4 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
@@ -324,7 +324,7 @@ export default function PropertyInterests() {
                       <td className="px-4 py-3">
                         {!isClosed(interest.interest_stage) ? (
                           <div className="flex items-center justify-end gap-1">
-                            <Button size="sm" variant="ghost" title="Avançar estágio" onClick={() => handleAdvance(interest)}>
+                            <Button size="sm" variant="ghost" title="Avançar etapa" onClick={() => handleAdvance(interest)}>
                               <ChevronRight className="h-4 w-4" />
                             </Button>
                             <Button

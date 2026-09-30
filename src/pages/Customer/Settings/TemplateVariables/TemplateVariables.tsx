@@ -392,7 +392,7 @@ export default function TemplateVariables() {
             </div>
 
             <div className="space-y-1.5">
-              <UILabel htmlFor="var-label">Label (mostra no chip)</UILabel>
+              <UILabel htmlFor="var-label">Rótulo (mostra no chip)</UILabel>
               <Input
                 id="var-label"
                 value={form.label}

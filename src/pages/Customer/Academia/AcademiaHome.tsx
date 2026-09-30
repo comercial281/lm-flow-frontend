@@ -195,7 +195,7 @@ export default function AcademiaHome({ canEdit, embedded }: Props) {
                               descricao: (
                                 <>
                                   Excluir o curso <strong>{c.titulo}</strong>? Os módulos ficam
-                                  soltos em Geral — nenhum é apagado.
+                                  soltos em Geral — nenhum é excluído.
                                 </>
                               ),
                               rotuloDaAcao: 'Excluir',

@@ -91,7 +91,7 @@ const LeftPanel: React.FC = () => (
         {[
           { label: 'Roteirização automatica de leads', dot: '#7c3aed' },
           { label: 'Follow-up por WhatsApp sem intervencao', dot: '#9333ea' },
-          { label: 'Pipeline visual com conversao em tempo real', dot: '#a855f7' },
+          { label: 'Funil visual com conversao em tempo real', dot: '#a855f7' },
         ].map((item, i) => (
           <motion.div
             key={item.label}

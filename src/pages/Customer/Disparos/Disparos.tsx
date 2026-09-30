@@ -218,10 +218,10 @@ export default function Disparos() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1.5 min-w-[240px]">
-              <label className="text-sm text-muted-foreground">Pipeline</label>
+              <label className="text-sm text-muted-foreground">Funil</label>
               <Select value={pipelineId} onValueChange={setPipelineId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Escolher pipeline" />
+                  <SelectValue placeholder="Escolher funil" />
                 </SelectTrigger>
                 <SelectContent>
                   {pipelines.map(p => (
@@ -241,7 +241,7 @@ export default function Disparos() {
 
           {campaigns.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Nenhum disparo neste pipeline ainda. Clique em "Novo disparo" pra criar o primeiro.
+              Nenhum disparo neste funil ainda. Clique em "Novo disparo" pra criar o primeiro.
             </div>
           ) : (
             <>
@@ -525,7 +525,7 @@ export default function Disparos() {
             return (
               <div className="rounded-xl border border-border p-3 space-y-3">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="text-sm font-medium">Retorno por disparo (pipeline selecionado)</div>
+                  <div className="text-sm font-medium">Retorno por disparo (funil selecionado)</div>
                   <div className="text-xs text-muted-foreground">
                     Custo estimado {dinheiro(totCost)} · {totReplied} respostas
                     {totReplied > 0 && <> · <strong className="text-foreground">{dinheiro(totCost / totReplied)}/resposta</strong></>}

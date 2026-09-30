@@ -234,7 +234,7 @@ export const ORIGIN_LABELS: Record<string, string> = {
 // 'lead.no_reply_after' é emitido por Followup::NoReplyEnrollJob (roda a cada 1 min).
 export const TRIGGER_LABELS: Record<string, string> = {
   'lead.created':              'Lead criado',
-  'lead.stage_changed':        'Estágio alterado',
+  'lead.stage_changed':        'Etapa alterada',
   'lead.visit_scheduled':      'Visita agendada',
   'lead.visit_completed':      'Visita realizada',
   'lead.visit_reminder_24h':   'Lembrete — 1 dia antes da visita',
@@ -265,7 +265,7 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
   assign_via_roleta:       'Distribuir via roleta',
   add_label:               'Adicionar etiqueta',
   remove_label:            'Remover etiqueta',
-  move_pipeline_stage:     'Mover no pipeline',
+  move_pipeline_stage:     'Mover no funil',
   create_task:             'Criar tarefa',
   notify_group:            'Notificar grupo',
   notify_user:             'Avisar usuário no WhatsApp (lembrete)',

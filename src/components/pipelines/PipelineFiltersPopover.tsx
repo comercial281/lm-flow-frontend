@@ -146,7 +146,7 @@ export default function PipelineFiltersPopover({
       {open && (
         <div
           role="dialog"
-          aria-label="Filtros do pipeline"
+          aria-label="Filtros do funil"
           className="absolute left-0 top-full z-30 mt-1 w-96 max-h-[80vh] overflow-y-auto rounded-lg border bg-popover p-3 shadow-lg"
         >
           {/* TEMPO (entrada do lead na etapa) */}
@@ -194,10 +194,10 @@ export default function PipelineFiltersPopover({
           {/* TAGS */}
           <section className="mt-2.5 border-t pt-2.5">
             <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-              Tags
+              Etiquetas
             </p>
             {allTags.length === 0 ? (
-              <p className="px-0.5 py-1 text-xs text-muted-foreground">Nenhuma tag neste funil.</p>
+              <p className="px-0.5 py-1 text-xs text-muted-foreground">Nenhuma etiqueta neste funil.</p>
             ) : (
               <div className="max-h-32 space-y-0.5 overflow-y-auto">
                 {allTags.map(tag => {

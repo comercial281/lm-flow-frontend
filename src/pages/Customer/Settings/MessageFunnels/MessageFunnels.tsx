@@ -532,7 +532,7 @@ export default function MessageFunnels() {
             <DialogDescription>
               Excluir <strong>{tagParaExcluir?.name}</strong>? Ela some de{' '}
               {tagParaExcluir?.usage_count ?? 0}{' '}
-              {(tagParaExcluir?.usage_count ?? 0) === 1 ? 'funil' : 'funis'} — nenhum funil é apagado.
+              {(tagParaExcluir?.usage_count ?? 0) === 1 ? 'funil' : 'funis'} — nenhum funil é excluído.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -581,7 +581,7 @@ export default function MessageFunnels() {
             <DialogDescription>
               Excluir a pasta <strong>{pastaParaExcluir?.name}</strong>? Os{' '}
               {pastaParaExcluir?.funnels_count ?? 0} funis de dentro voltam pra &ldquo;Sem pasta&rdquo; —
-              nenhum funil é apagado.
+              nenhum funil é excluído.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

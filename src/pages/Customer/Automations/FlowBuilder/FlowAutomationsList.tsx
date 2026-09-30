@@ -132,7 +132,7 @@ export default function FlowAutomationsList() {
     ev.stopPropagation();
     if (!(await confirmar({
       titulo: 'Excluir pasta',
-      descricao: <>Excluir a pasta <strong>{f.name}</strong>? Os fluxos de dentro voltam pra &ldquo;Sem pasta&rdquo; — nenhum fluxo é apagado.</>,
+      descricao: <>Excluir a pasta <strong>{f.name}</strong>? Os fluxos de dentro voltam pra &ldquo;Sem pasta&rdquo; — nenhum fluxo é excluído.</>,
       rotuloDaAcao: 'Excluir',
       destrutivo: true,
     }))) return;

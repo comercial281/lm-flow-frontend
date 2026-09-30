@@ -486,7 +486,7 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
     );
     return (
       <div>
-        <UILabel>Para qual estágio? *</UILabel>
+        <UILabel>Para qual etapa? *</UILabel>
         <select
           value={value}
           onChange={e =>
@@ -494,7 +494,7 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
           }
           className={baseSelectClass}
         >
-          <option value="">Selecione um estágio</option>
+          <option value="">Selecione uma etapa</option>
           {allStages.map(s => (
             <option key={s.id} value={s.id}>
               {s.pipelineName} &rarr; {s.name}
@@ -901,7 +901,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       const stageId = String(params.stage_id ?? '');
       return (
         <>
-          <Field label="Pipeline *">
+          <Field label="Funil *">
             <select
               value={pipelineId}
               onChange={e =>
@@ -912,20 +912,20 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               }
               className={baseSelectClass}
             >
-              <option value="">Selecione um pipeline</option>
+              <option value="">Selecione um funil</option>
               {resources.pipelines.map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
           </Field>
           {pipelineId && (
-            <Field label="Estágio *">
+            <Field label="Etapa *">
               <select
                 value={stageId}
                 onChange={e => setParam('stage_id', e.target.value)}
                 className={baseSelectClass}
               >
-                <option value="">Selecione um estágio</option>
+                <option value="">Selecione uma etapa</option>
                 {(resources.stagesByPipeline[pipelineId] ?? []).map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}

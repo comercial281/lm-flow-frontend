@@ -335,7 +335,7 @@ const SupabaseConfigDialog = ({
 
             <div className="flex flex-col gap-3 pt-4 border-t">
               <Button onClick={handleSave} className="w-full">
-                {t('edit.integrations.supabase.saveConfig') || 'SALVAR CONFIGURAÇÕES'}
+                {t('edit.integrations.supabase.saveConfig') || 'Salvar'}
               </Button>
 
               {onDisconnect && (

@@ -653,7 +653,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
             <Card>
               <CardHeader className="pb-2">
                 <CollapsibleHeader
-                  title="Tags"
+                  title="Etiquetas"
                   description="Etiquetas do lead"
                   icon={<Tag className="h-4 w-4 text-pink-500" />}
                   isOpen={showContactAttributes}

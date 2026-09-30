@@ -335,7 +335,7 @@ const AsanaConfigDialog = ({
 
             <div className="flex flex-col gap-3 pt-4 border-t">
               <Button onClick={handleSave} className="w-full">
-                {t('edit.integrations.asana.saveConfig') || 'SALVAR CONFIGURAÇÕES'}
+                {t('edit.integrations.asana.saveConfig') || 'Salvar'}
               </Button>
 
               {onDisconnect && (

@@ -342,10 +342,10 @@ export default function LeadAdsForms() {
       // A lista vai como JSX: no window.confirm ela era uma parede de texto com
       // `\n`, e com dezenas de etiquetas a caixinha do navegador cortava o fim.
       const ok = await confirmar({
-        titulo: `Apagar ${plural(preview.count, 'etiqueta', 'etiquetas')}`,
+        titulo: `Excluir ${plural(preview.count, 'etiqueta', 'etiquetas')}`,
         descricao: (
           <>
-            Estas etiquetas foram criadas automaticamente e serão apagadas. Não dá pra desfazer.
+            Estas etiquetas foram criadas automaticamente e serão excluídas. Não dá pra desfazer.
             <span className="mt-2 block max-h-48 overflow-auto text-xs">
               {preview.labels.map(l => (
                 <span key={l.title} className="block">• {l.title}</span>
@@ -353,7 +353,7 @@ export default function LeadAdsForms() {
             </span>
           </>
         ),
-        rotuloDaAcao: 'Apagar',
+        rotuloDaAcao: 'Excluir',
         destrutivo: true,
       });
       if (!ok) return;
@@ -402,7 +402,7 @@ export default function LeadAdsForms() {
   };
 
   const handleSave = async () => {
-    if (!form.pipeline_id) { toast.error('Selecione um pipeline'); return; }
+    if (!form.pipeline_id) { toast.error('Selecione um funil'); return; }
     if (!form.pipeline_stage_id) { toast.error('Selecione uma etapa'); return; }
 
     const assign = decodeAssignTo(form.assign_to);
@@ -625,7 +625,7 @@ export default function LeadAdsForms() {
             )}
 
             <p className="text-xs text-muted-foreground">
-              Dica: confira primeiro. Ao importar, os leads entram no pipeline e podem disparar as
+              Dica: confira primeiro. Ao importar, os leads entram no funil e podem disparar as
               automações de entrada — desative o primeiro contato antes se não quiser avisar leads antigos.
             </p>
           </div>
@@ -1260,7 +1260,7 @@ export default function LeadAdsForms() {
 
           <div className="space-y-4 py-2">
             <div>
-              <UILabel>Pipeline *</UILabel>
+              <UILabel>Funil *</UILabel>
               <select
                 value={form.pipeline_id}
                 onChange={e =>
@@ -1268,7 +1268,7 @@ export default function LeadAdsForms() {
                 }
                 className={baseSelectClass}
               >
-                <option value="">Selecione um pipeline</option>
+                <option value="">Selecione um funil</option>
                 {resources.pipelines.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}

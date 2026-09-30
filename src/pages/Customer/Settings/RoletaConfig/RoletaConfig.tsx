@@ -1248,17 +1248,17 @@ export default function RoletaConfigPage() {
 
   async function limparPadroes() {
     const ok = await confirmar({
-      titulo: 'Apagar os padrões da casa?',
+      titulo: 'Excluir os padrões da casa?',
       descricao: 'As roletas que já existem não mudam nada — elas guardam os próprios valores. '
         + 'O que muda é que a próxima roleta nova vai nascer com os campos em branco.',
-      rotuloDaAcao: 'Apagar padrões',
+      rotuloDaAcao: 'Excluir padrões',
       destrutivo: true,
     });
     if (!ok) return;
 
     setSalvandoPadroes(true);
     try {
-      // Todo campo em branco: é assim que o servidor entende "apagar o padrão".
+      // Todo campo em branco: é assim que o servidor entende "excluir o padrão".
       const vazio: RoletaDefaults = {
         gestor_whatsapp_number: null, gestor_group_jid: null, gestor_group_instance: null,
         notification_inbox_id: null, timeout_minutes: null, business_hours_config: null,
@@ -1266,9 +1266,9 @@ export default function RoletaConfigPage() {
         msg_grupo_template: null, msg_grupo_repasse_template: null,
       };
       setPadroes(await roletaConfigService.saveDefaults(vazio));
-      toast.success('Padrões apagados.');
+      toast.success('Padrões excluídos.');
     } catch (e) {
-      toast.error(apiErrorMessage(e, 'Não consegui apagar os padrões.'));
+      toast.error(apiErrorMessage(e, 'Não consegui excluir os padrões.'));
     } finally {
       setSalvandoPadroes(false);
     }
@@ -1583,7 +1583,7 @@ export default function RoletaConfigPage() {
 
           {Object.keys(padroes).length > 0 && (
             <Button variant="outline" onClick={limparPadroes} disabled={salvandoPadroes}>
-              Apagar padrões
+              Excluir padrões
             </Button>
           )}
         </div>

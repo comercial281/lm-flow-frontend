@@ -473,7 +473,7 @@ export default function ContactEventCard({ event }: ContactEventCardProps) {
                 </h4>
                 <div className="bg-sidebar border border-sidebar-border rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-sidebar-foreground/60">Pipeline:</span>
+                    <span className="text-xs text-sidebar-foreground/60">Funil:</span>
                     <Badge variant="outline" className="text-xs">
                       {event.properties?.pipeline_name}
                     </Badge>

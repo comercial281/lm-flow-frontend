@@ -149,10 +149,10 @@ export default function DeletePipelineModal({
         {hasItems && confirmCascade && (
           <div className="p-4 bg-destructive/10 border-2 border-destructive rounded-lg mb-2">
             <p className="text-sm font-semibold text-destructive">
-              Deseja excluir junto com os {itemCount} lead{itemCount !== 1 ? 's' : ''} dentro do pipeline?
+              Deseja excluir junto com os {itemCount} lead{itemCount !== 1 ? 's' : ''} dentro do funil?
             </p>
             <p className="text-xs text-destructive/80 mt-1">
-              Esta ação é permanente. Os leads serão removidos junto com o pipeline.
+              Esta ação é permanente. Os leads serão removidos junto com o funil.
             </p>
           </div>
         )}
@@ -179,7 +179,7 @@ export default function DeletePipelineModal({
             {loading
               ? t('deletePipeline.deleting')
               : hasItems && confirmCascade
-                ? `Sim, excluir pipeline e ${itemCount} lead${itemCount !== 1 ? 's' : ''}`
+                ? `Sim, excluir funil e ${itemCount} lead${itemCount !== 1 ? 's' : ''}`
                 : t('deletePipeline.delete')}
           </Button>
         </DialogFooter>

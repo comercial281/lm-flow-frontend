@@ -18,7 +18,7 @@ interface Props {
 const ACTION_LABELS: Record<string, string> = {
   created: 'Criado',
   updated: 'Editado',
-  deleted: 'Deletado',
+  deleted: 'Excluído',
   permission_added: 'Permissão adicionada',
   permission_removed: 'Permissão removida',
   permission_replaced: 'Permissão alterada',
