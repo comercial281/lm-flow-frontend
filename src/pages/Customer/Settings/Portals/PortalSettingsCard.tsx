@@ -64,8 +64,8 @@ const conheceLocacao = (s: PortalSettings | null | undefined) => typeof s?.rent_
 
 /**
  * A tela *Configurar* do portal, no modelo do Kenlo: dados do anunciante,
- * endereço no anúncio, leads e destino do lead — tudo gravado num *Salvar
- * configuração* só (uma requisição, `PUT /portals/:key/settings`).
+ * endereço no anúncio, leads e destino do lead — tudo gravado num *Salvar*
+ * só (uma requisição, `PUT /portals/:key/settings`).
  *
  * Os seletores de destino são leitura de fundo: cargo sem acesso a funis,
  * roletas ou usuários só não vê aquele seletor — nada de aviso vermelho. E o

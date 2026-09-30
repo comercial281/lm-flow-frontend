@@ -264,7 +264,7 @@ describe('PortalSettingsCard', () => {
 
       await usuario.click(screen.getByRole('tab', { name: 'Locação' }));
       expect(screen.getByRole('checkbox', { name: 'Mesmo destino da venda' })).toBeChecked();
-      await usuario.click(screen.getByRole('button', { name: 'Salvar configuração' }));
+      await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
       await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
       const corpo = mocks.updateSettings.mock.calls[0][1];
@@ -281,7 +281,7 @@ describe('PortalSettingsCard', () => {
       await usuario.click(screen.getByRole('checkbox', { name: 'Mesmo destino da venda' }));
       await usuario.selectOptions(screen.getByRole('combobox', { name: 'Funil' }), 'pipe-2');
       await usuario.selectOptions(await screen.findByRole('combobox', { name: 'Coluna' }), 'st-9');
-      await usuario.click(screen.getByRole('button', { name: 'Salvar configuração' }));
+      await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
       await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
       expect(mocks.updateSettings.mock.calls[0][1]).toMatchObject({
@@ -309,7 +309,7 @@ describe('PortalSettingsCard', () => {
       montar({ ...novo, rent_same_as_sale: false, rent_pipeline_id: 'pipe-2', rent_roleta_config_id: 'rol-1' });
       await screen.findByRole('combobox', { name: 'Funil' });
 
-      await usuario.click(screen.getByRole('button', { name: 'Salvar configuração' }));
+      await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
       await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
       expect(mocks.updateSettings.mock.calls[0][1]).not.toHaveProperty('rent_roleta_config_id');
