@@ -93,6 +93,13 @@ export function porcentagem(valor: unknown, casas = 1): string {
 
 export type Moeda = 'BRL' | 'USD' | 'EUR';
 
+// Moeda gravada no item pode vir de qualquer lugar (jsonb do backend, digitação
+// livre); desconhecida vira real em vez de quebrar a tela (Intl.NumberFormat
+// lança RangeError pra código de moeda inválido).
+export function moedaValida(codigo: unknown): Moeda {
+  return codigo === 'USD' || codigo === 'EUR' ? codigo : 'BRL';
+}
+
 const formatadorDeMoeda = (moeda: Moeda, centavos: boolean) =>
   new Intl.NumberFormat('pt-BR', {
     style: 'currency',
