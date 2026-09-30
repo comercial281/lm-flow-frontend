@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import { labelsFor } from '@/features/properties/amenities';
@@ -14,6 +14,8 @@ import {
   PortalFooter, PortalHeader, PropertyCard,
   type PortalProperty, type SiteInfo as PortalSiteInfo,
 } from './portalShared';
+import FinalidadeChoice from './FinalidadeChoice';
+import { FINALIDADE_PARAM, finalidadeDoImovel, finalidadeInicial, type Finalidade } from './finalidade';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — PÁGINA DO IMÓVEL (Produto A). Mesma pegada "Editorial
@@ -88,6 +90,10 @@ export default function ImovelPublicPage() {
   const [phone, setPhone] = useState('');
   const [phoneErr, setPhoneErr] = useState(false);
   const [sent, setSent] = useState(false);
+  // Imóvel de Venda + Locação: a pessoa escolhe, marcada pela aba da busca de
+  // onde veio (?finalidade=locacao). Os outros imóveis decidem sozinhos.
+  const [searchParams] = useSearchParams();
+  const [finalidade, setFinalidade] = useState<Finalidade>(() => finalidadeInicial(searchParams.get(FINALIDADE_PARAM)));
 
   useEffect(() => {
     let alive = true;
@@ -184,6 +190,7 @@ export default function ImovelPublicPage() {
         body: JSON.stringify({ lead: {
           name, phone, source: 'portal', form_type: 'imovel',
           property_code: code, property_id: prop?.id,
+          finalidade: finalidadeDoImovel(prop?.transaction_type) ?? finalidade,
           message: `Interesse no imóvel ${code}`,
           utm_source: params.get('utm_source') ?? undefined, utm_campaign: params.get('utm_campaign') ?? undefined,
           form_data: { page_url: window.location.href, referrer: document.referrer || null },
@@ -255,6 +262,7 @@ export default function ImovelPublicPage() {
       </div>
     ) : (
       <form onSubmit={submitLead} className="space-y-3">
+        {!finalidadeDoImovel(prop.transaction_type) && <FinalidadeChoice value={finalidade} onChange={setFinalidade} />}
         <input value={name} onChange={e => setName(e.target.value)} required placeholder="Seu nome" className="w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)]" />
         <BrPhoneInput
           value={phone}

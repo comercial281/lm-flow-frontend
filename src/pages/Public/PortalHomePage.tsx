@@ -6,6 +6,8 @@ import {
   API, HomeShortcuts, I, Ic, PROPERTY_TYPE_LABEL, PortalFooter, PortalHeader, PropertyCard, Select, Stat,
   usePortalData, type PortalTab,
 } from './portalShared';
+import FinalidadeChoice from './FinalidadeChoice';
+import { finalidadeInicial, type Finalidade } from './finalidade';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — HOME (Produto A do LM Flow)
@@ -37,6 +39,9 @@ export default function PortalHomePage() {
   const [leadPhone, setLeadPhone] = useState('');
   const [leadPhoneErr, setLeadPhoneErr] = useState(false);
   const [leadSent, setLeadSent] = useState(false);
+  // "Quero comprar / Quero alugar" (spec venda/locação, D3): marcado pela aba da
+  // busca do topo, e a pessoa troca se quiser.
+  const [leadFinalidade, setLeadFinalidade] = useState<Finalidade>('venda');
 
   // Vitrine de destaques (com fallback para os primeiros imóveis).
   const featured = useMemo(() => {
@@ -65,7 +70,7 @@ export default function PortalHomePage() {
       await fetch(`${API}/api/public/v1/site/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
-        body: JSON.stringify({ lead: { name: leadName, phone: leadPhone, source: 'portal', form_type: 'home', message: 'Quero ajuda pra encontrar um imóvel (portal home).' } }),
+        body: JSON.stringify({ lead: { name: leadName, phone: leadPhone, source: 'portal', form_type: 'home', finalidade: leadFinalidade, message: 'Quero ajuda pra encontrar um imóvel (portal home).' } }),
       });
       setLeadSent(true);
     } catch { /* silencioso */ }
@@ -126,7 +131,7 @@ export default function PortalHomePage() {
           <form onSubmit={runSearch} className="mt-8 rounded-[24px] bg-white/95 p-3 shadow-[0_30px_60px_-25px_rgba(0,0,0,0.5)] backdrop-blur sm:p-4">
             <div className="mb-3 flex gap-1.5">
               {([['sale', 'Comprar'], ['rent', 'Alugar'], ['launch', 'Lançamentos']] as const).map(([k, l]) => (
-                <button key={k} type="button" onClick={() => setTab(k)}
+                <button key={k} type="button" onClick={() => { setTab(k); if (k !== 'launch') setLeadFinalidade(finalidadeInicial(k)); }}
                   className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${tab === k ? 'text-white' : 'text-neutral-600 hover:bg-black/[0.04]'}`}
                   style={tab === k ? { background: 'var(--brand)' } : undefined}>
                   {l}
@@ -218,6 +223,7 @@ export default function PortalHomePage() {
               </div>
             ) : (
               <form onSubmit={submitLead} className="rounded-2xl bg-white p-5 shadow-xl">
+                <div className="mb-4"><FinalidadeChoice value={leadFinalidade} onChange={setLeadFinalidade} /></div>
                 <label className="mb-1 block text-[12px] font-semibold uppercase tracking-wide text-neutral-500">Seu nome</label>
                 <input value={leadName} onChange={e => setLeadName(e.target.value)} required placeholder="Como podemos te chamar?" className="mb-3 w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-[var(--brand)]" />
                 <label className="mb-1 block text-[12px] font-semibold uppercase tracking-wide text-neutral-500">WhatsApp</label>
