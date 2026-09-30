@@ -47,6 +47,7 @@ import { LeadCombobox } from '@/components/visits/LeadCombobox';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
+import { telefone } from '@/lib/formato';
 
 const FILTER_TABS = [
   { key: '', label: 'Todas' },
@@ -796,7 +797,7 @@ function VisitCard({
               <>
                 <span>·</span>
                 <Phone className="h-3 w-3" />
-                <span>{visit.contact.phone_number}</span>
+                <span>{telefone(visit.contact.phone_number)}</span>
               </>
             )}
           </div>

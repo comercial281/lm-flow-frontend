@@ -41,10 +41,10 @@ import { LeadPickerItem } from '@/services/visits/visitsService';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
+import { dinheiro } from '@/lib/formato';
 
 function formatCurrency(value?: number | null): string {
-  if (value == null) return '-';
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  return dinheiro(value);
 }
 
 function formatDate(iso?: string | null): string {

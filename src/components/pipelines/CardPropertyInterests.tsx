@@ -11,6 +11,7 @@ import {
 } from '@/services/propertyInterests/propertyInterestsService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import type { PipelineItem } from '@/types/analytics';
+import { dinheiro } from '@/lib/formato';
 
 interface CardPropertyInterestsProps {
   item: PipelineItem;
@@ -18,8 +19,7 @@ interface CardPropertyInterestsProps {
 }
 
 function formatBRL(n?: number | null) {
-  if (!n) return '';
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
+  return n ? dinheiro(n) : '';
 }
 
 export default function CardPropertyInterests({ item, onValueChange }: CardPropertyInterestsProps) {

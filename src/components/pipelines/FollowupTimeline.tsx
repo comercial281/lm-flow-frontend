@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Loader2, PauseCircle, PlayCircle, StopCircle, Rocket, CheckCircle2, ChevronDown, ChevronRight,
 } from 'lucide-react';
+import { plural } from '@/lib/formato';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/ds';
 import {
@@ -197,7 +198,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
       )}
       {state.status === 'paused' && (
         <p className="text-[10px] text-muted-foreground">
-          {state.queued_count} mensagem(ns) seguram na fila. Ao retomar, os horários são empurrados
+          {plural(state.queued_count, 'mensagem segura', 'mensagens seguram')} na fila. Ao retomar, os horários são empurrados
           pelo tempo que ficou parado — nada sai de uma vez só.
         </p>
       )}
@@ -280,7 +281,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
             <button type="button" onClick={() => setShowCancelled(v => !v)}
               className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5">
               {showCancelled ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-              {cancelledCount} cancelado(s)
+              {plural(cancelledCount, 'cancelado', 'cancelados')}
             </button>
           )}
         </div>

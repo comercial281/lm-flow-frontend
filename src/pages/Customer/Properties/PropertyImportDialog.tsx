@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import { toast } from 'sonner';
+import { plural } from '@/lib/formato';
 import {
   Button,
   Badge,
@@ -83,8 +84,8 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
         stopPolling();
         sessionStorage.removeItem(ACTIVE_BATCH_KEY);
         onChanged();
-        if (b.status === 'completed') toast.success(`Lote concluído: ${b.success_items} imóvel(is) criado(s) como rascunho`);
-        else if (b.status === 'completed_with_errors') toast.warning(`Lote concluído: ${b.success_items} criado(s), ${b.error_items} com erro`);
+        if (b.status === 'completed') toast.success(`Lote concluído: ${plural(b.success_items, 'imóvel criado', 'imóveis criados')} como rascunho`);
+        else if (b.status === 'completed_with_errors') toast.warning(`Lote concluído: ${plural(b.success_items, 'criado', 'criados')}, ${b.error_items} com erro`);
         else if (b.status === 'failed') toast.error('Nenhum item do lote pôde ser processado');
       }
     } catch {
@@ -144,7 +145,7 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
 
   const onDrop = useCallback((accepted: File[], rejected: FileRejection[]) => {
     if (rejected.length) {
-      toast.error(`${rejected.length} arquivo(s) recusado(s) — use PDF, imagem, Word ou TXT de até ${IMPORT_MAX_FILE_BYTES / 1024 / 1024}MB`);
+      toast.error(`${plural(rejected.length, 'arquivo recusado', 'arquivos recusados')} — use PDF, imagem, Word ou TXT de até ${IMPORT_MAX_FILE_BYTES / 1024 / 1024}MB`);
     }
     setFiles(prev => {
       const merged = [...prev, ...accepted].slice(0, IMPORT_MAX_FILES);
@@ -229,7 +230,7 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
         ok += 1;
       } catch { /* segue os demais */ }
     }
-    toast.success(`${ok} imóvel(is) ativado(s)`);
+    toast.success(plural(ok, 'imóvel ativado', 'imóveis ativados'));
     if (batch) await poll(batch.id);
     onChanged();
     setActivating(null);
@@ -325,7 +326,7 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
                     </button>
                   </div>
                 ))}
-                <p className="text-xs text-muted-foreground">{files.length} arquivo(s) — 1 imóvel por arquivo</p>
+                <p className="text-xs text-muted-foreground">{plural(files.length, 'arquivo', 'arquivos')} — 1 imóvel por arquivo</p>
               </div>
             )}
 

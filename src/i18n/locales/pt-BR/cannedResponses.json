@@ -86,7 +86,9 @@
     "updateError": "Erro ao atualizar resposta rápida",
     "deleteSuccess": "Resposta rápida deletada com sucesso",
     "deleteError": "Erro ao deletar resposta rápida",
-    "bulkDeleteSuccess": "{{count}} resposta(s) automática(s) deletada(s) com sucesso",
+    "bulkDeleteSuccess": "{{count}} resposta automática deletada com sucesso",
+    "bulkDeleteSuccess_other": "{{count}} respostas automáticas deletadas com sucesso",
+    "bulkDeleteSuccess_zero": "{{count}} respostas automáticas deletadas com sucesso",
     "bulkDeleteError": "Erro ao deletar respostas automáticas",
     "permissionDenied": {
       "create": "Você não tem permissão para criar respostas prontas",
@@ -105,7 +107,9 @@
     },
     "bulkDelete": {
       "title": "Deletar Respostas Automáticas",
-      "description": "Tem certeza de que deseja deletar {{count}} resposta(s) automática(s) selecionada(s)? Esta ação não pode ser desfeita.",
+      "description": "Tem certeza de que deseja deletar {{count}} resposta automática selecionada? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza de que deseja deletar {{count}} respostas automáticas selecionadas? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja deletar {{count}} respostas automáticas selecionadas? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
       "confirm": "Deletar Todos",
       "deleting": "Deletando..."

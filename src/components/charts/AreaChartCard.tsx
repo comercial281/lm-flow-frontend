@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { LucideIcon } from 'lucide-react';
 import { TooltipInfo } from '@/components/base/TooltipInfo';
+import { numero } from '@/lib/formato';
 
 interface AreaChartCardProps {
   title: string;
@@ -34,7 +35,7 @@ const AreaChartCard = ({
   color = '#3b82f6',
   gradientFrom = '#3b82f6',
   gradientTo = '#8b5cf6',
-  valueFormatter = (value) => value.toLocaleString(),
+  valueFormatter = (value) => numero(value, 2),
   tooltip,
 }: AreaChartCardProps) => {
   const chartId = toChartId(title);

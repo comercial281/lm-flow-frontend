@@ -53,6 +53,7 @@ import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import { ManualOriginInput } from '@/components/shared/ManualOriginInput';
 import { MANUAL_ORIGIN_KEY, readManualOrigin } from '@/constants/manualLeadOrigin';
+import { dinheiro, moedaValida } from '@/lib/formato';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { contactEventsService } from '@/services/contacts/contactEventsService';
 import { labelsService } from '@/services/contacts/labelsService';
@@ -510,7 +511,6 @@ export default function EditItemModal({
     setOpenServicePopover(null);
   };
   const calculateTotalValue = () => services.reduce((t, s) => t + (parseFloat(s.value) || 0), 0);
-  const formatCurrency = (v: number) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
 
   const canSubmit = selectedStageId !== null;
 
@@ -1318,7 +1318,7 @@ export default function EditItemModal({
                 <div className="pt-3 border-t border-border">
                   <div className="flex justify-between items-center text-sm font-medium">
                     <span className="text-muted-foreground">{t('editItem.totalValue')}</span>
-                    <span className="text-green-600 dark:text-green-400">{currency} {formatCurrency(calculateTotalValue())}</span>
+                    <span className="text-green-600 dark:text-green-400">{dinheiro(calculateTotalValue(), { moeda: moedaValida(currency) })}</span>
                   </div>
                 </div>
               </div>

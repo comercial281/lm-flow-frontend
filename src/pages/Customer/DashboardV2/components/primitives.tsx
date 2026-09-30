@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import type { Unavailable } from '../types';
+import { dinheiro } from '@/lib/formato';
 
 /** Card de vidro. Toda seção do dash usa este, então o visual não diverge. */
 export const GlassCard: React.FC<{
@@ -66,17 +67,11 @@ export const Delta: React.FC<{ value: number | null; suffix?: string }> = ({ val
 };
 
 const numberFmt = new Intl.NumberFormat('pt-BR');
-const currencyFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 
 export const formatNumber = (value: number) => numberFmt.format(Math.round(value || 0));
 
 /** Valores grandes viram 1,8 mi: o card do protótipo não comporta R$ 1.800.000,00. */
-export const formatCurrency = (value: number) => {
-  const v = value || 0;
-  if (Math.abs(v) >= 1_000_000) return `R$ ${(v / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mi`;
-  if (Math.abs(v) >= 10_000) return `R$ ${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} mil`;
-  return currencyFmt.format(v);
-};
+export const formatCurrency = (value: number) => dinheiro(value || 0, { compacto: true, centavos: false });
 
 export const formatDuration = (seconds: number) => {
   const s = Math.max(0, Math.round(seconds || 0));

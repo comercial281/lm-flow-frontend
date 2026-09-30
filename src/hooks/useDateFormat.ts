@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
+import { VAZIO } from '@/lib/formato';
 
 /**
  * Hook para formatação de datas baseado no locale atual do i18n
@@ -63,7 +64,7 @@ export function useDateFormat() {
       const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
       
       if (isNaN(date.getTime())) {
-        return 'Invalid date';
+        return VAZIO;
       }
 
       const defaultOptions: Intl.DateTimeFormatOptions = {
@@ -73,10 +74,10 @@ export function useDateFormat() {
         ...options,
       };
 
-      return date.toLocaleDateString(getLocale, defaultOptions);
+      return date.toLocaleDateString('pt-BR', defaultOptions);
     } catch (error) {
       console.error('Error formatting date:', error);
-      return 'Invalid date';
+      return VAZIO;
     }
   };
 
@@ -100,7 +101,7 @@ export function useDateFormat() {
       const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
       
       if (isNaN(date.getTime())) {
-        return 'Invalid date';
+        return VAZIO;
       }
 
       const defaultOptions: Intl.DateTimeFormatOptions = {
@@ -112,10 +113,10 @@ export function useDateFormat() {
         ...options,
       };
 
-      return date.toLocaleString(getLocale, defaultOptions);
+      return date.toLocaleString('pt-BR', defaultOptions);
     } catch (error) {
       console.error('Error formatting datetime:', error);
-      return 'Invalid date';
+      return VAZIO;
     }
   };
 
@@ -139,7 +140,7 @@ export function useDateFormat() {
       const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
       
       if (isNaN(date.getTime())) {
-        return 'Invalid date';
+        return VAZIO;
       }
 
       const defaultOptions: Intl.DateTimeFormatOptions = {
@@ -148,10 +149,10 @@ export function useDateFormat() {
         ...options,
       };
 
-      return date.toLocaleTimeString(getLocale, defaultOptions);
+      return date.toLocaleTimeString('pt-BR', defaultOptions);
     } catch (error) {
       console.error('Error formatting time:', error);
-      return 'Invalid date';
+      return VAZIO;
     }
   };
 

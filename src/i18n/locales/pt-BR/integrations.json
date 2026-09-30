@@ -384,7 +384,9 @@
     },
     "bulkDeleteDialog": {
       "title": "Deletar Aplicações do Dashboard",
-      "description": "Tem certeza de que deseja deletar {{count}} aplicação(ões) do dashboard selecionada(s)? Esta ação não pode ser desfeita.",
+      "description": "Tem certeza de que deseja deletar {{count}} aplicação do dashboard selecionada? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza de que deseja deletar {{count}} aplicações do dashboard selecionadas? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja deletar {{count}} aplicações do dashboard selecionadas? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
       "deleteAll": "Deletar Todas",
       "deleting": "Deletando..."
@@ -393,7 +395,9 @@
       "loadError": "Erro ao carregar aplicações do dashboard",
       "deleteSuccess": "Aplicação do dashboard deletada com sucesso",
       "deleteError": "Erro ao deletar aplicação do dashboard",
-      "bulkDeleteSuccess": "{{count}} aplicação(ões) deletada(s) com sucesso",
+      "bulkDeleteSuccess": "{{count}} aplicação deletada com sucesso",
+      "bulkDeleteSuccess_other": "{{count}} aplicações deletadas com sucesso",
+      "bulkDeleteSuccess_zero": "{{count}} aplicações deletadas com sucesso",
       "bulkDeleteError": "Erro ao deletar aplicações do dashboard",
       "createSuccess": "Aplicação do dashboard criada com sucesso",
       "createError": "Erro ao criar aplicação do dashboard",
@@ -618,7 +622,9 @@
     },
     "bulkDeleteDialog": {
       "title": "Deletar Aplicações OAuth",
-      "description": "Tem certeza de que deseja deletar {{count}} aplicação(ões) OAuth selecionada(s)? Esta ação não pode ser desfeita.",
+      "description": "Tem certeza de que deseja deletar {{count}} aplicação OAuth selecionada? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza de que deseja deletar {{count}} aplicações OAuth selecionadas? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja deletar {{count}} aplicações OAuth selecionadas? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
       "confirm": "Deletar Todas",
       "deleting": "Deletando..."
@@ -627,7 +633,9 @@
       "loading": "Carregando aplicações OAuth...",
       "deleteSuccess": "Aplicação OAuth deletada com sucesso",
       "deleteError": "Erro ao deletar aplicação OAuth",
-      "bulkDeleteSuccess": "{{count}} aplicação(ões) OAuth deletada(s) com sucesso",
+      "bulkDeleteSuccess": "{{count}} aplicação OAuth deletada com sucesso",
+      "bulkDeleteSuccess_other": "{{count}} aplicações OAuth deletadas com sucesso",
+      "bulkDeleteSuccess_zero": "{{count}} aplicações OAuth deletadas com sucesso",
       "bulkDeleteError": "Erro ao deletar aplicações OAuth",
       "createSuccess": "Aplicação OAuth criada com sucesso",
       "createError": "Erro ao criar aplicação OAuth",
@@ -1000,7 +1008,9 @@
     },
     "bulkDeleteDialog": {
       "title": "Deletar Webhooks",
-      "description": "Tem certeza de que deseja deletar {{count}} webhook(s) selecionado(s)? Esta ação não pode ser desfeita.",
+      "description": "Tem certeza de que deseja deletar {{count}} webhook selecionado? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza de que deseja deletar {{count}} webhooks selecionados? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja deletar {{count}} webhooks selecionados? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
       "confirm": "Deletar Todos",
       "deleting": "Deletando..."
@@ -1014,7 +1024,9 @@
       "updateError": "Erro ao atualizar webhook",
       "deleteSuccess": "Webhook deletado com sucesso",
       "deleteError": "Erro ao deletar webhook",
-      "bulkDeleteSuccess": "{{count}} webhook(s) deletado(s) com sucesso",
+      "bulkDeleteSuccess": "{{count}} webhook deletado com sucesso",
+      "bulkDeleteSuccess_other": "{{count}} webhooks deletados com sucesso",
+      "bulkDeleteSuccess_zero": "{{count}} webhooks deletados com sucesso",
       "bulkDeleteError": "Erro ao deletar webhooks",
       "testSuccess": "Teste de webhook enviado com sucesso",
       "testError": "Erro ao testar webhook"

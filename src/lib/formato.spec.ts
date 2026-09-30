@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { data, dataCurta, hora, dataHora, numero, porcentagem, dinheiro, dolar, plural, telefone, toDate, VAZIO } from './formato';
+import { data, dataCurta, hora, dataHora, numero, porcentagem, dinheiro, dolar, plural, telefone, toDate, VAZIO, moedaValida } from './formato';
 
 // Espaço não-quebrável: é o que o Intl põe entre "R$" e o número (não quebra linha).
 const NB = ' ';
@@ -89,6 +89,15 @@ describe('dinheiro', () => {
     expect(dolar(1234.5)).toBe(`US$${NB}1.234,50`);
     expect(dolar(0.0012, 4)).toBe(`US$${NB}0,0012`);
     expect(dolar(null)).toBe(VAZIO);
+  });
+
+  it('moedaValida aceita só BRL/USD/EUR; qualquer outra coisa vira BRL', () => {
+    expect(moedaValida('USD')).toBe('USD');
+    expect(moedaValida('EUR')).toBe('EUR');
+    expect(moedaValida('BRL')).toBe('BRL');
+    expect(moedaValida('XYZ')).toBe('BRL');
+    expect(moedaValida('')).toBe('BRL');
+    expect(moedaValida(undefined)).toBe('BRL');
   });
 });
 

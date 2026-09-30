@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
+import { plural } from '@/lib/formato';
 import { Button, Input } from '@/components/ui/ds';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Star, Search } from 'lucide-react';
@@ -240,7 +241,7 @@ export default function PortalPropertiesSelector({
         <div>
           <h2 className="font-semibold text-sm">Imóveis publicados neste portal</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {selecionadas.size} selecionado(s)
+            {plural(selecionadas.size, 'selecionado', 'selecionados')}
             {modoLegado && supportsHighlight ? ` · ${emDestaque} em destaque` : ''}
           </p>
         </div>

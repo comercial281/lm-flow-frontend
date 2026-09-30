@@ -7,6 +7,7 @@ import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import SalesAgentBadge from '@/components/salesAgents/SalesAgentBadge';
 import OfferActions from '@/components/roleta/OfferActions';
+import { telefone } from '@/lib/formato';
 
 interface PipelineItemCardProps {
   item: PipelineItem;
@@ -132,7 +133,7 @@ export default function PipelineItemCard({
               <span className="flex items-center space-x-1">
                 <Phone className="w-3 h-3" />
                 <span className="lm-redact truncate max-w-20">
-                  {item.contact.phone_number}
+                  {telefone(item.contact.phone_number)}
                 </span>
               </span>
             )}

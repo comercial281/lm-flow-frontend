@@ -13,6 +13,7 @@ import {
 import { Search, ChevronDown, UserPlus, User as UserIcon, KanbanSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { visitsService, LeadPickerItem } from '@/services/visits/visitsService';
+import { telefone } from '@/lib/formato';
 
 interface Props {
   value: LeadPickerItem | null;
@@ -130,7 +131,7 @@ export function LeadCombobox({ value, onChange, placeholder = 'Buscar lead ou co
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">
-                  {[item.phone_number, item.email].filter(Boolean).join(' · ') || '—'}
+                  {[telefone(item.phone_number), item.email].filter(Boolean).join(' · ') || '—'}
                 </div>
               </button>
             ))}

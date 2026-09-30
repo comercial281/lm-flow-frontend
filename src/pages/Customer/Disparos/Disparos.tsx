@@ -41,6 +41,7 @@ import { isForbiddenError } from '@/services/core/forbidden';
 import { useCan } from '@/hooks/useCan';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { dinheiro, dolar, plural, telefone } from '@/lib/formato';
 type Tab = 'disparos' | 'templates' | 'canais' | 'cadencias' | 'metricas';
 
 const STATUS_META: Record<BroadcastCampaign['status'], { label: string; cls: string }> = {
@@ -384,7 +385,7 @@ export default function Disparos() {
                     <SelectContent>
                       {channels.map(o => (
                         <SelectItem key={o.inbox_id} value={o.inbox_id}>
-                          {o.name} · {o.phone_number}
+                          {o.name} · {telefone(o.phone_number)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -434,7 +435,7 @@ export default function Disparos() {
                       <div className="min-w-0">
                         <div className="text-sm font-medium truncate">{o.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {o.phone_number} · {approved} template(s) aprovado(s) de {o.templates.length}
+                          {telefone(o.phone_number)} · {plural(approved, 'template aprovado', 'templates aprovados')} de {o.templates.length}
                         </div>
                       </div>
                     </div>
@@ -472,7 +473,7 @@ export default function Disparos() {
                     <div className="min-w-0">
                       <div className="text-sm font-medium truncate">{f.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {(f.items?.length ?? 0)} passo(s)
+                        {plural(f.items?.length ?? 0, 'passo', 'passos')}
                         {f.category ? ` · ${f.category}` : ''}
                       </div>
                     </div>
@@ -521,14 +522,13 @@ export default function Disparos() {
             if (rows.length === 0) return null;
             const totCost = rows.reduce((s, r) => s + r.cost, 0);
             const totReplied = rows.reduce((s, r) => s + r.replied, 0);
-            const brl = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`;
             return (
               <div className="rounded-xl border border-border p-3 space-y-3">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="text-sm font-medium">Retorno por disparo (pipeline selecionado)</div>
                   <div className="text-xs text-muted-foreground">
-                    Custo estimado {brl(totCost)} · {totReplied} respostas
-                    {totReplied > 0 && <> · <strong className="text-foreground">{brl(totCost / totReplied)}/resposta</strong></>}
+                    Custo estimado {dinheiro(totCost)} · {totReplied} respostas
+                    {totReplied > 0 && <> · <strong className="text-foreground">{dinheiro(totCost / totReplied)}/resposta</strong></>}
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -552,8 +552,8 @@ export default function Disparos() {
                           <td className="py-1.5 px-2">{delivered || '—'}</td>
                           <td className="py-1.5 px-2 font-medium text-foreground">{replied || '—'}</td>
                           <td className="py-1.5 px-2">{rate != null ? `${rate}%` : '—'}</td>
-                          <td className="py-1.5 px-2">{cost > 0 ? brl(cost) : '—'}</td>
-                          <td className="py-1.5 pl-2">{cpr != null ? brl(cpr) : '—'}</td>
+                          <td className="py-1.5 px-2">{cost > 0 ? dinheiro(cost) : '—'}</td>
+                          <td className="py-1.5 pl-2">{cpr != null ? dinheiro(cpr) : '—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -596,7 +596,7 @@ export default function Disparos() {
                 <div className="rounded-xl border border-border p-3">
                   <div className="text-xs text-muted-foreground">Custo (Meta, US$)</div>
                   <div className="text-2xl font-semibold">
-                    {metrics.totals.cost.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' })}
+                    {dolar(metrics.totals.cost)}
                   </div>
                 </div>
               </div>
@@ -611,7 +611,7 @@ export default function Disparos() {
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="min-w-0">
                           <div className="text-sm font-medium truncate">{c.name}</div>
-                          <div className="text-xs text-muted-foreground">{c.phone_number}</div>
+                          <div className="text-xs text-muted-foreground">{telefone(c.phone_number)}</div>
                         </div>
                         <div className="flex items-center gap-3 text-xs">
                           <span className={qClr}>● {c.quality_rating || 'sem dado'}</span>
@@ -629,7 +629,7 @@ export default function Disparos() {
                         </div>
                         <div>
                           <span className="text-muted-foreground text-xs block">Custo</span>
-                          <strong>{c.totals.cost.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' })}</strong>
+                          <strong>{dolar(c.totals.cost)}</strong>
                         </div>
                       </div>
                       {Object.keys(c.templates_by_category).length > 0 && (

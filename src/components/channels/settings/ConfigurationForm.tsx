@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { EvolutionApiService, ZapiService } from '@/services/channels/channelConfigurationService';
 import InboxesService from '@/services/channels/inboxesService';
+import { telefone } from '@/lib/formato';
 
 interface ConfigurationFormProps {
   inboxId: string;
@@ -1161,7 +1162,7 @@ const EvolutionWhatsAppConfig: React.FC<{
                 {t('settings.configuration.whatsapp.instance.statusTitle')}
               </h3>
               <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                {inbox.name} - {inbox.phone_number || getIdentifier() || '-'}
+                {inbox.name} - {telefone(inbox.phone_number) || getIdentifier() || '-'}
               </p>
 
               <div className="flex items-center gap-2 mt-4">

@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { NumberConfig, PropertyValue } from '../../types'
+import { dinheiro, dolar } from '@/lib/formato'
 
 interface Props {
   config: NumberConfig
@@ -21,8 +22,8 @@ export function formatNumber(n: number, config: NumberConfig): string {
     opts.minimumFractionDigits = digits
     opts.maximumFractionDigits = digits
   }
-  if (fmt === 'real') return new Intl.NumberFormat('pt-BR', { ...opts, style: 'currency', currency: 'BRL' }).format(n)
-  if (fmt === 'dolar') return new Intl.NumberFormat('en-US', { ...opts, style: 'currency', currency: 'USD' }).format(n)
+  if (fmt === 'real') return dinheiro(n, { centavos: digits !== 0 })
+  if (fmt === 'dolar') return dolar(n, opts.maximumFractionDigits ?? 2)
   if (fmt === 'percent') return `${new Intl.NumberFormat('pt-BR', opts).format(n)}%`
   return new Intl.NumberFormat('pt-BR', opts).format(n)
 }

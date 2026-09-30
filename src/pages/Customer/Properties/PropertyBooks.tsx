@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { apiErrorMessage } from '@/utils/apiHelpers';
+import { plural } from '@/lib/formato';
 import {
   Button, Input, Badge,
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -92,7 +93,7 @@ export default function PropertyBooks() {
                 Books
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {total} imóvel{total !== 1 ? 's' : ''} com book salvo
+                {plural(total, 'imóvel', 'imóveis')} com book salvo
               </p>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { useLanguage } from '@/hooks/useLanguage';
+import { dinheiro } from '@/lib/formato';
 import {
   Table,
   TableBody,
@@ -56,13 +57,6 @@ export default function PipelinesTable({
   onSort,
 }: PipelinesTableProps) {
   const { t } = useLanguage('pipelines');
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pt-BR', {
@@ -163,7 +157,7 @@ export default function PipelinesTable({
               <TableCell className="text-right">
                 {pipeline.services_info?.total_value ? (
                   <span className="text-green-600 dark:text-green-400 font-medium">
-                    R$ {formatCurrency(pipeline.services_info.total_value)}
+                    {dinheiro(pipeline.services_info.total_value)}
                   </span>
                 ) : (
                   <span className="text-muted-foreground">-</span>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BellRing, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { plural } from '@/lib/formato';
 import NotificationMatrix from '@/components/notifications/NotificationMatrix';
 import notificationPreferencesService, {
   type ClientCatalogData,
@@ -89,7 +90,7 @@ export default function NotificationCenter() {
           <p className="text-sm font-semibold">Central de Notificações</p>
           <p className="text-xs text-muted-foreground">
             Escolha o que a equipe recebe e por onde — sininho, push no celular, e-mail ou WhatsApp.{' '}
-            {loading ? 'Carregando…' : `${activeCount} aviso(s) ligado(s).`}
+            {loading ? 'Carregando…' : `${plural(activeCount, 'aviso ligado', 'avisos ligados')}.`}
           </p>
         </div>
         {saving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}

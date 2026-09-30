@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
+import { plural, telefone } from '@/lib/formato';
 import {
   Dialog,
   DialogContent,
@@ -438,7 +439,7 @@ export function ScheduleActionModal({
           created += 1;
         }
       }
-      toast.success(`${created} agendamento(s) criado(s).`);
+      toast.success(`${plural(created, 'agendamento criado', 'agendamentos criados')}.`);
       onClose();
     } catch (error) {
       console.error('Error scheduling rich blocks:', error);
@@ -573,7 +574,7 @@ export function ScheduleActionModal({
                         <div className="font-medium">{contact.name}</div>
                         {contact.email && <div className="text-sm text-muted-foreground">{contact.email}</div>}
                         {contact.phone_number && (
-                          <div className="text-sm text-muted-foreground">{contact.phone_number}</div>
+                          <div className="text-sm text-muted-foreground">{telefone(contact.phone_number)}</div>
                         )}
                       </div>
                     ))}

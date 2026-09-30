@@ -50,6 +50,7 @@ import {
   MessageTemplateForm,
   ModerationDashboard,
 } from '@/components/channels';
+import { telefone } from '@/lib/formato';
 
 // Constants for inbox types (matching the Vue app)
 const INBOX_TYPES = {
@@ -436,10 +437,10 @@ export default function ChannelSettings() {
       inbox.name;
 
     if (inboxHook.isATwilioSMSChannel || inboxHook.isATwilioWhatsAppChannel) {
-      return `${inbox.name} (${inbox.messaging_service_sid || inbox.phone_number})`;
+      return `${inbox.name} (${inbox.messaging_service_sid || telefone(inbox.phone_number)})`;
     }
     if (inboxHook.isAWhatsAppChannel) {
-      return `${inbox.name} (${inbox.phone_number || instanceIdentifier || '-'})`;
+      return `${inbox.name} (${telefone(inbox.phone_number) || instanceIdentifier || '-'})`;
     }
     if (inboxHook.isAnEmailChannel) {
       return `${inbox.name} (${inbox.email})`;

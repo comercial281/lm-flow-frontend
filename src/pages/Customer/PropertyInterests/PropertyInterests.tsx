@@ -30,6 +30,7 @@ import { contactsService } from '@/services/contacts/contactsService';
 import type { Contact } from '@/types/contacts';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
+import { telefone } from '@/lib/formato';
 
 const STAGE_FILTERS = [
   { key: '', label: 'Todos' },
@@ -280,7 +281,7 @@ export default function PropertyInterests() {
                               <span className="truncate">{interest.contact.name}</span>
                             </div>
                             {interest.contact.phone_number && (
-                              <div className="text-xs text-muted-foreground mt-0.5">{interest.contact.phone_number}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5">{telefone(interest.contact.phone_number)}</div>
                             )}
                           </div>
                         ) : (
@@ -458,7 +459,7 @@ export default function PropertyInterests() {
                       }}
                     >
                       <div className="font-medium truncate">{c.name}</div>
-                      <div className="text-xs text-muted-foreground">{c.phone_number}</div>
+                      <div className="text-xs text-muted-foreground">{telefone(c.phone_number)}</div>
                     </button>
                   ))}
                 </div>

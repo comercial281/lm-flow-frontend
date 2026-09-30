@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/ds';
 import { Pipeline } from '@/types/analytics';
 import { cn } from '@/lib/utils';
+import { dinheiro } from '@/lib/formato';
 
 interface PipelineCardProps {
   pipeline: Pipeline;
@@ -34,12 +35,6 @@ export default function PipelineCard({
 }: PipelineCardProps) {
   const { t } = useLanguage('pipelines');
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
 
   const getPipelineTypeLabel = (type: string) => {
     return t(`pipelineCard.types.${type}`, { defaultValue: t('pipelineCard.types.custom') });
@@ -218,7 +213,7 @@ export default function PipelineCard({
             <div className="flex items-center justify-between mt-2 pt-2 border-t border-sidebar-border">
               <span>{t('pipelineCard.stats.totalValue')}</span>
               <span className="font-semibold text-green-600 dark:text-green-400">
-                R$ {formatCurrency(pipeline.services_info.total_value)}
+                {dinheiro(pipeline.services_info.total_value)}
               </span>
             </div>
           )}

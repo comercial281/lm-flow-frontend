@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
+import { dataHora } from '@/lib/formato';
 
 import FacebookModerationService from '@/services/channels/facebookModerationService';
 import { FacebookCommentModeration } from '@/types/channels/inbox';
@@ -337,7 +338,7 @@ export default function ModerationDashboard({ conversationId }: ModerationDashbo
                         </div>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {new Date(moderation.created_at).toLocaleString()}
+                        {dataHora(moderation.created_at)}
                       </div>
                     </div>
 
@@ -449,11 +450,11 @@ export default function ModerationDashboard({ conversationId }: ModerationDashbo
                         {moderation.status === 'approved'
                           ? t('settings.moderation.approvedBy', {
                               name: moderation.moderated_by.name,
-                              date: new Date(moderation.moderated_at).toLocaleString(),
+                              date: dataHora(moderation.moderated_at),
                             })
                           : t('settings.moderation.rejectedBy', {
                               name: moderation.moderated_by.name,
-                              date: new Date(moderation.moderated_at).toLocaleString(),
+                              date: dataHora(moderation.moderated_at),
                             })}
                       </div>
                     )}

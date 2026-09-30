@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
+import { plural, numero, telefone } from '@/lib/formato';
 import {
   Dialog,
   DialogContent,
@@ -708,7 +709,11 @@ export default function BulkDispatchModal({
                     <>
                       <Users className="w-4 h-4 text-primary" />
                       <span>
-                        <strong>{recipientCount}</strong> contato(s) com telefone vão receber.
+                        <strong>{numero(recipientCount ?? 0)}</strong>{' '}
+                        {(recipientCount ?? 0) === 1
+                          ? 'contato com telefone vai receber'
+                          : 'contatos com telefone vão receber'}
+                        .
                       </span>
                     </>
                   )}
@@ -832,7 +837,7 @@ export default function BulkDispatchModal({
                               <SelectContent>
                                 {cloudOptions.map(o => (
                                   <SelectItem key={o.inbox_id} value={o.inbox_id}>
-                                    {o.name} · {o.phone_number}
+                                    {o.name} · {telefone(o.phone_number)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -1015,7 +1020,7 @@ export default function BulkDispatchModal({
                 )}
                 {recipientCount ? (
                   <p className="text-xs text-muted-foreground">
-                    Duração estimada: ~{estDurationMin} min pra {recipientCount} contato(s).
+                    Duração estimada: ~{estDurationMin} min pra {plural(recipientCount, 'contato', 'contatos')}.
                   </p>
                 ) : null}
               </div>

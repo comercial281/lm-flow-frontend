@@ -24,6 +24,7 @@ import EmptyState from '@/components/base/EmptyState';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import bolsaoService, { BolsaoLead, BolsaoQuota } from '@/services/bolsao/bolsaoService';
 import { useBolsaoQuota } from './useBolsaoQuota';
+import { telefone } from '@/lib/formato';
 
 // De quanto em quanto tempo a lista se atualiza sozinha. Mesma cadência da faixa
 // de ofertas da roleta. Existe para o corretor não clicar num lead que outro
@@ -330,7 +331,7 @@ function ClaimedCard({
         <div className="min-w-0">
           <p className="font-medium text-foreground">{lead.name} agora é seu</p>
           <p className="text-sm text-muted-foreground">
-            {lead.phone_number}
+            {telefone(lead.phone_number)}
             {lead.email ? ` · ${lead.email}` : ''}
           </p>
         </div>

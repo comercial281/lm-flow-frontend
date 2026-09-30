@@ -4,6 +4,7 @@ import { Shuffle } from 'lucide-react';
 import { mayRead } from '@/store/appDataStore';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { EmptyBlock, GlassCard } from './primitives';
+import { porcentagem } from '@/lib/formato';
 
 /**
  * Cartão "Roleta" — quem está recebendo lead agora.
@@ -193,7 +194,7 @@ export const RoletaSection: React.FC = () => {
                       <span key={c.nome} className="lmf-pill">
                         {c.nome}
                         {c.pct !== null && (
-                          <span style={{ opacity: 0.7, marginLeft: 4 }}>{c.pct.toFixed(0)}%</span>
+                          <span style={{ opacity: 0.7, marginLeft: 4 }}>{porcentagem(c.pct, 0)}</span>
                         )}
                       </span>
                     ))}

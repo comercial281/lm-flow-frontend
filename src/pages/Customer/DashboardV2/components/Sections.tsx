@@ -1,6 +1,7 @@
 import React from 'react';
 import { EmptyBlock, formatCurrency, formatDuration, formatNumber, GlassCard } from './primitives';
 import { isAvailable } from '../types';
+import { porcentagem } from '@/lib/formato';
 import type {
   AgentBlock, AiBlock, AutomationsBlock, CapiBlock, PipelineBlock, QueueBlock, ResponseBlock, UpcomingBlock,
 } from '../types';
@@ -160,7 +161,7 @@ export const AiSection: React.FC<{
           <div>
             <div style={{ fontSize: 12, color: 'var(--lmf-muted)' }}>% dos leads do período</div>
             <div style={{ fontSize: 20, fontWeight: 550, color: 'var(--lmf-muted)' }}>
-              {ai.leads_handled_percent.toFixed(1)}%
+              {porcentagem(ai.leads_handled_percent)}
             </div>
           </div>
         </div>

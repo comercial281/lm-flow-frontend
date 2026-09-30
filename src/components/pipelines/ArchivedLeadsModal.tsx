@@ -11,6 +11,7 @@ import { Loader2, Archive, RotateCcw, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import { pipelinesService } from '@/services/pipelines';
 import type { PipelineItem } from '@/types/analytics';
+import { telefone } from '@/lib/formato';
 
 interface ArchivedLeadsModalProps {
   open: boolean;
@@ -93,7 +94,7 @@ export default function ArchivedLeadsModal({ open, onClose, pipelineId, onUnarch
                     {(item.contact?.phone_number || (item.conversation as any)?.contact?.phone_number) && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Phone className="h-3 w-3" />
-                        {item.contact?.phone_number || (item.conversation as any)?.contact?.phone_number}
+                        {telefone(item.contact?.phone_number || (item.conversation as any)?.contact?.phone_number)}
                       </div>
                     )}
                   </div>

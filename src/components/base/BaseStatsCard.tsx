@@ -1,5 +1,6 @@
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { dinheiro, moedaValida, porcentagem } from '@/lib/formato';
 
 export interface BaseStatsCardProps {
   /** Título do card */
@@ -93,12 +94,7 @@ export default function BaseStatsCard({
 
     switch (valueFormat) {
       case 'currency':
-        return new Intl.NumberFormat('pt-BR', {
-          style: 'currency',
-          currency: currency,
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }).format(val);
+        return dinheiro(val, { moeda: moedaValida(currency) });
       
       case 'percentage':
         return `${val}%`;
@@ -169,7 +165,7 @@ export default function BaseStatsCard({
                   ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
                   : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
               )}>
-                {change.isPositive ? '+' : '-'}{change.percentage.toFixed(1)}%
+                {change.isPositive ? '+' : '-'}{porcentagem(change.percentage)}
               </span>
             )}
           </div>

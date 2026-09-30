@@ -8,6 +8,7 @@ import {
   ArrowLeft, Building2, MapPin, Bed, Bath, Car, Ruler, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { numero } from '@/lib/formato';
 import {
   propertiesService,
   PropertyMapMarker,
@@ -102,7 +103,7 @@ export default function PropertiesMap() {
               <p className="text-xs text-muted-foreground">
                 {loading ? 'Carregando...' : (
                   <>
-                    <strong className="text-foreground">{valid.length}</strong> imóvel{valid.length !== 1 ? 'es' : ''} com coordenadas
+                    <strong className="text-foreground">{numero(valid.length)}</strong> {valid.length === 1 ? 'imóvel' : 'imóveis'} com coordenadas
                     {withoutCoords > 0 && (
                       <span className="ml-2 text-orange-600">
                         · {withoutCoords} sem lat/lng (não aparece{withoutCoords !== 1 ? 'm' : ''} no mapa)
