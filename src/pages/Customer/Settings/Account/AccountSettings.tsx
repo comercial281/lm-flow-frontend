@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   Input,
@@ -10,21 +10,41 @@ import {
   SelectTrigger,
   SelectValue,
   Button,
-  Switch,
+  Checkbox,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/ds';
 import NotificationCenter from './NotificationCenter';
 import { toast } from 'sonner';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import BaseHeader from '@/components/base/BaseHeader';
+import BarraSalvar from '@/components/base/BarraSalvar';
+import Chave from '@/components/base/Chave';
+import IconActionButton from '@/components/base/IconActionButton';
+import { useAlteracoesNaoSalvas, mesmoConteudo } from '@/hooks/useAlteracoesNaoSalvas';
 import { accountService } from '@/services/account/accountService';
 import { useAppDataStore } from '@/store/appDataStore';
-import type { Account, FormDataOptions } from '@/types/settings';
+import type { Account, FormDataOptions, UpdateAccount } from '@/types/settings';
 import { Copy, Users2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { SettingsTour } from '@/tours';
 
-// Componente para seção
+// Tela piloto da Fase 3 (base de design e linguagem). Antes, três jeitos de
+// salvar conviviam aqui: "Transcrição de áudio" salvava na hora; "Resolução
+// automática" salvava sozinha ao DESLIGAR mas, ao ligar, só abria os campos e
+// esperava um segundo botão ("meio ligada"); e "Ignorar conversas aguardando"
+// era uma chave que esperava esse botão. Agora:
+//   - chave = efeito na hora (Transcrição, Resolução automática);
+//   - ligar a Resolução pergunta o tempo e a mensagem ali mesmo e já grava;
+//   - todo o resto é campo (ou caixinha) e espera a BarraSalvar, que só
+//     aparece quando há alteração — e sair com alteração pergunta antes.
+// O que o sistema faz com a conversa NÃO mudou.
+
 interface SectionLayoutProps {
   title: string;
   description: string;
@@ -54,6 +74,49 @@ function SectionLayout({
   );
 }
 
+interface FormState {
+  name: string;
+  locale: string;
+  domain: string;
+  supportEmail: string;
+  autoResolveAfter: number;
+  autoResolveMessage: string;
+  autoResolveIgnoreWaiting: boolean;
+  autoResolveLabel: string;
+  audioTranscriptions: boolean;
+  autoResolveEnabled: boolean;
+}
+
+const FORM_VAZIO: FormState = {
+  name: '',
+  locale: 'pt-BR',
+  domain: '',
+  supportEmail: '',
+  autoResolveAfter: 0,
+  autoResolveMessage: '',
+  autoResolveIgnoreWaiting: false,
+  autoResolveLabel: 'none',
+  audioTranscriptions: false,
+  autoResolveEnabled: false,
+};
+
+// O que a BarraSalvar cuida. As duas chaves (Transcrição e Resolução ligada)
+// ficam de fora: elas gravam na hora.
+const camposGerais = (f: FormState) => ({ name: f.name, locale: f.locale, domain: f.domain, supportEmail: f.supportEmail });
+const camposResolucao = (f: FormState) => ({
+  autoResolveAfter: f.autoResolveAfter,
+  autoResolveMessage: f.autoResolveMessage,
+  autoResolveIgnoreWaiting: f.autoResolveIgnoreWaiting,
+  autoResolveLabel: f.autoResolveLabel,
+});
+
+const TEMPO_MINIMO = 10;
+const TEMPO_SUGERIDO = 1440; // 24 horas
+
+interface PedidoLigarResolucao {
+  responder: (resposta: { tempo: number; mensagem: string } | null) => void;
+}
+
 export default function AccountSettings() {
   const { t } = useLanguage('accountSettings');
   const navigate = useNavigate();
@@ -68,18 +131,8 @@ export default function AccountSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    locale: 'pt-BR',
-    domain: '',
-    supportEmail: '',
-    autoResolveAfter: 0,
-    autoResolveMessage: '',
-    autoResolveIgnoreWaiting: false,
-    autoResolveLabel: 'none',
-    audioTranscriptions: false,
-    autoResolveEnabled: false,
-  });
+  const [formData, setFormData] = useState<FormState>(FORM_VAZIO);
+  const [carregado, setCarregado] = useState<FormState | null>(null);
   const [formDataOptions, setFormDataOptions] = useState<FormDataOptions>({
     inboxes: [],
     agents: [],
@@ -92,6 +145,16 @@ export default function AccountSettings() {
     isOnEvolutionCloud?: boolean;
   }>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [pedidoLigar, setPedidoLigar] = useState<PedidoLigarResolucao | null>(null);
+  const [tempoAoLigar, setTempoAoLigar] = useState(TEMPO_SUGERIDO);
+  const [mensagemAoLigar, setMensagemAoLigar] = useState('');
+  const pedidoAberto = useRef<PedidoLigarResolucao | null>(null);
+
+  const temAlteracao =
+    !!carregado &&
+    (!mesmoConteudo(camposGerais(formData), camposGerais(carregado)) ||
+      (formData.autoResolveEnabled && !mesmoConteudo(camposResolucao(formData), camposResolucao(carregado))));
+  useAlteracoesNaoSalvas(temAlteracao);
 
   // Linguagens disponíveis - baseado no LANGUAGES_CONFIG do Evolution
   // Apenas idiomas com enabled: true e que estão em SUPPORTED_LOCALES
@@ -129,9 +192,8 @@ export default function AccountSettings() {
       setFormDataOptions(formDataRes);
       setGlobalConfig(configRes);
 
-      // Inicializar o form com dados da conta
       const settings = accountData.settings || {};
-      setFormData({
+      const novo: FormState = {
         name: accountData.name || '',
         locale: normalizeAccountLocale(accountData.locale || 'pt-BR'),
         domain: accountData.domain || '',
@@ -142,7 +204,10 @@ export default function AccountSettings() {
         autoResolveLabel: settings.auto_resolve_label || 'none',
         audioTranscriptions: settings.audio_transcriptions || false,
         autoResolveEnabled: !!settings.auto_resolve_after,
-      });
+      };
+      setFormData(novo);
+      setCarregado(novo);
+      setErrors({});
     } catch (error) {
       console.error('Erro ao carregar dados da conta:', error);
       toast.error(t('messages.error.loadFailed'));
@@ -151,13 +216,12 @@ export default function AccountSettings() {
     }
   };
 
-  const handleFieldChange = (field: string, value: unknown) => {
+  const handleFieldChange = (field: keyof FormState, value: unknown) => {
     setFormData(prev => ({
       ...prev,
       [field]: value,
     }));
 
-    // Limpar erro do campo
     if (errors[field]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -178,7 +242,7 @@ export default function AccountSettings() {
       newErrors.locale = t('validation.localeRequired');
     }
 
-    if (formData.autoResolveEnabled && formData.autoResolveAfter < 10) {
+    if (formData.autoResolveEnabled && formData.autoResolveAfter < TEMPO_MINIMO) {
       newErrors.autoResolveAfter = t('validation.minAutoResolveTime');
     }
 
@@ -186,27 +250,41 @@ export default function AccountSettings() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleGeneralSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const recarregarTudo = async () => {
+    await loadAccountData();
+    // O nome no topo (Header) vem do store global: atualiza sem recarregar a página.
+    await useAppDataStore.getState().fetchAccount(true);
+  };
+
+  // Uma gravação só pro que a BarraSalvar cuida: manda o bloco geral e/ou o da
+  // resolução, conforme o que mudou.
+  const salvar = async () => {
+    if (!carregado) return;
     if (!can('accounts', 'update')) {
       toast.error(t('messages.permissionDenied.update'));
       return;
     }
     if (!validateForm()) return;
 
+    const payload: UpdateAccount = {};
+    if (!mesmoConteudo(camposGerais(formData), camposGerais(carregado))) {
+      payload.name = formData.name;
+      payload.locale = normalizeAccountLocale(formData.locale);
+      payload.domain = formData.domain;
+      payload.support_email = formData.supportEmail;
+    }
+    if (formData.autoResolveEnabled && !mesmoConteudo(camposResolucao(formData), camposResolucao(carregado))) {
+      payload.auto_resolve_after = formData.autoResolveAfter;
+      payload.auto_resolve_message = formData.autoResolveMessage;
+      payload.auto_resolve_ignore_waiting = formData.autoResolveIgnoreWaiting;
+      payload.auto_resolve_label = formData.autoResolveLabel === 'none' ? null : formData.autoResolveLabel;
+    }
+
     setSaving(true);
     try {
-      await accountService.updateAccount({
-        name: formData.name,
-        locale: normalizeAccountLocale(formData.locale),
-        domain: formData.domain,
-        support_email: formData.supportEmail,
-      });
-
-      toast.success(t('messages.success.generalUpdated'));
-      await loadAccountData(); // Recarregar dados
-      // Atualiza o store global pra o nome no topo (Header) refletir na hora, sem recarregar
-      await useAppDataStore.getState().fetchAccount(true);
+      await accountService.updateAccount(payload);
+      toast.success('Salvo');
+      await recarregarTudo();
     } catch (error: unknown) {
       console.error('Erro ao salvar:', error);
       toast.error((error as Error).message || t('messages.error.saveFailed'));
@@ -215,63 +293,68 @@ export default function AccountSettings() {
     }
   };
 
-  const handleAutoResolveSubmit = async () => {
-    if (!formData.autoResolveEnabled) {
-      // Desabilitar auto-resolve
-      try {
-        setSaving(true);
-        await accountService.updateAccount({
-          auto_resolve_after: null,
-          auto_resolve_message: '',
-          auto_resolve_ignore_waiting: false,
-          auto_resolve_label: null,
-        });
-        toast.success(t('messages.success.autoResolveDisabled'));
-        await loadAccountData();
-      } catch (error: unknown) {
-        toast.error((error as Error).message || t('messages.error.autoResolveDisableFailed'));
-      } finally {
-        setSaving(false);
-      }
-      return;
-    }
+  const descartar = () => {
+    if (carregado) setFormData(carregado);
+    setErrors({});
+  };
 
-    if (formData.autoResolveAfter < 10) {
-      toast.error(t('messages.error.minTime'));
-      return;
-    }
+  // Ligar pergunta o tempo e a mensagem numa janela. A Chave espera a resposta:
+  // `false` (desistiu) volta sem aviso.
+  const perguntarAoLigar = () =>
+    new Promise<{ tempo: number; mensagem: string } | null>(resolve => {
+      setTempoAoLigar(formData.autoResolveAfter >= TEMPO_MINIMO ? formData.autoResolveAfter : TEMPO_SUGERIDO);
+      setMensagemAoLigar(formData.autoResolveMessage);
+      const pedido = { responder: resolve };
+      pedidoAberto.current = pedido;
+      setPedidoLigar(pedido);
+    });
 
-    try {
-      setSaving(true);
+  const responderPedido = (resposta: { tempo: number; mensagem: string } | null) => {
+    pedidoAberto.current?.responder(resposta);
+    pedidoAberto.current = null;
+    setPedidoLigar(null);
+  };
+
+  const ligarDesligarResolucao = async (ligar: boolean): Promise<boolean | void> => {
+    if (ligar) {
+      const resposta = await perguntarAoLigar();
+      if (!resposta) return false;
       await accountService.updateAccount({
-        auto_resolve_after: formData.autoResolveAfter,
-        auto_resolve_message: formData.autoResolveMessage,
+        auto_resolve_after: resposta.tempo,
+        auto_resolve_message: resposta.mensagem,
         auto_resolve_ignore_waiting: formData.autoResolveIgnoreWaiting,
         auto_resolve_label: formData.autoResolveLabel === 'none' ? null : formData.autoResolveLabel,
       });
-      toast.success(t('messages.success.autoResolveUpdated'));
-      await loadAccountData();
-    } catch (error: unknown) {
-      toast.error((error as Error).message || t('messages.error.autoResolveSaveFailed'));
-    } finally {
-      setSaving(false);
+      const patch = {
+        autoResolveEnabled: true,
+        autoResolveAfter: resposta.tempo,
+        autoResolveMessage: resposta.mensagem,
+      };
+      setFormData(prev => ({ ...prev, ...patch }));
+      setCarregado(prev => (prev ? { ...prev, ...patch } : prev));
+    } else {
+      await accountService.updateAccount({
+        auto_resolve_after: null,
+        auto_resolve_message: '',
+        auto_resolve_ignore_waiting: false,
+        auto_resolve_label: null,
+      });
+      const patch = {
+        autoResolveEnabled: false,
+        autoResolveAfter: 0,
+        autoResolveMessage: '',
+        autoResolveIgnoreWaiting: false,
+        autoResolveLabel: 'none',
+      };
+      setFormData(prev => ({ ...prev, ...patch }));
+      setCarregado(prev => (prev ? { ...prev, ...patch } : prev));
     }
   };
 
-  const handleAudioTranscriptionToggle = async (enabled: boolean) => {
-    try {
-      await accountService.updateAccount({
-        audio_transcriptions: enabled,
-      });
-      setFormData(prev => ({ ...prev, audioTranscriptions: enabled }));
-      toast.success(
-        enabled
-          ? t('messages.success.audioTranscriptionEnabled')
-          : t('messages.success.audioTranscriptionDisabled'),
-      );
-    } catch (error: unknown) {
-      toast.error((error as Error).message || t('messages.error.audioTranscriptionFailed'));
-    }
+  const ligarDesligarTranscricao = async (ligar: boolean) => {
+    await accountService.updateAccount({ audio_transcriptions: ligar });
+    setFormData(prev => ({ ...prev, audioTranscriptions: ligar }));
+    setCarregado(prev => (prev ? { ...prev, audioTranscriptions: ligar } : prev));
   };
 
   const copyAccountId = () => {
@@ -282,9 +365,9 @@ export default function AccountSettings() {
   };
 
   const isOnEvolutionCloud = globalConfig.isOnEvolutionCloud;
+  const tempoAoLigarValido = tempoAoLigar >= TEMPO_MINIMO;
 
-
-  if (loading) {
+  if (loading && !carregado) {
     return (
       <div className="h-full flex flex-col p-4">
         <BaseHeader title={t('title')} subtitle={t('subtitle')} />
@@ -313,7 +396,7 @@ export default function AccountSettings() {
             title={t('sections.general.title')}
             description={t('sections.general.description')}
           >
-            <form onSubmit={handleGeneralSubmit} className="space-y-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">{t('fields.name.label')}</Label>
                 <Input
@@ -336,6 +419,7 @@ export default function AccountSettings() {
                   onValueChange={value => handleFieldChange('locale', value)}
                 >
                   <SelectTrigger
+                    id="locale"
                     className={`bg-sidebar border-sidebar-border text-sidebar-foreground ${
                       errors.locale ? 'border-red-500' : ''
                     }`}
@@ -384,42 +468,35 @@ export default function AccountSettings() {
                   />
                 </div>
               )}
-
-              <div>
-                <Button type="submit" disabled={saving} className="bg-primary hover:bg-primary/85 text-primary-foreground border-0 font-semibold">
-                  {saving ? t('buttons.saving') : t('buttons.save')}
-                </Button>
-              </div>
-            </form>
+            </div>
           </SectionLayout>
           </div>
 
-          {/* Auto-Resolução */}
+          {/* Resolução automática */}
           <div data-tour="settings-auto-resolve">
           <SectionLayout
             title={t('sections.autoResolve.title')}
             description={t('sections.autoResolve.description')}
             withBorder
             headerActions={
-              <Switch
-                checked={formData.autoResolveEnabled}
-                onCheckedChange={checked => {
-                  handleFieldChange('autoResolveEnabled', checked);
-                  if (!checked) {
-                    handleAutoResolveSubmit();
-                  }
-                }}
+              <Chave
+                rotulo={t('sections.autoResolve.title')}
+                semRotuloVisivel
+                genero="a"
+                ligada={formData.autoResolveEnabled}
+                aoMudar={ligarDesligarResolucao}
               />
             }
           >
             {formData.autoResolveEnabled && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>{t('fields.autoResolveTime.label')}</Label>
+                  <Label htmlFor="autoResolveAfter">{t('fields.autoResolveTime.label')}</Label>
                   <div className="flex gap-2 items-center">
                     <Input
+                      id="autoResolveAfter"
                       type="number"
-                      min="10"
+                      min={TEMPO_MINIMO}
                       max="1438560"
                       value={formData.autoResolveAfter}
                       onChange={e =>
@@ -442,8 +519,9 @@ export default function AccountSettings() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('fields.autoResolveMessage.label')}</Label>
+                  <Label htmlFor="autoResolveMessage">{t('fields.autoResolveMessage.label')}</Label>
                   <Textarea
+                    id="autoResolveMessage"
                     value={formData.autoResolveMessage}
                     onChange={e => handleFieldChange('autoResolveMessage', e.target.value)}
                     placeholder={t('fields.autoResolveMessage.placeholder')}
@@ -452,47 +530,36 @@ export default function AccountSettings() {
                   />
                 </div>
 
-                <div className="space-y-4">
-                  <div className="bg-sidebar-accent/30 border border-sidebar-border rounded-lg divide-y divide-sidebar-border">
-                    <div className="p-3 flex items-center justify-between">
-                      <span className="text-sm">{t('fields.ignoreWaiting.label')}</span>
-                      <Switch
-                        checked={formData.autoResolveIgnoreWaiting}
-                        onCheckedChange={checked =>
-                          handleFieldChange('autoResolveIgnoreWaiting', checked)
-                        }
-                      />
-                    </div>
-                    <div className="p-3 flex items-center justify-between">
-                      <span className="text-sm">{t('fields.applyLabel.label')}</span>
-                      <Select
-                        value={formData.autoResolveLabel}
-                        onValueChange={value => handleFieldChange('autoResolveLabel', value)}
-                      >
-                        <SelectTrigger className="w-40 bg-sidebar border-sidebar-border text-sidebar-foreground">
-                          <SelectValue placeholder={t('fields.applyLabel.placeholder')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">{t('fields.applyLabel.none')}</SelectItem>
-                          {formDataOptions.labels.map((label: any) => (
-                            <SelectItem key={label.title} value={label.title}>
-                              {label.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                <div className="bg-sidebar-accent/30 border border-sidebar-border rounded-lg divide-y divide-sidebar-border">
+                  <div className="p-3 flex items-center gap-2">
+                    <Checkbox
+                      id="autoResolveIgnoreWaiting"
+                      checked={formData.autoResolveIgnoreWaiting}
+                      onCheckedChange={checked => handleFieldChange('autoResolveIgnoreWaiting', checked === true)}
+                    />
+                    <Label htmlFor="autoResolveIgnoreWaiting" className="text-sm font-normal">
+                      {t('fields.ignoreWaiting.label')}
+                    </Label>
                   </div>
-                </div>
-
-                <div>
-                  <Button
-                    onClick={handleAutoResolveSubmit}
-                    disabled={saving}
-                    className="bg-primary hover:bg-primary/85 text-primary-foreground border-0 font-semibold"
-                  >
-                    {saving ? t('buttons.saving') : t('buttons.updateAutoResolve')}
-                  </Button>
+                  <div className="p-3 flex items-center justify-between">
+                    <span className="text-sm">{t('fields.applyLabel.label')}</span>
+                    <Select
+                      value={formData.autoResolveLabel}
+                      onValueChange={value => handleFieldChange('autoResolveLabel', value)}
+                    >
+                      <SelectTrigger className="w-40 bg-sidebar border-sidebar-border text-sidebar-foreground">
+                        <SelectValue placeholder={t('fields.applyLabel.placeholder')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{t('fields.applyLabel.none')}</SelectItem>
+                        {formDataOptions.labels.map((label: any) => (
+                          <SelectItem key={label.title} value={label.title}>
+                            {label.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             )}
@@ -506,9 +573,12 @@ export default function AccountSettings() {
               description={t('sections.audioTranscription.description')}
               withBorder
               headerActions={
-                <Switch
-                  checked={formData.audioTranscriptions}
-                  onCheckedChange={handleAudioTranscriptionToggle}
+                <Chave
+                  rotulo={t('sections.audioTranscription.title')}
+                  semRotuloVisivel
+                  genero="a"
+                  ligada={formData.audioTranscriptions}
+                  aoMudar={ligarDesligarTranscricao}
                 />
               }
             >
@@ -525,9 +595,13 @@ export default function AccountSettings() {
           >
             <div className="flex items-center gap-2 p-3 bg-sidebar-accent/30 border border-sidebar-border rounded-lg font-mono text-sm">
               <span className="text-sidebar-foreground">{account?.id}</span>
-              <Button size="sm" variant="ghost" onClick={copyAccountId} aria-label="Copiar ID da conta" title="Copiar ID da conta" className="ml-auto">
-                <Copy className="h-4 w-4" />
-              </Button>
+              <IconActionButton
+                label="Copiar ID da conta"
+                variant="ghost"
+                onClick={copyAccountId}
+                className="ml-auto"
+                icon={<Copy className="h-4 w-4" />}
+              />
             </div>
           </SectionLayout>
           </div>
@@ -546,7 +620,7 @@ export default function AccountSettings() {
               corretor" precisa do caminho, não de mais um formulário. */}
           <SectionLayout
             title="Equipe e acessos"
-            description="Cadastrar pessoas, definir cargo e escolher por quais números cada uma atende."
+            description="Cadastrar pessoas, definir cargo e escolher por quais números de WhatsApp cada uma atende."
             withBorder
             headerActions={
               <Button variant="outline" onClick={() => navigate('/equipe')} className="gap-1.5">
@@ -565,8 +639,57 @@ export default function AccountSettings() {
               <span>v{globalConfig.appVersion || '1.0.0'}</span>
             </div>
           </div>
+
+          <BarraSalvar visivel={temAlteracao} salvando={saving} aoSalvar={salvar} aoDescartar={descartar} />
         </div>
       </div>
+
+      <Dialog open={!!pedidoLigar} onOpenChange={aberto => { if (!aberto) responderPedido(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ligar a resolução automática</DialogTitle>
+            <DialogDescription>
+              Fechar conversas paradas há quanto tempo? A mensagem, se tiver, vai pro lead quando a conversa fechar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="tempoAoLigar">{t('fields.autoResolveTime.label')}</Label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  id="tempoAoLigar"
+                  type="number"
+                  min={TEMPO_MINIMO}
+                  value={tempoAoLigar}
+                  onChange={e => setTempoAoLigar(parseInt(e.target.value) || 0)}
+                  className="w-32"
+                />
+                <span className="text-sm text-muted-foreground">{t('fields.autoResolveTime.unit')} (1440 = 24 horas)</span>
+              </div>
+              {!tempoAoLigarValido && <p className="text-sm text-red-500">{t('validation.minAutoResolveTime')}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mensagemAoLigar">{t('fields.autoResolveMessage.label')}</Label>
+              <Textarea
+                id="mensagemAoLigar"
+                value={mensagemAoLigar}
+                onChange={e => setMensagemAoLigar(e.target.value)}
+                placeholder={t('fields.autoResolveMessage.placeholder')}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => responderPedido(null)}>Cancelar</Button>
+            <Button
+              disabled={!tempoAoLigarValido}
+              onClick={() => responderPedido({ tempo: tempoAoLigar, mensagem: mensagemAoLigar })}
+            >
+              Ligar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

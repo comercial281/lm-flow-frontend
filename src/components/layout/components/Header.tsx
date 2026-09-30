@@ -27,6 +27,7 @@ import PlantaoToggle from './PlantaoToggle';
 import ProfileMenu from './ProfileMenu';
 import { TourFab } from '@/components/TourFab';
 import MenuItem from './MenuItem';
+import { useGuardaDeSaida } from '@/hooks/useAlteracoesNaoSalvas';
 import { MenuItem as MenuItemType } from '../config/menuItems';
 import { ThemeToggle } from '../../ThemeToggle';
 import { DemoModeToggle } from '../../DemoModeToggle';
@@ -82,6 +83,8 @@ export default function Header({
   const [expandedMobileMenus, setExpandedMobileMenus] = useState<Set<string>>(new Set());
   const account = useAppDataStore(state => state.account);
   const fetchAccount = useAppDataStore(state => state.fetchAccount);
+  // Fase 3: menu mobile também pergunta antes de sair com alteração não salva.
+  const { aoClicar: guardarSaida, dialogoDeConfirmacao } = useGuardaDeSaida();
 
   // Garante que o nome da conta esteja disponível em qualquer rota
   // (o fetch é cacheado por 15min no appDataStore)
@@ -112,7 +115,7 @@ export default function Header({
               </SheetHeader>
 
               <ScrollArea className="flex-1 min-h-0 overflow-hidden p-4">
-                <nav className="space-y-1">
+                <nav onClickCapture={guardarSaida} className="space-y-1">
                   {menuItems.map(item => {
                     const hasSubItems = item.subItems && item.subItems.length > 0;
                     const menuKey = item.id || item.href;
@@ -341,6 +344,7 @@ export default function Header({
           />
         </div>
       </div>
+      {dialogoDeConfirmacao}
     </div>
   );
 }

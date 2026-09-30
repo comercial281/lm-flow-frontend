@@ -34,6 +34,7 @@ export default function MenuItem({
     <Link
       to={hasSubItems && !mobile && item.href === '#' ? '#' : item.href}
       onClick={onClick}
+      data-abre-submenu={hasSubItems && item.href === '#' ? '' : undefined}
       className={cn(
         'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group',
         mobile ? 'w-full' : isCollapsed ? 'justify-center' : '',

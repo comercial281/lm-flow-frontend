@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { NO_ACCESS_MESSAGE } from '@/components/permissions/noAccessCopy';
 
 const mocks = vi.hoisted(() => ({ list: vi.fn(), toastError: vi.fn() }));
@@ -34,10 +34,12 @@ describe('Lembretes WhatsApp: recusa explicada', () => {
     expect(mocks.toastError).not.toHaveBeenCalled();
   });
 
-  it('queda de rede avisa o erro e NÃO culpa o cargo', async () => {
+  it('queda de rede mostra "Não deu pra carregar" e NÃO culpa o cargo', async () => {
+    // Fase 3: erro é estado da tela (com "Tentar de novo"), não toast em cima
+    // de uma lista vazia que manda criar o que já existe.
     mocks.list.mockRejectedValue(new Error('Network Error'));
     render(<WhatsappReminders />);
-    await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Erro ao carregar lembretes'));
+    expect(await screen.findByText('Não deu pra carregar')).toBeInTheDocument();
     expect(screen.queryByText(NO_ACCESS_MESSAGE)).not.toBeInTheDocument();
   });
 });

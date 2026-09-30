@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { Zap, Rocket, Radio, Repeat, Bell, Shuffle, GitBranch } from 'lucide-react';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useCan } from '@/hooks/useCan';
 import { isRootTenantHost, AUTOMATION_SECTOR_PERMISSIONS } from '@/components/layout/config/menuItems';
 import NoAccessState from '@/components/permissions/NoAccessState';
+import Abas from '@/components/base/Abas';
 import type { LucideIcon } from 'lucide-react';
 
 interface Sector {
@@ -149,24 +150,12 @@ export default function AutomationsLayout() {
           <Zap className="h-5 w-5 text-primary" />
           <h1 className="text-lg font-semibold">Automações</h1>
         </div>
-        <div className="flex items-center gap-1 overflow-x-auto">
-          {visible.map(({ key, path, name, icon: Icon }) => (
-            <NavLink
-              key={key}
-              to={path}
-              className={({ isActive }) =>
-                `flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ${
-                  isActive
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`
-              }
-            >
-              <Icon className="h-3.5 w-3.5 shrink-0" />
-              {name}
-            </NavLink>
-          ))}
-        </div>
+        {/* Abas da casa (Fase 3): mesmo desenho de antes, e trocar de setor com
+            alteração não salva pergunta antes. */}
+        <Abas
+          rotulo="Setores de Automações"
+          abas={visible.map(({ key, name, icon, path }) => ({ chave: key, rotulo: name, icone: icon, para: path }))}
+        />
       </div>
       <main ref={mainRef} className="flex-1 min-w-0 overflow-auto">
         <Outlet />
