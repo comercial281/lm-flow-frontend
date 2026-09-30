@@ -225,7 +225,7 @@ export default function SalesAgents() {
         followup_drip_min_minutes: patch.followup_drip_min_minutes ?? selected.followup_drip_min_minutes,
         followup_drip_max_minutes: patch.followup_drip_max_minutes ?? selected.followup_drip_max_minutes,
         // DE QUAIS leads ela vai atrás. Entra com `??` e não com `in`: lista vazia
-        // não é null — é a escolha "todos os leads deste número", que o `??`
+        // não é null — é a escolha "todos os leads que ela atendeu", que o `??`
         // preserva. (Diferente das colunas do bloco de cima, onde `null` significa
         // "não escolhi coluna nenhuma".)
         followup_pipeline_ids: patch.followup_pipeline_ids ?? selected.followup_pipeline_ids,
@@ -2464,14 +2464,14 @@ function FollowupSection({
 /**
  * DE QUAIS leads a IA vai atrás.
  *
- * Antes disto a varredura pegava todo lead calado do número dela. Num cliente com
- * um funil por produto (lançamento, locação, o do Bolsão) não havia como ligar o
- * follow-up num deles e deixar o resto quieto — a única saída era não ligar.
+ * O público é fixo e decidido pelo servidor (29/09/2026): só lead que ELA atendeu
+ * e que ainda não foi para a roleta. É isso que faz o gatilho de ativação (o de
+ * formulário, por exemplo) valer também no follow-up. Aqui a tela só DIZ isso;
+ * o recorte que se escolhe é o por funil, por cima desse público.
  *
- * ⚠️ Nenhum funil marcado = TODOS os leads, que é o comportamento de sempre. Por
- * isso o aviso em âmbar quando a pessoa escolhe "só destes funis" e não marca
- * nenhum: sem ele, ela sai da tela achando que recortou e a IA vai atrás de todo
- * mundo, calada.
+ * ⚠️ Nenhum funil marcado = TODOS os leads que ela atendeu. Por isso o aviso em
+ * âmbar quando a pessoa escolhe "só destes funis" e não marca nenhum: sem ele,
+ * ela sai da tela achando que recortou e a IA vai atrás de todo mundo, calada.
  */
 function FollowupPipelinesRow({
   agent, onSave,
@@ -2509,8 +2509,14 @@ function FollowupPipelinesRow({
     <div className="rounded-md border border-sidebar-border p-3">
       <div className="text-sm font-medium">De quais leads ela vai atrás</div>
       <div className="text-xs text-muted-foreground">
-        Serve para ligar o follow-up só no funil que você quer — o de lançamento, por
-        exemplo — e deixar os outros quietos.
+        Ela só vai atrás de quem ela mesma atendeu e que ainda não foi para a roleta.
+        Lead de campanha que não ativa a IA (outro formulário, por exemplo) e lead já
+        entregue a um corretor ficam de fora — e também aquele em que o corretor
+        desligou a IA.
+      </div>
+      <div className="text-xs text-muted-foreground mt-1">
+        Abaixo, dá para recortar ainda mais: ligar o follow-up só no funil que você
+        quer — o de lançamento, por exemplo — e deixar os outros quietos.
       </div>
 
       <div className="mt-2 space-y-1">
@@ -2523,9 +2529,9 @@ function FollowupPipelinesRow({
             onChange={irParaTodos}
           />
           <div>
-            <div className="text-sm">Todos os leads deste número</div>
+            <div className="text-sm">Todos os leads que ela atendeu</div>
             <div className="text-xs text-muted-foreground">
-              Como sempre funcionou: qualquer lead que já respondeu e sumiu, tendo card ou não.
+              Qualquer lead que ela atendeu, que respondeu e sumiu, tendo card ou não.
             </div>
           </div>
         </label>
@@ -2566,7 +2572,7 @@ function FollowupPipelinesRow({
           {escolhidos.length === 0 && (
             <div className="rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-1 text-xs">
               Marque ao menos um funil. Sem nenhum marcado, ela continua indo atrás de
-              todos os leads deste número.
+              todos os leads que ela atendeu.
             </div>
           )}
 
