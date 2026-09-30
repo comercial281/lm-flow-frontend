@@ -1,5 +1,5 @@
 {
-  "title": "Configure seu Espaço",
+  "title": "Configure sua conta",
   "subtitle": "Crie a conta de administrador para começar",
   "form": {
     "firstName": {
@@ -54,9 +54,9 @@
   },
   "error": {
     "generic": "Ocorreu um erro durante a configuração. Tente novamente.",
-    "alreadySetup": "Este Espaço já foi configurado."
+    "alreadySetup": "Esta conta já foi configurada."
   },
-  "footer": "Isso criará a conta de administrador do seu Espaço no LM Flow.",
+  "footer": "Isso cria o acesso de administrador da sua conta no LM Flow.",
   "language": {
     "portuguese": "Português",
     "english": "Inglês",
