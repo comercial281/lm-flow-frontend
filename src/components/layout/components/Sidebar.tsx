@@ -155,7 +155,7 @@ export default function Sidebar({
 
           {/* Tutorials - fixed at bottom */}
           {tutorialsItem && (
-            <div className="px-2 pb-2">
+            <div onClickCapture={guardarSaida} className="px-2 pb-2">
               <MenuItem
                 item={tutorialsItem}
                 isCollapsed={isCollapsed}

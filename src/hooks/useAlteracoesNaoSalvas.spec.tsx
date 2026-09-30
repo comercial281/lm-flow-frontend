@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Link, Routes, Route } from 'react-router-dom';
 import {
@@ -106,6 +106,31 @@ describe('alteração não salva', () => {
   it('mesmoConteudo compara o formulário com o que veio do servidor', () => {
     expect(mesmoConteudo({ a: 1, b: 'x' }, { a: 1, b: 'x' })).toBe(true);
     expect(mesmoConteudo({ a: 1 }, { a: 2 })).toBe(false);
+  });
+
+  it('ctrl/cmd/shift/alt-click e right-click deixam passar sem perguntar', () => {
+    render(<App sujo />);
+    const link = screen.getByText('Outra tela');
+
+    // ctrl-click não deve mostrar diálogo
+    fireEvent.click(link, { ctrlKey: true });
+    expect(screen.queryByText('Sair sem salvar?')).not.toBeInTheDocument();
+
+    // cmd-click não deve mostrar diálogo
+    fireEvent.click(link, { metaKey: true });
+    expect(screen.queryByText('Sair sem salvar?')).not.toBeInTheDocument();
+
+    // shift-click não deve mostrar diálogo
+    fireEvent.click(link, { shiftKey: true });
+    expect(screen.queryByText('Sair sem salvar?')).not.toBeInTheDocument();
+
+    // alt-click não deve mostrar diálogo
+    fireEvent.click(link, { altKey: true });
+    expect(screen.queryByText('Sair sem salvar?')).not.toBeInTheDocument();
+
+    // right-click (button 2) não deve mostrar diálogo
+    fireEvent.click(link, { button: 2 });
+    expect(screen.queryByText('Sair sem salvar?')).not.toBeInTheDocument();
   });
 });
 

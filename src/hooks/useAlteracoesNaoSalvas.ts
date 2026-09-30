@@ -81,6 +81,8 @@ export function useGuardaDeSaida() {
   const aoClicar = useCallback(
     async (e: React.MouseEvent) => {
       if (!temAlteracaoPendente()) return;
+      // ctrl/cmd/shift/alt/right-click: deixa o navegador fazer seu trabalho (abrir nova aba, etc).
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
       const link = (e.target as HTMLElement).closest('a[href]');
       // Item do menu que só abre submenu não sai da tela: deixa passar.
       if (!link || link.hasAttribute('data-abre-submenu')) return;
