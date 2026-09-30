@@ -79,6 +79,8 @@ export default function BaseDefaultEdge({
             <button
               className="rounded-full bg-white p-1 shadow-md"
               onClick={onEdgeClick}
+              aria-label="Excluir conexão"
+              title="Excluir conexão"
             >
               <Trash2 className="text-red-500" size={16} />
             </button>

@@ -67,6 +67,8 @@ export default function CannedResponsesHeader({
               variant="ghost"
               size="sm"
               onClick={onClearSelection}
+              aria-label="Limpar seleção"
+              title="Limpar seleção"
             >
               <X className="h-4 w-4" />
             </Button>

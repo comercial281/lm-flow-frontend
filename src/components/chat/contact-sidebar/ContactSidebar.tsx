@@ -69,7 +69,14 @@ const CollapsibleHeader = ({
         {description && <p className="text-xs text-muted-foreground truncate">{description}</p>}
       </div>
     </div>
-    <Button variant="ghost" size="sm" onClick={onToggle} className="h-6 w-6 p-0 flex-shrink-0">
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={onToggle}
+      className="h-6 w-6 p-0 flex-shrink-0"
+      aria-label={isOpen ? `Recolher ${title}` : `Expandir ${title}`}
+      title={isOpen ? `Recolher ${title}` : `Expandir ${title}`}
+    >
       <div className={`transform transition-transform ${isOpen ? 'rotate-180' : ''}`}>
         <ChevronDown className="h-3 w-3" />
       </div>
@@ -218,6 +225,8 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
             size="sm"
             onClick={onClose}
             className="absolute top-4 right-4 h-8 w-8 p-0 hover:bg-muted"
+            aria-label="Fechar"
+            title="Fechar"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -718,8 +727,8 @@ const AgentDisplayNameCard: React.FC<AgentDisplayNameCardProps> = ({ conversatio
             <Input ref={inputRef} value={value} onChange={e => setValue(e.target.value)}
               placeholder="Ex: João Silva" className="text-sm h-8 flex-1"
               onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} />
-            <Button size="sm" className="h-8 px-2" onClick={handleSave} disabled={saving}><Check className="h-3 w-3" /></Button>
-            <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setEditing(false)}><X className="h-3 w-3" /></Button>
+            <Button size="sm" className="h-8 px-2" onClick={handleSave} disabled={saving} aria-label="Salvar" title="Salvar"><Check className="h-3 w-3" /></Button>
+            <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setEditing(false)} aria-label="Cancelar" title="Cancelar"><X className="h-3 w-3" /></Button>
           </div>
         ) : (
           <button onClick={() => setEditing(true)} className="w-full text-left flex items-center justify-between gap-2 p-2 rounded hover:bg-muted/50 transition-colors">

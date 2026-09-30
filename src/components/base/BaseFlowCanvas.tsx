@@ -522,6 +522,8 @@ export function BaseFlowCanvas({
               variant="outline"
               size="sm"
               onClick={() => setShowNodePanel(!showNodePanel)}
+              aria-label={showNodePanel ? 'Fechar painel de etapas' : 'Abrir painel de etapas'}
+              title={showNodePanel ? 'Fechar painel de etapas' : 'Abrir painel de etapas'}
               className="h-10 w-10 p-0"
             >
               {showNodePanel ? (

@@ -97,6 +97,8 @@ const StatusFilter: React.FC<StatusFilterProps> = ({
             hasActiveFilter ? 'text-primary' : 'text-muted-foreground'
           }`}
           disabled={disabled}
+          aria-label="Filtrar por status"
+          title="Filtrar por status"
         >
           <Filter className={`h-4 w-4 ${disabled ? 'animate-spin' : ''}`} />
           {hasActiveFilter && !disabled && (

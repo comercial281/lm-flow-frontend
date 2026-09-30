@@ -128,7 +128,12 @@ export default function ProfileMenu({ user, mobile = false, setLogoutDialogOpen,
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-10 w-auto px-2 py-2 text-sidebar-foreground hover:bg-sidebar-accent cursor-pointer">
+        <Button
+          variant="ghost"
+          className="h-10 w-auto px-2 py-2 text-sidebar-foreground hover:bg-sidebar-accent cursor-pointer"
+          aria-label="Abrir menu do perfil"
+          title="Abrir menu do perfil"
+        >
           <AvatarWithDot border="border-sidebar" />
         </Button>
       </DropdownMenuTrigger>

@@ -114,6 +114,8 @@ const MacrosList: React.FC<MacrosListProps> = ({ conversationId, onMacroExecuted
               onClick={() => handleMacroClick(macro)}
               disabled={executingMacro === macro.id}
               className="h-8 w-8 p-0 shrink-0"
+              aria-label={`Executar ${macro.name}`}
+              title={`Executar ${macro.name}`}
             >
               {executingMacro === macro.id ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

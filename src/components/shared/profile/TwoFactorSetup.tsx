@@ -279,6 +279,8 @@ const TwoFactorSetup = ({ onUpdate }: TwoFactorSetupProps) => {
                     size="sm"
                     variant="outline"
                     onClick={() => copyToClipboard(secretKey)}
+                    aria-label="Copiar chave"
+                    title="Copiar chave"
                   >
                     <Copy className="h-4 w-4" />
                   </Button>

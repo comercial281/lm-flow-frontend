@@ -167,6 +167,8 @@ export default function IntegrationStatus({
               size="sm"
               onClick={onRefresh}
               disabled={isRefreshing}
+              aria-label="Atualizar"
+              title="Atualizar"
               className="p-2"
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />

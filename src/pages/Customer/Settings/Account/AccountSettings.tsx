@@ -525,7 +525,7 @@ export default function AccountSettings() {
           >
             <div className="flex items-center gap-2 p-3 bg-sidebar-accent/30 border border-sidebar-border rounded-lg font-mono text-sm">
               <span className="text-sidebar-foreground">{account?.id}</span>
-              <Button size="sm" variant="ghost" onClick={copyAccountId} className="ml-auto">
+              <Button size="sm" variant="ghost" onClick={copyAccountId} aria-label="Copiar ID da conta" title="Copiar ID da conta" className="ml-auto">
                 <Copy className="h-4 w-4" />
               </Button>
             </div>

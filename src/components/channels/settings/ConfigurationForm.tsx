@@ -275,7 +275,7 @@ const WhatsAppChannelConfig: React.FC<{
                       ? t('settings.configuration.api.keys.hide')
                       : t('settings.configuration.api.keys.show')}
                   </Button>
-                  <Button variant="outline" size="sm" onClick={copyApiKey}>
+                  <Button variant="outline" size="sm" onClick={copyApiKey} aria-label="Copiar chave" title="Copiar chave">
                     <Copy className="w-4 h-4" />
                   </Button>
                 </div>

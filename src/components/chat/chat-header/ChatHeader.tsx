@@ -151,7 +151,7 @@ const ChatHeader = ({
     return (
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Mais ações" title="Mais ações">
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -375,7 +375,7 @@ const ChatHeader = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* Back button for mobile */}
-          <Button variant="ghost" size="sm" className="md:hidden" onClick={onBackClick}>
+          <Button variant="ghost" size="sm" className="md:hidden" onClick={onBackClick} aria-label="Voltar" title="Voltar">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div
@@ -432,6 +432,20 @@ const ChatHeader = ({
                     size="sm"
                     disabled={togglingAi}
                     onClick={handleToggleAi}
+                    aria-label={
+                      aiState.status === 'handoff'
+                        ? 'Religar IA Vendedora'
+                        : aiEnabled
+                          ? 'Desligar IA Vendedora'
+                          : 'Ligar IA Vendedora'
+                    }
+                    title={
+                      aiState.status === 'handoff'
+                        ? 'Religar IA Vendedora'
+                        : aiEnabled
+                          ? 'Desligar IA Vendedora'
+                          : 'Ligar IA Vendedora'
+                    }
                     className={`h-8 w-8 p-0 ${
                       aiState.status === 'active'
                         ? 'text-violet-600 hover:text-violet-700 dark:text-violet-400'

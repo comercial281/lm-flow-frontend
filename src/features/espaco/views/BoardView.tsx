@@ -436,7 +436,13 @@ function DraggableCard({
       </span>
 
       <div className="min-w-0 flex-1">
-        <button type="button" onClick={() => onOpenPage(row.id)} className="w-full text-left">
+        <button
+          type="button"
+          onClick={() => onOpenPage(row.id)}
+          aria-label={`Abrir ${row.title || 'cartão'}`}
+          title={`Abrir ${row.title || 'cartão'}`}
+          className="w-full text-left"
+        >
           <CardBody row={row} cardProps={cardProps} properties={properties} finalizada={finalizada} />
         </button>
         <CardActions row={row} databaseId={databaseId} properties={properties} finalizadaHint={finalizada} />

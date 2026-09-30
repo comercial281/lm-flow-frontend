@@ -595,6 +595,8 @@ export default function LeadAutomations() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setExpandedId(expandedId === rule.id ? null : rule.id)}
+                    aria-label={expandedId === rule.id ? 'Recolher' : 'Expandir'}
+                    title={expandedId === rule.id ? 'Recolher' : 'Expandir'}
                   >
                     {expandedId === rule.id
                       ? <ChevronUp className="h-4 w-4" />
@@ -805,6 +807,8 @@ export default function LeadAutomations() {
                         className="text-destructive hover:text-destructive flex-shrink-0"
                         onClick={() => removeAction(i)}
                         disabled={form.actions.length === 1}
+                        aria-label="Remover ação"
+                        title="Remover ação"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

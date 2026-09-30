@@ -394,7 +394,7 @@ export default function CustomAttributeModal({
                   onKeyPress={handleListValueKeyPress}
                   placeholder={t('modal.fields.listValues.placeholder')}
                 />
-                <Button type="button" onClick={addListValue} size="sm">
+                <Button type="button" onClick={addListValue} size="sm" aria-label="Adicionar valor" title="Adicionar valor">
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
@@ -413,6 +413,8 @@ export default function CustomAttributeModal({
                         onClick={() => removeListValue(index)}
                         size="sm"
                         variant="ghost"
+                        aria-label="Remover valor"
+                        title="Remover valor"
                         className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
                       >
                         <X className="h-3 w-3" />

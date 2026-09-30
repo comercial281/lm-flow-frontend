@@ -385,6 +385,8 @@ export const Auth: React.FC = () => {
                           type="button"
                           tabIndex={-1}
                           onClick={() => setShowLoginPass(v => !v)}
+                          aria-label={showLoginPass ? 'Esconder senha' : 'Mostrar senha'}
+                          title={showLoginPass ? 'Esconder senha' : 'Mostrar senha'}
                           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors z-10"
                         >
                           {showLoginPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

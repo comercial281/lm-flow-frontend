@@ -28,6 +28,8 @@ export default function IntegrationHeader({
           variant="ghost"
           size="sm"
           onClick={onBack}
+          aria-label="Voltar"
+          title="Voltar"
           className="p-2"
         >
           <ArrowLeft className="w-4 h-4" />

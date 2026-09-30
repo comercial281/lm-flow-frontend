@@ -453,6 +453,8 @@ const MessageAudio: React.FC<MessageAudioProps> = ({ attachments }) => {
                     variant="default"
                     size="icon"
                     onClick={() => togglePlayback(attachment)}
+                    aria-label={isCurrentlyPlaying ? 'Pausar áudio' : 'Tocar áudio'}
+                    title={isCurrentlyPlaying ? 'Pausar áudio' : 'Tocar áudio'}
                     className="h-9 w-9 rounded-full bg-primary hover:bg-primary/85 text-primary-foreground flex-shrink-0 border-0 shadow-sm"
                   >
                     {isCurrentlyPlaying ? (
@@ -507,6 +509,8 @@ const MessageAudio: React.FC<MessageAudioProps> = ({ attachments }) => {
                     size="sm"
                     variant="ghost"
                     onClick={() => downloadFile(attachment)}
+                    aria-label="Baixar áudio"
+                    title="Baixar áudio"
                     className="h-7 w-7 rounded-full hover:bg-muted-foreground/20 text-muted-foreground flex-shrink-0 p-0"
                   >
                     <Download className="h-3.5 w-3.5" />

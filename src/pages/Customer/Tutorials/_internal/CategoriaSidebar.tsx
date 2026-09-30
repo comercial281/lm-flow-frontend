@@ -104,6 +104,8 @@ export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Prop
                 e.stopPropagation();
                 toggle(node.id);
               }}
+              aria-label={isOpen ? `Recolher ${node.nome}` : `Expandir ${node.nome}`}
+              title={isOpen ? `Recolher ${node.nome}` : `Expandir ${node.nome}`}
               className="p-0.5 text-muted-foreground hover:text-foreground"
               type="button"
             >
@@ -137,6 +139,8 @@ export default function CategoriaSidebar({ selectedId, onSelect, canEdit }: Prop
                   e.stopPropagation();
                   setMenuOpen(menuOpen === node.id ? null : node.id);
                 }}
+                aria-label="Mais ações"
+                title="Mais ações"
                 className="p-0.5 text-muted-foreground hover:text-foreground"
               >
                 <MoreVertical size={12} />

@@ -140,6 +140,8 @@ export default function ContactImportModal({
                     size="sm"
                     onClick={handleRemoveFile}
                     disabled={loading || uploading}
+                    aria-label="Remover arquivo"
+                    title="Remover arquivo"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

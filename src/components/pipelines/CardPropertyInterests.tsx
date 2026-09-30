@@ -154,7 +154,14 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
             )}
           </div>
           {searchQuery && (
-            <Button size="sm" variant="ghost" className="h-9 px-2" onClick={() => { setSearchQuery(''); setSearchResults([]); setSearchOpen(false); }}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-9 px-2"
+              onClick={() => { setSearchQuery(''); setSearchResults([]); setSearchOpen(false); }}
+              aria-label="Limpar busca"
+              title="Limpar busca"
+            >
               <X className="h-4 w-4" />
             </Button>
           )}
@@ -261,6 +268,8 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
                 className="h-7 w-7 p-0 shrink-0 text-muted-foreground hover:text-destructive"
                 onClick={() => handleRemove(interest.id)}
                 disabled={removing === interest.id}
+                aria-label="Remover interesse"
+                title="Remover interesse"
               >
                 {removing === interest.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
               </Button>

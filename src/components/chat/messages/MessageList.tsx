@@ -646,6 +646,8 @@ const MessageList: React.FC<MessageListProps> = ({
             variant="secondary"
             className="rounded-full shadow-lg border bg-background/95 backdrop-blur-sm hover:bg-accent"
             onClick={scrollToBottom}
+            aria-label="Ir para o final"
+            title="Ir para o final"
           >
             <ChevronDown className="h-4 w-4" />
           </Button>

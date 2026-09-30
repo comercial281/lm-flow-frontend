@@ -395,6 +395,8 @@ export default function CannedResponseModal({
                       className="h-8 w-8 flex-shrink-0"
                       onClick={() => handleRemoveFile(index)}
                       disabled={loading}
+                      aria-label="Remover anexo"
+                      title="Remover anexo"
                     >
                       <X className="h-4 w-4" />
                     </Button>

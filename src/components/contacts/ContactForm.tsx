@@ -489,6 +489,8 @@ export default function ContactForm({
               size="sm"
               onClick={removeAvatar}
               disabled={loading}
+              aria-label="Remover foto"
+              title="Remover foto"
             >
               <X className="h-4 w-4" />
             </Button>

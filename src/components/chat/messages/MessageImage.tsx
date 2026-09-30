@@ -120,6 +120,8 @@ const MessageImage: React.FC<MessageImageProps> = ({ attachments }) => {
                       e.stopPropagation();
                       openImageModal(attachment);
                     }}
+                    aria-label="Ampliar imagem"
+                    title="Ampliar imagem"
                     className="bg-white/95 text-black hover:bg-white shadow-lg"
                   >
                     <ZoomIn className="h-4 w-4" />
@@ -131,6 +133,8 @@ const MessageImage: React.FC<MessageImageProps> = ({ attachments }) => {
                       e.stopPropagation();
                       downloadFile(attachment);
                     }}
+                    aria-label="Baixar imagem"
+                    title="Baixar imagem"
                     className="bg-white/95 text-black hover:bg-white shadow-lg"
                   >
                     <Download className="h-4 w-4" />
@@ -185,6 +189,8 @@ const MessageImage: React.FC<MessageImageProps> = ({ attachments }) => {
                   handleZoomOut();
                 }}
                 disabled={imageZoom <= 0.25}
+                aria-label="Diminuir zoom"
+                title="Diminuir zoom"
                 className="bg-white/10 border-white/20 text-white hover:bg-white/20"
               >
                 <ZoomOut className="h-4 w-4" />
@@ -202,6 +208,8 @@ const MessageImage: React.FC<MessageImageProps> = ({ attachments }) => {
                   handleZoomIn();
                 }}
                 disabled={imageZoom >= 3}
+                aria-label="Aumentar zoom"
+                title="Aumentar zoom"
                 className="bg-white/10 border-white/20 text-white hover:bg-white/20"
               >
                 <ZoomIn className="h-4 w-4" />
@@ -215,6 +223,8 @@ const MessageImage: React.FC<MessageImageProps> = ({ attachments }) => {
                   e.stopPropagation();
                   downloadFile(selectedImage);
                 }}
+                aria-label="Baixar imagem"
+                title="Baixar imagem"
                 className="bg-white/10 border-white/20 text-white hover:bg-white/20"
               >
                 <Download className="h-4 w-4" />
@@ -228,6 +238,8 @@ const MessageImage: React.FC<MessageImageProps> = ({ attachments }) => {
                   e.stopPropagation();
                   setSelectedImage(null);
                 }}
+                aria-label="Fechar"
+                title="Fechar"
                 className="bg-white/10 border-white/20 text-white hover:bg-white/20"
               >
                 <X className="h-4 w-4" />

@@ -204,6 +204,8 @@ export default function MacroActionRow({
                           handleParamsChange(action.action_params.filter(p => p !== paramValue))
                         }
                         disabled={disabled}
+                        aria-label="Remover valor"
+                        title="Remover valor"
                       >
                         <X className="h-3 w-3" />
                       </Button>
@@ -369,6 +371,8 @@ export default function MacroActionRow({
               size="sm"
               onClick={() => onRemove(index)}
               disabled={disabled}
+              aria-label="Remover ação"
+              title="Remover ação"
               className="bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-red-500/10 hover:border-red-500 hover:text-red-500"
             >
               <X className="h-4 w-4" />

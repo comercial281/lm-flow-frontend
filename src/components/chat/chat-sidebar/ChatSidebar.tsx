@@ -736,7 +736,14 @@ const ChatSidebar = ({
               <CheckCircle className="h-3 w-3 mr-1" />
               Resolver todas
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setSelectedConversations(new Set())} className="h-7 text-xs">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedConversations(new Set())}
+              className="h-7 text-xs"
+              aria-label="Limpar seleção"
+              title="Limpar seleção"
+            >
               <X className="h-3 w-3" />
             </Button>
           </div>

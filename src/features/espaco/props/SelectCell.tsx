@@ -127,6 +127,8 @@ export default function SelectCell({ property, value, onChange, variant = 'table
                     key={o.id}
                     type="button"
                     onClick={() => pick(o.id)}
+                    aria-label={`Selecionar ${o.name}`}
+                    title={`Selecionar ${o.name}`}
                     className="flex w-full items-center gap-2 rounded-lm-sm px-2 py-1.5 text-left hover:bg-lm-card2"
                   >
                     <Pill option={o} />

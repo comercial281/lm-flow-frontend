@@ -883,7 +883,7 @@ export default function LeadAdsForms() {
                       <UILabel className="text-xs">URL de callback</UILabel>
                       <div className="flex items-center gap-2 mt-1">
                         <code className="flex-1 text-xs break-all bg-muted rounded px-2 py-1">{debug.webhook_callback_url}</code>
-                        <Button size="sm" variant="outline" onClick={() => copyText(debug.webhook_callback_url, 'URL')}>
+                        <Button size="sm" variant="outline" onClick={() => copyText(debug.webhook_callback_url, 'URL')} aria-label="Copiar URL de callback" title="Copiar URL de callback">
                           <Copy className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -894,7 +894,7 @@ export default function LeadAdsForms() {
                       <UILabel className="text-xs">Verify Token</UILabel>
                       <div className="flex items-center gap-2 mt-1">
                         <code className="flex-1 text-xs break-all bg-muted rounded px-2 py-1">{debug.webhook_verify_token}</code>
-                        <Button size="sm" variant="outline" onClick={() => copyText(debug.webhook_verify_token, 'Verify Token')}>
+                        <Button size="sm" variant="outline" onClick={() => copyText(debug.webhook_verify_token, 'Verify Token')} aria-label="Copiar o valor do Verify Token" title="Copiar o valor do Verify Token">
                           <Copy className="h-3.5 w-3.5" />
                         </Button>
                       </div>

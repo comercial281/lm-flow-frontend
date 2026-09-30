@@ -465,6 +465,8 @@ export default function CSATForm({
                               variant="ghost"
                               size="sm"
                               onClick={() => handleRemoveTrigger(trigger.id)}
+                              aria-label="Excluir gatilho"
+                              title="Excluir gatilho"
                               className="h-8 w-8 p-0"
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -580,6 +582,8 @@ function LabelTriggerForm({ trigger, labels, onUpdate }: LabelTriggerFormProps) 
               {labelTitle}
               <button
                 onClick={() => handleLabelRemove(labelTitle)}
+                aria-label="Remover etiqueta"
+                title="Remover etiqueta"
                 className="ml-1 hover:bg-black/10 rounded-full p-0.5"
               >
                 <X className="h-3 w-3" />

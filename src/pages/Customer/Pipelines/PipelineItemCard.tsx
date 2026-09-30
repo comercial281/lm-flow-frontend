@@ -149,7 +149,7 @@ function PipelineItemCardComponent({
         <div className="flex items-center space-x-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-auto p-1 hover:bg-muted">
+              <Button variant="ghost" size="sm" className="h-auto p-1 hover:bg-muted" aria-label="Mais ações" title="Mais ações">
                 <MoreVertical className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>

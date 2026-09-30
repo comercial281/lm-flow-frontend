@@ -320,6 +320,8 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
                     <button
                       type="button"
                       onClick={() => setFiles(prev => prev.filter((_, i) => i !== idx))}
+                      aria-label="Remover arquivo"
+                      title="Remover arquivo"
                       className="text-muted-foreground hover:text-destructive"
                     >
                       <X className="h-4 w-4" />

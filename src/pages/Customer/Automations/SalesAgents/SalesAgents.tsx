@@ -367,7 +367,7 @@ export default function SalesAgents() {
             </h2>
           </div>
           {pode('sales_agents', 'create') && (
-            <Button size="sm" onClick={createAgent}>
+            <Button size="sm" onClick={createAgent} aria-label="Criar IA Vendedora" title="Criar IA Vendedora">
               <Plus className="h-4 w-4" />
             </Button>
           )}
@@ -438,7 +438,7 @@ export default function SalesAgents() {
                   </Button>
                 )}
                 {pode('sales_agents', 'delete') && (
-                  <Button variant="ghost" size="sm" onClick={() => deleteAgent(selected)}>
+                  <Button variant="ghost" size="sm" onClick={() => deleteAgent(selected)} aria-label="Excluir IA Vendedora" title="Excluir IA Vendedora">
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
                 )}
@@ -743,6 +743,8 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
       role="switch"
       aria-checked={on}
       onClick={() => onChange(!on)}
+      aria-label={on ? 'Desligar' : 'Ligar'}
+      title={on ? 'Desligar' : 'Ligar'}
       className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${on ? 'bg-primary' : 'bg-muted-foreground/40'}`}
     >
       <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
@@ -1131,7 +1133,13 @@ function VisitSection({
             <div key={i} className="rounded-md border border-sidebar-border p-2 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">Exemplo {i + 1}</span>
-                <button type="button" onClick={() => removeExample(i)} className="text-muted-foreground hover:text-destructive">
+                <button
+                  type="button"
+                  onClick={() => removeExample(i)}
+                  aria-label={`Excluir exemplo ${i + 1}`}
+                  title={`Excluir exemplo ${i + 1}`}
+                  className="text-muted-foreground hover:text-destructive"
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -1251,7 +1259,13 @@ function VisitWindows({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Pa
             {blockedDates.map((d) => (
               <span key={d} className="flex items-center gap-1 px-2 py-1 rounded text-xs border border-sidebar-border">
                 {d}
-                <button type="button" onClick={() => removeBlockedDate(d)} className="text-muted-foreground hover:text-destructive">
+                <button
+                  type="button"
+                  onClick={() => removeBlockedDate(d)}
+                  aria-label={`Remover ${d} das datas bloqueadas`}
+                  title={`Remover ${d} das datas bloqueadas`}
+                  className="text-muted-foreground hover:text-destructive"
+                >
                   <Trash2 className="h-3 w-3" />
                 </button>
               </span>
@@ -3796,7 +3810,7 @@ function PropertyLinkBox({
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Input readOnly value={result.link} className="text-xs" />
-            <Button size="sm" variant="outline" onClick={copy}>
+            <Button size="sm" variant="outline" onClick={copy} aria-label="Copiar link" title="Copiar link">
               {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
@@ -3835,7 +3849,7 @@ function FormAnswerAdder({ onAdd }: { onAdd: (key: string, value: string) => voi
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
       />
-      <Button variant="outline" size="sm" onClick={add} disabled={!key.trim() || !value.trim()}>
+      <Button variant="outline" size="sm" onClick={add} disabled={!key.trim() || !value.trim()} aria-label="Adicionar pergunta" title="Adicionar pergunta">
         <Plus className="h-4 w-4" />
       </Button>
     </div>
@@ -4368,7 +4382,7 @@ export function TestTab({ agent }: { agent: SalesAgent }) {
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') send(); }}
         />
-        <Button onClick={send} disabled={busy || !message.trim()}><Send className="h-4 w-4" /></Button>
+        <Button onClick={send} disabled={busy || !message.trim()} aria-label="Enviar" title="Enviar"><Send className="h-4 w-4" /></Button>
       </div>
 
       {last && (
@@ -5293,7 +5307,7 @@ function ResultsTab({ agent }: { agent: SalesAgent }) {
             </button>
           ))}
         </div>
-        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} className="ml-auto">
+        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} aria-label="Atualizar" title="Atualizar" className="ml-auto">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
         </Button>
       </div>

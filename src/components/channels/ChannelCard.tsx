@@ -120,6 +120,8 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete, c
               className="h-8 px-2 text-red-500 hover:text-red-400 hover:bg-red-500/10"
               disabled={isDeleting === inbox.id}
               onClick={() => onDelete(inbox)}
+              aria-label="Excluir número de WhatsApp"
+              title="Excluir número de WhatsApp"
             >
               <Trash2 className="h-4 w-4" />
             </Button>

@@ -440,7 +440,7 @@ export default function ImportLeadsModal({
               <FileText className="h-4 w-4 text-muted-foreground" />
               <span className="flex-1 text-sm truncate">{fileName}</span>
               <span className="text-xs text-muted-foreground">{plural(rows.length, 'linha', 'linhas')}</span>
-              <Button variant="ghost" size="sm" onClick={resetAll}>
+              <Button variant="ghost" size="sm" onClick={resetAll} aria-label="Remover arquivo" title="Remover arquivo">
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>

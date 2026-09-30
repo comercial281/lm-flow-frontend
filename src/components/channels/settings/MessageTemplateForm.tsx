@@ -380,6 +380,8 @@ const TemplateFormModal: React.FC<{
                             variant="outline"
                             size="sm"
                             onClick={() => removeButton(index)}
+                            aria-label="Remover botão"
+                            title="Remover botão"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -835,6 +837,8 @@ const MessageTemplateForm: React.FC<MessageTemplateFormProps> = ({
                           setSelectedTemplate(template);
                           setShowPreview(true);
                         }}
+                        aria-label="Visualizar modelo"
+                        title="Visualizar modelo"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -854,6 +858,8 @@ const MessageTemplateForm: React.FC<MessageTemplateFormProps> = ({
                             openEditModal(template);
                           }
                         }}
+                        aria-label="Editar modelo"
+                        title="Editar modelo"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -861,6 +867,8 @@ const MessageTemplateForm: React.FC<MessageTemplateFormProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={() => openDeleteConfirm(template)}
+                        aria-label="Excluir modelo"
+                        title="Excluir modelo"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>

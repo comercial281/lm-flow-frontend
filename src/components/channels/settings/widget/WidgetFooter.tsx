@@ -77,12 +77,18 @@ export default function WidgetFooter({ config }: WidgetFooterProps) {
           />
 
           <div className="flex items-center gap-2 px-2">
-            <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-600 rounded">
+            <button
+              className="p-1 hover:bg-slate-100 dark:hover:bg-slate-600 rounded"
+              aria-label="Emoji"
+              title="Emoji"
+            >
               <Smile className="w-4 h-4 text-slate-500 dark:text-slate-400" />
             </button>
             <button
               className="p-1 hover:bg-slate-100 dark:hover:bg-slate-600 rounded"
               style={{ color: config.widgetColor }}
+              aria-label="Enviar"
+              title="Enviar"
             >
               <Send className="w-4 h-4" />
             </button>

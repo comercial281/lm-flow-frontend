@@ -1794,7 +1794,7 @@ function PropertyCard({
             <Megaphone className="h-3.5 w-3.5" />
           </Button>
           {canDelete && (
-            <Button size="sm" variant="destructive" onClick={() => onDelete(p)}>
+            <Button size="sm" variant="destructive" onClick={() => onDelete(p)} aria-label="Excluir imóvel" title="Excluir imóvel">
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}

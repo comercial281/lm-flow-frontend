@@ -149,6 +149,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ attachment, messageType, onTo
           {/* Play/Pause Button */}
           <button
             onClick={togglePlayPause}
+            aria-label={isPlaying ? 'Pausar vídeo' : 'Tocar vídeo'}
+            title={isPlaying ? 'Pausar vídeo' : 'Tocar vídeo'}
             className="p-3 bg-white bg-opacity-90 rounded-full hover:bg-opacity-100 transition-all duration-200"
           >
             {isPlaying ? (

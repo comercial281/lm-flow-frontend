@@ -80,7 +80,7 @@ const QuickRepliesList: React.FC<QuickRepliesListProps> = ({
             <Zap className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium">Respostas Rápidas</span>
           </div>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose} aria-label="Fechar" title="Fechar">
             <X className="h-3 w-3" />
           </Button>
         </div>

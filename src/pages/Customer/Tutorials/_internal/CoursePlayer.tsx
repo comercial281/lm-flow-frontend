@@ -545,7 +545,7 @@ function AdminBar({ moduleId, lessons }: { moduleId: string; lessons: KnowledgeL
         <div className="space-y-3 max-w-2xl">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold">Nova aula</p>
-            <button onClick={reset} type="button" className="text-muted-foreground hover:text-foreground">
+            <button onClick={reset} type="button" aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground">
               <X size={14} />
             </button>
           </div>

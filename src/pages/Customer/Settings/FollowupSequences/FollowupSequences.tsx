@@ -856,7 +856,13 @@ export default function FollowupSequences() {
                   </code>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => toggle(seq)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggle(seq)}
+                    aria-label={seq.is_active ? 'Desligar sequência' : 'Ligar sequência'}
+                    title={seq.is_active ? 'Desligar sequência' : 'Ligar sequência'}
+                  >
                     {seq.is_active ? <ToggleRight className="h-4 w-4 text-green-500" /> : <ToggleLeft className="h-4 w-4 text-red-500" />}
                   </Button>
                   <Button
@@ -1069,7 +1075,14 @@ export default function FollowupSequences() {
                     <div className="mb-2 flex items-center gap-2">
                       <GripVertical className="h-4 w-4 text-muted-foreground" />
                       <span className="font-mono text-sm">Passo #{idx + 1}</span>
-                      <Button variant="ghost" size="sm" className="ml-auto" onClick={() => removeStep(idx)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-auto"
+                        onClick={() => removeStep(idx)}
+                        aria-label={`Excluir passo ${idx + 1}`}
+                        title={`Excluir passo ${idx + 1}`}
+                      >
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>

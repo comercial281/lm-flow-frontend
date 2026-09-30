@@ -60,7 +60,7 @@ export default function CourseForm({
     <div className="mb-6 bg-card border border-border rounded-xl p-4 space-y-4 max-w-2xl">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">{editing ? 'Editar curso' : 'Novo curso'}</p>
-        <button onClick={onClose} type="button" className="text-muted-foreground hover:text-foreground">
+        <button onClick={onClose} type="button" aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground">
           <X size={16} />
         </button>
       </div>

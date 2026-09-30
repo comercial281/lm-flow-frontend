@@ -190,7 +190,7 @@ const AddUsers: React.FC = () => {
       <div className="p-6">
         <div className="space-y-6">
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm" onClick={handleGoBack}>
+            <Button variant="ghost" size="sm" onClick={handleGoBack} aria-label="Voltar" title="Voltar">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="h-8 w-64 bg-muted animate-pulse rounded" />

@@ -425,6 +425,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
           size="icon"
           className="h-6 w-6 ml-auto hover:bg-destructive/20 hover:text-destructive"
           onClick={onCancel}
+          aria-label="Cancelar resposta"
+          title="Cancelar resposta"
         >
           <X className="h-3 w-3" />
         </Button>
@@ -522,6 +524,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                         : ''
                     }`}
                     onClick={toggleSignature}
+                    aria-label={isSignatureEnabled ? t('messageInput.signature.disable') : t('messageInput.signature.enable')}
+                    title={isSignatureEnabled ? t('messageInput.signature.disable') : t('messageInput.signature.enable')}
                   >
                     <PenLine
                       className={`h-4 w-4 ${
@@ -582,6 +586,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                     disabled={isDisabled || isSending || isPendingConversation}
                     className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
                     onClick={handleEmojiClick}
+                    aria-label="Emoji"
+                    title="Emoji"
                   >
                     <Smile className="h-4 w-4" />
                   </Button>
@@ -708,6 +714,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                       : 'h-9 w-9 flex-shrink-0 hover:bg-accent transition-all duration-200'
                   }
                   onClick={startAudioRecording}
+                  aria-label="Gravar áudio"
+                  title="Gravar áudio"
                 >
                   <Mic className="h-4 w-4" />
                 </Button>
@@ -720,6 +728,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                       size="icon"
                       onClick={handleSend}
                       disabled={!canSend}
+                      aria-label="Enviar"
+                      title="Enviar"
                       // Botão de enviar em verde WhatsApp — antes era cinza-claro em
                       // cima de roxo-claro (contraste quase zero, pedido do Giovani
                       // pra ficar visível de verdade, 19/08).

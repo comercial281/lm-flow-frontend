@@ -551,6 +551,8 @@ export function ScheduleActionModal({
                         setSelectedContactId(undefined);
                         setContactSearchQuery('');
                       }}
+                      aria-label="Limpar contato selecionado"
+                      title="Limpar contato selecionado"
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
                       ×

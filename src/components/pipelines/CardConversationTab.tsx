@@ -353,7 +353,7 @@ export default function CardConversationTab({ item, onCreateReminder }: CardConv
             )}
             {isArchived ? 'Desarquivar' : 'Arquivar'}
           </button>
-          <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
+          <Button variant="ghost" size="sm" onClick={load} disabled={loading} aria-label="Atualizar" title="Atualizar">
             <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
@@ -401,6 +401,8 @@ export default function CardConversationTab({ item, onCreateReminder }: CardConv
               <span className="max-w-[6rem] truncate">{f.name}</span>
               <button
                 onClick={() => setPendingFiles(prev => prev.filter((_, j) => j !== i))}
+                aria-label="Remover anexo"
+                title="Remover anexo"
                 className="text-muted-foreground hover:text-foreground"
               >
                 <X className="h-3 w-3" />
@@ -462,6 +464,8 @@ export default function CardConversationTab({ item, onCreateReminder }: CardConv
           onClick={send}
           disabled={sending || (!text.trim() && pendingFiles.length === 0)}
           size="default"
+          aria-label="Enviar"
+          title="Enviar"
           className="self-end"
         >
           {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

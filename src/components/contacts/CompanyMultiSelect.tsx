@@ -69,6 +69,8 @@ export default function CompanyMultiSelect({
                 type="button"
                 onClick={() => handleToggle(company.id)}
                 disabled={disabled}
+                aria-label={`Remover ${company.name}`}
+                title={`Remover ${company.name}`}
                 className="hover:text-destructive"
               >
                 <X className="h-3 w-3" />

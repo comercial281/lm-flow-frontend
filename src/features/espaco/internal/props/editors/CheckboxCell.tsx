@@ -23,6 +23,8 @@ export default function CheckboxCell({ value, onChange, variant = 'table', autoF
         onClick={() => onChange(!checked)}
         role="checkbox"
         aria-checked={checked}
+        aria-label={checked ? 'Desmarcar' : 'Marcar'}
+        title={checked ? 'Desmarcar' : 'Marcar'}
         className={[
           'flex h-4 w-4 items-center justify-center rounded-[4px] border transition-colors',
           checked ? 'border-lm-neon bg-lm-neon text-lm-inverse' : 'border-lm-border2 bg-transparent',

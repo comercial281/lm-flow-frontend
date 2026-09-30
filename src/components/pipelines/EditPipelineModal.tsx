@@ -263,7 +263,13 @@ export default function EditPipelineModal({
                         <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground text-xs">
                           <Users className="h-3 w-3" />
                           {team.name}
-                          <button type="button" onClick={() => setTeamIds(prev => prev.filter(tid => tid !== id))} className="hover:text-destructive">
+                          <button
+                            type="button"
+                            onClick={() => setTeamIds(prev => prev.filter(tid => tid !== id))}
+                            aria-label={`Remover ${team.name}`}
+                            title={`Remover ${team.name}`}
+                            className="hover:text-destructive"
+                          >
                             <X className="h-3 w-3" />
                           </button>
                         </span>
