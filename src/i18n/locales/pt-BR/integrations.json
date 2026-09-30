@@ -1155,8 +1155,8 @@
     "description": "Integração com Evolution Go API",
     "apiUrl": "Evolution Go API URL",
     "adminToken": "Evolution Go Admin Token",
-    "instanceId": "ID da instância",
-    "instanceToken": "Token da instância",
+    "instanceId": "ID do número",
+    "instanceToken": "Token do número",
     "placeholders": {
       "apiUrl": "URL da API do Evolution Go",
       "adminToken": "Digite o Admin Token",

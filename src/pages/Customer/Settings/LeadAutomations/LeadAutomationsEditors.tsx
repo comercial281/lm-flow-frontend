@@ -800,8 +800,8 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
           />
           {isSuperAdmin && resources.evolutionInstances.length > 0 && !envio.send_from && (
             <Field
-              label="Instância de envio (admin)"
-              hint="Só você vê este campo. Deixe em branco para usar a instância padrão do cliente."
+              label="Número de envio (admin)"
+              hint="Só você vê este campo. Deixe em branco para usar o número padrão do cliente."
             >
               <select
                 value={String(params.sender_instance ?? '')}
@@ -817,7 +817,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               </select>
               {params.sender_instance && (
                 <p className="text-xs text-amber-500 mt-1">
-                  ⚠️ Mensagem enviada pelo número da instância selecionada, não pelo número do cliente.
+                  ⚠️ Mensagem enviada pelo número selecionado, não pelo número do cliente.
                 </p>
               )}
             </Field>
@@ -970,7 +970,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               de grupos vazia e nada explicava o motivo. Quem não enxerga a lista
               (cliente) continua com o campo livre. */}
           <Field
-            label="Instância"
+            label="Número"
             hint="De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central Operacional (LM01)."
           >
             {resources.evolutionInstances.length > 0 ? (
@@ -1137,7 +1137,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     case 'assign_via_roleta':
       return (
         <p className="text-sm text-muted-foreground mt-1">
-          Atribui o lead ao proximo corretor disponivel conforme a roleta configurada para o inbox.
+          Atribui o lead ao proximo corretor disponivel conforme a roleta configurada para o canal.
         </p>
       );
 

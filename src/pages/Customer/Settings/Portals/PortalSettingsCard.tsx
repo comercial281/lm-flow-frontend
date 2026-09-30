@@ -217,7 +217,7 @@ export default function PortalSettingsCard({ portalKey, settings, onSaved }: Pro
         <div>
           <h3 className="text-sm font-medium">Leads</h3>
           <p className="text-xs text-muted-foreground">
-            O portal manda o lead para a URL de webhook acima. Aqui você decide se ele vira contato.
+            O portal manda o lead para a URL de recebimento acima. Aqui você decide se ele vira contato.
           </p>
         </div>
         <div role="radiogroup" aria-label="Receber leads automaticamente" className="space-y-2">

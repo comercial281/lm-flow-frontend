@@ -175,7 +175,7 @@ export default function MetaPagesPanel({ onGoToForms }: Props) {
                         </Badge>
                       )}
                       <Badge variant="outline" className="text-xs">
-                        {page.uses_own_token ? 'Token próprio' : 'Token de sistema'}
+                        {page.uses_own_token ? 'Chave própria' : 'Chave de sistema'}
                       </Badge>
                       {page.accept_unconfigured_forms && (
                         <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/40">

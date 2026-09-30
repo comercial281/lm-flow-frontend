@@ -337,16 +337,16 @@
   },
   "settingsAccessTokens": {
     "step1": {
-      "title": "Tokens de Acesso",
-      "content": "Gere e gerencie tokens de API para integrar o sistema com aplicações externas de forma segura."
+      "title": "Chaves de Acesso",
+      "content": "Gere e gerencie chaves de API para integrar o sistema com aplicações externas de forma segura."
     },
     "step2": {
       "title": "Barra de Ferramentas",
-      "content": "Crie novos tokens ou pesquise entre os existentes pelo nome, valor ou escopo."
+      "content": "Crie novas chaves ou pesquise entre as existentes pelo nome, valor ou escopo."
     },
     "step3": {
-      "title": "Lista de Tokens",
-      "content": "Todos os tokens aparecem aqui com nome, escopos e validade. Use as ações para visualizar o valor completo, regenerar ou excluir o token."
+      "title": "Lista de Chaves",
+      "content": "Todas as chaves aparecem aqui com nome, escopos e validade. Use as ações para visualizar o valor completo, regenerar ou excluir a chave."
     }
   },
   "campaigns": {
@@ -401,12 +401,12 @@
   },
   "channelTelegram": {
     "step1": {
-      "title": "Token do Bot",
-      "content": "Cole aqui o token do seu bot Telegram. Você obtém esse token ao criar um bot pelo @BotFather — é uma sequência de números e letras única para o seu bot."
+      "title": "Chave do Bot",
+      "content": "Cole aqui a chave do seu bot Telegram. Você obtém essa chave ao criar um bot pelo @BotFather — é uma sequência de números e letras única para o seu bot."
     },
     "step2": {
       "title": "Como criar seu bot",
-      "content": "Siga os passos indicados: abra o Telegram, acesse @BotFather, envie /newbot, escolha um nome e um username, e copie o token fornecido."
+      "content": "Siga os passos indicados: abra o Telegram, acesse @BotFather, envie /newbot, escolha um nome e um username, e copie a chave fornecida."
     }
   },
   "channelApi": {
@@ -415,7 +415,7 @@
       "content": "Defina um nome amigável para identificar este canal. O nome interno será gerado automaticamente a partir do nome exibido."
     },
     "step2": {
-      "title": "URL do Webhook",
+      "title": "URL de notificações",
       "content": "Informe o endereço (URL) que receberá as notificações das mensagens deste canal. É opcional, mas necessário para integração com sistemas externos."
     },
     "step3": {
@@ -488,7 +488,7 @@
     },
     "step2": {
       "title": "Configurações Avançadas",
-      "content": "Ajuste as configurações da instância conforme necessário. Consulte a documentação do provedor para detalhes sobre cada opção."
+      "content": "Ajuste as configurações do número conforme necessário. Consulte a documentação do provedor para detalhes sobre cada opção."
     }
   }
 }

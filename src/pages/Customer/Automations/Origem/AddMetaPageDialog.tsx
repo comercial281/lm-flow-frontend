@@ -162,7 +162,7 @@ export default function AddMetaPageDialog({ open, onOpenChange, onAdded }: Props
               className="text-xs text-primary underline underline-offset-2"
               onClick={() => setMode('manual')}
             >
-              Não está na lista? Informar Page ID e token
+              Não está na lista? Informar Page ID e chave
             </button>
           </div>
         ) : (
@@ -186,7 +186,7 @@ export default function AddMetaPageDialog({ open, onOpenChange, onAdded }: Props
               />
             </div>
             <div>
-              <UILabel htmlFor="meta-page-token">Access Token</UILabel>
+              <UILabel htmlFor="meta-page-token">Chave de acesso (Meta)</UILabel>
               <Input
                 id="meta-page-token"
                 type="password"
@@ -195,7 +195,7 @@ export default function AddMetaPageDialog({ open, onOpenChange, onAdded }: Props
                 onChange={e => setManual(m => ({ ...m, access_token: e.target.value }))}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Em branco, usa o token de sistema da Leal Mídia.
+                Em branco, usa a chave de sistema da Leal Mídia.
               </p>
             </div>
             {list && (

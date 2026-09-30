@@ -69,7 +69,7 @@ const Tutorials = () => {
               <p className="text-muted-foreground text-xs">
                 As variaveis <code>VITE_LMHUB_SUPABASE_URL</code> e{' '}
                 <code>VITE_LMHUB_SUPABASE_ANON_KEY</code> precisam ser configuradas no deploy
-                deste tenant.
+                deste Espaço.
               </p>
             </div>
           </div>

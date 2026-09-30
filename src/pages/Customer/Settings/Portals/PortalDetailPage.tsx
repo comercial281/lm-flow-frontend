@@ -188,17 +188,17 @@ export default function PortalDetailPage() {
 
   const handleRegenerateToken = async () => {
     if (!(await confirmar({
-      titulo: 'Rotacionar o token',
+      titulo: 'Rotacionar a chave',
       descricao: 'Isso invalida a URL atual do feed — será preciso atualizar no painel do portal.',
       rotuloDaAcao: 'Rotacionar',
       destrutivo: true,
     }))) return;
     try {
       await portalsService.regenerateToken(portalKey);
-      toast.success('Token rotacionado — atualize a URL no painel do portal');
+      toast.success('Chave rotacionada — atualize a URL no painel do portal');
       await load();
     } catch {
-      toast.error('Erro ao rotacionar token');
+      toast.error('Erro ao rotacionar a chave');
     }
   };
 
@@ -286,7 +286,7 @@ export default function PortalDetailPage() {
               <h2 className="font-semibold text-sm">Integração com o portal</h2>
               <Button variant="outline" className="text-xs" onClick={handleRegenerateToken}>
                 <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                Rotacionar token
+                Rotacionar chave
               </Button>
             </div>
 
@@ -300,7 +300,7 @@ export default function PortalDetailPage() {
               />
             )}
             {portal.lead_webhook_url && (
-              <CopyRow label="URL de webhook de leads" value={portal.lead_webhook_url} icon={Webhook} />
+              <CopyRow label="URL de recebimento de leads" value={portal.lead_webhook_url} icon={Webhook} />
             )}
             {portal.capabilities.includes('email_leads') && (
               <p className="text-xs text-muted-foreground flex items-start gap-1.5">

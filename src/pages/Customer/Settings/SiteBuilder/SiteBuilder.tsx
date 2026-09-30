@@ -939,7 +939,7 @@ export default function SiteBuilder() {
                   placeholder="Imobiliária XYZ" className="mt-1" />
               </div>
               <div className="col-span-2 sm:col-span-1">
-                <UILabel>Slug (URL base)</UILabel>
+                <UILabel>Endereço do site (URL)</UILabel>
                 <Input value={siteForm.slug} onChange={e => setF({ slug: e.target.value })}
                   placeholder="imobiliaria-xyz" className="mt-1 font-mono" />
               </div>
@@ -1816,7 +1816,7 @@ export default function SiteBuilder() {
                 placeholder="Ex: Sobre nós" className="mt-1" />
             </div>
             <div>
-              <UILabel>Slug (URL)</UILabel>
+              <UILabel>Endereço da página (URL)</UILabel>
               <Input value={pageForm.slug ?? ''}
                 onChange={e => setPageForm(f => ({ ...f, slug: e.target.value }))}
                 placeholder="sobre-nos" className="mt-1 font-mono" />

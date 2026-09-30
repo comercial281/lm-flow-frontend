@@ -81,7 +81,7 @@
       "statusUnavailable": "Status da mensagem indisponível",
       "statusUnavailableDescription": "A mensagem foi enviada, mas não conseguimos confirmar o status de entrega.",
       "checkChannelConfig": "Verifique a configuração do canal",
-      "webhookIssue": "O webhook pode estar desatualizado ou inativo.",
+      "webhookIssue": "A confirmação de entrega pode estar atrasada ou não ter chegado.",
       "deliveryStatusUnavailable": "Status de entrega indisponível - Clique para mais detalhes",
       "statusUnavailableText": "Status indisponível",
       "retryInDevelopment": "Funcionalidade de reenvio em desenvolvimento",
@@ -554,7 +554,7 @@
         "checkChannel": "Verificar se o canal WhatsApp/Telegram está configurado",
         "confirmCredentials": "Confirmar credenciais API do provedor",
         "testConnectivity": "Testar conectividade com o serviço externo",
-        "checkWebhooks": "Verificar webhooks configurados"
+        "checkWebhooks": "Verificar se o recebimento de mensagens está configurado"
       },
       "settings": "Configurações",
       "close": "Fechar"

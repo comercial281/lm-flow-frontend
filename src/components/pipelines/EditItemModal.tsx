@@ -1136,7 +1136,7 @@ export default function EditItemModal({
                 source_url: 'Link do anúncio', source_id: 'ID do anúncio', source_type: 'Tipo',
                 ctwa_clid: 'ID do clique', thumbnail_url: 'Imagem do anúncio',
                 // Landing Page
-                landing_name: 'Landing', landing_slug: 'Slug', landing_url: 'Link da landing',
+                landing_name: 'Landing', landing_slug: 'Nome na URL', landing_url: 'Link da landing',
                 // Origem universal (manual / orgânico / tracking interno)
                 inbox_name: 'Caixa de entrada', added_by_name: 'Adicionado por',
                 // Bolsão: de qual planilha o lead saiu. Vive separado do texto de

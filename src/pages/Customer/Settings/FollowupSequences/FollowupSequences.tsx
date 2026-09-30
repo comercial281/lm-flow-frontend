@@ -183,13 +183,13 @@ function StageSelector({
       </div>
       {slugVisivelMasSemMatch && (
         <p className="col-span-2 text-xs text-muted-foreground">
-          Slug atual <code className="rounded bg-muted px-1">{currentSlug}</code> nao bate com
+          Código atual <code className="rounded bg-muted px-1">{currentSlug}</code> nao bate com
           nenhuma coluna deste pipeline. Escolha uma coluna pra sobrescrever.
         </p>
       )}
       {currentSlug && !pipelineId && (
         <p className="col-span-2 text-xs text-muted-foreground">
-          Slug atual <code className="rounded bg-muted px-1">{currentSlug}</code>. Escolha o
+          Código atual <code className="rounded bg-muted px-1">{currentSlug}</code>. Escolha o
           pipeline pra mapear pra coluna correta.
         </p>
       )}
@@ -851,7 +851,7 @@ export default function FollowupSequences() {
                     <p className="mt-1 text-sm text-muted-foreground">{seq.description}</p>
                   )}
                   <code className="mt-1 inline-block rounded bg-muted px-1.5 py-0.5 text-xs">
-                    slug: {seq.slug}
+                    código: {seq.slug}
                   </code>
                 </div>
                 <div className="flex items-center gap-2">
@@ -939,7 +939,7 @@ export default function FollowupSequences() {
                     salvar), então mostrar um campo vazio e travado só confundiria. */}
                 {editing.id ? (
                   <div>
-                    <UILabel>Slug (não editar)</UILabel>
+                    <UILabel>Código (não editar)</UILabel>
                     <Input value={editing.slug} disabled />
                   </div>
                 ) : (

@@ -304,7 +304,7 @@ export default function RoletaConfigPage() {
         toast.success(`${plural(r.liberados, 'corretor liberado', 'corretores liberados')}, ${plural(r.total_revogar, 'vínculo removido', 'vínculos removidos')}`);
       }
     } catch {
-      toast.error('Erro ao ajustar o acesso às instâncias');
+      toast.error('Erro ao ajustar o acesso aos números');
     } finally {
       setAcessoBusy(false);
     }
@@ -1473,7 +1473,7 @@ export default function RoletaConfigPage() {
                   <div className={`h-2 w-2 rounded-full ${c.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`} />
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm">{c.display_name || c.inbox_name || `Inbox: ${c.inbox_id}`}</p>
+                      <p className="font-medium text-sm">{c.display_name || c.inbox_name || `Canal: ${c.inbox_id}`}</p>
                       <Badge variant="outline" className="text-[10px]">
                         {MODE_LABEL[c.distribution_mode] ?? 'Rodízio'}
                       </Badge>
@@ -1708,7 +1708,7 @@ export default function RoletaConfigPage() {
 
                       {dentro.length === 0 ? (
                         <p className="text-xs text-red-600 mt-1.5 ml-4">
-                          Nenhum corretor no sorteio — todo lead desta instância cai sem dono.
+                          Nenhum corretor no sorteio — todo lead deste número cai sem dono.
                         </p>
                       ) : (
                         <div className="mt-1.5 ml-4 flex flex-wrap gap-1.5">
@@ -1738,7 +1738,7 @@ export default function RoletaConfigPage() {
                             >
                               <span className="line-through">{m.nome ?? m.user_id}</span>
                               <span className="text-red-600">
-                                {m.sem_acesso_a_instancia ? 'sem acesso à instância' : 'desligado da roleta'}
+                                {m.sem_acesso_a_instancia ? 'sem acesso ao número' : 'desligado da roleta'}
                               </span>
                             </span>
                           ))}
@@ -1768,7 +1768,7 @@ export default function RoletaConfigPage() {
                 {repairBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ver leads sem responsável'}
               </Button>
               <Button variant="outline" size="sm" onClick={() => runAcesso(true)} disabled={acessoBusy}>
-                {acessoBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Conferir acesso às instâncias'}
+                {acessoBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Conferir acesso aos números'}
               </Button>
               {/* Ocultar em massa: limpa a lista inteira de uma vez. Some só o que
                   está carregado — registro novo continua aparecendo. */}
@@ -1839,7 +1839,7 @@ export default function RoletaConfigPage() {
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 O vínculo automático dá ao corretor acesso ao número do lead dele — nunca o coloca
-                na fila de distribuição. Quem você adicionou na mão como atendente da instância não
+                na fila de distribuição. Quem você adicionou na mão como atendente do número não
                 é tocado.
               </p>
 
@@ -2302,7 +2302,7 @@ export default function RoletaConfigPage() {
                       {inst.inbox_id && !loadingMembers && (membersByInbox[inst.inbox_id]?.length ?? 0) === 0 && (
                         <p className="text-xs text-destructive sm:col-span-12 sm:-mt-1">
                           Ninguém tem acesso a {instanceName(inst.inbox_id)}. Libere o acesso na equipe
-                          desse inbox, senão este número fica fora do sorteio.
+                          dele, senão este número fica fora do sorteio.
                         </p>
                       )}
                     </div>
@@ -2328,7 +2328,7 @@ export default function RoletaConfigPage() {
               </button>
               <div>
                 <p className="text-sm font-medium">Roleta {isActive ? 'ativa' : 'desativada'}</p>
-                <p className="text-xs text-muted-foreground">Desativar para não distribuir leads neste inbox.</p>
+                <p className="text-xs text-muted-foreground">Desativar para não distribuir leads neste número.</p>
               </div>
             </div>
 
@@ -2564,7 +2564,7 @@ export default function RoletaConfigPage() {
                     setNotifInstance(f.notification_instance_name ?? '');
                   }}
                 >
-                  <option value="">Mesma instância da roleta</option>
+                  <option value="">Mesmo número da roleta</option>
                   {notifInboxId && !inboxes.some(i => i.id === notifInboxId) && (
                     <option value={notifInboxId}>{notifInboxId}</option>
                   )}
@@ -2576,7 +2576,7 @@ export default function RoletaConfigPage() {
                       a lista): sumir com ela faria o próximo Salvar apagar a
                       escolha, calado. */}
                   {(isSuper || notifInstance) && (
-                    <optgroup label="Instâncias da Leal Mídia (fora deste CRM)">
+                    <optgroup label="Números da Leal Mídia (fora deste CRM)">
                       {notifInstance && !centralInstances.some(c => c.name === notifInstance) && (
                         <option value={CENTRAL_SENDER_PREFIX + notifInstance}>{notifInstance}</option>
                       )}
@@ -2591,13 +2591,13 @@ export default function RoletaConfigPage() {
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {notifInstance
-                  ? 'Corretor, gestor e grupo recebem os avisos vindos desta instância da Leal Mídia, que não é canal deste CRM. ' +
+                  ? 'Corretor, gestor e grupo recebem os avisos vindos deste número da Leal Mídia, que não é canal deste CRM. ' +
                     'O aviso que chegar num número que também é canal daqui vira uma conversa na caixa dele.'
-                  : 'Instância que ENVIA os alertas. Se vazio, usa a mesma da roleta.'}
+                  : 'Número que ENVIA os alertas. Se vazio, usa o mesmo da roleta.'}
               </p>
               {isSuper && centralInstances.length === 0 && centralReason && (
                 <p className="text-xs text-amber-700 dark:text-amber-400 mt-1" data-testid="central-instances-reason">
-                  Instâncias da Leal Mídia: {centralReason}
+                  Números da Leal Mídia: {centralReason}
                 </p>
               )}
             </div>

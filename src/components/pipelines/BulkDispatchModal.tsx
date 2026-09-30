@@ -740,7 +740,7 @@ export default function BulkDispatchModal({
                     >
                       <Zap className={`w-4 h-4 mt-0.5 ${!cloudMode ? 'text-primary' : 'text-muted-foreground'}`} />
                       <span className="text-sm">
-                        <span className="font-medium block">Evolution</span>
+                        <span className="font-medium block">WhatsApp por QR code</span>
                         <span className="text-xs text-muted-foreground">Mensagem livre (sequência)</span>
                       </span>
                     </button>
@@ -754,7 +754,7 @@ export default function BulkDispatchModal({
                       <ShieldCheck className={`w-4 h-4 mt-0.5 ${cloudMode ? 'text-primary' : 'text-muted-foreground'}`} />
                       <span className="text-sm">
                         <span className="font-medium block">WhatsApp Oficial</span>
-                        <span className="text-xs text-muted-foreground">Template aprovado (Cloud API)</span>
+                        <span className="text-xs text-muted-foreground">Template aprovado (WhatsApp oficial)</span>
                       </span>
                     </button>
                   </div>
@@ -1094,7 +1094,7 @@ export default function BulkDispatchModal({
                   </div>
                   <div className="flex justify-between p-2.5">
                     <span className="text-muted-foreground">Canal</span>
-                    <strong>{cloudMode ? 'WhatsApp Oficial (template)' : 'Evolution (sessão)'}</strong>
+                    <strong>{cloudMode ? 'WhatsApp Oficial (template)' : 'WhatsApp por QR code'}</strong>
                   </div>
                   <div className="flex justify-between p-2.5">
                     <span className="text-muted-foreground">{cloudMode ? 'Template' : 'Itens na sequência'}</span>

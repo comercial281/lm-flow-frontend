@@ -107,7 +107,7 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
 
   async function handleSave() {
     if (!inboxId) {
-      toast.error('Escolha o canal (inbox) da roleta.');
+      toast.error('Escolha o canal da roleta.');
       return;
     }
     const members = selectedIds
@@ -189,7 +189,7 @@ export default function CreateRoletaModal({ open, onOpenChange, users, onCreated
 
           {/* Canal */}
           <div className="grid gap-1.5">
-            <Label className="text-xs">Canal (inbox)</Label>
+            <Label className="text-xs">Canal</Label>
             <Select value={inboxId} onValueChange={setInboxId} disabled={loadingInboxes}>
               <SelectTrigger className="h-9 text-sm">
                 <SelectValue placeholder={loadingInboxes ? 'Carregando…' : 'Escolha o canal'} />

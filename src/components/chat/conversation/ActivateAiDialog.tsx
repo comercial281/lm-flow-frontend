@@ -103,7 +103,7 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
             <p>
               Nenhuma IA Vendedora ativa neste canal. Abra <strong>IA Vendedora</strong> no menu,
               crie ou ative uma, e escolha este canal no campo{' '}
-              <em>Instância do WhatsApp que ela opera</em>.
+              <em>Número de WhatsApp que ela opera</em>.
             </p>
             {report && <p className="text-foreground">{report.why}</p>}
             {report?.next_step && <p>{report.next_step}</p>}

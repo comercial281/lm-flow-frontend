@@ -144,7 +144,7 @@ export default function CapiConversionPanel({
 
       {!status.client_ready && (
         <p className="text-[11px] text-amber-600">
-          Pixel ou token do cliente incompletos em Automações, Pixel/CAPI.
+          Pixel ou chave do cliente incompletos em Automações, Pixel/CAPI.
         </p>
       )}
     </div>

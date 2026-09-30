@@ -54,18 +54,18 @@
     }
   },
   "accessToken": {
-    "title": "Token de Acesso da API",
-    "description": "Use este token para acessar a API do Evolution. Mantenha-o seguro e não o compartilhe.",
+    "title": "Chave de Acesso da API",
+    "description": "Use esta chave pra conectar outros sistemas ao LM Flow. Mantenha-a segura e não a compartilhe.",
     "actions": {
       "copy": "Copiar",
-      "reset": "Resetar Token",
+      "reset": "Resetar Chave",
       "resetting": "Resetando..."
     },
     "notifications": {
-      "copied": "Token copiado para a área de transferência",
-      "copyError": "Erro ao copiar token",
-      "resetSuccess": "Token resetado com sucesso",
-      "resetError": "Erro ao resetar token"
+      "copied": "Chave copiada para a área de transferência",
+      "copyError": "Erro ao copiar chave",
+      "resetSuccess": "Chave resetada com sucesso",
+      "resetError": "Erro ao resetar chave"
     }
   },
   "interface": {

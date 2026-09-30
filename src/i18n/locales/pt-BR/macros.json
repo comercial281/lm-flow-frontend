@@ -59,7 +59,7 @@
     "textPlaceholder": "Digite o valor",
     "hoursPlaceholder": "Horas para adiamento",
     "emailPlaceholder": "Digite o email",
-    "urlPlaceholder": "Digite a URL do webhook",
+    "urlPlaceholder": "Digite a URL do aviso automático",
     "fileSelectButton": "Selecionar Arquivo",
     "fileUploading": "Carregando...",
     "fileSelected": "Arquivo selecionado: {{filename}}",

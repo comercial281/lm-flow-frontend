@@ -560,7 +560,7 @@ function ConfigTab({
       </div>
 
       <div>
-        <Label htmlFor="inbox">Instância do WhatsApp que ela opera</Label>
+        <Label htmlFor="inbox">Número de WhatsApp que ela opera</Label>
         <select
           id="inbox"
           value={agent.inbox_id ?? ''}
@@ -572,7 +572,7 @@ function ConfigTab({
             <option key={i.id} value={String(i.id)}>{i.name}</option>
           ))}
         </select>
-        <p className="text-xs text-muted-foreground mt-1">Escolha a instância (número/canal do WhatsApp) onde a IA vai operar: ela recebe e responde os leads por essa instância.</p>
+        <p className="text-xs text-muted-foreground mt-1">Escolha o número de WhatsApp onde a IA vai operar: ela recebe e responde os leads por esse número.</p>
         {/* Sem canal a IA não é candidata a conversa nenhuma — a seleção filtra por
             inbox. Ligada e sem canal é o pior estado possível: parece pronta e não é. */}
         {agent.enabled && !agent.inbox_id && (
@@ -580,7 +580,7 @@ function ConfigTab({
             <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
             <span>
               Esta IA está <strong>ligada, mas sem canal</strong> — ela não vai responder
-              ninguém. Escolha a instância acima para ela começar a atender.
+              ninguém. Escolha o número acima para ela começar a atender.
             </span>
           </div>
         )}
@@ -2928,7 +2928,7 @@ function AdvancedSection({
           </div>
 
           <div>
-            <Label htmlFor="adv_ctx" className="text-xs">Quanto da base de conhecimento ela lê por resposta (tokens)</Label>
+            <Label htmlFor="adv_ctx" className="text-xs">Quanto da base de conhecimento ela lê por resposta</Label>
             <Input
               id="adv_ctx"
               type="number"

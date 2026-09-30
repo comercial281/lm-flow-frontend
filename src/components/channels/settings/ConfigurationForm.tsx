@@ -1980,7 +1980,7 @@ const ZapiWhatsAppConfig: React.FC<{
           setQrCode(null);
           setInstanceStatus('connected');
           lastStatusRef.current = 'connected';
-          toast.success('Instância conectada com sucesso!');
+          toast.success('Número conectado com sucesso!');
           // Reload instance data
           const data = await ZapiService.getInstanceData(instanceId);
           // Update profile settings from device data (primary) or instance data (fallback)
@@ -2070,7 +2070,7 @@ const ZapiWhatsAppConfig: React.FC<{
             if (currentStatus === 'connected' && previousStatus === 'disconnected') {
               setShowQrModal(false);
               setQrCode(null);
-              toast.success('Instância conectada com sucesso!');
+              toast.success('Número conectado com sucesso!');
             }
           }
 
@@ -2265,8 +2265,8 @@ const ZapiWhatsAppConfig: React.FC<{
 
     if (
       !(await confirmar({
-        titulo: 'Reiniciar a instância?',
-        descricao: 'A conexão do WhatsApp cai por alguns segundos enquanto a instância sobe de novo.',
+        titulo: 'Reiniciar o número?',
+        descricao: 'A conexão do WhatsApp cai por alguns segundos enquanto o número sobe de novo.',
         rotuloDaAcao: 'Reiniciar',
       }))
     )
@@ -2275,10 +2275,10 @@ const ZapiWhatsAppConfig: React.FC<{
     try {
       setIsLoading(true);
       await ZapiService.restartInstance(instanceId);
-      toast.success('Instância reiniciada com sucesso!');
+      toast.success('Número reiniciado com sucesso!');
     } catch (error: any) {
       console.error('Erro ao reiniciar instância:', error);
-      toast.error(error?.response?.data?.error || 'Erro ao reiniciar instância');
+      toast.error(error?.response?.data?.error || 'Erro ao reiniciar o número');
     } finally {
       setIsLoading(false);
     }
@@ -2289,7 +2289,7 @@ const ZapiWhatsAppConfig: React.FC<{
 
     if (
       !(await confirmar({
-        titulo: 'Desconectar a instância?',
+        titulo: 'Desconectar o número?',
         descricao: 'O canal para de enviar e receber mensagens até alguém ler o QR Code de novo.',
         rotuloDaAcao: 'Desconectar',
         destrutivo: true,
@@ -2300,11 +2300,11 @@ const ZapiWhatsAppConfig: React.FC<{
     try {
       setIsLoading(true);
       await ZapiService.disconnectInstance(instanceId);
-      toast.success('Instância desconectada com sucesso!');
+      toast.success('Número desconectado com sucesso!');
       setInstanceStatus('disconnected');
     } catch (error: any) {
       console.error('Erro ao desconectar instância:', error);
-      toast.error(error?.response?.data?.error || 'Erro ao desconectar instância');
+      toast.error(error?.response?.data?.error || 'Erro ao desconectar o número');
     } finally {
       setIsLoading(false);
     }
@@ -2348,7 +2348,7 @@ const ZapiWhatsAppConfig: React.FC<{
                 QR Code para Conexão
               </h3>
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                Escaneie o QR code com seu WhatsApp para conectar a instância
+                Escaneie o QR code com seu WhatsApp para conectar o número
               </p>
             </div>
             {getStatusBadge(instanceStatus)}
@@ -2489,14 +2489,14 @@ const ZapiWhatsAppConfig: React.FC<{
       <Card>
         <CardContent className="p-6">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">
-            Ações da Instância
+            Ações do número
           </h3>
           <div className="flex gap-2">
             <Button onClick={handleRestart} disabled={isLoading} variant="outline">
-              Reiniciar Instância
+              Reiniciar número
             </Button>
             <Button onClick={handleDisconnect} disabled={isLoading} variant="destructive">
-              Desconectar Instância
+              Desconectar número
             </Button>
           </div>
         </CardContent>
@@ -2528,7 +2528,7 @@ const ZapiWhatsAppConfig: React.FC<{
                   }}
                 />
                 <p className="text-sm text-center text-slate-600 dark:text-slate-400">
-                  Escaneie este QR code com seu WhatsApp para conectar a instância
+                  Escaneie este QR code com seu WhatsApp para conectar o número
                 </p>
 
                 {/* Passo a passo de onde clicar no app do WhatsApp */}

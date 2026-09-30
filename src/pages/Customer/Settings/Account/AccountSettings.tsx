@@ -546,7 +546,7 @@ export default function AccountSettings() {
               corretor" precisa do caminho, não de mais um formulário. */}
           <SectionLayout
             title="Equipe e acessos"
-            description="Cadastrar pessoas, definir cargo e escolher por quais instâncias cada uma atende."
+            description="Cadastrar pessoas, definir cargo e escolher por quais números cada uma atende."
             withBorder
             headerActions={
               <Button variant="outline" onClick={() => navigate('/equipe')} className="gap-1.5">

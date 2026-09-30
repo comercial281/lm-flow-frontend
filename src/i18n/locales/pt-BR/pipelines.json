@@ -586,7 +586,7 @@
       "scheduleActionComingSoon": "Em breve",
       "scheduleActionTooltip": "Esta funcionalidade está em desenvolvimento e estará disponível em breve.",
       "removeFromPipeline": "Remover do Pipeline",
-      "noInbox": "Sem Inbox",
+      "noInbox": "Sem canal",
       "status": {
         "open": "Aberto",
         "resolved": "Resolvido",
@@ -605,7 +605,7 @@
       "editConversation": "Editar Lead",
       "editItem": "Editar Lead",
       "removeFromPipeline": "Remover do Pipeline",
-      "noInbox": "Sem Inbox",
+      "noInbox": "Sem canal",
       "status": {
         "open": "Aberto",
         "resolved": "Resolvido",

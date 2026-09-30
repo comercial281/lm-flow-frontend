@@ -70,7 +70,7 @@ export type WhatsappRemindersResponse = PaginatedResponse<WhatsappReminder>;
 export type WhatsappReminderResponse = StandardResponse<WhatsappReminder>;
 
 export const TRIGGER_LABELS: Record<ReminderTriggerType, string> = {
-  lead_via_webhook: 'Lead chegou via webhook/form',
+  lead_via_webhook: 'Lead chegou por formulário ou integração',
   tag_added: 'Tag adicionada ao lead',
   card_moved_to_column: 'Card movido pra coluna',
   no_response_after: 'Sem resposta por X tempo',
