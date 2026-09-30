@@ -125,7 +125,7 @@ export default function PortalSearchPage() {
         ) : (
           <>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {shown.map(p => <PropertyCard key={p.id} tenant={tenant!} p={p} wa={wa} />)}
+              {shown.map(p => <PropertyCard key={p.id} tenant={tenant!} p={p} wa={wa} tab={filters.tab} />)}
             </div>
             {remaining > 0 && (
               <div className="mt-10 flex flex-col items-center gap-2">

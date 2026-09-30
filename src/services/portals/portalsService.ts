@@ -35,6 +35,15 @@ export interface PortalSettings {
   stage_id?: string | null;
   roleta_config_id?: string | null;
   default_assignee_id?: string | null;
+  /**
+   * Destino do lead de LOCAÇÃO (desde 2026-09-30). O servidor novo manda
+   * `rent_same_as_sale` sempre (booleano); ausente = servidor antigo, sem abas.
+   */
+  rent_same_as_sale?: boolean | null;
+  rent_pipeline_id?: string | null;
+  rent_stage_id?: string | null;
+  rent_roleta_config_id?: string | null;
+  rent_default_assignee_id?: string | null;
   /** Cota por tipo de anúncio, pela chave do tipo. 0 = ilimitado. */
   ad_plan?: Record<string, number> | null;
   /** Guardado como texto decimal com ponto ("3593.45"). */

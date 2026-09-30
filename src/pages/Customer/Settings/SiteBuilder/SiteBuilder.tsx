@@ -26,7 +26,9 @@ import {
 } from 'lucide-react';
 import { getTenantSlug } from '@/services/core/tenant';
 import { RichTextEditor, type RichTextEditorRef } from '@/components/chat/rich-text-editor';
-import LeadRoutingFields from '@/components/pipelines/LeadRoutingFields';
+import SaleRentDestination from '@/components/pipelines/SaleRentDestination';
+import { useLeadDestinationOptions } from '@/components/pipelines/useLeadDestinationOptions';
+import { siteRoutingFrom, siteRoutingPayload, type SiteRoutingState } from './siteLeadRouting';
 import { extractLogoColors } from '@/utils/logoColors';
 import {
   siteBuilderService,
@@ -115,9 +117,6 @@ const EMPTY_SITE_FORM: SiteFormData = {
   gtm_id: '',
   ga4_measurement_id: '',
   facebook_pixel_id: '',
-  lead_pipeline_id: null,
-  lead_stage_id: null,
-  lead_label_id: null,
 };
 
 const EMPTY_PAGE_FORM: PageFormData = {
@@ -184,6 +183,15 @@ export default function SiteBuilder() {
   // Site form
   const [siteForm, setSiteForm] = useState<SiteFormData>(EMPTY_SITE_FORM);
   const [siteFormDirty, setSiteFormDirty] = useState(false);
+
+  // Destino do lead por finalidade (venda/locação), com roleta e responsável.
+  // Mora fora do siteForm: a venda sai das colunas lead_*, o resto de lead_routing.
+  const [leadRouting, setLeadRouting] = useState<SiteRoutingState>(() => siteRoutingFrom(null));
+  const destinationOptions = useLeadDestinationOptions({ withLabels: true });
+  // Servidor antigo não conhece roleta/responsável no site: esses seletores somem.
+  const routingOptions = leadRouting.supported
+    ? destinationOptions
+    : { ...destinationOptions, roletas: null, users: null };
 
   // Logo upload + extração de cores (determinística, canvas)
   const logoInputRef = useRef<HTMLInputElement | null>(null);
@@ -280,10 +288,8 @@ export default function SiteBuilder() {
           gtm_id: s.tracking.gtm_id ?? '',
           ga4_measurement_id: s.tracking.ga4_measurement_id ?? '',
           facebook_pixel_id: s.tracking.facebook_pixel_id ?? '',
-          lead_pipeline_id: s.lead_pipeline_id ?? null,
-          lead_stage_id: s.lead_stage_id ?? null,
-          lead_label_id: s.lead_label_id ?? null,
         });
+        setLeadRouting(siteRoutingFrom(s));
         const fin = financingFrom(s);
         const lst = listingFrom(s);
         setFinancingPage(fin);
@@ -367,9 +373,11 @@ export default function SiteBuilder() {
       // sozinha no servidor — salvar uma não apaga a outra.
       payload.financiamento = financingPayload(financingPage);
       payload.anuncie = listingPayload({ ...listingPage, emails: parseEmails(emailsText) });
+      Object.assign(payload, siteRoutingPayload(leadRouting, routingOptions));
       if (site) {
         const updated = await siteBuilderService.updateSite(site.id, payload);
         setSite(updated);
+        setLeadRouting(siteRoutingFrom(updated));
         // Salvo: a prévia do banner passa a vir do servidor (site.hero_image).
         setHeroPickPreview(null);
         // E as duas páginas voltam do servidor RESOLVIDAS: é ele quem conhece os
@@ -383,6 +391,7 @@ export default function SiteBuilder() {
       } else {
         const created = await siteBuilderService.createSite(payload);
         setSite(created);
+        setLeadRouting(siteRoutingFrom(created));
         toast.success('Site criado');
       }
       setSiteFormDirty(false);
@@ -1482,22 +1491,27 @@ export default function SiteBuilder() {
             </div>
           </section>
 
-          {/* Roteamento de leads: pra onde vão os leads capturados nos formulários
-              do site. Sem pipeline = cai no pipeline padrão do tenant (comportamento
-              antigo). A tag do imóvel (cadastro do imóvel) é aplicada por cima desta. */}
+          {/* Destino do lead: para onde vão os leads dos formulários do site e
+              quem atende, separado por Venda e Locação (spec 2026-09-30). Sem
+              funil = funil padrão; sem roleta = entra sem responsável, como todo
+              site funcionou até aqui. A etiqueta do imóvel é aplicada por cima. */}
           <section className="rounded-xl border border-border bg-card p-5">
-            <h2 className="text-base font-semibold mb-1">Roteamento de leads</h2>
+            <h2 className="text-base font-semibold mb-1">Destino do lead</h2>
             <p className="mb-4 text-xs text-muted-foreground">
-              Escolha o pipeline, a coluna e a tag de destino dos leads que se cadastram
-              nos formulários do site. Deixe o pipeline vazio para usar o pipeline padrão.
+              Para onde vai o lead dos formulários do site. O imóvel decide se ele é de Venda ou de
+              Locação; no formulário da home e no imóvel de Venda + Locação, quem preenche escolhe.
+              Funil em branco usa o funil padrão; roleta em branco deixa o lead sem responsável.
             </p>
-            <LeadRoutingFields
-              value={{
-                lead_pipeline_id: siteForm.lead_pipeline_id ?? null,
-                lead_stage_id: siteForm.lead_stage_id ?? null,
-                lead_label_id: siteForm.lead_label_id ?? null,
-              }}
-              onChange={patch => setF(patch)}
+            <SaleRentDestination
+              sale={leadRouting.sale}
+              rent={leadRouting.rent}
+              rentSameAsSale={leadRouting.rentSameAsSale}
+              onSale={patch => { setLeadRouting(prev => ({ ...prev, sale: { ...prev.sale, ...patch } })); setSiteFormDirty(true); }}
+              onRent={patch => { setLeadRouting(prev => ({ ...prev, rent: { ...prev.rent, ...patch } })); setSiteFormDirty(true); }}
+              onRentSameAsSale={v => { setLeadRouting(prev => ({ ...prev, rentSameAsSale: v })); setSiteFormDirty(true); }}
+              options={routingOptions}
+              showRent={leadRouting.supported}
+              showLabel
             />
           </section>
 

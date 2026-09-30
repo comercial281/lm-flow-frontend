@@ -1,28 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button, Input } from '@/components/ui/ds';
-import { NativeSelect } from '@/components/ui/native-select';
 import {
   portalsService,
   type PortalDisplayAddress,
   type PortalSettings,
 } from '@/services/portals/portalsService';
-import { pipelinesService } from '@/services/pipelines/pipelinesService';
-import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
-import { usersService } from '@/services/users';
-import type { User } from '@/types/users';
 import { extractError } from '@/utils/apiHelpers';
+import { useLeadDestinationOptions } from '@/components/pipelines/useLeadDestinationOptions';
+import { hasAnyDestinationOption, type LeadDestinationValue } from '@/components/pipelines/LeadDestinationFields';
+import SaleRentDestination from '@/components/pipelines/SaleRentDestination';
 
 interface Props {
   portalKey: string;
   /** Ausente no servidor antigo: o card abre com os padrões. */
   settings?: PortalSettings | null;
   onSaved?: () => void;
-}
-
-interface Opt {
-  id: string;
-  label: string;
 }
 
 const ENDERECOS: Array<{ value: PortalDisplayAddress; label: string; hint: string }> = [
@@ -41,11 +34,17 @@ interface Form {
   contact_name: string;
   display_address: PortalDisplayAddress;
   leads_enabled: boolean;
-  pipeline_id: string;
-  stage_id: string;
-  roleta_config_id: string;
-  default_assignee_id: string;
+  sale: LeadDestinationValue;
+  rent: LeadDestinationValue;
+  rent_same_as_sale: boolean;
 }
+
+const destinoDe = (
+  pipeline?: string | null, stage?: string | null, roleta?: string | null, assignee?: string | null,
+): LeadDestinationValue => ({
+  pipeline_id: texto(pipeline), stage_id: texto(stage), roleta_config_id: texto(roleta),
+  default_assignee_id: texto(assignee), label_id: '',
+});
 
 const formDe = (s: PortalSettings | null | undefined): Form => ({
   provider_name: texto(s?.provider_name),
@@ -54,11 +53,14 @@ const formDe = (s: PortalSettings | null | undefined): Form => ({
   display_address: s?.display_address ?? 'neighborhood',
   // Ausente = ligado: é o comportamento de sempre do webhook.
   leads_enabled: s?.leads_enabled !== false,
-  pipeline_id: texto(s?.pipeline_id),
-  stage_id: texto(s?.stage_id),
-  roleta_config_id: texto(s?.roleta_config_id),
-  default_assignee_id: texto(s?.default_assignee_id),
+  sale: destinoDe(s?.pipeline_id, s?.stage_id, s?.roleta_config_id, s?.default_assignee_id),
+  rent: destinoDe(s?.rent_pipeline_id, s?.rent_stage_id, s?.rent_roleta_config_id, s?.rent_default_assignee_id),
+  // Ausente = mesmo destino: é para onde a locação sempre foi.
+  rent_same_as_sale: s?.rent_same_as_sale !== false,
 });
+
+/** O servidor novo sempre manda a chave; o antigo não conhece locação. */
+const conheceLocacao = (s: PortalSettings | null | undefined) => typeof s?.rent_same_as_sale === 'boolean';
 
 /**
  * A tela *Configurar* do portal, no modelo do Kenlo: dados do anunciante,
@@ -74,11 +76,6 @@ export default function PortalSettingsCard({ portalKey, settings, onSaved }: Pro
   const [form, setForm] = useState<Form>(() => formDe(settings));
   const [saving, setSaving] = useState(false);
 
-  const [pipelines, setPipelines] = useState<Opt[] | null>(null);
-  const [stages, setStages] = useState<Opt[]>([]);
-  const [roletas, setRoletas] = useState<RoletaConfig[] | null>(null);
-  const [users, setUsers] = useState<User[] | null>(null);
-
   // O servidor é a fonte: depois do salvar (e de qualquer recarga) o card volta
   // a mostrar o que ficou gravado.
   useEffect(() => { setForm(formDe(settings)); }, [settings]);
@@ -86,90 +83,9 @@ export default function PortalSettingsCard({ portalKey, settings, onSaved }: Pro
   const set = <K extends keyof Form>(key: K, value: Form[K]) =>
     setForm(prev => ({ ...prev, [key]: value }));
 
-  const carregarColunas = async (pipelineId: string): Promise<Opt[]> => {
-    try {
-      const res = await pipelinesService.getPipelineStages(pipelineId);
-      return ((res?.data ?? []) as Array<{ id: string; name: string }>).map(s => ({ id: s.id, label: s.name }));
-    } catch {
-      return [];
-    }
-  };
-
-  useEffect(() => {
-    let ativo = true;
-    (async () => {
-      // Três leituras de fundo, independentes: a que falhar (cargo sem acesso)
-      // só esconde o próprio seletor. `allSettled` para uma recusa não derrubar
-      // as outras duas.
-      const [pRes, rRes, uRes] = await Promise.allSettled([
-        pipelinesService.getPipelines(),
-        roletaConfigService.getAll(),
-        usersService.getUsers({ per_page: 100 }),
-      ]);
-      if (!ativo) return;
-
-      if (pRes.status === 'fulfilled') {
-        const lista = (pRes.value?.data ?? []) as Array<{ id: string; name: string }>;
-        setPipelines(lista.map(p => ({ id: p.id, label: p.name })));
-        const inicial = settings?.pipeline_id;
-        if (inicial) {
-          const cols = await carregarColunas(inicial);
-          if (ativo) setStages(cols);
-        }
-      }
-      if (rRes.status === 'fulfilled') setRoletas(rRes.value ?? []);
-      if (uRes.status === 'fulfilled') {
-        setUsers((uRes.value?.data ?? []).filter(u => !u.deactivated));
-      }
-    })();
-    return () => { ativo = false; };
-    // Só na montagem: o funil gravado inicial é o que decide as colunas iniciais.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Trocar o funil LIMPA a coluna: a coluna é de outro funil, e o servidor a
-  // recusaria — a pessoa veria a escolha guardada e o lead caindo em outro lugar.
-  const onPipeline = async (pipelineId: string) => {
-    setForm(prev => ({ ...prev, pipeline_id: pipelineId, stage_id: '' }));
-    setStages([]);
-    if (pipelineId) setStages(await carregarColunas(pipelineId));
-  };
-
-  // Funil gravado que não existe mais (apagado depois da configuração): o
-  // seletor mostra a escolha em vez de ficar em branco com o id preso por baixo
-  // — senão salvar qualquer outro campo devolvia "Funil não encontrado" sem a
-  // tela apontar de onde vinha. Quem escolhe outro funil (ou o padrão) limpa.
-  const pipelineOptions = useMemo<Opt[]>(() => {
-    if (!pipelines) return [];
-    if (form.pipeline_id && !pipelines.some(p => p.id === form.pipeline_id)) {
-      return [...pipelines, { id: form.pipeline_id, label: 'Funil escolhido (não existe mais)' }];
-    }
-    return pipelines;
-  }, [pipelines, form.pipeline_id]);
-
-  // A roleta já escolhida continua na lista mesmo desativada: sem ela o campo
-  // abriria em "não distribuir" e salvar trocaria a escolha do gestor sem ele ver.
-  const roletaOptions = useMemo<Opt[]>(() => {
-    if (!roletas) return [];
-    const opts = roletas.filter(r => r.is_active).map(r => ({ id: r.id, label: roletaLabel(r) }));
-    if (form.roleta_config_id && !opts.some(o => o.id === form.roleta_config_id)) {
-      opts.push({ id: form.roleta_config_id, label: 'Roleta escolhida (desativada)' });
-    }
-    return opts;
-  }, [roletas, form.roleta_config_id]);
-  const roletaDesativada =
-    !!form.roleta_config_id && !!roletas && !roletas.some(r => r.id === form.roleta_config_id && r.is_active);
-
-  const userOptions = useMemo<Opt[]>(() => {
-    if (!users) return [];
-    const opts = users.map(u => ({ id: u.id, label: u.name }));
-    if (form.default_assignee_id && !opts.some(o => o.id === form.default_assignee_id)) {
-      opts.push({ id: form.default_assignee_id, label: 'Responsável escolhido (fora da lista)' });
-    }
-    return opts;
-  }, [users, form.default_assignee_id]);
-
-  const temDestino = pipelines !== null || roletas !== null || users !== null;
+  const options = useLeadDestinationOptions();
+  const temDestino = hasAnyDestinationOption(options);
+  const locacao = conheceLocacao(settings);
 
   const save = async () => {
     const partial: Partial<PortalSettings> = {
@@ -181,12 +97,21 @@ export default function PortalSettingsCard({ portalKey, settings, onSaved }: Pro
     };
     // Só viaja o que a pessoa pôde ver. Seletor escondido por recusa de cargo
     // não pode apagar, calado, o que está gravado.
-    if (pipelines !== null) {
-      partial.pipeline_id = form.pipeline_id || null;
-      partial.stage_id = form.pipeline_id ? form.stage_id || null : null;
+    const destino = (v: LeadDestinationValue, prefixo: '' | 'rent_') => {
+      const out: Record<string, string | null> = {};
+      if (options.pipelines !== null) {
+        out[`${prefixo}pipeline_id`] = v.pipeline_id || null;
+        out[`${prefixo}stage_id`] = v.pipeline_id ? v.stage_id || null : null;
+      }
+      if (options.roletas !== null) out[`${prefixo}roleta_config_id`] = v.roleta_config_id || null;
+      if (options.users !== null) out[`${prefixo}default_assignee_id`] = v.default_assignee_id || null;
+      return out;
+    };
+    Object.assign(partial, destino(form.sale, ''));
+    if (locacao) {
+      partial.rent_same_as_sale = form.rent_same_as_sale;
+      if (!form.rent_same_as_sale) Object.assign(partial, destino(form.rent, 'rent_'));
     }
-    if (roletas !== null) partial.roleta_config_id = form.roleta_config_id || null;
-    if (users !== null) partial.default_assignee_id = form.default_assignee_id || null;
 
     setSaving(true);
     try {
@@ -333,75 +258,19 @@ export default function PortalSettingsCard({ portalKey, settings, onSaved }: Pro
             <p className="text-xs text-muted-foreground">
               Para onde vai o lead que chega deste portal. Em branco, ele entra como sempre entrou:
               no funil padrão, sem responsável.
+              {locacao && ' O imóvel do anúncio decide se o lead é de Venda ou de Locação; imóvel de Venda + Locação segue o que o portal informar, e sem informação vai para Venda.'}
             </p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {pipelines !== null && (
-              <>
-                <label className="block space-y-1.5">
-                  <span className="text-sm font-medium">Funil</span>
-                  <NativeSelect
-                    aria-label="Funil"
-                    value={form.pipeline_id}
-                    onChange={e => { void onPipeline(e.target.value); }}
-                  >
-                    <option value="">Funil padrão do CRM</option>
-                    {pipelineOptions.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-                  </NativeSelect>
-                </label>
-                {form.pipeline_id && (
-                  <label className="block space-y-1.5">
-                    <span className="text-sm font-medium">Coluna</span>
-                    <NativeSelect
-                      aria-label="Coluna"
-                      value={form.stage_id}
-                      onChange={e => set('stage_id', e.target.value)}
-                    >
-                      <option value="">Primeira coluna do funil</option>
-                      {stages.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                    </NativeSelect>
-                  </label>
-                )}
-              </>
-            )}
-            {roletas !== null && (
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium">Roleta</span>
-                <NativeSelect
-                  aria-label="Roleta"
-                  value={form.roleta_config_id}
-                  onChange={e => set('roleta_config_id', e.target.value)}
-                >
-                  <option value="">Não distribuir (entra sem responsável)</option>
-                  {roletaOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </NativeSelect>
-                {roletaDesativada && (
-                  <span className="block text-[11px] text-amber-600">
-                    Esta roleta está desativada: enquanto ela não for religada, o lead continua
-                    entrando sem responsável.
-                  </span>
-                )}
-              </label>
-            )}
-            {users !== null && (
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium">Responsável</span>
-                <NativeSelect
-                  aria-label="Responsável"
-                  value={form.default_assignee_id}
-                  onChange={e => set('default_assignee_id', e.target.value)}
-                >
-                  <option value="">Ninguém</option>
-                  {userOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </NativeSelect>
-                {form.roleta_config_id && form.default_assignee_id && (
-                  <span className="block text-[11px] text-muted-foreground">
-                    Com responsável escolhido, o lead vai direto para ele — a roleta não sorteia.
-                  </span>
-                )}
-              </label>
-            )}
-          </div>
+          <SaleRentDestination
+            sale={form.sale}
+            rent={form.rent}
+            rentSameAsSale={form.rent_same_as_sale}
+            onSale={patch => setForm(prev => ({ ...prev, sale: { ...prev.sale, ...patch } }))}
+            onRent={patch => setForm(prev => ({ ...prev, rent: { ...prev.rent, ...patch } }))}
+            onRentSameAsSale={v => set('rent_same_as_sale', v)}
+            options={options}
+            showRent={locacao}
+          />
         </section>
       )}
 

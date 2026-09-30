@@ -117,6 +117,29 @@ export interface SiteListingPage {
   emails?: string[];
 }
 
+/** Um lado do destino do lead do site (spec venda/locação, 2026-09-30). */
+export interface SiteLeadRoutingSide {
+  pipeline_id?: string | null;
+  stage_id?: string | null;
+  label_id?: string | null;
+  roleta_config_id?: string | null;
+  default_assignee_id?: string | null;
+}
+
+/** Como o servidor devolve: venda só com roleta/responsável (o resto está nas colunas lead_*). */
+export interface SiteLeadRouting {
+  rent_same_as_sale: boolean;
+  sale: SiteLeadRoutingSide;
+  rent: SiteLeadRoutingSide;
+}
+
+/** Como a tela grava: PARCIAL — só o que a pessoa pôde ver. */
+export interface SiteLeadRoutingPayload {
+  rent_same_as_sale?: boolean;
+  sale?: SiteLeadRoutingSide;
+  rent?: SiteLeadRoutingSide;
+}
+
 export interface Site {
   id: string;
   name: string;
@@ -147,6 +170,7 @@ export interface Site {
   lead_pipeline_id?: string | null;
   lead_stage_id?: string | null;
   lead_label_id?: string | null;
+  lead_routing?: SiteLeadRouting;
   /** Template único da página de imóvel (portal Produto A). Só vem no show (deep). */
   property_page_template?: BlockInstance[];
   created_at: string;
@@ -258,6 +282,7 @@ export interface SiteFormData {
   lead_pipeline_id?: string | null;
   lead_stage_id?: string | null;
   lead_label_id?: string | null;
+  lead_routing?: SiteLeadRoutingPayload;
 }
 
 export interface SiteFinancingForm {

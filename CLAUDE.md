@@ -4003,3 +4003,49 @@ Como funciona:
 **Não reabrir sem o dono pedir:** o teste sai pelo número do PRÓPRIO agente, não
 por uma instância à parte da Leal Mídia — foi escolha do dono em 30/09/26,
 justamente pra ver a mídia chegando como o lead real veria, no mesmo número.
+
+## Venda e locação: destinos separados no portal e no site (desde 2026-09-30)
+
+O dono do produto pediu o que o Kenlo faz: o lead de quem quer alugar e o de quem
+quer comprar vão para lugares diferentes, no portal e no site. E o site passou a
+distribuir pela roleta, como o portal.
+
+O que aparece na tela:
+
+- **Portal → Configurar → Destino do lead**: abas **Venda** e **Locação**. Locação
+  começa em **Mesmo destino da venda** ligado; desligado, tem funil, coluna, roleta
+  e responsável próprios.
+- **Site Builder → Destino do lead** (antes "Roteamento de leads"): as mesmas abas,
+  com etiqueta, e agora **Roleta** e **Responsável**.
+- **Site público**: o formulário "Não achou? A gente encontra pra você" pergunta
+  **Quero comprar / Quero alugar**, marcado pela aba da busca. Na página do imóvel,
+  a pergunta só aparece em imóvel de **Venda + Locação**, marcada pela aba de onde a
+  pessoa veio (`?finalidade=locacao`).
+- **Busca do site**: a aba **Alugar** passou a mostrar Temporada e Venda + Locação;
+  **Comprar** deixou de mostrar Temporada.
+- Todo lead de portal e site ganha a etiqueta **venda** ou **locação**.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **O imóvel decide.** Venda → venda; Locação e Temporada → locação. Venda + Locação
+  e lead sem imóvel: o que o portal informar ou o que a pessoa escolher; sem nada,
+  venda.
+- **Locação separada vale inteira**: sem roleta NÃO herda a roleta da venda.
+- **Página com destino próprio vence** o destino do site (funil/coluna/etiqueta);
+  quem atende (roleta/responsável) é sempre o do site.
+- **O imóvel com "leads vão direto para o responsável" vence** também no site.
+
+Armadilhas:
+
+1. **O bloco é um só** (`LeadDestinationFields` + `SaleRentDestination` +
+   `useLeadDestinationOptions`, em `src/components/pipelines/`). Portal e site
+   usam o mesmo; regra nova de destino entra ali, não numa tela.
+2. **Só viaja o que a pessoa pôde ver.** Seletor escondido por recusa de cargo não
+   manda a chave, e o servidor grava parcial. Mandar `null` "por completude"
+   apagaria a roleta que outra pessoa escolheu.
+3. **Servidor antigo = sem abas.** O portal sabe pela presença de
+   `rent_same_as_sale` no `settings`; o site pela presença de `lead_routing`. O
+   merge aqui é só DEPOIS do backend.
+4. **Não é `featureKey` nem `clientToggleKey`**: é configuração de portal e de site.
+5. **Item aberto:** a landing de anúncio tem cópia própria da regra de quem atende
+   no backend; convergir para `Leads::Distribution` quando alguém mexer nela.
