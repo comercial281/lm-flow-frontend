@@ -47,6 +47,11 @@ export default function SendToMeButton({
   const [sending, setSending] = useState(false);
 
   const send = async (raw: string) => {
+    // Enter no campo dispara o mesmo handler do clique — sem esta trava, Enter
+    // segurado (ou um segundo Enter enquanto a 1ª chamada ainda está no ar)
+    // mandava o teste em dobro.
+    if (sending) return;
+
     const digits = raw.replace(/\D/g, '');
     if (!digits) return;
 
@@ -122,7 +127,8 @@ export default function SendToMeButton({
         </div>
       )}
       <p className="text-[11px] text-muted-foreground">
-        Não responda essa mensagem pelo seu WhatsApp: a resposta entra no CRM como lead.
+        Não responda essa mensagem pelo seu WhatsApp. A resposta (inclusive a automática do WhatsApp Business)
+        entra no CRM como lead.
       </p>
     </div>
   );

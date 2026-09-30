@@ -110,8 +110,32 @@ describe('SendToMeButton', () => {
     expect(screen.getByRole('button', { name: 'Ver como chega' })).toBeInTheDocument();
   });
 
-  it('mostra o aviso de não responder', () => {
+  it('mostra o aviso de não responder, citando a resposta automática do WhatsApp Business', () => {
     render(<SendToMeButton onSend={vi.fn()} />);
-    expect(screen.getByText(/não responda essa mensagem/i)).toBeInTheDocument();
+    expect(screen.getByText(/não responda essa mensagem pelo seu whatsapp/i)).toBeInTheDocument();
+    expect(screen.getByText(/inclusive a automática do whatsapp business/i)).toBeInTheDocument();
+  });
+
+  // Fix round 1, item 3: Enter segurado (ou repetido antes do 1º envio
+  // terminar) não pode disparar onSend duas vezes — sem a trava, um teste em
+  // dobro também dobra o consumo do limite de 10/hora por agente.
+  it('Enter em sequência durante o envio não dispara onSend duas vezes', async () => {
+    const user = userEvent.setup();
+    let resolveSend: (message: string) => void = () => {};
+    const onSend = vi.fn(() => new Promise<string>((resolve) => { resolveSend = resolve; }));
+
+    render(<SendToMeButton onSend={onSend} />);
+    await user.click(screen.getByRole('button', { name: /mandar pra mim/i }));
+
+    const input = screen.getByPlaceholderText('Seu WhatsApp (com DDD)');
+    await user.type(input, '11999998888');
+    // Dois Enter em sequência, antes de o primeiro envio terminar.
+    await user.type(input, '{Enter}{Enter}');
+
+    expect(onSend).toHaveBeenCalledTimes(1);
+
+    resolveSend('Mandado!');
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Mandado!'));
+    expect(onSend).toHaveBeenCalledTimes(1);
   });
 });

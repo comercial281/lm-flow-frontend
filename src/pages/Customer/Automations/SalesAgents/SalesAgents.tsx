@@ -3643,13 +3643,18 @@ function FileConfigDialog({
             )}
             {/* "Ver como chega": manda ESTE arquivo pro WhatsApp do próprio dono,
                 pela mesma rota do lead real — sem isso, só dá pra saber como ele
-                chega esperando um lead de verdade pedir. */}
-            {sendable && (
+                chega esperando um lead de verdade pedir. Some quando o arquivo
+                está BLOQUEADO (grande demais e sem link): não tem como sair,
+                então não tem o que testar. */}
+            {sendable && doc.send_mode !== 'blocked' && (
               <div className="pt-1">
                 <p className="text-xs font-medium">Ver como chega</p>
                 <SendToMeButton
                   onSend={(phone) => salesAgentsService.testSend(agentId, { phone, document_id: doc.id }).then((r) => r.message)}
                 />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  O teste usa o que está salvo. Salve antes para ver a legenda nova.
+                </p>
               </div>
             )}
           </div>
@@ -3839,8 +3844,12 @@ function FormAnswerAdder({ onAdd }: { onAdd: (key: string, value: string) => voi
 // ---------------- Test ----------------
 
 // Turno da conversa de teste. `media` é só de exibição — a API recebe apenas
-// role/content, igual antes.
-type TestTurn = TestHistoryItem & { media?: TestMediaItem[] };
+// role/content, igual antes. `propertyCode` viaja junto da mídia: é o código
+// que estava no campo QUANDO esta bolha foi gerada — não o do campo agora.
+// Sem isto, "Mandar pra mim" numa bolha antiga reenviaria com o código ATUAL
+// do campo, e como o token das FOTOS só faz sentido dentro do imóvel que o
+// gerou, o teste sairia com as fotos de OUTRO imóvel.
+type TestTurn = TestHistoryItem & { media?: TestMediaItem[]; propertyCode?: string };
 
 // Cenário de teste: o contexto do lead + a primeira mensagem dele.
 //
@@ -4002,7 +4011,10 @@ function persistScenarios(list: TestScenario[]) {
   }
 }
 
-function TestTab({ agent }: { agent: SalesAgent }) {
+// Exportado só pra teste (mesmo padrão de TriggersSection): renderizar a tela
+// inteira pra testar uma bolha do painel Testar exigiria simular login,
+// tenant e dezenas de outras chamadas sem relação com o bug em questão.
+export function TestTab({ agent }: { agent: SalesAgent }) {
   const { perguntar, dialogoDePergunta } = usePergunta();
   const [history, setHistory] = useState<TestTurn[]>([]);
   const [message, setMessage] = useState('');
@@ -4108,6 +4120,9 @@ function TestTab({ agent }: { agent: SalesAgent }) {
           role: 'assistant' as const,
           content,
           media: i === parts.length - 1 ? media : [],
+          // O código DESTE turno, não o que estiver no campo quando o dono
+          // clicar em "Mandar pra mim" depois.
+          propertyCode: code,
         })),
       ]);
       setLast(result);
@@ -4332,7 +4347,9 @@ function TestTab({ agent }: { agent: SalesAgent }) {
                   <TestMediaBubble
                     item={m}
                     onSendToMe={(item, phone) => salesAgentsService.testSend(agent.id, {
-                      phone, token: item.token, property_code: propertyCode.trim() || undefined,
+                      // O código do TURNO que gerou esta bolha, não o do campo
+                      // agora — o campo pode ter mudado de imóvel desde então.
+                      phone, token: item.token, property_code: h.propertyCode || undefined,
                     }).then((r) => r.message)}
                   />
                 </div>

@@ -3991,10 +3991,14 @@ Como funciona:
   "já enviada" pro lead — é teste, roda fora do fluxo real.
 - **Limite: 10 testes por hora, por agente.** Passou disso, o botão mostra o
   aviso vindo do servidor e destrava sozinho depois.
-- Sob o botão, sempre o aviso: *"Não responda essa mensagem pelo seu WhatsApp:
-  a resposta entra no CRM como lead."*
-- Quem edita a IA (mesma permissão que salva o agente) vê o botão; quem só lê
-  não vê.
+- Sob o botão, sempre o aviso: *"Não responda essa mensagem pelo seu WhatsApp.
+  A resposta (inclusive a automática do WhatsApp Business) entra no CRM como
+  lead."* Se o seu WhatsApp Business tiver resposta automática, ela volta como
+  lead — é só uma mensagem chegando naquele número, o CRM não diferencia bot
+  de pessoa.
+- **Quem pode editar a IA manda de verdade** (mesma permissão que salva o
+  agente). Quem só lê **também vê o botão** — a tela não esconde — mas o
+  clique volta recusado, com o aviso de permissão.
 
 **Não reabrir sem o dono pedir:** o teste sai pelo número do PRÓPRIO agente, não
 por uma instância à parte da Leal Mídia — foi escolha do dono em 30/09/26,
