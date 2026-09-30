@@ -611,6 +611,12 @@ export interface TestMediaItem {
   title?: string;
   /** Por que ela escolheu mandar agora. Serve pra calibrar a regra. */
   reason?: string | null;
+  /**
+   * Identifica ESTE item pro botão "Mandar pra mim" (`test_send`) — sem ele a
+   * tela precisaria resolver de novo qual arquivo/pacote é este. Só em 'photos'
+   * e 'file'.
+   */
+  token?: string;
 }
 
 export interface SalesAgentTestResult {
@@ -900,6 +906,29 @@ export const salesAgentsService = {
       property_code: context.propertyCode || undefined,
     });
     return (res.data as { data: SalesAgentTestResult }).data;
+  },
+
+  /**
+   * "Mandar pra mim": entrega a mídia pro WhatsApp do PRÓPRIO dono, pela mesma
+   * SalesAgents::FileDelivery do lead real — a diferença do preview do painel
+   * Testar, que só MOSTRA. Não toca conversa/contato/card nenhum.
+   *
+   * Em erro, joga um Error com a MESMA mensagem do servidor (limite de
+   * teste/telefone inválido etc.), pra tela mostrar a frase certa, não um
+   * texto genérico.
+   */
+  async testSend(
+    id: string,
+    body: { phone: string; token?: string; property_code?: string; document_id?: string },
+  ): Promise<{ message: string }> {
+    try {
+      const res = await api.post(`${BASE}/${id}/test_send`, body);
+      return { message: (res.data as { message: string }).message };
+    } catch (err) {
+      const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };
+      const message = axiosErr.response?.data?.error?.message;
+      throw new Error(message || 'Não consegui mandar o teste agora.');
+    }
   },
 
   /**

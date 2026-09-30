@@ -10,6 +10,7 @@ import AiResultsPanel from '@/components/salesAgents/AiResultsPanel';
 import PlaybookSection from '@/components/salesAgents/PlaybookSection';
 import DuplicateAgentDialog from '@/components/salesAgents/DuplicateAgentDialog';
 import TestMediaBubble from './TestMediaBubble';
+import SendToMeButton from './SendToMeButton';
 import { DOC_ACCEPT, docUploadError } from './docUpload';
 import type { AgentPerformance } from '@/types/aiResults';
 import {
@@ -3640,6 +3641,17 @@ function FileConfigDialog({
                 Arquivo grande demais ({doc.size_label}) e sem endereço público pra oferecer. Reduza o arquivo.
               </p>
             )}
+            {/* "Ver como chega": manda ESTE arquivo pro WhatsApp do próprio dono,
+                pela mesma rota do lead real — sem isso, só dá pra saber como ele
+                chega esperando um lead de verdade pedir. */}
+            {sendable && (
+              <div className="pt-1">
+                <p className="text-xs font-medium">Ver como chega</p>
+                <SendToMeButton
+                  onSend={(phone) => salesAgentsService.testSend(agentId, { phone, document_id: doc.id }).then((r) => r.message)}
+                />
+              </div>
+            )}
           </div>
 
           {sendable && (
@@ -4317,7 +4329,12 @@ function TestTab({ agent }: { agent: SalesAgent }) {
               </div>
               {(h.media ?? []).map((m, j) => (
                 <div key={j} className="flex justify-end">
-                  <TestMediaBubble item={m} />
+                  <TestMediaBubble
+                    item={m}
+                    onSendToMe={(item, phone) => salesAgentsService.testSend(agent.id, {
+                      phone, token: item.token, property_code: propertyCode.trim() || undefined,
+                    }).then((r) => r.message)}
+                  />
                 </div>
               ))}
             </div>
