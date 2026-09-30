@@ -52,6 +52,24 @@ describe('textosDaTela: o que conta como texto que aparece', () => {
     );
   });
 
+  it('atributo hint= e text= é texto de tela', () => {
+    expect(textos(`const x = <Campo hint="Instância que envia os avisos" />;`)).toEqual(['Instância que envia os avisos']);
+    expect(textos(`const x = <Aviso text="Escolha a tag" />;`)).toEqual(['Escolha a tag']);
+  });
+
+  it('as palavras de plural(n, singular, plural) são texto de tela; o número não', () => {
+    expect(textos(`const x = <p>{plural(total, 'instância', 'instâncias')}</p>;`)).toEqual(['instância', 'instâncias']);
+    expect(textos(`const y = formato.plural(total, 'estágio', 'estágios');`)).toEqual(['estágio', 'estágios']);
+    expect(textos(`const z = plural('três' as unknown as number, 'item', 'itens');`)).toEqual(['item', 'itens']);
+  });
+
+  it('a mensagem de reserva de apiErrorMessage(erro, texto) é texto de tela; o erro não', () => {
+    expect(textos(`const m = apiErrorMessage(e, 'Não foi possível salvar a tag');`)).toEqual([
+      'Não foi possível salvar a tag',
+    ]);
+    expect(textos(`const m = apiErrorMessage('payload do erro', 'Falhou');`)).toEqual(['Falhou']);
+  });
+
   it('.ts é lido como TypeScript puro: genérico e asserção de tipo não viram texto de tela', () => {
     const codigo = `
       function f(): Envelope<Resposta> { return x as Envelope<Resposta>; }

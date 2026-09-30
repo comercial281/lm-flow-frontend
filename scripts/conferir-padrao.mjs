@@ -11,8 +11,9 @@
 //
 // COMO ELE LÊ AS TELAS
 // Pelo compilador do TypeScript, não por grep: texto de tela é o que está entre
-// tags, em atributo de texto (title, placeholder, label…), em toast, em
-// confirmação e nos mapas de rótulo (TRIGGER_LABELS…). Nome de variável, rota,
+// tags, em atributo de texto (title, placeholder, label, hint, text…), em toast,
+// em confirmação, nas palavras de plural() e na mensagem de reserva de
+// apiErrorMessage(), e nos mapas de rótulo (TRIGGER_LABELS…). Nome de variável, rota,
 // tipo e chave de i18n NÃO contam — "pipeline" em código fica; "Pipeline" na
 // tela é que conta.
 //
@@ -155,13 +156,18 @@ const CHAVE_DA_CASA = 'src/components/base/Chave.tsx';
 // Atributos e propriedades cujo valor é texto que aparece na tela.
 const ATRIBUTOS_DE_TEXTO = new Set([
   'title', 'placeholder', 'label', 'aria-label', 'alt', 'description', 'subtitle',
-  'tooltip', 'emptyMessage', 'titulo', 'descricao', 'rotuloDaAcao', 'rotuloDeCancelar',
+  'tooltip', 'emptyMessage', 'titulo', 'descricao', 'rotuloDaAcao', 'rotuloDeCancelar', 'hint', 'text',
 ]);
 const PROPRIEDADES_DE_TEXTO = new Set([
   'label', 'title', 'titulo', 'descricao', 'description', 'subtitle', 'placeholder',
   'tooltip', 'rotuloDaAcao', 'rotuloDeCancelar', 'emptyMessage', 'helpText', 'hint',
 ]);
 const MAPA_DE_ROTULOS = /(LABELS?|TEXTS?|TEXTOS?|ROTULOS?|COPY)$/;
+// Funções que devolvem pra tela o texto que recebem: em plural(n, 'etapa',
+// 'etapas') as palavras (2º e 3º argumentos) aparecem; em apiErrorMessage(erro,
+// 'Não foi possível…') a mensagem de reserva (2º) aparece quando o servidor não
+// manda uma. Os outros argumentos são dado, não texto.
+const ARGUMENTOS_DE_TEXTO = { plural: [1, 2], apiErrorMessage: [1] };
 
 // ── Leitura dos textos de uma tela ─────────────────────────────────────────
 // .tsx é JSX; .ts é TypeScript puro (genérico como Envelope<T> e asserção
@@ -226,7 +232,10 @@ function destinoDoTexto(no) {
       // toast('x'), toast.success('x'), toast.error('x')…
       if (ts.isIdentifier(alvo) && alvo.text === 'toast') return true;
       if (ts.isPropertyAccessExpression(alvo) && ts.isIdentifier(alvo.expression) && alvo.expression.text === 'toast') return true;
-      return false;
+      // plural(n, 'etapa', 'etapas'), formato.plural(…), apiErrorMessage(e, '…')
+      const funcao = ts.isIdentifier(alvo) ? alvo.text : ts.isPropertyAccessExpression(alvo) ? alvo.name.text : '';
+      const posicoes = Object.hasOwn(ARGUMENTOS_DE_TEXTO, funcao) ? ARGUMENTOS_DE_TEXTO[funcao] : null;
+      return !!posicoes && posicoes.includes(atual.arguments.indexOf(filho));
     }
     return false;
   }
