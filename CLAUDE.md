@@ -3900,7 +3900,7 @@ Armadilhas:
    verificação, fora desta leva).
 8. **A metade do backend vem PRIMEIRO.**
 
-## A IA Vendedora manda fotos e vídeo do imóvel (desde <data do merge>)
+## A IA Vendedora manda fotos e vídeo do imóvel (desde 2026-09-30)
 
 Pedido do dono (29/09/26): a mídia chegava "incongruente". A capa do imóvel saía sozinha, com o link, no momento em que o sistema reconhecia o imóvel, sem ligação com o que a IA estava falando. E só ia a capa, mesmo com 20+ fotos na galeria.
 
