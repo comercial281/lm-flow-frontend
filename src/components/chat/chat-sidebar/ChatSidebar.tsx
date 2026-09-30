@@ -56,6 +56,7 @@ import type {
   SearchContactResult,
   SearchMessageResult,
 } from '@/types/chat/search';
+import { telefone } from '@/lib/formato';
 
 interface ChatSidebarProps {
   mobileView: 'list' | 'chat';
@@ -874,7 +875,7 @@ const ChatSidebar = ({
                                 </p>
                                 {conversation.contact?.phone_number && (
                                   <p className="lm-redact text-xs text-muted-foreground/70 truncate">
-                                    {conversation.contact.phone_number}
+                                    {telefone(conversation.contact.phone_number)}
                                   </p>
                                 )}
                               </div>

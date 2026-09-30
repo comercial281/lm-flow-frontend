@@ -7,6 +7,7 @@ import ContactStatusBadge from './ContactStatusBadge';
 import ContactTagsList from './ContactTagsList';
 import ContactTypeBadge from './ContactTypeBadge';
 import ContactPipelinesBadge from './ContactPipelinesBadge';
+import { telefone } from '@/lib/formato';
 
 interface ContactsTableProps {
   contacts: Contact[];
@@ -75,7 +76,7 @@ export default function ContactsTable({
                 <span className="text-muted-foreground/50">|</span>
               )}
               {contact.phone_number && (
-                <span className="lm-redact whitespace-nowrap">{contact.phone_number}</span>
+                <span className="lm-redact whitespace-nowrap">{telefone(contact.phone_number)}</span>
               )}
             </div>
           </div>

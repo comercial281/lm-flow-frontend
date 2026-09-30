@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { formatDateTimeBR } from '@/utils/dateUtils';
-import { porcentagem, plural, numero } from '@/lib/formato';
+import { porcentagem, plural, numero, telefone } from '@/lib/formato';
 import { toast } from 'sonner';
 import {
   Button, Input, Label as UILabel, Badge,
@@ -1483,7 +1483,7 @@ export default function RoletaConfigPage() {
                       {c.distribution_mode === 'manual'
                         ? 'Gerente distribui na mão'
                         : `Prazo: ${timeoutLabel(c.timeout_minutes)}`}
-                      {' — Gestor: '}{c.gestor_whatsapp_number || '—'}
+                      {' — Gestor: '}{telefone(c.gestor_whatsapp_number) || '—'}
                     </p>
                   </div>
                 </div>
@@ -3014,9 +3014,9 @@ export default function RoletaConfigPage() {
                                     ? [
                                       isMulti ? `atende pelo ${instanceName(memberInbox(m))}` : null,
                                       (m.personal_whatsapp_number ?? '').trim()
-                                        ? `avisado no ${(m.personal_whatsapp_number ?? '').trim()}`
+                                        ? `avisado no ${telefone(m.personal_whatsapp_number)}`
                                         : (m.whatsapp_from_profile ?? '').trim()
-                                          ? `avisado no ${(m.whatsapp_from_profile ?? '').trim()} (do cadastro)`
+                                          ? `avisado no ${telefone(m.whatsapp_from_profile)} (do cadastro)`
                                           : 'sem WhatsApp — recebe a oferta pelo app',
                                     ].filter(Boolean).join(' · ')
                                     : 'Tem acesso ao número. Marque para incluir na roleta.'}

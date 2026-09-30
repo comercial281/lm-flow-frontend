@@ -22,6 +22,7 @@ import {
   transferCandidates,
   type DeactivatablePerson,
 } from '@/features/users/deactivation/deactivationRules';
+import { telefone } from '@/lib/formato';
 
 interface Props {
   open: boolean;
@@ -150,7 +151,7 @@ export default function DeactivateUserDialog({ open, user, users, onClose, onDon
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-muted-foreground">WhatsApp exclusivo dele</span>
                     <span className="text-right font-medium">
-                      {preview.exclusive_number?.name || preview.exclusive_number?.phone || 'sim'}
+                      {preview.exclusive_number?.name || telefone(preview.exclusive_number?.phone) || 'sim'}
                     </span>
                   </div>
                 )}

@@ -41,7 +41,7 @@ import { isForbiddenError } from '@/services/core/forbidden';
 import { useCan } from '@/hooks/useCan';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
-import { dinheiro, dolar, plural } from '@/lib/formato';
+import { dinheiro, dolar, plural, telefone } from '@/lib/formato';
 type Tab = 'disparos' | 'templates' | 'canais' | 'cadencias' | 'metricas';
 
 const STATUS_META: Record<BroadcastCampaign['status'], { label: string; cls: string }> = {
@@ -385,7 +385,7 @@ export default function Disparos() {
                     <SelectContent>
                       {channels.map(o => (
                         <SelectItem key={o.inbox_id} value={o.inbox_id}>
-                          {o.name} · {o.phone_number}
+                          {o.name} · {telefone(o.phone_number)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -435,7 +435,7 @@ export default function Disparos() {
                       <div className="min-w-0">
                         <div className="text-sm font-medium truncate">{o.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {o.phone_number} · {plural(approved, 'template aprovado', 'templates aprovados')} de {o.templates.length}
+                          {telefone(o.phone_number)} · {plural(approved, 'template aprovado', 'templates aprovados')} de {o.templates.length}
                         </div>
                       </div>
                     </div>
@@ -611,7 +611,7 @@ export default function Disparos() {
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="min-w-0">
                           <div className="text-sm font-medium truncate">{c.name}</div>
-                          <div className="text-xs text-muted-foreground">{c.phone_number}</div>
+                          <div className="text-xs text-muted-foreground">{telefone(c.phone_number)}</div>
                         </div>
                         <div className="flex items-center gap-3 text-xs">
                           <span className={qClr}>● {c.quality_rating || 'sem dado'}</span>

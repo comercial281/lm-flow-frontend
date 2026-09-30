@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { formatDateBR } from '@/utils/dateUtils';
-import { dinheiro } from '@/lib/formato';
+import { dinheiro, telefone } from '@/lib/formato';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -1514,7 +1514,7 @@ export default function PipelineKanban() {
                           {item.contact?.phone_number && (
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Phone className="w-3 h-3 shrink-0" />
-                              <span className="truncate">{item.contact.phone_number}</span>
+                              <span className="truncate">{telefone(item.contact.phone_number)}</span>
                             </div>
                           )}
                           {/* Coluna — visível só no mobile (colunas escondem a partir de md) */}

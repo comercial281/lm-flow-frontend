@@ -7,6 +7,7 @@ import ContactStatusBadge from './ContactStatusBadge';
 import ContactTagsList from './ContactTagsList';
 import ContactTypeBadge from './ContactTypeBadge';
 import ContactPipelinesBadge from './ContactPipelinesBadge';
+import { telefone } from '@/lib/formato';
 
 type ContactCardProps = {
   contact: Contact;
@@ -56,7 +57,7 @@ export default function ContactCard({
           </div>
           <div className="flex items-center justify-between">
             <span>{t('card.phone')}</span>
-            <span className="font-mono">{contact.phone_number}</span>
+            <span className="font-mono">{telefone(contact.phone_number)}</span>
           </div>
           {contact.labels && contact.labels.length > 0 && (
             <div className="pt-2">

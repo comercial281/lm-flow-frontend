@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
-import { plural, numero } from '@/lib/formato';
+import { plural, numero, telefone } from '@/lib/formato';
 import {
   Dialog,
   DialogContent,
@@ -837,7 +837,7 @@ export default function BulkDispatchModal({
                               <SelectContent>
                                 {cloudOptions.map(o => (
                                   <SelectItem key={o.inbox_id} value={o.inbox_id}>
-                                    {o.name} · {o.phone_number}
+                                    {o.name} · {telefone(o.phone_number)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

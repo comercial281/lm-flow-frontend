@@ -40,6 +40,7 @@ import {
   itemVisitLabel,
   hasVisitScheduled,
 } from './pipelineItemHelpers';
+import { telefone } from '@/lib/formato';
 
 // Wrapper estável (referência única, nunca recriado) pra parar propagação de
 // clique sem gerar uma arrow function nova a cada render.
@@ -279,7 +280,7 @@ function PipelineItemCardComponent({
             {item.contact?.phone_number && (
               <span className="flex items-center space-x-1">
                 <Phone className="w-3 h-3 shrink-0" />
-                <span className="whitespace-nowrap">{item.contact.phone_number}</span>
+                <span className="whitespace-nowrap">{telefone(item.contact.phone_number)}</span>
               </span>
             )}
             {item.contact?.email && (

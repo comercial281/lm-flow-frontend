@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { Contact, ContactFormData } from '@/types/contacts';
 import { ManualOriginInput } from '@/components/shared';
 import { contactSaveError } from '@/utils/contactErrors';
+import { telefone } from '@/lib/formato';
 
 // Normaliza telefone para E.164 (backend exige). Limpa tudo que não é dígito e prefixa "+".
 function normalizePhoneE164(raw: string): string {
@@ -547,7 +548,7 @@ export default function AddItemModal({
                             {(item.phone_number || item.contact?.phone_number) && (
                               <div className="flex items-center gap-1">
                                 <Phone className="w-3 h-3" />
-                                <span>{item.phone_number || item.contact?.phone_number}</span>
+                                <span>{telefone(item.phone_number || item.contact?.phone_number)}</span>
                               </div>
                             )}
                           </div>

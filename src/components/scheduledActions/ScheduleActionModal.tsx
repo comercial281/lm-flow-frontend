@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
-import { plural } from '@/lib/formato';
+import { plural, telefone } from '@/lib/formato';
 import {
   Dialog,
   DialogContent,
@@ -574,7 +574,7 @@ export function ScheduleActionModal({
                         <div className="font-medium">{contact.name}</div>
                         {contact.email && <div className="text-sm text-muted-foreground">{contact.email}</div>}
                         {contact.phone_number && (
-                          <div className="text-sm text-muted-foreground">{contact.phone_number}</div>
+                          <div className="text-sm text-muted-foreground">{telefone(contact.phone_number)}</div>
                         )}
                       </div>
                     ))}

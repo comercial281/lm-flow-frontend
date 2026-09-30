@@ -21,6 +21,7 @@ import {
   ACTION_TYPE_LABELS,
   ORIGIN_LABELS,
 } from '@/services/leadAutomation/leadAutomationService';
+import { telefone } from '@/lib/formato';
 
 // Nome de campo do lead como a pessoa vê na tela de automação — "source" não diz
 // nada para quem escolheu "Origem do lead" num seletor.
@@ -135,7 +136,7 @@ export default function AutomationTestDialog({ rule, open, onOpenChange, users =
                 <>
                   <p className="text-muted-foreground">
                     {result.lead.name || 'Lead sem nome'}
-                    {result.lead.phone ? ` · ${result.lead.phone}` : ''}
+                    {result.lead.phone ? ` · ${telefone(result.lead.phone)}` : ''}
                   </p>
                   <p className="text-muted-foreground mt-1">
                     Origem que o sistema enxergou:{' '}

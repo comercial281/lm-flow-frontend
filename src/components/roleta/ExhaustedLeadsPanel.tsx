@@ -9,6 +9,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { roletaConfigService, type RoletaExhaustedLead } from '@/services/roletaConfig/roletaConfigService';
 import { passouPorTexto, resumoSorteioEmLote } from './exhaustedText';
+import { telefone } from '@/lib/formato';
 
 // ── LEADS QUE ESGOTARAM A ROLETA ─────────────────────────────────────────────
 //
@@ -131,7 +132,7 @@ export default function ExhaustedLeadsPanel({ items, onChanged }: Props) {
                   <p className="font-medium text-sm">
                     {item.lead}
                     {item.lead_telefone && item.lead_telefone !== item.lead && (
-                      <span className="text-xs text-muted-foreground font-normal"> · {item.lead_telefone}</span>
+                      <span className="text-xs text-muted-foreground font-normal"> · {telefone(item.lead_telefone)}</span>
                     )}
                   </p>
                   <p className="text-xs text-muted-foreground">

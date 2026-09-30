@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/ds';
 import { Contact } from '@/types/contacts';
 import { Mail, Phone, Building2, User, Calendar } from 'lucide-react';
+import { telefone } from '@/lib/formato';
 
 interface ContactMergeModalProps {
   open: boolean;
@@ -121,7 +122,7 @@ export default function ContactMergeModal({
                           {contact.phone_number && (
                             <div className="flex items-center gap-2">
                               <Phone className="h-3 w-3" />
-                              <span>{contact.phone_number}</span>
+                              <span>{telefone(contact.phone_number)}</span>
                             </div>
                           )}
 

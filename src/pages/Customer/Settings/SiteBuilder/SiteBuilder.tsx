@@ -56,6 +56,7 @@ import {
 } from '@/features/siteBuilder/portalPages';
 import { useTenantFeatures, useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import { telefone } from '@/lib/formato';
 
 const TABS = [
   { key: 'portal', label: 'Portal', icon: LayoutTemplate },
@@ -1775,7 +1776,7 @@ export default function SiteBuilder() {
                         <span className="text-xs text-muted-foreground">{lead.email}</span>
                       )}
                       {lead.phone && (
-                        <span className="text-xs text-muted-foreground">{lead.phone}</span>
+                        <span className="text-xs text-muted-foreground">{telefone(lead.phone)}</span>
                       )}
                     </div>
                     {lead.message && (
