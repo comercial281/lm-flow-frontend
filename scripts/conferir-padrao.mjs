@@ -82,6 +82,7 @@ const palavra = fonte => new RegExp(`(?<![\\p{L}\\d_])(?:${fonte})(?![\\p{L}\\d_
 
 export const TERMOS_TECNICOS = [
   ['instância', palavra('inst[âa]ncias?')],
+  ['instance', palavra('instances?')],
   ['inbox', palavra('inbox(?:es)?')],
   ['Evolution', palavra('evolution')],
   ['Cloud API', palavra('cloud api')],
@@ -163,6 +164,11 @@ const PROPRIEDADES_DE_TEXTO = new Set([
 const MAPA_DE_ROTULOS = /(LABELS?|TEXTS?|TEXTOS?|ROTULOS?|COPY)$/;
 
 // ── Leitura dos textos de uma tela ─────────────────────────────────────────
+// .tsx é JSX; .ts é TypeScript puro (genérico como Envelope<T> e asserção
+// <T>x não são tag JSX ali). Qualquer outra extensão mantém TSX, como antes.
+const scriptKindDe = arquivo =>
+  arquivo.endsWith('.tsx') ? ts.ScriptKind.TSX : arquivo.endsWith('.ts') ? ts.ScriptKind.TS : ts.ScriptKind.TSX;
+
 const nomeDe = n => (n && (ts.isIdentifier(n) || ts.isStringLiteral(n)) ? n.text : '');
 
 // Sobe da string até achar quem decide se ela é texto de tela.
@@ -228,7 +234,7 @@ function destinoDoTexto(no) {
 }
 
 export function textosDaTela(codigo, arquivo = 'x.tsx') {
-  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
   const textos = [];
   const guardar = (no, texto) => {
     const limpo = texto.replace(/\s+/g, ' ').trim();
@@ -282,7 +288,7 @@ function ehImagemComAlt(abertura) {
 }
 
 export function botoesSemNome(codigo, arquivo = 'x.tsx') {
-  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
   const achados = [];
   const visitar = no => {
     if (ts.isJsxElement(no)) {

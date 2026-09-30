@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, textosDoJson, noEscopo, emTitleCase, SEM_ACENTO } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, textosDoJson, noEscopo, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -50,6 +50,31 @@ describe('textosDaTela: o que conta como texto que aparece', () => {
     expect(textos(`function T() { return <div>{ok && 'Pronto'}{nome ?? 'Sem nome'}{'Olá ' + nome}</div>; }`)).toEqual(
       expect.arrayContaining(['Pronto', 'Sem nome', 'Olá']),
     );
+  });
+
+  it('.ts é lido como TypeScript puro: genérico e asserção de tipo não viram texto de tela', () => {
+    const codigo = `
+      function f(): Envelope<Resposta> { return x as Envelope<Resposta>; }
+      const y = <Envelope<T>>z;
+    `;
+    expect(textosDaTela(codigo, 'servico.ts')).toEqual([]);
+  });
+
+  it('.tsx continua lendo JSX normalmente', () => {
+    expect(textos(`const x = <div>Olá</div>;`)).toEqual(['Olá']);
+    expect(textosDaTela(`const x = <div>Olá</div>;`, 'Tela.tsx').map((t: { texto: string }) => t.texto)).toEqual(['Olá']);
+  });
+});
+
+describe('TERMOS_TECNICOS: "instance" em inglês', () => {
+  const instancia = TERMOS_TECNICOS.find(([nome]: [string, RegExp]) => nome === 'instance')?.[1] as RegExp;
+
+  it('existe e pega "Instance ID", mas não "instanceof" nem identificador composto', () => {
+    expect(instancia).toBeInstanceOf(RegExp);
+    expect(instancia.test('Instance ID')).toBe(true);
+    expect(instancia.test('instanceof')).toBe(false);
+    expect(instancia.test('getInstance')).toBe(false);
+    expect(instancia.test('BlockInstance')).toBe(false);
   });
 });
 
