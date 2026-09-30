@@ -813,7 +813,7 @@ export default function EditItemModal({
                         style={labelStyle(l)}
                       >
                         {l}
-                        <button onClick={() => toggleLabel(l)} className="hover:opacity-60">
+                        <button onClick={() => toggleLabel(l)} aria-label="Remover etiqueta" title="Remover etiqueta" className="hover:opacity-60">
                           <X className="h-2.5 w-2.5" />
                         </button>
                       </Badge>
@@ -1011,7 +1011,15 @@ export default function EditItemModal({
                       <History className="h-3.5 w-3.5" />
                       Histórico
                     </h4>
-                    <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => loadHistory()} disabled={historyLoading}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2"
+                      onClick={() => loadHistory()}
+                      disabled={historyLoading}
+                      aria-label="Atualizar histórico"
+                      title="Atualizar histórico"
+                    >
                       <RefreshCw className={`h-3 w-3 ${historyLoading ? 'animate-spin' : ''}`} />
                     </Button>
                   </div>
@@ -1308,7 +1316,7 @@ export default function EditItemModal({
                           </Command>
                         </PopoverContent>
                       </Popover>
-                      <Button type="button" variant="outline" size="sm" onClick={() => removeService(index)} className="px-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => removeService(index)} aria-label="Remover serviço" title="Remover serviço" className="px-2">
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>

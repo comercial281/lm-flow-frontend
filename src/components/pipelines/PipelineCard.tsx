@@ -118,6 +118,8 @@ export default function PipelineCard({
                 size="sm"
                 className="h-8 w-8 p-0 text-sidebar-foreground/70 hover:text-sidebar-foreground"
                 onClick={e => e.stopPropagation()}
+                aria-label="Mais ações"
+                title="Mais ações"
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
@@ -243,6 +245,8 @@ export default function PipelineCard({
             variant="ghost"
             className="rounded-none h-12 px-4 text-red-500 hover:text-red-400 hover:bg-red-500/10"
             onClick={() => onDelete(pipeline)}
+            aria-label="Excluir funil"
+            title="Excluir funil"
           >
             <Trash2 className="h-4 w-4" />
           </Button>

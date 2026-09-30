@@ -84,6 +84,8 @@ export function NotesHistoryModal({ isOpen, contactId, contactName, onClose }: N
           </div>
           <button
             onClick={onClose}
+            aria-label="Fechar"
+            title="Fechar"
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X size={20} />
@@ -152,6 +154,8 @@ export function NotesHistoryModal({ isOpen, contactId, contactName, onClose }: N
             <button
               onClick={handleAddNote}
               disabled={saving || !newContent.trim()}
+              aria-label="Adicionar nota"
+              title="Adicionar nota"
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Send size={16} />

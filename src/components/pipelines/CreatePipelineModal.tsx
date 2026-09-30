@@ -453,7 +453,13 @@ export default function CreatePipelineModal({
                                 <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground text-xs">
                                   <Users className="h-3 w-3" />
                                   {team.name}
-                                  <button type="button" onClick={() => setTeamIds(prev => prev.filter(tid => tid !== id))} className="hover:text-destructive">
+                                  <button
+                                    type="button"
+                                    onClick={() => setTeamIds(prev => prev.filter(tid => tid !== id))}
+                                    aria-label={`Remover ${team.name}`}
+                                    title={`Remover ${team.name}`}
+                                    className="hover:text-destructive"
+                                  >
                                     <X className="h-3 w-3" />
                                   </button>
                                 </span>
@@ -559,6 +565,8 @@ export default function CreatePipelineModal({
                         variant="ghost"
                         size="sm"
                         onClick={() => removeStage(index)}
+                        aria-label="Remover etapa"
+                        title="Remover etapa"
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive p-1 h-auto"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -598,6 +606,8 @@ export default function CreatePipelineModal({
                             onClick={addStage}
                             disabled={!newStage.name.trim()}
                             size="sm"
+                            aria-label="Adicionar etapa"
+                            title="Adicionar etapa"
                             className="px-3"
                           >
                             <Plus className="w-4 h-4" />

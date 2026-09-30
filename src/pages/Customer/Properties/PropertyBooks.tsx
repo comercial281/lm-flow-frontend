@@ -116,6 +116,8 @@ export default function PropertyBooks() {
             <button
               type="button"
               onClick={() => { setSearch(''); load(''); }}
+              aria-label="Limpar busca"
+              title="Limpar busca"
               className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
             >
               <X className="h-4 w-4" />
@@ -185,7 +187,7 @@ export default function PropertyBooks() {
                     </Button>
                     {p.book_url && (
                       <a href={p.book_url} download={fileName} target="_blank" rel="noopener noreferrer" title="Baixar book">
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" aria-label="Baixar book" title="Baixar book">
                           <Download className="h-3.5 w-3.5" />
                         </Button>
                       </a>

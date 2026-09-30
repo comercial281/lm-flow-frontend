@@ -228,6 +228,8 @@ const ElevenLabsConfigDialog = ({
                     console.log('Preview voice:', config.voice);
                   }}
                   disabled={!config.voice || loadingVoices}
+                  aria-label="Testar voz"
+                  title="Testar voz"
                 >
                   <Play className="h-4 w-4" />
                 </Button>

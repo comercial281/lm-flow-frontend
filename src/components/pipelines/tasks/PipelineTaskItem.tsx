@@ -234,6 +234,8 @@ export default function PipelineTaskItem({
               size="sm"
               onClick={() => onReopen(task.id)}
               disabled={disabled}
+              aria-label="Reabrir tarefa"
+              title="Reabrir tarefa"
               className="h-8 w-8 p-0"
             >
               <RotateCcw className="h-4 w-4" />
@@ -245,6 +247,8 @@ export default function PipelineTaskItem({
               size="sm"
               onClick={() => onEdit(task)}
               disabled={disabled}
+              aria-label="Editar tarefa"
+              title="Editar tarefa"
               className="h-8 w-8 p-0"
             >
               <Edit className="h-4 w-4" />
@@ -255,6 +259,8 @@ export default function PipelineTaskItem({
             size="sm"
             onClick={() => onDelete(task.id)}
             disabled={disabled}
+            aria-label="Excluir tarefa"
+            title="Excluir tarefa"
             className="h-8 w-8 p-0 text-destructive hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />

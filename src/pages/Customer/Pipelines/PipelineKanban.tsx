@@ -1058,6 +1058,8 @@ export default function PipelineKanban() {
                   variant="ghost"
                   size="sm"
                   onClick={() => navigate('/pipelines')}
+                  aria-label="Voltar"
+                  title="Voltar"
                   className="text-muted-foreground hover:text-foreground"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -1155,7 +1157,7 @@ export default function PipelineKanban() {
                 {/* Pipeline Options Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" aria-label="Mais ações" title="Mais ações">
                       <MoreVertical className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -1225,6 +1227,8 @@ export default function PipelineKanban() {
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
+                    aria-label="Limpar busca"
+                    title="Limpar busca"
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     <X className="w-4 h-4" />
@@ -1335,7 +1339,7 @@ export default function PipelineKanban() {
                         {/* Stage Options */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-auto p-1">
+                            <Button variant="ghost" size="sm" className="h-auto p-1" aria-label="Mais ações" title="Mais ações">
                               <MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>

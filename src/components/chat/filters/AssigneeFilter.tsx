@@ -69,6 +69,8 @@ const AssigneeFilter: React.FC<AssigneeFilterProps> = ({
             hasActiveFilter ? 'text-primary' : 'text-muted-foreground'
           }`}
           disabled={disabled}
+          aria-label="Filtrar por responsável"
+          title="Filtrar por responsável"
         >
           <UserCheck className={`h-4 w-4 ${disabled ? 'animate-spin' : ''}`} />
           {hasActiveFilter && !disabled && (

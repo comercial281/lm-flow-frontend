@@ -272,7 +272,7 @@ const PipelineManagement: React.FC<PipelineManagementProps> = ({
           )}
         </Button>
         {currentPipeline && (
-          <Button onClick={handleRemoveClick} disabled={isSaving} variant="outline" size="sm">
+          <Button onClick={handleRemoveClick} disabled={isSaving} variant="outline" size="sm" aria-label="Remover do funil" title="Remover do funil">
             <Trash2 className="h-4 w-4" />
           </Button>
         )}

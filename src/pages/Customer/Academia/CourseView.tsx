@@ -547,7 +547,7 @@ function EditLessonForm({ lesson, onClose }: { lesson: KnowledgeLesson; onClose:
     <div className="mt-3 rounded-xl border border-border bg-card p-4 space-y-3 max-w-2xl">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold">Editar aula</p>
-        <button onClick={onClose} type="button" className="text-muted-foreground hover:text-foreground"><X size={14} /></button>
+        <button onClick={onClose} type="button" aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground"><X size={14} /></button>
       </div>
 
       <div>
@@ -623,7 +623,7 @@ function AddLessonForm({ moduleId, onDone }: { moduleId: string; onDone: () => v
           <button onClick={() => setMode('embed')} className={`flex items-center gap-1 px-2 py-1 text-[10px] rounded-md ${mode === 'embed' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} type="button"><Link2 size={10} /> Link</button>
           <button onClick={() => setMode('upload')} className={`flex items-center gap-1 px-2 py-1 text-[10px] rounded-md ${mode === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} type="button"><Upload size={10} /> Arquivo</button>
         </div>
-        <button onClick={onDone} type="button" className="text-muted-foreground hover:text-foreground"><X size={13} /></button>
+        <button onClick={onDone} type="button" aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground"><X size={13} /></button>
       </div>
       <input autoFocus value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Título da aula" className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs" />
       {mode === 'embed' ? (

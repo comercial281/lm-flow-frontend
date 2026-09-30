@@ -144,6 +144,8 @@ export default function NotificationPanel({
             variant="ghost"
             size="sm"
             onClick={handleOpenSettings}
+            aria-label="Configurações de notificações"
+            title="Configurações de notificações"
             className="text-muted-foreground hover:text-foreground"
           >
             <Settings className="h-4 w-4" />
@@ -153,6 +155,8 @@ export default function NotificationPanel({
             variant="ghost"
             size="sm"
             onClick={onClose}
+            aria-label="Fechar"
+            title="Fechar"
             className="text-muted-foreground hover:text-foreground"
           >
             <X className="h-4 w-4" />
@@ -199,6 +203,8 @@ export default function NotificationPanel({
               size="sm"
               onClick={() => handlePageChange(1)}
               disabled={isFirstPage}
+              aria-label="Primeira página"
+              title="Primeira página"
               className="text-muted-foreground hover:text-foreground"
             >
               <ChevronsLeft className="h-4 w-4" />
@@ -208,6 +214,8 @@ export default function NotificationPanel({
               size="sm"
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={isFirstPage}
+              aria-label="Página anterior"
+              title="Página anterior"
               className="text-muted-foreground hover:text-foreground"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -224,6 +232,8 @@ export default function NotificationPanel({
               size="sm"
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={isLastPage}
+              aria-label="Próxima página"
+              title="Próxima página"
               className="text-muted-foreground hover:text-foreground"
             >
               <ChevronRight className="h-4 w-4" />
@@ -233,6 +243,8 @@ export default function NotificationPanel({
               size="sm"
               onClick={() => handlePageChange(totalPages)}
               disabled={isLastPage}
+              aria-label="Última página"
+              title="Última página"
               className="text-muted-foreground hover:text-foreground"
             >
               <ChevronsRight className="h-4 w-4" />

@@ -207,7 +207,7 @@ export default function FlowAutomationCanvas() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 border-b border-border px-4 py-2">
-        <Button size="sm" variant="ghost" onClick={() => navigate('/automations/flow-builder')}>
+        <Button size="sm" variant="ghost" onClick={() => navigate('/automations/flow-builder')} aria-label="Voltar" title="Voltar">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <Input

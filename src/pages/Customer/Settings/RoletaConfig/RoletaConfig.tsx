@@ -1501,7 +1501,7 @@ export default function RoletaConfigPage() {
                     <Copy className="h-4 w-4" />
                     Criar a partir de
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => deleteConfig(c.id)} className="text-red-600 hover:text-red-700">
+                  <Button variant="outline" size="sm" onClick={() => deleteConfig(c.id)} aria-label="Excluir distribuição" title="Excluir distribuição" className="text-red-600 hover:text-red-700">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -2321,7 +2321,13 @@ export default function RoletaConfigPage() {
 
             {/* Ativo */}
             <div className="flex items-center gap-3 lg:col-span-2">
-              <button type="button" onClick={() => setIsActive(!isActive)} className="text-[#7c3aed]">
+              <button
+                type="button"
+                onClick={() => setIsActive(!isActive)}
+                aria-label={isActive ? 'Desligar roleta' : 'Ligar roleta'}
+                title={isActive ? 'Desligar roleta' : 'Ligar roleta'}
+                className="text-[#7c3aed]"
+              >
                 {isActive
                   ? <ToggleRight className="h-7 w-7 text-green-500" />
                   : <ToggleLeft className="h-7 w-7 text-red-500" />}

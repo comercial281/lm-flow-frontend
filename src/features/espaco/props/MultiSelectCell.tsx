@@ -31,7 +31,13 @@ function TagRow({ option, selecionada, onToggle, onCor, onExcluir }: {
   return (
     <div className="group rounded-lm-sm hover:bg-lm-card2">
       <div className="flex items-center gap-1 px-1.5 py-1">
-        <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={selecionada ? `Remover ${option.name}` : `Selecionar ${option.name}`}
+          title={selecionada ? `Remover ${option.name}` : `Selecionar ${option.name}`}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
           <Pill option={option} />
           {selecionada && <Check size={13} className="ml-auto shrink-0 text-lm-neon" />}
         </button>

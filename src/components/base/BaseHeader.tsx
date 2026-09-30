@@ -242,6 +242,8 @@ export default function BaseHeader({
                 <Button
                   variant="outline"
                   size="sm"
+                  aria-label="Mais ações"
+                  title="Mais ações"
                   className="bg-sidebar border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
                 >
                   <MoreVertical className="h-4 w-4" />
@@ -384,6 +386,8 @@ export default function BaseHeader({
                 variant="ghost"
                 size="sm"
                 onClick={filter.onRemove}
+                aria-label="Remover filtro"
+                title="Remover filtro"
                 className="ml-1 h-4 w-4 p-0 hover:bg-transparent text-sidebar-foreground/60 hover:text-sidebar-foreground"
               >
                 <X className="h-3 w-3" />

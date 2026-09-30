@@ -173,7 +173,7 @@ function LinkForm({ lessonId, onDone }: { lessonId: string; onDone: () => void }
     <div className="mb-3 rounded-lg border border-border bg-background/60 p-3 space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-semibold flex items-center gap-1.5"><Link2 size={12} /> Novo link</p>
-        <button type="button" onClick={onDone} className="text-muted-foreground hover:text-foreground"><X size={13} /></button>
+        <button type="button" onClick={onDone} aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground"><X size={13} /></button>
       </div>
       <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome (ex.: Planilha de metas)" className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs" />
       <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs" />
@@ -202,7 +202,7 @@ function TextForm({ lessonId, onDone }: { lessonId: string; onDone: () => void }
     <div className="mb-3 rounded-lg border border-border bg-background/60 p-3 space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-semibold flex items-center gap-1.5"><Type size={12} /> Nova nota de texto</p>
-        <button type="button" onClick={onDone} className="text-muted-foreground hover:text-foreground"><X size={13} /></button>
+        <button type="button" onClick={onDone} aria-label="Fechar" title="Fechar" className="text-muted-foreground hover:text-foreground"><X size={13} /></button>
       </div>
       <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Título (ex.: Passo a passo)" className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs" />
       <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Escreva aqui (aceita markdown: **negrito**, listas, links)" rows={5} className="w-full bg-background border border-border rounded px-2.5 py-1.5 text-xs resize-y" />

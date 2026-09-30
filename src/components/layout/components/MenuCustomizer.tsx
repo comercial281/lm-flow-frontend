@@ -51,7 +51,7 @@ export default function MenuCustomizer({ items, onClose }: Props) {
             <h3 className="text-white font-semibold text-sm">Personalizar menu</h3>
             <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Mover, favoritar e esconder do seu jeito</p>
           </div>
-          <button onClick={onClose} className="text-white/40 hover:text-white/80"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} aria-label="Fechar" title="Fechar" className="text-white/40 hover:text-white/80"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">

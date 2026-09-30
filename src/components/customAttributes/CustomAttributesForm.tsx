@@ -411,6 +411,8 @@ export default function CustomAttributesForm({
                 variant="ghost"
                 onClick={handleSave}
                 disabled={saving}
+                aria-label="Salvar"
+                title="Salvar"
                 className="h-8 w-8 p-0"
               >
                 {saving ? (
@@ -424,6 +426,8 @@ export default function CustomAttributesForm({
                 variant="ghost"
                 onClick={handleCancelEdit}
                 disabled={saving}
+                aria-label="Cancelar"
+                title="Cancelar"
                 className="h-8 w-8 p-0"
               >
                 <X className="h-3 w-3" />
@@ -451,6 +455,8 @@ export default function CustomAttributesForm({
                 variant="ghost"
                 onClick={handleSave}
                 disabled={saving}
+                aria-label="Salvar"
+                title="Salvar"
                 className="h-8 w-8 p-0"
               >
                 {saving ? (
@@ -464,6 +470,8 @@ export default function CustomAttributesForm({
                 variant="ghost"
                 onClick={handleCancelEdit}
                 disabled={saving}
+                aria-label="Cancelar"
+                title="Cancelar"
                 className="h-8 w-8 p-0"
               >
                 <X className="h-3 w-3" />
@@ -491,6 +499,8 @@ export default function CustomAttributesForm({
                 variant="ghost"
                 onClick={handleSave}
                 disabled={saving}
+                aria-label="Salvar"
+                title="Salvar"
                 className="h-8 w-8 p-0"
               >
                 {saving ? (
@@ -504,6 +514,8 @@ export default function CustomAttributesForm({
                 variant="ghost"
                 onClick={handleCancelEdit}
                 disabled={saving}
+                aria-label="Cancelar"
+                title="Cancelar"
                 className="h-8 w-8 p-0"
               >
                 <X className="h-3 w-3" />
@@ -526,6 +538,8 @@ export default function CustomAttributesForm({
                 variant="ghost"
                 onClick={handleSave}
                 disabled={saving}
+                aria-label="Salvar"
+                title="Salvar"
                 className="h-8 w-8 p-0"
               >
                 {saving ? (
@@ -539,6 +553,8 @@ export default function CustomAttributesForm({
                 variant="ghost"
                 onClick={handleCancelEdit}
                 disabled={saving}
+                aria-label="Cancelar"
+                title="Cancelar"
                 className="h-8 w-8 p-0"
               >
                 <X className="h-3 w-3" />
@@ -577,6 +593,8 @@ export default function CustomAttributesForm({
           variant="ghost"
           onClick={() => handleStartEdit(key, rawValue)}
           disabled={saving}
+          aria-label={`Editar ${attribute.attribute_display_name}`}
+          title={`Editar ${attribute.attribute_display_name}`}
           className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
         >
           <Pencil className="h-3 w-3" />
@@ -715,6 +733,8 @@ export default function CustomAttributesForm({
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveAttribute(key)}
+                          aria-label={`Remover ${key}`}
+                          title={`Remover ${key}`}
                           className="text-destructive hover:text-destructive"
                         >
                           <X className="h-4 w-4" />

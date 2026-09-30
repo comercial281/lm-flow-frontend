@@ -219,6 +219,8 @@ export default function Sidebar({
                     e.stopPropagation();
                     setActiveSubmenu(null);
                   }}
+                  aria-label={t('sidebar.closeSubmenu')}
+                  title={t('sidebar.closeSubmenu')}
                   className="h-8 w-8 p-0 hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-foreground"
                 >
                   <X className="h-4 w-4" />

@@ -39,6 +39,8 @@ const ChannelProviderPage: React.FC<ChannelProviderPageProps> = ({
           variant="ghost"
           size="sm"
           onClick={onBack}
+          aria-label="Voltar"
+          title="Voltar"
           className="p-2 text-sidebar-foreground hover:bg-sidebar-accent"
         >
           <ArrowLeft className="h-4 w-4" />

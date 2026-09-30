@@ -376,7 +376,14 @@ export default function MessageFunnelPopover({
               <Plus className="h-3.5 w-3.5" />
               Novo
             </Button>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={running ? undefined : onClose}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={running ? undefined : onClose}
+              aria-label="Fechar"
+              title="Fechar"
+            >
               <X className="h-3 w-3" />
             </Button>
           </div>

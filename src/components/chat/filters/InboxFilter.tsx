@@ -118,6 +118,8 @@ const InboxFilter: React.FC<InboxFilterProps> = ({
             hasActiveFilter ? 'text-primary' : 'text-muted-foreground'
           }`}
           disabled={disabled}
+          aria-label="Filtrar por número de WhatsApp"
+          title="Filtrar por número de WhatsApp"
         >
           <Hash className={`h-4 w-4 ${disabled ? 'animate-spin' : ''}`} />
           {hasActiveFilter && !disabled && (

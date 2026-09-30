@@ -1608,12 +1608,14 @@ export default function SiteBuilder() {
                     <p className="text-xs text-muted-foreground mt-0.5">/{page.slug} · Criada {formatDate(page.created_at)}</p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEditPage(page)}>
+                    <Button variant="ghost" size="icon" onClick={() => openEditPage(page)} aria-label="Editar página" title="Editar página">
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon"
                       className="text-destructive hover:text-destructive"
-                      onClick={() => handleDeletePage(page)}>
+                      onClick={() => handleDeletePage(page)}
+                      aria-label="Excluir página"
+                      title="Excluir página">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -1688,12 +1690,14 @@ export default function SiteBuilder() {
                         <Archive className="h-4 w-4 text-orange-600" />
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon" onClick={() => openEditArticle(article)}>
+                    <Button variant="ghost" size="icon" onClick={() => openEditArticle(article)} aria-label="Editar artigo" title="Editar artigo">
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon"
                       className="text-destructive hover:text-destructive"
-                      onClick={() => handleDeleteArticle(article)}>
+                      onClick={() => handleDeleteArticle(article)}
+                      aria-label="Excluir artigo"
+                      title="Excluir artigo">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

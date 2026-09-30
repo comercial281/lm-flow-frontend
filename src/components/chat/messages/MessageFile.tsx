@@ -98,6 +98,8 @@ const MessageFile: React.FC<MessageFileProps> = ({ attachments }) => {
             size="sm"
             variant="ghost"
             onClick={() => downloadFile(attachment)}
+            aria-label="Baixar arquivo"
+            title="Baixar arquivo"
             className="h-8 w-8 rounded-full hover:bg-primary-foreground/20 text-primary-foreground/80 dark:text-primary-foreground/70 flex-shrink-0 p-0"
           >
             <Download className="h-3 w-3" />

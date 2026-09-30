@@ -711,7 +711,7 @@ function ProposalRow({ proposal, onEdit, onDelete, onSend, onAccept, onReject, o
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 px-2">
+              <Button variant="ghost" size="sm" className="h-8 px-2" aria-label="Mais ações" title="Mais ações">
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

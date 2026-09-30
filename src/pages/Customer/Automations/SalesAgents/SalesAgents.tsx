@@ -367,7 +367,7 @@ export default function SalesAgents() {
             </h2>
           </div>
           {pode('sales_agents', 'create') && (
-            <Button size="sm" onClick={createAgent}>
+            <Button size="sm" onClick={createAgent} aria-label="Criar IA Vendedora" title="Criar IA Vendedora">
               <Plus className="h-4 w-4" />
             </Button>
           )}
@@ -438,7 +438,7 @@ export default function SalesAgents() {
                   </Button>
                 )}
                 {pode('sales_agents', 'delete') && (
-                  <Button variant="ghost" size="sm" onClick={() => deleteAgent(selected)}>
+                  <Button variant="ghost" size="sm" onClick={() => deleteAgent(selected)} aria-label="Excluir IA Vendedora" title="Excluir IA Vendedora">
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
                 )}
@@ -735,14 +735,19 @@ const SCHEDULE_OPTIONS: [ActiveHoursMode, string, string][] = [
   ['custom', 'Horário personalizado', 'Você escolhe a janela em que ela responde.'],
 ];
 
-// Toggle liga/desliga reutilizável
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+// Toggle liga/desliga reutilizável. `rotulo` é o nome da chave (ex.: "curtir
+// mensagens do cliente") — sem ele, o leitor de tela só ouve "Ligar"/"Desligar"
+// e, com 13 chaves na mesma tela, ninguém distingue uma da outra.
+function Toggle({ on, onChange, rotulo }: { on: boolean; onChange: (v: boolean) => void; rotulo?: string }) {
+  const nome = rotulo ? `${on ? 'Desligar' : 'Ligar'} ${rotulo}` : (on ? 'Desligar' : 'Ligar');
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
       onClick={() => onChange(!on)}
+      aria-label={nome}
+      title={nome}
       className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${on ? 'bg-primary' : 'bg-muted-foreground/40'}`}
     >
       <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
@@ -811,7 +816,7 @@ function ReactionSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
             um 👍 em vez de mais uma mensagem.
           </div>
         </div>
-        <Toggle on={on} onChange={(v) => onSave({ reaction_enabled: v })} />
+        <Toggle on={on} onChange={(v) => onSave({ reaction_enabled: v })} rotulo="curtir mensagens do cliente" />
       </div>
 
       {on && (
@@ -880,7 +885,7 @@ function AudioSection({ agent, onChange, onSave }: {
             A IA sempre ENTENDE os áudios do lead (transcrição automática). Ligue aqui pra ela também RESPONDER em voz.
           </div>
         </div>
-        <Toggle on={!!on} onChange={(v) => onSave({ audio_enabled: v })} />
+        <Toggle on={!!on} onChange={(v) => onSave({ audio_enabled: v })} rotulo="responder em áudio" />
       </div>
 
       {on && (
@@ -935,7 +940,7 @@ function ScheduleSection({ agent, onSave }: { agent: SalesAgent; onSave: (patch:
           <Label>Horário de atuação</Label>
           <p className="text-xs text-muted-foreground">Desligado = a IA responde a qualquer hora (24h).</p>
         </div>
-        <Toggle on={enabled} onChange={toggleEnabled} />
+        <Toggle on={enabled} onChange={toggleEnabled} rotulo="horário de atuação" />
       </div>
 
       {enabled && (
@@ -1005,7 +1010,7 @@ function OutOfHoursSection({ agent, onSave }: { agent: SalesAgent; onSave: (patc
             Sem isso, o lead que manda mensagem de madrugada não recebe absolutamente nada.
           </div>
         </div>
-        <Toggle on={on} onChange={(v) => onSave({ out_of_hours_reply: v })} />
+        <Toggle on={on} onChange={(v) => onSave({ out_of_hours_reply: v })} rotulo="avisar quem escrever fora do horário" />
       </div>
 
       {on && (
@@ -1098,7 +1103,7 @@ function VisitSection({
               Quando o lead topar, a IA marca a visita direto (com dia e hora), cria o agendamento e dispara os lembretes. Desligado = ela passa pro corretor marcar.
             </div>
           </div>
-          <Toggle on={!!booking} onChange={(v) => onSave({ booking_enabled: v })} />
+          <Toggle on={!!booking} onChange={(v) => onSave({ booking_enabled: v })} rotulo="agendar visita sozinha" />
         </div>
         {booking && (
           <div className="mt-3 pl-7 space-y-3">
@@ -1131,7 +1136,13 @@ function VisitSection({
             <div key={i} className="rounded-md border border-sidebar-border p-2 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">Exemplo {i + 1}</span>
-                <button type="button" onClick={() => removeExample(i)} className="text-muted-foreground hover:text-destructive">
+                <button
+                  type="button"
+                  onClick={() => removeExample(i)}
+                  aria-label={`Excluir exemplo ${i + 1}`}
+                  title={`Excluir exemplo ${i + 1}`}
+                  className="text-muted-foreground hover:text-destructive"
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -1229,7 +1240,7 @@ function VisitWindows({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Pa
             esperando — quem confirma presença é o corretor.
           </p>
         </div>
-        <Toggle on={c.same_day_requires_human !== false} onChange={(v) => patch({ same_day_requires_human: v })} />
+        <Toggle on={c.same_day_requires_human !== false} onChange={(v) => patch({ same_day_requires_human: v })} rotulo="visita para hoje só com o corretor confirmando" />
       </div>
 
       {/* Granularidade de CALENDÁRIO, além do dia da semana recorrente: feriado,
@@ -1251,7 +1262,13 @@ function VisitWindows({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Pa
             {blockedDates.map((d) => (
               <span key={d} className="flex items-center gap-1 px-2 py-1 rounded text-xs border border-sidebar-border">
                 {d}
-                <button type="button" onClick={() => removeBlockedDate(d)} className="text-muted-foreground hover:text-destructive">
+                <button
+                  type="button"
+                  onClick={() => removeBlockedDate(d)}
+                  aria-label={`Remover ${d} das datas bloqueadas`}
+                  title={`Remover ${d} das datas bloqueadas`}
+                  className="text-muted-foreground hover:text-destructive"
+                >
                   <Trash2 className="h-3 w-3" />
                 </button>
               </span>
@@ -1267,7 +1284,7 @@ function VisitWindows({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Pa
           <Label className="text-xs">Evitar dois leads no mesmo horário</Label>
           <p className="text-xs text-muted-foreground">Antes de marcar, confere se já não tem outra visita no mesmo imóvel no mesmo horário.</p>
         </div>
-        <Toggle on={c.avoid_double_booking !== false} onChange={(v) => patch({ avoid_double_booking: v })} />
+        <Toggle on={c.avoid_double_booking !== false} onChange={(v) => patch({ avoid_double_booking: v })} rotulo="evitar dois leads no mesmo horário" />
       </div>
     </div>
   );
@@ -1333,7 +1350,7 @@ function BantSection({ agent, onChange, onSave }: {
             os 4 ao longo da conversa (sem virar interrogatório) e registra o que descobrir.
           </div>
         </div>
-        <Toggle on={on} onChange={(v) => onSave({ bant_config: { ...cfg, enabled: v } })} />
+        <Toggle on={on} onChange={(v) => onSave({ bant_config: { ...cfg, enabled: v } })} rotulo="qualificação BANT" />
       </div>
 
       {on && (
@@ -2195,7 +2212,7 @@ function PipelineMoveSection({
             O histórico do card mostra o movimento como feito pela IA.
           </div>
         </div>
-        <Toggle on={ligado} onChange={(v) => onSave({ pipeline_move_enabled: v })} />
+        <Toggle on={ligado} onChange={(v) => onSave({ pipeline_move_enabled: v })} rotulo="mover o card no funil" />
       </div>
 
       {ligado && (
@@ -2269,7 +2286,7 @@ function IntelligenceSection({
             Desligue se a imobiliária só vende. A IA foca em venda e redireciona quem procura aluguel.
           </div>
         </div>
-        <Toggle on={agent.locacao_enabled !== false} onChange={(v) => onSave({ locacao_enabled: v })} />
+        <Toggle on={agent.locacao_enabled !== false} onChange={(v) => onSave({ locacao_enabled: v })} rotulo="trabalhar com locação" />
       </div>
 
       {/* Cenário de repasse: a decisão grande vem ANTES das exceções dela. */}
@@ -2360,7 +2377,7 @@ function IntelligenceSection({
             <div className="text-sm font-medium">Pedir avaliação no Google</div>
             <div className="text-xs text-muted-foreground">Após um bom atendimento, convida o lead a avaliar (reputação/SEO).</div>
           </div>
-          <Toggle on={!!agent.ask_google_review} onChange={(v) => onSave({ ask_google_review: v })} />
+          <Toggle on={!!agent.ask_google_review} onChange={(v) => onSave({ ask_google_review: v })} rotulo="pedir avaliação no Google" />
         </div>
         {agent.ask_google_review && (
           <div className="mt-2 pl-7">
@@ -2403,7 +2420,7 @@ function FollowupSection({
             respondeu nenhuma vez é do <em>Robô Sem Resposta</em>, em Automações.
           </div>
         </div>
-        <Toggle on={!!on} onChange={(v) => onSave({ followup_enabled: v })} />
+        <Toggle on={!!on} onChange={(v) => onSave({ followup_enabled: v })} rotulo="follow-up automático" />
       </div>
 
       {on && (
@@ -2672,7 +2689,7 @@ function FollowupDripRow({
             quanto rajada.
           </div>
         </div>
-        <Toggle on={on} onChange={(v) => onSave({ followup_drip_enabled: v })} />
+        <Toggle on={on} onChange={(v) => onSave({ followup_drip_enabled: v })} rotulo="ir aos poucos, como gente" />
       </div>
 
       {on ? (
@@ -3796,7 +3813,7 @@ function PropertyLinkBox({
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Input readOnly value={result.link} className="text-xs" />
-            <Button size="sm" variant="outline" onClick={copy}>
+            <Button size="sm" variant="outline" onClick={copy} aria-label="Copiar link" title="Copiar link">
               {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
@@ -3835,7 +3852,7 @@ function FormAnswerAdder({ onAdd }: { onAdd: (key: string, value: string) => voi
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
       />
-      <Button variant="outline" size="sm" onClick={add} disabled={!key.trim() || !value.trim()}>
+      <Button variant="outline" size="sm" onClick={add} disabled={!key.trim() || !value.trim()} aria-label="Adicionar pergunta" title="Adicionar pergunta">
         <Plus className="h-4 w-4" />
       </Button>
     </div>
@@ -4368,7 +4385,7 @@ export function TestTab({ agent }: { agent: SalesAgent }) {
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') send(); }}
         />
-        <Button onClick={send} disabled={busy || !message.trim()}><Send className="h-4 w-4" /></Button>
+        <Button onClick={send} disabled={busy || !message.trim()} aria-label="Enviar" title="Enviar"><Send className="h-4 w-4" /></Button>
       </div>
 
       {last && (
@@ -5293,7 +5310,7 @@ function ResultsTab({ agent }: { agent: SalesAgent }) {
             </button>
           ))}
         </div>
-        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} className="ml-auto">
+        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} aria-label="Atualizar" title="Atualizar" className="ml-auto">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
         </Button>
       </div>

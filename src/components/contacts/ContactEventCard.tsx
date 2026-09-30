@@ -307,6 +307,8 @@ export default function ContactEventCard({ event }: ContactEventCardProps) {
                 size="sm"
                 className="h-8 w-8 p-0 text-sidebar-foreground/60 hover:text-sidebar-foreground"
                 onClick={() => setShowDetails(!showDetails)}
+                aria-label={showDetails ? 'Esconder detalhes' : 'Mostrar detalhes'}
+                title={showDetails ? 'Esconder detalhes' : 'Mostrar detalhes'}
               >
                 <ChevronDown
                   className={`h-4 w-4 transition-transform ${showDetails ? 'rotate-180' : ''}`}

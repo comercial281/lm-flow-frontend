@@ -221,6 +221,8 @@ export default function PageView({ pageId, mode = 'full', onOpenPage }: PageView
             <button
               type="button"
               onClick={() => setShowIconPicker(true)}
+              aria-label="Trocar ícone"
+              title="Trocar ícone"
               className="flex h-16 w-16 items-center justify-center rounded-lm-md text-[56px] leading-none transition hover:bg-lm-card2"
             >
               <IconGlyph icon={page.icon} />

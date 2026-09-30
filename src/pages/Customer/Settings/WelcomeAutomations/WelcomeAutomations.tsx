@@ -215,12 +215,16 @@ export default function WelcomeAutomations() {
                   </button>
                   <button
                     onClick={() => openEdit(a)}
+                    aria-label="Editar automação"
+                    title="Editar automação"
                     className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                   >
                     <Edit className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(a)}
+                    aria-label="Excluir automação"
+                    title="Excluir automação"
                     className="p-1.5 rounded hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />

@@ -280,10 +280,10 @@ export function ScheduledActionsList({ contactId }: ScheduledActionsListProps) {
                   <div className="flex items-center gap-2">
                     {action.status === 'scheduled' && (
                       <>
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(action)}>
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(action)} aria-label="Editar agendamento" title="Editar agendamento">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleCancel(action.id)}>
+                        <Button variant="outline" size="sm" onClick={() => handleCancel(action.id)} aria-label="Cancelar agendamento" title="Cancelar agendamento">
                           <X className="h-4 w-4" />
                         </Button>
                       </>

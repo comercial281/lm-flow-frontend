@@ -118,6 +118,8 @@ export default function IntegrationActions({
               size="sm"
               className="p-2"
               disabled={isProcessing}
+              aria-label="Mais ações"
+              title="Mais ações"
             >
               <MoreVertical className="w-4 h-4" />
             </Button>

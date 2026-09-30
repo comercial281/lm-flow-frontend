@@ -157,11 +157,11 @@ function MonthGrid({ date, visits, onNavigate, onDayClick, onVisitClick }: {
           <h2 className="text-base font-bold">{MONTHS[month]} {year}</h2>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(new Date(year, month - 1, 1))}>
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(new Date(year, month - 1, 1))} aria-label="Mês anterior" title="Mês anterior">
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => onNavigate(new Date())}>Hoje</Button>
-          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(new Date(year, month + 1, 1))}>
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(new Date(year, month + 1, 1))} aria-label="Próximo mês" title="Próximo mês">
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -678,7 +678,7 @@ export default function Visits() {
                 <UILabel>Avaliação (1-5)</UILabel>
                 <div className="flex gap-1 mt-2">
                   {[1,2,3,4,5].map(n => (
-                    <button key={n} onClick={() => setRating(n)}>
+                    <button key={n} onClick={() => setRating(n)} aria-label={`Avaliar com ${n} ${n === 1 ? 'estrela' : 'estrelas'}`} title={`Avaliar com ${n} ${n === 1 ? 'estrela' : 'estrelas'}`}>
                       <Star className={`h-6 w-6 ${n <= rating ? 'text-violet-400 fill-violet-400' : 'text-muted-foreground'}`} />
                     </button>
                   ))}

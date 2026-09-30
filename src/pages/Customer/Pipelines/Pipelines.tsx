@@ -408,6 +408,8 @@ export default function Pipelines() {
             variant={viewMode === 'cards' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('cards')}
+            aria-label="Ver em cartões"
+            title="Ver em cartões"
             className="border-0 rounded-r-none"
           >
             <Grid3X3 className="h-4 w-4" />
@@ -416,6 +418,8 @@ export default function Pipelines() {
             variant={viewMode === 'table' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('table')}
+            aria-label="Ver em tabela"
+            title="Ver em tabela"
             className="border-0 rounded-l-none"
           >
             <List className="h-4 w-4" />

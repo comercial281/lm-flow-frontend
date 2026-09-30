@@ -240,6 +240,8 @@ export default function ContactQuickFilters({ activeFilters, onApply }: ContactQ
             variant="ghost"
             size="sm"
             onClick={() => toggleExcludedTag(title)}
+            aria-label={`Remover filtro ${title}`}
+            title={`Remover filtro ${title}`}
             className="h-4 w-4 p-0 hover:bg-transparent"
           >
             <X className="h-3 w-3" />

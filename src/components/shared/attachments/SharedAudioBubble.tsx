@@ -205,6 +205,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ attachment, messageType, onTo
         <button
           onClick={togglePlayPause}
           disabled={isLoading}
+          aria-label={isPlaying ? 'Pausar áudio' : 'Tocar áudio'}
+          title={isPlaying ? 'Pausar áudio' : 'Tocar áudio'}
           className={`
             w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200
             ${isLoading

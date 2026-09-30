@@ -170,6 +170,8 @@ export function BaseNodePanel({
           {onClose && (
             <button
               onClick={onClose}
+              aria-label="Fechar"
+              title="Fechar"
               className="h-8 w-8 rounded-md flex items-center justify-center text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
             >
               <X className="h-4 w-4" />

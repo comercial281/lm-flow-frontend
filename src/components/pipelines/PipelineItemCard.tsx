@@ -71,6 +71,8 @@ export default function PipelineItemCard({
                   variant="ghost"
                   size="sm"
                   className="h-auto p-1 hover:bg-muted"
+                  aria-label="Mais ações"
+                  title="Mais ações"
                 >
                   <MoreVertical className="w-4 h-4" />
                 </Button>

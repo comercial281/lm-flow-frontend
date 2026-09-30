@@ -116,6 +116,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, filename, className = ''
           variant="outline"
           onClick={togglePlayPause}
           disabled={isLoading}
+          aria-label={isPlaying ? 'Pausar áudio' : 'Tocar áudio'}
+          title={isPlaying ? 'Pausar áudio' : 'Tocar áudio'}
           className="h-8 w-8 rounded-full p-0 flex-shrink-0"
         >
           {isLoading ? (

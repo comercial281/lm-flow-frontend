@@ -319,8 +319,8 @@ const AgentDisplayNameCard: React.FC<AgentDisplayNameCardProps> = ({ conversatio
             <Input ref={inputRef} value={value} onChange={e => setValue(e.target.value)}
               placeholder="Ex: João Silva" className="text-sm h-8 flex-1"
               onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} />
-            <Button size="sm" className="h-8 px-2" onClick={handleSave} disabled={saving}><Check className="h-3 w-3" /></Button>
-            <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setEditing(false)}><X className="h-3 w-3" /></Button>
+            <Button size="sm" className="h-8 px-2" onClick={handleSave} disabled={saving} aria-label="Salvar" title="Salvar"><Check className="h-3 w-3" /></Button>
+            <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setEditing(false)} aria-label="Cancelar" title="Cancelar"><X className="h-3 w-3" /></Button>
           </div>
         ) : (
           <button onClick={() => setEditing(true)} className="w-full text-left flex items-center justify-between gap-2 p-2 rounded hover:bg-muted/50 transition-colors">

@@ -205,7 +205,7 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
           <Button type="button" variant="ghost" size="sm" onClick={() => void toggle(entry)}>
             {entry.enabled ? 'Desligar' : 'Ligar'}
           </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={() => void remove(entry)}>
+          <Button type="button" variant="ghost" size="sm" onClick={() => void remove(entry)} aria-label={`Remover ${entry.label}`} title={`Remover ${entry.label}`}>
             <Trash2 className="h-3 w-3" />
           </Button>
         </div>

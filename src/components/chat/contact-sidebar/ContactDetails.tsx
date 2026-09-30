@@ -380,7 +380,14 @@ const InfoField: React.FC<InfoFieldProps> = ({ label, value, icon, copyable = fa
         </span>
 
         {copyable && value && (
-          <Button variant="ghost" size="sm" onClick={handleCopy} className="h-6 w-6 p-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCopy}
+            className="h-6 w-6 p-0"
+            aria-label={`Copiar ${label}`}
+            title={`Copiar ${label}`}
+          >
             <Copy className="h-3 w-3" />
           </Button>
         )}

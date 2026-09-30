@@ -679,6 +679,8 @@ export default function PipelineCustomAttributesForm({
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveAttribute(key)}
+                          aria-label={`Remover ${key}`}
+                          title={`Remover ${key}`}
                           className="text-destructive hover:text-destructive"
                         >
                           <X className="h-4 w-4" />

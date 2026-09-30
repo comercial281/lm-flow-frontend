@@ -70,6 +70,8 @@ export function BaseFlowPanel({
               variant="ghost"
               size="sm"
               onClick={onClose}
+              aria-label="Fechar"
+              title="Fechar"
               className="h-8 w-8 p-0 hover:bg-sidebar-accent"
             >
               <X className="h-4 w-4" />

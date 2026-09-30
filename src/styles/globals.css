@@ -483,8 +483,11 @@ html.demo-mode .lm-redact-img {
   animation-duration: 1.2s;
 }
 
-/* Toggles (Switch) globais do LM Flow: ATIVO = verde, DESATIVADO = vermelho.
-   Cobre o Switch do design system (Radix: role=switch + data-state) e o fallback aria-checked. */
+/* Toggles (Switch) globais do LM Flow: LIGADO = verde, DESLIGADO = cinza.
+   Cobre o Switch do design system (Radix: role=switch + data-state) e o fallback aria-checked.
+   Fase 3 (30/09/2026, decisão D2 do Tony): desligado deixou de ser vermelho. O Raio-X
+   achou gente lendo a chave vermelha como "deu problema". Vermelho fica só pra erro e
+   pra Excluir. O estado também vai escrito ao lado da chave (componente Chave). */
 button[role='switch'][data-state='checked'],
 [role='switch'][aria-checked='true'] {
   background-color: #22c55e !important; /* verde */
@@ -492,8 +495,13 @@ button[role='switch'][data-state='checked'],
 }
 button[role='switch'][data-state='unchecked'],
 [role='switch'][aria-checked='false'] {
-  background-color: #ef4444 !important; /* vermelho */
-  border-color: #ef4444 !important;
+  background-color: #a1a1aa !important; /* cinza (zinc-400) */
+  border-color: #a1a1aa !important;
+}
+.dark button[role='switch'][data-state='unchecked'],
+.dark [role='switch'][aria-checked='false'] {
+  background-color: #52525b !important; /* cinza (zinc-600), visível no fundo escuro */
+  border-color: #52525b !important;
 }
 
 /* ═══ Conversas = espelho do WhatsApp (só reskin, lógica intacta) ═══ */

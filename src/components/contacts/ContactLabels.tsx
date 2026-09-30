@@ -102,6 +102,8 @@ export default function ContactLabels({
                   size="sm"
                   className="h-4 w-4 p-0 hover:bg-transparent"
                   onClick={() => handleRemoveLabel(labelTitle)}
+                  aria-label="Remover etiqueta"
+                  title="Remover etiqueta"
                 >
                   <X className="h-3 w-3" />
                 </Button>

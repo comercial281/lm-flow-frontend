@@ -79,12 +79,16 @@ export default function QuickRepliesTable({
         <div className="flex items-center gap-1 justify-end">
           <button
             onClick={e => { e.stopPropagation(); onEdit(item as QuickReply); }}
+            aria-label="Editar modelo"
+            title="Editar modelo"
             className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
           >
             <Edit className="h-4 w-4" />
           </button>
           <button
             onClick={e => { e.stopPropagation(); onDelete(item as QuickReply); }}
+            aria-label="Excluir modelo"
+            title="Excluir modelo"
             className="p-1.5 rounded hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />

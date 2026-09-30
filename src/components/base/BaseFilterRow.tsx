@@ -219,6 +219,8 @@ export default function BaseFilterRow<T extends BaseFilter>({
         variant="ghost"
         size="sm"
         onClick={() => onRemove(index)}
+        aria-label="Remover filtro"
+        title="Remover filtro"
         className="flex-shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
       >
         <X className="h-4 w-4" />

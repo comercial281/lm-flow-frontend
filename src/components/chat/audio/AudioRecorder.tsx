@@ -118,10 +118,19 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
                 variant="outline"
                 onClick={isPaused ? resumeRecording : pauseRecording}
                 disabled={disabled}
+                aria-label={isPaused ? 'Continuar gravação' : 'Pausar gravação'}
+                title={isPaused ? 'Continuar gravação' : 'Pausar gravação'}
               >
                 {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
               </Button>
-              <Button size="sm" variant="destructive" onClick={stopRecording} disabled={disabled}>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={stopRecording}
+                disabled={disabled}
+                aria-label="Parar gravação"
+                title="Parar gravação"
+              >
                 <Square className="h-4 w-4" />
               </Button>
             </>
@@ -129,10 +138,24 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
 
           {hasRecording && (
             <>
-              <Button size="sm" variant="outline" onClick={togglePlayback} disabled={disabled}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={togglePlayback}
+                disabled={disabled}
+                aria-label={isPlaying ? 'Pausar áudio' : 'Tocar áudio'}
+                title={isPlaying ? 'Pausar áudio' : 'Tocar áudio'}
+              >
                 {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
               </Button>
-              <Button size="sm" variant="outline" onClick={handleCancel} disabled={disabled}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCancel}
+                disabled={disabled}
+                aria-label="Excluir gravação"
+                title="Excluir gravação"
+              >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </>
