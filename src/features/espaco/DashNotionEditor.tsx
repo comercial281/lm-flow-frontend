@@ -219,7 +219,7 @@ function EditorInterno({
         items.push({
           title: p.title || 'Sem titulo',
           icon: <FileText size={16} />,
-          group: 'Paginas',
+          group: 'Páginas',
           onItemClick: () => {
             editor.insertInlineContent([
               { type: 'pageMention', props: { pageId: p.id, title: p.title || 'Sem titulo', icon: p.icon ?? '' } },
@@ -232,7 +232,7 @@ function EditorInterno({
       items.push({
         title: `Criar página "${query.trim()}"`,
         icon: <Plus size={16} />,
-        group: 'Paginas',
+        group: 'Páginas',
         onItemClick: () => {
           void (async () => {
             try {

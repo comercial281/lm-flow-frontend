@@ -321,7 +321,7 @@ function TreeRow({
             { onSuccess: p => { onToggle(node.id); onOpenPage(p.id) } },
           )}
           className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-lm-card2 shrink-0"
-          title="Adicionar subpagina"
+          title="Adicionar subpágina"
         >
           <Plus size={12} />
         </button>
@@ -364,7 +364,7 @@ function TreeRow({
       ))}
       {isOpen && !hasChildren && (
         <div className="text-[11px] text-lm-disabled py-1" style={{ paddingLeft: `${(depth + 1) * 12 + 22}px` }}>
-          Sem subpaginas
+          Sem subpáginas
         </div>
       )}
     </>

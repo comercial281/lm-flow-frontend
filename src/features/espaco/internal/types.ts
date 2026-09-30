@@ -245,14 +245,14 @@ export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
   url: 'URL',
   email: 'E-mail',
   phone: 'Telefone',
-  formula: 'Formula',
-  relation: 'Relacao',
+  formula: 'Fórmula',
+  relation: 'Relação',
   rollup: 'Rollup',
   created_time: 'Criado em',
   created_by: 'Criado por',
   last_edited_time: 'Editado em',
   last_edited_by: 'Editado por',
-  auto_number: 'ID unico',
+  auto_number: 'ID único',
 }
 
 export const VIEW_KIND_LABELS: Record<ViewKind, string> = {
@@ -260,7 +260,7 @@ export const VIEW_KIND_LABELS: Record<ViewKind, string> = {
   board: 'Quadro',
   gallery: 'Galeria',
   list: 'Lista',
-  calendar: 'Calendario',
+  calendar: 'Calendário',
   timeline: 'Linha do tempo',
 }
 

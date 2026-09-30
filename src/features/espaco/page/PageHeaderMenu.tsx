@@ -51,11 +51,11 @@ export default function PageHeaderMenu({ page, onOpenVersions, onArchived }: Pag
     { key: 'link', label: 'Copiar link', icon: Link2, onClick: () => { void copyLink() } },
     { key: 'dup', label: 'Duplicar', icon: Copy, onClick: () => { duplicate.mutate(page); close() } },
     {
-      key: 'width', label: page.full_width ? 'Largura padrao' : 'Largura total', icon: MoveHorizontal,
+      key: 'width', label: page.full_width ? 'Largura padrão' : 'Largura total', icon: MoveHorizontal,
       onClick: () => { updatePage.mutate({ id: page.id, full_width: !page.full_width }); close() },
     },
     {
-      key: 'small', label: page.small_text ? 'Texto padrao' : 'Texto pequeno', icon: Type,
+      key: 'small', label: page.small_text ? 'Texto padrão' : 'Texto pequeno', icon: Type,
       onClick: () => { updatePage.mutate({ id: page.id, small_text: !page.small_text }); close() },
     },
     {

@@ -254,9 +254,9 @@ export const TRIGGER_LABELS: Record<string, string> = {
 // Actions processadas pelo LeadAutomation::Executor.
 export const ACTION_TYPE_LABELS: Record<string, string> = {
   send_whatsapp_message:   'Enviar mensagem WhatsApp',
-  send_audio:              'Enviar audio',
+  send_audio:              'Enviar áudio',
   send_image:              'Enviar imagem',
-  send_video:              'Enviar video',
+  send_video:              'Enviar vídeo',
   send_document:           'Enviar documento',
   send_sticker:            'Enviar figurinha',
   send_message_funnel:     'Disparar funil de mensagens',
@@ -272,6 +272,6 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
   notify_broker:           'Notificar corretor (WhatsApp pessoal)',
   notify_gestor:           'Notificar gestor (WhatsApp)',
   notify_push:             'Notificação no app (push / Modo Plantão)',
-  send_quick_reply:        'Enviar resposta rapida',
+  send_quick_reply:        'Enviar resposta rápida',
   wait:                    'Aguardar (delay)',
 };
