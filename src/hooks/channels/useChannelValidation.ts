@@ -156,7 +156,7 @@ export const useChannelValidation = () => {
       return false;
     }
     if (!getStr(form, 'instance_id').trim()) {
-      toast.error('Instance ID é obrigatório');
+      toast.error('ID do número é obrigatório');
       return false;
     }
     if (!getStr(form, 'token').trim()) {

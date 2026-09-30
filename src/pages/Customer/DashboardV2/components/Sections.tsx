@@ -186,7 +186,6 @@ export const AiSection: React.FC<{
             <span className="lmf-row-sub">
               {formatNumber(ai.usage.sessions)} sessões · {formatNumber(ai.usage.executions)} execuções
             </span>
-            <span className="lmf-pill">{formatNumber(ai.usage.tokens)} créditos de IA</span>
           </div>
         )}
       </>

@@ -989,7 +989,7 @@
               "pictureRemoved": "Foto do perfil removida com sucesso!"
             },
             "errors": {
-              "nameNotFound": "Instance name não encontrado",
+              "nameNotFound": "Nome do número não encontrado",
               "nameUpdateError": "Erro ao atualizar nome do perfil",
               "statusUpdateError": "Erro ao atualizar status do perfil",
               "pictureUpdateError": "Erro ao atualizar foto do perfil",

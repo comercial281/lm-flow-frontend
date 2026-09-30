@@ -1160,8 +1160,8 @@
     "placeholders": {
       "apiUrl": "URL da API do Evolution Go",
       "adminToken": "Digite o Admin Token",
-      "instanceId": "Digite o Instance ID",
-      "instanceToken": "Digite o Instance Token"
+      "instanceId": "Digite o ID do número",
+      "instanceToken": "Digite o Token do número"
     }
   },
   "linear": {
