@@ -48,7 +48,7 @@
     "buttons": {
       "cancel": "Cancelar",
       "create": "Criar",
-      "update": "Atualizar",
+      "update": "Salvar",
       "saving": "Salvando..."
     }
   },

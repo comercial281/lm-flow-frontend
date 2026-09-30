@@ -703,7 +703,7 @@
       "unassigned": "Não atribuído",
       "cancel": "Cancelar",
       "create": "Criar Tarefa",
-      "update": "Atualizar Tarefa",
+      "update": "Salvar",
       "errors": {
         "titleRequired": "O título é obrigatório",
         "assignedToRequired": "Atribuição é obrigatória",
