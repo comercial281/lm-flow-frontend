@@ -3809,3 +3809,53 @@ Armadilhas:
    pontos foram trocados nesta leva (`roletaFormChecks.ts` e `RoletaConfig.tsx`);
    o resto do vocabulário "instância" espalhado pelo app não foi tocado — não é
    esquecimento desta leva, é escopo.
+
+## Enviar pelo número, nome fixo no texto e a bolha pelo celular (desde 2026-09-29)
+
+Fase 2b.2 do programa de usabilidade, escopo enxuto (decisão do dono do produto,
+29/09): só a ação *Enviar mensagem WhatsApp* das Automações de Lead e os funis de
+Follow-up. IA Vendedora, landing e formulário do Meta ficam para a fase 4.
+
+O que aparece na tela:
+
+- **Campo *Enviar pelo número*** na ação *Enviar mensagem WhatsApp* e em cada
+  funil de Follow-up (logo abaixo de *Parar quando o lead responder*).
+  - Na automação: *Automático (como sempre foi)*, *O número do responsável pelo
+    lead* ou um número.
+  - No funil: *O número do responsável pelo lead (padrão)* ou um número. O padrão
+    do funil MUDOU (E37): sem responsável, ou responsável sem número, sai como antes.
+  - Cada número aparece como "Loja · (11) 91234-1234 · desconectado · de Ana". O
+    dono só aparece com a regra do dono ligada.
+- **Ao salvar**, avisos amarelos (10 s) quando o número está desconectado ou é de
+  outra pessoa. O salvar acontece mesmo assim.
+- **Número que sumiu** aparece como *Número que não existe mais — escolha outro*,
+  ainda selecionado. **Lista que não carregou** diz isso e mantém a escolha.
+- Com um número (ou o do responsável) escolhido, o campo *Instância de envio
+  (admin)* some da ação.
+- **Chip *Corretor* (`{{corretor}}`) no follow-up.** Sem corretor, o servidor
+  tira a frase inteira.
+- **Aviso de nome fixo**: se o texto da mensagem (automação) ou do passo (funil)
+  tem o primeiro nome de alguém da equipe, aparece "O texto cita "Gabriela", que é
+  da equipe… use {{corretor}}". Não barra.
+- **Bolha "Atendente · pelo celular"**: mensagem digitada no celular de número sem
+  dono, com a regra do dono ligada. Antes saía com o nome do 1º admin.
+
+Armadilhas:
+
+1. **Toda automação nasce no automático**, e o servidor só muda o caminho quando
+   há escolha. **O funil, não**: o padrão dele é o número do responsável (E37).
+   `valueForScope` mostra `'owner'` gravado no funil como o padrão.
+2. **As regras e os textos moram em `src/features/numbers/`**:
+   `sendFrom.ts`, `teamNameWarning.ts` e `messageAuthor.ts`, todos com spec. O
+   campo é `src/components/numbers/SendFromField.tsx`. Chave nova de `t()` não entra.
+3. **Quem decide o número, o aviso e o `{{corretor}}` é o servidor**
+   (`Numbers::SendFrom`, `Followup::CorretorVariable`, no `lm-flow`). A tela só mostra.
+4. **A lista vem de uma rota por tela** (`/lead_automation_rules/send_numbers`,
+   `/followup_sequences/send_numbers`), com a chave de leitura de cada tela.
+5. **Escolher número tira `sender_instance` da ação** (`applySendFrom`).
+6. **O aviso de nome fixo usa `/users` (primeira página).** Equipe maior que a
+   página pode escapar do aviso.
+7. **O nome ao lado de "Atendente" vem SÓ de `agentDisplayNameFor`.** A prévia do
+   card e as respostas em fio ainda leem `sender.name` direto (item 13 da
+   verificação, fora desta leva).
+8. **A metade do backend vem PRIMEIRO.**
