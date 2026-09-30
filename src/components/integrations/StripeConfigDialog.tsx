@@ -161,7 +161,7 @@ const StripeConfigDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving Stripe configuration:', error);
-      toast.error(apiErrorMessage(error, 'Erro ao salvar configurações'));
+      toast.error(apiErrorMessage(error, 'Erro ao salvar'));
     }
   };
 

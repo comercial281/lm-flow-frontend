@@ -1555,7 +1555,7 @@ export default function RoletaConfigPage() {
               {([
                 ['Número do gestor', padroes.gestor_whatsapp_number],
                 ['Grupo de avisos', padroes.gestor_group_jid],
-                ['Instância que envia os avisos',
+                ['Número de WhatsApp que envia os avisos',
                   inboxes.find(i => i.id === padroes.notification_inbox_id)?.name ?? padroes.notification_inbox_id],
                 ['Prazo de aceite', timeoutLabel(padroes.timeout_minutes)],
                 ['Horário de funcionamento',
@@ -1852,7 +1852,7 @@ export default function RoletaConfigPage() {
                     ) : acessoPreview.corretores.map(c => (
                       <div key={`grant-${c.user_id}`} className="text-xs text-muted-foreground flex flex-wrap gap-x-2">
                         <span className="font-medium text-foreground">{c.corretor ?? c.user_id}</span>
-                        <span>→ {c.instancias.join(', ') || `${plural(c.total_instancias, 'instância', 'instâncias')}`}</span>
+                        <span>→ {c.instancias.join(', ') || `${plural(c.total_instancias, 'número de WhatsApp', 'números de WhatsApp')}`}</span>
                         {c.motivo && <span className="text-red-600">{c.motivo}</span>}
                       </div>
                     ))}
@@ -1867,7 +1867,7 @@ export default function RoletaConfigPage() {
                     ) : acessoPreview.revogacoes.map(c => (
                       <div key={`revoke-${c.user_id}`} className="text-xs text-muted-foreground flex flex-wrap gap-x-2">
                         <span className="font-medium text-foreground">{c.corretor ?? c.user_id}</span>
-                        <span>→ {c.instancias.join(', ') || `${plural(c.total_instancias, 'instância', 'instâncias')}`}</span>
+                        <span>→ {c.instancias.join(', ') || `${plural(c.total_instancias, 'número de WhatsApp', 'números de WhatsApp')}`}</span>
                         {c.motivo && <span className="text-red-600">{c.motivo}</span>}
                       </div>
                     ))}

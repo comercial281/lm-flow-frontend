@@ -79,7 +79,7 @@ export default function ContactTagsManager({
       onUpdated?.();
     } catch (e) {
       setTags(prev);
-      toast.error(apiErrorMessage(e, 'Erro ao salvar a tag'));
+      toast.error(apiErrorMessage(e, 'Erro ao salvar a etiqueta'));
     } finally {
       setSaving(false);
     }

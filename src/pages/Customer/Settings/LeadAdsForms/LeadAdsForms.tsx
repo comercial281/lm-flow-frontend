@@ -149,7 +149,7 @@ export default function LeadAdsForms() {
       setDebugPages(result.pages);
       setDebug(result.data ?? result.pages[0] ?? null);
     } catch (e) {
-      setDebugError(apiErrorMessage(e, 'Não foi possível diagnosticar o token'));
+      setDebugError(apiErrorMessage(e, 'Não foi possível diagnosticar a conexão com o Meta'));
     } finally {
       setDebugBusy(false);
     }
@@ -436,7 +436,7 @@ export default function LeadAdsForms() {
       }
       setModalOpen(false);
     } catch (e) {
-      toast.error(apiErrorMessage(e, 'Erro ao salvar configuração'));
+      toast.error(apiErrorMessage(e, 'Erro ao salvar'));
     } finally {
       setSaving(false);
     }

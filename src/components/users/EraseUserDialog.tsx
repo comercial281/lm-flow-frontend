@@ -64,7 +64,7 @@ export default function EraseUserDialog({ open, user, onClose, onDone }: Props) 
       onDone();
     } catch (error) {
       // Clique explícito: o motivo do servidor aparece, nos dois formatos de erro.
-      toast.error(apiErrorMessage(error, 'Não consegui apagar agora.'));
+      toast.error(apiErrorMessage(error, 'Não consegui excluir agora.'));
     } finally {
       setSaving(false);
     }

@@ -55,6 +55,7 @@ import usersService from '@/services/users/usersService';
 import type { User } from '@/types/users';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { plural } from '@/lib/formato';
 // Backend (Followup::SendStep#move_stage_if_configured) deriva o slug a partir do
 // nome do stage e NORMALIZA os dois lados: transliterate + downcase + strip + '-'.
 // Espelhamos exatamente isso aqui — com acento, 'follow-up-automatico' nao casava
@@ -657,7 +658,7 @@ export default function FollowupSequences() {
   const removeSequence = async (seq: FollowupSequence) => {
     const disparos = seq.jobs_count ?? 0;
     const aviso = disparos > 0
-      ? ` O histórico deste funil vai junto: ${disparos} disparo(s) registrados serão apagados.`
+      ? ` O histórico deste funil vai junto: ${plural(disparos, 'disparo registrado', 'disparos registrados')} ${disparos === 1 ? 'será excluído' : 'serão excluídos'}.`
       : '';
     if (!(await confirmar({
       titulo: 'Excluir funil',

@@ -161,7 +161,7 @@ const NotionConfigDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving Notion configuration:', error);
-      toast.error(apiErrorMessage(error, 'Erro ao salvar configurações'));
+      toast.error(apiErrorMessage(error, 'Erro ao salvar'));
     }
   };
 

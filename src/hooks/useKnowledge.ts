@@ -213,9 +213,9 @@ async function callAdmin(
   payload: Record<string, unknown>,
 ): Promise<unknown> {
   const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error('Sessao expirada — faca login novamente.');
+  if (!token) throw new Error('Sessão expirada — faça login novamente.');
   const apiUrl = tenantApiUrl();
-  if (!apiUrl) throw new Error('VITE_API_URL nao configurada no tenant.');
+  if (!apiUrl) throw new Error('Não achei o servidor desta conta. Recarregue a página e tente de novo.');
 
   const res = await fetch(`${LMHUB_SUPABASE_URL}/functions/v1/tutorial-admin`, {
     method: 'POST',

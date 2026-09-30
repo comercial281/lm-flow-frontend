@@ -835,7 +835,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
         <>
           <Field
             label="URL da mídia *"
-            hint={action.type === 'send_sticker' ? 'PNG ou WebP. A Evolution converte pra figurinha.' : undefined}
+            hint={action.type === 'send_sticker' ? 'PNG ou WebP. Chega no WhatsApp como figurinha.' : undefined}
           >
             <Input
               value={String(params.media_url ?? '')}
@@ -1160,7 +1160,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       return (
         <Field
           label="Mensagem para o corretor *"
-          hint="Enviada no WhatsApp pessoal do corretor atribuido. Variaveis: {{nome}}, {{telefone}}, {{link_do_card}}"
+          hint="Enviada no WhatsApp pessoal do corretor atribuído. Variáveis: {{nome}}, {{telefone}}, {{link_do_card}}"
         >
           <Textarea
             value={String(params.message ?? '')}
@@ -1178,7 +1178,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       return (
         <Field
           label="Mensagem para o gestor *"
-          hint="Enviada no numero do gestor configurado na Roleta. Variaveis: {{nome}}, {{telefone}}, {{link_do_card}}"
+          hint="Enviada no número do gestor configurado na Roleta. Variáveis: {{nome}}, {{telefone}}, {{link_do_card}}"
         >
           <Textarea
             value={String(params.message ?? '')}
@@ -1368,7 +1368,7 @@ export function formatConditionSummary(
   if (trigger === 'lead.stage_changed') {
     const allStages = Object.values(resources.stagesByPipeline).flat();
     const stage = allStages.find(s => s.id === condition.value);
-    return `Para o estágio: ${stage?.name ?? condition.value}`;
+    return `Para a etapa: ${stage?.name ?? condition.value}`;
   }
   if (trigger === 'lead.no_reply_after') {
     return `Sem resposta por ${condition.value} min`;
@@ -1413,7 +1413,7 @@ export function formatActionSummary(
     case 'move_pipeline_stage': {
       const stages = p.pipeline_id ? resources.stagesByPipeline[String(p.pipeline_id)] : undefined;
       const stage = stages?.find(s => s.id === p.stage_id);
-      return stage ? `Estágio: ${stage.name}` : 'Estágio: (não definido)';
+      return stage ? `Etapa: ${stage.name}` : 'Etapa: (não definida)';
     }
     case 'create_task':
       return p.title ? `Tarefa: ${p.title}` : '(tarefa sem título)';

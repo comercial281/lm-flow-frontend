@@ -161,7 +161,7 @@ const SupabaseConfigDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving Supabase configuration:', error);
-      toast.error(apiErrorMessage(error, 'Erro ao salvar configurações'));
+      toast.error(apiErrorMessage(error, 'Erro ao salvar'));
     }
   };
 

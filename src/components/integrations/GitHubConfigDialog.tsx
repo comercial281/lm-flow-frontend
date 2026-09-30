@@ -161,7 +161,7 @@ const GitHubConfigDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving GitHub configuration:', error);
-      toast.error(apiErrorMessage(error, 'Erro ao salvar configurações'));
+      toast.error(apiErrorMessage(error, 'Erro ao salvar'));
     }
   };
 

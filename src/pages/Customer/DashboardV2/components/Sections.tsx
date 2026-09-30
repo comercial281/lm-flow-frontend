@@ -75,7 +75,7 @@ export const PipelineFunnel: React.FC<{
       }
     >
       {pipeline.stages.length === 0 ? (
-        <EmptyBlock text="Este pipeline não tem etapas." />
+        <EmptyBlock text="Este funil não tem etapas." />
       ) : (
         <ul>
           {pipeline.stages.map(stage => (

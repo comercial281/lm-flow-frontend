@@ -42,7 +42,7 @@ export function heroImageWarning(resolved?: SiteHeroImage | null): string | null
   const nome = resolved.property?.title ? `«${resolved.property.title}»` : 'escolhido';
   switch (resolved.reason) {
     case 'imovel_removido':
-      return 'O imóvel escolhido foi apagado. O site está usando o banner automático até você escolher outra foto.';
+      return 'O imóvel escolhido foi excluído. O site está usando o banner automático até você escolher outra foto.';
     case 'imovel_despublicado':
       return `O imóvel ${nome} não está mais publicado no site. O banner voltou ao automático até você escolher outra foto ou publicá-lo de novo.`;
     case 'imovel_sem_foto':

@@ -161,7 +161,7 @@ const PayPalConfigDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving PayPal configuration:', error);
-      toast.error(apiErrorMessage(error, 'Erro ao salvar configurações'));
+      toast.error(apiErrorMessage(error, 'Erro ao salvar'));
     }
   };
 

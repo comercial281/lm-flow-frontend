@@ -53,7 +53,7 @@ export async function mintClientToken(tenantId: string): Promise<string> {
   const url: string | undefined = r.data?.data?.url;
   const direct: string | undefined = r.data?.data?.token;
   const token = direct || extractTokenFromUrl(url);
-  if (!token) throw new Error('Não consegui gerar o acesso ao cliente (token ausente).');
+  if (!token) throw new Error('Não consegui gerar o acesso ao cliente. Tente de novo.');
   return token;
 }
 

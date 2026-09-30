@@ -169,7 +169,7 @@ export default function ContactDetails({
       await propertyInterestsService.update(id, { interest_stage: stage });
       if (contact) loadPropertyInterests(contact.id);
     } catch (e) {
-      toast.error(apiErrorMessage(e, 'Não foi possível mudar o estágio'));
+      toast.error(apiErrorMessage(e, 'Não foi possível mudar a etapa'));
     }
   };
 

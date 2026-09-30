@@ -161,7 +161,7 @@ const AsanaConfigDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving Asana configuration:', error);
-      toast.error(apiErrorMessage(error, 'Erro ao salvar configurações'));
+      toast.error(apiErrorMessage(error, 'Erro ao salvar'));
     }
   };
 

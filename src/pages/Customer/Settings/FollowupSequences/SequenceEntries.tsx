@@ -63,7 +63,7 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
     const groups = new Map<string, { id: string; pipeline: string; stages: FollowupEntryStage[] }>();
     stages.forEach(s => {
       const group = groups.get(s.pipeline_id)
-        ?? { id: s.pipeline_id, pipeline: s.pipeline_name || 'Pipeline sem nome', stages: [] };
+        ?? { id: s.pipeline_id, pipeline: s.pipeline_name || 'Funil sem nome', stages: [] };
       group.stages.push(s);
       groups.set(s.pipeline_id, group);
     });

@@ -35,7 +35,7 @@ export const EmptyBlock: React.FC<{ block?: Unavailable; text?: string }> = ({ b
   const reasons: Record<string, string> = {
     no_source: 'Sem fonte de dados conectada.',
     no_table: 'Ainda não há histórico registrado para este período.',
-    no_pipeline: 'Nenhum pipeline ativo encontrado.',
+    no_pipeline: 'Nenhum funil ativo encontrado.',
     error: 'Não foi possível calcular este bloco.',
   };
   const message = text || block?.message || reasons[block?.reason || ''] || 'Sem dados no período.';
