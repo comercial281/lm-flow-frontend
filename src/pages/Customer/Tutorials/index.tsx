@@ -65,11 +65,11 @@ const Tutorials = () => {
           <div className="max-w-md bg-card border border-orange-500/40 rounded-xl p-6 flex items-start gap-3">
             <AlertTriangle size={20} className="text-orange-500 shrink-0 mt-0.5" />
             <div className="text-sm">
-              <p className="font-semibold mb-1">Tutorial indisponivel</p>
+              <p className="font-semibold mb-1">Tutorial indisponível</p>
               <p className="text-muted-foreground text-xs">
-                As variaveis <code>VITE_LMHUB_SUPABASE_URL</code> e{' '}
+                As variáveis <code>VITE_LMHUB_SUPABASE_URL</code> e{' '}
                 <code>VITE_LMHUB_SUPABASE_ANON_KEY</code> precisam ser configuradas no deploy
-                deste Espaço.
+                do seu LM Flow.
               </p>
             </div>
           </div>

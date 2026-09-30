@@ -264,7 +264,7 @@
       "instanceId": {
         "label": "ID do número",
         "placeholder": "Seu Instance ID da Z-API",
-        "helpText": "Aparece no painel da Z-API, no número que você criou"
+        "helpText": "Aparece no painel da Z-API, na instância que você criou"
       },
       "token": {
         "label": "Token",

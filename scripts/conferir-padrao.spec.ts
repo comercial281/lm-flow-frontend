@@ -130,6 +130,12 @@ describe('acento e maiúsculas', () => {
     expect(SEM_ACENTO.test('botaozinho')).toBe(false);
   });
 
+  it('acha "conversao"/"conversoes" sem acento', () => {
+    expect(SEM_ACENTO.test('Funil visual com conversao em tempo real')).toBe(true);
+    expect(SEM_ACENTO.test('Suas conversoes')).toBe(true);
+    expect(SEM_ACENTO.test('Funil visual com conversão em tempo real')).toBe(false);
+  });
+
   it('Title Case só em texto curto, descontando nome próprio', () => {
     expect(emTitleCase('Novo Cargo')).toBe(true);
     expect(emTitleCase('Enviar Convites Agora')).toBe(true);

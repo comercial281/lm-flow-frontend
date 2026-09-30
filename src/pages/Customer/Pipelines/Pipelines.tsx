@@ -548,7 +548,7 @@ export default function Pipelines() {
           <DialogHeader>
             <DialogTitle>Aplicar template Leads (Marketing)</DialogTitle>
             <DialogDescription>
-              Cria (ou re-aplica, é idempotente) no seu Espaço atual:
+              Cria na sua conta (dá pra aplicar de novo sem duplicar nada):
               <ul className="mt-2 list-inside list-disc text-sm">
                 <li>Funil "Leads (Marketing)" com 4 colunas (Novo / Primeiro Contato / Follow-up Curto / Follow-up Longo)</li>
                 <li>10 etiquetas coloridas (meta-ads, follow-up, follow-up1-6, recuperado-pelo-follow-up, keyword-trigger)</li>

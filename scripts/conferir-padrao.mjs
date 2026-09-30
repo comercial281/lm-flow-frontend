@@ -127,7 +127,7 @@ export const SEM_ACENTO = palavra(
     'versao|versoes|visivel|visiveis|selecao|atribuicao|atribuicoes|demonstracao|voce|voces|tambem|informacao|' +
     'informacoes|descricao|descricoes|opcao|opcoes|acao|acoes|notificacao|notificacoes|funcao|funcoes|numero|numeros|' +
     'pagina|paginas|conteudo|conteudos|midia|midias|codigo|horario|horarios|usuario|usuarios|responsavel|disponivel|' +
-    'automacao|automacoes|integracao|integracoes|conexao|mensagens? automaticas?|imoveis|imovel',
+    'automacao|automacoes|integracao|integracoes|conexao|conversao|conversoes|mensagens? automaticas?|imoveis|imovel',
 );
 
 // Título e botão em frase normal: "Novo cargo", não "Novo Cargo". Conta texto

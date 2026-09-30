@@ -2329,7 +2329,7 @@ const ZapiWhatsAppConfig: React.FC<{
       <div className="space-y-6">
         <Card>
           <CardContent className="p-6">
-            <p className="text-slate-600 dark:text-slate-400">Número não encontrado</p>
+            <p className="text-slate-600 dark:text-slate-400">Instance ID não encontrado</p>
           </CardContent>
         </Card>
       </div>
