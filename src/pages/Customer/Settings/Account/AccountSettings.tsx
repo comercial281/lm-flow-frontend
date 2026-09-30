@@ -325,6 +325,14 @@ export default function AccountSettings() {
         auto_resolve_ignore_waiting: formData.autoResolveIgnoreWaiting,
         auto_resolve_label: formData.autoResolveLabel === 'none' ? null : formData.autoResolveLabel,
       });
+      const patch = {
+        autoResolveEnabled: true,
+        autoResolveAfter: resposta.tempo,
+        autoResolveMessage: resposta.mensagem,
+      };
+      setFormData(prev => ({ ...prev, ...patch }));
+      setCarregado(prev => (prev ? { ...prev, ...patch } : prev));
+      toast.success('Ligada');
     } else {
       await accountService.updateAccount({
         auto_resolve_after: null,
@@ -332,8 +340,16 @@ export default function AccountSettings() {
         auto_resolve_ignore_waiting: false,
         auto_resolve_label: null,
       });
+      const patch = {
+        autoResolveEnabled: false,
+        autoResolveAfter: 0,
+        autoResolveMessage: '',
+        autoResolveIgnoreWaiting: false,
+        autoResolveLabel: 'none',
+      };
+      setFormData(prev => ({ ...prev, ...patch }));
+      setCarregado(prev => (prev ? { ...prev, ...patch } : prev));
     }
-    await loadAccountData();
   };
 
   const ligarDesligarTranscricao = async (ligar: boolean) => {

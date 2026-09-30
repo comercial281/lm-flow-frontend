@@ -98,9 +98,7 @@ describe('Conta na base da Fase 3', () => {
   });
 
   it('ligar a resolução automática pergunta o tempo e já grava — nada de "meio ligada"', async () => {
-    mocks.getAccount
-      .mockResolvedValueOnce(CONTA())
-      .mockResolvedValueOnce(CONTA({ auto_resolve_after: 1440, auto_resolve_message: 'Encerramos por aqui' }));
+    mocks.getAccount.mockResolvedValue(CONTA());
     montar();
     await userEvent.click(await screen.findByRole('switch', { name: 'sections.autoResolve.title' }));
     const janela = await screen.findByRole('dialog');
@@ -169,5 +167,25 @@ describe('Conta na base da Fase 3', () => {
     await userEvent.click(await screen.findByRole('switch', { name: 'sections.audioTranscription.title' }));
     await waitFor(() => expect(mocks.updateAccount).toHaveBeenCalledWith({ audio_transcriptions: true }));
     expect(screen.queryByRole('region', { name: 'Alterações não salvas' })).toBeNull();
+  });
+
+  it('ligar/desligar a resolução não apaga alteração não salva de outro campo', async () => {
+    mocks.getAccount.mockResolvedValue(CONTA({ auto_resolve_after: 60 }));
+    montar();
+    const nome = await screen.findByLabelText('fields.name.label');
+    await userEvent.type(nome, ' Ltda');
+    expect(screen.getByRole('region', { name: 'Alterações não salvas' })).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('switch', { name: 'sections.autoResolve.title' }));
+    await waitFor(() =>
+      expect(mocks.updateAccount).toHaveBeenCalledWith({
+        auto_resolve_after: null,
+        auto_resolve_message: '',
+        auto_resolve_ignore_waiting: false,
+        auto_resolve_label: null,
+      }),
+    );
+    expect(nome).toHaveValue('Imobiliária Horizonte Ltda');
+    expect(screen.getByRole('region', { name: 'Alterações não salvas' })).toBeInTheDocument();
+    expect(mocks.getAccount).toHaveBeenCalledTimes(1);
   });
 });
