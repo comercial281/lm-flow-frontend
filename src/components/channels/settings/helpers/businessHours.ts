@@ -47,33 +47,27 @@ export const getDayNames = (): Record<number, string> => ({
   6: i18n.t('channels:settings.businessHours.days.saturday'),
 });
 
+// Horário na tela é SEMPRE 24h ("09:00", "17:30"). Até a Fase 3 (30/09/2026)
+// estes textos eram "09:00 AM"/"05:00 PM" — formato americano na cara do
+// gestor. O servidor nunca viu esse texto: ele guarda hora e minuto em número
+// (open_hour/open_minutes), então a troca é só da tela.
+export const FORMATO_HORA = 'HH:mm';
+export const MEIA_NOITE = '00:00';
+export const FIM_DO_DIA = '23:59';
+
 // Generate time slots with specified step (in minutes)
 export const generateTimeSlots = (step = 30): string[] => {
-  const date = new Date(1970, 1, 1);
   const slots: string[] = [];
-
-  while (date.getDate() === 1) {
-    slots.push(
-      date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      }),
-    );
-    date.setMinutes(date.getMinutes() + step);
+  for (let minutos = 0; minutos < 24 * 60; minutos += step) {
+    slots.push(getTime(Math.floor(minutos / 60), minutos % 60));
   }
 
   return slots;
 };
 
 // Convert hour and minute to time string
-export const getTime = (hour: number, minute: number): string => {
-  const meridian = hour > 11 ? 'PM' : 'AM';
-  const modHour = hour > 12 ? hour % 12 : hour || 12;
-  const parsedHour = modHour < 10 ? `0${modHour}` : modHour;
-  const parsedMinute = minute < 10 ? `0${minute}` : minute;
-  return `${parsedHour}:${parsedMinute} ${meridian}`;
-};
+export const getTime = (hour: number, minute: number): string =>
+  `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 
 // Parse business hours from API format to UI format
 export const timeSlotParse = (timeSlots: BusinessHourSlot[]): TimeSlot[] => {
@@ -112,10 +106,10 @@ export const timeSlotTransform = (timeSlots: TimeSlot[]): BusinessHourSlot[] => 
     let closeMinutes = 0;
 
     if (!closed && slot.from && slot.to) {
-      openHour = getHours(parse(slot.from, 'hh:mm a', new Date()));
-      openMinutes = getMinutes(parse(slot.from, 'hh:mm a', new Date()));
-      closeHour = getHours(parse(slot.to, 'hh:mm a', new Date()));
-      closeMinutes = getMinutes(parse(slot.to, 'hh:mm a', new Date()));
+      openHour = getHours(parse(slot.from, FORMATO_HORA, new Date()));
+      openMinutes = getMinutes(parse(slot.from, FORMATO_HORA, new Date()));
+      closeHour = getHours(parse(slot.to, FORMATO_HORA, new Date()));
+      closeMinutes = getMinutes(parse(slot.to, FORMATO_HORA, new Date()));
     }
 
     return {
@@ -135,11 +129,11 @@ export const validateTimeSlot = (from: string, to: string): boolean => {
   if (!from || !to) return false;
 
   try {
-    const fromDate = parse(from, 'hh:mm a', new Date());
-    const toDate = parse(to, 'hh:mm a', new Date());
+    const fromDate = parse(from, FORMATO_HORA, new Date());
+    const toDate = parse(to, FORMATO_HORA, new Date());
 
     // Special case for midnight (next day)
-    if (to === '12:00 AM') return true;
+    if (to === MEIA_NOITE) return true;
 
     return differenceInMinutes(toDate, fromDate) > 0;
   } catch {
@@ -154,11 +148,11 @@ export const calculateTotalHours = (timeSlot: TimeSlot): number => {
   if (!timeSlot.from || !timeSlot.to || !timeSlot.valid) return 0;
 
   try {
-    const fromDate = parse(timeSlot.from, 'hh:mm a', new Date());
-    const toDate = parse(timeSlot.to, 'hh:mm a', new Date());
+    const fromDate = parse(timeSlot.from, FORMATO_HORA, new Date());
+    const toDate = parse(timeSlot.to, FORMATO_HORA, new Date());
 
     // Handle midnight as next day
-    if (timeSlot.to === '12:00 AM') {
+    if (timeSlot.to === MEIA_NOITE) {
       const nextDayMidnight = new Date(toDate);
       nextDayMidnight.setDate(nextDayMidnight.getDate() + 1);
       return differenceInMinutes(nextDayMidnight, fromDate) / 60;

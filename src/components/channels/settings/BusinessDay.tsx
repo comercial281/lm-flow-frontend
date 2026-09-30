@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Checkbox, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/ds';
 import { Minus } from 'lucide-react';
-import { TimeSlot, generateTimeSlots, validateTimeSlot, calculateTotalHours } from './helpers/businessHours';
+import { TimeSlot, generateTimeSlots, validateTimeSlot, calculateTotalHours, MEIA_NOITE, FIM_DO_DIA } from './helpers/businessHours';
 import { useLanguage } from '@/hooks/useLanguage';
 
 interface BusinessDayProps {
@@ -14,7 +14,7 @@ export default function BusinessDay({ dayName, timeSlot, onUpdate }: BusinessDay
   const { t } = useLanguage('channels');
   // Generate time slots
   const fromTimeSlots = useMemo(() => generateTimeSlots(30), []);
-  const toTimeSlots = useMemo(() => fromTimeSlots.filter(slot => slot !== '12:00 AM'), [fromTimeSlots]);
+  const toTimeSlots = useMemo(() => fromTimeSlots.filter(slot => slot !== MEIA_NOITE), [fromTimeSlots]);
 
   const isDayEnabled = Boolean(timeSlot.from && timeSlot.to);
   const hasError = !timeSlot.valid && isDayEnabled;
@@ -22,11 +22,11 @@ export default function BusinessDay({ dayName, timeSlot, onUpdate }: BusinessDay
 
   const handleDayToggle = (checked: boolean) => {
     if (checked) {
-      // Enable day with default hours (9 AM to 5 PM)
+      // Enable day with default hours (9h às 17h)
       onUpdate({
         ...timeSlot,
-        from: '09:00 AM',
-        to: '05:00 PM',
+        from: '09:00',
+        to: '17:00',
         valid: true,
         openAllDay: false,
       });
@@ -47,8 +47,8 @@ export default function BusinessDay({ dayName, timeSlot, onUpdate }: BusinessDay
       // Set to 24 hours
       onUpdate({
         ...timeSlot,
-        from: '12:00 AM',
-        to: '11:59 PM',
+        from: MEIA_NOITE,
+        to: FIM_DO_DIA,
         valid: true,
         openAllDay: true,
       });
@@ -56,8 +56,8 @@ export default function BusinessDay({ dayName, timeSlot, onUpdate }: BusinessDay
       // Set to default business hours
       onUpdate({
         ...timeSlot,
-        from: '09:00 AM',
-        to: '05:00 PM',
+        from: '09:00',
+        to: '17:00',
         valid: true,
         openAllDay: false,
       });
