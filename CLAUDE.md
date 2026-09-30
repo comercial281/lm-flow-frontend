@@ -4049,3 +4049,21 @@ Armadilhas:
 4. **Não é `featureKey` nem `clientToggleKey`**: é configuração de portal e de site.
 5. **Item aberto:** a landing de anúncio tem cópia própria da regra de quem atende
    no backend; convergir para `Leads::Distribution` quando alguém mexer nela.
+
+## Base de design e linguagem (desde 30/09/2026, Fase 3) — não reabrir sem o dono pedir
+
+Spec e plano: `LM FLOW/specs/2026-09-29-fase-3-base-de-design-e-linguagem-design.md` e `LM FLOW/plans/2026-09-30-fase-3-base-de-design.md` (pasta do Tony, fora deste repo).
+
+- **Régua de linguagem:** [GLOSSARIO.md](GLOSSARIO.md). "Número de WhatsApp", funil, etapa, etiqueta, Ligar/Desligar, Excluir × Remover, Salvar/Criar. Termo técnico só em tela de conectar outro sistema.
+- **Formato:** tudo que aparece na tela sai de `src/lib/formato.ts`. Vazio vira `—`, hora é sempre 24h. "2026-09-30" puro é dia de calendário (não vira 29/09 em São Paulo). `utils/dateUtils` e `numberTexts.formatPhone` só repassam pra ele.
+- **Trava do build:** `scripts/conferir-padrao.mjs --tetos scripts/conferir-padrao.tetos.json`.
+  - Ela lê as telas com o compilador do TypeScript. Texto de tela é o que está entre tags, em atributo de texto, em toast, em confirmação e em mapa `*_LABELS`; nome de variável, rota, tipo e chave de i18n não contam.
+  - Fora do escopo: o painel raiz, as páginas públicas, as landings, o widget e a **sobra** do Evolution (listas `SOBRA`/`NAMESPACES_SOBRA`). A fase 4 decide se a sobra some.
+  - **Teto só desce.**
+- **Decisões do Tony (30/09):**
+  - **D1:** cada tema num PR pequeno, com prévia (`?tenant=lealmidia`) e antes/depois, e merge um por vez com o ok dele.
+  - **D2:** chave desligada é cinza.
+  - **D3:** o glossário acima.
+  - **D4:** as telas piloto são Conta e Lembretes.
+- **Nunca muda nesta frente:** texto que sai pro lead ou pro corretor por WhatsApp (modelos, `{{variáveis}}`, instruções da IA, mensagens padrão).
+- **Testes com Node 26+:** `NODE_OPTIONS=--no-experimental-webstorage npx vitest run`. Sem isso, o `localStorage` experimental do Node tapa o do jsdom e ~29 arquivos falham na `main` limpa.
