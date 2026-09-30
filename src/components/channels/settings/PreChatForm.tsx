@@ -287,7 +287,7 @@ export default function PreChatForm({
           {/* Save Button */}
           <div className="flex justify-end pt-4 border-t border-border">
             <Button onClick={handleUpdate} disabled={isUpdating} className="min-w-32">
-              {isUpdating ? 'Salvando...' : 'Salvar Configurações'}
+              {isUpdating ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
         </CardContent>

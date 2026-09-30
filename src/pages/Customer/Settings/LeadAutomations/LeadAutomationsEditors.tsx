@@ -486,7 +486,7 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
     );
     return (
       <div>
-        <UILabel>Para qual estágio? *</UILabel>
+        <UILabel>Para qual etapa? *</UILabel>
         <select
           value={value}
           onChange={e =>
@@ -494,7 +494,7 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
           }
           className={baseSelectClass}
         >
-          <option value="">Selecione um estágio</option>
+          <option value="">Selecione uma etapa</option>
           {allStages.map(s => (
             <option key={s.id} value={s.id}>
               {s.pipelineName} &rarr; {s.name}
@@ -800,8 +800,8 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
           />
           {isSuperAdmin && resources.evolutionInstances.length > 0 && !envio.send_from && (
             <Field
-              label="Instância de envio (admin)"
-              hint="Só você vê este campo. Deixe em branco para usar a instância padrão do cliente."
+              label="Número de envio (admin)"
+              hint="Só você vê este campo. Deixe em branco para usar o número padrão do cliente."
             >
               <select
                 value={String(params.sender_instance ?? '')}
@@ -817,7 +817,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               </select>
               {params.sender_instance && (
                 <p className="text-xs text-amber-500 mt-1">
-                  ⚠️ Mensagem enviada pelo número da instância selecionada, não pelo número do cliente.
+                  ⚠️ Mensagem enviada pelo número selecionado, não pelo número do cliente.
                 </p>
               )}
             </Field>
@@ -835,7 +835,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
         <>
           <Field
             label="URL da mídia *"
-            hint={action.type === 'send_sticker' ? 'PNG ou WebP. A Evolution converte pra figurinha.' : undefined}
+            hint={action.type === 'send_sticker' ? 'PNG ou WebP. Chega no WhatsApp como figurinha.' : undefined}
           >
             <Input
               value={String(params.media_url ?? '')}
@@ -901,7 +901,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       const stageId = String(params.stage_id ?? '');
       return (
         <>
-          <Field label="Pipeline *">
+          <Field label="Funil *">
             <select
               value={pipelineId}
               onChange={e =>
@@ -912,20 +912,20 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               }
               className={baseSelectClass}
             >
-              <option value="">Selecione um pipeline</option>
+              <option value="">Selecione um funil</option>
               {resources.pipelines.map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
           </Field>
           {pipelineId && (
-            <Field label="Estágio *">
+            <Field label="Etapa *">
               <select
                 value={stageId}
                 onChange={e => setParam('stage_id', e.target.value)}
                 className={baseSelectClass}
               >
-                <option value="">Selecione um estágio</option>
+                <option value="">Selecione uma etapa</option>
                 {(resources.stagesByPipeline[pipelineId] ?? []).map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
@@ -970,7 +970,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               de grupos vazia e nada explicava o motivo. Quem não enxerga a lista
               (cliente) continua com o campo livre. */}
           <Field
-            label="Instância"
+            label="Número"
             hint="De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central Operacional (LM01)."
           >
             {resources.evolutionInstances.length > 0 ? (
@@ -1137,7 +1137,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     case 'assign_via_roleta':
       return (
         <p className="text-sm text-muted-foreground mt-1">
-          Atribui o lead ao proximo corretor disponivel conforme a roleta configurada para o inbox.
+          Atribui o lead ao próximo corretor disponível conforme a roleta configurada para o canal.
         </p>
       );
 
@@ -1160,7 +1160,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       return (
         <Field
           label="Mensagem para o corretor *"
-          hint="Enviada no WhatsApp pessoal do corretor atribuido. Variaveis: {{nome}}, {{telefone}}, {{link_do_card}}"
+          hint="Enviada no WhatsApp pessoal do corretor atribuído. Variáveis: {{nome}}, {{telefone}}, {{link_do_card}}"
         >
           <Textarea
             value={String(params.message ?? '')}
@@ -1178,7 +1178,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       return (
         <Field
           label="Mensagem para o gestor *"
-          hint="Enviada no numero do gestor configurado na Roleta. Variaveis: {{nome}}, {{telefone}}, {{link_do_card}}"
+          hint="Enviada no número do gestor configurado na Roleta. Variáveis: {{nome}}, {{telefone}}, {{link_do_card}}"
         >
           <Textarea
             value={String(params.message ?? '')}
@@ -1368,7 +1368,7 @@ export function formatConditionSummary(
   if (trigger === 'lead.stage_changed') {
     const allStages = Object.values(resources.stagesByPipeline).flat();
     const stage = allStages.find(s => s.id === condition.value);
-    return `Para o estágio: ${stage?.name ?? condition.value}`;
+    return `Para a etapa: ${stage?.name ?? condition.value}`;
   }
   if (trigger === 'lead.no_reply_after') {
     return `Sem resposta por ${condition.value} min`;
@@ -1413,7 +1413,7 @@ export function formatActionSummary(
     case 'move_pipeline_stage': {
       const stages = p.pipeline_id ? resources.stagesByPipeline[String(p.pipeline_id)] : undefined;
       const stage = stages?.find(s => s.id === p.stage_id);
-      return stage ? `Estágio: ${stage.name}` : 'Estágio: (não definido)';
+      return stage ? `Etapa: ${stage.name}` : 'Etapa: (não definida)';
     }
     case 'create_task':
       return p.title ? `Tarefa: ${p.title}` : '(tarefa sem título)';

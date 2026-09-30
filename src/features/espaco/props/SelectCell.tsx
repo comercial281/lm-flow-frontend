@@ -148,7 +148,7 @@ export default function SelectCell({ property, value, onChange, variant = 'table
             )}
             {!canCreate && filtered.length === 0 && (
               <div className="px-2 py-3 text-center text-xs text-lm-subtle">
-                {options.length === 0 ? 'Digite pra criar a primeira opcao' : 'Nenhuma opcao'}
+                {options.length === 0 ? 'Digite pra criar a primeira opção' : 'Nenhuma opção'}
               </div>
             )}
           </div>

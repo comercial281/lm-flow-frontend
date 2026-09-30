@@ -134,11 +134,11 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({ contact, leadArrivedAt 
     if (!contact?.id) return;
     try {
       await contactsService.deleteContact(String(contact.id));
-      toast.success('Contato deletado');
+      toast.success('Contato excluído');
       navigate('/contacts');
     } catch (error) {
       console.error('Error deleting contact:', error);
-      toast.error('Erro ao deletar contato');
+      toast.error('Erro ao excluir contato');
     }
   };
 
@@ -203,19 +203,19 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({ contact, leadArrivedAt 
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm">
                 <Trash2 className="h-4 w-4" />
-                Deletar contato
+                Excluir contato
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Deletar contato</AlertDialogTitle>
+                <AlertDialogTitle>Excluir contato</AlertDialogTitle>
                 <AlertDialogDescription>
                   Esta ação não pode ser desfeita. O contato e suas conversas serão removidos permanentemente.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteContact}>Deletar</AlertDialogAction>
+                <AlertDialogAction onClick={handleDeleteContact}>Excluir</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>

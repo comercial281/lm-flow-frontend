@@ -234,25 +234,25 @@ export const NOTION_COLORS: Record<NotionColor, { bg: string; text: string; dot:
 export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
   title: 'Titulo',
   text: 'Texto',
-  number: 'Numero',
-  select: 'Selecao',
-  multi_select: 'Multi-selecao',
+  number: 'Número',
+  select: 'Seleção',
+  multi_select: 'Multi-seleção',
   status: 'Status',
   date: 'Data',
   person: 'Pessoa',
-  files: 'Arquivos e midia',
-  checkbox: 'Caixa de selecao',
+  files: 'Arquivos e mídia',
+  checkbox: 'Caixa de seleção',
   url: 'URL',
   email: 'E-mail',
   phone: 'Telefone',
-  formula: 'Formula',
-  relation: 'Relacao',
+  formula: 'Fórmula',
+  relation: 'Relação',
   rollup: 'Rollup',
   created_time: 'Criado em',
   created_by: 'Criado por',
   last_edited_time: 'Editado em',
   last_edited_by: 'Editado por',
-  auto_number: 'ID unico',
+  auto_number: 'ID único',
 }
 
 export const VIEW_KIND_LABELS: Record<ViewKind, string> = {
@@ -260,7 +260,7 @@ export const VIEW_KIND_LABELS: Record<ViewKind, string> = {
   board: 'Quadro',
   gallery: 'Galeria',
   list: 'Lista',
-  calendar: 'Calendario',
+  calendar: 'Calendário',
   timeline: 'Linha do tempo',
 }
 

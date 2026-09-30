@@ -55,6 +55,7 @@ import usersService from '@/services/users/usersService';
 import type { User } from '@/types/users';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { plural } from '@/lib/formato';
 // Backend (Followup::SendStep#move_stage_if_configured) deriva o slug a partir do
 // nome do stage e NORMALIZA os dois lados: transliterate + downcase + strip + '-'.
 // Espelhamos exatamente isso aqui — com acento, 'follow-up-automatico' nao casava
@@ -141,7 +142,7 @@ function StageSelector({
   return (
     <div className="grid grid-cols-2 gap-2">
       <div>
-        <UILabel className="text-xs">Pipeline</UILabel>
+        <UILabel className="text-xs">Funil</UILabel>
         <Select
           value={pipelineId}
           onValueChange={(v) => {
@@ -150,7 +151,7 @@ function StageSelector({
           }}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Escolha o pipe" />
+            <SelectValue placeholder="Escolha o funil" />
           </SelectTrigger>
           <SelectContent>
             {pipelines.map(p => (
@@ -171,7 +172,7 @@ function StageSelector({
         >
           <SelectTrigger>
             <SelectValue
-              placeholder={pipelineId ? 'Escolha a coluna' : 'Escolha o pipeline primeiro'}
+              placeholder={pipelineId ? 'Escolha a coluna' : 'Escolha o funil primeiro'}
             />
           </SelectTrigger>
           <SelectContent>
@@ -183,14 +184,14 @@ function StageSelector({
       </div>
       {slugVisivelMasSemMatch && (
         <p className="col-span-2 text-xs text-muted-foreground">
-          Slug atual <code className="rounded bg-muted px-1">{currentSlug}</code> nao bate com
-          nenhuma coluna deste pipeline. Escolha uma coluna pra sobrescrever.
+          Código atual <code className="rounded bg-muted px-1">{currentSlug}</code> nao bate com
+          nenhuma coluna deste funil. Escolha uma coluna pra sobrescrever.
         </p>
       )}
       {currentSlug && !pipelineId && (
         <p className="col-span-2 text-xs text-muted-foreground">
-          Slug atual <code className="rounded bg-muted px-1">{currentSlug}</code>. Escolha o
-          pipeline pra mapear pra coluna correta.
+          Código atual <code className="rounded bg-muted px-1">{currentSlug}</code>. Escolha o
+          funil pra mapear pra coluna correta.
         </p>
       )}
     </div>
@@ -464,14 +465,14 @@ export default function FollowupSequences() {
     pipelinesService
       .getPipelines()
       .then(res => setPipelines(res.data ?? []))
-      .catch(() => toast.error('Erro ao carregar pipelines'));
+      .catch(() => toast.error('Erro ao carregar funis'));
   }, []);
 
   const loadStages = useCallback((pipelineId: string) => {
     pipelinesService
       .getPipelineStages(pipelineId)
       .then(res => setStagesByPipeline(prev => ({ ...prev, [pipelineId]: res.data ?? [] })))
-      .catch(() => toast.error('Erro ao carregar colunas do pipeline'));
+      .catch(() => toast.error('Erro ao carregar colunas do funil'));
   }, []);
 
   // Criar do zero. Até aqui a tela só sabia LISTAR e EDITAR: num CRM sem nenhum
@@ -657,7 +658,7 @@ export default function FollowupSequences() {
   const removeSequence = async (seq: FollowupSequence) => {
     const disparos = seq.jobs_count ?? 0;
     const aviso = disparos > 0
-      ? ` O histórico deste funil vai junto: ${disparos} disparo(s) registrados serão apagados.`
+      ? ` O histórico deste funil vai junto: ${plural(disparos, 'disparo registrado', 'disparos registrados')} ${disparos === 1 ? 'será excluído' : 'serão excluídos'}.`
       : '';
     if (!(await confirmar({
       titulo: 'Excluir funil',
@@ -851,7 +852,7 @@ export default function FollowupSequences() {
                     <p className="mt-1 text-sm text-muted-foreground">{seq.description}</p>
                   )}
                   <code className="mt-1 inline-block rounded bg-muted px-1.5 py-0.5 text-xs">
-                    slug: {seq.slug}
+                    código: {seq.slug}
                   </code>
                 </div>
                 <div className="flex items-center gap-2">
@@ -939,7 +940,7 @@ export default function FollowupSequences() {
                     salvar), então mostrar um campo vazio e travado só confundiria. */}
                 {editing.id ? (
                   <div>
-                    <UILabel>Slug (não editar)</UILabel>
+                    <UILabel>Código (não editar)</UILabel>
                     <Input value={editing.slug} disabled />
                   </div>
                 ) : (
@@ -1167,7 +1168,7 @@ export default function FollowupSequences() {
                         <div className="mt-2 space-y-3 rounded-md border bg-muted/20 p-3">
                           {!editing.progress_tagging && (
                             <div>
-                              <UILabel className="text-xs">Tag ao enviar</UILabel>
+                              <UILabel className="text-xs">Etiqueta ao enviar</UILabel>
                               <Input value={s.tag_on_send ?? ''} onChange={e => updateStep(idx, { tag_on_send: e.target.value })} />
                             </div>
                           )}
@@ -1218,7 +1219,7 @@ export default function FollowupSequences() {
                 vira contato no CRM. */}
             <DialogDescription>
               As mensagens deste funil são enviadas de verdade para esse número, respeitando
-              os tempos que você configurou. O número vira um contato no CRM — vale apagar
+              os tempos que você configurou. O número vira um contato no CRM — vale excluir
               depois se for só teste. Testar duas vezes no mesmo número não recomeça do
               início: o funil continua da mensagem seguinte.
             </DialogDescription>
@@ -1413,7 +1414,7 @@ export default function FollowupSequences() {
                       <h3 className="font-medium">Pacote completo de marketing</h3>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Além de dois funis, cria um pipeline novo com suas colunas, as etiquetas de
+                      Além de dois funis, cria um funil novo com suas colunas, as etiquetas de
                       origem e as regras que ligam tudo. Use num CRM que está começando do zero —
                       num CRM já em uso, prefira um modelo de funil acima.
                     </p>

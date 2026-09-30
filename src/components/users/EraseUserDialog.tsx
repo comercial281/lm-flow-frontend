@@ -60,11 +60,11 @@ export default function EraseUserDialog({ open, user, onClose, onDone }: Props) 
     setSaving(true);
     try {
       await usersService.deleteUser(user.id);
-      toast.success(`O cadastro de ${user.name} foi apagado.`);
+      toast.success(`O cadastro de ${user.name} foi excluído.`);
       onDone();
     } catch (error) {
       // Clique explícito: o motivo do servidor aparece, nos dois formatos de erro.
-      toast.error(apiErrorMessage(error, 'Não consegui apagar agora.'));
+      toast.error(apiErrorMessage(error, 'Não consegui excluir agora.'));
     } finally {
       setSaving(false);
     }
@@ -92,7 +92,7 @@ export default function EraseUserDialog({ open, user, onClose, onDone }: Props) 
             </div>
           ) : verdict.allowed ? (
             <div className="rounded-md border border-border bg-muted/30 p-3">
-              Ninguém encontrou lead, conversa, mensagem ou oferta no nome dele. Pode apagar: o e-mail
+              Ninguém encontrou lead, conversa, mensagem ou oferta no nome dele. Pode excluir: o e-mail
               fica livre para um cadastro novo.
             </div>
           ) : (
@@ -109,7 +109,7 @@ export default function EraseUserDialog({ open, user, onClose, onDone }: Props) 
           </Button>
           {verdict.allowed && (
             <Button variant="destructive" onClick={confirm} disabled={saving || loading}>
-              {saving ? 'Apagando...' : 'Apagar cadastro'}
+              {saving ? 'Excluindo...' : 'Excluir cadastro'}
             </Button>
           )}
         </DialogFooter>

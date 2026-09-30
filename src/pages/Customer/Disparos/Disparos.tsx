@@ -186,7 +186,7 @@ export default function Disparos() {
           <div>
             <h1 className="text-2xl font-bold leading-tight">Disparos</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Disparo em massa por WhatsApp — Evolution ou oficial (Cloud API), templates e cadências.
+              Disparo em massa por WhatsApp — por QR code ou número oficial, templates e cadências.
             </p>
           </div>
         </div>
@@ -218,10 +218,10 @@ export default function Disparos() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1.5 min-w-[240px]">
-              <label className="text-sm text-muted-foreground">Pipeline</label>
+              <label className="text-sm text-muted-foreground">Funil</label>
               <Select value={pipelineId} onValueChange={setPipelineId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Escolher pipeline" />
+                  <SelectValue placeholder="Escolher funil" />
                 </SelectTrigger>
                 <SelectContent>
                   {pipelines.map(p => (
@@ -241,7 +241,7 @@ export default function Disparos() {
 
           {campaigns.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Nenhum disparo neste pipeline ainda. Clique em "Novo disparo" pra criar o primeiro.
+              Nenhum disparo neste funil ainda. Clique em "Novo disparo" pra criar o primeiro.
             </div>
           ) : (
             <>
@@ -367,7 +367,7 @@ export default function Disparos() {
           ) : channels.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border p-8 text-center space-y-2">
               <p className="text-sm text-muted-foreground">
-                Nenhum canal WhatsApp Oficial conectado. Templates são criados e aprovados por número oficial (Cloud API).
+                Nenhum canal WhatsApp Oficial conectado. Templates são criados e aprovados por número oficial.
               </p>
               <Button variant="outline" onClick={() => navigate('/channels')}>
                 <Plus className="w-4 h-4 mr-1" /> Conectar canal oficial
@@ -411,7 +411,7 @@ export default function Disparos() {
       {tab === 'canais' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm text-muted-foreground">Números oficiais (WhatsApp Cloud API) conectados ao LM Flow.</p>
+            <p className="text-sm text-muted-foreground">Números oficiais do WhatsApp conectados ao LM Flow.</p>
             <Button variant="outline" size="sm" onClick={() => navigate('/channels')}>
               <Plus className="w-4 h-4 mr-1" /> Conectar número
             </Button>
@@ -525,7 +525,7 @@ export default function Disparos() {
             return (
               <div className="rounded-xl border border-border p-3 space-y-3">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="text-sm font-medium">Retorno por disparo (pipeline selecionado)</div>
+                  <div className="text-sm font-medium">Retorno por disparo (funil selecionado)</div>
                   <div className="text-xs text-muted-foreground">
                     Custo estimado {dinheiro(totCost)} · {totReplied} respostas
                     {totReplied > 0 && <> · <strong className="text-foreground">{dinheiro(totCost / totReplied)}/resposta</strong></>}
@@ -561,7 +561,7 @@ export default function Disparos() {
                 </div>
                 <p className="text-[11px] text-muted-foreground">
                   Custo é estimativa (nº enviadas × tarifa da categoria). Custo real por número está abaixo (dados da Meta).
-                  Respostas vêm da reconciliação dos webhooks de status.
+                  Respostas vêm da conferência automática do status que a Meta manda.
                 </p>
               </div>
             );

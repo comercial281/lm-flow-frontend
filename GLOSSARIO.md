@@ -68,3 +68,4 @@ O build reprova se alguma passar do teto em `scripts/conferir-padrao.tetos.json`
 - **Ver onde:** `node scripts/conferir-padrao.mjs --listar <categoria>`.
 - **O teto só desce.** Se precisar subir, suba junto com a razão, no mesmo PR.
 - **Exceção** (texto que não aparece na tela, ou valor que vai pra API) mora em `scripts/conferir-padrao.excecoes.json`, sempre com `motivo`.
+- **Ponto cego:** frase montada em variável (ou em tupla) antes de ir pra tela e texto devolvido por função não são lidos pela trava. Contagem 0 não prova tela limpa: a revisão de PR confere esses casos.

@@ -11,8 +11,9 @@
 //
 // COMO ELE LÊ AS TELAS
 // Pelo compilador do TypeScript, não por grep: texto de tela é o que está entre
-// tags, em atributo de texto (title, placeholder, label…), em toast, em
-// confirmação e nos mapas de rótulo (TRIGGER_LABELS…). Nome de variável, rota,
+// tags, em atributo de texto (title, placeholder, label, hint, text…), em toast,
+// em confirmação, nas palavras de plural() e na mensagem de reserva de
+// apiErrorMessage(), e nos mapas de rótulo (TRIGGER_LABELS…). Nome de variável, rota,
 // tipo e chave de i18n NÃO contam — "pipeline" em código fica; "Pipeline" na
 // tela é que conta.
 //
@@ -82,6 +83,7 @@ const palavra = fonte => new RegExp(`(?<![\\p{L}\\d_])(?:${fonte})(?![\\p{L}\\d_
 
 export const TERMOS_TECNICOS = [
   ['instância', palavra('inst[âa]ncias?')],
+  ['instance', palavra('instances?')],
   ['inbox', palavra('inbox(?:es)?')],
   ['Evolution', palavra('evolution')],
   ['Cloud API', palavra('cloud api')],
@@ -125,7 +127,7 @@ export const SEM_ACENTO = palavra(
     'versao|versoes|visivel|visiveis|selecao|atribuicao|atribuicoes|demonstracao|voce|voces|tambem|informacao|' +
     'informacoes|descricao|descricoes|opcao|opcoes|acao|acoes|notificacao|notificacoes|funcao|funcoes|numero|numeros|' +
     'pagina|paginas|conteudo|conteudos|midia|midias|codigo|horario|horarios|usuario|usuarios|responsavel|disponivel|' +
-    'automacao|automacoes|integracao|integracoes|conexao|mensagens? automaticas?|imoveis|imovel',
+    'automacao|automacoes|integracao|integracoes|conexao|conversao|conversoes|mensagens? automaticas?|imoveis|imovel',
 );
 
 // Título e botão em frase normal: "Novo cargo", não "Novo Cargo". Conta texto
@@ -154,15 +156,25 @@ const CHAVE_DA_CASA = 'src/components/base/Chave.tsx';
 // Atributos e propriedades cujo valor é texto que aparece na tela.
 const ATRIBUTOS_DE_TEXTO = new Set([
   'title', 'placeholder', 'label', 'aria-label', 'alt', 'description', 'subtitle',
-  'tooltip', 'emptyMessage', 'titulo', 'descricao', 'rotuloDaAcao', 'rotuloDeCancelar',
+  'tooltip', 'emptyMessage', 'titulo', 'descricao', 'rotuloDaAcao', 'rotuloDeCancelar', 'hint', 'text',
 ]);
 const PROPRIEDADES_DE_TEXTO = new Set([
   'label', 'title', 'titulo', 'descricao', 'description', 'subtitle', 'placeholder',
   'tooltip', 'rotuloDaAcao', 'rotuloDeCancelar', 'emptyMessage', 'helpText', 'hint',
 ]);
 const MAPA_DE_ROTULOS = /(LABELS?|TEXTS?|TEXTOS?|ROTULOS?|COPY)$/;
+// Funções que devolvem pra tela o texto que recebem: em plural(n, 'etapa',
+// 'etapas') as palavras (2º e 3º argumentos) aparecem; em apiErrorMessage(erro,
+// 'Não foi possível…') a mensagem de reserva (2º) aparece quando o servidor não
+// manda uma. Os outros argumentos são dado, não texto.
+const ARGUMENTOS_DE_TEXTO = { plural: [1, 2], apiErrorMessage: [1] };
 
 // ── Leitura dos textos de uma tela ─────────────────────────────────────────
+// .tsx é JSX; .ts é TypeScript puro (genérico como Envelope<T> e asserção
+// <T>x não são tag JSX ali). Qualquer outra extensão mantém TSX, como antes.
+const scriptKindDe = arquivo =>
+  arquivo.endsWith('.tsx') ? ts.ScriptKind.TSX : arquivo.endsWith('.ts') ? ts.ScriptKind.TS : ts.ScriptKind.TSX;
+
 const nomeDe = n => (n && (ts.isIdentifier(n) || ts.isStringLiteral(n)) ? n.text : '');
 
 // Sobe da string até achar quem decide se ela é texto de tela.
@@ -220,7 +232,10 @@ function destinoDoTexto(no) {
       // toast('x'), toast.success('x'), toast.error('x')…
       if (ts.isIdentifier(alvo) && alvo.text === 'toast') return true;
       if (ts.isPropertyAccessExpression(alvo) && ts.isIdentifier(alvo.expression) && alvo.expression.text === 'toast') return true;
-      return false;
+      // plural(n, 'etapa', 'etapas'), formato.plural(…), apiErrorMessage(e, '…')
+      const funcao = ts.isIdentifier(alvo) ? alvo.text : ts.isPropertyAccessExpression(alvo) ? alvo.name.text : '';
+      const posicoes = Object.hasOwn(ARGUMENTOS_DE_TEXTO, funcao) ? ARGUMENTOS_DE_TEXTO[funcao] : null;
+      return !!posicoes && posicoes.includes(atual.arguments.indexOf(filho));
     }
     return false;
   }
@@ -228,7 +243,7 @@ function destinoDoTexto(no) {
 }
 
 export function textosDaTela(codigo, arquivo = 'x.tsx') {
-  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
   const textos = [];
   const guardar = (no, texto) => {
     const limpo = texto.replace(/\s+/g, ' ').trim();
@@ -282,7 +297,7 @@ function ehImagemComAlt(abertura) {
 }
 
 export function botoesSemNome(codigo, arquivo = 'x.tsx') {
-  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const fonte = ts.createSourceFile(arquivo, codigo, ts.ScriptTarget.Latest, true, scriptKindDe(arquivo));
   const achados = [];
   const visitar = no => {
     if (ts.isJsxElement(no)) {

@@ -161,7 +161,7 @@ const HubSpotConfigDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving HubSpot configuration:', error);
-      toast.error(apiErrorMessage(error, 'Erro ao salvar configurações'));
+      toast.error(apiErrorMessage(error, 'Erro ao salvar'));
     }
   };
 
@@ -346,7 +346,7 @@ const HubSpotConfigDialog = ({
 
             <div className="flex flex-col gap-3 pt-4 border-t">
               <Button onClick={handleSave} className="w-full">
-                {t('edit.integrations.hubspot.saveConfig') || 'SALVAR CONFIGURAÇÕES'}
+                {t('edit.integrations.hubspot.saveConfig') || 'Salvar'}
               </Button>
 
               {onDisconnect && (

@@ -139,7 +139,7 @@ const GoogleSheetsConfigDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving Google Sheets configuration:', error);
-      toast.error(apiErrorMessage(error, 'Erro ao salvar configurações'));
+      toast.error(apiErrorMessage(error, 'Erro ao salvar'));
     }
   };
 

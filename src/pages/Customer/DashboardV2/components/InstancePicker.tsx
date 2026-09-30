@@ -55,15 +55,15 @@ export const InstancePicker: React.FC<Props> = ({ value, onChange }) => {
   };
 
   return (
-    <label className="lmf-select flex items-center gap-2" title="Filtrar por instância (WhatsApp)">
+    <label className="lmf-select flex items-center gap-2" title="Filtrar por número de WhatsApp">
       <Smartphone size={14} aria-hidden />
-      <span className="sr-only">Instância</span>
+      <span className="sr-only">Número</span>
       <select
         value={value ?? ''}
         onChange={e => handleChange(e.target.value)}
         style={{ background: 'transparent', border: 0, color: 'inherit', font: 'inherit', outline: 'none' }}
       >
-        <option value="">Todas as instâncias</option>
+        <option value="">Todos os números</option>
         {options.map(o => (
           <option key={o.id} value={o.id}>
             {o.label}

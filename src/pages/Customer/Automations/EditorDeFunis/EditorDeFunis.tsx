@@ -26,7 +26,7 @@ export default function EditorDeFunis() {
         <h1 className="text-xl font-bold">Editor de Funis</h1>
       </div>
       <p className="text-sm text-muted-foreground mb-4">
-        Monte os funis de mensagem, os campos ({'{{token}}'}) que eles usam e os atributos customizados do CRM.
+        Monte os funis de mensagem, as variáveis ({'{{nome}}'}) que eles usam e os atributos customizados do CRM.
       </p>
 
       <Tabs value={tab} onValueChange={v => setTab(v as EditorTab)} className="flex-1 flex flex-col min-h-0">

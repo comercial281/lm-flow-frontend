@@ -800,7 +800,7 @@ export function ScheduleActionModal({
                     setFormData({ ...formData, webhook_url: e.target.value });
                     if (errors.webhook_url) setErrors({ ...errors, webhook_url: '' });
                   }}
-                  placeholder="https://example.com/webhook"
+                  placeholder="https://seusite.com.br/aviso"
                   required
                   className={errors.webhook_url ? 'border-red-500' : ''}
                 />

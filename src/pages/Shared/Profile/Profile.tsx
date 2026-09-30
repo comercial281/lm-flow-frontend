@@ -751,7 +751,7 @@ const Profile = () => {
             </p>
             <div className="mt-2 space-y-1 text-sm text-violet-700 dark:text-violet-400">
               <p><strong>Android (Chrome):</strong> menu &gt; "Adicionar à tela inicial"</p>
-              <p><strong>iPhone (Safari):</strong> botao Compartilhar &gt; "Adicionar à Tela de Início"</p>
+              <p><strong>iPhone (Safari):</strong> botão Compartilhar &gt; "Adicionar à Tela de Início"</p>
             </div>
           </div>
         </div>
@@ -764,7 +764,7 @@ const Profile = () => {
               <p className="font-medium">Notificações push</p>
               <p className="text-sm text-muted-foreground">
                 {pushStatus === 'denied'
-                  ? 'Permissao negada. Habilite nas configuracoes do celular.'
+                  ? 'Permissão negada. Habilite nas configurações do celular.'
                   : pushStatus === 'unsupported'
                   ? 'Nao suportado neste navegador. Use Chrome (Android) ou Safari (iPhone).'
                   : 'Receba alertas de novas mensagens mesmo com o app fechado.'}

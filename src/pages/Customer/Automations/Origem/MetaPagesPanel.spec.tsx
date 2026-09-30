@@ -139,7 +139,7 @@ describe('MetaPagesPanel', () => {
 
     await usuario.type(await screen.findByLabelText('Page ID (Facebook)'), '444');
     await usuario.type(screen.getByLabelText('Nome da página'), 'Manual');
-    await usuario.type(screen.getByLabelText('Access Token'), 'EAAtoken');
+    await usuario.type(screen.getByLabelText('Chave de acesso (Meta)'), 'EAAtoken');
     await usuario.click(screen.getByRole('button', { name: 'Conectar página' }));
 
     await waitFor(() =>

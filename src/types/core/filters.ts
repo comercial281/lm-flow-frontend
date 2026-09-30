@@ -251,7 +251,7 @@ export const CUSTOM_MCP_SERVER_FILTER_TYPES: FilterType[] = [
   },
   {
     attributeKey: 'tags',
-    attributeI18nKey: 'Tags',
+    attributeI18nKey: 'Etiquetas',
     inputType: 'plain_text',
     dataType: 'text',
     filterOperators: OPERATOR_TYPES_3,
@@ -292,7 +292,7 @@ export const TOOL_FILTER_TYPES: FilterType[] = [
   },
   {
     attributeKey: 'tags',
-    attributeI18nKey: 'Tags',
+    attributeI18nKey: 'Etiquetas',
     inputType: 'plain_text',
     dataType: 'text',
     filterOperators: OPERATOR_TYPES_3,
@@ -350,7 +350,7 @@ export const CUSTOM_TOOL_FILTER_TYPES: FilterType[] = [
   },
   {
     attributeKey: 'tags',
-    attributeI18nKey: 'Tags',
+    attributeI18nKey: 'Etiquetas',
     inputType: 'plain_text',
     dataType: 'text',
     filterOperators: OPERATOR_TYPES_3,

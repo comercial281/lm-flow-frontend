@@ -122,7 +122,7 @@ export default function WhatsappReminders() {
       .then(setGroups)
       .catch(e => {
         console.error(e);
-        toast.error('Não foi possível listar grupos da instância');
+        toast.error('Não foi possível listar grupos do número');
       })
       .finally(() => setGroupsLoading(false));
   }, [form.destination_type, form.inbox_id]);
@@ -180,19 +180,19 @@ export default function WhatsappReminders() {
   const remove = async (r: WhatsappReminder) => {
     if (
       !(await confirmar({
-        titulo: 'Apagar lembrete',
-        descricao: `O lembrete "${r.name}" será removido. Esta ação não pode ser desfeita.`,
-        rotuloDaAcao: 'Apagar',
+        titulo: 'Excluir lembrete',
+        descricao: `O lembrete "${r.name}" será excluído. Esta ação não pode ser desfeita.`,
+        rotuloDaAcao: 'Excluir',
         destrutivo: true,
       }))
     )
       return;
     try {
       await whatsappRemindersService.remove(r.id);
-      toast.success('Lembrete apagado');
+      toast.success('Lembrete excluído');
       load();
     } catch {
-      toast.error('Falha ao apagar');
+      toast.error('Falha ao excluir');
     }
   };
 
@@ -254,7 +254,7 @@ export default function WhatsappReminders() {
                 <th className="text-left p-3">Nome</th>
                 <th className="text-left p-3">Gatilho</th>
                 <th className="text-left p-3">Destino</th>
-                <th className="text-left p-3">Instância</th>
+                <th className="text-left p-3">Número</th>
                 <th className="text-left p-3">Status</th>
                 <th className="text-right p-3">Ações</th>
               </tr>
@@ -286,7 +286,7 @@ export default function WhatsappReminders() {
                     <Button size="sm" variant="ghost" onClick={() => openEdit(r)} title="Editar">
                       <Pencil className="w-4 h-4" />
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => remove(r)} title="Apagar">
+                    <Button size="sm" variant="ghost" onClick={() => remove(r)} title="Excluir">
                       <Trash2 className="w-4 h-4 text-red-500" />
                     </Button>
                   </td>
@@ -323,7 +323,7 @@ export default function WhatsappReminders() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Quando disparar (trigger)</Label>
+                <Label>Quando disparar</Label>
                 <Select
                   value={form.trigger_type}
                   onValueChange={v => setForm({ ...form, trigger_type: v as ReminderTriggerType })}
@@ -337,7 +337,7 @@ export default function WhatsappReminders() {
                 </Select>
                 {form.trigger_type !== 'manual_macro' && (
                   <p className="text-xs text-amber-600 mt-1">
-                    Trigger automático estará disponível na Fase 2. Por enquanto só "Manual" funciona.
+                    O disparo automático estará disponível na Fase 2. Por enquanto só "Manual" funciona.
                   </p>
                 )}
               </div>
@@ -394,12 +394,12 @@ export default function WhatsappReminders() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Instância (inbox WhatsApp) {requiresInbox && '*'}</Label>
+                <Label>Número de WhatsApp {requiresInbox && '*'}</Label>
                 <Select
                   value={form.inbox_id ? String(form.inbox_id) : ''}
                   onValueChange={v => setForm({ ...form, inbox_id: v ? parseInt(v, 10) : null })}
                 >
-                  <SelectTrigger><SelectValue placeholder="Escolha a instância" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Escolha o número" /></SelectTrigger>
                   <SelectContent>
                     {inboxes.map(i => (
                       <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
@@ -456,7 +456,7 @@ export default function WhatsappReminders() {
                 >
                   <SelectTrigger>
                     <SelectValue
-                      placeholder={!form.inbox_id ? 'Escolha uma instância primeiro' : 'Selecione um grupo'}
+                      placeholder={!form.inbox_id ? 'Escolha um número primeiro' : 'Selecione um grupo'}
                     />
                   </SelectTrigger>
                   <SelectContent>

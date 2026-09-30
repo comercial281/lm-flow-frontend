@@ -417,7 +417,7 @@ export default function EditItemModal({
     } catch {
       // Falhar calado era o pior do caso antigo: a tag sumia da lista e voltava
       // sozinha depois, sem nenhum aviso de que não tinha sido salva.
-      toast.error(has ? 'Não foi possível remover a tag' : 'Não foi possível aplicar a tag');
+      toast.error(has ? 'Não foi possível remover a etiqueta' : 'Não foi possível aplicar a etiqueta');
     } finally {
       setSavingLabel(false);
     }
@@ -442,7 +442,7 @@ export default function EditItemModal({
         onLabelsChanged?.();
       }
     } catch {
-      toast.error('Não foi possível criar a tag');
+      toast.error('Não foi possível criar a etiqueta');
     } finally {
       setCreatingLabel(false);
       setLabelPopoverOpen(false);
@@ -801,7 +801,7 @@ export default function EditItemModal({
                 <div className="grid gap-1.5">
                   <Label className="flex items-center gap-1 text-xs">
                     <Tag className="h-3.5 w-3.5" />
-                    Tags
+                    Etiquetas
                     {(savingLabel || creatingLabel) && <Loader2 className="h-3 w-3 animate-spin" />}
                   </Label>
                   <div className="flex flex-wrap gap-1 mb-1">
@@ -823,22 +823,22 @@ export default function EditItemModal({
                     <Popover open={labelPopoverOpen} onOpenChange={setLabelPopoverOpen}>
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="h-7 text-xs w-full justify-start">
-                          <Plus className="h-3 w-3 mr-1" /> Adicionar tag
+                          <Plus className="h-3 w-3 mr-1" /> Adicionar etiqueta
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-52 p-0" align="start">
                         <Command>
-                          <CommandInput placeholder="Buscar ou criar tag..." value={labelSearch} onValueChange={setLabelSearch} />
+                          <CommandInput placeholder="Buscar ou criar etiqueta..." value={labelSearch} onValueChange={setLabelSearch} />
                           {/* max-h + overflow + onWheel stopPropagation: sem isso a roda
                               do mouse não rolava a lista dentro do popover/modal. */}
                           <CommandList
                             className="max-h-56 overflow-y-auto overscroll-contain"
                             onWheel={e => e.stopPropagation()}
                           >
-                            <CommandEmpty>Digite o nome e clique em "Criar tag".</CommandEmpty>
+                            <CommandEmpty>Digite o nome e clique em "Criar etiqueta".</CommandEmpty>
                             {/* Criar nova tag: sempre visível no topo. Sem texto digitado,
                                 fica desabilitado pedindo o nome; com texto, cria na hora. */}
-                            <CommandGroup heading="Nova tag">
+                            <CommandGroup heading="Nova etiqueta">
                               <CommandItem
                                 value={`__create__${trimmedLabelSearch}`}
                                 disabled={!canCreateLabel || creatingLabel}
@@ -848,11 +848,11 @@ export default function EditItemModal({
                                   ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                                   : <Plus className="mr-2 h-3.5 w-3.5" />}
                                 {trimmedLabelSearch
-                                  ? `Criar tag "${trimmedLabelSearch}"`
-                                  : 'Digite acima pra criar uma nova tag'}
+                                  ? `Criar etiqueta "${trimmedLabelSearch}"`
+                                  : 'Digite acima pra criar uma nova etiqueta'}
                               </CommandItem>
                             </CommandGroup>
-                            <CommandGroup heading="Tags existentes">
+                            <CommandGroup heading="Etiquetas existentes">
                               {filteredLabels.map(l => (
                                 <CommandItem key={l.id} value={l.title} onSelect={() => { toggleLabel(l.title); setLabelPopoverOpen(false); setLabelSearch(''); }}>
                                   <Check className={`mr-2 h-3.5 w-3.5 ${activeLabels.includes(l.title) ? 'opacity-100' : 'opacity-0'}`} />
@@ -1136,9 +1136,9 @@ export default function EditItemModal({
                 source_url: 'Link do anúncio', source_id: 'ID do anúncio', source_type: 'Tipo',
                 ctwa_clid: 'ID do clique', thumbnail_url: 'Imagem do anúncio',
                 // Landing Page
-                landing_name: 'Landing', landing_slug: 'Slug', landing_url: 'Link da landing',
+                landing_name: 'Landing', landing_slug: 'Nome na URL', landing_url: 'Link da landing',
                 // Origem universal (manual / orgânico / tracking interno)
-                inbox_name: 'Caixa de entrada', added_by_name: 'Adicionado por',
+                inbox_name: 'Número de WhatsApp', added_by_name: 'Adicionado por',
                 // Bolsão: de qual planilha o lead saiu. Vive separado do texto de
                 // origem informada porque aquele é editável — reescrever "veio por
                 // indicação" apagava a rastreabilidade da lista.

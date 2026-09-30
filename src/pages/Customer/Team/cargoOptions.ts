@@ -33,7 +33,7 @@ const FACTORY: Array<{ slug: string; label: string; description: string; chaveRo
   {
     slug: 'administrador',
     label: 'Administrador',
-    description: 'Acesso total: configurações, equipe, todas as instâncias.',
+    description: 'Acesso total: configurações, equipe, todos os números.',
     chaveRole: 'admin',
   },
   {
@@ -45,7 +45,7 @@ const FACTORY: Array<{ slug: string; label: string; description: string; chaveRo
   {
     slug: 'corretor',
     label: 'Corretor',
-    description: 'Atende leads. Só vê as instâncias que você liberar.',
+    description: 'Atende leads. Só vê os números que você liberar.',
     chaveRole: 'agent',
   },
 ];

@@ -4057,7 +4057,8 @@ Spec e plano: `LM FLOW/specs/2026-09-29-fase-3-base-de-design-e-linguagem-design
 - **Régua de linguagem:** [GLOSSARIO.md](GLOSSARIO.md). "Número de WhatsApp", funil, etapa, etiqueta, Ligar/Desligar, Excluir × Remover, Salvar/Criar. Termo técnico só em tela de conectar outro sistema.
 - **Formato:** tudo que aparece na tela sai de `src/lib/formato.ts`. Vazio vira `—`, hora é sempre 24h. "2026-09-30" puro é dia de calendário (não vira 29/09 em São Paulo). `utils/dateUtils` e `numberTexts.formatPhone` só repassam pra ele.
 - **Trava do build:** `scripts/conferir-padrao.mjs --tetos scripts/conferir-padrao.tetos.json`.
-  - Ela lê as telas com o compilador do TypeScript. Texto de tela é o que está entre tags, em atributo de texto, em toast, em confirmação e em mapa `*_LABELS`; nome de variável, rota, tipo e chave de i18n não contam.
+  - Ela lê as telas com o compilador do TypeScript. Texto de tela é o que está entre tags, em atributo de texto (inclui `hint`/`text`), em toast, em confirmação, nas palavras de `plural()`, na mensagem de reserva de `apiErrorMessage()` e em mapa `*_LABELS`; nome de variável, rota, tipo e chave de i18n não contam.
+  - **Ponto cego:** frase montada em variável ou tupla e texto devolvido por função não são lidos. Contagem 0 não prova tela limpa: a revisão de PR confere.
   - Fora do escopo: o painel raiz, as páginas públicas, as landings, o widget e a **sobra** do Evolution (listas `SOBRA`/`NAMESPACES_SOBRA`). A fase 4 decide se a sobra some.
   - **Teto só desce.**
 - **Decisões do Tony (30/09):**

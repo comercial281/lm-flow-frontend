@@ -37,7 +37,7 @@ function TagRow({ option, selecionada, onToggle, onCor, onExcluir }: {
         </button>
         <button
           type="button"
-          aria-label="Cor da tag"
+          aria-label="Cor da etiqueta"
           title="Trocar a cor"
           onClick={() => setPaleta(v => !v)}
           className="shrink-0 rounded p-1 text-lm-subtle opacity-0 hover:bg-lm-card hover:text-lm-primary group-hover:opacity-100"
@@ -46,8 +46,8 @@ function TagRow({ option, selecionada, onToggle, onCor, onExcluir }: {
         </button>
         <button
           type="button"
-          aria-label="Excluir tag"
-          title="Excluir tag"
+          aria-label="Excluir etiqueta"
+          title="Excluir etiqueta"
           onClick={onExcluir}
           className="shrink-0 rounded p-1 text-lm-subtle opacity-0 hover:bg-lm-card hover:text-lm-danger group-hover:opacity-100"
         >
@@ -152,7 +152,7 @@ export default function MultiSelectCell({ property, value, onChange, variant = '
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && canCreate) { e.preventDefault(); void createOption() } }}
-              placeholder="Buscar ou criar tag..."
+              placeholder="Buscar ou criar etiqueta..."
               className="w-full rounded-lm-sm bg-lm-bg px-2 py-1.5 text-sm text-lm-primary outline-none placeholder:text-lm-subtle focus:ring-1 focus:ring-lm-neon/40"
             />
           </div>
@@ -175,12 +175,12 @@ export default function MultiSelectCell({ property, value, onChange, variant = '
                 className="flex w-full items-center gap-2 rounded-lm-sm px-2 py-1.5 text-left text-sm text-lm-primary hover:bg-lm-card2 disabled:opacity-50"
               >
                 <Plus size={13} className="text-lm-neon" />
-                Criar tag <span className="font-medium">{term.trim()}</span>
+                Criar etiqueta <span className="font-medium">{term.trim()}</span>
               </button>
             )}
             {!canCreate && filtered.length === 0 && (
               <div className="px-2 py-3 text-center text-xs text-lm-subtle">
-                {options.length === 0 ? 'Digite pra criar a primeira tag' : 'Nenhuma tag'}
+                {options.length === 0 ? 'Digite pra criar a primeira etiqueta' : 'Nenhuma etiqueta'}
               </div>
             )}
           </div>

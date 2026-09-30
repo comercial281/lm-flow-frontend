@@ -464,7 +464,7 @@ function LessonEditForm({ lesson, onClose }: { lesson: KnowledgeLesson; onClose:
           className="px-3 py-1.5 text-xs text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-50 rounded-lg"
           type="button"
         >
-          {busy ? 'Salvando...' : 'Salvar alterações'}
+          {busy ? 'Salvando...' : 'Salvar'}
         </button>
       </div>
     </div>

@@ -38,7 +38,7 @@ export default function PagePeekModal({ pageId, onClose, onExpand, onOpenPage }:
         <header className="flex shrink-0 items-center gap-1 border-b border-lm-border px-3 py-2">
           <button
             type="button"
-            aria-label="Abrir em pagina cheia"
+            aria-label="Abrir em página cheia"
             onClick={onExpand}
             className="rounded-lm-sm p-1.5 text-lm-muted transition hover:bg-lm-card2 hover:text-lm-primary"
           >

@@ -256,7 +256,7 @@ export function leadDestinationNotice(preview: DeactivationPreview | null): stri
 }
 
 export const ERASE_UNKNOWN =
-  'O servidor ainda não sabe dizer se este cadastro pode ser apagado. Tente de novo em alguns minutos.';
+  'O servidor ainda não sabe dizer se este cadastro pode ser excluído. Tente de novo em alguns minutos.';
 
 /**
  * O *Excluir cadastro* apaga DE VERDADE, e só o cadastro que nunca foi usado.
@@ -272,5 +272,5 @@ export function eraseVerdict(preview: DeactivationPreview | null): { allowed: bo
   const verdict = preview?.erase;
   if (!verdict) return { allowed: false, reason: ERASE_UNKNOWN };
   if (verdict.allowed) return { allowed: true, reason: null };
-  return { allowed: false, reason: verdict.reason || 'Este cadastro já foi usado e não pode ser apagado. Use Desativar.' };
+  return { allowed: false, reason: verdict.reason || 'Este cadastro já foi usado e não pode ser excluído. Use Desativar.' };
 }

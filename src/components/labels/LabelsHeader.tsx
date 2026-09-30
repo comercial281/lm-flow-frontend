@@ -30,7 +30,7 @@ export default function LabelsHeader({
   return (
     <BaseHeader
       title={t('header.title')}
-      subtitle={t('header.subtitle', { count: totalCount, plural: totalCount !== 1 ? 's' : '' })}
+      subtitle={t('header.subtitle', { count: totalCount })}
       searchPlaceholder={t('header.searchPlaceholder')}
       searchValue={searchValue}
       onSearchChange={onSearchChange}

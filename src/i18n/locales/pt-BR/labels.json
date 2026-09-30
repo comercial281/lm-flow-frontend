@@ -3,10 +3,12 @@
   "loading": "Carregando etiquetas...",
   "header": {
     "title": "Etiquetas",
-    "subtitle": "{{count}} etiqueta{{plural}} no total",
+    "subtitle": "{{count}} etiqueta no total",
+    "subtitle_other": "{{count}} etiquetas no total",
+    "subtitle_zero": "{{count}} etiquetas no total",
     "searchPlaceholder": "Buscar etiquetas...",
     "newLabel": "Nova Etiqueta",
-    "bulkDelete": "Deletar",
+    "bulkDelete": "Excluir",
     "clearSelection": "Limpar Seleção",
     "selected": "{{count}} selecionada",
     "selected_other": "{{count}} selecionadas",
@@ -49,7 +51,7 @@
     "buttons": {
       "cancel": "Cancelar",
       "create": "Criar",
-      "update": "Atualizar",
+      "update": "Salvar",
       "saving": "Salvando..."
     }
   },
@@ -68,12 +70,12 @@
     },
     "actions": {
       "edit": "Editar",
-      "delete": "Deletar"
+      "delete": "Excluir"
     }
   },
   "actions": {
     "edit": "Editar",
-    "delete": "Deletar",
+    "delete": "Excluir",
     "cancel": "Cancelar",
     "save": "Salvar",
     "confirm": "Confirmar"
@@ -83,36 +85,36 @@
       "read": "Você não tem permissão para visualizar etiquetas",
       "create": "Você não tem permissão para criar etiquetas",
       "update": "Você não tem permissão para editar etiquetas",
-      "delete": "Você não tem permissão para deletar etiquetas"
+      "delete": "Você não tem permissão para excluir etiquetas"
     },
     "loadError": "Erro ao carregar etiquetas",
     "createSuccess": "Etiqueta criada com sucesso",
     "createError": "Erro ao criar etiqueta",
     "updateSuccess": "Etiqueta atualizada com sucesso",
     "updateError": "Erro ao atualizar etiqueta",
-    "deleteSuccess": "Etiqueta deletada com sucesso",
-    "deleteError": "Erro ao deletar etiqueta",
-    "bulkDeleteSuccess": "{{count}} etiqueta deletada com sucesso",
-    "bulkDeleteSuccess_other": "{{count}} etiquetas deletadas com sucesso",
-    "bulkDeleteSuccess_zero": "{{count}} etiquetas deletadas com sucesso",
-    "bulkDeleteError": "Erro ao deletar etiquetas"
+    "deleteSuccess": "Etiqueta excluída com sucesso",
+    "deleteError": "Erro ao excluir etiqueta",
+    "bulkDeleteSuccess": "{{count}} etiqueta excluída com sucesso",
+    "bulkDeleteSuccess_other": "{{count}} etiquetas excluídas com sucesso",
+    "bulkDeleteSuccess_zero": "{{count}} etiquetas excluídas com sucesso",
+    "bulkDeleteError": "Erro ao excluir etiquetas"
   },
   "dialog": {
     "delete": {
-      "title": "Deletar Etiqueta",
-      "description": "Tem certeza de que deseja deletar a etiqueta \"{{title}}\"? Esta ação não pode ser desfeita.",
+      "title": "Excluir Etiqueta",
+      "description": "Tem certeza de que deseja excluir a etiqueta \"{{title}}\"? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "confirm": "Deletar",
-      "deleting": "Deletando..."
+      "confirm": "Excluir",
+      "deleting": "Excluindo..."
     },
     "bulkDelete": {
-      "title": "Deletar Etiquetas",
-      "description": "Tem certeza de que deseja deletar {{count}} etiqueta selecionada? Esta ação não pode ser desfeita.",
-      "description_other": "Tem certeza de que deseja deletar {{count}} etiquetas selecionadas? Esta ação não pode ser desfeita.",
-      "description_zero": "Tem certeza de que deseja deletar {{count}} etiquetas selecionadas? Esta ação não pode ser desfeita.",
+      "title": "Excluir Etiquetas",
+      "description": "Tem certeza de que deseja excluir {{count}} etiqueta selecionada? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza de que deseja excluir {{count}} etiquetas selecionadas? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja excluir {{count}} etiquetas selecionadas? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "confirm": "Deletar Todas",
-      "deleting": "Deletando..."
+      "confirm": "Excluir Todas",
+      "deleting": "Excluindo..."
     }
   }
 }

@@ -314,7 +314,7 @@ export default function AddItemModal({
         }
       }
 
-      toast.success(reused ? 'Lead já existia — adicionado ao pipeline.' : 'Lead criado e adicionado ao pipeline.');
+      toast.success(reused ? 'Lead já existia — adicionado ao funil.' : 'Lead criado e adicionado ao funil.');
       onItemAdded();
       onOpenChange(false);
     } catch (error) {

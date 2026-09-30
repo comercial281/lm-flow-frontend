@@ -655,7 +655,7 @@ export default function ChannelSettings() {
               {formData.avatar_url && (
                 <img
                   src={formData.avatar_url}
-                  alt="Inbox avatar"
+                  alt="Foto do canal"
                   className="w-16 h-16 rounded-full object-cover border-2 border-border"
                 />
               )}

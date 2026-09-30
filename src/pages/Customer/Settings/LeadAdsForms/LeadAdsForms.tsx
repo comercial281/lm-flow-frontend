@@ -149,7 +149,7 @@ export default function LeadAdsForms() {
       setDebugPages(result.pages);
       setDebug(result.data ?? result.pages[0] ?? null);
     } catch (e) {
-      setDebugError(apiErrorMessage(e, 'Não foi possível diagnosticar o token'));
+      setDebugError(apiErrorMessage(e, 'Não foi possível diagnosticar a conexão com o Meta'));
     } finally {
       setDebugBusy(false);
     }
@@ -159,7 +159,7 @@ export default function LeadAdsForms() {
     if (!debug?.access_token) return;
     try {
       await navigator.clipboard.writeText(debug.access_token);
-      toast.success('Token copiado');
+      toast.success('Chave copiada');
     } catch {
       toast.error('Não foi possível copiar');
     }
@@ -342,10 +342,10 @@ export default function LeadAdsForms() {
       // A lista vai como JSX: no window.confirm ela era uma parede de texto com
       // `\n`, e com dezenas de etiquetas a caixinha do navegador cortava o fim.
       const ok = await confirmar({
-        titulo: `Apagar ${plural(preview.count, 'etiqueta', 'etiquetas')}`,
+        titulo: `Excluir ${plural(preview.count, 'etiqueta', 'etiquetas')}`,
         descricao: (
           <>
-            Estas etiquetas foram criadas automaticamente e serão apagadas. Não dá pra desfazer.
+            Estas etiquetas foram criadas automaticamente e serão excluídas. Não dá pra desfazer.
             <span className="mt-2 block max-h-48 overflow-auto text-xs">
               {preview.labels.map(l => (
                 <span key={l.title} className="block">• {l.title}</span>
@@ -353,7 +353,7 @@ export default function LeadAdsForms() {
             </span>
           </>
         ),
-        rotuloDaAcao: 'Apagar',
+        rotuloDaAcao: 'Excluir',
         destrutivo: true,
       });
       if (!ok) return;
@@ -402,7 +402,7 @@ export default function LeadAdsForms() {
   };
 
   const handleSave = async () => {
-    if (!form.pipeline_id) { toast.error('Selecione um pipeline'); return; }
+    if (!form.pipeline_id) { toast.error('Selecione um funil'); return; }
     if (!form.pipeline_stage_id) { toast.error('Selecione uma etapa'); return; }
 
     const assign = decodeAssignTo(form.assign_to);
@@ -436,7 +436,7 @@ export default function LeadAdsForms() {
       }
       setModalOpen(false);
     } catch (e) {
-      toast.error(apiErrorMessage(e, 'Erro ao salvar configuração'));
+      toast.error(apiErrorMessage(e, 'Erro ao salvar'));
     } finally {
       setSaving(false);
     }
@@ -566,7 +566,7 @@ export default function LeadAdsForms() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <IconActionButton
-            label="Diagnosticar token"
+            label="Diagnosticar conexão"
             icon={<Stethoscope className="h-4 w-4" />}
             onClick={runTokenDebug}
           />
@@ -625,7 +625,7 @@ export default function LeadAdsForms() {
             )}
 
             <p className="text-xs text-muted-foreground">
-              Dica: confira primeiro. Ao importar, os leads entram no pipeline e podem disparar as
+              Dica: confira primeiro. Ao importar, os leads entram no funil e podem disparar as
               automações de entrada — desative o primeiro contato antes se não quiser avisar leads antigos.
             </p>
           </div>
@@ -663,9 +663,9 @@ export default function LeadAdsForms() {
       <Dialog open={debugOpen} onOpenChange={setDebugOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Diagnóstico do token da Meta</DialogTitle>
+            <DialogTitle>Diagnóstico da conexão com o Meta</DialogTitle>
             <DialogDescription>
-              O que o Facebook diz sobre o token conectado deste cliente — app, permissões
+              O que o Facebook diz sobre a conexão deste cliente — app, permissões
               e se ele enxerga a página.
             </DialogDescription>
           </DialogHeader>
@@ -708,7 +708,7 @@ export default function LeadAdsForms() {
               )}
               {debug.token_error && (
                 <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-400">
-                  <p className="font-medium">O Facebook recusou este token</p>
+                  <p className="font-medium">O Facebook recusou esta conexão</p>
                   <p className="mt-0.5">{debug.token_error}</p>
                 </div>
               )}
@@ -720,7 +720,7 @@ export default function LeadAdsForms() {
                   </span>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">Tipo do token</span>
+                  <span className="text-muted-foreground">Tipo de acesso</span>
                   <span className="font-medium">{debug.token_type || '—'}</span>
                 </div>
                 <div className="flex justify-between gap-3">
@@ -748,10 +748,10 @@ export default function LeadAdsForms() {
                   : <X className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />}
                 <div>
                   {debug.page_ok ? (
-                    <p>O token <strong>enxerga a página</strong>: {debug.page_name} ({debug.page_id})</p>
+                    <p>A conexão <strong>enxerga a página</strong>: {debug.page_name} ({debug.page_id})</p>
                   ) : (
                     <>
-                      <p className="font-medium">O token NÃO enxerga a página {debug.page_id}</p>
+                      <p className="font-medium">A conexão NÃO enxerga a página {debug.page_id}</p>
                       {debug.page_error && <p className="text-muted-foreground mt-0.5">{debug.page_error}</p>}
                     </>
                   )}
@@ -770,7 +770,7 @@ export default function LeadAdsForms() {
                     : <X className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />}
                   <div>
                     {debug.page_token_ok ? (
-                      <p>Página <strong>atribuída ao Usuário do Sistema</strong> para Leads (token de página OK) — os formulários devem carregar.</p>
+                      <p>Página <strong>atribuída ao Usuário do Sistema</strong> para Leads (acesso à página OK) — os formulários devem carregar.</p>
                     ) : (
                       <>
                         <p className="font-medium">A página não está atribuída ao Usuário do Sistema para Leads</p>
@@ -923,7 +923,7 @@ export default function LeadAdsForms() {
                 </div>
                 {debug.missing_scopes.length > 0 && (
                   <p className="text-xs text-amber-600 mt-2">
-                    Faltam permissões — gere um token novo com elas e reconecte.
+                    Faltam permissões — refaça a conexão com o Facebook autorizando essas permissões.
                   </p>
                 )}
               </div>
@@ -933,7 +933,7 @@ export default function LeadAdsForms() {
                 <div className="rounded-lg border border-border p-3">
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Access Token salvo{typeof debug.token_length === 'number' ? ` (${debug.token_length} caracteres)` : ''}
+                      Chave de acesso salva{typeof debug.token_length === 'number' ? ` (${debug.token_length} caracteres)` : ''}
                     </p>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowToken(s => !s)}
@@ -1260,7 +1260,7 @@ export default function LeadAdsForms() {
 
           <div className="space-y-4 py-2">
             <div>
-              <UILabel>Pipeline *</UILabel>
+              <UILabel>Funil *</UILabel>
               <select
                 value={form.pipeline_id}
                 onChange={e =>
@@ -1268,7 +1268,7 @@ export default function LeadAdsForms() {
                 }
                 className={baseSelectClass}
               >
-                <option value="">Selecione um pipeline</option>
+                <option value="">Selecione um funil</option>
                 {resources.pipelines.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}

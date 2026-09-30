@@ -64,8 +64,8 @@ const conheceLocacao = (s: PortalSettings | null | undefined) => typeof s?.rent_
 
 /**
  * A tela *Configurar* do portal, no modelo do Kenlo: dados do anunciante,
- * endereço no anúncio, leads e destino do lead — tudo gravado num *Salvar
- * configuração* só (uma requisição, `PUT /portals/:key/settings`).
+ * endereço no anúncio, leads e destino do lead — tudo gravado num *Salvar*
+ * só (uma requisição, `PUT /portals/:key/settings`).
  *
  * Os seletores de destino são leitura de fundo: cargo sem acesso a funis,
  * roletas ou usuários só não vê aquele seletor — nada de aviso vermelho. E o
@@ -217,7 +217,7 @@ export default function PortalSettingsCard({ portalKey, settings, onSaved }: Pro
         <div>
           <h3 className="text-sm font-medium">Leads</h3>
           <p className="text-xs text-muted-foreground">
-            O portal manda o lead para a URL de webhook acima. Aqui você decide se ele vira contato.
+            O portal manda o lead para a URL de recebimento acima. Aqui você decide se ele vira contato.
           </p>
         </div>
         <div role="radiogroup" aria-label="Receber leads automaticamente" className="space-y-2">
@@ -276,7 +276,7 @@ export default function PortalSettingsCard({ portalKey, settings, onSaved }: Pro
 
       <div className="flex justify-end">
         <Button className="text-xs" onClick={save} disabled={saving}>
-          {saving ? 'Salvando...' : 'Salvar configuração'}
+          {saving ? 'Salvando...' : 'Salvar'}
         </Button>
       </div>
     </div>

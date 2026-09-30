@@ -179,8 +179,8 @@ export const MACRO_ACTION_TYPES: MacroActionType[] = [
   },
   {
     key: 'send_webhook_event',
-    name: 'Enviar webhook',
+    name: 'Avisar outro sistema',
     inputType: 'url',
-    description: 'Dispara um webhook para um endpoint externo',
+    description: 'Avisa automaticamente um sistema externo, numa URL que você escolhe',
   },
 ];

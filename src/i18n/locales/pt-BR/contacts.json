@@ -7,7 +7,7 @@
       "viewDetails": "Ver detalhes",
       "viewEvents": "Ver eventos",
       "edit": "Editar contato",
-      "delete": "Deletar contato"
+      "delete": "Excluir contato"
     }
   },
   "details": {
@@ -16,7 +16,7 @@
       "profile": "Perfil",
       "companies": "Empresas",
       "persons": "Contatos",
-      "pipeline": "Pipeline",
+      "pipeline": "Funil",
       "history": "Histórico",
       "notes": "Notas",
       "attributes": "Atributos"
@@ -131,12 +131,12 @@
       "message_created": "Mensagem Criada",
       "message_updated": "Mensagem Atualizada",
       "message_deleted": "Mensagem Excluída",
-      "pipeline_conversation_created": "Adicionado ao Pipeline",
-      "pipeline_conversation_updated": "Pipeline Atualizado",
-      "pipeline_conversation_added": "Adicionado ao Pipeline",
-      "pipeline_conversation_deleted": "Removido do Pipeline",
-      "pipeline_stage_changed": "Estágio do Pipeline Alterado",
-      "pipeline_custom_fields_updated": "Campos Personalizados do Pipeline",
+      "pipeline_conversation_created": "Adicionado ao Funil",
+      "pipeline_conversation_updated": "Funil Atualizado",
+      "pipeline_conversation_added": "Adicionado ao Funil",
+      "pipeline_conversation_deleted": "Removido do Funil",
+      "pipeline_stage_changed": "Etapa do Funil Alterada",
+      "pipeline_custom_fields_updated": "Campos Personalizados do Funil",
       "contactCreated": "Contato criado",
       "contactUpdated": "Contato atualizado",
       "labelAdded": "Etiqueta adicionada",
@@ -145,8 +145,8 @@
       "conversationCreated": "Conversa criada",
       "conversationUpdated": "Conversa atualizada",
       "messageCreated": "Mensagem criada",
-      "pipelineCreated": "Pipeline criado",
-      "pipelineUpdated": "Pipeline atualizado"
+      "pipelineCreated": "Funil criado",
+      "pipelineUpdated": "Funil atualizado"
     },
     "descriptions": {
       "contact_created": "Um novo contato foi criado no sistema",
@@ -156,13 +156,13 @@
       "label_added": "Etiqueta \"{{labelName}}\" foi adicionada",
       "label_removed": "Etiqueta \"{{labelName}}\" foi removida",
       "custom_attribute_changed": "Atributo \"{{attributeName}}\" foi alterado",
-      "conversation_created": "Nova conversa criada no inbox \"{{inbox_name}}\"",
+      "conversation_created": "Nova conversa criada no canal \"{{inbox_name}}\"",
       "conversation_updated": "Conversa atualizada ({{count}} alterações)",
       "message_created_incoming": "recebida do contato",
       "message_created_outgoing": "enviada pelo atendente",
-      "pipeline_added": "Adicionado ao pipeline \"{{pipeline_name}}\" no estágio \"{{pipeline_stage_name}}\"",
-      "pipeline_stage_changed": "Pipeline \"{{pipeline_name}}\": movido de \"{{old_stage_name}}\" para \"{{new_stage_name}}\"",
-      "pipeline_custom_fields": "Campos personalizados do pipeline \"{{pipeline_name}}\" atualizados (valor total: {{value}})",
+      "pipeline_added": "Adicionado ao funil \"{{pipeline_name}}\" na etapa \"{{pipeline_stage_name}}\"",
+      "pipeline_stage_changed": "Funil \"{{pipeline_name}}\": movido de \"{{old_stage_name}}\" para \"{{new_stage_name}}\"",
+      "pipeline_custom_fields": "Campos personalizados do funil \"{{pipeline_name}}\" atualizados (valor total: {{value}})",
       "system": "Evento do sistema",
       "segment_entered": "O contato passou a fazer parte de um segmento",
       "segment_exited": "O contato deixou de fazer parte de um segmento"
@@ -180,12 +180,12 @@
       },
       "previous": "Anterior:",
       "new": "Novo:",
-      "pipelineAdded": "Adicionado ao Pipeline",
-      "pipeline": "Pipeline:",
-      "initialStage": "Estágio Inicial:",
-      "stageChange": "Mudança de Estágio",
-      "daysInPipeline": "Dias no pipeline: {{days}}",
-      "daysInStage": "Dias no estágio atual: {{days}}",
+      "pipelineAdded": "Adicionado ao Funil",
+      "pipeline": "Funil:",
+      "initialStage": "Etapa Inicial:",
+      "stageChange": "Mudança de Etapa",
+      "daysInPipeline": "Dias no funil: {{days}}",
+      "daysInStage": "Dias na etapa atual: {{days}}",
       "services": "Serviços e Valores",
       "total": "Total:",
       "message": "Mensagem",
@@ -209,7 +209,7 @@
         "assignee_last_seen_at": "Última visualização do atendente",
         "generic": "Campo \"{{field}}\" foi modificado"
       },
-      "inbox": "Caixa de entrada: {{name}}",
+      "inbox": "Número de WhatsApp: {{name}}",
       "channelType": "Canal: {{type}}",
       "labelUnknown": "Etiqueta desconhecida",
       "yes": "Sim",
@@ -405,7 +405,7 @@
     },
     "actions": {
       "cancel": "Cancelar",
-      "save": "Salvar Alterações",
+      "save": "Salvar",
       "create": "Criar Contato",
       "saving": "Salvando..."
     }
@@ -423,7 +423,7 @@
     "contacts": "Carregando contatos...",
     "creating": "Criando...",
     "updating": "Atualizando...",
-    "deleting": "Deletando...",
+    "deleting": "Excluindo...",
     "importing": "Importando...",
     "exporting": "Exportando...",
     "bulk": "Processando..."
@@ -431,7 +431,7 @@
   "actions": {
     "startConversation": "Iniciar Conversa",
     "edit": "Editar",
-    "delete": "Deletar",
+    "delete": "Excluir",
     "viewEvents": "Ver Eventos",
     "cancel": "Cancelar",
     "save": "Salvar",
@@ -445,12 +445,12 @@
     "openExisting": "Abrir contato existente",
     "updateSuccess": "Contato atualizado com sucesso",
     "updateError": "Erro ao atualizar contato",
-    "deleteSuccess": "Contato deletado com sucesso",
-    "deleteError": "Erro ao deletar contato",
-    "bulkDeleteSuccess": "{{count}} contato deletado com sucesso",
-    "bulkDeleteSuccess_other": "{{count}} contatos deletados com sucesso",
-    "bulkDeleteSuccess_zero": "{{count}} contatos deletados com sucesso",
-    "bulkDeleteError": "Erro ao deletar contatos",
+    "deleteSuccess": "Contato excluído com sucesso",
+    "deleteError": "Erro ao excluir contato",
+    "bulkDeleteSuccess": "{{count}} contato excluído com sucesso",
+    "bulkDeleteSuccess_other": "{{count}} contatos excluídos com sucesso",
+    "bulkDeleteSuccess_zero": "{{count}} contatos excluídos com sucesso",
+    "bulkDeleteError": "Erro ao excluir contatos",
     "mergeSuccess": "Contatos mesclados com sucesso",
     "mergeError": "Erro ao mesclar contatos",
     "importSuccess": "Contatos importados com sucesso",
@@ -472,21 +472,21 @@
   },
   "dialog": {
     "deleteContact": {
-      "title": "Deletar Contato",
-      "description": "Tem certeza de que deseja deletar o contato \"{{name}}\"? Esta ação não pode ser desfeita.",
-      "confirm": "Deletar",
+      "title": "Excluir Contato",
+      "description": "Tem certeza de que deseja excluir o contato \"{{name}}\"? Esta ação não pode ser desfeita.",
+      "confirm": "Excluir",
       "cancel": "Cancelar",
-      "deleting": "Deletando..."
+      "deleting": "Excluindo..."
     },
     "bulkDelete": {
-      "title": "Deletar Contatos",
-      "description": "Tem certeza de que deseja deletar {{count}} contato selecionado? Esta ação não pode ser desfeita.",
-      "description_other": "Tem certeza de que deseja deletar {{count}} contatos selecionados? Esta ação não pode ser desfeita.",
-      "description_zero": "Tem certeza de que deseja deletar {{count}} contatos selecionados? Esta ação não pode ser desfeita.",
-      "confirm": "Deletar Todos",
+      "title": "Excluir Contatos",
+      "description": "Tem certeza de que deseja excluir {{count}} contato selecionado? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza de que deseja excluir {{count}} contatos selecionados? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja excluir {{count}} contatos selecionados? Esta ação não pode ser desfeita.",
+      "confirm": "Excluir Todos",
       "cancel": "Cancelar",
-      "deleting": "Deletando...",
-      "descriptionAll": "Tem certeza de que deseja deletar TODOS os {{count}} contatos que casam com o filtro atual? A exclusão roda em segundo plano e não pode ser desfeita."
+      "deleting": "Excluindo...",
+      "descriptionAll": "Tem certeza de que deseja excluir TODOS os {{count}} contatos que casam com o filtro atual? A exclusão roda em segundo plano e não pode ser desfeita."
     },
     "mergeContacts": {
       "title": "Mesclar Contatos",
@@ -551,7 +551,7 @@
       "company": "Empresa"
     },
     "quick": {
-      "allTags": "Todas as tags",
+      "allTags": "Todas as etiquetas",
       "clear": "Limpar",
       "withoutTagsPlaceholder": "Sem a etiqueta...",
       "withoutTagsSummary": "Sem {{count}} etiqueta",
@@ -607,13 +607,13 @@
       "type": "Tipo",
       "tags": "Etiquetas",
       "status": "Status",
-      "pipelines": "Pipelines"
+      "pipelines": "Funis"
     },
     "actions": {
       "startConversation": "Iniciar conversa",
       "viewEvents": "Ver eventos",
       "edit": "Editar contato",
-      "delete": "Deletar contato",
+      "delete": "Excluir contato",
       "create": "Criar contato"
     },
     "empty": {
@@ -631,14 +631,14 @@
     "import": "Importar",
     "export": "Exportar",
     "filters": "Filtros",
-    "bulkDelete": "Deletar Selecionados",
+    "bulkDelete": "Excluir Selecionados",
     "mergeContacts": "Mesclar Contatos",
     "clearSelection": "Limpar Seleção",
     "selected": "{{count}} selecionado",
     "selected_other": "{{count}} selecionados",
     "selectAllMatching": "Selecionar todos os {{count}} contatos",
     "allMatchingSelected": "todos os contatos do filtro atual",
-    "bulkDeleteAll": "Deletar todos os {{count}}"
+    "bulkDeleteAll": "Excluir todos os {{count}}"
   },
   "startConversation": {
     "title": "Iniciar Conversa",
@@ -655,8 +655,8 @@
       }
     },
     "pipelines": {
-      "morePipelines": "+{{count}} pipeline",
-      "morePipelines_other": "+{{count}} pipelines"
+      "morePipelines": "+{{count}} funil",
+      "morePipelines_other": "+{{count}} funis"
     },
     "channels": {
       "whatsapp": "WhatsApp",
@@ -737,7 +737,7 @@
     "message": "Mensagem",
     "subject": "Assunto",
     "body": "Corpo do Email",
-    "webhookUrl": "URL do Webhook",
+    "webhookUrl": "URL do aviso automático",
     "webhookMethod": "Método HTTP",
     "taskTitle": "Título da Tarefa",
     "taskDescription": "Descrição da Tarefa (opcional)",
@@ -749,7 +749,7 @@
       "send_email": "Enviar Email",
       "send_whatsapp": "Enviar WhatsApp",
       "send_sms": "Enviar SMS",
-      "execute_webhook": "Executar Webhook",
+      "execute_webhook": "Enviar aviso automático",
       "create_task": "Criar Tarefa",
       "update_deal_stage": "Atualizar Etapa",
       "add_deal_note": "Adicionar Nota"
@@ -771,7 +771,7 @@
       "dateTimeFuture": "A data e hora devem ser no futuro",
       "channel": "Canal é obrigatório",
       "message": "Mensagem é obrigatória",
-      "webhookUrl": "URL do webhook é obrigatória",
+      "webhookUrl": "URL do aviso automático é obrigatória",
       "journeyId": "ID da jornada é obrigatório",
       "taskTitle": "Título da tarefa é obrigatório",
       "contact": "Contato é obrigatório"
@@ -781,6 +781,6 @@
     "noContactsFound": "Nenhum contato encontrado"
   },
   "pipelines": {
-    "morePipelines": "+{{count}} pipeline"
+    "morePipelines": "+{{count}} funil"
   }
 }

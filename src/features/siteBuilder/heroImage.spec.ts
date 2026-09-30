@@ -40,9 +40,9 @@ describe('foto do banner da home', () => {
       expect(msg).toContain('automático');
     });
 
-    it('explica o imóvel apagado sem nome', () => {
+    it('explica o imóvel excluído sem nome', () => {
       expect(heroImageWarning({ mode: 'property', property_id: 'im-1', reason: 'imovel_removido' }))
-        .toMatch(/apagado/);
+        .toMatch(/excluído/);
     });
   });
 });

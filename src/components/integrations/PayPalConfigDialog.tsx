@@ -161,7 +161,7 @@ const PayPalConfigDialog = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving PayPal configuration:', error);
-      toast.error(apiErrorMessage(error, 'Erro ao salvar configurações'));
+      toast.error(apiErrorMessage(error, 'Erro ao salvar'));
     }
   };
 
@@ -335,7 +335,7 @@ const PayPalConfigDialog = ({
 
             <div className="flex flex-col gap-3 pt-4 border-t">
               <Button onClick={handleSave} className="w-full">
-                {t('edit.integrations.paypal.saveConfig') || 'SALVAR CONFIGURAÇÕES'}
+                {t('edit.integrations.paypal.saveConfig') || 'Salvar'}
               </Button>
 
               {onDisconnect && (

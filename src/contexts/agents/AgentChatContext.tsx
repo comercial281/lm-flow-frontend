@@ -141,7 +141,7 @@ export function AgentChatProvider({ children, agentId }: AgentChatProviderProps)
         setSelectedSessionId(null);
         setMessages([]);
       }
-      toast.success('Sessão deletada com sucesso');
+      toast.success('Sessão excluída com sucesso');
     } catch (error: any) {
       console.error('Error deleting session:', error);
       // If session not found (404), remove it from the list anyway
@@ -153,7 +153,7 @@ export function AgentChatProvider({ children, agentId }: AgentChatProviderProps)
         }
         toast.success('Sessão removida');
       } else {
-        toast.error('Erro ao deletar sessão');
+        toast.error('Erro ao excluir sessão');
         // Reload sessions to sync with backend
         await loadSessions();
       }

@@ -9,7 +9,7 @@
     "actions": {
       "users": "Usuários",
       "edit": "Editar",
-      "delete": "Deletar"
+      "delete": "Excluir"
     }
   },
   "details": {
@@ -76,7 +76,7 @@
       "cancel": "Cancelar",
       "saving": "Salvando...",
       "create": "Criar Equipe",
-      "save": "Salvar Alterações"
+      "save": "Salvar"
     }
   },
   "modal": {
@@ -87,7 +87,7 @@
     "newTeam": "Nova Equipe",
     "export": "Exportar",
     "import": "Importar",
-    "delete": "Deletar",
+    "delete": "Excluir",
     "searchPlaceholder": "Buscar por nome ou descrição..."
   },
   "table": {
@@ -102,7 +102,7 @@
     "actions": {
       "manageUsers": "Gerenciar Usuários",
       "edit": "Editar",
-      "delete": "Deletar"
+      "delete": "Excluir"
     },
     "empty": {
       "action": "Criar equipe",
@@ -115,12 +115,14 @@
     "loadDataError": "Erro ao carregar dados",
     "createSuccess": "Equipe criada com sucesso!",
     "updateSuccess": "Equipe atualizada com sucesso!",
-    "deleteSuccess": "Equipe deletada com sucesso!",
-    "bulkDeleteSuccess": "{{count}} equipes deletadas com sucesso!",
+    "deleteSuccess": "Equipe excluída com sucesso!",
+    "bulkDeleteSuccess": "{{count}} equipe excluída com sucesso!",
+    "bulkDeleteSuccess_other": "{{count}} equipes excluídas com sucesso!",
+    "bulkDeleteSuccess_zero": "{{count}} equipes excluídas com sucesso!",
     "createError": "Erro ao criar equipe",
     "updateError": "Erro ao atualizar equipe",
-    "deleteError": "Erro ao deletar equipe",
-    "bulkDeleteError": "Erro ao deletar equipes selecionadas",
+    "deleteError": "Erro ao excluir equipe",
+    "bulkDeleteError": "Erro ao excluir equipes selecionadas",
     "selectAtLeastOne": "Selecione pelo menos um usuário",
     "usersAddedSuccess": "Usuários adicionados com sucesso!",
     "addUsersError": "Erro ao adicionar usuários",
@@ -128,7 +130,7 @@
       "read": "Sem permissão para visualizar equipes",
       "create": "Sem permissão para criar equipes",
       "update": "Sem permissão para editar equipes",
-      "delete": "Sem permissão para deletar equipes"
+      "delete": "Sem permissão para excluir equipes"
     },
     "importInfo": "Funcionalidade de importação em desenvolvimento",
     "exportInfo": "Funcionalidade de exportação em desenvolvimento",
@@ -165,18 +167,20 @@
   },
   "dialog": {
     "delete": {
-      "title": "Deletar Equipe",
-      "description": "Tem certeza que deseja deletar a equipe \"{{name}}\"? Esta ação não pode ser desfeita.",
+      "title": "Excluir Equipe",
+      "description": "Tem certeza que deseja excluir a equipe \"{{name}}\"? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "confirm": "Deletar",
-      "deleting": "Deletando..."
+      "confirm": "Excluir",
+      "deleting": "Excluindo..."
     },
     "bulkDelete": {
-      "title": "Deletar Equipes",
-      "description": "Tem certeza que deseja deletar {{count}} equipes selecionadas? Esta ação não pode ser desfeita.",
+      "title": "Excluir Equipes",
+      "description": "Tem certeza que deseja excluir {{count}} equipe selecionada? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza que deseja excluir {{count}} equipes selecionadas? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza que deseja excluir {{count}} equipes selecionadas? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "confirm": "Deletar Todas",
-      "deleting": "Deletando..."
+      "confirm": "Excluir Todas",
+      "deleting": "Excluindo..."
     }
   },
   "actions": {

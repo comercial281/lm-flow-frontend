@@ -71,27 +71,27 @@ export default function RolesPage({ embedded = false }: RolesPageProps) {
 
   const handleDelete = async (role: CustomRole) => {
     if (role.system) {
-      toast.error('Cargo do sistema não pode ser deletado');
+      toast.error('Cargo do sistema não pode ser excluído');
       return;
     }
     const emUso = role.users_count > 0;
     if (
       !(await confirmar({
-        titulo: `Deletar cargo '${role.name}'?`,
+        titulo: `Excluir cargo '${role.name}'?`,
         descricao: emUso
           ? `Este cargo está em uso por ${plural(role.users_count, 'usuário', 'usuários')}. ${role.users_count === 1 ? 'Ele ficará' : 'Eles ficarão'} sem cargo definido.`
           : undefined,
-        rotuloDaAcao: 'Deletar',
+        rotuloDaAcao: 'Excluir',
         destrutivo: true,
       }))
     )
       return;
     try {
       await customRolesService.destroy(role.id);
-      toast.success('Cargo removido');
+      toast.success('Cargo excluído');
       refresh();
     } catch (err: any) {
-      toast.error('Erro ao deletar: ' + (err?.message ?? 'desconhecido'));
+      toast.error('Erro ao excluir: ' + (err?.message ?? 'desconhecido'));
     }
   };
 
@@ -162,7 +162,7 @@ export default function RolesPage({ embedded = false }: RolesPageProps) {
                 {role.system && (
                   <span
                     className="flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-                    title="Cargo do sistema (não pode ser deletado, mas pode ser editado)"
+                    title="Cargo do sistema (não pode ser excluído, mas pode ser editado)"
                   >
                     <Lock className="h-3 w-3" /> Sistema
                   </span>
@@ -213,7 +213,7 @@ export default function RolesPage({ embedded = false }: RolesPageProps) {
                   onClick={() => handleDelete(role)}
                   disabled={role.system}
                   className="flex items-center justify-center gap-1 rounded px-2 py-1.5 text-xs text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
-                  title={role.system ? 'Cargo do sistema não pode ser deletado' : 'Deletar'}
+                  title={role.system ? 'Cargo do sistema não pode ser excluído' : 'Excluir'}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>

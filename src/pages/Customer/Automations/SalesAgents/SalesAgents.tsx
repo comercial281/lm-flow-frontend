@@ -560,7 +560,7 @@ function ConfigTab({
       </div>
 
       <div>
-        <Label htmlFor="inbox">Instância do WhatsApp que ela opera</Label>
+        <Label htmlFor="inbox">Número de WhatsApp que ela opera</Label>
         <select
           id="inbox"
           value={agent.inbox_id ?? ''}
@@ -572,7 +572,7 @@ function ConfigTab({
             <option key={i.id} value={String(i.id)}>{i.name}</option>
           ))}
         </select>
-        <p className="text-xs text-muted-foreground mt-1">Escolha a instância (número/canal do WhatsApp) onde a IA vai operar: ela recebe e responde os leads por essa instância.</p>
+        <p className="text-xs text-muted-foreground mt-1">Escolha o número de WhatsApp onde a IA vai operar: ela recebe e responde os leads por esse número.</p>
         {/* Sem canal a IA não é candidata a conversa nenhuma — a seleção filtra por
             inbox. Ligada e sem canal é o pior estado possível: parece pronta e não é. */}
         {agent.enabled && !agent.inbox_id && (
@@ -580,7 +580,7 @@ function ConfigTab({
             <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
             <span>
               Esta IA está <strong>ligada, mas sem canal</strong> — ela não vai responder
-              ninguém. Escolha a instância acima para ela começar a atender.
+              ninguém. Escolha o número acima para ela começar a atender.
             </span>
           </div>
         )}
@@ -623,7 +623,7 @@ function ConfigTab({
         {(agent.trigger_keyword ?? '').trim() !== '' && (
           <p className="text-xs text-amber-600 mt-1">
             Atenção: enquanto este campo estiver preenchido, a IA <strong>não</strong> atende todo lead do canal, mesmo que
-            você apague todos os gatilhos da lista abaixo. Deixe o campo vazio para ela atender todo mundo.
+            você exclua todos os gatilhos da lista abaixo. Deixe o campo vazio para ela atender todo mundo.
           </p>
         )}
       </div>
@@ -2928,7 +2928,7 @@ function AdvancedSection({
           </div>
 
           <div>
-            <Label htmlFor="adv_ctx" className="text-xs">Quanto da base de conhecimento ela lê por resposta (tokens)</Label>
+            <Label htmlFor="adv_ctx" className="text-xs">Quanto da base de conhecimento ela lê por resposta</Label>
             <Input
               id="adv_ctx"
               type="number"
@@ -2959,8 +2959,8 @@ const TRIGGER_TYPES: { value: SalesAgentTriggerType; label: string }[] = [
   { value: 'origin', label: 'Origem do lead' },
   { value: 'form', label: 'Veio de um destes formulários' },
   { value: 'property', label: 'Imóvel (código / form)' },
-  { value: 'pipeline_stage', label: 'Coluna de pipeline' },
-  { value: 'tag', label: 'Tem a tag' },
+  { value: 'pipeline_stage', label: 'Coluna de funil' },
+  { value: 'tag', label: 'Tem a etiqueta' },
 ];
 
 const TRIGGER_MATCH_MODE_OPTIONS: [SalesAgentTriggerMatchMode, string, string][] = [
@@ -3080,7 +3080,7 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
             )}
 
             {t.type === 'tag' && (
-              <Input className="flex-1 min-w-40" placeholder="tag (ex: vip)" value={t.value ?? ''}
+              <Input className="flex-1 min-w-40" placeholder="etiqueta (ex: vip)" value={t.value ?? ''}
                 onChange={(e) => update(i, { value: e.target.value })} onBlur={() => commit(triggers)} />
             )}
 
@@ -3158,7 +3158,7 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
               <>
                 <select value={t.pipeline_id ?? ''} onChange={(e) => { loadStages(e.target.value); update(i, { pipeline_id: e.target.value, stage_id: '' }); }}
                   className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
-                  <option value="">— pipeline —</option>
+                  <option value="">— funil —</option>
                   {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
                 <select value={t.stage_id ?? ''} onChange={(e) => update(i, { stage_id: e.target.value })} disabled={!t.pipeline_id}

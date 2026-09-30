@@ -81,7 +81,7 @@
       "statusUnavailable": "Status da mensagem indisponível",
       "statusUnavailableDescription": "A mensagem foi enviada, mas não conseguimos confirmar o status de entrega.",
       "checkChannelConfig": "Verifique a configuração do canal",
-      "webhookIssue": "O webhook pode estar desatualizado ou inativo.",
+      "webhookIssue": "A confirmação de entrega pode estar atrasada ou não ter chegado.",
       "deliveryStatusUnavailable": "Status de entrega indisponível - Clique para mais detalhes",
       "statusUnavailableText": "Status indisponível",
       "retryInDevelopment": "Funcionalidade de reenvio em desenvolvimento",
@@ -132,11 +132,11 @@
     "description": "Escolha uma conversa da lista para começar a visualizar as mensagens"
   },
   "deleteDialog": {
-    "title": "Deletar conversa",
-    "description": "Tem certeza de que deseja deletar esta conversa com {{name}}? Esta ação não pode ser desfeita e todas as mensagens serão permanentemente removidas.",
+    "title": "Excluir conversa",
+    "description": "Tem certeza de que deseja excluir esta conversa com {{name}}? Esta ação não pode ser desfeita e todas as mensagens serão permanentemente removidas.",
     "contactFallback": "este contato",
     "cancel": "Cancelar",
-    "confirm": "Deletar conversa"
+    "confirm": "Excluir conversa"
   },
   "aiAssistance": {
     "title": "Assistência de IA",
@@ -286,7 +286,7 @@
       "assignTag": "Atribuir etiqueta",
       "unassignAgent": "Desvincular corretor",
       "unassignTeam": "Desvincular equipe",
-      "deleteConversation": "Deletar conversa",
+      "deleteConversation": "Excluir conversa",
       "archiveConversation": "Arquivar conversa",
       "pinConversation": "Fixar conversa",
       "unarchiveConversation": "Desarquivar conversa",
@@ -342,7 +342,7 @@
         "description": "Executar automações"
       },
       "pipeline": {
-        "title": "Pipeline",
+        "title": "Funil",
         "description": "Gerenciar funil de vendas"
       },
       "contactNotes": {
@@ -450,34 +450,34 @@
       }
     },
     "pipeline": {
-      "loading": "Erro ao carregar dados do pipeline",
-      "noPipelines": "Nenhum pipeline configurado",
-      "current": "Pipeline Atual",
-      "label": "Pipeline",
-      "selectPipeline": "Selecione um pipeline",
-      "selectStage": "Selecione um estágio",
-      "stage": "Estágio",
+      "loading": "Erro ao carregar dados do funil",
+      "noPipelines": "Nenhum funil configurado",
+      "current": "Funil Atual",
+      "label": "Funil",
+      "selectPipeline": "Selecione um funil",
+      "selectStage": "Selecione uma etapa",
+      "stage": "Etapa",
       "saving": "Salvando...",
       "save": "Salvar",
-      "saveSuccess": "Pipeline atualizado com sucesso",
-      "saveError": "Erro ao atualizar pipeline",
-      "selectError": "Selecione um pipeline e um estágio",
-      "removeSuccess": "Conversa removida do pipeline",
-      "removeError": "Erro ao remover do pipeline",
+      "saveSuccess": "Funil atualizado com sucesso",
+      "saveError": "Erro ao atualizar funil",
+      "selectError": "Selecione um funil e uma etapa",
+      "removeSuccess": "Conversa removida do funil",
+      "removeError": "Erro ao remover do funil",
       "dialogs": {
         "update": {
-          "title": "Atualizar Pipeline",
-          "description": "Você tem certeza que deseja mover esta conversa para {{pipelineName}} no estágio {{stageName}}?",
+          "title": "Atualizar Funil",
+          "description": "Você tem certeza que deseja mover esta conversa para {{pipelineName}} na etapa {{stageName}}?",
           "confirm": "Atualizar"
         },
         "add": {
-          "title": "Adicionar ao Pipeline",
-          "description": "Você tem certeza que deseja adicionar esta conversa ao pipeline {{pipelineName}} no estágio {{stageName}}?",
+          "title": "Adicionar ao Funil",
+          "description": "Você tem certeza que deseja adicionar esta conversa ao funil {{pipelineName}} na etapa {{stageName}}?",
           "confirm": "Adicionar"
         },
         "remove": {
-          "title": "Remover do Pipeline",
-          "description": "Você tem certeza que deseja remover esta conversa do pipeline {{pipelineName}}? Esta ação não pode ser desfeita.",
+          "title": "Remover do Funil",
+          "description": "Você tem certeza que deseja remover esta conversa do funil {{pipelineName}}? Esta ação não pode ser desfeita.",
           "cancel": "Cancelar",
           "confirm": "Remover"
         }
@@ -547,14 +547,14 @@
     "channelDiagnostic": {
       "title": "Diagnóstico de Canal",
       "description": "As mensagens estão falhando, possivelmente devido à configuração do canal.",
-      "inboxId": "ID da caixa de entrada:",
+      "inboxId": "ID do número de WhatsApp:",
       "accountId": "ID da conta:",
       "possibleSolutions": "Possíveis Soluções:",
       "solutions": {
         "checkChannel": "Verificar se o canal WhatsApp/Telegram está configurado",
         "confirmCredentials": "Confirmar credenciais API do provedor",
         "testConnectivity": "Testar conectividade com o serviço externo",
-        "checkWebhooks": "Verificar webhooks configurados"
+        "checkWebhooks": "Verificar se o recebimento de mensagens está configurado"
       },
       "settings": "Configurações",
       "close": "Fechar"
@@ -588,7 +588,7 @@
         "conversationNotFound": "Conversa não encontrada",
         "updateStatus": "Erro ao atualizar status da conversa",
         "updatePriority": "Erro ao atualizar prioridade da conversa",
-        "deleteConversation": "Erro ao deletar conversa",
+        "deleteConversation": "Erro ao excluir conversa",
         "markAsRead": "Erro ao marcar como lida",
         "markAsUnread": "Erro ao marcar como não lida",
         "markAsResolved": "Erro ao marcar como resolvida",
@@ -606,7 +606,7 @@
       "success": {
         "statusChanged": "Status alterado para: {{status}}",
         "priorityChanged": "Prioridade alterada para: {{priority}}",
-        "deleted": "Conversa deletada com sucesso",
+        "deleted": "Conversa excluída com sucesso",
         "markedAsRead": "Conversa marcada como lida",
         "markedAsUnread": "Conversa marcada como não lida",
         "markedAsResolved": "Conversa marcada como resolvida",
@@ -764,7 +764,7 @@
       "created_at": "Data de Criação",
       "last_activity_at": "Última Atividade",
       "priority": "Prioridade",
-      "pipeline_id": "Pipeline",
+      "pipeline_id": "Funil",
       "pipeline_stage_id": "Etapa (Coluna)"
     },
     "options": {
@@ -962,7 +962,7 @@
   "channelDiagnostic": {
     "close": "Fechar",
     "description": "Esta conversa está ligada a um canal que não está respondendo. Enquanto isso, as mensagens não entram nem saem.",
-    "inboxId": "ID da caixa de entrada:",
+    "inboxId": "ID do número de WhatsApp:",
     "possibleSolutions": "O que costuma resolver:",
     "settings": "Abrir configurações do canal",
     "solutions": {

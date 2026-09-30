@@ -252,7 +252,7 @@ export default function ImportLeadsModal({
       return;
     }
     if (isPipelineMode && !stageId) {
-      toast.error('Escolha a coluna (etapa) do pipeline.');
+      toast.error('Escolha a coluna (etapa) do funil.');
       return;
     }
     setStep('importing');
@@ -488,7 +488,7 @@ export default function ImportLeadsModal({
             >
               {isPipelineMode && (
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Etapa (coluna do pipeline)</Label>
+                  <Label className="text-sm">Etapa (coluna do funil)</Label>
                   <Select value={stageId} onValueChange={setStageId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Escolher etapa" />
@@ -505,7 +505,7 @@ export default function ImportLeadsModal({
               )}
               <div className="space-y-1.5">
                 <Label className="text-sm">
-                  {isPipelineMode ? 'Etiqueta (tag) nos leads' : 'Etiqueta (tag) nos contatos'}
+                  {isPipelineMode ? 'Etiqueta nos leads' : 'Etiqueta nos contatos'}
                 </Label>
                 <Select
                   value={tag === CREATE_TAG ? CREATE_TAG : tag}

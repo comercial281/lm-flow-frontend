@@ -326,10 +326,10 @@ export default function EditPipelineModal({
 
             <TabsContent value="entry" className="py-4 overflow-y-auto flex-1">
               <div className="mb-4">
-                <h3 className="text-lg font-semibold mb-1">Quais leads entram nesta pipeline</h3>
+                <h3 className="text-lg font-semibold mb-1">Quais leads entram neste funil</h3>
                 <p className="text-sm text-muted-foreground">
-                  Escolha as origens que entram aqui automaticamente. Assim dá pra ter uma pipeline
-                  que recebe todos os leads e outra que só recebe os de anúncio.
+                  Escolha as origens que entram aqui automaticamente. Assim dá pra ter um funil
+                  que recebe todos os leads e outro que só recebe os de anúncio.
                 </p>
               </div>
 
@@ -343,7 +343,7 @@ export default function EditPipelineModal({
                 <span>
                   <span className="text-sm font-medium">Usar o padrão do cliente</span>
                   <span className="block text-xs text-muted-foreground">
-                    Segue o que está configurado em Funções do cliente. Desmarque para esta pipeline
+                    Segue o que está configurado em Funções do cliente. Desmarque para este funil
                     ter regra própria.
                   </span>
                 </span>
@@ -373,7 +373,7 @@ export default function EditPipelineModal({
                   ))}
                   {entrySources.length === 0 && (
                     <p className="text-xs text-amber-600 dark:text-amber-400 pt-1">
-                      Nenhuma origem marcada: nada entra sozinho nesta pipeline. Você ainda pode
+                      Nenhuma origem marcada: nada entra sozinho neste funil. Você ainda pode
                       adicionar cards na mão.
                     </p>
                   )}

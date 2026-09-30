@@ -141,7 +141,7 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
               <textarea
                 value={draftBody}
                 onChange={(e) => setDraftBody(e.target.value)}
-                placeholder="Escreva o conteudo em markdown"
+                placeholder="Escreva o conteúdo em markdown"
                 rows={20}
                 className="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm font-mono resize-y min-h-[400px]"
               />
@@ -154,7 +154,7 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
               </h1>
               <div className="text-sm leading-relaxed">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {selected.content_md || '_Sem conteudo._'}
+                  {selected.content_md || '_Sem conteúdo._'}
                 </ReactMarkdown>
               </div>
             </article>
@@ -208,7 +208,7 @@ export default function DocsTab({ categoryId, canEdit }: Props) {
             <textarea
               value={draftBody}
               onChange={(e) => setDraftBody(e.target.value)}
-              placeholder="Conteudo em markdown"
+              placeholder="Conteúdo em markdown"
               rows={10}
               className="w-full bg-background border border-border rounded px-3 py-2 text-sm font-mono resize-y"
             />

@@ -95,7 +95,7 @@ export default function EntitlementsEditor({ targetType, targetId }: Props) {
               add();
             }
           }}
-          placeholder={subjectType === 'tenant' ? 'slug do cliente (ex.: imob-x)' : 'e-mail do usuário'}
+          placeholder={subjectType === 'tenant' ? 'código do cliente (ex.: imob-x)' : 'e-mail do usuário'}
           className="flex-1 bg-background border border-border rounded px-2.5 py-1.5 text-xs"
         />
         <button

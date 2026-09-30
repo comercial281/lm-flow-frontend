@@ -46,7 +46,7 @@ describe('Editor de funil: etiquetas', () => {
     render(<MessageFunnelEditor open onClose={() => {}} funnel={FUNIL_VALIDO} />);
 
     await usuario.click(await screen.findByRole('button', { name: 'Lead quente' }));
-    await usuario.click(screen.getByRole('button', { name: /Salvar alterações/i }));
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() =>
       expect(atualizarFunil).toHaveBeenCalledWith('f1', expect.objectContaining({ tag_ids: ['t1'] })),
@@ -61,7 +61,7 @@ describe('Editor de funil: etiquetas', () => {
     render(<MessageFunnelEditor open onClose={() => {}} funnel={{ ...FUNIL_VALIDO, tag_ids: ['t1'] }} />);
 
     await usuario.click(await screen.findByRole('button', { name: 'Lead quente' }));
-    await usuario.click(screen.getByRole('button', { name: /Salvar alterações/i }));
+    await usuario.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() =>
       expect(atualizarFunil).toHaveBeenCalledWith('f1', expect.objectContaining({ tag_ids: [] })),

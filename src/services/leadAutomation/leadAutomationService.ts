@@ -234,7 +234,7 @@ export const ORIGIN_LABELS: Record<string, string> = {
 // 'lead.no_reply_after' é emitido por Followup::NoReplyEnrollJob (roda a cada 1 min).
 export const TRIGGER_LABELS: Record<string, string> = {
   'lead.created':              'Lead criado',
-  'lead.stage_changed':        'Estágio alterado',
+  'lead.stage_changed':        'Etapa alterada',
   'lead.visit_scheduled':      'Visita agendada',
   'lead.visit_completed':      'Visita realizada',
   'lead.visit_reminder_24h':   'Lembrete — 1 dia antes da visita',
@@ -254,24 +254,24 @@ export const TRIGGER_LABELS: Record<string, string> = {
 // Actions processadas pelo LeadAutomation::Executor.
 export const ACTION_TYPE_LABELS: Record<string, string> = {
   send_whatsapp_message:   'Enviar mensagem WhatsApp',
-  send_audio:              'Enviar audio',
+  send_audio:              'Enviar áudio',
   send_image:              'Enviar imagem',
-  send_video:              'Enviar video',
+  send_video:              'Enviar vídeo',
   send_document:           'Enviar documento',
   send_sticker:            'Enviar figurinha',
   send_message_funnel:     'Disparar funil de mensagens',
-  start_followup_sequence: 'Iniciar sequencia de follow-up',
+  start_followup_sequence: 'Iniciar sequência de follow-up',
   assign_broker:           'Atribuir corretor',
   assign_via_roleta:       'Distribuir via roleta',
   add_label:               'Adicionar etiqueta',
   remove_label:            'Remover etiqueta',
-  move_pipeline_stage:     'Mover no pipeline',
+  move_pipeline_stage:     'Mover no funil',
   create_task:             'Criar tarefa',
   notify_group:            'Notificar grupo',
   notify_user:             'Avisar usuário no WhatsApp (lembrete)',
   notify_broker:           'Notificar corretor (WhatsApp pessoal)',
   notify_gestor:           'Notificar gestor (WhatsApp)',
   notify_push:             'Notificação no app (push / Modo Plantão)',
-  send_quick_reply:        'Enviar resposta rapida',
+  send_quick_reply:        'Enviar resposta rápida',
   wait:                    'Aguardar (delay)',
 };

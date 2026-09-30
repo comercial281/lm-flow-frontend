@@ -535,7 +535,7 @@ export default function BulkDispatchModal({
           <DialogDescription>
             {view === 'new'
               ? 'Escolha quem recebe, monte a sequência de mensagens, ajuste o ritmo e dispare.'
-              : 'Acompanhe, pause, retome ou cancele os disparos deste pipeline.'}
+              : 'Acompanhe, pause, retome ou cancele os disparos deste funil.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -629,9 +629,9 @@ export default function BulkDispatchModal({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pipeline">Todos os leads do pipeline</SelectItem>
+                      <SelectItem value="pipeline">Todos os leads do funil</SelectItem>
                       <SelectItem value="stage">Uma etapa específica</SelectItem>
-                      <SelectItem value="tag">Por etiqueta (tag)</SelectItem>
+                      <SelectItem value="tag">Por etiqueta</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -740,7 +740,7 @@ export default function BulkDispatchModal({
                     >
                       <Zap className={`w-4 h-4 mt-0.5 ${!cloudMode ? 'text-primary' : 'text-muted-foreground'}`} />
                       <span className="text-sm">
-                        <span className="font-medium block">Evolution</span>
+                        <span className="font-medium block">WhatsApp por QR code</span>
                         <span className="text-xs text-muted-foreground">Mensagem livre (sequência)</span>
                       </span>
                     </button>
@@ -754,7 +754,7 @@ export default function BulkDispatchModal({
                       <ShieldCheck className={`w-4 h-4 mt-0.5 ${cloudMode ? 'text-primary' : 'text-muted-foreground'}`} />
                       <span className="text-sm">
                         <span className="font-medium block">WhatsApp Oficial</span>
-                        <span className="text-xs text-muted-foreground">Template aprovado (Cloud API)</span>
+                        <span className="text-xs text-muted-foreground">Template aprovado (WhatsApp oficial)</span>
                       </span>
                     </button>
                   </div>
@@ -1061,7 +1061,7 @@ export default function BulkDispatchModal({
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] text-muted-foreground">Aplicar tag (cria se não existir)</Label>
+                    <Label className="text-[11px] text-muted-foreground">Aplicar etiqueta (cria se não existir)</Label>
                     <Input
                       value={postLabel}
                       onChange={e => setPostLabel(e.target.value)}
@@ -1094,7 +1094,7 @@ export default function BulkDispatchModal({
                   </div>
                   <div className="flex justify-between p-2.5">
                     <span className="text-muted-foreground">Canal</span>
-                    <strong>{cloudMode ? 'WhatsApp Oficial (template)' : 'Evolution (sessão)'}</strong>
+                    <strong>{cloudMode ? 'WhatsApp Oficial (template)' : 'WhatsApp por QR code'}</strong>
                   </div>
                   <div className="flex justify-between p-2.5">
                     <span className="text-muted-foreground">{cloudMode ? 'Template' : 'Itens na sequência'}</span>

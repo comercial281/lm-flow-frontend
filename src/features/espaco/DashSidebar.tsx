@@ -164,18 +164,18 @@ export default function DashSidebar({
             </Section>
 
             <Section
-              title="Paginas"
+              title="Páginas"
               action={
                 <button
                   onClick={() => createPage.mutate({ title: '' }, { onSuccess: p => onOpenPage(p.id) })}
                   className="text-lm-subtle hover:text-lm-primary p-0.5 rounded hover:bg-lm-card2"
-                  title="Nova pagina"
+                  title="Nova página"
                 >
                   <Plus size={13} />
                 </button>
               }
             >
-              {tree.length === 0 && <Empty>Nenhuma pagina ainda</Empty>}
+              {tree.length === 0 && <Empty>Nenhuma página ainda</Empty>}
               {tree.map(node => (
                 <TreeRow
                   key={node.id}
@@ -245,7 +245,7 @@ function DatabaseRow({ db, ativa, onOpen }: { db: NotionDatabase; ativa: boolean
         ref={menuBtn}
         onClick={() => setMenuOpen(v => !v)}
         className="shrink-0 opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-lm-card2"
-        title="Opcoes da base"
+        title="Opções da base"
       >
         <MoreHorizontal size={12} />
       </button>
@@ -321,7 +321,7 @@ function TreeRow({
             { onSuccess: p => { onToggle(node.id); onOpenPage(p.id) } },
           )}
           className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-lm-card2 shrink-0"
-          title="Adicionar subpagina"
+          title="Adicionar subpágina"
         >
           <Plus size={12} />
         </button>
@@ -330,7 +330,7 @@ function TreeRow({
           ref={menuBtn}
           onClick={() => setMenuOpen(v => !v)}
           className="shrink-0 opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-lm-card2"
-          title="Opcoes"
+          title="Opções"
         >
           <MoreHorizontal size={12} />
         </button>
@@ -364,7 +364,7 @@ function TreeRow({
       ))}
       {isOpen && !hasChildren && (
         <div className="text-[11px] text-lm-disabled py-1" style={{ paddingLeft: `${(depth + 1) * 12 + 22}px` }}>
-          Sem subpaginas
+          Sem subpáginas
         </div>
       )}
     </>
@@ -437,7 +437,7 @@ function TrashModal({ onClose, onOpenPage }: { onClose: () => void; onOpenPage: 
           ))}
 
           {filteredDbs.length > 0 && filtered.length > 0 && (
-            <div className="px-1 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-lm-subtle">Paginas</div>
+            <div className="px-1 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-lm-subtle">Páginas</div>
           )}
           {filtered.map(p => (
             <div key={p.id} className="group flex items-center gap-2 px-2 py-1.5 rounded-lm-sm hover:bg-lm-card2">

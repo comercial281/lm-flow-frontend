@@ -22,7 +22,7 @@ import { buildCargoOptions, cargoPayload } from './cargoOptions';
 const STEPS = [
   { key: 'quem', label: 'Quem é', icon: UserIcon },
   { key: 'cargo', label: 'Cargo', icon: ShieldCheck },
-  { key: 'instancias', label: 'Instâncias', icon: MessageCircle },
+  { key: 'instancias', label: 'Números', icon: MessageCircle },
 ] as const;
 
 interface AddPersonWizardProps {
@@ -145,7 +145,7 @@ export default function AddPersonWizard({ open, roles, inboxes, onClose, onCreat
         <DialogHeader>
           <DialogTitle>Adicionar pessoa</DialogTitle>
           <DialogDescription>
-            Cadastro, cargo e instâncias — e, no fim, o acesso vai no WhatsApp dela.
+            Cadastro, cargo e números — e, no fim, o acesso vai no WhatsApp dela.
           </DialogDescription>
         </DialogHeader>
 
@@ -224,10 +224,10 @@ export default function AddPersonWizard({ open, roles, inboxes, onClose, onCreat
             <div className="space-y-2">
               {roleSeesAll ? (
                 <p className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
-                  Administrador vê <strong>todas as instâncias</strong> automaticamente — não há o que escolher aqui.
+                  Administrador vê <strong>todos os números</strong> automaticamente — não há o que escolher aqui.
                 </p>
               ) : inboxes.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Nenhuma instância conectada ainda.</p>
+                <p className="text-xs text-muted-foreground">Nenhum número conectado ainda.</p>
               ) : (
                 <>
                   {inboxes.map(ib => (
@@ -243,7 +243,7 @@ export default function AddPersonWizard({ open, roles, inboxes, onClose, onCreat
                     </label>
                   ))}
                   <p className="pt-1 text-xs text-muted-foreground">
-                    Marcado = atende essa instância e entra na fila para receber leads novos dela. Dá para
+                    Marcado = atende esse número e entra na fila para receber leads novos dele. Dá para
                     mudar depois em Gerenciar acesso.
                   </p>
                 </>

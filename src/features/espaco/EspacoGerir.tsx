@@ -339,7 +339,7 @@ function TabPessoas() {
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-xs text-lm-subtle max-w-md">
-          As pessoas do Espaço são os usuários cadastrados do tenant. Pra adicionar, editar ou remover, use a tela de gestão de usuários.
+          As pessoas do Espaço são os usuários cadastrados nele. Pra adicionar, editar ou remover, use a tela de gestão de usuários.
         </p>
         <Link to="/equipe" className={btnPrimary}>
           <ExternalLink size={14} strokeWidth={2.5} /> Gerenciar usuários

@@ -12,11 +12,11 @@
     "whatsappName": "Nome no WhatsApp",
     "connection": {
       "connected": "Conectado",
-      "connectedHint": "A instância está no ar: recebe e envia mensagens normalmente.",
+      "connectedHint": "O número está no ar: recebe e envia mensagens normalmente.",
       "connecting": "Conectando",
-      "connectingHint": "A instância está pareando com o celular. Se ficar parada aqui, leia o QR Code de novo.",
+      "connectingHint": "O número está pareando com o celular. Se ficar parado aqui, leia o QR Code de novo.",
       "disconnected": "Desconectado",
-      "disconnectedHint": "A instância está fora do ar: não recebe nem envia mensagens. Abra o canal e leia o QR Code.",
+      "disconnectedHint": "O número está fora do ar: não recebe nem envia mensagens. Abra o canal e leia o QR Code.",
       "since": "Fora do ar desde {{since}}"
     }
   },
@@ -439,8 +439,8 @@
           "selectFirst": "Selecionar Primeiro",
           "selectAll": "Selecionar Todos",
           "deselectAll": "Desmarcar Todos",
-          "update": "Atualizar",
-          "updating": "Atualizando..."
+          "update": "Salvar",
+          "updating": "Salvando..."
         },
         "roles": {
           "agent": "Atendente",
@@ -575,8 +575,8 @@
         "point4": "Configurações se aplicam apenas a este canal"
       },
       "buttons": {
-        "updating": "Atualizando...",
-        "update": "Atualizar Configurações"
+        "updating": "Salvando...",
+        "update": "Salvar"
       },
       "disabled": {
         "title": "Horário de Funcionamento Desabilitado",
@@ -620,7 +620,7 @@
       "allTriggersAdded": "Todos os tipos de gatilho foram adicionados",
       "triggerTypes": {
         "label": "Etiqueta",
-        "stage": "Estágio do Pipeline",
+        "stage": "Etapa do Funil",
         "regex": "Padrão Regex",
         "inactivity": "Inatividade"
       },
@@ -636,12 +636,12 @@
         "doesNotContain": "não contém"
       },
       "stageTrigger": {
-        "label": "Gatilho de Estágio do Pipeline",
-        "selectPipeline": "Selecionar Pipeline",
-        "selectStages": "Selecionar Estágios",
-        "loadingStages": "Carregando estágios...",
-        "noStagesSelected": "Nenhum estágio selecionado",
-        "noStagesAvailable": "Nenhum estágio disponível para este pipeline"
+        "label": "Gatilho de Etapa do Funil",
+        "selectPipeline": "Selecionar Funil",
+        "selectStages": "Selecionar Etapas",
+        "loadingStages": "Carregando etapas...",
+        "noStagesSelected": "Nenhuma etapa selecionada",
+        "noStagesAvailable": "Nenhuma etapa disponível para este funil"
       },
       "regexTrigger": {
         "label": "Gatilho de Padrão Regex",
@@ -659,7 +659,7 @@
       },
       "errors": {
         "loadLabelsError": "Erro ao carregar etiquetas",
-        "loadStagesError": "Erro ao carregar estágios do pipeline",
+        "loadStagesError": "Erro ao carregar etapas do funil",
         "updateError": "Erro ao atualizar configurações de CSAT"
       },
       "success": {
@@ -674,7 +674,7 @@
       },
       "buttons": {
         "saving": "Salvando...",
-        "save": "Salvar Configurações"
+        "save": "Salvar"
       },
       "disabled": {
         "title": "CSAT Desabilitado",
@@ -689,7 +689,7 @@
     },
     "errors": {
       "loadError": "Erro ao carregar configurações",
-      "saveError": "Erro ao salvar configurações",
+      "saveError": "Erro ao salvar",
       "useTabUpdate": "Use o botão de atualização dentro da aba atual",
       "avatarDeleteError": "Erro ao remover avatar",
       "senderUpdateError": "Erro ao atualizar configurações de remetente",
@@ -780,7 +780,7 @@
         "active": "Ativo",
         "activeHelp": "Templates inativos não estarão disponíveis para uso",
         "create": "Criar Template",
-        "save": "Salvar Alterações",
+        "save": "Salvar",
         "cancel": "Cancelar",
         "requiredFields": "Preencha todos os campos obrigatórios"
       },
@@ -848,14 +848,14 @@
         "syncError": "Erro ao sincronizar templates",
         "createError": "Erro ao criar template",
         "updateError": "Erro ao atualizar template",
-        "deleteError": "Erro ao deletar template",
+        "deleteError": "Erro ao excluir template",
         "requiredFields": "Preencha todos os campos obrigatórios"
       },
       "success": {
         "syncSuccess": "Templates sincronizados com sucesso!",
         "createSuccess": "Template criado com sucesso!",
         "updateSuccess": "Template atualizado com sucesso!",
-        "deleteSuccess": "Template deletado com sucesso!"
+        "deleteSuccess": "Template excluído com sucesso!"
       },
       "editor": {
         "subtitle": "Editor visual de templates de email",
@@ -878,17 +878,17 @@
     "configuration": {
       "api": {
         "hmac": {
-          "title": "Autenticação HMAC",
-          "description": "Habilite a autenticação HMAC para proteger suas requisições de API",
-          "enabled": "Autenticação HMAC habilitada",
-          "disabled": "Autenticação HMAC desabilitada",
-          "active": "Autenticação HMAC está ativa",
-          "activeDescription": "Todas as requisições de API devem incluir uma assinatura HMAC válida",
+          "title": "Validação de identidade",
+          "description": "Ative a validação de identidade para proteger suas requisições de API",
+          "enabled": "Validação de identidade habilitada",
+          "disabled": "Validação de identidade desabilitada",
+          "active": "Validação de identidade está ativa",
+          "activeDescription": "Todas as requisições de API devem incluir uma assinatura válida",
           "success": {
-            "updated": "HMAC configurado com sucesso!"
+            "updated": "Validação de identidade configurada com sucesso!"
           },
           "errors": {
-            "updateError": "Erro ao atualizar HMAC"
+            "updateError": "Erro ao atualizar a validação de identidade"
           }
         },
         "keys": {
@@ -931,7 +931,7 @@
       },
       "whatsapp": {
         "instance": {
-          "statusTitle": "Status da Instância",
+          "statusTitle": "Status do número",
           "statusConnected": "Conectado",
           "statusDisconnected": "Desconectado",
           "statusConnecting": "Conectando",
@@ -944,8 +944,8 @@
             "step4": "Aponte a câmera do celular para o QR Code desta tela e aguarde a confirmação."
           },
           "qrCodeInstructions": "Escaneie este QR Code com seu WhatsApp",
-          "settingsTitle": "Configurações da Instância",
-          "settingsDescription": "Configure o comportamento da sua instância do WhatsApp",
+          "settingsTitle": "Configurações do número",
+          "settingsDescription": "Configure o comportamento do seu número de WhatsApp",
           "rejectCall": "Rejeitar chamadas",
           "alwaysOnline": "Sempre online",
           "readMessages": "Ler mensagens",
@@ -955,16 +955,16 @@
           "ignoreStatus": "Ignorar Status",
           "callRejectionMessage": "Mensagem de rejeição de chamada",
           "callRejectionPlaceholder": "Mensagem quando rejeitar chamadas",
-          "saveSettings": "Salvar Configurações",
+          "saveSettings": "Salvar",
           "errors": {
-            "nameNotFound": "Nome da instância não encontrado",
+            "nameNotFound": "Nome do número não encontrado",
             "qrCodeError": "Erro ao gerar QR Code",
-            "updateError": "Erro ao atualizar configurações da instância",
+            "updateError": "Erro ao atualizar configurações do número",
             "qrImageError": "Não foi possível exibir o QR Code. Gere um novo."
           },
           "success": {
             "qrCodeGenerated": "QR Code gerado com sucesso!",
-            "updated": "Configurações da instância atualizadas com sucesso!",
+            "updated": "Configurações do número atualizadas com sucesso!",
             "connected": "Dispositivo conectado com sucesso!"
           },
           "qrCodeTitle": "Conectar WhatsApp",
@@ -980,7 +980,7 @@
             "picture": "Foto do Perfil (URL)",
             "picturePlaceholder": "https://exemplo.com/foto.jpg",
             "pictureHelp": "Insira a URL da imagem que deseja usar como foto de perfil",
-            "update": "Atualizar",
+            "update": "Salvar",
             "remove": "Remover",
             "success": {
               "nameUpdated": "Nome do perfil atualizado com sucesso!",
@@ -989,7 +989,7 @@
               "pictureRemoved": "Foto do perfil removida com sucesso!"
             },
             "errors": {
-              "nameNotFound": "Instance name não encontrado",
+              "nameNotFound": "Nome do número não encontrado",
               "nameUpdateError": "Erro ao atualizar nome do perfil",
               "statusUpdateError": "Erro ao atualizar status do perfil",
               "pictureUpdateError": "Erro ao atualizar foto do perfil",
@@ -1022,20 +1022,20 @@
             }
           },
           "actions": {
-            "title": "Ações da Instância",
-            "disconnect": "Desconectar Instância",
-            "confirmDisconnect": "Tem certeza que deseja desconectar a instância?",
+            "title": "Ações do número",
+            "disconnect": "Desconectar número",
+            "confirmDisconnect": "Tem certeza que deseja desconectar o número?",
             "success": {
-              "disconnected": "Instância desconectada com sucesso!",
+              "disconnected": "Número desconectado com sucesso!",
               "reconnected": "Conexão reconstruída. Escaneie o novo código."
             },
             "errors": {
-              "disconnectError": "Erro ao desconectar instância",
-              "reconnectError": "Erro ao reconectar a instância"
+              "disconnectError": "Erro ao desconectar o número",
+              "reconnectError": "Erro ao reconectar o número"
             },
             "reconnect": "Reconectar",
             "confirmReconnect": "Reconectar reconstrói a conexão do zero e gera um código novo. Use quando o QR Code não estiver pareando. Deseja continuar?",
-            "confirmReconnectTitle": "Reconectar a instância?"
+            "confirmReconnectTitle": "Reconectar o número?"
           },
           "qrExpiresIn": "Este código expira em {{seconds}}s",
           "qrExpired": "O código expirou",
@@ -1109,16 +1109,16 @@
           },
           "qrCode": {
             "title": "QR Code para Conexão",
-            "description": "Escaneie o QR code com seu WhatsApp para conectar a instância",
+            "description": "Escaneie o QR code com seu WhatsApp para conectar o número",
             "getQRCode": "Obter QR Code",
             "refreshQRCode": "Atualizar QR Code",
-            "instructions": "Escaneie este QR code com seu WhatsApp para conectar a instância",
+            "instructions": "Escaneie este QR code com seu WhatsApp para conectar o número",
             "generating": "Gerando QR Code...",
             "notAvailable": "QR Code não disponível. Clique em \"Atualizar QR Code\" para gerar um novo.",
             "close": "Fechar",
             "success": {
               "qrCodeRefreshed": "QR Code atualizado com sucesso!",
-              "connected": "Instância conectada com sucesso!"
+              "connected": "Número conectado com sucesso!"
             },
             "errors": {
               "qrCodeNotFound": "QR Code não encontrado",
@@ -1127,18 +1127,18 @@
             }
           },
           "actions": {
-            "title": "Ações da Instância",
-            "restart": "Reiniciar Instância",
-            "disconnect": "Desconectar Instância",
-            "confirmRestart": "Tem certeza que deseja reiniciar a instância?",
-            "confirmDisconnect": "Tem certeza que deseja desconectar a instância?",
+            "title": "Ações do número",
+            "restart": "Reiniciar número",
+            "disconnect": "Desconectar número",
+            "confirmRestart": "Tem certeza que deseja reiniciar o número?",
+            "confirmDisconnect": "Tem certeza que deseja desconectar o número?",
             "success": {
-              "restarted": "Instância reiniciada com sucesso!",
-              "disconnected": "Instância desconectada com sucesso!"
+              "restarted": "Número reiniciado com sucesso!",
+              "disconnected": "Número desconectado com sucesso!"
             },
             "errors": {
-              "restartError": "Erro ao reiniciar instância",
-              "disconnectError": "Erro ao desconectar instância"
+              "restartError": "Erro ao reiniciar o número",
+              "disconnectError": "Erro ao desconectar o número"
             }
           },
           "privacyTitle": "Configurações de Privacidade",
@@ -1184,7 +1184,7 @@
           "placeholder": "Digite sua assinatura de email (HTML suportado)...",
           "save": "Salvar Assinatura"
         },
-        "saveButton": "Salvar Configurações de Email",
+        "saveButton": "Salvar",
         "success": {
           "updated": "Configurações de email atualizadas com sucesso!"
         },
@@ -1379,7 +1379,7 @@
         },
         "label": {
           "title": "Rótulo do Campo",
-          "description": "Texto que será exibido como label do campo"
+          "description": "Texto que será exibido como rótulo do campo"
         },
         "placeholder": {
           "title": "Texto de exemplo",
@@ -1388,7 +1388,7 @@
       },
       "placeholders": {
         "label": "Digite o rótulo do campo",
-        "placeholder": "Digite o placeholder do campo"
+        "placeholder": "Digite o texto de exemplo do campo"
       }
     },
     "widgetBuilder": {
@@ -1429,7 +1429,7 @@
         "placeholder": "Chat com nossa equipe"
       },
       "defaultLauncherTitle": "Chat com a equipe",
-      "saveSettings": "Salvar Configurações",
+      "saveSettings": "Salvar",
       "saving": "Salvando...",
       "widgetCode": {
         "title": "Código do Widget",
@@ -1441,7 +1441,7 @@
         "instructions": {
           "title": "Como usar este código:",
           "step1": "Copie o código acima",
-          "step2": "Cole no HTML da sua página, antes do fechamento da tag </body>",
+          "step2": "Cole no HTML da sua página, antes de fechar </body>",
           "step3": "O widget aparecerá automaticamente no seu site"
         }
       },

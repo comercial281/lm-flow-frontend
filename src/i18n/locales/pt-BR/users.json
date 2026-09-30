@@ -9,7 +9,7 @@
     "actions": {
       "chat": "Conversar",
       "edit": "Editar",
-      "delete": "Deletar",
+      "delete": "Excluir",
       "deactivate": "Desativar",
       "reactivate": "Reativar"
     }
@@ -178,7 +178,7 @@
     "newUser": "Novo Atendente",
     "bulkInvite": "Convidar em Massa",
     "export": "Exportar",
-    "delete": "Deletar",
+    "delete": "Excluir",
     "searchPlaceholder": "Buscar por nome, email ou função..."
   },
   "table": {
@@ -194,7 +194,7 @@
     },
     "actions": {
       "edit": "Editar",
-      "delete": "Deletar",
+      "delete": "Excluir",
       "deactivate": "Desativar",
       "reactivate": "Reativar"
     },
@@ -209,17 +209,17 @@
       "read": "Você não tem permissão para visualizar atendentes",
       "create": "Você não tem permissão para criar atendentes",
       "update": "Você não tem permissão para editar atendentes",
-      "delete": "Você não tem permissão para deletar atendentes",
+      "delete": "Você não tem permissão para excluir atendentes",
       "invite": "Você não tem permissão para convidar atendentes"
     },
     "loadError": "Erro ao carregar atendentes",
     "filterError": "Erro ao aplicar filtros",
-    "deleteSuccess": "Atendente deletado com sucesso",
-    "deleteError": "Erro ao deletar atendente",
-    "bulkDeleteSuccess": "{{count}} atendente deletado com sucesso",
-    "bulkDeleteSuccess_other": "{{count}} atendentes deletados com sucesso",
-    "bulkDeleteSuccess_zero": "{{count}} atendentes deletados com sucesso",
-    "bulkDeleteError": "Erro ao deletar atendentes",
+    "deleteSuccess": "Atendente excluído com sucesso",
+    "deleteError": "Erro ao excluir atendente",
+    "bulkDeleteSuccess": "{{count}} atendente excluído com sucesso",
+    "bulkDeleteSuccess_other": "{{count}} atendentes excluídos com sucesso",
+    "bulkDeleteSuccess_zero": "{{count}} atendentes excluídos com sucesso",
+    "bulkDeleteError": "Erro ao excluir atendentes",
     "availabilityUpdated": "Status de disponibilidade atualizado"
   },
   "empty": {
@@ -229,20 +229,20 @@
   },
   "dialog": {
     "delete": {
-      "title": "Deletar Atendente",
-      "description": "Tem certeza de que deseja deletar o atendente \"{{name}}\"? Esta ação não pode ser desfeita.",
+      "title": "Excluir Atendente",
+      "description": "Tem certeza de que deseja excluir o atendente \"{{name}}\"? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "deleting": "Deletando...",
-      "confirm": "Deletar"
+      "deleting": "Excluindo...",
+      "confirm": "Excluir"
     },
     "bulkDelete": {
-      "title": "Deletar Atendentes",
-      "description": "Tem certeza de que deseja deletar {{count}} atendente selecionado? Esta ação não pode ser desfeita.",
-      "description_other": "Tem certeza de que deseja deletar {{count}} atendentes selecionados? Esta ação não pode ser desfeita.",
-      "description_zero": "Tem certeza de que deseja deletar {{count}} atendentes selecionados? Esta ação não pode ser desfeita.",
+      "title": "Excluir Atendentes",
+      "description": "Tem certeza de que deseja excluir {{count}} atendente selecionado? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza de que deseja excluir {{count}} atendentes selecionados? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja excluir {{count}} atendentes selecionados? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "deleting": "Deletando...",
-      "confirm": "Deletar Todos"
+      "deleting": "Excluindo...",
+      "confirm": "Excluir Todos"
     }
   }
 }

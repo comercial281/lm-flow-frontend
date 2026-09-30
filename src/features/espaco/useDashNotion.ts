@@ -738,7 +738,7 @@ export function useCreatePage() {
       })
       return toNotionPage(r.page)
     },
-    onSuccess: () => { inval.space(); toast.success('Pagina criada') },
+    onSuccess: () => { inval.space(); toast.success('Página criada') },
     onError: (e) => toast.error(errorMessage(e)),
   })
 }
@@ -797,7 +797,7 @@ export function useArchivePage() {
     onSuccess: (p) => {
       inval.space(); inval.trash()
       if (p.database_id) inval.rows(p.database_id)
-      toast.success(p.archived === false ? 'Pagina restaurada' : 'Movida para a lixeira')
+      toast.success(p.archived === false ? 'Página restaurada' : 'Movida para a lixeira')
     },
     onError: (e) => toast.error(errorMessage(e)),
   })
@@ -841,7 +841,7 @@ export function useDuplicatePage() {
     onSuccess: (p) => {
       inval.space()
       if (p.database_id) inval.rows(p.database_id)
-      toast.success('Pagina duplicada')
+      toast.success('Página duplicada')
     },
     onError: (e) => toast.error(errorMessage(e)),
   })

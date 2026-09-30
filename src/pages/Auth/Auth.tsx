@@ -91,7 +91,7 @@ const LeftPanel: React.FC = () => (
         {[
           { label: 'Roteirização automatica de leads', dot: '#7c3aed' },
           { label: 'Follow-up por WhatsApp sem intervencao', dot: '#9333ea' },
-          { label: 'Pipeline visual com conversao em tempo real', dot: '#a855f7' },
+          { label: 'Funil visual com conversão em tempo real', dot: '#a855f7' },
         ].map((item, i) => (
           <motion.div
             key={item.label}
@@ -113,7 +113,7 @@ const LeftPanel: React.FC = () => (
 
     <div className="relative z-10">
       <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-        Leal Midia &copy; {new Date().getFullYear()}
+        Leal Mídia &copy; {new Date().getFullYear()}
       </p>
     </div>
   </div>

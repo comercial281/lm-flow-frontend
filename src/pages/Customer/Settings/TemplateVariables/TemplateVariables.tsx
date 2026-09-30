@@ -37,14 +37,14 @@ const SOURCE_PRESETS: SourcePreset[] = [
   {
     key: 'contact_phone',
     label: 'Telefone do contato',
-    description: 'Lê do campo phone_number do lead (formato E.164)',
+    description: 'Lê do campo phone_number do lead (com código do país, ex.: +5511999999999)',
     template: 'contact.phone_number',
     needsExtra: null,
   },
   {
     key: 'contact_name',
     label: 'Nome completo do contato',
-    description: 'Nome inteiro (use o built-in {{nome}} pra primeiro nome)',
+    description: 'Nome inteiro (pra só o primeiro nome, use a variável pronta {{nome}})',
     template: 'contact.name',
     needsExtra: null,
   },
@@ -154,13 +154,13 @@ export default function TemplateVariables() {
   }
 
   function validateForm(): string | null {
-    if (!form.token.trim()) return 'Token é obrigatório';
+    if (!form.token.trim()) return 'Nome da variável é obrigatório';
     if (!/^[a-z][a-z0-9_]{1,62}[a-z0-9]$/.test(form.token)) {
-      return 'Token só pode usar a-z, 0-9 e _ (3-64 chars, começa com letra)';
+      return 'Nome da variável só pode usar a-z, 0-9 e _ (de 3 a 64 caracteres, começando com letra)';
     }
     const builtinHit = builtin.some(b => b.token === form.token);
-    if (builtinHit) return `Token "${form.token}" é reservado pelo sistema`;
-    if (!form.label.trim()) return 'Label é obrigatório';
+    if (builtinHit) return `O nome "${form.token}" já é usado pelo sistema`;
+    if (!form.label.trim()) return 'Rótulo é obrigatório';
     const preset = SOURCE_PRESETS.find(p => p.key === form.presetKey);
     if (!preset) return 'Selecione uma fonte de valor';
     if (preset.needsExtra && !form.extraValue.trim()) {
@@ -234,7 +234,7 @@ export default function TemplateVariables() {
             </h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            Placeholders que você insere nos funis ({'{{token}}'}) e que viram texto real no
+            Variáveis prontas que você insere nos funis (como {'{{nome}}'}) e que viram texto real no
             momento do envio, lido do lead da conversa.
           </p>
         </div>
@@ -249,7 +249,7 @@ export default function TemplateVariables() {
         <div className="flex items-center gap-2 mb-2">
           <Lock size={14} className="text-muted-foreground" />
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Sistema (built-in, não editável)
+            Sistema (pronta, não editável)
           </h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -291,7 +291,7 @@ export default function TemplateVariables() {
             <Code size={32} className="mx-auto mb-2 text-muted-foreground" />
             <p className="font-semibold mb-1">Nenhuma variável customizada</p>
             <p className="text-sm text-muted-foreground mb-4">
-              Crie variáveis específicas do seu tenant pra usar nos funis (ex:
+              Crie variáveis específicas da sua conta pra usar nos funis (ex:
               {' '}<code className="text-xs">{'{{empreendimento_atual}}'}</code>).
             </p>
             <p className="text-sm text-muted-foreground mb-4">
@@ -374,7 +374,7 @@ export default function TemplateVariables() {
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
               <UILabel htmlFor="var-token">
-                Token <span className="text-muted-foreground text-xs">(sem chaves duplas)</span>
+                Nome da variável <span className="text-muted-foreground text-xs">(sem chaves duplas)</span>
               </UILabel>
               <Input
                 id="var-token"
@@ -392,7 +392,7 @@ export default function TemplateVariables() {
             </div>
 
             <div className="space-y-1.5">
-              <UILabel htmlFor="var-label">Label (mostra no chip)</UILabel>
+              <UILabel htmlFor="var-label">Rótulo (mostra no chip)</UILabel>
               <Input
                 id="var-label"
                 value={form.label}
@@ -489,8 +489,8 @@ export default function TemplateVariables() {
             <DialogTitle>Remover variável?</DialogTitle>
             <DialogDescription>
               A variável <code className="text-primary">{toDelete?.placeholder}</code> será
-              removida. Funis que usam ela vão deixar de interpolar (ficam com o placeholder
-              literal no texto enviado).
+              removida. Funis que usam ela vão deixar de interpolar (o texto enviado mostra a
+              variável do jeito que foi escrita, sem virar o valor real).
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

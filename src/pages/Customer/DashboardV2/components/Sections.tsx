@@ -60,11 +60,11 @@ export const PipelineFunnel: React.FC<{
 
   return (
     <GlassCard
-      title="Funil do pipeline"
+      title="Funil"
       subtitle={pipeline.spend ? 'Quantidade por etapa e quanto custou colocar um lead em cada uma' : 'Quantidade parada em cada etapa e quantos entraram no período'}
       action={
         pipeline.pipelines.length > 1 ? (
-          <select className="lmf-select" value={pipeline.pipeline.id} onChange={e => onSelect(e.target.value)} aria-label="Pipeline">
+          <select className="lmf-select" value={pipeline.pipeline.id} onChange={e => onSelect(e.target.value)} aria-label="Funil">
             {pipeline.pipelines.map(p => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -75,7 +75,7 @@ export const PipelineFunnel: React.FC<{
       }
     >
       {pipeline.stages.length === 0 ? (
-        <EmptyBlock text="Este pipeline não tem etapas." />
+        <EmptyBlock text="Este funil não tem etapas." />
       ) : (
         <ul>
           {pipeline.stages.map(stage => (
@@ -186,7 +186,6 @@ export const AiSection: React.FC<{
             <span className="lmf-row-sub">
               {formatNumber(ai.usage.sessions)} sessões · {formatNumber(ai.usage.executions)} execuções
             </span>
-            <span className="lmf-pill">{formatNumber(ai.usage.tokens)} tokens</span>
           </div>
         )}
       </>

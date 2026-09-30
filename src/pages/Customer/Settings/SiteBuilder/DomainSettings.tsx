@@ -177,8 +177,8 @@ export default function DomainSettings({ siteId }: { siteId: string }) {
           <div>
             <p className="font-medium text-orange-900 dark:text-orange-300">Integração com a Vercel não configurada</p>
             <p className="mt-1 text-orange-800 dark:text-orange-400">
-              Peça para o time técnico preencher <code className="font-mono">VERCEL_API_TOKEN</code> e{' '}
-              <code className="font-mono">VERCEL_PROJECT_ID</code> nas variáveis de ambiente desta instância.
+              O domínio próprio ainda não pode ser ligado por aqui: falta uma configuração no
+              servidor do seu LM Flow. Fale com o suporte.
             </p>
           </div>
         </div>

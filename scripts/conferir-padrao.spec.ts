@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, textosDoJson, noEscopo, emTitleCase, SEM_ACENTO } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, textosDoJson, noEscopo, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -51,6 +51,49 @@ describe('textosDaTela: o que conta como texto que aparece', () => {
       expect.arrayContaining(['Pronto', 'Sem nome', 'Olá']),
     );
   });
+
+  it('atributo hint= e text= é texto de tela', () => {
+    expect(textos(`const x = <Campo hint="Instância que envia os avisos" />;`)).toEqual(['Instância que envia os avisos']);
+    expect(textos(`const x = <Aviso text="Escolha a tag" />;`)).toEqual(['Escolha a tag']);
+  });
+
+  it('as palavras de plural(n, singular, plural) são texto de tela; o número não', () => {
+    expect(textos(`const x = <p>{plural(total, 'instância', 'instâncias')}</p>;`)).toEqual(['instância', 'instâncias']);
+    expect(textos(`const y = formato.plural(total, 'estágio', 'estágios');`)).toEqual(['estágio', 'estágios']);
+    expect(textos(`const z = plural('três' as unknown as number, 'item', 'itens');`)).toEqual(['item', 'itens']);
+  });
+
+  it('a mensagem de reserva de apiErrorMessage(erro, texto) é texto de tela; o erro não', () => {
+    expect(textos(`const m = apiErrorMessage(e, 'Não foi possível salvar a tag');`)).toEqual([
+      'Não foi possível salvar a tag',
+    ]);
+    expect(textos(`const m = apiErrorMessage('payload do erro', 'Falhou');`)).toEqual(['Falhou']);
+  });
+
+  it('.ts é lido como TypeScript puro: genérico e asserção de tipo não viram texto de tela', () => {
+    const codigo = `
+      function f(): Envelope<Resposta> { return x as Envelope<Resposta>; }
+      const y = <Envelope<T>>z;
+    `;
+    expect(textosDaTela(codigo, 'servico.ts')).toEqual([]);
+  });
+
+  it('.tsx continua lendo JSX normalmente', () => {
+    expect(textos(`const x = <div>Olá</div>;`)).toEqual(['Olá']);
+    expect(textosDaTela(`const x = <div>Olá</div>;`, 'Tela.tsx').map((t: { texto: string }) => t.texto)).toEqual(['Olá']);
+  });
+});
+
+describe('TERMOS_TECNICOS: "instance" em inglês', () => {
+  const instancia = TERMOS_TECNICOS.find(([nome]: [string, RegExp]) => nome === 'instance')?.[1] as RegExp;
+
+  it('existe e pega "Instance ID", mas não "instanceof" nem identificador composto', () => {
+    expect(instancia).toBeInstanceOf(RegExp);
+    expect(instancia.test('Instance ID')).toBe(true);
+    expect(instancia.test('instanceof')).toBe(false);
+    expect(instancia.test('getInstance')).toBe(false);
+    expect(instancia.test('BlockInstance')).toBe(false);
+  });
 });
 
 describe('botoesSemNome', () => {
@@ -85,6 +128,12 @@ describe('acento e maiúsculas', () => {
     expect(SEM_ACENTO.test('Clique no botao')).toBe(true);
     expect(SEM_ACENTO.test('Configurações')).toBe(false);
     expect(SEM_ACENTO.test('botaozinho')).toBe(false);
+  });
+
+  it('acha "conversao"/"conversoes" sem acento', () => {
+    expect(SEM_ACENTO.test('Funil visual com conversao em tempo real')).toBe(true);
+    expect(SEM_ACENTO.test('Suas conversoes')).toBe(true);
+    expect(SEM_ACENTO.test('Funil visual com conversão em tempo real')).toBe(false);
   });
 
   it('Title Case só em texto curto, descontando nome próprio', () => {

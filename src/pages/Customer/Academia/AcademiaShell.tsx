@@ -18,7 +18,7 @@ export default function AcademiaShell({ children }: { children: ReactNode }) {
             <div className="text-sm">
               <p className="font-semibold mb-1">Área de membros indisponível</p>
               <p className="text-muted-foreground text-xs">
-                As variáveis <code>VITE_LMHUB_SUPABASE_URL</code> e <code>VITE_LMHUB_SUPABASE_ANON_KEY</code> precisam ser configuradas no deploy deste tenant.
+                As variáveis <code>VITE_LMHUB_SUPABASE_URL</code> e <code>VITE_LMHUB_SUPABASE_ANON_KEY</code> precisam ser configuradas no deploy do seu LM Flow.
               </p>
             </div>
           </div>

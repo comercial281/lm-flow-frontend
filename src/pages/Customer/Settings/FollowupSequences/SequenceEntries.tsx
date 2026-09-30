@@ -63,7 +63,7 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
     const groups = new Map<string, { id: string; pipeline: string; stages: FollowupEntryStage[] }>();
     stages.forEach(s => {
       const group = groups.get(s.pipeline_id)
-        ?? { id: s.pipeline_id, pipeline: s.pipeline_name || 'Pipeline sem nome', stages: [] };
+        ?? { id: s.pipeline_id, pipeline: s.pipeline_name || 'Funil sem nome', stages: [] };
       group.stages.push(s);
       groups.set(s.pipeline_id, group);
     });
@@ -235,7 +235,7 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
             stageGroups.length === 0 ? (
               <p className="flex items-start gap-2 text-xs text-muted-foreground">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
-                Este CRM ainda não tem coluna nenhuma. Crie um pipeline antes de usar esta opção.
+                Este CRM ainda não tem coluna nenhuma. Crie um funil antes de usar esta opção.
               </p>
             ) : (
               <div>

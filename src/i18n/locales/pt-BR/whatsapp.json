@@ -123,9 +123,9 @@
         "helpText": "Gerado automaticamente do nome de exibição"
       },
       "instanceName": {
-        "label": "Nome da Instância",
-        "placeholder": "minha-instancia",
-        "helpText": "Nome único para identificar sua instância"
+        "label": "Nome do número",
+        "placeholder": "minha-loja",
+        "helpText": "Nome único para identificar seu número"
       },
       "baseUrl": {
         "label": "URL Base",
@@ -153,7 +153,7 @@
         "protocol": "Protocolo",
         "username": {
           "label": "Usuário",
-          "placeholder": "usuario"
+          "placeholder": "usuário"
         },
         "password": {
           "label": "Senha",
@@ -161,7 +161,7 @@
         }
       },
       "instance": {
-        "title": "Configurações da Instância",
+        "title": "Configurações do número",
         "rejectCalls": "Rejeitar Chamadas",
         "alwaysOnline": "Sempre Online",
         "readMessages": "Marcar Mensagens como Lidas",
@@ -262,14 +262,14 @@
         "helpText": "Inclua o código do país (ex: +55 para Brasil)"
       },
       "instanceId": {
-        "label": "ID da instância",
+        "label": "ID do número",
         "placeholder": "Seu Instance ID da Z-API",
         "helpText": "Aparece no painel da Z-API, na instância que você criou"
       },
       "token": {
         "label": "Token",
         "placeholder": "Seu token da Z-API",
-        "helpText": "O token da instância, no mesmo painel da Z-API"
+        "helpText": "O token do número, no mesmo painel da Z-API"
       },
       "clientToken": {
         "label": "Token do cliente",
@@ -280,7 +280,7 @@
     "help": {
       "title": "Ajuda - Z-API",
       "instanceId": {
-        "title": "ID da instância",
+        "title": "ID do número",
         "description": "Encontre em sua conta Z-API"
       },
       "token": {
@@ -366,25 +366,25 @@
         "placeholder": "Seu token de administração"
       },
       "instanceName": {
-        "label": "Nome da Instância",
-        "placeholder": "minha-instancia"
+        "label": "Nome do número",
+        "placeholder": "minha-loja"
       },
       "phoneNumber": {
         "label": "Número do WhatsApp",
         "placeholder": "+5511999999999"
       },
       "instanceUuid": {
-        "label": "UUID da Instância",
+        "label": "UUID do número",
         "placeholder": "Gerado automaticamente"
       },
       "instanceToken": {
-        "label": "Token da Instância",
+        "label": "Token do número",
         "placeholder": "Gerado automaticamente"
       }
     },
     "sections": {
       "instance": {
-        "title": "Configurações da Instância",
+        "title": "Configurações do número",
         "alwaysOnline": "Sempre Online",
         "rejectCall": "Rejeitar Chamadas",
         "readMessages": "Marcar Mensagens como Lidas",
@@ -481,7 +481,7 @@
     "phoneRequired": "Número de telefone é obrigatório",
     "apiKeyRequired": "API Key é obrigatória",
     "tokenRequired": "Token é obrigatório",
-    "instanceRequired": "Nome da instância é obrigatório",
+    "instanceRequired": "Nome do número é obrigatório",
     "urlRequired": "URL é obrigatória",
     "fillAllFields": "Preencha todos os campos obrigatórios"
   },
@@ -495,7 +495,7 @@
     "connectionError": "Erro de conexão",
     "testError": "Erro ao testar conexão",
     "invalidCredentials": "Credenciais inválidas",
-    "instanceNotFound": "Instância não encontrada",
+    "instanceNotFound": "Número não encontrado",
     "providerNotImplemented": "Provedor {{provider}} não implementado ainda."
   }
 }

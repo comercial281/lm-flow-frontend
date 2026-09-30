@@ -559,7 +559,7 @@ export default function Properties() {
       .trim()
       .replace(/^[ _-]+|[ _-]+$/g, '')
       .slice(0, 60);
-    if (!cleaned) { toast.error('Digite um nome válido para a tag'); return; }
+    if (!cleaned) { toast.error('Digite um nome válido para a etiqueta'); return; }
     // Se já existe (case-insensitive), só seleciona.
     const existing = labels.find(l => l.title.toLowerCase() === cleaned.toLowerCase());
     if (existing) { setF({ label_id: existing.id }); setNewTagName(''); return; }
@@ -572,9 +572,9 @@ export default function Properties() {
       setLabels(prev => (prev.some(l => l.id === item.id) ? prev : [...prev, item]));
       setF({ label_id: item.id });
       setNewTagName('');
-      toast.success('Tag criada e selecionada');
+      toast.success('Etiqueta criada e selecionada');
     } catch {
-      toast.error('Não consegui criar a tag');
+      toast.error('Não consegui criar a etiqueta');
     } finally {
       setCreatingTag(false);
     }
@@ -1085,7 +1085,7 @@ export default function Properties() {
               </div>
 
               <div>
-                <UILabel>Estágio</UILabel>
+                <UILabel>Situação da obra</UILabel>
                 <select value={f.stage} onChange={e => setF({ stage: e.target.value })}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                   <option value="ready">Pronto</option>
@@ -1264,10 +1264,10 @@ export default function Properties() {
                   {tenantUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               </div>
-              {/* Tag do imóvel: o lead que entra pela página deste imóvel é etiquetado
-                  com essa tag. Assim o pipeline fica geral e a tag identifica o imóvel. */}
+              {/* Etiqueta do imóvel: o lead que entra pela página deste imóvel é etiquetado
+                  com essa etiqueta. Assim o funil fica geral e a etiqueta identifica o imóvel. */}
               <div>
-                <UILabel>Tag do imóvel</UILabel>
+                <UILabel>Etiqueta do imóvel</UILabel>
               <select
                 value={f.label_id ?? ''}
                 onChange={e => setF({ label_id: e.target.value || null })}
@@ -1281,7 +1281,7 @@ export default function Properties() {
                   value={newTagName}
                   onChange={e => setNewTagName(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); createTag(); } }}
-                  placeholder="Criar nova tag…"
+                  placeholder="Criar nova etiqueta…"
                   className="flex-1"
                 />
                 <Button type="button" variant="outline" onClick={createTag} disabled={creatingTag || !newTagName.trim()}>
@@ -1289,7 +1289,7 @@ export default function Properties() {
                 </Button>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Aplicada ao lead capturado na página deste imóvel. Vazio = cria uma tag
+                Aplicada ao lead capturado na página deste imóvel. Vazio = cria uma etiqueta
                 automática com o título do imóvel.
               </p>
               </div>

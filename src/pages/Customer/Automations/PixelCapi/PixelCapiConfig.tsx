@@ -274,7 +274,7 @@ export default function PixelCapiConfig() {
         {(config?.pipelines ?? []).map((pipeline) => (
           <div key={pipeline.id} className="rounded-lg border border-border">
             <div className="border-b border-border px-4 py-2 text-sm font-medium text-foreground">
-              {pipeline.name || 'Pipeline'}
+              {pipeline.name || 'Funil'}
             </div>
             <div className="divide-y divide-border">
               {pipeline.stages.map((stage) => {
@@ -338,14 +338,14 @@ export default function PixelCapiConfig() {
                 );
               })}
               {pipeline.stages.length === 0 && (
-                <div className="px-4 py-3 text-xs text-muted-foreground">Sem colunas neste pipeline.</div>
+                <div className="px-4 py-3 text-xs text-muted-foreground">Sem colunas neste funil.</div>
               )}
             </div>
           </div>
         ))}
 
         {(config?.pipelines ?? []).length === 0 && (
-          <p className="text-sm text-muted-foreground">Nenhum pipeline encontrado para este cliente.</p>
+          <p className="text-sm text-muted-foreground">Nenhum funil encontrado para este cliente.</p>
         )}
       </section>
 
