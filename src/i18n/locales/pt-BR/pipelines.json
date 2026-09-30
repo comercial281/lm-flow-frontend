@@ -577,7 +577,7 @@
       "deleteStage": "Deletar Etapa",
       "noConversations": "Nenhuma conversa nesta etapa",
       "noStages": "Nenhuma etapa encontrada para este pipeline",
-      "totalValue": "R$ {{value}}"
+      "totalValue": "{{value}}"
     },
     "item": {
       "unknownUser": "Usuário Desconhecido",

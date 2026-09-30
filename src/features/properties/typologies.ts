@@ -11,6 +11,8 @@
    Usado pelo cadastro (Properties.tsx) e pela página pública (ImovelPublicPage).
 ──────────────────────────────────────────────────────────────────────────── */
 
+import { dinheiro } from '@/lib/formato';
+
 export interface PropertyTypology {
   /** Rótulo da planta como está no book ("Tipo A", "Final 3"). Opcional. */
   name?: string | null;
@@ -77,7 +79,7 @@ export function typologySpecs(t: PropertyTypology): string[] {
 
 /** Preço da tipologia já formatado (venda tem prioridade; aluguel leva "/mês"). */
 export function typologyPrice(t: PropertyTypology): string | null {
-  const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+  const brl = (v: number) => dinheiro(v, { centavos: false });
   if (t.sale_price) return brl(t.sale_price);
   if (t.rent_price) return `${brl(t.rent_price)}/mês`;
   return null;

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, DragEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { dinheiro } from '@/lib/formato';
 import {
   Button,
   Input,
@@ -129,7 +130,7 @@ const EMPTY_FORM: PropertyFormData = {
 };
 
 const formatCurrency = (v?: number | null) =>
-  v != null ? `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : null;
+  v != null ? dinheiro(v, { centavos: false }) : null;
 
 /*
  * Observação interna do corretor trazida por importação (a "nota do corretor" do

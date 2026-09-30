@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { formatDateBR } from '@/utils/dateUtils';
+import { dinheiro } from '@/lib/formato';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -587,14 +588,6 @@ export default function PipelineKanban() {
     }, 0);
   };
 
-  // Format currency
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
-
   // Mesma data de chegada de formatArrivalDate, mas em epoch ms — pra ordenar
   // a Lista por ordem de chegada real (não confundir com `position`, que é a
   // ordem manual de arraste dentro da coluna do Kanban). Fica local: não é
@@ -1105,7 +1098,7 @@ export default function PipelineKanban() {
                 {calculatePipelineTotal() > 0 && (
                   <div className="hidden md:block text-center">
                     <div className="font-semibold text-green-600 dark:text-green-400 whitespace-nowrap leading-tight">
-                      R$ {formatCurrency(calculatePipelineTotal())}
+                      {dinheiro(calculatePipelineTotal())}
                     </div>
                     <div className="text-muted-foreground">{t('kanban.header.totalValue')}</div>
                   </div>
@@ -1333,7 +1326,7 @@ export default function PipelineKanban() {
                           {calculateStageTotal(stage.items) > 0 && (
                             <span className="bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs px-2 py-1 rounded-full font-medium">
                               {t('kanban.stage.totalValue', {
-                                value: formatCurrency(calculateStageTotal(stage.items)),
+                                value: dinheiro(calculateStageTotal(stage.items)),
                               })}
                             </span>
                           )}

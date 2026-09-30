@@ -27,6 +27,7 @@ import { TRANSACTION_TYPE_LABELS, PROPERTY_TYPE_LABELS } from '@/services/proper
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
+import { dinheiro } from '@/lib/formato';
 
 const STATUS_TABS = [
   { key: '', label: 'Todas' },
@@ -37,8 +38,7 @@ const STATUS_TABS = [
 ];
 
 function formatCurrency(v?: number | null) {
-  if (!v) return null;
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+  return v ? dinheiro(v) : null;
 }
 
 function formatDate(iso: string) {
