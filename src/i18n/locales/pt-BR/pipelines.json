@@ -1,65 +1,65 @@
 {
-  "title": "Pipelines",
+  "title": "Funis",
   "header": {
-    "newPipeline": "Criar Pipeline",
-    "searchPlaceholder": "Buscar pipelines..."
+    "newPipeline": "Criar Funil",
+    "searchPlaceholder": "Buscar funis..."
   },
   "stats": {
-    "totalPipelines": "Pipelines",
+    "totalPipelines": "Funis",
     "activePipelines": "Ativos",
     "totalItems": "Total de Leads",
-    "completedPipelines": "Pipelines Completados"
+    "completedPipelines": "Funis Completados"
   },
   "viewMode": {
     "cards": "Cartões",
     "table": "Tabela"
   },
   "empty": {
-    "noResults": "Nenhum pipeline encontrado",
-    "noResultsDescription": "Tente ajustar sua busca para encontrar o pipeline desejado.",
-    "noPipelines": "Nenhum pipeline criado",
-    "noPipelinesDescription": "Crie um pipeline para organizar e acompanhar suas conversas através de diferentes etapas.",
-    "createPipeline": "Criar Pipeline"
+    "noResults": "Nenhum funil encontrado",
+    "noResultsDescription": "Tente ajustar sua busca para encontrar o funil desejado.",
+    "noPipelines": "Nenhum funil criado",
+    "noPipelinesDescription": "Crie um funil para organizar e acompanhar suas conversas através de diferentes etapas.",
+    "createPipeline": "Criar Funil"
   },
   "loading": {
-    "pipelines": "Carregando pipelines...",
+    "pipelines": "Carregando funis...",
     "creating": "Criando...",
     "updating": "Atualizando...",
-    "deleting": "Deletando...",
+    "deleting": "Excluindo...",
     "duplicating": "Duplicando..."
   },
   "actions": {
     "view": "Visualizar",
     "edit": "Editar",
     "duplicate": "Duplicar",
-    "delete": "Deletar",
+    "delete": "Excluir",
     "toggle": "Alternar Status",
     "cancel": "Cancelar",
     "save": "Salvar",
     "confirm": "Confirmar"
   },
   "messages": {
-    "loadError": "Erro ao carregar pipelines",
-    "createSuccess": "Pipeline criado com sucesso",
-    "createError": "Erro ao criar pipeline",
-    "updateSuccess": "Pipeline atualizado com sucesso",
-    "updateError": "Erro ao atualizar pipeline",
-    "deleteSuccess": "Pipeline deletado com sucesso",
-    "deleteError": "Erro ao deletar pipeline",
-    "duplicateSuccess": "Pipeline duplicado com sucesso",
-    "duplicateError": "Erro ao duplicar pipeline",
-    "activateSuccess": "Pipeline ativado com sucesso",
-    "deactivateSuccess": "Pipeline desativado com sucesso",
-    "toggleError": "Erro ao alterar status do pipeline",
-    "setAsDefaultSuccess": "Pipeline marcado como padrão com sucesso",
-    "setAsDefaultError": "Erro ao marcar pipeline como padrão",
-    "noPermissionRead": "Você não tem permissão para visualizar pipelines",
-    "noPermissionCreate": "Você não tem permissão para criar pipelines",
-    "noPermissionUpdate": "Você não tem permissão para atualizar pipelines"
+    "loadError": "Erro ao carregar funis",
+    "createSuccess": "Funil criado com sucesso",
+    "createError": "Erro ao criar funil",
+    "updateSuccess": "Funil atualizado com sucesso",
+    "updateError": "Erro ao atualizar funil",
+    "deleteSuccess": "Funil excluído com sucesso",
+    "deleteError": "Erro ao excluir funil",
+    "duplicateSuccess": "Funil duplicado com sucesso",
+    "duplicateError": "Erro ao duplicar funil",
+    "activateSuccess": "Funil ativado com sucesso",
+    "deactivateSuccess": "Funil desativado com sucesso",
+    "toggleError": "Erro ao alterar status do funil",
+    "setAsDefaultSuccess": "Funil marcado como padrão com sucesso",
+    "setAsDefaultError": "Erro ao marcar funil como padrão",
+    "noPermissionRead": "Você não tem permissão para visualizar funis",
+    "noPermissionCreate": "Você não tem permissão para criar funis",
+    "noPermissionUpdate": "Você não tem permissão para atualizar funis"
   },
   "addItem": {
-    "title": "Adicionar Lead ao Pipeline",
-    "description": "Selecione um lead disponível para adicionar ao pipeline.",
+    "title": "Adicionar Lead ao Funil",
+    "description": "Selecione um lead disponível para adicionar ao funil.",
     "selectStage": "Selecionar Etapa",
     "chooseStage": "Escolha uma etapa",
     "itemType": "Origem do Lead",
@@ -74,24 +74,24 @@
     "noItemsFound": "Nenhum lead encontrado",
     "noItemsAvailable": "Nenhum lead disponível",
     "notes": "Observações (opcional)",
-    "notesPlaceholder": "Adicione observações sobre este lead no pipeline...",
+    "notesPlaceholder": "Adicione observações sobre este lead no funil...",
     "unknownUser": "Usuário Desconhecido",
     "loading": "Carregando...",
     "adding": "Adicionando...",
     "add": "Adicionar Lead",
     "cancel": "Cancelar",
-    "success": "Lead adicionado com sucesso ao pipeline",
-    "error": "Erro ao adicionar lead ao pipeline",
+    "success": "Lead adicionado com sucesso ao funil",
+    "error": "Erro ao adicionar lead ao funil",
     "loadError": "Erro ao carregar leads disponíveis"
   },
   "createPipeline": {
-    "title": "Criar Novo Pipeline",
-    "description": "Configure um novo pipeline e suas etapas para organizar suas conversas.",
+    "title": "Criar Novo Funil",
+    "description": "Configure um novo funil e suas etapas para organizar suas conversas.",
     "basicInfo": "Informações Básicas",
-    "pipelineName": "Nome do Pipeline",
-    "pipelineNamePlaceholder": "Ex: Pipeline de Vendas",
+    "pipelineName": "Nome do Funil",
+    "pipelineNamePlaceholder": "Ex: Funil de Vendas",
     "descriptionLabel": "Descrição",
-    "descriptionPlaceholder": "Descreva o objetivo deste pipeline...",
+    "descriptionPlaceholder": "Descreva o objetivo deste funil...",
     "type": "Tipo",
     "types": {
       "custom": "Personalizado",
@@ -111,16 +111,16 @@
       "required": "Selecione pelo menos uma equipe",
       "noTeams": "Nenhuma equipe disponível"
     },
-    "stages": "Etapas do Pipeline",
+    "stages": "Etapas do Funil",
     "stagesCount": "{{count}} etapas",
     "reset": "Resetar",
     "addStage": "Adicionar Ação",
     "newStageName": "Nome da nova etapa...",
     "newStageDescription": "Descrição (opcional)...",
-    "addStageMessage": "Adicione pelo menos uma etapa para o pipeline",
+    "addStageMessage": "Adicione pelo menos uma etapa para o funil",
     "cancel": "Cancelar",
     "creating": "Criando...",
-    "create": "Criar Pipeline",
+    "create": "Criar Funil",
     "templates": {
       "sales": {
         "newLead": {
@@ -194,7 +194,7 @@
   },
   "createStage": {
     "title": "Criar Nova Etapa",
-    "description": "Adicione uma nova etapa ao pipeline para organizar suas conversas.",
+    "description": "Adicione uma nova etapa ao funil para organizar suas conversas.",
     "name": "Nome da Etapa",
     "namePlaceholder": "Ex: Leads Qualificados",
     "descriptionLabel": "Descrição",
@@ -223,48 +223,48 @@
     }
   },
   "deletePipeline": {
-    "title": "Deletar Pipeline",
+    "title": "Excluir Funil",
     "description": "Esta ação não pode ser desfeita e irá afetar todos os dados relacionados.",
-    "confirmMessage": "Tem certeza que deseja deletar o pipeline",
+    "confirmMessage": "Tem certeza que deseja excluir o funil",
     "info": {
       "conversations": "Conversas",
       "stages": "Etapas",
       "type": "Tipo"
     },
-    "warningTitle": "Atenção: Este pipeline possui conversas ativas",
-    "warningMessage": "Existem {{count}} conversa{{plural}} neste pipeline. Ao deletar o pipeline, todas essas conversas serão removidas do sistema de pipelines.",
-    "note": "As conversas continuarão existindo no sistema principal, mas perderão sua associação com este pipeline.",
-    "safeToDelete": "Este pipeline não possui conversas ativas e pode ser deletado com segurança.",
-    "willDelete": "A exclusão do pipeline irá:",
+    "warningTitle": "Atenção: Este funil possui conversas ativas",
+    "warningMessage": "Existem {{count}} conversa{{plural}} neste funil. Ao excluir o funil, todas essas conversas serão removidas do sistema de funis.",
+    "note": "As conversas continuarão existindo no sistema principal, mas perderão sua associação com este funil.",
+    "safeToDelete": "Este funil não possui conversas ativas e pode ser excluído com segurança.",
+    "willDelete": "A exclusão do funil irá:",
     "effects": {
-      "remove": "Remover permanentemente o pipeline e todas suas configurações",
-      "deleteStages": "Deletar todas as {{count}} etapa{{plural}} configuradas",
-      "removeConversations": "Remover {{count}} conversa{{plural}} do sistema de pipelines",
-      "deleteHistory": "Apagar todo o histórico e métricas associadas",
+      "remove": "Remover permanentemente o funil e todas suas configurações",
+      "deleteStages": "Excluir todas as {{count}} etapa{{plural}} configuradas",
+      "removeConversations": "Remover {{count}} conversa{{plural}} do sistema de funis",
+      "deleteHistory": "Excluir todo o histórico e métricas associadas",
       "invalidateReports": "Invalidar relatórios e análises dependentes"
     },
     "cancel": "Cancelar",
-    "deleting": "Deletando...",
-    "delete": "Deletar Pipeline"
+    "deleting": "Excluindo...",
+    "delete": "Excluir Funil"
   },
   "deleteStage": {
-    "title": "Deletar Etapa",
+    "title": "Excluir Etapa",
     "description": "Esta ação não pode ser desfeita.",
-    "confirmMessage": "Tem certeza que deseja deletar a etapa",
+    "confirmMessage": "Tem certeza que deseja excluir a etapa",
     "warningTitle": "Atenção: Esta etapa possui conversas ativas",
-    "warningMessage": "Existem {{count}} conversa{{plural}} nesta etapa. Ao deletar a etapa, {{pronoun}} será{{verbPlural}} removida{{plural}} do pipeline.",
-    "safeToDelete": "Esta etapa não possui conversas ativas e pode ser deletada com segurança.",
+    "warningMessage": "Existem {{count}} conversa{{plural}} nesta etapa. Ao excluir a etapa, {{pronoun}} será{{verbPlural}} removida{{plural}} do funil.",
+    "safeToDelete": "Esta etapa não possui conversas ativas e pode ser excluída com segurança.",
     "important": "Importante:",
     "effects": {
-      "remove": "Remover permanentemente a etapa do pipeline",
-      "removeConversations": "Remover todas as conversas desta etapa do pipeline",
+      "remove": "Remover permanentemente a etapa do funil",
+      "removeConversations": "Remover todas as conversas desta etapa do funil",
       "reorder": "Reordenar automaticamente as etapas restantes"
     },
     "cancel": "Cancelar",
-    "deleting": "Deletando...",
-    "delete": "Deletar Etapa",
+    "deleting": "Excluindo...",
+    "delete": "Excluir Etapa",
     "deletionWill": {
-      "removeConversations": "Tirar do pipeline as conversas que estão nesta etapa",
+      "removeConversations": "Tirar do funil as conversas que estão nesta etapa",
       "removeStage": "Excluir a etapa em definitivo",
       "reorderStages": "Reordenar as etapas que sobrarem"
     },
@@ -272,24 +272,24 @@
     "importantLabel": "Atenção"
   },
   "duplicatePipeline": {
-    "title": "Duplicar Pipeline",
-    "description": "Crie uma cópia do pipeline \"{{name}}\" com as mesmas configurações e etapas.",
+    "title": "Duplicar Funil",
+    "description": "Crie uma cópia do funil \"{{name}}\" com as mesmas configurações e etapas.",
     "name": "Nome",
-    "namePlaceholder": "Ex: Pipeline de Vendas (Cópia)",
+    "namePlaceholder": "Ex: Funil de Vendas (Cópia)",
     "copyDefault": "{{name}} (Cópia)",
     "descriptionLabel": "Descrição",
-    "descriptionPlaceholder": "Descreva o objetivo deste pipeline...",
+    "descriptionPlaceholder": "Descreva o objetivo deste funil...",
     "whatCopied": "O que será copiado:",
-    "settings": "Configurações do pipeline (tipo, visibilidade)",
-    "allStages": "Todas as etapas do pipeline",
+    "settings": "Configurações do funil (tipo, visibilidade)",
+    "allStages": "Todas as etapas do funil",
     "structure": "Estrutura e organização",
     "observation": "Observação:",
-    "noConversations": "As conversas não serão copiadas. O novo pipeline iniciará vazio.",
+    "noConversations": "As conversas não serão copiadas. O novo funil iniciará vazio.",
     "cancel": "Cancelar",
     "duplicating": "Duplicando...",
-    "duplicate": "Duplicar Pipeline",
+    "duplicate": "Duplicar Funil",
     "copied": {
-      "settings": "As configurações do pipeline",
+      "settings": "As configurações do funil",
       "stages": "Todas as etapas, na mesma ordem",
       "structure": "A estrutura completa"
     },
@@ -299,7 +299,7 @@
     "whatWillBeCopied": "O que vai ser copiado:"
   },
   "editItem": {
-    "title": "Editar Lead no Pipeline",
+    "title": "Editar Lead no Funil",
     "description": "Detalhes do lead",
     "unknownUser": "Usuário Desconhecido",
     "currentStage": "Etapa Atual",
@@ -322,7 +322,7 @@
     "value": "Valor",
     "totalValue": "Valor Total:",
     "notes": "Observações",
-    "notesPlaceholder": "Adicione observações sobre este lead no pipeline...",
+    "notesPlaceholder": "Adicione observações sobre este lead no funil...",
     "customAttributes": "Atributos Personalizados",
     "servicesDescription": "Gerencie os serviços associados a este lead",
     "attributesDescription": "Configure atributos personalizados para este lead",
@@ -334,10 +334,10 @@
     },
     "cancel": "Cancelar",
     "saving": "Salvando...",
-    "save": "Salvar Alterações"
+    "save": "Salvar"
   },
   "editConversation": {
-    "title": "Editar Lead no Pipeline",
+    "title": "Editar Lead no Funil",
     "description": "Detalhes do lead",
     "unknownUser": "Usuário Desconhecido",
     "currentStage": "Etapa Atual",
@@ -356,22 +356,22 @@
     "value": "Valor",
     "totalValue": "Valor Total:",
     "notes": "Observações",
-    "notesPlaceholder": "Adicione observações sobre esta conversa no pipeline...",
+    "notesPlaceholder": "Adicione observações sobre esta conversa no funil...",
     "cancel": "Cancelar",
     "saving": "Salvando...",
-    "save": "Salvar Alterações"
+    "save": "Salvar"
   },
   "editPipeline": {
-    "title": "Editar Pipeline",
-    "description": "Atualize as informações do pipeline \"{{name}}\".",
+    "title": "Editar Funil",
+    "description": "Atualize as informações do funil \"{{name}}\".",
     "details": "Detalhes",
     "customAttributes": "Atributos",
-    "attributesDescription": "Configure atributos para este pipeline",
+    "attributesDescription": "Configure atributos para este funil",
     "name": "Nome",
-    "namePlaceholder": "Ex: Pipeline de Vendas",
+    "namePlaceholder": "Ex: Funil de Vendas",
     "descriptionLabel": "Descrição",
-    "descriptionPlaceholder": "Descreva o objetivo deste pipeline...",
-    "pipelineType": "Tipo de Pipeline",
+    "descriptionPlaceholder": "Descreva o objetivo deste funil...",
+    "pipelineType": "Tipo de Funil",
     "selectType": "Selecione o tipo",
     "types": {
       "custom": "Personalizado",
@@ -392,17 +392,17 @@
       "required": "Selecione pelo menos uma equipe",
       "noTeams": "Nenhuma equipe disponível"
     },
-    "pipelineActive": "Pipeline ativo",
+    "pipelineActive": "Funil ativo",
     "cancel": "Cancelar",
     "saving": "Salvando...",
-    "save": "Salvar Alterações"
+    "save": "Salvar"
   },
   "editStage": {
     "title": "Editar Etapa",
-    "description": "Edite as informações desta etapa do pipeline.",
+    "description": "Edite as informações desta etapa do funil.",
     "details": "Detalhes",
     "customAttributes": "Atributos",
-    "attributesDescription": "Configure atributos para este estágio",
+    "attributesDescription": "Configure atributos para esta etapa",
     "name": "Nome da Etapa",
     "namePlaceholder": "Ex: Prospecção, Negociação, Fechamento...",
     "color": "Cor da Etapa",
@@ -426,13 +426,13 @@
       "cancelled": "Cancelada"
     },
     "descriptionLabel": "Descrição (opcional)",
-    "descriptionPlaceholder": "Descreva esta etapa do pipeline...",
+    "descriptionPlaceholder": "Descreva esta etapa do funil...",
     "characterCount": "{{current}}/{{max}} caracteres",
     "preview": "Prévia",
     "stageName": "Nome da etapa",
     "cancel": "Cancelar",
     "saving": "Salvando...",
-    "save": "Salvar Alterações"
+    "save": "Salvar"
   },
   "pipelineCard": {
     "active": "Ativo",
@@ -444,7 +444,7 @@
     "idCopied": "ID copiado para a área de transferência",
     "activate": "Ativar",
     "deactivate": "Desativar",
-    "delete": "Deletar",
+    "delete": "Excluir",
     "view": "Visualizar",
     "setAsDefault": "Marcar como padrão",
     "stats": {
@@ -462,26 +462,26 @@
     }
   },
   "pipelinesHeader": {
-    "title": "Pipelines",
-    "subtitle": "{{count}} pipeline{{plural}} encontrado{{plural}}",
+    "title": "Funis",
+    "subtitle": "{{count}} funil{{plural}} encontrado{{plural}}",
     "organize": "Organize suas conversas em diferentes etapas",
-    "searchPlaceholder": "Buscar pipelines...",
-    "newPipeline": "Novo Pipeline"
+    "searchPlaceholder": "Buscar funis...",
+    "newPipeline": "Novo Funil"
   },
   "pipelinesStats": {
-    "totalPipelines": "Total de Pipelines",
-    "activePipelines": "Pipelines Ativos",
+    "totalPipelines": "Total de Funis",
+    "activePipelines": "Funis Ativos",
     "totalItems": "Total de Leads",
-    "completedPipelines": "Pipelines Completados"
+    "completedPipelines": "Funis Completados"
   },
   "pipelinesTable": {
-    "loading": "Carregando pipelines...",
+    "loading": "Carregando funis...",
     "columns": {
       "name": "Nome",
       "type": "Tipo",
       "status": "Status",
       "conversations": "Conversas",
-      "completedPipelines": "Pipelines Completados",
+      "completedPipelines": "Funis Completados",
       "createdAt": "Criado em",
       "actions": "Ações"
     },
@@ -493,7 +493,7 @@
       "idCopied": "ID copiado para a área de transferência",
       "activate": "Ativar",
       "deactivate": "Desativar",
-      "delete": "Deletar"
+      "delete": "Excluir"
     },
     "types": {
       "sales": "Vendas",
@@ -507,19 +507,19 @@
     }
   },
   "pipelineSwitcher": {
-    "loading": "Carregando pipeline...",
-    "noDescription": "Pipeline sem descrição",
+    "loading": "Carregando funil...",
+    "noDescription": "Funil sem descrição",
     "waiting": "Aguardando carregamento...",
-    "search": "Pesquisar pipelines...",
-    "noResults": "Nenhum pipeline encontrado",
-    "noAvailable": "Nenhum pipeline disponível",
+    "search": "Pesquisar funis...",
+    "noResults": "Nenhum funil encontrado",
+    "noAvailable": "Nenhum funil disponível",
     "active": "Ativo",
     "inactive": "Inativo",
     "conversationsCount": "{{count}} conversas",
     "stagesCount": "{{count}} etapas"
   },
   "removeItem": {
-    "title": "Remover Lead do Pipeline",
+    "title": "Remover Lead do Funil",
     "description": "Esta ação não pode ser desfeita.",
     "confirmMessage": "Tem certeza que deseja remover o lead de",
     "unknownUser": "Usuário Desconhecido",
@@ -527,14 +527,14 @@
     "contact": "Contato:",
     "id": "ID:",
     "status": "Status:",
-    "inbox": "Caixa de entrada:",
-    "note": "O lead será apenas removido do pipeline, mas continuará existindo no sistema.",
+    "inbox": "Número de WhatsApp:",
+    "note": "O lead será apenas removido do funil, mas continuará existindo no sistema.",
     "cancel": "Cancelar",
     "removing": "Removendo...",
-    "remove": "Remover do Pipeline"
+    "remove": "Remover do Funil"
   },
   "removeConversation": {
-    "title": "Remover Lead do Pipeline",
+    "title": "Remover Lead do Funil",
     "description": "Esta ação não pode ser desfeita.",
     "confirmMessage": "Tem certeza que deseja remover o lead de",
     "unknownUser": "Usuário Desconhecido",
@@ -542,11 +542,11 @@
     "contact": "Contato:",
     "id": "ID:",
     "status": "Status:",
-    "inbox": "Caixa de entrada:",
-    "note": "O lead será apenas removido do pipeline, mas continuará existindo no sistema.",
+    "inbox": "Número de WhatsApp:",
+    "note": "O lead será apenas removido do funil, mas continuará existindo no sistema.",
     "cancel": "Cancelar",
     "removing": "Removendo...",
-    "remove": "Remover do Pipeline"
+    "remove": "Remover do Funil"
   },
   "reorderStages": {
     "title": "Reordenar Etapas",
@@ -566,17 +566,17 @@
       "totalValue": "Valor Total",
       "addItem": "Adicionar Lead",
       "addConversation": "Adicionar Lead",
-      "editPipeline": "Editar Pipeline",
+      "editPipeline": "Editar Funil",
       "reorderStages": "Reordenar Etapas",
-      "deletePipeline": "Deletar Pipeline"
+      "deletePipeline": "Excluir Funil"
     },
     "stage": {
       "addStage": "Adicionar Etapa",
-      "addStageDescription": "Clique para criar uma nova etapa neste pipeline",
+      "addStageDescription": "Clique para criar uma nova etapa neste funil",
       "editStage": "Editar Etapa",
-      "deleteStage": "Deletar Etapa",
+      "deleteStage": "Excluir Etapa",
       "noConversations": "Nenhuma conversa nesta etapa",
-      "noStages": "Nenhuma etapa encontrada para este pipeline",
+      "noStages": "Nenhuma etapa encontrada para este funil",
       "totalValue": "{{value}}"
     },
     "item": {
@@ -585,7 +585,7 @@
       "scheduleAction": "Agendar Ação",
       "scheduleActionComingSoon": "Em breve",
       "scheduleActionTooltip": "Esta funcionalidade está em desenvolvimento e estará disponível em breve.",
-      "removeFromPipeline": "Remover do Pipeline",
+      "removeFromPipeline": "Remover do Funil",
       "noInbox": "Sem canal",
       "status": {
         "open": "Aberto",
@@ -604,7 +604,7 @@
       "unknownUser": "Usuário Desconhecido",
       "editConversation": "Editar Lead",
       "editItem": "Editar Lead",
-      "removeFromPipeline": "Remover do Pipeline",
+      "removeFromPipeline": "Remover do Funil",
       "noInbox": "Sem canal",
       "status": {
         "open": "Aberto",
@@ -621,26 +621,26 @@
       "itemMoveError": "Erro ao mover lead",
       "conversationMoved": "Lead movido com sucesso",
       "conversationMoveError": "Erro ao mover lead",
-      "loadDataError": "Erro ao carregar dados do pipeline",
+      "loadDataError": "Erro ao carregar dados do funil",
       "stageCreated": "Etapa criada com sucesso",
       "stageCreateError": "Erro ao criar etapa",
       "stageUpdated": "Etapa atualizada com sucesso",
       "stageUpdateError": "Erro ao atualizar etapa",
-      "stageDeleted": "Etapa deletada com sucesso",
-      "stageDeleteError": "Erro ao deletar etapa",
+      "stageDeleted": "Etapa excluída com sucesso",
+      "stageDeleteError": "Erro ao excluir etapa",
       "stageReordered": "Ordem das etapas atualizada com sucesso",
       "stageReorderError": "Erro ao reordenar etapas",
       "itemAdded": "Lead adicionado com sucesso",
-      "itemRemoved": "Lead removido do pipeline com sucesso",
-      "itemRemoveError": "Erro ao remover lead do pipeline",
+      "itemRemoved": "Lead removido do funil com sucesso",
+      "itemRemoveError": "Erro ao remover lead do funil",
       "itemUpdated": "Lead atualizado com sucesso",
       "itemUpdateError": "Erro ao atualizar lead",
       "conversationAdded": "Lead adicionado com sucesso",
-      "conversationRemoved": "Lead removido do pipeline com sucesso",
-      "conversationRemoveError": "Erro ao remover lead do pipeline",
+      "conversationRemoved": "Lead removido do funil com sucesso",
+      "conversationRemoveError": "Erro ao remover lead do funil",
       "conversationUpdated": "Lead atualizado com sucesso",
       "conversationUpdateError": "Erro ao atualizar lead",
-      "notInPipeline": "Este contato ainda não está em nenhum pipeline"
+      "notInPipeline": "Este contato ainda não está em nenhum funil"
     },
     "tasks": {
       "pending": "pendentes",
@@ -713,7 +713,7 @@
     },
     "createModal": {
       "title": "Criar Nova Tarefa",
-      "description": "Adicione uma nova tarefa ao item do pipeline."
+      "description": "Adicione uma nova tarefa ao item do funil."
     },
     "editModal": {
       "title": "Editar Tarefa",
@@ -774,11 +774,11 @@
   },
   "dialog": {
     "deletePipeline": {
-      "title": "Deletar Pipeline",
-      "description": "Tem certeza de que deseja deletar este pipeline? Esta ação não pode ser desfeita e afetará todos os dados relacionados.",
+      "title": "Excluir Funil",
+      "description": "Tem certeza de que deseja excluir este funil? Esta ação não pode ser desfeita e afetará todos os dados relacionados.",
       "cancel": "Cancelar",
-      "delete": "Deletar Pipeline",
-      "deleting": "Deletando..."
+      "delete": "Excluir Funil",
+      "deleting": "Excluindo..."
     }
   }
 }

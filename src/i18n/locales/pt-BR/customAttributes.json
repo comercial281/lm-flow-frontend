@@ -9,7 +9,7 @@
   "tabs": {
     "conversation": "Conversas",
     "contact": "Contatos",
-    "pipeline_attribute": "Pipeline"
+    "pipeline_attribute": "Funil"
   },
   "attributeTypeOptions": {
     "text": {
@@ -56,7 +56,7 @@
     "subtitle_zero": "{{count}} atributos {{tabName}} no total",
     "searchPlaceholder": "Buscar atributos personalizados...",
     "newAttribute": "Novo Atributo",
-    "bulkDelete": "Deletar",
+    "bulkDelete": "Excluir",
     "clearSelection": "Limpar Seleção",
     "selected": "{{count}} selecionado",
     "selected_other": "{{count}} selecionados",
@@ -133,11 +133,11 @@
         "hint": "Esta dica será exibida aos usuários quando eles preencherem o campo"
       },
       "pipelineType": {
-        "label": "Tipo de Pipeline",
-        "placeholder": "Selecione o tipo de pipeline",
-        "hint": "Selecione se este atributo se aplica ao pipeline, estágio ou item",
+        "label": "Tipo de Funil",
+        "placeholder": "Selecione o tipo de funil",
+        "hint": "Selecione se este atributo se aplica ao funil, etapa ou item",
         "errors": {
-          "required": "Tipo de pipeline é obrigatório para atributos de pipeline"
+          "required": "Tipo de funil é obrigatório para atributos de funil"
         }
       }
     }
@@ -154,8 +154,8 @@
       "actions": "Ações",
       "model": {
         "label": "Modelo",
-        "pipeline_attribute": "Pipeline",
-        "pipeline_stage_attribute": "Estágio",
+        "pipeline_attribute": "Funil",
+        "pipeline_stage_attribute": "Etapa",
         "pipeline_item_attribute": "Item"
       }
     },
@@ -181,16 +181,16 @@
       "placeholder": "Selecione para quem é este atributo",
       "options": {
         "pipeline": {
-          "label": "Para este Pipeline",
-          "description": "Atributo específico para este pipeline"
+          "label": "Para este Funil",
+          "description": "Atributo específico para este funil"
         },
         "stages": {
-          "label": "Para os Estágios",
-          "description": "Atributo compartilhado com todos os estágios deste pipeline"
+          "label": "Para as Etapas",
+          "description": "Atributo compartilhado com todas as etapas deste funil"
         },
         "stage": {
-          "label": "Para este Estágio",
-          "description": "Atributo específico para este estágio"
+          "label": "Para esta Etapa",
+          "description": "Atributo específico para esta etapa"
         },
         "items": {
           "label": "Para os Cards",
@@ -203,15 +203,15 @@
       },
       "sharedMessage": {
         "label": "Compartilhado com cards",
-        "labelStages": "Compartilhado com estágios",
+        "labelStages": "Compartilhado com etapas",
         "pipeline": "Este atributo será preenchido diretamente no card.",
         "stage": "Este atributo será preenchido diretamente no card.",
-        "descriptionStages": "O valor será definido pelos estágios",
+        "descriptionStages": "O valor será definido pelas etapas",
         "descriptionCards": "O valor será definido pelos cards"
       },
       "attributeOrigin": {
-        "pipeline": "Atributo do Pipeline",
-        "stage": "Atributo do Estágio",
+        "pipeline": "Atributo do Funil",
+        "stage": "Atributo da Etapa",
         "item": "Atributo do Card"
       }
     }
@@ -229,7 +229,7 @@
     "remove": "Remover",
     "addAttribute": "Adicionar Atributo Personalizado",
     "edit": "Editar",
-    "delete": "Deletar",
+    "delete": "Excluir",
     "save": "Salvar",
     "create": "Criar",
     "update": "Atualizar",
@@ -246,7 +246,7 @@
     "descriptionReadOnly": "Configure atributos personalizados nas configurações da conta",
     "descriptionConversation": "Crie um novo atributo personalizado para conversas para começar a coletar informações específicas.",
     "descriptionContact": "Crie um novo atributo personalizado para contatos para começar a coletar informações específicas.",
-    "descriptionPipeline": "Crie um novo atributo personalizado para pipelines, estágios ou items para começar a coletar informações específicas.",
+    "descriptionPipeline": "Crie um novo atributo personalizado para funis, etapas ou items para começar a coletar informações específicas.",
     "action": "Novo Atributo"
   },
   "messages": {
@@ -255,12 +255,12 @@
     "createError": "Erro ao criar atributo personalizado",
     "updateSuccess": "Atributo personalizado atualizado com sucesso",
     "updateError": "Erro ao atualizar atributo personalizado",
-    "deleteSuccess": "Atributo personalizado deletado com sucesso",
-    "deleteError": "Erro ao deletar atributo personalizado",
-    "bulkDeleteSuccess": "{{count}} atributo personalizado deletado com sucesso",
-    "bulkDeleteSuccess_other": "{{count}} atributos personalizados deletados com sucesso",
-    "bulkDeleteSuccess_zero": "{{count}} atributos personalizados deletados com sucesso",
-    "bulkDeleteError": "Erro ao deletar atributos personalizados",
+    "deleteSuccess": "Atributo personalizado excluído com sucesso",
+    "deleteError": "Erro ao excluir atributo personalizado",
+    "bulkDeleteSuccess": "{{count}} atributo personalizado excluído com sucesso",
+    "bulkDeleteSuccess_other": "{{count}} atributos personalizados excluídos com sucesso",
+    "bulkDeleteSuccess_zero": "{{count}} atributos personalizados excluídos com sucesso",
+    "bulkDeleteError": "Erro ao excluir atributos personalizados",
     "permissionDenied": {
       "create": "Você não tem permissão para criar campos",
       "delete": "Você não tem permissão para excluir campos",
@@ -270,20 +270,20 @@
   },
   "dialog": {
     "delete": {
-      "title": "Deletar Atributo Personalizado",
-      "description": "Tem certeza de que deseja deletar o atributo personalizado \"{{name}}\"? Esta ação não pode ser desfeita e removerá todos os dados associados.",
+      "title": "Excluir Atributo Personalizado",
+      "description": "Tem certeza de que deseja excluir o atributo personalizado \"{{name}}\"? Esta ação não pode ser desfeita e removerá todos os dados associados.",
       "cancel": "Cancelar",
-      "confirm": "Deletar",
-      "deleting": "Deletando..."
+      "confirm": "Excluir",
+      "deleting": "Excluindo..."
     },
     "bulkDelete": {
-      "title": "Deletar Atributos Personalizados",
-      "description": "Tem certeza de que deseja deletar {{count}} atributo personalizado selecionado? Esta ação não pode ser desfeita.",
-      "description_other": "Tem certeza de que deseja deletar {{count}} atributos personalizados selecionados? Esta ação não pode ser desfeita.",
-      "description_zero": "Tem certeza de que deseja deletar {{count}} atributos personalizados selecionados? Esta ação não pode ser desfeita.",
+      "title": "Excluir Atributos Personalizados",
+      "description": "Tem certeza de que deseja excluir {{count}} atributo personalizado selecionado? Esta ação não pode ser desfeita.",
+      "description_other": "Tem certeza de que deseja excluir {{count}} atributos personalizados selecionados? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja excluir {{count}} atributos personalizados selecionados? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
-      "confirm": "Deletar Todos",
-      "deleting": "Deletando..."
+      "confirm": "Excluir Todos",
+      "deleting": "Excluindo..."
     }
   }
 }

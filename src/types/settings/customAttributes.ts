@@ -124,8 +124,8 @@ export const ATTRIBUTE_MODEL_OPTIONS = [
   },
   {
     value: 'pipeline_attribute' as AttributeModel,
-    label: 'Pipeline',
-    description: 'Atributos aplicados a pipelines, estágios ou items'
+    label: 'Funil',
+    description: 'Atributos aplicados a funis, etapas ou items'
   }
 ];
 
@@ -135,18 +135,18 @@ export type PipelineType = 'pipeline' | 'pipeline_stage' | 'pipeline_item';
 export const PIPELINE_TYPE_OPTIONS = [
   {
     value: 'pipeline' as PipelineType,
-    label: 'Pipeline',
-    description: 'Atributos aplicados ao pipeline em si'
+    label: 'Funil',
+    description: 'Atributos aplicados ao funil em si'
   },
   {
     value: 'pipeline_stage' as PipelineType,
-    label: 'Estágio',
-    description: 'Atributos aplicados aos estágios do pipeline'
+    label: 'Etapa',
+    description: 'Atributos aplicados às etapas do funil'
   },
   {
     value: 'pipeline_item' as PipelineType,
     label: 'Item',
-    description: 'Atributos aplicados aos items (deals/leads) do pipeline'
+    description: 'Atributos aplicados aos items (deals/leads) do funil'
   }
 ];
 
@@ -257,7 +257,7 @@ export const ATTRIBUTE_TABS = [
   },
   {
     key: 'pipeline_attribute' as AttributeModel,
-    name: 'Pipeline',
-    description: 'Atributos personalizados para pipelines, estágios e items'
+    name: 'Funil',
+    description: 'Atributos personalizados para funis, etapas e items'
   }
 ];
