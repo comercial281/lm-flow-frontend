@@ -152,6 +152,7 @@
       "contact_created": "Um novo contato foi criado no sistema",
       "contact_updated": "{{count}} campo foi alterado",
       "contact_updated_other": "{{count}} campos foram alterados",
+      "contact_updated_zero": "{{count}} campos foram alterados",
       "label_added": "Etiqueta \"{{labelName}}\" foi adicionada",
       "label_removed": "Etiqueta \"{{labelName}}\" foi removida",
       "custom_attribute_changed": "Atributo \"{{attributeName}}\" foi alterado",
@@ -448,6 +449,7 @@
     "deleteError": "Erro ao deletar contato",
     "bulkDeleteSuccess": "{{count}} contato deletado com sucesso",
     "bulkDeleteSuccess_other": "{{count}} contatos deletados com sucesso",
+    "bulkDeleteSuccess_zero": "{{count}} contatos deletados com sucesso",
     "bulkDeleteError": "Erro ao deletar contatos",
     "mergeSuccess": "Contatos mesclados com sucesso",
     "mergeError": "Erro ao mesclar contatos",
@@ -461,6 +463,7 @@
     "conversationStarted": "Conversa iniciada com sucesso",
     "bulkDeleteAllQueued": "Exclusão de {{count}} contato iniciada. O processamento roda em segundo plano e a lista pode levar alguns minutos para refletir.",
     "bulkDeleteAllQueued_other": "Exclusão de {{count}} contatos iniciada. O processamento roda em segundo plano e a lista pode levar alguns minutos para refletir.",
+    "bulkDeleteAllQueued_zero": "Exclusão de {{count}} contatos iniciada. O processamento roda em segundo plano e a lista pode levar alguns minutos para refletir.",
     "mergeNeedsExplicitSelection": "Para mesclar, selecione os contatos um a um — mesclar não funciona com \"todos selecionados\".",
     "exportDownloaded": "Planilha baixada."
   },
@@ -479,6 +482,7 @@
       "title": "Deletar Contatos",
       "description": "Tem certeza de que deseja deletar {{count}} contato selecionado? Esta ação não pode ser desfeita.",
       "description_other": "Tem certeza de que deseja deletar {{count}} contatos selecionados? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja deletar {{count}} contatos selecionados? Esta ação não pode ser desfeita.",
       "confirm": "Deletar Todos",
       "cancel": "Cancelar",
       "deleting": "Deletando...",
@@ -552,6 +556,7 @@
       "withoutTagsPlaceholder": "Sem a etiqueta...",
       "withoutTagsSummary": "Sem {{count}} etiqueta",
       "withoutTagsSummary_other": "Sem {{count}} etiquetas",
+      "withoutTagsSummary_zero": "Sem {{count}} etiquetas",
       "withoutTagsHint": "Contatos com as etiquetas marcadas NÃO aparecem na lista.",
       "withoutTagBadge": "sem: {{tag}}"
     }

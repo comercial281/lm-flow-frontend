@@ -386,6 +386,7 @@
       "title": "Deletar Aplicações do Dashboard",
       "description": "Tem certeza de que deseja deletar {{count}} aplicação do dashboard selecionada? Esta ação não pode ser desfeita.",
       "description_other": "Tem certeza de que deseja deletar {{count}} aplicações do dashboard selecionadas? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja deletar {{count}} aplicações do dashboard selecionadas? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
       "deleteAll": "Deletar Todas",
       "deleting": "Deletando..."
@@ -396,6 +397,7 @@
       "deleteError": "Erro ao deletar aplicação do dashboard",
       "bulkDeleteSuccess": "{{count}} aplicação deletada com sucesso",
       "bulkDeleteSuccess_other": "{{count}} aplicações deletadas com sucesso",
+      "bulkDeleteSuccess_zero": "{{count}} aplicações deletadas com sucesso",
       "bulkDeleteError": "Erro ao deletar aplicações do dashboard",
       "createSuccess": "Aplicação do dashboard criada com sucesso",
       "createError": "Erro ao criar aplicação do dashboard",
@@ -622,6 +624,7 @@
       "title": "Deletar Aplicações OAuth",
       "description": "Tem certeza de que deseja deletar {{count}} aplicação OAuth selecionada? Esta ação não pode ser desfeita.",
       "description_other": "Tem certeza de que deseja deletar {{count}} aplicações OAuth selecionadas? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja deletar {{count}} aplicações OAuth selecionadas? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
       "confirm": "Deletar Todas",
       "deleting": "Deletando..."
@@ -632,6 +635,7 @@
       "deleteError": "Erro ao deletar aplicação OAuth",
       "bulkDeleteSuccess": "{{count}} aplicação OAuth deletada com sucesso",
       "bulkDeleteSuccess_other": "{{count}} aplicações OAuth deletadas com sucesso",
+      "bulkDeleteSuccess_zero": "{{count}} aplicações OAuth deletadas com sucesso",
       "bulkDeleteError": "Erro ao deletar aplicações OAuth",
       "createSuccess": "Aplicação OAuth criada com sucesso",
       "createError": "Erro ao criar aplicação OAuth",
@@ -1006,6 +1010,7 @@
       "title": "Deletar Webhooks",
       "description": "Tem certeza de que deseja deletar {{count}} webhook selecionado? Esta ação não pode ser desfeita.",
       "description_other": "Tem certeza de que deseja deletar {{count}} webhooks selecionados? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja deletar {{count}} webhooks selecionados? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
       "confirm": "Deletar Todos",
       "deleting": "Deletando..."
@@ -1021,6 +1026,7 @@
       "deleteError": "Erro ao deletar webhook",
       "bulkDeleteSuccess": "{{count}} webhook deletado com sucesso",
       "bulkDeleteSuccess_other": "{{count}} webhooks deletados com sucesso",
+      "bulkDeleteSuccess_zero": "{{count}} webhooks deletados com sucesso",
       "bulkDeleteError": "Erro ao deletar webhooks",
       "testSuccess": "Teste de webhook enviado com sucesso",
       "testError": "Erro ao testar webhook"

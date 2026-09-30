@@ -160,8 +160,10 @@
       "noValidEmail": "Nenhum email válido encontrado",
       "allSuccess": "{{count}} convite enviado com sucesso",
       "allSuccess_other": "{{count}} convites enviados com sucesso",
+      "allSuccess_zero": "{{count}} convites enviados com sucesso",
       "allFailed": "Falha ao enviar {{count}} convite",
       "allFailed_other": "Falha ao enviar {{count}} convites",
+      "allFailed_zero": "Falha ao enviar {{count}} convites",
       "sendError": "Erro ao enviar convites"
     }
   },
@@ -216,6 +218,7 @@
     "deleteError": "Erro ao deletar atendente",
     "bulkDeleteSuccess": "{{count}} atendente deletado com sucesso",
     "bulkDeleteSuccess_other": "{{count}} atendentes deletados com sucesso",
+    "bulkDeleteSuccess_zero": "{{count}} atendentes deletados com sucesso",
     "bulkDeleteError": "Erro ao deletar atendentes",
     "availabilityUpdated": "Status de disponibilidade atualizado"
   },
@@ -236,6 +239,7 @@
       "title": "Deletar Atendentes",
       "description": "Tem certeza de que deseja deletar {{count}} atendente selecionado? Esta ação não pode ser desfeita.",
       "description_other": "Tem certeza de que deseja deletar {{count}} atendentes selecionados? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja deletar {{count}} atendentes selecionados? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
       "deleting": "Deletando...",
       "confirm": "Deletar Todos"

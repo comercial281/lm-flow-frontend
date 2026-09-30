@@ -91,7 +91,8 @@
         "reset": "Resetar",
         "loading": "Carregando flow...",
         "errors": "{{count}} erro encontrado",
-        "errors_other": "{{count}} erros encontrados"
+        "errors_other": "{{count}} erros encontrados",
+        "errors_zero": "{{count}} erros encontrados"
       },
       "node": {
         "nextStep": "Próximo Passo",

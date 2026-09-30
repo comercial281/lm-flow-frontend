@@ -53,12 +53,14 @@
     "title": "Atributos Personalizados",
     "subtitle": "{{count}} atributo {{tabName}} no total",
     "subtitle_other": "{{count}} atributos {{tabName}} no total",
+    "subtitle_zero": "{{count}} atributos {{tabName}} no total",
     "searchPlaceholder": "Buscar atributos personalizados...",
     "newAttribute": "Novo Atributo",
     "bulkDelete": "Deletar",
     "clearSelection": "Limpar Seleção",
     "selected": "{{count}} selecionado",
-    "selected_other": "{{count}} selecionados"
+    "selected_other": "{{count}} selecionados",
+    "selected_zero": "{{count}} selecionados"
   },
   "modal": {
     "title": {
@@ -257,6 +259,7 @@
     "deleteError": "Erro ao deletar atributo personalizado",
     "bulkDeleteSuccess": "{{count}} atributo personalizado deletado com sucesso",
     "bulkDeleteSuccess_other": "{{count}} atributos personalizados deletados com sucesso",
+    "bulkDeleteSuccess_zero": "{{count}} atributos personalizados deletados com sucesso",
     "bulkDeleteError": "Erro ao deletar atributos personalizados",
     "permissionDenied": {
       "create": "Você não tem permissão para criar campos",
@@ -277,6 +280,7 @@
       "title": "Deletar Atributos Personalizados",
       "description": "Tem certeza de que deseja deletar {{count}} atributo personalizado selecionado? Esta ação não pode ser desfeita.",
       "description_other": "Tem certeza de que deseja deletar {{count}} atributos personalizados selecionados? Esta ação não pode ser desfeita.",
+      "description_zero": "Tem certeza de que deseja deletar {{count}} atributos personalizados selecionados? Esta ação não pode ser desfeita.",
       "cancel": "Cancelar",
       "confirm": "Deletar Todos",
       "deleting": "Deletando..."
