@@ -1,13 +1,18 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Bell, Play, Plus, Trash2, Pencil, Loader2 } from 'lucide-react';
+import { Bell, Play, Plus, Pencil, Loader2, MoreHorizontal, Trash2 } from 'lucide-react';
 import {
   Button,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Input,
   Label,
   Select,
@@ -15,7 +20,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Switch,
   Textarea
 } from '@/components/ui/ds';
 import { whatsappRemindersService } from '@/services/whatsappReminders';
@@ -37,6 +41,20 @@ import { extractData } from '@/utils/apiHelpers';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
+import BaseHeader from '@/components/base/BaseHeader';
+import EmptyState from '@/components/base/EmptyState';
+import Chave from '@/components/base/Chave';
+import IconActionButton from '@/components/base/IconActionButton';
+
+// Tela piloto da Fase 3 (base de design e linguagem). O que mudou aqui é a
+// referência pra fase 4 levar pras outras telas:
+//   - cabeçalho da casa (BaseHeader), título igual ao nome da aba;
+//   - "não carregou" é estado de erro com "Tentar de novo", nunca lista vazia;
+//   - vazio ensina pra que serve, com exemplo;
+//   - ligar/desligar na própria lista, com a Chave (salva na hora);
+//   - dentro do formulário, "Ligado" é caixinha (espera o Criar/Salvar);
+//   - Excluir mora no menu "…", nunca lixeira solta ao lado da ação principal.
+// O que o lembrete MANDA no WhatsApp não mudou — só a tela.
 
 interface InboxOption {
   id: number;
@@ -63,6 +81,7 @@ export default function WhatsappReminders() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [items, setItems] = useState<WhatsappReminder[]>([]);
   const [loading, setLoading] = useState(false);
+  const [falhou, setFalhou] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<WhatsappReminder | null>(null);
   const [form, setForm] = useState<CreateReminderData>(EMPTY_FORM);
@@ -76,6 +95,7 @@ export default function WhatsappReminders() {
   const load = useCallback(async () => {
     setLoading(true);
     setRecusado(false);
+    setFalhou(false);
     try {
       const res = await whatsappRemindersService.list({ page: 1, per_page: 50 });
       setItems(res.data || []);
@@ -84,7 +104,7 @@ export default function WhatsappReminders() {
         setRecusado(true);
       } else {
         console.error(e);
-        toast.error('Erro ao carregar lembretes');
+        setFalhou(true);
       }
     } finally {
       setLoading(false);
@@ -156,12 +176,12 @@ export default function WhatsappReminders() {
     setSaving(true);
     try {
       if (!form.name?.trim()) {
-        toast.error('Nome obrigatório');
+        toast.error('Dê um nome ao lembrete');
         return;
       }
       if (editing) {
         await whatsappRemindersService.update(editing.id, form);
-        toast.success('Lembrete atualizado');
+        toast.success('Lembrete salvo');
       } else {
         await whatsappRemindersService.create(form);
         toast.success('Lembrete criado');
@@ -170,11 +190,18 @@ export default function WhatsappReminders() {
       load();
     } catch (e: any) {
       console.error(e);
-      const details = e?.response?.data?.details || e?.response?.data?.message || 'Erro ao salvar';
+      const details = e?.response?.data?.details || e?.response?.data?.message || 'Não deu pra salvar. Tente de novo.';
       toast.error(Array.isArray(details) ? details.join(', ') : details);
     } finally {
       setSaving(false);
     }
+  };
+
+  // A chave da lista grava SÓ o `enabled` (o servidor aceita o campo sozinho).
+  // Se falhar, a Chave volta sozinha e avisa; a lista local só muda no sucesso.
+  const ligarDesligar = async (r: WhatsappReminder, ligado: boolean) => {
+    await whatsappRemindersService.update(r.id, { enabled: ligado });
+    setItems(prev => prev.map(x => (x.id === r.id ? { ...x, enabled: ligado } : x)));
   };
 
   const remove = async (r: WhatsappReminder) => {
@@ -192,7 +219,7 @@ export default function WhatsappReminders() {
       toast.success('Lembrete excluído');
       load();
     } catch {
-      toast.error('Falha ao excluir');
+      toast.error('Não deu pra excluir. Tente de novo.');
     }
   };
 
@@ -201,19 +228,17 @@ export default function WhatsappReminders() {
     try {
       const res = await whatsappRemindersService.execute({ reminderId: r.id });
       if (res.status === 'sent') {
-        toast.success('Lembrete disparado com sucesso');
+        toast.success('Lembrete enviado');
       } else {
-        toast.error(`Disparo retornou status ${res.status}`);
+        toast.error('O lembrete não saiu. Confira se o número de WhatsApp está conectado em Canais e tente de novo.');
       }
     } catch (e: any) {
-      const msg = e?.response?.data?.message || 'Falha no disparo';
+      const msg = e?.response?.data?.message || 'O lembrete não saiu. Tente de novo.';
       toast.error(msg);
     } finally {
       setExecuting(null);
     }
   };
-
-  const requiresInbox = useMemo(() => true, []);
   const showNumberField = form.destination_type === 'number';
   const showGroupField = form.destination_type === 'group';
   const showDelayField = form.delivery_mode === 'delayed';
@@ -221,81 +246,95 @@ export default function WhatsappReminders() {
 
   if (recusado) return <NoAccessState />;
 
-  return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Bell className="w-6 h-6 text-violet-600" /> Lembretes WhatsApp
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Dispare mensagens automáticas pra número, grupo, lead ou atendente.
-          </p>
-        </div>
-        <Button onClick={openCreate}>
-          <Plus className="w-4 h-4 mr-1" /> Novo lembrete
-        </Button>
-      </div>
-
-      {loading ? (
+  const conteudo = () => {
+    if (loading) {
+      return (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+          <Loader2 className="w-4 h-4 animate-spin" /> Carregando…
         </div>
-      ) : items.length === 0 ? (
-        <div className="border border-dashed rounded-lg p-12 text-center text-muted-foreground">
-          <Bell className="w-10 h-10 mx-auto mb-3 opacity-50" />
-          Nenhum lembrete criado ainda. Clique em <strong>Novo lembrete</strong>.
-        </div>
-      ) : (
-        <div className="border rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="text-left p-3">Nome</th>
-                <th className="text-left p-3">Gatilho</th>
-                <th className="text-left p-3">Destino</th>
-                <th className="text-left p-3">Número</th>
-                <th className="text-left p-3">Status</th>
-                <th className="text-right p-3">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map(r => (
-                <tr key={r.id} className="border-t hover:bg-muted/30">
-                  <td className="p-3 font-medium">{r.name}</td>
-                  <td className="p-3">{TRIGGER_LABELS[r.trigger_type]}</td>
-                  <td className="p-3">{DESTINATION_LABELS[r.destination_type]}</td>
-                  <td className="p-3">{r.inbox_name || '—'}</td>
-                  <td className="p-3">
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs ${r.enabled ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'}`}
-                    >
-                      {r.enabled ? 'Ativo' : 'Pausado'}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right">
-                    <Button
-                      size="sm"
+      );
+    }
+    if (falhou) return <EmptyState tipo="erro" aoTentarDeNovo={load} />;
+    if (items.length === 0) {
+      return (
+        <EmptyState
+          icon={Bell}
+          title="Nenhum lembrete ainda"
+          description="Um lembrete manda uma mensagem no WhatsApp pra um número, um grupo, o lead ou o corretor responsável."
+          exemplo="Avisar o comercial sobre um lead novo"
+          action={{ label: 'Novo lembrete', onClick: openCreate }}
+        />
+      );
+    }
+    return (
+      <div className="border rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50">
+            <tr>
+              <th className="text-left p-3">Nome</th>
+              <th className="text-left p-3">Quando</th>
+              <th className="text-left p-3">Para quem</th>
+              <th className="text-left p-3">Número de WhatsApp</th>
+              <th className="text-left p-3">Ligado</th>
+              <th className="text-right p-3"><span className="sr-only">Ações</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map(r => (
+              <tr key={r.id} className="border-t hover:bg-muted/30">
+                <td className="p-3 font-medium">{r.name}</td>
+                <td className="p-3">{TRIGGER_LABELS[r.trigger_type]}</td>
+                <td className="p-3">{DESTINATION_LABELS[r.destination_type]}</td>
+                <td className="p-3">{r.inbox_name || '—'}</td>
+                <td className="p-3">
+                  <Chave
+                    rotulo={`Lembrete ${r.name}`}
+                    semRotuloVisivel
+                    ligada={r.enabled}
+                    aoMudar={v => ligarDesligar(r, v)}
+                  />
+                </td>
+                <td className="p-3">
+                  <div className="flex items-center justify-end gap-1">
+                    <IconActionButton
+                      label="Mandar agora"
                       variant="ghost"
                       onClick={() => runNow(r)}
                       disabled={executing === r.id}
-                      title="Executar agora"
-                    >
-                      {executing === r.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => openEdit(r)} title="Editar">
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => remove(r)} title="Excluir">
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                      icon={executing === r.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                    />
+                    <IconActionButton label="Editar" variant="ghost" onClick={() => openEdit(r)} icon={<Pencil className="w-4 h-4" />} />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="ghost" aria-label={`Mais ações de ${r.name}`}>
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => remove(r)} className="text-destructive">
+                          <Trash2 className="w-4 h-4 mr-2" /> Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <BaseHeader
+        title="Lembretes"
+        subtitle="Mensagens no WhatsApp pra um número, um grupo, o lead ou o corretor responsável."
+        primaryAction={{ label: 'Novo lembrete', icon: <Plus className="w-4 h-4" />, onClick: openCreate }}
+      />
+
+      {conteudo()}
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -305,25 +344,27 @@ export default function WhatsappReminders() {
 
           <div className="space-y-4 py-2">
             <div>
-              <Label>Nome *</Label>
+              <Label htmlFor="lembrete-nome">Nome *</Label>
               <Input
+                id="lembrete-nome"
                 value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })}
-                placeholder="Ex: Avisar comercial sobre novo lead"
+                placeholder="Ex.: Avisar o comercial sobre um lead novo"
               />
             </div>
 
             <div className="flex items-center gap-2">
-              <Switch
+              <Checkbox
+                id="lembrete-ligado"
                 checked={form.enabled}
-                onCheckedChange={(v: boolean) => setForm({ ...form, enabled: v })}
+                onCheckedChange={v => setForm({ ...form, enabled: v === true })}
               />
-              <Label>Ativo</Label>
+              <Label htmlFor="lembrete-ligado">Ligado</Label>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Quando disparar</Label>
+                <Label>Quando mandar</Label>
                 <Select
                   value={form.trigger_type}
                   onValueChange={v => setForm({ ...form, trigger_type: v as ReminderTriggerType })}
@@ -337,13 +378,13 @@ export default function WhatsappReminders() {
                 </Select>
                 {form.trigger_type !== 'manual_macro' && (
                   <p className="text-xs text-amber-600 mt-1">
-                    O disparo automático estará disponível na Fase 2. Por enquanto só "Manual" funciona.
+                    Por enquanto só o disparo manual funciona.
                   </p>
                 )}
               </div>
 
               <div>
-                <Label>Modo de entrega</Label>
+                <Label>Quando entregar</Label>
                 <Select
                   value={form.delivery_mode}
                   onValueChange={v => setForm({ ...form, delivery_mode: v as ReminderDeliveryMode })}
@@ -357,7 +398,7 @@ export default function WhatsappReminders() {
                 </Select>
                 {form.delivery_mode !== 'immediate' && (
                   <p className="text-xs text-amber-600 mt-1">
-                    Delay/recorrente estará disponível na Fase 2.
+                    Por enquanto só a entrega na hora funciona.
                   </p>
                 )}
               </div>
@@ -365,8 +406,9 @@ export default function WhatsappReminders() {
 
             {showDelayField && (
               <div>
-                <Label>Delay (minutos)</Label>
+                <Label htmlFor="lembrete-espera">Esperar quantos minutos</Label>
                 <Input
+                  id="lembrete-espera"
                   type="number"
                   value={form.delivery_config?.delay_minutes || 0}
                   onChange={e =>
@@ -381,8 +423,9 @@ export default function WhatsappReminders() {
 
             {showCronField && (
               <div>
-                <Label>Cron (ex: 0 9 * * * = todo dia 9h)</Label>
+                <Label htmlFor="lembrete-cron">Repetição (ex.: 0 9 * * * = todo dia às 9h)</Label>
                 <Input
+                  id="lembrete-cron"
                   value={form.delivery_config?.cron || ''}
                   onChange={e =>
                     setForm({ ...form, delivery_config: { ...(form.delivery_config || {}), cron: e.target.value } })
@@ -394,7 +437,7 @@ export default function WhatsappReminders() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Número de WhatsApp {requiresInbox && '*'}</Label>
+                <Label>Número de WhatsApp que manda *</Label>
                 <Select
                   value={form.inbox_id ? String(form.inbox_id) : ''}
                   onValueChange={v => setForm({ ...form, inbox_id: v ? parseInt(v, 10) : null })}
@@ -409,7 +452,7 @@ export default function WhatsappReminders() {
               </div>
 
               <div>
-                <Label>Tipo de destino</Label>
+                <Label>Para quem</Label>
                 <Select
                   value={form.destination_type}
                   onValueChange={v => setForm({ ...form, destination_type: v as ReminderDestinationType, destination_value: {} })}
@@ -426,13 +469,14 @@ export default function WhatsappReminders() {
 
             {showNumberField && (
               <div>
-                <Label>Número WhatsApp (com DDI, só dígitos)</Label>
+                <Label htmlFor="lembrete-destino">Número de quem recebe (com 55 e DDD, só números)</Label>
                 <Input
+                  id="lembrete-destino"
                   value={form.destination_value?.number || ''}
                   onChange={e =>
                     setForm({ ...form, destination_value: { number: e.target.value.replace(/\D/g, '') } })
                   }
-                  placeholder="5511949329570"
+                  placeholder="5511999990000"
                 />
               </div>
             )}
@@ -440,7 +484,7 @@ export default function WhatsappReminders() {
             {showGroupField && (
               <div>
                 <Label>
-                  Grupo WhatsApp{' '}
+                  Grupo do WhatsApp{' '}
                   {groupsLoading && <Loader2 className="w-3 h-3 inline animate-spin ml-1" />}
                 </Label>
                 <Select
@@ -456,7 +500,7 @@ export default function WhatsappReminders() {
                 >
                   <SelectTrigger>
                     <SelectValue
-                      placeholder={!form.inbox_id ? 'Escolha um número primeiro' : 'Selecione um grupo'}
+                      placeholder={!form.inbox_id ? 'Escolha o número primeiro' : 'Escolha um grupo'}
                     />
                   </SelectTrigger>
                   <SelectContent>
@@ -487,23 +531,23 @@ export default function WhatsappReminders() {
 
             {form.content_mode === 'editor_vars' && (
               <div>
-                <Label>Template (use {'{{nome}}'}, {'{{telefone}}'}, {'{{cidade}}'}, {'{{tipo_pretensao}}'}...)</Label>
+                <Label htmlFor="lembrete-mensagem">Mensagem (use {'{{nome}}'}, {'{{telefone}}'}, {'{{cidade}}'}, {'{{tipo_pretensao}}'}…)</Label>
                 <Textarea
+                  id="lembrete-mensagem"
                   rows={5}
                   value={form.content_template || ''}
                   onChange={e => setForm({ ...form, content_template: e.target.value })}
                   placeholder="Olá {{nome}}, novo lead chegou! Telefone: {{telefone}}"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Variáveis disponíveis: nome, nome_completo, telefone, email, tipo_pretensao, cidade, orcamento
+                  Pode usar: nome, nome_completo, telefone, email, tipo_pretensao, cidade, orcamento
                 </p>
               </div>
             )}
 
             {form.content_mode === 'fixed_card' && (
               <div className="text-xs text-muted-foreground bg-muted/40 rounded p-3">
-                Layout fixo: vai enviar nome, telefone, email, cidade do lead automaticamente.
-                Customização de layouts é Fase 2.
+                Cartão pronto: manda nome, telefone, e-mail e cidade do lead.
               </div>
             )}
           </div>
@@ -512,7 +556,7 @@ export default function WhatsappReminders() {
             <Button variant="outline" onClick={() => setModalOpen(false)} disabled={saving}>Cancelar</Button>
             <Button onClick={save} disabled={saving}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-              {editing ? 'Salvar' : 'Criar'}
+              {saving ? 'Salvando…' : editing ? 'Salvar' : 'Criar'}
             </Button>
           </DialogFooter>
         </DialogContent>
