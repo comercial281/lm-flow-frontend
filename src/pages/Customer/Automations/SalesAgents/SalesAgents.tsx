@@ -9,6 +9,7 @@ import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, C
 import AiResultsPanel from '@/components/salesAgents/AiResultsPanel';
 import PlaybookSection from '@/components/salesAgents/PlaybookSection';
 import DuplicateAgentDialog from '@/components/salesAgents/DuplicateAgentDialog';
+import TestMediaBubble from './TestMediaBubble';
 import type { AgentPerformance } from '@/types/aiResults';
 import {
   salesAgentsService,
@@ -4345,51 +4346,6 @@ function TestTab({ agent }: { agent: SalesAgent }) {
       )}
 
       {dialogoDePergunta}
-    </div>
-  );
-}
-
-// A foto/link que o lead REAL receberia. Aqui não há canal pra enviar, então em
-// vez de a mídia sumir — deixando a IA parecer que prometeu "te mando as fotos"
-// e não cumpriu — mostramos o que teria ido, com a foto de verdade.
-function TestMediaBubble({ item }: { item: TestMediaItem }) {
-  if (item.type === 'image') {
-    return (
-      <div className="max-w-[80%] rounded-lg border border-primary/30 bg-primary/5 overflow-hidden">
-        <img src={item.url} alt="Foto do imóvel" className="w-full max-h-48 object-cover" />
-        <div className="px-3 py-2 space-y-1">
-          <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium">
-            <ImageIcon className="h-3 w-3" /> Foto enviada no WhatsApp
-          </div>
-          {item.caption && <p className="text-xs text-muted-foreground whitespace-pre-line">{item.caption}</p>}
-        </div>
-      </div>
-    );
-  }
-
-  // Arquivo que ela MANDARIA. O painel não envia nada — é aqui que dá pra calibrar
-  // as regras de "quando enviar" sem gastar mensagem com lead de verdade.
-  if (item.type === 'file') {
-    return (
-      <div className="max-w-[80%] rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-        <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium mb-0.5">
-          <FileText className="h-3 w-3" /> Arquivo enviado no WhatsApp
-        </div>
-        <div className="text-xs font-medium break-words">{item.title}</div>
-        {item.caption && <p className="text-xs text-muted-foreground whitespace-pre-line">{item.caption}</p>}
-        {item.reason && <p className="text-[11px] text-muted-foreground mt-1 italic">Por quê: {item.reason}</p>}
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-w-[80%] rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-      <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium mb-0.5">
-        <Link2 className="h-3 w-3" /> Link enviado no WhatsApp
-      </div>
-      <a href={item.url} target="_blank" rel="noreferrer" className="text-xs underline break-all">
-        {item.url}
-      </a>
     </div>
   );
 }
