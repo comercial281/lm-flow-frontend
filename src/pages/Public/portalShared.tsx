@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchAllPortalProperties } from './portalProperties';
+import { imovelHref } from './finalidade';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — peças compartilhadas (Produto A do LM Flow)
@@ -131,8 +132,11 @@ export function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: strin
 /* ── Filtro de imóveis (puro, reutilizável) ──────────────────────────────── */
 export function filterProperties(items: PortalProperty[], f: PortalFilters): PortalProperty[] {
   return items.filter(p => {
-    if (f.tab === 'rent' && p.transaction_type !== 'rent') return false;
-    if (f.tab === 'sale' && p.transaction_type === 'rent') return false;
+    // Alugar = Locação, Temporada e Venda + Locação; Comprar = tudo que não é só
+    // de aluguel. Antes, Temporada caía em Comprar e Venda + Locação nunca
+    // aparecia em Alugar — e a aba é o que marca "Quero alugar" no imóvel.
+    if (f.tab === 'rent' && !['rent', 'season', 'sale_rent'].includes(p.transaction_type)) return false;
+    if (f.tab === 'sale' && (p.transaction_type === 'rent' || p.transaction_type === 'season')) return false;
     // "Lançamentos" ainda não tem campo próprio no backend — usamos `featured`
     // como proxy interino até existir um flag de lançamento.
     if (f.tab === 'launch' && !p.featured) return false;
@@ -246,16 +250,17 @@ export function usePublishedArticlesExist(tenant?: string): boolean {
 }
 
 /* ── Card de imóvel ──────────────────────────────────────────────────────── */
-export function PropertyCard({ tenant, p, wa }: { tenant: string; p: PortalProperty; wa?: string | null }) {
+export function PropertyCard({ tenant, p, wa, tab }: { tenant: string; p: PortalProperty; wa?: string | null; tab?: PortalTab }) {
   const s = p.icon_summary ?? {};
   const badge = p.exclusive ? 'Exclusivo' : (p.featured ? 'Destaque' : null);
   const typeLabel = PROPERTY_TYPE_LABEL[p.property_type] || p.property_type;
   const local = [p.address?.neighborhood, p.address?.city].filter(Boolean).join(', ');
   const waLink = wa ? `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent(`Olá! Tenho interesse no imóvel ${p.code} (${p.title}).`)}` : null;
+  const href = imovelHref(tenant, p.code, tab);
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-[20px] bg-white ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_-16px_rgba(0,0,0,0.25)]">
-      <Link to={`/imovel/${tenant}/${p.code}`} className="relative block aspect-[4/3] overflow-hidden bg-neutral-100">
+      <Link to={href} className="relative block aspect-[4/3] overflow-hidden bg-neutral-100">
         {p.cover_url ? (
           <img src={p.cover_url} alt={p.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]" />
         ) : (
@@ -278,7 +283,7 @@ export function PropertyCard({ tenant, p, wa }: { tenant: string; p: PortalPrope
 
       <div className="flex flex-1 flex-col p-4">
         <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand)]">{typeLabel}</span>
-        <Link to={`/imovel/${tenant}/${p.code}`} className="mt-1">
+        <Link to={href} className="mt-1">
           <h3 className="font-[var(--display)] text-[17px] leading-snug text-[var(--ink)] line-clamp-2 transition-colors group-hover:text-[var(--brand)]">{p.title}</h3>
         </Link>
         {local && (
@@ -295,7 +300,7 @@ export function PropertyCard({ tenant, p, wa }: { tenant: string; p: PortalPrope
         </div>
 
         <div className="mt-4 flex items-center gap-2 border-t border-black/[0.06] pt-3">
-          <Link to={`/imovel/${tenant}/${p.code}`} className="flex-1 rounded-full px-3 py-2 text-center text-[13px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--ink)' }}>
+          <Link to={href} className="flex-1 rounded-full px-3 py-2 text-center text-[13px] font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'var(--ink)' }}>
             Ver detalhes
           </Link>
           {waLink && (
