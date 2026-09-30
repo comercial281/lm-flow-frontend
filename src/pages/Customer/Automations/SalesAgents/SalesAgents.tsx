@@ -5,11 +5,12 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon, Zap, AlertTriangle, Lightbulb, CalendarDays, Users, MessageSquare, Sparkles, X } from 'lucide-react';
+import { Bot, Plus, Trash2, Send, FileText, Upload, RefreshCw, Loader2, Link2, Copy, Check, SlidersHorizontal, ImageIcon, Film, Zap, AlertTriangle, Lightbulb, CalendarDays, Users, MessageSquare, Sparkles, X } from 'lucide-react';
 import AiResultsPanel from '@/components/salesAgents/AiResultsPanel';
 import PlaybookSection from '@/components/salesAgents/PlaybookSection';
 import DuplicateAgentDialog from '@/components/salesAgents/DuplicateAgentDialog';
 import TestMediaBubble from './TestMediaBubble';
+import { DOC_ACCEPT, docUploadError } from './docUpload';
 import type { AgentPerformance } from '@/types/aiResults';
 import {
   salesAgentsService,
@@ -2322,7 +2323,7 @@ function IntelligenceSection({
         <CheckRow checked={agent.cross_sell_enabled !== false} onChange={(v) => onSave({ cross_sell_enabled: v })}
           title="Oferecer outras opções" desc="Quando não tem o imóvel exato, sugere alternativas reais e não perde o lead." />
         <CheckRow checked={agent.rich_media_enabled !== false} onChange={(v) => onSave({ rich_media_enabled: v })}
-          title="Mandar foto e link do imóvel" desc="Envia mídia do imóvel de interesse no WhatsApp." />
+          title="Mandar fotos e vídeo do imóvel" desc="A IA escolhe a hora e manda até 5 fotos ou 1 vídeo no WhatsApp, sem link." />
         {/* Sem isto, "Oferecer outras opções" era promessa vazia: a IA só
             enxergava o imóvel do anúncio e não tinha como consultar o cadastro. */}
         <CheckRow checked={agent.catalog_search_enabled !== false} onChange={(v) => onSave({ catalog_search_enabled: v })}
@@ -3329,10 +3330,6 @@ function LearningTab({ agent }: { agent: SalesAgent }) {
   );
 }
 
-// Aceitos no upload de arquivo. PDF entrou junto com o envio: é o formato em que a
-// imobiliária tem TODO o material dela (book, planta, memorial) e a base recusava.
-const DOC_ACCEPT = '.pdf,.txt,.md,.csv,.docx,.xlsx,.jpg,.jpeg,.png,.webp';
-const DOC_MAX_BYTES = 25 * 1024 * 1024;
 // De quanto em quanto tempo re-buscar a lista enquanto algum arquivo estiver
 // "Processando". A extração leva segundos; 4s é o mesmo ritmo da importação de imóveis.
 const DOC_POLL_MS = 4000;
@@ -3391,8 +3388,9 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
   };
 
   const upload = async (file: File) => {
-    if (file.size > DOC_MAX_BYTES) {
-      toast.error(`"${file.name}" tem mais de 25 MB. Reduza o arquivo antes de subir.`);
+    const erro = docUploadError(file);
+    if (erro) {
+      toast.error(erro);
       return;
     }
     setBusy(true); setProgress(0);
@@ -3495,6 +3493,7 @@ function KnowledgeTab({ agent, onCountChange }: { agent: SalesAgent; onCountChan
               <div className="min-w-0">
                 <div className="text-sm font-medium truncate flex items-center gap-2">
                   {d.media_kind === 'image' ? <ImageIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    : d.media_kind === 'video' ? <Film className="h-4 w-4 shrink-0 text-muted-foreground" />
                     : <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />}
                   <span className="truncate">{d.title}</span>
                 </div>
