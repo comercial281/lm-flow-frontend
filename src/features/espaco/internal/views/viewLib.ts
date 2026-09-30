@@ -5,6 +5,7 @@ import type {
   PageRow, NotionProperty, FilterGroup, FilterCondition, SortRule,
   SelectOption, PropertyValue, RollupConfig, FilterOperator, PropertyType, ViewConfig,
 } from '../types'
+import { dolar } from '@/lib/formato'
 
 // ── Helpers de leitura de valor ────────────────────────────────────────────
 
@@ -402,7 +403,7 @@ export function formatValue(value: PropertyValue, property: NotionProperty): str
         case 'real':
           return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n)
         case 'dolar':
-          return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD' }).format(n)
+          return dolar(n)
         default:
           return formatNumber(n, precision)
       }

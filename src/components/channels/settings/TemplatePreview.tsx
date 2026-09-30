@@ -2,6 +2,7 @@ import React from 'react';
 import { MessageSquare, Mail, Send, ExternalLink, Phone } from 'lucide-react';
 import { usesStructuredComponents } from '@/services/channels/messageTemplatesService';
 import { TemplateFormData } from '@/types';
+import { hora } from '@/lib/formato';
 
 interface TemplatePreviewProps {
   template: Partial<TemplateFormData>;
@@ -108,7 +109,7 @@ const BubblePreview: React.FC<{
             {/* Delivery time */}
             <div className="text-right">
               <span className="text-xs text-gray-500 dark:text-slate-400">
-                {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                {hora(new Date())}
               </span>
             </div>
           </div>
@@ -215,7 +216,7 @@ const TextPreview: React.FC<{
               {getChannelName()} Message Preview
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+              {hora(new Date())}
             </span>
           </div>
         </div>

@@ -13,6 +13,7 @@ import TestMediaBubble from './TestMediaBubble';
 import SendToMeButton from './SendToMeButton';
 import { DOC_ACCEPT, docUploadError } from './docUpload';
 import type { AgentPerformance } from '@/types/aiResults';
+import { dolar } from '@/lib/formato';
 import {
   salesAgentsService,
   type SalesAgent,
@@ -1404,7 +1405,7 @@ function LimitsSection({ agent, onChange, onSave }: {
       <div className="space-y-3">
         {numField('max_new_leads_per_day', 'Máx. de leads novos por dia', 'Depois desse número de leads NOVOS no dia, a IA para de puxar conversa nova (quem já está conversando continua).', 'lim_leads')}
         {numField('max_active_conversations', 'Máx. de conversas ativas ao mesmo tempo', 'Teto de conversas em aberto que a IA está tocando ao mesmo tempo.', 'lim_conv')}
-        {numField('daily_budget_usd', 'Orçamento diário (USD)', 'Quando o gasto do dia (mesma conta da aba Resultados) bate este valor, a IA para de atender lead novo até o dia seguinte.', 'lim_budget')}
+        {numField('daily_budget_usd', 'Orçamento diário (US$)', 'Quando o gasto do dia (mesma conta da aba Resultados) bate este valor, a IA para de atender lead novo até o dia seguinte.', 'lim_budget')}
       </div>
     </div>
   );
@@ -4632,7 +4633,7 @@ function SuggestionsTab({ agent }: { agent: SalesAgent }) {
           {data.last_analysis_at && (
             <p>
               Última análise em {new Date(data.last_analysis_at).toLocaleDateString('pt-BR')}
-              {data.last_analysis_cost_usd > 0 && ` — custou US$ ${data.last_analysis_cost_usd.toFixed(4)}`}
+              {data.last_analysis_cost_usd > 0 && ` — custou ${dolar(data.last_analysis_cost_usd, 4)}`}
             </p>
           )}
           <p className={noTeto ? 'text-amber-600' : undefined}>
@@ -5426,7 +5427,7 @@ function DiagnosticsTab({ agent }: { agent: SalesAgent }) {
             <Stat label="Respondeu" value={String(totals.replied)} />
             <Stat label="Não respondeu" value={String(totals.skipped)} />
             <Stat label="Falhou" value={String(totals.failed)} />
-            <Stat label="Custo" value={`US$ ${totals.cost_usd.toFixed(2)}`} />
+            <Stat label="Custo" value={dolar(totals.cost_usd)} />
           </div>
         </div>
       )}
@@ -5466,7 +5467,7 @@ function DiagnosticsTab({ agent }: { agent: SalesAgent }) {
                   )}
                 </div>
                 {run.cost_usd > 0 && (
-                  <span className="text-muted-foreground whitespace-nowrap">US$ {run.cost_usd.toFixed(4)}</span>
+                  <span className="text-muted-foreground whitespace-nowrap">{dolar(run.cost_usd, 4)}</span>
                 )}
               </div>
             ))}

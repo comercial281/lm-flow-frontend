@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/useLanguage';
 import type { ChannelConnectionStatus } from '@/types/channels/inbox';
+import { dataHora } from '@/lib/formato';
 
 // Selo de "essa instância está no ar?" para a tela de Canais.
 //
@@ -95,10 +96,5 @@ function formatSince(value?: string | null): string | null {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
 
-  return date.toLocaleString(undefined, {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return dataHora(date);
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { formatDateTimeBR } from '@/utils/dateUtils';
+import { porcentagem } from '@/lib/formato';
 import { toast } from 'sonner';
 import {
   Button, Input, Label as UILabel, Badge,
@@ -3113,8 +3114,8 @@ export default function RoletaConfigPage() {
                         const nome = userName(m.user_id);
                         if (pct === null) return ` ${nome} —`;
                         return isMulti
-                          ? ` ${nome} (${instanceName(memberInbox(m))}) ${pct.toFixed(0)}%`
-                          : ` ${nome} ${pct.toFixed(0)}%`;
+                          ? ` ${nome} (${instanceName(memberInbox(m))}) ${porcentagem(pct, 0)}`
+                          : ` ${nome} ${porcentagem(pct, 0)}`;
                       })}
                     </div>
                   )}

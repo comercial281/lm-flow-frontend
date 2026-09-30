@@ -10,6 +10,7 @@ import AIActionsModal from './AIActionsModal';
 import AIResultModal from './AIResultModal';
 import { AI_ACTIONS, AI_ACTIONS_NO_DRAFT, AIActionType } from '@/types/chat/ai-assistance';
 import { hasVisibleMessageContent } from '@/utils/chat/aiAssistanceMessage';
+import { porcentagem } from '@/lib/formato';
 
 interface AIAssistanceButtonProps {
   currentMessage?: string;
@@ -108,7 +109,7 @@ const AIAssistanceButton: React.FC<AIAssistanceButtonProps> = ({
             const formatted =
               `Sentiment Analysis Result:\n\n` +
               `Offensive: ${parsed.offensive ? 'Yes' : 'No'}\n` +
-              `Confidence: ${((parsed.confidence || 0) * 100).toFixed(1)}%\n` +
+              `Confiança: ${porcentagem((parsed.confidence || 0) * 100)}\n` +
               `Reason: ${parsed.reason || 'No reason provided'}`;
             setGeneratedContent(formatted);
           } else {
