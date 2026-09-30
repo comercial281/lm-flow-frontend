@@ -242,4 +242,78 @@ describe('PortalSettingsCard', () => {
       leads_enabled: true,
     });
   });
+
+  describe('com o servidor que conhece locação', () => {
+    const novo: PortalSettings = {
+      pipeline_id: 'pipe-1', stage_id: 'st-1', roleta_config_id: 'rol-1',
+      rent_same_as_sale: true, rent_pipeline_id: null, rent_stage_id: null,
+      rent_roleta_config_id: null, rent_default_assignee_id: null,
+    };
+
+    it('servidor antigo não mostra as abas', async () => {
+      montar({ pipeline_id: 'pipe-1' });
+      await screen.findByRole('combobox', { name: 'Funil' });
+
+      expect(screen.queryByRole('tab', { name: 'Locação' })).toBeNull();
+    });
+
+    it('"Mesmo destino da venda" ligado viaja sozinho, sem as chaves de locação', async () => {
+      const usuario = userEvent.setup();
+      montar(novo);
+      await screen.findByRole('combobox', { name: 'Funil' });
+
+      await usuario.click(screen.getByRole('tab', { name: 'Locação' }));
+      expect(screen.getByRole('checkbox', { name: 'Mesmo destino da venda' })).toBeChecked();
+      await usuario.click(screen.getByRole('button', { name: 'Salvar configuração' }));
+
+      await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
+      const corpo = mocks.updateSettings.mock.calls[0][1];
+      expect(corpo).toMatchObject({ rent_same_as_sale: true, pipeline_id: 'pipe-1', roleta_config_id: 'rol-1' });
+      expect(corpo).not.toHaveProperty('rent_pipeline_id');
+    });
+
+    it('locação separada viaja com as chaves rent_, e a venda fica como estava', async () => {
+      const usuario = userEvent.setup();
+      montar(novo);
+      await screen.findByRole('combobox', { name: 'Funil' });
+
+      await usuario.click(screen.getByRole('tab', { name: 'Locação' }));
+      await usuario.click(screen.getByRole('checkbox', { name: 'Mesmo destino da venda' }));
+      await usuario.selectOptions(screen.getByRole('combobox', { name: 'Funil' }), 'pipe-2');
+      await usuario.selectOptions(await screen.findByRole('combobox', { name: 'Coluna' }), 'st-9');
+      await usuario.click(screen.getByRole('button', { name: 'Salvar configuração' }));
+
+      await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
+      expect(mocks.updateSettings.mock.calls[0][1]).toMatchObject({
+        pipeline_id: 'pipe-1', stage_id: 'st-1', roleta_config_id: 'rol-1',
+        rent_same_as_sale: false, rent_pipeline_id: 'pipe-2', rent_stage_id: 'st-9',
+        rent_roleta_config_id: null, rent_default_assignee_id: null,
+      });
+    });
+
+    it('abre a Locação com o que está gravado', async () => {
+      const usuario = userEvent.setup();
+      montar({ ...novo, rent_same_as_sale: false, rent_pipeline_id: 'pipe-2', rent_stage_id: 'st-9' });
+      await screen.findByRole('combobox', { name: 'Funil' });
+
+      await usuario.click(screen.getByRole('tab', { name: 'Locação' }));
+
+      expect(screen.getByRole('checkbox', { name: 'Mesmo destino da venda' })).not.toBeChecked();
+      expect(screen.getByRole('combobox', { name: 'Funil' })).toHaveValue('pipe-2');
+      await waitFor(() => expect(screen.getByRole('combobox', { name: 'Coluna' })).toHaveValue('st-9'));
+    });
+
+    it('cargo sem acesso às roletas não apaga a roleta de locação gravada', async () => {
+      const usuario = userEvent.setup();
+      mocks.getAllRoletas.mockRejectedValueOnce(erro403);
+      montar({ ...novo, rent_same_as_sale: false, rent_pipeline_id: 'pipe-2', rent_roleta_config_id: 'rol-1' });
+      await screen.findByRole('combobox', { name: 'Funil' });
+
+      await usuario.click(screen.getByRole('button', { name: 'Salvar configuração' }));
+
+      await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
+      expect(mocks.updateSettings.mock.calls[0][1]).not.toHaveProperty('rent_roleta_config_id');
+      expect(mocks.updateSettings.mock.calls[0][1]).toHaveProperty('rent_pipeline_id', 'pipe-2');
+    });
+  });
 });
