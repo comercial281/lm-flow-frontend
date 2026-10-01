@@ -51,7 +51,7 @@ import { isForbiddenError } from '@/services/core/forbidden';
 import { telefone } from '@/lib/formato';
 import { lerFiltroAgenda, type FiltroAgenda } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
-import { intervaloDoMes, rotuloContador } from '@/features/visits/contagem';
+import { intervaloDoMes, rotuloContador, lerContador } from '@/features/visits/contagem';
 
 const FILTER_TABS = [
   { key: '', label: 'Todas' },
@@ -238,6 +238,9 @@ export default function Visits() {
   // Filtro que veio de um clique na Dashboard (?situacao=, ?desde=, ?visita=).
   const [filtroLink, setFiltroLink] = useState<FiltroAgenda | null>(() => lerFiltroAgenda(searchParams));
   const [soMinhas, setSoMinhas] = useState(false);
+  // Só o servidor novo entende o mês pedido; o antigo devolve a história toda,
+  // e aí o rótulo não pode dizer "em setembro".
+  const [servidorNovo, setServidorNovo] = useState(false);
   const temFiltroNoLink = !!filtroLink && Object.keys(filtroLink.params).length > 0;
 
   const [modalOpen, setModalOpen]   = useState(false);
@@ -283,10 +286,11 @@ export default function Visits() {
     setRecusado(false);
     try {
       // No calendário, pede SÓ o mês visível: é o escopo do contador do
-      // cabeçalho. O contador soma as visitas ATIVAS do mês (meta.active_total,
-      // sem canceladas) — a grade continua desenhando a pílula cancelada, então
-      // o número do contador pode ficar menor que a quantidade de pílulas no
-      // mês. Na lista, o que o link ou a aba pedirem.
+      // cabeçalho. Com o mês inteiro (sem aba de situação), o contador soma as
+      // visitas ATIVAS (meta.active_total, sem canceladas) — a grade continua
+      // desenhando a pílula cancelada, então o número pode ficar menor que a
+      // quantidade de pílulas. Na lista, o que o link ou a aba pedirem, e o
+      // contador é o total do que veio. Regra em features/visits/contagem.ts.
       const doMes = viewMode === 'calendar' && !temFiltroNoLink
         ? (() => { const m = intervaloDoMes(calDate); return { since: m.desde, until: m.ate }; })()
         : {};
@@ -297,7 +301,11 @@ export default function Visits() {
         per_page: 500,
       });
       setVisits(res.data ?? []);
-      setTotal(res.meta?.active_total ?? res.meta?.total ?? 0);
+      const contador = lerContador(res.meta, {
+        mesInteiro: viewMode === 'calendar' && !temFiltroNoLink && !status,
+      });
+      setTotal(contador.total);
+      setServidorNovo(contador.servidorNovo);
       setSoMinhas(!!res.meta?.only_mine);
     } catch (e) {
       if (isForbiddenError(e)) setRecusado(true);
@@ -489,7 +497,10 @@ export default function Visits() {
                 Agenda de Visitas
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {rotuloContador(total, { soMinhas, mes: viewMode === 'calendar' && !temFiltroNoLink ? calDate : undefined })}
+                {rotuloContador(total, {
+                  soMinhas,
+                  mes: servidorNovo && viewMode === 'calendar' && !temFiltroNoLink ? calDate : undefined,
+                })}
               </p>
               {filtroLink?.rotulo && (
                 <div className="mt-1.5">

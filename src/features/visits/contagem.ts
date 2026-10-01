@@ -28,3 +28,30 @@ export function rotuloContador(total: number, opcoes: { soMinhas: boolean; mes?:
   const mes = opcoes.mes ? ` em ${MESES[opcoes.mes.getMonth()]}` : '';
   return `${base}${dono}${mes}`;
 }
+
+export interface MetaVisitas {
+  total?: number;
+  only_mine?: boolean;
+  /** Só o servidor novo manda: as visitas não canceladas do recorte pedido. */
+  active_total?: number;
+}
+
+/**
+ * Qual número o contador mostra, a partir do `meta` da lista.
+ *
+ * - `mesInteiro`: o calendário pedindo o mês inteiro, sem filtro do link e sem
+ *   aba de situação. Só aí vale `active_total` (o mês sem as canceladas, o
+ *   mesmo número da Dashboard). Em todo o resto é `total`, senão a aba
+ *   "Canceladas" diria "0 visitas" ao lado de uma lista de canceladas.
+ * - `servidorNovo`: o servidor entendeu o recorte do mês (só ele manda
+ *   `active_total`). O servidor antigo devolve a história inteira, então o
+ *   rótulo não pode dizer "em setembro".
+ */
+export function lerContador(
+  meta: MetaVisitas | undefined,
+  opcoes: { mesInteiro: boolean },
+): { total: number; servidorNovo: boolean } {
+  const servidorNovo = meta?.active_total !== undefined;
+  const total = opcoes.mesInteiro && servidorNovo ? (meta?.active_total ?? 0) : (meta?.total ?? 0);
+  return { total, servidorNovo };
+}
