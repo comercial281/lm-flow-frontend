@@ -172,4 +172,24 @@ describe('Agendar visita', () => {
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('Escolha o corretor responsável'));
     expect(create).not.toHaveBeenCalled();
   });
+
+  it('gestor: digitar por cima do corretor e depois trocar para cliente sem dono limpa o campo de vez', async () => {
+    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: false, me: null } });
+    leadPicker.mockResolvedValue([LEAD, LEAD_SEM_DONO]);
+    abrir();
+
+    await userEvent.click(await screen.findByPlaceholderText('Buscar cliente por nome ou telefone'));
+    await userEvent.click(await screen.findByText('Leonardo Teste'));
+    expect(await screen.findByDisplayValue('Bruno')).toBeInTheDocument();
+
+    const campoCorretor = screen.getByPlaceholderText('Buscar corretor por nome') as HTMLInputElement;
+    await userEvent.clear(campoCorretor);
+    await userEvent.type(campoCorretor, 'Ca');
+    expect(campoCorretor.value).toBe('Ca');
+
+    await userEvent.click(screen.getByDisplayValue(/Leonardo Teste/));
+    await userEvent.click(await screen.findByText('Marcos Teste'));
+
+    expect((screen.getByPlaceholderText('Buscar corretor por nome') as HTMLInputElement).value).toBe('');
+  });
 });
