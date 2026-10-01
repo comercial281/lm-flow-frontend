@@ -98,14 +98,25 @@ export const visitsService = {
     return (res.data as { data: LeadPickerItem[] }).data;
   },
 
-  /** Igual ao leadPicker, com o meta: `only_mine` diz que o corretor está travado nele mesmo (`me`). */
+  /**
+   * Seletor de cliente paginado (Agendar visita). O meta traz o `total` real do
+   * recorte e `has_more`; `only_mine` diz que o corretor está travado nele
+   * mesmo (`me`). Para só conferir o cargo, peça `per_page = 1`.
+   */
   async leadPickerPage(
     q: string = '',
-    per_page: number = 20,
-  ): Promise<{ data: LeadPickerItem[]; meta: { only_mine?: boolean; me?: PersonRef | null } }> {
-    const res = await api.get(`${BASE}/lead_picker`, { params: { q, per_page } });
-    const body = res.data as { data: LeadPickerItem[]; meta?: { only_mine?: boolean; me?: PersonRef | null } };
+    page: number = 1,
+    per_page: number = 50,
+  ): Promise<{ data: LeadPickerItem[]; meta: LeadPickerMeta }> {
+    const res = await api.get(`${BASE}/lead_picker`, { params: { q, page, per_page } });
+    const body = res.data as { data: LeadPickerItem[]; meta?: LeadPickerMeta };
     return { data: body.data ?? [], meta: body.meta ?? {} };
+  },
+
+  /** Corretores que podem receber visita (ativos e visíveis). O corretor isolado recebe só ele mesmo. */
+  async realtors(): Promise<PersonRef[]> {
+    const res = await api.get(`${BASE}/realtors`);
+    return (res.data as { data?: PersonRef[] }).data ?? [];
   },
 
   async quickCreateContact(payload: { name: string; phone_number: string; email?: string }): Promise<LeadPickerItem> {
@@ -113,6 +124,15 @@ export const visitsService = {
     return (res.data as { data: LeadPickerItem }).data;
   },
 };
+
+export interface LeadPickerMeta {
+  total?: number;
+  page?: number;
+  per_page?: number;
+  has_more?: boolean;
+  only_mine?: boolean;
+  me?: PersonRef | null;
+}
 
 export interface LeadPickerItem {
   id: string;

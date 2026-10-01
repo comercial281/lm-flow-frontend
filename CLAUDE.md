@@ -4393,14 +4393,36 @@ tela de Conversas filtrada na jornada de Conversas; o espaço do banner
 Pedido do dono do produto: *"o corretor tem que clicar e já abrir com o nome dele
 […] só pode marcar visita para os contatos dele"* e *"aparecer apenas datas
 disponíveis"*. Spec: `specs/2026-09-30-fase-4-agendar-visita-design.md` (pasta LM FLOW).
+Ajuste de 2026-10-01 (corretor em botões, cliente pelo nome, lista paginada, modal
+maior): `specs/2026-10-01-fase-4-agenda-do-corretor-design.md`, parte 0.
 
 O que aparece na tela, no **Agendar visita** da Agenda:
 
-- **Duas colunas.** *Quem*: Cliente, Corretor responsável, Observações e Imóvel
+- **Duas colunas, modal largo** (`max-w-5xl`, colunas com `gap-8`, campos com
+  `space-y-5`). *Quem*: Cliente, Corretor responsável, Observações e Imóvel
   (opcional, por último). *Quando*: dia (Hoje / Amanhã / Sábado / outra data),
-  duração (30 min / 1 h / 1h30 / 2 h), horário e a frase por extenso.
+  duração (30 min / 1 h / 1h30 / 2 h), horário (grade de 4 colunas no computador,
+  `max-h-64`) e a frase por extenso. No celular, uma coluna só, com rolagem
+  (`max-h-[90dvh] overflow-y-auto`).
 - **Corretor:** o campo de cliente só encontra os clientes dele, e o responsável é
-  ele, sem campo. **Gestor:** escolhe; ao escolher o cliente, vem o dono do lead.
+  ele, sem botões. **Gestor:** escolhe o corretor em **botões**, um por corretor
+  (`GET /visits/realtors`: ativos e visíveis, por nome; mesmo padrão dos botões de
+  duração, com `aria-pressed`). Com muita gente, a área dos botões rola
+  (`max-h-40`). Ao escolher o cliente, o dono do lead vem marcado; cliente sem
+  dono desmarca, e dono que não está na lista (desativado) também não fica
+  marcado. Salvar sem corretor: "Escolha o corretor responsável". Enquanto o
+  modal confere o cargo, os botões não aparecem (o corretor não vê a equipe
+  piscar).
+- **Cliente pelo nome, lista que carrega mais.** O servidor manda o nome limpo
+  (nunca o número cru do WhatsApp); o campo, depois de escolhido, mostra
+  `nome · telefone formatado` (`telefone()`). Cliente sem nome de verdade (o
+  servidor manda o telefone no lugar: nome igual ao `phone_number` ou só dígitos,
+  `+` e espaços) aparece pelo **telefone formatado**, sem repetir o telefone na
+  linha de baixo, e o campo escolhido mostra só o telefone (`nomeDoCliente` /
+  `textoEscolhido` no `LeadCombobox`). A lista vem de 50 em 50 e pede a
+  próxima página ao rolar até perto do fim; o rodapé diz "Mostrando 50 de 1.240 —
+  digite para buscar" (sem mais páginas, só "Mostrando 2 de 2"). Nova busca volta
+  à página 1 e resposta de busca antiga é descartada.
 - **Horário ocupado aparece riscado, só com a hora** (o nome do cliente estourava a
   grade de 3 colunas) — vai pro `aria-label`/`title` do botão, e o nome completo
   aparece embaixo, na lista das visitas do corretor naquele dia: para o corretor
@@ -4420,9 +4442,14 @@ O que aparece na tela, no **Agendar visita** da Agenda:
 Decisões (não reabrir sem o dono pedir):
 
 - **Quem decide é o servidor** (`Visits::Booking`). A tela trava o corretor pelo
-  `meta.only_mine` do seletor, nunca pelo cargo.
-- **Horários fixos, de 30 em 30, das 07h às 21h, em 24 h.** O campo de hora do
-  navegador vira AM/PM em celular em inglês.
+  `meta.only_mine` do seletor, nunca pelo cargo (a conferência pede
+  `leadPickerPage('', 1, 1)`: só o meta interessa).
+- **Corretor em botões, não em busca** (decisão de 2026-10-01): a busca por nome
+  listava usuários desativados e escondia quem existia.
+- **Horários fixos, de 30 em 30, das 07h às 21h, em 24 h — só com a chave
+  `agenda_do_corretor` desligada.** O campo de hora do navegador vira AM/PM em
+  celular em inglês. Com a chave ligada, os horários vêm do horário de visita da
+  Agenda (seção "Agenda do corretor", abaixo), continuam de 30 em 30 e em 24 h.
 - **Nada sobre WhatsApp no modal.** A confirmação para o cliente é função futura,
   ligada por imobiliária no admin (spec da agenda do corretor).
 
@@ -4432,6 +4459,127 @@ Armadilhas:
    servidor antigo o modal abre como de gestor, sem trava nem recorte.
 2. **A lista de horários e o "ocupado" moram em `src/features/visits/daySlots.ts`**,
    com spec, fora do JSX. A conta é a mesma do servidor: encostar não é conflito.
+3. **`LeadCombobox` é compartilhado com Propostas**: `allowCreate` nasce `true` e
+   `paginated` nasce `false` (Propostas segue com `leadPicker(q, 20)`, sem rodapé).
+   Só a visita liga `paginated`.
+4. **A paginação do cliente e o `/visits/realtors` vêm do servidor**
+   (**comercial281/lm-flow#356**, mergear ANTES deste). Contra o servidor antigo,
+   o rodapé de total não aparece (sem `meta.total`) e os botões de corretor dão
+   erro de carregamento. Os botões usam o mesmo nome que a visita mostra
+   (`Visits::Booking.user_ref`), em ordem por ele.
+
+## Agenda do corretor: horário de visita e folgas (desde 2026-10-01)
+
+Pedido do dono do produto: a IA prometia horário que o corretor não tinha, a visita
+marcada à mão não tinha regra nenhuma e ninguém registrava folga. *"Mesmo que
+limitado, é o que dá menos problema"*: um horário de visita da imobiliária, com
+folgas por corretor. Spec: `specs/2026-10-01-fase-4-agenda-do-corretor-design.md`
+(pasta LM FLOW), partes 1 a 3.
+
+Tudo aqui fica atrás da chave **`agenda_do_corretor`**, liberada cliente a cliente
+(nasce desligada). Com ela desligada, a tela é a de antes, sem nenhum pedido novo
+ao servidor.
+
+O que aparece na tela, com a chave ligada:
+
+- **Agenda de Visitas → *Horário de visita*** (só gestor e administrador): dias da
+  semana, início e fim (listas de 30 em 30, em 24 h) e *Feriados e datas
+  fechadas*. Texto do efeito: "Vale para a IA e para quem marca à mão. Fora disso,
+  nenhuma visita é marcada." Se o horário nasceu de uma IA e havia outras com
+  horário diferente, avisa qual foi usada.
+- **Agenda de Visitas → *Folgas*** (gestor, com o corretor escolhido em botões) /
+  ***Minhas folgas*** (corretor, só as dele): período com data de início e fim, dia
+  inteiro ou uma faixa de horas (a faixa vale em cada dia do período) e motivo
+  opcional. "Excluir" confirma na própria linha.
+- **Agendar visita:** os horários do dia vêm do servidor
+  (`GET /visits/availability`), só os de dentro do horário de visita. Ocupado e
+  folga aparecem **riscados, só com a hora** (`aria-label` "15:00 · ocupado,
+  Fulano" / "15:00 · folga"). Dia fechado (dia da semana sem visita, data fechada,
+  folga de dia inteiro do corretor escolhido) fica com o atalho desabilitado e o
+  motivo no `title`; em *Outra data*, o campo leva o motivo e, no lugar dos
+  horários, vem a frase do servidor ("Domingo não tem visita"). O gestor que ainda
+  não escolheu o corretor vê o horário de visita sem ocupação; ao escolher, a grade
+  é recalculada com as visitas e as folgas dele.
+- **IA Vendedora → *Quando a IA pode marcar visita*:** somem dias, faixa e datas
+  bloqueadas; no lugar, "Usa o horário de visita da Agenda — editar" (link para
+  `/visits`). Ficam antecedência, máx. de dias, *Visita para hoje só com o
+  corretor confirmando*, *Evitar dois leads no mesmo horário* e a duração.
+- **Assistente da IA**, etapa *O rumo da conversa*: sem dias e horário da visita
+  (diz que vêm da Agenda), e a revisão mostra "no horário de visita da Agenda".
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Um horário de visita por imobiliária, mais folgas por corretor.** Não existe
+  horário próprio por corretor.
+- **Regra dura para todos.** Ninguém marca fora do horário de visita: nem a IA, nem
+  o gestor, nem o corretor. Sem "Outro horário". Quem decide é o servidor
+  (`Visits::Agenda`, usado pela trava da marcação à mão e pela IA); a tela só
+  mostra a mesma conta.
+- **Que corretor a IA confere, em camadas:** (0) o corretor da visita que ela está
+  remarcando (o lead já tem visita marcada); (1) o dono do lead; (2) o corretor
+  fixo da IA; (3) o dono do número quando ela fala como o corretor; senão nenhum
+  (só o horário da imobiliária).
+- **Chave `agenda_do_corretor` por imobiliária, desligada por padrão.** Ao ligar,
+  o horário nasce copiado da IA principal; sem IA, 8h às 20h, de segunda a sábado.
+- **Na IA e no assistente, os valores antigos de dias/faixa/datas continuam
+  gravados em `visit_config`** e voltam a valer se a chave desligar: a tela não
+  apaga, só deixa de mostrar, e o assistente não grava `days/start/end`.
+
+Armadilhas:
+
+1. **O backend vem PRIMEIRO**: **comercial281/lm-flow#358** (tabelas, chave, a
+   conta única e os endpoints) e **comercial281/lm-flow#359** (a IA). Os dois no
+   ar antes de ligar a chave em qualquer cliente. Contra o servidor antigo a chave
+   nem existe.
+2. **O build da Vercel falha na checagem de funções** (`audit-feature-catalog.mjs`)
+   até a chave `agenda_do_corretor` estar no catálogo de produção, ou seja, o
+   **#358 no ar antes do merge deste**. Localmente, rodar as travas sem o audit.
+3. **Quem muda a regra é o gestor do servidor** (administrador, suporte ou quem vê
+   todas as conversas), não "quem não é isolado". A tela decide pelo
+   `meta.only_mine`: no cliente com o isolamento desligado o corretor vê os botões
+   de gestor, mas o servidor recusa salvar o horário (403) e grava a folga no nome
+   dele.
+4. **A chave vai LITERAL** em `useClientToggle('agenda_do_corretor')` (Agenda,
+   modal, IA e assistente): os scripts do catálogo leem por regex.
+5. **`src/features/visits/daySlots.ts` continua sendo o caminho da chave
+   desligada** (e de quando o servidor responde `enabled: false`). Não apagar nem
+   trocar a grade 07h–21h sem tirar a chave antes.
+6. **As contas puras da agenda** (motivo do dia fechado com as mesmas frases do
+   servidor, rótulo da folga, horas de 30 em 30) moram em
+   `src/features/visits/agenda.ts`, com spec; os pedidos ao servidor, em
+   `src/services/visits/agendaService.ts`.
+
+
+## Novo canal: só WhatsApp, com o ícone do WhatsApp (desde 2026-10-01)
+
+Pedido do dono do produto: em *Canais → Novo canal* tem que aparecer **só o
+WhatsApp** para a pessoa conectar, e a Evolution API precisa de um ícone mais
+bonito — inclusive para quando o canal aparece na lista de Canais.
+
+O que aparece na tela:
+
+- **A grade *Selecione um tipo de canal* mostra só o cartão WhatsApp.** Widget
+  Web, Instagram, Facebook Messenger, Telegram, SMS, Email e API saíram da
+  criação, para todo mundo (inclusive a Leal Mídia).
+- **A opção Evolution API usa o ícone do WhatsApp** no lugar do logo "evo api"
+  (preto e verde). Vale em todo lugar que desenha o ícone do canal: o cartão do
+  provedor, a lista de Canais, a conversa e o *Iniciar conversa*.
+- **Selos dos provedores do WhatsApp:** o *WhatsApp Business API (nuvem)* perdeu
+  o selo *Recomendado* (aparecia apagado, sem configuração, recomendando o que a
+  pessoa não consegue usar) e a **Evolution API ganhou o selo *Mais usado***. O
+  cartão de provedor passou a desenhar o `popular`, que existia no tipo e nos
+  textos e nunca aparecia; *Recomendado* vence quando os dois estão marcados.
+
+Armadilhas:
+
+1. **Os outros tipos continuam em `getChannelTypes()`.** Canal antigo de outro
+   tipo ainda lê nome e ícone de lá; o recorte é só na tela de criação
+   (`NewChannel`). Não apagar os tipos da constante.
+2. **Não tem metade de backend.** O servidor continua aceitando criar os outros
+   tipos pela API; só a tela deixou de oferecer.
+3. **Não é `featureKey` nem `clientToggleKey`.** Os scanners do catálogo de
+   funcionalidades não entram nesta história.
+
 3. **`LeadCombobox` é compartilhado com Propostas**: `allowCreate` nasce `true`.
 
 ## Área do Admin: o que saiu na limpeza (desde 2026-10-01)

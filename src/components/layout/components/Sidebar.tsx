@@ -58,8 +58,14 @@ export default function Sidebar({ isCollapsed, secoes, rodape }: SidebarProps) {
           {/* Uma coluna só, que rola inteira quando passa da tela: cartão da
               conta, seções e rodapé em sequência. O rodapé vem logo depois do
               último bloco, sem ficar preso no fundo (era o vão embaixo de
-              Minha imobiliária). */}
-          <nav onClickCapture={guardarSaida} className="flex-1 min-h-0 overflow-y-auto px-3 py-4">
+              Minha imobiliária). O espaço da barra de rolagem fica reservado
+              sempre (scrollbar-gutter), senão o menu estreita ao abrir uma
+              seção que faz a lista passar da tela. Só no aberto: no recolhido
+              (w-16) a reserva espremeria os ícones. */}
+          <nav
+            onClickCapture={guardarSaida}
+            className={cn('flex-1 min-h-0 overflow-y-auto px-3 py-4', !isCollapsed && '[scrollbar-gutter:stable]')}
+          >
             {!isCollapsed && <CartaoDaConta />}
             {isCollapsed ? (
               // Recolhido: só ícones, com um traço entre as seções. Sem seção

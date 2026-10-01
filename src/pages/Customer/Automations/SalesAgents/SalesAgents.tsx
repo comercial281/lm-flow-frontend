@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Button, Input, Label, Textarea,
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -1168,8 +1168,13 @@ function VisitSection({
 }
 
 // ---------------- Janelas de disponibilidade da visita ----------------
+// Com a chave `agenda_do_corretor`, dias, faixa e datas bloqueadas saem daqui:
+// a IA usa o horário de visita da Agenda (a mesma regra de quem marca à mão).
+// Os valores antigos continuam guardados em `visit_config` (o `patch` espalha
+// o que já existe) e voltam a valer se a chave desligar.
 
-function VisitWindows({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
+export function VisitWindows({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
+  const agendaLigada = useClientToggle('agenda_do_corretor');
   const c = agent.visit_config ?? {};
   const days = c.days ?? [1, 2, 3, 4, 5];
   const blockedDates = c.blocked_dates ?? [];
@@ -1189,26 +1194,34 @@ function VisitWindows({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Pa
   return (
     <div className="space-y-2">
       <Label className="text-xs">Quando a IA pode marcar visita</Label>
-      <div className="flex flex-wrap gap-1">
-        {WEEKDAYS.map(([d, label]) => (
-          <button key={d} type="button" onClick={() => toggleDay(d)}
-            className={`px-2 py-1 rounded text-xs border ${days.includes(d) ? 'bg-primary/10 text-primary border-primary/40' : 'border-sidebar-border text-muted-foreground'}`}>
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="flex items-end gap-2 flex-wrap">
-        <div>
-          <Label htmlFor="vw_start" className="text-xs">Das</Label>
-          <Input id="vw_start" type="time" value={c.start ?? '09:00'} className="mt-1 w-28"
-            onChange={(e) => patch({ start: e.target.value })} />
-        </div>
-        <div>
-          <Label htmlFor="vw_end" className="text-xs">até</Label>
-          <Input id="vw_end" type="time" value={c.end ?? '18:00'} className="mt-1 w-28"
-            onChange={(e) => patch({ end: e.target.value })} />
-        </div>
-      </div>
+      {agendaLigada ? (
+        <p className="text-xs text-muted-foreground">
+          Usa o horário de visita da Agenda — <Link to="/visits" className="text-primary underline">editar</Link>
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-1">
+            {WEEKDAYS.map(([d, label]) => (
+              <button key={d} type="button" onClick={() => toggleDay(d)}
+                className={`px-2 py-1 rounded text-xs border ${days.includes(d) ? 'bg-primary/10 text-primary border-primary/40' : 'border-sidebar-border text-muted-foreground'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-end gap-2 flex-wrap">
+            <div>
+              <Label htmlFor="vw_start" className="text-xs">Das</Label>
+              <Input id="vw_start" type="time" value={c.start ?? '09:00'} className="mt-1 w-28"
+                onChange={(e) => patch({ start: e.target.value })} />
+            </div>
+            <div>
+              <Label htmlFor="vw_end" className="text-xs">até</Label>
+              <Input id="vw_end" type="time" value={c.end ?? '18:00'} className="mt-1 w-28"
+                onChange={(e) => patch({ end: e.target.value })} />
+            </div>
+          </div>
+        </>
+      )}
       <div className="flex items-end gap-2 flex-wrap">
         <div>
           <Label htmlFor="vw_min" className="text-xs">Antecedência mín. (horas)</Label>
@@ -1246,36 +1259,38 @@ function VisitWindows({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Pa
       {/* Granularidade de CALENDÁRIO, além do dia da semana recorrente: feriado,
           plantão fechado, manutenção — datas específicas que nunca aparecem como
           opção pra IA, mesmo caindo num dia da semana liberado acima. */}
-      <div className="pt-2">
-        <Label className="text-xs">Datas bloqueadas no calendário (feriado, plantão fechado etc)</Label>
-        <div className="flex items-end gap-2 mt-1">
-          <Input type="date" value={newBlockedDate} className="w-40"
-            onChange={(e) => setNewBlockedDate(e.target.value)} />
-          <Button type="button" variant="outline" size="sm" onClick={addBlockedDate} disabled={!newBlockedDate}>
-            <Plus className="h-3 w-3 mr-1" /> Bloquear data
-          </Button>
-        </div>
-        {blockedDates.length === 0 ? (
-          <p className="text-xs text-muted-foreground mt-1">Nenhuma data bloqueada.</p>
-        ) : (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {blockedDates.map((d) => (
-              <span key={d} className="flex items-center gap-1 px-2 py-1 rounded text-xs border border-sidebar-border">
-                {d}
-                <button
-                  type="button"
-                  onClick={() => removeBlockedDate(d)}
-                  aria-label={`Remover ${d} das datas bloqueadas`}
-                  title={`Remover ${d} das datas bloqueadas`}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
+      {!agendaLigada && (
+        <div className="pt-2">
+          <Label className="text-xs">Datas bloqueadas no calendário (feriado, plantão fechado etc)</Label>
+          <div className="flex items-end gap-2 mt-1">
+            <Input type="date" value={newBlockedDate} className="w-40"
+              onChange={(e) => setNewBlockedDate(e.target.value)} />
+            <Button type="button" variant="outline" size="sm" onClick={addBlockedDate} disabled={!newBlockedDate}>
+              <Plus className="h-3 w-3 mr-1" /> Bloquear data
+            </Button>
           </div>
-        )}
-      </div>
+          {blockedDates.length === 0 ? (
+            <p className="text-xs text-muted-foreground mt-1">Nenhuma data bloqueada.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {blockedDates.map((d) => (
+                <span key={d} className="flex items-center gap-1 px-2 py-1 rounded text-xs border border-sidebar-border">
+                  {d}
+                  <button
+                    type="button"
+                    onClick={() => removeBlockedDate(d)}
+                    aria-label={`Remover ${d} das datas bloqueadas`}
+                    title={`Remover ${d} das datas bloqueadas`}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Sem isto, dois leads diferentes podiam sair com o MESMO horário marcado
           pro mesmo imóvel — a IA não enxergava a visita agendada pelo OUTRO lead. */}

@@ -13,11 +13,13 @@ import { Campo, CampoLinhas, CampoTexto, CartaoEscolha, PilulasDias, Secao, Sele
  * Rótulos e dicas vêm do servidor quando ele os manda — a tela não inventa texto.
  */
 export default function EtapaRumo({
-  a, set, playbook,
+  a, set, playbook, agendaLigada = false,
 }: {
   a: AssistenteAnswers;
   set: (patch: Partial<AssistenteAnswers>) => void;
   playbook: AgentPlaybook | null;
+  /** Chave `agenda_do_corretor`: dias e horário da visita vêm da Agenda. */
+  agendaLigada?: boolean;
 }) {
   const rotulo = (k: string, reserva: string) => playbook?.var_labels?.[k] ?? reserva;
   const dica = (k: string) => playbook?.var_hints?.[k];
@@ -70,18 +72,26 @@ export default function EtapaRumo({
         </Campo>
         <div className="rounded-lg border border-sidebar-border p-3 space-y-2">
           <Label>Quando a IA pode marcar visita</Label>
-          <PilulasDias value={a.visita_dias} onChange={(dias) => set({ visita_dias: dias })} />
-          <div className="flex items-end gap-2 flex-wrap">
-            <div>
-              <Label htmlFor="as_vis_ini" className="text-xs">Das</Label>
-              <Input id="as_vis_ini" type="time" value={a.visita_inicio} className="mt-1 w-28" onChange={(e) => set({ visita_inicio: e.target.value })} />
-            </div>
-            <div>
-              <Label htmlFor="as_vis_fim" className="text-xs">até</Label>
-              <Input id="as_vis_fim" type="time" value={a.visita_fim} className="mt-1 w-28" onChange={(e) => set({ visita_fim: e.target.value })} />
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">Antecedência mínima, datas bloqueadas e duração ficam na tela de configuração.</p>
+          {agendaLigada ? (
+            <p className="text-xs text-muted-foreground">
+              Os dias e o horário de visita vêm da Agenda, os mesmos de quem marca à mão. Antecedência mínima e duração ficam na tela de configuração.
+            </p>
+          ) : (
+            <>
+              <PilulasDias value={a.visita_dias} onChange={(dias) => set({ visita_dias: dias })} />
+              <div className="flex items-end gap-2 flex-wrap">
+                <div>
+                  <Label htmlFor="as_vis_ini" className="text-xs">Das</Label>
+                  <Input id="as_vis_ini" type="time" value={a.visita_inicio} className="mt-1 w-28" onChange={(e) => set({ visita_inicio: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="as_vis_fim" className="text-xs">até</Label>
+                  <Input id="as_vis_fim" type="time" value={a.visita_fim} className="mt-1 w-28" onChange={(e) => set({ visita_fim: e.target.value })} />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Antecedência mínima, datas bloqueadas e duração ficam na tela de configuração.</p>
+            </>
+          )}
         </div>
       </Secao>
 

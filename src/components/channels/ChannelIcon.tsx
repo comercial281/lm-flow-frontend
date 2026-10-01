@@ -23,7 +23,9 @@ function getChannelIconSrc(channelType?: string, provider?: string): string | un
         return new URL('@/assets/channels/whatsapp-cloud.svg', import.meta.url).toString();
       }
       if (prov === 'evolution') {
-        return new URL('@/assets/channels/evolution-api.png', import.meta.url).toString();
+        // Ícone do WhatsApp, não o logo do fornecedor: é o número de WhatsApp
+        // que a pessoa reconhece, no cartão do provedor e na lista de canais.
+        return new URL('@/assets/channels/whatsapp.png', import.meta.url).toString();
       }
       if (prov === 'evolution_go') {
         return new URL('@/assets/channels/evolution-go.png', import.meta.url).toString();
