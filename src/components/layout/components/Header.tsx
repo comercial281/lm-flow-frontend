@@ -225,9 +225,11 @@ export default function Header({
           </div>
         </div>
 
-        {/* Centro: nome da conta do cliente (identifica de quem é o CRM) */}
+        {/* Centro: nome da conta do cliente (identifica de quem é o CRM).
+            Com o menu aberto, o cartão da conta no topo do menu já mostra o
+            nome, então aqui só aparece com o menu recolhido (onde o cartão some). */}
         <div className="flex-1 flex items-center justify-center min-w-0 px-4">
-          {account?.name && (
+          {isCollapsed && account?.name && (
             <div className="flex items-center gap-2 min-w-0 rounded-md bg-primary/10 px-3 py-1.5">
               <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
               <span className="lm-redact truncate text-sm font-semibold text-sidebar-foreground">
