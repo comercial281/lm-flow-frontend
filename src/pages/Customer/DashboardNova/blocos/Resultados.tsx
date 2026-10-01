@@ -19,7 +19,7 @@ export const Resultados: React.FC<ContextoBloco> = ({ dados, carregando }) => {
   const itens = [
     { rotulo: 'Vendas', valor: numero(bloco.sales) },
     { rotulo: 'VGV', valor: formatCurrency(bloco.vgv) },
-    { rotulo: 'Ticket médio', valor: bloco.sales ? formatCurrency(bloco.ticket) : VAZIO },
+    { rotulo: 'Ticket médio', valor: bloco.sales && bloco.ticket ? formatCurrency(bloco.ticket) : VAZIO },
     { rotulo: 'Lead que virou venda', valor: bloco.lead_to_sale_percent === null ? VAZIO : porcentagem(bloco.lead_to_sale_percent) },
   ];
   const boas = `${numero(bloco.good_visits)} ${bloco.good_visits === 1 ? 'visita boa' : 'visitas boas'}`;

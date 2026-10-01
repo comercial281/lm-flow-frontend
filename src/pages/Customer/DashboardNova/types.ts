@@ -20,6 +20,14 @@ export type BlocoApi =
   | 'properties' | 'pending' | 'team' | 'results'
   | 'leads_by_weekday' | 'leads_by_hour' | 'leads_6_months';
 
+/** Item de Próximas visitas. `property_title` não vem de servidor antigo. */
+type UpcomingItemBase = UpcomingBlock['items'][number];
+export interface UpcomingItem extends UpcomingItemBase {
+  property_title?: string | null;
+}
+
+export interface UpcomingBlockNova { items: UpcomingItem[] }
+
 export interface PropertiesSummary {
   active: number; new: number; exclusive: number; on_sign: number;
   without_photos: number; off_site: number; stale: number; stale_after_days: number;
@@ -87,7 +95,7 @@ export interface DashboardNovaPayload {
   ai?: Maybe<AiBlock>;
   response?: Maybe<ResponseBlock>;
   heatmap?: Maybe<HeatmapBlock>;
-  upcoming?: Maybe<UpcomingBlock>;
+  upcoming?: Maybe<UpcomingBlockNova>;
   history?: Maybe<HistoryBlock>;
   queue?: Maybe<QueueBlock>;
   properties?: Maybe<PropertiesSummary>;

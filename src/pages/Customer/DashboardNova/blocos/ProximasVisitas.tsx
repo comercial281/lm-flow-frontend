@@ -34,8 +34,10 @@ export const ProximasVisitas: React.FC<ContextoBloco> = ({ dados, carregando, vi
   }
 
   return (
-    <GlassCard title={titulo} subtitle="Agendadas para os próximos 14 dias" action={acao}>
+    <GlassCard title={titulo} subtitle="As próximas, até 14 dias" action={acao}>
       {bloco.items.map(v => {
+        // Imóvel (quando o servidor manda) e, para o gestor, o corretor.
+        const detalhe = [v.property_title, visao === 'gestor' ? v.realtor_name : null].filter(Boolean).join(' · ');
         const corpo = (
           <>
             <span style={{ width: 64, fontSize: 12, color: 'var(--lmf-muted)' }}>
@@ -44,7 +46,7 @@ export const ProximasVisitas: React.FC<ContextoBloco> = ({ dados, carregando, vi
             </span>
             <span className="lmfn-item-texto">
               {v.contact_name}
-              {visao === 'gestor' && v.realtor_name && <small>{v.realtor_name}</small>}
+              {detalhe && <small>{detalhe}</small>}
             </span>
             <span className={`lmfn-pilula${v.confirmed ? '' : ' lmfn-pilula-atencao'}`}>{v.confirmed ? 'Confirmada' : 'A confirmar'}</span>
           </>

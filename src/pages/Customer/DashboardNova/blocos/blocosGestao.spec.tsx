@@ -40,6 +40,17 @@ describe('Próximas visitas', () => {
     expect(screen.queryByText('Ana')).not.toBeInTheDocument();
   });
 
+  it('mostra o imóvel da visita quando vem', () => {
+    wrap(<ProximasVisitas {...ctx({ upcoming: { items: [{ ...visita, property_title: 'Casa Teste' }] } })} />);
+    expect(screen.getByText('Casa Teste · Ana')).toBeInTheDocument();
+    expect(screen.getByText('As próximas, até 14 dias')).toBeInTheDocument();
+  });
+
+  it('sem o imóvel (servidor antigo ou visita sem imóvel), mostra só o corretor', () => {
+    wrap(<ProximasVisitas {...ctx({ upcoming: { items: [{ ...visita, property_title: null }] } })} />);
+    expect(screen.getByText('Ana')).toBeInTheDocument();
+  });
+
   it('sem acesso à Agenda, a visita não é clicável', () => {
     wrap(<ProximasVisitas {...ctx({ upcoming: { items: [visita] } }, { pode: { ...pode, agenda: false } })} />);
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
@@ -68,10 +79,33 @@ describe('Funil', () => {
   });
 });
 
+describe('Funil sem dado', () => {
+  it('sem funil ativo, diz isso em vez de erro', () => {
+    wrap(<Funil {...ctx({ pipeline: { available: false, reason: 'no_pipeline' } })} />);
+    expect(screen.getByText('Nenhum funil ativo encontrado.')).toBeInTheDocument();
+  });
+
+  it('com erro, diz que não deu para carregar', () => {
+    wrap(<Funil {...ctx({ pipeline: { available: false, reason: 'error' } })} />);
+    expect(screen.getByText('Não deu para carregar o funil agora.')).toBeInTheDocument();
+  });
+
+  it('funil sem etapas', () => {
+    wrap(<Funil {...ctx({ pipeline: { pipeline: { id: 'p1', name: 'Vendas' }, pipelines: [{ id: 'p1', name: 'Vendas' }], stages: [] } })} />);
+    expect(screen.getByText('Este funil ainda não tem etapas.')).toBeInTheDocument();
+  });
+});
+
 describe('Resultados', () => {
   it('visitas boas de realizadas', () => {
     wrap(<Resultados {...ctx({ results: { sales: 3, vgv: 2100000, ticket: 700000, leads: 195, lead_to_sale_percent: 1.5, visits_done: 18, good_visits: 11 } })} />);
     expect(screen.getByText('11 visitas boas de 18 realizadas')).toBeInTheDocument();
+  });
+
+  it('ticket zerado mostra o traço, não R$ 0', () => {
+    wrap(<Resultados {...ctx({ results: { sales: 2, vgv: 0, ticket: 0, leads: 10, lead_to_sale_percent: 20, visits_done: 0, good_visits: 0 } })} />);
+    const rotulo = screen.getByText('Ticket médio');
+    expect(rotulo.nextElementSibling).toHaveTextContent('—');
   });
 
   it('não aparece quando o servidor não manda (corretor)', () => {

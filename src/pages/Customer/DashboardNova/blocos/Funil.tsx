@@ -14,7 +14,12 @@ export const Funil: React.FC<ContextoBloco> = ({ dados, carregando, visao, pode,
   if (!isAvailable(bloco)) {
     return (
       <GlassCard title={titulo}>
-        {carregando && !dados ? <Skeleton height={200} /> : <EmptyBlock block={bloco} text="Não deu para carregar o funil agora." />}
+        {carregando && !dados ? (
+          <Skeleton height={200} />
+        ) : (
+          // Só erro (ou bloco ausente) vira "não deu para carregar"; os outros motivos o EmptyBlock explica.
+          <EmptyBlock block={bloco} text={!bloco || bloco.reason === 'error' ? 'Não deu para carregar o funil agora.' : undefined} />
+        )}
       </GlassCard>
     );
   }
@@ -27,6 +32,7 @@ export const Funil: React.FC<ContextoBloco> = ({ dados, carregando, visao, pode,
 
   return (
     <GlassCard title={titulo} subtitle="Leads em cada etapa agora" action={seletor}>
+      {bloco.stages.length === 0 && <EmptyBlock text="Este funil ainda não tem etapas." />}
       {bloco.stages.map(s => {
         const corpo = (
           <>
