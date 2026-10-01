@@ -30,9 +30,14 @@ export interface VisitFormData {
 const BASE = '/visits';
 
 export const visitsService = {
-  async list(params: Record<string, string | number | undefined> = {}): Promise<{ data: Visit[]; meta: { total: number } }> {
+  async list(params: Record<string, string | number | undefined> = {}): Promise<{ data: Visit[]; meta: { total: number; only_mine?: boolean; active_total?: number } }> {
     const res = await api.get(BASE, { params });
-    return res.data as { data: Visit[]; meta: { total: number } };
+    return res.data as { data: Visit[]; meta: { total: number; only_mine?: boolean; active_total?: number } };
+  },
+
+  async get(id: string): Promise<Visit> {
+    const res = await api.get(`${BASE}/${id}`);
+    return (res.data as { data: Visit }).data;
   },
 
   async create(data: VisitFormData): Promise<Visit> {
@@ -56,6 +61,19 @@ export const visitsService = {
 
   async complete(id: string, rating?: number, feedback?: string): Promise<Visit> {
     const res = await api.post(`${BASE}/${id}/complete`, { rating, feedback_notes: feedback });
+    return (res.data as { data: Visit }).data;
+  },
+
+  /**
+   * Retorno de visita já Realizada: grava só nota e/ou comentário. Não mexe na
+   * data de realização nem dispara automação. 422 se a visita não está
+   * Realizada ou se não veio nada pra salvar.
+   */
+  async feedback(id: string, rating?: number, feedbackNotes?: string): Promise<Visit> {
+    const body: { rating?: number; feedback_notes?: string } = {};
+    if (rating !== undefined) body.rating = rating;
+    if (feedbackNotes !== undefined) body.feedback_notes = feedbackNotes;
+    const res = await api.post(`${BASE}/${id}/feedback`, body);
     return (res.data as { data: Visit }).data;
   },
 

@@ -165,6 +165,16 @@ export interface PropertiesListParams {
    * É o que responde "quais dos 900 têm regra?" sem exigir uma tela de exceções.
    */
   lead_goes_to_responsible?: boolean;
+  /** Filtros dos links da Dashboard (ver src/features/dashboard/links.ts). */
+  exclusive?: string;
+  on_sign?: string;
+  without_photos?: string;
+  off_site?: string;
+  stale?: string;
+  /** YYYY-MM-DD: cadastrados a partir desta data. */
+  created_since?: string;
+  /** '1' = imóveis em que quem pede é captador ou responsável. */
+  mine?: string;
   page?: number;
   per_page?: number;
 }

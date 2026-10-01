@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Button,
@@ -30,6 +31,7 @@ import {
   ChevronRight,
   CalendarDays,
   List,
+  MessageSquare,
 } from 'lucide-react';
 import {
   visitsService,
@@ -48,6 +50,10 @@ import { useFeature } from '@/contexts/TenantFeaturesContext';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { telefone } from '@/lib/formato';
+import { lerFiltroAgenda, type FiltroAgenda } from '@/features/dashboard/links';
+import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
+import { intervaloDoMes, rotuloContador, lerContador } from '@/features/visits/contagem';
+import { acaoDaVisita, temRetorno, type AcaoDaVisita } from '@/features/visits/acaoDaVisita';
 
 const FILTER_TABS = [
   { key: '', label: 'Todas' },
@@ -115,12 +121,14 @@ function dayKey(d: Date) {
 
 /** Calendário de mês idêntico ao protótipo: grade 7 colunas, células com dia +
  *  pills coloridos por status. Dados reais das visitas. */
-function MonthGrid({ date, visits, onNavigate, onDayClick, onVisitClick }: {
+function MonthGrid({ date, visits, onNavigate, onDayClick, onVisitClick, destacadaId }: {
   date: Date;
   visits: Visit[];
   onNavigate: (d: Date) => void;
   onDayClick: (d: Date) => void;
   onVisitClick: (v: Visit) => void;
+  /** Visita que veio pelo link: ganha contorno. */
+  destacadaId?: string | null;
 }) {
   const year = date.getFullYear();
   const month = date.getMonth();
@@ -197,8 +205,9 @@ function MonthGrid({ date, visits, onNavigate, onDayClick, onVisitClick }: {
                 return (
                   <button
                     key={v.id}
+                    id={`visita-${v.id}`}
                     onClick={e => { e.stopPropagation(); onVisitClick(v); }}
-                    className={`text-[10px] font-semibold px-1.5 py-[3px] rounded-md truncate text-left transition-colors ${PILL_STYLES[v.status] || PILL_STYLES.scheduled}`}
+                    className={`text-[10px] font-semibold px-1.5 py-[3px] rounded-md truncate text-left transition-colors ${PILL_STYLES[v.status] || PILL_STYLES.scheduled} ${destacadaId === v.id ? 'ring-2 ring-primary' : ''}`}
                     title={`${time} · ${who}`}
                   >
                     {time} · {who}
@@ -222,16 +231,28 @@ export default function Visits() {
   const [total, setTotal]           = useState(0);
   const [loading, setLoading]       = useState(false);
   const [activeTab, setActiveTab]   = useState('');
-  const [viewMode, setViewMode]     = useState<ViewMode>('calendar');
+  // O estado inicial do modo respeita o link: chegando com filtro, abre na lista.
+  const [viewMode, setViewMode]     = useState<ViewMode>(() => {
+    const f = lerFiltroAgenda(new URLSearchParams(window.location.search));
+    return f && Object.keys(f.params).length > 0 ? 'list' : 'calendar';
+  });
   const [recusado, setRecusado]     = useState(false);
 
   const [calDate, setCalDate]       = useState<Date>(new Date());
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Filtro que veio de um clique na Dashboard (?situacao=, ?desde=, ?visita=).
+  const [filtroLink, setFiltroLink] = useState<FiltroAgenda | null>(() => lerFiltroAgenda(searchParams));
+  const [soMinhas, setSoMinhas] = useState(false);
+  // Só o servidor novo entende o mês pedido; o antigo devolve a história toda,
+  // e aí o rótulo não pode dizer "em setembro".
+  const [servidorNovo, setServidorNovo] = useState(false);
+  const temFiltroNoLink = !!filtroLink && Object.keys(filtroLink.params).length > 0;
 
   const [modalOpen, setModalOpen]   = useState(false);
   const [form, setForm]             = useState<VisitFormData>(EMPTY_FORM);
   const [saving, setSaving]         = useState(false);
 
-  const [actionModal, setActionModal] = useState<{ visit: Visit; action: 'complete' | 'cancel' } | null>(null);
+  const [actionModal, setActionModal] = useState<{ visit: Visit; action: AcaoDaVisita } | null>(null);
   const [rating, setRating]           = useState(0);
   const [feedback, setFeedback]       = useState('');
   const [cancelReason, setCancelReason] = useState('');
@@ -255,22 +276,143 @@ export default function Visits() {
   const propertyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const realtorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Abre um diálogo de ação. "Dar retorno" já vem com a nota e o comentário que
+  // a visita tem; os outros começam vazios.
+  const abrirAcao = (visit: Visit, action: AcaoDaVisita) => {
+    setRating(action === 'retorno' ? (visit.rating ?? 0) : 0);
+    setFeedback(action === 'retorno' ? (visit.feedback_notes ?? '') : '');
+    setCancelReason('');
+    setActionModal({ visit, action });
+  };
+
+  const handleVisitClick = (visit: Visit) => {
+    const acao = acaoDaVisita(visit, 'clique');
+    if (acao) abrirAcao(visit, acao);
+    else toast.info(`Visita ${VISIT_STATUS_LABELS[visit.status] ?? visit.status}`);
+  };
+
+  // Trocar de mês rápido (‹ › ‹ ›) dispara pedidos que se cruzam: só a resposta
+  // do pedido mais recente entra na tela, senão outubro chega atrasado e o
+  // contador diz "N visitas em novembro" com o N de outubro.
+  const ultimoPedido = useRef(0);
+
   const load = useCallback(async (status = activeTab) => {
+    const pedido = ++ultimoPedido.current;
+    const atual = () => pedido === ultimoPedido.current;
     setLoading(true);
     setRecusado(false);
     try {
-      const res = await visitsService.list({ status: status || undefined, per_page: 500 });
+      // No calendário, pede SÓ o mês visível: é o escopo do contador do
+      // cabeçalho. Com o mês inteiro (sem aba de situação), o contador soma as
+      // visitas ATIVAS (meta.active_total, sem canceladas) — a grade continua
+      // desenhando a pílula cancelada, então o número pode ficar menor que a
+      // quantidade de pílulas. Na lista, o que o link ou a aba pedirem, e o
+      // contador é o total do que veio. Regra em features/visits/contagem.ts.
+      const doMes = viewMode === 'calendar' && !temFiltroNoLink
+        ? (() => { const m = intervaloDoMes(calDate); return { since: m.desde, until: m.ate }; })()
+        : {};
+      const res = await visitsService.list({
+        status: status || undefined,
+        ...doMes,
+        ...(filtroLink?.params ?? {}),
+        per_page: 500,
+      });
+      if (!atual()) return;
       setVisits(res.data ?? []);
-      setTotal(res.meta?.total ?? 0);
+      const contador = lerContador(res.meta, {
+        mesInteiro: viewMode === 'calendar' && !temFiltroNoLink && !status,
+      });
+      setTotal(contador.total);
+      setServidorNovo(contador.servidorNovo);
+      setSoMinhas(!!res.meta?.only_mine);
     } catch (e) {
+      if (!atual()) return;
       if (isForbiddenError(e)) setRecusado(true);
       else toast.error('Erro ao carregar visitas');
     } finally {
-      setLoading(false);
+      if (atual()) setLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, viewMode, calDate, filtroLink, temFiltroNoLink]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [viewMode, calDate, filtroLink]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A visita que veio pelo link fica com contorno por 2 s, e a tela rola até ela.
+  const [visitaDestacada, setVisitaDestacada] = useState<string | null>(null);
+
+  // ?visita= : MOSTRA a visita, não age sobre ela. Quem chega de "A confirmar"
+  // quer o card com Confirmar / Realizada / Cancelar, não o diálogo de
+  // "Confirmar realização" (que grava e dispara automação). Quando a visita está
+  // fora do recorte carregado (ex.: "Próximas visitas" em 30/09 apontando pra
+  // 02/10), busca pelo id e leva o calendário até o mês dela.
+  const buscandoVisita = useRef<string | null>(null);
+  useEffect(() => {
+    const alvo = filtroLink?.visita;
+    if (!alvo || loading) return;
+    if (buscandoVisita.current === alvo) return; // já em voo pra este id
+
+    // Tira o parâmetro do endereço uma única vez, aconteça o que acontecer. Lê o
+    // endereço de agora (não o da primeira renderização), pra não ressuscitar
+    // parâmetro que outra coisa já tirou.
+    const limpar = () => {
+      const resto = new URLSearchParams(window.location.search);
+      resto.delete('visita');
+      setSearchParams(resto, { replace: true });
+      setFiltroLink(f => (f ? { ...f, visita: null } : f));
+    };
+
+    const mostrar = (v: Visit) => {
+      // Exceções (regra em features/visits/acaoDaVisita.ts): visita que já passou
+      // e segue Agendada/Confirmada abre o diálogo de "realizada"; Realizada é
+      // mostrada e abre "Dar retorno" (é o que baixa "Visitas sem feedback").
+      const acao = acaoDaVisita(v, 'link');
+      if (acao === 'complete') {
+        abrirAcao(v, 'complete');
+        return;
+      }
+      // Sem filtro do link, o calendário vai pro mês da visita (e recarrega esse
+      // mês). Com filtro, a pessoa fica na lista filtrada.
+      if (!temFiltroNoLink) {
+        const quando = new Date(v.scheduled_at);
+        setCalDate(d => (
+          d.getFullYear() === quando.getFullYear() && d.getMonth() === quando.getMonth() ? d : quando
+        ));
+      }
+      setVisitaDestacada(v.id);
+      if (acao === 'retorno') abrirAcao(v, 'retorno');
+    };
+
+    const naLista = visits.find(x => x.id === alvo);
+    if (naLista) {
+      mostrar(naLista);
+      limpar();
+      return;
+    }
+
+    buscandoVisita.current = alvo;
+    visitsService.get(alvo)
+      .then(mostrar)
+      .catch(() => toast.error('Visita não encontrada'))
+      .finally(() => {
+        buscandoVisita.current = null;
+        limpar();
+      });
+  }, [filtroLink?.visita, loading, visits]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Rola até a visita destacada quando ela aparece na tela (o mês certo pode
+  // ainda estar carregando) e solta o contorno depois de 2 s.
+  useEffect(() => {
+    if (!visitaDestacada || loading) return;
+    const el = document.getElementById(`visita-${visitaDestacada}`);
+    if (!el) return;
+    el.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    const t = setTimeout(() => setVisitaDestacada(null), 2000);
+    return () => clearTimeout(t);
+  }, [visitaDestacada, loading, visits]);
+
+  const tirarFiltroLink = () => {
+    setFiltroLink(null);
+    setSearchParams({}, { replace: true });
+  };
 
   const switchTab = (key: string) => {
     setActiveTab(key);
@@ -345,9 +487,10 @@ export default function Visits() {
         ...form,
         property_id: form.property_id?.trim() ? form.property_id : null,
       };
-      const created = await visitsService.create(payload);
-      setVisits(prev => [created, ...prev]);
-      setTotal(t => t + 1);
+      await visitsService.create(payload);
+      // Recarrega em vez de somar 1 na mão: a visita nova pode ser de outro mês
+      // ou de outro corretor, e aí o contador do mês não muda.
+      load();
       toast.success('Visita agendada');
       setModalOpen(false);
       setForm(EMPTY_FORM);
@@ -373,7 +516,11 @@ export default function Visits() {
     setActionLoading(true);
     try {
       let updated: Visit;
-      if (actionModal.action === 'complete') {
+      if (actionModal.action === 'retorno') {
+        // Só nota e comentário: não muda a data da realização nem dispara automação.
+        updated = await visitsService.feedback(actionModal.visit.id, rating || undefined, feedback.trim() ? feedback : undefined);
+        toast.success('Retorno salvo');
+      } else if (actionModal.action === 'complete') {
         updated = await visitsService.complete(actionModal.visit.id, rating || undefined, feedback || undefined);
         toast.success('Visita marcada como realizada');
       } else {
@@ -381,24 +528,27 @@ export default function Visits() {
         toast.success('Visita cancelada');
       }
       setVisits(prev => prev.map(v => v.id === updated.id ? updated : v));
+      // Cancelar tira a visita do contador (que não conta canceladas): recarrega.
+      if (actionModal.action === 'cancel') load();
       setActionModal(null);
       setRating(0);
       setFeedback('');
       setCancelReason('');
-    } catch {
-      toast.error('Erro ao executar ação');
+    } catch (e) {
+      if (actionModal.action === 'retorno') {
+        const status = (e as { response?: { status?: number } })?.response?.status;
+        if (status === 422) toast.error('Não deu para salvar: o retorno só vale para visita realizada, com nota ou comentário');
+        else if (status === 404) toast.error('Visita não encontrada');
+        else toast.error('Erro ao salvar retorno');
+      } else {
+        toast.error('Erro ao executar ação');
+      }
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleVisitClick = (visit: Visit) => {
-    if (visit.status === 'scheduled' || visit.status === 'confirmed' || visit.status === 'in_progress') {
-      setActionModal({ visit, action: 'complete' });
-    } else {
-      toast.info(`Visita ${VISIT_STATUS_LABELS[visit.status] ?? visit.status}`);
-    }
-  };
+  const semNadaParaSalvar = actionModal?.action === 'retorno' && !rating && !feedback.trim();
 
   const grouped = groupByDate(visits);
 
@@ -419,14 +569,29 @@ export default function Visits() {
                 <CalendarClock className="h-6 w-6 text-primary" />
                 Agenda de Visitas
               </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">{total} visita{total !== 1 ? 's' : ''}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {rotuloContador(total, {
+                  soMinhas,
+                  mes: servidorNovo && viewMode === 'calendar' && !temFiltroNoLink ? calDate : undefined,
+                })}
+              </p>
+              {filtroLink?.rotulo && (
+                <div className="mt-1.5">
+                  <ChipDaDashboard rotulo={filtroLink.rotulo} onTirar={tirarFiltroLink} />
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
             {/* View toggle */}
             <div className="inline-flex rounded-md border border-border bg-background p-0.5">
               <button
-                onClick={() => setViewMode('calendar')}
+                onClick={() => {
+                  // O calendário sempre mostra o mês visível inteiro — um filtro
+                  // da Dashboard ativo (ex.: "A confirmar") não sobrevive à troca.
+                  if (temFiltroNoLink) tirarFiltroLink();
+                  setViewMode('calendar');
+                }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
                   viewMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
                 }`}
@@ -484,6 +649,7 @@ export default function Visits() {
               scheduled_at: toLocalInput(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0)),
             })}
             onVisitClick={handleVisitClick}
+            destacadaId={visitaDestacada}
           />
         ) : loading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
@@ -521,9 +687,11 @@ export default function Visits() {
                     <VisitCard
                       key={visit.id}
                       visit={visit}
+                      destacada={visitaDestacada === visit.id}
                       onConfirm={handleConfirm}
-                      onComplete={() => setActionModal({ visit, action: 'complete' })}
-                      onCancel={() => setActionModal({ visit, action: 'cancel' })}
+                      onComplete={() => abrirAcao(visit, 'complete')}
+                      onCancel={() => abrirAcao(visit, 'cancel')}
+                      onRetorno={() => abrirAcao(visit, 'retorno')}
                     />
                   ))}
                 </div>
@@ -664,15 +832,17 @@ export default function Visits() {
         </DialogContent>
       </Dialog>
 
-      {/* Complete / Cancel action modal */}
+      {/* Complete / Retorno / Cancel action modal */}
       <Dialog open={!!actionModal} onOpenChange={() => setActionModal(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {actionModal?.action === 'complete' ? 'Marcar visita como realizada' : 'Cancelar visita'}
+              {actionModal?.action === 'complete'
+                ? 'Marcar visita como realizada'
+                : actionModal?.action === 'retorno' ? 'Dar retorno da visita' : 'Cancelar visita'}
             </DialogTitle>
           </DialogHeader>
-          {actionModal?.action === 'complete' ? (
+          {actionModal?.action === 'complete' || actionModal?.action === 'retorno' ? (
             <div className="space-y-4 py-2">
               <div>
                 <UILabel>Avaliação (1-5)</UILabel>
@@ -712,9 +882,13 @@ export default function Visits() {
             <Button
               variant={actionModal?.action === 'cancel' ? 'destructive' : 'default'}
               onClick={handleAction}
-              disabled={actionLoading}
+              disabled={actionLoading || semNadaParaSalvar}
             >
-              {actionLoading ? 'Salvando...' : actionModal?.action === 'complete' ? 'Confirmar realização' : 'Cancelar visita'}
+              {actionLoading
+                ? 'Salvando...'
+                : actionModal?.action === 'complete'
+                  ? 'Confirmar realização'
+                  : actionModal?.action === 'retorno' ? 'Salvar retorno' : 'Cancelar visita'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -725,22 +899,28 @@ export default function Visits() {
 
 function VisitCard({
   visit,
+  destacada = false,
   onConfirm,
   onComplete,
   onCancel,
+  onRetorno,
 }: {
   visit: Visit;
+  /** Visita que veio pelo link: ganha contorno. */
+  destacada?: boolean;
   onConfirm: (v: Visit) => void;
   onComplete: (v: Visit) => void;
   onCancel: (v: Visit) => void;
+  /** Realizada sem nota nem comentário: abre "Dar retorno". */
+  onRetorno: (v: Visit) => void;
 }) {
   const isPastVisit = isPast(visit.scheduled_at);
   const isActive = ['scheduled', 'confirmed', 'in_progress'].includes(visit.status);
 
   return (
-    <div className={`flex gap-4 p-4 rounded-xl border border-border bg-card ${
+    <div id={`visita-${visit.id}`} className={`flex gap-4 p-4 rounded-xl border border-border bg-card transition-shadow ${
       isPastVisit && isActive ? 'border-orange-300 dark:border-orange-700' : ''
-    }`}>
+    } ${destacada ? 'ring-2 ring-primary' : ''}`}>
       {/* Time column */}
       <div className="flex-shrink-0 w-16 text-center">
         <div className="text-lg font-bold text-foreground">
@@ -829,6 +1009,14 @@ function VisitCard({
               onClick={() => onCancel(visit)}>
               <XCircle className="h-3.5 w-3.5 mr-1" />
               Cancelar
+            </Button>
+          </div>
+        )}
+        {visit.status === 'completed' && !temRetorno(visit) && (
+          <div className="flex gap-2 mt-3">
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onRetorno(visit)}>
+              <MessageSquare className="h-3.5 w-3.5 mr-1" />
+              Dar retorno
             </Button>
           </div>
         )}

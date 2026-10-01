@@ -17,6 +17,7 @@ import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import type { SalesAgentCardState, SalesAgentLeadReport } from '@/types/analytics/pipelines';
 import { chatService } from '@/services/chat/chatService';
 import SalesAgentBadge from '@/components/salesAgents/SalesAgentBadge';
+import { etapaDeGanho, etapaDePerda } from '@/features/pipelines/etapaFinal';
 
 // Modal de agendamento só aparece com clique explícito — vira lazy.
 const ScheduleActionModal = lazyWithRetry(() =>
@@ -111,9 +112,10 @@ export default function CardActionsPanel({
   // Current stage
   const currentStageId = item.stage_id ?? null;
 
-  // Detecta colunas de Ganho/Perdido pelo nome (template padrao: "Venda" / "Desqualificado").
-  const wonStage = stages.find(s => /vend|ganho|ganhou|fechad/i.test(s.name));
-  const lostStage = stages.find(s => /desqualific|perdid|perda|perdeu|descart/i.test(s.name));
+  // Coluna de Ganho / Perdido pela regra do servidor (tipo da etapa, e o nome
+  // só quando a etapa não tem tipo). Ver src/features/pipelines/etapaFinal.ts.
+  const wonStage = etapaDeGanho(stages);
+  const lostStage = etapaDePerda(stages);
 
   const handleMoveStage = useCallback(async (toStageId: string) => {
     if (!currentStageId || toStageId === currentStageId) return;

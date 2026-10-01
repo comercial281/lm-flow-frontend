@@ -87,6 +87,8 @@ import PropertyBookDialog from '@/components/properties/PropertyBookDialog';
 import { labelsService } from '@/services/contacts/labelsService';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
+import { lerRecorteImoveis, type FiltroDoLink } from '@/features/dashboard/links';
+import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
 
 const EMPTY_FORM: PropertyFormData = {
   title: '',
@@ -170,7 +172,9 @@ export default function Properties() {
   const [deleting, setDeleting]     = useState(false);
   const [recusado, setRecusado]     = useState(false);
 
-  const [searchParams]                        = useSearchParams();
+  const [searchParams, setSearchParams]       = useSearchParams();
+  // Filtro que veio de um clique na Dashboard (?recorte=…). Lido uma vez ao abrir.
+  const [recorte, setRecorte]                 = useState<FiltroDoLink | null>(() => lerRecorteImoveis(searchParams));
   const [search, setSearch]                   = useState(searchParams.get('q') ?? '');
   const [filterStatus, setFilterStatus]       = useState('');
   const [filterType, setFilterType]           = useState('');
@@ -235,6 +239,7 @@ export default function Properties() {
     type = filterType,
     transaction = filterTransaction,
     leadDestination = filterLeadDestination,
+    doLink: FiltroDoLink | null = recorte,
   ) => {
     setLoading(true);
     setRecusado(false);
@@ -245,6 +250,8 @@ export default function Properties() {
         property_type: type || undefined,
         transaction_type: transaction || undefined,
         lead_goes_to_responsible: leadDestination || undefined,
+        // O filtro do link vence o da tela (ex.: "Sem fotos" já é "Ativo").
+        ...(doLink?.params ?? {}),
         per_page: 60,
       });
       setProperties(res.data ?? []);
@@ -255,7 +262,7 @@ export default function Properties() {
     } finally {
       setLoading(false);
     }
-  }, [search, filterStatus, filterType, filterTransaction, filterLeadDestination]);
+  }, [search, filterStatus, filterType, filterTransaction, filterLeadDestination, recorte]);
 
   // Recarrega os contadores da barra de status (ativos/reservados/…). Tolerante a falha.
   const loadStats = useCallback(() => {
@@ -303,6 +310,21 @@ export default function Properties() {
     setFilterTransaction(tr);
     setFilterLeadDestination(ld);
     load(search, s, t, tr, ld);
+  };
+
+  // Tira o filtro do link. Também é o caminho de quem escolhe um Status com o
+  // link ligado: o link manda o próprio status (ex.: "Sem fotos" é Ativo), então
+  // os dois juntos mostrariam "Vendido" no menu e imóveis ativos na lista.
+  const tirarRecorte = (status = filterStatus) => {
+    setRecorte(null);
+    setSearchParams({}, { replace: true });
+    setFilterStatus(status);
+    load(search, status, filterType, filterTransaction, filterLeadDestination, null);
+  };
+
+  const escolherStatus = (status: string) => {
+    if (recorte) tirarRecorte(status);
+    else applyFilter(status, filterType, filterTransaction);
   };
 
   const openCreate = () => {
@@ -825,7 +847,7 @@ export default function Properties() {
 
           <select
             value={filterStatus}
-            onChange={e => applyFilter(e.target.value, filterType, filterTransaction)}
+            onChange={e => escolherStatus(e.target.value)}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             <option value="">Status</option>
@@ -845,12 +867,15 @@ export default function Properties() {
             Só com destino próprio
           </label>
 
-          {(filterStatus || filterType || filterTransaction || filterLeadDestination || search) && (
+          {recorte && <ChipDaDashboard rotulo={recorte.rotulo} onTirar={() => tirarRecorte()} />}
+
+          {(filterStatus || filterType || filterTransaction || filterLeadDestination || search || recorte) && (
             <button
               onClick={() => {
                 setSearch(''); setFilterStatus(''); setFilterType(''); setFilterTransaction('');
                 setFilterLeadDestination(false);
-                load('', '', '', '', false);
+                setRecorte(null); setSearchParams({}, { replace: true });
+                load('', '', '', '', false, null);
               }}
               className="text-xs text-primary hover:underline"
             >

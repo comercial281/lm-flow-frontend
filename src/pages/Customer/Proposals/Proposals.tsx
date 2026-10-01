@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { formatDateBR } from '@/utils/dateUtils';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
@@ -42,6 +43,8 @@ import { useFeature } from '@/contexts/TenantFeaturesContext';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { dinheiro } from '@/lib/formato';
+import { lerFiltroPropostas, type FiltroDoLink } from '@/features/dashboard/links';
+import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
 
 function formatCurrency(value?: number | null): string {
   return dinheiro(value);
@@ -100,6 +103,10 @@ export default function Proposals() {
   const [counterModal, setCounterModal] = useState<CounterModalState>({ open: false, proposalId: '', value: '' });
   const [recusado, setRecusado] = useState(false);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Filtro de período que veio de um clique na Dashboard (?desde=&ate=). Lido uma vez ao abrir.
+  const [periodoLink, setPeriodoLink] = useState<FiltroDoLink | null>(() => lerFiltroPropostas(searchParams));
+
   // Property combobox state (mirrors pattern from Visits.tsx)
   const [propertyQuery, setPropertyQuery] = useState('');
   const [propertyResults, setPropertyResults] = useState<Property[]>([]);
@@ -154,7 +161,7 @@ export default function Proposals() {
     setLoading(true);
     setRecusado(false);
     try {
-      const params: Record<string, string> = {};
+      const params: Record<string, string> = { ...(periodoLink?.params ?? {}) };
       if (statusFilter) params.status = statusFilter;
       const res = await proposalsService.list(params);
       setProposals(res.data);
@@ -164,7 +171,7 @@ export default function Proposals() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, periodoLink]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -377,6 +384,12 @@ export default function Proposals() {
               </Button>
             ))}
           </div>
+          {periodoLink && (
+            <ChipDaDashboard
+              rotulo={periodoLink.rotulo}
+              onTirar={() => { setPeriodoLink(null); setSearchParams({}, { replace: true }); }}
+            />
+          )}
         </div>
       </div>
 

@@ -4250,3 +4250,48 @@ Armadilhas:
    quadrados de cor sólida) e NÃO deve ser rodado.
 3. **Não é `featureKey` nem `clientToggleKey`** e não tem metade de backend. Os
    scanners do catálogo de funcionalidades não entram nesta história.
+
+## Links da Dashboard e as telas que abrem filtradas (desde 2026-09-30)
+
+Fase 4, jornada 1. Todo número da Dashboard nova leva a algum lugar. As telas de
+destino passaram a ler o filtro do endereço.
+
+- **`src/features/dashboard/links.ts` é a fonte única**: a Dashboard MONTA o
+  link e a tela LÊ com as mesmas funções. Filtro novo entra nos dois lados de
+  uma vez, lá.
+- **Imóveis** (`?recorte=`, `&desde=`, `&ate=`, `&meus=1`), **Agenda** (`?situacao=`,
+  `&desde=`, `&ate=`, `&visita=`), **Propostas** (`?desde=`, `&ate=`) e **Funil**
+  (`?etapa=`, além do `?card=` que já existia).
+- **O chip "Da Dashboard: …"** (`ChipDaDashboard`) aparece sempre que a lista
+  abriu filtrada por link, e tira o filtro. Sem ele, quem chega vê 3 de 415 e
+  acha que sumiram.
+- **Agenda: o calendário pede só o mês visível** e o contador conta o que a
+  pessoa vê naquele mês ("7 visitas suas em setembro"), sem as canceladas
+  (`meta.active_total`); as canceladas continuam desenhadas na grade. Antes era
+  a história inteira, de todos os corretores.
+  - `active_total` só vale no mês inteiro (calendário, sem filtro do link, sem
+    aba de situação). Lista e abas contam `meta.total`: a aba Canceladas não
+    pode dizer "0 visitas". Regra em `features/visits/contagem.ts`.
+  - O mês só entra no rótulo quando o servidor manda `active_total`. Servidor
+    antigo devolve a história toda, e o rótulo fica "415 visitas".
+  - Agendar e cancelar recarregam a lista; o contador nunca é somado na mão.
+- **Agenda: `?visita=` MOSTRA a visita, não age sobre ela** (busca por
+  `GET /visits/:id` se não estiver carregada; não achou → "Visita não
+  encontrada"). Sem filtro do link, o calendário vai pro mês dela; com filtro,
+  fica na lista. O card ou a pílula ganha contorno por 2 s. Exceção (além da
+  Realizada, abaixo):
+  visita que já passou e segue Agendada/Confirmada abre o diálogo de realizada.
+  Nunca abrir "Confirmar realização" para visita futura: grava e dispara
+  automação. Trocar para Calendário tira o filtro do link: o calendário é
+  sempre o mês na tela.
+- Visita Realizada abre *Dar retorno* (nota e comentário, `POST /visits/:id/feedback`, sem disparar automação; comentário apagado não apaga o salvo); o link `?visita=` de uma Realizada abre a mesma janela.
+- **Imóveis: escolher um Status no menu tira o filtro do link** (o link manda
+  o próprio status; os dois juntos mostrariam "Vendido" no menu e ativos na
+  lista).
+- **Ganho/Perdido seguem o `final` que o servidor manda em cada etapa**
+  (`etapaFinal.ts`). O nome só vale com servidor antigo, e nome ambíguo
+  ("Venda perdida") vira perda, como no servidor. A etapa marcada como
+  Concluída/Cancelada (`stage_type`) vem antes de uma que só bate pelo nome.
+
+Armadilha: **`stage_type` é palavra na API desde 2026-09-30** (era número). Tipo
+novo que o descreva usa `string`.
