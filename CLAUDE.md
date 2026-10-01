@@ -4415,7 +4415,11 @@ O que aparece na tela, no **Agendar visita** da Agenda:
   piscar).
 - **Cliente pelo nome, lista que carrega mais.** O servidor manda o nome limpo
   (nunca o número cru do WhatsApp); o campo, depois de escolhido, mostra
-  `nome · telefone formatado` (`telefone()`). A lista vem de 50 em 50 e pede a
+  `nome · telefone formatado` (`telefone()`). Cliente sem nome de verdade (o
+  servidor manda o telefone no lugar: nome igual ao `phone_number` ou só dígitos,
+  `+` e espaços) aparece pelo **telefone formatado**, sem repetir o telefone na
+  linha de baixo, e o campo escolhido mostra só o telefone (`nomeDoCliente` /
+  `textoEscolhido` no `LeadCombobox`). A lista vem de 50 em 50 e pede a
   próxima página ao rolar até perto do fim; o rodapé diz "Mostrando 50 de 1.240 —
   digite para buscar" (sem mais páginas, só "Mostrando 2 de 2"). Nova busca volta
   à página 1 e resposta de busca antiga é descartada.
@@ -4456,6 +4460,8 @@ Armadilhas:
 3. **`LeadCombobox` é compartilhado com Propostas**: `allowCreate` nasce `true` e
    `paginated` nasce `false` (Propostas segue com `leadPicker(q, 20)`, sem rodapé).
    Só a visita liga `paginated`.
-4. **A paginação do cliente e o `/visits/realtors` vêm do servidor** (PR do
-   `lm-flow` da parte 0). Contra o servidor antigo, o rodapé de total não aparece
-   (sem `meta.total`) e os botões de corretor dão erro de carregamento.
+4. **A paginação do cliente e o `/visits/realtors` vêm do servidor**
+   (**comercial281/lm-flow#356**, mergear ANTES deste). Contra o servidor antigo,
+   o rodapé de total não aparece (sem `meta.total`) e os botões de corretor dão
+   erro de carregamento. Os botões usam o mesmo nome que a visita mostra
+   (`Visits::Booking.user_ref`), em ordem por ele.

@@ -19,7 +19,7 @@ vi.mock('@/services/visits/visitsService', async (orig) => {
   };
 });
 
-import { LeadCombobox } from './LeadCombobox';
+import { LeadCombobox, nomeDoCliente, textoEscolhido } from './LeadCombobox';
 import type { LeadPickerItem } from '@/services/visits/visitsService';
 
 const cliente = (i: number): LeadPickerItem => ({
@@ -178,6 +178,71 @@ describe('LeadCombobox paginado', () => {
     expect(screen.getByDisplayValue('Leonardo Teste · (11) 99999-0000')).toBeInTheDocument();
     expect(screen.queryByDisplayValue(/whatsapp|5511999990000/)).not.toBeInTheDocument();
     expect(screen.queryByText(/@s\.whatsapp\.net/)).not.toBeInTheDocument();
+  });
+});
+
+describe('LeadCombobox: cliente sem nome de verdade', () => {
+  it('o nome igual ao telefone vira o telefone formatado, sem repetir na linha de baixo', async () => {
+    leadPickerPage.mockResolvedValue(resposta(
+      [{ id: 'c1', name: '5511999990000', phone_number: '5511999990000', in_pipeline: false }],
+      { total: 1, page: 1, per_page: 50, has_more: false },
+    ));
+    render(<Campo />);
+    await abrirLista();
+
+    expect(await screen.findByText('(11) 99999-0000')).toBeInTheDocument();
+    expect(screen.getAllByText(/99999-0000/)).toHaveLength(1);
+    expect(screen.queryByText('5511999990000')).not.toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+  });
+
+  it('nome só com dígitos, + e espaços também vira o telefone formatado; o e-mail continua embaixo', async () => {
+    leadPickerPage.mockResolvedValue(resposta(
+      [{ id: 'c1', name: '+55 11 99999 0000', phone_number: '5511999990000@s.whatsapp.net', email: 'teste@example.com', in_pipeline: false }],
+      { total: 1, page: 1, per_page: 50, has_more: false },
+    ));
+    render(<Campo />);
+    await abrirLista();
+
+    expect(await screen.findByText('(11) 99999-0000')).toBeInTheDocument();
+    expect(screen.getByText('teste@example.com')).toBeInTheDocument();
+    expect(screen.queryByText(/\+55 11/)).not.toBeInTheDocument();
+  });
+
+  it('escolhido, o campo mostra só o telefone formatado', async () => {
+    leadPickerPage.mockResolvedValue(resposta(
+      [{ id: 'c1', name: '5511999990000', phone_number: '5511999990000', in_pipeline: false }],
+      { total: 1, page: 1, per_page: 50, has_more: false },
+    ));
+    render(<Campo />);
+    await abrirLista();
+    await userEvent.click(await screen.findByText('(11) 99999-0000'));
+
+    expect(screen.getByDisplayValue('(11) 99999-0000')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue(/·/)).not.toBeInTheDocument();
+  });
+
+  it('cliente com nome continua com nome e telefone embaixo', async () => {
+    leadPickerPage.mockResolvedValue(resposta(
+      [{ id: 'c1', name: 'Leonardo Teste 2', phone_number: '5511999990000', in_pipeline: false }],
+      { total: 1, page: 1, per_page: 50, has_more: false },
+    ));
+    render(<Campo />);
+    await abrirLista();
+
+    expect(await screen.findByText('Leonardo Teste 2')).toBeInTheDocument();
+    expect(screen.getByText('(11) 99999-0000')).toBeInTheDocument();
+  });
+});
+
+describe('nomeDoCliente / textoEscolhido', () => {
+  it('reconhece o telefone no lugar do nome', () => {
+    expect(nomeDoCliente({ name: '5511999990000', phone_number: '5511999990000' })).toEqual({ nome: '(11) 99999-0000', ehTelefone: true });
+    expect(nomeDoCliente({ name: '+55 11 99999 0000', phone_number: null })).toEqual({ nome: '(11) 99999-0000', ehTelefone: true });
+    expect(nomeDoCliente({ name: 'Ana Teste', phone_number: '5511999990000' })).toEqual({ nome: 'Ana Teste', ehTelefone: false });
+    expect(nomeDoCliente({ name: 'Contato #12', phone_number: null })).toEqual({ nome: 'Contato #12', ehTelefone: false });
+    expect(textoEscolhido({ name: 'Ana Teste', phone_number: '5511999990000' })).toBe('Ana Teste · (11) 99999-0000');
+    expect(textoEscolhido({ name: '5511999990000', phone_number: '5511999990000' })).toBe('(11) 99999-0000');
   });
 });
 

@@ -30,6 +30,32 @@ interface Props {
   paginated?: boolean;
 }
 
+/**
+ * Cliente sem nome de verdade: o servidor manda o telefone no lugar do nome
+ * (às vezes cru, `5511999990000`). Aí o nome mostrado é o telefone formatado,
+ * e ele não se repete na linha de baixo nem no campo escolhido.
+ */
+export function nomeDoCliente(item: Pick<LeadPickerItem, 'name' | 'phone_number'>): { nome: string; ehTelefone: boolean } {
+  const nome = (item.name ?? '').trim();
+  const fone = (item.phone_number ?? '').trim();
+  const ehTelefone = nome === '' || (fone !== '' && nome === fone) || /^[\d+\s]+$/.test(nome);
+  if (!ehTelefone) return { nome, ehTelefone: false };
+  return { nome: telefone(fone || nome) || nome, ehTelefone: true };
+}
+
+/** Texto do campo depois de escolhido: "Nome · (11) 99999-0000", ou só o telefone. */
+export function textoEscolhido(item: Pick<LeadPickerItem, 'name' | 'phone_number'>): string {
+  const { nome, ehTelefone } = nomeDoCliente(item);
+  if (ehTelefone) return nome;
+  return [nome, telefone(item.phone_number)].filter(Boolean).join(' · ');
+}
+
+/** Linha de baixo da lista: telefone e e-mail, sem repetir o telefone que já é o nome. */
+function linhaDeBaixo(item: LeadPickerItem): string {
+  const { ehTelefone } = nomeDoCliente(item);
+  return [ehTelefone ? '' : telefone(item.phone_number), item.email].filter(Boolean).join(' · ');
+}
+
 const POR_PAGINA = 50;
 /** Distância do fim da lista (px) em que a próxima página já é pedida. */
 const PERTO_DO_FIM = 80;
@@ -168,7 +194,7 @@ export function LeadCombobox({
         <div className="relative mt-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
-            value={value && !open ? [value.name, telefone(value.phone_number)].filter(Boolean).join(' · ') : query}
+            value={value && !open ? textoEscolhido(value) : query}
             onChange={e => { setQuery(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
             placeholder={placeholder}
@@ -191,30 +217,36 @@ export function LeadCombobox({
                 {allowCreate ? 'Nenhum lead encontrado' : 'Nenhum cliente seu com esse nome ou telefone'}
               </div>
             )}
-            {items.map(item => (
-              <button
-                key={item.id}
-                type="button"
-                className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0"
-                onClick={() => { onChange(item); setOpen(false); setQuery(''); }}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-medium text-sm truncate flex items-center gap-1.5">
-                    <UserIcon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                    {item.name}
+            {items.map(item => {
+              const { nome, ehTelefone } = nomeDoCliente(item);
+              const abaixo = linhaDeBaixo(item);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0"
+                  onClick={() => { onChange(item); setOpen(false); setQuery(''); }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-medium text-sm truncate flex items-center gap-1.5">
+                      <UserIcon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                      {nome}
+                    </div>
+                    {item.in_pipeline && (
+                      <span className="text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary flex items-center gap-1 flex-shrink-0">
+                        <KanbanSquare className="h-2.5 w-2.5" />
+                        {item.stage_name ?? 'kanban'}
+                      </span>
+                    )}
                   </div>
-                  {item.in_pipeline && (
-                    <span className="text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary flex items-center gap-1 flex-shrink-0">
-                      <KanbanSquare className="h-2.5 w-2.5" />
-                      {item.stage_name ?? 'kanban'}
-                    </span>
+                  {(abaixo || !ehTelefone) && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {abaixo || '—'}
+                    </div>
                   )}
-                </div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  {[telefone(item.phone_number), item.email].filter(Boolean).join(' · ') || '—'}
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
 
             {paginated && total !== null && items.length > 0 && (
               <div className="sticky bottom-0 bg-popover border-t border-border px-3 py-2 text-xs text-muted-foreground">
