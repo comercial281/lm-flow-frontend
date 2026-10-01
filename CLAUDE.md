@@ -4278,11 +4278,13 @@ destino passaram a ler o filtro do endereço.
 - **Agenda: `?visita=` MOSTRA a visita, não age sobre ela** (busca por
   `GET /visits/:id` se não estiver carregada; não achou → "Visita não
   encontrada"). Sem filtro do link, o calendário vai pro mês dela; com filtro,
-  fica na lista. O card ou a pílula ganha contorno por 2 s. Única exceção:
+  fica na lista. O card ou a pílula ganha contorno por 2 s. Exceção (além da
+  Realizada, abaixo):
   visita que já passou e segue Agendada/Confirmada abre o diálogo de realizada.
   Nunca abrir "Confirmar realização" para visita futura: grava e dispara
   automação. Trocar para Calendário tira o filtro do link: o calendário é
   sempre o mês na tela.
+- Visita Realizada abre *Dar retorno* (nota e comentário, `PATCH /visits/:id/feedback`, sem disparar automação); o link `?visita=` de uma Realizada abre a mesma janela.
 - **Imóveis: escolher um Status no menu tira o filtro do link** (o link manda
   o próprio status; os dois juntos mostrariam "Vendido" no menu e ativos na
   lista).

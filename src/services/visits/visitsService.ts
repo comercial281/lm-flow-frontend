@@ -64,6 +64,19 @@ export const visitsService = {
     return (res.data as { data: Visit }).data;
   },
 
+  /**
+   * Retorno de visita já Realizada: grava só nota e/ou comentário. Não mexe na
+   * data de realização nem dispara automação. 422 se a visita não está
+   * Realizada ou se não veio nada pra salvar.
+   */
+  async feedback(id: string, rating?: number, feedbackNotes?: string): Promise<Visit> {
+    const body: { rating?: number; feedback_notes?: string } = {};
+    if (rating !== undefined) body.rating = rating;
+    if (feedbackNotes !== undefined) body.feedback_notes = feedbackNotes;
+    const res = await api.patch(`${BASE}/${id}/feedback`, body);
+    return (res.data as { data: Visit }).data;
+  },
+
   async cancel(id: string, reason?: string): Promise<Visit> {
     const res = await api.post(`${BASE}/${id}/cancel`, { reason });
     return (res.data as { data: Visit }).data;

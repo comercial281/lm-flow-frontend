@@ -31,6 +31,7 @@ import {
   ChevronRight,
   CalendarDays,
   List,
+  MessageSquare,
 } from 'lucide-react';
 import {
   visitsService,
@@ -52,6 +53,7 @@ import { telefone } from '@/lib/formato';
 import { lerFiltroAgenda, type FiltroAgenda } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
 import { intervaloDoMes, rotuloContador, lerContador } from '@/features/visits/contagem';
+import { acaoDaVisita, temRetorno, type AcaoDaVisita } from '@/features/visits/acaoDaVisita';
 
 const FILTER_TABS = [
   { key: '', label: 'Todas' },
@@ -250,7 +252,7 @@ export default function Visits() {
   const [form, setForm]             = useState<VisitFormData>(EMPTY_FORM);
   const [saving, setSaving]         = useState(false);
 
-  const [actionModal, setActionModal] = useState<{ visit: Visit; action: 'complete' | 'cancel' } | null>(null);
+  const [actionModal, setActionModal] = useState<{ visit: Visit; action: AcaoDaVisita } | null>(null);
   const [rating, setRating]           = useState(0);
   const [feedback, setFeedback]       = useState('');
   const [cancelReason, setCancelReason] = useState('');
@@ -274,12 +276,19 @@ export default function Visits() {
   const propertyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const realtorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Abre um diálogo de ação. "Dar retorno" já vem com a nota e o comentário que
+  // a visita tem; os outros começam vazios.
+  const abrirAcao = (visit: Visit, action: AcaoDaVisita) => {
+    setRating(action === 'retorno' ? (visit.rating ?? 0) : 0);
+    setFeedback(action === 'retorno' ? (visit.feedback_notes ?? '') : '');
+    setCancelReason('');
+    setActionModal({ visit, action });
+  };
+
   const handleVisitClick = (visit: Visit) => {
-    if (visit.status === 'scheduled' || visit.status === 'confirmed' || visit.status === 'in_progress') {
-      setActionModal({ visit, action: 'complete' });
-    } else {
-      toast.info(`Visita ${VISIT_STATUS_LABELS[visit.status] ?? visit.status}`);
-    }
+    const acao = acaoDaVisita(visit, 'clique');
+    if (acao) abrirAcao(visit, acao);
+    else toast.info(`Visita ${VISIT_STATUS_LABELS[visit.status] ?? visit.status}`);
   };
 
   // Trocar de mês rápido (‹ › ‹ ›) dispara pedidos que se cruzam: só a resposta
@@ -352,10 +361,12 @@ export default function Visits() {
     };
 
     const mostrar = (v: Visit) => {
-      // Exceção: visita que já passou e segue Agendada/Confirmada. O que falta ali
-      // é registrar o que aconteceu, e é o diálogo de "realizada" que faz isso.
-      if (isPast(v.scheduled_at) && (v.status === 'scheduled' || v.status === 'confirmed')) {
-        setActionModal({ visit: v, action: 'complete' });
+      // Exceções (regra em features/visits/acaoDaVisita.ts): visita que já passou
+      // e segue Agendada/Confirmada abre o diálogo de "realizada"; Realizada é
+      // mostrada e abre "Dar retorno" (é o que baixa "Visitas sem feedback").
+      const acao = acaoDaVisita(v, 'link');
+      if (acao === 'complete') {
+        abrirAcao(v, 'complete');
         return;
       }
       // Sem filtro do link, o calendário vai pro mês da visita (e recarrega esse
@@ -367,6 +378,7 @@ export default function Visits() {
         ));
       }
       setVisitaDestacada(v.id);
+      if (acao === 'retorno') abrirAcao(v, 'retorno');
     };
 
     const naLista = visits.find(x => x.id === alvo);
@@ -504,7 +516,11 @@ export default function Visits() {
     setActionLoading(true);
     try {
       let updated: Visit;
-      if (actionModal.action === 'complete') {
+      if (actionModal.action === 'retorno') {
+        // Só nota e comentário: não muda a data da realização nem dispara automação.
+        updated = await visitsService.feedback(actionModal.visit.id, rating || undefined, feedback.trim() ? feedback : undefined);
+        toast.success('Retorno salvo');
+      } else if (actionModal.action === 'complete') {
         updated = await visitsService.complete(actionModal.visit.id, rating || undefined, feedback || undefined);
         toast.success('Visita marcada como realizada');
       } else {
@@ -518,12 +534,21 @@ export default function Visits() {
       setRating(0);
       setFeedback('');
       setCancelReason('');
-    } catch {
-      toast.error('Erro ao executar ação');
+    } catch (e) {
+      if (actionModal.action === 'retorno') {
+        const status = (e as { response?: { status?: number } })?.response?.status;
+        if (status === 422) toast.error('Não deu para salvar: o retorno só vale para visita realizada, com nota ou comentário');
+        else if (status === 404) toast.error('Visita não encontrada');
+        else toast.error('Erro ao salvar retorno');
+      } else {
+        toast.error('Erro ao executar ação');
+      }
     } finally {
       setActionLoading(false);
     }
   };
+
+  const semNadaParaSalvar = actionModal?.action === 'retorno' && !rating && !feedback.trim();
 
   const grouped = groupByDate(visits);
 
@@ -664,8 +689,9 @@ export default function Visits() {
                       visit={visit}
                       destacada={visitaDestacada === visit.id}
                       onConfirm={handleConfirm}
-                      onComplete={() => setActionModal({ visit, action: 'complete' })}
-                      onCancel={() => setActionModal({ visit, action: 'cancel' })}
+                      onComplete={() => abrirAcao(visit, 'complete')}
+                      onCancel={() => abrirAcao(visit, 'cancel')}
+                      onRetorno={() => abrirAcao(visit, 'retorno')}
                     />
                   ))}
                 </div>
@@ -806,15 +832,17 @@ export default function Visits() {
         </DialogContent>
       </Dialog>
 
-      {/* Complete / Cancel action modal */}
+      {/* Complete / Retorno / Cancel action modal */}
       <Dialog open={!!actionModal} onOpenChange={() => setActionModal(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {actionModal?.action === 'complete' ? 'Marcar visita como realizada' : 'Cancelar visita'}
+              {actionModal?.action === 'complete'
+                ? 'Marcar visita como realizada'
+                : actionModal?.action === 'retorno' ? 'Dar retorno da visita' : 'Cancelar visita'}
             </DialogTitle>
           </DialogHeader>
-          {actionModal?.action === 'complete' ? (
+          {actionModal?.action === 'complete' || actionModal?.action === 'retorno' ? (
             <div className="space-y-4 py-2">
               <div>
                 <UILabel>Avaliação (1-5)</UILabel>
@@ -854,9 +882,13 @@ export default function Visits() {
             <Button
               variant={actionModal?.action === 'cancel' ? 'destructive' : 'default'}
               onClick={handleAction}
-              disabled={actionLoading}
+              disabled={actionLoading || semNadaParaSalvar}
             >
-              {actionLoading ? 'Salvando...' : actionModal?.action === 'complete' ? 'Confirmar realização' : 'Cancelar visita'}
+              {actionLoading
+                ? 'Salvando...'
+                : actionModal?.action === 'complete'
+                  ? 'Confirmar realização'
+                  : actionModal?.action === 'retorno' ? 'Salvar retorno' : 'Cancelar visita'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -871,6 +903,7 @@ function VisitCard({
   onConfirm,
   onComplete,
   onCancel,
+  onRetorno,
 }: {
   visit: Visit;
   /** Visita que veio pelo link: ganha contorno. */
@@ -878,6 +911,8 @@ function VisitCard({
   onConfirm: (v: Visit) => void;
   onComplete: (v: Visit) => void;
   onCancel: (v: Visit) => void;
+  /** Realizada sem nota nem comentário: abre "Dar retorno". */
+  onRetorno: (v: Visit) => void;
 }) {
   const isPastVisit = isPast(visit.scheduled_at);
   const isActive = ['scheduled', 'confirmed', 'in_progress'].includes(visit.status);
@@ -974,6 +1009,14 @@ function VisitCard({
               onClick={() => onCancel(visit)}>
               <XCircle className="h-3.5 w-3.5 mr-1" />
               Cancelar
+            </Button>
+          </div>
+        )}
+        {visit.status === 'completed' && !temRetorno(visit) && (
+          <div className="flex gap-2 mt-3">
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onRetorno(visit)}>
+              <MessageSquare className="h-3.5 w-3.5 mr-1" />
+              Dar retorno
             </Button>
           </div>
         )}
