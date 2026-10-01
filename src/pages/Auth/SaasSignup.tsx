@@ -76,7 +76,7 @@ export const SaasSignup: React.FC = () => {
       <div className="relative lg:w-[55%] xl:w-[60%] hidden lg:block">
         <div className="relative flex flex-col justify-between h-full px-12 py-10 overflow-hidden">
           <FlowBackground />
-          <div className="relative z-10"><AppLogo className="h-8" /></div>
+          <div className="relative z-10"><AppLogo className="h-8" forceTheme="dark" /></div>
           <div className="relative z-10 space-y-6">
             <p className="text-xs font-semibold tracking-[0.2em] uppercase mb-3" style={{ color: 'rgba(167,100,250,0.8)' }}>
               CRM Imobiliário
@@ -101,7 +101,7 @@ export const SaasSignup: React.FC = () => {
 
       {/* Direita — formulário */}
       <div className="flex-1 flex flex-col min-h-screen relative" style={{ background: 'rgba(15,5,32,0.92)', borderLeft: '1px solid rgba(124,58,237,0.12)' }}>
-        <div className="lg:hidden pt-10 px-8"><AppLogo className="h-7" /></div>
+        <div className="lg:hidden pt-10 px-8"><AppLogo className="h-7" forceTheme="dark" /></div>
         <div className="flex-1 flex items-center justify-center px-8 py-12">
           <div className="w-full max-w-sm">
 

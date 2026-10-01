@@ -63,7 +63,7 @@ const LeftPanel: React.FC = () => (
 
     {/* Content above the background */}
     <div className="relative z-10">
-      <AppLogo className="h-8" />
+      <AppLogo className="h-8" forceTheme="dark" />
     </div>
 
     <div className="relative z-10 space-y-6">
@@ -309,7 +309,7 @@ export const Auth: React.FC = () => {
       >
         {/* Mobile logo */}
         <div className="lg:hidden pt-10 px-8">
-          <AppLogo className="h-7" />
+          <AppLogo className="h-7" forceTheme="dark" />
         </div>
 
         {/* Form area — centered */}

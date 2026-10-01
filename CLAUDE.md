@@ -4209,3 +4209,44 @@ Armadilhas:
 3. **Aba cujo endereço é começo do de outra** (`/bolsao` e `/bolsao/listas`)
    precisa de `exata: true`, senão as duas acendem.
 
+
+## O logo novo do LM Flow (desde 2026-10-01)
+
+O dono do produto trouxe o logo novo (o símbolo de dois "L" encaixados + "LM Flow")
+como imagem com fundo. Ele foi redesenhado em vetor e entrou no lugar do texto
+"LM FLOW" que o sistema desenhava, e o símbolo virou o ícone do app e da aba.
+
+O que aparece na tela:
+
+- **O logo com símbolo** em todo lugar que já tinha logo: barra do menu, login,
+  cadastro, convite de acesso, troca de senha, carregamento e as telas de retorno
+  das integrações. A grafia passou de "LM FLOW" para **"LM Flow"**.
+- **No tema escuro, o "LM" e a metade azul-marinho do símbolo viram branco**; o
+  roxo não muda.
+- **Ícone da aba, do celular e do app instalado**: o símbolo branco e roxo sobre
+  azul-marinho. Era o "LM" com a casinha, que o Giovani tinha mandado.
+- **Login, cadastro e convite de acesso mostram sempre o logo da versão escura.**
+  Essas três telas têm fundo escuro fixo, e o logo seguia o tema da pessoa: no
+  tema claro o "LM" azul-marinho sumia no fundo. O defeito já existia com o logo
+  antigo.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **O texto é desenho, não fonte.** As letras são da Figtree (Google, licença
+  livre), convertidas em curvas: o logo não depende de fonte carregada e sai igual
+  em qualquer aparelho.
+- **Fonte de verdade: `public/brand/`** (logo claro, logo escuro, símbolo e
+  símbolo escuro, em SVG). Esses arquivos também servem para uso fora do sistema.
+  O `AppLogo` carrega os mesmos traços, escritos no próprio componente.
+
+Armadilhas:
+
+1. **Tela nova com fundo escuro FIXO passa `forceTheme="dark"`** no `AppLogo`.
+   Sem isso o defeito do login volta, e ele é mudo: só aparece para quem usa o
+   tema claro.
+2. **Mudou o desenho, muda nos dois lugares**: `public/brand/` e os traços dentro
+   do `AppLogo`. Os ícones PNG e o `favicon.ico` são gerados a partir do símbolo e
+   precisam ser refeitos junto. O `generate-icons.mjs` da raiz é antigo (gera
+   quadrados de cor sólida) e NÃO deve ser rodado.
+3. **Não é `featureKey` nem `clientToggleKey`** e não tem metade de backend. Os
+   scanners do catálogo de funcionalidades não entram nesta história.
