@@ -4515,9 +4515,10 @@ Decisões (não reabrir sem o dono pedir):
   o gestor, nem o corretor. Sem "Outro horário". Quem decide é o servidor
   (`Visits::Agenda`, usado pela trava da marcação à mão e pela IA); a tela só
   mostra a mesma conta.
-- **Que corretor a IA confere, em camadas:** o dono do lead; senão o corretor fixo
-  da IA; senão o dono do número quando ela fala como o corretor; senão nenhum (só
-  o horário da imobiliária).
+- **Que corretor a IA confere, em camadas:** (0) o corretor da visita que ela está
+  remarcando (o lead já tem visita marcada); (1) o dono do lead; (2) o corretor
+  fixo da IA; (3) o dono do número quando ela fala como o corretor; senão nenhum
+  (só o horário da imobiliária).
 - **Chave `agenda_do_corretor` por imobiliária, desligada por padrão.** Ao ligar,
   o horário nasce copiado da IA principal; sem IA, 8h às 20h, de segunda a sábado.
 - **Na IA e no assistente, os valores antigos de dias/faixa/datas continuam
@@ -4526,17 +4527,24 @@ Decisões (não reabrir sem o dono pedir):
 
 Armadilhas:
 
-1. **O backend vem PRIMEIRO** (PRs da agenda no `lm-flow`: tabelas, chave, a conta
-   única e os endpoints; depois a IA). Contra o servidor antigo a chave nem existe.
+1. **O backend vem PRIMEIRO**: **comercial281/lm-flow#358** (tabelas, chave, a
+   conta única e os endpoints) e **comercial281/lm-flow#359** (a IA). Os dois no
+   ar antes de ligar a chave em qualquer cliente. Contra o servidor antigo a chave
+   nem existe.
 2. **O build da Vercel falha na checagem de funções** (`audit-feature-catalog.mjs`)
-   até a chave `agenda_do_corretor` estar no catálogo de produção, ou seja, até o
-   PR do servidor estar no ar. Localmente, rodar as travas sem o audit.
-3. **A chave vai LITERAL** em `useClientToggle('agenda_do_corretor')` (Agenda,
+   até a chave `agenda_do_corretor` estar no catálogo de produção, ou seja, o
+   **#358 no ar antes do merge deste**. Localmente, rodar as travas sem o audit.
+3. **Quem muda a regra é o gestor do servidor** (administrador, suporte ou quem vê
+   todas as conversas), não "quem não é isolado". A tela decide pelo
+   `meta.only_mine`: no cliente com o isolamento desligado o corretor vê os botões
+   de gestor, mas o servidor recusa salvar o horário (403) e grava a folga no nome
+   dele.
+4. **A chave vai LITERAL** em `useClientToggle('agenda_do_corretor')` (Agenda,
    modal, IA e assistente): os scripts do catálogo leem por regex.
-4. **`src/features/visits/daySlots.ts` continua sendo o caminho da chave
+5. **`src/features/visits/daySlots.ts` continua sendo o caminho da chave
    desligada** (e de quando o servidor responde `enabled: false`). Não apagar nem
    trocar a grade 07h–21h sem tirar a chave antes.
-5. **As contas puras da agenda** (motivo do dia fechado com as mesmas frases do
+6. **As contas puras da agenda** (motivo do dia fechado com as mesmas frases do
    servidor, rótulo da folga, horas de 30 em 30) moram em
    `src/features/visits/agenda.ts`, com spec; os pedidos ao servidor, em
    `src/services/visits/agendaService.ts`.
