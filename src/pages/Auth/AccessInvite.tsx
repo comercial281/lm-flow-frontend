@@ -100,7 +100,7 @@ const AccessInvite: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center px-6 py-12" style={{ background: '#0F0520' }}>
       <div className="w-full max-w-sm">
-        <AppLogo className="h-7 mb-8" />
+        <AppLogo className="h-7 mb-8" forceTheme="dark" />
 
         {carregando && (
           <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Abrindo seu convite...</p>
