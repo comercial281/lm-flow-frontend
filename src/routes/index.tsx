@@ -1400,7 +1400,8 @@ const AppRouter = () => {
               viraram abas dentro de /admin/clientes (reorg 19/08/2026) — rotas
               antigas só redirecionam, pra não quebrar link salvo/bookmark. */}
           <Route path="/admin/leads-ao-vivo" element={<Navigate to="/admin/clientes?tab=leads-ao-vivo" replace />} />
-          <Route path="/admin/modo-cliente" element={<Navigate to="/admin/clientes?tab=modo-cliente" replace />} />
+          {/* Modo Cliente saiu em 01/10/2026: o "Entrar" do cartão faz o mesmo. */}
+          <Route path="/admin/modo-cliente" element={<Navigate to="/admin/clientes" replace />} />
           <Route path="/admin/formularios" element={<Navigate to="/admin/clientes?tab=formularios" replace />} />
           <Route path="/admin/sugestoes-bugs" element={<Navigate to="/admin/clientes?tab=sugestoes-bugs" replace />} />
           <Route path="/admin/atividade" element={<Navigate to="/admin/clientes?tab=atividade" replace />} />

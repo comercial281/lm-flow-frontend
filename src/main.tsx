@@ -12,6 +12,14 @@ import { initTheme } from './utils/themeUtils';
 import { initGA4 } from './utils/ga4Utils';
 import { reloadForNewVersion } from './utils/chunkReload';
 
+// O Modo Cliente saiu em 01/10/2026. A chave que ele guardava no navegador
+// (token de um cliente) não serve mais pra nada: some na primeira abertura.
+try {
+  localStorage.removeItem('lm_client_mode');
+} catch {
+  // navegador sem localStorage: nada a limpar
+}
+
 // Registra o Service Worker PWA.
 // Aba aberta há horas NÃO pega deploy novo sozinha (o build em memória continua
 // o antigo até um reload) — era a causa de "essa aba não loga / sumiu o olho":

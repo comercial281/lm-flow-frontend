@@ -4,7 +4,6 @@ import { useAuthStore } from '@/store/authStore';
 import { requestMonitor } from '@/utils/requestMonitor';
 import apiAuth from '@/services/core/apiAuth';
 import { applySetupInterceptor } from '@/services/core/setupInterceptor';
-import { getClientModeToken } from '@/store/clientModeStore';
 import { requiredPermissionOf } from '@/services/core/forbidden';
 
 const api = axios.create({
@@ -55,15 +54,9 @@ api.interceptors.request.use(config => {
   (config as AxiosRequestConfig & { requestId?: string; requestStartTime?: number }).requestId = requestId;
   (config as AxiosRequestConfig & { requestId?: string; requestStartTime?: number }).requestStartTime = Date.now();
 
-  // Modo Cliente (super-admin): usa o token cunhado dentro do cliente.
-  const clientToken = getClientModeToken();
-  if (clientToken) {
-    config.headers.Authorization = `Bearer ${clientToken}`;
-  } else {
-    const authHeader = useAuthStore.getState().getAuthHeader();
-    if (authHeader) {
-      config.headers.Authorization = authHeader.Authorization;
-    }
+  const authHeader = useAuthStore.getState().getAuthHeader();
+  if (authHeader) {
+    config.headers.Authorization = authHeader.Authorization;
   }
 
   // Upload de arquivo: o Content-Type TEM que sair, sempre.
@@ -116,12 +109,6 @@ api.interceptors.response.use(
     }
 
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-
-    // Em Modo Cliente, um 401 é do token do cliente — NÃO renova nem derruba a
-    // sessão raiz do super-admin. Apenas propaga o erro pra tela tratar.
-    if (getClientModeToken()) {
-      return Promise.reject(error);
-    }
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (isRefreshing) {

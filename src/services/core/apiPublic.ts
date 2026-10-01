@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { applySetupInterceptor } from '@/services/core/setupInterceptor';
-import { getClientModeToken } from '@/store/clientModeStore';
 
 // Criar instância do axios com configurações base
 const apiPublic = axios.create({
@@ -13,15 +12,9 @@ const apiPublic = axios.create({
 
 // Interceptador para incluir o access_token nos headers das requisições
 apiPublic.interceptors.request.use((config) => {
-  // Modo Cliente (super-admin): token cunhado dentro do cliente vence.
-  const clientToken = getClientModeToken();
-  if (clientToken) {
-    config.headers.Authorization = `Bearer ${clientToken}`;
-  } else {
-    const authHeader = useAuthStore.getState().getAuthHeader();
-    if (authHeader) {
-      config.headers.Authorization = authHeader.Authorization;
-    }
+  const authHeader = useAuthStore.getState().getAuthHeader();
+  if (authHeader) {
+    config.headers.Authorization = authHeader.Authorization;
   }
 
   // Don't override Content-Type for FormData requests
