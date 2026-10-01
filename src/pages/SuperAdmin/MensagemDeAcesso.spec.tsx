@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 const svc = vi.hoisted(() => ({
   getMemberAccessConfig: vi.fn(),
@@ -34,5 +34,19 @@ describe('Mensagem de acesso', () => {
     svc.getMemberAccessConfig.mockRejectedValue({ response: { data: { error: 'falhou' } } });
     render(<MensagemDeAcesso />);
     expect(await screen.findByText('falhou')).toBeInTheDocument();
+  });
+
+  it('erro ao carregar não deixa salvar por cima: só o erro e "Tentar de novo"', async () => {
+    svc.getMemberAccessConfig.mockRejectedValueOnce({ response: { data: { error: 'falhou' } } });
+    render(<MensagemDeAcesso />);
+    expect(await screen.findByText('falhou')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /salvar/i })).toBeNull();
+    const retry = screen.getByRole('button', { name: /tentar de novo/i });
+
+    svc.getMemberAccessConfig.mockClear();
+    fireEvent.click(retry);
+    expect(await screen.findByDisplayValue('Olá {nome}! Entre: {link}')).toBeInTheDocument();
+    expect(svc.getMemberAccessConfig).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('falhou')).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Loader2, RotateCcw, Save } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import clientInstancesService, {
@@ -30,6 +30,9 @@ export default function MensagemDeAcesso() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // Erro do carregamento inicial: sem config lida, o form não pode aparecer
+  // (salvar por cima apagaria a mensagem gravada / religaria o envio).
+  const [loadError, setLoadError] = useState('');
   const [saved, setSaved] = useState(false);
   const [template, setTemplate] = useState('');
   const [instance, setInstance] = useState('');
@@ -37,7 +40,8 @@ export default function MensagemDeAcesso() {
   const [defaultTemplate, setDefaultTemplate] = useState('');
   const [instances, setInstances] = useState<CentralInstance[]>([]);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true); setLoadError('');
     Promise.all([
       clientInstancesService.getMemberAccessConfig(),
       clientInstancesService.centralInstances().catch(() => ({ data: { data: [] as CentralInstance[] } })),
@@ -50,9 +54,11 @@ export default function MensagemDeAcesso() {
         setDefaultTemplate(cfg.default_template);
         setInstances(instRes.data.data ?? []);
       })
-      .catch(e => setError(e?.response?.data?.error ?? 'Não consegui carregar a mensagem de acesso.'))
+      .catch(e => setLoadError(e?.response?.data?.error ?? 'Não consegui carregar a mensagem de acesso.'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const save = async () => {
     setSaving(true); setError(''); setSaved(false);
@@ -75,6 +81,16 @@ export default function MensagemDeAcesso() {
     return (
       <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
         <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Carregando...
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-4 px-6 py-6">
+        <h2 className="text-xl font-semibold">Mensagem de acesso</h2>
+        <p className="text-sm text-destructive">{loadError}</p>
+        <Button onClick={load} className="gap-1">Tentar de novo</Button>
       </div>
     );
   }
