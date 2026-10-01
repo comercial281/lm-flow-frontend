@@ -56,6 +56,11 @@ const SemDados: React.FC<{
   </GlassCard>
 );
 
+/** O gráfico com um resumo de uma linha para leitor de tela (o SVG em si não diz nada). */
+const Grafico: React.FC<{ resumo: string; children: React.ReactNode }> = ({ resumo, children }) => (
+  <div role="img" aria-label={resumo}>{children}</div>
+);
+
 const Destaque: React.FC<{ valor: string; legenda: string }> = ({ valor, legenda }) => (
   <div style={{ marginBottom: 8 }}>
     <div className="lmfn-numero-valor" style={{ fontSize: 24 }}>{valor}</div>
@@ -74,14 +79,16 @@ export const LeadsDiaSemana: React.FC<ContextoBloco> = ({ dados, carregando, vis
   return (
     <GlassCard title={titulo}>
       <Destaque valor={dia ?? VAZIO} legenda={dia ? 'é o dia que mais chega lead no período' : 'Nenhum lead no período'} />
-      <ResponsiveContainer width="100%" height={190}>
-        <BarChart data={linhas}>
-          <XAxis dataKey="nome" tick={eixo} tickLine={false} axisLine={false} />
-          <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={28} />
-          <Tooltip {...tooltipStyle} formatter={formatoLeads} />
-          <Bar dataKey="leads" fill="var(--lmf-accent)" radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+      <Grafico resumo={`${titulo}: ${linhas.map(l => `${l.nome} ${numero(l.leads)}`).join(', ')}`}>
+        <ResponsiveContainer width="100%" height={190}>
+          <BarChart data={linhas}>
+            <XAxis dataKey="nome" tick={eixo} tickLine={false} axisLine={false} />
+            <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={28} />
+            <Tooltip {...tooltipStyle} formatter={formatoLeads} />
+            <Bar dataKey="leads" fill="var(--lmf-accent)" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </Grafico>
     </GlassCard>
   );
 };
@@ -94,21 +101,28 @@ export const LeadsHorario: React.FC<ContextoBloco> = ({ dados, carregando }) => 
   }
   const fora = percentualForaDoHorario(bloco.hours);
   const linhas = bloco.hours.map(h => ({ hora: `${h.hour}h`, leads: h.leads }));
+  const pico = bloco.hours.reduce<{ hour: number; leads: number } | null>((m, h) => (!m || h.leads > m.leads ? h : m), null);
+  const resumo = fora === null || !pico
+    ? `${titulo}: nenhum lead no período`
+    : `${titulo}: mais leads às ${pico.hour}h (${numero(pico.leads)}); ${porcentagem(fora, 0)} fora do horário comercial`;
   return (
     <GlassCard title={titulo}>
       <Destaque
         valor={fora === null ? VAZIO : porcentagem(fora, 0)}
         legenda={fora === null ? 'Nenhum lead no período' : 'dos leads chegaram fora do horário comercial (8h às 18h)'}
       />
-      <ResponsiveContainer width="100%" height={190}>
-        <AreaChart data={linhas}>
-          <ReferenceArea x1={`${ABRE}h`} x2={`${FECHA}h`} fill="var(--lmf-accent-soft)" />
-          <XAxis dataKey="hora" interval={3} tick={eixo} tickLine={false} axisLine={false} />
-          <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={28} />
-          <Tooltip {...tooltipStyle} formatter={formatoLeads} />
-          <Area type="monotone" dataKey="leads" stroke="var(--lmf-accent)" fill="var(--lmf-accent-soft)" strokeWidth={2} />
-        </AreaChart>
-      </ResponsiveContainer>
+      <Grafico resumo={resumo}>
+        <ResponsiveContainer width="100%" height={190}>
+          <AreaChart data={linhas}>
+            {/* A faixa do horário comercial é neutra: não pode se confundir com a área dos leads. */}
+            <ReferenceArea x1={`${ABRE}h`} x2={`${FECHA}h`} fill="var(--lmf-track)" fillOpacity={0.7} />
+            <XAxis dataKey="hora" interval={3} tick={eixo} tickLine={false} axisLine={false} />
+            <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={28} />
+            <Tooltip {...tooltipStyle} formatter={formatoLeads} />
+            <Area type="monotone" dataKey="leads" stroke="var(--lmf-accent)" fill="var(--lmf-accent-soft)" strokeWidth={2} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </Grafico>
     </GlassCard>
   );
 };
@@ -120,16 +134,23 @@ export const LeadsSeisMeses: React.FC<ContextoBloco> = ({ dados, carregando }) =
     return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="os leads dos últimos 6 meses" />;
   }
   const linhas = bloco.months.map(m => ({ mes: rotuloMes(m.month), leads: m.leads }));
+  const algum = linhas.some(l => l.leads > 0);
   return (
     <GlassCard title={titulo} subtitle="Leads que entraram no funil, por mês">
-      <ResponsiveContainer width="100%" height={210}>
-        <BarChart data={linhas}>
-          <XAxis dataKey="mes" tick={eixo} tickLine={false} axisLine={false} />
-          <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={32} />
-          <Tooltip {...tooltipStyle} formatter={formatoLeads} />
-          <Bar dataKey="leads" fill="var(--lmf-accent)" radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+      {algum ? (
+        <Grafico resumo={`${titulo}: ${linhas.map(l => `${l.mes} ${numero(l.leads)}`).join(', ')}`}>
+          <ResponsiveContainer width="100%" height={210}>
+            <BarChart data={linhas}>
+              <XAxis dataKey="mes" tick={eixo} tickLine={false} axisLine={false} />
+              <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={32} />
+              <Tooltip {...tooltipStyle} formatter={formatoLeads} />
+              <Bar dataKey="leads" fill="var(--lmf-accent)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Grafico>
+      ) : (
+        <EmptyBlock text="Nenhum lead nos últimos 6 meses" />
+      )}
     </GlassCard>
   );
 };
@@ -142,7 +163,8 @@ export const Origem: React.FC<ContextoBloco> = ({ dados, carregando }) => {
   }
   const max = Math.max(1, ...bloco.items.map(i => i.count));
   return (
-    <GlassCard title={titulo} subtitle="Leads do período, pela primeira origem registrada">
+    <GlassCard title={titulo} subtitle="Contatos captados no período, pela primeira origem">
+      <Destaque valor={numero(bloco.total)} legenda="contatos captados no período" />
       {bloco.items.length === 0 && <EmptyBlock text="Nenhuma origem registrada no período." />}
       {bloco.items.map(i => (
         <div key={i.source} className="lmfn-item">

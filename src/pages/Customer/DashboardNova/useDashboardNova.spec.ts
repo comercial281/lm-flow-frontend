@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import type { FiltrosDashboard } from './types';
 
 const fetchMetrics = vi.fn();
 vi.mock('@/services/dashboard/dashboardMetricsService', () => ({
@@ -37,5 +38,54 @@ describe('useDashboardNova', () => {
     await waitFor(() => expect(result.current.carregando).toBe(false));
     expect(result.current.erro).toBe('Não consegui carregar a Dashboard.');
     expect(result.current.dados).toBeNull();
+  });
+
+  it('lista de blocos vazia não vira pedido com blocks= vazio', () => {
+    const { result } = renderHook(() => useDashboardNova({ preset: 'last_7_days' }, []));
+    expect(fetchMetrics).not.toHaveBeenCalled();
+    expect(result.current.carregando).toBe(false);
+    expect(result.current.pendente).toBe(false);
+  });
+
+  it('pendente: já no render em que o filtro muda, antes de o pedido sair', async () => {
+    fetchMetrics.mockResolvedValueOnce({ period: {}, scope: { mode: 'all', owner_id: null } });
+    const vistos: { carregando: boolean; pendente: boolean }[] = [];
+    const { result, rerender } = renderHook(
+      ({ f }) => {
+        const r = useDashboardNova(f, ['kpis']);
+        vistos.push({ carregando: r.carregando, pendente: r.pendente });
+        return r;
+      },
+      { initialProps: { f: { preset: 'last_7_days' } as FiltrosDashboard } },
+    );
+    await waitFor(() => expect(result.current.pendente).toBe(false));
+
+    let soltar: (v: unknown) => void = () => {};
+    fetchMetrics.mockImplementationOnce(() => new Promise(r => { soltar = r; }));
+    vistos.length = 0;
+    rerender({ f: { preset: 'last_7_days', ownerId: 'u1' } });
+    // O primeiro render com o filtro novo ainda tem carregando = false (o efeito não rodou).
+    expect(vistos[0]).toEqual({ carregando: false, pendente: true });
+    expect(result.current.pendente).toBe(true);
+
+    await act(async () => { soltar({ period: {}, scope: { mode: 'all', owner_id: 'u1' } }); });
+    expect(result.current.pendente).toBe(false);
+    expect(result.current.dados?.scope.owner_id).toBe('u1');
+  });
+
+  it('erro depois de uma resposta boa guarda os números de antes e continua pendente', async () => {
+    fetchMetrics.mockResolvedValueOnce({ period: {}, scope: { mode: 'all' } });
+    const { result, rerender } = renderHook(({ f }) => useDashboardNova(f, ['kpis']), {
+      initialProps: { f: { preset: 'last_7_days' } as FiltrosDashboard },
+    });
+    await waitFor(() => expect(result.current.dados).not.toBeNull());
+
+    fetchMetrics.mockRejectedValueOnce(new Error('rede'));
+    rerender({ f: { preset: 'last_30_days' } });
+    await waitFor(() => expect(result.current.erro).toBe('Não consegui carregar a Dashboard.'));
+    expect(result.current.dados?.scope.mode).toBe('all');
+    expect(result.current.carregando).toBe(false);
+    // A resposta em mãos não é a do filtro pedido.
+    expect(result.current.pendente).toBe(true);
   });
 });

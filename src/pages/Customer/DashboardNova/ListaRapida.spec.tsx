@@ -126,6 +126,13 @@ describe('ListaRapida', () => {
     expect(screen.getByText('Mostrando 2 de 1.200')).toBeInTheDocument();
   });
 
+  it('lista limitada: o "Mostrando" também sai com +', async () => {
+    fetchList.mockResolvedValue(payload('esperando_resposta', [conversa('Fulano'), conversa('Beltrano')], 500));
+    abrir({ limitado: true });
+    await waitFor(() => screen.getByText('Fulano'));
+    expect(screen.getByText('Mostrando 2 de 500+')).toBeInTheDocument();
+  });
+
   it('não avisa quando a lista está inteira', async () => {
     fetchList.mockResolvedValue(umItem('leads_periodo', 'Fulano', 1));
     abrir();

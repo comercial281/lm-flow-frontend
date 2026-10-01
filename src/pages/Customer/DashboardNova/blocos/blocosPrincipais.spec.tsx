@@ -166,7 +166,7 @@ describe('bloco Pendências', () => {
     expect(screen.getByText(/3 parados desde ontem ou antes/)).toBeInTheDocument();
     expect(screen.getByText(/1 parado desde ontem ou antes/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Leads sem responsável/ }));
-    expect(abrirLista).toHaveBeenCalledWith('sem_responsavel', 'Leads sem responsável');
+    expect(abrirLista).toHaveBeenCalledWith('sem_responsavel', 'Leads sem responsável', false);
   });
 
   it('"Esperando resposta" no teto mostra 500+', () => {
@@ -176,6 +176,14 @@ describe('bloco Pendências', () => {
     expect(within(titulo).getByText('500+')).toBeInTheDocument();
     const linha = screen.getByRole('button', { name: /Esperando resposta/ });
     expect(within(linha).getByText('500+')).toBeInTheDocument();
+  });
+
+  it('linha no teto abre a lista avisando que ela é limitada', () => {
+    const abrirLista = vi.fn();
+    const rows = [{ key: 'esperando_resposta', total: 500, older: 0, capped: true }];
+    wrap(<Pendencias {...ctx({ abrirLista }, { pending: { rows } })} />);
+    fireEvent.click(screen.getByRole('button', { name: /Esperando resposta/ }));
+    expect(abrirLista).toHaveBeenCalledWith('esperando_resposta', 'Esperando resposta há mais de 1 h', true);
   });
 
   it('sem as pendências, diz que não deu para carregar', () => {

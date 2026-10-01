@@ -41,6 +41,7 @@ export interface ContextoBloco {
   carregando: boolean;
   visao: Visao;
   pode: PodeAbrir;
-  abrirLista: (kind: ListaKind, titulo: string) => void;
+  /** `limitado`: o número que abriu a lista tem teto no servidor (sai com +). */
+  abrirLista: (kind: ListaKind, titulo: string, limitado?: boolean) => void;
   mudarFunil: (pipelineId: string) => void;
 }

@@ -61,7 +61,7 @@ export const Pendencias: React.FC<ContextoBloco> = ({ dados, carregando, visao, 
         const antigos = r.older > 0 ? ` · ${plural(r.older, 'parado', 'parados')} desde ontem ou antes` : '';
         const valor = r.capped ? `${numero(r.total)}+` : numero(r.total);
         return (
-          <button key={r.key} type="button" className="lmfn-item" onClick={() => abrirLista(r.key, rotulo)}>
+          <button key={r.key} type="button" className="lmfn-item" onClick={() => abrirLista(r.key, rotulo, !!r.capped)}>
             <span className={`lmfn-pilula${r.total ? ` lmfn-pilula-${ROTULOS[r.key].tom}` : ''}`}>{valor}</span>
             <span className="lmfn-item-texto">{rotulo}<small>{ROTULOS[r.key].dica}{antigos}</small></span>
             <ChevronRight size={14} aria-hidden style={{ color: 'var(--lmf-faint)' }} />

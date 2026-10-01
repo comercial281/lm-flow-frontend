@@ -10,7 +10,12 @@ export function visaoDoEscopo(scope?: ScopeInfo): Visao {
   return scope?.mode === 'mine' ? 'corretor' : 'gestor';
 }
 
-/** Gestor que escolheu "Só os meus" (o corretor de verdade vem travado). */
-export function gestorVendoComoCorretor(scope?: ScopeInfo): boolean {
-  return scope?.mode === 'mine' && !scope.locked;
+/**
+ * Gestor que escolheu "Só os meus". Não basta o recorte vir destravado: num
+ * cliente com o isolamento do corretor desligado, o corretor de verdade também
+ * vem `mine` sem trava. Por isso o cargo conta: `temCargoDeGestao` é ter
+ * `dashboard.team` (Administrador e Gerente; o Corretor não tem).
+ */
+export function gestorVendoComoCorretor(scope: ScopeInfo | undefined, temCargoDeGestao: boolean): boolean {
+  return temCargoDeGestao && scope?.mode === 'mine' && !scope.locked;
 }

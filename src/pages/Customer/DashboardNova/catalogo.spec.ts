@@ -40,8 +40,11 @@ describe('catálogo da Dashboard', () => {
     expect(visaoDoEscopo(escopo('all'))).toBe('gestor');
     expect(visaoDoEscopo(escopo('team'))).toBe('gestor');
     expect(visaoDoEscopo(escopo('mine', true))).toBe('corretor');
-    expect(gestorVendoComoCorretor(escopo('mine', false))).toBe(true);
-    expect(gestorVendoComoCorretor(escopo('mine', true))).toBe(false);
+    expect(gestorVendoComoCorretor(escopo('mine', false), true)).toBe(true);
+    expect(gestorVendoComoCorretor(escopo('mine', true), true)).toBe(false);
+    // Corretor de verdade num cliente com o isolamento desligado: destravado, mas não é gestor.
+    expect(gestorVendoComoCorretor(escopo('mine', false), false)).toBe(false);
+    expect(gestorVendoComoCorretor(escopo('all', false), true)).toBe(false);
     expect(visaoDoEscopo(undefined)).toBe('gestor');
   });
 });

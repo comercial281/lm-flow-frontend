@@ -61,9 +61,10 @@ interface Resposta {
  * que o número (Dashboard::QuickList no servidor): clicar em "7" nunca abre 9.
  *
  * A busca não tem como ser abortada, então cada pedido ganha um número e só a
- * resposta do pedido EM VIGOR aparece. Trocar de pendência, mudar o filtro ou
- * fechar e reabrir abre um pedido novo: a lista anterior nunca aparece debaixo
- * do título de agora, nem por um instante.
+ * resposta do pedido EM VIGOR aparece. Abrir, ou trocar de pendência/filtro com
+ * o painel aberto, abre um pedido novo: a lista anterior nunca aparece debaixo
+ * do título de agora, nem por um instante. FECHAR não abre pedido: o painel
+ * ainda desliza para fora com a última lista, em vez de piscar vazio.
  */
 export const ListaRapida: React.FC<Props> = ({ aberta, kind, titulo, filtros, pode, limitado, onFechar }) => {
   const navigate = useNavigate();
@@ -74,12 +75,12 @@ export const ListaRapida: React.FC<Props> = ({ aberta, kind, titulo, filtros, po
   const chaveFiltros = JSON.stringify(paramsDaApi(filtros));
   const chave = kind ? `${kind}|${chaveFiltros}` : '';
 
-  // O pedido em vigor muda NO MESMO render em que a lista abre/fecha ou o
-  // pedido muda (padrão "ajustar estado quando a prop muda" do React), então a
-  // resposta antiga já sai de cena antes de pintar.
+  // O pedido em vigor muda NO MESMO render em que a lista abre ou o pedido muda
+  // com ela aberta (padrão "ajustar estado quando a prop muda" do React), então
+  // a resposta antiga já sai de cena antes de pintar. Fechada, só anota.
   const [vigente, setVigente] = useState({ aberta, chave, pedido: 0 });
   if (vigente.aberta !== aberta || vigente.chave !== chave) {
-    setVigente({ aberta, chave, pedido: vigente.pedido + 1 });
+    setVigente({ aberta, chave, pedido: aberta ? vigente.pedido + 1 : vigente.pedido });
   }
   const pedido = vigente.pedido;
 
@@ -142,7 +143,7 @@ export const ListaRapida: React.FC<Props> = ({ aberta, kind, titulo, filtros, po
           })}
           {lista && lista.total > lista.items.length && (
             <p className="pt-3 text-xs text-muted-foreground">
-              Mostrando {numero(lista.items.length)} de {numero(lista.total)}
+              Mostrando {numero(lista.items.length)} de {numero(lista.total)}{limitado ? '+' : ''}
             </p>
           )}
         </div>

@@ -13,7 +13,7 @@ describe('análise do período', () => {
     expect(melhorDia(Array.from({ length: 7 }, (_, day) => ({ day, leads: 0 })))).toBeNull();
   });
 
-  it('dia da semana: no empate, ganha o primeiro da semana (domingo → sábado)', () => {
+  it('no empate, ganha o primeiro na ordem que o servidor manda', () => {
     expect(melhorDia([{ day: 0, leads: 3 }, { day: 3, leads: 8 }, { day: 5, leads: 8 }])).toBe('Quarta-feira');
     expect(melhorDia([{ day: 6, leads: 4 }, { day: 0, leads: 4 }])).toBe('Sábado');
     expect(melhorDia([{ day: 6, leads: 2 }])).toBe('Sábado');

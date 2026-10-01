@@ -20,19 +20,37 @@ export function paramsDaApi(f: FiltrosDashboard): DashboardMetricsParams {
  * Um pedido só, com `blocks=`: todos os blocos dividem o MESMO período
  * resolvido no servidor. O pedido anterior é abortado quando o filtro muda
  * (senão a resposta velha chega depois e sobrescreve a nova).
+ *
+ * `pendente`: a resposta em mãos NÃO é a dos filtros pedidos agora. Calculado
+ * no render, então já vale no render em que o filtro muda, antes de o efeito
+ * pôr `carregando` em true (o seletor de Corretor não pisca "Todos"). Depois de
+ * um erro continua true: os números na tela são da última resposta, não destes
+ * filtros.
+ *
+ * Sem bloco nenhum não há pedido: `blocks=` vazio o servidor leria como "tudo".
  */
 export function useDashboardNova(filtros: FiltrosDashboard, blocos: string[]) {
-  const [dados, setDados] = useState<DashboardNovaPayload | null>(null);
-  const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
   const chaveFiltros = JSON.stringify(paramsDaApi(filtros));
   const chaveBlocos = blocos.join(',');
+  const chavePedido = `${chaveFiltros}|${chaveBlocos}`;
+  const temBlocos = chaveBlocos.length > 0;
+
+  // A resposta guarda a chave do pedido que a gerou.
+  const [resposta, setResposta] = useState<{ dados: DashboardNovaPayload; chave: string } | null>(null);
+  const [carregando, setCarregando] = useState(temBlocos);
+  const [erro, setErro] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const recarregar = useCallback(async () => {
     abortRef.current?.abort();
+    if (!chaveBlocos) {
+      abortRef.current = null;
+      setCarregando(false);
+      return;
+    }
     const controller = new AbortController();
     abortRef.current = controller;
+    const chave = `${chaveFiltros}|${chaveBlocos}`;
     setCarregando(true);
     setErro(null);
     try {
@@ -40,7 +58,7 @@ export function useDashboardNova(filtros: FiltrosDashboard, blocos: string[]) {
         { ...JSON.parse(chaveFiltros), blocks: chaveBlocos },
         controller.signal,
       );
-      if (!controller.signal.aborted) setDados(payload as unknown as DashboardNovaPayload);
+      if (!controller.signal.aborted) setResposta({ dados: payload as unknown as DashboardNovaPayload, chave });
     } catch (e) {
       const abortado =
         controller.signal.aborted ||
@@ -57,5 +75,8 @@ export function useDashboardNova(filtros: FiltrosDashboard, blocos: string[]) {
     return () => abortRef.current?.abort();
   }, [recarregar]);
 
-  return { dados, carregando, erro, recarregar };
+  const dados = resposta?.dados ?? null;
+  const pendente = temBlocos && (carregando || resposta?.chave !== chavePedido);
+
+  return { dados, carregando, pendente, erro, recarregar };
 }
