@@ -4393,14 +4393,32 @@ tela de Conversas filtrada na jornada de Conversas; o espaço do banner
 Pedido do dono do produto: *"o corretor tem que clicar e já abrir com o nome dele
 […] só pode marcar visita para os contatos dele"* e *"aparecer apenas datas
 disponíveis"*. Spec: `specs/2026-09-30-fase-4-agendar-visita-design.md` (pasta LM FLOW).
+Ajuste de 2026-10-01 (corretor em botões, cliente pelo nome, lista paginada, modal
+maior): `specs/2026-10-01-fase-4-agenda-do-corretor-design.md`, parte 0.
 
 O que aparece na tela, no **Agendar visita** da Agenda:
 
-- **Duas colunas.** *Quem*: Cliente, Corretor responsável, Observações e Imóvel
+- **Duas colunas, modal largo** (`max-w-5xl`, colunas com `gap-8`, campos com
+  `space-y-5`). *Quem*: Cliente, Corretor responsável, Observações e Imóvel
   (opcional, por último). *Quando*: dia (Hoje / Amanhã / Sábado / outra data),
-  duração (30 min / 1 h / 1h30 / 2 h), horário e a frase por extenso.
+  duração (30 min / 1 h / 1h30 / 2 h), horário (grade de 4 colunas no computador,
+  `max-h-64`) e a frase por extenso. No celular, uma coluna só, com rolagem
+  (`max-h-[90dvh] overflow-y-auto`).
 - **Corretor:** o campo de cliente só encontra os clientes dele, e o responsável é
-  ele, sem campo. **Gestor:** escolhe; ao escolher o cliente, vem o dono do lead.
+  ele, sem botões. **Gestor:** escolhe o corretor em **botões**, um por corretor
+  (`GET /visits/realtors`: ativos e visíveis, por nome; mesmo padrão dos botões de
+  duração, com `aria-pressed`). Com muita gente, a área dos botões rola
+  (`max-h-40`). Ao escolher o cliente, o dono do lead vem marcado; cliente sem
+  dono desmarca, e dono que não está na lista (desativado) também não fica
+  marcado. Salvar sem corretor: "Escolha o corretor responsável". Enquanto o
+  modal confere o cargo, os botões não aparecem (o corretor não vê a equipe
+  piscar).
+- **Cliente pelo nome, lista que carrega mais.** O servidor manda o nome limpo
+  (nunca o número cru do WhatsApp); o campo, depois de escolhido, mostra
+  `nome · telefone formatado` (`telefone()`). A lista vem de 50 em 50 e pede a
+  próxima página ao rolar até perto do fim; o rodapé diz "Mostrando 50 de 1.240 —
+  digite para buscar" (sem mais páginas, só "Mostrando 2 de 2"). Nova busca volta
+  à página 1 e resposta de busca antiga é descartada.
 - **Horário ocupado aparece riscado, só com a hora** (o nome do cliente estourava a
   grade de 3 colunas) — vai pro `aria-label`/`title` do botão, e o nome completo
   aparece embaixo, na lista das visitas do corretor naquele dia: para o corretor
@@ -4420,7 +4438,10 @@ O que aparece na tela, no **Agendar visita** da Agenda:
 Decisões (não reabrir sem o dono pedir):
 
 - **Quem decide é o servidor** (`Visits::Booking`). A tela trava o corretor pelo
-  `meta.only_mine` do seletor, nunca pelo cargo.
+  `meta.only_mine` do seletor, nunca pelo cargo (a conferência pede
+  `leadPickerPage('', 1, 1)`: só o meta interessa).
+- **Corretor em botões, não em busca** (decisão de 2026-10-01): a busca por nome
+  listava usuários desativados e escondia quem existia.
 - **Horários fixos, de 30 em 30, das 07h às 21h, em 24 h.** O campo de hora do
   navegador vira AM/PM em celular em inglês.
 - **Nada sobre WhatsApp no modal.** A confirmação para o cliente é função futura,
@@ -4432,4 +4453,9 @@ Armadilhas:
    servidor antigo o modal abre como de gestor, sem trava nem recorte.
 2. **A lista de horários e o "ocupado" moram em `src/features/visits/daySlots.ts`**,
    com spec, fora do JSX. A conta é a mesma do servidor: encostar não é conflito.
-3. **`LeadCombobox` é compartilhado com Propostas**: `allowCreate` nasce `true`.
+3. **`LeadCombobox` é compartilhado com Propostas**: `allowCreate` nasce `true` e
+   `paginated` nasce `false` (Propostas segue com `leadPicker(q, 20)`, sem rodapé).
+   Só a visita liga `paginated`.
+4. **A paginação do cliente e o `/visits/realtors` vêm do servidor** (PR do
+   `lm-flow` da parte 0). Contra o servidor antigo, o rodapé de total não aparece
+   (sem `meta.total`) e os botões de corretor dão erro de carregamento.
