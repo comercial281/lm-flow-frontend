@@ -6,7 +6,10 @@
  * Quem pode marcar para quem é decidido pelo SERVIDOR (Visits::Booking): o
  * corretor isolado só encontra os clientes dele e é sempre o responsável. A
  * tela sabe disso pelo `meta.only_mine` do seletor, não pelo cargo.
- * Spec: specs/2026-09-30-fase-4-agendar-visita-design.md (pasta LM FLOW).
+ * O gestor escolhe o corretor em botões (`GET /visits/realtors`); o cliente
+ * vem do seletor paginado (50 por vez, com o total).
+ * Specs: specs/2026-09-30-fase-4-agendar-visita-design.md e
+ * specs/2026-10-01-fase-4-agenda-do-corretor-design.md (pasta LM FLOW).
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -20,8 +23,6 @@ import {
   visitsService, type LeadPickerItem, type PersonRef, type Visit,
 } from '@/services/visits/visitsService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
-import { usersService } from '@/services/users';
-import type { User } from '@/types/users';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { hora } from '@/lib/formato';
 import {
@@ -46,6 +47,9 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
   const [verificandoCargo, setVerificandoCargo] = useState(true);
   const [lead, setLead] = useState<LeadPickerItem | null>(null);
   const [corretor, setCorretor] = useState<PersonRef | null>(null);
+  // Corretores que o gestor pode escolher; `null` = ainda carregando.
+  const [corretores, setCorretores] = useState<PersonRef[] | null>(null);
+  const [erroCorretores, setErroCorretores] = useState(false);
   const [dia, setDia] = useState<Date>(diaInicial ?? hojeSemHora());
   const [inicio, setInicio] = useState<Date | null>(null);
   const [duracao, setDuracao] = useState<number>(60);
@@ -58,15 +62,6 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
   // deps do efeito "visitas do dia" pra forçar um refetch sem duplicar a
   // lógica nem o guarda de corrida dele.
   const [recarregarDia, setRecarregarDia] = useState(0);
-  // Sobe a cada "abriu" (ver efeito abaixo) OU a cada troca de cliente (ver
-  // `escolherLead`) e vira `key` do `BuscaCorretor`: força ele a remontar do
-  // zero sempre que o VALOR dele foi decidido de fora (reabrir a tela, ou o
-  // gestor escolher outro cliente). É o remonte — não um efeito sincronizando
-  // `texto` com `valor` — quem garante o campo limpo nesses dois casos,
-  // inclusive quando o novo valor é igual ao antigo (null→null, cliente sem
-  // dono depois de outro cliente sem dono) e um efeito em `[valor]` não
-  // disparia. Digitar dentro do campo continua só local (`BuscaCorretor`).
-  const [cicloFormulario, setCicloFormulario] = useState(0);
 
   // `diaInicial` costuma ser um `Date` recriado a cada render do pai: não pode
   // entrar nas dependências do reset (reabriria o form de novo só por isso).
@@ -88,8 +83,10 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
     setImovel(null);
     setTravado(null);
     setVerificandoCargo(true);
-    setCicloFormulario(c => c + 1);
-    visitsService.leadPickerPage('', 1)
+    setCorretores(null);
+    setErroCorretores(false);
+    // Um cliente só, porque aqui só interessa o meta (cargo travado ou não).
+    visitsService.leadPickerPage('', 1, 1)
       .then(({ meta }) => {
         if (!vivo) return;
         if (meta.only_mine && meta.me) {
@@ -99,8 +96,19 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
       })
       .catch(() => { /* sem meta = tela de gestor; o servidor confere ao salvar */ })
       .finally(() => { if (vivo) setVerificandoCargo(false); });
+    visitsService.realtors()
+      .then(lista => { if (vivo) setCorretores(lista); })
+      .catch(() => { if (vivo) setErroCorretores(true); });
     return () => { vivo = false; };
   }, [open]);
+
+  // Gestor: o corretor escolhido é sempre um dos botões. Dono do lead que não
+  // está na lista (desativado, fora da equipe visível) não fica marcado
+  // escondido — o gestor escolhe outro.
+  useEffect(() => {
+    if (travado || !corretor || !corretores) return;
+    if (!corretores.some(c => c.id === corretor.id)) setCorretor(null);
+  }, [travado, corretor, corretores]);
 
   // Visitas do corretor no dia escolhido. Trocar corretor ou dia antes da
   // resposta anterior chegar não pode deixar a resposta velha pisar na nova
@@ -136,16 +144,9 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
 
   const escolherLead = (l: LeadPickerItem) => {
     setLead(l);
-    if (!travado) {
-      // Cliente sem dono precisa LIMPAR o corretor anterior, não só deixar
-      // como estava — senão o form salva o corretor do cliente trocado. O
-      // `setCorretor` sozinho não bastaria quando o valor não muda (um
-      // cliente sem dono depois de outro cliente sem dono, null→null): quem
-      // garante o campo limpo nesse caso é o remonte, por isso o ciclo sobe
-      // sempre que o cliente troca, não só quando o corretor realmente muda.
-      setCorretor(l.owner ?? null);
-      setCicloFormulario(c => c + 1);
-    }
+    // Cliente sem dono precisa LIMPAR o corretor anterior, não só deixar como
+    // estava — senão o form salva o corretor do cliente trocado.
+    if (!travado) setCorretor(l.owner ?? null);
   };
 
   const salvar = async () => {
@@ -183,29 +184,32 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Agendar visita</DialogTitle>
           <DialogDescription>Quem vai visitar e quando</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-6 py-2 md:grid-cols-2">
+        <div className="grid gap-8 py-2 md:grid-cols-2">
           {/* Quem */}
-          <section className="space-y-4" aria-label="Quem">
+          <section className="space-y-5" aria-label="Quem">
             <LeadCombobox
               value={lead}
               onChange={escolherLead}
               label="Cliente *"
               placeholder="Buscar cliente por nome ou telefone"
               allowCreate={false}
+              paginated
             />
 
             <div>
               <UILabel>Corretor responsável{travado ? '' : ' *'}</UILabel>
               {travado ? (
                 <p className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">{travado.name}</p>
+              ) : verificandoCargo ? (
+                <p className="mt-1 text-sm text-muted-foreground">Carregando...</p>
               ) : (
-                <BuscaCorretor key={cicloFormulario} valor={corretor} onEscolher={setCorretor} />
+                <EscolhaCorretor corretores={corretores} erro={erroCorretores} valor={corretor} onEscolher={setCorretor} />
               )}
             </div>
 
@@ -224,7 +228,7 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
           </section>
 
           {/* Quando */}
-          <section className="space-y-4" aria-label="Quando">
+          <section className="space-y-5" aria-label="Quando">
             <div>
               <UILabel>Dia *</UILabel>
               <div className="mt-1 flex flex-wrap gap-2">
@@ -275,7 +279,7 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
               {slots.length === 0 ? (
                 <p className="mt-1 text-sm text-muted-foreground">Não sobrou horário nesse dia. Escolha outro dia.</p>
               ) : (
-                <div className="mt-1 grid max-h-44 grid-cols-3 gap-1.5 overflow-y-auto pr-1">
+                <div className="mt-1 grid max-h-64 grid-cols-3 gap-1.5 overflow-y-auto pr-1 md:grid-cols-4">
                   {slots.map(s => (
                     <Button
                       key={s.rotulo}
@@ -332,71 +336,41 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
 }
 
 /**
- * Corretor responsável, para o gestor. Mesmo serviço de usuários que a tela
- * antiga usava.
- *
- * `texto` nasce de `valor` e depois é só local: nenhum `useEffect` o
- * sincroniza de volta com `valor` (um efeito em `[valor]` não dispara quando
- * o novo valor é igual ao antigo — null→null — e isso já causou campo preso
- * com texto velho duas vezes). Quem precisa que o campo reflita um `valor`
- * novo de fora remonta o componente trocando a `key` (ver `cicloFormulario`
- * no componente pai); escolher da própria lista deste componente atualiza
- * `texto` direto no clique.
+ * Corretor responsável, para o gestor: um botão por corretor (mesmo padrão
+ * da duração). Com muita gente na equipe, a área rola.
  */
-function BuscaCorretor({ valor, onEscolher }: { valor: PersonRef | null; onEscolher: (p: PersonRef | null) => void }) {
-  const [texto, setTexto] = useState(valor?.name ?? '');
-  const [lista, setLista] = useState<User[]>([]);
-  const [aberto, setAberto] = useState(false);
-  const espera = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const buscar = (q: string) => {
-    if (espera.current) clearTimeout(espera.current);
-    if (!q.trim()) { setLista([]); setAberto(false); return; }
-    espera.current = setTimeout(async () => {
-      try {
-        const res = await usersService.getUsers({ q, per_page: 8 });
-        setLista(res.data ?? []);
-        setAberto(true);
-      } catch { setLista([]); }
-    }, 300);
-  };
-
+function EscolhaCorretor({ corretores, erro, valor, onEscolher }: {
+  corretores: PersonRef[] | null;
+  erro: boolean;
+  valor: PersonRef | null;
+  onEscolher: (p: PersonRef) => void;
+}) {
+  if (erro) {
+    return <p className="mt-1 text-sm text-destructive">Não deu para carregar os corretores. Feche e abra de novo.</p>;
+  }
+  if (corretores === null) {
+    return <p className="mt-1 text-sm text-muted-foreground">Carregando...</p>;
+  }
+  if (corretores.length === 0) {
+    return <p className="mt-1 text-sm text-muted-foreground">Nenhum corretor ativo na equipe.</p>;
+  }
   return (
-    <div className="relative mt-1">
-      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      <Input
-        value={texto}
-        onChange={e => {
-          const v = e.target.value;
-          setTexto(v);
-          // Digitou por cima do nome escolhido: o campo mostra o que foi
-          // digitado (`texto` já virou `v` acima), mas o VALOR escolhido não
-          // é mais válido — limpa o corretor pra `salvar` recusar.
-          if (valor && v !== valor.name) onEscolher(null);
-          buscar(v);
-        }}
-        placeholder="Buscar corretor por nome"
-        className="pl-9"
-      />
-      {aberto && lista.length > 0 && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-y-auto rounded-md border border-border bg-popover shadow-lg">
-          {lista.map(u => (
-            <button
-              key={u.id}
-              type="button"
-              className="w-full border-b border-border px-3 py-2.5 text-left text-sm last:border-0 hover:bg-muted/50"
-              onClick={() => {
-                const nome = u.available_name ?? u.name;
-                onEscolher({ id: u.id, name: nome });
-                setTexto(nome);
-                setAberto(false);
-              }}
-            >
-              {u.available_name ?? u.name}
-            </button>
-          ))}
-        </div>
-      )}
+    <div role="group" aria-label="Corretor responsável" className="mt-1 flex max-h-40 flex-wrap gap-2 overflow-y-auto pr-1">
+      {corretores.map(c => {
+        const escolhido = valor?.id === c.id;
+        return (
+          <Button
+            key={c.id}
+            type="button"
+            size="sm"
+            variant={escolhido ? 'default' : 'outline'}
+            aria-pressed={escolhido}
+            onClick={() => onEscolher(c)}
+          >
+            {c.name}
+          </Button>
+        );
+      })}
     </div>
   );
 }
