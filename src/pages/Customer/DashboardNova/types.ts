@@ -59,6 +59,14 @@ export interface HourBlock { hours: { hour: number; leads: number }[] }
 /** `month` no formato 'YYYY-MM'. Janela fixa: os 5 meses anteriores e o atual. */
 export interface SixMonthsBlock { months: { month: string; leads: number }[] }
 
+export interface PeriodInfoNova extends PeriodInfo {
+  /**
+   * Janela das visitas: o mês/semana/ano inteiro, incluindo as que ainda vão
+   * acontecer (o `until` do período para em hoje). Servidor antigo não manda.
+   */
+  calendar?: { since: string; until: string };
+}
+
 export interface ScopeInfoNova extends ScopeInfo {
   /** Corretor escolhido no filtro, quando o servidor aceitou. Sempre vem; null sem filtro. */
   owner_id: string | null;
@@ -69,7 +77,7 @@ export interface ScopeInfoNova extends ScopeInfo {
  * recorte `mine`, mesmo pedidas.
  */
 export interface DashboardNovaPayload {
-  period: PeriodInfo;
+  period: PeriodInfoNova;
   scope: ScopeInfoNova;
   kpis?: Maybe<Kpis>;
   series?: Maybe<SeriesBlock>;

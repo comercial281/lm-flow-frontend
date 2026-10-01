@@ -2,7 +2,7 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { numero } from '@/lib/formato';
+import { numero, plural } from '@/lib/formato';
 import { EmptyBlock, GlassCard, Skeleton } from '../../DashboardV2/components/primitives';
 import { isAvailable } from '../../DashboardV2/types';
 import { usePendingOffers } from '@/contexts/PendingOffersContext';
@@ -24,15 +24,27 @@ export const Pendencias: React.FC<ContextoBloco> = ({ dados, carregando, visao, 
   const bloco = dados?.pending;
   const titulo = visao === 'corretor' ? 'Suas pendências' : 'Pendências';
 
+  // As ofertas vêm da roleta, não do bloco: aparecem mesmo sem as pendências.
+  const ofertas = visao === 'corretor' ? offers.length : 0;
+  const linhaOfertas = ofertas > 0 && (
+    <button type="button" className="lmfn-item" onClick={() => navigate(linkAceite(offers[0].id))}>
+      <span className="lmfn-pilula lmfn-pilula-alerta">{numero(ofertas)}</span>
+      <span className="lmfn-item-texto">Ofertas esperando seu aceite<small>Leads da roleta oferecidos a você</small></span>
+      <ChevronRight size={14} aria-hidden style={{ color: 'var(--lmf-faint)' }} />
+    </button>
+  );
+
   if (!isAvailable(bloco)) {
     return (
       <GlassCard title={titulo}>
-        {carregando && !dados ? <Skeleton height={220} /> : <EmptyBlock block={bloco} />}
+        {linhaOfertas}
+        {carregando && !dados
+          ? <Skeleton height={220} />
+          : <EmptyBlock block={bloco} text="Não deu para carregar as pendências agora." />}
       </GlassCard>
     );
   }
 
-  const ofertas = visao === 'corretor' ? offers.length : 0;
   const total = bloco.rows.reduce((soma, r) => soma + r.total, 0) + ofertas;
   // Uma linha no teto (500+) deixa o total também "pelo menos".
   const totalNoTeto = bloco.rows.some(r => r.capped);
@@ -43,16 +55,10 @@ export const Pendencias: React.FC<ContextoBloco> = ({ dados, carregando, visao, 
       subtitle={visao === 'corretor' ? 'Comece o dia por aqui' : 'O que precisa de alguém agora'}
       action={<span className={`lmfn-pilula${total ? ' lmfn-pilula-alerta' : ''}`}>{numero(total)}{totalNoTeto ? '+' : ''}</span>}
     >
-      {ofertas > 0 && (
-        <button type="button" className="lmfn-item" onClick={() => navigate(linkAceite(offers[0].id))}>
-          <span className="lmfn-pilula lmfn-pilula-alerta">{numero(ofertas)}</span>
-          <span className="lmfn-item-texto">Ofertas esperando seu aceite<small>Leads da roleta oferecidos a você</small></span>
-          <ChevronRight size={14} aria-hidden style={{ color: 'var(--lmf-faint)' }} />
-        </button>
-      )}
+      {linhaOfertas}
       {bloco.rows.map(r => {
         const rotulo = ROTULOS[r.key][visao];
-        const antigos = r.older > 0 ? ` · ${numero(r.older)} desde ontem ou antes` : '';
+        const antigos = r.older > 0 ? ` · ${plural(r.older, 'parado', 'parados')} desde ontem ou antes` : '';
         const valor = r.capped ? `${numero(r.total)}+` : numero(r.total);
         return (
           <button key={r.key} type="button" className="lmfn-item" onClick={() => abrirLista(r.key, rotulo)}>

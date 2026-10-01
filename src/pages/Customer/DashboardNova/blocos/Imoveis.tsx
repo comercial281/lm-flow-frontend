@@ -26,12 +26,12 @@ export const Imoveis: React.FC<ContextoBloco> = ({ dados, carregando, visao, pod
   const navigate = useNavigate();
   const bloco = dados?.properties;
   const titulo = visao === 'corretor' ? 'Seus imóveis' : 'Imóveis';
-  const sub = visao === 'corretor' ? 'Os que você captou ou é responsável' : 'Carteira ativa hoje';
+  const sub = visao === 'corretor' ? 'Os que você captou ou pelos quais é responsável' : 'Carteira ativa hoje';
 
   if (!isAvailable(bloco)) {
     return (
       <GlassCard title={titulo} subtitle={sub}>
-        {carregando && !dados ? <Skeleton height={260} /> : <EmptyBlock block={bloco} />}
+        {carregando && !dados ? <Skeleton height={260} /> : <EmptyBlock block={bloco} text="Não deu para carregar os imóveis agora." />}
       </GlassCard>
     );
   }
@@ -42,12 +42,28 @@ export const Imoveis: React.FC<ContextoBloco> = ({ dados, carregando, visao, pod
   const meus = visao === 'corretor';
   const abrir = (recorte: RecorteImoveis) => navigate(linkImoveis(recorte, { desde, ate, meus }));
 
+  const ativos = (
+    <>
+      <span className="lmfn-numero-valor" style={{ fontSize: 36 }}>{numero(bloco.active)}</span>
+      <span className="lmf-card-sub" style={{ margin: 0 }}>ativos</span>
+    </>
+  );
+
   return (
     <GlassCard title={titulo} subtitle={sub}>
-      <div className="flex items-baseline gap-2 mb-2">
-        <span className="lmfn-numero-valor" style={{ fontSize: 36 }}>{numero(bloco.active)}</span>
-        <span className="lmf-card-sub" style={{ margin: 0 }}>ativos</span>
-      </div>
+      {pode.imoveis ? (
+        <button
+          type="button"
+          className="flex items-baseline gap-2 mb-2 bg-transparent border-0 p-0 text-left cursor-pointer"
+          style={{ color: 'inherit', font: 'inherit' }}
+          onClick={() => abrir('ativos')}
+        >
+          {ativos}
+          <ChevronRight size={14} aria-hidden style={{ color: 'var(--lmf-faint)' }} />
+        </button>
+      ) : (
+        <div className="flex items-baseline gap-2 mb-2">{ativos}</div>
+      )}
       {LINHAS.map(l => {
         const valor = bloco[l.campo];
         const tom = valor > 0 && l.tom !== 'neutro' ? ` lmfn-pilula-${l.tom}` : '';

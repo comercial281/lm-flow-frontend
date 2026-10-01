@@ -1,6 +1,6 @@
 // src/pages/Customer/DashboardNova/blocos/blocosPrincipais.spec.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const offers = vi.hoisted(() => ({ list: [] as { id: string }[] }));
@@ -29,6 +29,7 @@ const wrap = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter
 
 beforeEach(() => {
   navegar.mockReset();
+  offers.list = [];
 });
 
 describe('diaDoPeriodo', () => {
@@ -55,6 +56,24 @@ describe('bloco Imóveis', () => {
     expect(navegar).toHaveBeenLastCalledWith('/properties?recorte=novos&desde=2026-09-24&ate=2026-09-30');
   });
 
+  it('o número de ativos leva aos ativos', () => {
+    wrap(<Imoveis {...ctx({}, { properties })} />);
+    fireEvent.click(screen.getByRole('button', { name: /ativos/ }));
+    expect(navegar).toHaveBeenLastCalledWith('/properties?recorte=ativos');
+  });
+
+  it('o corretor vai para os ativos dele', () => {
+    wrap(<Imoveis {...ctx({ visao: 'corretor' }, { properties })} />);
+    fireEvent.click(screen.getByRole('button', { name: /ativos/ }));
+    expect(navegar).toHaveBeenLastCalledWith('/properties?recorte=ativos&meus=1');
+    expect(screen.getByText('Os que você captou ou pelos quais é responsável')).toBeInTheDocument();
+  });
+
+  it('sem os imóveis, diz que não deu para carregar', () => {
+    wrap(<Imoveis {...ctx({}, { properties: { available: false, reason: 'error' } })} />);
+    expect(screen.getByText('Não deu para carregar os imóveis agora.')).toBeInTheDocument();
+  });
+
   it('o corretor vai para os imóveis dele', () => {
     wrap(<Imoveis {...ctx({ visao: 'corretor' }, { properties })} />);
     fireEvent.click(screen.getByRole('button', { name: /Desatualizados/ }));
@@ -64,6 +83,7 @@ describe('bloco Imóveis', () => {
   it('sem permissão de Imóveis, as linhas não são links', () => {
     wrap(<Imoveis {...ctx({ pode: { ...pode, imoveis: false } }, { properties })} />);
     expect(screen.queryByRole('button', { name: /Sem fotos/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ativos/ })).not.toBeInTheDocument();
     expect(screen.getByText('Sem fotos')).toBeInTheDocument();
   });
 });
@@ -85,6 +105,23 @@ describe('bloco Números', () => {
     expect(abrirLista).toHaveBeenLastCalledWith('conversas_periodo', 'Conversas');
     fireEvent.click(screen.getByRole('button', { name: /Visitas agendadas/ }));
     expect(navegar).toHaveBeenLastCalledWith('/visits?desde=2026-09-24&ate=2026-09-30');
+  });
+
+  it('Visitas agendadas abre a Agenda na janela do calendário, com as visitas que ainda vão acontecer', () => {
+    const esteMes = {
+      ...periodo, preset: 'this_month', since: '2026-09-01T00:00:00-03:00', until: '2026-09-15T23:59:59-03:00',
+      calendar: { since: '2026-09-01T00:00:00-03:00', until: '2026-09-30T23:59:59-03:00' },
+    };
+    wrap(<Numeros {...ctx({}, { kpis, period: esteMes })} />);
+    fireEvent.click(screen.getByRole('button', { name: /Visitas agendadas/ }));
+    expect(navegar).toHaveBeenLastCalledWith('/visits?desde=2026-09-01&ate=2026-09-30');
+  });
+
+  it('servidor sem a janela do calendário: a Agenda abre no período', () => {
+    const esteMes = { ...periodo, preset: 'this_month', since: '2026-09-01T00:00:00-03:00', until: '2026-09-15T23:59:59-03:00' };
+    wrap(<Numeros {...ctx({}, { kpis, period: esteMes })} />);
+    fireEvent.click(screen.getByRole('button', { name: /Visitas agendadas/ }));
+    expect(navegar).toHaveBeenLastCalledWith('/visits?desde=2026-09-01&ate=2026-09-15');
   });
 
   it('Propostas vai para Propostas no período', () => {
@@ -126,7 +163,8 @@ describe('bloco Pendências', () => {
     const abrirLista = vi.fn();
     wrap(<Pendencias {...ctx({ abrirLista }, { pending })} />);
     expect(screen.getByText('16')).toBeInTheDocument();
-    expect(screen.getByText(/3 desde ontem ou antes/)).toBeInTheDocument();
+    expect(screen.getByText(/3 parados desde ontem ou antes/)).toBeInTheDocument();
+    expect(screen.getByText(/1 parado desde ontem ou antes/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Leads sem responsável/ }));
     expect(abrirLista).toHaveBeenCalledWith('sem_responsavel', 'Leads sem responsável');
   });
@@ -134,7 +172,22 @@ describe('bloco Pendências', () => {
   it('"Esperando resposta" no teto mostra 500+', () => {
     const rows = [{ key: 'esperando_resposta', total: 500, older: 120, capped: true }];
     wrap(<Pendencias {...ctx({}, { pending: { rows } })} />);
-    expect(screen.getAllByText('500+').length).toBeGreaterThan(0);
+    const titulo = screen.getByRole('heading', { name: 'Pendências' }).closest('header') as HTMLElement;
+    expect(within(titulo).getByText('500+')).toBeInTheDocument();
+    const linha = screen.getByRole('button', { name: /Esperando resposta/ });
+    expect(within(linha).getByText('500+')).toBeInTheDocument();
+  });
+
+  it('sem as pendências, diz que não deu para carregar', () => {
+    wrap(<Pendencias {...ctx({}, { pending: { available: false, reason: 'error' } })} />);
+    expect(screen.getByText('Não deu para carregar as pendências agora.')).toBeInTheDocument();
+  });
+
+  it('as ofertas do corretor aparecem mesmo sem as pendências', () => {
+    offers.list = [{ id: 'o7' }];
+    wrap(<Pendencias {...ctx({ visao: 'corretor' }, { pending: { available: false, reason: 'error' } })} />);
+    fireEvent.click(screen.getByRole('button', { name: /Ofertas esperando seu aceite/ }));
+    expect(navegar).toHaveBeenLastCalledWith('/roleta/aceite/o7');
   });
 
   it('o corretor vê as ofertas esperando o aceite dele', () => {
@@ -142,6 +195,5 @@ describe('bloco Pendências', () => {
     wrap(<Pendencias {...ctx({ visao: 'corretor' }, { pending: { rows: pending.rows.slice(1) } })} />);
     fireEvent.click(screen.getByRole('button', { name: /Ofertas esperando seu aceite/ }));
     expect(navegar).toHaveBeenLastCalledWith('/roleta/aceite/o1');
-    offers.list = [];
   });
 });
