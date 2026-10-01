@@ -124,8 +124,7 @@ function SuperAdminRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-const ClientInstances = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances'));
-// Clientes, Leads ao Vivo, Modo Cliente, Formulários, Sugestões/Bugs e
+// Clientes, Leads ao Vivo, Sugestões/Bugs e
 // Atividade viraram abas DENTRO do PooledClients — só ele é rota.
 const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients'));
 const PushCentral = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral'));
@@ -133,7 +132,6 @@ const CustoIA = lazyWithRetry(() => import('@/pages/SuperAdmin/CustoIA'));
 // Agentes, Cérebro Universal, Resultados e Aperfeiçoamento viraram abas
 // DENTRO do SuperAgents (IA Vendedora) — só ele é rota.
 const SuperAgents = lazyWithRetry(() => import('@/pages/SuperAdmin/SuperAgents'));
-const PublicOnboardingForm = lazyWithRetry(() => import('@/pages/PublicOnboardingForm'));
 
 // Área do Admin — shell próprio (AdminLayout), fora do menu do CRM.
 const AdminLayout = lazyWithRetry(() => import('@/components/layout/AdminLayout'));
@@ -1135,31 +1133,6 @@ const AppRouter = () => {
 
           {/*
             ===================================================================
-            GRUPO B — PrivateRoute + MainLayout + SuperAdminRoute (persistente)
-            ===================================================================
-            Sem CustomerRoute (igual ao original). SuperAdminRoute continua
-            gateando o conteúdo (redireciona pra "/" se não for super-admin no
-            host raiz), só que agora em volta do Outlet compartilhado.
-          */}
-          <Route
-            element={
-              <PrivateRoute>
-                <MainLayout>
-                  <SuperAdminRoute>
-                    <Suspense fallback={outletSuspenseFallback}>
-                      <Outlet />
-                    </Suspense>
-                  </SuperAdminRoute>
-                </MainLayout>
-              </PrivateRoute>
-            }
-          >
-            {/* Super Admin — gerenciamento de instâncias de clientes */}
-            <Route path="/super-admin/clientes" element={<ClientInstances />} />
-          </Route>
-
-          {/*
-            ===================================================================
             GRUPO C — PrivateRoute + MainLayout (persistente, sem CustomerRoute)
             ===================================================================
           */}
@@ -1368,8 +1341,9 @@ const AppRouter = () => {
           <Route path="/lp/:tenant/:slug" element={<LandingPublic />} />
           <Route path="/lp/:tenant/:slug/:result" element={<LandingResult />} />
 
-          {/* Público (sem login): formulário de onboarding por link (Épico E). */}
-          <Route path="/formulario/:token" element={<PublicOnboardingForm />} />
+          {/* Formulários de onboarding saíram em 01/10/2026 (ninguém usava). Link
+              público antigo cai na entrada do app. As respostas ficam no banco. */}
+          <Route path="/formulario/*" element={<Navigate to="/" replace />} />
 
           {/* O Espaço saiu do CRM em 30/09/2026 (fase 4: ninguém usava). Link
               salvo ou compartilhado (/espaco e /espaco/:token) cai no início.
@@ -1396,12 +1370,13 @@ const AppRouter = () => {
           <Route path="/portal/:tenant/blog" element={<PortalBlog />} />
           <Route path="/portal/:tenant/blog/:slug" element={<PortalArticle />} />
 
-          {/* Leads ao Vivo, Modo Cliente, Formulários, Sugestões/Bugs e Atividade
+          {/* Leads ao Vivo, Sugestões/Bugs e Atividade
               viraram abas dentro de /admin/clientes (reorg 19/08/2026) — rotas
               antigas só redirecionam, pra não quebrar link salvo/bookmark. */}
           <Route path="/admin/leads-ao-vivo" element={<Navigate to="/admin/clientes?tab=leads-ao-vivo" replace />} />
-          <Route path="/admin/modo-cliente" element={<Navigate to="/admin/clientes?tab=modo-cliente" replace />} />
-          <Route path="/admin/formularios" element={<Navigate to="/admin/clientes?tab=formularios" replace />} />
+          {/* Modo Cliente saiu em 01/10/2026: o "Entrar" do cartão faz o mesmo. */}
+          <Route path="/admin/modo-cliente" element={<Navigate to="/admin/clientes" replace />} />
+          <Route path="/admin/formularios" element={<Navigate to="/admin/clientes" replace />} />
           <Route path="/admin/sugestoes-bugs" element={<Navigate to="/admin/clientes?tab=sugestoes-bugs" replace />} />
           <Route path="/admin/atividade" element={<Navigate to="/admin/clientes?tab=atividade" replace />} />
           {/* Rota antiga: Auditoria virou Atividade, que agora é aba de Clientes */}
@@ -1420,8 +1395,10 @@ const AppRouter = () => {
           <Route path="/super-admin/pooled-clients" element={<Navigate to="/admin/clientes" replace />} />
           <Route path="/super-admin/automation-templates" element={<Navigate to="/admin" replace />} />
 
-          {/* Super Admin — gerenciamento de instâncias de clientes */}
-          <Route path="/super-admin/clients" element={<Navigate to="/super-admin/clientes" replace />} />
+          {/* A tela antiga de instâncias (modelo de junho, com "revelar senha")
+              saiu em 01/10/2026. Os dois endereços dela levam pra Clientes. */}
+          <Route path="/super-admin/clients" element={<Navigate to="/admin/clientes" replace />} />
+          <Route path="/super-admin/clientes" element={<Navigate to="/admin/clientes" replace />} />
 
           {/* /super-admin/automation-templates e /super-admin/pooled-clients viraram
               redirects pra /admin/* (declarados acima). */}

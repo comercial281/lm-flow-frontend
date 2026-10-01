@@ -29,7 +29,6 @@ import { useDashboardApps } from '@/hooks/useDashboardApps';
 import { useRoutePrefetch } from '@/hooks/useRoutePrefetch';
 import { injectDashboardAppsIntoMenu } from '@/utils/injectDashboardApps';
 import InstallAppPrompt from './components/InstallAppPrompt';
-import ClientModeBar from './ClientModeBar';
 import PendingOffersBanner from '@/components/roleta/PendingOffersBanner';
 import { PendingOffersProvider } from '@/contexts/PendingOffersContext';
 import { WelcomeTourModal } from '@/components/WelcomeTourModal';
@@ -154,9 +153,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
     // atrasada em relação ao teclado (`transition-colors` só afeta cores).
     <PendingOffersProvider>
     <div className="flex flex-col h-[calc(100dvh-var(--keyboard-inset,0px))] bg-background transition-colors duration-150 ease-in-out">
-
-      {/* Barra do Modo Cliente (super-admin) — só aparece quando ativo */}
-      <ClientModeBar />
 
       {/* Ofertas da roleta esperando aceite — só aparece quando há alguma */}
       <PendingOffersBanner />

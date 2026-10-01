@@ -2,7 +2,7 @@ import { AxiosInstance, AxiosError } from 'axios';
 import { getTenantSlug, getSubdomainSlug } from '@/services/core/tenant';
 
 interface SetupInterceptorOptions {
-  // 'app'  => X-Tenant ciente do Modo Cliente (padrão, telas do cliente)
+  // 'app'  => X-Tenant do cliente do endereço (padrão, telas do cliente)
   // 'auth' => X-Tenant sempre do subdomínio real (login/refresh/validate)
   authScope?: 'app' | 'auth';
 }
@@ -20,7 +20,7 @@ export function applySetupInterceptor(instance: AxiosInstance, opts: SetupInterc
   const resolveSlug = opts.authScope === 'auth' ? getSubdomainSlug : getTenantSlug;
   // SaaS multi-tenant: injeta X-Tenant em TODA requisição. Casa com o
   // TenantResolution do backend. Sem tenant (apex/localhost) não manda nada =>
-  // schema public/legado. Escopo 'app' respeita o Modo Cliente; 'auth' não.
+  // schema public/legado. O tenant é o subdomínio do endereço, nos dois escopos.
   instance.interceptors.request.use(config => {
     const tenant = resolveSlug();
     if (tenant) {
