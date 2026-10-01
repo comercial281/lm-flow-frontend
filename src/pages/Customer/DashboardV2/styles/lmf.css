@@ -209,6 +209,56 @@
   color: var(--lmf-accent);
 }
 
+/* Campo de filtro com rótulo em cima (CampoFiltro). Só aparece quando o seletor
+   recebe `rotulo`, hoje só na Dashboard nova; a DashboardV2 continua no
+   .lmf-select de sempre. A caixa é o próprio select/botão, com 40 px; ícone e
+   seta ficam por cima, sem pegar clique, para o clique em qualquer ponto abrir. */
+.lmf-campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lmf-campo-rotulo { font-size: 12px; font-weight: 500; color: var(--lmf-muted); }
+.lmf-campo-caixa { position: relative; display: flex; }
+.lmf-campo-controle {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 40px;
+  margin: 0;
+  padding: 0 34px;
+  border: 1px solid var(--lmf-border);
+  border-radius: var(--lmf-radius-sm);
+  background: var(--lmf-control-bg);
+  color: var(--lmf-text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 38px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.lmf-campo-sem-icone .lmf-campo-controle { padding-left: 12px; }
+.lmf-campo-controle:hover { border-color: var(--lmf-border-strong); }
+.lmf-campo-controle:focus-visible { outline: 2px solid var(--lmf-accent); outline-offset: 2px; }
+/* Filtro em uso: borda roxa. No botão liga/desliga, também o fundo e o texto. */
+.lmf-campo-controle[data-active='true'] { border-color: var(--lmf-accent); }
+button.lmf-campo-controle[data-active='true'] { color: var(--lmf-accent); background: var(--lmf-accent-soft); }
+.dark button.lmf-campo-controle[data-active='true'] { color: #c4b5fd; }
+.lmf-campo-caixa:has(> [data-active='true']) .lmf-campo-icone { color: var(--lmf-accent); }
+.dark .lmf-campo-controle { color-scheme: dark; }
+.lmf-campo-icone,
+.lmf-campo-seta {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  color: var(--lmf-muted);
+  pointer-events: none;
+}
+.lmf-campo-icone { left: 12px; }
+.lmf-campo-seta { right: 12px; }
+
 .lmf-date-input {
   background: var(--lmf-control-bg);
   border: 1px solid var(--lmf-border);

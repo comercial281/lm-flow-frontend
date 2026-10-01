@@ -46,7 +46,7 @@ const Esqueleto: React.FC = () => (
     <div className="lmfn-linha lmfn-linha-principal">
       <Skeleton height={260} />
       <div className="lmfn-coluna">
-        <Skeleton height={104} />
+        <Skeleton height={124} />
         <Skeleton height={220} />
       </div>
     </div>

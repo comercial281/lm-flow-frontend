@@ -26,11 +26,11 @@ export const Resultados: React.FC<ContextoBloco> = ({ dados, carregando }) => {
   const realizadas = `${numero(bloco.visits_done)} ${bloco.visits_done === 1 ? 'realizada' : 'realizadas'}`;
   return (
     <GlassCard title="Resultados" subtitle="Vendas registradas no funil e visitas do período">
-      <div className="lmfn-numeros">
+      <div className="lmfn-resumo">
         {itens.map(i => (
-          <div key={i.rotulo}>
+          <div key={i.rotulo} className="lmfn-resumo-item">
             <div className="lmfn-numero-rotulo">{i.rotulo}</div>
-            <div className="lmfn-numero-valor" style={{ fontSize: 22 }}>{i.valor}</div>
+            <div className="lmfn-numero-valor">{i.valor}</div>
           </div>
         ))}
       </div>

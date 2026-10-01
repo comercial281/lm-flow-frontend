@@ -204,8 +204,16 @@ describe('Atendimento do time', () => {
 
   it('mostra o % de feedback da imobiliária e a IA', () => {
     wrap(<AtendimentoTime {...ctx({ team: { total, people: [] } })} />);
-    expect(screen.getByText('62% das visitas do período tiveram feedback')).toBeInTheDocument();
+    // O feedback é o quarto item do resumo: rótulo, número e legenda.
+    const item = screen.getByText('Visitas com feedback').parentElement!;
+    expect(item).toHaveTextContent('Visitas com feedback62%das visitas do período tiveram feedback');
     expect(screen.getByText('1ª resposta da IA Vendedora')).toBeInTheDocument();
+  });
+
+  it('sem visita realizada, o item do feedback mostra traço e diz por quê', () => {
+    wrap(<AtendimentoTime {...ctx({ team: { total: { ...total, visits_done: 0, visits_with_feedback: 0, feedback_percent: null }, people: [] } })} />);
+    const item = screen.getByText('Visitas com feedback').parentElement!;
+    expect(item).toHaveTextContent('Visitas com feedback—Nenhuma visita realizada no período');
   });
 
   it('sem IA no período, a linha da IA não aparece', () => {

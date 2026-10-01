@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { Tag } from 'lucide-react';
 import { labelsService } from '@/services/contacts/labelsService';
+import { CampoFiltro } from './CampoFiltro';
 
 interface LabelOption {
   id: string;
@@ -11,6 +12,8 @@ interface LabelOption {
 interface Props {
   value?: string;
   onChange: (labelId: string | undefined, title: string | undefined) => void;
+  /** Com rótulo, desenha o campo da Dashboard nova (rótulo em cima, caixa de 40 px). Sem, o de sempre. */
+  rotulo?: string;
 }
 
 /**
@@ -23,8 +26,9 @@ interface Props {
  * etiquetas perdia as últimas em ordem alfabética (achado ao vivo: "tráfego"
  * sumia com 37 etiquetas cadastradas e o default de 20).
  */
-export const TagPicker: React.FC<Props> = ({ value, onChange }) => {
+export const TagPicker: React.FC<Props> = ({ value, onChange, rotulo }) => {
   const [options, setOptions] = useState<LabelOption[]>([]);
+  const id = useId();
 
   useEffect(() => {
     let alive = true;
@@ -52,6 +56,31 @@ export const TagPicker: React.FC<Props> = ({ value, onChange }) => {
 
   const selected = options.find(o => o.id === value);
 
+  const opcoes = (
+    <>
+      <option value="">Todas as etiquetas</option>
+      {options.map(o => (
+        <option key={o.id} value={o.id} style={{ color: o.color }}>
+          {o.title}
+        </option>
+      ))}
+    </>
+  );
+
+  if (rotulo) {
+    const icone = selected
+      ? <span style={{ width: 10, height: 10, borderRadius: '50%', background: selected.color }} />
+      : <Tag size={14} />;
+    return (
+      <CampoFiltro id={id} rotulo={rotulo} icone={icone}>
+        <select id={id} className="lmf-campo-controle" data-active={selected ? true : undefined}
+          value={value ?? ''} onChange={e => handleChange(e.target.value)}>
+          {opcoes}
+        </select>
+      </CampoFiltro>
+    );
+  }
+
   return (
     <label className="lmf-select flex items-center gap-2" title="Filtrar por etiqueta">
       {/* Bolinha na cor da etiqueta selecionada — o <select> nativo não deixa
@@ -70,12 +99,7 @@ export const TagPicker: React.FC<Props> = ({ value, onChange }) => {
         onChange={e => handleChange(e.target.value)}
         style={{ background: 'transparent', border: 0, color: 'inherit', font: 'inherit', outline: 'none' }}
       >
-        <option value="">Todas as etiquetas</option>
-        {options.map(o => (
-          <option key={o.id} value={o.id} style={{ color: o.color }}>
-            {o.title}
-          </option>
-        ))}
+        {opcoes}
       </select>
     </label>
   );

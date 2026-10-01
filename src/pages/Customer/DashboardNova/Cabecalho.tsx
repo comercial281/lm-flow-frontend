@@ -1,9 +1,10 @@
 // src/pages/Customer/DashboardNova/Cabecalho.tsx
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, User } from 'lucide-react';
 import { InstancePicker } from '../DashboardV2/components/InstancePicker';
 import { TagPicker } from '../DashboardV2/components/TagPicker';
 import { AiToggle } from '../DashboardV2/components/AiToggle';
+import { CampoFiltro } from '../DashboardV2/components/CampoFiltro';
 import type { PeriodPreset, ScopeMode } from '../DashboardV2/types';
 import { usersService } from '@/services/users';
 import type { FiltrosDashboard, ScopeInfoNova } from './types';
@@ -36,6 +37,7 @@ export const Cabecalho: React.FC<Props> = ({ nome, visao, scope, carregando, fil
   const [aberto, setAberto] = useState(false);
   const [corretores, setCorretores] = useState<{ id: string; nome: string }[]>([]);
   const idPainel = useId();
+  const idCorretor = useId();
   const modos = ORDEM_VISAO.filter(m => scope?.available_modes.includes(m));
   const mostraVisao = !!scope && !scope.locked && modos.length > 1;
 
@@ -113,20 +115,22 @@ export const Cabecalho: React.FC<Props> = ({ nome, visao, scope, carregando, fil
       </header>
 
       {aberto && (
-        <div id={idPainel} className="lmfn-filtros" role="region" aria-label="Filtros">
+        <div id={idPainel} className="lmf-glass lmfn-filtros" role="region" aria-label="Filtros">
+          {/* Os quatro com o mesmo desenho: rótulo em cima, caixa de 40 px (CampoFiltro). */}
           {visao === 'gestor' && (
-            <label>
-              Corretor
-              <select className="lmf-select" value={donoAplicado ?? ''}
+            <CampoFiltro id={idCorretor} rotulo="Corretor" icone={<User size={14} />}>
+              <select id={idCorretor} className="lmf-campo-controle" data-active={donoAplicado ? true : undefined}
+                value={donoAplicado ?? ''}
                 onChange={e => onFiltros({ ...filtros, ownerId: e.target.value || undefined })}>
                 <option value="">Todos</option>
                 {corretores.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </select>
-            </label>
+            </CampoFiltro>
           )}
-          <InstancePicker value={filtros.inboxId} onChange={inboxId => onFiltros({ ...filtros, inboxId })} />
-          <TagPicker value={filtros.labelId} onChange={labelId => onFiltros({ ...filtros, labelId })} />
-          <AiToggle active={!!filtros.aiOnly} salesAgentId={filtros.salesAgentId}
+          <InstancePicker rotulo="Número de WhatsApp" value={filtros.inboxId}
+            onChange={inboxId => onFiltros({ ...filtros, inboxId })} />
+          <TagPicker rotulo="Etiqueta" value={filtros.labelId} onChange={labelId => onFiltros({ ...filtros, labelId })} />
+          <AiToggle rotulo="Atendimento" active={!!filtros.aiOnly} salesAgentId={filtros.salesAgentId}
             onChange={({ active, salesAgentId }) => onFiltros({ ...filtros, aiOnly: active, salesAgentId })} />
           <div className="lmfn-filtros-rodape">
             {/* O funil não é filtro daqui (escolhe-se no card Funil): fica. */}

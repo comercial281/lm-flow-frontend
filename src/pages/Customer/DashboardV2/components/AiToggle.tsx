@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { Bot } from 'lucide-react';
 import { salesAgentsService } from '@/services/salesAgents/salesAgentsService';
+import { CampoFiltro } from './CampoFiltro';
 
 interface Props {
   active: boolean;
   salesAgentId?: string;
   onChange: (next: { active: boolean; salesAgentId?: string; salesAgentName?: string }) => void;
+  /** Com rótulo, desenha o campo da Dashboard nova (rótulo em cima, caixa de 40 px). Sem, o de sempre. */
+  rotulo?: string;
 }
 
 /**
@@ -24,8 +27,9 @@ interface Props {
  * por agente. Escolher um agente já liga o filtro sozinho — não precisa dos
  * dois cliques.
  */
-export const AiToggle: React.FC<Props> = ({ active, salesAgentId, onChange }) => {
+export const AiToggle: React.FC<Props> = ({ active, salesAgentId, onChange, rotulo }) => {
   const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
+  const id = useId();
 
   useEffect(() => {
     let alive = true;
@@ -38,6 +42,25 @@ export const AiToggle: React.FC<Props> = ({ active, salesAgentId, onChange }) =>
       .catch(() => { /* silencioso — fica no botão liga/desliga */ });
     return () => { alive = false; };
   }, []);
+
+  if (agents.length < 2 && rotulo) {
+    // Botão liga/desliga: sem seta (não abre lista). O rótulo dá nome ao grupo;
+    // o botão continua se chamando "Só IA".
+    return (
+      <CampoFiltro rotulo={rotulo} idRotulo={`${id}-rotulo`} icone={<Bot size={14} />} seta={false}>
+        <button
+          type="button"
+          className="lmf-campo-controle"
+          data-active={active || undefined}
+          onClick={() => onChange({ active: !active, salesAgentId: undefined })}
+          aria-pressed={active}
+          title="Mostrar só leads atendidos pela IA"
+        >
+          Só IA
+        </button>
+      </CampoFiltro>
+    );
+  }
 
   if (agents.length < 2) {
     return (
@@ -68,6 +91,29 @@ export const AiToggle: React.FC<Props> = ({ active, salesAgentId, onChange }) =>
     }
   };
 
+  const opcoes = (
+    <>
+      <option value="">Todos os atendimentos</option>
+      <option value={ANY_AI}>Todas as IAs</option>
+      {agents.map(a => (
+        <option key={a.id} value={a.id}>
+          {a.name}
+        </option>
+      ))}
+    </>
+  );
+
+  if (rotulo) {
+    return (
+      <CampoFiltro id={id} rotulo={rotulo} icone={<Bot size={14} />}>
+        <select id={id} className="lmf-campo-controle" data-active={active || undefined}
+          value={value} onChange={e => handleChange(e.target.value)}>
+          {opcoes}
+        </select>
+      </CampoFiltro>
+    );
+  }
+
   return (
     <label className="lmf-select flex items-center gap-2" title="Filtrar por IA que atendeu">
       <Bot size={14} aria-hidden />
@@ -77,13 +123,7 @@ export const AiToggle: React.FC<Props> = ({ active, salesAgentId, onChange }) =>
         onChange={e => handleChange(e.target.value)}
         style={{ background: 'transparent', border: 0, color: 'inherit', font: 'inherit', outline: 'none' }}
       >
-        <option value="">Todos os atendimentos</option>
-        <option value={ANY_AI}>Todas as IAs</option>
-        {agents.map(a => (
-          <option key={a.id} value={a.id}>
-            {a.name}
-          </option>
-        ))}
+        {opcoes}
       </select>
     </label>
   );

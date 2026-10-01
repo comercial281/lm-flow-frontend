@@ -47,30 +47,33 @@ export const AtendimentoTime: React.FC<ContextoBloco> = ({ dados, carregando }) 
 
   return (
     <GlassCard title="Atendimento do time" subtitle="Quanto o lead espera, e se as visitas têm feedback">
-      <div className="lmfn-numeros" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
-        <div>
+      {/* O feedback das visitas é o quarto item do resumo, alinhado com os outros. */}
+      <div className="lmfn-resumo">
+        <div className="lmfn-resumo-item">
           <div className="lmfn-numero-rotulo">1ª resposta do time</div>
-          <div className="lmfn-numero-valor" style={{ fontSize: 22 }}>{t.median_seconds === null ? VAZIO : formatDuration(t.median_seconds)}</div>
-          <div className="lmf-card-sub" style={{ margin: 0 }}>{comparacao(t.median_seconds, t.previous_median_seconds)}</div>
+          <div className="lmfn-numero-valor">{t.median_seconds === null ? VAZIO : formatDuration(t.median_seconds)}</div>
+          <div className="lmfn-resumo-legenda">{comparacao(t.median_seconds, t.previous_median_seconds)}</div>
         </div>
         {temIa && (
-          <div>
+          <div className="lmfn-resumo-item">
             <div className="lmfn-numero-rotulo">1ª resposta da IA Vendedora</div>
-            <div className="lmfn-numero-valor" style={{ fontSize: 22 }}>{formatDuration(t.ai_median_seconds ?? 0)}</div>
+            <div className="lmfn-numero-valor">{formatDuration(t.ai_median_seconds ?? 0)}</div>
           </div>
         )}
-        <div>
+        <div className="lmfn-resumo-item">
           <div className="lmfn-numero-rotulo">Esperaram mais de 1 h</div>
-          <div className="lmfn-numero-valor" style={{ fontSize: 22 }}>{numero(t.waited_over_hour)}</div>
+          <div className="lmfn-numero-valor">{numero(t.waited_over_hour)}</div>
+        </div>
+        <div className="lmfn-resumo-item">
+          <div className="lmfn-numero-rotulo">Visitas com feedback</div>
+          <div className="lmfn-numero-valor">{t.feedback_percent === null ? VAZIO : porcentagem(t.feedback_percent, 0)}</div>
+          <div className="lmfn-resumo-legenda">
+            {t.feedback_percent === null ? 'Nenhuma visita realizada no período' : 'das visitas do período tiveram feedback'}
+          </div>
         </div>
       </div>
-      <p className="lmf-card-sub" style={{ marginTop: 12 }}>
-        {t.feedback_percent === null
-          ? 'Nenhuma visita realizada no período'
-          : `${porcentagem(t.feedback_percent, 0)} das visitas do período tiveram feedback`}
-      </p>
       {bloco.people.length > 0 && (
-        <table className="lmfn-tabela" style={{ marginTop: 8 }}>
+        <table className="lmfn-tabela" style={{ marginTop: 16 }}>
           <thead>
             <tr><th>Corretor</th><th>1ª resposta</th><th>Esperaram mais de 1 h</th><th>Visitas com feedback</th></tr>
           </thead>
