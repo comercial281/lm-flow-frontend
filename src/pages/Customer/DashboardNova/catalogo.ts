@@ -31,7 +31,7 @@ export const CATALOGO: Record<BlocoId, BlocoCatalogo> = {
   pendencias:       bloco({ id: 'pendencias', titulo: 'Pendências', visoes: ['gestor', 'corretor'], api: ['pending'], seguePeriodo: false, ligado: true }),
   proximas_visitas: bloco({ id: 'proximas_visitas', titulo: 'Próximas visitas', visoes: ['gestor', 'corretor'], api: ['upcoming'], seguePeriodo: false, ligado: true }),
   roleta_agora:     bloco({ id: 'roleta_agora', titulo: 'Roleta agora', visoes: ['gestor'], api: [], seguePeriodo: false, ligado: true }),
-  atendimento_time: bloco({ id: 'atendimento_time', titulo: 'Atendimento do time', visoes: ['gestor'], api: ['team', 'response'], seguePeriodo: true, ligado: true }),
+  atendimento_time: bloco({ id: 'atendimento_time', titulo: 'Atendimento do time', visoes: ['gestor'], api: ['team'], seguePeriodo: true, ligado: true }),
   funil:            bloco({ id: 'funil', titulo: 'Funil', visoes: ['gestor', 'corretor'], api: ['pipeline'], seguePeriodo: false, ligado: true }),
   resultados:       bloco({ id: 'resultados', titulo: 'Resultados', visoes: ['gestor'], api: ['results'], seguePeriodo: true, ligado: true }),
   leads_dia_semana: bloco({ id: 'leads_dia_semana', titulo: 'Leads por dia da semana', visoes: ['gestor', 'corretor'], api: ['leads_by_weekday'], seguePeriodo: true, ligado: true }),
@@ -83,12 +83,22 @@ export function linhasDaVisao(visao: Visao): Linha[] {
     .filter(linha => linha.colunas.length > 0);
 }
 
-/** Um pedido só para as duas visões: o servidor tira sozinho o que o corretor não vê. */
+/**
+ * Blocos com pedido próprio: o Funil muda pelo seletor dele, e trocar de funil
+ * não pode refazer o resto da tela (pendências, time, resultados…).
+ */
+const PEDIDO_A_PARTE: BlocoId[] = ['funil'];
+
+/** O pedido principal, para as duas visões: o servidor tira sozinho o que o corretor não vê. */
 export const BLOCOS_API: BlocoApi[] = Array.from(
   new Set(
     (['gestor', 'corretor'] as Visao[])
       .flatMap(v => linhasDaVisao(v))
       .flatMap(l => l.colunas.flat())
+      .filter(id => !PEDIDO_A_PARTE.includes(id))
       .flatMap(id => CATALOGO[id].api),
   ),
 );
+
+/** O pedido do Funil, com o `pipeline_id` escolhido nele. */
+export const BLOCOS_FUNIL: BlocoApi[] = CATALOGO.funil.api;

@@ -1,6 +1,6 @@
 // src/pages/Customer/DashboardNova/catalogo.spec.ts
 import { describe, it, expect } from 'vitest';
-import { BLOCOS_API, CATALOGO, linhasDaVisao } from './catalogo';
+import { BLOCOS_API, BLOCOS_FUNIL, CATALOGO, linhasDaVisao } from './catalogo';
 import { gestorVendoComoCorretor, visaoDoEscopo } from './visao';
 
 const ids = (visao: 'gestor' | 'corretor') => linhasDaVisao(visao).flatMap(l => l.colunas.flat());
@@ -30,8 +30,15 @@ describe('catálogo da Dashboard', () => {
     expect(BLOCOS_API).not.toContain('heatmap');
   });
 
-  it('pede à API tudo que alguma visão desenha', () => {
-    expect(BLOCOS_API).toEqual(expect.arrayContaining(['kpis', 'properties', 'pending', 'upcoming', 'team', 'response', 'pipeline', 'results']));
+  it('pede à API tudo que alguma visão desenha, e nada que nenhum bloco lê', () => {
+    expect(BLOCOS_API).toEqual(expect.arrayContaining(['kpis', 'properties', 'pending', 'upcoming', 'team', 'results']));
+    // O tempo de resposta geral não aparece em bloco nenhum (o do time vem em `team`).
+    expect(BLOCOS_API).not.toContain('response');
+  });
+
+  it('o funil vem num pedido à parte: trocar de funil não refaz o resto', () => {
+    expect(BLOCOS_API).not.toContain('pipeline');
+    expect(BLOCOS_FUNIL).toEqual(['pipeline']);
   });
 
   it('visão pelo recorte que o servidor resolveu', () => {

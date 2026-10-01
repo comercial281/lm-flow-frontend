@@ -10,11 +10,18 @@ const hook = vi.hoisted(() => ({
   carregando: false,
   pendente: false,
   erro: null as string | null,
+  /** O Funil tem pedido próprio: o erro dele é outro. */
+  erroFunil: null as string | null,
   recarregar: vi.fn(),
+  chamadas: [] as { filtros: FiltrosDashboard; blocos: string[] }[],
 }));
 vi.mock('./useDashboardNova', async orig => ({
   ...(await orig<typeof import('./useDashboardNova')>()),
-  useDashboardNova: () => ({ dados: hook.dados, carregando: hook.carregando, pendente: hook.pendente, erro: hook.erro, recarregar: hook.recarregar }),
+  useDashboardNova: (filtros: FiltrosDashboard, blocos: string[]) => {
+    hook.chamadas.push({ filtros, blocos });
+    const erro = blocos.includes('pipeline') ? hook.erroFunil : hook.erro;
+    return { dados: hook.dados, carregando: hook.carregando, pendente: hook.pendente, erro, recarregar: hook.recarregar };
+  },
 }));
 const PODE = vi.hoisted(() => ({ imoveis: true, agenda: true, propostas: true, funil: true, roleta: false, conversas: true }));
 vi.mock('./usePodeAbrir', async orig => ({
@@ -48,6 +55,7 @@ vi.mock('./ListaRapida', () => ({
 vi.mock('./blocos/RoletaAgora', () => ({ RoletaAgora: () => <div>Bloco Roleta agora</div> }));
 
 import DashboardNova from './index';
+import { paramsDaApi } from './useDashboardNova';
 
 const base = (mode: 'all' | 'mine', locked = false, extra: Record<string, unknown> = {}) => ({
   period: { preset: 'last_7_days', since: '2026-09-24T00:00:00-03:00', until: '2026-09-30T23:59:59-03:00' },
@@ -64,7 +72,9 @@ describe('DashboardNova', () => {
     hook.carregando = false;
     hook.pendente = false;
     hook.erro = null;
+    hook.erroFunil = null;
     hook.recarregar.mockReset();
+    hook.chamadas = [];
     cargo.gestor = true;
     cab.props = null;
     lista.props = null;
@@ -188,5 +198,25 @@ describe('DashboardNova', () => {
     fireEvent.click(screen.getByRole('button', { name: /Sem contato do corretor/ }));
     act(() => { lista.props?.onFechar(); });
     expect(lista.props).toMatchObject({ aberta: false, kind: 'sem_contato', titulo: 'Sem contato do corretor há mais de 3 dias' });
+  });
+
+  it('trocar de funil só refaz o pedido do funil, não o dos outros blocos', () => {
+    hook.dados = base('all', false, {
+      pipeline: {
+        pipeline: { id: 'p1', name: 'Vendas' },
+        pipelines: [{ id: 'p1', name: 'Vendas' }, { id: 'p2', name: 'Locação' }],
+        stages: [{ id: 'e1', name: 'Novo', color: '#000', position: 1, entered: 3, current: 48 }],
+      },
+    });
+    tela();
+    const ultimo = (funil: boolean) =>
+      [...hook.chamadas].reverse().find(c => c.blocos.includes('pipeline') === funil)!;
+    const antes = JSON.stringify(paramsDaApi(ultimo(false).filtros));
+    expect(ultimo(true).blocos).toEqual(['pipeline']);
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Funil' }), { target: { value: 'p2' } });
+    expect(JSON.stringify(paramsDaApi(ultimo(false).filtros))).toBe(antes);
+    expect(ultimo(false).filtros.pipelineId).toBeUndefined();
+    expect(ultimo(true).filtros.pipelineId).toBe('p2');
   });
 });

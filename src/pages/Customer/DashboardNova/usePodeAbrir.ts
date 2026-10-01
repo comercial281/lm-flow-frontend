@@ -43,6 +43,18 @@ export interface ContextoBloco {
   pode: PodeAbrir;
   /** Os filtros pedidos agora: com `recorteBateComDestino` (visao.ts), decidem se um número vira link. */
   filtros: FiltrosDashboard;
+  /**
+   * O Funil vem num pedido à parte (trocar de funil não refaz o resto), com
+   * dados, erro e espera próprios. `pendente`: a resposta em mãos não é a do
+   * funil escolhido agora.
+   */
+  funil: {
+    dados: DashboardNovaPayload | null;
+    carregando: boolean;
+    pendente: boolean;
+    erro: string | null;
+    recarregar: () => void;
+  };
   /** `limitado`: o número que abriu a lista tem teto no servidor (sai com +). */
   abrirLista: (kind: ListaKind, titulo: string, limitado?: boolean) => void;
   mudarFunil: (pipelineId: string) => void;

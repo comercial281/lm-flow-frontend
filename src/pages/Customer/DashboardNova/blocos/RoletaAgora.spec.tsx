@@ -11,7 +11,8 @@ import type { ContextoBloco } from '../usePodeAbrir';
 
 const pode = { imoveis: true, agenda: true, propostas: true, funil: true, roleta: true, conversas: true };
 const ctx = (over: Partial<ContextoBloco> = {}): ContextoBloco =>
-  ({ dados: null, carregando: false, visao: 'gestor', pode, filtros: { preset: 'last_7_days' }, abrirLista: vi.fn(), mudarFunil: vi.fn(), ...over });
+  ({ dados: null, carregando: false, visao: 'gestor', pode, filtros: { preset: 'last_7_days' },
+    funil: { dados: null, carregando: false, pendente: false, erro: null, recarregar: vi.fn() }, abrirLista: vi.fn(), mudarFunil: vi.fn(), ...over });
 
 const membro = (nome: string, extra = {}) => ({ user_id: nome, nome, peso: 1, ativo: true, sem_acesso_a_instancia: false, chance_pct: null, proximo: false, segurando_agora: 0, ultimo_lead_em: null, ...extra });
 const roleta = (id: string, nome: string, extra = {}) => ({ id, nome, instancia: id, modo: 'fila', ativa: true, prazo_minutos: 10, membros: [membro(`${nome}-membro`)], ...extra });

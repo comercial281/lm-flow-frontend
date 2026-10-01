@@ -8,7 +8,7 @@ import '../DashboardV2/styles/lmf.css';
 import './dashboard-nova.css';
 import { Cabecalho } from './Cabecalho';
 import { ListaRapida } from './ListaRapida';
-import { BLOCOS_API, linhasDaVisao, type BlocoId } from './catalogo';
+import { BLOCOS_API, BLOCOS_FUNIL, linhasDaVisao, type BlocoId } from './catalogo';
 import { gestorVendoComoCorretor, modoDeVolta, rotuloDaVolta, visaoDoEscopo } from './visao';
 import { useDashboardNova } from './useDashboardNova';
 import { usePodeAbrir, type ContextoBloco } from './usePodeAbrir';
@@ -69,7 +69,10 @@ const DashboardNova: React.FC = () => {
   const [filtros, setFiltros] = useState<FiltrosDashboard>({ preset: 'last_7_days' });
   const [lista, setLista] = useState<ListaAberta | null>(null);
   const [listaAberta, setListaAberta] = useState(false);
-  const { dados, carregando, pendente, erro, recarregar } = useDashboardNova(filtros, BLOCOS_API);
+  // Dois pedidos: o funil escolhido só entra no do Funil, então trocar de funil
+  // não refaz pendências, time, resultados e o resto.
+  const { dados, carregando, pendente, erro, recarregar } = useDashboardNova({ ...filtros, pipelineId: undefined }, BLOCOS_API);
+  const pedidoFunil = useDashboardNova(filtros, BLOCOS_FUNIL);
 
   // `dados.scope` passa adiante como veio (mesmo objeto): o Cabecalho confere
   // o corretor descartado pelo servidor uma vez por resposta, pela referência.
@@ -80,14 +83,19 @@ const DashboardNova: React.FC = () => {
   const volta = modoDeVolta(scope);
   const tentarDeNovo = () => { void recarregar(); };
 
+  const { dados: dadosFunil, carregando: carregandoFunil, pendente: pendenteFunil, erro: erroFunil, recarregar: recarregarFunil } = pedidoFunil;
   const ctx: ContextoBloco = useMemo(() => ({
     dados, carregando, visao, pode, filtros,
+    funil: {
+      dados: dadosFunil, carregando: carregandoFunil, pendente: pendenteFunil, erro: erroFunil,
+      recarregar: () => { void recarregarFunil(); },
+    },
     abrirLista: (kind, titulo, limitado) => {
       setLista({ kind, titulo, limitado: !!limitado });
       setListaAberta(true);
     },
     mudarFunil: pipelineId => setFiltros(f => ({ ...f, pipelineId })),
-  }), [dados, carregando, visao, pode, filtros]);
+  }), [dados, carregando, visao, pode, filtros, dadosFunil, carregandoFunil, pendenteFunil, erroFunil, recarregarFunil]);
 
   let corpo: React.ReactNode;
   if (!dados && erro) {

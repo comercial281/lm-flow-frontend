@@ -21,7 +21,8 @@ const periodo = { preset: 'last_7_days', since: '2026-09-24T00:00:00-03:00', unt
 function ctx(over: Partial<ContextoBloco> = {}, dados: Record<string, unknown> = {}): ContextoBloco {
   return {
     dados: { period: periodo, scope: { mode: 'all', locked: false, available_modes: ['all'], blocks: { media_spend: false, operations: false } }, ...dados } as never,
-    carregando: false, visao: 'gestor', pode, filtros: { preset: 'last_7_days' }, abrirLista: vi.fn(), mudarFunil: vi.fn(), ...over,
+    carregando: false, visao: 'gestor', pode, filtros: { preset: 'last_7_days' },
+    funil: { dados: null, carregando: false, pendente: false, erro: null, recarregar: vi.fn() }, abrirLista: vi.fn(), mudarFunil: vi.fn(), ...over,
   };
 }
 

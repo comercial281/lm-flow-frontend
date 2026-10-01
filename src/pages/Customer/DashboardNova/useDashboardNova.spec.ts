@@ -40,6 +40,17 @@ describe('useDashboardNova', () => {
     expect(result.current.dados).toBeNull();
   });
 
+  it('os mesmos filtros num objeto novo não refazem o pedido', async () => {
+    fetchMetrics.mockResolvedValue({ period: {}, scope: { mode: 'all' } });
+    const { result, rerender } = renderHook(({ f }) => useDashboardNova(f, ['kpis']), {
+      initialProps: { f: { preset: 'last_7_days' } as FiltrosDashboard },
+    });
+    await waitFor(() => expect(result.current.carregando).toBe(false));
+    rerender({ f: { preset: 'last_7_days', pipelineId: undefined } });
+    rerender({ f: { preset: 'last_7_days' } });
+    expect(fetchMetrics).toHaveBeenCalledTimes(1);
+  });
+
   it('lista de blocos vazia não vira pedido com blocks= vazio', () => {
     const { result } = renderHook(() => useDashboardNova({ preset: 'last_7_days' }, []));
     expect(fetchMetrics).not.toHaveBeenCalled();

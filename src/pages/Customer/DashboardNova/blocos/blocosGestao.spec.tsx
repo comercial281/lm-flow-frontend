@@ -13,10 +13,15 @@ import { AtendimentoTime, motivoAtencao, precisaAtencao } from './AtendimentoTim
 import type { ContextoBloco } from '../usePodeAbrir';
 
 const pode = { imoveis: true, agenda: true, propostas: true, funil: true, roleta: true, conversas: true };
-const ctx = (dados: Record<string, unknown>, over: Partial<ContextoBloco> = {}): ContextoBloco => ({
-  dados: { period: { since: '2026-09-24T00:00:00-03:00', until: '2026-09-30T23:59:59-03:00' }, scope: { mode: 'all' }, ...dados } as never,
-  carregando: false, visao: 'gestor', pode, filtros: { preset: 'last_7_days' }, abrirLista: vi.fn(), mudarFunil: vi.fn(), ...over,
-});
+const ctx = (dados: Record<string, unknown>, over: Partial<ContextoBloco> = {}): ContextoBloco => {
+  const payload = { period: { since: '2026-09-24T00:00:00-03:00', until: '2026-09-30T23:59:59-03:00' }, scope: { mode: 'all' }, ...dados } as never;
+  return {
+    dados: payload, carregando: false, visao: 'gestor', pode, filtros: { preset: 'last_7_days' },
+    // O funil vem num pedido à parte; aqui, a mesma resposta.
+    funil: { dados: payload, carregando: false, pendente: false, erro: null, recarregar: vi.fn() },
+    abrirLista: vi.fn(), mudarFunil: vi.fn(), ...over,
+  };
+};
 const wrap = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
 beforeEach(() => {
@@ -76,6 +81,27 @@ describe('Funil', () => {
     wrap(<Funil {...c} />);
     fireEvent.change(screen.getByRole('combobox', { name: 'Funil' }), { target: { value: 'p2' } });
     expect(c.mudarFunil).toHaveBeenCalledWith('p2');
+  });
+
+  it('enquanto o funil novo carrega, o seletor mostra o escolhido, não o da resposta antiga', () => {
+    const c = ctx({ pipeline });
+    wrap(<Funil {...c} filtros={{ preset: 'last_7_days', pipelineId: 'p2' }} funil={{ ...c.funil, carregando: true, pendente: true }} />);
+    expect(screen.getByRole('combobox', { name: 'Funil' })).toHaveValue('p2');
+  });
+
+  it('o funil lê o pedido dele: erro nele não mostra o funil velho calado', () => {
+    const c = ctx({ pipeline });
+    wrap(<Funil {...c} funil={{ ...c.funil, erro: 'Não consegui carregar a Dashboard.' }} />);
+    expect(screen.getByText('Não deu para carregar o funil agora.')).toBeInTheDocument();
+    expect(screen.queryByText('Novo')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    expect(c.funil.recarregar).toHaveBeenCalled();
+  });
+
+  it('o funil não depende da resposta dos outros blocos', () => {
+    const c = ctx({});
+    wrap(<Funil {...c} funil={{ ...c.funil, dados: { scope: { mode: 'all' }, pipeline } as never }} />);
+    expect(screen.getByText('Novo')).toBeInTheDocument();
   });
 
   it('recorte que o funil não aplica (Meu time, corretor, filtro): as etapas viram texto', () => {
