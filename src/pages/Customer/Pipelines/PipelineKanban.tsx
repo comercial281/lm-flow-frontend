@@ -436,6 +436,23 @@ export default function PipelineKanban() {
     }
   }, [searchParams, stages, loading, setSearchParams]);
 
+  // ?etapa= (link da Dashboard): rola até a coluna e destaca por 2 segundos.
+  const [etapaDestacada, setEtapaDestacada] = useState<string | null>(null);
+  useEffect(() => {
+    const etapa = searchParams.get('etapa');
+    if (!etapa || loading) return;
+    document.getElementById(`etapa-${etapa}`)?.scrollIntoView?.({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+    setEtapaDestacada(etapa);
+    const resto = new URLSearchParams(searchParams);
+    resto.delete('etapa');
+    setSearchParams(resto, { replace: true });
+  }, [searchParams, loading, setSearchParams]);
+  useEffect(() => {
+    if (!etapaDestacada) return;
+    const t = setTimeout(() => setEtapaDestacada(null), 2000);
+    return () => clearTimeout(t);
+  }, [etapaDestacada]);
+
   // Handle pipeline change
   const handlePipelineChange = (newPipelineId: string) => {
     if (newPipelineId !== pipelineId) {
@@ -1304,7 +1321,11 @@ export default function PipelineKanban() {
             >
               {/* Stage Columns */}
               {filteredStages.map((stage: PipelineStage) => (
-                <div key={stage.id} className="w-80 flex-shrink-0">
+                <div
+                  key={stage.id}
+                  id={`etapa-${stage.id}`}
+                  className={`w-80 flex-shrink-0 rounded-xl transition-shadow ${etapaDestacada === stage.id ? 'ring-2 ring-primary' : ''}`}
+                >
                   <div className="bg-muted/40 rounded-xl shadow-sm border border-border h-full flex flex-col">
                     {/* Stage Header */}
                     <div
