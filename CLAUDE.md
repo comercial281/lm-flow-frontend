@@ -4468,6 +4468,7 @@ O que aparece na tela, no menu da Área do Admin:
 - **Link antigo continua valendo.** `?tab=` de Clientes e da IA Vendedora leva pra aba nova (`adminEnderecosAntigos.ts`); `/admin/uso?client=x` vira `/admin/usuarios?client=x`, e Usuários abre no cliente do link (antes o link dos Logs não filtrava nada).
 - **Logs e Atividade viraram uma tela só** (já eram o mesmo componente). `/admin/uso` era cópia de Métricas de Uso: virou Usuários.
 - **Conhecimento** junta Cérebro Universal, Princípios e Aperfeiçoamento, um embaixo do outro.
+- **Aviso de visita** saiu de Plataforma e foi para IA Vendedora → Aviso de visita, sem mudar comportamento (decisões de 21/09 mantidas).
 - **Mensagem de acesso** saiu da janela e virou aba; a variável `{senha}` saiu da lista (a senha é criada pela pessoa, pelo link, desde a fase 1).
 - **WhatsApp** é o Comunicado. Neste passo a escrita continua na janela de sempre, com todos os clientes marcados (decisão). Confirmação e tela própria entram no PR de Comunicação.
 - **Push** ainda tem três abas por dentro (Regras, Disparo manual, Histórico): viram seções no PR de Comunicação. É a única exceção ao "sem terceiro nível", e é temporária.
