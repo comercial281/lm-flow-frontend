@@ -4331,8 +4331,8 @@ Fase 4, jornada 1. Spec: `LM FLOW/specs/2026-09-30-fase-4-jornada-dashboard-desi
   (a lista usa os mesmos filtros do servidor; Imóveis do corretor vai com
   `meus=1`). O conserto de vez é o servidor aceitar `owner_ids` nas telas de
   destino; aí os links voltam.
-- **Propostas do corretor fica sem link** até a lista de Propostas recortar por
-  corretor (ela ainda mostra as de todo mundo).
+- **O corretor não vê Propostas na Dashboard** (decisão do dono, 01/10/2026):
+  os números dele são três (leads recebidos, conversas, visitas agendadas).
 - **Pendências = abertas agora**, não seguem o período.
 - **Roleta agora** reaproveita `GET /roleta_configs/queue`, a cada 30 s com a aba
   visível; some para quem não tem `roleta_configs.queue`.

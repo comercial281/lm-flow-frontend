@@ -163,10 +163,10 @@ describe('bloco Números', () => {
     expect(screen.getByText('Leads recebidos')).toBeInTheDocument();
   });
 
-  it('para o corretor, Propostas é só o número: a lista ainda não separa por corretor', () => {
+  it('o corretor não vê Propostas', () => {
     wrap(<Numeros {...ctx({ visao: 'corretor' }, { kpis })} />);
-    expect(screen.queryByRole('button', { name: /Propostas/ })).not.toBeInTheDocument();
-    expect(screen.getByText('Propostas')).toBeInTheDocument();
+    expect(screen.queryByText('Propostas')).not.toBeInTheDocument();
+    expect(screen.getByText('Leads recebidos')).toBeInTheDocument();
   });
 
   const escopo = (mode: 'all' | 'team' | 'mine', over: Record<string, unknown> = {}) =>

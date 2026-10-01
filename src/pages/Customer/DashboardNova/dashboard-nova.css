@@ -42,6 +42,7 @@ button.lmfn-item:hover { background: var(--lmf-accent-soft); }
 .lmfn-pilula-atencao { color: var(--lmf-warn); border-color: transparent; background: rgba(217, 119, 6, 0.12); }
 .lmfn-pilula-alerta { color: var(--lmf-down); border-color: transparent; background: rgba(225, 29, 72, 0.1); }
 .lmfn-numeros { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.lmfn-numeros-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 640px) { .lmfn-numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .lmfn-numero { display: flex; flex-direction: column; gap: 4px; text-align: left; border: 1px solid var(--lmf-border); background: var(--lmf-surface); border-radius: 14px; padding: 14px; box-shadow: var(--lmf-shadow); color: inherit; font: inherit; min-width: 0; }
 button.lmfn-numero { cursor: pointer; }
