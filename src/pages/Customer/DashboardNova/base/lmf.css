@@ -210,8 +210,7 @@
 }
 
 /* Campo de filtro com rótulo em cima (CampoFiltro). Só aparece quando o seletor
-   recebe `rotulo`, hoje só na Dashboard nova; a DashboardV2 continua no
-   .lmf-select de sempre. A caixa é o próprio select/botão, com 40 px; ícone e
+   recebe `rotulo`; sem ele, o .lmf-select simples. A caixa é o próprio select/botão, com 40 px; ícone e
    seta ficam por cima, sem pegar clique, para o clique em qualquer ponto abrir. */
 .lmf-campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .lmf-campo-rotulo { font-size: 12px; font-weight: 500; color: var(--lmf-muted); }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
-import type { Unavailable } from '../types';
+import type { Unavailable } from './types';
 import { dinheiro } from '@/lib/formato';
 
 /** Card de vidro. Toda seção do dash usa este, então o visual não diverge. */

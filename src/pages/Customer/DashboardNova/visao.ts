@@ -1,4 +1,4 @@
-import type { ScopeInfo, ScopeMode } from '../DashboardV2/types';
+import type { ScopeInfo, ScopeMode } from './base/types';
 import type { Visao } from './catalogo';
 import type { FiltrosDashboard, ScopeInfoNova } from './types';
 

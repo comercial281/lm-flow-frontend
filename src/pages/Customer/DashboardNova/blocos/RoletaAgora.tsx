@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { data, dataCurta, hora, numero, plural, porcentagem } from '@/lib/formato';
 import { IconActionButton } from '@/components/base';
-import { GlassCard } from '../../DashboardV2/components/primitives';
+import { GlassCard } from '../base/primitives';
 import {
   roletaConfigService,
   type DistributionMode,

@@ -2,8 +2,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { numero } from '@/lib/formato';
-import { Delta, Skeleton } from '../../DashboardV2/components/primitives';
-import { isAvailable, type KpiKey } from '../../DashboardV2/types';
+import { Delta, Skeleton } from '../base/primitives';
+import { isAvailable, type KpiKey } from '../base/types';
 import { linkAgenda, linkPropostas } from '@/features/dashboard/links';
 import type { ContextoBloco } from '../usePodeAbrir';
 import { recorteBateComDestino } from '../visao';

@@ -5,9 +5,9 @@
 import React from 'react';
 import { Area, AreaChart, Bar, BarChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { VAZIO, numero, porcentagem } from '@/lib/formato';
-import { EmptyBlock, GlassCard, Skeleton, tooltipStyle } from '../../DashboardV2/components/primitives';
-import { Heatmap } from '../../DashboardV2/components/Heatmap';
-import { isAvailable, type Unavailable } from '../../DashboardV2/types';
+import { EmptyBlock, GlassCard, Skeleton, tooltipStyle } from '../base/primitives';
+import { Heatmap } from '../base/Heatmap';
+import { isAvailable, type Unavailable } from '../base/types';
 import type { ContextoBloco } from '../usePodeAbrir';
 
 const DIAS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];

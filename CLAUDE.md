@@ -4300,11 +4300,12 @@ novo que o descreva usa `string`.
 
 Fase 4, jornada 1. Spec: `LM FLOW/specs/2026-09-30-fase-4-jornada-dashboard-design.md`.
 
-- **Atrás da chave `dashboard_nova`** (`DashboardEntrada.tsx`, `useClientToggle`).
-  Sem a chave, a `DashboardV2` de sempre. O PR 5 da jornada liga para todos e
-  apaga a ponte e a antiga. Com o cache das funções do cliente ainda frio, quem
-  tem a chave vê a Dashboard de hoje por um instante e ela troca pela nova
-  (direção segura: nunca o contrário).
+- **Desde 01/10/2026, para todos; a DashboardV2 foi apagada.** `/dashboard`
+  abre a `DashboardNova` direto (`routes/lazyPages.ts`), sem chave por cliente.
+  O que a nova aproveitava da antiga mora em `DashboardNova/base/` (tipos do
+  payload, `primitives`, `Heatmap`, os seletores, `CampoFiltro` e o `lmf.css`).
+  Pedido a `GET /dashboard/metrics` sempre leva `blocks=`: sem ele o servidor
+  devolve só período e recorte.
 - **Duas visões saídas do recorte do servidor**: `scope.mode === 'mine'` é a do
   corretor. O gestor em "Só os meus" vê exatamente a tela do corretor, com aviso.
   Os modos do seletor vêm de `available_modes` (regra da casa).
@@ -4370,8 +4371,7 @@ Regras de tela que vieram das revisões (o que quem usa vê):
   entre cartões. O painel de Filtros também. Os quatro filtros (Corretor, Número
   de WhatsApp, Etiqueta, Atendimento) têm o mesmo campo: rótulo visível em cima e
   caixa de 40 px com ícone à esquerda e seta à direita (`CampoFiltro`, ligado
-  pela prop `rotulo` dos seletores). Sem `rotulo`, os seletores da DashboardV2
-  desenham exatamente o de antes na Dashboard antiga. Em Atendimento do time,
+  pela prop `rotulo` dos seletores). Em Atendimento do time,
   "Visitas com feedback" é o quarto item do resumo, com a frase como legenda.
 - **Análise do período:** "De onde vêm os leads" conta contatos captados no
   período pela primeira origem, com o total em cima; seis meses sem lead nenhum

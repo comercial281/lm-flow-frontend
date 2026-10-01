@@ -12,9 +12,8 @@
 // ════════════════════════════════════════════════════════════════════════════
 import { lazyWithRetry } from '@/utils/chunkReload';
 
-// /dashboard escolhe pela chave `dashboard_nova` (fase 4, jornada 1): a nova onde
-// estiver ligada, a DashboardV2 no resto. O PR 5 da jornada desfaz esta ponte.
-export const Dashboard = lazyWithRetry(() => import('@/pages/Customer/DashboardEntrada'));
+// /dashboard: a Dashboard nova, para todos desde 01/10/2026 (fase 4, jornada 1).
+export const Dashboard = lazyWithRetry(() => import('@/pages/Customer/DashboardNova'));
 export const Contacts = lazyWithRetry(() => import('@/pages/Customer/Contacts'));
 export const ScheduledActions = lazyWithRetry(() => import('@/pages/Customer/Contacts/ScheduledActions'));
 export const Channels = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.Channels })));

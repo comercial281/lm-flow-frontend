@@ -16,8 +16,8 @@ interface Props {
 
 /**
  * Um filtro com o rótulo em cima e a caixa de 40 px embaixo (ícone à esquerda,
- * seta à direita). Os seletores só desenham assim quando recebem `rotulo`
- * (Dashboard nova); sem ele, o desenho de sempre (DashboardV2 não muda).
+ * seta à direita). Os seletores só desenham assim quando recebem `rotulo`;
+ * sem ele, caem no `.lmf-select` simples.
  * Visual em lmf.css (`.lmf-campo`).
  */
 export const CampoFiltro: React.FC<Props> = ({ rotulo, id, idRotulo, icone, seta = true, children }) => {
