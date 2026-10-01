@@ -20,9 +20,13 @@ interface Props {
   onChange: (lead: LeadPickerItem) => void;
   placeholder?: string;
   label?: string;
+  /** "Criar contato novo" no fim da lista. A visita não cadastra cliente (decisão do dono, 30/09). */
+  allowCreate?: boolean;
 }
 
-export function LeadCombobox({ value, onChange, placeholder = 'Buscar lead ou contato...', label = 'Contato *' }: Props) {
+export function LeadCombobox({
+  value, onChange, placeholder = 'Buscar lead ou contato...', label = 'Contato *', allowCreate = true,
+}: Props) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<LeadPickerItem[]>([]);
@@ -108,7 +112,7 @@ export function LeadCombobox({ value, onChange, placeholder = 'Buscar lead ou co
           <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-72 overflow-y-auto">
             {items.length === 0 && !loading && (
               <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-                Nenhum lead encontrado
+                {allowCreate ? 'Nenhum lead encontrado' : 'Nenhum cliente seu com esse nome ou telefone'}
               </div>
             )}
             {items.map(item => (
@@ -137,47 +141,51 @@ export function LeadCombobox({ value, onChange, placeholder = 'Buscar lead ou co
             ))}
 
             {/* Sticky "criar novo" */}
-            <button
-              type="button"
-              className="w-full text-left px-3 py-2.5 hover:bg-primary/5 border-t border-border text-sm font-medium text-primary flex items-center gap-2 sticky bottom-0 bg-popover"
-              onClick={() => { setQuickOpen(true); setOpen(false); }}
-            >
-              <UserPlus className="h-4 w-4" />
-              Criar contato novo
-            </button>
+            {allowCreate && (
+              <button
+                type="button"
+                className="w-full text-left px-3 py-2.5 hover:bg-primary/5 border-t border-border text-sm font-medium text-primary flex items-center gap-2 sticky bottom-0 bg-popover"
+                onClick={() => { setQuickOpen(true); setOpen(false); }}
+              >
+                <UserPlus className="h-4 w-4" />
+                Criar contato novo
+              </button>
+            )}
           </div>
         )}
       </div>
 
       {/* Quick create modal */}
-      <Dialog open={quickOpen} onOpenChange={setQuickOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Criar contato novo</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div>
-              <UILabel>Nome *</UILabel>
-              <Input value={quickName} onChange={e => setQuickName(e.target.value)} className="mt-1" />
+      {allowCreate && (
+        <Dialog open={quickOpen} onOpenChange={setQuickOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Criar contato novo</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div>
+                <UILabel>Nome *</UILabel>
+                <Input value={quickName} onChange={e => setQuickName(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <UILabel>Telefone *</UILabel>
+                <Input
+                  value={quickPhone}
+                  onChange={e => setQuickPhone(e.target.value)}
+                  placeholder="+5511999999999"
+                  className="mt-1"
+                />
+              </div>
             </div>
-            <div>
-              <UILabel>Telefone *</UILabel>
-              <Input
-                value={quickPhone}
-                onChange={e => setQuickPhone(e.target.value)}
-                placeholder="+5511999999999"
-                className="mt-1"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setQuickOpen(false)}>Cancelar</Button>
-            <Button onClick={handleQuickCreate} disabled={quickSaving}>
-              {quickSaving ? 'Salvando...' : 'Criar e selecionar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setQuickOpen(false)}>Cancelar</Button>
+              <Button onClick={handleQuickCreate} disabled={quickSaving}>
+                {quickSaving ? 'Salvando...' : 'Criar e selecionar'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }
