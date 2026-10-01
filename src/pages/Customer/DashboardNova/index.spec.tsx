@@ -1,0 +1,183 @@
+// src/pages/Customer/DashboardNova/index.spec.tsx
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import type { FiltrosDashboard, ListaKind } from './types';
+import type { PodeAbrir } from './usePodeAbrir';
+
+const hook = vi.hoisted(() => ({
+  dados: null as unknown,
+  carregando: false,
+  pendente: false,
+  erro: null as string | null,
+  recarregar: vi.fn(),
+}));
+vi.mock('./useDashboardNova', async orig => ({
+  ...(await orig<typeof import('./useDashboardNova')>()),
+  useDashboardNova: () => ({ dados: hook.dados, carregando: hook.carregando, pendente: hook.pendente, erro: hook.erro, recarregar: hook.recarregar }),
+}));
+const PODE = vi.hoisted(() => ({ imoveis: true, agenda: true, propostas: true, funil: true, roleta: false, conversas: true }));
+vi.mock('./usePodeAbrir', async orig => ({
+  ...(await orig<typeof import('./usePodeAbrir')>()),
+  usePodeAbrir: () => PODE,
+}));
+// Gestor = tem `dashboard.team` (Administrador e Gerente; o Corretor não tem).
+const cargo = vi.hoisted(() => ({ gestor: true }));
+vi.mock('@/hooks/useCan', () => ({
+  useCan: () => (recurso: string, acao: string) => cargo.gestor && recurso === 'dashboard' && acao === 'team',
+}));
+vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { name: 'Rafael Teste' } }) }));
+vi.mock('@/contexts/PendingOffersContext', () => ({ usePendingOffers: () => ({ offers: [] }) }));
+
+const cab = vi.hoisted(() => ({ props: null as null | { scope?: unknown; carregando: boolean; filtros: FiltrosDashboard } }));
+vi.mock('./Cabecalho', async orig => ({
+  ...(await orig<typeof import('./Cabecalho')>()),
+  Cabecalho: (p: { nome: string; scope?: unknown; carregando: boolean; filtros: FiltrosDashboard }) => {
+    cab.props = p;
+    return <h1>{p.nome}</h1>;
+  },
+}));
+
+interface PropsLista {
+  aberta: boolean; kind: ListaKind | null; titulo: string; pode: PodeAbrir; limitado?: boolean; onFechar: () => void;
+}
+const lista = vi.hoisted(() => ({ props: null as null | PropsLista }));
+vi.mock('./ListaRapida', () => ({
+  ListaRapida: (p: PropsLista) => { lista.props = p; return null; },
+}));
+vi.mock('./blocos/RoletaAgora', () => ({ RoletaAgora: () => <div>Bloco Roleta agora</div> }));
+
+import DashboardNova from './index';
+
+const base = (mode: 'all' | 'mine', locked = false, extra: Record<string, unknown> = {}) => ({
+  period: { preset: 'last_7_days', since: '2026-09-24T00:00:00-03:00', until: '2026-09-30T23:59:59-03:00' },
+  scope: { mode, locked, owner_id: null, available_modes: locked ? ['mine'] : ['all', 'mine'], blocks: { media_spend: false, operations: false } },
+  pending: { rows: [] },
+  ...extra,
+});
+
+const tela = () => render(<MemoryRouter><DashboardNova /></MemoryRouter>);
+
+describe('DashboardNova', () => {
+  beforeEach(() => {
+    hook.dados = null;
+    hook.carregando = false;
+    hook.pendente = false;
+    hook.erro = null;
+    hook.recarregar.mockReset();
+    cargo.gestor = true;
+    cab.props = null;
+    lista.props = null;
+  });
+
+  it('gestor vê a análise; o espaço do banner existe e está vazio', () => {
+    hook.dados = base('all');
+    const { container } = tela();
+    expect(screen.getByText('Análise do período')).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="banner"]')).toBeEmptyDOMElement();
+  });
+
+  it('Roleta agora fica nas linhas do gestor, não nas do corretor', () => {
+    hook.dados = base('all');
+    const { unmount } = tela();
+    expect(screen.getByText('Bloco Roleta agora')).toBeInTheDocument();
+    unmount();
+    hook.dados = base('mine', true);
+    tela();
+    expect(screen.queryByText('Bloco Roleta agora')).not.toBeInTheDocument();
+  });
+
+  it('gestor em "Só os meus" vê o aviso e a tela do corretor', () => {
+    hook.dados = base('mine', false);
+    tela();
+    expect(screen.getByText(/Você está vendo a Dashboard como um corretor vê/)).toBeInTheDocument();
+    expect(screen.queryByText('Análise do período')).not.toBeInTheDocument();
+    expect(screen.getByText('Suas pendências')).toBeInTheDocument();
+  });
+
+  it('"Voltar para a imobiliária" pede a imobiliária inteira', () => {
+    hook.dados = base('mine', false);
+    tela();
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar para a imobiliária' }));
+    expect(cab.props?.filtros.scope).toBe('all');
+  });
+
+  it('o corretor de verdade (travado) não vê o aviso', () => {
+    hook.dados = base('mine', true);
+    tela();
+    expect(screen.queryByText(/como um corretor vê/)).not.toBeInTheDocument();
+  });
+
+  it('o corretor de verdade num cliente sem isolamento (não travado) também não vê o aviso', () => {
+    cargo.gestor = false;
+    hook.dados = base('mine', false);
+    tela();
+    expect(screen.queryByText(/como um corretor vê/)).not.toBeInTheDocument();
+    expect(screen.getByText('Suas pendências')).toBeInTheDocument();
+  });
+
+  it('o Cabecalho recebe o MESMO scope da resposta e o "pendente" como carregando', () => {
+    hook.dados = base('all');
+    hook.carregando = false;
+    hook.pendente = true;
+    tela();
+    expect(cab.props?.scope).toBe((hook.dados as { scope: unknown }).scope);
+    expect(cab.props?.carregando).toBe(true);
+  });
+
+  it('primeira carga: esqueleto neutro, sem os blocos do gestor', () => {
+    hook.carregando = true;
+    hook.pendente = true;
+    tela();
+    expect(screen.getByRole('status', { name: 'Carregando os números' })).toBeInTheDocument();
+    expect(screen.queryByText('Pendências')).not.toBeInTheDocument();
+    expect(screen.queryByText('Análise do período')).not.toBeInTheDocument();
+    expect(screen.queryByText('Bloco Roleta agora')).not.toBeInTheDocument();
+  });
+
+  it('erro sem resposta nenhuma: estado de erro com Tentar de novo', () => {
+    hook.erro = 'Não consegui carregar a Dashboard.';
+    tela();
+    expect(screen.getByText('Não deu pra carregar')).toBeInTheDocument();
+    expect(screen.queryByText('Análise do período')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    expect(hook.recarregar).toHaveBeenCalled();
+  });
+
+  it('erro com resposta antiga: avisa em cima dos blocos que os números são da última vez', () => {
+    hook.dados = base('all');
+    hook.erro = 'Não consegui carregar a Dashboard.';
+    hook.pendente = true;
+    tela();
+    expect(screen.getByText('Não deu para atualizar. Os números abaixo são da última vez.')).toBeInTheDocument();
+    expect(screen.getByText('Análise do período')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    expect(hook.recarregar).toHaveBeenCalled();
+  });
+
+  it('pendência abre a lista rápida com o tipo, o que abre e o teto da linha', () => {
+    hook.dados = base('all', false, {
+      pending: { rows: [
+        { key: 'esperando_resposta', total: 500, older: 0, capped: true },
+        { key: 'sem_contato', total: 3, older: 0 },
+      ] },
+    });
+    tela();
+    expect(lista.props?.aberta).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: /Esperando resposta há mais de 1 h/ }));
+    expect(lista.props).toMatchObject({ aberta: true, kind: 'esperando_resposta', limitado: true });
+    expect(lista.props?.pode).toBe(PODE);
+
+    fireEvent.click(screen.getByRole('button', { name: /Sem contato do corretor/ }));
+    expect(lista.props).toMatchObject({ aberta: true, kind: 'sem_contato', limitado: false });
+  });
+
+  it('fechar a lista mantém o tipo e o título enquanto o painel sai', () => {
+    hook.dados = base('all', false, { pending: { rows: [{ key: 'sem_contato', total: 3, older: 0 }] } });
+    tela();
+    fireEvent.click(screen.getByRole('button', { name: /Sem contato do corretor/ }));
+    act(() => { lista.props?.onFechar(); });
+    expect(lista.props).toMatchObject({ aberta: false, kind: 'sem_contato', titulo: 'Sem contato do corretor há mais de 3 dias' });
+  });
+});

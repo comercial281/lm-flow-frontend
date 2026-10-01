@@ -14,6 +14,8 @@
 .lmfn-filtros-rodape button { border: 0; background: transparent; color: var(--lmf-accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .lmfn-aviso { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--lmf-accent-soft); font-size: 13px; margin-bottom: 16px; }
 .lmfn-aviso button { margin-left: auto; border: 0; background: transparent; color: var(--lmf-accent); font: inherit; font-weight: 600; cursor: pointer; }
+.lmfn-aviso-erro { background: rgba(217, 119, 6, 0.12); color: var(--lmf-text); }
+.lmfn-aviso-erro button { color: var(--lmf-warn); }
 .lmfn-linha { display: grid; gap: 18px; margin-top: 18px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
 .lmfn-linha-principal { grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr); }
 @media (max-width: 1024px) { .lmfn-linha-principal { grid-template-columns: minmax(0, 1fr); } }

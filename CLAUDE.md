@@ -4295,3 +4295,62 @@ destino passaram a ler o filtro do endereço.
 
 Armadilha: **`stage_type` é palavra na API desde 2026-09-30** (era número). Tipo
 novo que o descreva usa `string`.
+
+## Dashboard nova (desde 2026-09-30)
+
+Fase 4, jornada 1. Spec: `LM FLOW/specs/2026-09-30-fase-4-jornada-dashboard-design.md`.
+
+- **Atrás da chave `dashboard_nova`** (`DashboardEntrada.tsx`, `useClientToggle`).
+  Sem a chave, a `DashboardV2` de sempre. O PR 5 da jornada liga para todos e
+  apaga a ponte e a antiga.
+- **Duas visões saídas do recorte do servidor**: `scope.mode === 'mine'` é a do
+  corretor. O gestor em "Só os meus" vê exatamente a tela do corretor, com aviso.
+  Os modos do seletor vêm de `available_modes` (regra da casa).
+- **Catálogo de blocos** (`catalogo.ts`): cada bloco declara quem vê, o que pede
+  à API e se nasce ligado; as linhas dizem onde. Mapa de calor existe desligado.
+  É daqui que o editor da Dashboard vai sair.
+- **Um pedido só, com `blocks=`.** O servidor tira `team` e `results` do corretor.
+- **Todo número leva a algum lugar**, e só vira link se o cargo abre o destino
+  (`usePodeAbrir`). Destino de tela: `features/dashboard/links.ts`. Destino que
+  não existe ou é caro (conversas, pendências): a lista rápida (`ListaRapida`,
+  `GET /dashboard/list`), das mesmas fontes que o número.
+- **Pendências = abertas agora**, não seguem o período.
+- **Roleta agora** reaproveita `GET /roleta_configs/queue`, a cada 30 s com a aba
+  visível; some para quem não tem `roleta_configs.queue`.
+- **Período padrão: últimos 7 dias.** Um seletor só. O resto dos filtros fica em
+  *Filtros*, recolhido.
+
+Regras de tela que vieram das revisões (o que quem usa vê):
+
+- **O aviso "Você está vendo a Dashboard como um corretor vê"** só aparece para
+  quem tem cargo de gestão (`dashboard.team`: Administrador e Gerente) em "Só os
+  meus". Num cliente com o isolamento do corretor desligado, o corretor de
+  verdade também chega em "Só os meus" sem trava, e ele nunca vê esse aviso.
+- **Antes da primeira resposta, um esqueleto neutro.** Sem a resposta não se sabe
+  a visão, e desenhar a do gestor por um instante mostraria ao corretor blocos
+  que não são dele.
+- **Erro nunca mostra número velho calado.** Com uma resposta anterior na mão,
+  aparece em cima dos blocos "Não deu para atualizar. Os números abaixo são da
+  última vez." com *Tentar de novo*. Sem resposta nenhuma, o estado de erro da
+  Fase 3 com *Tentar de novo*.
+- **O seletor de Corretor não pisca "Todos"** logo depois da escolha: enquanto a
+  resposta em mãos não é a dos filtros pedidos (`pendente` do
+  `useDashboardNova`), vale a escolha.
+- **Lista rápida:** pendência no teto (ex.: "500+") abre a lista com o total e o
+  "Mostrando N de T" também com +. Fechar não apaga a lista enquanto o painel
+  desliza para fora; só abrir (ou trocar de pendência/filtro com ele aberto)
+  busca de novo.
+- **Análise do período:** "De onde vêm os leads" conta contatos captados no
+  período pela primeira origem, com o total em cima; seis meses sem lead nenhum
+  dizem "Nenhum lead nos últimos 6 meses" em vez de um gráfico zerado; cada
+  gráfico tem um resumo de uma linha para leitor de tela; a faixa do horário
+  comercial tem cor própria, diferente da área dos leads.
+
+Não reabrir sem o dono pedir: as duas visões, o que cada uma vê, o período de 7
+dias, pendências abertas agora, "Visitas boas" = nota 4 ou 5 de realizadas, e o
+mapa de calor desligado.
+
+Pendências registradas: Propostas aparece sem link e em zero onde o menu está
+escondido (liga sozinho quando voltar); os cliques de conversa passam a abrir a
+tela de Conversas filtrada na jornada de Conversas; o espaço do banner
+(`data-slot="banner"`) é preenchido pela spec do banner.
