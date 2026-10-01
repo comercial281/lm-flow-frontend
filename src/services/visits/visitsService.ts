@@ -35,6 +35,11 @@ export const visitsService = {
     return res.data as { data: Visit[]; meta: { total: number; only_mine?: boolean; active_total?: number } };
   },
 
+  async get(id: string): Promise<Visit> {
+    const res = await api.get(`${BASE}/${id}`);
+    return (res.data as { data: Visit }).data;
+  },
+
   async create(data: VisitFormData): Promise<Visit> {
     const res = await api.post(BASE, { visit: data });
     return (res.data as { data: Visit }).data;

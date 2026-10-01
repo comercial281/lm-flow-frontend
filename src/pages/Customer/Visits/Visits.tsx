@@ -282,8 +282,11 @@ export default function Visits() {
     setLoading(true);
     setRecusado(false);
     try {
-      // No calendário, pede SÓ o mês visível: é o que faz o contador bater com
-      // o que está desenhado. Na lista, o que o link ou a aba pedirem.
+      // No calendário, pede SÓ o mês visível: é o escopo do contador do
+      // cabeçalho. O contador soma as visitas ATIVAS do mês (meta.active_total,
+      // sem canceladas) — a grade continua desenhando a pílula cancelada, então
+      // o número do contador pode ficar menor que a quantidade de pílulas no
+      // mês. Na lista, o que o link ou a aba pedirem.
       const doMes = viewMode === 'calendar' && !temFiltroNoLink
         ? (() => { const m = intervaloDoMes(calDate); return { since: m.desde, until: m.ate }; })()
         : {};
@@ -291,7 +294,7 @@ export default function Visits() {
         status: status || undefined,
         ...doMes,
         ...(filtroLink?.params ?? {}),
-        per_page: 200,
+        per_page: 500,
       });
       setVisits(res.data ?? []);
       setTotal(res.meta?.active_total ?? res.meta?.total ?? 0);
@@ -306,17 +309,39 @@ export default function Visits() {
 
   useEffect(() => { load(); }, [viewMode, calDate, filtroLink]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ?visita= : abre a visita assim que ela chega na lista, e tira o parâmetro
-  // do endereço para não reabrir a cada recarga.
+  // ?visita= : abre a visita assim que ela chega na lista. Quando o link vem de
+  // fora do recorte carregado (ex.: "Próximas visitas" do Dashboard em 30/09
+  // apontando pra uma visita de 02/10, fora do mês visível), busca ela direto
+  // pelo id em vez de esperar aparecer numa lista que nunca vai trazê-la.
+  const buscandoVisita = useRef<string | null>(null);
   useEffect(() => {
     const alvo = filtroLink?.visita;
     if (!alvo || loading) return;
-    const v = visits.find(x => x.id === alvo);
-    if (v) handleVisitClick(v);
-    const resto = new URLSearchParams(searchParams);
-    resto.delete('visita');
-    setSearchParams(resto, { replace: true });
-    setFiltroLink(f => (f ? { ...f, visita: null } : f));
+    if (buscandoVisita.current === alvo) return; // já em voo pra este id
+
+    // Tira o parâmetro do endereço uma única vez, aconteça o que acontecer.
+    const limpar = () => {
+      const resto = new URLSearchParams(searchParams);
+      resto.delete('visita');
+      setSearchParams(resto, { replace: true });
+      setFiltroLink(f => (f ? { ...f, visita: null } : f));
+    };
+
+    const naLista = visits.find(x => x.id === alvo);
+    if (naLista) {
+      handleVisitClick(naLista);
+      limpar();
+      return;
+    }
+
+    buscandoVisita.current = alvo;
+    visitsService.get(alvo)
+      .then(v => handleVisitClick(v))
+      .catch(() => toast.error('Visita não encontrada'))
+      .finally(() => {
+        buscandoVisita.current = null;
+        limpar();
+      });
   }, [filtroLink?.visita, loading, visits]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const tirarFiltroLink = () => {
@@ -477,7 +502,12 @@ export default function Visits() {
             {/* View toggle */}
             <div className="inline-flex rounded-md border border-border bg-background p-0.5">
               <button
-                onClick={() => setViewMode('calendar')}
+                onClick={() => {
+                  // O calendário sempre mostra o mês visível inteiro — um filtro
+                  // da Dashboard ativo (ex.: "A confirmar") não sobrevive à troca.
+                  if (temFiltroNoLink) tirarFiltroLink();
+                  setViewMode('calendar');
+                }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
                   viewMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
                 }`}
