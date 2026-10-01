@@ -73,7 +73,7 @@ export const visitsService = {
     const body: { rating?: number; feedback_notes?: string } = {};
     if (rating !== undefined) body.rating = rating;
     if (feedbackNotes !== undefined) body.feedback_notes = feedbackNotes;
-    const res = await api.patch(`${BASE}/${id}/feedback`, body);
+    const res = await api.post(`${BASE}/${id}/feedback`, body);
     return (res.data as { data: Visit }).data;
   },
 

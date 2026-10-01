@@ -4284,7 +4284,7 @@ destino passaram a ler o filtro do endereço.
   Nunca abrir "Confirmar realização" para visita futura: grava e dispara
   automação. Trocar para Calendário tira o filtro do link: o calendário é
   sempre o mês na tela.
-- Visita Realizada abre *Dar retorno* (nota e comentário, `PATCH /visits/:id/feedback`, sem disparar automação); o link `?visita=` de uma Realizada abre a mesma janela.
+- Visita Realizada abre *Dar retorno* (nota e comentário, `POST /visits/:id/feedback`, sem disparar automação; comentário apagado não apaga o salvo); o link `?visita=` de uma Realizada abre a mesma janela.
 - **Imóveis: escolher um Status no menu tira o filtro do link** (o link manda
   o próprio status; os dois juntos mostrariam "Vendido" no menu e ativos na
   lista).
