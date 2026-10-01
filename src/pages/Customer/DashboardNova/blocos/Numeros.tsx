@@ -7,12 +7,24 @@ import { isAvailable, type KpiKey } from '../../DashboardV2/types';
 import { linkAgenda, linkPropostas } from '@/features/dashboard/links';
 import type { ContextoBloco } from '../usePodeAbrir';
 import { recorteBateComDestino } from '../visao';
+import { CATALOGO } from '../catalogo';
 import { diaDoPeriodo } from './comum';
 
 export const Numeros: React.FC<ContextoBloco> = ({ dados, carregando, visao, pode, filtros, abrirLista }) => {
   const navigate = useNavigate();
   const kpis = dados?.kpis;
-  if (!isAvailable(kpis)) return carregando && !dados ? <Skeleton height={104} /> : null;
+  // Título só para leitor de tela: quem navega por títulos não pula o bloco mais importante.
+  const titulo = <h2 className="sr-only">{CATALOGO.numeros.titulo}</h2>;
+  if (!isAvailable(kpis)) {
+    if (carregando && !dados) return <Skeleton height={104} />;
+    // Sem os números, dizer isso: nunca quatro zeros nem um buraco calado.
+    return (
+      <div>
+        {titulo}
+        <div className="lmfn-numero"><span className="lmfn-numero-rotulo">Não deu para carregar os números agora.</span></div>
+      </div>
+    );
+  }
 
   const desde = diaDoPeriodo(dados?.period?.since);
   const ate = diaDoPeriodo(dados?.period?.until);
@@ -38,22 +50,25 @@ export const Numeros: React.FC<ContextoBloco> = ({ dados, carregando, visao, pod
   ];
 
   return (
-    <div className="lmfn-numeros">
-      {cartoes.map(c => {
-        const kpi = kpis[c.chave];
-        const corpo = (
-          <>
-            <span className="lmfn-numero-rotulo">{c.rotulo}</span>
-            <span className="lmfn-numero-valor">{kpi ? numero(kpi.value) : '—'}</span>
-            {kpi && <Delta value={kpi.delta} suffix="vs. período anterior" />}
-          </>
-        );
-        return c.acao ? (
-          <button key={c.chave} type="button" className="lmfn-numero" onClick={c.acao}>{corpo}</button>
-        ) : (
-          <div key={c.chave} className="lmfn-numero">{corpo}</div>
-        );
-      })}
+    <div>
+      {titulo}
+      <div className="lmfn-numeros">
+        {cartoes.map(c => {
+          const kpi = kpis[c.chave];
+          const corpo = (
+            <>
+              <span className="lmfn-numero-rotulo">{c.rotulo}</span>
+              <span className="lmfn-numero-valor">{kpi ? numero(kpi.value) : '—'}</span>
+              {kpi && <Delta value={kpi.delta} suffix="vs. período anterior" />}
+            </>
+          );
+          return c.acao ? (
+            <button key={c.chave} type="button" className="lmfn-numero" onClick={c.acao}>{corpo}</button>
+          ) : (
+            <div key={c.chave} className="lmfn-numero">{corpo}</div>
+          );
+        })}
+      </div>
     </div>
   );
 };

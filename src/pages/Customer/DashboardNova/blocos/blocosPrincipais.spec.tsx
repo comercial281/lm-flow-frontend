@@ -81,6 +81,16 @@ describe('bloco Imóveis', () => {
     expect(navegar).toHaveBeenLastCalledWith('/properties?recorte=desatualizados&meus=1');
   });
 
+  it('"Novos no período" mostra +N, e 0 sem o sinal', () => {
+    const { unmount } = wrap(<Imoveis {...ctx({}, { properties })} />);
+    expect(screen.getByText('+9')).toBeInTheDocument();
+    unmount();
+    wrap(<Imoveis {...ctx({}, { properties: { ...properties, new: 0 } })} />);
+    const linha = screen.getByRole('button', { name: /Novos no período/ });
+    expect(within(linha).getByText('0')).toBeInTheDocument();
+    expect(screen.queryByText('+0')).not.toBeInTheDocument();
+  });
+
   it('sem permissão de Imóveis, as linhas não são links', () => {
     wrap(<Imoveis {...ctx({ pode: { ...pode, imoveis: false } }, { properties })} />);
     expect(screen.queryByRole('button', { name: /Sem fotos/ })).not.toBeInTheDocument();
@@ -135,6 +145,17 @@ describe('bloco Números', () => {
     wrap(<Numeros {...ctx({ pode: { ...pode, propostas: false } }, { kpis })} />);
     expect(screen.queryByRole('button', { name: /Propostas/ })).not.toBeInTheDocument();
     expect(screen.getByText('Propostas')).toBeInTheDocument();
+  });
+
+  it('sem os números, diz que não deu para carregar no lugar dos quatro (nunca zero)', () => {
+    wrap(<Numeros {...ctx({}, { kpis: { available: false, reason: 'error' } })} />);
+    expect(screen.getByText('Não deu para carregar os números agora.')).toBeInTheDocument();
+    expect(screen.queryByText('Leads captados')).not.toBeInTheDocument();
+  });
+
+  it('os números têm um título para quem navega por títulos', () => {
+    wrap(<Numeros {...ctx({}, { kpis })} />);
+    expect(screen.getByRole('heading', { level: 2, name: 'Números do período' })).toBeInTheDocument();
   });
 
   it('o corretor lê "Leads recebidos"', () => {

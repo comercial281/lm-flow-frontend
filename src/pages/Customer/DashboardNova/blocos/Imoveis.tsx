@@ -73,7 +73,7 @@ export const Imoveis: React.FC<ContextoBloco> = ({ dados, carregando, visao, pod
         const conteudo = (
           <>
             <span className="lmfn-item-texto">{l.rotulo}{dica && <small>{dica}</small>}</span>
-            <span className={`lmfn-pilula${tom}`}>{l.campo === 'new' ? `+${numero(valor)}` : numero(valor)}</span>
+            <span className={`lmfn-pilula${tom}`}>{l.campo === 'new' && valor > 0 ? `+${numero(valor)}` : numero(valor)}</span>
             {pode.imoveis && <ChevronRight size={14} aria-hidden style={{ color: 'var(--lmf-faint)' }} />}
           </>
         );
