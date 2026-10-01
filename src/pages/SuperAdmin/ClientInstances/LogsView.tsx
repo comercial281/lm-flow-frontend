@@ -49,7 +49,7 @@ function PresenceStrip({ client, includeInternal }: { client: string; includeInt
           {ov?.total_accesses ?? 0} acessos · {fmtDur(ov?.total_seconds ?? 0)} de uso
         </span>
         <button
-          onClick={() => navigate(`/admin/uso?client=${encodeURIComponent(client)}`)}
+          onClick={() => navigate(`/admin/usuarios?client=${encodeURIComponent(client)}`)}
           className="ml-auto flex items-center gap-1 text-xs text-primary hover:underline"
         >
           <BarChart3 className="h-3.5 w-3.5" /> Uso detalhado

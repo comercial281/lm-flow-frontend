@@ -61,11 +61,6 @@ export default function AdminOverview() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 border-l-4 border-primary pl-3">
-        <h1 className="text-xl font-semibold">Visão Geral</h1>
-        <p className="text-sm text-muted-foreground">Saúde do SaaS num relance</p>
-      </div>
-
       {loading ? (
         <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -119,11 +114,11 @@ export default function AdminOverview() {
             </Link>
 
             <Link
-              to="/admin/auditoria"
+              to="/admin/usuarios/logs"
               className="group flex items-center justify-between rounded-lg border border-sidebar-border bg-sidebar p-4 transition-colors hover:border-primary/40"
             >
               <div>
-                <p className="font-medium">Auditoria</p>
+                <p className="font-medium">Logs</p>
                 <p className="text-sm text-muted-foreground">O que aconteceu, por cliente.</p>
               </div>
               <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />

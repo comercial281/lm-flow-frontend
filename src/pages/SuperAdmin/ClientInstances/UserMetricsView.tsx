@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Loader2, Building2, Server, Users, Clock, MousePointerClick, Monitor,
   Circle, ArrowLeft, RefreshCw,
@@ -149,7 +150,9 @@ function DetailPanel({ client, userId, onBack }: { client: string; userId: strin
 
 export default function UserMetricsView() {
   const [clients, setClients] = useState<LogClient[]>([]);
-  const [client, setClient] = useState('master');
+  // O link "ver uso" dos Logs manda o cliente no endereço (?client=...).
+  const [busca] = useSearchParams();
+  const [client, setClient] = useState(busca.get('client') || 'master');
   const [data, setData] = useState<UserMetricsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);

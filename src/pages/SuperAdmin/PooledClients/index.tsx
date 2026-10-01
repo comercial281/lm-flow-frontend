@@ -1,21 +1,11 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, ScrollText, Gauge, MessageCircle, XCircle, Bot, Radio, MessageSquarePlus, Activity, Workflow, Search, ChevronRight, Link2, Send, Smartphone } from 'lucide-react';
+import { LogIn, Users, Loader2, RefreshCw, X, KeyRound, ExternalLink, Plus, Clock, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, MessageCircle, XCircle, Bot, Workflow, Search, ChevronRight, Link2, Send } from 'lucide-react';
 import api from '@/services/core/api';
 import { copyText } from '@/utils/clipboard';
 import IconActionButton from '@/components/base/IconActionButton';
 import NewTenantWizard from './NewTenantWizard';
-import ClientBroadcastModal from './ClientBroadcastModal';
 import ClientFollowupRolloutModal from './ClientFollowupRolloutModal';
-import MemberAccessConfigModal from '../ClientInstances/MemberAccessConfigModal';
 import clientInstancesService, { CentralInstance, WhatsappSendResult } from '@/services/clientInstances/clientInstancesService';
-import LogsView from '../ClientInstances/LogsView';
-import UserMetricsView from '../ClientInstances/UserMetricsView';
-import ArchivedFeaturesView from './ArchivedFeaturesView';
-import LeadsFeed from '../LeadsFeed';
-import CustomerFeedbacks from '../CustomerFeedbacks';
-import NumberOwnership from '../NumberOwnership';
-import AdminAtividade from '@/pages/Admin/Area/Auditoria';
 import { groupCatalogByTheme, itemLabel, matchesQuery, type CatalogItem } from '../featureCatalog';
 import {
   GROUP_KIND_LABEL, groupJidsFrom, groupLabel, groupsPatch, nameRuleHint, sortGroupsForPicker,
@@ -25,16 +15,6 @@ import {
 import { toast } from 'sonner';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
-type ViewTab =
-  | 'clients'
-  | 'logs'
-  | 'metrics'
-  | 'archived-features'
-  | 'leads-ao-vivo'
-  | 'sugestoes-bugs'
-  | 'atividade'
-  | 'numeros';
-
 // Consumo de IA do mês corrente, já cruzado com a franquia contratada.
 // Vem pronto do backend (SalesAgents::UsageReport) de propósito: a conta do
 // excedente é a mesma que vai virar fatura, e ter a regra em dois lugares é
@@ -1163,23 +1143,11 @@ export default function PooledClients() {
   const [membersOf, setMembersOf] = useState<PooledTenant | null>(null);
   const [featuresOf, setFeaturesOf] = useState<PooledTenant | null>(null);
   const [showWizard, setShowWizard] = useState(false);
-  const [showBroadcast, setShowBroadcast] = useState(false);
   const [showFollowupRollout, setShowFollowupRollout] = useState(false);
-  const [showAccessCfg, setShowAccessCfg] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<PooledTenant | null>(null);
   const [deleteText, setDeleteText] = useState('');
-  const [searchParams, setSearchParams] = useSearchParams();
-  const VALID_TABS: ViewTab[] = ['clients', 'logs', 'metrics', 'archived-features', 'leads-ao-vivo', 'sugestoes-bugs', 'atividade', 'numeros'];
-  const initialTab = searchParams.get('tab') as ViewTab | null;
-  const [tab, setTabState] = useState<ViewTab>(
-    initialTab && VALID_TABS.includes(initialTab) ? initialTab : 'clients',
-  );
-  const setTab = (id: ViewTab) => {
-    setTabState(id);
-    setSearchParams(id === 'clients' ? {} : { tab: id }, { replace: true });
-  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1239,92 +1207,36 @@ export default function PooledClients() {
     <>
     <div className="flex flex-col h-full">
       <div className="px-6 pt-6 shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-violet-500" /> Clientes (SaaS)
-            </h1>
-            <p className="text-sm text-muted-foreground">Entre, gerencie membros, métricas e logs de cada CRM.</p>
-          </div>
+        <div className="flex items-center justify-end mb-4">
           <div className="flex flex-wrap items-center gap-2">
             <IconActionButton
               label="Atualizar"
               icon={<RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />}
               onClick={() => load()}
             />
-            {tab === 'clients' && (
-              <>
-                <IconActionButton
-                  label={showArchived ? 'Mostrar ativos' : 'Mostrar arquivados'}
-                  icon={showArchived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                  onClick={() => setShowArchived(v => !v)}
-                  className={showArchived ? 'border-violet-500/50 text-violet-700 dark:text-violet-300 bg-violet-500/10' : ''}
-                />
-                <IconActionButton
-                  label="Comunicado — enviar aviso para os clientes"
-                  icon={<Megaphone className="h-4 w-4" />}
-                  onClick={() => setShowBroadcast(true)}
-                  disabled={tenants.length === 0}
-                />
-                <IconActionButton
-                  label="Funil de follow-up — aplicar o mesmo funil (mensagens e mídia) em vários clientes de uma vez"
-                  icon={<Workflow className="h-4 w-4" />}
-                  onClick={() => setShowFollowupRollout(true)}
-                  disabled={tenants.length === 0}
-                />
-                <IconActionButton
-                  label="Msg de acesso — editar a mensagem enviada no WhatsApp ao criar um membro"
-                  icon={<MessageCircle className="h-4 w-4" />}
-                  onClick={() => setShowAccessCfg(true)}
-                />
-                <button onClick={() => setShowWizard(true)}
-                  className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md font-semibold text-white"
-                  style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}>
-                  <Plus className="w-4 h-4" /> Novo Cliente
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Abas */}
-        <div className="flex items-center gap-1 border-b">
-          {([
-            { id: 'clients', label: 'Clientes', Icon: List },
-            { id: 'logs', label: 'Logs', Icon: ScrollText },
-            { id: 'metrics', label: 'Métricas de Uso', Icon: Gauge },
-            { id: 'archived-features', label: 'Arquivados', Icon: Archive },
-            { id: 'leads-ao-vivo', label: 'Leads ao Vivo', Icon: Radio },
-            { id: 'numeros', label: 'Números', Icon: Smartphone },
-            { id: 'sugestoes-bugs', label: 'Sugestões/Bugs', Icon: MessageSquarePlus },
-            { id: 'atividade', label: 'Atividade', Icon: Activity },
-          ] as { id: ViewTab; label: string; Icon: typeof List }[]).map(({ id, label, Icon }) => (
-            <button key={id} onClick={() => setTab(id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                tab === id ? 'border-violet-500 text-violet-600 dark:text-violet-400' : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}>
-              <Icon className="h-3.5 w-3.5" /> {label}
+            <IconActionButton
+              label={showArchived ? 'Mostrar ativos' : 'Mostrar arquivados'}
+              icon={showArchived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+              onClick={() => setShowArchived(v => !v)}
+              className={showArchived ? 'border-violet-500/50 text-violet-700 dark:text-violet-300 bg-violet-500/10' : ''}
+            />
+            <IconActionButton
+              label="Funil de follow-up — aplicar o mesmo funil (mensagens e mídia) em vários clientes de uma vez"
+              icon={<Workflow className="h-4 w-4" />}
+              onClick={() => setShowFollowupRollout(true)}
+              disabled={tenants.length === 0}
+            />
+            <button onClick={() => setShowWizard(true)}
+              className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-md font-semibold text-white"
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}>
+              <Plus className="w-4 h-4" /> Novo Cliente
             </button>
-          ))}
+          </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto px-6 py-4 min-h-0">
-      {tab === 'logs' ? (
-        <div className="h-full"><LogsView /></div>
-      ) : tab === 'metrics' ? (
-        <div className="h-full"><UserMetricsView /></div>
-      ) : tab === 'archived-features' ? (
-        <ArchivedFeaturesView />
-      ) : tab === 'leads-ao-vivo' ? (
-        <LeadsFeed />
-      ) : tab === 'numeros' ? (
-        <NumberOwnership />
-      ) : tab === 'sugestoes-bugs' ? (
-        <CustomerFeedbacks />
-      ) : tab === 'atividade' ? (
-        <div className="h-full"><AdminAtividade /></div>
-      ) : loading && tenants.length === 0 ? (
+      {loading && tenants.length === 0 ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-violet-500" /></div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 max-w-5xl mx-auto">
@@ -1431,9 +1343,7 @@ export default function PooledClients() {
         />
       )}
       {showWizard && <NewTenantWizard onClose={() => setShowWizard(false)} onCreated={load} />}
-      {showBroadcast && <ClientBroadcastModal tenants={tenants} onClose={() => setShowBroadcast(false)} />}
       {showFollowupRollout && <ClientFollowupRolloutModal tenants={tenants} onClose={() => setShowFollowupRollout(false)} />}
-      {showAccessCfg && <MemberAccessConfigModal open={showAccessCfg} onClose={() => setShowAccessCfg(false)} />}
       {confirmDelete && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={() => setConfirmDelete(null)}>
           <div className="w-full max-w-md rounded-xl overflow-hidden" style={{ background: '#150a26', border: '1px solid rgba(239,68,68,0.4)' }} onClick={e => e.stopPropagation()}>

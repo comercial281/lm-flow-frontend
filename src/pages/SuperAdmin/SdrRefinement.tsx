@@ -67,7 +67,7 @@ export default function SdrRefinement() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
       <header className="mb-5">
-        <h1 className="text-xl font-semibold text-foreground">Aperfeiçoamento</h1>
+        <h2 className="text-xl font-semibold text-foreground">Aperfeiçoamento</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Ensine a IA descrevendo o que quer, ou deixe ela aprender com as conversas passadas. Você aprova cada sugestão.
         </p>

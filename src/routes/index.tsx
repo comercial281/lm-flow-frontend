@@ -124,13 +124,11 @@ function SuperAdminRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-// Clientes, Leads ao Vivo, Sugestões/Bugs e
-// Atividade viraram abas DENTRO do PooledClients — só ele é rota.
+// Clientes → aba Clientes (a lista). As outras abas são rotas próprias desde 01/10/2026.
 const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients'));
 const PushCentral = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral'));
 const CustoIA = lazyWithRetry(() => import('@/pages/SuperAdmin/CustoIA'));
-// Agentes, Cérebro Universal, Resultados e Aperfeiçoamento viraram abas
-// DENTRO do SuperAgents (IA Vendedora) — só ele é rota.
+// IA Vendedora → aba Agentes. As outras abas são rotas próprias desde 01/10/2026.
 const SuperAgents = lazyWithRetry(() => import('@/pages/SuperAdmin/SuperAgents'));
 
 // Área do Admin — shell próprio (AdminLayout), fora do menu do CRM.
@@ -138,7 +136,21 @@ const AdminLayout = lazyWithRetry(() => import('@/components/layout/AdminLayout'
 // Shell da área de membros (Academia do cliente) — sem o CRM em volta.
 const MembersLayout = lazyWithRetry(() => import('@/components/layout/MembersLayout'));
 const AdminOverview = lazyWithRetry(() => import('@/pages/Admin/Area/Overview'));
-const AdminUso = lazyWithRetry(() => import('@/pages/Admin/Area/Uso'));
+import AdminPaginaComAbas from '@/components/layout/AdminPaginaComAbas';
+import AdminConteudo from '@/pages/Admin/Area/AdminConteudo';
+import { ComAbaAntiga, RedirecionaComBusca } from '@/routes/AdminRedirecionamentos';
+const AdminLeadsAoVivo = lazyWithRetry(() => import('@/pages/SuperAdmin/LeadsFeed'));
+const AdminNumeros = lazyWithRetry(() => import('@/pages/SuperAdmin/NumberOwnership'));
+const AdminUsuarios = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances/UserMetricsView'));
+const AdminLogs = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances/LogsView'));
+const AdminMensagemDeAcesso = lazyWithRetry(() => import('@/pages/SuperAdmin/MensagemDeAcesso'));
+const AdminAvisosNaTela = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral/NotificationsTab'));
+const AdminComunicadoWhatsapp = lazyWithRetry(() => import('@/pages/SuperAdmin/ComunicadoWhatsapp'));
+const AdminMenusArquivados = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients/ArchivedFeaturesView'));
+const AdminSugestoesEBugs = lazyWithRetry(() => import('@/pages/SuperAdmin/CustomerFeedbacks'));
+const AdminIaDashboard = lazyWithRetry(() => import('@/pages/SuperAdmin/ResultadosIA'));
+const AdminIaConhecimento = lazyWithRetry(() => import('@/pages/SuperAdmin/IaConhecimento'));
+const AdminAvisoDeVisita = lazyWithRetry(() => import('@/pages/SuperAdmin/AiVisitNoticeSection'));
 const AdminEquipe = lazyWithRetry(() => import('@/pages/Admin/Area/Equipe'));
 const AdminAcademia = lazyWithRetry(() => import('@/pages/Admin/Area/Academia'));
 const AdminPlataforma = lazyWithRetry(() => import('@/pages/SuperAdmin/Plataforma'));
@@ -1178,21 +1190,37 @@ const AppRouter = () => {
               </PrivateRoute>
             }
           >
-            <Route path="/admin" element={<AdminOverview />} />
-            <Route path="/admin/clientes" element={<PooledClients />} />
-            <Route path="/admin/agentes" element={<SuperAgents />} />
-            {/* Rateio do consumo da Anthropic por cliente: a chave é uma só pra
-                todos os tenants, então sem esta tela a fatura não tem dono. */}
-            <Route path="/admin/custo-ia" element={<CustoIA />} />
-            <Route path="/admin/push" element={<PushCentral />} />
-            <Route path="/admin/equipe" element={<AdminEquipe />} />
-            <Route path="/admin/uso" element={<AdminUso />} />
-            {/* Academia dentro do admin: mesma tela do /tutorials, mas no shell do
-                admin. /tutorials continua sendo por onde o CLIENTE assiste. */}
-            <Route path="/admin/academia" element={<AdminAcademia />} />
-            {/* Configuração que vale para TODAS as imobiliárias de uma vez —
-                hoje os logos dos bancos da página de financiamento. */}
-            <Route path="/admin/plataforma" element={<AdminPlataforma />} />
+            <Route element={<AdminPaginaComAbas />}>
+              {/* Visão Geral */}
+              <Route path="/admin" element={<AdminOverview />} />
+              <Route path="/admin/leads-ao-vivo" element={<AdminConteudo><AdminLeadsAoVivo /></AdminConteudo>} />
+              {/* Clientes */}
+              <Route path="/admin/clientes" element={<ComAbaAntiga base="/admin/clientes"><PooledClients /></ComAbaAntiga>} />
+              <Route path="/admin/clientes/numeros" element={<AdminConteudo><AdminNumeros /></AdminConteudo>} />
+              {/* Custos: por enquanto a tela Custo da IA. O rateio de Railway,
+                  Evolution e Vercel entra no PR de Custos. */}
+              <Route path="/admin/clientes/custos" element={<CustoIA />} />
+              {/* Usuários */}
+              <Route path="/admin/usuarios" element={<AdminConteudo><AdminUsuarios /></AdminConteudo>} />
+              <Route path="/admin/usuarios/logs" element={<AdminConteudo><AdminLogs /></AdminConteudo>} />
+              <Route path="/admin/usuarios/mensagem-de-acesso" element={<AdminMensagemDeAcesso />} />
+              {/* Comunicação */}
+              <Route path="/admin/comunicacao" element={<AdminConteudo><AdminAvisosNaTela /></AdminConteudo>} />
+              <Route path="/admin/push" element={<PushCentral />} />
+              <Route path="/admin/comunicacao/whatsapp" element={<AdminComunicadoWhatsapp />} />
+              {/* Plataforma */}
+              <Route path="/admin/academia" element={<AdminAcademia />} />
+              <Route path="/admin/plataforma" element={<AdminPlataforma />} />
+              <Route path="/admin/plataforma/menus-arquivados" element={<AdminConteudo><AdminMenusArquivados /></AdminConteudo>} />
+              <Route path="/admin/plataforma/sugestoes-e-bugs" element={<AdminConteudo><AdminSugestoesEBugs /></AdminConteudo>} />
+              {/* IA Vendedora */}
+              <Route path="/admin/agentes" element={<ComAbaAntiga base="/admin/agentes"><SuperAgents /></ComAbaAntiga>} />
+              <Route path="/admin/agentes/dashboard" element={<AdminIaDashboard />} />
+              <Route path="/admin/agentes/conhecimento" element={<AdminIaConhecimento />} />
+              <Route path="/admin/agentes/aviso-de-visita" element={<AdminConteudo><AdminAvisoDeVisita /></AdminConteudo>} />
+              {/* Equipe (sem abas: a moldura não desenha nada) */}
+              <Route path="/admin/equipe" element={<AdminEquipe />} />
+            </Route>
           </Route>
 
           {/*
@@ -1370,22 +1398,18 @@ const AppRouter = () => {
           <Route path="/portal/:tenant/blog" element={<PortalBlog />} />
           <Route path="/portal/:tenant/blog/:slug" element={<PortalArticle />} />
 
-          {/* Leads ao Vivo, Sugestões/Bugs e Atividade
-              viraram abas dentro de /admin/clientes (reorg 19/08/2026) — rotas
-              antigas só redirecionam, pra não quebrar link salvo/bookmark. */}
-          <Route path="/admin/leads-ao-vivo" element={<Navigate to="/admin/clientes?tab=leads-ao-vivo" replace />} />
-          {/* Modo Cliente saiu em 01/10/2026: o "Entrar" do cartão faz o mesmo. */}
+          {/* Endereços antigos da Área do Admin (reorganizações de 19/08 e
+              01/10/2026). Continuam vivos pra não quebrar link salvo. */}
           <Route path="/admin/modo-cliente" element={<Navigate to="/admin/clientes" replace />} />
           <Route path="/admin/formularios" element={<Navigate to="/admin/clientes" replace />} />
-          <Route path="/admin/sugestoes-bugs" element={<Navigate to="/admin/clientes?tab=sugestoes-bugs" replace />} />
-          <Route path="/admin/atividade" element={<Navigate to="/admin/clientes?tab=atividade" replace />} />
-          {/* Rota antiga: Auditoria virou Atividade, que agora é aba de Clientes */}
-          <Route path="/admin/auditoria" element={<Navigate to="/admin/clientes?tab=atividade" replace />} />
-          {/* Cérebro Universal, Resultados e Aperfeiçoamento viraram abas dentro
-              de /admin/agentes (IA Vendedora) — rotas antigas só redirecionam. */}
-          <Route path="/admin/cerebro" element={<Navigate to="/admin/agentes?tab=cerebro" replace />} />
-          <Route path="/admin/resultados-ia" element={<Navigate to="/admin/agentes?tab=resultados" replace />} />
-          <Route path="/admin/aperfeicoamento" element={<Navigate to="/admin/agentes?tab=aperfeicoamento" replace />} />
+          <Route path="/admin/sugestoes-bugs" element={<Navigate to="/admin/plataforma/sugestoes-e-bugs" replace />} />
+          <Route path="/admin/atividade" element={<Navigate to="/admin/usuarios/logs" replace />} />
+          <Route path="/admin/auditoria" element={<Navigate to="/admin/usuarios/logs" replace />} />
+          <Route path="/admin/uso" element={<RedirecionaComBusca para="/admin/usuarios" />} />
+          <Route path="/admin/custo-ia" element={<Navigate to="/admin/clientes/custos" replace />} />
+          <Route path="/admin/cerebro" element={<Navigate to="/admin/agentes/conhecimento" replace />} />
+          <Route path="/admin/aperfeicoamento" element={<Navigate to="/admin/agentes/conhecimento" replace />} />
+          <Route path="/admin/resultados-ia" element={<Navigate to="/admin/agentes/dashboard" replace />} />
           {/* Biblioteca de Automações excluída (19/08/2026) — sem uso real, era
               redundante com o modal de biblioteca que o cliente já tem em
               Automações. Bookmark antigo cai na Visão Geral. */}

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { AlertTriangle, Landmark, Loader2, RotateCcw, Upload } from 'lucide-react';
+import { AlertTriangle, Globe, Loader2, RotateCcw, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import { platformBanksService, type PlatformBank } from '@/services/superAdmin/platformBanksService';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
-import AiVisitNoticeSection from './AiVisitNoticeSection';
 
 /**
  * Configuração que vale para TODAS as imobiliárias de uma vez.
@@ -105,11 +104,11 @@ export default function Plataforma() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 p-4 sm:p-6">
       <header className="space-y-1">
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <Landmark className="h-5 w-5" /> Plataforma
-        </h1>
+        <h2 className="flex items-center gap-2 text-xl font-semibold">
+          <Globe className="h-5 w-5" /> Site
+        </h2>
         <p className="text-sm text-muted-foreground">
-          O que vale para todas as imobiliárias de uma vez.
+          O que vale no site de todas as imobiliárias de uma vez.
         </p>
       </header>
 
@@ -180,8 +179,6 @@ export default function Plataforma() {
           </div>
         )}
       </section>
-
-      <AiVisitNoticeSection />
     </div>
   );
 }

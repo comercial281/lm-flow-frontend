@@ -189,7 +189,7 @@ export default function CustomerFeedbacks() {
       <header className="space-y-1">
         <div className="flex items-center gap-2">
           <MessageSquarePlus className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">Sugestões/Bugs</h1>
+          <h2 className="text-2xl font-bold">Sugestões/Bugs</h2>
         </div>
         <p className="text-sm text-muted-foreground">
           Tudo que os clientes enviam pelo botão dentro do CRM.

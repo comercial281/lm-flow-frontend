@@ -4593,3 +4593,32 @@ Primeiro passo da refatoração da Área do Admin (spec `specs/2026-10-01-fase-4
 - **Sync Todos saiu.** Ele publicava de novo o frontend próprio de cada instância de junho; os clientes de hoje usam o frontend único, que publica sozinho no merge.
 - Monitoramento e Servidores MCP eram código sem rota: saíram.
 - Teto das caixinhas do SuperAdmin: 7 → 5.
+
+
+## Área do Admin em 7 itens, com abas no topo (desde 2026-10-01)
+
+Segundo passo da refatoração da Área do Admin (spec `specs/2026-10-01-fase-4-area-do-admin-design.md` na pasta LM FLOW). Só mudança de lugar: nenhuma tela foi refeita.
+
+O que aparece na tela, no menu da Área do Admin:
+
+| Item | Abas |
+|---|---|
+| Visão Geral | Dashboard · Leads ao vivo |
+| Clientes | Clientes · Números conectados · Custos |
+| Usuários | Usuários · Logs · Mensagem de acesso |
+| Comunicação | Avisos na tela · Push · WhatsApp |
+| Plataforma | Academia · Menus arquivados · Site · Sugestões e bugs |
+| IA Vendedora | Agentes · Dashboard · Conhecimento · Aviso de visita |
+| Equipe | — |
+
+- **Mesmo padrão do menu novo do CRM:** cada item é uma página, as subdivisões são abas no topo, sem terceiro nível. A moldura (`AdminPaginaComAbas`) lê as abas do próprio menu (`adminMenuItems.ts`): menu e abas não têm como discordar. **O nome do item é o único h1**; o título de cada tela de dentro é h2.
+- **Cada aba é uma rota.** Aba que já tinha endereço manteve (`/admin/push`, `/admin/academia`, `/admin/plataforma`). O item aceso no menu é o DONO do endereço (`donoDoEnderecoAdmin`), não o prefixo.
+- **Link antigo continua valendo.** `?tab=` de Clientes e da IA Vendedora leva pra aba nova (`adminEnderecosAntigos.ts`); `/admin/uso?client=x` vira `/admin/usuarios?client=x`, e Usuários abre no cliente do link (antes o link dos Logs não filtrava nada).
+- **Logs e Atividade viraram uma tela só** (já eram o mesmo componente). `/admin/uso` era cópia de Métricas de Uso: virou Usuários.
+- **Conhecimento** junta Cérebro Universal, Princípios e Aperfeiçoamento, um embaixo do outro.
+- **Aviso de visita** saiu de Plataforma e foi para IA Vendedora → Aviso de visita, sem mudar comportamento (decisões de 21/09 mantidas).
+- **Mensagem de acesso** saiu da janela e virou aba; a variável `{senha}` saiu da lista (a senha é criada pela pessoa, pelo link, desde a fase 1).
+- **WhatsApp** é o Comunicado. Neste passo a escrita continua na janela de sempre, com todos os clientes marcados (decisão). Confirmação e tela própria entram no PR de Comunicação.
+- **Push** ainda tem três abas por dentro (Regras, Disparo manual, Histórico): viram seções no PR de Comunicação. É a única exceção ao "sem terceiro nível", e é temporária.
+- **Custos** ainda é a tela Custo da IA (US$, N dias). O rateio de Railway, Evolution e Vercel entra no PR de Custos.
+- **Banner** ainda não tem aba: entra com a spec própria.

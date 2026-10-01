@@ -26,7 +26,7 @@ export default function CerebroUniversal() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
       <header className="mb-5">
-        <h1 className="text-xl font-semibold text-foreground">Cérebro Universal</h1>
+        <h2 className="text-xl font-semibold text-foreground">Cérebro Universal</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Conhecimento e lições que todo agente de IA herda. Vale pra todos os clientes; cada agente refina com o que é dele.
         </p>

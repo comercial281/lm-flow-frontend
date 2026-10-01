@@ -1,36 +1,38 @@
-import { LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import {
-  LayoutDashboard,
-  Building2,
-  Bell,
-  GraduationCap,
-  UsersRound,
-  Bot,
-  DollarSign,
-  Landmark,
+  LayoutDashboard, Radio, Building2, Smartphone, Wallet, Users, ScrollText, MessageCircle,
+  Megaphone, Bell, BellRing, Landmark, GraduationCap, Archive, Globe, MessageSquarePlus,
+  Bot, Sparkles, Brain, CalendarCheck, UsersRound,
 } from 'lucide-react';
+import { enderecoCasa } from './menuItems';
 
 /**
- * Menu da Área do Admin (Leal Mídia).
+ * Menu da Área do Admin (Leal Mídia). Shell separado do CRM: aqui NÃO entra
+ * nada que o cliente use.
  *
- * Shell separado do CRM: aqui NÃO entra nada que o cliente use. Se um item
- * serve pro cliente, ele mora em menuItems.ts (menu do CRM), não aqui.
+ * Fase 4 (01/10/2026, spec `specs/2026-10-01-fase-4-area-do-admin-design.md`):
+ * mesmo padrão do menu novo do CRM. Cada item é uma página, e as subdivisões
+ * são ABAS NO TOPO, lidas daqui pela `AdminPaginaComAbas` — menu e abas não têm
+ * como discordar. Não existe terceiro nível.
  *
- * Reorganizado em 19/08/2026: era uma lista chapada de 15 itens, muitos deles
- * sub-telas de outro item maior. Agora cada item de topo é um assunto —
- * telas relacionadas viraram abas DENTRO do item, não itens à parte:
- *   Clientes     -> Clientes, Leads ao Vivo, Sugestões/Bugs, Atividade
- *                    (tudo que gira em torno do cliente e do que ele faz
- *                    no CRM)
- *   IA Vendedora -> Agentes, Cérebro Universal, Resultados, Aperfeiçoamento
- *                    (tudo que é a IA de pré-atendimento)
- * "Biblioteca" (templates de automação) foi excluída: não tinha uso real.
+ * Cada aba é uma rota própria. Aba que já tinha endereço manteve (Push em
+ * /admin/push, Academia em /admin/academia, Site em /admin/plataforma), pra
+ * link salvo continuar valendo. `exata` marca a aba cujo endereço é começo do
+ * de outra aba.
  */
+export interface AdminAba {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  exata?: boolean;
+}
+
 export interface AdminMenuItem {
   name: string;
   href: string;
   icon: LucideIcon;
   description: string;
+  abas?: AdminAba[];
 }
 
 export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
@@ -38,56 +40,95 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     name: 'Visão Geral',
     href: '/admin',
     icon: LayoutDashboard,
-    description: 'Saúde do SaaS num relance',
+    description: 'A carteira num relance e os leads chegando agora',
+    abas: [
+      { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, exata: true },
+      { name: 'Leads ao vivo', href: '/admin/leads-ao-vivo', icon: Radio },
+    ],
   },
   {
     name: 'Clientes',
     href: '/admin/clientes',
     icon: Building2,
-    description: 'Clientes, números, leads ao vivo, sugestões/bugs e atividade',
+    description: 'Cada cliente, os números de WhatsApp dele e quanto ele custa',
+    abas: [
+      { name: 'Clientes', href: '/admin/clientes', icon: Building2, exata: true },
+      { name: 'Números conectados', href: '/admin/clientes/numeros', icon: Smartphone },
+      { name: 'Custos', href: '/admin/clientes/custos', icon: Wallet },
+    ],
   },
   {
-    // Lista as IAs de PRÉ-ATENDIMENTO (sales_agents) de todos os clientes —
-    // é a IA Vendedora vista de fora. Agora também reúne Cérebro Universal,
-    // Resultados e Aperfeiçoamento como abas, por serem a mesma IA.
+    name: 'Usuários',
+    href: '/admin/usuarios',
+    icon: Users,
+    description: 'Todas as pessoas de todos os clientes: acessos, logs e a mensagem de acesso',
+    abas: [
+      { name: 'Usuários', href: '/admin/usuarios', icon: Users, exata: true },
+      { name: 'Logs', href: '/admin/usuarios/logs', icon: ScrollText },
+      { name: 'Mensagem de acesso', href: '/admin/usuarios/mensagem-de-acesso', icon: MessageCircle },
+    ],
+  },
+  {
+    name: 'Comunicação',
+    href: '/admin/comunicacao',
+    icon: Megaphone,
+    description: 'Falar com os clientes: avisos na tela, push e WhatsApp',
+    abas: [
+      { name: 'Avisos na tela', href: '/admin/comunicacao', icon: Bell, exata: true },
+      { name: 'Push', href: '/admin/push', icon: BellRing },
+      { name: 'WhatsApp', href: '/admin/comunicacao/whatsapp', icon: MessageCircle },
+    ],
+  },
+  {
+    name: 'Plataforma',
+    href: '/admin/academia',
+    icon: Landmark,
+    description: 'O que vale em todas as imobiliárias de uma vez',
+    abas: [
+      { name: 'Academia', href: '/admin/academia', icon: GraduationCap },
+      { name: 'Menus arquivados', href: '/admin/plataforma/menus-arquivados', icon: Archive },
+      { name: 'Site', href: '/admin/plataforma', icon: Globe, exata: true },
+      { name: 'Sugestões e bugs', href: '/admin/plataforma/sugestoes-e-bugs', icon: MessageSquarePlus },
+    ],
+  },
+  {
     name: 'IA Vendedora',
     href: '/admin/agentes',
     icon: Bot,
-    description: 'A IA Vendedora de todos os clientes: agentes, cérebro, resultados e aperfeiçoamento',
-  },
-  {
-    name: 'Custo da IA',
-    href: '/admin/custo-ia',
-    icon: DollarSign,
-    description: 'Quanto cada cliente consumiu de IA: a chave da Anthropic é uma só para todos',
-  },
-  {
-    name: 'Central de Push',
-    href: '/admin/push',
-    icon: Bell,
-    description: 'Avisos no celular: regras, disparo manual e o que falhou',
-  },
-  {
-    // Aponta pra DENTRO do admin, não pro /tutorials do CRM: o item era um
-    // atalho que chutava o Giovani de volta pro shell do cliente.
-    name: 'Academia',
-    href: '/admin/academia',
-    icon: GraduationCap,
-    description: 'Publicar e gerenciar as aulas e a documentação',
-  },
-  {
-    // O que vale para TODAS as imobiliárias de uma vez. Hoje: os logos dos
-    // bancos da página de financiamento do portal — subidos aqui uma vez, toda
-    // imobiliária os herda, inclusive as que ainda nem existem.
-    name: 'Plataforma',
-    href: '/admin/plataforma',
-    icon: Landmark,
-    description: 'Configuração que vale em todas as imobiliárias de uma vez',
+    description: 'A IA Vendedora de todos os clientes',
+    abas: [
+      { name: 'Agentes', href: '/admin/agentes', icon: Bot, exata: true },
+      { name: 'Dashboard', href: '/admin/agentes/dashboard', icon: Sparkles },
+      { name: 'Conhecimento', href: '/admin/agentes/conhecimento', icon: Brain },
+      { name: 'Aviso de visita', href: '/admin/agentes/aviso-de-visita', icon: CalendarCheck },
+    ],
   },
   {
     name: 'Equipe',
     href: '/admin/equipe',
     icon: UsersRound,
-    description: 'Adicionar pessoas da Leal Mídia (acesso ao admin e ocultas nos logs)',
+    description: 'Pessoas da Leal Mídia com acesso ao admin',
   },
 ];
+
+/**
+ * Qual item (e qual aba) é dono do endereço. Ganha o endereço mais longo que
+ * casa, igual ao `donoDoEndereco` do CRM. Item sem abas casa pelo próprio href.
+ */
+export function donoDoEnderecoAdmin(
+  itens: AdminMenuItem[],
+  pathname: string,
+): { item: AdminMenuItem; aba?: AdminAba } | null {
+  let melhor: { item: AdminMenuItem; aba?: AdminAba; tamanho: number } | null = null;
+  for (const item of itens) {
+    const candidatos: { href: string; exata?: boolean; aba?: AdminAba }[] = item.abas?.length
+      ? item.abas.map(aba => ({ href: aba.href, exata: aba.exata, aba }))
+      : [{ href: item.href }];
+    for (const c of candidatos) {
+      if (enderecoCasa(pathname, c.href, c.exata) && (!melhor || c.href.length > melhor.tamanho)) {
+        melhor = { item, aba: c.aba, tamanho: c.href.length };
+      }
+    }
+  }
+  return melhor ? { item: melhor.item, aba: melhor.aba } : null;
+}
