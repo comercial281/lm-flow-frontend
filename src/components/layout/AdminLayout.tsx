@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { ADMIN_MENU_ITEMS } from './config/adminMenuItems';
+import { ADMIN_MENU_ITEMS, donoDoEnderecoAdmin } from './config/adminMenuItems';
 
 function cn(...classes: (string | undefined | null | false)[]) {
   return classes.filter(Boolean).join(' ');
@@ -58,8 +58,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     return <div className="flex h-screen items-center justify-center">Carregando...</div>;
   }
 
-  const isActive = (href: string) =>
-    href === '/admin' ? location.pathname === '/admin' : location.pathname.startsWith(href);
+  // O item aceso é o DONO do endereço (Push mora em /admin/push e é de
+  // Comunicação; Academia mora em /admin/academia e é de Plataforma).
+  const itemAtivo = donoDoEnderecoAdmin(ADMIN_MENU_ITEMS, location.pathname)?.item;
+  const isActive = (href: string) => itemAtivo?.href === href;
 
   return (
     <div className="flex flex-col h-screen bg-background">
