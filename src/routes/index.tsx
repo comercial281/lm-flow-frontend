@@ -124,7 +124,7 @@ function SuperAdminRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-// Clientes, Leads ao Vivo, Modo Cliente, Formulários, Sugestões/Bugs e
+// Clientes, Leads ao Vivo, Sugestões/Bugs e
 // Atividade viraram abas DENTRO do PooledClients — só ele é rota.
 const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients'));
 const PushCentral = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral'));
@@ -1370,7 +1370,7 @@ const AppRouter = () => {
           <Route path="/portal/:tenant/blog" element={<PortalBlog />} />
           <Route path="/portal/:tenant/blog/:slug" element={<PortalArticle />} />
 
-          {/* Leads ao Vivo, Modo Cliente, Formulários, Sugestões/Bugs e Atividade
+          {/* Leads ao Vivo, Sugestões/Bugs e Atividade
               viraram abas dentro de /admin/clientes (reorg 19/08/2026) — rotas
               antigas só redirecionam, pra não quebrar link salvo/bookmark. */}
           <Route path="/admin/leads-ao-vivo" element={<Navigate to="/admin/clientes?tab=leads-ao-vivo" replace />} />

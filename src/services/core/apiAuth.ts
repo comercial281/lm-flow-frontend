@@ -179,7 +179,7 @@ authApi.interceptors.response.use(
 );
 
 // Escopo 'auth': login/refresh/validate SEMPRE na sessão raiz (subdomínio real),
-// nunca no cliente do Modo Cliente — senão o token raiz validaria no schema errado.
+// nunca em outro tenant — o tenant é o subdomínio do endereço.
 applySetupInterceptor(authApi, { authScope: 'auth' });
 
 export default authApi;

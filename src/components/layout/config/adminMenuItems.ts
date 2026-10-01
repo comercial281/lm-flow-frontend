@@ -19,9 +19,9 @@ import {
  * Reorganizado em 19/08/2026: era uma lista chapada de 15 itens, muitos deles
  * sub-telas de outro item maior. Agora cada item de topo é um assunto —
  * telas relacionadas viraram abas DENTRO do item, não itens à parte:
- *   Clientes     -> Clientes, Leads ao Vivo, Modo Cliente, Formulários,
- *                    Sugestões/Bugs, Atividade (tudo que gira em torno do
- *                    cliente e do que ele faz no CRM)
+ *   Clientes     -> Clientes, Leads ao Vivo, Sugestões/Bugs, Atividade
+ *                    (tudo que gira em torno do cliente e do que ele faz
+ *                    no CRM)
  *   IA Vendedora -> Agentes, Cérebro Universal, Resultados, Aperfeiçoamento
  *                    (tudo que é a IA de pré-atendimento)
  * "Biblioteca" (templates de automação) foi excluída: não tinha uso real.
@@ -44,7 +44,7 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     name: 'Clientes',
     href: '/admin/clientes',
     icon: Building2,
-    description: 'Clientes, números, leads ao vivo, modo cliente, formulários, sugestões/bugs e atividade',
+    description: 'Clientes, números, leads ao vivo, sugestões/bugs e atividade',
   },
   {
     // Lista as IAs de PRÉ-ATENDIMENTO (sales_agents) de todos os clientes —
