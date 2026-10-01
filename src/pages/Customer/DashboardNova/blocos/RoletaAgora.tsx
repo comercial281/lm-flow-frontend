@@ -1,7 +1,7 @@
 // src/pages/Customer/DashboardNova/blocos/RoletaAgora.tsx
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { numero, plural, porcentagem } from '@/lib/formato';
+import { data, dataCurta, hora, numero, plural, porcentagem } from '@/lib/formato';
 import { IconActionButton } from '@/components/base';
 import { GlassCard } from '../../DashboardV2/components/primitives';
 import {
@@ -22,8 +22,16 @@ const MODO: Record<DistributionMode, string> = {
 };
 const INTERVALO_MS = 30_000;
 
-const prazo = (o: RoletaQueueItem) =>
-  o.sem_prazo ? 'sem prazo' : o.estourou ? 'prazo estourado' : `faltam ${numero(o.minutos_restantes ?? 0)} min`;
+const prazo = (o: RoletaQueueItem) => {
+  if (o.sem_prazo) return 'sem prazo';
+  if (o.estourou) return 'prazo estourado';
+  const min = o.minutos_restantes ?? 0;
+  return `${min === 1 ? 'falta' : 'faltam'} ${numero(min)} min`;
+};
+
+/** "último lead às 14:32" se foi hoje, "último lead em 28/09" se não. */
+const ultimoLead = (quando: string) =>
+  data(quando) === data(new Date()) ? `último lead às ${hora(quando)}` : `último lead em ${dataCurta(quando)}`;
 
 /**
  * A oferta é desta roleta? Pelo id da roleta; servidor antigo não manda o id,
@@ -126,6 +134,7 @@ export const RoletaAgora: React.FC<ContextoBloco> = ({ visao, pode }) => {
             <span className="lmfn-item-texto">
               {m.nome ?? 'Sem nome'}
               {m.segurando_agora > 0 && <small>{`Segurando ${plural(m.segurando_agora, 'lead', 'leads')} agora`}</small>}
+              {atual.modo === 'fila' && m.ultimo_lead_em && <small>{ultimoLead(m.ultimo_lead_em)}</small>}
             </span>
             {atual.modo === 'rodizio' && m.chance_pct !== null && <span className="lmfn-pilula">{porcentagem(m.chance_pct, 0)}</span>}
             {marcas.map(x => <span key={x.texto} className={`lmfn-pilula${x.classe}`}>{x.texto}</span>)}

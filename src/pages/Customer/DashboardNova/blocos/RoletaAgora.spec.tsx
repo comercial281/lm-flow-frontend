@@ -6,6 +6,7 @@ const getQueue = vi.fn();
 vi.mock('@/services/roletaConfig/roletaConfigService', () => ({ roletaConfigService: { getQueue: () => getQueue() } }));
 
 import { RoletaAgora } from './RoletaAgora';
+import { dataCurta, hora } from '@/lib/formato';
 import type { ContextoBloco } from '../usePodeAbrir';
 
 const pode = { imoveis: true, agenda: true, propostas: true, funil: true, roleta: true, conversas: true };
@@ -90,6 +91,29 @@ describe('RoletaAgora', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Próxima roleta' }));
     expect(screen.getByText('Beltrano')).toBeInTheDocument();
     expect(screen.queryByText('Fulano')).not.toBeInTheDocument();
+  });
+
+  it('com 1 minuto, diz "falta 1 min"', async () => {
+    getQueue.mockResolvedValue(resposta([roleta('principal', 'Vendas')], [oferta('o1', { minutos_restantes: 1 })]));
+    await montar(ctx());
+    expect(screen.getByText('falta 1 min')).toBeInTheDocument();
+  });
+
+  it('na Fila, mostra quando cada um recebeu o último lead: a hora se foi hoje, o dia se não', async () => {
+    const hoje = new Date().toISOString();
+    const antes = '2026-01-15T15:00:00Z';
+    getQueue.mockResolvedValue(resposta([
+      roleta('r1', 'Vendas', { membros: [membro('Ana', { ultimo_lead_em: hoje }), membro('Bruno', { ultimo_lead_em: antes }), membro('Carla')] }),
+      roleta('r2', 'Locação', { modo: 'rodizio', membros: [membro('Diego', { ultimo_lead_em: antes, chance_pct: 100 })] }),
+    ]));
+    await montar(ctx());
+    expect(screen.getByText(`último lead às ${hora(hoje)}`)).toBeInTheDocument();
+    expect(screen.getByText(`último lead em ${dataCurta(antes)}`)).toBeInTheDocument();
+    expect(screen.getAllByText(/último lead/)).toHaveLength(2);
+
+    // Fora da Fila, a linha não aparece.
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima roleta' }));
+    expect(screen.queryByText(/último lead/)).not.toBeInTheDocument();
   });
 
   it('com uma roleta só, não tem setas', async () => {
