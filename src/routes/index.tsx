@@ -133,7 +133,6 @@ const CustoIA = lazyWithRetry(() => import('@/pages/SuperAdmin/CustoIA'));
 // Agentes, Cérebro Universal, Resultados e Aperfeiçoamento viraram abas
 // DENTRO do SuperAgents (IA Vendedora) — só ele é rota.
 const SuperAgents = lazyWithRetry(() => import('@/pages/SuperAdmin/SuperAgents'));
-const PublicOnboardingForm = lazyWithRetry(() => import('@/pages/PublicOnboardingForm'));
 
 // Área do Admin — shell próprio (AdminLayout), fora do menu do CRM.
 const AdminLayout = lazyWithRetry(() => import('@/components/layout/AdminLayout'));
@@ -1368,8 +1367,9 @@ const AppRouter = () => {
           <Route path="/lp/:tenant/:slug" element={<LandingPublic />} />
           <Route path="/lp/:tenant/:slug/:result" element={<LandingResult />} />
 
-          {/* Público (sem login): formulário de onboarding por link (Épico E). */}
-          <Route path="/formulario/:token" element={<PublicOnboardingForm />} />
+          {/* Formulários de onboarding saíram em 01/10/2026 (ninguém usava). Link
+              público antigo cai na entrada do app. As respostas ficam no banco. */}
+          <Route path="/formulario/*" element={<Navigate to="/" replace />} />
 
           {/* O Espaço saiu do CRM em 30/09/2026 (fase 4: ninguém usava). Link
               salvo ou compartilhado (/espaco e /espaco/:token) cai no início.
@@ -1402,7 +1402,7 @@ const AppRouter = () => {
           <Route path="/admin/leads-ao-vivo" element={<Navigate to="/admin/clientes?tab=leads-ao-vivo" replace />} />
           {/* Modo Cliente saiu em 01/10/2026: o "Entrar" do cartão faz o mesmo. */}
           <Route path="/admin/modo-cliente" element={<Navigate to="/admin/clientes" replace />} />
-          <Route path="/admin/formularios" element={<Navigate to="/admin/clientes?tab=formularios" replace />} />
+          <Route path="/admin/formularios" element={<Navigate to="/admin/clientes" replace />} />
           <Route path="/admin/sugestoes-bugs" element={<Navigate to="/admin/clientes?tab=sugestoes-bugs" replace />} />
           <Route path="/admin/atividade" element={<Navigate to="/admin/clientes?tab=atividade" replace />} />
           {/* Rota antiga: Auditoria virou Atividade, que agora é aba de Clientes */}
