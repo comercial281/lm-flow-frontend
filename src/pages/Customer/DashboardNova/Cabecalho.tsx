@@ -1,5 +1,5 @@
 // src/pages/Customer/DashboardNova/Cabecalho.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { InstancePicker } from '../DashboardV2/components/InstancePicker';
 import { TagPicker } from '../DashboardV2/components/TagPicker';
@@ -26,25 +26,37 @@ interface Props {
   subtitulo: string;
   visao: Visao;
   scope?: ScopeInfoNova;
+  /** O pedido com os filtros atuais ainda não voltou (o `carregando` do useDashboardNova). */
+  carregando: boolean;
   filtros: FiltrosDashboard;
   onFiltros: (f: FiltrosDashboard) => void;
 }
 
-export const Cabecalho: React.FC<Props> = ({ nome, subtitulo, visao, scope, filtros, onFiltros }) => {
+export const Cabecalho: React.FC<Props> = ({ nome, subtitulo, visao, scope, carregando, filtros, onFiltros }) => {
   const [aberto, setAberto] = useState(false);
   const [corretores, setCorretores] = useState<{ id: string; nome: string }[]>([]);
-  // A resposta que estava na tela quando o corretor foi escolhido. Enquanto ela
-  // não muda, o pedido novo ainda não voltou e vale a escolha.
-  const [escolhaPendente, setEscolhaPendente] = useState<{ scope?: ScopeInfoNova } | null>(null);
+  const idPainel = useId();
   const modos = ORDEM_VISAO.filter(m => scope?.available_modes.includes(m));
   const mostraVisao = !!scope && !scope.locked && modos.length > 1;
 
   // O servidor descarta, sem avisar, um corretor que não é do time: o que vale
-  // é o `scope.owner_id` da resposta, não só o que foi escolhido.
-  const esperandoServidor = escolhaPendente !== null && escolhaPendente.scope === scope;
-  const donoAplicado = !scope || esperandoServidor ? filtros.ownerId : scope.owner_id ?? undefined;
+  // é o `scope.owner_id` da resposta. Enquanto o pedido não volta, vale a escolha.
+  const donoAplicado = carregando || !scope ? filtros.ownerId : scope.owner_id ?? undefined;
   const ativos = [visao === 'gestor' && donoAplicado, filtros.inboxId, filtros.labelId, filtros.aiOnly]
     .filter(Boolean).length;
+
+  // Corretor descartado pelo servidor sai dos filtros, uma vez por resposta.
+  // Só olha resposta NOVA: logo depois de escolher, o `carregando` ainda é
+  // false por um instante e a resposta na tela é a antiga, que não conta.
+  const ultimo = useRef({ filtros, onFiltros });
+  ultimo.current = { filtros, onFiltros };
+  const escopoConferido = useRef<ScopeInfoNova | undefined>(undefined);
+  useEffect(() => {
+    if (carregando || !scope || escopoConferido.current === scope) return;
+    escopoConferido.current = scope;
+    const { filtros: f, onFiltros: aplicar } = ultimo.current;
+    if (f.ownerId && scope.owner_id == null) aplicar({ ...f, ownerId: undefined });
+  }, [scope, carregando]);
 
   // A lista de corretores só é buscada quando o painel abre, e só para o gestor.
   useEffect(() => {
@@ -84,7 +96,7 @@ export const Cabecalho: React.FC<Props> = ({ nome, subtitulo, visao, scope, filt
             {PERIODOS.map(p => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
           </select>
           <button type="button" className="lmf-select flex items-center gap-2" aria-expanded={aberto}
-            onClick={() => setAberto(a => !a)}>
+            aria-controls={idPainel} onClick={() => setAberto(a => !a)}>
             <SlidersHorizontal size={14} aria-hidden />
             Filtros
             {ativos > 0 && <span className="lmfn-contador">{ativos}</span>}
@@ -93,15 +105,12 @@ export const Cabecalho: React.FC<Props> = ({ nome, subtitulo, visao, scope, filt
       </header>
 
       {aberto && (
-        <div className="lmfn-filtros" role="region" aria-label="Filtros">
+        <div id={idPainel} className="lmfn-filtros" role="region" aria-label="Filtros">
           {visao === 'gestor' && (
             <label>
               Corretor
               <select className="lmf-select" value={donoAplicado ?? ''}
-                onChange={e => {
-                  setEscolhaPendente({ scope });
-                  onFiltros({ ...filtros, ownerId: e.target.value || undefined });
-                }}>
+                onChange={e => onFiltros({ ...filtros, ownerId: e.target.value || undefined })}>
                 <option value="">Todos</option>
                 {corretores.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </select>
@@ -112,7 +121,12 @@ export const Cabecalho: React.FC<Props> = ({ nome, subtitulo, visao, scope, filt
           <AiToggle active={!!filtros.aiOnly} salesAgentId={filtros.salesAgentId}
             onChange={({ active, salesAgentId }) => onFiltros({ ...filtros, aiOnly: active, salesAgentId })} />
           <div className="lmfn-filtros-rodape">
-            <button type="button" onClick={() => onFiltros({ preset: filtros.preset, scope: filtros.scope })}>
+            {/* O funil não é filtro daqui (escolhe-se no card Funil): fica. */}
+            <button type="button" onClick={() => onFiltros({
+              preset: filtros.preset,
+              ...(filtros.scope ? { scope: filtros.scope } : {}),
+              ...(filtros.pipelineId ? { pipelineId: filtros.pipelineId } : {}),
+            })}>
               Limpar filtros
             </button>
           </div>
