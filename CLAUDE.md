@@ -4146,6 +4146,10 @@ O que aparece na tela:
   200 ms); com "reduzir movimento" no sistema, sem animação. Seção fechada fica
   no DOM com `inert` + `aria-hidden`, fora do Tab e do leitor de tela.
 - **Recolhido:** só ícones, com um traço entre as seções.
+- **Nome da conta na barra do topo** (computador): só com o menu recolhido. Com
+  o menu aberto o cartão já mostra o nome, e o selo no centro do topo repetia
+  (pedido do dono, 01/10/2026). No celular o nome continua embaixo da logo: lá
+  não tem cartão.
 - **Rodapé:** Guia do LM Flow e Falar com o suporte. Saíram o © e o link
   "Documentação" (era a documentação da Evolution).
 - **Avatar:** Meu perfil, **Meus números**, Sugestões/Bugs, Sair. Meus números
