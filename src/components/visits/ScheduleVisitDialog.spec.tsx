@@ -150,4 +150,26 @@ describe('Agendar visita', () => {
     expect(await screen.findByText('Nenhuma outra visita sua nesse dia.')).toBeInTheDocument();
     expect(screen.queryByText(/Nenhuma outra visita de/)).not.toBeInTheDocument();
   });
+
+  it('gestor: digitar por cima do corretor mantém o que foi digitado (não apaga) e barra o salvar', async () => {
+    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: false, me: null } });
+    abrir();
+
+    await userEvent.click(await screen.findByPlaceholderText('Buscar cliente por nome ou telefone'));
+    await userEvent.click(await screen.findByText('Leonardo Teste'));
+    expect(await screen.findByDisplayValue('Bruno')).toBeInTheDocument();
+
+    const campoCorretor = screen.getByPlaceholderText('Buscar corretor por nome') as HTMLInputElement;
+    await userEvent.clear(campoCorretor);
+    await userEvent.type(campoCorretor, 'Ca');
+
+    expect(campoCorretor.value).toBe('Ca');
+    expect(screen.queryByDisplayValue('Bruno')).not.toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Escolha o corretor responsável'));
+    expect(create).not.toHaveBeenCalled();
+  });
 });

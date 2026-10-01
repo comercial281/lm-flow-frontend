@@ -53,6 +53,12 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
   const [imovel, setImovel] = useState<Property | null>(null);
   const [doDia, setDoDia] = useState<BusyVisit[]>([]);
   const [salvando, setSalvando] = useState(false);
+  // Sobe a cada "abriu" (ver efeito abaixo) e vira `key` do `BuscaCorretor`:
+  // força ele a remontar do zero no reset, sem depender de o Dialog
+  // desmontar o conteúdo sozinho (aqui é explícito, não um efeito colateral
+  // do Radix). Sem isso o texto digitado por cima de um corretor anterior
+  // poderia sobreviver a uma reabertura.
+  const [cicloFormulario, setCicloFormulario] = useState(0);
 
   // `diaInicial` costuma ser um `Date` recriado a cada render do pai: não pode
   // entrar nas dependências do reset (reabriria o form de novo só por isso).
@@ -74,6 +80,7 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
     setImovel(null);
     setTravado(null);
     setVerificandoCargo(true);
+    setCicloFormulario(c => c + 1);
     visitsService.leadPickerPage('', 1)
       .then(({ meta }) => {
         if (!vivo) return;
@@ -178,7 +185,7 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
               {travado ? (
                 <p className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">{travado.name}</p>
               ) : (
-                <BuscaCorretor valor={corretor} onEscolher={setCorretor} />
+                <BuscaCorretor key={cicloFormulario} valor={corretor} onEscolher={setCorretor} />
               )}
             </div>
 
@@ -309,8 +316,17 @@ function BuscaCorretor({ valor, onEscolher }: { valor: PersonRef | null; onEscol
   const [lista, setLista] = useState<User[]>([]);
   const [aberto, setAberto] = useState(false);
   const espera = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Fica `true` só entre "digitei e isso zerou o `valor`" e o re-render que
+  // chega de volta com `valor = null` — pra esse re-render não apagar o que
+  // acabou de ser digitado. Qualquer OUTRA causa de `valor` virar null (o
+  // gestor trocou de cliente para um sem dono) passa batido por aqui e cai no
+  // sync normal abaixo, que esvazia o campo de verdade.
+  const limpeiPorDigitarRef = useRef(false);
 
-  useEffect(() => { setTexto(valor?.name ?? ''); }, [valor]);
+  useEffect(() => {
+    if (limpeiPorDigitarRef.current) { limpeiPorDigitarRef.current = false; return; }
+    setTexto(valor?.name ?? '');
+  }, [valor]);
 
   const buscar = (q: string) => {
     if (espera.current) clearTimeout(espera.current);
@@ -333,8 +349,13 @@ function BuscaCorretor({ valor, onEscolher }: { valor: PersonRef | null; onEscol
           const v = e.target.value;
           setTexto(v);
           // Digitou por cima do nome escolhido: o campo não pode mais exibir
-          // um nome que não é mais o que vai ser salvo.
-          if (valor && v !== valor.name) onEscolher(null);
+          // um nome que não é mais o que vai ser salvo. Mas o texto JÁ digitado
+          // continua na tela — quem limpa pra "nada escolhido" é o estado
+          // (`corretor` vira null), não o campo (ver `limpeiPorDigitarRef`).
+          if (valor && v !== valor.name) {
+            limpeiPorDigitarRef.current = true;
+            onEscolher(null);
+          }
           buscar(v);
         }}
         placeholder="Buscar corretor por nome"
