@@ -21,7 +21,7 @@ const periodo = { preset: 'last_7_days', since: '2026-09-24T00:00:00-03:00', unt
 function ctx(over: Partial<ContextoBloco> = {}, dados: Record<string, unknown> = {}): ContextoBloco {
   return {
     dados: { period: periodo, scope: { mode: 'all', locked: false, available_modes: ['all'], blocks: { media_spend: false, operations: false } }, ...dados } as never,
-    carregando: false, visao: 'gestor', pode, abrirLista: vi.fn(), mudarFunil: vi.fn(), ...over,
+    carregando: false, visao: 'gestor', pode, filtros: { preset: 'last_7_days' }, abrirLista: vi.fn(), mudarFunil: vi.fn(), ...over,
   };
 }
 
@@ -145,6 +145,38 @@ describe('bloco Números', () => {
     wrap(<Numeros {...ctx({ visao: 'corretor' }, { kpis })} />);
     expect(screen.queryByRole('button', { name: /Propostas/ })).not.toBeInTheDocument();
     expect(screen.getByText('Propostas')).toBeInTheDocument();
+  });
+
+  const escopo = (mode: 'all' | 'team' | 'mine', over: Record<string, unknown> = {}) =>
+    ({ mode, locked: false, owner_id: null, available_modes: ['mine', 'team', 'all'], blocks: { media_spend: false, operations: false }, ...over });
+
+  it('recorte que a Agenda e Propostas não aplicam (Meu time, filtro): os números viram texto', () => {
+    const casos: Partial<ContextoBloco>[] = [
+      { filtros: { preset: 'last_7_days', labelId: 'l1' } },
+      { filtros: { preset: 'last_7_days', ownerId: 'u1' } },
+    ];
+    casos.forEach(over => {
+      const { unmount } = wrap(<Numeros {...ctx(over, { kpis })} />);
+      expect(screen.queryByRole('button', { name: /Visitas agendadas/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Propostas/ })).not.toBeInTheDocument();
+      expect(screen.getByText('Visitas agendadas')).toBeInTheDocument();
+      // Leads e Conversas abrem a lista rápida, que usa os mesmos filtros: continuam.
+      expect(screen.getByRole('button', { name: /Leads captados/ })).toBeInTheDocument();
+      unmount();
+    });
+    wrap(<Numeros {...ctx({}, { kpis, scope: escopo('team') })} />);
+    expect(screen.queryByRole('button', { name: /Visitas agendadas/ })).not.toBeInTheDocument();
+  });
+
+  it('o corretor travado: Visitas agendadas leva à Agenda, que já recorta por ele', () => {
+    wrap(<Numeros {...ctx({ visao: 'corretor' }, { kpis, scope: escopo('mine', { locked: true, available_modes: ['mine'] }) })} />);
+    fireEvent.click(screen.getByRole('button', { name: /Visitas agendadas/ }));
+    expect(navegar).toHaveBeenLastCalledWith('/visits?desde=2026-09-24&ate=2026-09-30');
+  });
+
+  it('o corretor sem trava (isolamento desligado): a Agenda mostraria a casa toda, então não é link', () => {
+    wrap(<Numeros {...ctx({ visao: 'corretor' }, { kpis, scope: escopo('mine') })} />);
+    expect(screen.queryByRole('button', { name: /Visitas agendadas/ })).not.toBeInTheDocument();
   });
 });
 

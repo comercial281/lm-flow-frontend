@@ -6,8 +6,9 @@ import { EmptyBlock, GlassCard, Skeleton } from '../../DashboardV2/components/pr
 import { isAvailable } from '../../DashboardV2/types';
 import { linkFunil } from '@/features/dashboard/links';
 import type { ContextoBloco } from '../usePodeAbrir';
+import { recorteBateComDestino } from '../visao';
 
-export const Funil: React.FC<ContextoBloco> = ({ dados, carregando, visao, pode, mudarFunil }) => {
+export const Funil: React.FC<ContextoBloco> = ({ dados, carregando, visao, pode, filtros, mudarFunil }) => {
   const navigate = useNavigate();
   const bloco = dados?.pipeline;
   const titulo = visao === 'corretor' ? 'Seu funil' : 'Funil';
@@ -23,6 +24,9 @@ export const Funil: React.FC<ContextoBloco> = ({ dados, carregando, visao, pode,
       </GlassCard>
     );
   }
+  // O funil não recebe time, corretor nem os filtros do painel: fora do recorte
+  // que ele mostra sozinho, a etapa fica sem link.
+  const abreEtapa = pode.funil && recorteBateComDestino(dados?.scope, filtros);
   const max = Math.max(1, ...bloco.stages.map(s => s.current));
   const seletor = bloco.pipelines.length > 1 ? (
     <select className="lmf-select" aria-label="Funil" value={bloco.pipeline.id} onChange={e => mudarFunil(e.target.value)}>
@@ -43,7 +47,7 @@ export const Funil: React.FC<ContextoBloco> = ({ dados, carregando, visao, pode,
             <span style={{ width: 40, textAlign: 'right', fontWeight: 600 }}>{numero(s.current)}</span>
           </>
         );
-        return pode.funil ? (
+        return abreEtapa ? (
           <button key={s.id} type="button" className="lmfn-item" onClick={() => navigate(linkFunil(bloco.pipeline.id, s.id))}>{corpo}</button>
         ) : (
           <div key={s.id} className="lmfn-item">{corpo}</div>

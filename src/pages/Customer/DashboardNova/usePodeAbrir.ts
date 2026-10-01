@@ -1,6 +1,6 @@
 import { useCan } from '@/hooks/useCan';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
-import type { DashboardNovaPayload, ListaKind } from './types';
+import type { DashboardNovaPayload, FiltrosDashboard, ListaKind } from './types';
 import type { Visao } from './catalogo';
 
 /**
@@ -41,6 +41,8 @@ export interface ContextoBloco {
   carregando: boolean;
   visao: Visao;
   pode: PodeAbrir;
+  /** Os filtros pedidos agora: com `recorteBateComDestino` (visao.ts), decidem se um número vira link. */
+  filtros: FiltrosDashboard;
   /** `limitado`: o número que abriu a lista tem teto no servidor (sai com +). */
   abrirLista: (kind: ListaKind, titulo: string, limitado?: boolean) => void;
   mudarFunil: (pipelineId: string) => void;

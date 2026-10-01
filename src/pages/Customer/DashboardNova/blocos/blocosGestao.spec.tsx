@@ -15,7 +15,7 @@ import type { ContextoBloco } from '../usePodeAbrir';
 const pode = { imoveis: true, agenda: true, propostas: true, funil: true, roleta: true, conversas: true };
 const ctx = (dados: Record<string, unknown>, over: Partial<ContextoBloco> = {}): ContextoBloco => ({
   dados: { period: { since: '2026-09-24T00:00:00-03:00', until: '2026-09-30T23:59:59-03:00' }, scope: { mode: 'all' }, ...dados } as never,
-  carregando: false, visao: 'gestor', pode, abrirLista: vi.fn(), mudarFunil: vi.fn(), ...over,
+  carregando: false, visao: 'gestor', pode, filtros: { preset: 'last_7_days' }, abrirLista: vi.fn(), mudarFunil: vi.fn(), ...over,
 });
 const wrap = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
@@ -76,6 +76,20 @@ describe('Funil', () => {
     wrap(<Funil {...c} />);
     fireEvent.change(screen.getByRole('combobox', { name: 'Funil' }), { target: { value: 'p2' } });
     expect(c.mudarFunil).toHaveBeenCalledWith('p2');
+  });
+
+  it('recorte que o funil não aplica (Meu time, corretor, filtro): as etapas viram texto', () => {
+    const casos: [Record<string, unknown>, Partial<ContextoBloco>][] = [
+      [{ pipeline, scope: { mode: 'team', locked: false, owner_id: null, available_modes: ['mine', 'team'] } }, {}],
+      [{ pipeline }, { filtros: { preset: 'last_7_days', ownerId: 'u1' } }],
+      [{ pipeline }, { filtros: { preset: 'last_7_days', inboxId: 'i1' } }],
+    ];
+    casos.forEach(([dados, over]) => {
+      const { unmount } = wrap(<Funil {...ctx(dados, over)} />);
+      expect(screen.queryByRole('button', { name: /Novo/ })).not.toBeInTheDocument();
+      expect(screen.getByText('Novo')).toBeInTheDocument();
+      unmount();
+    });
   });
 });
 

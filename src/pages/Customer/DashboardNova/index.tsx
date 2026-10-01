@@ -84,13 +84,13 @@ const DashboardNova: React.FC = () => {
   const tentarDeNovo = () => { void recarregar(); };
 
   const ctx: ContextoBloco = useMemo(() => ({
-    dados, carregando, visao, pode,
+    dados, carregando, visao, pode, filtros,
     abrirLista: (kind, titulo, limitado) => {
       setLista({ kind, titulo, limitado: !!limitado });
       setListaAberta(true);
     },
     mudarFunil: pipelineId => setFiltros(f => ({ ...f, pipelineId })),
-  }), [dados, carregando, visao, pode]);
+  }), [dados, carregando, visao, pode, filtros]);
 
   let corpo: React.ReactNode;
   if (!dados && erro) {

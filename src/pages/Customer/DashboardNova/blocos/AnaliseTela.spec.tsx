@@ -9,7 +9,7 @@ const pode = { imoveis: true, agenda: true, propostas: true, funil: true, roleta
 function ctx(dados: Record<string, unknown>): ContextoBloco {
   return {
     dados: { period: {}, scope: { mode: 'all' }, ...dados } as never,
-    carregando: false, visao: 'gestor', pode, abrirLista: vi.fn(), mudarFunil: vi.fn(),
+    carregando: false, visao: 'gestor', pode, filtros: { preset: 'last_7_days' }, abrirLista: vi.fn(), mudarFunil: vi.fn(),
   };
 }
 
