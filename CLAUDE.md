@@ -4132,12 +4132,12 @@ O que aparece na tela:
   Imóveis, Leads, Vendas e automação e Minha imobiliária. A seção da página
   atual abre sozinha. Seção sem item que o cargo veja não aparece.
 - **Todo item leva direto a uma página.** O terceiro nível virou **abas no topo
-  da página** (Integrações: WhatsApp, Pixel, Portais · Bolsão: Pegar leads,
+  da página** (Integrações: WhatsApp, Facebook, Pixel, Portais · Bolsão: Pegar leads,
   Listas e regras · Fluxos de mensagem: Editor de funis, FlowBuilder ·
   Automações: Regras de lead, Lembretes · Campos personalizados: Atributos,
   Variáveis). A segunda coluna ao lado do menu acabou.
 - **Automações deixou de ser uma página de 7 abas**, sem mudar endereço:
-  Follow-up, Roleta de leads e Origem são páginas sozinhas. `/automations` puro
+  Follow-up, Roleta de leads e Formulários são páginas sozinhas. `/automations` puro
   manda pra primeira tela que a pessoa vê.
 - **Como a Lais:** cartão no topo com o nome da imobiliária e o cargo de quem
   usa (`lm-redact`, some no modo demonstração); divisor depois do Principal e
@@ -4173,8 +4173,13 @@ Decisões do dono (não reabrir sem ele pedir):
   `menuItems.ts`, e o spec impede que voltem por engano.
 - **Saiu o "Personalizar menu"** (esconder, favoritar, reordenar): com seções
   fixas ele quebrava os rótulos. O que estava salvo no navegador é ignorado.
-- **A Página do Facebook continua em Origem**, junto com os Formulários. Ela vai
-  para Integrações quando a tela de Origem for refatorada.
+- **A Página do Facebook é integração** (desde 01/10/2026, a pedido do dono):
+  Integrações → Facebook, em `/settings/facebook` (`FacebookPages`, que embrulha o
+  `MetaPagesPanel`). A antiga tela Origem virou só **Formulários**, no mesmo
+  endereço `/automations/origem`. Os links que mandavam revisar a conexão da
+  página (aviso de erro dos Formulários e o Marketplace) apontam para a aba nova.
+  Ela tem as mesmas travas da antiga Origem: `hideOnRoot` (não aparece no painel
+  raiz nem na prévia da Vercel) e `client_manage_automations`.
 
 Como funciona por dentro:
 
@@ -4190,8 +4195,8 @@ Como funciona por dentro:
   título): é o corretor no Bolsão e em Meus números.
 - O `AutomationsLayout` virou: redirecionamento de `/automations` + `PaginaComAbas`.
   O "vazio pelo plano × vazio pelo cargo" continua igual.
-- `hideOnRoot` saiu da aba de Automações para o item do menu (Origem some no
-  painel raiz).
+- `hideOnRoot` saiu da aba de Automações para o item do menu (Formulários e a
+  aba Facebook somem no painel raiz).
 
 Armadilhas:
 
