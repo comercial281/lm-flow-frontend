@@ -4250,3 +4250,31 @@ Armadilhas:
    quadrados de cor sólida) e NÃO deve ser rodado.
 3. **Não é `featureKey` nem `clientToggleKey`** e não tem metade de backend. Os
    scanners do catálogo de funcionalidades não entram nesta história.
+
+## Links da Dashboard e as telas que abrem filtradas (desde 2026-09-30)
+
+Fase 4, jornada 1. Todo número da Dashboard nova leva a algum lugar. As telas de
+destino passaram a ler o filtro do endereço.
+
+- **`src/features/dashboard/links.ts` é a fonte única**: a Dashboard MONTA o
+  link e a tela LÊ com as mesmas funções. Filtro novo entra nos dois lados de
+  uma vez, lá.
+- **Imóveis** (`?recorte=`, `&desde=`, `&meus=1`), **Agenda** (`?situacao=`,
+  `&desde=`, `&ate=`, `&visita=`), **Propostas** (`?desde=`, `&ate=`) e **Funil**
+  (`?etapa=`, além do `?card=` que já existia).
+- **O chip "Da Dashboard: …"** (`ChipDaDashboard`) aparece sempre que a lista
+  abriu filtrada por link, e tira o filtro. Sem ele, quem chega vê 3 de 415 e
+  acha que sumiram.
+- **Agenda: o calendário pede só o mês visível** e o contador conta o que a
+  pessoa vê naquele mês ("7 visitas suas em setembro"), sem as canceladas
+  (`meta.active_total`); as canceladas continuam desenhadas na grade. Antes era
+  a história inteira, de todos os corretores.
+- **Agenda: `?visita=` abre a visita mesmo fora do mês carregado** (busca por
+  `GET /visits/:id`; não achou → "Visita não encontrada"). Trocar para
+  Calendário tira o filtro do link: o calendário é sempre o mês na tela.
+- **Ganho/Perdido seguem o `final` que o servidor manda em cada etapa**
+  (`etapaFinal.ts`). O nome só vale com servidor antigo, e nome ambíguo
+  ("Venda perdida") vira perda, como no servidor.
+
+Armadilha: **`stage_type` é palavra na API desde 2026-09-30** (era número). Tipo
+novo que o descreva usa `string`.
