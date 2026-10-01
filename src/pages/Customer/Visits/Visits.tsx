@@ -119,12 +119,14 @@ function dayKey(d: Date) {
 
 /** Calendário de mês idêntico ao protótipo: grade 7 colunas, células com dia +
  *  pills coloridos por status. Dados reais das visitas. */
-function MonthGrid({ date, visits, onNavigate, onDayClick, onVisitClick }: {
+function MonthGrid({ date, visits, onNavigate, onDayClick, onVisitClick, destacadaId }: {
   date: Date;
   visits: Visit[];
   onNavigate: (d: Date) => void;
   onDayClick: (d: Date) => void;
   onVisitClick: (v: Visit) => void;
+  /** Visita que veio pelo link: ganha contorno. */
+  destacadaId?: string | null;
 }) {
   const year = date.getFullYear();
   const month = date.getMonth();
@@ -201,8 +203,9 @@ function MonthGrid({ date, visits, onNavigate, onDayClick, onVisitClick }: {
                 return (
                   <button
                     key={v.id}
+                    id={`visita-${v.id}`}
                     onClick={e => { e.stopPropagation(); onVisitClick(v); }}
-                    className={`text-[10px] font-semibold px-1.5 py-[3px] rounded-md truncate text-left transition-colors ${PILL_STYLES[v.status] || PILL_STYLES.scheduled}`}
+                    className={`text-[10px] font-semibold px-1.5 py-[3px] rounded-md truncate text-left transition-colors ${PILL_STYLES[v.status] || PILL_STYLES.scheduled} ${destacadaId === v.id ? 'ring-2 ring-primary' : ''}`}
                     title={`${time} · ${who}`}
                   >
                     {time} · {who}
@@ -271,8 +274,6 @@ export default function Visits() {
   const propertyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const realtorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Precisa estar declarado antes do efeito de `?visita=` logo abaixo, que chama
-  // handleVisitClick assim que a visita-alvo chega na lista.
   const handleVisitClick = (visit: Visit) => {
     if (visit.status === 'scheduled' || visit.status === 'confirmed' || visit.status === 'in_progress') {
       setActionModal({ visit, action: 'complete' });
@@ -326,40 +327,75 @@ export default function Visits() {
 
   useEffect(() => { load(); }, [viewMode, calDate, filtroLink]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ?visita= : abre a visita assim que ela chega na lista. Quando o link vem de
-  // fora do recorte carregado (ex.: "Próximas visitas" do Dashboard em 30/09
-  // apontando pra uma visita de 02/10, fora do mês visível), busca ela direto
-  // pelo id em vez de esperar aparecer numa lista que nunca vai trazê-la.
+  // A visita que veio pelo link fica com contorno por 2 s, e a tela rola até ela.
+  const [visitaDestacada, setVisitaDestacada] = useState<string | null>(null);
+
+  // ?visita= : MOSTRA a visita, não age sobre ela. Quem chega de "A confirmar"
+  // quer o card com Confirmar / Realizada / Cancelar, não o diálogo de
+  // "Confirmar realização" (que grava e dispara automação). Quando a visita está
+  // fora do recorte carregado (ex.: "Próximas visitas" em 30/09 apontando pra
+  // 02/10), busca pelo id e leva o calendário até o mês dela.
   const buscandoVisita = useRef<string | null>(null);
   useEffect(() => {
     const alvo = filtroLink?.visita;
     if (!alvo || loading) return;
     if (buscandoVisita.current === alvo) return; // já em voo pra este id
 
-    // Tira o parâmetro do endereço uma única vez, aconteça o que acontecer.
+    // Tira o parâmetro do endereço uma única vez, aconteça o que acontecer. Lê o
+    // endereço de agora (não o da primeira renderização), pra não ressuscitar
+    // parâmetro que outra coisa já tirou.
     const limpar = () => {
-      const resto = new URLSearchParams(searchParams);
+      const resto = new URLSearchParams(window.location.search);
       resto.delete('visita');
       setSearchParams(resto, { replace: true });
       setFiltroLink(f => (f ? { ...f, visita: null } : f));
     };
 
+    const mostrar = (v: Visit) => {
+      // Exceção: visita que já passou e segue Agendada/Confirmada. O que falta ali
+      // é registrar o que aconteceu, e é o diálogo de "realizada" que faz isso.
+      if (isPast(v.scheduled_at) && (v.status === 'scheduled' || v.status === 'confirmed')) {
+        setActionModal({ visit: v, action: 'complete' });
+        return;
+      }
+      // Sem filtro do link, o calendário vai pro mês da visita (e recarrega esse
+      // mês). Com filtro, a pessoa fica na lista filtrada.
+      if (!temFiltroNoLink) {
+        const quando = new Date(v.scheduled_at);
+        setCalDate(d => (
+          d.getFullYear() === quando.getFullYear() && d.getMonth() === quando.getMonth() ? d : quando
+        ));
+      }
+      setVisitaDestacada(v.id);
+    };
+
     const naLista = visits.find(x => x.id === alvo);
     if (naLista) {
-      handleVisitClick(naLista);
+      mostrar(naLista);
       limpar();
       return;
     }
 
     buscandoVisita.current = alvo;
     visitsService.get(alvo)
-      .then(v => handleVisitClick(v))
+      .then(mostrar)
       .catch(() => toast.error('Visita não encontrada'))
       .finally(() => {
         buscandoVisita.current = null;
         limpar();
       });
   }, [filtroLink?.visita, loading, visits]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Rola até a visita destacada quando ela aparece na tela (o mês certo pode
+  // ainda estar carregando) e solta o contorno depois de 2 s.
+  useEffect(() => {
+    if (!visitaDestacada || loading) return;
+    const el = document.getElementById(`visita-${visitaDestacada}`);
+    if (!el) return;
+    el.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    const t = setTimeout(() => setVisitaDestacada(null), 2000);
+    return () => clearTimeout(t);
+  }, [visitaDestacada, loading, visits]);
 
   const tirarFiltroLink = () => {
     setFiltroLink(null);
@@ -588,6 +624,7 @@ export default function Visits() {
               scheduled_at: toLocalInput(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0)),
             })}
             onVisitClick={handleVisitClick}
+            destacadaId={visitaDestacada}
           />
         ) : loading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
@@ -625,6 +662,7 @@ export default function Visits() {
                     <VisitCard
                       key={visit.id}
                       visit={visit}
+                      destacada={visitaDestacada === visit.id}
                       onConfirm={handleConfirm}
                       onComplete={() => setActionModal({ visit, action: 'complete' })}
                       onCancel={() => setActionModal({ visit, action: 'cancel' })}
@@ -829,11 +867,14 @@ export default function Visits() {
 
 function VisitCard({
   visit,
+  destacada = false,
   onConfirm,
   onComplete,
   onCancel,
 }: {
   visit: Visit;
+  /** Visita que veio pelo link: ganha contorno. */
+  destacada?: boolean;
   onConfirm: (v: Visit) => void;
   onComplete: (v: Visit) => void;
   onCancel: (v: Visit) => void;
@@ -842,9 +883,9 @@ function VisitCard({
   const isActive = ['scheduled', 'confirmed', 'in_progress'].includes(visit.status);
 
   return (
-    <div className={`flex gap-4 p-4 rounded-xl border border-border bg-card ${
+    <div id={`visita-${visit.id}`} className={`flex gap-4 p-4 rounded-xl border border-border bg-card transition-shadow ${
       isPastVisit && isActive ? 'border-orange-300 dark:border-orange-700' : ''
-    }`}>
+    } ${destacada ? 'ring-2 ring-primary' : ''}`}>
       {/* Time column */}
       <div className="flex-shrink-0 w-16 text-center">
         <div className="text-lg font-bold text-foreground">
