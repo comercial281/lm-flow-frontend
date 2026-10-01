@@ -12,7 +12,7 @@ interface ContactPipelineInfo {
     name: string;
     color: string;
     position: number;
-    stage_type: number;
+    stage_type: string;
   };
   item: {
     id: string;
