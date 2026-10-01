@@ -3,11 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Button,
-  Input,
   Badge,
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -25,8 +23,6 @@ import {
   MapPin,
   Phone,
   Star,
-  Search,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CalendarDays,
@@ -36,16 +32,11 @@ import {
 import {
   visitsService,
   Visit,
-  VisitFormData,
-  LeadPickerItem,
   VISIT_STATUS_LABELS,
   VISIT_STATUS_COLORS,
 } from '@/services/visits/visitsService';
-import { propertiesService, Property } from '@/services/properties/propertiesService';
-import { usersService } from '@/services/users';
-import type { User } from '@/types/users';
 
-import { LeadCombobox } from '@/components/visits/LeadCombobox';
+import { ScheduleVisitDialog } from '@/components/visits/ScheduleVisitDialog';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
@@ -62,15 +53,6 @@ const FILTER_TABS = [
   { key: 'completed', label: 'Realizadas' },
   { key: 'cancelled', label: 'Canceladas' },
 ];
-
-const EMPTY_FORM: VisitFormData = {
-  property_id: '',
-  contact_id: '',
-  realtor_id: null,
-  scheduled_at: '',
-  duration_minutes: 60,
-  notes: '',
-};
 
 function groupByDate(visits: Visit[]): Map<string, Visit[]> {
   const map = new Map<string, Visit[]>();
@@ -92,12 +74,6 @@ function isToday(iso: string) {
 
 function isPast(iso: string) {
   return new Date(iso) < new Date();
-}
-
-/** Converte Date local pra string aceita por <input type="datetime-local"> (YYYY-MM-DDTHH:mm). */
-function toLocalInput(d: Date): string {
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 type ViewMode = 'calendar' | 'list';
@@ -249,32 +225,13 @@ export default function Visits() {
   const temFiltroNoLink = !!filtroLink && Object.keys(filtroLink.params).length > 0;
 
   const [modalOpen, setModalOpen]   = useState(false);
-  const [form, setForm]             = useState<VisitFormData>(EMPTY_FORM);
-  const [saving, setSaving]         = useState(false);
+  const [diaDoModal, setDiaDoModal] = useState<Date | null>(null);
 
   const [actionModal, setActionModal] = useState<{ visit: Visit; action: AcaoDaVisita } | null>(null);
   const [rating, setRating]           = useState(0);
   const [feedback, setFeedback]       = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-
-  // Property + realtor search state
-  const [propertyQuery, setPropertyQuery] = useState('');
-  const [propertyResults, setPropertyResults] = useState<Property[]>([]);
-  const [propertySearching, setPropertySearching] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
-
-  const [selectedLead, setSelectedLead] = useState<LeadPickerItem | null>(null);
-
-  const [realtorQuery, setRealtorQuery] = useState('');
-  const [realtorResults, setRealtorResults] = useState<User[]>([]);
-  const [realtorSearching, setRealtorSearching] = useState(false);
-  const [selectedRealtor, setSelectedRealtor] = useState<User | null>(null);
-  const [showRealtorDropdown, setShowRealtorDropdown] = useState(false);
-
-  const propertyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const realtorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Abre um diálogo de ação. "Dar retorno" já vem com a nota e o comentário que
   // a visita tem; os outros começam vazios.
@@ -419,86 +376,9 @@ export default function Visits() {
     load(key);
   };
 
-  const searchProperties = (q: string) => {
-    if (propertyTimeout.current) clearTimeout(propertyTimeout.current);
-    if (!q.trim()) { setPropertyResults([]); setShowPropertyDropdown(false); return; }
-    setPropertySearching(true);
-    propertyTimeout.current = setTimeout(async () => {
-      try {
-        const res = await propertiesService.list({ q, per_page: 8 });
-        setPropertyResults(res.data ?? []);
-        setShowPropertyDropdown(true);
-      } catch { setPropertyResults([]); }
-      finally { setPropertySearching(false); }
-    }, 300);
-  };
-
-  const selectProperty = (p: Property) => {
-    setSelectedProperty(p);
-    setForm(f => ({ ...f, property_id: p.id }));
-    setPropertyQuery(p.title);
-    setShowPropertyDropdown(false);
-  };
-
-  const searchRealtors = (q: string) => {
-    if (realtorTimeout.current) clearTimeout(realtorTimeout.current);
-    if (!q.trim()) { setRealtorResults([]); setShowRealtorDropdown(false); return; }
-    setRealtorSearching(true);
-    realtorTimeout.current = setTimeout(async () => {
-      try {
-        const res = await usersService.getUsers({ q, per_page: 8 });
-        setRealtorResults(res.data ?? []);
-        setShowRealtorDropdown(true);
-      } catch { setRealtorResults([]); }
-      finally { setRealtorSearching(false); }
-    }, 300);
-  };
-
-  const selectRealtor = (u: User) => {
-    setSelectedRealtor(u);
-    setForm(f => ({ ...f, realtor_id: u.id }));
-    setRealtorQuery(u.available_name ?? u.name);
-    setShowRealtorDropdown(false);
-  };
-
-  const handleLeadChange = (lead: LeadPickerItem) => {
-    setSelectedLead(lead);
-    setForm(f => ({ ...f, contact_id: lead.id }));
-  };
-
-  const openScheduleModal = (prefill?: Partial<VisitFormData>) => {
-    setForm({ ...EMPTY_FORM, ...prefill });
-    setPropertyQuery('');
-    setRealtorQuery('');
-    setSelectedProperty(null);
-    setSelectedLead(null);
-    setSelectedRealtor(null);
-    setPropertyResults([]);
-    setRealtorResults([]);
+  const openScheduleModal = (dia?: Date) => {
+    setDiaDoModal(dia ?? null);
     setModalOpen(true);
-  };
-
-  const handleSave = async () => {
-    if (!form.contact_id.trim())  { toast.error('Selecione um contato'); return; }
-    if (!form.scheduled_at)       { toast.error('Data/hora é obrigatória'); return; }
-    setSaving(true);
-    try {
-      const payload: VisitFormData = {
-        ...form,
-        property_id: form.property_id?.trim() ? form.property_id : null,
-      };
-      await visitsService.create(payload);
-      // Recarrega em vez de somar 1 na mão: a visita nova pode ser de outro mês
-      // ou de outro corretor, e aí o contador do mês não muda.
-      load();
-      toast.success('Visita agendada');
-      setModalOpen(false);
-      setForm(EMPTY_FORM);
-    } catch {
-      toast.error('Erro ao agendar visita');
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleConfirm = async (visit: Visit) => {
@@ -645,9 +525,12 @@ export default function Visits() {
             date={calDate}
             visits={visits}
             onNavigate={setCalDate}
-            onDayClick={d => openScheduleModal({
-              scheduled_at: toLocalInput(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0)),
-            })}
+            onDayClick={d => {
+              // Dia que já passou não abre: o servidor recusaria e o modal abriria com data vencida.
+              const hoje = new Date();
+              if (d < new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())) return;
+              openScheduleModal(d);
+            }}
             onVisitClick={handleVisitClick}
             destacadaId={visitaDestacada}
           />
@@ -701,136 +584,14 @@ export default function Visits() {
         )}
       </div>
 
-      {/* Schedule modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Agendar visita</DialogTitle>
-            <DialogDescription>Preencha os dados da visita ao imóvel</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {/* Property search */}
-            <div className="relative">
-              <UILabel>Imóvel (opcional)</UILabel>
-              <div className="relative mt-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  value={propertyQuery}
-                  onChange={e => { setPropertyQuery(e.target.value); searchProperties(e.target.value); }}
-                  onFocus={() => propertyResults.length > 0 && setShowPropertyDropdown(true)}
-                  placeholder="Buscar por título, código..."
-                  className="pl-9"
-                />
-                {propertySearching && (
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
-                )}
-              </div>
-              {showPropertyDropdown && propertyResults.length > 0 && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                  {propertyResults.map(p => (
-                    <button
-                      key={p.id}
-                      className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0 text-sm"
-                      onClick={() => selectProperty(p)}
-                    >
-                      <div className="font-medium truncate">{p.title}</div>
-                      <div className="text-xs text-muted-foreground">{p.code} · {p.address_city}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {selectedProperty && (
-                <div className="mt-1 text-xs text-emerald-600 font-medium flex items-center gap-1">
-                  <Building2 className="h-3 w-3" />
-                  {selectedProperty.code} selecionado
-                </div>
-              )}
-            </div>
-
-            {/* Lead combobox unificado (leads kanban + contacts + criar novo) */}
-            <LeadCombobox value={selectedLead} onChange={handleLeadChange} />
-
-            {/* Realtor search */}
-            <div className="relative">
-              <UILabel>Corretor responsável (opcional)</UILabel>
-              <div className="relative mt-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  value={realtorQuery}
-                  onChange={e => { setRealtorQuery(e.target.value); searchRealtors(e.target.value); }}
-                  onFocus={() => realtorResults.length > 0 && setShowRealtorDropdown(true)}
-                  placeholder="Buscar por nome..."
-                  className="pl-9"
-                />
-                {realtorSearching && (
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
-                )}
-              </div>
-              {showRealtorDropdown && realtorResults.length > 0 && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                  {realtorResults.map(u => (
-                    <button
-                      key={u.id}
-                      className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0 text-sm"
-                      onClick={() => selectRealtor(u)}
-                    >
-                      <div className="font-medium truncate">{u.available_name ?? u.name}</div>
-                      <div className="text-xs text-muted-foreground">{u.email}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {selectedRealtor && (
-                <div className="mt-1 text-xs text-emerald-600 font-medium flex items-center gap-1">
-                  <UserIcon className="h-3 w-3" />
-                  {selectedRealtor.available_name ?? selectedRealtor.name} selecionado
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <UILabel>Data e hora *</UILabel>
-                <Input
-                  type="datetime-local"
-                  value={form.scheduled_at}
-                  onChange={e => setForm(f => ({ ...f, scheduled_at: e.target.value }))}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <UILabel>Duração (min)</UILabel>
-                <Input
-                  type="number"
-                  value={form.duration_minutes ?? ''}
-                  onChange={e => setForm(f => ({ ...f, duration_minutes: parseInt(e.target.value) || undefined }))}
-                  min={15}
-                  step={15}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-            <div>
-              <UILabel>Observações</UILabel>
-              <Textarea
-                value={form.notes}
-                onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                rows={2}
-                placeholder="Detalhes da visita..."
-                className="mt-1 resize-none"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Salvando...' : 'Agendar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ScheduleVisitDialog
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        diaInicial={diaDoModal}
+        // Recarrega em vez de somar 1 na mão: a visita nova pode ser de outro mês
+        // ou de outro corretor, e aí o contador do mês não muda.
+        onCreated={() => load()}
+      />
 
       {/* Complete / Retorno / Cancel action modal */}
       <Dialog open={!!actionModal} onOpenChange={() => setActionModal(null)}>
@@ -987,8 +748,8 @@ function VisitCard({
           <div className="text-xs text-muted-foreground">Corretor: {visit.realtor.name}</div>
         )}
 
-        {visit.notes && (
-          <p className="text-xs text-muted-foreground mt-1 italic">{visit.notes}</p>
+        {visit.realtor_notes && (
+          <p className="text-xs text-muted-foreground mt-1 italic">{visit.realtor_notes}</p>
         )}
 
         {/* Actions */}
