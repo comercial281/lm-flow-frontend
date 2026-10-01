@@ -25,6 +25,21 @@ describe('links da Dashboard', () => {
     });
   });
 
+  it('Imóveis: "novos" com início e fim leva os dois para o servidor', () => {
+    const url = linkImoveis('novos', { desde: '2026-08-01', ate: '2026-08-31' });
+    expect(url).toBe('/properties?recorte=novos&desde=2026-08-01&ate=2026-08-31');
+    expect(lerRecorteImoveis(sp(url))).toEqual({
+      rotulo: 'Novos',
+      params: { created_since: '2026-08-01', created_until: '2026-08-31' },
+    });
+  });
+
+  it('Imóveis: o fim só vale no recorte "novos"', () => {
+    expect(linkImoveis('sem_fotos', { ate: '2026-08-31' })).toBe('/properties?recorte=sem_fotos');
+    expect(lerRecorteImoveis(sp('/properties?recorte=sem_fotos&ate=2026-08-31'))?.params)
+      .toEqual({ status: 'active', without_photos: '1' });
+  });
+
   it('Imóveis: recorte desconhecido ou data torta são ignorados', () => {
     expect(lerRecorteImoveis(sp('/properties?recorte=qualquer'))).toBeNull();
     expect(lerRecorteImoveis(sp('/properties?recorte=novos&desde=ontem'))).toEqual({ rotulo: 'Novos', params: {} });

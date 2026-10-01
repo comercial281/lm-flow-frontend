@@ -54,10 +54,14 @@ function rotuloPeriodo(desde: string | null, ate: string | null): string {
 }
 
 // ── Imóveis ─────────────────────────────────────────────────────────────────
-export function linkImoveis(recorte: RecorteImoveis, opcoes: { desde?: string; meus?: boolean } = {}): string {
+export function linkImoveis(
+  recorte: RecorteImoveis,
+  opcoes: { desde?: string; ate?: string; meus?: boolean } = {},
+): string {
   return `/properties${query({
     recorte,
     desde: recorte === 'novos' ? diaValido(opcoes.desde) : null,
+    ate: recorte === 'novos' ? diaValido(opcoes.ate) : null,
     meus: opcoes.meus ? '1' : null,
   })}`;
 }
@@ -69,6 +73,9 @@ export function lerRecorteImoveis(sp: URLSearchParams): FiltroDoLink | null {
   const params = { ...base.params };
   const desde = diaValido(sp.get('desde'));
   if (recorte === 'novos' && desde) params.created_since = desde;
+  // Sem o fim, um "Novos" do mês passado listaria até hoje e o número não bateria.
+  const ate = diaValido(sp.get('ate'));
+  if (recorte === 'novos' && ate) params.created_until = ate;
   const meus = sp.get('meus') === '1';
   if (meus) params.mine = '1';
   return { rotulo: meus ? `${base.rotulo} (seus)` : base.rotulo, params };

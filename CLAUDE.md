@@ -4259,7 +4259,7 @@ destino passaram a ler o filtro do endereço.
 - **`src/features/dashboard/links.ts` é a fonte única**: a Dashboard MONTA o
   link e a tela LÊ com as mesmas funções. Filtro novo entra nos dois lados de
   uma vez, lá.
-- **Imóveis** (`?recorte=`, `&desde=`, `&meus=1`), **Agenda** (`?situacao=`,
+- **Imóveis** (`?recorte=`, `&desde=`, `&ate=`, `&meus=1`), **Agenda** (`?situacao=`,
   `&desde=`, `&ate=`, `&visita=`), **Propostas** (`?desde=`, `&ate=`) e **Funil**
   (`?etapa=`, além do `?card=` que já existia).
 - **O chip "Da Dashboard: …"** (`ChipDaDashboard`) aparece sempre que a lista
