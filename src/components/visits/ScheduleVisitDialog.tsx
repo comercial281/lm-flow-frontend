@@ -19,6 +19,7 @@ import {
   Input, Label as UILabel, Textarea,
 } from '@/components/ui/ds';
 import { LeadCombobox } from '@/components/visits/LeadCombobox';
+import { EscolhaCorretor } from '@/components/visits/EscolhaCorretor';
 import {
   visitsService, type LeadPickerItem, type PersonRef, type Visit,
 } from '@/services/visits/visitsService';
@@ -332,46 +333,6 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/**
- * Corretor responsável, para o gestor: um botão por corretor (mesmo padrão
- * da duração). Com muita gente na equipe, a área rola.
- */
-function EscolhaCorretor({ corretores, erro, valor, onEscolher }: {
-  corretores: PersonRef[] | null;
-  erro: boolean;
-  valor: PersonRef | null;
-  onEscolher: (p: PersonRef) => void;
-}) {
-  if (erro) {
-    return <p className="mt-1 text-sm text-destructive">Não deu para carregar os corretores. Feche e abra de novo.</p>;
-  }
-  if (corretores === null) {
-    return <p className="mt-1 text-sm text-muted-foreground">Carregando...</p>;
-  }
-  if (corretores.length === 0) {
-    return <p className="mt-1 text-sm text-muted-foreground">Nenhum corretor ativo na equipe.</p>;
-  }
-  return (
-    <div role="group" aria-label="Corretor responsável" className="mt-1 flex max-h-40 flex-wrap gap-2 overflow-y-auto pr-1">
-      {corretores.map(c => {
-        const escolhido = valor?.id === c.id;
-        return (
-          <Button
-            key={c.id}
-            type="button"
-            size="sm"
-            variant={escolhido ? 'default' : 'outline'}
-            aria-pressed={escolhido}
-            onClick={() => onEscolher(c)}
-          >
-            {c.name}
-          </Button>
-        );
-      })}
-    </div>
   );
 }
 
