@@ -4364,6 +4364,15 @@ Regras de tela que vieram das revisões (o que quem usa vê):
   "Mostrando N de T" também com +. Fechar não apaga a lista enquanto o painel
   desliza para fora; só abrir (ou trocar de pendência/filtro com ele aberto)
   busca de novo.
+- **Um desenho de cartão só** (01/10/2026): todo bloco, inclusive os quatro
+  números, usa a superfície do `GlassCard` (`lmf-glass lmf-card`: fundo, borda,
+  raio, sombra e 20 px por dentro), título no estilo `lmf-card-title` e 18 px
+  entre cartões. O painel de Filtros também. Os quatro filtros (Corretor, Número
+  de WhatsApp, Etiqueta, Atendimento) têm o mesmo campo: rótulo visível em cima e
+  caixa de 40 px com ícone à esquerda e seta à direita (`CampoFiltro`, ligado
+  pela prop `rotulo` dos seletores). Sem `rotulo`, os seletores da DashboardV2
+  desenham exatamente o de antes na Dashboard antiga. Em Atendimento do time,
+  "Visitas com feedback" é o quarto item do resumo, com a frase como legenda.
 - **Análise do período:** "De onde vêm os leads" conta contatos captados no
   período pela primeira origem, com o total em cima; seis meses sem lead nenhum
   dizem "Nenhum lead nos últimos 6 meses" em vez de um gráfico zerado; cada

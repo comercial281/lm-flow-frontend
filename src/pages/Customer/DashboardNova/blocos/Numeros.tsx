@@ -16,12 +16,12 @@ export const Numeros: React.FC<ContextoBloco> = ({ dados, carregando, visao, pod
   // Título só para leitor de tela: quem navega por títulos não pula o bloco mais importante.
   const titulo = <h2 className="sr-only">{CATALOGO.numeros.titulo}</h2>;
   if (!isAvailable(kpis)) {
-    if (carregando && !dados) return <Skeleton height={104} />;
+    if (carregando && !dados) return <Skeleton height={124} />;
     // Sem os números, dizer isso: nunca quatro zeros nem um buraco calado.
     return (
       <div>
         {titulo}
-        <div className="lmfn-numero"><span className="lmfn-numero-rotulo">Não deu para carregar os números agora.</span></div>
+        <div className="lmf-glass lmf-card lmfn-numero"><span className="lmfn-numero-rotulo">Não deu para carregar os números agora.</span></div>
       </div>
     );
   }
@@ -58,15 +58,15 @@ export const Numeros: React.FC<ContextoBloco> = ({ dados, carregando, visao, pod
           const kpi = kpis[c.chave];
           const corpo = (
             <>
-              <span className="lmfn-numero-rotulo">{c.rotulo}</span>
+              <span className="lmf-card-title">{c.rotulo}</span>
               <span className="lmfn-numero-valor">{kpi ? numero(kpi.value) : '—'}</span>
               {kpi && <Delta value={kpi.delta} suffix="vs. período anterior" />}
             </>
           );
           return c.acao ? (
-            <button key={c.chave} type="button" className="lmfn-numero" onClick={c.acao}>{corpo}</button>
+            <button key={c.chave} type="button" className="lmf-glass lmf-card lmfn-numero" onClick={c.acao}>{corpo}</button>
           ) : (
-            <div key={c.chave} className="lmfn-numero">{corpo}</div>
+            <div key={c.chave} className="lmf-glass lmf-card lmfn-numero">{corpo}</div>
           );
         })}
       </div>
