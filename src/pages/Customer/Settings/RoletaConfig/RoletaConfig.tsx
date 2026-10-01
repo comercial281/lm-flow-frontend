@@ -2570,7 +2570,12 @@ export default function RoletaConfigPage() {
                     setNotifInstance(f.notification_instance_name ?? '');
                   }}
                 >
-                  <option value="">Mesmo número da roleta</option>
+                  {/* Vazio = padrão desde 01/10/2026: corretor e gestor
+                      recebem pelo número operacional da Leal Mídia; o grupo,
+                      pelo número da roleta (RoletaConfig#person_notice_default?
+                      no backend). Antes era "Mesmo número da roleta" — o
+                      celular de alguém do time. */}
+                  <option value="">Padrão (número da Leal Mídia)</option>
                   {notifInboxId && !inboxes.some(i => i.id === notifInboxId) && (
                     <option value={notifInboxId}>{notifInboxId}</option>
                   )}
@@ -2599,7 +2604,10 @@ export default function RoletaConfigPage() {
                 {notifInstance
                   ? 'Corretor, gestor e grupo recebem os avisos vindos deste número da Leal Mídia, que não é canal deste CRM. ' +
                     'O aviso que chegar num número que também é canal daqui vira uma conversa na caixa dele.'
-                  : 'Número que ENVIA os alertas. Se vazio, usa o mesmo da roleta.'}
+                  : notifInboxId
+                    ? 'Corretor, gestor e grupo recebem os avisos vindos deste número.'
+                    : 'Corretor e gestor recebem os avisos pelo número da Leal Mídia. ' +
+                      'O grupo de avisos recebe pelo número da roleta.'}
               </p>
               {isSuper && centralInstances.length === 0 && centralReason && (
                 <p className="text-xs text-amber-700 dark:text-amber-400 mt-1" data-testid="central-instances-reason">

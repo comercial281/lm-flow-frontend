@@ -4638,3 +4638,19 @@ O que aparece na tela, no menu da Área do Admin:
 - **Push** ainda tem três abas por dentro (Regras, Disparo manual, Histórico): viram seções no PR de Comunicação. É a única exceção ao "sem terceiro nível", e é temporária.
 - **Custos** ainda é a tela Custo da IA (US$, N dias). O rateio de Railway, Evolution e Vercel entra no PR de Custos.
 - **Banner** ainda não tem aba: entra com a spec própria.
+
+## Número que envia os avisos: vazio = número da Leal Mídia (desde 2026-10-01)
+
+Decisão do dono do produto, depois de o Rycco (Pinote) receber "Lead respondeu o
+follow-up!" saindo do WhatsApp da Cher: **aviso para pessoa nunca sai do número
+de um cliente**. Na tela da roleta, o *Número que envia os avisos* vazio deixou
+de ser "Mesmo número da roleta" e passou a ser **"Padrão (número da Leal Mídia)"**:
+
+- corretor e gestor recebem pelo Operacional da Leal Mídia;
+- o **grupo** de avisos continua recebendo pelo número da roleta (nada garante
+  que o Operacional esteja no grupo da imobiliária);
+- quem escolheu um número deste cliente ou uma instância da Leal Mídia continua
+  com a escolha.
+
+A regra mora no backend (`RoletaConfig#person_notice_default?`, PR do backend
+"Avisos para pessoa"); a tela só descreve. Não reabrir sem o dono pedir.
