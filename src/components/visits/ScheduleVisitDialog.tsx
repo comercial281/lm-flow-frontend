@@ -6,7 +6,17 @@
  * Quem pode marcar para quem é decidido pelo SERVIDOR (Visits::Booking): o
  * corretor isolado só encontra os clientes dele e é sempre o responsável. A
  * tela sabe disso pelo `meta.only_mine` do seletor, não pelo cargo.
- * Spec: specs/2026-09-30-fase-4-agendar-visita-design.md (pasta LM FLOW).
+ * O gestor escolhe o corretor em botões (`GET /visits/realtors`); o cliente
+ * vem do seletor paginado (50 por vez, com o total).
+ *
+ * Com a chave `agenda_do_corretor`, os horários do dia vêm do servidor
+ * (`/visits/availability`: só os de dentro do horário de visita, com ocupado e
+ * folga já marcados) e dia fechado não se escolhe (`motivoDiaFechado`, com o
+ * horário de visita e as folgas do corretor escolhido). Sem a chave — ou com o
+ * servidor respondendo `enabled: false` — é a grade fixa de `daySlots.ts`,
+ * exatamente como antes.
+ * Specs: specs/2026-09-30-fase-4-agendar-visita-design.md e
+ * specs/2026-10-01-fase-4-agenda-do-corretor-design.md (pasta LM FLOW).
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -16,24 +26,41 @@ import {
   Input, Label as UILabel, Textarea,
 } from '@/components/ui/ds';
 import { LeadCombobox } from '@/components/visits/LeadCombobox';
+import { EscolhaCorretor } from '@/components/visits/EscolhaCorretor';
 import {
   visitsService, type LeadPickerItem, type PersonRef, type Visit,
 } from '@/services/visits/visitsService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
-import { usersService } from '@/services/users';
-import type { User } from '@/types/users';
+import { agendaService, type AvailabilitySlot } from '@/services/visits/agendaService';
+import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { hora } from '@/lib/formato';
 import {
   DURACOES, atalhosDeDia, diaISO, horariosDoDia, mesmoDia, ocupando, porExtenso, rotuloDuracao,
   type BusyVisit,
 } from '@/features/visits/daySlots';
+import { motivoDiaFechado, type AgendaSettings, type TimeOff } from '@/features/visits/agenda';
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   diaInicial?: Date | null;
   onCreated: (v: Visit) => void;
+}
+
+/** Um botão da grade de horários, venha da grade fixa ou do servidor. */
+interface SlotTela {
+  inicio: Date;
+  rotulo: string;
+  ocupadoPor: string | null;
+  folga: boolean;
+}
+
+/** A resposta do servidor para o dia, já no formato da tela. */
+interface DiaDaAgenda {
+  aberto: boolean;
+  motivo: string | null;
+  slots: AvailabilitySlot[];
 }
 
 const hojeSemHora = () => {
@@ -46,6 +73,9 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
   const [verificandoCargo, setVerificandoCargo] = useState(true);
   const [lead, setLead] = useState<LeadPickerItem | null>(null);
   const [corretor, setCorretor] = useState<PersonRef | null>(null);
+  // Corretores que o gestor pode escolher; `null` = ainda carregando.
+  const [corretores, setCorretores] = useState<PersonRef[] | null>(null);
+  const [erroCorretores, setErroCorretores] = useState(false);
   const [dia, setDia] = useState<Date>(diaInicial ?? hojeSemHora());
   const [inicio, setInicio] = useState<Date | null>(null);
   const [duracao, setDuracao] = useState<number>(60);
@@ -58,15 +88,18 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
   // deps do efeito "visitas do dia" pra forçar um refetch sem duplicar a
   // lógica nem o guarda de corrida dele.
   const [recarregarDia, setRecarregarDia] = useState(0);
-  // Sobe a cada "abriu" (ver efeito abaixo) OU a cada troca de cliente (ver
-  // `escolherLead`) e vira `key` do `BuscaCorretor`: força ele a remontar do
-  // zero sempre que o VALOR dele foi decidido de fora (reabrir a tela, ou o
-  // gestor escolher outro cliente). É o remonte — não um efeito sincronizando
-  // `texto` com `valor` — quem garante o campo limpo nesses dois casos,
-  // inclusive quando o novo valor é igual ao antigo (null→null, cliente sem
-  // dono depois de outro cliente sem dono) e um efeito em `[valor]` não
-  // disparia. Digitar dentro do campo continua só local (`BuscaCorretor`).
-  const [cicloFormulario, setCicloFormulario] = useState(0);
+
+  // Agenda do corretor. `servidorSemAgenda`: a tela tem a chave, mas o
+  // servidor respondeu `enabled: false` — vale o que o servidor diz, e a tela
+  // volta para a grade fixa.
+  const agendaLigada = useClientToggle('agenda_do_corretor');
+  const [servidorSemAgenda, setServidorSemAgenda] = useState(false);
+  const usarAgenda = agendaLigada && !servidorSemAgenda;
+  const [ajustes, setAjustes] = useState<AgendaSettings | null>(null);
+  const [folgas, setFolgas] = useState<TimeOff[]>([]);
+  // `null` = carregando.
+  const [diaAgenda, setDiaAgenda] = useState<DiaDaAgenda | null>(null);
+  const [erroAgenda, setErroAgenda] = useState(false);
 
   // `diaInicial` costuma ser um `Date` recriado a cada render do pai: não pode
   // entrar nas dependências do reset (reabriria o form de novo só por isso).
@@ -88,8 +121,12 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
     setImovel(null);
     setTravado(null);
     setVerificandoCargo(true);
-    setCicloFormulario(c => c + 1);
-    visitsService.leadPickerPage('', 1)
+    setCorretores(null);
+    setErroCorretores(false);
+    setServidorSemAgenda(false);
+    setAjustes(null);
+    // Um cliente só, porque aqui só interessa o meta (cargo travado ou não).
+    visitsService.leadPickerPage('', 1, 1)
       .then(({ meta }) => {
         if (!vivo) return;
         if (meta.only_mine && meta.me) {
@@ -99,8 +136,19 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
       })
       .catch(() => { /* sem meta = tela de gestor; o servidor confere ao salvar */ })
       .finally(() => { if (vivo) setVerificandoCargo(false); });
+    visitsService.realtors()
+      .then(lista => { if (vivo) setCorretores(lista); })
+      .catch(() => { if (vivo) setErroCorretores(true); });
     return () => { vivo = false; };
   }, [open]);
+
+  // Gestor: o corretor escolhido é sempre um dos botões. Dono do lead que não
+  // está na lista (desativado, fora da equipe visível) não fica marcado
+  // escondido — o gestor escolhe outro.
+  useEffect(() => {
+    if (travado || !corretor || !corretores) return;
+    if (!corretores.some(c => c.id === corretor.id)) setCorretor(null);
+  }, [travado, corretor, corretores]);
 
   // Visitas do corretor no dia escolhido. Trocar corretor ou dia antes da
   // resposta anterior chegar não pode deixar a resposta velha pisar na nova
@@ -124,28 +172,83 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
     return () => { vivo = false; };
   }, [open, corretor, dia, recarregarDia]);
 
+  const corretorId = corretor?.id;
+  const diaChave = diaISO(dia);
+
+  // Agenda: o horário de visita da imobiliária, uma vez por abertura.
+  useEffect(() => {
+    if (!open || !agendaLigada) return;
+    let vivo = true;
+    agendaService.getSettings()
+      .then(r => {
+        if (!vivo) return;
+        if (r.enabled) setAjustes(r);
+        else setServidorSemAgenda(true);
+      })
+      .catch(() => { /* sem o horário, os atalhos não travam; o servidor confere ao salvar */ });
+    return () => { vivo = false; };
+  }, [open, agendaLigada]);
+
+  // Agenda: as folgas do corretor escolhido, uma vez por abertura e corretor.
+  useEffect(() => {
+    setFolgas([]);
+    if (!open || !usarAgenda || !corretorId) return;
+    let vivo = true;
+    agendaService.listTimeOffs({ user_id: corretorId, from: diaISO(hojeSemHora()) })
+      .then(lista => { if (vivo) setFolgas(lista); })
+      .catch(() => { /* idem: o servidor confere ao salvar */ });
+    return () => { vivo = false; };
+  }, [open, usarAgenda, corretorId]);
+
+  // Agenda: os horários do dia, pela conta do servidor. Mesmo guarda de corrida
+  // das visitas do dia (resposta velha descartada) e o mesmo `recarregarDia`
+  // depois de um 422. Espera saber o cargo para não pedir duas vezes. Sem
+  // corretor (gestor antes de escolher): o horário de visita, sem ocupação.
+  useEffect(() => {
+    setDiaAgenda(null);
+    setErroAgenda(false);
+    if (!open || !usarAgenda || verificandoCargo) return;
+    let vivo = true;
+    agendaService.availability({ realtor_id: corretorId, date: diaChave, duration: duracao })
+      .then(r => {
+        if (!vivo) return;
+        if (!r.enabled) { setServidorSemAgenda(true); return; }
+        setDiaAgenda({ aberto: r.day.open, motivo: r.day.reason_text, slots: r.slots ?? [] });
+      })
+      .catch(() => { if (vivo) setErroAgenda(true); });
+    return () => { vivo = false; };
+  }, [open, usarAgenda, verificandoCargo, corretorId, diaChave, duracao, recarregarDia]);
+
   const ocupadas = useMemo(() => ocupando(doDia), [doDia]);
-  const slots = useMemo(() => horariosDoDia(dia, duracao, ocupadas, new Date()), [dia, duracao, ocupadas]);
+  const slotsFixos = useMemo(() => horariosDoDia(dia, duracao, ocupadas, new Date()), [dia, duracao, ocupadas]);
+  // `null` = a agenda ainda não respondeu.
+  const slots = useMemo<SlotTela[] | null>(() => {
+    if (!usarAgenda) return slotsFixos.map(s => ({ ...s, folga: false }));
+    if (!diaAgenda) return null;
+    return diaAgenda.slots.map(s => ({
+      inicio: new Date(s.at),
+      rotulo: hora(s.at),
+      ocupadoPor: s.state === 'busy' ? (s.client_name || 'outro cliente') : null,
+      folga: s.state === 'time_off',
+    }));
+  }, [usarAgenda, slotsFixos, diaAgenda]);
 
   // Trocou dia, duração ou corretor e o horário escolhido deixou de caber: limpa.
   useEffect(() => {
-    if (!inicio) return;
+    if (!inicio || !slots) return;
     const s = slots.find(x => x.inicio.getTime() === inicio.getTime());
-    if (!s || s.ocupadoPor) setInicio(null);
+    if (!s || s.ocupadoPor || s.folga) setInicio(null);
   }, [slots, inicio]);
+
+  // Por que o dia está fechado (agenda ligada e horário carregado), ou null.
+  const motivoFechado = (d: Date): string | null =>
+    usarAgenda && ajustes ? motivoDiaFechado(d, ajustes, folgas) : null;
 
   const escolherLead = (l: LeadPickerItem) => {
     setLead(l);
-    if (!travado) {
-      // Cliente sem dono precisa LIMPAR o corretor anterior, não só deixar
-      // como estava — senão o form salva o corretor do cliente trocado. O
-      // `setCorretor` sozinho não bastaria quando o valor não muda (um
-      // cliente sem dono depois de outro cliente sem dono, null→null): quem
-      // garante o campo limpo nesse caso é o remonte, por isso o ciclo sobe
-      // sempre que o cliente troca, não só quando o corretor realmente muda.
-      setCorretor(l.owner ?? null);
-      setCicloFormulario(c => c + 1);
-    }
+    // Cliente sem dono precisa LIMPAR o corretor anterior, não só deixar como
+    // estava — senão o form salva o corretor do cliente trocado.
+    if (!travado) setCorretor(l.owner ?? null);
   };
 
   const salvar = async () => {
@@ -180,32 +283,36 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
 
   const atalhos = atalhosDeDia(new Date());
   const atalhoAtivo = atalhos.find(a => mesmoDia(a.dia, dia));
+  const motivoOutraData = atalhoAtivo ? null : motivoFechado(dia);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Agendar visita</DialogTitle>
           <DialogDescription>Quem vai visitar e quando</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-6 py-2 md:grid-cols-2">
+        <div className="grid gap-8 py-2 md:grid-cols-2">
           {/* Quem */}
-          <section className="space-y-4" aria-label="Quem">
+          <section className="space-y-5" aria-label="Quem">
             <LeadCombobox
               value={lead}
               onChange={escolherLead}
               label="Cliente *"
               placeholder="Buscar cliente por nome ou telefone"
               allowCreate={false}
+              paginated
             />
 
             <div>
               <UILabel>Corretor responsável{travado ? '' : ' *'}</UILabel>
               {travado ? (
                 <p className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">{travado.name}</p>
+              ) : verificandoCargo ? (
+                <p className="mt-1 text-sm text-muted-foreground">Carregando...</p>
               ) : (
-                <BuscaCorretor key={cicloFormulario} valor={corretor} onEscolher={setCorretor} />
+                <EscolhaCorretor corretores={corretores} erro={erroCorretores} valor={corretor} onEscolher={setCorretor} />
               )}
             </div>
 
@@ -224,25 +331,32 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
           </section>
 
           {/* Quando */}
-          <section className="space-y-4" aria-label="Quando">
+          <section className="space-y-5" aria-label="Quando">
             <div>
               <UILabel>Dia *</UILabel>
               <div className="mt-1 flex flex-wrap gap-2">
-                {atalhos.map(a => (
-                  <Button
-                    key={a.rotulo}
-                    type="button"
-                    size="sm"
-                    variant={atalhoAtivo?.rotulo === a.rotulo ? 'default' : 'outline'}
-                    onClick={() => setDia(a.dia)}
-                  >
-                    {a.rotulo}
-                  </Button>
-                ))}
+                {atalhos.map(a => {
+                  const motivo = motivoFechado(a.dia);
+                  return (
+                    <Button
+                      key={a.rotulo}
+                      type="button"
+                      size="sm"
+                      variant={atalhoAtivo?.rotulo === a.rotulo ? 'default' : 'outline'}
+                      disabled={!!motivo}
+                      title={motivo ?? undefined}
+                      onClick={() => setDia(a.dia)}
+                    >
+                      {a.rotulo}
+                    </Button>
+                  );
+                })}
                 <Input
                   type="date"
                   aria-label="Outra data"
                   className="w-auto"
+                  title={motivoOutraData ?? undefined}
+                  aria-invalid={motivoOutraData ? true : undefined}
                   min={diaISO(hojeSemHora())}
                   value={atalhoAtivo ? '' : diaISO(dia)}
                   onChange={e => {
@@ -272,20 +386,31 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
 
             <div>
               <UILabel>Horário *</UILabel>
-              {slots.length === 0 ? (
+              {erroAgenda ? (
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  <span>Não deu para carregar os horários.</span>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setRecarregarDia(c => c + 1)}>Tentar de novo</Button>
+                </div>
+              ) : !slots ? (
+                <p className="mt-1 text-sm text-muted-foreground">Carregando horários...</p>
+              ) : diaAgenda && !diaAgenda.aberto ? (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {diaAgenda.motivo || motivoFechado(dia) || 'Esse dia está fechado para visitas.'}
+                </p>
+              ) : slots.length === 0 ? (
                 <p className="mt-1 text-sm text-muted-foreground">Não sobrou horário nesse dia. Escolha outro dia.</p>
               ) : (
-                <div className="mt-1 grid max-h-44 grid-cols-3 gap-1.5 overflow-y-auto pr-1">
+                <div className="mt-1 grid max-h-64 grid-cols-3 gap-1.5 overflow-y-auto pr-1 md:grid-cols-4">
                   {slots.map(s => (
                     <Button
                       key={s.rotulo}
                       type="button"
                       size="sm"
                       variant={inicio?.getTime() === s.inicio.getTime() ? 'default' : 'outline'}
-                      disabled={!!s.ocupadoPor}
-                      title={s.ocupadoPor ? `Ocupado: visita com ${s.ocupadoPor}` : undefined}
-                      aria-label={s.ocupadoPor ? `${s.rotulo} · ocupado, ${s.ocupadoPor}` : undefined}
-                      className={s.ocupadoPor ? 'line-through' : undefined}
+                      disabled={!!s.ocupadoPor || s.folga}
+                      title={s.ocupadoPor ? `Ocupado: visita com ${s.ocupadoPor}` : s.folga ? 'Folga do corretor' : undefined}
+                      aria-label={s.ocupadoPor ? `${s.rotulo} · ocupado, ${s.ocupadoPor}` : s.folga ? `${s.rotulo} · folga` : undefined}
+                      className={s.ocupadoPor || s.folga ? 'line-through' : undefined}
                       onClick={() => setInicio(s.inicio)}
                     >
                       {s.rotulo}
@@ -328,76 +453,6 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/**
- * Corretor responsável, para o gestor. Mesmo serviço de usuários que a tela
- * antiga usava.
- *
- * `texto` nasce de `valor` e depois é só local: nenhum `useEffect` o
- * sincroniza de volta com `valor` (um efeito em `[valor]` não dispara quando
- * o novo valor é igual ao antigo — null→null — e isso já causou campo preso
- * com texto velho duas vezes). Quem precisa que o campo reflita um `valor`
- * novo de fora remonta o componente trocando a `key` (ver `cicloFormulario`
- * no componente pai); escolher da própria lista deste componente atualiza
- * `texto` direto no clique.
- */
-function BuscaCorretor({ valor, onEscolher }: { valor: PersonRef | null; onEscolher: (p: PersonRef | null) => void }) {
-  const [texto, setTexto] = useState(valor?.name ?? '');
-  const [lista, setLista] = useState<User[]>([]);
-  const [aberto, setAberto] = useState(false);
-  const espera = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const buscar = (q: string) => {
-    if (espera.current) clearTimeout(espera.current);
-    if (!q.trim()) { setLista([]); setAberto(false); return; }
-    espera.current = setTimeout(async () => {
-      try {
-        const res = await usersService.getUsers({ q, per_page: 8 });
-        setLista(res.data ?? []);
-        setAberto(true);
-      } catch { setLista([]); }
-    }, 300);
-  };
-
-  return (
-    <div className="relative mt-1">
-      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      <Input
-        value={texto}
-        onChange={e => {
-          const v = e.target.value;
-          setTexto(v);
-          // Digitou por cima do nome escolhido: o campo mostra o que foi
-          // digitado (`texto` já virou `v` acima), mas o VALOR escolhido não
-          // é mais válido — limpa o corretor pra `salvar` recusar.
-          if (valor && v !== valor.name) onEscolher(null);
-          buscar(v);
-        }}
-        placeholder="Buscar corretor por nome"
-        className="pl-9"
-      />
-      {aberto && lista.length > 0 && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-y-auto rounded-md border border-border bg-popover shadow-lg">
-          {lista.map(u => (
-            <button
-              key={u.id}
-              type="button"
-              className="w-full border-b border-border px-3 py-2.5 text-left text-sm last:border-0 hover:bg-muted/50"
-              onClick={() => {
-                const nome = u.available_name ?? u.name;
-                onEscolher({ id: u.id, name: nome });
-                setTexto(nome);
-                setAberto(false);
-              }}
-            >
-              {u.available_name ?? u.name}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 

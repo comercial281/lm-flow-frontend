@@ -9,6 +9,7 @@ const leadPickerPage = vi.fn();
 const leadPicker = vi.fn();
 const list = vi.fn();
 const create = vi.fn();
+const realtors = vi.fn();
 vi.mock('@/services/visits/visitsService', async (orig) => {
   const real = await orig<typeof import('@/services/visits/visitsService')>();
   return {
@@ -19,16 +20,18 @@ vi.mock('@/services/visits/visitsService', async (orig) => {
       leadPicker: (...a: unknown[]) => leadPicker(...a),
       list: (...a: unknown[]) => list(...a),
       create: (...a: unknown[]) => create(...a),
+      realtors: (...a: unknown[]) => realtors(...a),
     },
   };
 });
-vi.mock('@/services/users', () => ({ usersService: { getUsers: vi.fn().mockResolvedValue({ data: [] }) } }));
 vi.mock('@/services/properties/propertiesService', () => ({ propertiesService: { list: vi.fn().mockResolvedValue({ data: [] }) } }));
 
 import { ScheduleVisitDialog } from './ScheduleVisitDialog';
 
 const LEAD = { id: 'c1', name: 'Leonardo Teste', phone_number: '5511999990000', in_pipeline: true, stage_name: 'Em atendimento', owner: { id: 'u-bruno', name: 'Bruno' } };
 const LEAD_SEM_DONO = { id: 'c2', name: 'Marcos Teste', phone_number: '5511999992222', in_pipeline: false, stage_name: null, owner: null };
+const LEAD_DONO_FORA = { id: 'c3', name: 'Paula Teste', phone_number: null, in_pipeline: false, stage_name: null, owner: { id: 'u-saiu', name: 'Rafael' } };
+const CORRETORES = [{ id: 'u-bruno', name: 'Bruno' }, { id: 'u-carla', name: 'Carla' }];
 
 // Amanhã: a lista de horários começa às 07:00, sem depender da hora do teste.
 const amanha = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1); };
@@ -36,34 +39,85 @@ const amanha = () => { const d = new Date(); return new Date(d.getFullYear(), d.
 const abrir = () =>
   render(<ScheduleVisitDialog open onOpenChange={vi.fn()} diaInicial={amanha()} onCreated={vi.fn()} />);
 
+// O mesmo endpoint serve as duas perguntas: a conferência do cargo ao abrir
+// (`leadPickerPage('', 1, 1)`, só o meta interessa) e a lista paginada do campo
+// de cliente (50 por vez).
+let clientes: unknown[] = [LEAD];
+const responderComo = (meta: { only_mine: boolean; me: { id: string; name: string } | null }) => {
+  leadPickerPage.mockImplementation((_q: string, page: number, perPage: number) => {
+    if (perPage === 1) return Promise.resolve({ data: [], meta });
+    return Promise.resolve({ data: clientes, meta: { ...meta, total: clientes.length, page, per_page: perPage, has_more: false } });
+  });
+};
+const comoCorretor = () => responderComo({ only_mine: true, me: { id: 'u-ana', name: 'Ana' } });
+const comoGestor = () => responderComo({ only_mine: false, me: null });
+
+const escolherCliente = async (nome: string) => {
+  await userEvent.click(await screen.findByPlaceholderText('Buscar cliente por nome ou telefone'));
+  await userEvent.click(await screen.findByText(nome));
+};
+const trocarCliente = async (nomeAtual: RegExp, novo: string) => {
+  await userEvent.click(screen.getByDisplayValue(nomeAtual));
+  await userEvent.click(await screen.findByText(novo));
+};
+const botaoCorretor = (nome: string) => screen.findByRole('button', { name: nome });
+
 beforeEach(() => {
   vi.clearAllMocks();
-  leadPicker.mockResolvedValue([LEAD]);
+  clientes = [LEAD];
   list.mockResolvedValue({ data: [], meta: { total: 0 } });
+  realtors.mockResolvedValue(CORRETORES);
 });
 
 describe('Agendar visita', () => {
-  it('corretor: o responsável é ele, sem campo de busca', async () => {
-    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: true, me: { id: 'u-ana', name: 'Ana' } } });
+  it('corretor: o responsável é ele, sem botões de corretor', async () => {
+    comoCorretor();
+    realtors.mockResolvedValue([{ id: 'u-ana', name: 'Ana' }]);
     abrir();
 
     expect(await screen.findByText('Ana')).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Buscar corretor por nome')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Corretor responsável' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ana' })).not.toBeInTheDocument();
     expect(screen.queryByText('Criar contato novo')).not.toBeInTheDocument();
+    expect(leadPickerPage).toHaveBeenCalledWith('', 1, 1);
   });
 
-  it('gestor: escolher o cliente preenche o corretor com o dono do lead', async () => {
-    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: false, me: null } });
+  it('enquanto confere o cargo, não mostra os botões e não deixa agendar', async () => {
+    leadPickerPage.mockImplementation(() => new Promise(() => {}));
+    realtors.mockImplementation(() => new Promise(() => {}));
     abrir();
 
-    await userEvent.click(await screen.findByPlaceholderText('Buscar cliente por nome ou telefone'));
-    await userEvent.click(await screen.findByText('Leonardo Teste'));
+    expect(screen.getByRole('button', { name: 'Agendar' })).toBeDisabled();
+    expect(screen.queryByRole('group', { name: 'Corretor responsável' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bruno' })).not.toBeInTheDocument();
+  });
 
-    expect(await screen.findByDisplayValue('Bruno')).toBeInTheDocument();
+  it('o modal é maior (64rem de largura máxima)', async () => {
+    comoGestor();
+    abrir();
+
+    expect(await screen.findByRole('dialog')).toHaveStyle({ maxWidth: '64rem' });
+  });
+
+  it('gestor: vê os corretores em botões e escolher o cliente marca o dono do lead', async () => {
+    comoGestor();
+    abrir();
+
+    const bruno = await botaoCorretor('Bruno');
+    const carla = await botaoCorretor('Carla');
+    expect(bruno).toHaveAttribute('aria-pressed', 'false');
+    expect(carla).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByPlaceholderText('Buscar corretor por nome')).not.toBeInTheDocument();
+
+    await escolherCliente('Leonardo Teste');
+
+    expect(await botaoCorretor('Bruno')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Carla' })).toHaveAttribute('aria-pressed', 'false');
+    expect(realtors).toHaveBeenCalledTimes(1);
   });
 
   it('horário ocupado aparece riscado e não pode ser escolhido', async () => {
-    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: true, me: { id: 'u-ana', name: 'Ana' } } });
+    comoCorretor();
     const d = amanha();
     list.mockResolvedValue({
       data: [{ id: 'v1', scheduled_at: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 15, 0).toISOString(), duration_minutes: 60, status: 'scheduled', contact: { name: 'Fulano Teste' } }],
@@ -82,12 +136,11 @@ describe('Agendar visita', () => {
   });
 
   it('mostra o motivo que o servidor deu', async () => {
-    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: true, me: { id: 'u-ana', name: 'Ana' } } });
+    comoCorretor();
     create.mockRejectedValue({ response: { data: { error: { message: 'Você já tem visita com Fulano Teste das 15h às 16h' } } } });
     abrir();
 
-    await userEvent.click(await screen.findByPlaceholderText('Buscar cliente por nome ou telefone'));
-    await userEvent.click(await screen.findByText('Leonardo Teste'));
+    await escolherCliente('Leonardo Teste');
     await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
     await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
 
@@ -95,14 +148,13 @@ describe('Agendar visita', () => {
   });
 
   it('422 de conflito (alguém marcou nesse horário entre meio) recarrega a lista do dia', async () => {
-    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: true, me: { id: 'u-ana', name: 'Ana' } } });
+    comoCorretor();
     create.mockRejectedValue({
       response: { status: 422, data: { error: { message: 'Esse horário acabou de ser ocupado' } } },
     });
     abrir();
 
-    await userEvent.click(await screen.findByPlaceholderText('Buscar cliente por nome ou telefone'));
-    await userEvent.click(await screen.findByText('Leonardo Teste'));
+    await escolherCliente('Leonardo Teste');
 
     // 1 chamada ao abrir (corretor travado já definido) + 1 ao trocar de cliente
     // não dispara de novo (mesmo corretor/dia) — só confere que já rodou antes do save.
@@ -117,12 +169,11 @@ describe('Agendar visita', () => {
   });
 
   it('corretor não manda realtor_id; observações vão como realtor_notes', async () => {
-    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: true, me: { id: 'u-ana', name: 'Ana' } } });
+    comoCorretor();
     create.mockResolvedValue({ id: 'v9' });
     abrir();
 
-    await userEvent.click(await screen.findByPlaceholderText('Buscar cliente por nome ou telefone'));
-    await userEvent.click(await screen.findByText('Leonardo Teste'));
+    await escolherCliente('Leonardo Teste');
     await userEvent.type(screen.getByPlaceholderText('Detalhes da visita'), 'Levar a chave');
     await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
     await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
@@ -135,12 +186,12 @@ describe('Agendar visita', () => {
   });
 
   it('gestor: o payload manda o dono do lead como realtor_id', async () => {
-    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: false, me: null } });
+    comoGestor();
     create.mockResolvedValue({ id: 'v10' });
     abrir();
 
-    await userEvent.click(await screen.findByPlaceholderText('Buscar cliente por nome ou telefone'));
-    await userEvent.click(await screen.findByText('Leonardo Teste'));
+    await escolherCliente('Leonardo Teste');
+    expect(await botaoCorretor('Bruno')).toHaveAttribute('aria-pressed', 'true');
     await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
     await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
 
@@ -148,20 +199,36 @@ describe('Agendar visita', () => {
     expect(create.mock.calls[0][0].realtor_id).toBe('u-bruno');
   });
 
-  it('gestor: trocar para um cliente sem dono limpa o corretor e barra o salvar', async () => {
-    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: false, me: null } });
-    leadPicker.mockResolvedValue([LEAD, LEAD_SEM_DONO]);
+  it('gestor: o payload manda o corretor do botão escolhido', async () => {
+    comoGestor();
+    create.mockResolvedValue({ id: 'v11' });
     abrir();
 
-    await userEvent.click(await screen.findByPlaceholderText('Buscar cliente por nome ou telefone'));
-    await userEvent.click(await screen.findByText('Leonardo Teste'));
-    expect(await screen.findByDisplayValue('Bruno')).toBeInTheDocument();
+    await escolherCliente('Leonardo Teste');
+    await userEvent.click(await botaoCorretor('Carla'));
+    expect(screen.getByRole('button', { name: 'Carla' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Bruno' })).toHaveAttribute('aria-pressed', 'false');
+    expect(await screen.findByText('Nenhuma outra visita de Carla nesse dia.')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByDisplayValue(/Leonardo Teste/));
-    await userEvent.click(await screen.findByText('Marcos Teste'));
+    await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
 
-    expect(screen.queryByDisplayValue('Bruno')).not.toBeInTheDocument();
-    expect((screen.getByPlaceholderText('Buscar corretor por nome') as HTMLInputElement).value).toBe('');
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    expect(create.mock.calls[0][0].realtor_id).toBe('u-carla');
+  });
+
+  it('gestor: trocar para um cliente sem dono desmarca o corretor e o salvar pede o corretor', async () => {
+    comoGestor();
+    clientes = [LEAD, LEAD_SEM_DONO];
+    abrir();
+
+    await escolherCliente('Leonardo Teste');
+    expect(await botaoCorretor('Bruno')).toHaveAttribute('aria-pressed', 'true');
+
+    await trocarCliente(/Leonardo Teste/, 'Marcos Teste');
+
+    expect(screen.getByRole('button', { name: 'Bruno' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Carla' })).toHaveAttribute('aria-pressed', 'false');
 
     await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
     await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
@@ -170,53 +237,60 @@ describe('Agendar visita', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it('gestor: escolher outro corretor à mão e depois trocar para cliente sem dono desmarca de vez', async () => {
+    comoGestor();
+    clientes = [LEAD, LEAD_SEM_DONO];
+    abrir();
+
+    await escolherCliente('Leonardo Teste');
+    await userEvent.click(await botaoCorretor('Carla'));
+    expect(screen.getByRole('button', { name: 'Carla' })).toHaveAttribute('aria-pressed', 'true');
+
+    await trocarCliente(/Leonardo Teste/, 'Marcos Teste');
+
+    expect(screen.getByRole('button', { name: 'Carla' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Bruno' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('gestor: dono do lead fora da lista de corretores não fica marcado escondido', async () => {
+    comoGestor();
+    clientes = [LEAD_DONO_FORA];
+    abrir();
+
+    await escolherCliente('Paula Teste');
+    await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Escolha o corretor responsável'));
+    expect(create).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Visitas de Rafael/)).not.toBeInTheDocument();
+  });
+
+  it('gestor: se a lista de corretores não carrega, a tela avisa', async () => {
+    comoGestor();
+    realtors.mockRejectedValue(new Error('falhou'));
+    abrir();
+
+    expect(await screen.findByText('Não deu para carregar os corretores. Feche e abra de novo.')).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Corretor responsável' })).not.toBeInTheDocument();
+  });
+
   it('corretor travado: sem outra visita mostra o texto na 1ª pessoa', async () => {
-    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: true, me: { id: 'u-ana', name: 'Ana' } } });
+    comoCorretor();
     abrir();
 
     expect(await screen.findByText('Nenhuma outra visita sua nesse dia.')).toBeInTheDocument();
     expect(screen.queryByText(/Nenhuma outra visita de/)).not.toBeInTheDocument();
   });
 
-  it('gestor: digitar por cima do corretor mantém o que foi digitado (não apaga) e barra o salvar', async () => {
-    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: false, me: null } });
+  it('o cliente escolhido aparece pelo nome e telefone formatado, sem o número cru', async () => {
+    comoGestor();
     abrir();
 
-    await userEvent.click(await screen.findByPlaceholderText('Buscar cliente por nome ou telefone'));
-    await userEvent.click(await screen.findByText('Leonardo Teste'));
-    expect(await screen.findByDisplayValue('Bruno')).toBeInTheDocument();
+    await escolherCliente('Leonardo Teste');
 
-    const campoCorretor = screen.getByPlaceholderText('Buscar corretor por nome') as HTMLInputElement;
-    await userEvent.clear(campoCorretor);
-    await userEvent.type(campoCorretor, 'Ca');
-
-    expect(campoCorretor.value).toBe('Ca');
-    expect(screen.queryByDisplayValue('Bruno')).not.toBeInTheDocument();
-
-    await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
-
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Escolha o corretor responsável'));
-    expect(create).not.toHaveBeenCalled();
-  });
-
-  it('gestor: digitar por cima do corretor e depois trocar para cliente sem dono limpa o campo de vez', async () => {
-    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: false, me: null } });
-    leadPicker.mockResolvedValue([LEAD, LEAD_SEM_DONO]);
-    abrir();
-
-    await userEvent.click(await screen.findByPlaceholderText('Buscar cliente por nome ou telefone'));
-    await userEvent.click(await screen.findByText('Leonardo Teste'));
-    expect(await screen.findByDisplayValue('Bruno')).toBeInTheDocument();
-
-    const campoCorretor = screen.getByPlaceholderText('Buscar corretor por nome') as HTMLInputElement;
-    await userEvent.clear(campoCorretor);
-    await userEvent.type(campoCorretor, 'Ca');
-    expect(campoCorretor.value).toBe('Ca');
-
-    await userEvent.click(screen.getByDisplayValue(/Leonardo Teste/));
-    await userEvent.click(await screen.findByText('Marcos Teste'));
-
-    expect((screen.getByPlaceholderText('Buscar corretor por nome') as HTMLInputElement).value).toBe('');
+    expect(screen.getByDisplayValue('Leonardo Teste · (11) 99999-0000')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue(/5511999990000/)).not.toBeInTheDocument();
+    expect(leadPickerPage).toHaveBeenCalledWith('', 1, 50);
   });
 });

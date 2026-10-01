@@ -28,6 +28,7 @@ import {
   CalendarDays,
   List,
   MessageSquare,
+  CalendarOff,
 } from 'lucide-react';
 import {
   visitsService,
@@ -37,7 +38,9 @@ import {
 } from '@/services/visits/visitsService';
 
 import { ScheduleVisitDialog } from '@/components/visits/ScheduleVisitDialog';
-import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { HorarioVisitaDialog } from '@/components/visits/HorarioVisitaDialog';
+import { FolgasDialog } from '@/components/visits/FolgasDialog';
+import { useClientToggle, useFeature } from '@/contexts/TenantFeaturesContext';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { telefone } from '@/lib/formato';
@@ -203,6 +206,8 @@ function MonthGrid({ date, visits, onNavigate, onDayClick, onVisitClick, destaca
 
 export default function Visits() {
   const canCreate = useFeature('visits_create');
+  // Agenda do corretor (horário de visita + folgas), por imobiliária.
+  const agendaLigada = useClientToggle('agenda_do_corretor');
   const [visits, setVisits]         = useState<Visit[]>([]);
   const [total, setTotal]           = useState(0);
   const [loading, setLoading]       = useState(false);
@@ -219,6 +224,11 @@ export default function Visits() {
   // Filtro que veio de um clique na Dashboard (?situacao=, ?desde=, ?visita=).
   const [filtroLink, setFiltroLink] = useState<FiltroAgenda | null>(() => lerFiltroAgenda(searchParams));
   const [soMinhas, setSoMinhas] = useState(false);
+  // `soMinhas` nasce false: até a 1ª resposta, o corretor pareceria gestor e
+  // veria o botão "Horário de visita" piscar. Os botões da agenda esperam isto.
+  const [cargoConhecido, setCargoConhecido] = useState(false);
+  const [horarioAberto, setHorarioAberto] = useState(false);
+  const [folgasAbertas, setFolgasAbertas] = useState(false);
   // Só o servidor novo entende o mês pedido; o antigo devolve a história toda,
   // e aí o rótulo não pode dizer "em setembro".
   const [servidorNovo, setServidorNovo] = useState(false);
@@ -282,6 +292,7 @@ export default function Visits() {
       setTotal(contador.total);
       setServidorNovo(contador.servidorNovo);
       setSoMinhas(!!res.meta?.only_mine);
+      setCargoConhecido(true);
     } catch (e) {
       if (!atual()) return;
       if (isForbiddenError(e)) setRecusado(true);
@@ -489,6 +500,18 @@ export default function Visits() {
                 Lista
               </button>
             </div>
+            {agendaLigada && cargoConhecido && !soMinhas && (
+              <Button variant="outline" onClick={() => setHorarioAberto(true)}>
+                <Clock className="h-4 w-4 mr-2" />
+                Horário de visita
+              </Button>
+            )}
+            {agendaLigada && cargoConhecido && (
+              <Button variant="outline" onClick={() => setFolgasAbertas(true)}>
+                <CalendarOff className="h-4 w-4 mr-2" />
+                {soMinhas ? 'Minhas folgas' : 'Folgas'}
+              </Button>
+            )}
             {canCreate && (
               <Button onClick={() => openScheduleModal()}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -592,6 +615,13 @@ export default function Visits() {
         // ou de outro corretor, e aí o contador do mês não muda.
         onCreated={() => load()}
       />
+
+      {agendaLigada && (
+        <>
+          <HorarioVisitaDialog open={horarioAberto} onOpenChange={setHorarioAberto} />
+          <FolgasDialog open={folgasAbertas} onOpenChange={setFolgasAbertas} soMinhas={soMinhas} />
+        </>
+      )}
 
       {/* Complete / Retorno / Cancel action modal */}
       <Dialog open={!!actionModal} onOpenChange={() => setActionModal(null)}>

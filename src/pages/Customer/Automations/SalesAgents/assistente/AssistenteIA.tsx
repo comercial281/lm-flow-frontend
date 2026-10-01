@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/ds';
 import { salesAgentsService, type AgentPlaybook, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { followupSequencesService } from '@/services/followupSequences/followupSequencesService';
+import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { answersFromAgent, payloadFromAnswers, type AssistenteAnswers } from './assistenteMapping';
 import { chaveDoRascunho, ETAPAS, motivoDoErro } from './assistenteOpcoes';
 import EtapaQuemE from './steps/EtapaQuemE';
@@ -68,6 +69,8 @@ export default function AssistenteIA() {
   const navigate = useNavigate();
 
   const [agent, setAgent] = useState<SalesAgent | null>(null);
+  // Literal: os scripts do catálogo de funções leem a chave por regex.
+  const agendaLigada = useClientToggle('agenda_do_corretor');
   const [playbook, setPlaybook] = useState<AgentPlaybook | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erroCarga, setErroCarga] = useState<string | null>(null);
@@ -201,7 +204,10 @@ export default function AssistenteIA() {
     }
   };
 
-  const payload = useMemo(() => (agent && respostas ? payloadFromAnswers(respostas, agent) : {}), [agent, respostas]);
+  const payload = useMemo(
+    () => (agent && respostas ? payloadFromAnswers(respostas, agent, { agendaLigada }) : {}),
+    [agent, respostas, agendaLigada],
+  );
   const nadaMudou = Object.keys(payload).length === 0;
 
   const concluir = async () => {
@@ -317,10 +323,10 @@ export default function AssistenteIA() {
           <div className="mx-auto w-full max-w-3xl">
             {etapa === 0 && <EtapaQuemE a={respostas} set={set} onRedigir={redigir} redigindo={redigindo} />}
             {etapa === 1 && <EtapaOQueVende a={respostas} set={set} playbook={playbook} />}
-            {etapa === 2 && <EtapaRumo a={respostas} set={set} playbook={playbook} />}
+            {etapa === 2 && <EtapaRumo a={respostas} set={set} playbook={playbook} agendaLigada={agendaLigada} />}
             {etapa === 3 && <EtapaLimites a={respostas} set={set} />}
             {etapa === 4 && <EtapaOperacao a={respostas} set={set} agent={agent} pipelines={pipelines} stages={stages} funis={funis} />}
-            {etapa === 5 && <EtapaRevisao a={respostas} playbook={playbook} irPara={irPara} pipelines={pipelines} stages={stages} funis={funis} />}
+            {etapa === 5 && <EtapaRevisao a={respostas} playbook={playbook} irPara={irPara} pipelines={pipelines} stages={stages} funis={funis} agendaLigada={agendaLigada} />}
           </div>
         </main>
 

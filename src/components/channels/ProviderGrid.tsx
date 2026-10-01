@@ -65,6 +65,11 @@ const ProviderGrid: React.FC<ProviderGridProps> = ({
                 {t('newChannel.providers.badges.recommended')}
               </div>
             )}
+            {!provider.recommended && provider.popular && (
+              <div className="absolute -top-2 right-4 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full font-medium">
+                {t('newChannel.providers.badges.popular')}
+              </div>
+            )}
 
             <CardContent className="p-5">
               <div className="flex items-start gap-4">

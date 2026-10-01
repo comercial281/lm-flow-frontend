@@ -80,31 +80,11 @@ export default function NewChannel() {
   const { isSubmitting, isTesting, testConnection, submitCreate, healthCheckPassed } =
     useChannelSubmission(form);
 
-  // Generate channel types with dynamic config
+  // Só o WhatsApp é oferecido na criação de canal. Os outros tipos continuam em
+  // getChannelTypes() porque canais já existentes ainda leem nome e ícone de lá.
   const channelTypes = useMemo(
-    () =>
-      getChannelTypes().map(channel => {
-        if (channel.id === 'email') {
-          return {
-            ...channel,
-            providers: channel.providers?.map(provider => ({
-              ...provider,
-              description:
-                provider.id === 'google'
-                  ? canEmailGoogle
-                    ? t('newChannel.providers.gmail.description')
-                    : t('newChannel.messages.googleOAuthNotConfigured')
-                  : provider.id === 'microsoft'
-                  ? canEmailMicrosoft
-                    ? t('newChannel.providers.outlook.description')
-                    : t('newChannel.messages.microsoftOAuthNotConfigured')
-                  : provider.description,
-            })),
-          };
-        }
-        return channel;
-      }),
-    [canEmailGoogle, canEmailMicrosoft, t],
+    () => getChannelTypes().filter(channel => channel.id === 'whatsapp'),
+    [],
   );
 
   const handleGoBack = () => {

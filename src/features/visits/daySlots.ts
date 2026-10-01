@@ -37,7 +37,7 @@ const PASSO = 30;
 const DURACAO_PADRAO = 60;
 const OCUPAM = new Set(['scheduled', 'confirmed', 'in_progress', 'rescheduled']);
 
-const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+export const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
 const MINUTO = 60_000;

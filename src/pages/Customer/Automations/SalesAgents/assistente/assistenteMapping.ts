@@ -303,7 +303,16 @@ export function playbookDasRespostas(a: AssistenteAnswers, atual: AgentPlaybookC
 /**
  * O PATCH do "Concluir". Objeto vazio = nada mudou, e a tela não chama o servidor.
  */
-export function payloadFromAnswers(a: AssistenteAnswers, agent: SalesAgent): Partial<SalesAgentPayload> {
+/**
+ * `agendaLigada` (chave `agenda_do_corretor`): dias, início e fim da visita são
+ * do horário de visita da Agenda, não da IA — o assistente não os grava, e o
+ * que está em `visit_config` fica como está.
+ */
+export function payloadFromAnswers(
+  a: AssistenteAnswers,
+  agent: SalesAgent,
+  { agendaLigada = false }: { agendaLigada?: boolean } = {},
+): Partial<SalesAgentPayload> {
   const p: Partial<SalesAgentPayload> = {};
 
   // 1. Quem é a IA
@@ -348,7 +357,7 @@ export function payloadFromAnswers(a: AssistenteAnswers, agent: SalesAgent): Par
     start: visitaAtual.start ?? VISITA_INICIO_PADRAO,
     end: visitaAtual.end ?? VISITA_FIM_PADRAO,
   };
-  if (!iguais(visita, visitaComparavel)) p.visit_config = visita;
+  if (!agendaLigada && !iguais(visita, visitaComparavel)) p.visit_config = visita;
 
   // 4. Limites
   const limitesAtuais: AiLimits = agent.ai_limits ?? {};
