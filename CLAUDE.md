@@ -4269,12 +4269,27 @@ destino passaram a ler o filtro do endereço.
   pessoa vê naquele mês ("7 visitas suas em setembro"), sem as canceladas
   (`meta.active_total`); as canceladas continuam desenhadas na grade. Antes era
   a história inteira, de todos os corretores.
-- **Agenda: `?visita=` abre a visita mesmo fora do mês carregado** (busca por
-  `GET /visits/:id`; não achou → "Visita não encontrada"). Trocar para
-  Calendário tira o filtro do link: o calendário é sempre o mês na tela.
+  - `active_total` só vale no mês inteiro (calendário, sem filtro do link, sem
+    aba de situação). Lista e abas contam `meta.total`: a aba Canceladas não
+    pode dizer "0 visitas". Regra em `features/visits/contagem.ts`.
+  - O mês só entra no rótulo quando o servidor manda `active_total`. Servidor
+    antigo devolve a história toda, e o rótulo fica "415 visitas".
+  - Agendar e cancelar recarregam a lista; o contador nunca é somado na mão.
+- **Agenda: `?visita=` MOSTRA a visita, não age sobre ela** (busca por
+  `GET /visits/:id` se não estiver carregada; não achou → "Visita não
+  encontrada"). Sem filtro do link, o calendário vai pro mês dela; com filtro,
+  fica na lista. O card ou a pílula ganha contorno por 2 s. Única exceção:
+  visita que já passou e segue Agendada/Confirmada abre o diálogo de realizada.
+  Nunca abrir "Confirmar realização" para visita futura: grava e dispara
+  automação. Trocar para Calendário tira o filtro do link: o calendário é
+  sempre o mês na tela.
+- **Imóveis: escolher um Status no menu tira o filtro do link** (o link manda
+  o próprio status; os dois juntos mostrariam "Vendido" no menu e ativos na
+  lista).
 - **Ganho/Perdido seguem o `final` que o servidor manda em cada etapa**
   (`etapaFinal.ts`). O nome só vale com servidor antigo, e nome ambíguo
-  ("Venda perdida") vira perda, como no servidor.
+  ("Venda perdida") vira perda, como no servidor. A etapa marcada como
+  Concluída/Cancelada (`stage_type`) vem antes de uma que só bate pelo nome.
 
 Armadilha: **`stage_type` é palavra na API desde 2026-09-30** (era número). Tipo
 novo que o descreva usa `string`.
