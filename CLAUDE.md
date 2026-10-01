@@ -4322,8 +4322,10 @@ Fase 4, jornada 1. Spec: `LM FLOW/specs/2026-09-30-fase-4-jornada-dashboard-desi
 - **Número sem link quando o recorte não bate com o destino.** A Agenda,
   Propostas e o funil não recebem time, corretor, número, etiqueta nem IA pelo
   link. Então Visitas agendadas, Propostas e as etapas do Funil só levam ao
-  destino na imobiliária inteira sem filtro, ou para o corretor travado (o
-  destino já recorta por ele): `recorteBateComDestino` em `visao.ts`. Em "Meu
+  destino na imobiliária inteira sem filtro, ou para o corretor travado sem
+  filtro (o destino já recorta por ele, mas não por Número, Etiqueta nem IA:
+  com um desses ligado, o corretor travado também fica sem link):
+  `recorteBateComDestino` em `visao.ts`. Em "Meu
   time", "Só os meus" destravado ou com filtro, viram texto, para nunca mostrar
   3 na Dashboard e 48 na Agenda. A lista rápida e Imóveis não entram nessa regra
   (a lista usa os mesmos filtros do servidor; Imóveis do corretor vai com

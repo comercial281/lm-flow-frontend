@@ -20,7 +20,9 @@
 .lmfn-aviso-erro { background: color-mix(in srgb, var(--lmf-warn) 12%, transparent); color: var(--lmf-text); }
 .lmfn-aviso-erro button { color: var(--lmf-warn); }
 .lmfn-blocos { transition: opacity 0.15s ease; }
-.lmfn-blocos-pendente { opacity: 0.6; }
+.lmfn-blocos-pendente { opacity: 0.6; transition: opacity 0.15s ease; }
+/* O Funil esmaecido dentro da área já esmaecida não escurece duas vezes. */
+.lmfn-blocos-pendente .lmfn-blocos-pendente { opacity: 1; }
 /* min(): no celular estreito a coluna nunca passa da tela (nada de rolar de lado). */
 .lmfn-linha { display: grid; gap: 18px; margin-top: 18px; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); }
 .lmfn-linha-principal { grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr); }

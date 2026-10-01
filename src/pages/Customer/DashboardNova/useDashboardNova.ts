@@ -17,8 +17,10 @@ export function paramsDaApi(f: FiltrosDashboard): DashboardMetricsParams {
 }
 
 /**
- * Um pedido só, com `blocks=`: todos os blocos dividem o MESMO período
- * resolvido no servidor. O pedido anterior é abortado quando o filtro muda
+ * Um pedido com `blocks=`. A página faz dois: o principal, com todos os blocos
+ * (que dividem o MESMO período resolvido no servidor), e o do Funil
+ * (`blocks=pipeline` com o funil escolhido), para trocar de funil sem refazer o
+ * resto. O pedido anterior é abortado quando o filtro muda
  * (senão a resposta velha chega depois e sobrescreve a nova).
  *
  * `pendente`: a resposta em mãos NÃO é a dos filtros pedidos agora. Calculado

@@ -98,6 +98,41 @@ describe('Funil', () => {
     expect(c.funil.recarregar).toHaveBeenCalled();
   });
 
+  it('enquanto o funil novo carrega, o cartão fica esmaecido e ocupado, e as etapas antigas não abrem', () => {
+    const c = ctx({ pipeline });
+    const { container } = wrap(<Funil {...c} filtros={{ preset: 'last_7_days', pipelineId: 'p2' }} funil={{ ...c.funil, carregando: true, pendente: true }} />);
+    const area = container.querySelector('[aria-busy="true"]') as HTMLElement;
+    expect(area).toHaveClass('lmfn-blocos-pendente');
+    expect(screen.queryByRole('button', { name: /Novo/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Novo')).toBeInTheDocument();
+    // O seletor continua: dá para escolher outro funil enquanto este carrega.
+    expect(screen.getByRole('combobox', { name: 'Funil' })).toBeInTheDocument();
+  });
+
+  it('com o funil em dia, nada de esmaecer', () => {
+    const { container } = wrap(<Funil {...ctx({ pipeline })} />);
+    expect(container.querySelector('[aria-busy]')).toBeNull();
+    expect(container.querySelector('.lmfn-blocos-pendente')).toBeNull();
+  });
+
+  it('com erro no funil, o seletor continua lá para trocar de funil sem recarregar', () => {
+    const c = ctx({ pipeline });
+    wrap(<Funil {...c} filtros={{ preset: 'last_7_days', pipelineId: 'p2' }} funil={{ ...c.funil, erro: 'Não consegui carregar a Dashboard.', pendente: true }} />);
+    expect(screen.getByText('Não deu para carregar o funil agora.')).toBeInTheDocument();
+    const seletor = screen.getByRole('combobox', { name: 'Funil' });
+    expect(seletor).toHaveValue('p2');
+    fireEvent.change(seletor, { target: { value: 'p1' } });
+    expect(c.mudarFunil).toHaveBeenCalledWith('p1');
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+  });
+
+  it('erro sem resposta nenhuma do funil: só Tentar de novo, sem seletor', () => {
+    const c = ctx({});
+    wrap(<Funil {...c} funil={{ ...c.funil, dados: null, erro: 'Não consegui carregar a Dashboard.' }} />);
+    expect(screen.queryByRole('combobox', { name: 'Funil' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument();
+  });
+
   it('o funil não depende da resposta dos outros blocos', () => {
     const c = ctx({});
     wrap(<Funil {...c} funil={{ ...c.funil, dados: { scope: { mode: 'all' }, pipeline } as never }} />);
