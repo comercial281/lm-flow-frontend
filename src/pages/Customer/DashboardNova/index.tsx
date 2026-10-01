@@ -6,10 +6,10 @@ import EmptyState from '@/components/base/EmptyState';
 import { GlassCard, Skeleton } from '../DashboardV2/components/primitives';
 import '../DashboardV2/styles/lmf.css';
 import './dashboard-nova.css';
-import { Cabecalho, PERIODOS } from './Cabecalho';
+import { Cabecalho } from './Cabecalho';
 import { ListaRapida } from './ListaRapida';
 import { BLOCOS_API, linhasDaVisao, type BlocoId } from './catalogo';
-import { gestorVendoComoCorretor, visaoDoEscopo } from './visao';
+import { gestorVendoComoCorretor, modoDeVolta, rotuloDaVolta, visaoDoEscopo } from './visao';
 import { useDashboardNova } from './useDashboardNova';
 import { usePodeAbrir, type ContextoBloco } from './usePodeAbrir';
 import type { FiltrosDashboard, ListaKind } from './types';
@@ -77,10 +77,7 @@ const DashboardNova: React.FC = () => {
   const visao = visaoDoEscopo(scope);
   const comoCorretor = gestorVendoComoCorretor(scope, can('dashboard', 'team'));
   const primeiroNome = (user?.name || '').trim().split(' ')[0];
-  const rotuloPeriodo = PERIODOS.find(p => p.valor === filtros.preset)?.rotulo ?? '';
-  const periodo = rotuloPeriodo.toLowerCase();
-  let subtitulo = rotuloPeriodo;
-  if (dados) subtitulo = visao === 'corretor' ? `Seus números · ${periodo}` : `A imobiliária · ${periodo}`;
+  const volta = modoDeVolta(scope);
   const tentarDeNovo = () => { void recarregar(); };
 
   const ctx: ContextoBloco = useMemo(() => ({
@@ -124,7 +121,6 @@ const DashboardNova: React.FC = () => {
     <div className="lmf">
       <Cabecalho
         nome={`${saudacao()}${primeiroNome ? `, ${primeiroNome}` : ''}`}
-        subtitulo={subtitulo}
         visao={visao}
         scope={scope}
         carregando={pendente}
@@ -135,9 +131,11 @@ const DashboardNova: React.FC = () => {
       {comoCorretor && (
         <div className="lmfn-aviso">
           <span>Você está vendo a Dashboard como um corretor vê: só os seus leads, visitas e imóveis.</span>
-          <button type="button" onClick={() => setFiltros(f => ({ ...f, scope: scope?.available_modes.includes('all') ? 'all' : 'team' }))}>
-            Voltar para a imobiliária
-          </button>
+          {volta && (
+            <button type="button" onClick={() => setFiltros(f => ({ ...f, scope: volta }))}>
+              {rotuloDaVolta(volta)}
+            </button>
+          )}
         </div>
       )}
 

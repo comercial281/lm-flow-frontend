@@ -8,6 +8,7 @@ import type { PeriodPreset, ScopeMode } from '../DashboardV2/types';
 import { usersService } from '@/services/users';
 import type { FiltrosDashboard, ScopeInfoNova } from './types';
 import type { Visao } from './catalogo';
+import { deQuemSaoOsNumeros } from './visao';
 
 const ROTULO_VISAO: Record<ScopeMode, string> = { all: 'Imobiliária', team: 'Meu time', mine: 'Só os meus' };
 const ORDEM_VISAO: ScopeMode[] = ['all', 'team', 'mine'];
@@ -23,7 +24,6 @@ export const PERIODOS: { valor: PeriodPreset; rotulo: string }[] = [
 
 interface Props {
   nome: string;
-  subtitulo: string;
   visao: Visao;
   scope?: ScopeInfoNova;
   /** O pedido com os filtros atuais ainda não voltou (o `carregando` do useDashboardNova). */
@@ -32,7 +32,7 @@ interface Props {
   onFiltros: (f: FiltrosDashboard) => void;
 }
 
-export const Cabecalho: React.FC<Props> = ({ nome, subtitulo, visao, scope, carregando, filtros, onFiltros }) => {
+export const Cabecalho: React.FC<Props> = ({ nome, visao, scope, carregando, filtros, onFiltros }) => {
   const [aberto, setAberto] = useState(false);
   const [corretores, setCorretores] = useState<{ id: string; nome: string }[]>([]);
   const idPainel = useId();
@@ -44,6 +44,14 @@ export const Cabecalho: React.FC<Props> = ({ nome, subtitulo, visao, scope, carr
   const donoAplicado = carregando || !scope ? filtros.ownerId : scope.owner_id ?? undefined;
   const ativos = [visao === 'gestor' && donoAplicado, filtros.inboxId, filtros.labelId, filtros.aiOnly]
     .filter(Boolean).length;
+
+  // A linha de baixo diz de quem são os números (o recorte da resposta) e o período.
+  // O nome do corretor sai da lista do painel, que já foi buscada para escolhê-lo.
+  const rotuloPeriodo = PERIODOS.find(p => p.valor === filtros.preset)?.rotulo ?? '';
+  const nomeDoCorretor = corretores.find(c => c.id === scope?.owner_id)?.nome;
+  const subtitulo = scope
+    ? `${deQuemSaoOsNumeros(scope, nomeDoCorretor)} · ${rotuloPeriodo.toLowerCase()}`
+    : rotuloPeriodo;
 
   // Corretor descartado pelo servidor sai dos filtros, uma vez por resposta.
   // Só olha resposta NOVA: logo depois de escolher, o `carregando` ainda é

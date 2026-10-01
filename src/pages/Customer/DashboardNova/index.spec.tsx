@@ -102,6 +102,15 @@ describe('DashboardNova', () => {
     expect(cab.props?.filtros.scope).toBe('all');
   });
 
+  it('o gerente (sem a imobiliária) volta para o time, e o botão diz isso', () => {
+    hook.dados = base('mine', false);
+    (hook.dados as { scope: { available_modes: string[] } }).scope.available_modes = ['mine', 'team'];
+    tela();
+    expect(screen.queryByRole('button', { name: 'Voltar para a imobiliária' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar para o meu time' }));
+    expect(cab.props?.filtros.scope).toBe('team');
+  });
+
   it('o corretor de verdade (travado) não vê o aviso', () => {
     hook.dados = base('mine', true);
     tela();

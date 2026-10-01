@@ -21,7 +21,7 @@ const escopo = (
 const gestor = (props: {
   scope?: ScopeInfoNova; carregando?: boolean; filtros: FiltrosDashboard; onFiltros?: (f: FiltrosDashboard) => void;
 }) => (
-  <Cabecalho nome="Rafael" subtitulo="" visao="gestor" scope={props.scope ?? escopo(['all'], 'all')}
+  <Cabecalho nome="Rafael" visao="gestor" scope={props.scope ?? escopo(['all'], 'all')}
     carregando={props.carregando ?? false} filtros={props.filtros} onFiltros={props.onFiltros ?? vi.fn()} />
 );
 
@@ -42,7 +42,7 @@ describe('Cabecalho', () => {
 
   it('o corretor travado não vê o seletor de visão', () => {
     render(
-      <Cabecalho nome="Ana" subtitulo="" visao="corretor" scope={escopo(['mine'], 'mine', true)} carregando={false}
+      <Cabecalho nome="Ana" visao="corretor" scope={escopo(['mine'], 'mine', true)} carregando={false}
         filtros={{ preset: 'last_7_days' }} onFiltros={vi.fn()} />,
     );
     expect(screen.queryByRole('button', { name: 'Só os meus' })).not.toBeInTheDocument();
@@ -68,7 +68,7 @@ describe('Cabecalho', () => {
 
   it('Corretor só aparece na visão gestor', () => {
     render(
-      <Cabecalho nome="Ana" subtitulo="" visao="corretor" scope={escopo(['mine'], 'mine', true)} carregando={false}
+      <Cabecalho nome="Ana" visao="corretor" scope={escopo(['mine'], 'mine', true)} carregando={false}
         filtros={{ preset: 'last_7_days' }} onFiltros={vi.fn()} />,
     );
     fireEvent.click(screen.getByRole('button', { name: /Filtros/ }));
@@ -152,5 +152,35 @@ describe('Cabecalho', () => {
     rerender(gestor({ scope, carregando: true, filtros: { preset: 'last_7_days', ownerId: 'u9' }, onFiltros }));
     rerender(gestor({ scope, carregando: false, filtros: { preset: 'last_7_days', ownerId: 'u9' }, onFiltros }));
     expect(onFiltros).not.toHaveBeenCalled();
+  });
+
+  it('a linha de baixo diz de quem são os números, pelo recorte que o servidor aplicou', () => {
+    const { rerender } = render(gestor({ scope: escopo(['all', 'team', 'mine'], 'all'), filtros: { preset: 'last_7_days' } }));
+    expect(screen.getByText('A imobiliária · últimos 7 dias')).toBeInTheDocument();
+    rerender(gestor({ scope: escopo(['mine', 'team'], 'team'), filtros: { preset: 'this_month', scope: 'team' } }));
+    expect(screen.getByText('Meu time · este mês')).toBeInTheDocument();
+    // Corretor escolhido sem a lista de nomes em mãos.
+    rerender(gestor({ scope: escopo(['all'], 'all', false, 'u1'), filtros: { preset: 'last_7_days', ownerId: 'u1' } }));
+    expect(screen.getByText('Um corretor · últimos 7 dias')).toBeInTheDocument();
+  });
+
+  it('com um corretor escolhido, a linha de baixo diz o nome dele', async () => {
+    const { rerender } = render(gestor({ filtros: { preset: 'last_7_days' } }));
+    await abrirFiltros();
+    rerender(gestor({ scope: escopo(['all'], 'all', false, 'u1'), filtros: { preset: 'last_7_days', ownerId: 'u1' } }));
+    expect(screen.getByText('Ana · últimos 7 dias')).toBeInTheDocument();
+  });
+
+  it('o corretor lê "Seus números"; antes da resposta, só o período', () => {
+    const { rerender } = render(
+      <Cabecalho nome="Ana" visao="corretor" scope={escopo(['mine'], 'mine', true)} carregando={false}
+        filtros={{ preset: 'last_7_days' }} onFiltros={vi.fn()} />,
+    );
+    expect(screen.getByText('Seus números · últimos 7 dias')).toBeInTheDocument();
+    rerender(
+      <Cabecalho nome="Ana" visao="gestor" scope={undefined} carregando
+        filtros={{ preset: 'last_7_days' }} onFiltros={vi.fn()} />,
+    );
+    expect(screen.getByText('Últimos 7 dias', { selector: 'p' })).toBeInTheDocument();
   });
 });
