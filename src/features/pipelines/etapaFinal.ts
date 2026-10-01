@@ -12,6 +12,8 @@ export type TipoFinal = 'won' | 'lost';
 interface EtapaComNome {
   name: string;
   final?: TipoFinal | null;
+  /** Tipo marcado na etapa ('completed' = Concluída, 'cancelled' = Cancelada). */
+  stage_type?: string | null;
 }
 
 export function tipoFinal(etapa: EtapaComNome): TipoFinal | null {
@@ -21,10 +23,15 @@ export function tipoFinal(etapa: EtapaComNome): TipoFinal | null {
   return null;
 }
 
+/**
+ * A etapa marcada como Concluída ganha de uma que só "parece" ganho pelo nome,
+ * mesmo vindo depois na ordem. Sem nenhuma marcada, a primeira que é ganho.
+ */
 export function etapaDeGanho<T extends EtapaComNome>(etapas: T[]): T | undefined {
-  return etapas.find(e => tipoFinal(e) === 'won');
+  return etapas.find(e => e.stage_type === 'completed') ?? etapas.find(e => tipoFinal(e) === 'won');
 }
 
+/** Mesma regra do ganho: a marcada como Cancelada vem primeiro. */
 export function etapaDePerda<T extends EtapaComNome>(etapas: T[]): T | undefined {
-  return etapas.find(e => tipoFinal(e) === 'lost');
+  return etapas.find(e => e.stage_type === 'cancelled') ?? etapas.find(e => tipoFinal(e) === 'lost');
 }

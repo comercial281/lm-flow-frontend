@@ -22,4 +22,25 @@ describe('etapa final', () => {
     expect(etapaDeGanho(etapas)?.id).toBe('2');
     expect(etapaDePerda(etapas)?.id).toBe('3');
   });
+
+  it('a etapa marcada (Concluída / Cancelada) ganha da que só bate pelo nome', () => {
+    const etapas = [
+      { id: '1', name: 'Venda', final: 'won' as const, stage_type: 'active' },
+      { id: '2', name: 'Perdido', final: 'lost' as const, stage_type: 'active' },
+      { id: '3', name: 'Contrato assinado', final: 'won' as const, stage_type: 'completed' },
+      { id: '4', name: 'Encerrado', final: 'lost' as const, stage_type: 'cancelled' },
+    ];
+    expect(etapaDeGanho(etapas)?.id).toBe('3');
+    expect(etapaDePerda(etapas)?.id).toBe('4');
+  });
+
+  it('sem nenhuma marcada, a primeira pelo final (como antes)', () => {
+    const etapas = [
+      { id: '1', name: 'Venda', stage_type: 'active' },
+      { id: '2', name: 'Fechado', stage_type: 'active' },
+      { id: '3', name: 'Perdido' },
+    ];
+    expect(etapaDeGanho(etapas)?.id).toBe('1');
+    expect(etapaDePerda(etapas)?.id).toBe('3');
+  });
 });
