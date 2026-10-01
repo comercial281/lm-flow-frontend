@@ -40,3 +40,10 @@ describe('abas antigas da IA Vendedora', () => {
     expect(destinoDaAbaAntiga('/admin/agentes', 'agentes')).toBeNull();
   });
 });
+
+describe('abas com nome estranho', () => {
+  it('nome herdado do JavaScript cai na tela-base, não vira função', () => {
+    expect(destinoDaAbaAntiga('/admin/clientes', 'constructor')).toBe('/admin/clientes');
+    expect(destinoDaAbaAntiga('/admin/agentes', 'toString')).toBe('/admin/agentes');
+  });
+});

@@ -27,5 +27,5 @@ const AGENTES: Record<string, string | null> = {
 export function destinoDaAbaAntiga(base: Base, tab: string | null): string | null {
   if (!tab) return null;
   const mapa = base === '/admin/clientes' ? CLIENTES : AGENTES;
-  return tab in mapa ? mapa[tab] : base;
+  return Object.prototype.hasOwnProperty.call(mapa, tab) ? mapa[tab] : base;
 }
