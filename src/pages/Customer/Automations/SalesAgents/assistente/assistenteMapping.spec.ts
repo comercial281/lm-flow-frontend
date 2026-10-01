@@ -289,3 +289,26 @@ describe('assistente da IA: respostas → PATCH', () => {
     expect(payloadFromAnswers(respostas, agent)).toEqual({});
   });
 });
+
+describe('assistente da IA: agenda do corretor ligada', () => {
+  const comVisita = () => iaNova({ visit_config: { days: [1, 2, 3], start: '09:00', end: '18:00', min_advance_hours: 12 } });
+
+  it('chave desligada: mudar dias e horário da visita grava visit_config, como sempre', () => {
+    const agent = comVisita();
+    const respostas: AssistenteAnswers = { ...answersFromAgent(agent, null), visita_dias: [1, 2, 3, 4, 5], visita_fim: '19:00' };
+    expect(payloadFromAnswers(respostas, agent).visit_config).toEqual({
+      days: [1, 2, 3, 4, 5], start: '09:00', end: '19:00', min_advance_hours: 12,
+    });
+  });
+
+  it('chave ligada: dias, início e fim da visita são da Agenda — o assistente não grava visit_config', () => {
+    const agent = comVisita();
+    const respostas: AssistenteAnswers = {
+      ...answersFromAgent(agent, null), visita_dias: [0, 6], visita_inicio: '07:00', visita_fim: '22:00',
+    };
+    const patch = payloadFromAnswers(respostas, agent, { agendaLigada: true });
+    expect(patch).not.toHaveProperty('visit_config');
+    expect(patch).toEqual({});
+  });
+});
+

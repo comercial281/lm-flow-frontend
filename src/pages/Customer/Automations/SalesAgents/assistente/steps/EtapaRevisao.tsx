@@ -41,7 +41,7 @@ function Linha({ rotulo, valor, apagado }: { rotulo: string; valor: ReactNode; a
  * ao passo. O que está no padrão de fábrica aparece como padrão, em itálico.
  */
 export default function EtapaRevisao({
-  a, playbook, irPara, pipelines, stages, funis,
+  a, playbook, irPara, pipelines, stages, funis, agendaLigada = false,
 }: {
   a: AssistenteAnswers;
   playbook: AgentPlaybook | null;
@@ -49,6 +49,8 @@ export default function EtapaRevisao({
   pipelines: OpcaoLista[];
   stages: OpcaoLista[];
   funis: OpcaoLista[];
+  /** Chave `agenda_do_corretor`: dias e horário da visita vêm da Agenda. */
+  agendaLigada?: boolean;
 }) {
   const tipos = playbook?.sale_types?.length ? playbook.sale_types : TIPOS_DE_VENDA_RESERVA;
   const passos = playbook?.next_steps?.length ? playbook.next_steps : PROXIMOS_PASSOS_RESERVA;
@@ -104,7 +106,11 @@ export default function EtapaRevisao({
         <Linha rotulo="O que dói" valor={ou(a.dor_tipica, 'exemplo da casa')} apagado={!a.dor_tipica.trim()} />
         <Linha rotulo="Lead pronto" valor={ou(a.lead_pronto, 'exemplo da casa')} apagado={!a.lead_pronto.trim()} />
         <Linha rotulo="Próximo passo" valor={passos.find((p) => p.value === (a.proximo_passo || PROXIMO_PASSO_PADRAO))?.label ?? a.proximo_passo} apagado={(a.proximo_passo || PROXIMO_PASSO_PADRAO) === PROXIMO_PASSO_PADRAO} />
-        <Linha rotulo="Visitas" valor={`${[...a.visita_dias].sort().map(nomeDoDia).join(', ') || 'nenhum dia'}, das ${a.visita_inicio} às ${a.visita_fim}`} />
+        {agendaLigada ? (
+          <Linha rotulo="Visitas" valor="no horário de visita da Agenda" apagado />
+        ) : (
+          <Linha rotulo="Visitas" valor={`${[...a.visita_dias].sort().map(nomeDoDia).join(', ') || 'nenhum dia'}, das ${a.visita_inicio} às ${a.visita_fim}`} />
+        )}
         <Linha rotulo="Objeções" valor={objecoes.length ? objecoes.map((o) => `${o.objecao} → ${o.resposta}`).join('\n') : 'as da casa'} apagado={!objecoes.length} />
       </Bloco>
 
