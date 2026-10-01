@@ -4433,3 +4433,15 @@ Armadilhas:
 2. **A lista de horários e o "ocupado" moram em `src/features/visits/daySlots.ts`**,
    com spec, fora do JSX. A conta é a mesma do servidor: encostar não é conflito.
 3. **`LeadCombobox` é compartilhado com Propostas**: `allowCreate` nasce `true`.
+
+## Área do Admin: o que saiu na limpeza (desde 2026-10-01)
+
+Primeiro passo da refatoração da Área do Admin (spec `specs/2026-10-01-fase-4-area-do-admin-design.md` na pasta LM FLOW).
+
+- **Modo Cliente saiu.** O *Entrar* do cartão do cliente faz o mesmo. A cópia do "aplicar funil em vários clientes" que morava nele (sem a regra de o funil chegar desligado) saiu junto. A chave `lm_client_mode` que ficava no navegador é apagada na abertura do app: **nenhuma requisição troca mais de cliente por conta própria.** `getTenantSlug()` é só o subdomínio.
+- **Formulários de onboarding saíram** (ninguém usava). O link público `/formulario/...` cai na entrada do app. As respostas continuam no banco, sem tela.
+- **A tela antiga de instâncias (`/super-admin/clientes`) saiu**, com o "revelar senha". Os dois endereços dela levam para Clientes. **O "revelar senha" não volta** (decisão da fase 1).
+- **A aba Dashboard de Clientes saiu.** Ela lia o modelo de junho (um projeto do Railway por cliente) e não enxergava os clientes de hoje. A Visão Geral nova ocupa o lugar dela num PR próprio.
+- **Sync Todos saiu.** Ele publicava de novo o frontend próprio de cada instância de junho; os clientes de hoje usam o frontend único, que publica sozinho no merge.
+- Monitoramento e Servidores MCP eram código sem rota: saíram.
+- Teto das caixinhas do SuperAdmin: 7 → 5.
