@@ -43,6 +43,7 @@ const hojeSemHora = () => {
 
 export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated }: Props) {
   const [travado, setTravado] = useState<PersonRef | null>(null);
+  const [verificandoCargo, setVerificandoCargo] = useState(true);
   const [lead, setLead] = useState<LeadPickerItem | null>(null);
   const [corretor, setCorretor] = useState<PersonRef | null>(null);
   const [dia, setDia] = useState<Date>(diaInicial ?? hojeSemHora());
@@ -53,34 +54,59 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
   const [doDia, setDoDia] = useState<BusyVisit[]>([]);
   const [salvando, setSalvando] = useState(false);
 
-  // Abriu: zera e descobre se é corretor travado.
+  // `diaInicial` costuma ser um `Date` recriado a cada render do pai: não pode
+  // entrar nas dependências do reset (reabriria o form de novo só por isso).
+  // O efeito abaixo lê o valor mais recente só no instante em que abre.
+  const diaInicialRef = useRef<Date | null | undefined>(diaInicial);
+  diaInicialRef.current = diaInicial;
+
+  // Abriu: zera e descobre se é corretor travado. Só depende de `open` —
+  // reabrir é a única hora de zerar o formulário.
   useEffect(() => {
     if (!open) return;
+    let vivo = true;
     setLead(null);
     setCorretor(null);
-    setDia(diaInicial ?? hojeSemHora());
+    setDia(diaInicialRef.current ?? hojeSemHora());
     setInicio(null);
     setDuracao(60);
     setObservacoes('');
     setImovel(null);
     setTravado(null);
+    setVerificandoCargo(true);
     visitsService.leadPickerPage('', 1)
       .then(({ meta }) => {
+        if (!vivo) return;
         if (meta.only_mine && meta.me) {
           setTravado(meta.me);
           setCorretor(meta.me);
         }
       })
-      .catch(() => { /* sem meta = tela de gestor; o servidor confere ao salvar */ });
-  }, [open, diaInicial]);
+      .catch(() => { /* sem meta = tela de gestor; o servidor confere ao salvar */ })
+      .finally(() => { if (vivo) setVerificandoCargo(false); });
+    return () => { vivo = false; };
+  }, [open]);
 
-  // Visitas do corretor no dia escolhido.
+  // Visitas do corretor no dia escolhido. Trocar corretor ou dia antes da
+  // resposta anterior chegar não pode deixar a resposta velha pisar na nova
+  // (resposta mais lenta de um pedido antigo vencendo a mais rápida do atual).
   useEffect(() => {
     if (!open || !corretor) { setDoDia([]); return; }
+    setDoDia([]);
+    let vivo = true;
     const d = diaISO(dia);
     visitsService.list({ realtor_id: corretor.id, since: d, until: d, per_page: 50 })
-      .then(res => setDoDia((res.data ?? []) as BusyVisit[]))
-      .catch(() => setDoDia([]));
+      .then(res => {
+        if (!vivo) return;
+        // O servidor manda mais nova primeiro; a lista do dia é lida de cima
+        // pra baixo, então ordena crescente aqui.
+        const ordenada = ((res.data ?? []) as BusyVisit[])
+          .slice()
+          .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+        setDoDia(ordenada);
+      })
+      .catch(() => { if (vivo) setDoDia([]); });
+    return () => { vivo = false; };
   }, [open, corretor, dia]);
 
   const ocupadas = useMemo(() => ocupando(doDia), [doDia]);
@@ -95,7 +121,9 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
 
   const escolherLead = (l: LeadPickerItem) => {
     setLead(l);
-    if (!travado && l.owner) setCorretor(l.owner);
+    // Cliente sem dono precisa LIMPAR o corretor anterior, não só deixar como
+    // estava — senão o form salva o corretor do cliente trocado.
+    if (!travado) setCorretor(l.owner ?? null);
   };
 
   const salvar = async () => {
@@ -243,10 +271,10 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
 
             {corretor && (
               <div>
-                <UILabel>Visitas de {travado ? 'você' : corretor.name} nesse dia</UILabel>
+                <UILabel>{travado ? 'Suas visitas nesse dia' : `Visitas de ${corretor.name} nesse dia`}</UILabel>
                 {ocupadas.length === 0 ? (
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Nenhuma outra visita de {travado ? 'você' : corretor.name} nesse dia.
+                    {travado ? 'Nenhuma outra visita sua nesse dia.' : `Nenhuma outra visita de ${corretor.name} nesse dia.`}
                   </p>
                 ) : (
                   <ul className="mt-1 space-y-1 text-sm">
@@ -268,7 +296,7 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={salvar} disabled={salvando}>{salvando ? 'Salvando...' : 'Agendar'}</Button>
+          <Button onClick={salvar} disabled={salvando || verificandoCargo}>{salvando ? 'Salvando...' : 'Agendar'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -276,7 +304,7 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
 }
 
 /** Corretor responsável, para o gestor. Mesmo serviço de usuários que a tela antiga usava. */
-function BuscaCorretor({ valor, onEscolher }: { valor: PersonRef | null; onEscolher: (p: PersonRef) => void }) {
+function BuscaCorretor({ valor, onEscolher }: { valor: PersonRef | null; onEscolher: (p: PersonRef | null) => void }) {
   const [texto, setTexto] = useState(valor?.name ?? '');
   const [lista, setLista] = useState<User[]>([]);
   const [aberto, setAberto] = useState(false);
@@ -301,7 +329,14 @@ function BuscaCorretor({ valor, onEscolher }: { valor: PersonRef | null; onEscol
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         value={texto}
-        onChange={e => { setTexto(e.target.value); buscar(e.target.value); }}
+        onChange={e => {
+          const v = e.target.value;
+          setTexto(v);
+          // Digitou por cima do nome escolhido: o campo não pode mais exibir
+          // um nome que não é mais o que vai ser salvo.
+          if (valor && v !== valor.name) onEscolher(null);
+          buscar(v);
+        }}
         placeholder="Buscar corretor por nome"
         className="pl-9"
       />

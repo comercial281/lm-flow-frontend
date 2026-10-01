@@ -28,6 +28,7 @@ vi.mock('@/services/properties/propertiesService', () => ({ propertiesService: {
 import { ScheduleVisitDialog } from './ScheduleVisitDialog';
 
 const LEAD = { id: 'c1', name: 'Leonardo Teste', phone_number: '5511999990000', in_pipeline: true, stage_name: 'Em atendimento', owner: { id: 'u-bruno', name: 'Bruno' } };
+const LEAD_SEM_DONO = { id: 'c2', name: 'Marcos Teste', phone_number: '5511999992222', in_pipeline: false, stage_name: null, owner: null };
 
 // Amanhã: a lista de horários começa às 07:00, sem depender da hora do teste.
 const amanha = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1); };
@@ -104,5 +105,49 @@ describe('Agendar visita', () => {
     expect(payload.realtor_id).toBeUndefined();
     expect(payload.realtor_notes).toBe('Levar a chave');
     expect(payload.duration_minutes).toBe(60);
+  });
+
+  it('gestor: o payload manda o dono do lead como realtor_id', async () => {
+    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: false, me: null } });
+    create.mockResolvedValue({ id: 'v10' });
+    abrir();
+
+    await userEvent.click(await screen.findByPlaceholderText('Buscar cliente por nome ou telefone'));
+    await userEvent.click(await screen.findByText('Leonardo Teste'));
+    await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
+
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    expect(create.mock.calls[0][0].realtor_id).toBe('u-bruno');
+  });
+
+  it('gestor: trocar para um cliente sem dono limpa o corretor e barra o salvar', async () => {
+    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: false, me: null } });
+    leadPicker.mockResolvedValue([LEAD, LEAD_SEM_DONO]);
+    abrir();
+
+    await userEvent.click(await screen.findByPlaceholderText('Buscar cliente por nome ou telefone'));
+    await userEvent.click(await screen.findByText('Leonardo Teste'));
+    expect(await screen.findByDisplayValue('Bruno')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByDisplayValue(/Leonardo Teste/));
+    await userEvent.click(await screen.findByText('Marcos Teste'));
+
+    expect(screen.queryByDisplayValue('Bruno')).not.toBeInTheDocument();
+    expect((screen.getByPlaceholderText('Buscar corretor por nome') as HTMLInputElement).value).toBe('');
+
+    await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Escolha o corretor responsável'));
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('corretor travado: sem outra visita mostra o texto na 1ª pessoa', async () => {
+    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: true, me: { id: 'u-ana', name: 'Ana' } } });
+    abrir();
+
+    expect(await screen.findByText('Nenhuma outra visita sua nesse dia.')).toBeInTheDocument();
+    expect(screen.queryByText(/Nenhuma outra visita de/)).not.toBeInTheDocument();
   });
 });
