@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, BarChart3, ScrollText, Gauge, UploadCloud, MessageCircle, XCircle, Bot, Radio, MessageSquarePlus, Activity, Workflow, Search, ChevronRight, Link2, Send, Smartphone } from 'lucide-react';
+import { LogIn, Users, Loader2, RefreshCw, Building2, X, KeyRound, ExternalLink, Plus, Clock, Megaphone, SlidersHorizontal, Archive, ArchiveRestore, Snowflake, Play, Trash2, List, ScrollText, Gauge, MessageCircle, XCircle, Bot, Radio, MessageSquarePlus, Activity, Workflow, Search, ChevronRight, Link2, Send, Smartphone } from 'lucide-react';
 import api from '@/services/core/api';
 import { copyText } from '@/utils/clipboard';
 import IconActionButton from '@/components/base/IconActionButton';
@@ -8,8 +8,7 @@ import NewTenantWizard from './NewTenantWizard';
 import ClientBroadcastModal from './ClientBroadcastModal';
 import ClientFollowupRolloutModal from './ClientFollowupRolloutModal';
 import MemberAccessConfigModal from '../ClientInstances/MemberAccessConfigModal';
-import clientInstancesService, { DashboardData, CentralInstance, WhatsappSendResult } from '@/services/clientInstances/clientInstancesService';
-import DashboardView from '../ClientInstances/DashboardView';
+import clientInstancesService, { CentralInstance, WhatsappSendResult } from '@/services/clientInstances/clientInstancesService';
 import LogsView from '../ClientInstances/LogsView';
 import UserMetricsView from '../ClientInstances/UserMetricsView';
 import ArchivedFeaturesView from './ArchivedFeaturesView';
@@ -28,7 +27,6 @@ import { toast } from 'sonner';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 type ViewTab =
   | 'clients'
-  | 'dashboard'
   | 'logs'
   | 'metrics'
   | 'archived-features'
@@ -1173,7 +1171,7 @@ export default function PooledClients() {
   const [confirmDelete, setConfirmDelete] = useState<PooledTenant | null>(null);
   const [deleteText, setDeleteText] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
-  const VALID_TABS: ViewTab[] = ['clients', 'dashboard', 'logs', 'metrics', 'archived-features', 'leads-ao-vivo', 'sugestoes-bugs', 'atividade', 'numeros'];
+  const VALID_TABS: ViewTab[] = ['clients', 'logs', 'metrics', 'archived-features', 'leads-ao-vivo', 'sugestoes-bugs', 'atividade', 'numeros'];
   const initialTab = searchParams.get('tab') as ViewTab | null;
   const [tab, setTabState] = useState<ViewTab>(
     initialTab && VALID_TABS.includes(initialTab) ? initialTab : 'clients',
@@ -1182,9 +1180,6 @@ export default function PooledClients() {
     setTabState(id);
     setSearchParams(id === 'clients' ? {} : { tab: id }, { replace: true });
   };
-  const [dashData, setDashData] = useState<DashboardData | null>(null);
-  const [loadingDash, setLoadingDash] = useState(false);
-  const [syncingAll, setSyncingAll] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1193,56 +1188,6 @@ export default function PooledClients() {
     finally { setLoading(false); }
   }, [showArchived]);
   useEffect(() => { load(); }, [load]);
-
-  // Aba Dashboard: métricas por cliente (snapshots pooled-aware do SyncClientMetricsJob).
-  const loadDashboard = useCallback(async () => {
-    setLoadingDash(true);
-    try { const r = await clientInstancesService.dashboard(); setDashData(r.data.data); }
-    catch { setDashData(null); }
-    finally { setLoadingDash(false); }
-  }, []);
-  useEffect(() => { if (tab === 'dashboard') loadDashboard(); }, [tab, loadDashboard]);
-
-  // Arquivar a partir do card de métrica (id do ClientInstance, não do Tenant pooled).
-  const handleArchiveCI = async (id: number) => {
-    if (!(await confirmar({
-      titulo: 'Arquivar cliente',
-      descricao: 'Ele sai das métricas. O CRM dele continua no ar.',
-      rotuloDaAcao: 'Arquivar',
-      destrutivo: true,
-    }))) return;
-    try { await clientInstancesService.archive(id); loadDashboard(); } catch { toast.error('Falha ao arquivar.'); }
-  };
-
-  const handleSyncAll = async () => {
-    // A ação mais cara do painel inteiro: mexe em TODOS os clientes pagantes de
-    // uma vez. Enquanto foi window.confirm, o aviso disputava espaço com o
-    // endereço do site no cabeçalho da caixinha do navegador.
-    if (!(await confirmar({
-      titulo: 'Redeploy de TODOS os tenants',
-      descricao: (
-        <>
-          Isso dispara redeploy na Vercel de <strong>todos os tenants ativos</strong>, de uma vez.
-          Não é por cliente.
-        </>
-      ),
-      rotuloDaAcao: 'Redeployar todos',
-      rotuloDeCancelar: 'Voltar',
-      destrutivo: true,
-    }))) return;
-    setSyncingAll(true);
-    try {
-      const res = await clientInstancesService.syncAllFrontends();
-      const results = res.data.data;
-      const ok = results.filter(r => r.success).map(r => r.name).join(', ');
-      const fail = results.filter(r => !r.success).map(r => `${r.name}: ${r.error}`).join('\n');
-      let msg = res.data.message;
-      if (ok) msg += `\nOK: ${ok}`;
-      if (fail) msg += `\nFalhou:\n${fail}`;
-      toast.error(msg);
-    } catch (e: any) { toast.error(e?.response?.data?.error ?? 'Erro ao sincronizar todos'); }
-    finally { setSyncingAll(false); }
-  };
 
   const doAction = async (t: PooledTenant, action: 'suspend' | 'unsuspend' | 'archive' | 'unarchive') => {
     setBusyId(t.id);
@@ -1304,14 +1249,8 @@ export default function PooledClients() {
           <div className="flex flex-wrap items-center gap-2">
             <IconActionButton
               label="Atualizar"
-              icon={<RefreshCw className={`h-4 w-4 ${loading || loadingDash ? 'animate-spin' : ''}`} />}
-              onClick={() => (tab === 'dashboard' ? loadDashboard() : load())}
-            />
-            <IconActionButton
-              label="Sync Todos — redeploy Vercel de todos os tenants (atualiza todos com o código da raiz)"
-              icon={syncingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
-              onClick={handleSyncAll}
-              disabled={syncingAll}
+              icon={<RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />}
+              onClick={() => load()}
             />
             {tab === 'clients' && (
               <>
@@ -1352,7 +1291,6 @@ export default function PooledClients() {
         <div className="flex items-center gap-1 border-b">
           {([
             { id: 'clients', label: 'Clientes', Icon: List },
-            { id: 'dashboard', label: 'Dashboard', Icon: BarChart3 },
             { id: 'logs', label: 'Logs', Icon: ScrollText },
             { id: 'metrics', label: 'Métricas de Uso', Icon: Gauge },
             { id: 'archived-features', label: 'Arquivados', Icon: Archive },
@@ -1372,9 +1310,7 @@ export default function PooledClients() {
       </div>
 
       <div className="flex-1 overflow-auto px-6 py-4 min-h-0">
-      {tab === 'dashboard' ? (
-        <DashboardView data={dashData} loading={loadingDash} onArchive={handleArchiveCI} />
-      ) : tab === 'logs' ? (
+      {tab === 'logs' ? (
         <div className="h-full"><LogsView /></div>
       ) : tab === 'metrics' ? (
         <div className="h-full"><UserMetricsView /></div>

@@ -124,7 +124,6 @@ function SuperAdminRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-const ClientInstances = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances'));
 // Clientes, Leads ao Vivo, Modo Cliente, Formulários, Sugestões/Bugs e
 // Atividade viraram abas DENTRO do PooledClients — só ele é rota.
 const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients'));
@@ -1134,31 +1133,6 @@ const AppRouter = () => {
 
           {/*
             ===================================================================
-            GRUPO B — PrivateRoute + MainLayout + SuperAdminRoute (persistente)
-            ===================================================================
-            Sem CustomerRoute (igual ao original). SuperAdminRoute continua
-            gateando o conteúdo (redireciona pra "/" se não for super-admin no
-            host raiz), só que agora em volta do Outlet compartilhado.
-          */}
-          <Route
-            element={
-              <PrivateRoute>
-                <MainLayout>
-                  <SuperAdminRoute>
-                    <Suspense fallback={outletSuspenseFallback}>
-                      <Outlet />
-                    </Suspense>
-                  </SuperAdminRoute>
-                </MainLayout>
-              </PrivateRoute>
-            }
-          >
-            {/* Super Admin — gerenciamento de instâncias de clientes */}
-            <Route path="/super-admin/clientes" element={<ClientInstances />} />
-          </Route>
-
-          {/*
-            ===================================================================
             GRUPO C — PrivateRoute + MainLayout (persistente, sem CustomerRoute)
             ===================================================================
           */}
@@ -1421,8 +1395,10 @@ const AppRouter = () => {
           <Route path="/super-admin/pooled-clients" element={<Navigate to="/admin/clientes" replace />} />
           <Route path="/super-admin/automation-templates" element={<Navigate to="/admin" replace />} />
 
-          {/* Super Admin — gerenciamento de instâncias de clientes */}
-          <Route path="/super-admin/clients" element={<Navigate to="/super-admin/clientes" replace />} />
+          {/* A tela antiga de instâncias (modelo de junho, com "revelar senha")
+              saiu em 01/10/2026. Os dois endereços dela levam pra Clientes. */}
+          <Route path="/super-admin/clients" element={<Navigate to="/admin/clientes" replace />} />
+          <Route path="/super-admin/clientes" element={<Navigate to="/admin/clientes" replace />} />
 
           {/* /super-admin/automation-templates e /super-admin/pooled-clients viraram
               redirects pra /admin/* (declarados acima). */}
