@@ -10,7 +10,7 @@ vi.mock('@/services/dashboard/dashboardMetricsService', () => ({ fetchDashboardL
 const navegar = vi.fn();
 vi.mock('react-router-dom', async orig => ({ ...(await orig<typeof import('react-router-dom')>()), useNavigate: () => navegar }));
 
-import { ListaRapida } from './ListaRapida';
+import { ListaRapida, detalheDoItem } from './ListaRapida';
 
 const TUDO: PodeAbrir = { imoveis: true, agenda: true, propostas: true, funil: true, roleta: true, conversas: true };
 
@@ -36,6 +36,23 @@ const pendente = () => {
   fetchList.mockImplementationOnce(() => new Promise<ListaRapidaPayload>(r => { soltar = r; }));
   return (p: ListaRapidaPayload) => act(async () => { soltar(p); });
 };
+
+describe('detalheDoItem', () => {
+  const item = (open: ListaItem['open']): ListaItem => ({
+    id: 'x', title: 'Fulano', subtitle: null, owner_name: 'Ana', since: '2026-09-28T14:32:00Z', open,
+  });
+  const card = { type: 'card' as const, pipeline_id: 'p1', item_id: 'i1' };
+
+  it('lead do período diz quando entrou, não "desde" (que soa como parado)', () => {
+    expect(detalheDoItem(item(card), 'leads_periodo')).toMatch(/^Ana · entrou em \d{2}\/\d{2}\/\d{4} às \d{2}:\d{2}$/);
+  });
+
+  it('as pendências continuam com "desde", e a visita com "visita em"', () => {
+    expect(detalheDoItem(item(card), 'sem_responsavel')).toMatch(/^Ana · desde \d{2}\/\d{2}\/\d{4} às \d{2}:\d{2}$/);
+    expect(detalheDoItem(item({ type: 'conversation', id: 'c1' }), 'conversas_periodo')).toMatch(/· desde /);
+    expect(detalheDoItem(item({ type: 'visit', id: 'v1' }), 'visitas_a_confirmar')).toMatch(/· visita em /);
+  });
+});
 
 describe('ListaRapida', () => {
   beforeEach(() => { fetchList.mockReset(); navegar.mockReset(); });

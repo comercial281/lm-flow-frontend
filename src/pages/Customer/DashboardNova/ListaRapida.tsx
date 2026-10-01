@@ -35,11 +35,18 @@ const abre = (open: AbrirItem, pode: PodeAbrir): boolean => {
   return pode.agenda;
 };
 
-// Na visita, `since` é quando ela está marcada (futuro em "a confirmar").
-const detalheDoItem = (item: ListaItem): string => {
-  const quando = item.since
-    ? `${item.open.type === 'visit' ? 'visita em' : 'desde'} ${dataHora(item.since)}`
-    : null;
+/**
+ * Na visita, `since` é quando ela está marcada (futuro em "a confirmar"). No
+ * lead do período, é quando ele entrou: "desde" soaria como "parado desde".
+ */
+const prefixoDoQuando = (item: ListaItem, kind: ListaKind): string => {
+  if (item.open.type === 'visit') return 'visita em';
+  if (kind === 'leads_periodo') return 'entrou em';
+  return 'desde';
+};
+
+export const detalheDoItem = (item: ListaItem, kind: ListaKind): string => {
+  const quando = item.since ? `${prefixoDoQuando(item, kind)} ${dataHora(item.since)}` : null;
   return [item.subtitle, item.owner_name, quando].filter(Boolean).join(' · ');
 };
 
@@ -123,7 +130,7 @@ export const ListaRapida: React.FC<Props> = ({ aberta, kind, titulo, filtros, po
             <EmptyState title={textoVazio(kind)} description="Quando aparecer algo, ele entra nesta lista." />
           )}
           {lista?.items.map(item => {
-            const detalhe = detalheDoItem(item);
+            const detalhe = detalheDoItem(item, lista.kind);
             const texto = (
               <span className="min-w-0 flex-1">
                 <span className="block font-medium">{item.title}</span>
