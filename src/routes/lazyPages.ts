@@ -43,10 +43,6 @@ export const PortalsList = lazyWithRetry(() => import('../pages/Customer/Setting
 export const DashboardAppPage = lazyWithRetry(() => import('../pages/Customer/DashboardApp'));
 export const Tutorials = lazyWithRetry(() => import('@/pages/Customer/Tutorials'));
 export const Marketplace = lazyWithRetry(() => import('@/pages/Shared/Marketplace'));
-// Espaço — módulo "Notion por tenant" (portado do LM Hub). Item de menu
-// (clientToggleKey: 'espaco'), por isso entra aqui também — não só a rota
-// pública por token (EspacoPublicRoute, que fica inline em routes/index.tsx).
-export const Espaco = lazyWithRetry(() => import('@/features/espaco/Espaco'));
 
 /**
  * path -> função de prefetch (mesmo __preload do lazyWithRetry, com retry
@@ -63,7 +59,6 @@ export const routePrefetchMap: Record<string, () => Promise<unknown>> = {
   '/bolsao/listas': BolsaoBatches.__preload,
   '/disparos': Disparos.__preload,
   '/ia-vendedora': SalesAgents.__preload,
-  '/espaco': Espaco.__preload,
   '/equipe': TeamAccess.__preload,
   '/properties': Properties.__preload,
   '/books': PropertyBooks.__preload,

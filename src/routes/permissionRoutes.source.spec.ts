@@ -55,10 +55,6 @@ describe('toda rota do CRM confere o cargo', () => {
   ])('%s exige %s.%s', (path, resource, action) => {
     expect(trecho(path)).toContain(`<PermissionRoute resource="${resource}" action="${action}">`);
   });
-
-  it('Espaço continua sem cargo, por decisão registrada (o servidor não confere)', () => {
-    expect(trecho('/espaco')).not.toContain('PermissionRoute');
-  });
 });
 
 // /conversations e /conversations/:conversationId NÃO têm o `<PermissionRoute>`

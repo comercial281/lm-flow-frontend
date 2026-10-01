@@ -3529,8 +3529,9 @@ Decisões do dono (não reabrir sem ele pedir):
 - **O *Exportar* do quadro some para o Corretor.** Ele gera o CSV no
   navegador e não chama o servidor — é o único ponto em que o Corretor perdeu
   algo que funcionava, e foi escolha explícita (26/09/2026).
-- **Espaço e Tutoriais ficam sem cargo** (`MENU_FREE_BY_DESIGN`): o servidor não
-  confere cargo neles. Item novo sem permissão reprova o spec do menu.
+- **Tutoriais fica sem cargo** (`MENU_FREE_BY_DESIGN`): o servidor não confere
+  cargo nele. Item novo sem permissão reprova o spec do menu. (O Espaço também
+  era livre; saiu do CRM em 30/09/2026.)
 - **"Toda a imobiliária" é do servidor** (`available_modes`); a tela só mostra
   o que ele oferece. O `ScopePicker.spec` é trava desse contrato.
 - **Um leitor só de 403** (`services/core/forbidden.ts`). Só o 403 é recusa de
@@ -4049,6 +4050,18 @@ Armadilhas:
 4. **Não é `featureKey` nem `clientToggleKey`**: é configuração de portal e de site.
 5. **Item aberto:** a landing de anúncio tem cópia própria da regra de quem atende
    no backend; convergir para `Leads::Distribution` quando alguém mexer nela.
+
+## O Espaço saiu do CRM (desde 2026-09-30, Fase 4)
+
+Decisão do dono (30/09/26): o **Espaço** (o "Notion dentro do CRM": bases, páginas, tarefas, comentários, link público) não era usado por ninguém. Pro cliente ele já nascia desligado (chave `espaco` nas Funções); quem via sempre era a equipe da Leal Mídia, e só como item a mais no menu.
+
+Como ficou:
+- Sumiu do menu, e a tela foi apagada (`src/features/espaco`). `/espaco` e `/espaco/:token` (link compartilhado) levam pro início.
+- A chave `espaco` sai sozinha do catálogo de Funções no deploy (o `sync-feature-catalog.mjs` remove chave que o código não usa mais).
+- **O backend não mudou.** Controllers, models e as tabelas `espaco_*` continuam lá, sem ninguém chamando. Dado que existir fica guardado. Apagar as tabelas é outro PR, no backend, só com o ok do dono (a migration roda em todos os clientes e não tem volta).
+- As bibliotecas que só o Espaço usava (`@blocknote/*`, `@mantine/*`, `@dnd-kit/*`, `@tanstack/react-query`, `yjs`, `y-protocols`) ficaram no `package.json` por enquanto: o repo tem três lockfiles (pnpm, npm, yarn) fora de sincronia, e limpar dependência pede resolver isso antes. Como ninguém importa, não entram no pacote.
+
+**Não reabrir sem o dono pedir.** Tarefa do corretor já tem lugar: Ações agendadas, Follow-up e Lembretes.
 
 ## Base de design e linguagem (desde 30/09/2026, Fase 3) — não reabrir sem o dono pedir
 
