@@ -56,9 +56,9 @@ export default function CustoIA() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-start justify-between gap-4 mb-1">
         <div>
-          <h1 className="text-xl font-semibold flex items-center gap-2">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
             <DollarSign className="h-5 w-5" /> Custo da IA
-          </h1>
+          </h2>
           <p className="text-sm text-muted-foreground">
             Quanto cada cliente consumiu de IA no período. A chave da Anthropic é uma só para todos, então este é o rateio real.
           </p>

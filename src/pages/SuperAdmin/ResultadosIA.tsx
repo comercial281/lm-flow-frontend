@@ -62,9 +62,9 @@ export default function ResultadosIA() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6 border-l-4 border-primary pl-3">
-        <h1 className="text-xl font-semibold flex items-center gap-2">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
           <Sparkles className="h-5 w-5" /> Resultados da IA
-        </h1>
+        </h2>
         <p className="text-sm text-muted-foreground">
           O que a IA Vendedora produziu no período: quem ela atendeu, quantos responderam e quantas
           visitas ela marcou sozinha. Feita para mostrar ao cliente.

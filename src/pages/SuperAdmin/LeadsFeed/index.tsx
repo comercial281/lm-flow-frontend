@@ -299,7 +299,7 @@ export default function LeadsFeed() {
             <Radio className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-foreground">Leads ao Vivo</h1>
+            <h2 className="text-xl font-semibold text-foreground">Leads ao Vivo</h2>
             <p className="text-sm text-muted-foreground">
               {overview
                 ? `${overview.total_today} hoje · ${overview.total_1h} na última hora`

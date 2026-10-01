@@ -22,7 +22,6 @@ import pushCentralService, {
   type PushRulePayload,
   type PushTenantScope,
 } from '@/services/push/pushCentralService';
-import NotificationsTab from './NotificationsTab';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 /**
@@ -40,7 +39,7 @@ import { useConfirmacao } from '@/hooks/useConfirmacao';
  * é o que a equipe do cliente recebe dentro do CRM dele.
  */
 
-type Tab = 'rules' | 'notifications' | 'manual' | 'logs';
+type Tab = 'rules' | 'manual' | 'logs';
 
 const EMPTY_FORM: PushRulePayload = {
   name: '',
@@ -237,10 +236,10 @@ export default function PushCentral() {
       <div className="px-6 pt-6 shrink-0">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-semibold flex items-center gap-2">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
               <Bell className="w-5 h-5" />
-              Central de Push
-            </h1>
+              Push
+            </h2>
             <p className="text-sm text-muted-foreground mt-1">
               Avisos no celular quando acontece algo nos clientes. Você escolhe o gatilho, de quais
               clientes e pra quem vai.
@@ -264,7 +263,6 @@ export default function PushCentral() {
         <div className="flex gap-6 border-b mt-4">
           {([
             ['rules', 'Regras'],
-            ['notifications', 'Notificações do cliente'],
             ['manual', 'Disparo manual'],
             ['logs', 'Histórico'],
           ] as [Tab, string][]).map(([key, label]) => (
@@ -361,9 +359,6 @@ export default function PushCentral() {
             ))}
           </div>
         )}
-
-        {/* ── NOTIFICAÇÕES DO CLIENTE ── */}
-        {!loading && tab === 'notifications' && <NotificationsTab />}
 
         {/* ── DISPARO MANUAL ── */}
         {!loading && tab === 'manual' && (

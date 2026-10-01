@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Button, Input, Label } from '@/components/ui/ds';
 import { toast } from 'sonner';
-import { Bot, ChevronDown, Power, Clock, MessageSquare, Loader2, Coins, Brain, Sparkles, Wand2, ShieldCheck } from 'lucide-react';
+import { Bot, ChevronDown, Power, Clock, MessageSquare, Loader2, Coins } from 'lucide-react';
 import {
   superAgentsService,
   MODE_LABELS,
@@ -10,44 +9,9 @@ import {
   type SuperAgentPatch,
   type ModelOption,
 } from '@/services/superAdmin/superAgentsService';
-import CerebroUniversal from './CerebroUniversal';
-import ResultadosIA from './ResultadosIA';
-import SdrRefinement from './SdrRefinement';
-import PrincipiosIA from './PrincipiosIA';
 
-type HubTab = 'agentes' | 'cerebro' | 'resultados' | 'aperfeicoamento' | 'principios';
-
-const HUB_TABS: { id: HubTab; label: string; Icon: typeof Bot }[] = [
-  { id: 'agentes', label: 'Agentes', Icon: Bot },
-  { id: 'cerebro', label: 'Cérebro Universal', Icon: Brain },
-  { id: 'resultados', label: 'Resultados', Icon: Sparkles },
-  { id: 'aperfeicoamento', label: 'Aperfeiçoamento', Icon: Wand2 },
-  // Os princípios do comando dela: o que vale em toda imobiliária. É a quinta
-  // face da mesma IA — como ela SE COMPORTA, ao lado do que ela sabe e do que
-  // ela produziu.
-  { id: 'principios', label: 'Princípios', Icon: ShieldCheck },
-];
-
-/**
- * Épico B — IA Vendedora (todos os clientes) na Área do Admin.
- *
- * Hub com 4 abas: tudo aqui é a mesma IA Vendedora, só olhada de ângulos
- * diferentes — quem ela é (Agentes), o que ela sabe (Cérebro Universal), o
- * que ela produziu (Resultados) e como ela melhora (Aperfeiçoamento). Eram 4
- * itens soltos no menu; juntos porque são um assunto só.
- */
+/** IA Vendedora → Agentes: todas as IAs Vendedoras de todos os clientes. */
 export default function SuperAgents() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = (searchParams.get('tab') as HubTab) || 'agentes';
-  const [hubTab, setHubTab] = useState<HubTab>(
-    HUB_TABS.some(t => t.id === initialTab) ? initialTab : 'agentes',
-  );
-
-  const changeHubTab = (id: HubTab) => {
-    setHubTab(id);
-    setSearchParams(id === 'agentes' ? {} : { tab: id }, { replace: true });
-  };
-
   const [agents, setAgents] = useState<SuperAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -82,38 +46,7 @@ export default function SuperAgents() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
-      <header className="mb-5">
-        <h1 className="text-xl font-semibold text-foreground">IA Vendedora</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Todas as IAs Vendedoras, de todos os clientes. Configure cada uma daqui, sem entrar no CRM.
-        </p>
-      </header>
-
-      <div className="mb-5 flex items-center gap-1 border-b border-border">
-        {HUB_TABS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            onClick={() => changeHubTab(id)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              hubTab === id
-                ? 'border-violet-500 text-violet-600 dark:text-violet-400'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Icon className="h-3.5 w-3.5" /> {label}
-          </button>
-        ))}
-      </div>
-
-      {hubTab === 'principios' ? (
-        <PrincipiosIA />
-      ) : hubTab === 'cerebro' ? (
-        <CerebroUniversal />
-      ) : hubTab === 'resultados' ? (
-        <ResultadosIA />
-      ) : hubTab === 'aperfeicoamento' ? (
-        <SdrRefinement />
-      ) : loading ? (
+      {loading ? (
         <p className="text-sm text-muted-foreground">Carregando...</p>
       ) : agents.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
