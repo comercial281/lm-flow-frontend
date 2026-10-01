@@ -25,6 +25,11 @@ vi.mock('@/services/visits/visitsService', async (orig) => {
   };
 });
 vi.mock('@/services/properties/propertiesService', () => ({ propertiesService: { list: vi.fn().mockResolvedValue({ data: [] }) } }));
+// O servidor de hoje: agenda desligada, grade fixa (a agenda ligada está em
+// ScheduleVisitDialog.agenda.spec.tsx).
+vi.mock('@/services/visits/agendaService', () => ({
+  agendaService: { getSettings: vi.fn().mockResolvedValue({ enabled: false }) },
+}));
 
 import { ScheduleVisitDialog } from './ScheduleVisitDialog';
 

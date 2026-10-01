@@ -1,10 +1,10 @@
 /**
- * Agenda do corretor (chave `agenda_do_corretor`): horário de visita da
+ * Agenda do corretor (agenda ligada no servidor): horário de visita da
  * imobiliária, folgas do corretor e horários livres de um dia.
  *
  * Quem pode o quê é decidido pelo SERVIDOR: o corretor isolado só lê e muda as
  * folgas dele, não muda o horário de visita (403) e, na disponibilidade, é
- * sempre ele mesmo. Com a chave desligada, `getSettings` e `availability`
+ * sempre ele mesmo. Com a agenda desligada, `getSettings` e `availability`
  * devolvem `{ enabled: false }`.
  *
  * O servidor responde no envelope `{ success, data }`; `semEnvelope` aceita

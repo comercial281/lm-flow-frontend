@@ -1,9 +1,10 @@
 /**
- * "Agendar visita" com a chave `agenda_do_corretor`: os horários vêm do
- * servidor (`/visits/availability`), dia fechado não se escolhe e a folga do
- * corretor aparece riscada. Com a chave desligada (ou o servidor dizendo
- * `enabled: false`) é a grade fixa de hoje — o resto do modal está em
- * ScheduleVisitDialog.spec.tsx, que roda sem a chave.
+ * "Agendar visita" com a agenda ligada no servidor (`GET /visit_settings` com
+ * `enabled: true`): os horários vêm do servidor (`/visits/availability`), dia
+ * fechado não se escolhe e a folga do corretor aparece riscada. Com o servidor
+ * dizendo `enabled: false` (o de hoje, para todo cliente), com erro ou ainda
+ * sem resposta, é a grade fixa de sempre — o resto do modal está em
+ * ScheduleVisitDialog.spec.tsx, que roda com o servidor desligado.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -11,16 +12,6 @@ import userEvent from '@testing-library/user-event';
 
 const toastError = vi.fn();
 vi.mock('sonner', () => ({ toast: { error: (m: string) => toastError(m), success: vi.fn() } }));
-
-const ligadas = new Set<string>();
-vi.mock('@/contexts/TenantFeaturesContext', async (orig) => {
-  const real = await orig<typeof import('@/contexts/TenantFeaturesContext')>();
-  return {
-    ...real,
-    useFeature: () => true,
-    useClientToggle: (k: string) => ligadas.has(k),
-  };
-});
 
 const leadPickerPage = vi.fn();
 const list = vi.fn();
@@ -54,6 +45,7 @@ vi.mock('@/services/properties/propertiesService', () => ({ propertiesService: {
 
 import { ScheduleVisitDialog } from './ScheduleVisitDialog';
 import { diaISO } from '@/features/visits/daySlots';
+import { esquecerAgendaLigada } from '@/features/visits/useAgendaLigada';
 
 const LEAD = { id: 'c1', name: 'Leonardo Teste', phone_number: '5511999990000', in_pipeline: true, stage_name: null, owner: { id: 'u-bruno', name: 'Bruno' } };
 const TODOS_OS_DIAS = [0, 1, 2, 3, 4, 5, 6];
@@ -83,7 +75,7 @@ const livre = (dia: Date, h: number, m = 0) => ({ at: as(dia, h, m), label: `${S
 
 beforeEach(() => {
   vi.clearAllMocks();
-  ligadas.clear();
+  esquecerAgendaLigada();
   list.mockResolvedValue({ data: [], meta: { total: 0 } });
   realtors.mockResolvedValue([{ id: 'u-bruno', name: 'Bruno' }, { id: 'u-carla', name: 'Carla' }]);
   getSettings.mockResolvedValue(settings());
@@ -91,21 +83,42 @@ beforeEach(() => {
   availability.mockResolvedValue(diaAberto([]));
 });
 
-describe('Agendar visita · chave da agenda desligada', () => {
-  it('é a grade fixa de hoje e não pergunta nada à agenda', async () => {
+describe('Agendar visita · servidor com a agenda desligada', () => {
+  it('`enabled: false`: é a grade fixa de hoje e não pede folgas nem horários livres', async () => {
     comoCorretor();
+    getSettings.mockResolvedValue({ enabled: false });
     abrir();
 
     expect(await screen.findByRole('button', { name: '07:00' })).toBeEnabled();
     expect(screen.getByRole('button', { name: '21:00' })).toBeEnabled();
-    expect(getSettings).not.toHaveBeenCalled();
+    await waitFor(() => expect(getSettings).toHaveBeenCalledTimes(1));
+    expect(listTimeOffs).not.toHaveBeenCalled();
+    expect(availability).not.toHaveBeenCalled();
+  });
+
+  it('403 ou erro no horário de visita: grade fixa, igual a desligada', async () => {
+    comoCorretor();
+    getSettings.mockRejectedValue(new Error('403'));
+    abrir();
+
+    expect(await screen.findByRole('button', { name: '07:00' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '21:00' })).toBeEnabled();
+    expect(listTimeOffs).not.toHaveBeenCalled();
+    expect(availability).not.toHaveBeenCalled();
+  });
+
+  it('enquanto o servidor não responde: a grade fixa, sem nada da agenda', async () => {
+    comoCorretor();
+    getSettings.mockReturnValue(new Promise(() => {}));
+    abrir();
+
+    expect(await screen.findByRole('button', { name: '07:00' })).toBeEnabled();
     expect(listTimeOffs).not.toHaveBeenCalled();
     expect(availability).not.toHaveBeenCalled();
   });
 });
 
-describe('Agendar visita · chave da agenda ligada', () => {
-  beforeEach(() => { ligadas.add('agenda_do_corretor'); });
+describe('Agendar visita · servidor com a agenda ligada', () => {
 
   it('os horários vêm do servidor: ocupado e folga riscados, nada fora do horário de visita', async () => {
     comoCorretor();
@@ -157,14 +170,14 @@ describe('Agendar visita · chave da agenda ligada', () => {
     expect(screen.getByRole('button', { name: '10:00' })).toBeInTheDocument();
   });
 
-  it('servidor com a agenda desligada (enabled: false): volta para a grade fixa', async () => {
+  it('horários livres respondendo `enabled: false` (desligaram no meio): volta para a grade fixa', async () => {
     comoCorretor();
     availability.mockResolvedValue({ enabled: false });
-    getSettings.mockResolvedValue({ enabled: false });
     abrir();
 
-    expect(await screen.findByRole('button', { name: '07:00' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: '21:00' })).toBeEnabled();
+    await waitFor(() => expect(availability).toHaveBeenCalled());
+    expect(await screen.findByRole('button', { name: '21:00' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '07:00' })).toBeEnabled();
   });
 
   it('atalho de dia fechado fica desabilitado com o motivo (data fechada, folga de dia inteiro)', async () => {

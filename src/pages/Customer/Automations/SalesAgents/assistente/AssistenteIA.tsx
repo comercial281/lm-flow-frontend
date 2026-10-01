@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/ds';
 import { salesAgentsService, type AgentPlaybook, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { followupSequencesService } from '@/services/followupSequences/followupSequencesService';
-import { useClientToggle } from '@/contexts/TenantFeaturesContext';
+import { useAgendaLigada } from '@/features/visits/useAgendaLigada';
 import { answersFromAgent, payloadFromAnswers, type AssistenteAnswers } from './assistenteMapping';
 import { chaveDoRascunho, ETAPAS, motivoDoErro } from './assistenteOpcoes';
 import EtapaQuemE from './steps/EtapaQuemE';
@@ -69,8 +69,9 @@ export default function AssistenteIA() {
   const navigate = useNavigate();
 
   const [agent, setAgent] = useState<SalesAgent | null>(null);
-  // Literal: os scripts do catálogo de funções leem a chave por regex.
-  const agendaLigada = useClientToggle('agenda_do_corretor');
+  // Agenda ligada no servidor (`GET /visit_settings`): sem resposta, desligada
+  // ou erro, o assistente pergunta e grava dias e horário como antes.
+  const agendaLigada = useAgendaLigada().ligada === true;
   const [playbook, setPlaybook] = useState<AgentPlaybook | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erroCarga, setErroCarga] = useState<string | null>(null);

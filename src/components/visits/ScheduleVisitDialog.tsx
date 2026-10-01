@@ -9,12 +9,12 @@
  * O gestor escolhe o corretor em botões (`GET /visits/realtors`); o cliente
  * vem do seletor paginado (50 por vez, com o total).
  *
- * Com a chave `agenda_do_corretor`, os horários do dia vêm do servidor
- * (`/visits/availability`: só os de dentro do horário de visita, com ocupado e
- * folga já marcados) e dia fechado não se escolhe (`motivoDiaFechado`, com o
- * horário de visita e as folgas do corretor escolhido). Sem a chave — ou com o
- * servidor respondendo `enabled: false` — é a grade fixa de `daySlots.ts`,
- * exatamente como antes.
+ * Com a agenda ligada no servidor (`useAgendaLigada`, `GET /visit_settings`),
+ * os horários do dia vêm do servidor (`/visits/availability`: só os de dentro
+ * do horário de visita, com ocupado e folga já marcados) e dia fechado não se
+ * escolhe (`motivoDiaFechado`, com o horário de visita e as folgas do corretor
+ * escolhido). Com o servidor respondendo `enabled: false` (ou ainda sem
+ * resposta, ou com erro) é a grade fixa de `daySlots.ts`, exatamente como antes.
  * Specs: specs/2026-09-30-fase-4-agendar-visita-design.md e
  * specs/2026-10-01-fase-4-agenda-do-corretor-design.md (pasta LM FLOW).
  */
@@ -32,14 +32,14 @@ import {
 } from '@/services/visits/visitsService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import { agendaService, type AvailabilitySlot } from '@/services/visits/agendaService';
-import { useClientToggle } from '@/contexts/TenantFeaturesContext';
+import { useAgendaLigada } from '@/features/visits/useAgendaLigada';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { hora } from '@/lib/formato';
 import {
   DURACOES, atalhosDeDia, diaISO, horariosDoDia, mesmoDia, ocupando, porExtenso, rotuloDuracao,
   type BusyVisit,
 } from '@/features/visits/daySlots';
-import { motivoDiaFechado, type AgendaSettings, type TimeOff } from '@/features/visits/agenda';
+import { motivoDiaFechado, type TimeOff } from '@/features/visits/agenda';
 
 interface Props {
   open: boolean;
@@ -89,13 +89,14 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
   // lógica nem o guarda de corrida dele.
   const [recarregarDia, setRecarregarDia] = useState(0);
 
-  // Agenda do corretor. `servidorSemAgenda`: a tela tem a chave, mas o
-  // servidor respondeu `enabled: false` — vale o que o servidor diz, e a tela
-  // volta para a grade fixa.
-  const agendaLigada = useClientToggle('agenda_do_corretor');
+  // Agenda do corretor: ligada só quando o servidor diz (`/visit_settings`),
+  // perguntado a cada abertura. Enquanto não responde, é a grade fixa de antes.
+  // `servidorSemAgenda`: o `/visits/availability` respondeu `enabled: false`
+  // (desligaram no meio) — vale o que o servidor diz, e a tela volta para a
+  // grade fixa.
+  const { ligada: agendaLigada, ajustes } = useAgendaLigada(open);
   const [servidorSemAgenda, setServidorSemAgenda] = useState(false);
-  const usarAgenda = agendaLigada && !servidorSemAgenda;
-  const [ajustes, setAjustes] = useState<AgendaSettings | null>(null);
+  const usarAgenda = agendaLigada === true && !servidorSemAgenda;
   const [folgas, setFolgas] = useState<TimeOff[]>([]);
   // `null` = carregando.
   const [diaAgenda, setDiaAgenda] = useState<DiaDaAgenda | null>(null);
@@ -124,7 +125,6 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
     setCorretores(null);
     setErroCorretores(false);
     setServidorSemAgenda(false);
-    setAjustes(null);
     // Um cliente só, porque aqui só interessa o meta (cargo travado ou não).
     visitsService.leadPickerPage('', 1, 1)
       .then(({ meta }) => {
@@ -174,20 +174,6 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
 
   const corretorId = corretor?.id;
   const diaChave = diaISO(dia);
-
-  // Agenda: o horário de visita da imobiliária, uma vez por abertura.
-  useEffect(() => {
-    if (!open || !agendaLigada) return;
-    let vivo = true;
-    agendaService.getSettings()
-      .then(r => {
-        if (!vivo) return;
-        if (r.enabled) setAjustes(r);
-        else setServidorSemAgenda(true);
-      })
-      .catch(() => { /* sem o horário, os atalhos não travam; o servidor confere ao salvar */ });
-    return () => { vivo = false; };
-  }, [open, agendaLigada]);
 
   // Agenda: as folgas do corretor escolhido, uma vez por abertura e corretor.
   useEffect(() => {

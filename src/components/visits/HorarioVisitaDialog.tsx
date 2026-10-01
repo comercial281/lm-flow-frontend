@@ -1,10 +1,10 @@
 /**
- * "Horário de visita" da imobiliária (chave `agenda_do_corretor`, só gestor e
+ * "Horário de visita" da imobiliária (agenda ligada no servidor, só gestor e
  * administrador — o botão some para o corretor, e o servidor recusa com 403).
  *
  * Um horário só para todos: dias da semana, faixa de horas (de 30 em 30, em
  * lista, nunca o campo de hora do navegador) e feriados/datas fechadas. Vale
- * para a IA e para quem marca à mão. Quando a chave é ligada, o horário nasce
+ * para a IA e para quem marca à mão. Quando a agenda é ligada no servidor, o horário nasce
  * copiado da IA principal; se havia IAs com horários diferentes, avisa qual
  * foi usada (`seeded_from`).
  * Spec: specs/2026-10-01-fase-4-agenda-do-corretor-design.md (pasta LM FLOW).
@@ -20,6 +20,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import IconActionButton from '@/components/base/IconActionButton';
 import { PilulasDias } from '@/pages/Customer/Automations/SalesAgents/assistente/steps/Campos';
 import { agendaService } from '@/services/visits/agendaService';
+import { esquecerAgendaLigada } from '@/features/visits/useAgendaLigada';
 import { avisoSemente, opcoesDeHora, type SeededFrom } from '@/features/visits/agenda';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { data } from '@/lib/formato';
@@ -85,6 +86,8 @@ export function HorarioVisitaDialog({ open, onOpenChange }: Props) {
         end: fim,
         closed_dates: fechadas,
       });
+      // O modal "Agendar visita" lê o horário guardado: o próximo lê o novo.
+      esquecerAgendaLigada();
       toast.success('Horário de visita salvo');
       onOpenChange(false);
     } catch (e) {

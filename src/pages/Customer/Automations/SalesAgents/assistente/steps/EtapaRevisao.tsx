@@ -49,7 +49,7 @@ export default function EtapaRevisao({
   pipelines: OpcaoLista[];
   stages: OpcaoLista[];
   funis: OpcaoLista[];
-  /** Chave `agenda_do_corretor`: dias e horário da visita vêm da Agenda. */
+  /** Agenda ligada no servidor: dias e horário da visita vêm da Agenda. */
   agendaLigada?: boolean;
 }) {
   const tipos = playbook?.sale_types?.length ? playbook.sale_types : TIPOS_DE_VENDA_RESERVA;
