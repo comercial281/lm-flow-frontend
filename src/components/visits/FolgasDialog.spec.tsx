@@ -145,7 +145,9 @@ describe('Folgas', () => {
     abrir(true);
     const [primeira] = await screen.findAllByRole('listitem');
 
-    await user.click(within(primeira).getByRole('button', { name: 'Excluir' }));
+    const excluir = within(primeira).getByRole('button', { name: 'Excluir folga de Quarta, 07/10, das 14h às 18h' });
+    expect(excluir).toHaveTextContent('Excluir');
+    await user.click(excluir);
     expect(removeTimeOff).not.toHaveBeenCalled();
     await user.click(within(primeira).getByRole('button', { name: 'Sim, excluir' }));
 

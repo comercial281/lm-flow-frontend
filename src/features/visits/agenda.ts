@@ -68,6 +68,19 @@ export function horariosDe30em30(): string[] {
   return out;
 }
 
+/**
+ * A lista de horas para um campo cujo valor atual pode estar fora da grade
+ * (ex.: "08:15", copiado do campo livre da IA). Sem isso o select mostraria a
+ * primeira opção ("00:00") com outro valor guardado por trás; com isso mostra a
+ * verdade, e se salvar assim quem explica é o servidor.
+ */
+export function opcoesDeHora(valorAtual: string): string[] {
+  const grade = horariosDe30em30();
+  const v = valorAtual ? hhmm(valorAtual) : '';
+  if (!v || grade.includes(v)) return grade;
+  return [...grade, v].sort();
+}
+
 export const ehDiaInteiro = (f: Pick<TimeOff, 'start_time' | 'end_time'>) => !f.start_time || !f.end_time;
 
 /**

@@ -54,6 +54,20 @@ describe('Horário de visita', () => {
     expect(opcoes).not.toContain('08:15');
   });
 
+  it('hora fora da grade de 30 em 30 (copiada da IA) aparece como está, sem virar 00:00', async () => {
+    getSettings.mockResolvedValueOnce({ ...HORARIO, start: '08:15', end: '19:45' });
+    updateSettings.mockResolvedValue(HORARIO);
+    const user = userEvent.setup();
+    abrir();
+    const inicio = await screen.findByLabelText('Início');
+    expect(inicio).toHaveValue('08:15');
+    expect(screen.getByLabelText('Fim')).toHaveValue('19:45');
+    const opcoes = Array.from((inicio as HTMLSelectElement).options).map(o => o.value);
+    expect(opcoes.indexOf('08:15')).toBe(opcoes.indexOf('08:00') + 1);
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ start: '08:15', end: '19:45' })));
+  });
+
   it('Salvar envia dias, faixa e datas fechadas', async () => {
     updateSettings.mockResolvedValue(HORARIO);
     const onOpenChange = vi.fn();

@@ -20,7 +20,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import IconActionButton from '@/components/base/IconActionButton';
 import { PilulasDias } from '@/pages/Customer/Automations/SalesAgents/assistente/steps/Campos';
 import { agendaService } from '@/services/visits/agendaService';
-import { avisoSemente, horariosDe30em30, type SeededFrom } from '@/features/visits/agenda';
+import { avisoSemente, opcoesDeHora, type SeededFrom } from '@/features/visits/agenda';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { data } from '@/lib/formato';
 
@@ -30,8 +30,6 @@ interface Props {
 }
 
 type Estado = 'carregando' | 'erro' | 'desligada' | 'pronto';
-
-const HORAS = horariosDe30em30();
 
 export function HorarioVisitaDialog({ open, onOpenChange }: Props) {
   const [estado, setEstado] = useState<Estado>('carregando');
@@ -54,8 +52,8 @@ export function HorarioVisitaDialog({ open, onOpenChange }: Props) {
         if (!vivo) return;
         if (!s.enabled) { setEstado('desligada'); return; }
         setDias(s.days ?? []);
-        setInicio(s.start);
-        setFim(s.end);
+        setInicio(s.start.slice(0, 5));
+        setFim(s.end.slice(0, 5));
         setFechadas(s.closed_dates ?? []);
         setSemente(s.seeded_from);
         setEstado('pronto');
@@ -128,7 +126,7 @@ export function HorarioVisitaDialog({ open, onOpenChange }: Props) {
             )}
 
             <div role="group" aria-label="Dias da semana">
-              <UILabel>Dias da semana</UILabel>
+              <p className="text-sm font-medium">Dias da semana</p>
               <div className="mt-1">
                 <PilulasDias value={dias} onChange={setDias} />
               </div>
@@ -138,13 +136,13 @@ export function HorarioVisitaDialog({ open, onOpenChange }: Props) {
               <div className="w-32">
                 <UILabel htmlFor="hv_inicio">Início</UILabel>
                 <NativeSelect id="hv_inicio" className="mt-1" value={inicio} onChange={e => setInicio(e.target.value)}>
-                  {HORAS.map(h => <option key={h} value={h}>{h}</option>)}
+                  {opcoesDeHora(inicio).map(h => <option key={h} value={h}>{h}</option>)}
                 </NativeSelect>
               </div>
               <div className="w-32">
                 <UILabel htmlFor="hv_fim">Fim</UILabel>
                 <NativeSelect id="hv_fim" className="mt-1" value={fim} onChange={e => setFim(e.target.value)}>
-                  {HORAS.map(h => <option key={h} value={h}>{h}</option>)}
+                  {opcoesDeHora(fim).map(h => <option key={h} value={h}>{h}</option>)}
                 </NativeSelect>
               </div>
             </div>

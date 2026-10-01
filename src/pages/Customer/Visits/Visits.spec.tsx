@@ -58,6 +58,8 @@ describe('Agenda de Visitas: botões da agenda do corretor', () => {
     expect(list).toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: /Horário de visita/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Folgas/ })).toBeNull();
+    expect(getSettings).not.toHaveBeenCalled();
+    expect(listTimeOffs).not.toHaveBeenCalled();
   });
 
   it('chave ligada, gestor: Horário de visita e Folgas', async () => {

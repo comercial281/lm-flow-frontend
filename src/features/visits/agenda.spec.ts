@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  avisoSemente, faixaTexto, horaCurta, horariosDe30em30, motivoDiaFechado, ordenarFolgas, rotuloFolga,
+  avisoSemente, faixaTexto, horaCurta, horariosDe30em30, opcoesDeHora, motivoDiaFechado, ordenarFolgas, rotuloFolga,
   type AgendaSettings, type TimeOff,
 } from './agenda';
 
@@ -39,6 +39,18 @@ describe('horariosDe30em30', () => {
     expect(lista[0]).toBe('00:00');
     expect(lista[17]).toBe('08:30');
     expect(lista[47]).toBe('23:30');
+  });
+});
+
+describe('opcoesDeHora', () => {
+  it('na grade: a lista de 30 em 30 como está', () => {
+    expect(opcoesDeHora('08:00')).toEqual(horariosDe30em30());
+  });
+
+  it('fora da grade: entra na lista, no lugar certo', () => {
+    const lista = opcoesDeHora('08:15');
+    expect(lista).toHaveLength(49);
+    expect(lista.slice(16, 19)).toEqual(['08:00', '08:15', '08:30']);
   });
 });
 

@@ -140,7 +140,7 @@ export function FolgasDialog({ open, onOpenChange, soMinhas }: Props) {
         </DialogHeader>
 
         <section aria-label="Próximas folgas" className="space-y-2 py-2">
-          <UILabel>Próximas folgas</UILabel>
+          <h3 className="text-sm font-medium">Próximas folgas</h3>
           {erroLista ? (
             <div className="space-y-2">
               <p className="text-sm text-destructive">Não deu para carregar as folgas.</p>
@@ -168,7 +168,16 @@ export function FolgasDialog({ open, onOpenChange, soMinhas }: Props) {
                       <Button type="button" size="sm" variant="outline" onClick={() => setConfirmando(null)}>Não</Button>
                     </div>
                   ) : (
-                    <Button type="button" size="sm" variant="outline" onClick={() => setConfirmando(f.id)}>Excluir</Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      aria-label={`Excluir folga de ${rotuloFolga(f)}`}
+                      title={`Excluir folga de ${rotuloFolga(f)}`}
+                      onClick={() => setConfirmando(f.id)}
+                    >
+                      Excluir
+                    </Button>
                   )}
                 </li>
               ))}
@@ -177,7 +186,7 @@ export function FolgasDialog({ open, onOpenChange, soMinhas }: Props) {
         </section>
 
         <section aria-label="Nova folga" className="space-y-4 border-t border-border pt-4">
-          <UILabel>Nova folga</UILabel>
+          <h3 className="text-sm font-medium">Nova folga</h3>
 
           {!soMinhas && (
             <div>
