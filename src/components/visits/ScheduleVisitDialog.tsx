@@ -53,6 +53,11 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
   const [imovel, setImovel] = useState<Property | null>(null);
   const [doDia, setDoDia] = useState<BusyVisit[]>([]);
   const [salvando, setSalvando] = useState(false);
+  // Sobe quando o servidor recusa o agendamento por conflito (422): alguém
+  // marcou nesse horário entre a tela abrir e o Agendar ser clicado. Entra nas
+  // deps do efeito "visitas do dia" pra forçar um refetch sem duplicar a
+  // lógica nem o guarda de corrida dele.
+  const [recarregarDia, setRecarregarDia] = useState(0);
   // Sobe a cada "abriu" (ver efeito abaixo) OU a cada troca de cliente (ver
   // `escolherLead`) e vira `key` do `BuscaCorretor`: força ele a remontar do
   // zero sempre que o VALOR dele foi decidido de fora (reabrir a tela, ou o
@@ -117,7 +122,7 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
       })
       .catch(() => { if (vivo) setDoDia([]); });
     return () => { vivo = false; };
-  }, [open, corretor, dia]);
+  }, [open, corretor, dia, recarregarDia]);
 
   const ocupadas = useMemo(() => ocupando(doDia), [doDia]);
   const slots = useMemo(() => horariosDoDia(dia, duracao, ocupadas, new Date()), [dia, duracao, ocupadas]);
@@ -163,6 +168,11 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
       onOpenChange(false);
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Erro ao agendar visita'));
+      // 422 = corrida: alguém marcou nesse horário entre a tela abrir e o
+      // clique no Agendar. O horário escolhido já não vale mais — recarrega a
+      // lista do dia pra riscar o que acabou de ser ocupado por outra pessoa.
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      if (status === 422) setRecarregarDia(c => c + 1);
     } finally {
       setSalvando(false);
     }
@@ -173,7 +183,7 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Agendar visita</DialogTitle>
           <DialogDescription>Quem vai visitar e quando</DialogDescription>
@@ -274,10 +284,11 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
                       variant={inicio?.getTime() === s.inicio.getTime() ? 'default' : 'outline'}
                       disabled={!!s.ocupadoPor}
                       title={s.ocupadoPor ? `Ocupado: visita com ${s.ocupadoPor}` : undefined}
+                      aria-label={s.ocupadoPor ? `${s.rotulo} · ocupado, ${s.ocupadoPor}` : undefined}
                       className={s.ocupadoPor ? 'line-through' : undefined}
                       onClick={() => setInicio(s.inicio)}
                     >
-                      {s.ocupadoPor ? `${s.rotulo} · ocupado, ${s.ocupadoPor}` : s.rotulo}
+                      {s.rotulo}
                     </Button>
                   ))}
                 </div>

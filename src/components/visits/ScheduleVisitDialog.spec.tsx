@@ -73,6 +73,11 @@ describe('Agendar visita', () => {
 
     const ocupado = await screen.findByRole('button', { name: /15:00 · ocupado, Fulano Teste/ });
     expect(ocupado).toBeDisabled();
+    // O nome acessível carrega "ocupado, Fulano Teste" (aria-label), mas o
+    // texto visível no botão é só a hora — o nome do cliente já aparece na
+    // lista "Visitas ... nesse dia" logo abaixo, não precisa repetir aqui.
+    expect(ocupado).toHaveTextContent('15:00');
+    expect(ocupado.textContent).toBe('15:00');
     expect(screen.getByRole('button', { name: '16:00' })).toBeEnabled();
   });
 
@@ -87,6 +92,28 @@ describe('Agendar visita', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('Você já tem visita com Fulano Teste das 15h às 16h'));
+  });
+
+  it('422 de conflito (alguém marcou nesse horário entre meio) recarrega a lista do dia', async () => {
+    leadPickerPage.mockResolvedValue({ data: [], meta: { only_mine: true, me: { id: 'u-ana', name: 'Ana' } } });
+    create.mockRejectedValue({
+      response: { status: 422, data: { error: { message: 'Esse horário acabou de ser ocupado' } } },
+    });
+    abrir();
+
+    await userEvent.click(await screen.findByPlaceholderText('Buscar cliente por nome ou telefone'));
+    await userEvent.click(await screen.findByText('Leonardo Teste'));
+
+    // 1 chamada ao abrir (corretor travado já definido) + 1 ao trocar de cliente
+    // não dispara de novo (mesmo corretor/dia) — só confere que já rodou antes do save.
+    const chamadasAntes = list.mock.calls.length;
+    expect(chamadasAntes).toBeGreaterThan(0);
+
+    await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Esse horário acabou de ser ocupado'));
+    await waitFor(() => expect(list.mock.calls.length).toBeGreaterThan(chamadasAntes));
   });
 
   it('corretor não manda realtor_id; observações vão como realtor_notes', async () => {
