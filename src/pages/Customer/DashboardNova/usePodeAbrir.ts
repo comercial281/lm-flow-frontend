@@ -3,7 +3,11 @@ import { useFeature } from '@/contexts/TenantFeaturesContext';
 import type { DashboardNovaPayload, ListaKind } from './types';
 import type { Visao } from './catalogo';
 
-/** Quais destinos o cargo abre. Número cujo destino o cargo não abre não é link. */
+/**
+ * Quais destinos abrem. Número cujo destino não abre não é link.
+ * Abre = o cargo abre E a chave do cliente está ligada (a mesma `featureKey`
+ * do menu): tela fora do menu do cliente não vira destino de clique.
+ */
 export interface PodeAbrir {
   imoveis: boolean;
   agenda: boolean;
@@ -14,12 +18,15 @@ export interface PodeAbrir {
 
 export function usePodeAbrir(): PodeAbrir {
   const pode = useCan();
+  const imoveisNoMenu = useFeature('properties');
+  const agendaNoMenu = useFeature('visits');
   const propostasNoMenu = useFeature('proposals');
+  const funilNoMenu = useFeature('pipelines');
   return {
-    imoveis: pode('properties', 'read'),
-    agenda: pode('visits', 'read'),
+    imoveis: imoveisNoMenu && pode('properties', 'read'),
+    agenda: agendaNoMenu && pode('visits', 'read'),
     propostas: propostasNoMenu && pode('proposals', 'read'),
-    funil: pode('pipelines', 'read'),
+    funil: funilNoMenu && pode('pipelines', 'read'),
     roleta: pode('roleta_configs', 'queue'),
   };
 }
