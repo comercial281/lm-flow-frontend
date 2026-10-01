@@ -4549,3 +4549,33 @@ Armadilhas:
    `src/features/visits/agenda.ts`, com spec; os pedidos ao servidor, em
    `src/services/visits/agendaService.ts`.
 
+
+## Novo canal: só WhatsApp, com o ícone do WhatsApp (desde 2026-10-01)
+
+Pedido do dono do produto: em *Canais → Novo canal* tem que aparecer **só o
+WhatsApp** para a pessoa conectar, e a Evolution API precisa de um ícone mais
+bonito — inclusive para quando o canal aparece na lista de Canais.
+
+O que aparece na tela:
+
+- **A grade *Selecione um tipo de canal* mostra só o cartão WhatsApp.** Widget
+  Web, Instagram, Facebook Messenger, Telegram, SMS, Email e API saíram da
+  criação, para todo mundo (inclusive a Leal Mídia).
+- **A opção Evolution API usa o ícone do WhatsApp** no lugar do logo "evo api"
+  (preto e verde). Vale em todo lugar que desenha o ícone do canal: o cartão do
+  provedor, a lista de Canais, a conversa e o *Iniciar conversa*.
+- **Selos dos provedores do WhatsApp:** o *WhatsApp Business API (nuvem)* perdeu
+  o selo *Recomendado* (aparecia apagado, sem configuração, recomendando o que a
+  pessoa não consegue usar) e a **Evolution API ganhou o selo *Mais usado***. O
+  cartão de provedor passou a desenhar o `popular`, que existia no tipo e nos
+  textos e nunca aparecia; *Recomendado* vence quando os dois estão marcados.
+
+Armadilhas:
+
+1. **Os outros tipos continuam em `getChannelTypes()`.** Canal antigo de outro
+   tipo ainda lê nome e ícone de lá; o recorte é só na tela de criação
+   (`NewChannel`). Não apagar os tipos da constante.
+2. **Não tem metade de backend.** O servidor continua aceitando criar os outros
+   tipos pela API; só a tela deixou de oferecer.
+3. **Não é `featureKey` nem `clientToggleKey`.** Os scanners do catálogo de
+   funcionalidades não entram nesta história.
