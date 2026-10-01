@@ -158,7 +158,11 @@ const DashboardNova: React.FC = () => {
       {/* Espaço do banner de campanhas da Leal Mídia (spec própria). Vazio. */}
       <div data-slot="banner" />
 
-      {corpo}
+      {/* Filtro novo pedido e a resposta ainda não chegou: os blocos são da última
+          resposta, então a área avisa que está ocupada e fica esmaecida. */}
+      <div className={`lmfn-blocos${pendente && dados ? ' lmfn-blocos-pendente' : ''}`} aria-busy={pendente || undefined}>
+        {corpo}
+      </div>
 
       <ListaRapida
         aberta={listaAberta}

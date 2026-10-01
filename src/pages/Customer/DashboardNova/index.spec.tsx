@@ -219,4 +219,19 @@ describe('DashboardNova', () => {
     expect(ultimo(false).filtros.pipelineId).toBeUndefined();
     expect(ultimo(true).filtros.pipelineId).toBe('p2');
   });
+
+  it('enquanto os números novos não chegam, a área dos blocos avisa que está ocupada e fica esmaecida', () => {
+    hook.dados = base('all');
+    hook.pendente = true;
+    const { container, unmount } = tela();
+    const area = container.querySelector('.lmfn-blocos') as HTMLElement;
+    expect(area).toHaveAttribute('aria-busy', 'true');
+    expect(area).toHaveClass('lmfn-blocos-pendente');
+    unmount();
+
+    hook.pendente = false;
+    const outra = tela().container.querySelector('.lmfn-blocos') as HTMLElement;
+    expect(outra).not.toHaveAttribute('aria-busy');
+    expect(outra).not.toHaveClass('lmfn-blocos-pendente');
+  });
 });

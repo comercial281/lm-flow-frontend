@@ -16,10 +16,15 @@
 .lmfn-aviso button { margin-left: auto; border: 0; background: transparent; color: var(--lmf-accent); font: inherit; font-weight: 600; cursor: pointer; }
 .lmfn-aviso-erro { background: rgba(217, 119, 6, 0.12); color: var(--lmf-text); }
 .lmfn-aviso-erro button { color: var(--lmf-warn); }
-.lmfn-linha { display: grid; gap: 18px; margin-top: 18px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.lmfn-blocos { transition: opacity 0.15s ease; }
+.lmfn-blocos-pendente { opacity: 0.6; }
+/* min(): no celular estreito a coluna nunca passa da tela (nada de rolar de lado). */
+.lmfn-linha { display: grid; gap: 18px; margin-top: 18px; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); }
 .lmfn-linha-principal { grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr); }
 @media (max-width: 1024px) { .lmfn-linha-principal { grid-template-columns: minmax(0, 1fr); } }
 .lmfn-coluna { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+/* Bloco que não desenha nada (Roleta agora sem roleta ativa): a coluna sai e a vizinha ocupa a largura. */
+.lmfn-coluna:empty { display: none; }
 .lmfn-secao { margin-top: 30px; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
 .lmfn-secao h2 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
 .lmfn-secao p { margin: 0; color: var(--lmf-muted); font-size: 13px; }
