@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Button,
@@ -48,6 +49,9 @@ import { useFeature } from '@/contexts/TenantFeaturesContext';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { telefone } from '@/lib/formato';
+import { lerFiltroAgenda, type FiltroAgenda } from '@/features/dashboard/links';
+import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
+import { intervaloDoMes, rotuloContador } from '@/features/visits/contagem';
 
 const FILTER_TABS = [
   { key: '', label: 'Todas' },
@@ -222,10 +226,19 @@ export default function Visits() {
   const [total, setTotal]           = useState(0);
   const [loading, setLoading]       = useState(false);
   const [activeTab, setActiveTab]   = useState('');
-  const [viewMode, setViewMode]     = useState<ViewMode>('calendar');
+  // O estado inicial do modo respeita o link: chegando com filtro, abre na lista.
+  const [viewMode, setViewMode]     = useState<ViewMode>(() => {
+    const f = lerFiltroAgenda(new URLSearchParams(window.location.search));
+    return f && Object.keys(f.params).length > 0 ? 'list' : 'calendar';
+  });
   const [recusado, setRecusado]     = useState(false);
 
   const [calDate, setCalDate]       = useState<Date>(new Date());
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Filtro que veio de um clique na Dashboard (?situacao=, ?desde=, ?visita=).
+  const [filtroLink, setFiltroLink] = useState<FiltroAgenda | null>(() => lerFiltroAgenda(searchParams));
+  const [soMinhas, setSoMinhas] = useState(false);
+  const temFiltroNoLink = !!filtroLink && Object.keys(filtroLink.params).length > 0;
 
   const [modalOpen, setModalOpen]   = useState(false);
   const [form, setForm]             = useState<VisitFormData>(EMPTY_FORM);
@@ -255,22 +268,61 @@ export default function Visits() {
   const propertyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const realtorTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Precisa estar declarado antes do efeito de `?visita=` logo abaixo, que chama
+  // handleVisitClick assim que a visita-alvo chega na lista.
+  const handleVisitClick = (visit: Visit) => {
+    if (visit.status === 'scheduled' || visit.status === 'confirmed' || visit.status === 'in_progress') {
+      setActionModal({ visit, action: 'complete' });
+    } else {
+      toast.info(`Visita ${VISIT_STATUS_LABELS[visit.status] ?? visit.status}`);
+    }
+  };
+
   const load = useCallback(async (status = activeTab) => {
     setLoading(true);
     setRecusado(false);
     try {
-      const res = await visitsService.list({ status: status || undefined, per_page: 500 });
+      // No calendário, pede SÓ o mês visível: é o que faz o contador bater com
+      // o que está desenhado. Na lista, o que o link ou a aba pedirem.
+      const doMes = viewMode === 'calendar' && !temFiltroNoLink
+        ? (() => { const m = intervaloDoMes(calDate); return { since: m.desde, until: m.ate }; })()
+        : {};
+      const res = await visitsService.list({
+        status: status || undefined,
+        ...doMes,
+        ...(filtroLink?.params ?? {}),
+        per_page: 200,
+      });
       setVisits(res.data ?? []);
-      setTotal(res.meta?.total ?? 0);
+      setTotal(res.meta?.active_total ?? res.meta?.total ?? 0);
+      setSoMinhas(!!res.meta?.only_mine);
     } catch (e) {
       if (isForbiddenError(e)) setRecusado(true);
       else toast.error('Erro ao carregar visitas');
     } finally {
       setLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, viewMode, calDate, filtroLink, temFiltroNoLink]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [viewMode, calDate, filtroLink]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ?visita= : abre a visita assim que ela chega na lista, e tira o parâmetro
+  // do endereço para não reabrir a cada recarga.
+  useEffect(() => {
+    const alvo = filtroLink?.visita;
+    if (!alvo || loading) return;
+    const v = visits.find(x => x.id === alvo);
+    if (v) handleVisitClick(v);
+    const resto = new URLSearchParams(searchParams);
+    resto.delete('visita');
+    setSearchParams(resto, { replace: true });
+    setFiltroLink(f => (f ? { ...f, visita: null } : f));
+  }, [filtroLink?.visita, loading, visits]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const tirarFiltroLink = () => {
+    setFiltroLink(null);
+    setSearchParams({}, { replace: true });
+  };
 
   const switchTab = (key: string) => {
     setActiveTab(key);
@@ -392,14 +444,6 @@ export default function Visits() {
     }
   };
 
-  const handleVisitClick = (visit: Visit) => {
-    if (visit.status === 'scheduled' || visit.status === 'confirmed' || visit.status === 'in_progress') {
-      setActionModal({ visit, action: 'complete' });
-    } else {
-      toast.info(`Visita ${VISIT_STATUS_LABELS[visit.status] ?? visit.status}`);
-    }
-  };
-
   const grouped = groupByDate(visits);
 
   if (recusado) return <NoAccessState />;
@@ -419,7 +463,14 @@ export default function Visits() {
                 <CalendarClock className="h-6 w-6 text-primary" />
                 Agenda de Visitas
               </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">{total} visita{total !== 1 ? 's' : ''}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {rotuloContador(total, { soMinhas, mes: viewMode === 'calendar' && !temFiltroNoLink ? calDate : undefined })}
+              </p>
+              {filtroLink?.rotulo && (
+                <div className="mt-1.5">
+                  <ChipDaDashboard rotulo={filtroLink.rotulo} onTirar={tirarFiltroLink} />
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">

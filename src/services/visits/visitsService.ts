@@ -30,9 +30,9 @@ export interface VisitFormData {
 const BASE = '/visits';
 
 export const visitsService = {
-  async list(params: Record<string, string | number | undefined> = {}): Promise<{ data: Visit[]; meta: { total: number } }> {
+  async list(params: Record<string, string | number | undefined> = {}): Promise<{ data: Visit[]; meta: { total: number; only_mine?: boolean; active_total?: number } }> {
     const res = await api.get(BASE, { params });
-    return res.data as { data: Visit[]; meta: { total: number } };
+    return res.data as { data: Visit[]; meta: { total: number; only_mine?: boolean; active_total?: number } };
   },
 
   async create(data: VisitFormData): Promise<Visit> {
