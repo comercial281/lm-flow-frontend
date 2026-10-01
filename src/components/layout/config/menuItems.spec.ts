@@ -49,6 +49,8 @@ describe('o menu do CRM confere o cargo', () => {
     ['/visits', 'visits.read'],
     ['/automations/message-funnels', 'message_funnels.read'],
     ['/settings/pixel-capi', 'capi_configs.read'],
+    ['/settings/facebook', 'lead_ads_form_configs.read'],
+    ['/automations/origem', 'lead_ads_form_configs.read'],
   ])('%s pede %s', (href, chave) => {
     const item = achar(href);
     expect(`${item.resource}.${item.action}`).toBe(chave);
@@ -128,6 +130,13 @@ describe('menu novo: seções (fase 4)', () => {
       '/contacts/scheduled-actions', '/marketplace', '/automations']) {
       expect(hrefs).not.toContain(fora);
     }
+  });
+
+  it('a Página do Facebook é aba de Integrações, e Formulários fica sozinho em Minha imobiliária', () => {
+    const imobiliaria = secoes.find(s => s.id === 'imobiliaria')!;
+    const integracoes = imobiliaria.itens.find(i => i.name === 'Integrações')!;
+    expect(integracoes.abas?.map(a => a.name)).toEqual(['WhatsApp', 'Facebook', 'Pixel', 'Portais']);
+    expect(imobiliaria.itens.find(i => i.href === '/automations/origem')?.name).toBe('Formulários');
   });
 
   it('o dono do endereço é o casamento mais longo, inclusive em tela interna', () => {

@@ -995,8 +995,8 @@ export default function LeadAdsForms() {
             <p className="text-muted-foreground mt-0.5">{metaError}</p>
             <p className="text-muted-foreground mt-2">
               Revise a conexão da página em{' '}
-              <Link to="/automations/origem" className="text-primary underline">
-                Automações → Origem
+              <Link to="/settings/facebook" className="text-primary underline">
+                Integrações → Facebook
               </Link>{' '}
               e sincronize de novo.
             </p>

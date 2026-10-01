@@ -41,6 +41,7 @@ describe('toda rota do CRM confere o cargo', () => {
     ['/property-interests', 'property_interests', 'read'],
     ['/settings/portals', 'portals', 'read'],
     ['/settings/portals/:portalKey', 'portals', 'read'],
+    ['/settings/facebook', 'lead_ads_form_configs', 'read'],
     ['message-funnels', 'message_funnels', 'read'],
     ['/settings/message-funnels', 'message_funnels', 'read'],
     ['origem', 'lead_ads_form_configs', 'read'],

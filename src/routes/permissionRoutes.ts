@@ -74,6 +74,7 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/settings/pixel-capi', resource: 'capi_configs', action: 'read' },
   { path: '/settings/portals', resource: 'portals', action: 'read' },
   { path: '/settings/portals/:portalKey', resource: 'portals', action: 'read' },
+  { path: '/settings/facebook', resource: 'lead_ads_form_configs', action: 'read' },
   { path: '/settings/roleta-config', resource: 'roleta_configs', action: 'read' },
 
   { path: '/dashboard-app/:appId', resource: 'integrations', action: 'read' },

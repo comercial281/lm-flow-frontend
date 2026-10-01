@@ -118,7 +118,7 @@ export default function MetaPagesPanel({ onGoToForms }: Props) {
           <h2 className="text-lg font-semibold">Páginas conectadas</h2>
           <p className="text-sm text-muted-foreground mt-1">
             As páginas do Facebook/Instagram de onde os leads dos formulários de anúncio entram
-            neste CRM. Cada página traz os próprios formulários, na aba <em>Formulários</em>.
+            neste CRM. Os formulários de cada página ficam em <em>Minha imobiliária → Formulários</em>.
           </p>
         </div>
         {isSuperAdmin && (

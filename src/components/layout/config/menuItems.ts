@@ -28,7 +28,8 @@ import {
   GitBranch,
   Repeat,
   Shuffle,
-  Radio,
+  ClipboardList,
+  Facebook,
   Plug,
   Smartphone,
   Target,
@@ -274,14 +275,19 @@ export const getCustomerMenuSections = (): MenuSection[] => [
         // `inboxes.update` é o "vejo qualquer número", que o Gerente tem pelo
         // piso de reparos e o Corretor não.
         { name: 'WhatsApp', href: '/channels', icon: Smartphone, ...gestao('/channels', 'inboxes.update'), featureKey: 'channels' },
+        // Páginas do Facebook/Instagram dos Lead Ads (era a aba de Origem). Mesmas
+        // travas da antiga Origem: some no painel raiz, e o cliente só vê com a
+        // função de automações liberada pela Leal Mídia.
+        { name: 'Facebook', href: '/settings/facebook', icon: Facebook, ...permissionFromRoute('/settings/facebook'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', hideOnRoot: true },
         { name: 'Pixel', href: '/settings/pixel-capi', icon: Target, ...permissionFromRoute('/settings/pixel-capi'), featureKey: 'lead_automations' },
         // Portais imobiliários (ZAP, Imóvel Web…) — feed + leads
         { name: 'Portais', href: '/settings/portals', icon: Share2, ...permissionFromRoute('/settings/portals'), featureKey: 'properties' },
       ]),
       // Tela única de distribuição: modo + quem participa + prazo + gestor.
       { name: 'Roleta de leads', href: '/automations/roleta-config', icon: Shuffle, ...permissionFromRoute('/automations/roleta-config'), featureKey: 'lead_automations' },
-      // Página do Facebook + formulários. A Página muda pra Integrações quando a tela de Origem for refatorada.
-      { name: 'Origem', href: '/automations/origem', icon: Radio, ...permissionFromRoute('/automations/origem'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', hideOnRoot: true },
+      // Formulários dos Lead Ads (endereço antigo da tela Origem). A conexão da
+      // página do Facebook está em Integrações → Facebook desde 01/10/2026.
+      { name: 'Formulários', href: '/automations/origem', icon: ClipboardList, ...permissionFromRoute('/automations/origem'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', hideOnRoot: true },
       { name: 'Etiquetas', href: '/settings/labels', icon: Tags, ...gestao('/settings/labels', 'labels.create') },
       itemComAbas({ name: 'Campos personalizados', icon: SlidersHorizontal }, [
         { name: 'Atributos', href: '/settings/attributes', icon: SlidersHorizontal, ...permissionFromRoute('/settings/attributes') },

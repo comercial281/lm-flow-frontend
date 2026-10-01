@@ -148,6 +148,7 @@ const RoletaConfigPage = lazyWithRetry(() => import('@/pages/Customer/Settings/R
 const AcceptLeadPage = lazyWithRetry(() => import('@/pages/Customer/Roleta/AcceptLeadPage'));
 const AssignmentSettingsPage = lazyWithRetry(() => import('@/pages/Customer/Settings/AssignmentSettings/AssignmentSettings'));
 const PixelCapiConfig = lazyWithRetry(() => import('@/pages/Customer/Automations/PixelCapi/PixelCapiConfig'));
+const FacebookPages = lazyWithRetry(() => import('@/pages/Customer/Settings/FacebookPages'));
 const Macros = lazyWithRetry(() => import('@/pages/Customer/Settings/Macros').then(m => ({ default: m.Macros })));
 const WhatsappReminders = lazyWithRetry(() => import('@/pages/Customer/Settings/WhatsappReminders'));
 const EmailTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Settings/EmailTemplateEditor'));
@@ -873,7 +874,7 @@ const AppRouter = () => {
             {/* Pixel/CAPI mora agora em Configurações, não em Automações — não usa mais
                 o layout com submenu de setores. Filha simples de Grupo A: já herda
                 PrivateRoute+CustomerRoute+MainLayout do pai, sem guards próprios. */}
-            {/* WhatsApp (/channels), Pixel e Portais são as abas da página
+            {/* WhatsApp (/channels), Facebook, Pixel e Portais são as abas da página
                 Integrações (fase 4) — moldura sem endereço, ver PaginaComAbas.
                 As telas internas (portal aberto, número novo, ajustes do
                 número) ficam fora: têm título e "voltar" próprios.
@@ -881,6 +882,15 @@ const AppRouter = () => {
                 Fase 1 Cargos): integrations.* segue sendo repassada a quem já a
                 tinha, mas a chave nova e específica é portals.read/update. */}
             <Route element={<PaginaComAbas />}>
+              {/* Páginas do Facebook (Lead Ads): era a aba de Automações → Origem. */}
+              <Route
+                path="/settings/facebook"
+                element={
+                  <PermissionRoute resource="lead_ads_form_configs" action="read">
+                    <FacebookPages />
+                  </PermissionRoute>
+                }
+              />
               <Route
                 path="/settings/pixel-capi"
                 element={

@@ -37,7 +37,7 @@ const CATALOG: CatalogEntry[] = [
     description: 'Integre com Facebook e Instagram Ads para capturar leads diretamente do formulário de anúncios.',
     category: 'Marketing',
     tags: ['leads', 'facebook', 'instagram', 'ads'],
-    configPath: '/automations/origem',
+    configPath: '/settings/facebook',
     logo: '📘',
   },
   {
