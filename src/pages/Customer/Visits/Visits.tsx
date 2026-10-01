@@ -281,7 +281,14 @@ export default function Visits() {
     }
   };
 
+  // Trocar de mês rápido (‹ › ‹ ›) dispara pedidos que se cruzam: só a resposta
+  // do pedido mais recente entra na tela, senão outubro chega atrasado e o
+  // contador diz "N visitas em novembro" com o N de outubro.
+  const ultimoPedido = useRef(0);
+
   const load = useCallback(async (status = activeTab) => {
+    const pedido = ++ultimoPedido.current;
+    const atual = () => pedido === ultimoPedido.current;
     setLoading(true);
     setRecusado(false);
     try {
@@ -300,6 +307,7 @@ export default function Visits() {
         ...(filtroLink?.params ?? {}),
         per_page: 500,
       });
+      if (!atual()) return;
       setVisits(res.data ?? []);
       const contador = lerContador(res.meta, {
         mesInteiro: viewMode === 'calendar' && !temFiltroNoLink && !status,
@@ -308,10 +316,11 @@ export default function Visits() {
       setServidorNovo(contador.servidorNovo);
       setSoMinhas(!!res.meta?.only_mine);
     } catch (e) {
+      if (!atual()) return;
       if (isForbiddenError(e)) setRecusado(true);
       else toast.error('Erro ao carregar visitas');
     } finally {
-      setLoading(false);
+      if (atual()) setLoading(false);
     }
   }, [activeTab, viewMode, calDate, filtroLink, temFiltroNoLink]);
 
