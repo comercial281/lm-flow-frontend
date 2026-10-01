@@ -110,7 +110,7 @@ export default function Header({
                 <nav onClickCapture={guardarSaida} className="space-y-1">
                   {/* Mesmas seções do computador: uma aberta por vez. */}
                   <MenuSecoes secoes={secoes} mobile aoNavegar={() => setIsMobileMenuOpen(false)} />
-                  <div className="mt-2 pt-2 border-t border-sidebar-border space-y-1">
+                  <div className="mt-3 pt-3 border-t border-sidebar-border space-y-1">
                     {rodape.map(item => (
                       <MenuItem
                         key={item.href}

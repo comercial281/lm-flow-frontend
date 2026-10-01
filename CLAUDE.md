@@ -4139,6 +4139,12 @@ O que aparece na tela:
 - **Automações deixou de ser uma página de 7 abas**, sem mudar endereço:
   Follow-up, Roleta de leads e Origem são páginas sozinhas. `/automations` puro
   manda pra primeira tela que a pessoa vê.
+- **Como a Lais:** cartão no topo com o nome da imobiliária e o cargo de quem
+  usa (`lm-redact`, some no modo demonstração); divisor depois do Principal e
+  antes do rodapé; o rodapé vem logo depois do último bloco, e a coluna inteira
+  rola se passar da tela. Abrir e fechar seção desliza (grade de `0fr` a `1fr`,
+  200 ms); com "reduzir movimento" no sistema, sem animação. Seção fechada fica
+  no DOM com `inert` + `aria-hidden`, fora do Tab e do leitor de tela.
 - **Recolhido:** só ícones, com um traço entre as seções.
 - **Rodapé:** Guia do LM Flow e Falar com o suporte. Saíram o © e o link
   "Documentação" (era a documentação da Evolution).

@@ -53,11 +53,12 @@ export default function MenuSecoes({ secoes, mobile = false, aoNavegar }: MenuSe
   );
 
   return (
-    <div className="space-y-1">
+    <div>
       {secoes.map(secao => {
         if (secao.fixa) {
+          // Divisor depois do bloco fixo, como na Lais.
           return (
-            <div key={secao.id} className="space-y-1 pb-2">
+            <div key={secao.id} className="space-y-1 pb-3 mb-3 border-b border-sidebar-border">
               {secao.itens.map(desenhaItem)}
             </div>
           );
@@ -66,7 +67,7 @@ export default function MenuSecoes({ secoes, mobile = false, aoNavegar }: MenuSe
         const Icone = secao.icone;
         const temAtivo = secao.itens.some(i => itemAtivo(i, pathname));
         return (
-          <div key={secao.id}>
+          <div key={secao.id} className="mb-1">
             <button
               type="button"
               aria-expanded={estaAberta}
@@ -79,15 +80,32 @@ export default function MenuSecoes({ secoes, mobile = false, aoNavegar }: MenuSe
               {Icone && <Icone className="flex-shrink-0" style={{ width: '1.125rem', height: '1.125rem' }} aria-hidden="true" />}
               <span className="flex-1">{secao.rotulo}</span>
               <ChevronDown
-                className={cn('h-3.5 w-3.5 opacity-60 transition-transform', estaAberta && 'rotate-180')}
+                className={cn(
+                  'h-3.5 w-3.5 opacity-60 transition-transform duration-200 motion-reduce:transition-none',
+                  estaAberta && 'rotate-180',
+                )}
                 aria-hidden="true"
               />
             </button>
-            {estaAberta && (
-              <div className="ml-5 mt-1 mb-1 space-y-0.5 border-l border-sidebar-border pl-2">
-                {secao.itens.map(desenhaItem)}
+            {/* Abrir e fechar deslizando: a linha da grade vai de 0fr a 1fr
+                (anima a altura sem medir o conteúdo). Fechada, a lista
+                continua no DOM para a animação de saída, mas `inert` e
+                `aria-hidden` tiram ela do Tab e do leitor de tela. Quem pediu
+                "reduzir movimento" no sistema vê sem animação. */}
+            <div
+              className={cn(
+                'grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none',
+                estaAberta ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+              )}
+              aria-hidden={!estaAberta}
+              inert={!estaAberta}
+            >
+              <div className="overflow-hidden">
+                <div className="ml-5 mt-1 mb-1 space-y-0.5 border-l border-sidebar-border pl-2">
+                  {secao.itens.map(desenhaItem)}
+                </div>
               </div>
-            )}
+            </div>
           </div>
         );
       })}
