@@ -4564,6 +4564,11 @@ O que aparece na tela:
 - **A opção Evolution API usa o ícone do WhatsApp** no lugar do logo "evo api"
   (preto e verde). Vale em todo lugar que desenha o ícone do canal: o cartão do
   provedor, a lista de Canais, a conversa e o *Iniciar conversa*.
+- **Selos dos provedores do WhatsApp:** o *WhatsApp Business API (nuvem)* perdeu
+  o selo *Recomendado* (aparecia apagado, sem configuração, recomendando o que a
+  pessoa não consegue usar) e a **Evolution API ganhou o selo *Mais usado***. O
+  cartão de provedor passou a desenhar o `popular`, que existia no tipo e nos
+  textos e nunca aparecia; *Recomendado* vence quando os dois estão marcados.
 
 Armadilhas:
 
