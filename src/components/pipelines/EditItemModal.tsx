@@ -1151,14 +1151,16 @@ export default function EditItemModal({
                 // origem informada porque aquele é editável — reescrever "veio por
                 // indicação" apagava a rastreabilidade da lista.
                 bolsao_lista: 'Lista do Bolsão',
+                // Portal e formulário do site: o nome de qual portal/site trouxe o lead.
+                portal: 'Portal', site: 'Site',
               };
               // manual_origin sai da lista genérica: tem campo editável próprio no topo.
               // bolsao_batch_id/bolsao_lead_id são identificadores internos: quem
               // lê o card quer o NOME da lista, que sai em bolsao_lista.
               const HIDDEN = new Set(['thumbnail_url', 'source', 'entered_via', 'added_by_id', 'channel_type',
-                'bolsao_batch_id', 'bolsao_lead_id', MANUAL_ORIGIN_KEY]);
+                'bolsao_batch_id', 'bolsao_lead_id', 'reclassificado', MANUAL_ORIGIN_KEY]);
               // Rótulo + cor por origem. Todo lead tem origem (nunca "sem dados"):
-              // anúncio, formulário, landing, UTM, WhatsApp orgânico, manual ou não identificada.
+              // anúncio, formulário, landing, portal, site, UTM, WhatsApp orgânico, manual ou não identificada.
               const SOURCE_META: Record<string, { label: string; cls: string }> = {
                 whatsapp_ctwa:    { label: '💬 WhatsApp Direto (CTWA)', cls: 'bg-green-500/15 text-green-600 dark:text-green-400' },
                 meta_lead_ads:    { label: '📋 Formulário Meta Ads', cls: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
@@ -1167,6 +1169,8 @@ export default function EditItemModal({
                 organic_whatsapp: { label: 'WhatsApp orgânico', cls: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
                 manual:           { label: 'Adicionado manualmente', cls: 'bg-slate-500/15 text-slate-600 dark:text-slate-300' },
                 bolsao:           { label: '🗃️ Bolsão de Leads', cls: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400' },
+                portal:           { label: 'Portal', cls: 'bg-sky-500/15 text-sky-600 dark:text-sky-400' },
+                site:             { label: 'Site', cls: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
                 unknown:          { label: 'Origem não identificada', cls: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' },
               };
               const source = (ar as any).source as string | undefined;

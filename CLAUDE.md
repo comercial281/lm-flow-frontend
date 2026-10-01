@@ -4101,3 +4101,18 @@ As regras estão em [GLOSSARIO.md → As peças da casa](GLOSSARIO.md#as-peças-
   - Ligar/desligar a resolução atualiza só os campos dela, e alteração não salva de outro campo não se perde. Não chame `loadAccountData()` depois de uma chave: ele apaga o que está na barra.
   - Em Lembretes, a chave da lista grava só o `enabled`, e o Excluir fica no menu "…".
 - **Botões só-ícone:** os 202 que existiam ganharam `aria-label` + `title` (3.4). Botão novo usa `IconActionButton`, e a trava reprova botão sem nome.
+
+## Origem do lead: Portal e Site (desde 2026-09-30)
+
+Relato do dono do produto: na rosca *de onde vêm os leads* da Dashboard, o lead de
+portal aparecia como "desconhecida". O backend (`lm-flow` #352) passou a gravar as
+origens **`portal`** e **`site`** no lugar do `unknown`, corrigiu os leads antigos e
+manda o rótulo da rosca já em português.
+
+Nesta tela só muda a aba **Origem** do card: os selos *Portal* e *Site*, e o nome
+de qual portal ou site trouxe o lead (`raw_data.portal` / `raw_data.site`).
+
+- **O rótulo da rosca vem do servidor** (`sources.items[].label`). Não traduzir de
+  novo aqui: duas tabelas de nome de origem é o que deixava a rosca em inglês.
+- **`reclassificado` fica escondido** na aba Origem: é a marca da correção de dados
+  do backend, não informação para quem atende.
