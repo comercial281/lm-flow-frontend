@@ -62,14 +62,13 @@ export default function Sidebar({
     '/bolsao': 'Principal',
     '/disparos': 'Comercial',
     '/ia-vendedora': 'Comercial',
-    // Espaço e Portais NÃO estavam aqui. Sem entrada no mapa, o item herda em
-    // silêncio o cabeçalho do vizinho de cima — funcionava por acidente de
-    // posição no menuItems.ts, e mudaria sozinho no dia em que alguém
-    // reordenasse aquele arquivo.
-    '/espaco': 'Comercial',
     '/equipe': 'Comercial',
     '/properties': 'Imobiliário',
     '/books': 'Imobiliário',
+    // Portais NÃO estava aqui. Sem entrada no mapa, o item herda em silêncio
+    // o cabeçalho do vizinho de cima — funcionava por acidente de posição no
+    // menuItems.ts, e mudaria sozinho no dia em que alguém reordenasse aquele
+    // arquivo.
     '/settings/portals': 'Imobiliário',
     '/visits': 'Imobiliário',
     '/proposals': 'Imobiliário',

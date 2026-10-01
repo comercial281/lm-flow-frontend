@@ -1,5 +1,5 @@
 import { Suspense, type ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { isRootTenantHost } from '@/components/layout/config/menuItems';
 import { lazyWithRetry } from '@/utils/chunkReload';
@@ -36,7 +36,6 @@ import {
   DashboardAppPage,
   Tutorials,
   Marketplace,
-  Espaco,
 } from './lazyPages';
 import PrivateRoute from './PrivateRoute';
 import AcademiaRoute from './AcademiaRoute';
@@ -74,7 +73,7 @@ import SurveyResponse from '@/pages/Public/Survey/SurveyResponse';
 // TeamAccess, AccountSettings, Labels, CustomAttributes, SiteBuilder,
 // Properties, PropertyBooks, Visits, Proposals, Contracts, PropertyCaptureRequests,
 // PropertyInterests, AutomationsLayout, SalesAgents, PortalsList,
-// DashboardAppPage, Tutorials, Marketplace, Espaco — importadas de
+// DashboardAppPage, Tutorials, Marketplace — importadas de
 // ./lazyPages, ver import acima.)
 const SaasSignup = lazyWithRetry(() => import('@/pages/Auth/SaasSignup'));
 const ChannelSettings = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.ChannelSettings })));
@@ -123,23 +122,6 @@ function SuperAdminRoute({ children }: { children: ReactNode }) {
   }
   if (!isAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
-}
-
-// Wrapper da rota pública do Espaço: lê o :token da URL e monta o módulo em
-// modo público. Suspense próprio porque Espaco é lazy.
-function EspacoPublicRoute() {
-  const { token } = useParams<{ token: string }>();
-  return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center h-screen w-full">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      }
-    >
-      <Espaco mode="public" token={token} />
-    </Suspense>
-  );
 }
 
 const ClientInstances = lazyWithRetry(() => import('@/pages/SuperAdmin/ClientInstances'));
@@ -1035,14 +1017,6 @@ const AppRouter = () => {
               }
             />
 
-            {/* Espaço — Notion por tenant (usuário logado). Sem gate de permissão:
-                QUALQUER staff logado do tenant acessa (decisão do Giovani). O
-                controle fino (pausar / visibilidade por seção / links) fica na aba
-                Gerir, que só aparece pra admin (role do backend).
-                Sem cargo também na Fase 1 (Cargos): o servidor do Espaço não
-                confere cargo (`skip_permission_enforcement!`). */}
-            <Route path="/espaco" element={<Espaco mode="auth" />} />
-
             <Route path="/conversations" element={ChatRouteElement} />
 
             <Route path="/conversations/:conversationId" element={ChatRouteElement} />
@@ -1375,10 +1349,10 @@ const AppRouter = () => {
           {/* Público (sem login): formulário de onboarding por link (Épico E). */}
           <Route path="/formulario/:token" element={<PublicOnboardingForm />} />
 
-          {/* Público (sem login): Espaço compartilhado por link/token. Rota nua
-              (sem PublicRoute) igual às outras rotas de token — pra não bounce
-              um usuário logado que abrir o link. */}
-          <Route path="/espaco/:token" element={<EspacoPublicRoute />} />
+          {/* O Espaço saiu do CRM em 30/09/2026 (fase 4: ninguém usava). Link
+              salvo ou compartilhado (/espaco e /espaco/:token) cai no início.
+              As tabelas espaco_* continuam no banco, intactas. */}
+          <Route path="/espaco/*" element={<Navigate to="/" replace />} />
 
           {/* Público INDEXÁVEL — página de imóvel do portal (Produto A). */}
           <Route path="/imovel/:tenant/:code" element={<ImovelPublic />} />

@@ -41,8 +41,8 @@ describe('o menu do CRM confere o cargo', () => {
     expect(achar('/automations').permissions).toEqual(Object.values(AUTOMATION_SECTOR_PERMISSIONS));
   });
 
-  it('Espaço e Tutoriais são os únicos livres', () => {
-    expect([...MENU_FREE_BY_DESIGN].sort()).toEqual(['/espaco', '/tutorials']);
+  it('Tutoriais é o único livre', () => {
+    expect([...MENU_FREE_BY_DESIGN]).toEqual(['/tutorials']);
   });
 
   it('o Corretor não vê IA Vendedora mesmo com a função liberada no cliente', () => {

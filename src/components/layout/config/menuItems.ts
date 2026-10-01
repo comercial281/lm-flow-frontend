@@ -29,7 +29,6 @@ import {
   Rocket,
   Target,
   Megaphone,
-  NotebookPen,
   MessageSquarePlus,
 } from 'lucide-react';
 import { openFeedbackDialog } from '@/components/feedback/openFeedback';
@@ -99,11 +98,10 @@ export interface ProfileMenuItem {
 
 /**
  * Itens SEM cargo, por decisão registrada: o servidor não confere cargo neles.
- * Espaço: `skip_permission_enforcement!` ("qualquer staff logado", decisão do
- * Giovani). Tutoriais: lê o Supabase do LM Hub, não a API do CRM.
+ * Tutoriais: lê o Supabase do LM Hub, não a API do CRM.
  * Todo o resto declara a permissão — há spec que reprova item novo sem ela.
  */
-export const MENU_FREE_BY_DESIGN = ['/espaco', '/tutorials'];
+export const MENU_FREE_BY_DESIGN = ['/tutorials'];
 
 /** Setor da aba Automações → a leitura que o servidor exige. Menu e abas usam a mesma tabela. */
 export const AUTOMATION_SECTOR_PERMISSIONS: Record<string, string> = {
@@ -239,16 +237,6 @@ export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => 
     icon: Bot,
     ...permissionFromRoute('/ia-vendedora'),
     clientToggleKey: 'client_manage_automations',
-  },
-  {
-    // Espaço — Notion por tenant (docs/bases colaborativas). Feature gerenciada
-    // pela Leal Mídia: super-admin SEMPRE vê; o cliente só vê se a Leal Mídia
-    // ligar o toggle "espaco" nas Funções do CRM (default OFF, como clientToggleKey).
-    // Sem cargo: ver MENU_FREE_BY_DESIGN.
-    name: 'Espaço',
-    href: '/espaco',
-    icon: NotebookPen,
-    clientToggleKey: 'espaco',
   },
   {
     // Painel "Equipe & Acessos" — só admins (gate resource users/update).
