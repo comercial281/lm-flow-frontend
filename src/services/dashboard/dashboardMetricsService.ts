@@ -1,6 +1,7 @@
 import api from '@/services/core/api';
 import { extractData } from '@/utils/apiHelpers';
 import type { DashboardMetrics, Granularity, PeriodPreset, ScopeMode } from '@/pages/Customer/DashboardV2/types';
+import type { ListaRapidaPayload } from '@/pages/Customer/DashboardNova/types';
 
 export interface DashboardMetricsParams {
   preset?: PeriodPreset;
@@ -23,6 +24,10 @@ export interface DashboardMetricsParams {
   ai_only?: boolean;
   /** Qual IA Vendedora, quando o tenant tem mais de uma. Implica `ai_only`. */
   sales_agent_id?: string;
+  /** Só estes blocos, separados por vírgula (a Dashboard nova). Sem isto, o payload de sempre. */
+  blocks?: string;
+  /** Um corretor só, para quem vê a imobiliária ou o time. */
+  owner_id?: string;
 }
 
 /**
@@ -40,4 +45,13 @@ export const fetchDashboardMetrics = async (
   return extractData<DashboardMetrics>(response);
 };
 
-export default { fetchDashboardMetrics };
+/** Os itens por trás de um número da Dashboard (a lista rápida). Mesmos filtros. */
+export const fetchDashboardList = async (
+  kind: string,
+  params: DashboardMetricsParams = {},
+): Promise<ListaRapidaPayload> => {
+  const response = await api.get('/dashboard/list', { params: { ...params, kind } });
+  return extractData<ListaRapidaPayload>(response);
+};
+
+export default { fetchDashboardMetrics, fetchDashboardList };

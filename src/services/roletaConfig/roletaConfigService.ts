@@ -306,6 +306,9 @@ export interface RoletaDiagnostic {
 // que é sempre a de quem pergunta — inclusive para admin.
 export interface RoletaQueueItem {
   id: string;
+  // De qual roleta é a oferta. Servidor antigo não manda: aí a tela cai no
+  // nome do número (`instancia`), que pode repetir entre roletas.
+  roleta_config_id?: string | null;
   lead: string;
   lead_telefone: string | null;
   contact_id: string;

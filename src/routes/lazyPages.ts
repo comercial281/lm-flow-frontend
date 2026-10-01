@@ -12,10 +12,9 @@
 // ════════════════════════════════════════════════════════════════════════════
 import { lazyWithRetry } from '@/utils/chunkReload';
 
-// Dashboard reconstruído do zero na identidade do protótipo (DashboardV2). O
-// antigo segue no repo, sem rota, até a nova tela rodar alguns dias em
-// produção — remover no mesmo passo da troca deixaria sem para onde voltar.
-export const Dashboard = lazyWithRetry(() => import('@/pages/Customer/DashboardV2'));
+// /dashboard escolhe pela chave `dashboard_nova` (fase 4, jornada 1): a nova onde
+// estiver ligada, a DashboardV2 no resto. O PR 5 da jornada desfaz esta ponte.
+export const Dashboard = lazyWithRetry(() => import('@/pages/Customer/DashboardEntrada'));
 export const Contacts = lazyWithRetry(() => import('@/pages/Customer/Contacts'));
 export const ScheduledActions = lazyWithRetry(() => import('@/pages/Customer/Contacts/ScheduledActions'));
 export const Channels = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.Channels })));

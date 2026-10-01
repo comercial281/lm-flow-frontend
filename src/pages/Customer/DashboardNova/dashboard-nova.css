@@ -1,0 +1,57 @@
+/* src/pages/Customer/DashboardNova/dashboard-nova.css
+ * Só o que o lmf.css (DashboardV2) não tem. Tokens de cor sempre os --lmf-*,
+ * que já trazem o claro e o escuro. A exceção é o cinza neutro de verdade
+ * (os --lmf-* puxam todos para o roxo): --lmfn-neutro, com claro e escuro. */
+.lmfn { --lmfn-neutro: rgba(100, 116, 139, 0.18); }
+.dark .lmfn { --lmfn-neutro: rgba(148, 163, 184, 0.14); }
+.lmfn-cabecalho { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 16px; margin-bottom: 16px; }
+.lmfn-cabecalho h1 { font-size: 26px; font-weight: 650; letter-spacing: -0.03em; margin: 0; }
+.lmfn-controles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.lmfn-seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; border: 1px solid var(--lmf-border); background: var(--lmf-accent-soft); }
+.lmfn-seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 500; color: var(--lmf-muted); cursor: pointer; }
+.lmfn-seg button[aria-pressed='true'] { background: var(--lmf-surface); color: var(--lmf-text); box-shadow: var(--lmf-shadow); }
+.lmfn-contador { background: var(--lmf-accent); color: #fff; border-radius: 999px; font-size: 11px; padding: 0 6px; line-height: 17px; }
+.lmfn-filtros { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 12px; padding: 14px; margin-bottom: 16px; border: 1px solid var(--lmf-border); border-radius: 14px; background: var(--lmf-surface); }
+.lmfn-filtros label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--lmf-muted); }
+.lmfn-filtros-rodape { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+.lmfn-filtros-rodape button { border: 0; background: transparent; color: var(--lmf-accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.lmfn-aviso { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--lmf-accent-soft); font-size: 13px; margin-bottom: 16px; }
+.lmfn-aviso button { margin-left: auto; border: 0; background: transparent; color: var(--lmf-accent); font: inherit; font-weight: 600; cursor: pointer; }
+.lmfn-aviso-erro { background: color-mix(in srgb, var(--lmf-warn) 12%, transparent); color: var(--lmf-text); }
+.lmfn-aviso-erro button { color: var(--lmf-warn); }
+.lmfn-blocos { transition: opacity 0.15s ease; }
+.lmfn-blocos-pendente { opacity: 0.6; transition: opacity 0.15s ease; }
+/* O Funil esmaecido dentro da área já esmaecida não escurece duas vezes. */
+.lmfn-blocos-pendente .lmfn-blocos-pendente { opacity: 1; }
+/* min(): no celular estreito a coluna nunca passa da tela (nada de rolar de lado). */
+.lmfn-linha { display: grid; gap: 18px; margin-top: 18px; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); }
+.lmfn-linha-principal { grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr); }
+@media (max-width: 1024px) { .lmfn-linha-principal { grid-template-columns: minmax(0, 1fr); } }
+.lmfn-coluna { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+/* Bloco que não desenha nada (Roleta agora sem roleta ativa): a coluna sai e a vizinha ocupa a largura. */
+.lmfn-coluna:empty { display: none; }
+.lmfn-secao { margin-top: 30px; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
+.lmfn-secao h2 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+.lmfn-secao p { margin: 0; color: var(--lmf-muted); font-size: 13px; }
+.lmfn-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 4px; border: 0; border-top: 1px solid var(--lmf-border); background: transparent; color: inherit; text-align: left; font: inherit; }
+button.lmfn-item { cursor: pointer; }
+button.lmfn-item:hover { background: var(--lmf-accent-soft); }
+.lmfn-item-texto { flex: 1; min-width: 0; font-size: 13.5px; }
+.lmfn-item-texto small { display: block; color: var(--lmf-muted); font-size: 12px; }
+.lmfn-pilula { display: inline-flex; align-items: center; gap: 4px; min-width: 40px; justify-content: center; border-radius: 8px; padding: 2px 8px; font-size: 13px; font-weight: 600; background: var(--lmf-surface-2); color: var(--lmf-muted); border: 1px solid var(--lmf-border); font-variant-numeric: tabular-nums; }
+.lmfn-pilula-atencao { color: var(--lmf-warn); border-color: transparent; background: rgba(217, 119, 6, 0.12); }
+.lmfn-pilula-alerta { color: var(--lmf-down); border-color: transparent; background: rgba(225, 29, 72, 0.1); }
+.lmfn-numeros { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.lmfn-numeros-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 640px) { .lmfn-numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.lmfn-numero { display: flex; flex-direction: column; gap: 4px; text-align: left; border: 1px solid var(--lmf-border); background: var(--lmf-surface); border-radius: 14px; padding: 14px; box-shadow: var(--lmf-shadow); color: inherit; font: inherit; min-width: 0; }
+button.lmfn-numero { cursor: pointer; }
+button.lmfn-numero:hover { border-color: var(--lmf-accent); }
+.lmfn-numero-valor { font-size: 28px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.lmfn-numero-rotulo { font-size: 12.5px; color: var(--lmf-muted); }
+.lmfn-tabela { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.lmfn-tabela th { text-align: left; font-weight: 500; color: var(--lmf-muted); font-size: 12px; padding: 6px 4px; }
+.lmfn-tabela td { padding: 7px 4px; border-top: 1px solid var(--lmf-border); }
+.lmfn-carrossel { display: flex; align-items: center; gap: 6px; }
+.lmfn-carrossel button { border: 1px solid var(--lmf-border); background: var(--lmf-surface); border-radius: 8px; width: 28px; height: 28px; display: inline-grid; place-items: center; color: inherit; cursor: pointer; }
+.lmfn-carrossel button:disabled { opacity: 0.4; cursor: default; }
