@@ -4436,6 +4436,11 @@ O que aparece na tela, no **Agendar visita** da Agenda:
 - **Sem cadastro de cliente no modal** (decisão do dono). Em Propostas, continua.
 - **As observações passam a ser gravadas** (antes sumiam, aqui e no cartão do Funil).
 - Dia que já passou no calendário não abre o modal.
+- **O resumo da visita** ("Sexta, 2 de outubro, das 13h às 14h" + as visitas do
+  corretor naquele dia) fica num bloco próprio **embaixo de Imóvel**, na coluna da
+  esquerda, que sobrava vazia (pedido do dono, 01/10). No celular, como as colunas
+  viram uma, ele vem depois dos horários (ordem do DOM; a grade usa
+  `md:row-start`/`md:row-span-2` para encaixar no computador).
 - Corretor e gestor (não administrador) voltam a conseguir escolher o cliente na
   visita e em Propostas: desde a mudança de permissões a lista aparecia vazia.
 
