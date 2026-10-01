@@ -10,7 +10,7 @@ import {
   DialogTitle,
   Input,
 } from '@/components/ui/ds';
-import { Trash2, Grid3X3, List, Layers } from 'lucide-react';
+import { Trash2, Grid3X3, List, Layers, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 
@@ -36,6 +36,9 @@ export default function Channels() {
   // lista (04/09/2026) — veria a lixeira vermelha em cada número e levaria um
   // aviso de permissão ao clicar. Botão que só sabe recusar é chamado de suporte.
   const podeExcluir = permissionsReady && can('channels', 'delete');
+  // "Vejo qualquer número" é `inboxes.update` (InboxPolicy#show?): quem não tem
+  // vê só os números em que atende — o corretor, que chega aqui por "Meus números".
+  const semNumeroProprio = permissionsReady && !can('inboxes', 'update');
   const { t } = useLanguage('channels');
   const canConnect = useFeature('channels_connect');
 
@@ -227,7 +230,7 @@ export default function Channels() {
           searchValue={query}
           onSearchChange={setQuery}
           onNewChannel={handleNewChannel}
-          canCreate={canConnect}
+          canCreate={canConnect && permissionsReady && can('channels', 'create')}
           onClearSelection={() => {}}
         />
       </div>
@@ -264,6 +267,16 @@ export default function Channels() {
               <Skeleton key={idx} className="h-28" />
             ))}
           </div>
+        ) : inboxes.length === 0 && semNumeroProprio ? (
+          // Corretor que não atende em nenhum número: a lista vem vazia porque
+          // ela só mostra os números DELE, e criar número é do gestor. Diz a
+          // quem pedir, em vez de oferecer um "Novo canal" que ele não pode usar.
+          <EmptyState
+            icon={Smartphone}
+            title="Você ainda não tem um número de WhatsApp"
+            description="Peça ao gestor da sua imobiliária para criar o seu."
+            className="h-full"
+          />
         ) : totalCount === 0 ? (
           <EmptyState
             icon={Layers}

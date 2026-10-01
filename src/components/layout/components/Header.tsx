@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Menu,
   PanelRightClose,
   PanelRightOpen,
-  ChevronDown,
-  ChevronRight,
   Building2,
   Search,
 } from 'lucide-react';
@@ -27,8 +25,9 @@ import PlantaoToggle from './PlantaoToggle';
 import ProfileMenu from './ProfileMenu';
 import { TourFab } from '@/components/TourFab';
 import MenuItem from './MenuItem';
+import MenuSecoes from './MenuSecoes';
 import { useGuardaDeSaida } from '@/hooks/useAlteracoesNaoSalvas';
-import { MenuItem as MenuItemType } from '../config/menuItems';
+import { itemAtivo, type MenuItem as MenuItemType, type MenuSection } from '../config/menuItems';
 import { ThemeToggle } from '../../ThemeToggle';
 import { DemoModeToggle } from '../../DemoModeToggle';
 import AdminAreaButton from './AdminAreaButton';
@@ -53,15 +52,11 @@ interface HeaderProps {
   user: User;
   isCollapsed: boolean;
   isMobileMenuOpen: boolean;
-  menuItems: MenuItemType[];
-  activeMenu: string | null;
-  pathname: string;
+  secoes: MenuSection[];
+  rodape: MenuItemType[];
   toggleSidebar: () => void;
   setIsMobileMenuOpen: (open: boolean) => void;
   setLogoutDialogOpen: (open: boolean) => void;
-  isMenuItemActive: (href: string) => boolean;
-  isMenuWithSubItemsActive: (item: MenuItemType) => boolean;
-  handleMenuClick: (item: MenuItemType, e: React.MouseEvent) => void;
   onOpenSearch?: () => void;
 }
 
@@ -69,18 +64,15 @@ export default function Header({
   user,
   isCollapsed,
   isMobileMenuOpen,
-  menuItems,
-  activeMenu,
-  pathname,
+  secoes,
+  rodape,
   toggleSidebar,
   setIsMobileMenuOpen,
   setLogoutDialogOpen,
-  isMenuWithSubItemsActive,
-  handleMenuClick,
   onOpenSearch,
 }: HeaderProps) {
   const { t } = useLanguage('layout');
-  const [expandedMobileMenus, setExpandedMobileMenus] = useState<Set<string>>(new Set());
+  const { pathname } = useLocation();
   const account = useAppDataStore(state => state.account);
   const fetchAccount = useAppDataStore(state => state.fetchAccount);
   // Fase 3: menu mobile também pergunta antes de sair com alteração não salva.
@@ -116,85 +108,19 @@ export default function Header({
 
               <ScrollArea className="flex-1 min-h-0 overflow-hidden p-4">
                 <nav onClickCapture={guardarSaida} className="space-y-1">
-                  {menuItems.map(item => {
-                    const hasSubItems = item.subItems && item.subItems.length > 0;
-                    const menuKey = item.id || item.href;
-                    const isExpanded = expandedMobileMenus.has(menuKey);
-
-                    if (!hasSubItems) {
-                      return (
-                        <MenuItem
-                          key={menuKey}
-                          item={item}
-                          mobile
-                          isActive={isMenuWithSubItemsActive(item)}
-                          activeMenu={activeMenu}
-                          onClick={e => handleMenuClick(item, e)}
-                        />
-                      );
-                    }
-
-                    const isParentActive = item.subItems!.some(
-                      sub => pathname === sub.href || pathname.startsWith(sub.href + '/')
-                    );
-
-                    return (
-                      <div key={menuKey}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setExpandedMobileMenus(prev => {
-                              const next = new Set(prev);
-                              if (next.has(menuKey)) {
-                                next.delete(menuKey);
-                              } else {
-                                next.add(menuKey);
-                              }
-                              return next;
-                            });
-                          }}
-                          className={cn(
-                            'flex items-center gap-3 px-3 py-2.5 rounded-md transition-all w-full text-left cursor-pointer',
-                            isParentActive
-                              ? 'bg-primary/10 text-primary'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-accent',
-                          )}
-                        >
-                          <item.icon className={cn('flex-shrink-0 h-5 w-5', isParentActive && 'text-primary')} />
-                          <span className="font-medium flex-1">{item.name}</span>
-                          {isExpanded ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                        </button>
-
-                        {isExpanded && (
-                          <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-sidebar-border pl-3">
-                            {item.subItems!.map(subItem => {
-                              const isSubActive = pathname === subItem.href || pathname.startsWith(subItem.href + '/');
-                              return (
-                                <Link
-                                  key={subItem.href}
-                                  to={subItem.href}
-                                  onClick={() => setIsMobileMenuOpen(false)}
-                                  className={cn(
-                                    'flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm',
-                                    isSubActive
-                                      ? 'bg-primary text-primary-foreground'
-                                      : 'text-muted-foreground hover:text-foreground hover:bg-accent',
-                                  )}
-                                >
-                                  <subItem.icon className={cn('flex-shrink-0 h-4 w-4', isSubActive && 'text-primary-foreground')} />
-                                  <span className="font-medium">{subItem.name}</span>
-                                </Link>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {/* Mesmas seções do computador: uma aberta por vez. */}
+                  <MenuSecoes secoes={secoes} mobile aoNavegar={() => setIsMobileMenuOpen(false)} />
+                  <div className="mt-3 pt-3 border-t border-sidebar-border space-y-1">
+                    {rodape.map(item => (
+                      <MenuItem
+                        key={item.href}
+                        item={item}
+                        mobile
+                        isActive={itemAtivo(item, pathname)}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      />
+                    ))}
+                  </div>
                 </nav>
               </ScrollArea>
 
@@ -264,7 +190,7 @@ export default function Header({
         <div
           className={cn(
             'flex items-center justify-between transition-all duration-300 ease-in-out px-4 relative',
-            isCollapsed ? 'w-16' : 'w-56',
+            isCollapsed ? 'w-16' : 'w-60',
           )}
         >
           {/* App Logo - only show when not collapsed */}

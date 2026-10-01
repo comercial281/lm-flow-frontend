@@ -32,7 +32,7 @@ interface Props {
 const MIN_QUERY_LENGTH = 2;
 const SECTION_LIMIT = 5;
 
-/** Achata o menu (itens + subitens) em alvos de navegação únicos. */
+/** Achata o menu (itens + abas das páginas) em alvos de navegação únicos. */
 function flattenMenu(menuItems: MenuItem[]): Array<{ name: string; href: string; icon: MenuItem['icon'] }> {
   const out: Array<{ name: string; href: string; icon: MenuItem['icon'] }> = [];
   const seen = new Set<string>();
@@ -41,7 +41,7 @@ function flattenMenu(menuItems: MenuItem[]): Array<{ name: string; href: string;
       seen.add(item.href);
       out.push({ name: item.name, href: item.href, icon: item.icon });
     }
-    for (const sub of item.subItems ?? []) {
+    for (const sub of item.abas ?? []) {
       if (sub.href && sub.href !== '#' && !seen.has(sub.href)) {
         seen.add(sub.href);
         out.push({ name: sub.name, href: sub.href, icon: sub.icon });

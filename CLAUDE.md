@@ -4090,11 +4090,11 @@ As regras estão em [GLOSSARIO.md → As peças da casa](GLOSSARIO.md#as-peças-
   - Trava o duplo clique.
   - Desligado é cinza no CSS global (`chaveCinza.spec.ts` impede o vermelho de voltar).
 - **`useAlteracoesNaoSalvas(temAlteracao)` + `BarraSalvar`:** a tela declara se tem alteração, compara com `mesmoConteudo(atual, carregado)`, e a barra aparece.
-  - `useGuardaDeSaida` é usado no `Sidebar` (os dois `<nav>` e o bloco de Tutoriais), no `Header` (menu do celular) e nas `Abas`.
-  - Deixam passar: Ctrl/Cmd/Shift/Alt ou botão que não é o esquerdo, e `data-abre-submenu`, que só vai no item com submenu cujo `href` é `'#'`. Contatos e Bolsão navegam **e** têm submenu, então perguntam.
+  - `useGuardaDeSaida` é usado no `Sidebar` (o `<nav>` do menu e o rodapé), no `Header` (menu do celular) e nas `Abas`.
+  - Deixam passar: Ctrl/Cmd/Shift/Alt ou botão que não é o esquerdo, e `data-abre-submenu`. Desde o menu novo (fase 4) nenhum item produz esse atributo: o cabeçalho de seção é `<button>`, não link, e todo item leva a uma página. A guarda continua aceitando o atributo.
   - Não aninhe um `<nav>` guardado dentro de outro.
   - **O "voltar" do navegador NÃO é coberto:** `<BrowserRouter>`, sem `useBlocker`. Migrar pro roteador de dados é outra frente.
-- **`Abas`:** com `para` em todas as abas vira navegação com guarda; sem `para`, é tablist. Estreou em `AutomationsLayout`. O modo tablist **ainda não tem navegação por setas**: o primeiro consumidor acrescenta.
+- **`Abas`:** com `para` em todas as abas vira navegação com guarda; sem `para`, é tablist. Estreou em `AutomationsLayout`; desde o menu novo, quem a usa nas páginas do menu é a `PaginaComAbas`. `exata` faz a aba só acender no endereço exato. O modo tablist **ainda não tem navegação por setas**: o primeiro consumidor acrescenta.
 - **`EmptyState`:** `tipo` pode ser `vazio`, `semResultado` ou `erro`. Erro nunca vira lista vazia.
 - **Telas de referência:** `Settings/Account/AccountSettings.tsx` e `Settings/WhatsappReminders/WhatsappReminders.tsx`. Os specs `*.base.spec.tsx` delas são a régua.
   - Em Conta, ligar a resolução automática pergunta o tempo e já grava; os ajustes esperam a barra.
@@ -4116,3 +4116,91 @@ de qual portal ou site trouxe o lead (`raw_data.portal` / `raw_data.site`).
   novo aqui: duas tabelas de nome de origem é o que deixava a rosca em inglês.
 - **`reclassificado` fica escondido** na aba Origem: é a marca da correção de dados
   do backend, não informação para quem atende.
+
+## Menu novo: seções, uma aberta por vez (desde 2026-10-01)
+
+Fase 4, primeiro PR. O menu tinha 18 itens soltos, rótulos que não ajudavam
+("Inteligência" com Canais e Configurações dentro), cortava itens em tela de
+900px, Configurações abria uma segunda coluna e Automações juntava 7 abas de
+assuntos diferentes. Modelo do dono: a Lais, em que cada item é uma página.
+Spec: `LM FLOW/specs/2026-10-01-fase-4-menu-novo-design.md`.
+
+O que aparece na tela:
+
+- **Seções que abrem e fecham, uma por vez.** Principal (Dashboard, Conversas,
+  Funil de vendas, Visitas) fica sempre aberta, sem cabeçalho. Depois vêm
+  Imóveis, Leads, Vendas e automação e Minha imobiliária. A seção da página
+  atual abre sozinha. Seção sem item que o cargo veja não aparece.
+- **Todo item leva direto a uma página.** O terceiro nível virou **abas no topo
+  da página** (Integrações: WhatsApp, Pixel, Portais · Bolsão: Pegar leads,
+  Listas e regras · Fluxos de mensagem: Editor de funis, FlowBuilder ·
+  Automações: Regras de lead, Lembretes · Campos personalizados: Atributos,
+  Variáveis). A segunda coluna ao lado do menu acabou.
+- **Automações deixou de ser uma página de 7 abas**, sem mudar endereço:
+  Follow-up, Roleta de leads e Origem são páginas sozinhas. `/automations` puro
+  manda pra primeira tela que a pessoa vê.
+- **Como a Lais:** cartão no topo com o nome da imobiliária e o cargo de quem
+  usa (`lm-redact`, some no modo demonstração); divisor depois do Principal e
+  antes do rodapé; o rodapé vem logo depois do último bloco, e a coluna inteira
+  rola se passar da tela. Abrir e fechar seção desliza (grade de `0fr` a `1fr`,
+  200 ms); com "reduzir movimento" no sistema, sem animação. Seção fechada fica
+  no DOM com `inert` + `aria-hidden`, fora do Tab e do leitor de tela.
+- **Recolhido:** só ícones, com um traço entre as seções.
+- **Rodapé:** Guia do LM Flow e Falar com o suporte. Saíram o © e o link
+  "Documentação" (era a documentação da Evolution).
+- **Avatar:** Meu perfil, **Meus números**, Sugestões/Bugs, Sair. Meus números
+  leva para `/channels` (o corretor religa o WhatsApp em que atende).
+- **Corretor sem número** vê, na tela de WhatsApp, "Você ainda não tem um número
+  de WhatsApp. Peça ao gestor da sua imobiliária para criar o seu." O "Novo
+  canal" só aparece para quem tem `channels.create`.
+- Nomes: Funil de vendas, Visitas, Meus imóveis, Meu site, Roleta de leads,
+  Campos personalizados, Guia do LM Flow.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **O menu do corretor sai do cargo, não de um segundo menu.** Com o Corretor de
+  fábrica ele vê Principal, Imóveis (Meus imóveis, Books) e Leads (Contatos,
+  Bolsão). O `menuItems.spec` trava essa lista.
+- **Telas de gestão pedem, no menu, a chave da rota + uma de escrita** (`gestao()`
+  em `menuItems.ts`): WhatsApp (`inboxes.update`), Etiquetas (`labels.create`),
+  Variáveis (`canned_responses.create`), Meu site (`sites.update`). O Corretor lê
+  essas coisas para usar no chat e ganharia a seção Minha imobiliária inteira. A
+  rota continua aberta para quem lê; só o menu não oferece. A primeira chave é
+  sempre a da rota, e o spec confere.
+- **Saíram do menu, para todo mundo (inclusive a Leal Mídia)**, e abrem só pelo
+  endereço: Propostas, Contratos, Captação (voltam quando prontas); Interesses,
+  Ações agendadas, Marketplace (sem plano). A lista está no topo de
+  `menuItems.ts`, e o spec impede que voltem por engano.
+- **Saiu o "Personalizar menu"** (esconder, favoritar, reordenar): com seções
+  fixas ele quebrava os rótulos. O que estava salvo no navegador é ignorado.
+- **A Página do Facebook continua em Origem**, junto com os Formulários. Ela vai
+  para Integrações quando a tela de Origem for refatorada.
+
+Como funciona por dentro:
+
+- `getCustomerMenuSections()` devolve as seções; `filterMenuSections` aplica o
+  filtro de sempre (cargo, função do cliente, arquivamento) seção a seção.
+- **Item com abas** (`abas`): aparece se alguma aba sobrevive ao filtro, e o
+  `href` dele vira o da primeira que sobreviveu.
+- **`MenuContext`**: o `MainLayout` entrega o menu já filtrado. A
+  **`PaginaComAbas`** (rota-moldura sem endereço em `routes/index.tsx`) acha o
+  item dono do endereço (`donoDoEndereco`, casamento mais longo) e desenha título
+  + `Abas` a partir dele. Menu e abas leem a MESMA lista e não têm como discordar.
+  Com menos de duas abas visíveis ela não desenha nada (a tela de dentro já tem
+  título): é o corretor no Bolsão e em Meus números.
+- O `AutomationsLayout` virou: redirecionamento de `/automations` + `PaginaComAbas`.
+  O "vazio pelo plano × vazio pelo cargo" continua igual.
+- `hideOnRoot` saiu da aba de Automações para o item do menu (Origem some no
+  painel raiz).
+
+Armadilhas:
+
+1. **Item novo com abas:** a rota de cada aba tem que estar dentro de uma
+   `<Route element={<PaginaComAbas />}>` em `routes/index.tsx`, senão a página
+   abre sem a fileira de abas.
+2. **Tela interna** (`/channels/new`, `/settings/portals/:portalKey`) fica FORA da
+   moldura: tem título e "voltar" próprios. Já `/automations/flow-builder/:id`
+   fica dentro, porque é filha de `/automations`.
+3. **Aba cujo endereço é começo do de outra** (`/bolsao` e `/bolsao/listas`)
+   precisa de `exata: true`, senão as duas acendem.
+

@@ -23,6 +23,8 @@ export interface Aba {
   icone?: LucideIcon;
   /** Rota. Com `para` em todas as abas, a faixa vira navegação. */
   para?: string;
+  /** A aba só fica ativa no endereço exato (quando o endereço dela é começo do de outra aba). */
+  exata?: boolean;
 }
 
 export interface AbasProps {
@@ -47,8 +49,8 @@ export default function Abas({ abas, rotulo, ativa, aoTrocar, className }: AbasP
   if (saoLinks) {
     return (
       <nav aria-label={rotulo} onClickCapture={aoClicar} className={cn('flex items-center gap-1 overflow-x-auto', className)}>
-        {abas.map(({ chave, rotulo: nome, icone: Icone, para }) => (
-          <NavLink key={chave} to={para!} className={({ isActive }) => classeDaAba(isActive)}>
+        {abas.map(({ chave, rotulo: nome, icone: Icone, para, exata }) => (
+          <NavLink key={chave} to={para!} end={exata} className={({ isActive }) => classeDaAba(isActive)}>
             {Icone && <Icone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
             {nome}
           </NavLink>
