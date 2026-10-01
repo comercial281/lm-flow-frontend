@@ -312,10 +312,19 @@ export default function Properties() {
     load(search, s, t, tr, ld);
   };
 
-  const tirarRecorte = () => {
+  // Tira o filtro do link. Também é o caminho de quem escolhe um Status com o
+  // link ligado: o link manda o próprio status (ex.: "Sem fotos" é Ativo), então
+  // os dois juntos mostrariam "Vendido" no menu e imóveis ativos na lista.
+  const tirarRecorte = (status = filterStatus) => {
     setRecorte(null);
     setSearchParams({}, { replace: true });
-    load(search, filterStatus, filterType, filterTransaction, filterLeadDestination, null);
+    setFilterStatus(status);
+    load(search, status, filterType, filterTransaction, filterLeadDestination, null);
+  };
+
+  const escolherStatus = (status: string) => {
+    if (recorte) tirarRecorte(status);
+    else applyFilter(status, filterType, filterTransaction);
   };
 
   const openCreate = () => {
@@ -838,7 +847,7 @@ export default function Properties() {
 
           <select
             value={filterStatus}
-            onChange={e => applyFilter(e.target.value, filterType, filterTransaction)}
+            onChange={e => escolherStatus(e.target.value)}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             <option value="">Status</option>
@@ -858,7 +867,7 @@ export default function Properties() {
             Só com destino próprio
           </label>
 
-          {recorte && <ChipDaDashboard rotulo={recorte.rotulo} onTirar={tirarRecorte} />}
+          {recorte && <ChipDaDashboard rotulo={recorte.rotulo} onTirar={() => tirarRecorte()} />}
 
           {(filterStatus || filterType || filterTransaction || filterLeadDestination || search || recorte) && (
             <button
