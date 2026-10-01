@@ -1,5 +1,5 @@
 /* src/pages/Customer/DashboardNova/dashboard-nova.css
- * Só o que o lmf.css (DashboardV2) não tem. Tokens de cor sempre os --lmf-*,
+ * Só o que o base/lmf.css não tem. Tokens de cor sempre os --lmf-*,
  * que já trazem o claro e o escuro. A exceção é o cinza neutro de verdade
  * (os --lmf-* puxam todos para o roxo): --lmfn-neutro, com claro e escuro. */
 .lmfn { --lmfn-neutro: rgba(100, 116, 139, 0.18); }

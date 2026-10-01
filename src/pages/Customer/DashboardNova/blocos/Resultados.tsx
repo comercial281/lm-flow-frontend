@@ -1,8 +1,8 @@
 // src/pages/Customer/DashboardNova/blocos/Resultados.tsx
 import React from 'react';
 import { VAZIO, numero, porcentagem } from '@/lib/formato';
-import { EmptyBlock, GlassCard, Skeleton, formatCurrency } from '../../DashboardV2/components/primitives';
-import { isAvailable } from '../../DashboardV2/types';
+import { EmptyBlock, GlassCard, Skeleton, formatCurrency } from '../base/primitives';
+import { isAvailable } from '../base/types';
 import type { ContextoBloco } from '../usePodeAbrir';
 
 export const Resultados: React.FC<ContextoBloco> = ({ dados, carregando }) => {

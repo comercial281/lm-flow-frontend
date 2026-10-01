@@ -2,8 +2,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { numero } from '@/lib/formato';
-import { EmptyBlock, GlassCard, Skeleton } from '../../DashboardV2/components/primitives';
-import { isAvailable } from '../../DashboardV2/types';
+import { EmptyBlock, GlassCard, Skeleton } from '../base/primitives';
+import { isAvailable } from '../base/types';
 import { linkFunil } from '@/features/dashboard/links';
 import type { ContextoBloco } from '../usePodeAbrir';
 import { recorteBateComDestino } from '../visao';

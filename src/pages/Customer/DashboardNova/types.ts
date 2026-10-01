@@ -2,12 +2,12 @@
 // e de GET /api/v1/dashboard/list (a lista rápida).
 //
 // Espelham Dashboard::MetricsService, PropertiesSummary, PendingNow,
-// TeamService e QuickList. Os blocos antigos reaproveitam os tipos da
-// DashboardV2, que é o mesmo serviço.
+// TeamService e QuickList. Os blocos de sempre usam os tipos de
+// base/types.ts, que é o mesmo serviço.
 import type {
   AgentBlock, AiBlock, HeatmapBlock, HistoryBlock, Kpis, Maybe, PeriodInfo, PeriodPreset, PipelineBlock,
   QueueBlock, ResponseBlock, ScopeInfo, ScopeMode, SeriesBlock, SourcesBlock, UpcomingBlock,
-} from '../DashboardV2/types';
+} from './base/types';
 
 /**
  * Os nomes que a API entende em `blocks=` (Dashboard::MetricsService::BLOCKS).

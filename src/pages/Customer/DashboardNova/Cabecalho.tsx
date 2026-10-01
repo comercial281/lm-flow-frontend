@@ -1,11 +1,11 @@
 // src/pages/Customer/DashboardNova/Cabecalho.tsx
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { SlidersHorizontal, User } from 'lucide-react';
-import { InstancePicker } from '../DashboardV2/components/InstancePicker';
-import { TagPicker } from '../DashboardV2/components/TagPicker';
-import { AiToggle } from '../DashboardV2/components/AiToggle';
-import { CampoFiltro } from '../DashboardV2/components/CampoFiltro';
-import type { PeriodPreset, ScopeMode } from '../DashboardV2/types';
+import { InstancePicker } from './base/InstancePicker';
+import { TagPicker } from './base/TagPicker';
+import { AiToggle } from './base/AiToggle';
+import { CampoFiltro } from './base/CampoFiltro';
+import type { PeriodPreset, ScopeMode } from './base/types';
 import { usersService } from '@/services/users';
 import type { FiltrosDashboard, ScopeInfoNova } from './types';
 import type { Visao } from './catalogo';

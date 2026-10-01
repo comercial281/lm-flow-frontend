@@ -2,9 +2,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
-vi.mock('../DashboardV2/components/InstancePicker', () => ({ InstancePicker: () => null }));
-vi.mock('../DashboardV2/components/TagPicker', () => ({ TagPicker: () => null }));
-vi.mock('../DashboardV2/components/AiToggle', () => ({ AiToggle: () => null }));
+vi.mock('./base/InstancePicker', () => ({ InstancePicker: () => null }));
+vi.mock('./base/TagPicker', () => ({ TagPicker: () => null }));
+vi.mock('./base/AiToggle', () => ({ AiToggle: () => null }));
 vi.mock('@/services/users', () => ({
   usersService: { getUsers: vi.fn().mockResolvedValue({ data: [{ id: 'u1', name: 'Ana' }, { id: 'u9', name: 'Bruno' }] }) },
 }));

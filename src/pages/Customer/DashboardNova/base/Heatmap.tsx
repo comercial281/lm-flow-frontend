@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { EmptyBlock, formatNumber } from './primitives';
-import type { HeatmapBlock } from '../types';
+import type { HeatmapBlock } from './types';
 
 const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 

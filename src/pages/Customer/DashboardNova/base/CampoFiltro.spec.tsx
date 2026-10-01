@@ -15,8 +15,7 @@ import { InstancePicker } from './InstancePicker';
 import { TagPicker } from './TagPicker';
 import { AiToggle } from './AiToggle';
 
-// Com `rotulo` (Dashboard nova), cada seletor vira um campo com o rótulo visível
-// ligado à caixa. Sem `rotulo`, o desenho da DashboardV2 não muda.
+// Com `rotulo`, cada seletor vira um campo com o rótulo visível ligado à caixa.
 describe('seletores com rótulo', () => {
   it('Número de WhatsApp e Etiqueta: rótulo visível que dá nome à caixa', async () => {
     const onNumero = vi.fn();

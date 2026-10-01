@@ -69,7 +69,7 @@ describe('catálogo de etiquetas: uma porta só', () => {
     'src/services/automation/automationService.ts',
     'src/services/account/accountService.ts',
     'src/services/chat/chatService.ts',
-    'src/pages/Customer/DashboardV2/components/TagPicker.tsx',
+    'src/pages/Customer/DashboardNova/base/TagPicker.tsx',
   ];
 
   it.each(COM_CICATRIZ)('%s busca etiqueta pelo serviço', (arquivo) => {

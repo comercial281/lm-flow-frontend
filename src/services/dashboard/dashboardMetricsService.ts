@@ -1,6 +1,6 @@
 import api from '@/services/core/api';
 import { extractData } from '@/utils/apiHelpers';
-import type { DashboardMetrics, Granularity, PeriodPreset, ScopeMode } from '@/pages/Customer/DashboardV2/types';
+import type { DashboardMetrics, Granularity, PeriodPreset, ScopeMode } from '@/pages/Customer/DashboardNova/base/types';
 import type { ListaRapidaPayload } from '@/pages/Customer/DashboardNova/types';
 
 export interface DashboardMetricsParams {
@@ -24,7 +24,7 @@ export interface DashboardMetricsParams {
   ai_only?: boolean;
   /** Qual IA Vendedora, quando o tenant tem mais de uma. Implica `ai_only`. */
   sales_agent_id?: string;
-  /** Só estes blocos, separados por vírgula (a Dashboard nova). Sem isto, o payload de sempre. */
+  /** Só estes blocos, separados por vírgula. Sempre mandar: sem isto, o servidor devolve só período e recorte. */
   blocks?: string;
   /** Um corretor só, para quem vê a imobiliária ou o time. */
   owner_id?: string;
