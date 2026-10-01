@@ -1156,7 +1156,7 @@ function FeaturesModal({ tenant, onClose, onTenantUpdated }: {
 }
 
 export default function PooledClients() {
-  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  const { dialogoDeConfirmacao } = useConfirmacao();
   const [tenants, setTenants] = useState<PooledTenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [entering, setEntering] = useState<string | null>(null);
