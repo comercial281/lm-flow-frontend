@@ -439,9 +439,10 @@ export default function Visits() {
         ...form,
         property_id: form.property_id?.trim() ? form.property_id : null,
       };
-      const created = await visitsService.create(payload);
-      setVisits(prev => [created, ...prev]);
-      setTotal(t => t + 1);
+      await visitsService.create(payload);
+      // Recarrega em vez de somar 1 na mão: a visita nova pode ser de outro mês
+      // ou de outro corretor, e aí o contador do mês não muda.
+      load();
       toast.success('Visita agendada');
       setModalOpen(false);
       setForm(EMPTY_FORM);
@@ -475,6 +476,8 @@ export default function Visits() {
         toast.success('Visita cancelada');
       }
       setVisits(prev => prev.map(v => v.id === updated.id ? updated : v));
+      // Cancelar tira a visita do contador (que não conta canceladas): recarrega.
+      if (actionModal.action === 'cancel') load();
       setActionModal(null);
       setRating(0);
       setFeedback('');
