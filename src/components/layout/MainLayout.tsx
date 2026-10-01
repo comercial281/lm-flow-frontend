@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Dialog,
@@ -12,23 +12,22 @@ import {
 import { toast } from 'sonner';
 import { Header, Sidebar } from './components';
 import {
-  getCustomerMenuItems,
-  MenuItem as MenuItemType,
+  getCustomerMenuSections,
+  getFooterMenuItems,
+  filterMenuSections,
   filterMenuItemsByPermissions,
 } from './config/menuItems';
+import { MenuProvider } from '@/contexts/MenuContext';
 
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
-import { useMenuState } from '@/hooks/useMenuState';
 import { useKeyboardInsetVar } from '@/hooks/useKeyboardInset';
 import { useDashboardApps } from '@/hooks/useDashboardApps';
 import { useRoutePrefetch } from '@/hooks/useRoutePrefetch';
 import { injectDashboardAppsIntoMenu } from '@/utils/injectDashboardApps';
-import { applyMenuPrefs, MENU_PREFS_EVENT } from './config/menuPrefs';
-import MenuCustomizer from './components/MenuCustomizer';
 import InstallAppPrompt from './components/InstallAppPrompt';
 import ClientModeBar from './ClientModeBar';
 import PendingOffersBanner from '@/components/roleta/PendingOffersBanner';
@@ -49,9 +48,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // Suporte da Leal Mídia (Fase 1 — Cargos): vem do servidor, não do e-mail.
   const isSupport = useIsSuperAdmin();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [menuPrefsVersion, setMenuPrefsVersion] = useState(0);
-  const [showMenuCustomizer, setShowMenuCustomizer] = useState(false);
 
   // Mantém --keyboard-inset atualizada para a casca encolher com o teclado
   // do celular (ver a altura do container abaixo).
@@ -63,12 +59,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // src/hooks/useRoutePrefetch.ts.
   useRoutePrefetch(!!user);
 
-  useEffect(() => {
-    const onPrefs = () => setMenuPrefsVersion(v => v + 1);
-    window.addEventListener(MENU_PREFS_EVENT, onPrefs);
-    return () => window.removeEventListener(MENU_PREFS_EVENT, onPrefs);
-  }, []);
-  const pathname = location.pathname;
 
   // Estados do layout
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -107,29 +97,22 @@ export default function MainLayout({ children }: MainLayoutProps) {
     localStorage.setItem('sidebar-collapsed', JSON.stringify(isCollapsed));
   }, [isCollapsed]);
 
-  // Menu items baseado no tipo de usuário e rota atual
-  const getMenuItems = useCallback((): MenuItemType[] => {
-    return getCustomerMenuItems(t);
-  }, [t]);
-
-  // Itens permitidos (filtrados por permissão) — usados pelo editor de menu.
-  const permittedMenuItems = useMemo(() => {
-    const rawMenuItems = getMenuItems();
-    let finalItems = filterMenuItemsByPermissions(rawMenuItems, can, canAny, canAll, user?.role?.key, user?.email, tenantFeatures, archivedKeys, isSupport);
-
-    if (dashboardApps.length > 0) {
-      finalItems = injectDashboardAppsIntoMenu(finalItems, dashboardApps);
-    }
-
-    return finalItems;
-  }, [getMenuItems, can, canAny, canAll, dashboardApps, user?.role?.key, user?.email, tenantFeatures, archivedKeys, isSupport]);
-
-  // Aplica as preferências do usuário (esconder/favoritar/ordenar) por cima.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const menuItems = useMemo(() => applyMenuPrefs(permittedMenuItems), [permittedMenuItems, menuPrefsVersion]);
-
-  // Use the custom menu state hook
-  const menuState = useMenuState(menuItems, setIsMobileMenuOpen);
+  // Menu em seções (fase 4), já filtrado por cargo, função do cliente e
+  // arquivamento. A MESMA lista desenha o menu, a gaveta do celular, a busca e
+  // as abas das páginas (MenuContext) — nunca discordam.
+  const regras = [can, canAny, canAll, user?.role?.key, user?.email, tenantFeatures, archivedKeys, isSupport] as const;
+  const secoes = useMemo(() => {
+    const filtradas = filterMenuSections(getCustomerMenuSections(), ...regras);
+    if (dashboardApps.length === 0) return filtradas;
+    return filtradas.map(secao => ({ ...secao, itens: injectDashboardAppsIntoMenu(secao.itens, dashboardApps) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dashboardApps, ...regras]);
+  const rodape = useMemo(
+    () => filterMenuItemsByPermissions(getFooterMenuItems(), ...regras),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    regras,
+  );
+  const itensParaBusca = useMemo(() => [...secoes.flatMap(s => s.itens), ...rodape], [secoes, rodape]);
 
   const handleLogout = async () => {
     setLogoutDialogOpen(false);
@@ -183,35 +166,24 @@ export default function MainLayout({ children }: MainLayoutProps) {
         user={user}
         isCollapsed={isCollapsed}
         isMobileMenuOpen={isMobileMenuOpen}
-        menuItems={menuItems}
-        activeMenu={menuState.activeMenu}
-        pathname={pathname}
+        secoes={secoes}
+        rodape={rodape}
         toggleSidebar={toggleSidebar}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
         setLogoutDialogOpen={setLogoutDialogOpen}
-        isMenuItemActive={menuState.isMenuItemActive}
-        isMenuWithSubItemsActive={menuState.isMenuWithSubItemsActive}
-        handleMenuClick={menuState.handleMenuClick}
         onOpenSearch={() => setCommandOpen(true)}
       />
 
       {/* Main Layout Container */}
       <div className="flex flex-1 min-h-0 transition-colors duration-150 ease-in-out">
         {/* Sidebar */}
-        <Sidebar
-          isCollapsed={isCollapsed}
-          menuItems={menuItems}
-          activeSubmenu={menuState.activeSubmenu}
-          activeMenu={menuState.activeMenu}
-          isMenuWithSubItemsActive={menuState.isMenuWithSubItemsActive}
-          handleMenuClick={menuState.handleMenuClick}
-          setActiveSubmenu={menuState.setActiveSubmenu}
-          onCustomizeMenu={() => setShowMenuCustomizer(true)}
-        />
+        <Sidebar isCollapsed={isCollapsed} secoes={secoes} rodape={rodape} />
 
-        {/* Main Content */}
+        {/* Main Content — as páginas com abas leem o menu filtrado daqui. */}
         <main className="flex-1 overflow-auto bg-background transition-colors duration-150 ease-in-out">
-          <div className="h-full">{children}</div>
+          <MenuProvider value={secoes}>
+            <div className="h-full">{children}</div>
+          </MenuProvider>
         </main>
 
       </div>
@@ -220,7 +192,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <GlobalCommandPalette
         open={commandOpen}
         onOpenChange={setCommandOpen}
-        menuItems={menuItems}
+        menuItems={itensParaBusca}
       />
 
       {/* Tour */}
@@ -249,11 +221,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Personalizar menu */}
-      {showMenuCustomizer && (
-        <MenuCustomizer items={permittedMenuItems} onClose={() => setShowMenuCustomizer(false)} />
-      )}
     </div>
     </PendingOffersProvider>
   );

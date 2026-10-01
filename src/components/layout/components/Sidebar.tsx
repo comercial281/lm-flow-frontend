@@ -1,282 +1,75 @@
-import React from 'react';
-import { useLanguage } from '@/hooks/useLanguage';
-import { Link, useLocation } from 'react-router-dom';
-import { X, EyeOff } from 'lucide-react';
-import {
-  Button,
-  TooltipProvider,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/ds';
+import { useLocation } from 'react-router-dom';
+import { LifeBuoy } from 'lucide-react';
+import { TooltipProvider } from '@/components/ui/ds';
+import { cn } from '@/lib/utils';
 import MenuItem from './MenuItem';
+import MenuSecoes from './MenuSecoes';
 import { useGuardaDeSaida } from '@/hooks/useAlteracoesNaoSalvas';
-import { MenuItem as MenuItemType } from '../config/menuItems';
+import { itemAtivo, type MenuItem as MenuItemType, type MenuSection } from '../config/menuItems';
 
-// Utility function for className merging
-function cn(...classes: (string | undefined | null | false)[]) {
-  return classes.filter(Boolean).join(' ');
-}
+// WhatsApp de suporte da Leal Mídia (o mesmo "Preciso de suporte" de antes).
+export const SUPORTE_WHATSAPP_URL =
+  'https://api.whatsapp.com/send/?phone=553196219989&text=Ol%C3%A1%21+Preciso+de+suporte.&type=phone_number&app_absent=0';
 
 interface SidebarProps {
   isCollapsed: boolean;
-  menuItems: MenuItemType[];
-  activeSubmenu: MenuItemType | null;
-  activeMenu: string | null;
-  isMenuWithSubItemsActive: (item: MenuItemType) => boolean;
-  handleMenuClick: (item: MenuItemType, e: React.MouseEvent) => void;
-  setActiveSubmenu: (item: MenuItemType | null) => void;
-  onCustomizeMenu?: () => void;
+  secoes: MenuSection[];
+  rodape: MenuItemType[];
 }
 
-export default function Sidebar({
-  isCollapsed,
-  menuItems,
-  activeSubmenu,
-  activeMenu,
-  isMenuWithSubItemsActive,
-  handleMenuClick,
-  setActiveSubmenu,
-  onCustomizeMenu,
-}: SidebarProps) {
-  const location = useLocation();
-  const pathname = location.pathname;
-  const { t } = useLanguage('layout');
+export default function Sidebar({ isCollapsed, secoes, rodape }: SidebarProps) {
+  const { pathname } = useLocation();
   // Fase 3: com alteração não salva na tela, clicar no menu pergunta antes.
   const { aoClicar: guardarSaida, dialogoDeConfirmacao } = useGuardaDeSaida();
-  const currentYear = new Date().getFullYear();
-
-  const companyName = t('sidebar.footer.brand');
-  const supportWhatsappUrl = 'https://api.whatsapp.com/send/?phone=553196219989&text=Ol%C3%A1%21+Preciso+de+suporte.&type=phone_number&app_absent=0';
-
-  const mainMenuItems = menuItems.filter(item => item.href !== '/tutorials');
-  const tutorialsItem = menuItems.find(item => item.href === '/tutorials');
-
-  // [redesign] grupos da sidebar (estética do protótipo). Só rótulo visual —
-  // não altera a ordem nem o menu customizável.
-  const GROUP_BY_HREF: Record<string, string> = {
-    '/dashboard': 'Principal',
-    '/conversations': 'Principal',
-    '/contacts': 'Principal',
-    '/pipelines': 'Principal',
-    '/bolsao': 'Principal',
-    '/disparos': 'Comercial',
-    '/ia-vendedora': 'Comercial',
-    '/equipe': 'Comercial',
-    '/properties': 'Imobiliário',
-    '/books': 'Imobiliário',
-    // Portais NÃO estava aqui. Sem entrada no mapa, o item herda em silêncio
-    // o cabeçalho do vizinho de cima — funcionava por acidente de posição no
-    // menuItems.ts, e mudaria sozinho no dia em que alguém reordenasse aquele
-    // arquivo.
-    '/settings/portals': 'Imobiliário',
-    '/visits': 'Imobiliário',
-    '/proposals': 'Imobiliário',
-    '/contracts': 'Imobiliário',
-    '/property-capture-requests': 'Imobiliário',
-    '/property-interests': 'Imobiliário',
-    '/agents/list': 'Inteligência',
-    '/channels': 'Inteligência',
-    '/automations': 'Inteligência',
-    '/marketplace': 'Inteligência',
-  };
-  // Os rótulos só fazem sentido se cada grupo estiver INTEIRO e junto na lista.
-  //
-  // ⚠️ A lista que chega aqui NÃO é a do menuItems.ts: o MainLayout passa o
-  // resultado do applyMenuPrefs, que sobe os favoritos pro topo e aplica a ordem
-  // manual do usuário. Basta favoritar um item de Imobiliário pra lista chegar
-  // intercalada — e aí o código anterior, que só suprimia repetição CONSECUTIVA,
-  // desenhava "Imobiliário" duas vezes.
-  //
-  // Quando isso acontece, o rótulo passou a mentir sobre o que está embaixo
-  // dele. Então ele sai inteiro, em vez de sair errado: menu personalizado é
-  // menu sem cabeçalho, que é o que o usuário pediu ao personalizar.
-  const gruposNaOrdem = mainMenuItems.map(i => GROUP_BY_HREF[i.href] || '');
-  const corridas = gruposNaOrdem.filter((g, i) => g && g !== gruposNaOrdem[i - 1]);
-  const agrupamentoIntacto = corridas.length === new Set(corridas).size;
-  let lastSidebarGroup = '';
 
   return (
     <>
-      {/* Desktop Sidebar */}
       <div
         role="complementary"
         aria-label="Menu lateral"
         className={cn(
           'hidden md:flex bg-sidebar text-sidebar-foreground flex-col border-r border-sidebar-border',
-          isCollapsed ? 'w-16' : 'w-56',
+          isCollapsed ? 'w-16' : 'w-60',
         )}
       >
         <TooltipProvider delayDuration={300}>
-          {/* Navigation Menu */}
-          <nav onClickCapture={guardarSaida} className="space-y-1.5 flex-1 min-h-0 overflow-y-auto px-2 py-4">
-            {mainMenuItems.flatMap(item => {
-              const group = GROUP_BY_HREF[item.href] || '';
-              const showHeader =
-                agrupamentoIntacto && !!group && group !== lastSidebarGroup && !isCollapsed;
-              if (group) lastSidebarGroup = group;
-              const menuNode = (
-                <MenuItem
-                  key={item.id || item.href}
-                  item={item}
-                  isCollapsed={isCollapsed}
-                  isActive={isMenuWithSubItemsActive(item)}
-                  activeMenu={activeMenu}
-                  onClick={(e) => handleMenuClick(item, e)}
-                />
-              );
-              return showHeader
-                ? [
-                    <div
-                      key={`group-${group}`}
-                      className="px-3 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40 select-none"
-                    >
-                      {group}
-                    </div>,
-                    menuNode,
-                  ]
-                : [menuNode];
-            })}
+          <nav onClickCapture={guardarSaida} className="flex-1 min-h-0 overflow-y-auto px-2 py-4">
+            {isCollapsed ? (
+              // Recolhido: só ícones, com um traço entre as seções. Sem seção
+              // que abre e fecha — o nome de cada item aparece ao passar o mouse.
+              secoes.map((secao, i) => (
+                <div key={secao.id} className={cn('space-y-1', i > 0 && 'mt-2 pt-2 border-t border-sidebar-border')}>
+                  {secao.itens.map(item => (
+                    <MenuItem key={item.id || item.href} item={item} isCollapsed isActive={itemAtivo(item, pathname)} />
+                  ))}
+                </div>
+              ))
+            ) : (
+              <MenuSecoes secoes={secoes} />
+            )}
           </nav>
 
-          {/* Personalizar menu */}
-          {onCustomizeMenu && !isCollapsed && (
-            <div className="px-2 pb-1">
-              <button
-                onClick={onCustomizeMenu}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs text-sidebar-foreground/55 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/></svg>
-                Personalizar menu
-              </button>
-            </div>
-          )}
-
-          {/* Tutorials - fixed at bottom */}
-          {tutorialsItem && (
-            <div onClickCapture={guardarSaida} className="px-2 pb-2">
-              <MenuItem
-                item={tutorialsItem}
-                isCollapsed={isCollapsed}
-                isActive={pathname === tutorialsItem.href}
-                activeMenu={activeMenu}
-                onClick={(e) => handleMenuClick(tutorialsItem, e)}
-              />
-            </div>
-          )}
-
-          {/* Sidebar Footer */}
-          <div className="p-4 border-t border-sidebar-border">
-            {isCollapsed ? (
-              <div className="flex flex-col items-center">
-                <div className="text-xs text-muted-foreground text-center">© {currentYear}</div>
-              </div>
-            ) : (
-              <>
-                <div className="text-sm text-sidebar-foreground font-medium">{companyName}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {t('sidebar.footer.copyright', { year: currentYear })}
-                </div>
-                <div className="mt-2 flex flex-col gap-1 text-xs">
-                  <a
-                    href="https://docs.evolutionfoundation.com.br/"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {t('sidebar.footer.documentation')}
-                  </a>
-                  <a
-                    href={supportWhatsappUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {t('sidebar.footer.support')}
-                  </a>
-                </div>
-              </>
-            )}
+          {/* Rodapé fixo: Guia do LM Flow e suporte. */}
+          <div onClickCapture={guardarSaida} className="px-2 py-2 space-y-1 border-t border-sidebar-border">
+            {rodape.map(item => (
+              <MenuItem key={item.href} item={item} isCollapsed={isCollapsed} isActive={itemAtivo(item, pathname)} />
+            ))}
+            <a
+              href={SUPORTE_WHATSAPP_URL}
+              target="_blank"
+              rel="noreferrer"
+              title={isCollapsed ? 'Falar com o suporte' : undefined}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-colors',
+                isCollapsed && 'justify-center',
+              )}
+            >
+              <LifeBuoy className="flex-shrink-0" style={{ width: '1.125rem', height: '1.125rem' }} aria-hidden="true" />
+              {isCollapsed ? <span className="sr-only">Falar com o suporte</span> : <span className="font-medium text-sm">Falar com o suporte</span>}
+            </a>
           </div>
         </TooltipProvider>
       </div>
-
-      {/* Second Sidebar for Submenus — nunca em cima de /automations, que já
-          renderiza o próprio menu lateral (senão empilha os dois). */}
-      {activeSubmenu && !isCollapsed && !pathname.startsWith('/automations') && (
-        <div className="hidden md:flex w-64 bg-sidebar text-sidebar-foreground flex-col border-r border-sidebar-border">
-          {/* Submenu Header */}
-          <div className="flex items-center gap-3 p-4 border-b border-sidebar-border">
-            <activeSubmenu.icon className="h-5 w-5 text-primary" />
-            <div className="flex-1">
-              <h3 className="font-semibold text-sidebar-foreground">{activeSubmenu.name}</h3>
-            </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setActiveSubmenu(null);
-                  }}
-                  aria-label={t('sidebar.closeSubmenu')}
-                  title={t('sidebar.closeSubmenu')}
-                  className="h-8 w-8 p-0 hover:bg-sidebar-accent text-sidebar-foreground hover:text-sidebar-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                <p>{t('sidebar.closeSubmenu')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-
-          {/* Submenu Items */}
-          <nav onClickCapture={guardarSaida} className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            {activeSubmenu.subItems?.map(subItem => {
-              // For submenu items, check exact match first, then startsWith
-              // But if another subitem has a more specific match (longer path), prefer that one
-              const exactMatch = pathname === subItem.href;
-              const startsWithMatch = pathname.startsWith(subItem.href + '/');
-
-              // Check if any other subitem has a more specific match
-              const hasMoreSpecificMatch = activeSubmenu.subItems?.some(otherSubItem =>
-                otherSubItem.href !== subItem.href &&
-                (pathname === otherSubItem.href || pathname.startsWith(otherSubItem.href + '/')) &&
-                otherSubItem.href.length > subItem.href.length
-              );
-
-              const isSubActive = exactMatch || (startsWithMatch && !hasMoreSpecificMatch);
-              return (
-                <Link
-                  key={subItem.href}
-                  to={subItem.href}
-                  onClick={subItem.closesSubmenu ? () => setActiveSubmenu(null) : undefined}
-                  className={cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-md transition-all text-sm',
-                    isSubActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent',
-                  )}
-                >
-                  <subItem.icon className={cn('flex-shrink-0 h-4 w-4', isSubActive && 'text-primary')} />
-                  <div className="flex items-center gap-2 flex-1">
-                    <span className="font-medium">{subItem.name}</span>
-                    {subItem.hiddenFromClient && (
-                      <span className="flex items-center" title="Oculto pro cliente (você vê como super-admin)">
-                        <EyeOff className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" aria-label="Oculto pro cliente" />
-                      </span>
-                    )}
-                  </div>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-      )}
       {dialogoDeConfirmacao}
     </>
   );

@@ -169,6 +169,7 @@ import OnboardingPage from '@/pages/Setup/OnboardingPage';
 // Outras páginas
 import NotFound from '@/pages/NotFound';
 import Unauthorized from '@/pages/Unauthorized';
+import PaginaComAbas from '@/components/base/PaginaComAbas';
 // Widget é lazy: rota pública de embed em iframe que a esmagadora maioria das
 // visitas nunca acessa — não faz sentido pesar o bundle inicial com ela. Já
 // cai dentro do <Suspense> global do AppRouter.
@@ -544,24 +545,28 @@ const AppRouter = () => {
                 /bolsao/listas é do GESTOR (subir planilha, regras, histórico).
                 A rota mais específica vem primeiro; e o gate de cada uma tem que
                 casar com o do menu, senão o corretor vê o item e cai em
-                /unauthorized. */}
-            <Route
-              path="/bolsao/listas"
-              element={
-                <PermissionRoute resource="bolsao_batches" action="read">
-                  <BolsaoBatches />
-                </PermissionRoute>
-              }
-            />
+                /unauthorized.
+                Moldura sem endereço (fase 4): as duas viram abas da página
+                Bolsão, lidas do item do menu — ver PaginaComAbas. */}
+            <Route element={<PaginaComAbas />}>
+              <Route
+                path="/bolsao/listas"
+                element={
+                  <PermissionRoute resource="bolsao_batches" action="read">
+                    <BolsaoBatches />
+                  </PermissionRoute>
+                }
+              />
 
-            <Route
-              path="/bolsao"
-              element={
-                <PermissionRoute resource="bolsao_leads" action="read">
-                  <Bolsao />
-                </PermissionRoute>
-              }
-            />
+              <Route
+                path="/bolsao"
+                element={
+                  <PermissionRoute resource="bolsao_leads" action="read">
+                    <Bolsao />
+                  </PermissionRoute>
+                }
+              />
+            </Route>
 
             <Route
               path="/equipe"
@@ -776,14 +781,26 @@ const AppRouter = () => {
               }
             />
 
-            <Route
-              path="/settings/attributes"
-              element={
-                <PermissionRoute resource="custom_attribute_definitions" action="read">
-                  <CustomAttributes />
-                </PermissionRoute>
-              }
-            />
+            {/* Atributos e Variáveis são as abas da página Campos personalizados
+                (fase 4) — moldura sem endereço, ver PaginaComAbas. */}
+            <Route element={<PaginaComAbas />}>
+              <Route
+                path="/settings/attributes"
+                element={
+                  <PermissionRoute resource="custom_attribute_definitions" action="read">
+                    <CustomAttributes />
+                  </PermissionRoute>
+                }
+              />
+              <Route
+                path="/settings/template-variables"
+                element={
+                  <PermissionRoute resource="canned_responses" action="read">
+                    <TemplateVariables />
+                  </PermissionRoute>
+                }
+              />
+            </Route>
 
             {/* Novo módulo unificado — Funis de Mensagem (substitui Prontas + Rápidas) */}
             <Route
@@ -791,15 +808,6 @@ const AppRouter = () => {
               element={
                 <PermissionRoute resource="message_funnels" action="read">
                   <MessageFunnels />
-                </PermissionRoute>
-              }
-            />
-
-            <Route
-              path="/settings/template-variables"
-              element={
-                <PermissionRoute resource="canned_responses" action="read">
-                  <TemplateVariables />
                 </PermissionRoute>
               }
             />
@@ -865,26 +873,39 @@ const AppRouter = () => {
             {/* Pixel/CAPI mora agora em Configurações, não em Automações — não usa mais
                 o layout com submenu de setores. Filha simples de Grupo A: já herda
                 PrivateRoute+CustomerRoute+MainLayout do pai, sem guards próprios. */}
-            <Route
-              path="/settings/pixel-capi"
-              element={
-                <PermissionRoute resource="capi_configs" action="read">
-                  <PixelCapiConfig />
-                </PermissionRoute>
-              }
-            />
-
-            {/* A chave é `portals`, não `integrations` (backend A5, Fase 1 Cargos):
-                integrations.* segue sendo repassada a quem já a tinha, mas a
-                chave nova e específica de Portais é portals.read/update. */}
-            <Route
-              path="/settings/portals"
-              element={
-                <PermissionRoute resource="portals" action="read">
-                  <PortalsList />
-                </PermissionRoute>
-              }
-            />
+            {/* WhatsApp (/channels), Pixel e Portais são as abas da página
+                Integrações (fase 4) — moldura sem endereço, ver PaginaComAbas.
+                As telas internas (portal aberto, número novo, ajustes do
+                número) ficam fora: têm título e "voltar" próprios.
+                A chave de Portais é `portals`, não `integrations` (backend A5,
+                Fase 1 Cargos): integrations.* segue sendo repassada a quem já a
+                tinha, mas a chave nova e específica é portals.read/update. */}
+            <Route element={<PaginaComAbas />}>
+              <Route
+                path="/settings/pixel-capi"
+                element={
+                  <PermissionRoute resource="capi_configs" action="read">
+                    <PixelCapiConfig />
+                  </PermissionRoute>
+                }
+              />
+              <Route
+                path="/settings/portals"
+                element={
+                  <PermissionRoute resource="portals" action="read">
+                    <PortalsList />
+                  </PermissionRoute>
+                }
+              />
+              <Route
+                path="/channels"
+                element={
+                  <PermissionRoute resource="channels" action="read">
+                    <Channels />
+                  </PermissionRoute>
+                }
+              />
+            </Route>
             <Route
               path="/settings/portals/:portalKey"
               element={
@@ -947,15 +968,6 @@ const AppRouter = () => {
                       <p className="text-muted-foreground">Página em desenvolvimento</p>
                     </div>
                   </div>
-                </PermissionRoute>
-              }
-            />
-
-            <Route
-              path="/channels"
-              element={
-                <PermissionRoute resource="channels" action="read">
-                  <Channels />
                 </PermissionRoute>
               }
             />

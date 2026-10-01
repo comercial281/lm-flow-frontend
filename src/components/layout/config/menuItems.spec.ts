@@ -1,20 +1,42 @@
 import { describe, it, expect } from 'vitest';
 import {
-  getCustomerMenuItems, shouldShowMenuItem, MENU_FREE_BY_DESIGN, AUTOMATION_SECTOR_PERMISSIONS,
+  getCustomerMenuSections, getFooterMenuItems, shouldShowMenuItem, filterMenuSections,
+  itensDoMenu, donoDoEndereco, MENU_FREE_BY_DESIGN,
   type MenuItem, type SubMenuItem,
 } from './menuItems';
-import { ROUTE_PERMISSIONS, permissionForPath, hrefFor } from '@/routes/permissionRoutes';
+import { permissionForPath } from '@/routes/permissionRoutes';
 
-const itens = getCustomerMenuItems((k: string) => k);
-const todos: (MenuItem | SubMenuItem)[] = itens
-  .flatMap(i => [i as MenuItem | SubMenuItem, ...(i.subItems ?? [])])
-  .filter(i => i.href !== '#');
-const achar = (href: string) => todos.find(i => i.href === href)!;
+const secoes = getCustomerMenuSections();
+const todos: (MenuItem | SubMenuItem)[] = itensDoMenu(secoes, getFooterMenuItems());
+// O pai de um item com abas herda o href da primeira aba; quem confere cargo é a aba.
+const folhas = todos.filter(i => !('abas' in i && i.abas?.length));
+const achar = (href: string) => folhas.find(i => i.href === href)!;
 const semCargo = (i: MenuItem | SubMenuItem) => !(i.resource && i.action) && !(i.permissions && i.permissions.length > 0);
 
+// Cargo Corretor de fábrica (backend: PermissionsController::AGENT_PERMISSIONS).
+const CORRETOR = new Set(`
+  dashboard.read profile.read profile.update
+  properties.read properties.map properties.cep_lookup
+  property_photos.read property_interests.read visits.read visits.create proposals.read
+  contacts.read contacts.create contacts.update
+  conversations.read conversations.create conversations.update
+  pipelines.read pipeline_stages.read pipeline_items.create labels.read canned_responses.read
+  quick_replies.read macros.read person_roles.read dynamic_forms.read sites.read site_leads.read
+  reports.read summary_reports.read capi_events.read bolsao_leads.read bolsao_leads.claim
+  inboxes.read channels.read channels.update
+`.split(/\s+/).filter(Boolean));
+
+const comCargo = (chaves: Set<string>) => {
+  const can = (r: string, a: string) => chaves.has(`${r}.${a}`);
+  const um = (ps: string[]) => ps.some(p => chaves.has(p));
+  const todas = (ps: string[]) => ps.every(p => chaves.has(p));
+  const funcoes = { bolsao: true, client_manage_automations: true };
+  return filterMenuSections(secoes, can, um, todas, 'agent', 'c@x.com', funcoes, [], false);
+};
+
 describe('o menu do CRM confere o cargo', () => {
-  it('todo item declara a permissão que o servidor exige (ou é livre por decisão registrada)', () => {
-    const faltando = todos.filter(i => semCargo(i) && !MENU_FREE_BY_DESIGN.includes(i.href)).map(i => i.href);
+  it('todo item e toda aba declaram a permissão que o servidor exige (ou são livres por decisão registrada)', () => {
+    const faltando = folhas.filter(i => semCargo(i) && !MENU_FREE_BY_DESIGN.includes(i.href)).map(i => i.href);
     expect(faltando).toEqual([]);
   });
 
@@ -25,20 +47,25 @@ describe('o menu do CRM confere o cargo', () => {
     ['/books', 'properties.read'],
     ['/settings/portals', 'portals.read'],
     ['/visits', 'visits.read'],
-    ['/proposals', 'proposals.read'],
-    ['/contracts', 'contracts.read'],
-    ['/property-capture-requests', 'property_capture_requests.read'],
-    ['/property-interests', 'property_interests.read'],
     ['/automations/message-funnels', 'message_funnels.read'],
     ['/settings/pixel-capi', 'capi_configs.read'],
-    ['/settings/site-builder', 'sites.read'],
   ])('%s pede %s', (href, chave) => {
     const item = achar(href);
     expect(`${item.resource}.${item.action}`).toBe(chave);
   });
 
-  it('Automações aparece para quem tem qualquer um dos setores', () => {
-    expect(achar('/automations').permissions).toEqual(Object.values(AUTOMATION_SECTOR_PERMISSIONS));
+  it.each([
+    ['/channels', ['channels.read', 'inboxes.update']],
+    ['/settings/labels', ['labels.read', 'labels.create']],
+    ['/settings/template-variables', ['canned_responses.read', 'canned_responses.create']],
+    ['/settings/site-builder', ['sites.read', 'sites.update']],
+  ])('tela de gestão %s pede a chave da rota E uma de escrita', (href, chaves) => {
+    const item = achar(href);
+    expect(item.permissions).toEqual(chaves);
+    expect(item.requireAll).toBe(true);
+    // A primeira é sempre a da rota — o menu nunca oferece o que a rota recusa.
+    const rota = permissionForPath(href)!;
+    expect(chaves[0]).toBe(`${rota.resource}.${rota.action}`);
   });
 
   it('Tutoriais é o único livre', () => {
@@ -58,27 +85,56 @@ describe('o menu do CRM confere o cargo', () => {
     expect(shouldShowMenuItem(ia, pode, pode, pode, 'admin', 'comercial@lealmidia.com.br', {}, [], false)).toBe(false);
   });
 
-  // Ruling do controlador (fonte única de chave): todo item cujo href está em
-  // ROUTE_PERMISSIONS (o mapa da B4) declara EXATAMENTE a chave daquele mapa —
-  // nunca uma segunda cópia digitada aqui que possa divergir dele com o tempo.
+  // Ruling do controlador (fonte única de chave): todo item com resource/action
+  // cujo href está no mapa de rotas declara EXATAMENTE a chave daquele mapa.
   it('todo item com resource/action cujo href está no mapa de rotas usa a MESMA chave do mapa', () => {
-    const divergentes = todos
+    const divergentes = folhas
       .filter(i => i.resource && i.action)
       .map(i => ({ href: i.href, item: `${i.resource}.${i.action}`, mapa: permissionForPath(i.href) }))
       .filter(({ mapa, item }) => mapa && `${mapa.resource}.${mapa.action}` !== item);
     expect(divergentes).toEqual([]);
   });
+});
 
-  // E o inverso, para os setores de Automações: cada chave de
-  // AUTOMATION_SECTOR_PERMISSIONS é a mesma que o mapa de rotas exige para
-  // /automations/<setor>, quando aquele setor tem rota protegida no mapa.
-  it('AUTOMATION_SECTOR_PERMISSIONS bate com o mapa de rotas para /automations/<setor>', () => {
-    const divergentes = Object.entries(AUTOMATION_SECTOR_PERMISSIONS)
-      .map(([key, chave]) => {
-        const entry = ROUTE_PERMISSIONS.find(r => r.automationsChild && hrefFor(r) === `/automations/${key}`);
-        return { key, chave, mapa: entry ? `${entry.resource}.${entry.action}` : undefined };
-      })
-      .filter(({ mapa, chave }) => mapa && mapa !== chave);
-    expect(divergentes).toEqual([]);
+describe('menu novo: seções (fase 4)', () => {
+  it('o Corretor de fábrica vê só Principal, Imóveis e Leads', () => {
+    const vistas = comCargo(CORRETOR);
+    expect(vistas.map(s => s.id)).toEqual(['principal', 'imoveis', 'leads']);
+    expect(vistas.flatMap(s => s.itens.map(i => i.name))).toEqual([
+      'Dashboard', 'Conversas', 'Funil de vendas', 'Visitas', 'Meus imóveis', 'Books', 'Contatos', 'Bolsão',
+    ]);
+  });
+
+  it('o Bolsão do Corretor fica com uma aba só (Listas e regras é do gestor)', () => {
+    const bolsao = comCargo(CORRETOR).flatMap(s => s.itens).find(i => i.name === 'Bolsão')!;
+    expect(bolsao.abas?.map(a => a.name)).toEqual(['Pegar leads']);
+    expect(bolsao.href).toBe('/bolsao');
+  });
+
+  it('item com abas leva para a primeira aba que sobreviveu ao cargo', () => {
+    const soPortais = new Set(['portals.read']);
+    const integracoes = comCargo(soPortais).flatMap(s => s.itens).find(i => i.name === 'Integrações')!;
+    expect(integracoes.href).toBe('/settings/portals');
+    expect(integracoes.abas?.map(a => a.name)).toEqual(['Portais']);
+  });
+
+  it('seção sem nenhum item visível some', () => {
+    expect(comCargo(new Set(['dashboard.read'])).map(s => s.id)).toEqual(['principal']);
+  });
+
+  it('as telas que saíram do menu não voltam por engano', () => {
+    const hrefs = todos.map(i => i.href);
+    for (const fora of ['/proposals', '/contracts', '/property-capture-requests', '/property-interests',
+      '/contacts/scheduled-actions', '/marketplace', '/automations']) {
+      expect(hrefs).not.toContain(fora);
+    }
+  });
+
+  it('o dono do endereço é o casamento mais longo, inclusive em tela interna', () => {
+    expect(donoDoEndereco(secoes, '/automations/flow-builder/42')?.item.name).toBe('Fluxos de mensagem');
+    expect(donoDoEndereco(secoes, '/bolsao/listas')?.aba?.name).toBe('Listas e regras');
+    expect(donoDoEndereco(secoes, '/bolsao')?.aba?.name).toBe('Pegar leads');
+    expect(donoDoEndereco(secoes, '/pipelines/7')?.secao.id).toBe('principal');
+    expect(donoDoEndereco(secoes, '/profile')).toBeNull();
   });
 });

@@ -3,7 +3,6 @@ import { permissionForPath } from '@/routes/permissionRoutes';
 import {
   User,
   LogOut,
-  Cog,
   MessageSquare,
   Contact,
   SquareKanban,
@@ -11,25 +10,31 @@ import {
   ListChecks,
   Hand,
   Bot,
-  Layers,
   PieChart,
+  Users,
   Users2,
-  Clock,
   Tags,
   GraduationCap,
   Zap,
-  Store,
+  Bell,
   Building2,
+  Building,
   CalendarClock,
-  FileSignature,
-  ClipboardList,
   Globe,
   FileText,
-  TrendingUp,
-  Rocket,
-  Target,
   Megaphone,
   MessageSquarePlus,
+  Rocket,
+  GitBranch,
+  Repeat,
+  Shuffle,
+  Radio,
+  Plug,
+  Smartphone,
+  Target,
+  Share2,
+  SlidersHorizontal,
+  Braces,
 } from 'lucide-react';
 import { openFeedbackDialog } from '@/components/feedback/openFeedback';
 
@@ -38,7 +43,14 @@ export interface MenuItem {
   name: string;
   href: string;
   icon: LucideIcon;
-  subItems?: SubMenuItem[];
+  /**
+   * Abas da página que o item abre (menu novo, fase 4). O menu mostra só o
+   * item; as abas aparecem no topo da página, pela `PaginaComAbas`, lidas
+   * DESTA lista — menu e abas não têm como discordar. Cada aba confere o
+   * cargo sozinha; o item some quando nenhuma aba sobrevive, e o `href` dele
+   * vira o da primeira aba visível.
+   */
+  abas?: SubMenuItem[];
   resource?: string;
   action?: string;
   permissions?: string[];
@@ -59,6 +71,8 @@ export interface MenuItem {
   clientToggleKey?: string;
   /** Quando true, só aparece no tenant raiz (VITE_IS_ROOT_TENANT=true). */
   rootTenantOnly?: boolean;
+  /** O inverso: some no painel raiz (app.lmflow), tela que só faz sentido no CRM do cliente. */
+  hideOnRoot?: boolean;
   /**
    * Anotado em runtime (não configurar à mão): true quando o item está visível
    * pra ele (super-admin) mas OCULTO pro cliente pelo estado atual dos toggles.
@@ -80,13 +94,26 @@ export interface SubMenuItem {
   featureKey?: string;
   clientToggleKey?: string;
   rootTenantOnly?: boolean;
+  hideOnRoot?: boolean;
   hiddenFromClient?: boolean;
   /**
-   * Atalho que leva pra uma seção com o próprio menu lateral (ex: Automações).
-   * Fecha o painel de submenu ao navegar, senão os dois ficam abertos ao
-   * mesmo tempo (2 menus empilhados).
+   * A aba só fica ativa no endereço EXATO. Para a aba cujo endereço é prefixo
+   * de outra aba da mesma página (/bolsao e /bolsao/listas).
    */
-  closesSubmenu?: boolean;
+  exata?: boolean;
+}
+
+/**
+ * Seção do menu (fase 4, modelo da Lais): abre e fecha, uma por vez. A `fixa`
+ * (Principal) fica sempre aberta e não entra nessa conta. Seção sem nenhum item
+ * que o cargo veja não aparece.
+ */
+export interface MenuSection {
+  id: string;
+  rotulo: string;
+  icone?: LucideIcon;
+  fixa?: boolean;
+  itens: MenuItem[];
 }
 
 export interface ProfileMenuItem {
@@ -94,6 +121,8 @@ export interface ProfileMenuItem {
   href: string;
   icon: LucideIcon;
   onClick?: () => void;
+  /** Chave `recurso.acao` que a pessoa precisa ter para ver o item. */
+  permissao?: string;
 }
 
 /**
@@ -103,24 +132,29 @@ export interface ProfileMenuItem {
  */
 export const MENU_FREE_BY_DESIGN = ['/tutorials'];
 
-/** Setor da aba Automações → a leitura que o servidor exige. Menu e abas usam a mesma tabela. */
-export const AUTOMATION_SECTOR_PERMISSIONS: Record<string, string> = {
-  'lead-automations': 'lead_automation_rules.read',
-  'message-funnels': 'message_funnels.read',
-  'flow-builder': 'flow_automations.read',
-  origem: 'lead_ads_form_configs.read',
-  'follow-ups': 'followup_sequences.read',
-  'whatsapp-reminders': 'whatsapp_reminders.read',
-  'roleta-config': 'roleta_configs.read',
-};
+/**
+ * FORA DO MENU (01/10/2026, decisão do Tony). As telas continuam no ar e abrem
+ * pelo endereço digitado; só não têm entrada no menu, nem para a Leal Mídia.
+ *
+ * Em breve (voltam quando estiverem prontas):
+ *   - Propostas ............ /proposals
+ *   - Contratos ............ /contracts
+ *   - Captação ............. /property-capture-requests
+ *   - Gestão de proprietários, Plano/assinatura (ainda sem tela)
+ * Sem plano de voltar:
+ *   - Interesses ........... /property-interests
+ *   - Ações agendadas ...... /contacts/scheduled-actions
+ *   - Marketplace .......... /marketplace
+ *
+ * Também saiu o "Personalizar menu" (esconder/favoritar/reordenar): com seções
+ * fixas ele quebrava os rótulos. Ver a seção "Menu novo" no CLAUDE.md.
+ */
 
 /**
  * Fonte única de chave (ruling do controlador, Fase 1 — Cargos, task B5): para
  * todo item cujo `href` tem rota protegida em `ROUTE_PERMISSIONS` (a B4), a
  * chave vem DAQUELE mapa — nunca uma segunda cópia digitada aqui, que poderia
  * divergir dele com o tempo. Uso: `{ ...permissionFromRoute('/disparos') }`.
- * Item sem rota no mapa (ex.: o pai `/automations`, que usa `permissions:`)
- * não passa por aqui.
  */
 function permissionFromRoute(href: string): { resource: string; action: string } {
   const entry = permissionForPath(href);
@@ -130,286 +164,180 @@ function permissionFromRoute(href: string): { resource: string; action: string }
   return { resource: entry.resource, action: entry.action };
 }
 
-export const getCustomerMenuItems = (t: (key: string) => string): MenuItem[] => [
+/**
+ * TELA DE GESTÃO no menu: a chave da rota + uma chave de escrita.
+ *
+ * O Corretor de fábrica LÊ etiquetas, variáveis e o site (usa no chat e nos
+ * leads) — e com a chave da rota sozinha ganharia, no menu, a seção Minha
+ * imobiliária e o "Meu site", que são de quem configura. O menu pede também a
+ * escrita, que o Gerente tem e o Corretor não. A rota continua aberta para
+ * quem lê: é só o menu que não oferece. Mesmo motivo da aba WhatsApp.
+ */
+function gestao(href: string, escrita: string): { permissions: string[]; requireAll: true } {
+  const { resource, action } = permissionFromRoute(href);
+  return { permissions: [`${resource}.${action}`, escrita], requireAll: true };
+}
+
+/** Item com abas: aparece para quem vê qualquer uma delas (o filtro confere aba a aba). */
+function itemComAbas(item: Omit<MenuItem, 'href' | 'abas'>, abas: SubMenuItem[]): MenuItem {
+  return { ...item, href: abas[0].href, abas };
+}
+
+export const getCustomerMenuSections = (): MenuSection[] => [
   {
-    name: t('menu.customer.dashboard'),
-    href: '/dashboard',
-    icon: PieChart,
-    ...permissionFromRoute('/dashboard'),
-    featureKey: 'dashboard',
-  },
-  {
-    name: t('menu.customer.conversations'),
-    href: '/conversations',
-    icon: MessageSquare,
-    ...permissionFromRoute('/conversations'),
-    featureKey: 'conversations',
-  },
-  {
-    id: 'customer-contacts',
-    name: t('menu.customer.contacts'),
-    href: '/contacts',
-    icon: Contact,
-    ...permissionFromRoute('/contacts'),
-    featureKey: 'contacts',
-    subItems: [
-      {
-        name: t('menu.contacts.list'),
-        href: '/contacts',
-        icon: Contact,
-        ...permissionFromRoute('/contacts'),
-      },
-      {
-        name: t('menu.contacts.scheduledActions'),
-        href: '/contacts/scheduled-actions',
-        icon: Clock,
-        ...permissionFromRoute('/contacts/scheduled-actions'),
-      },
+    id: 'principal',
+    rotulo: 'Principal',
+    fixa: true,
+    itens: [
+      { name: 'Dashboard', href: '/dashboard', icon: PieChart, ...permissionFromRoute('/dashboard'), featureKey: 'dashboard' },
+      { name: 'Conversas', href: '/conversations', icon: MessageSquare, ...permissionFromRoute('/conversations'), featureKey: 'conversations' },
+      { name: 'Funil de vendas', href: '/pipelines', icon: SquareKanban, ...permissionFromRoute('/pipelines'), featureKey: 'pipelines' },
+      { name: 'Visitas', href: '/visits', icon: CalendarClock, ...permissionFromRoute('/visits'), featureKey: 'visits' },
     ],
   },
   {
-    name: t('menu.customer.pipelines'),
-    href: '/pipelines',
-    icon: SquareKanban,
-    ...permissionFromRoute('/pipelines'),
-    featureKey: 'pipelines',
-  },
-  {
-    // Bolsão — a lista de leads sem dono que o corretor se serve.
-    //
-    // Fica no grupo Principal, ao lado do funil, porque é tela de uso DIÁRIO do
-    // corretor: é o que ele abre no dia em que não caiu lead nenhum.
-    //
-    // O pai usa `bolsao_leads.read` (o cargo do corretor); "Listas e regras" tem
-    // gate próprio de gestor. Como o pai some quando nenhum sub-item sobrevive,
-    // quem não tem nenhum dos dois não vê o menu.
-    //
-    // ⚠️ O gate daqui tem que casar com o do PermissionRoute da rota, senão o
-    // corretor vê o item e cai em /unauthorized.
-    //
-    // clientToggleKey, e NÃO featureKey: `featureKey` só esconde quando a chave
-    // vale exatamente false, ou seja AUSÊNCIA = LIGADO — o Bolsão estrearia para
-    // todas as imobiliárias no primeiro deploy. Com `clientToggleKey` o cliente
-    // só vê quando a chave vale true (ausência = desligado) e a Leal Mídia
-    // sempre vê, que é o que permite liberar cliente a cliente. Mesmo padrão da
-    // IA Vendedora.
-    //
-    // ⚠️ ESTA LINHA É METADE DA TRAVA. A outra metade é `bolsao` estar em
-    // ClientInstance::DEFAULT_OFF_FEATURES no backend: o endpoint público
-    // resolve chave AUSENTE como `true`, então sem a lista de lá o cliente
-    // receberia `bolsao: true`, a guarda daqui passaria e o menu apareceria
-    // para todo mundo — que foi exatamente o furo em 25/08/2026. Mexeu numa,
-    // confira a outra.
-    id: 'customer-bolsao',
-    name: 'Bolsão',
-    href: '/bolsao',
-    icon: Inbox,
-    ...permissionFromRoute('/bolsao'),
-    clientToggleKey: 'bolsao',
-    subItems: [
-      {
-        name: 'Pegar leads',
-        href: '/bolsao',
-        icon: Hand,
-        ...permissionFromRoute('/bolsao'),
-      },
-      {
-        name: 'Listas e regras',
-        href: '/bolsao/listas',
-        icon: ListChecks,
-        ...permissionFromRoute('/bolsao/listas'),
-      },
+    id: 'imoveis',
+    rotulo: 'Imóveis',
+    icone: Building2,
+    itens: [
+      { name: 'Meus imóveis', href: '/properties', icon: Building2, ...permissionFromRoute('/properties'), featureKey: 'properties' },
+      // Gestão do site: pede `sites.update` além da leitura (ver `gestao`).
+      { name: 'Meu site', href: '/settings/site-builder', icon: Globe, ...gestao('/settings/site-builder', 'sites.update'), featureKey: 'site_builder' },
+      // Books (PDF) salvos nos imóveis — visualizar e baixar
+      { name: 'Books', href: '/books', icon: FileText, ...permissionFromRoute('/books'), featureKey: 'properties' },
     ],
   },
   {
-    name: 'Disparos',
-    href: '/disparos',
-    icon: Megaphone,
-    ...permissionFromRoute('/disparos'),
-    featureKey: 'disparos',
+    id: 'leads',
+    rotulo: 'Leads',
+    icone: Users,
+    itens: [
+      { name: 'Contatos', href: '/contacts', icon: Contact, ...permissionFromRoute('/contacts'), featureKey: 'contacts' },
+      // Bolsão — a lista de leads sem dono que o corretor se serve.
+      //
+      // "Pegar leads" é do CORRETOR (`bolsao_leads.read`); "Listas e regras" é
+      // do GESTOR. O corretor vê o item e cai na página sem a fileira de abas.
+      //
+      // clientToggleKey, e NÃO featureKey: `featureKey` só esconde quando a
+      // chave vale exatamente false, ou seja AUSÊNCIA = LIGADO — o Bolsão
+      // estrearia para todas as imobiliárias no primeiro deploy. Com
+      // `clientToggleKey` o cliente só vê quando a chave vale true e a Leal
+      // Mídia sempre vê, o que permite liberar cliente a cliente.
+      //
+      // ⚠️ ESTA LINHA É METADE DA TRAVA. A outra metade é `bolsao` estar em
+      // ClientInstance::DEFAULT_OFF_FEATURES no backend: o endpoint público
+      // resolve chave AUSENTE como `true`, então sem a lista de lá o cliente
+      // receberia `bolsao: true` e o menu apareceria para todo mundo — que foi
+      // exatamente o furo em 25/08/2026. Mexeu numa, confira a outra.
+      itemComAbas({ id: 'customer-bolsao', name: 'Bolsão', icon: Inbox, clientToggleKey: 'bolsao' }, [
+        { name: 'Pegar leads', href: '/bolsao', icon: Hand, ...permissionFromRoute('/bolsao'), clientToggleKey: 'bolsao', exata: true },
+        { name: 'Listas e regras', href: '/bolsao/listas', icon: ListChecks, ...permissionFromRoute('/bolsao/listas'), clientToggleKey: 'bolsao' },
+      ]),
+    ],
   },
   {
-    // IA Vendedora (pré-atendimento). Promovida de sub-item de Automações para
-    // item de topo do CRM (URL própria /ia-vendedora). Feature gerenciada pela
-    // Leal Mídia: super-admin SEMPRE vê; cliente só se ligar o toggle.
-    name: 'IA Vendedora',
-    href: '/ia-vendedora',
-    icon: Bot,
-    ...permissionFromRoute('/ia-vendedora'),
-    clientToggleKey: 'client_manage_automations',
+    id: 'vendas',
+    rotulo: 'Vendas e automação',
+    icone: Zap,
+    itens: [
+      // Fluxos = o conteúdo da conversa (o que a mensagem diz).
+      itemComAbas({ name: 'Fluxos de mensagem', icon: Rocket }, [
+        { name: 'Editor de funis', href: '/automations/message-funnels', icon: Rocket, ...permissionFromRoute('/automations/message-funnels'), featureKey: 'message_funnels' },
+        // FlowBuilder reusa o flag das regras por não ter registro próprio.
+        { name: 'FlowBuilder', href: '/automations/flow-builder', icon: GitBranch, ...permissionFromRoute('/automations/flow-builder'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations' },
+      ]),
+      { name: 'Disparos', href: '/disparos', icon: Megaphone, ...permissionFromRoute('/disparos'), featureKey: 'disparos' },
+      // Feature gerenciada pela Leal Mídia: super-admin SEMPRE vê; cliente só se ligar o toggle.
+      { name: 'IA Vendedora', href: '/ia-vendedora', icon: Bot, ...permissionFromRoute('/ia-vendedora'), clientToggleKey: 'client_manage_automations' },
+      { name: 'Follow-up', href: '/automations/follow-ups', icon: Repeat, ...permissionFromRoute('/automations/follow-ups'), featureKey: 'follow_ups' },
+      // Automações = "quando X acontecer, faça Y".
+      itemComAbas({ name: 'Automações', icon: Zap }, [
+        { name: 'Regras de lead', href: '/automations/lead-automations', icon: Zap, ...permissionFromRoute('/automations/lead-automations'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations' },
+        { name: 'Lembretes', href: '/automations/whatsapp-reminders', icon: Bell, ...permissionFromRoute('/automations/whatsapp-reminders') },
+      ]),
+    ],
   },
   {
-    // Painel "Equipe & Acessos" — só admins (gate resource users/update).
-    name: 'Equipe',
-    href: '/equipe',
-    icon: Users2,
-    ...permissionFromRoute('/equipe'),
-  },
-  {
-    name: 'Imóveis',
-    href: '/properties',
-    icon: Building2,
-    ...permissionFromRoute('/properties'),
-    featureKey: 'properties',
-  },
-  {
-    // Books (PDF) salvos nos imóveis — visualizar e baixar
-    name: 'Books',
-    href: '/books',
-    icon: FileText,
-    ...permissionFromRoute('/books'),
-    featureKey: 'properties',
-  },
-  {
-    // Portais imobiliários (ZAP, Imóvel Web…) — feed + leads
-    name: 'Portais',
-    href: '/settings/portals',
-    icon: Globe,
-    ...permissionFromRoute('/settings/portals'),
-    featureKey: 'properties',
-  },
-  {
-    name: 'Agenda de Visitas',
-    href: '/visits',
-    icon: CalendarClock,
-    ...permissionFromRoute('/visits'),
-    featureKey: 'visits',
-  },
-  {
-    name: 'Propostas',
-    href: '/proposals',
-    icon: FileSignature,
-    ...permissionFromRoute('/proposals'),
-    featureKey: 'proposals',
-  },
-  {
-    name: 'Contratos',
-    href: '/contracts',
-    icon: FileText,
-    ...permissionFromRoute('/contracts'),
-    featureKey: 'contracts',
-  },
-  {
-    name: 'Captação',
-    href: '/property-capture-requests',
-    icon: ClipboardList,
-    ...permissionFromRoute('/property-capture-requests'),
-    featureKey: 'property_capture',
-  },
-  {
-    name: 'Interesses',
-    href: '/property-interests',
-    icon: TrendingUp,
-    ...permissionFromRoute('/property-interests'),
-    featureKey: 'property_interests',
-  },
-  {
-    name: t('menu.customer.channels'),
-    href: '/channels',
-    icon: Layers,
-    ...permissionFromRoute('/channels'),
-    featureKey: 'channels',
-  },
-  {
-    name: 'Marketplace',
-    href: '/marketplace',
-    icon: Store,
-    resource: 'integrations',
-    action: 'read',
-    // Acesso da Leal Mídia: super-admin SEMPRE vê; cliente só se a Leal Mídia
-    // ligar o toggle "marketplace" nas Funções dele (default OFF — ver
-    // DEFAULT_OFF_FEATURES no backend). Não faz sentido cliente ver isso.
-    clientToggleKey: 'marketplace',
-  },
-  // 'Clientes CRM' e 'Biblioteca de Automacoes' saíram daqui: agora moram na
-  // Área do Admin (/admin), num shell próprio. O menu do CRM só tem coisa que o
-  // cliente usa — era esse o ponto de separar. Entrada: AdminAreaButton, no Header.
-  {
-    // Sem cargo: ver MENU_FREE_BY_DESIGN.
-    name: t('menu.customer.tutorials'),
-    href: '/tutorials',
-    icon: GraduationCap,
-    featureKey: 'tutorials',
-  },
-  {
-    id: 'customer-settings',
-    name: t('menu.customer.settings'),
-    href: '#',
-    icon: Cog,
-    subItems: [
-      {
-        name: t('menu.settings.account'),
-        href: '/settings/account',
-        icon: User,
-        // A rota /settings/account é protegida por accounts.read (PermissionRoute).
-        // Gate do menu tem que casar com a rota, senão o corretor vê o item,
-        // clica e cai em "Acesso Negado" (/unauthorized).
-        ...permissionFromRoute('/settings/account'),
-      },
-      // Usuários, Times e Cargos e Permissões saíram daqui: viraram as abas da
-      // tela *Equipe*, no menu de cima. Eram quatro endereços mandando em
-      // pedaços da mesma decisão (quem é a pessoa, o que ela pode, por onde
-      // atende) e nenhum mandando na decisão inteira. As rotas antigas
-      // redirecionam para a aba certa — link salvo não morre.
-      {
-        name: t('menu.settings.labels'),
-        href: '/settings/labels',
-        icon: Tags,
-        ...permissionFromRoute('/settings/labels'),
-      },
-      {
-        // Sem chave de rota própria (não é rota, é o SHELL de Automações): a
-        // regra é "aparece pra quem tem qualquer um dos setores" — ver
-        // AUTOMATION_SECTOR_PERMISSIONS e AutomationsLayout.
-        name: 'Automações',
-        href: '/automations',
-        icon: Zap,
-        permissions: Object.values(AUTOMATION_SECTOR_PERMISSIONS),
-        clientToggleKey: 'client_manage_automations',
-        closesSubmenu: true,
-      },
-      {
-        name: 'Funis de Mensagem',
-        href: '/automations/message-funnels',
-        icon: Rocket,
-        ...permissionFromRoute('/automations/message-funnels'),
-        featureKey: 'message_funnels',
-        closesSubmenu: true,
-      },
-      {
-        name: 'Pixel / CAPI',
-        href: '/settings/pixel-capi',
-        icon: Target,
-        ...permissionFromRoute('/settings/pixel-capi'),
-        featureKey: 'lead_automations',
-      },
-      {
-        name: 'Site Builder',
-        href: '/settings/site-builder',
-        icon: Globe,
-        ...permissionFromRoute('/settings/site-builder'),
-        featureKey: 'site_builder',
-      },
-      // MACROS OCULTO — habilitar quando pronto
-      // {
-      //   name: t('menu.settings.macros'),
-      //   href: '/settings/macros',
-      //   icon: Settings,
-      //   resource: 'macros',
-      //   action: 'read',
-      // },
-      // INTEGRAÇÕES OCULTO DO MENU — rota continua viva (Meta Ads/Shopify/etc
-      // ainda são acessadas via link direto, ex: dentro de Automações → Origem).
-      // {
-      //   name: t('menu.settings.integrations'),
-      //   href: '/settings/integrations',
-      //   icon: Settings,
-      //   resource: 'integrations',
-      //   action: 'read',
-      // },
+    id: 'imobiliaria',
+    rotulo: 'Minha imobiliária',
+    icone: Building,
+    itens: [
+      // Gate da rota é accounts.read: o menu casa com ele, senão o corretor vê o item e cai no aviso do cargo.
+      { name: 'Conta', href: '/settings/account', icon: User, ...permissionFromRoute('/settings/account') },
+      // Usuários, Times e Cargos e Permissões são abas da tela Equipe (rotas antigas redirecionam).
+      { name: 'Equipe', href: '/equipe', icon: Users2, ...permissionFromRoute('/equipe') },
+      itemComAbas({ name: 'Integrações', icon: Plug }, [
+        // A aba pede `inboxes.update` além da chave da rota: o Corretor tem
+        // `channels.read` (religa o número em que ELE atende, desde 04/09/2026)
+        // e, sem isto, ganharia a seção Minha Imobiliária inteira só por causa
+        // dela. Ele chega na mesma tela por "Meus números", no avatar.
+        // `inboxes.update` é o "vejo qualquer número", que o Gerente tem pelo
+        // piso de reparos e o Corretor não.
+        { name: 'WhatsApp', href: '/channels', icon: Smartphone, ...gestao('/channels', 'inboxes.update'), featureKey: 'channels' },
+        { name: 'Pixel', href: '/settings/pixel-capi', icon: Target, ...permissionFromRoute('/settings/pixel-capi'), featureKey: 'lead_automations' },
+        // Portais imobiliários (ZAP, Imóvel Web…) — feed + leads
+        { name: 'Portais', href: '/settings/portals', icon: Share2, ...permissionFromRoute('/settings/portals'), featureKey: 'properties' },
+      ]),
+      // Tela única de distribuição: modo + quem participa + prazo + gestor.
+      { name: 'Roleta de leads', href: '/automations/roleta-config', icon: Shuffle, ...permissionFromRoute('/automations/roleta-config'), featureKey: 'lead_automations' },
+      // Página do Facebook + formulários. A Página muda pra Integrações quando a tela de Origem for refatorada.
+      { name: 'Origem', href: '/automations/origem', icon: Radio, ...permissionFromRoute('/automations/origem'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', hideOnRoot: true },
+      { name: 'Etiquetas', href: '/settings/labels', icon: Tags, ...gestao('/settings/labels', 'labels.create') },
+      itemComAbas({ name: 'Campos personalizados', icon: SlidersHorizontal }, [
+        { name: 'Atributos', href: '/settings/attributes', icon: SlidersHorizontal, ...permissionFromRoute('/settings/attributes') },
+        { name: 'Variáveis', href: '/settings/template-variables', icon: Braces, ...gestao('/settings/template-variables', 'canned_responses.create') },
+      ]),
     ],
   },
 ];
+
+/** Rodapé fixo do menu. */
+export const getFooterMenuItems = (): MenuItem[] => [
+  // Sem cargo: ver MENU_FREE_BY_DESIGN.
+  { name: 'Guia do LM Flow', href: '/tutorials', icon: GraduationCap, featureKey: 'tutorials' },
+];
+
+/** Todo item e toda aba do menu, numa lista só (busca, testes). */
+export function itensDoMenu(secoes: MenuSection[], rodape: MenuItem[] = []): (MenuItem | SubMenuItem)[] {
+  return [...secoes.flatMap(s => s.itens), ...rodape].flatMap(i => [i as MenuItem | SubMenuItem, ...(i.abas ?? [])]);
+}
+
+/** Endereço casa com o item (ou com o começo dele, para telas internas como /pipelines/:id). */
+export function enderecoCasa(pathname: string, href: string, exata = false): boolean {
+  if (!href || href === '#') return false;
+  if (pathname === href) return true;
+  return !exata && pathname.startsWith(href + '/');
+}
+
+/** Item ativo: o endereço é dele ou de qualquer aba dele. */
+export function itemAtivo(item: MenuItem, pathname: string): boolean {
+  if (item.abas?.length) return item.abas.some(aba => enderecoCasa(pathname, aba.href, aba.exata));
+  return enderecoCasa(pathname, item.href);
+}
+
+/**
+ * Item (e aba) do menu dono do endereço. Ganha o casamento mais longo, para
+ * /automations/flow-builder/:id cair em Fluxos e não em outro item.
+ */
+export function donoDoEndereco(
+  secoes: MenuSection[],
+  pathname: string,
+): { secao: MenuSection; item: MenuItem; aba?: SubMenuItem } | null {
+  let melhor: { secao: MenuSection; item: MenuItem; aba?: SubMenuItem; tamanho: number } | null = null;
+  for (const secao of secoes) {
+    for (const item of secao.itens) {
+      const candidatos: { href: string; exata?: boolean; aba?: SubMenuItem }[] = item.abas?.length
+        ? item.abas.map(aba => ({ href: aba.href, exata: aba.exata, aba }))
+        : [{ href: item.href }];
+      for (const c of candidatos) {
+        if (enderecoCasa(pathname, c.href, c.exata) && (!melhor || c.href.length > melhor.tamanho)) {
+          melhor = { secao, item, aba: c.aba, tamanho: c.href.length };
+        }
+      }
+    }
+  }
+  return melhor ? { secao: melhor.secao, item: melhor.item, aba: melhor.aba } : null;
+}
 
 export const getProfileMenuItems = (
   t: (key: string) => string,
@@ -422,6 +350,16 @@ export const getProfileMenuItems = (
       href: '/profile',
       icon: User,
       onClick: () => navigate('/profile'),
+    },
+    // Atalho do corretor para religar o WhatsApp em que ele atende (a tela já
+    // mostra só os números dele). O gestor chega na mesma tela por Minha
+    // imobiliária → Integrações.
+    {
+      name: 'Meus números',
+      href: '/channels',
+      icon: Smartphone,
+      onClick: () => navigate('/channels'),
+      permissao: 'channels.read',
     },
     // Entrada fixa para o diálogo de feedback. Necessária porque na aba de
     // Conversas o botão flutuante é escondido (cobria o botão de enviar).
@@ -512,6 +450,9 @@ export const shouldShowMenuItem = (
   if ('rootTenantOnly' in item && item.rootTenantOnly && !isRootTenantHost()) {
     return false;
   }
+  if (item.hideOnRoot && isRootTenantHost()) {
+    return false;
+  }
 
   // Gate por email (espelha checagens server-side hardcoded por email, ex: super-admin)
   if (item.requiredEmail) {
@@ -541,7 +482,7 @@ export const shouldShowMenuItem = (
   return true;
 };
 
-// Função para filtrar menus baseado em permissões
+// Filtra itens (e as abas de cada um) por cargo, função do cliente e arquivamento.
 export const filterMenuItemsByPermissions = (
   items: MenuItem[],
   canFunction: (resource: string, action: string) => boolean,
@@ -559,31 +500,29 @@ export const filterMenuItemsByPermissions = (
   // esses itens (foram filtrados), então nunca vê selo.
   const mark = (item: MenuItem | SubMenuItem) =>
     isSuper ? isHiddenFromClient(item, features) : false;
+  const mostra = (item: MenuItem | SubMenuItem) =>
+    shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features, archivedKeys, isSupport);
 
   return items
-    .filter(item => shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features, archivedKeys, isSupport))
     .map((item): MenuItem | null => {
-      // Se o item tem subitens, filtrar os subitens também
-      if (item.subItems && item.subItems.length > 0) {
-        const filteredSubItems = item.subItems
-          .filter(subItem =>
-            shouldShowMenuItem(subItem, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features, archivedKeys, isSupport)
-          )
-          .map(subItem => ({ ...subItem, hiddenFromClient: mark(subItem) }));
-
-        // Se não há subitens visíveis, não mostrar o item pai
-        if (filteredSubItems.length === 0) {
-          return null;
-        }
-
-        return {
-          ...item,
-          hiddenFromClient: mark(item),
-          subItems: filteredSubItems
-        };
+      if (item.abas && item.abas.length > 0) {
+        // Item com abas: vale a regra de cada aba. Ele aparece se alguma
+        // sobrevive, e leva para a primeira que sobreviveu.
+        if (!mostra({ ...item, resource: undefined, action: undefined, permissions: undefined })) return null;
+        const abas = item.abas.filter(mostra).map(aba => ({ ...aba, hiddenFromClient: mark(aba) }));
+        if (abas.length === 0) return null;
+        return { ...item, href: abas[0].href, abas, hiddenFromClient: mark(item) };
       }
-
-      return { ...item, hiddenFromClient: mark(item) };
+      return mostra(item) ? { ...item, hiddenFromClient: mark(item) } : null;
     })
     .filter((item): item is MenuItem => item !== null);
 };
+
+/** Mesmo filtro, seção a seção. Seção que fica sem item some. */
+export const filterMenuSections = (
+  secoes: MenuSection[],
+  ...regras: Parameters<typeof filterMenuItemsByPermissions> extends [unknown, ...infer R] ? R : never
+): MenuSection[] =>
+  secoes
+    .map(secao => ({ ...secao, itens: filterMenuItemsByPermissions(secao.itens, ...regras) }))
+    .filter(secao => secao.itens.length > 0);

@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
 import { getProfileMenuItems } from '../config/menuItems';
+import { useCan } from '@/hooks/useCan';
 import { Role } from '@/types/auth';
 import { availabilityOptions, getAvailabilityConfig } from '@/hooks/useUserAvailability';
 import { useAuthStore } from '@/store/authStore';
@@ -70,7 +71,13 @@ export default function ProfileMenu({ user, mobile = false, setLogoutDialogOpen,
 
   const userName = getUserDisplayName();
   const userInitials = getUserInitials(userName);
-  const profileMenuItems = getProfileMenuItems(t, navigate, setLogoutDialogOpen);
+  const pode = useCan();
+  // Item com `permissao` (Meus números) só para quem tem a chave.
+  const profileMenuItems = getProfileMenuItems(t, navigate, setLogoutDialogOpen).filter(item => {
+    if (!item.permissao) return true;
+    const [resource, action] = item.permissao.split('.');
+    return pode(resource, action);
+  });
 
   const AvailabilityPicker = () => (
     <div className="px-2 py-1.5">
