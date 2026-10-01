@@ -1,5 +1,5 @@
 /**
- * Agenda do corretor (chave `agenda_do_corretor`): as contas puras da tela —
+ * Agenda do corretor (agenda ligada no servidor): as contas puras da tela —
  * horário de visita da imobiliária e folgas do corretor.
  *
  * Quem decide de verdade é o servidor (`Visits::Agenda`). Aqui é a mesma regra,
@@ -15,7 +15,7 @@
 import { dataCurta, toDate } from '@/lib/formato';
 import { DIAS, diaISO } from '@/features/visits/daySlots';
 
-/** De qual IA o horário nasceu, quando a chave foi ligada. */
+/** De qual IA o horário nasceu, quando a agenda foi ligada no servidor. */
 export interface SeededFrom {
   agent_id?: string;
   agent_name?: string;

@@ -4451,9 +4451,9 @@ Decisões (não reabrir sem o dono pedir):
   `leadPickerPage('', 1, 1)`: só o meta interessa).
 - **Corretor em botões, não em busca** (decisão de 2026-10-01): a busca por nome
   listava usuários desativados e escondia quem existia.
-- **Horários fixos, de 30 em 30, das 07h às 21h, em 24 h — só com a chave
-  `agenda_do_corretor` desligada.** O campo de hora do navegador vira AM/PM em
-  celular em inglês. Com a chave ligada, os horários vêm do horário de visita da
+- **Horários fixos, de 30 em 30, das 07h às 21h, em 24 h — só com a agenda
+  desligada no servidor.** O campo de hora do navegador vira AM/PM em
+  celular em inglês. Com a agenda ligada, os horários vêm do horário de visita da
   Agenda (seção "Agenda do corretor", abaixo), continuam de 30 em 30 e em 24 h.
 - **Nada sobre WhatsApp no modal.** A confirmação para o cliente é função futura,
   ligada por imobiliária no admin (spec da agenda do corretor).
@@ -4481,11 +4481,15 @@ limitado, é o que dá menos problema"*: um horário de visita da imobiliária, 
 folgas por corretor. Spec: `specs/2026-10-01-fase-4-agenda-do-corretor-design.md`
 (pasta LM FLOW), partes 1 a 3.
 
-Tudo aqui fica atrás da chave **`agenda_do_corretor`**, liberada cliente a cliente
-(nasce desligada). Com ela desligada, a tela é a de antes, sem nenhum pedido novo
-ao servidor.
+**A tela segue o `enabled` do servidor (`GET /visit_settings`); a chave
+`agenda_do_corretor` saiu (01/10/2026).** Um gancho só,
+`src/features/visits/useAgendaLigada.ts`, pergunta uma vez (resposta guardada por
+30 s, um pedido para a página inteira) e devolve `ligada`: `null` enquanto não
+respondeu, `false` com `enabled: false`, 403 ou erro, `true` só com
+`enabled: true`. Desligada ou sem resposta, a tela é a de antes. Salvar o
+*Horário de visita* chama `esquecerAgendaLigada()`.
 
-O que aparece na tela, com a chave ligada:
+O que aparece na tela, com a agenda ligada no servidor:
 
 - **Agenda de Visitas → *Horário de visita*** (só gestor e administrador): dias da
   semana, início e fim (listas de 30 em 30, em 24 h) e *Feriados e datas
@@ -4524,31 +4528,34 @@ Decisões (não reabrir sem o dono pedir):
   remarcando (o lead já tem visita marcada); (1) o dono do lead; (2) o corretor
   fixo da IA; (3) o dono do número quando ela fala como o corretor; senão nenhum
   (só o horário da imobiliária).
-- **Chave `agenda_do_corretor` por imobiliária, desligada por padrão.** Ao ligar,
-  o horário nasce copiado da IA principal; sem IA, 8h às 20h, de segunda a sábado.
+- **Quem liga é o servidor; a tela só obedece ao `enabled`.** Ao ligar, o
+  horário nasce copiado da IA principal; sem IA, 8h às 20h, de segunda a sábado.
 - **Na IA e no assistente, os valores antigos de dias/faixa/datas continuam
-  gravados em `visit_config`** e voltam a valer se a chave desligar: a tela não
+  gravados em `visit_config`** e voltam a valer se a agenda desligar: a tela não
   apaga, só deixa de mostrar, e o assistente não grava `days/start/end`.
 
 Armadilhas:
 
 1. **O backend vem PRIMEIRO**: **comercial281/lm-flow#358** (tabelas, chave, a
-   conta única e os endpoints) e **comercial281/lm-flow#359** (a IA). Os dois no
-   ar antes de ligar a chave em qualquer cliente. Contra o servidor antigo a chave
-   nem existe.
-2. **O build da Vercel falha na checagem de funções** (`audit-feature-catalog.mjs`)
-   até a chave `agenda_do_corretor` estar no catálogo de produção, ou seja, o
-   **#358 no ar antes do merge deste**. Localmente, rodar as travas sem o audit.
+   conta única e os endpoints) e **comercial281/lm-flow#359** (a IA).
+2. **A tela sem a chave entra ANTES do servidor que liga a agenda para todos.**
+   Sozinha não muda nada: o servidor ainda responde `enabled: false` para todo
+   cliente, e a tela fica a de antes. Como o front não usa mais
+   `useClientToggle('agenda_do_corretor')`, o catálogo de funções
+   (`sync-feature-catalog.mjs` / `audit-feature-catalog.mjs`) deixa de vê-la; o
+   que liga ou desliga a agenda é só o servidor.
 3. **Quem muda a regra é o gestor do servidor** (administrador, suporte ou quem vê
    todas as conversas), não "quem não é isolado". A tela decide pelo
    `meta.only_mine`: no cliente com o isolamento desligado o corretor vê os botões
    de gestor, mas o servidor recusa salvar o horário (403) e grava a folga no nome
    dele.
-4. **A chave vai LITERAL** em `useClientToggle('agenda_do_corretor')` (Agenda,
-   modal, IA e assistente): os scripts do catálogo leem por regex.
-5. **`src/features/visits/daySlots.ts` continua sendo o caminho da chave
-   desligada** (e de quando o servidor responde `enabled: false`). Não apagar nem
-   trocar a grade 07h–21h sem tirar a chave antes.
+4. **Não voltar a ler a chave na tela.** Agenda, modal, IA e assistente usam
+   `useAgendaLigada()`; o "ligada" é sempre `=== true` (o `null` do carregando
+   conta como desligada, sem piscar a tela nova).
+5. **`src/features/visits/daySlots.ts` continua sendo o caminho da agenda
+   desligada** (servidor respondendo `enabled: false`, erro ou ainda sem
+   resposta, e o `/visits/availability` respondendo `enabled: false`). Não apagar
+   nem trocar a grade 07h–21h enquanto o servidor puder responder desligado.
 6. **As contas puras da agenda** (motivo do dia fechado com as mesmas frases do
    servidor, rótulo da folga, horas de 30 em 30) moram em
    `src/features/visits/agenda.ts`, com spec; os pedidos ao servidor, em

@@ -40,7 +40,8 @@ import {
 import { ScheduleVisitDialog } from '@/components/visits/ScheduleVisitDialog';
 import { HorarioVisitaDialog } from '@/components/visits/HorarioVisitaDialog';
 import { FolgasDialog } from '@/components/visits/FolgasDialog';
-import { useClientToggle, useFeature } from '@/contexts/TenantFeaturesContext';
+import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { useAgendaLigada } from '@/features/visits/useAgendaLigada';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { telefone } from '@/lib/formato';
@@ -206,8 +207,9 @@ function MonthGrid({ date, visits, onNavigate, onDayClick, onVisitClick, destaca
 
 export default function Visits() {
   const canCreate = useFeature('visits_create');
-  // Agenda do corretor (horário de visita + folgas), por imobiliária.
-  const agendaLigada = useClientToggle('agenda_do_corretor');
+  // Agenda do corretor (horário de visita + folgas): ligada quando o servidor
+  // diz (`GET /visit_settings`). Sem resposta, desligada ou erro: sem os botões.
+  const agendaLigada = useAgendaLigada().ligada === true;
   const [visits, setVisits]         = useState<Visit[]>([]);
   const [total, setTotal]           = useState(0);
   const [loading, setLoading]       = useState(false);

@@ -18,7 +18,7 @@ export default function EtapaRumo({
   a: AssistenteAnswers;
   set: (patch: Partial<AssistenteAnswers>) => void;
   playbook: AgentPlaybook | null;
-  /** Chave `agenda_do_corretor`: dias e horário da visita vêm da Agenda. */
+  /** Agenda ligada no servidor: dias e horário da visita vêm da Agenda. */
   agendaLigada?: boolean;
 }) {
   const rotulo = (k: string, reserva: string) => playbook?.var_labels?.[k] ?? reserva;

@@ -60,6 +60,7 @@ import { processingLabel, processingWarning } from '@/features/salesAgents/docum
 // falhas diferentes chegarem ao gestor como a mesma frase genérica.
 import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
+import { useAgendaLigada } from '@/features/visits/useAgendaLigada';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { classifyLoadFailure, type LoadFailure } from '@/services/core/forbidden';
@@ -1168,13 +1169,14 @@ function VisitSection({
 }
 
 // ---------------- Janelas de disponibilidade da visita ----------------
-// Com a chave `agenda_do_corretor`, dias, faixa e datas bloqueadas saem daqui:
-// a IA usa o horário de visita da Agenda (a mesma regra de quem marca à mão).
-// Os valores antigos continuam guardados em `visit_config` (o `patch` espalha
-// o que já existe) e voltam a valer se a chave desligar.
+// Com a agenda ligada no servidor (`GET /visit_settings` com `enabled: true`),
+// dias, faixa e datas bloqueadas saem daqui: a IA usa o horário de visita da
+// Agenda (a mesma regra de quem marca à mão). Sem resposta, desligada ou erro:
+// os campos de sempre. Os valores antigos continuam guardados em `visit_config`
+// (o `patch` espalha o que já existe) e voltam a valer se a agenda desligar.
 
 export function VisitWindows({ agent, onSave }: { agent: SalesAgent; onSave: (patch: Partial<SalesAgent>) => void }) {
-  const agendaLigada = useClientToggle('agenda_do_corretor');
+  const agendaLigada = useAgendaLigada().ligada === true;
   const c = agent.visit_config ?? {};
   const days = c.days ?? [1, 2, 3, 4, 5];
   const blockedDates = c.blocked_dates ?? [];

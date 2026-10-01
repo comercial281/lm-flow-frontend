@@ -304,7 +304,7 @@ export function playbookDasRespostas(a: AssistenteAnswers, atual: AgentPlaybookC
  * O PATCH do "Concluir". Objeto vazio = nada mudou, e a tela não chama o servidor.
  */
 /**
- * `agendaLigada` (chave `agenda_do_corretor`): dias, início e fim da visita são
+ * `agendaLigada` (agenda ligada no servidor): dias, início e fim da visita são
  * do horário de visita da Agenda, não da IA — o assistente não os grava, e o
  * que está em `visit_config` fica como está.
  */

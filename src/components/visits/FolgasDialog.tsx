@@ -1,5 +1,5 @@
 /**
- * Folgas do corretor (chave `agenda_do_corretor`). Na folga ninguém marca
+ * Folgas do corretor (agenda ligada no servidor). Na folga ninguém marca
  * visita para ele: nem a IA, nem o gestor, nem ele mesmo.
  *
  * Folga = um período (início e fim) com o dia inteiro ou uma faixa de horas.
