@@ -1,5 +1,10 @@
 import api from '@/services/core/api';
 
+export interface PersonRef {
+  id: string;
+  name: string;
+}
+
 export interface Visit {
   id: string;
   property_id: string | null;
@@ -8,12 +13,13 @@ export interface Visit {
   status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled';
   scheduled_at: string;
   duration_minutes?: number | null;
-  notes?: string;
+  realtor_notes?: string | null;
+  cancelled_at?: string | null;
   feedback_notes?: string;
   rating?: number | null;
   property?: { id: string; title: string; code: string; address_city?: string; address_neighborhood?: string };
   contact?: { id: string; name: string; phone_number?: string };
-  realtor?: { id: string; name: string } | null;
+  realtor?: PersonRef | null;
   created_at: string;
   updated_at: string;
 }
@@ -24,7 +30,7 @@ export interface VisitFormData {
   realtor_id?: string | null;
   scheduled_at: string;
   duration_minutes?: number;
-  notes?: string;
+  realtor_notes?: string;
 }
 
 const BASE = '/visits';
@@ -92,6 +98,16 @@ export const visitsService = {
     return (res.data as { data: LeadPickerItem[] }).data;
   },
 
+  /** Igual ao leadPicker, com o meta: `only_mine` diz que o corretor está travado nele mesmo (`me`). */
+  async leadPickerPage(
+    q: string = '',
+    per_page: number = 20,
+  ): Promise<{ data: LeadPickerItem[]; meta: { only_mine?: boolean; me?: PersonRef | null } }> {
+    const res = await api.get(`${BASE}/lead_picker`, { params: { q, per_page } });
+    const body = res.data as { data: LeadPickerItem[]; meta?: { only_mine?: boolean; me?: PersonRef | null } };
+    return { data: body.data ?? [], meta: body.meta ?? {} };
+  },
+
   async quickCreateContact(payload: { name: string; phone_number: string; email?: string }): Promise<LeadPickerItem> {
     const res = await api.post(`${BASE}/quick_create_contact`, payload);
     return (res.data as { data: LeadPickerItem }).data;
@@ -107,6 +123,7 @@ export interface LeadPickerItem {
   pipeline_id?: string | null;
   stage_name?: string | null;
   updated_at?: string;
+  owner?: PersonRef | null;
 }
 
 export const VISIT_STATUS_LABELS: Record<string, string> = {

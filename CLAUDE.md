@@ -4378,3 +4378,49 @@ Pendências registradas: Propostas aparece sem link e em zero onde o menu está
 escondido (liga sozinho quando voltar); os cliques de conversa passam a abrir a
 tela de Conversas filtrada na jornada de Conversas; o espaço do banner
 (`data-slot="banner"`) é preenchido pela spec do banner.
+
+## Agendar visita: só os seus clientes, sem horário duplicado (desde 2026-09-30)
+
+Pedido do dono do produto: *"o corretor tem que clicar e já abrir com o nome dele
+[…] só pode marcar visita para os contatos dele"* e *"aparecer apenas datas
+disponíveis"*. Spec: `specs/2026-09-30-fase-4-agendar-visita-design.md` (pasta LM FLOW).
+
+O que aparece na tela, no **Agendar visita** da Agenda:
+
+- **Duas colunas.** *Quem*: Cliente, Corretor responsável, Observações e Imóvel
+  (opcional, por último). *Quando*: dia (Hoje / Amanhã / Sábado / outra data),
+  duração (30 min / 1 h / 1h30 / 2 h), horário e a frase por extenso.
+- **Corretor:** o campo de cliente só encontra os clientes dele, e o responsável é
+  ele, sem campo. **Gestor:** escolhe; ao escolher o cliente, vem o dono do lead.
+- **Horário ocupado aparece riscado, só com a hora** (o nome do cliente estourava a
+  grade de 3 colunas) — vai pro `aria-label`/`title` do botão, e o nome completo
+  aparece embaixo, na lista das visitas do corretor naquele dia: para o corretor
+  travado, "Suas visitas nesse dia" / "Nenhuma outra visita sua nesse dia."; para o
+  gestor, com o nome do corretor escolhido. Se mesmo assim bater, o aviso diz com
+  quem.
+- **422 na hora de salvar** (corrida: alguém marcou esse horário enquanto o modal
+  estava aberto) recarrega a lista de visitas do dia, reusando o efeito e o guarda
+  de corrida dele (contador `recarregarDia` nas deps) — o horário que acabou de ser
+  ocupado aparece riscado sem precisar fechar e reabrir o modal.
+- **Sem cadastro de cliente no modal** (decisão do dono). Em Propostas, continua.
+- **As observações passam a ser gravadas** (antes sumiam, aqui e no cartão do Funil).
+- Dia que já passou no calendário não abre o modal.
+- Corretor e gestor (não administrador) voltam a conseguir escolher o cliente na
+  visita e em Propostas: desde a mudança de permissões a lista aparecia vazia.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Quem decide é o servidor** (`Visits::Booking`). A tela trava o corretor pelo
+  `meta.only_mine` do seletor, nunca pelo cargo.
+- **Horários fixos, de 30 em 30, das 07h às 21h, em 24 h.** O campo de hora do
+  navegador vira AM/PM em celular em inglês.
+- **Nada sobre WhatsApp no modal.** A confirmação para o cliente é função futura,
+  ligada por imobiliária no admin (spec da agenda do corretor).
+
+Armadilhas:
+
+1. **O backend vem PRIMEIRO** (`lm-flow` **#350**, empilhado sobre o #349). Contra o
+   servidor antigo o modal abre como de gestor, sem trava nem recorte.
+2. **A lista de horários e o "ocupado" moram em `src/features/visits/daySlots.ts`**,
+   com spec, fora do JSX. A conta é a mesma do servidor: encostar não é conflito.
+3. **`LeadCombobox` é compartilhado com Propostas**: `allowCreate` nasce `true`.

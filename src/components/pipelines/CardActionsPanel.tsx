@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { visitsService } from '@/services/visits/visitsService';
+import { apiErrorMessage } from '@/utils/apiHelpers';
 import { lazyWithRetry } from '@/utils/chunkReload';
 // FollowupTimeline é conteúdo do painel, já visível de cara — segue import
 // estático de propósito.
@@ -145,7 +146,7 @@ export default function CardActionsPanel({
         contact_id: String(contactId),
         scheduled_at: new Date(visitWhen).toISOString(),
         duration_minutes: Number(visitDuration) || 60,
-        notes: visitNotes || undefined,
+        realtor_notes: visitNotes || undefined,
       });
       // Marca o lead com a tag de visita agendada (aparece no card)
       if (convId) {
@@ -154,8 +155,8 @@ export default function CardActionsPanel({
       toast.success('Visita agendada');
       setVisitOpen(false);
       setVisitWhen(''); setVisitNotes(''); setVisitDuration('60');
-    } catch {
-      toast.error('Erro ao agendar visita');
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Erro ao agendar visita'));
     } finally {
       setSavingVisit(false);
     }
