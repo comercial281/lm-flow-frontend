@@ -8,6 +8,7 @@ import {
   roletaConfigService,
   type DistributionMode,
   type RoletaQueue,
+  type RoletaQueueConfig,
   type RoletaQueueItem,
 } from '@/services/roletaConfig/roletaConfigService';
 import type { ContextoBloco } from '../usePodeAbrir';
@@ -23,6 +24,13 @@ const INTERVALO_MS = 30_000;
 
 const prazo = (o: RoletaQueueItem) =>
   o.sem_prazo ? 'sem prazo' : o.estourou ? 'prazo estourado' : `faltam ${numero(o.minutos_restantes ?? 0)} min`;
+
+/**
+ * A oferta é desta roleta? Pelo id da roleta; servidor antigo não manda o id,
+ * e aí vale o nome do número de entrada (que pode repetir entre roletas).
+ */
+const daRoleta = (o: RoletaQueueItem, r: RoletaQueueConfig) =>
+  o.roleta_config_id !== undefined ? o.roleta_config_id === r.id : r.instancia !== null && o.instancia === r.instancia;
 
 /**
  * A roleta funcionando, quase ao vivo (a cada 30 s, só com a aba visível).
@@ -81,8 +89,7 @@ export const RoletaAgora: React.FC<ContextoBloco> = ({ visao, pode }) => {
   const indice = achado >= 0 ? achado : Math.min(posicao.indice, roletas.length - 1);
   const atual = roletas[indice];
   const irPara = (i: number) => setPosicao({ id: roletas[i].id, indice: i });
-  // A oferta não traz o id da roleta; o número de entrada é único por roleta.
-  const ofertas = atual.instancia ? fila.aguardando.filter(o => o.instancia === atual.instancia) : [];
+  const ofertas = fila.aguardando.filter(o => daRoleta(o, atual));
 
   const setas = roletas.length > 1 ? (
     <div className="lmfn-carrossel">

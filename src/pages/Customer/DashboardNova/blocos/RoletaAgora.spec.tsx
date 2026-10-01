@@ -78,6 +78,20 @@ describe('RoletaAgora', () => {
     expect(screen.getByText('prazo estourado')).toBeInTheDocument();
   });
 
+  it('com o id da roleta na oferta, números com o mesmo nome não misturam as ofertas', async () => {
+    getQueue.mockResolvedValue(resposta(
+      [roleta('r1', 'Vendas', { instancia: 'principal' }), roleta('r2', 'Locação', { instancia: 'principal' })],
+      [oferta('o1', { lead: 'Fulano', roleta_config_id: 'r1' }), oferta('o2', { lead: 'Beltrano', roleta_config_id: 'r2' })],
+    ));
+    await montar(ctx());
+    expect(screen.getByText('Fulano')).toBeInTheDocument();
+    expect(screen.queryByText('Beltrano')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima roleta' }));
+    expect(screen.getByText('Beltrano')).toBeInTheDocument();
+    expect(screen.queryByText('Fulano')).not.toBeInTheDocument();
+  });
+
   it('com uma roleta só, não tem setas', async () => {
     getQueue.mockResolvedValue(resposta([roleta('r1', 'Vendas'), roleta('r2', 'Antiga', { ativa: false })]));
     await montar(ctx());
