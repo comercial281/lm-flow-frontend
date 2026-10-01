@@ -59,7 +59,11 @@ const SemDados: React.FC<{
 /** Cartão dentro da seção "Análise do período" tem título h3; fora dela (tela do corretor), h2. */
 const tituloEm = (nivel?: 2 | 3): 'h2' | 'h3' => (nivel === 3 ? 'h3' : 'h2');
 
-/** O gráfico com um resumo de uma linha para leitor de tela (o SVG em si não diz nada). */
+/**
+ * O gráfico com um resumo de uma linha para leitor de tela (o SVG em si não diz
+ * nada). Os gráficos vão com `accessibilityLayer={false}`: senão o recharts faz
+ * o SVG focável dentro de um `role="img"`, e o teclado para em três pontos sem nome.
+ */
 const Grafico: React.FC<{ resumo: string; children: React.ReactNode }> = ({ resumo, children }) => (
   <div role="img" aria-label={resumo}>{children}</div>
 );
@@ -84,7 +88,7 @@ export const LeadsDiaSemana: React.FC<ContextoBloco> = ({ dados, carregando, vis
       <Destaque valor={dia ?? VAZIO} legenda={dia ? 'é o dia que mais chega lead no período' : 'Nenhum lead no período'} />
       <Grafico resumo={`${titulo}: ${linhas.map(l => `${l.nome} ${numero(l.leads)}`).join(', ')}`}>
         <ResponsiveContainer width="100%" height={190}>
-          <BarChart data={linhas}>
+          <BarChart data={linhas} accessibilityLayer={false}>
             <XAxis dataKey="nome" tick={eixo} tickLine={false} axisLine={false} />
             <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={28} />
             <Tooltip {...tooltipStyle} formatter={formatoLeads} />
@@ -116,9 +120,9 @@ export const LeadsHorario: React.FC<ContextoBloco> = ({ dados, carregando, nivel
       />
       <Grafico resumo={resumo}>
         <ResponsiveContainer width="100%" height={190}>
-          <AreaChart data={linhas}>
-            {/* A faixa do horário comercial é neutra: não pode se confundir com a área dos leads. */}
-            <ReferenceArea x1={`${ABRE}h`} x2={`${FECHA}h`} fill="var(--lmf-track)" fillOpacity={0.7} />
+          <AreaChart data={linhas} accessibilityLayer={false}>
+            {/* A faixa do horário comercial é cinza neutro (não roxo): não pode se confundir com a área dos leads. */}
+            <ReferenceArea x1={`${ABRE}h`} x2={`${FECHA}h`} fill="var(--lmfn-neutro)" fillOpacity={1} />
             <XAxis dataKey="hora" interval={3} tick={eixo} tickLine={false} axisLine={false} />
             <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={28} />
             <Tooltip {...tooltipStyle} formatter={formatoLeads} />
@@ -143,7 +147,7 @@ export const LeadsSeisMeses: React.FC<ContextoBloco> = ({ dados, carregando, niv
       {algum ? (
         <Grafico resumo={`${titulo}: ${linhas.map(l => `${l.mes} ${numero(l.leads)}`).join(', ')}`}>
           <ResponsiveContainer width="100%" height={210}>
-            <BarChart data={linhas}>
+            <BarChart data={linhas} accessibilityLayer={false}>
               <XAxis dataKey="mes" tick={eixo} tickLine={false} axisLine={false} />
               <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={32} />
               <Tooltip {...tooltipStyle} formatter={formatoLeads} />

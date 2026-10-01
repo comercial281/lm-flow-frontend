@@ -132,7 +132,7 @@ const DashboardNova: React.FC = () => {
   }
 
   return (
-    <div className="lmf">
+    <div className="lmf lmfn">
       <Cabecalho
         nome={`${saudacao()}${primeiroNome ? `, ${primeiroNome}` : ''}`}
         visao={visao}

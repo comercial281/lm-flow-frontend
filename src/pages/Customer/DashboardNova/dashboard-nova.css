@@ -1,6 +1,9 @@
 /* src/pages/Customer/DashboardNova/dashboard-nova.css
  * Só o que o lmf.css (DashboardV2) não tem. Tokens de cor sempre os --lmf-*,
- * que já trazem o claro e o escuro. */
+ * que já trazem o claro e o escuro. A exceção é o cinza neutro de verdade
+ * (os --lmf-* puxam todos para o roxo): --lmfn-neutro, com claro e escuro. */
+.lmfn { --lmfn-neutro: rgba(100, 116, 139, 0.18); }
+.dark .lmfn { --lmfn-neutro: rgba(148, 163, 184, 0.14); }
 .lmfn-cabecalho { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 16px; margin-bottom: 16px; }
 .lmfn-cabecalho h1 { font-size: 26px; font-weight: 650; letter-spacing: -0.03em; margin: 0; }
 .lmfn-controles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -14,7 +17,7 @@
 .lmfn-filtros-rodape button { border: 0; background: transparent; color: var(--lmf-accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .lmfn-aviso { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--lmf-accent-soft); font-size: 13px; margin-bottom: 16px; }
 .lmfn-aviso button { margin-left: auto; border: 0; background: transparent; color: var(--lmf-accent); font: inherit; font-weight: 600; cursor: pointer; }
-.lmfn-aviso-erro { background: rgba(217, 119, 6, 0.12); color: var(--lmf-text); }
+.lmfn-aviso-erro { background: color-mix(in srgb, var(--lmf-warn) 12%, transparent); color: var(--lmf-text); }
 .lmfn-aviso-erro button { color: var(--lmf-warn); }
 .lmfn-blocos { transition: opacity 0.15s ease; }
 .lmfn-blocos-pendente { opacity: 0.6; }
