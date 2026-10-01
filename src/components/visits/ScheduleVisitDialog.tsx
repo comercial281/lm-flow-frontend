@@ -8,6 +8,13 @@
  * tela sabe disso pelo `meta.only_mine` do seletor, não pelo cargo.
  * O gestor escolhe o corretor em botões (`GET /visits/realtors`); o cliente
  * vem do seletor paginado (50 por vez, com o total).
+ *
+ * Com a chave `agenda_do_corretor`, os horários do dia vêm do servidor
+ * (`/visits/availability`: só os de dentro do horário de visita, com ocupado e
+ * folga já marcados) e dia fechado não se escolhe (`motivoDiaFechado`, com o
+ * horário de visita e as folgas do corretor escolhido). Sem a chave — ou com o
+ * servidor respondendo `enabled: false` — é a grade fixa de `daySlots.ts`,
+ * exatamente como antes.
  * Specs: specs/2026-09-30-fase-4-agendar-visita-design.md e
  * specs/2026-10-01-fase-4-agenda-do-corretor-design.md (pasta LM FLOW).
  */
@@ -24,18 +31,36 @@ import {
   visitsService, type LeadPickerItem, type PersonRef, type Visit,
 } from '@/services/visits/visitsService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
+import { agendaService, type AvailabilitySlot } from '@/services/visits/agendaService';
+import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { hora } from '@/lib/formato';
 import {
   DURACOES, atalhosDeDia, diaISO, horariosDoDia, mesmoDia, ocupando, porExtenso, rotuloDuracao,
   type BusyVisit,
 } from '@/features/visits/daySlots';
+import { motivoDiaFechado, type AgendaSettings, type TimeOff } from '@/features/visits/agenda';
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   diaInicial?: Date | null;
   onCreated: (v: Visit) => void;
+}
+
+/** Um botão da grade de horários, venha da grade fixa ou do servidor. */
+interface SlotTela {
+  inicio: Date;
+  rotulo: string;
+  ocupadoPor: string | null;
+  folga: boolean;
+}
+
+/** A resposta do servidor para o dia, já no formato da tela. */
+interface DiaDaAgenda {
+  aberto: boolean;
+  motivo: string | null;
+  slots: AvailabilitySlot[];
 }
 
 const hojeSemHora = () => {
@@ -64,6 +89,18 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
   // lógica nem o guarda de corrida dele.
   const [recarregarDia, setRecarregarDia] = useState(0);
 
+  // Agenda do corretor. `servidorSemAgenda`: a tela tem a chave, mas o
+  // servidor respondeu `enabled: false` — vale o que o servidor diz, e a tela
+  // volta para a grade fixa.
+  const agendaLigada = useClientToggle('agenda_do_corretor');
+  const [servidorSemAgenda, setServidorSemAgenda] = useState(false);
+  const usarAgenda = agendaLigada && !servidorSemAgenda;
+  const [ajustes, setAjustes] = useState<AgendaSettings | null>(null);
+  const [folgas, setFolgas] = useState<TimeOff[]>([]);
+  // `null` = carregando.
+  const [diaAgenda, setDiaAgenda] = useState<DiaDaAgenda | null>(null);
+  const [erroAgenda, setErroAgenda] = useState(false);
+
   // `diaInicial` costuma ser um `Date` recriado a cada render do pai: não pode
   // entrar nas dependências do reset (reabriria o form de novo só por isso).
   // O efeito abaixo lê o valor mais recente só no instante em que abre.
@@ -86,6 +123,8 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
     setVerificandoCargo(true);
     setCorretores(null);
     setErroCorretores(false);
+    setServidorSemAgenda(false);
+    setAjustes(null);
     // Um cliente só, porque aqui só interessa o meta (cargo travado ou não).
     visitsService.leadPickerPage('', 1, 1)
       .then(({ meta }) => {
@@ -133,15 +172,77 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
     return () => { vivo = false; };
   }, [open, corretor, dia, recarregarDia]);
 
+  const corretorId = corretor?.id;
+  const diaChave = diaISO(dia);
+
+  // Agenda: o horário de visita da imobiliária, uma vez por abertura.
+  useEffect(() => {
+    if (!open || !agendaLigada) return;
+    let vivo = true;
+    agendaService.getSettings()
+      .then(r => {
+        if (!vivo) return;
+        if (r.enabled) setAjustes(r);
+        else setServidorSemAgenda(true);
+      })
+      .catch(() => { /* sem o horário, os atalhos não travam; o servidor confere ao salvar */ });
+    return () => { vivo = false; };
+  }, [open, agendaLigada]);
+
+  // Agenda: as folgas do corretor escolhido, uma vez por abertura e corretor.
+  useEffect(() => {
+    setFolgas([]);
+    if (!open || !usarAgenda || !corretorId) return;
+    let vivo = true;
+    agendaService.listTimeOffs({ user_id: corretorId, from: diaISO(hojeSemHora()) })
+      .then(lista => { if (vivo) setFolgas(lista); })
+      .catch(() => { /* idem: o servidor confere ao salvar */ });
+    return () => { vivo = false; };
+  }, [open, usarAgenda, corretorId]);
+
+  // Agenda: os horários do dia, pela conta do servidor. Mesmo guarda de corrida
+  // das visitas do dia (resposta velha descartada) e o mesmo `recarregarDia`
+  // depois de um 422. Espera saber o cargo para não pedir duas vezes. Sem
+  // corretor (gestor antes de escolher): o horário de visita, sem ocupação.
+  useEffect(() => {
+    setDiaAgenda(null);
+    setErroAgenda(false);
+    if (!open || !usarAgenda || verificandoCargo) return;
+    let vivo = true;
+    agendaService.availability({ realtor_id: corretorId, date: diaChave, duration: duracao })
+      .then(r => {
+        if (!vivo) return;
+        if (!r.enabled) { setServidorSemAgenda(true); return; }
+        setDiaAgenda({ aberto: r.day.open, motivo: r.day.reason_text, slots: r.slots ?? [] });
+      })
+      .catch(() => { if (vivo) setErroAgenda(true); });
+    return () => { vivo = false; };
+  }, [open, usarAgenda, verificandoCargo, corretorId, diaChave, duracao, recarregarDia]);
+
   const ocupadas = useMemo(() => ocupando(doDia), [doDia]);
-  const slots = useMemo(() => horariosDoDia(dia, duracao, ocupadas, new Date()), [dia, duracao, ocupadas]);
+  const slotsFixos = useMemo(() => horariosDoDia(dia, duracao, ocupadas, new Date()), [dia, duracao, ocupadas]);
+  // `null` = a agenda ainda não respondeu.
+  const slots = useMemo<SlotTela[] | null>(() => {
+    if (!usarAgenda) return slotsFixos.map(s => ({ ...s, folga: false }));
+    if (!diaAgenda) return null;
+    return diaAgenda.slots.map(s => ({
+      inicio: new Date(s.at),
+      rotulo: hora(s.at),
+      ocupadoPor: s.state === 'busy' ? (s.client_name || 'outro cliente') : null,
+      folga: s.state === 'time_off',
+    }));
+  }, [usarAgenda, slotsFixos, diaAgenda]);
 
   // Trocou dia, duração ou corretor e o horário escolhido deixou de caber: limpa.
   useEffect(() => {
-    if (!inicio) return;
+    if (!inicio || !slots) return;
     const s = slots.find(x => x.inicio.getTime() === inicio.getTime());
-    if (!s || s.ocupadoPor) setInicio(null);
+    if (!s || s.ocupadoPor || s.folga) setInicio(null);
   }, [slots, inicio]);
+
+  // Por que o dia está fechado (agenda ligada e horário carregado), ou null.
+  const motivoFechado = (d: Date): string | null =>
+    usarAgenda && ajustes ? motivoDiaFechado(d, ajustes, folgas) : null;
 
   const escolherLead = (l: LeadPickerItem) => {
     setLead(l);
@@ -182,6 +283,7 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
 
   const atalhos = atalhosDeDia(new Date());
   const atalhoAtivo = atalhos.find(a => mesmoDia(a.dia, dia));
+  const motivoOutraData = atalhoAtivo ? null : motivoFechado(dia);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -233,21 +335,28 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
             <div>
               <UILabel>Dia *</UILabel>
               <div className="mt-1 flex flex-wrap gap-2">
-                {atalhos.map(a => (
-                  <Button
-                    key={a.rotulo}
-                    type="button"
-                    size="sm"
-                    variant={atalhoAtivo?.rotulo === a.rotulo ? 'default' : 'outline'}
-                    onClick={() => setDia(a.dia)}
-                  >
-                    {a.rotulo}
-                  </Button>
-                ))}
+                {atalhos.map(a => {
+                  const motivo = motivoFechado(a.dia);
+                  return (
+                    <Button
+                      key={a.rotulo}
+                      type="button"
+                      size="sm"
+                      variant={atalhoAtivo?.rotulo === a.rotulo ? 'default' : 'outline'}
+                      disabled={!!motivo}
+                      title={motivo ?? undefined}
+                      onClick={() => setDia(a.dia)}
+                    >
+                      {a.rotulo}
+                    </Button>
+                  );
+                })}
                 <Input
                   type="date"
                   aria-label="Outra data"
                   className="w-auto"
+                  title={motivoOutraData ?? undefined}
+                  aria-invalid={motivoOutraData ? true : undefined}
                   min={diaISO(hojeSemHora())}
                   value={atalhoAtivo ? '' : diaISO(dia)}
                   onChange={e => {
@@ -277,7 +386,18 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
 
             <div>
               <UILabel>Horário *</UILabel>
-              {slots.length === 0 ? (
+              {erroAgenda ? (
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  <span>Não deu para carregar os horários.</span>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setRecarregarDia(c => c + 1)}>Tentar de novo</Button>
+                </div>
+              ) : !slots ? (
+                <p className="mt-1 text-sm text-muted-foreground">Carregando horários...</p>
+              ) : diaAgenda && !diaAgenda.aberto ? (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {diaAgenda.motivo || motivoFechado(dia) || 'Esse dia está fechado para visitas.'}
+                </p>
+              ) : slots.length === 0 ? (
                 <p className="mt-1 text-sm text-muted-foreground">Não sobrou horário nesse dia. Escolha outro dia.</p>
               ) : (
                 <div className="mt-1 grid max-h-64 grid-cols-3 gap-1.5 overflow-y-auto pr-1 md:grid-cols-4">
@@ -287,10 +407,10 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
                       type="button"
                       size="sm"
                       variant={inicio?.getTime() === s.inicio.getTime() ? 'default' : 'outline'}
-                      disabled={!!s.ocupadoPor}
-                      title={s.ocupadoPor ? `Ocupado: visita com ${s.ocupadoPor}` : undefined}
-                      aria-label={s.ocupadoPor ? `${s.rotulo} · ocupado, ${s.ocupadoPor}` : undefined}
-                      className={s.ocupadoPor ? 'line-through' : undefined}
+                      disabled={!!s.ocupadoPor || s.folga}
+                      title={s.ocupadoPor ? `Ocupado: visita com ${s.ocupadoPor}` : s.folga ? 'Folga do corretor' : undefined}
+                      aria-label={s.ocupadoPor ? `${s.rotulo} · ocupado, ${s.ocupadoPor}` : s.folga ? `${s.rotulo} · folga` : undefined}
+                      className={s.ocupadoPor || s.folga ? 'line-through' : undefined}
                       onClick={() => setInicio(s.inicio)}
                     >
                       {s.rotulo}

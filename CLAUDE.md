@@ -4446,8 +4446,10 @@ Decisões (não reabrir sem o dono pedir):
   `leadPickerPage('', 1, 1)`: só o meta interessa).
 - **Corretor em botões, não em busca** (decisão de 2026-10-01): a busca por nome
   listava usuários desativados e escondia quem existia.
-- **Horários fixos, de 30 em 30, das 07h às 21h, em 24 h.** O campo de hora do
-  navegador vira AM/PM em celular em inglês.
+- **Horários fixos, de 30 em 30, das 07h às 21h, em 24 h — só com a chave
+  `agenda_do_corretor` desligada.** O campo de hora do navegador vira AM/PM em
+  celular em inglês. Com a chave ligada, os horários vêm do horário de visita da
+  Agenda (seção "Agenda do corretor", abaixo), continuam de 30 em 30 e em 24 h.
 - **Nada sobre WhatsApp no modal.** A confirmação para o cliente é função futura,
   ligada por imobiliária no admin (spec da agenda do corretor).
 
@@ -4465,3 +4467,77 @@ Armadilhas:
    o rodapé de total não aparece (sem `meta.total`) e os botões de corretor dão
    erro de carregamento. Os botões usam o mesmo nome que a visita mostra
    (`Visits::Booking.user_ref`), em ordem por ele.
+
+## Agenda do corretor: horário de visita e folgas (desde 2026-10-01)
+
+Pedido do dono do produto: a IA prometia horário que o corretor não tinha, a visita
+marcada à mão não tinha regra nenhuma e ninguém registrava folga. *"Mesmo que
+limitado, é o que dá menos problema"*: um horário de visita da imobiliária, com
+folgas por corretor. Spec: `specs/2026-10-01-fase-4-agenda-do-corretor-design.md`
+(pasta LM FLOW), partes 1 a 3.
+
+Tudo aqui fica atrás da chave **`agenda_do_corretor`**, liberada cliente a cliente
+(nasce desligada). Com ela desligada, a tela é a de antes, sem nenhum pedido novo
+ao servidor.
+
+O que aparece na tela, com a chave ligada:
+
+- **Agenda de Visitas → *Horário de visita*** (só gestor e administrador): dias da
+  semana, início e fim (listas de 30 em 30, em 24 h) e *Feriados e datas
+  fechadas*. Texto do efeito: "Vale para a IA e para quem marca à mão. Fora disso,
+  nenhuma visita é marcada." Se o horário nasceu de uma IA e havia outras com
+  horário diferente, avisa qual foi usada.
+- **Agenda de Visitas → *Folgas*** (gestor, com o corretor escolhido em botões) /
+  ***Minhas folgas*** (corretor, só as dele): período com data de início e fim, dia
+  inteiro ou uma faixa de horas (a faixa vale em cada dia do período) e motivo
+  opcional. "Excluir" confirma na própria linha.
+- **Agendar visita:** os horários do dia vêm do servidor
+  (`GET /visits/availability`), só os de dentro do horário de visita. Ocupado e
+  folga aparecem **riscados, só com a hora** (`aria-label` "15:00 · ocupado,
+  Fulano" / "15:00 · folga"). Dia fechado (dia da semana sem visita, data fechada,
+  folga de dia inteiro do corretor escolhido) fica com o atalho desabilitado e o
+  motivo no `title`; em *Outra data*, o campo leva o motivo e, no lugar dos
+  horários, vem a frase do servidor ("Domingo não tem visita"). O gestor que ainda
+  não escolheu o corretor vê o horário de visita sem ocupação; ao escolher, a grade
+  é recalculada com as visitas e as folgas dele.
+- **IA Vendedora → *Quando a IA pode marcar visita*:** somem dias, faixa e datas
+  bloqueadas; no lugar, "Usa o horário de visita da Agenda — editar" (link para
+  `/visits`). Ficam antecedência, máx. de dias, *Visita para hoje só com o
+  corretor confirmando*, *Evitar dois leads no mesmo horário* e a duração.
+- **Assistente da IA**, etapa *O rumo da conversa*: sem dias e horário da visita
+  (diz que vêm da Agenda), e a revisão mostra "no horário de visita da Agenda".
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Um horário de visita por imobiliária, mais folgas por corretor.** Não existe
+  horário próprio por corretor.
+- **Regra dura para todos.** Ninguém marca fora do horário de visita: nem a IA, nem
+  o gestor, nem o corretor. Sem "Outro horário". Quem decide é o servidor
+  (`Visits::Agenda`, usado pela trava da marcação à mão e pela IA); a tela só
+  mostra a mesma conta.
+- **Que corretor a IA confere, em camadas:** o dono do lead; senão o corretor fixo
+  da IA; senão o dono do número quando ela fala como o corretor; senão nenhum (só
+  o horário da imobiliária).
+- **Chave `agenda_do_corretor` por imobiliária, desligada por padrão.** Ao ligar,
+  o horário nasce copiado da IA principal; sem IA, 8h às 20h, de segunda a sábado.
+- **Na IA e no assistente, os valores antigos de dias/faixa/datas continuam
+  gravados em `visit_config`** e voltam a valer se a chave desligar: a tela não
+  apaga, só deixa de mostrar, e o assistente não grava `days/start/end`.
+
+Armadilhas:
+
+1. **O backend vem PRIMEIRO** (PRs da agenda no `lm-flow`: tabelas, chave, a conta
+   única e os endpoints; depois a IA). Contra o servidor antigo a chave nem existe.
+2. **O build da Vercel falha na checagem de funções** (`audit-feature-catalog.mjs`)
+   até a chave `agenda_do_corretor` estar no catálogo de produção, ou seja, até o
+   PR do servidor estar no ar. Localmente, rodar as travas sem o audit.
+3. **A chave vai LITERAL** em `useClientToggle('agenda_do_corretor')` (Agenda,
+   modal, IA e assistente): os scripts do catálogo leem por regex.
+4. **`src/features/visits/daySlots.ts` continua sendo o caminho da chave
+   desligada** (e de quando o servidor responde `enabled: false`). Não apagar nem
+   trocar a grade 07h–21h sem tirar a chave antes.
+5. **As contas puras da agenda** (motivo do dia fechado com as mesmas frases do
+   servidor, rótulo da folga, horas de 30 em 30) moram em
+   `src/features/visits/agenda.ts`, com spec; os pedidos ao servidor, em
+   `src/services/visits/agendaService.ts`.
+
