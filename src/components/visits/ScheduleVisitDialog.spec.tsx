@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const toastError = vi.fn();
@@ -166,6 +166,20 @@ describe('Agendar visita', () => {
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('Esse horário acabou de ser ocupado'));
     await waitFor(() => expect(list.mock.calls.length).toBeGreaterThan(chamadasAntes));
+  });
+
+  it('o resumo da visita fica num bloco próprio (embaixo de Imóvel no computador), com a data por extenso e as visitas do dia', async () => {
+    comoCorretor();
+    abrir();
+
+    await escolherCliente('Leonardo Teste');
+    await userEvent.click(await screen.findByRole('button', { name: '10:00' }));
+
+    const resumo = await screen.findByRole('region', { name: 'Resumo da visita' });
+    expect(within(resumo).getByText(/das 10h às 11h/)).toBeInTheDocument();
+    expect(within(resumo).getByText('Nenhuma outra visita sua nesse dia.')).toBeInTheDocument();
+    const quando = screen.getByRole('region', { name: 'Quando' });
+    expect(within(quando).queryByText(/das 10h às 11h/)).not.toBeInTheDocument();
   });
 
   it('corretor não manda realtor_id; observações vão como realtor_notes', async () => {

@@ -293,9 +293,9 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
           <DialogDescription>Quem vai visitar e quando</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-8 py-2 md:grid-cols-2">
+        <div className="grid gap-8 py-2 md:grid-cols-2 md:grid-rows-[auto_1fr]">
           {/* Quem */}
-          <section className="space-y-5" aria-label="Quem">
+          <section className="space-y-5 md:col-start-1 md:row-start-1" aria-label="Quem">
             <LeadCombobox
               value={lead}
               onChange={escolherLead}
@@ -331,7 +331,7 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
           </section>
 
           {/* Quando */}
-          <section className="space-y-5" aria-label="Quando">
+          <section className="space-y-5 md:col-start-2 md:row-span-2 md:row-start-1" aria-label="Quando">
             <div>
               <UILabel>Dia *</UILabel>
               <div className="mt-1 flex flex-wrap gap-2">
@@ -420,31 +420,37 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
               )}
             </div>
 
-            {inicio && <p className="text-sm font-medium">{porExtenso(inicio, duracao)}</p>}
-
-            {corretor && (
-              <div>
-                <UILabel>{travado ? 'Suas visitas nesse dia' : `Visitas de ${corretor.name} nesse dia`}</UILabel>
-                {ocupadas.length === 0 ? (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {travado ? 'Nenhuma outra visita sua nesse dia.' : `Nenhuma outra visita de ${corretor.name} nesse dia.`}
-                  </p>
-                ) : (
-                  <ul className="mt-1 space-y-1 text-sm">
-                    {ocupadas.map(v => (
-                      <li key={v.id} className="flex gap-2">
-                        <span className="tabular-nums text-muted-foreground">{hora(v.scheduled_at)}</span>
-                        <span className="truncate">
-                          {v.contact?.name ?? 'Cliente'}
-                          {v.property ? ` · ${v.property.code}` : ''}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
           </section>
+
+          {/* Resumo: embaixo de Imóvel no computador; no celular, depois dos horários */}
+          {(inicio || corretor) && (
+            <section className="space-y-4 self-start rounded-lg border border-border bg-muted/30 p-4 md:col-start-1 md:row-start-2" aria-label="Resumo da visita">
+              {inicio && <p className="text-sm font-medium">{porExtenso(inicio, duracao)}</p>}
+
+              {corretor && (
+                <div>
+                  <UILabel>{travado ? 'Suas visitas nesse dia' : `Visitas de ${corretor.name} nesse dia`}</UILabel>
+                  {ocupadas.length === 0 ? (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {travado ? 'Nenhuma outra visita sua nesse dia.' : `Nenhuma outra visita de ${corretor.name} nesse dia.`}
+                    </p>
+                  ) : (
+                    <ul className="mt-1 space-y-1 text-sm">
+                      {ocupadas.map(v => (
+                        <li key={v.id} className="flex gap-2">
+                          <span className="tabular-nums text-muted-foreground">{hora(v.scheduled_at)}</span>
+                          <span className="truncate">
+                            {v.contact?.name ?? 'Cliente'}
+                            {v.property ? ` · ${v.property.code}` : ''}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
         </div>
 
         <DialogFooter>
