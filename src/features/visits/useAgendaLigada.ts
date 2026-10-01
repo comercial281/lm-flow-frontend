@@ -11,9 +11,12 @@
  * Um pedido só para a página inteira: a resposta fica guardada por pouco tempo
  * (cabeçalho da Agenda, modal e IA perguntam a mesma coisa). Quem muda o horário
  * de visita chama `esquecerAgendaLigada()` para o próximo a perguntar ler o novo.
+ * A resposta guardada é da imobiliária do subdomínio (`getTenantSlug`): trocou
+ * de imobiliária, pergunta de novo.
  */
 import { useEffect, useState } from 'react';
 import { agendaService } from '@/services/visits/agendaService';
+import { getTenantSlug } from '@/services/core/tenant';
 import type { AgendaSettings } from '@/features/visits/agenda';
 
 export interface AgendaLigada {
@@ -26,22 +29,40 @@ const VALIDADE_MS = 30_000;
 const CARREGANDO: AgendaLigada = { ligada: null, ajustes: null };
 const DESLIGADA: AgendaLigada = { ligada: false, ajustes: null };
 
-let guardado: { em: number; pedido: Promise<AgendaLigada>; valor: AgendaLigada | null } | null = null;
+let guardado: {
+  em: number;
+  slug: string | null;
+  pedido: Promise<AgendaLigada>;
+  valor: AgendaLigada | null;
+} | null = null;
 
 /** Joga fora a resposta guardada (depois de salvar o horário de visita; specs). */
 export function esquecerAgendaLigada() {
   guardado = null;
 }
 
+function slugAtual(): string | null {
+  try { return getTenantSlug() ?? null; } catch { return null; }
+}
+
+/** A resposta guardada, se ainda vale: dentro da validade e da mesma imobiliária. */
 function fresco() {
-  return guardado && Date.now() - guardado.em < VALIDADE_MS ? guardado : null;
+  if (!guardado) return null;
+  if (Date.now() - guardado.em >= VALIDADE_MS) return null;
+  if (guardado.slug !== slugAtual()) return null;
+  return guardado;
 }
 
 function perguntar(): Promise<AgendaLigada> {
   const atual = fresco();
   if (atual) return atual.pedido;
-  const entrada: NonNullable<typeof guardado> = { em: Date.now(), pedido: Promise.resolve(CARREGANDO), valor: null };
-  entrada.pedido = agendaService.getSettings()
+  const entrada: NonNullable<typeof guardado> = {
+    em: Date.now(), slug: slugAtual(), pedido: Promise.resolve(CARREGANDO), valor: null,
+  };
+  // Dentro de um `then`: erro síncrono (ou retorno que não é promessa) cai no
+  // `catch` abaixo e vira "desligada", nunca um erro solto.
+  entrada.pedido = Promise.resolve()
+    .then(() => agendaService.getSettings())
     .then((r): AgendaLigada => {
       if (!r || r.enabled !== true) return DESLIGADA;
       const { days, start, end, closed_dates, seeded_from } = r;
