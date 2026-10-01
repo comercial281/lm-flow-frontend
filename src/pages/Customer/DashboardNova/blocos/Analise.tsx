@@ -44,9 +44,9 @@ const formatoLeads = (v?: number) => [numero(v ?? 0), 'Leads'] as [string, strin
 
 /** Bloco sem dado: carregando, erro ("não deu para carregar") ou o motivo que o servidor deu. */
 const SemDados: React.FC<{
-  titulo: string; carregando: boolean; temDados: boolean; bloco: Unavailable | undefined; oQue: string;
-}> = ({ titulo, carregando, temDados, bloco, oQue }) => (
-  <GlassCard title={titulo}>
+  titulo: string; carregando: boolean; temDados: boolean; bloco: Unavailable | undefined; oQue: string; nivel?: 2 | 3;
+}> = ({ titulo, carregando, temDados, bloco, oQue, nivel }) => (
+  <GlassCard title={titulo} titleAs={tituloEm(nivel)}>
     {carregando && !temDados ? (
       <Skeleton height={200} />
     ) : (
@@ -55,6 +55,9 @@ const SemDados: React.FC<{
     )}
   </GlassCard>
 );
+
+/** Cartão dentro da seção "Análise do período" tem título h3; fora dela (tela do corretor), h2. */
+const tituloEm = (nivel?: 2 | 3): 'h2' | 'h3' => (nivel === 3 ? 'h3' : 'h2');
 
 /** O gráfico com um resumo de uma linha para leitor de tela (o SVG em si não diz nada). */
 const Grafico: React.FC<{ resumo: string; children: React.ReactNode }> = ({ resumo, children }) => (
@@ -68,16 +71,16 @@ const Destaque: React.FC<{ valor: string; legenda: string }> = ({ valor, legenda
   </div>
 );
 
-export const LeadsDiaSemana: React.FC<ContextoBloco> = ({ dados, carregando, visao }) => {
+export const LeadsDiaSemana: React.FC<ContextoBloco> = ({ dados, carregando, visao, nivelTitulo }) => {
   const bloco = dados?.leads_by_weekday;
   const titulo = visao === 'corretor' ? 'Seus leads por dia da semana' : 'Leads por dia da semana';
   if (!isAvailable(bloco)) {
-    return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="os leads por dia da semana" />;
+    return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="os leads por dia da semana" nivel={nivelTitulo} />;
   }
   const dia = melhorDia(bloco.days);
   const linhas = bloco.days.map(d => ({ nome: DIAS_CURTOS[d.day], leads: d.leads }));
   return (
-    <GlassCard title={titulo}>
+    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)}>
       <Destaque valor={dia ?? VAZIO} legenda={dia ? 'é o dia que mais chega lead no período' : 'Nenhum lead no período'} />
       <Grafico resumo={`${titulo}: ${linhas.map(l => `${l.nome} ${numero(l.leads)}`).join(', ')}`}>
         <ResponsiveContainer width="100%" height={190}>
@@ -93,11 +96,11 @@ export const LeadsDiaSemana: React.FC<ContextoBloco> = ({ dados, carregando, vis
   );
 };
 
-export const LeadsHorario: React.FC<ContextoBloco> = ({ dados, carregando }) => {
+export const LeadsHorario: React.FC<ContextoBloco> = ({ dados, carregando, nivelTitulo }) => {
   const bloco = dados?.leads_by_hour;
   const titulo = 'Leads por horário';
   if (!isAvailable(bloco)) {
-    return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="os leads por horário" />;
+    return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="os leads por horário" nivel={nivelTitulo} />;
   }
   const fora = percentualForaDoHorario(bloco.hours);
   const linhas = bloco.hours.map(h => ({ hora: `${h.hour}h`, leads: h.leads }));
@@ -106,7 +109,7 @@ export const LeadsHorario: React.FC<ContextoBloco> = ({ dados, carregando }) => 
     ? `${titulo}: nenhum lead no período`
     : `${titulo}: mais leads às ${pico.hour}h (${numero(pico.leads)}); ${porcentagem(fora, 0)} fora do horário comercial`;
   return (
-    <GlassCard title={titulo}>
+    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)}>
       <Destaque
         valor={fora === null ? VAZIO : porcentagem(fora, 0)}
         legenda={fora === null ? 'Nenhum lead no período' : 'dos leads chegaram fora do horário comercial (8h às 18h)'}
@@ -127,16 +130,16 @@ export const LeadsHorario: React.FC<ContextoBloco> = ({ dados, carregando }) => 
   );
 };
 
-export const LeadsSeisMeses: React.FC<ContextoBloco> = ({ dados, carregando }) => {
+export const LeadsSeisMeses: React.FC<ContextoBloco> = ({ dados, carregando, nivelTitulo }) => {
   const bloco = dados?.leads_6_months;
   const titulo = 'Leads nos últimos 6 meses';
   if (!isAvailable(bloco)) {
-    return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="os leads dos últimos 6 meses" />;
+    return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="os leads dos últimos 6 meses" nivel={nivelTitulo} />;
   }
   const linhas = bloco.months.map(m => ({ mes: rotuloMes(m.month), leads: m.leads }));
   const algum = linhas.some(l => l.leads > 0);
   return (
-    <GlassCard title={titulo} subtitle="Leads que entraram no funil, por mês">
+    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)} subtitle="Leads que entraram no funil, por mês">
       {algum ? (
         <Grafico resumo={`${titulo}: ${linhas.map(l => `${l.mes} ${numero(l.leads)}`).join(', ')}`}>
           <ResponsiveContainer width="100%" height={210}>
@@ -155,15 +158,15 @@ export const LeadsSeisMeses: React.FC<ContextoBloco> = ({ dados, carregando }) =
   );
 };
 
-export const Origem: React.FC<ContextoBloco> = ({ dados, carregando }) => {
+export const Origem: React.FC<ContextoBloco> = ({ dados, carregando, nivelTitulo }) => {
   const bloco = dados?.sources;
   const titulo = 'De onde vêm os leads';
   if (!isAvailable(bloco)) {
-    return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="a origem dos leads" />;
+    return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="a origem dos leads" nivel={nivelTitulo} />;
   }
   const max = Math.max(1, ...bloco.items.map(i => i.count));
   return (
-    <GlassCard title={titulo} subtitle="Contatos captados no período, pela primeira origem">
+    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)} subtitle="Contatos captados no período, pela primeira origem">
       <Destaque valor={numero(bloco.total)} legenda="contatos captados no período" />
       {bloco.items.length === 0 && <EmptyBlock text="Nenhuma origem registrada no período." />}
       {bloco.items.map(i => (
@@ -180,14 +183,14 @@ export const Origem: React.FC<ContextoBloco> = ({ dados, carregando }) => {
 };
 
 /** Existe no catálogo, desligado: é o primeiro bloco do futuro editor da Dashboard. */
-export const MapaCalor: React.FC<ContextoBloco> = ({ dados, carregando }) => {
+export const MapaCalor: React.FC<ContextoBloco> = ({ dados, carregando, nivelTitulo }) => {
   const bloco = dados?.heatmap;
   const titulo = 'Mapa de calor';
   if (!isAvailable(bloco)) {
-    return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="o mapa de calor" />;
+    return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="o mapa de calor" nivel={nivelTitulo} />;
   }
   return (
-    <GlassCard title={titulo} subtitle="Mensagens recebidas por dia da semana e horário">
+    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)} subtitle="Mensagens recebidas por dia da semana e horário">
       <Heatmap heatmap={bloco} />
     </GlassCard>
   );

@@ -234,4 +234,20 @@ describe('DashboardNova', () => {
     expect(outra).not.toHaveAttribute('aria-busy');
     expect(outra).not.toHaveClass('lmfn-blocos-pendente');
   });
+
+  it('títulos em ordem: h1 na página, h2 nos blocos e na seção, h3 nos cartões da Análise do período', () => {
+    hook.dados = base('all', false, { pending: { rows: [{ key: 'sem_contato', total: 3, older: 0 }] } });
+    tela();
+    expect(screen.getByRole('heading', { level: 2, name: 'Análise do período' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Pendências' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Leads por horário' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'De onde vêm os leads' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 2, name: 'Leads por dia da semana' })).not.toBeInTheDocument();
+  });
+
+  it('fora de seção (tela do corretor), o cartão de leads por dia da semana é h2', () => {
+    hook.dados = base('mine', true);
+    tela();
+    expect(screen.getByRole('heading', { level: 2, name: 'Seus leads por dia da semana' })).toBeInTheDocument();
+  });
 });

@@ -55,6 +55,8 @@ export interface ContextoBloco {
     erro: string | null;
     recarregar: () => void;
   };
+  /** Bloco dentro de uma seção com título ("Análise do período"): o título dele é h3. */
+  nivelTitulo?: 2 | 3;
   /** `limitado`: o número que abriu a lista tem teto no servidor (sai com +). */
   abrirLista: (kind: ListaKind, titulo: string, limitado?: boolean) => void;
   mudarFunil: (pipelineId: string) => void;

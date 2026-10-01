@@ -103,26 +103,32 @@ const DashboardNova: React.FC = () => {
   } else if (!dados) {
     corpo = <Esqueleto />;
   } else {
-    corpo = linhasDaVisao(visao).map((linha, i) => (
-      <React.Fragment key={i}>
-        {linha.titulo && (
-          <div className="lmfn-secao">
-            <h2>{linha.titulo}</h2>
-            {linha.subtitulo && <p>{linha.subtitulo}</p>}
-          </div>
-        )}
-        <div className={`lmfn-linha${linha.principal ? ' lmfn-linha-principal' : ''}`}>
-          {linha.colunas.map(coluna => (
-            <div key={coluna.join('-')} className="lmfn-coluna">
-              {coluna.map(id => {
-                const Bloco = COMPONENTES[id];
-                return <Bloco key={id} {...ctx} />;
-              })}
+    // Depois do primeiro título de seção, os cartões ficam debaixo dele: h3.
+    let emSecao = false;
+    corpo = linhasDaVisao(visao).map((linha, i) => {
+      emSecao = emSecao || !!linha.titulo;
+      const nivelTitulo = emSecao ? 3 : 2;
+      return (
+        <React.Fragment key={i}>
+          {linha.titulo && (
+            <div className="lmfn-secao">
+              <h2>{linha.titulo}</h2>
+              {linha.subtitulo && <p>{linha.subtitulo}</p>}
             </div>
-          ))}
-        </div>
-      </React.Fragment>
-    ));
+          )}
+          <div className={`lmfn-linha${linha.principal ? ' lmfn-linha-principal' : ''}`}>
+            {linha.colunas.map(coluna => (
+              <div key={coluna.join('-')} className="lmfn-coluna">
+                {coluna.map(id => {
+                  const Bloco = COMPONENTES[id];
+                  return <Bloco key={id} {...ctx} nivelTitulo={nivelTitulo} />;
+                })}
+              </div>
+            ))}
+          </div>
+        </React.Fragment>
+      );
+    });
   }
 
   return (

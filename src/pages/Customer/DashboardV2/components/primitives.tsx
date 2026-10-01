@@ -10,13 +10,15 @@ export const GlassCard: React.FC<{
   action?: React.ReactNode;
   className?: string;
   bodyClassName?: string;
+  /** Nível do título. h2 de padrão; h3 para cartão dentro de uma seção com título. */
+  titleAs?: 'h2' | 'h3';
   children: React.ReactNode;
-}> = ({ title, subtitle, action, className = '', bodyClassName = '', children }) => (
+}> = ({ title, subtitle, action, className = '', bodyClassName = '', titleAs: Titulo = 'h2', children }) => (
   <section className={`lmf-glass lmf-card ${className}`}>
     {(title || action) && (
       <header className="flex items-start justify-between gap-3 mb-4">
         <div>
-          {title && <h2 className="lmf-card-title">{title}</h2>}
+          {title && <Titulo className="lmf-card-title">{title}</Titulo>}
           {subtitle && <p className="lmf-card-sub">{subtitle}</p>}
         </div>
         {action}
