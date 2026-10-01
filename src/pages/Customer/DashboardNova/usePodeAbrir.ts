@@ -14,6 +14,7 @@ export interface PodeAbrir {
   propostas: boolean;
   funil: boolean;
   roleta: boolean;
+  conversas: boolean;
 }
 
 export function usePodeAbrir(): PodeAbrir {
@@ -22,12 +23,15 @@ export function usePodeAbrir(): PodeAbrir {
   const agendaNoMenu = useFeature('visits');
   const propostasNoMenu = useFeature('proposals');
   const funilNoMenu = useFeature('pipelines');
+  const conversasNoMenu = useFeature('conversations');
   return {
     imoveis: imoveisNoMenu && pode('properties', 'read'),
     agenda: agendaNoMenu && pode('visits', 'read'),
     propostas: propostasNoMenu && pode('proposals', 'read'),
     funil: funilNoMenu && pode('pipelines', 'read'),
     roleta: pode('roleta_configs', 'queue'),
+    // A mesma permissão da rota /conversations (PermissionRoute em routes/index.tsx).
+    conversas: conversasNoMenu && pode('conversations', 'read'),
   };
 }
 

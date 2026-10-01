@@ -1,19 +1,25 @@
 // src/pages/Customer/DashboardNova/ListaRapida.tsx
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/ds';
+import { ChevronRight } from 'lucide-react';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/ds';
 import EmptyState from '@/components/base/EmptyState';
 import { dataHora, numero } from '@/lib/formato';
 import { fetchDashboardList } from '@/services/dashboard/dashboardMetricsService';
 import { linkAgenda, linkCard, linkConversa } from '@/features/dashboard/links';
 import { paramsDaApi } from './useDashboardNova';
-import type { AbrirItem, FiltrosDashboard, ListaKind, ListaRapidaPayload } from './types';
+import type { PodeAbrir } from './usePodeAbrir';
+import type { AbrirItem, FiltrosDashboard, ListaItem, ListaKind, ListaRapidaPayload } from './types';
 
 interface Props {
   aberta: boolean;
   kind: ListaKind | null;
   titulo: string;
   filtros: FiltrosDashboard;
+  /** Destino que o cargo ou o cliente não abre vira texto, sem clique. */
+  pode: PodeAbrir;
+  /** O número tem teto no servidor (ex.: "99+"): o total também sai com +. */
+  limitado?: boolean;
   onFechar: () => void;
 }
 
@@ -23,9 +29,29 @@ const destino = (open: AbrirItem): string => {
   return linkAgenda({ visita: open.id });
 };
 
+const abre = (open: AbrirItem, pode: PodeAbrir): boolean => {
+  if (open.type === 'card') return pode.funil;
+  if (open.type === 'conversation') return pode.conversas;
+  return pode.agenda;
+};
+
+// Na visita, `since` é quando ela está marcada (futuro em "a confirmar").
+const detalheDoItem = (item: ListaItem): string => {
+  const quando = item.since
+    ? `${item.open.type === 'visit' ? 'visita em' : 'desde'} ${dataHora(item.since)}`
+    : null;
+  return [item.subtitle, item.owner_name, quando].filter(Boolean).join(' · ');
+};
+
+const textoVazio = (kind: ListaKind): string => {
+  if (kind === 'leads_periodo') return 'Nenhum lead no período';
+  if (kind === 'conversas_periodo') return 'Nenhuma conversa no período';
+  return 'Nada pendente aqui';
+};
+
 /** O que voltou do servidor, carimbado com o pedido que o gerou. */
 interface Resposta {
-  chave: string;
+  pedido: number;
   lista: ListaRapidaPayload | null;
   erro: boolean;
 }
@@ -35,72 +61,92 @@ interface Resposta {
  * que o número (Dashboard::QuickList no servidor): clicar em "7" nunca abre 9.
  *
  * A busca não tem como ser abortada, então cada pedido ganha um número e só a
- * resposta do ÚLTIMO entra na tela. Sem isso, trocar de pendência rápido podia
- * mostrar a lista anterior debaixo do título novo.
+ * resposta do pedido EM VIGOR aparece. Trocar de pendência, mudar o filtro ou
+ * fechar e reabrir abre um pedido novo: a lista anterior nunca aparece debaixo
+ * do título de agora, nem por um instante.
  */
-export const ListaRapida: React.FC<Props> = ({ aberta, kind, titulo, filtros, onFechar }) => {
+export const ListaRapida: React.FC<Props> = ({ aberta, kind, titulo, filtros, pode, limitado, onFechar }) => {
   const navigate = useNavigate();
   const [resposta, setResposta] = useState<Resposta | null>(null);
-  const pedidoRef = useRef(0);
+  const ultimoRef = useRef(0);
   // String, não o objeto: a Dashboard redesenha com um `filtros` novo a cada
   // render, e isso não pode virar uma busca nova.
   const chaveFiltros = JSON.stringify(paramsDaApi(filtros));
   const chave = kind ? `${kind}|${chaveFiltros}` : '';
 
+  // O pedido em vigor muda NO MESMO render em que a lista abre/fecha ou o
+  // pedido muda (padrão "ajustar estado quando a prop muda" do React), então a
+  // resposta antiga já sai de cena antes de pintar.
+  const [vigente, setVigente] = useState({ aberta, chave, pedido: 0 });
+  if (vigente.aberta !== aberta || vigente.chave !== chave) {
+    setVigente({ aberta, chave, pedido: vigente.pedido + 1 });
+  }
+  const pedido = vigente.pedido;
+
   const carregar = useCallback(async () => {
     if (!kind) return;
-    const meu = ++pedidoRef.current;
+    const meu = ++ultimoRef.current;
     setResposta(null);
     try {
       const lista = await fetchDashboardList(kind, JSON.parse(chaveFiltros));
-      if (meu === pedidoRef.current) setResposta({ chave, lista, erro: false });
+      if (meu === ultimoRef.current) setResposta({ pedido, lista, erro: false });
     } catch {
-      if (meu === pedidoRef.current) setResposta({ chave, lista: null, erro: true });
+      if (meu === ultimoRef.current) setResposta({ pedido, lista: null, erro: true });
     }
-  }, [kind, chaveFiltros, chave]);
+  }, [kind, chaveFiltros, pedido]);
 
   useEffect(() => {
     if (aberta) carregar();
-    else pedidoRef.current += 1;
+    else ultimoRef.current += 1;
   }, [aberta, carregar]);
 
-  // Resposta de outro pedido (pendência ou filtro anterior) não vale aqui.
-  const atual = resposta && resposta.chave === chave ? resposta : null;
+  const atual = resposta && resposta.pedido === pedido ? resposta : null;
   const lista = atual?.lista ?? null;
   const erro = !!atual?.erro;
-  const carregando = !!kind && !atual;
+
+  let descricao = 'Carregando…';
+  if (erro) descricao = 'Não deu para carregar.';
+  else if (lista) descricao = `${numero(lista.total)}${limitado ? '+' : ''} no total`;
 
   return (
-    <Dialog open={aberta} onOpenChange={o => { if (!o) onFechar(); }}>
-      <DialogContent className="!left-auto !right-0 !top-0 !translate-x-0 !translate-y-0 h-full max-w-md w-full rounded-none overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{titulo}</DialogTitle>
-          <DialogDescription>{lista ? `${numero(lista.total)} no total` : ' '}</DialogDescription>
-        </DialogHeader>
+    <Sheet open={aberta} onOpenChange={o => { if (!o) onFechar(); }}>
+      <SheetContent side="right" className="w-full sm:max-w-md gap-0">
+        <SheetHeader className="pr-10">
+          <SheetTitle>{titulo}</SheetTitle>
+          <SheetDescription>{descricao}</SheetDescription>
+        </SheetHeader>
 
-        {erro && <EmptyState tipo="erro" aoTentarDeNovo={carregar} />}
-        {carregando && <p className="text-sm text-muted-foreground">Carregando…</p>}
-        {lista && lista.items.length === 0 && (
-          <EmptyState title="Nada pendente aqui" description="Quando aparecer algo, ele entra nesta lista." />
-        )}
-        {lista?.items.map(item => {
-          const detalhe = [item.subtitle, item.owner_name, item.since ? `desde ${dataHora(item.since)}` : null]
-            .filter(Boolean)
-            .join(' · ');
-          return (
-            <button key={item.id} type="button" className="w-full text-left py-2.5 px-1 border-t border-border hover:bg-muted/50"
-              onClick={() => { onFechar(); navigate(destino(item.open)); }}>
-              <span className="font-medium">{item.title}</span>
-              {detalhe && <span className="block text-xs text-muted-foreground">{detalhe}</span>}
-            </button>
-          );
-        })}
-        {lista && lista.total > lista.items.length && (
-          <p className="pt-3 text-xs text-muted-foreground">
-            Mostrando os {numero(lista.items.length)} primeiros de {numero(lista.total)}
-          </p>
-        )}
-      </DialogContent>
-    </Dialog>
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
+          {erro && <EmptyState tipo="erro" aoTentarDeNovo={carregar} />}
+          {kind && lista && lista.items.length === 0 && (
+            <EmptyState title={textoVazio(kind)} description="Quando aparecer algo, ele entra nesta lista." />
+          )}
+          {lista?.items.map(item => {
+            const detalhe = detalheDoItem(item);
+            const texto = (
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium">{item.title}</span>
+                {detalhe && <span className="block text-xs text-muted-foreground">{detalhe}</span>}
+              </span>
+            );
+            return abre(item.open, pode) ? (
+              <button key={item.id} type="button"
+                className="flex w-full items-center gap-2 border-t border-border px-1 py-2.5 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                onClick={() => { onFechar(); navigate(destino(item.open)); }}>
+                {texto}
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              </button>
+            ) : (
+              <div key={item.id} className="flex w-full items-center border-t border-border px-1 py-2.5">{texto}</div>
+            );
+          })}
+          {lista && lista.total > lista.items.length && (
+            <p className="pt-3 text-xs text-muted-foreground">
+              Mostrando {numero(lista.items.length)} de {numero(lista.total)}
+            </p>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };

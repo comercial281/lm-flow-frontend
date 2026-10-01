@@ -15,7 +15,7 @@ import { Pendencias } from './Pendencias';
 import { diaDoPeriodo } from './comum';
 import type { ContextoBloco } from '../usePodeAbrir';
 
-const pode = { imoveis: true, agenda: true, propostas: true, funil: true, roleta: true };
+const pode = { imoveis: true, agenda: true, propostas: true, funil: true, roleta: true, conversas: true };
 const periodo = { preset: 'last_7_days', since: '2026-09-24T00:00:00-03:00', until: '2026-09-30T23:59:59-03:00', granularity: 'day', days: 7, previous: { since: '', until: '' } };
 
 function ctx(over: Partial<ContextoBloco> = {}, dados: Record<string, unknown> = {}): ContextoBloco {
