@@ -4850,7 +4850,8 @@ Decisões do dono (não reabrir sem ele pedir):
 Armadilhas:
 
 1. **"Minhas" filtra pelo id do usuário** (`assignee_id`), não por `'me'`: o
-   `POST /conversations/filter` coloca o valor cru no SQL.
+   `POST /conversations/filter` coloca o valor cru no SQL. Só cai em `'me'`
+   quando a tela ainda não sabe o id do usuário.
 2. **`waiting` mora no servidor** (backend lm-flow #364): `waiting_since`
    preenchido e IA fora do atendimento. Vai no GET e no POST e na rolagem
    ("carregar mais"). Não recalcule no front.
@@ -4868,7 +4869,9 @@ Armadilhas:
    que não é de texto livre (baileys, evolution, evolution_go, zapi, notificame
    são de texto livre e nunca mostram a frase).
 8. **A etiqueta no histórico casa por título inteiro** (ou UUID), separado por
-   espaço/vírgula. Número solto não casa mais ("Atribuído a Ana por Bia 2" fica
-   texto). O catálogo vem do store (`useAppDataStore.labels` + `fetchLabels()`),
+   espaço/vírgula, e só na lista depois de "adicionou"/"removeu" ("Tony
+   adicionou visita-agendada, demo-0001"); o resto do texto nunca é editado, então
+   "Atribuído a Ana por Bia" não vira etiqueta mesmo existindo etiqueta "Ana".
+   Número solto não casa. O catálogo vem do store (`useAppDataStore.labels` + `fetchLabels()`),
    sem requisição a mais. O texto do servidor usa o slug como título.
 9. **Lista colada no campo do chat sai achatada** (já era assim; não é desta leva).
