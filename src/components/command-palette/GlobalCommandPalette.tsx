@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import useGlobalSearch from '@/hooks/chat/useGlobalSearch';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
+import { linkNaLista } from '@/features/properties/listingKind';
 import type { MenuItem } from '@/components/layout/config/menuItems';
 
 interface Props {
@@ -218,7 +219,7 @@ export default function GlobalCommandPalette({ open, onOpenChange, menuItems }: 
                     <CommandItem
                       key={`prop-${p.id}`}
                       value={`prop-${p.id}`}
-                      onSelect={() => go(`/properties?q=${encodeURIComponent(p.code || p.title)}`)}
+                      onSelect={() => go(linkNaLista(p))}
                       className="flex items-start gap-3 py-2 cursor-pointer"
                     >
                       <Building2 className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
