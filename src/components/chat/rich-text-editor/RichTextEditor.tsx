@@ -10,7 +10,11 @@ import { wrapInList } from 'prosemirror-schema-list';
 import type { Schema } from 'prosemirror-model';
 import { messageSchema } from './schema';
 import { EditorToolbar, TODAS_AS_ACOES, type AcaoDoEditor } from './EditorToolbar';
+import { atalhosDoEditor } from './atalhosDoEditor';
 import { toast } from 'sonner';
+
+const classeDoEditor = (minHeight: string) =>
+  `prosemirror-editor p-3 ${minHeight} max-h-[200px] overflow-y-auto focus:outline-none resize-none text-sm leading-relaxed text-foreground`;
 
 export interface RichTextEditorRef {
   focus: () => void;
@@ -150,14 +154,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
         plugins: [
           history(),
           keymap({
-            ...(acoes.includes('undo') ? { 'Mod-z': undo, 'Mod-Shift-z': redo } : {}),
-            ...(acoes.includes('redo') ? { 'Mod-y': redo } : {}),
-            ...(acoes.includes('bold') ? { 'Mod-b': toggleMark(schema.marks.strong) } : {}),
-            ...(acoes.includes('italic') ? { 'Mod-i': toggleMark(schema.marks.em) } : {}),
-            ...(acoes.includes('code') ? { 'Mod-`': toggleMark(schema.marks.code) } : {}),
-            ...(acoes.includes('list')
-              ? { 'Shift-Ctrl-8': wrapInList(schema.nodes.bullet_list) }
-              : {}),
+            ...atalhosDoEditor(acoes, schema),
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             Enter: (_state, _dispatch) => {
               if (onKeyDownRef.current) {
@@ -196,7 +193,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
         editable: () => !disabled,
         attributes: {
           class:
-            `prosemirror-editor p-3 ${editorMinHeightClass} max-h-[200px] overflow-y-auto focus:outline-none resize-none text-sm leading-relaxed text-foreground`,
+            classeDoEditor(editorMinHeightClass),
           'data-placeholder': placeholder,
         },
       });
@@ -223,7 +220,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
     useEffect(() => {
       viewRef.current?.setProps({
         attributes: {
-          class: `prosemirror-editor p-3 ${editorMinHeightClass} max-h-[200px] overflow-y-auto focus:outline-none resize-none text-sm leading-relaxed text-foreground`,
+          class: classeDoEditor(editorMinHeightClass),
           'data-placeholder': placeholder,
         },
       });
