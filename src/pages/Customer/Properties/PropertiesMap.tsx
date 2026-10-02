@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Button, Badge } from '@/components/ui/ds';
+import { Seletor } from '@/components/base/Seletor';
 import {
   ArrowLeft, Building2, MapPin, Bed, Bath, Car, Ruler, Loader2,
 } from 'lucide-react';
@@ -118,26 +119,26 @@ export default function PropertiesMap() {
         </div>
 
         <div className="flex flex-wrap gap-2 items-center">
-          <select
+          <Seletor
             value={filterTransaction}
             onChange={e => setFilterTransaction(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm w-44"
           >
             <option value="">Tipo de negócio</option>
             {Object.entries(TRANSACTION_TYPE_LABELS).map(([v, l]) => (
               <option key={v} value={v}>{l}</option>
             ))}
-          </select>
-          <select
+          </Seletor>
+          <Seletor
             value={filterType}
             onChange={e => setFilterType(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm w-52"
           >
             <option value="">Tipo de imóvel</option>
             {Object.entries(PROPERTY_TYPE_LABELS).map(([v, l]) => (
               <option key={v} value={v}>{l}</option>
             ))}
-          </select>
+          </Seletor>
           {(filterTransaction || filterType) && (
             <button
               onClick={() => { setFilterTransaction(''); setFilterType(''); }}

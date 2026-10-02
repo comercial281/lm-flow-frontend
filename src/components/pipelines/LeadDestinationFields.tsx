@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { NativeSelect } from '@/components/ui/native-select';
+import { Seletor } from '@/components/base/Seletor';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { roletaLabel } from '@/services/roletaConfig/roletaConfigService';
 import type { DestinationOpt, LeadDestinationOptions } from './useLeadDestinationOptions';
@@ -99,26 +99,26 @@ export default function LeadDestinationFields({ value, onChange, options, showLa
         <>
           <label className="block space-y-1.5">
             <span className="text-sm font-medium">Funil</span>
-            <NativeSelect
+            <Seletor className="w-full"
               aria-label="Funil"
               value={value.pipeline_id}
               onChange={e => onChange({ pipeline_id: e.target.value, stage_id: '' })}
             >
               <option value="">Funil padrão do CRM</option>
               {pipelineOptions.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-            </NativeSelect>
+            </Seletor>
           </label>
           {value.pipeline_id && (
             <label className="block space-y-1.5">
               <span className="text-sm font-medium">Coluna</span>
-              <NativeSelect
+              <Seletor className="w-full"
                 aria-label="Coluna"
                 value={value.stage_id}
                 onChange={e => onChange({ stage_id: e.target.value })}
               >
                 <option value="">Primeira coluna do funil</option>
                 {stages.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-              </NativeSelect>
+              </Seletor>
             </label>
           )}
         </>
@@ -126,14 +126,14 @@ export default function LeadDestinationFields({ value, onChange, options, showLa
       {roletas !== null && (
         <label className="block space-y-1.5">
           <span className="text-sm font-medium">Roleta</span>
-          <NativeSelect
+          <Seletor className="w-full"
             aria-label="Roleta"
             value={value.roleta_config_id}
             onChange={e => onChange({ roleta_config_id: e.target.value })}
           >
             <option value="">Não distribuir (entra sem responsável)</option>
             {roletaOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-          </NativeSelect>
+          </Seletor>
           {roletaDesativada && (
             <span className="block text-[11px] text-amber-600">
               Esta roleta está desativada: enquanto ela não for religada, o lead continua
@@ -145,14 +145,14 @@ export default function LeadDestinationFields({ value, onChange, options, showLa
       {users !== null && (
         <label className="block space-y-1.5">
           <span className="text-sm font-medium">Responsável</span>
-          <NativeSelect
+          <Seletor className="w-full"
             aria-label="Responsável"
             value={value.default_assignee_id}
             onChange={e => onChange({ default_assignee_id: e.target.value })}
           >
             <option value="">Ninguém</option>
             {userOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-          </NativeSelect>
+          </Seletor>
           {value.roleta_config_id && value.default_assignee_id && (
             <span className="block text-[11px] text-muted-foreground">
               Com responsável escolhido, o lead vai direto para ele — a roleta não sorteia.
@@ -163,14 +163,14 @@ export default function LeadDestinationFields({ value, onChange, options, showLa
       {showLabel && labels !== null && (
         <label className="block space-y-1.5">
           <span className="text-sm font-medium">Etiqueta</span>
-          <NativeSelect
+          <Seletor className="w-full"
             aria-label="Etiqueta"
             value={value.label_id}
             onChange={e => onChange({ label_id: e.target.value })}
           >
             <option value="">Sem etiqueta</option>
             {labelOptions.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
-          </NativeSelect>
+          </Seletor>
         </label>
       )}
     </div>

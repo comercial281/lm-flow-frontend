@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
 import { Button, Input } from '@/components/ui/ds';
-import { NativeSelect } from '@/components/ui/native-select';
+import { Seletor } from '@/components/base/Seletor';
 import { Star, Search } from 'lucide-react';
 import {
   propertiesService,
@@ -333,7 +333,7 @@ export default function PortalPropertiesSelector({
                 </div>
                 {comSeletor && isSelected && (
                   <div className="w-36 sm:w-44 shrink-0">
-                    <NativeSelect
+                    <Seletor className="w-full"
                       aria-label={`Tipo de anúncio de ${p.code}`}
                       value={adType}
                       onChange={e => setAdType(p.id, e.target.value)}
@@ -341,7 +341,7 @@ export default function PortalPropertiesSelector({
                       {adTypes.map(t => (
                         <option key={t.key} value={t.key}>{t.label}</option>
                       ))}
-                    </NativeSelect>
+                    </Seletor>
                   </div>
                 )}
                 {modoLegado && supportsHighlight && (

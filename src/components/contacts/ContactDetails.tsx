@@ -58,6 +58,7 @@ import {
 } from '@/services/propertyInterests/propertyInterestsService';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import { telefone } from '@/lib/formato';
+import { Seletor } from '@/components/base/Seletor';
 
 interface ContactDetailsProps {
   open: boolean;
@@ -627,7 +628,8 @@ export default function ContactDetails({
                                     Um lead pode ter vários imóveis, cada um com seu status.
                                     Chevron explícito porque a seta nativa some no modo escuro. */}
                                 <div className="relative inline-flex items-center">
-                                  <select
+                                  <Seletor
+                                    bare
                                     value={pi.interest_stage}
                                     onChange={e => handleChangeInterestStage(pi.id, e.target.value)}
                                     className={`appearance-none cursor-pointer text-xs rounded-md border border-input pl-2 pr-6 py-1 font-medium ${stageColor}`}
@@ -636,7 +638,7 @@ export default function ContactDetails({
                                     {Object.entries(INTEREST_STAGE_LABELS).map(([value, label]) => (
                                       <option key={value} value={value}>{label}</option>
                                     ))}
-                                  </select>
+                                  </Seletor>
                                   <ChevronDown className="pointer-events-none absolute right-1.5 h-3.5 w-3.5 opacity-70" />
                                 </div>
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground">

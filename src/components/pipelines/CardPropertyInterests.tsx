@@ -12,6 +12,7 @@ import {
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
 import type { PipelineItem } from '@/types/analytics';
 import { dinheiro } from '@/lib/formato';
+import { Seletor } from '@/components/base/Seletor';
 
 interface CardPropertyInterestsProps {
   item: PipelineItem;
@@ -248,7 +249,8 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
                   {/* Status do interesse — dropdown pra mudar direto (chevron
                       explícito porque a seta nativa some no modo escuro). */}
                   <div className="relative inline-flex items-center">
-                    <select
+                    <Seletor
+                      bare
                       value={interest.interest_stage}
                       onChange={e => handleChangeStage(interest.id, e.target.value)}
                       className={`appearance-none cursor-pointer text-[10px] rounded-md border border-input pl-1.5 pr-5 py-0.5 font-medium ${INTEREST_STAGE_COLORS[interest.interest_stage] ?? ''}`}
@@ -257,7 +259,7 @@ export default function CardPropertyInterests({ item, onValueChange }: CardPrope
                       {Object.entries(INTEREST_STAGE_LABELS).map(([value, label]) => (
                         <option key={value} value={value}>{label}</option>
                       ))}
-                    </select>
+                    </Seletor>
                     <ChevronDown className="pointer-events-none absolute right-1 h-3 w-3 opacity-70" />
                   </div>
                 </div>

@@ -1,0 +1,140 @@
+// src/components/base/Seletor.tsx
+// Lista de escolha da casa. Recebe o MESMO que um <select> (value, onChange com
+// e.target.value, <option>/<optgroup> como filhos), então trocar uma tela é só
+// trocar a tag.
+//
+// No computador desenha a lista do produto (Select do design system); no
+// celular, a lista do sistema (a rodinha do iPhone, a lista do Android), que é
+// melhor com o polegar. Antes cada tela escolhia: metade abria a lista cinza do
+// sistema operacional no computador — a do Windows inclusive. Decisão do dono
+// em 02/10/2026; spec em LM FLOW/specs/2026-10-02-seletor-unico-design.md.
+//
+// Dentro de um <form>, no computador, quem responde ao navegador (FormData,
+// `required`) é um <select> escondido que espelha a escolha com o valor REAL. O
+// select escondido do próprio Radix carregaria o valor interno da opção vazia e
+// nunca barraria o `required`.
+//
+// `bare`: caixa sem o visual do design system e sem a seta, só a className de
+// quem chama (status colorido, filtros com ícone próprio). A lista que abre é a
+// do produto do mesmo jeito.
+import { useState, type ComponentProps, type CSSProperties, type SelectHTMLAttributes } from 'react';
+import {
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
+} from '@/components/ui/ds';
+import { cn } from '@/lib/utils';
+import { usePonteiroDeToque } from '@/hooks/usePonteiroDeToque';
+import {
+  deRadix, eventoDeMudanca, lerItens, paraRadix, valorExibido, type OpcaoDoSeletor,
+} from './seletorOpcoes';
+
+export type SeletorProps = SelectHTMLAttributes<HTMLSelectElement> & { bare?: boolean };
+
+// A caixa do nativo, com a cara dos Inputs (era o NativeSelect de 04/08).
+const CAIXA_NATIVA =
+  'h-9 appearance-none truncate rounded-md border border-input bg-background px-3 text-sm ' +
+  'shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring ' +
+  'focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50';
+
+// Seta do select nativo: chevron-down do lucide, desenhado como fundo.
+const SETA_NATIVA: CSSProperties = {
+  backgroundImage:
+    'url("data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27none%27%20stroke=%27%2371717a%27%20stroke-width=%272%27%20stroke-linecap=%27round%27%20stroke-linejoin=%27round%27%3E%3Cpath%20d=%27m6%209%206%206%206-6%27/%3E%3C/svg%3E")',
+  backgroundRepeat: 'no-repeat',
+  backgroundSize: '1rem 1rem',
+  backgroundPosition: 'right 0.625rem center',
+};
+
+// Tira o visual do design system no modo `bare`. A seta é o último svg.
+const SEM_CAIXA =
+  'h-auto gap-1 border-0 bg-transparent p-0 shadow-none dark:bg-transparent ' +
+  'dark:hover:bg-transparent [&>svg:last-child]:hidden';
+
+export function Seletor({
+  bare = false, children, className, value, defaultValue, onChange,
+  disabled, name, required, id, title, style, ...resto
+}: SeletorProps) {
+  const toque = usePonteiroDeToque();
+  // Sem `value`, guarda a escolha aqui (o nativo faria o mesmo sozinho).
+  const [interno, setInterno] = useState(defaultValue);
+
+  if (toque) {
+    const props = { ...resto, value, defaultValue, onChange, disabled, name, required, id, title };
+    if (bare) return <select {...props} style={style} className={className}>{children}</select>;
+    // Um <select> só, sem invólucro: as classes de layout da tela (flex-1,
+    // w-48, col-span-*, m*-...) valem nele como valem no botão do computador.
+    // A seta vai como imagem de fundo, em style: o twMerge trata bg-[url()] e
+    // bg-background como o mesmo grupo e derrubaria um dos dois.
+    return (
+      <select
+        {...props}
+        style={{ ...SETA_NATIVA, ...style }}
+        className={cn(CAIXA_NATIVA, className, 'pr-8')}
+      >
+        {children}
+      </select>
+    );
+  }
+
+  const itens = lerItens(children);
+  const atual = value !== undefined ? value : interno;
+  const exibido = valorExibido(atual, itens);
+  const mudar = (radix: string) => {
+    const novo = deRadix(radix);
+    if (value === undefined) setInterno(novo);
+    onChange?.(eventoDeMudanca(novo, name));
+  };
+  const item = (o: OpcaoDoSeletor, i: number) => (
+    <SelectItem key={`${o.valor}-${i}`} value={paraRadix(o.valor)} disabled={o.desligada} style={o.estilo}>
+      {o.rotulo}
+    </SelectItem>
+  );
+
+  return (
+    <>
+      {/* Sem name/required aqui: quem fala com o <form> é o espelho abaixo. */}
+      <Select value={exibido} onValueChange={mudar} disabled={disabled}>
+        <SelectTrigger
+          {...(resto as ComponentProps<typeof SelectTrigger>)}
+          id={id}
+          title={title}
+          style={style}
+          // Vence o data-size="default" do design system, que prende a altura
+          // em h-9 por cima de qualquer classe da tela.
+          data-size="livre"
+          className={cn('h-9', bare && SEM_CAIXA, className)}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        {/* Acima de qualquer janela da casa (modais em z-[200], mapa em z-[1000]). */}
+        <SelectContent className="z-[1200]">
+          {itens.map((it, i) =>
+            it.tipo === 'opcao' ? (
+              item(it, i)
+            ) : (
+              <SelectGroup key={`grupo-${i}`}>
+                <SelectLabel>{it.rotulo}</SelectLabel>
+                {it.opcoes.map(item)}
+              </SelectGroup>
+            ),
+          )}
+        </SelectContent>
+      </Select>
+      {(name !== undefined || required) && (
+        <select
+          aria-hidden
+          tabIndex={-1}
+          className="sr-only"
+          name={name}
+          required={required}
+          disabled={disabled}
+          value={deRadix(exibido)}
+          onChange={() => {}}
+        >
+          {itens.flatMap(it => (it.tipo === 'opcao' ? [it] : it.opcoes)).map((o, i) => (
+            <option key={`${o.valor}-${i}`} value={o.valor} disabled={o.desligada} />
+          ))}
+        </select>
+      )}
+    </>
+  );
+}
