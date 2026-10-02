@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { NotebookPen, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import IconActionButton from '@/components/base/IconActionButton';
@@ -48,7 +48,7 @@ export default function SecaoNotas({ contactId }: { contactId: string }) {
   const visiveis = todas ? notas : notas.slice(0, VISIVEIS);
 
   return (
-    <Secao titulo={T.notas}>
+    <Secao titulo={T.notas} icone={{ Icone: NotebookPen, tom: 'laranja' }}>
       <div className="flex items-center gap-2">
         <input
           className="flex-1 min-w-0 text-sm border border-border rounded px-2 py-1 bg-background focus:outline-none focus:ring-1 focus:ring-primary"

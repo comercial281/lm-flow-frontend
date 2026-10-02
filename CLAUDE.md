@@ -4779,15 +4779,37 @@ O que aparece na tela:
   antes: abre no clique no nome do lead, e trocar de conversa não abre nem fecha
   (no celular, igual antes).
 - **Topo:** foto, nome, telefone com copiar, e-mail, o lápis (a mesma janela de
-  edição de Contatos) e o X. Embaixo, **"Veio de: …"** com **Ver anúncio** quando
-  há link, e **"Também conversou pelo número X · abrir (+N)"** quando o lead tem
-  outra conversa que a pessoa pode abrir (leva a mais recente).
-- **Seções simples, uma embaixo da outra:** Funil (uma linha *nome do funil ·
-  Etapa [▾]* por funil, que move o lead na hora, e **Abrir card do lead**; fora
-  de funil, só **Colocar no funil**), O que a IA entendeu (só se a IA atendeu,
-  resumo em 3 linhas com **Ver mais**), Etiquetas, Notas (campo, as 3 últimas e
-  **Ver todas**), **Respostas do formulário** (a única que abre e fecha, começa
-  fechada e só existe com dado) e Conversão Meta (só se o cliente usa CAPI).
+  edição de Contatos) e o X. Embaixo, a **faixa de selos** (ver abaixo) e
+  **"Também conversou pelo número X · abrir (+N)"** quando o lead tem outra
+  conversa que a pessoa pode abrir (leva a mais recente).
+- **Faixa de selos (Proposta B, 02/10)**, uma linha que quebra se precisar, cada
+  selo com o fundo claro da sua cor, nesta ordem: **etapa** em cada funil (o nome
+  da etapa com a cor que o gestor deu a ela; um selo por funil; fora de funil,
+  nenhum), **temperatura da IA** (Quente vermelho, Morno âmbar, Frio azul; só
+  quando a IA disse; "unknown" não vira selo), **origem** (o antigo "Veio de",
+  azul; com link de anúncio o próprio selo é o **Ver anúncio**) e **espera**
+  ("sem resposta há X", laranja, a mesma régua da lista, anda a cada 60 s). A
+  linha de texto "Veio de: …" saiu.
+- **Conversão Meta numa linha logo abaixo do topo:** "Meta" em verde + Qualificado,
+  Desqualificado e Venda. A explicação longa virou o ⓘ (balão); quando e quem
+  enviou aparece ao passar o mouse no botão já enviado (dica nativa, `title`).
+  Continua sumindo quando o cliente não usa Pixel/CAPI; ao trocar de conversa a
+  linha guarda o lugar enquanto carrega (nada pula), e a resposta atrasada do
+  lead anterior é descartada. No card do lead, o bloco completo de antes
+  (`variante`).
+- **Seções simples, uma embaixo da outra, com um ícone colorido pequeno no
+  título** (Funil azul, O que a IA entendeu roxo, Etiquetas rosa, Notas laranja):
+  Funil (uma linha *nome do funil · Etapa [▾]* por funil, que move o lead na
+  hora, e **Abrir card do lead**; fora de funil, só **Colocar no funil**), O que
+  a IA entendeu (só se a IA atendeu; **o resumo primeiro, à vista**, em 3 linhas
+  com **Ver mais**; "Histórico e próximos passos" continua fechado; a
+  temperatura não se repete ali, está no selo), Etiquetas (**só as do lead**,
+  com ✕ pra tirar, e **+ Etiqueta**, que abre a busca no catálogo da conta;
+  Enter aplica a etiqueta de nome exato ou a 1ª sugestão e só cria quando não
+  há sugestão, e o botão **Criar "x"** cria de propósito; sem etiqueta, só o
+  "+ Etiqueta"), Notas (campo, as 3
+  últimas e **Ver todas**) e **Respostas do formulário** (a única que abre e
+  fecha, começa fechada, sem ícone, e só existe com dado).
 - **Topo da conversa:** *"Número Guatemala · (11) 98235-3462 · Responsável:
   Marina"* (ou *"Sem responsável"*). Saiu o "Status: Aberta". O cabeçalho continua
   verde.
@@ -4819,6 +4841,12 @@ Decisões do dono (não reabrir sem ele pedir):
 - **"Remover do funil" saiu do painel**: fica no quadro do funil.
 - **O painel não coloca o lead num segundo funil.** "Colocar no funil" só existe
   para lead fora de qualquer funil; o segundo funil é pelo quadro.
+- **Proposta B, "resumo no topo" (02/10), com cor só onde informa:** etapa,
+  temperatura, origem e espera nos selos; nas seções, só o ícone pequeno do
+  título. Nada de card dentro de card. Na oferta da roleta os selos aparecem
+  (não têm dado pessoal); o resto da máscara segue igual.
+- **Etiquetas mostra só as do lead.** O catálogo da conta sempre aberto embaixo
+  de "Nenhuma etiqueta" fazia parecer que o lead tinha todas.
 
 Armadilhas:
 
@@ -4828,8 +4856,8 @@ Armadilhas:
    oferta, a seção Respostas do formulário SOME inteira (não há máscara campo a
    campo) e o card do lead não abre pelo painel.
 2. **`SOURCE_META` mora em `src/features/leadOrigin/origem.ts`**, usado pela aba
-   Origem do card e pelo "Veio de". Origem nova entra lá, uma vez. No painel o
-   emoji do rótulo sai; `unknown` não mostra a linha; sem origem gravada, cai no
+   Origem do card e pelo selo de origem (o antigo "Veio de"). Origem nova entra lá, uma vez. No painel o
+   emoji do rótulo sai; `unknown` não vira selo; sem origem gravada, cai no
    anúncio da conversa ("Anúncio no Instagram/Facebook"). **"Ver anúncio" só
    aponta pra anúncio**: o link do `ad_referral` da conversa, ou o da origem
    gravada quando ela é `whatsapp_ctwa`, `meta_lead_ads` ou `anuncio`. Landing,
@@ -4838,12 +4866,16 @@ Armadilhas:
    (`GET /contacts/:id/conversations`, que passa pelo
    `Conversations::PermissionFilterService`). A tela não filtra de novo.
 4. **As regras e os textos moram em `src/features/conversas/painelDoLead.ts`**
-   (com spec); a linha do topo da conversa, em `topoDaConversa.ts`
+   (com spec; os selos são `selosDoLead`, desenhados por `painel/FaixaDeSelos.tsx`);
+   a linha do topo da conversa, em `topoDaConversa.ts`
    (`linhaDoTopo`), na mesma pasta. Textos literais: chave nova de `t()` não
    entra. As seções ficam em `src/components/chat/contact-sidebar/painel/`.
-5. **A origem do "Veio de" vem dos funis que o painel já busca**
-   (`getPipelinesByConversation`, campo `lead_origin` do item). Nenhuma
-   requisição a mais por conversa. Lead fora de funil usa o `ad_referral`.
+5. **A origem e a etapa dos selos vêm dos funis que o painel já busca**
+   (`getPipelinesByConversation`: a etapa é a que tem o item do lead; a origem,
+   o `lead_origin` do item). A temperatura é o `sales_agent_temperature` da
+   conversa (a mesma fonte do "O que a IA entendeu") e a espera é o
+   `esperaDoLead` da lista. Nenhuma requisição a mais por conversa. Lead fora de
+   funil usa o `ad_referral`.
 6. **`ContactHeader`, o `ContactDetails` do painel e `ConversationPipelineItem`
    foram apagados.** A edição do contato é `useEditarContato`.
 7. **"Nome que é telefone" é uma régua só:** `isPhoneLikeName` em
@@ -4861,6 +4893,21 @@ Armadilhas:
     `fetchLabels()`, com cache e busca única). O painel remonta as Etiquetas a
     cada contato: buscar direto no serviço fazia uma requisição por troca de
     conversa, até com o painel fechado.
+11. **Foto do lead em branco (02/10): o Avatar do Radix guarda "a foto
+    carregou" no Root** e só desenha as iniciais quando ela NÃO carregou. Quando
+    a imagem sai (o lead novo não tem foto), esse estado não volta, e o círculo
+    fica vazio. O painel do lead (que agora abre sozinho e fica montado de uma
+    conversa pra outra) e o topo da conversa não remontam ao trocar de conversa:
+    bastava passar por um lead com foto antes de um sem foto. O `ContactAvatar`
+    remonta o `Avatar` por `key` (contato + endereço da foto). Não tire a `key`.
+12. **Temperatura e resumo da IA podem estar velhos na tela.** A IA grava
+    `sales_agent_*` com `update_columns` (backend, `ConversationRunner#persist_attributes`),
+    que não dispara `conversation.updated`; a tela lê a conversa da lista, que só
+    se atualiza com esse evento ou recarregando. Resultado: lead que a IA
+    atendeu depois de a lista carregar aparece sem selo de temperatura e sem
+    resumo (só o "Histórico e próximos passos", que é buscado na hora). A
+    correção é no backend (avisar a conversa atualizada depois de gravar, ou
+    mandar temperatura e resumo no `sales_agent_status`); fica em aberto.
 
 ## Conversas: pílulas, hora certa e campo enxuto (desde 2026-10-02)
 
