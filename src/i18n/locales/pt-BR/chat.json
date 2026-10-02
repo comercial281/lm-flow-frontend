@@ -23,6 +23,9 @@
         "badge": "Atendente",
         "fallback": "Atendente"
       },
+      "followup": {
+        "badge": "Follow-up automático"
+      },
       "bot": {
         "badge": "🤖 Bot",
         "fallback": "Bot"

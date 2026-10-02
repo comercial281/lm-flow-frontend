@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DEVICE_SENT_LABEL, agentDisplayNameFor } from './messageAuthor';
+import { DEVICE_SENT_LABEL, agentDisplayNameFor, isFollowupMessage } from './messageAuthor';
 
 // O nome ao lado do selo "Atendente" (fase 2b.2, E41). Mensagem nossa nunca é
 // assinada pelo lead; automática não leva nome; digitada no celular de número
@@ -24,5 +24,21 @@ describe('agentDisplayNameFor', () => {
 
   it('sem autor e sem marca: sem nome', () => {
     expect(agentDisplayNameFor({ sender: null, content_attributes: null })).toBe('');
+  });
+});
+
+describe('isFollowupMessage', () => {
+  it('follow-up de funil (marca followup_job_id)', () => {
+    expect(isFollowupMessage({ content_attributes: { automated: true, followup_job_id: 'abc' } })).toBe(true);
+  });
+
+  it('follow-up da IA Vendedora (marca followup)', () => {
+    expect(isFollowupMessage({ content_attributes: { sales_agent: true, followup: true } })).toBe(true);
+  });
+
+  it('resposta normal da IA, automação e mensagem de gente: não', () => {
+    expect(isFollowupMessage({ content_attributes: { sales_agent: true } })).toBe(false);
+    expect(isFollowupMessage({ content_attributes: { automated: true } })).toBe(false);
+    expect(isFollowupMessage({ sender: { type: 'user', name: 'Ana' }, content_attributes: null })).toBe(false);
   });
 });

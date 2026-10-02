@@ -22,3 +22,12 @@ export function agentDisplayNameFor(message: MessageAuthorLike): string {
   if (attrs.device_sent) return DEVICE_SENT_LABEL;
   return message.sender?.name ?? '';
 }
+
+// Follow-up automático (02/10/2026): a bolha troca o selo "Atendente" pelo selo
+// amarelo "Follow-up automático". Duas marcas, uma por caminho no servidor:
+// - `followup_job_id`: follow-up de funil (Followup::SendStep), gravada desde 31/08;
+// - `followup`: follow-up da IA Vendedora (SalesAgents::FollowupRunner).
+export function isFollowupMessage(message: MessageAuthorLike): boolean {
+  const attrs = message.content_attributes ?? {};
+  return Boolean(attrs.followup_job_id || attrs.followup);
+}

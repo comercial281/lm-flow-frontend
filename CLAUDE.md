@@ -5154,3 +5154,27 @@ Armadilhas:
 
 Spec e plano: `LM FLOW/specs/2026-10-02-seletor-unico-design.md` e
 `LM FLOW/plans/2026-10-02-seletor-unico-pr1.md` (pasta do Tony, fora deste repo).
+
+## Selo *Follow-up automático* nas Conversas (desde 2026-10-02)
+
+Pedido do dono do produto: a mensagem que saiu pelo follow-up automático aparecia
+na conversa com o selo *Atendente*, igual a uma resposta da equipe.
+
+O que mudou na tela:
+
+- **Mensagem de follow-up mostra o selo amarelo *Follow-up automático*** no lugar de
+  *Atendente*, sem nome ao lado. Vale para os dois follow-ups: o de funil
+  (*Automações*) e o da IA Vendedora (*IA Vendedora → Configuração → Follow-up
+  automático*). A bolha continua verde, como toda mensagem nossa.
+- Resposta normal da IA, automação de lead e disparo agendado continuam como
+  *Atendente*.
+
+Armadilhas:
+
+1. **A tela reconhece o follow-up por duas marcas do servidor**: `followup_job_id`
+   (funil, gravada desde 31/08, então o histórico já sai com o selo) e `followup`
+   (IA Vendedora, só a partir do PR #367 do `lm-flow`). A regra mora em
+   `features/numbers/messageAuthor.ts` (`isFollowupMessage`).
+2. **A metade do backend vem PRIMEIRO** (`lm-flow` #367, branch `saas-multitenant`).
+   Sem ela, o follow-up da IA continua como *Atendente*, e a bolha que o webhook
+   grava antes do eco também.
