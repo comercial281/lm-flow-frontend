@@ -33,7 +33,7 @@ import ContactsTable from '@/components/contacts/ContactsTable';
 import ContactsPagination from '@/components/contacts/ContactsPagination';
 import ContactModal from '@/components/contacts/ContactModal';
 import StartConversationModal from '@/components/contacts/StartConversationModal';
-import ContactDetails from '@/components/contacts/ContactDetails';
+import CardDoContato from '@/components/contacts/CardDoContato';
 import ContactsFiltros from '@/components/contacts/ContactsFiltros';
 import ContactCartaoMovel from '@/components/contacts/ContactCartaoMovel';
 import { useAccountUsers } from '@/hooks/useAccountUsers';
@@ -46,7 +46,6 @@ import {
   type PilulaDeContatos,
 } from '@/features/contatos/filtros';
 import ContactExportModal from '@/components/contacts/ContactExportModal';
-import ContactEventsModal from '@/components/contacts/ContactEventsModal';
 import ContactMergeModal from '@/components/contacts/ContactMergeModal';
 import { AxiosError } from 'axios';
 import { ContactsTour } from '@/tours';
@@ -94,8 +93,8 @@ export default function Contacts() {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [conversationModalOpen, setConversationModalOpen] = useState(false);
   const [conversationContact, setConversationContact] = useState<Contact | null>(null);
-  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
-  const [detailsContact, setDetailsContact] = useState<Contact | null>(null);
+  // Card do lead aberto pela pessoa (substituiu a "Detalhes do Contato").
+  const [cardContatoId, setCardContatoId] = useState<string | null>(null);
   const [activeFilters, setActiveFilters] = useState<BaseFilter[]>([]);
   // Pílula + popover (fase 4). Viram as linhas de `activeFilters`.
   const [pilula, setPilula] = useState<PilulaDeContatos>('todos');
@@ -104,8 +103,6 @@ export default function Contacts() {
   const { user: eu } = useAuth();
   const corretor = useCorretorLogado();
   const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [eventsModalOpen, setEventsModalOpen] = useState(false);
-  const [eventsContact, setEventsContact] = useState<Contact | null>(null);
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
   const [contactsToMerge, setContactsToMerge] = useState<Contact[]>([]);
   // "Selecionar todos": a seleção deixa de ser a lista de ids da página e passa a
@@ -240,30 +237,10 @@ export default function Contacts() {
     setState(prev => ({ ...prev, selectedContactIds: prev.contacts.map(contact => contact.id) }));
   }, [selectAllMatching, state.contacts]);
 
+  // Link /contacts/:id (Copiar link do card, notificações) abre o card da pessoa.
   useEffect(() => {
-    if (!contactIdFromRoute) return;
-
-    let cancelled = false;
-
-    const openContactDetails = async () => {
-      try {
-        const contact = await contactsService.getContact(contactIdFromRoute);
-        if (cancelled) return;
-        setDetailsContact(contact);
-        setDetailsModalOpen(true);
-      } catch (error) {
-        if (cancelled) return;
-        console.error('Error loading contact from route:', error);
-        toast.error(t('errors.loadContact'));
-      }
-    };
-
-    openContactDetails();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [contactIdFromRoute, t]);
+    if (contactIdFromRoute) setCardContatoId(contactIdFromRoute);
+  }, [contactIdFromRoute]);
 
   // Handlers
   const handleSearchChange = (query: string) => {
@@ -491,8 +468,7 @@ export default function Contacts() {
 
   // Contact actions
   const handleContactClick = (contact: Contact) => {
-    setDetailsContact(contact);
-    setDetailsModalOpen(true);
+    setCardContatoId(String(contact.id));
   };
 
   const handleCreateContact = () => {
@@ -517,11 +493,6 @@ export default function Contacts() {
   const handleStartConversation = (contact: Contact) => {
     setConversationContact(contact);
     setConversationModalOpen(true);
-  };
-
-  const handleViewEvents = (contact: Contact) => {
-    setEventsContact(contact);
-    setEventsModalOpen(true);
   };
 
   // Bulk actions
@@ -802,21 +773,10 @@ export default function Contacts() {
     }
   };
 
-  const handleDetailsModalClose = (open: boolean) => {
-    if (!open) {
-      setDetailsModalOpen(false);
-      setDetailsContact(null);
-      if (contactIdFromRoute) {
-        navigate('/contacts', { replace: true });
-      }
-    }
-  };
-
-  const handleEventsModalClose = (open: boolean) => {
-    if (!open) {
-      setEventsModalOpen(false);
-      setEventsContact(null);
-    }
+  const fecharCardDoContato = (open: boolean) => {
+    if (open) return;
+    setCardContatoId(null);
+    if (contactIdFromRoute) navigate('/contacts', { replace: true });
   };
 
   const handleMergeModalClose = (open: boolean) => {
@@ -915,7 +875,6 @@ export default function Contacts() {
             onStartConversation={handleStartConversation}
             onEditContact={handleEditContact}
             onDeleteContact={handleDeleteContact}
-            onViewEvents={handleViewEvents}
             onCreateContact={handleCreateContact}
             sortBy={state.sortBy}
             sortOrder={state.sortOrder}
@@ -1032,34 +991,11 @@ export default function Contacts() {
         />
       )}
 
-      {/* Contact Details Modal */}
-      <ContactDetails
-        open={detailsModalOpen}
-        onOpenChange={handleDetailsModalClose}
-        contact={detailsContact}
-        onEdit={contact => {
-          setDetailsModalOpen(false);
-          setEditingContact(contact);
-          setContactModalOpen(true);
-        }}
-        onStartConversation={contact => {
-          setDetailsModalOpen(false);
-          setConversationContact(contact);
-          setConversationModalOpen(true);
-        }}
-        onNavigateToContact={async contactId => {
-          try {
-            const response = await contactsService.getContact(contactId);
-            setDetailsContact(response);
-            setDetailsModalOpen(true);
-          } catch (error) {
-            console.error('Error loading contact:', error);
-            toast.error(t('errors.loadContact'));
-          }
-        }}
-        onContactUpdated={() => {
-          loadContacts();
-        }}
+      {/* Card do lead aberto pela pessoa */}
+      <CardDoContato
+        contactId={cardContatoId}
+        onOpenChange={fecharCardDoContato}
+        onMudou={() => loadContacts()}
       />
 
       {/* Contact Export Modal */}
@@ -1072,12 +1008,6 @@ export default function Contacts() {
         totalCount={state.meta.pagination.total}
       />
 
-      {/* Contact Events Modal */}
-      <ContactEventsModal
-        open={eventsModalOpen}
-        onOpenChange={handleEventsModalClose}
-        contact={eventsContact}
-      />
 
       {/* Contact Merge Modal */}
       <ContactMergeModal
