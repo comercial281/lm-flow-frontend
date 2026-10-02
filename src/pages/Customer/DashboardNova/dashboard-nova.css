@@ -43,6 +43,15 @@ button.lmfn-item { cursor: pointer; }
 button.lmfn-item:hover { background: var(--lmf-accent-soft); }
 .lmfn-item-texto { flex: 1; min-width: 0; font-size: 13.5px; }
 .lmfn-item-texto small { display: block; color: var(--lmf-muted); font-size: 12px; }
+/* Linha de uma linha só (Roleta agora): nome, detalhe discreto à direita, selos. */
+.lmfn-item-compacto { padding: 7px 6px; }
+.lmfn-item-compacto .lmfn-item-texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lmfn-item-detalhe { color: var(--lmf-muted); font-size: 12px; white-space: nowrap; }
+.lmfn-item-destaque { background: var(--lmf-accent-soft); border-radius: 8px; }
+.lmfn-ordem { width: 22px; flex: 0 0 22px; color: var(--lmf-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+/* Lista fechada: a última linha some para baixo, sinal de que tem mais. */
+.lmfn-lista-esmaecida { -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent); mask-image: linear-gradient(to bottom, #000 72%, transparent); }
+.lmfn-ver-todos { display: block; margin: 8px auto 0; background: none; border: 0; padding: 4px 8px; font: inherit; font-size: 13px; font-weight: 600; color: var(--lmf-accent); cursor: pointer; }
 .lmfn-pilula { display: inline-flex; align-items: center; gap: 4px; min-width: 40px; justify-content: center; border-radius: 8px; padding: 2px 8px; font-size: 13px; font-weight: 600; background: var(--lmf-surface-2); color: var(--lmf-muted); border: 1px solid var(--lmf-border); font-variant-numeric: tabular-nums; }
 .lmfn-pilula-atencao { color: var(--lmf-warn); border-color: transparent; background: rgba(217, 119, 6, 0.12); }
 .lmfn-pilula-alerta { color: var(--lmf-down); border-color: transparent; background: rgba(225, 29, 72, 0.1); }

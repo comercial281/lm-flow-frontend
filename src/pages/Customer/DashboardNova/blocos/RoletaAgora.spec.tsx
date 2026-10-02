@@ -117,6 +117,48 @@ describe('RoletaAgora', () => {
     expect(screen.queryByText(/último lead/)).not.toBeInTheDocument();
   });
 
+  it('na Fila, a lista começa pelo próximo e numera quem está na disputa', async () => {
+    getQueue.mockResolvedValue(resposta([
+      roleta('r1', 'Vendas', { membros: [membro('Ana'), membro('Bruno', { ativo: false }), membro('Carla', { proximo: true }), membro('Davi')] }),
+    ]));
+    await montar(ctx());
+    const nomes = screen.getAllByText(/^(Ana|Bruno|Carla|Davi)$/).map(n => n.textContent);
+    expect(nomes).toEqual(['Carla', 'Davi', 'Ana', 'Bruno']);
+    expect(screen.getByText('1º')).toBeInTheDocument();
+    expect(screen.getByText('3º')).toBeInTheDocument();
+    // Pausado não ganha número.
+    expect(screen.queryByText('4º')).not.toBeInTheDocument();
+  });
+
+  it('com muitos corretores, mostra os primeiros e abre a lista inteira no Ver', async () => {
+    const nomes = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A10'];
+    getQueue.mockResolvedValue(resposta([
+      roleta('r1', 'Vendas', { membros: nomes.map((n, i) => membro(n, { proximo: i === 0 })) }),
+      roleta('r2', 'Locação'),
+    ]));
+    await montar(ctx());
+    expect(screen.getByText('A5')).toBeInTheDocument();
+    expect(screen.queryByText('A6')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver os 10 corretores' }));
+    expect(screen.getByText('A10')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mostrar menos' })).toHaveAttribute('aria-expanded', 'true');
+
+    // Trocar de roleta fecha a lista de novo.
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima roleta' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Roleta anterior' }));
+    expect(screen.queryByText('A6')).not.toBeInTheDocument();
+  });
+
+  it('com só um corretor a mais, mostra todos sem o Ver', async () => {
+    getQueue.mockResolvedValue(resposta([
+      roleta('r1', 'Vendas', { membros: ['A1', 'A2', 'A3', 'A4', 'A5'].map(n => membro(n)) }),
+    ]));
+    await montar(ctx());
+    expect(screen.getByText('A5')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Ver os/ })).not.toBeInTheDocument();
+  });
+
   it('com uma roleta só, não tem setas', async () => {
     getQueue.mockResolvedValue(resposta([roleta('r1', 'Vendas'), roleta('r2', 'Antiga', { ativa: false })]));
     await montar(ctx());
