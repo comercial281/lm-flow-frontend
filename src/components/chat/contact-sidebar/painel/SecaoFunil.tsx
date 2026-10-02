@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, SquareKanban } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@evoapi/design-system/button';
@@ -116,7 +116,7 @@ export default function SecaoFunil({
   };
 
   return (
-    <Secao titulo={T.funil}>
+    <Secao titulo={T.funil} icone={{ Icone: SquareKanban, tom: 'azul' }}>
       {carregando && linhas.length === 0 ? (
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       ) : linhas.length > 0 ? (

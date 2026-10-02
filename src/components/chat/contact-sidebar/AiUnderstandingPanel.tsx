@@ -94,7 +94,8 @@ function Resumo({ texto, cortar }: { texto: string; cortar: boolean }) {
   }, [texto, cortar, aberto]);
 
   return (
-    <div className="lm-redact text-xs text-muted-foreground bg-muted/40 rounded p-2 mt-1">
+    // No painel, texto corrido logo abaixo do título (sem caixinha); no card, a caixinha de antes.
+    <div className={cortar ? 'lm-redact text-xs text-foreground' : 'lm-redact text-xs text-muted-foreground bg-muted/40 rounded p-2 mt-1'}>
       <div ref={ref} className={cortar && !aberto ? 'line-clamp-3' : undefined}>
         {texto}
       </div>
@@ -156,8 +157,9 @@ export default function AiUnderstandingPanel({ conversation, embutido = false }:
   // — incluindo o log de turnos (uma IA que só falhou não tem "leitura" nenhuma
   // do lead, mas o corretor ainda precisa ver que ela tentou e não deu certo).
   const temLog = Boolean(report && (report.runs.length > 0 || report.why));
+  // No painel do lead a temperatura mora na faixa de selos: sozinha, não segura a seção.
   const temLeitura =
-    (temperatura && temperatura !== 'unknown') ||
+    (!embutido && temperatura && temperatura !== 'unknown') ||
     Boolean(resumo) ||
     Boolean(etapa) ||
     coletado.length > 0 ||
@@ -171,7 +173,11 @@ export default function AiUnderstandingPanel({ conversation, embutido = false }:
 
   const conteudo = (
     <div className="space-y-2">
-      {temp && (
+      {/* No painel do lead o resumo vem primeiro, à vista (3 linhas e "Ver mais"),
+          e a temperatura fica na faixa de selos do topo. */}
+      {embutido && resumo && <Resumo texto={resumo} cortar />}
+
+      {temp && !embutido && (
         <div className="flex justify-between items-center text-xs">
           <span className="text-muted-foreground">Temperatura</span>
           <span className={`px-2 py-0.5 rounded-full font-medium ${temp.classe}`}>{temp.label}</span>
@@ -213,7 +219,7 @@ export default function AiUnderstandingPanel({ conversation, embutido = false }:
         </div>
       )}
 
-      {resumo && <Resumo texto={resumo} cortar={embutido} />}
+      {resumo && !embutido && <Resumo texto={resumo} cortar={false} />}
 
       {transferiu && (
         <div className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400 mt-1">
@@ -305,7 +311,13 @@ export default function AiUnderstandingPanel({ conversation, embutido = false }:
     </div>
   );
 
-  if (embutido) return <Secao titulo="O que a IA entendeu">{conteudo}</Secao>;
+  if (embutido) {
+    return (
+      <Secao titulo="O que a IA entendeu" icone={{ Icone: Brain, tom: 'roxo' }}>
+        {conteudo}
+      </Secao>
+    );
+  }
 
   return (
     <Card className="border-violet-200 bg-violet-50/30 dark:border-violet-800 dark:bg-violet-950/20">
