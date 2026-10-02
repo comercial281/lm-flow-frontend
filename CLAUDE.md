@@ -4266,6 +4266,9 @@ Armadilhas:
    ao sair.
 6. **O azul do visto é cor própria**, não a cor primária da marca, para não
    mudar quando o cliente troca o tema.
+7. **O hover não pode puxar o foco** (Conversas tem o campo de mensagem); abrir por
+   clique ou teclado pode. Abrir por hover tem atraso de intenção (150 ms), pra
+   passar o mouse pela barra não abrir caixa por cima da lista.
 
 ## O logo novo do LM Flow (desde 2026-10-01)
 
