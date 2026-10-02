@@ -4762,3 +4762,101 @@ Armadilhas:
 4. **O filtro `status=open` é o de sempre** (`FiltersContext.DEFAULT_FILTER`) e
    não conta como filtro; qualquer outro desliga o aviso da lista vazia.
 5. **Não tem metade de backend e não é `featureKey` nem `clientToggleKey`.**
+
+## Conversas: o lead ao lado da conversa (desde 2026-10-02)
+
+Relato do dono do produto (Fase 4, jornada 8): o que o corretor precisa saber
+do lead ficava escondido. Etapa, etiquetas, notas e o que a IA entendeu só
+apareciam clicando no nome, e o painel era uma pilha de 12 cards fechados,
+metade repetida ou sem uso, com um botão vermelho de excluir o contato no meio
+do atendimento. No topo da conversa, o nome técnico do número e "Status: Aberta".
+
+O que aparece na tela:
+
+- **O painel do lead abre sozinho** em tela de 1280px ou mais, a cada conversa
+  aberta. O X fecha, e ele reabre ao trocar de conversa. Abaixo de 1280px, como
+  antes: abre no clique no nome do lead, e trocar de conversa não abre nem fecha
+  (no celular, igual antes).
+- **Topo:** foto, nome, telefone com copiar, e-mail, o lápis (a mesma janela de
+  edição de Contatos) e o X. Embaixo, **"Veio de: …"** com **Ver anúncio** quando
+  há link, e **"Também conversou pelo número X · abrir (+N)"** quando o lead tem
+  outra conversa que a pessoa pode abrir (leva a mais recente).
+- **Seções simples, uma embaixo da outra:** Funil (uma linha *nome do funil ·
+  Etapa [▾]* por funil, que move o lead na hora, e **Abrir card do lead**; fora
+  de funil, só **Colocar no funil**), O que a IA entendeu (só se a IA atendeu,
+  resumo em 3 linhas com **Ver mais**), Etiquetas, Notas (campo, as 3 últimas e
+  **Ver todas**), **Respostas do formulário** (a única que abre e fecha, começa
+  fechada e só existe com dado) e Conversão Meta (só se o cliente usa CAPI).
+- **Topo da conversa:** *"Número Guatemala · (11) 98235-3462 · Responsável:
+  Marina"* (ou *"Sem responsável"*). Saiu o "Status: Aberta". O cabeçalho continua
+  verde.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **O painel abre a cada conversa**, em tela larga. Fechar vale até a próxima troca.
+- **Saíram do painel:** Nome do atendente, Informações da conversa, Origem do
+  Anúncio, Origem (dados crus), Conversas anteriores (virou a linha do topo), a
+  repetição de Informações Básicas, Histórico e Excluir contato. E o "Online"
+  verde do topo, que era fixo no código e aparecia pra todo lead.
+- **Histórico só no card do lead** (Funil → Abrir card do lead), onde já existia.
+- **Excluir contato só em Contatos.**
+- **O verde fica** (cabeçalho e botão de enviar): reconhecimento com o WhatsApp.
+- **Telefone mascarado na oferta da roleta:** com a oferta aberta para quem está
+  vendo (o mesmo estado da faixa "assuma o lead"), o topo mostra
+  `(11) •••••-••34`, sem e-mail, sem copiar e sem o lápis (a janela de edição
+  mostraria o número). As **Respostas do formulário somem** (formulário de lead
+  costuma trazer telefone e e-mail) e **"Abrir card do lead" some** (o card
+  mostra telefone, e-mail e respostas; o seletor de etapa fica). **Nome que é o
+  telefone** (o Evolution não manda o nome no 1º evento) sai mascarado também,
+  no painel e no topo da conversa. Ao aceitar, aparece tudo. Enquanto a lista
+  de ofertas ainda não chegou (logo depois de abrir o app), lead sem dono já
+  aparece mascarado.
+- **O nome do número é o que o gestor deu** (`display_name` da lista de
+  números), no topo da conversa e na linha "Também conversou". O `inbox.name`
+  que vem com a conversa é o identificador interno
+  ("whatsapp-horizonte-imveis") e só aparece se a lista não tiver o número.
+- **"Remover do funil" saiu do painel**: fica no quadro do funil.
+- **O painel não coloca o lead num segundo funil.** "Colocar no funil" só existe
+  para lead fora de qualquer funil; o segundo funil é pelo quadro.
+
+Armadilhas:
+
+1. **A máscara é da tela.** O servidor continua mandando o contato inteiro pro
+   corretor ofertado: é a dívida de 28/09 ("Roleta: o telefone do lead só chega
+   depois do aceite", armadilha 3), aberta para o backend. Na tela, durante a
+   oferta, a seção Respostas do formulário SOME inteira (não há máscara campo a
+   campo) e o card do lead não abre pelo painel.
+2. **`SOURCE_META` mora em `src/features/leadOrigin/origem.ts`**, usado pela aba
+   Origem do card e pelo "Veio de". Origem nova entra lá, uma vez. No painel o
+   emoji do rótulo sai; `unknown` não mostra a linha; sem origem gravada, cai no
+   anúncio da conversa ("Anúncio no Instagram/Facebook"). **"Ver anúncio" só
+   aponta pra anúncio**: o link do `ad_referral` da conversa, ou o da origem
+   gravada quando ela é `whatsapp_ctwa`, `meta_lead_ads` ou `anuncio`. Landing,
+   site e portal não ganham link ali.
+3. **A linha "Também conversou" depende do recorte de permissão do servidor**
+   (`GET /contacts/:id/conversations`, que passa pelo
+   `Conversations::PermissionFilterService`). A tela não filtra de novo.
+4. **As regras e os textos moram em `src/features/conversas/painelDoLead.ts`**
+   (com spec); a linha do topo da conversa, em `topoDaConversa.ts`
+   (`linhaDoTopo`), na mesma pasta. Textos literais: chave nova de `t()` não
+   entra. As seções ficam em `src/components/chat/contact-sidebar/painel/`.
+5. **A origem do "Veio de" vem dos funis que o painel já busca**
+   (`getPipelinesByConversation`, campo `lead_origin` do item). Nenhuma
+   requisição a mais por conversa. Lead fora de funil usa o `ad_referral`.
+6. **`ContactHeader`, o `ContactDetails` do painel e `ConversationPipelineItem`
+   foram apagados.** A edição do contato é `useEditarContato`.
+7. **"Nome que é telefone" é uma régua só:** `isPhoneLikeName` em
+   `src/lib/nomeDoContato.ts`, usada pelo card do funil (`pipelineItemHelpers`
+   reexporta), pelo card aberto (`EditItemModal`) e pela máscara da oferta
+   (`nomeNaTela`, no painel e no `ChatHeader`, que recebe `emOferta` do `Chat`).
+8. **Abrir/fechar o painel mora em `usePainelDoLeadAberto`** (com spec). O
+   fechamento ("endereço sem conversa fecha") depende SÓ do endereço. Ao abrir
+   uma conversa a partir de /conversations, a seleção muda antes do endereço (o
+   `navigate` roda em transição); se o fechamento também olhasse o "aberto",
+   fecharia o painel que a seleção acabou de abrir. Não junte as duas regras.
+9. **O nome do número vem da lista que a tela já busca** (`useNumerosDaConversa`,
+   `display_name`), no topo e no painel. Nenhuma requisição a mais.
+10. **O catálogo de etiquetas vem do store** (`useAppDataStore.labels` +
+    `fetchLabels()`, com cache e busca única). O painel remonta as Etiquetas a
+    cada contato: buscar direto no serviço fazia uma requisição por troca de
+    conversa, até com o painel fechado.

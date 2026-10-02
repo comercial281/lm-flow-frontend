@@ -4,6 +4,7 @@ import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { contactsService } from '@/services/contacts/contactsService';
 import { labelsService } from '@/services/contacts/labelsService';
+import { useAppDataStore } from '@/store/appDataStore';
 import chatService from '@/services/chat/chatService';
 import type { Label } from '@/types/settings';
 
@@ -40,20 +41,29 @@ export default function ContactTagsManager({
   onUpdated,
 }: ContactTagsManagerProps) {
   const [tags, setTags] = useState<string[]>(normalizeNames(initialLabels));
-  const [catalog, setCatalog] = useState<Label[]>([]);
+  // Catálogo global de tags (nome + cor) pra sugerir e dar cor à tag. Vem do
+  // store (cache + uma busca só): o painel do lead remonta a cada contato e não
+  // pode pedir o catálogo de novo a cada troca de conversa.
+  const catalogoDoStore = useAppDataStore(s => s.labels);
+  const fetchLabels = useAppDataStore(s => s.fetchLabels);
+  // Tags criadas aqui entram na hora, sem esperar o catálogo recarregar.
+  const [criadas, setCriadas] = useState<Label[]>([]);
+  const catalog = useMemo(
+    () => [
+      ...catalogoDoStore,
+      ...criadas.filter(c => !catalogoDoStore.some(l => l.title?.toLowerCase() === c.title?.toLowerCase())),
+    ],
+    [catalogoDoStore, criadas],
+  );
   const [input, setInput] = useState('');
   const [saving, setSaving] = useState(false);
   const datalistId = useRef(`tags-${Math.abs([...contactId].reduce((a, c) => a + c.charCodeAt(0), 0))}`).current;
 
-  // Catálogo global de tags (nome + cor) pra sugerir e dar cor à tag.
   useEffect(() => {
-    labelsService
-      .getLabels()
-      .then(res => setCatalog((res?.data as Label[]) || []))
-      .catch(() => {
-        /* catálogo é só enriquecimento (sugestões/cor) */
-      });
-  }, []);
+    fetchLabels().catch(() => {
+      /* catálogo é só enriquecimento (sugestões/cor) */
+    });
+  }, [fetchLabels]);
 
   const colorOf = (name: string) =>
     catalog.find(l => l.title?.toLowerCase() === name.toLowerCase())?.color || colorForName(name);
@@ -98,7 +108,7 @@ export default function ContactTagsManager({
       try {
         const created = await labelsService.createLabel({ title: name, color: colorForName(name) });
         const lbl = (created as { data?: Label })?.data || (created as unknown as Label);
-        if (lbl?.title) setCatalog(c => [...c, lbl]);
+        if (lbl?.title) setCriadas(c => [...c, lbl]);
       } catch {
         /* se já existir ou falhar o catálogo, segue aplicando a tag mesmo assim */
       }

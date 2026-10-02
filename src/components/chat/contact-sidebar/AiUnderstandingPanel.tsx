@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Card, CardHeader, CardContent } from '@evoapi/design-system/card';
 import { Brain, ChevronDown, ArrowRightLeft, History, CheckCircle2, XCircle, MinusCircle } from 'lucide-react';
 
 import type { Conversation } from '@/types/chat/api';
 import { chatService } from '@/services/chat/chatService';
 import type { SalesAgentLeadReport } from '@/types/analytics/pipelines';
+import { TEXTOS_DO_PAINEL } from '@/features/conversas/painelDoLead';
+import Secao from './painel/Secao';
 
 /**
  * "O que a IA entendeu" — as leituras da IA Vendedora sobre ESTE lead.
@@ -65,9 +67,51 @@ const texto = (valor: unknown): string => (typeof valor === 'string' ? valor.tri
 
 interface Props {
   conversation: Conversation | null;
+  /**
+   * Dentro do painel do lead em Conversas: vira uma seção simples (sem card e
+   * sem recolher), com o resumo cortado em 3 linhas e "Ver mais".
+   */
+  embutido?: boolean;
 }
 
-export default function AiUnderstandingPanel({ conversation }: Props) {
+/** Resumo da IA: inteiro no card; cortado em 3 linhas no painel, com "Ver mais" quando passa disso. */
+function Resumo({ texto, cortar }: { texto: string; cortar: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [aberto, setAberto] = useState(false);
+  const [passa, setPassa] = useState(false);
+
+  // Mede só com o resumo cortado (aberto, nunca "passa"), e de novo quando a
+  // largura muda: o painel nasce com largura 0 e abre depois.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!cortar || aberto || !el) return;
+    const medir = () => setPassa(el.scrollHeight > el.clientHeight + 1);
+    medir();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observador = new ResizeObserver(medir);
+    observador.observe(el);
+    return () => observador.disconnect();
+  }, [texto, cortar, aberto]);
+
+  return (
+    <div className="lm-redact text-xs text-muted-foreground bg-muted/40 rounded p-2 mt-1">
+      <div ref={ref} className={cortar && !aberto ? 'line-clamp-3' : undefined}>
+        {texto}
+      </div>
+      {passa && (
+        <button
+          type="button"
+          onClick={() => setAberto(a => !a)}
+          className="mt-1 text-primary hover:underline"
+        >
+          {aberto ? TEXTOS_DO_PAINEL.verMenos : TEXTOS_DO_PAINEL.verMais}
+        </button>
+      )}
+    </div>
+  );
+}
+
+export default function AiUnderstandingPanel({ conversation, embutido = false }: Props) {
   const [aberto, setAberto] = useState(true);
   const [logsAbertos, setLogsAbertos] = useState(false);
   const [report, setReport] = useState<SalesAgentLeadReport | null>(null);
@@ -125,6 +169,144 @@ export default function AiUnderstandingPanel({ conversation }: Props) {
 
   const temp = TEMPERATURA[temperatura] ?? null;
 
+  const conteudo = (
+    <div className="space-y-2">
+      {temp && (
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-muted-foreground">Temperatura</span>
+          <span className={`px-2 py-0.5 rounded-full font-medium ${temp.classe}`}>{temp.label}</span>
+        </div>
+      )}
+
+      {etapa && ETAPA[etapa] && (
+        <div className="flex justify-between text-xs">
+          <span className="text-muted-foreground">Etapa</span>
+          <span className="font-medium text-right max-w-[60%]">{ETAPA[etapa]}</span>
+        </div>
+      )}
+
+      {intencao && INTENCAO[intencao] && (
+        <div className="flex justify-between text-xs">
+          <span className="text-muted-foreground">Interesse</span>
+          <span className="font-medium text-right max-w-[60%]">{INTENCAO[intencao]}</span>
+        </div>
+      )}
+
+      {/* Humor só quando NÃO é neutro: "Neutro" em toda conversa é ruído que
+          esconde as duas leituras que realmente pedem ação. */}
+      {humor && humor !== 'neutro' && HUMOR[humor] && (
+        <div className="flex justify-between text-xs">
+          <span className="text-muted-foreground">Como está se sentindo</span>
+          <span className="font-medium text-right max-w-[60%]">{HUMOR[humor]}</span>
+        </div>
+      )}
+
+      {coletado.length > 0 && (
+        <div className="pt-1 mt-1 border-t border-violet-200/60 dark:border-violet-800/60 space-y-2">
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ela já perguntou</p>
+          {coletado.map(c => (
+            <div key={c.chave} className="flex justify-between text-xs gap-2">
+              <span className="text-muted-foreground flex-shrink-0">{c.rotulo}</span>
+              <span className="lm-redact font-medium text-right break-words">{c.valor}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {resumo && <Resumo texto={resumo} cortar={embutido} />}
+
+      {transferiu && (
+        <div className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400 mt-1">
+          <ArrowRightLeft className="h-3 w-3 mt-0.5 flex-shrink-0" />
+          <span>
+            Passou para um corretor
+            {motivoTransferencia ? `: ${motivoTransferencia}` : '.'}
+          </span>
+        </div>
+      )}
+
+      {repasseSegurado && (
+        <div className="flex items-start gap-1.5 text-xs text-muted-foreground mt-1">
+          <ArrowRightLeft className="h-3 w-3 mt-0.5 flex-shrink-0" />
+          <span>
+            A IA quis passar este lead e o cenário escolhido segurou: {repasseSegurado}.
+          </span>
+        </div>
+      )}
+
+      {/* Log da IA nesta conversa: turno a turno (respondeu/pulou/falhou) +
+          o próximo passo calculado pelo backend. Fica fechado por padrão —
+          é detalhe de investigação, não a primeira coisa que se quer ver. */}
+      {temLog && report && (
+        <div className="pt-2 mt-2 border-t border-violet-200/60 dark:border-violet-800/60">
+          <button
+            type="button"
+            onClick={() => setLogsAbertos(!logsAbertos)}
+            aria-expanded={logsAbertos}
+            className="flex w-full items-center justify-between text-[11px] uppercase tracking-wide text-muted-foreground hover:text-foreground"
+          >
+            <span className="flex items-center gap-1.5">
+              <History className="h-3 w-3" />
+              Histórico e próximos passos
+              {report.runs.length > 0 && (
+                <span className="normal-case font-normal">({report.runs.length})</span>
+              )}
+            </span>
+            <ChevronDown className={`h-3 w-3 transition-transform ${logsAbertos ? 'rotate-180' : ''}`} />
+          </button>
+
+          {logsAbertos && (
+            <div className="mt-2 space-y-2">
+              <div className="rounded bg-muted/40 p-2 space-y-1">
+                <p className="text-xs">{report.why}</p>
+                {report.next_step && (
+                  <p className="text-xs text-muted-foreground">{report.next_step}</p>
+                )}
+              </div>
+
+              {report.runs.length > 0 && (
+                <ul className="space-y-1">
+                  {report.runs.map((run, i) => {
+                    const Icon =
+                      run.status === 'replied' && run.delivered
+                        ? CheckCircle2
+                        : run.status === 'failed'
+                          ? XCircle
+                          : MinusCircle;
+                    const cor =
+                      run.status === 'replied' && run.delivered
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : run.status === 'failed'
+                          ? 'text-red-600 dark:text-red-400'
+                          : 'text-muted-foreground';
+                    const rotulo =
+                      run.status === 'replied'
+                        ? run.delivered
+                          ? 'Respondeu o lead'
+                          : 'Gerou resposta, mas não conseguiu enviar'
+                        : run.status === 'failed'
+                          ? `Falhou: ${run.error_message ?? 'erro no servidor'}`
+                          : (run.reason_label ?? 'Não respondeu');
+                    return (
+                      <li key={i} className="flex items-start gap-1.5 text-[11px]">
+                        <Icon className={`h-3 w-3 mt-0.5 flex-shrink-0 ${cor}`} />
+                        <span className="text-muted-foreground">
+                          {new Date(run.created_at).toLocaleString('pt-BR')} · {rotulo}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  if (embutido) return <Secao titulo="O que a IA entendeu">{conteudo}</Secao>;
+
   return (
     <Card className="border-violet-200 bg-violet-50/30 dark:border-violet-800 dark:bg-violet-950/20">
       <CardHeader className="pb-2">
@@ -152,141 +334,7 @@ export default function AiUnderstandingPanel({ conversation }: Props) {
 
       {aberto && (
         <CardContent className="pt-0 px-3 pb-3">
-          <div className="space-y-2">
-            {temp && (
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-muted-foreground">Temperatura</span>
-                <span className={`px-2 py-0.5 rounded-full font-medium ${temp.classe}`}>{temp.label}</span>
-              </div>
-            )}
-
-            {etapa && ETAPA[etapa] && (
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Etapa</span>
-                <span className="font-medium text-right max-w-[60%]">{ETAPA[etapa]}</span>
-              </div>
-            )}
-
-            {intencao && INTENCAO[intencao] && (
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Interesse</span>
-                <span className="font-medium text-right max-w-[60%]">{INTENCAO[intencao]}</span>
-              </div>
-            )}
-
-            {/* Humor só quando NÃO é neutro: "Neutro" em toda conversa é ruído que
-                esconde as duas leituras que realmente pedem ação. */}
-            {humor && humor !== 'neutro' && HUMOR[humor] && (
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Como está se sentindo</span>
-                <span className="font-medium text-right max-w-[60%]">{HUMOR[humor]}</span>
-              </div>
-            )}
-
-            {coletado.length > 0 && (
-              <div className="pt-1 mt-1 border-t border-violet-200/60 dark:border-violet-800/60 space-y-2">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ela já perguntou</p>
-                {coletado.map(c => (
-                  <div key={c.chave} className="flex justify-between text-xs gap-2">
-                    <span className="text-muted-foreground flex-shrink-0">{c.rotulo}</span>
-                    <span className="lm-redact font-medium text-right break-words">{c.valor}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {resumo && (
-              <div className="lm-redact text-xs text-muted-foreground bg-muted/40 rounded p-2 mt-1">{resumo}</div>
-            )}
-
-            {transferiu && (
-              <div className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400 mt-1">
-                <ArrowRightLeft className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                <span>
-                  Passou para um corretor
-                  {motivoTransferencia ? `: ${motivoTransferencia}` : '.'}
-                </span>
-              </div>
-            )}
-
-            {repasseSegurado && (
-              <div className="flex items-start gap-1.5 text-xs text-muted-foreground mt-1">
-                <ArrowRightLeft className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                <span>
-                  A IA quis passar este lead e o cenário escolhido segurou: {repasseSegurado}.
-                </span>
-              </div>
-            )}
-
-            {/* Log da IA nesta conversa: turno a turno (respondeu/pulou/falhou) +
-                o próximo passo calculado pelo backend. Fica fechado por padrão —
-                é detalhe de investigação, não a primeira coisa que se quer ver. */}
-            {temLog && report && (
-              <div className="pt-2 mt-2 border-t border-violet-200/60 dark:border-violet-800/60">
-                <button
-                  type="button"
-                  onClick={() => setLogsAbertos(!logsAbertos)}
-                  aria-expanded={logsAbertos}
-                  className="flex w-full items-center justify-between text-[11px] uppercase tracking-wide text-muted-foreground hover:text-foreground"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <History className="h-3 w-3" />
-                    Histórico e próximos passos
-                    {report.runs.length > 0 && (
-                      <span className="normal-case font-normal">({report.runs.length})</span>
-                    )}
-                  </span>
-                  <ChevronDown className={`h-3 w-3 transition-transform ${logsAbertos ? 'rotate-180' : ''}`} />
-                </button>
-
-                {logsAbertos && (
-                  <div className="mt-2 space-y-2">
-                    <div className="rounded bg-muted/40 p-2 space-y-1">
-                      <p className="text-xs">{report.why}</p>
-                      {report.next_step && (
-                        <p className="text-xs text-muted-foreground">{report.next_step}</p>
-                      )}
-                    </div>
-
-                    {report.runs.length > 0 && (
-                      <ul className="space-y-1">
-                        {report.runs.map((run, i) => {
-                          const Icon =
-                            run.status === 'replied' && run.delivered
-                              ? CheckCircle2
-                              : run.status === 'failed'
-                                ? XCircle
-                                : MinusCircle;
-                          const cor =
-                            run.status === 'replied' && run.delivered
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : run.status === 'failed'
-                                ? 'text-red-600 dark:text-red-400'
-                                : 'text-muted-foreground';
-                          const rotulo =
-                            run.status === 'replied'
-                              ? run.delivered
-                                ? 'Respondeu o lead'
-                                : 'Gerou resposta, mas não conseguiu enviar'
-                              : run.status === 'failed'
-                                ? `Falhou: ${run.error_message ?? 'erro no servidor'}`
-                                : (run.reason_label ?? 'Não respondeu');
-                          return (
-                            <li key={i} className="flex items-start gap-1.5 text-[11px]">
-                              <Icon className={`h-3 w-3 mt-0.5 flex-shrink-0 ${cor}`} />
-                              <span className="text-muted-foreground">
-                                {new Date(run.created_at).toLocaleString('pt-BR')} · {rotulo}
-                              </span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          {conteudo}
         </CardContent>
       )}
     </Card>
