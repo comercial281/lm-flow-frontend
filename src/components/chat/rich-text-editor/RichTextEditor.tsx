@@ -9,7 +9,7 @@ import { toggleMark } from 'prosemirror-commands';
 import { wrapInList } from 'prosemirror-schema-list';
 import type { Schema } from 'prosemirror-model';
 import { messageSchema } from './schema';
-import { EditorToolbar } from './EditorToolbar';
+import { EditorToolbar, TODAS_AS_ACOES, type AcaoDoEditor } from './EditorToolbar';
 import { toast } from 'sonner';
 
 export interface RichTextEditorRef {
@@ -41,6 +41,11 @@ interface RichTextEditorProps {
    * escreve lá vira mensagem de WhatsApp.
    */
   schema?: Schema;
+  /**
+   * Formatações oferecidas (barra e atalhos). Padrão: todas — é o que as
+   * landings e o Site Builder usam. O chat passa só negrito e itálico.
+   */
+  acoes?: AcaoDoEditor[];
 }
 
 export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
@@ -55,6 +60,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
       showToolbar = true,
       editorMinHeightClass = 'min-h-[100px]',
       schema = messageSchema,
+      acoes = TODAS_AS_ACOES,
     },
     ref,
   ) => {
@@ -144,13 +150,14 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
         plugins: [
           history(),
           keymap({
-            'Mod-z': undo,
-            'Mod-y': redo,
-            'Mod-Shift-z': redo,
-            'Mod-b': toggleMark(schema.marks.strong),
-            'Mod-i': toggleMark(schema.marks.em),
-            'Mod-`': toggleMark(schema.marks.code),
-            'Shift-Ctrl-8': wrapInList(schema.nodes.bullet_list),
+            ...(acoes.includes('undo') ? { 'Mod-z': undo, 'Mod-Shift-z': redo } : {}),
+            ...(acoes.includes('redo') ? { 'Mod-y': redo } : {}),
+            ...(acoes.includes('bold') ? { 'Mod-b': toggleMark(schema.marks.strong) } : {}),
+            ...(acoes.includes('italic') ? { 'Mod-i': toggleMark(schema.marks.em) } : {}),
+            ...(acoes.includes('code') ? { 'Mod-`': toggleMark(schema.marks.code) } : {}),
+            ...(acoes.includes('list')
+              ? { 'Shift-Ctrl-8': wrapInList(schema.nodes.bullet_list) }
+              : {}),
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             Enter: (_state, _dispatch) => {
               if (onKeyDownRef.current) {
@@ -210,6 +217,17 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
         });
       }
     }, [disabled]);
+
+    // A frase do campo muda com o estado da conversa (pendente, restrita, nota);
+    // o ProseMirror só leu o `placeholder` na montagem, então atualiza aqui.
+    useEffect(() => {
+      viewRef.current?.setProps({
+        attributes: {
+          class: `prosemirror-editor p-3 ${editorMinHeightClass} max-h-[200px] overflow-y-auto focus:outline-none resize-none text-sm leading-relaxed text-foreground`,
+          'data-placeholder': placeholder,
+        },
+      });
+    }, [placeholder, editorMinHeightClass]);
 
     const handleToolbarAction = (action: string) => {
       if (!viewRef.current || !editorState) return;
@@ -278,6 +296,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>
           <EditorToolbar
             editorState={editorState}
             onAction={handleToolbarAction}
+            acoes={acoes}
             disabled={disabled}
           />
         )}
