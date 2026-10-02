@@ -4429,7 +4429,13 @@ Fase 4, jornada 1. Spec: `LM FLOW/specs/2026-09-30-fase-4-jornada-dashboard-desi
   os números dele são três (leads recebidos, conversas, visitas agendadas).
 - **Pendências = abertas agora**, não seguem o período.
 - **Roleta agora** reaproveita `GET /roleta_configs/queue`, a cada 30 s com a aba
-  visível; some para quem não tem `roleta_configs.queue`.
+  visível; some para quem não tem `roleta_configs.queue`. **Compacto (pedido do
+  dono, 02/10):** uma linha por corretor (nome, detalhe discreto à direita, selos);
+  na Fila a lista começa pelo próximo da vez e numera quem está na disputa (1º, 2º…;
+  pausado e sem acesso ficam sem número). Fechada mostra 4 e esmaece o 5º
+  (`.lmfn-lista-esmaecida`, `mask-image`), com *Ver os N corretores*; com só um a
+  mais, mostra todos. Ofertas esperando aceite: 3 com a lista fechada. Trocar de
+  roleta fecha a lista.
 - **Período padrão: últimos 7 dias.** Um seletor só. O resto dos filtros fica em
   *Filtros*, recolhido. Os filtros de origem e de funil da spec não estão no
   painel: origem não tem filtro na API, e o funil se escolhe no próprio bloco.
