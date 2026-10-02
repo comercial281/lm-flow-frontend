@@ -90,18 +90,28 @@ export const OUTRO_NUMERO = 'outro número';
  * pessoa não pode abrir nem chega aqui.
  */
 export function outraConversa(
-  conversas: Array<{ id: number | string; inbox?: { name?: string } | null; last_activity_at?: string | number }>,
+  conversas: Array<{
+    id: number | string;
+    inbox?: { id?: number | string; name?: string } | null;
+    last_activity_at?: string | number;
+  }>,
   atualId: number | string,
+  // Lista de números da tela (useNumerosDaConversa): o nome que o gestor deu ao
+  // número é o `display_name`; o `inbox.name` da conversa é o identificador interno.
+  numeros?: Array<{ id: number | string; display_name?: string | null }> | null,
 ): { id: string; numero: string; mais: number } | null {
   const outras = conversas.filter(c => String(c.id) !== String(atualId));
   if (outras.length === 0) return null;
 
   const quando = (c: (typeof outras)[number]) => toDate(c.last_activity_at)?.getTime() ?? 0;
   const maisRecente = outras.reduce((a, b) => (quando(b) > quando(a) ? b : a));
+  const inboxId = maisRecente.inbox?.id;
+  const apelido =
+    inboxId != null ? numeros?.find(n => String(n.id) === String(inboxId))?.display_name : undefined;
 
   return {
     id: String(maisRecente.id),
-    numero: textoDe(maisRecente.inbox?.name) || OUTRO_NUMERO,
+    numero: textoDe(apelido) || textoDe(maisRecente.inbox?.name) || OUTRO_NUMERO,
     mais: outras.length - 1,
   };
 }
@@ -186,4 +196,14 @@ export function mascararTelefone(telefoneCru: string | null | undefined): string
  */
 export function painelAoTrocarDeConversa(telaLarga: boolean, abertoAgora: boolean): boolean {
   return telaLarga ? true : abertoAgora;
+}
+
+/**
+ * A conversa está em oferta da roleta para quem vê? Sem dono e com oferta minha
+ * em aberto. Enquanto a lista de ofertas não chegou (logo depois de abrir o app),
+ * lead sem dono conta como em oferta: melhor mascarar um instante a mais do que
+ * mostrar o telefone inteiro antes da resposta.
+ */
+export function emOfertaParaQuemVe(e: { semDono: boolean; ofertasCarregadas: boolean; temOferta: boolean }): boolean {
+  return e.semDono && (!e.ofertasCarregadas || e.temOferta);
 }

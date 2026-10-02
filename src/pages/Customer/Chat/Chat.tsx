@@ -11,7 +11,8 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { useConversationPresence } from '@/hooks/useConversationPresence';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { usePendingOffers } from '@/contexts/PendingOffersContext';
-import { painelAoTrocarDeConversa } from '@/features/conversas/painelDoLead';
+import { emOfertaParaQuemVe } from '@/features/conversas/painelDoLead';
+import { usePainelDoLeadAberto } from '@/features/conversas/usePainelDoLeadAberto';
 import ClaimLeadBanner from '@/components/chat/assignment/ClaimLeadBanner';
 import OfferActions from '@/components/roleta/OfferActions';
 
@@ -97,7 +98,6 @@ const Chat = () => {
   // Estados locais simplificados
   const [searchInput, setSearchInput] = useState('');
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
-  const [isContactSidebarOpen, setIsContactSidebarOpen] = useState(false);
 
   // Modal states
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -149,35 +149,32 @@ const Chat = () => {
     [filterHandlers],
   );
 
-  // 🔒 FECHAR SIDEBAR: Quando navega para /conversations (sem ID específico)
-  useEffect(() => {
-    if (!conversationId && isContactSidebarOpen) {
-      setIsContactSidebarOpen(false);
-    }
-  }, [conversationId, isContactSidebarOpen]);
-
-  // Painel do lead: em tela larga (≥1280px) abre sozinho a cada conversa aberta.
-  // O X fecha até a próxima troca. Abaixo disso, a troca não mexe no painel (abre
-  // no clique no nome do lead, como antes). A largura é lida na troca, não
-  // acompanhada: redimensionar não reabre o que o X fechou.
+  // Painel do lead: em tela larga (≥1280px) abre sozinho a cada conversa aberta;
+  // o X fecha até a próxima troca. Abaixo disso, a troca não mexe no painel.
+  // Endereço sem conversa fecha. Ver usePainelDoLeadAberto (a ordem importa).
   const telaLarga = useMediaQuery('(min-width: 1280px)');
-  const telaLargaRef = useRef(telaLarga);
-  telaLargaRef.current = telaLarga;
-  useEffect(() => {
-    if (!selectedConversationIdStr) return;
-    setIsContactSidebarOpen(aberto => painelAoTrocarDeConversa(telaLargaRef.current, aberto));
-  }, [selectedConversationIdStr]);
+  const [isContactSidebarOpen, setIsContactSidebarOpen] = usePainelDoLeadAberto(
+    conversationId,
+    selectedConversationIdStr,
+    telaLarga,
+  );
 
   // A roleta ofertou este lead a quem está vendo e ainda não houve aceite (a mesma
-  // conta da faixa de oferta, OfferActions): o painel mascara o telefone.
-  const { offerFor } = usePendingOffers();
+  // conta da faixa de oferta, OfferActions): o painel e o topo mascaram o telefone.
+  // Enquanto as ofertas não chegaram, lead sem dono conta como em oferta.
+  const { offerFor, loaded: ofertasCarregadas } = usePendingOffers();
   const emOferta = Boolean(
     selectedConversation &&
-      !selectedConversation.assignee_id &&
-      offerFor({
-        contactId: selectedConversation.contact?.id ?? selectedConversation.meta?.sender?.id,
-        conversationId: String(selectedConversation.id),
-        conversationDisplayId: selectedConversation.display_id,
+      emOfertaParaQuemVe({
+        semDono: !selectedConversation.assignee_id,
+        ofertasCarregadas,
+        temOferta: Boolean(
+          offerFor({
+            contactId: selectedConversation.contact?.id ?? selectedConversation.meta?.sender?.id,
+            conversationId: String(selectedConversation.id),
+            conversationDisplayId: selectedConversation.display_id,
+          }),
+        ),
       }),
   );
 

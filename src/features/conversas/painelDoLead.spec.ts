@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  OUTRO_NUMERO, mascararTelefone, nomeNaTela, origemDoLead, outraConversa, painelAoTrocarDeConversa, respostasDoFormulario,
-  textoOutraConversa,
+  OUTRO_NUMERO, emOfertaParaQuemVe, mascararTelefone, nomeNaTela, origemDoLead, outraConversa,
+  painelAoTrocarDeConversa, respostasDoFormulario, textoOutraConversa,
 } from './painelDoLead';
 
 // Regras do topo do painel do lead em Conversas (Fase 4, 02/10).
@@ -101,6 +101,18 @@ describe('outraConversa — a linha "Também conversou pelo número"', () => {
     });
   });
 
+  it('prefere o nome que o gestor deu ao número (display_name), depois o nome da conversa', () => {
+    const conversas = [
+      { id: 'atual' },
+      { id: 'c-2', inbox: { id: 'i9', name: 'whatsapp-marina-imoveis' }, last_activity_at: 10 },
+    ];
+    expect(outraConversa(conversas, 'atual', [{ id: 'i9', display_name: 'Marina' }])?.numero).toBe('Marina');
+    expect(outraConversa(conversas, 'atual', [{ id: 'outro', display_name: 'X' }])?.numero).toBe(
+      'whatsapp-marina-imoveis',
+    );
+    expect(outraConversa(conversas, 'atual', null)?.numero).toBe('whatsapp-marina-imoveis');
+  });
+
   it('sem nome do número: "outro número"', () => {
     expect(outraConversa([{ id: 1 }, { id: 2, inbox: null }], 1)?.numero).toBe(OUTRO_NUMERO);
     expect(OUTRO_NUMERO).toBe('outro número');
@@ -133,6 +145,25 @@ describe('respostasDoFormulario — a seção recolhida', () => {
 
   it('sem atributos: lista vazia', () => {
     expect(respostasDoFormulario(undefined, null)).toEqual([]);
+  });
+});
+
+describe('emOfertaParaQuemVe', () => {
+  it('sem dono e com oferta minha: em oferta', () => {
+    expect(emOfertaParaQuemVe({ semDono: true, ofertasCarregadas: true, temOferta: true })).toBe(true);
+  });
+
+  it('sem dono, ofertas carregadas e nenhuma minha: não', () => {
+    expect(emOfertaParaQuemVe({ semDono: true, ofertasCarregadas: true, temOferta: false })).toBe(false);
+  });
+
+  it('ofertas ainda não chegaram: lead sem dono conta como em oferta', () => {
+    expect(emOfertaParaQuemVe({ semDono: true, ofertasCarregadas: false, temOferta: false })).toBe(true);
+  });
+
+  it('com dono: nunca', () => {
+    expect(emOfertaParaQuemVe({ semDono: false, ofertasCarregadas: false, temOferta: false })).toBe(false);
+    expect(emOfertaParaQuemVe({ semDono: false, ofertasCarregadas: true, temOferta: true })).toBe(false);
   });
 });
 
