@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bot, Check, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@evoapi/design-system/button';
+import { Seletor } from '@/components/base/Seletor';
 import chatService from '@/services/chat/chatService';
 import usersService from '@/services/users/usersService';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
@@ -54,6 +55,10 @@ const ADVANCED_ONLY_KEYS = new Set([
   'pipeline_stage_id',
   'created_at',
 ]);
+
+// A lista aberta de um Seletor no computador (Select do design system, num portal
+// fora desta caixinha).
+const LISTA_ABERTA = '[data-slot="select-content"], [data-radix-popper-content-wrapper]';
 
 function mkFilter(attributeKey: string, filterOperator: string, values: string): BaseFilter {
   return { attributeKey, filterOperator, values, queryOperator: 'and', attributeModel: 'standard' };
@@ -143,10 +148,18 @@ export default function QuickFilters({
 
   useEffect(() => {
     if (!open) return;
+    // A lista do Seletor abre num portal, fora da caixinha: clique dentro dela
+    // não é clique fora. Sem isto a caixinha fechava no mousedown e a escolha
+    // nunca chegava.
     const onClickOutside = (e: MouseEvent) => {
-      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+      const alvo = e.target as Element | null;
+      if (boxRef.current?.contains(alvo)) return;
+      if (alvo?.closest?.(LISTA_ABERTA)) return;
+      setOpen(false);
     };
-    const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    // Esc com a lista aberta fecha só a lista: o Radix trata o Esc antes (na
+    // captura) e marca o evento com preventDefault.
+    const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && !e.defaultPrevented && setOpen(false);
     document.addEventListener('mousedown', onClickOutside);
     document.addEventListener('keydown', onEsc);
     return () => {
@@ -297,7 +310,7 @@ export default function QuickFilters({
           {/* TAGS — dropdown nativo, não lista solta. Uma lista de botões
               esticava o popup toda vez que o tenant tinha muitas etiquetas
               (pedido do Giovani, 19/08: "não faz sentido esticar esse
-              menu"). Um <select> mostra uma linha só, fechado. */}
+              menu"). Um <Seletor> mostra uma linha só, fechado. */}
           <section>
             <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               Etiquetas
@@ -309,7 +322,7 @@ export default function QuickFilters({
                 Nenhuma etiqueta criada ainda.
               </p>
             ) : (
-              <select
+              <Seletor
                 value={activeTagTitle ?? ''}
                 onChange={e => applyTag(e.target.value || undefined)}
                 className="w-full cursor-pointer rounded border bg-background px-1.5 py-1.5 text-sm text-foreground outline-none focus:border-primary"
@@ -320,7 +333,7 @@ export default function QuickFilters({
                     {l.title}
                   </option>
                 ))}
-              </select>
+              </Seletor>
             )}
           </section>
 
@@ -397,7 +410,7 @@ export default function QuickFilters({
                 Nenhum usuário encontrado.
               </p>
             ) : (
-              <select
+              <Seletor
                 value={activeAssigneeId ?? ''}
                 onChange={e => applyAssignee(e.target.value || undefined)}
                 className="w-full cursor-pointer rounded border bg-background px-1.5 py-1.5 text-sm text-foreground outline-none focus:border-primary"
@@ -408,7 +421,7 @@ export default function QuickFilters({
                     {a.name}
                   </option>
                 ))}
-              </select>
+              </Seletor>
             )}
           </section>
 
@@ -425,7 +438,7 @@ export default function QuickFilters({
               {loadingRoletas ? (
                 <p className="px-0.5 py-1.5 text-xs text-muted-foreground">Carregando…</p>
               ) : (
-                <select
+                <Seletor
                   value={activeRoletaId ?? ''}
                   onChange={e => applyRoleta(e.target.value || undefined)}
                   className="w-full cursor-pointer rounded border bg-background px-1.5 py-1.5 text-sm text-foreground outline-none focus:border-primary"
@@ -436,7 +449,7 @@ export default function QuickFilters({
                       {roletaLabel(r)}
                     </option>
                   ))}
-                </select>
+                </Seletor>
               )}
             </section>
           )}
