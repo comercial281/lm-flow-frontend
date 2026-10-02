@@ -21,6 +21,9 @@ const PALETTE = ['#7c3aed', '#9333ea', '#2563eb', '#0891b2', '#16a34a', '#d97706
 const colorForName = (name: string) =>
   PALETTE[[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % PALETTE.length];
 
+// Quantas etiquetas do catálogo aparecem de uma vez (a busca filtra o resto).
+const MAX_SUGESTOES = 12;
+
 const normalizeNames = (labels: ContactTagsManagerProps['initialLabels']): string[] => {
   if (!Array.isArray(labels)) return [];
   return labels
@@ -57,7 +60,10 @@ export default function ContactTagsManager({
   );
   const [input, setInput] = useState('');
   const [saving, setSaving] = useState(false);
-  const datalistId = useRef(`tags-${Math.abs([...contactId].reduce((a, c) => a + c.charCodeAt(0), 0))}`).current;
+  // O catálogo da conta só abre no "+ Etiqueta": aberto o tempo todo, parecia que o
+  // lead tinha todas as etiquetas.
+  const [catalogoAberto, setCatalogoAberto] = useState(false);
+  const campo = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchLabels().catch(() => {
@@ -68,11 +74,16 @@ export default function ContactTagsManager({
   const colorOf = (name: string) =>
     catalog.find(l => l.title?.toLowerCase() === name.toLowerCase())?.color || colorForName(name);
 
-  // Sugestões do catálogo ainda não aplicadas.
-  const suggestions = useMemo(
-    () => catalog.filter(l => l.title && !tags.some(t => t.toLowerCase() === l.title.toLowerCase())),
-    [catalog, tags],
-  );
+  // Sugestões do catálogo ainda não aplicadas, filtradas pelo que foi digitado.
+  const suggestions = useMemo(() => {
+    const busca = input.trim().toLowerCase();
+    return catalog.filter(
+      l =>
+        l.title &&
+        !tags.some(t => t.toLowerCase() === l.title.toLowerCase()) &&
+        (!busca || l.title.toLowerCase().includes(busca)),
+    );
+  }, [catalog, tags, input]);
 
   const persist = async (next: string[], changed: string, action: 'add' | 'remove') => {
     const prev = tags;
@@ -116,6 +127,19 @@ export default function ContactTagsManager({
     await persist([...tags, name], name, 'add');
   };
 
+  // Enter na busca: escolhe, não inventa. O nome exato do catálogo (sem diferença
+  // de maiúscula) vence; senão, a 1ª sugestão que a pessoa está vendo; só cria
+  // quando não há sugestão nenhuma. Criar de propósito é o botão "Criar".
+  // ("vis" + Enter criava a etiqueta "vis" na conta inteira.)
+  const aoApertarEnter = () => {
+    const busca = input.trim().toLowerCase();
+    if (!busca) return;
+    const exata = catalog.find(l => l.title?.toLowerCase() === busca);
+    if (exata) return void addTag(exata.title);
+    if (suggestions.length > 0) return void addTag(suggestions[0].title);
+    void addTag(input);
+  };
+
   const removeTag = async (name: string) => {
     await persist(
       tags.filter(t => t !== name),
@@ -124,13 +148,14 @@ export default function ContactTagsManager({
     );
   };
 
+  useEffect(() => {
+    if (catalogoAberto) campo.current?.focus();
+  }, [catalogoAberto]);
+
   return (
-    <div className="space-y-3">
-      {/* Tags aplicadas */}
-      <div className="flex flex-wrap gap-1.5">
-        {tags.length === 0 && (
-          <span className="text-xs text-muted-foreground">Nenhuma etiqueta</span>
-        )}
+    <div className="space-y-2">
+      {/* Só as etiquetas do lead, com o ✕ pra tirar, e o "+ Etiqueta" no fim. */}
+      <div className="flex flex-wrap items-center gap-1.5">
         {tags.map(name => {
           const color = colorOf(name);
           return (
@@ -152,55 +177,68 @@ export default function ContactTagsManager({
             </span>
           );
         })}
-      </div>
-
-      {/* Adicionar / criar */}
-      <div className="flex items-center gap-2">
-        <input
-          list={datalistId}
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              void addTag(input);
-            }
-          }}
-          placeholder="Adicionar ou criar etiqueta..."
-          disabled={saving}
-          className="flex-1 h-8 rounded-md border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
-        />
-        <datalist id={datalistId}>
-          {suggestions.map(l => (
-            <option key={l.id} value={l.title} />
-          ))}
-        </datalist>
         <button
           type="button"
-          onClick={() => void addTag(input)}
-          disabled={saving || !input.trim()}
-          className="inline-flex h-8 items-center gap-1 rounded-md bg-primary px-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          onClick={() => setCatalogoAberto(a => !a)}
+          aria-expanded={catalogoAberto}
+          className="inline-flex items-center rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
         >
-          <Plus className="h-3 w-3" /> Adicionar
+          + Etiqueta
         </button>
       </div>
 
-      {/* Sugestões rápidas do catálogo */}
-      {suggestions.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {suggestions.slice(0, 8).map(l => (
-            <button
-              key={l.id}
-              type="button"
-              onClick={() => void addTag(l.title)}
-              disabled={saving}
-              className="inline-flex items-center gap-1 rounded-full border border-dashed px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
-              style={{ borderColor: `${l.color || '#7c3aed'}66` }}
-            >
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: l.color || '#7c3aed' }} />
-              {l.title}
-            </button>
-          ))}
+      {catalogoAberto && (
+        <div className="space-y-2">
+          {/* Buscar no catálogo; Enter aplica a exata ou a 1ª sugestão (e só cria sem
+              sugestão). Salvando, fica só leitura e não desabilitado: desabilitar
+              tira o foco, e a pessoa quer pôr outra ou fechar com Esc. */}
+          <input
+            ref={campo}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!saving) aoApertarEnter();
+              } else if (e.key === 'Escape') {
+                setInput('');
+                setCatalogoAberto(false);
+              }
+            }}
+            placeholder="Buscar ou criar etiqueta..."
+            aria-label="Buscar ou criar etiqueta"
+            readOnly={saving}
+            aria-busy={saving}
+            className="w-full h-8 rounded-md border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-primary read-only:opacity-60"
+          />
+
+          <div className="flex flex-wrap gap-1.5">
+            {suggestions.slice(0, MAX_SUGESTOES).map(l => (
+              <button
+                key={l.id}
+                type="button"
+                onClick={() => void addTag(l.title)}
+                disabled={saving}
+                className="inline-flex items-center gap-1 rounded-full border border-dashed px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
+                style={{ borderColor: `${l.color || '#7c3aed'}66` }}
+              >
+                <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: l.color || '#7c3aed' }} />
+                {l.title}
+              </button>
+            ))}
+            {/* Nada no catálogo com esse nome: Enter (ou este botão) cria a etiqueta. */}
+            {input.trim() && !catalog.some(l => l.title?.toLowerCase() === input.trim().toLowerCase()) && (
+              <button
+                type="button"
+                onClick={() => void addTag(input)}
+                disabled={saving}
+                className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                <Plus className="h-3 w-3" />
+                Criar "{input.trim()}"
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

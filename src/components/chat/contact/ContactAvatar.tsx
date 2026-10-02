@@ -41,11 +41,13 @@ const ContactAvatar: React.FC<ContactAvatarProps> = ({
 }) => {
   const { t } = useLanguage('chat');
   const [imageError, setImageError] = useState(false);
+  const fotoDoContato = getContactAvatarUrl(contact);
 
-  // Reset error state when contact changes
+  // Contato ou foto novos: tenta a foto de novo. Olha a URL que a tela usa (que
+  // pode vir de `thumbnail`), não só `avatar_url`/`avatar`.
   useEffect(() => {
     setImageError(false);
-  }, [contact?.id, contact?.avatar_url, contact?.avatar]);
+  }, [contact?.id, fotoDoContato]);
 
   // Tamanhos do avatar
   const sizeClasses = {
@@ -69,7 +71,7 @@ const ContactAvatar: React.FC<ContactAvatarProps> = ({
   };
 
   // Obter dados do contato usando helpers
-  const avatarUrl = imageError ? undefined : getContactAvatarUrl(contact);
+  const avatarUrl = imageError ? undefined : fotoDoContato;
   const initials = getContactInitials(contact?.name);
   const colorClass = showColoredFallback
     ? getContactAvatarColor(contact?.name)
@@ -127,7 +129,14 @@ const ContactAvatar: React.FC<ContactAvatarProps> = ({
 
   return (
     <div className="relative">
-      <Avatar className={`lm-redact-img ${sizeClasses[size]} flex-shrink-0 ${className}`}>
+      {/* A key remonta o Avatar quando o contato ou a foto mudam. O Avatar do Radix
+          guarda "a foto carregou" e só mostra as iniciais quando ela NÃO carregou; o
+          painel do lead e o topo da conversa não remontam ao trocar de conversa, e
+          ir de um lead com foto para um sem foto deixava o círculo em branco. */}
+      <Avatar
+        key={`${contact?.id ?? ''}|${avatarUrl ?? ''}`}
+        className={`lm-redact-img ${sizeClasses[size]} flex-shrink-0 ${className}`}
+      >
         {avatarUrl && (
           <AvatarImage
             src={avatarUrl}

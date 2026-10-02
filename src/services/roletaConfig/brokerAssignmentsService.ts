@@ -49,6 +49,21 @@ export interface BrokerAssignmentDetail {
   ia_briefing?: OfferAiBriefing | null;
 }
 
+/**
+ * A posição do PRÓPRIO corretor numa roleta em modo Fila (cartão *Sua vez na
+ * fila* da Dashboard). Só a dele: a fila com o nome dos outros é visão de gestão.
+ * `posicao` 1 = é a vez dele. Nula fora da fila (`pausado` / `fora`).
+ */
+export interface QueuePosition {
+  roleta_id: string;
+  roleta_nome: string;
+  situacao: 'na_fila' | 'pausado' | 'fora';
+  posicao: number | null;
+  total: number;
+  /** Com oferta aberta a vez já passou por ele: a tela fala da oferta, não da posição. */
+  com_oferta: boolean;
+}
+
 const BASE = '/broker_assignments';
 
 export const brokerAssignmentsService = {
@@ -57,6 +72,11 @@ export const brokerAssignmentsService = {
   async listMine(): Promise<BrokerAssignmentDetail[]> {
     const res = await api.get(BASE);
     return (res.data as { data: BrokerAssignmentDetail[] }).data ?? [];
+  },
+
+  async queuePosition(): Promise<QueuePosition[]> {
+    const res = await api.get(`${BASE}/queue_position`);
+    return (res.data as { data: QueuePosition[] }).data ?? [];
   },
   async get(id: string): Promise<BrokerAssignmentDetail> {
     const res = await api.get(`${BASE}/${id}`);

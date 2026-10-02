@@ -19,6 +19,8 @@ export interface IconActionButtonProps {
   side?: 'top' | 'bottom' | 'left' | 'right';
   dataTour?: string;
   type?: 'button' | 'submit';
+  /** Classe extra do balão (ex.: `max-w-64` pra texto longo quebrar linha). */
+  tooltipClassName?: string;
 }
 
 /**
@@ -38,6 +40,7 @@ const IconActionButton = forwardRef<HTMLButtonElement, IconActionButtonProps>(
       side = 'bottom',
       dataTour,
       type = 'button',
+      tooltipClassName,
     },
     ref,
   ) => {
@@ -64,7 +67,7 @@ const IconActionButton = forwardRef<HTMLButtonElement, IconActionButtonProps>(
             {/* Radix não dispara tooltip em elemento disabled — o span vira o trigger */}
             {disabled ? <span tabIndex={0} className="inline-flex">{button}</span> : button}
           </TooltipTrigger>
-          <TooltipContent side={side}>
+          <TooltipContent side={side} className={tooltipClassName}>
             <p>{label}</p>
           </TooltipContent>
         </Tooltip>
