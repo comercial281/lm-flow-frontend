@@ -9,11 +9,14 @@
 // sistema operacional no computador — a do Windows inclusive. Decisão do dono
 // em 02/10/2026; spec em LM FLOW/specs/2026-10-02-seletor-unico-design.md.
 //
+// Dentro de um <form> nativo, no computador, `name` envia o valor interno da
+// opção vazia e `required` não barra a opção vazia: tela que precise de
+// FormData ou validação nativa não pode contar com isto (nenhuma conta hoje).
+//
 // `bare`: caixa sem o visual do design system e sem a seta, só a className de
 // quem chama (status colorido, filtros com ícone próprio). A lista que abre é a
 // do produto do mesmo jeito.
-import { useState, type ComponentProps, type SelectHTMLAttributes } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { useState, type ComponentProps, type CSSProperties, type SelectHTMLAttributes } from 'react';
 import {
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from '@/components/ui/ds';
@@ -27,9 +30,18 @@ export type SeletorProps = SelectHTMLAttributes<HTMLSelectElement> & { bare?: bo
 
 // A caixa do nativo, com a cara dos Inputs (era o NativeSelect de 04/08).
 const CAIXA_NATIVA =
-  'h-9 w-full appearance-none truncate rounded-md border border-input bg-background px-3 text-sm ' +
+  'h-9 appearance-none truncate rounded-md border border-input bg-background px-3 text-sm ' +
   'shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring ' +
   'focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50';
+
+// Seta do select nativo: chevron-down do lucide, desenhado como fundo.
+const SETA_NATIVA: CSSProperties = {
+  backgroundImage:
+    'url("data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2024%2024%27%20fill=%27none%27%20stroke=%27%2371717a%27%20stroke-width=%272%27%20stroke-linecap=%27round%27%20stroke-linejoin=%27round%27%3E%3Cpath%20d=%27m6%209%206%206%206-6%27/%3E%3C/svg%3E")',
+  backgroundRepeat: 'no-repeat',
+  backgroundSize: '1rem 1rem',
+  backgroundPosition: 'right 0.625rem center',
+};
 
 // Tira o visual do design system no modo `bare`. A seta é o último svg.
 const SEM_CAIXA =
@@ -45,17 +57,20 @@ export function Seletor({
   const [interno, setInterno] = useState(defaultValue);
 
   if (toque) {
-    const props = { ...resto, value, defaultValue, onChange, disabled, name, required, id, title, style };
-    if (bare) return <select {...props} className={className}>{children}</select>;
+    const props = { ...resto, value, defaultValue, onChange, disabled, name, required, id, title };
+    if (bare) return <select {...props} style={style} className={className}>{children}</select>;
+    // Um <select> só, sem invólucro: as classes de layout da tela (flex-1,
+    // w-48, col-span-*, m*-...) valem nele como valem no botão do computador.
+    // A seta vai como imagem de fundo, em style: o twMerge trata bg-[url()] e
+    // bg-background como o mesmo grupo e derrubaria um dos dois.
     return (
-      <div className={cn('relative inline-flex max-w-full', /\bw-full\b/.test(className ?? '') && 'w-full')}>
-        <select {...props} className={cn(CAIXA_NATIVA, className, 'pr-8')}>{children}</select>
-        {/* pointer-events-none: o clique atravessa e abre o select. */}
-        <ChevronDown
-          aria-hidden
-          className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50"
-        />
-      </div>
+      <select
+        {...props}
+        style={{ ...SETA_NATIVA, ...style }}
+        className={cn(CAIXA_NATIVA, className, 'pr-8')}
+      >
+        {children}
+      </select>
     );
   }
 

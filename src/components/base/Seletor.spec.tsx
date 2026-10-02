@@ -73,11 +73,15 @@ describe('Seletor no celular (e sem matchMedia)', () => {
     expect(select.parentElement).toBe(container);
   });
 
-  it('pede w-full no invólucro só quando a tela pediu', () => {
+  it('nativo sem bare é um select só, com a className da tela e a seta de fundo', () => {
     const { container } = render(
-      <Seletor value="a" onChange={() => {}} className="w-full"><option value="a">A</option></Seletor>,
+      <Seletor value="a" onChange={() => {}} className="w-full flex-1"><option value="a">A</option></Seletor>,
     );
-    expect(container.firstElementChild!.className).toContain('w-full');
+    const select = container.firstElementChild as HTMLElement;
+    expect(select.tagName).toBe('SELECT');
+    expect(container.children).toHaveLength(1);
+    expect(select.className.split(/\s+/)).toEqual(expect.arrayContaining(['w-full', 'flex-1', 'pr-8']));
+    expect(select.style.backgroundImage).toContain('data:image/svg+xml');
   });
 });
 
@@ -186,6 +190,8 @@ describe('Seletor no computador', () => {
   it('desligado não abre', async () => {
     render(<Seletor aria-label="X" value="a" onChange={() => {}} disabled><option value="a">A</option></Seletor>);
     expect(screen.getByLabelText('X')).toBeDisabled();
+    await userEvent.click(screen.getByLabelText('X'));
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
   it('troca de modo com a tela aberta (iPad que conecta mouse)', () => {
