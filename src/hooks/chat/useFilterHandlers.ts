@@ -9,7 +9,7 @@ export const useFilterHandlers = () => {
   const { conversations, filters } = useChatContext();
 
   const handleApplyFilters = useCallback(
-    async (newFilters: BaseFilter[]) => {
+    async (newFilters: BaseFilter[], filtrosParaSalvar: BaseFilter[] = newFilters) => {
       // Converter BaseFilter para ConversationFilter e aplicar
       const apiFilters = convertBaseFiltersToConversationFilters(newFilters);
 
@@ -24,7 +24,8 @@ export const useFilterHandlers = () => {
             conversations.setConversations(conversationsResult, pagination);
 
             // 💾 PERSISTIR: Salvar filtros aplicados no localStorage
-            saveConversationFilters(newFilters);
+            // (sem o filtro da pílula: ela não é salva, a lista abre em "Todas")
+            saveConversationFilters(filtrosParaSalvar);
             resolve(conversationsResult);
           },
           error => {

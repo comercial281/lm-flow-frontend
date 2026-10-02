@@ -263,6 +263,8 @@ export interface ConversationFilter {
 
 export interface FilterRequest {
   page?: number;
+  /** "Sem resposta" — também vale no POST, pra pílula não sumir. */
+  waiting?: boolean;
   filters: Array<{
     attribute_key: string;
     filter_operator: string;
@@ -363,6 +365,8 @@ export interface ConversationListParams {
   conversation_type?: 'mention' | 'unattended' | 'participating';
   /** Só conversas que a IA (Vendedora ou bot externo) respondeu. */
   handled_by_ai?: boolean;
+  /** "Sem resposta": o lead escreveu, ninguém respondeu e a IA não atende. */
+  waiting?: 'true';
 }
 
 export interface MessageListParams {

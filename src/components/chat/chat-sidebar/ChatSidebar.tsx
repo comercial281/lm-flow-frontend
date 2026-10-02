@@ -54,6 +54,15 @@ import ConversationsFilter from '../conversation/ConversationsFilter';
 import QuickFilters from '../filters/QuickFilters';
 import GlobalSearchPanel from '../search/GlobalSearchPanel';
 import { BaseFilter } from '@/types/core';
+import { getDefaultFilter } from '@/utils/storage/filtersStorage';
+import {
+  PILULAS,
+  filtrosComPilula,
+  semFiltrosDaPilula,
+  mostraArquivadas,
+  deveAvisarNumero,
+  type Pilula,
+} from '@/features/conversas/pilulas';
 import { useNumerosDaConversa } from '@/features/numbers/useNumerosDaConversa';
 import type { Inbox } from '@/types/channels/inbox';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -71,7 +80,10 @@ interface ChatSidebarProps {
   searchInput: string;
   onSearchChange: (value: string) => void;
   onConversationSelect: (conversation: Conversation) => void;
-  onFilterApply: (filters: BaseFilter[]) => Promise<Conversation[] | void>;
+  onFilterApply: (
+    filters: BaseFilter[],
+    filtrosParaSalvar?: BaseFilter[],
+  ) => Promise<Conversation[] | void>;
   onFilterClear: () => void;
   onMarkAsRead: (conversation: Conversation) => void;
   onMarkAsUnread: (conversation: Conversation) => void;
@@ -170,35 +182,30 @@ const ChatSidebar = ({
   );
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [isLoadingMoreConversations, setIsLoadingMoreConversations] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
+  // Pílula da lista (não é salva: abre em "Todas"). `conversationFilters` guarda
+  // só o que o usuário escolheu no popover; a pílula é somada na hora de aplicar.
+  const [pilula, setPilula] = useState<Pilula>('todas');
+  const showArchived = mostraArquivadas(pilula);
   const [selectedConversations, setSelectedConversations] = useState<Set<string>>(new Set());
   const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
   const loadingMoreRef = useRef(false);
 
   useEffect(() => {
-    const currentLocal = JSON.stringify(conversationFilters);
-    const currentContext = JSON.stringify(
-      filters.state.activeFilters.map((f: ConversationFilter) => ({
+    const doPopover = (list: ConversationFilter[]) =>
+      list.map((f: ConversationFilter) => ({
         attributeKey: f.attribute_key,
         filterOperator: f.filter_operator,
         values: Array.isArray(f.values) ? f.values.join(',') : String(f.values[0] || ''),
         queryOperator: f.query_operator,
         attributeModel: 'standard' as const,
-      })),
-    );
+      }));
+    // O filtro ativo no contexto inclui o da pílula; o popover só mostra o seu.
+    const next = semFiltrosDaPilula(doPopover(filters.state.activeFilters), pilula);
 
-    if (currentLocal !== currentContext) {
-      setConversationFilters(
-        filters.state.activeFilters.map((f: ConversationFilter) => ({
-          attributeKey: f.attribute_key,
-          filterOperator: f.filter_operator,
-          values: Array.isArray(f.values) ? f.values.join(',') : String(f.values[0] || ''),
-          queryOperator: f.query_operator,
-          attributeModel: 'standard' as const,
-        })),
-      );
+    if (JSON.stringify(conversationFilters) !== JSON.stringify(next)) {
+      setConversationFilters(next);
     }
-  }, [filters.state.activeFilters, conversationFilters]);
+  }, [filters.state.activeFilters, conversationFilters, pilula]);
 
   const navigate = useNavigate();
   const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(false);
@@ -259,14 +266,33 @@ const ChatSidebar = ({
     [navigate, onSearchChange],
   );
 
+  // Aplica os filtros do popover SOMADOS aos da pílula; só os do popover são salvos.
+  const aplicarComPilula = (doPopover: BaseFilter[], pilulaAtual: Pilula) =>
+    onFilterApply(filtrosComPilula(doPopover, pilulaAtual), doPopover);
+
   const handleApplyFilters = async (newFilters: BaseFilter[]) => {
     setConversationFilters(newFilters);
-    return onFilterApply(newFilters);
+    return aplicarComPilula(newFilters, pilula);
+  };
+
+  const handleChangePilula = (nova: Pilula) => {
+    if (nova === pilula) return;
+    const antes = filtrosComPilula(conversationFilters, pilula);
+    const depois = filtrosComPilula(conversationFilters, nova);
+    setPilula(nova);
+    // Arquivadas é recorte da tela: a lista do servidor é a mesma de "Todas".
+    if (JSON.stringify(antes) === JSON.stringify(depois)) return;
+    void aplicarComPilula(conversationFilters, nova).catch(() => undefined);
   };
 
   const handleClearFilters = async () => {
     setConversationFilters([]);
-    onFilterClear();
+    if (pilula === 'todas' || pilula === 'arquivadas') {
+      onFilterClear();
+      return;
+    }
+    // Limpar o popover não tira a pílula: volta ao padrão (abertas) + pílula.
+    void aplicarComPilula(getDefaultFilter(), pilula).catch(() => undefined);
   };
 
   // Filtro rápido (tag, instância, responsável, roleta, período) — um
@@ -434,11 +460,9 @@ const ChatSidebar = ({
   const gestor = permissoesProntas && can('inboxes', 'update');
   const podeCriarNumero = useFeature('channels_connect') && permissoesProntas && can('channels', 'create');
   const { user } = useAuth();
-  const soFiltroPadrao = conversationFilters.every(
-    (f) => f.attributeKey === 'status' && String(f.values) === 'open',
-  );
   const avisoVazio =
-    permissoesProntas && !showArchived && !searchInput && soFiltroPadrao
+    permissoesProntas &&
+    deveAvisarNumero({ pilula, showArchived, busca: searchInput, filtros: conversationFilters })
       ? avisoListaVazia({ numeros, gestor, podeCriar: podeCriarNumero })
       : null;
   const paraReconectar =
@@ -692,31 +716,28 @@ const ChatSidebar = ({
         </div>
 
         <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
-          <button
-            type="button"
-            aria-pressed={!showArchived}
-            onClick={() => setShowArchived(false)}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-              !showArchived
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {t('chatSidebar.view.active')}
-          </button>
-          <button
-            type="button"
-            aria-pressed={showArchived}
-            onClick={() => setShowArchived(true)}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-              showArchived
-                ? 'bg-orange-100 text-orange-700 shadow-sm dark:bg-orange-950/40 dark:text-orange-400'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Archive className="h-3 w-3" />
-            {t('chatSidebar.view.archived')}
-          </button>
+          {PILULAS.map(({ id, rotulo }) => {
+            const ativa = pilula === id;
+            const arquivadas = id === 'arquivadas';
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={ativa}
+                onClick={() => handleChangePilula(id)}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all ${
+                  ativa
+                    ? arquivadas
+                      ? 'bg-orange-100 text-orange-700 shadow-sm dark:bg-orange-950/40 dark:text-orange-400'
+                      : 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {arquivadas && <Archive className="h-3 w-3" />}
+                {rotulo}
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex items-center justify-between">

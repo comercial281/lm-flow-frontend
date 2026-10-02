@@ -134,9 +134,9 @@ const Chat = () => {
 
   // 🎯 FILTROS: Usar handlers dos hooks customizados (DEFINIR ANTES DOS useEffect)
   const handleApplyFilters = useCallback(
-    async (newFilters: BaseFilter[]) => {
+    async (newFilters: BaseFilter[], filtrosParaSalvar?: BaseFilter[]) => {
       try {
-        return await filterHandlers.handleApplyFilters(newFilters);
+        return await filterHandlers.handleApplyFilters(newFilters, filtrosParaSalvar);
       } catch (error) {
         // Se erro 403 ou 404, marcar como erro
         const axiosError = error as AxiosError;
