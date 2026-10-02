@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Plug, X } from 'lucide-react';
+import { Seletor } from '@/components/base/Seletor';
 import { labelsService } from '@/services/contacts/labelsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import {
@@ -34,6 +35,45 @@ import {
 interface Opt {
   id: string;
   label: string;
+}
+
+// Os dois campos de lista ficam FORA do componente da janela. Declarados dentro
+// do render, eram um componente novo a cada redesenho: o React desmontava e
+// montava de novo, e a lista do produto aberta fechava sozinha (e o foco sumia).
+
+/** Lista de evento do Pixel: "Não disparar nada" + os eventos oferecidos. */
+function EventField({ label, value, onChange, options, hint }: {
+  label: string; value: string; onChange: (v: string) => void; options: string[]; hint?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs text-muted-foreground">{label}</span>
+      <Seletor value={value} onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary">
+        <option value="">Não disparar nada</option>
+        {options.map((ev) => (
+          <option key={ev} value={ev}>{CAPI_EVENT_LABELS[ev] ?? ev}</option>
+        ))}
+      </Seletor>
+      {hint && <span className="mt-1 block text-[11px] text-muted-foreground">{hint}</span>}
+    </label>
+  );
+}
+
+/** Lista com a opção vazia (o texto de `placeholder`) + as opções. */
+function Field({ label, value, onChange, options, placeholder }: {
+  label: string; value: string; onChange: (v: string) => void; options: Opt[]; placeholder: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs text-muted-foreground">{label}</span>
+      <Seletor value={value} onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary">
+        <option value="">{placeholder}</option>
+        {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+      </Seletor>
+    </label>
+  );
 }
 
 /** Config por landing: pra qual pipeline/coluna o lead cai e qual tag recebe. */
@@ -243,35 +283,6 @@ export default function LeadRoutingModal({
     }
   };
 
-  const EventField = ({ label, value, onChange, hint }: {
-    label: string; value: string; onChange: (v: string) => void; hint?: string;
-  }) => (
-    <label className="block">
-      <span className="mb-1 block text-xs text-muted-foreground">{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary">
-        <option value="">Não disparar nada</option>
-        {eventOptions.map((ev) => (
-          <option key={ev} value={ev}>{CAPI_EVENT_LABELS[ev] ?? ev}</option>
-        ))}
-      </select>
-      {hint && <span className="mt-1 block text-[11px] text-muted-foreground">{hint}</span>}
-    </label>
-  );
-
-  const Field = ({ label, value, onChange, options, placeholder }: {
-    label: string; value: string; onChange: (v: string) => void; options: Opt[]; placeholder: string;
-  }) => (
-    <label className="block">
-      <span className="mb-1 block text-xs text-muted-foreground">{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary">
-        <option value="">{placeholder}</option>
-        {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-      </select>
-    </label>
-  );
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
@@ -342,7 +353,7 @@ export default function LeadRoutingModal({
 
               <label className="block">
                 <span className="mb-1 block text-xs text-muted-foreground">Enviar para</span>
-                <select value={pixel.mode} onChange={(e) => setPixelField('mode', e.target.value as PixelForm['mode'])}
+                <Seletor value={pixel.mode} onChange={(e) => setPixelField('mode', e.target.value as PixelForm['mode'])}
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary">
                   <option value="off">Não rastrear esta landing</option>
                   <option value="crm">
@@ -351,7 +362,7 @@ export default function LeadRoutingModal({
                       : 'Pixel do CRM (nenhum cadastrado ainda)'}
                   </option>
                   <option value="custom">Outro pixel (só desta landing)</option>
-                </select>
+                </Seletor>
               </label>
 
               {pixel.mode === 'crm' && !crmPixelId && (
@@ -382,12 +393,12 @@ export default function LeadRoutingModal({
                       onChange={(e) => setPixelField('pageView', e.target.checked)} />
                     Contar quem abre a página (PageView)
                   </label>
-                  <EventField label="Quando o formulário é enviado" value={pixel.submitEvent}
+                  <EventField options={eventOptions} label="Quando o formulário é enviado" value={pixel.submitEvent}
                     onChange={(v) => setPixelField('submitEvent', v)} />
-                  <EventField label="Quando a régua do formulário aprova" value={pixel.qualifiedEvent}
+                  <EventField options={eventOptions} label="Quando a régua do formulário aprova" value={pixel.qualifiedEvent}
                     onChange={(v) => setPixelField('qualifiedEvent', v)}
                     hint="Escolher o mesmo evento que o corretor usa no card faz o mesmo lead contar duas vezes como qualificado." />
-                  <EventField label="Quando a régua do formulário reprova" value={pixel.disqualifiedEvent}
+                  <EventField options={eventOptions} label="Quando a régua do formulário reprova" value={pixel.disqualifiedEvent}
                     onChange={(v) => setPixelField('disqualifiedEvent', v)} />
 
                   <div className="pt-1">
