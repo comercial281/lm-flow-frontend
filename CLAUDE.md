@@ -5167,7 +5167,10 @@ Armadilhas:
    lista do produto abre num portal, fora da caixinha. Quem fecha no `mousedown` de
    fora ignora alvo dentro de `[data-slot="select-content"],
    [data-radix-popper-content-wrapper]`, e no Esc olha `defaultPrevented` (o Radix
-   fecha só a lista). Modelo: `chat/filters/QuickFilters.tsx`, com spec.
+   fecha só a lista). Com a lista aberta o Radix desliga os cliques no body, então
+   o clique de fora chega no `<html>`: quem fecha no `mousedown` também ignora alvo
+   igual a `document.documentElement` (como o `QuickFilters`), senão qualquer clique
+   fecha a caixinha junto com a lista. Modelo: `chat/filters/QuickFilters.tsx`, com spec.
 9. **Componente com `Seletor` declarado dentro do render fecha a lista aberta**: é
    um componente novo a cada redesenho, e o React desmonta e monta de novo. Declare
    no escopo do módulo e passe o que ele usa por prop (`LeadRoutingModal`,

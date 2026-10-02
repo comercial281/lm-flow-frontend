@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import QuickFilters from './QuickFilters';
 
@@ -56,5 +56,16 @@ describe('QuickFilters no computador', () => {
     expect(screen.getByRole('dialog', { name: 'Filtros rápidos' })).toBeInTheDocument();
     await userEvent.click(screen.getByText('fora'));
     expect(screen.queryByRole('dialog', { name: 'Filtros rápidos' })).not.toBeInTheDocument();
+  });
+
+  it('clique que chega no html com a lista aberta fecha só a lista, não a caixinha', async () => {
+    render(<QuickFilters filters={[]} inboxOptions={[]} onApply={() => {}} onOpenAdvanced={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: /Filtros/ }));
+    await userEvent.click(await screen.findByRole('combobox'));
+    await screen.findByRole('listbox');
+    // Com a lista aberta o Radix desliga os cliques no body: no navegador o mousedown chega no <html>.
+    fireEvent.mouseDown(document.documentElement);
+    // hidden: com a lista aberta o Radix esconde o resto da tela dos leitores (aria-hidden).
+    expect(screen.getByRole('dialog', { name: 'Filtros rápidos', hidden: true })).toBeInTheDocument();
   });
 });

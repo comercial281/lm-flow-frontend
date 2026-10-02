@@ -153,6 +153,9 @@ export default function QuickFilters({
     // nunca chegava.
     const onClickOutside = (e: MouseEvent) => {
       const alvo = e.target as Element | null;
+      // Com a lista aberta o Radix desliga os cliques no body, então o clique chega
+      // no <html>: quem fecha nesse caso é só a lista.
+      if (alvo === document.documentElement) return;
       if (boxRef.current?.contains(alvo)) return;
       if (alvo?.closest?.(LISTA_ABERTA)) return;
       setOpen(false);
