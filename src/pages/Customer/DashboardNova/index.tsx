@@ -117,7 +117,7 @@ const DashboardNova: React.FC = () => {
               {linha.subtitulo && <p>{linha.subtitulo}</p>}
             </div>
           )}
-          <div className={`lmfn-linha${linha.principal ? ' lmfn-linha-principal' : ''}`}>
+          <div className={`lmfn-linha${linha.principal ? ' lmfn-linha-principal' : ''}${linha.lateral ? ' lmfn-linha-lateral' : ''}`}>
             {linha.colunas.map(coluna => (
               <div key={coluna.join('-')} className="lmfn-coluna">
                 {coluna.map(id => {

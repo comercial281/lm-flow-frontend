@@ -49,6 +49,8 @@ export interface Linha {
   subtitulo?: string;
   /** A linha de cima do gestor: Imóveis estreito à esquerda, o resto largo à direita. */
   principal?: boolean;
+  /** A segunda coluna é um cartão estreito, quase quadrado, à direita (Sua vez na fila). */
+  lateral?: boolean;
   colunas: BlocoId[][];
 }
 
@@ -69,7 +71,7 @@ export const LINHAS: Record<Visao, Linha[]> = {
   corretor: [
     // Sem roleta Fila o cartão não desenha nada, a coluna some (`.lmfn-coluna:empty`)
     // e as Pendências ocupam a linha inteira, como antes.
-    { colunas: [['pendencias'], ['minha_vez']] },
+    { lateral: true, colunas: [['pendencias'], ['minha_vez']] },
     { colunas: [['numeros']] },
     { colunas: [['proximas_visitas'], ['funil']] },
     { colunas: [['imoveis'], ['leads_dia_semana']] },

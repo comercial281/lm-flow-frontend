@@ -3211,13 +3211,19 @@ quase em tempo real. Cartão **Sua vez na fila** (`blocos/MinhaVez.tsx`, bloco
   próximo a receber"*. Pausado ou fora do sorteio: sem número, com o motivo e
   *"Fale com o gestor"*. Com oferta aberta: *"Você está com um lead esperando seu
   aceite"* no lugar da posição (a vez já passou por ele).
+- **Desenho (pedido do dono, 02/10):** *Pendências* largo e o cartão da fila
+  estreito, quase quadrado, à direita (`lateral` na linha do catálogo →
+  `.lmfn-linha-lateral`, flex com 260 px; no celular, um embaixo do outro). Número
+  grande no meio, nome da roleta em cima, setas embaixo.
 - **Mais de uma roleta Fila: um cartão só**, com setas e "1 de 2", e dá para
   **arrastar para o lado** (pointer events, `touch-action: pan-y` para a página
   continuar rolando na vertical).
 - **Atualiza a cada 2 minutos**, só com a aba visível, e na hora em que uma oferta
   dele chega ou sai (`usePendingOffers`, que já faz a ronda de 1 min do app).
 - Sem roleta Fila, ou contra o servidor antigo, o cartão não desenha nada e a coluna
-  some (`.lmfn-coluna:empty`): as *Pendências* ocupam a linha como antes.
+  some (`.lmfn-coluna:empty`): as *Pendências* ocupam a linha como antes. É por
+  isso que a linha lateral é FLEX e não grid: com grid de duas trilhas fixas, a
+  trilha do cartão sumido ficaria como buraco à direita.
 
 Decisões do dono (não reabrir sem ele pedir): **só a posição DELE**, nunca a fila
 com o nome dos colegas (essa é o *Roleta agora* do gestor); **2 minutos**, não
