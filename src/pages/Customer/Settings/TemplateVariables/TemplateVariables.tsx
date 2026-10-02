@@ -15,6 +15,7 @@ import { Code, Lock, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { tenantTemplateVariablesService } from '@/services/messageFunnels/messageFunnelsService';
 import type { TemplateVariable, TenantTemplateVariable } from '@/types/messageFunnels';
+import { Seletor } from '@/components/base/Seletor';
 
 // ── Presets de value_source pro UI guiado ────────────────────────────────────
 
@@ -415,7 +416,7 @@ export default function TemplateVariables() {
 
             <div className="space-y-1.5">
               <UILabel htmlFor="var-source">De onde vem o valor</UILabel>
-              <select
+              <Seletor
                 id="var-source"
                 value={form.presetKey}
                 onChange={e => setForm(f => ({ ...f, presetKey: e.target.value }))}
@@ -426,7 +427,7 @@ export default function TemplateVariables() {
                     {p.label}
                   </option>
                 ))}
-              </select>
+              </Seletor>
               <p className="text-xs text-muted-foreground">
                 {SOURCE_PRESETS.find(p => p.key === form.presetKey)?.description}
               </p>

@@ -13,6 +13,7 @@ import {
 import CoverPicker from './CoverPicker';
 import LockConfigFields, { type LockConfig } from './LockConfigFields';
 import EntitlementsEditor from './EntitlementsEditor';
+import { Seletor } from '@/components/base/Seletor';
 
 export default function ModuleForm({
   editing,
@@ -88,7 +89,7 @@ export default function ModuleForm({
 
       <div>
         <p className="text-[11px] text-muted-foreground mb-1">Curso</p>
-        <select
+        <Seletor
           value={courseId}
           onChange={(e) => setCourseId(e.target.value)}
           className="w-full bg-background border border-border rounded px-3 py-2 text-sm"
@@ -97,7 +98,7 @@ export default function ModuleForm({
           {courses.map((c) => (
             <option key={c.id} value={c.id}>{c.titulo}</option>
           ))}
-        </select>
+        </Seletor>
       </div>
 
       <CoverPicker value={capaUrl} onChange={setCapaUrl} />

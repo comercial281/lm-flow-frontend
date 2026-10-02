@@ -57,6 +57,7 @@ import {
 import { useTenantFeatures, useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { telefone } from '@/lib/formato';
+import { Seletor } from '@/components/base/Seletor';
 
 const TABS = [
   { key: 'portal', label: 'Portal', icon: LayoutTemplate },
@@ -1007,7 +1008,7 @@ export default function SiteBuilder() {
               </div>
               <div className="col-span-2">
                 <UILabel htmlFor="site-font">Fonte</UILabel>
-                <select
+                <Seletor
                   id="site-font"
                   value={siteForm.font_family ?? 'Inter'}
                   onChange={e => setF({ font_family: e.target.value })}
@@ -1017,7 +1018,7 @@ export default function SiteBuilder() {
                   {SITE_FONTS.map(f => (
                     <option key={f} value={f} style={{ fontFamily: `${f}, system-ui, sans-serif` }}>{f}</option>
                   ))}
-                </select>
+                </Seletor>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Aplica-se a textos e títulos do site público.
                 </p>

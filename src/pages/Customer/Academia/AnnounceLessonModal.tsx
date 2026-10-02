@@ -21,6 +21,7 @@ import {
   type AvailableGroup,
   type CentralInstance,
 } from '@/services/academy/academyAnnouncementsService';
+import { Seletor } from '@/components/base/Seletor';
 
 interface Props {
   lesson: AnnounceLesson;
@@ -282,7 +283,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
             {/* Remetente */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold" htmlFor="aviso-instancia">Enviar pelo número</label>
-              <select
+              <Seletor
                 id="aviso-instancia"
                 value={instancia}
                 onChange={(e) => trocarInstancia(e.target.value)}
@@ -294,7 +295,7 @@ export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props
                     {i.name} {i.connected ? '· conectado' : '· fora do ar'}
                   </option>
                 ))}
-              </select>
+              </Seletor>
             </div>
 
             {/* Grupos */}
