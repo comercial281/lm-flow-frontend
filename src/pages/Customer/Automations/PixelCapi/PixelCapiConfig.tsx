@@ -7,6 +7,7 @@ import {
   type CapiConnectionTest,
   type CapiStageRule,
 } from '@/services/capi/capiConfigService';
+import { Seletor } from '@/components/base/Seletor';
 
 const VALUE_EVENTS = ['Purchase', 'UltraQualificado'];
 
@@ -284,8 +285,8 @@ export default function PixelCapiConfig() {
                   <div key={stage.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <span className="w-40 shrink-0 truncate text-sm text-foreground">{stage.name || '—'}</span>
 
-                    <select
-                      className={`${inputCls} w-44`}
+                    <Seletor
+                      className={inputCls}
                       value={r.event_name}
                       onChange={(e) => patchRule(stage.id, { event_name: e.target.value, enabled: !!e.target.value })}
                     >
@@ -295,7 +296,7 @@ export default function PixelCapiConfig() {
                           {CAPI_EVENT_LABELS[ev] ?? ev}
                         </option>
                       ))}
-                    </select>
+                    </Seletor>
 
                     {r.event_name && (
                       <>
@@ -312,8 +313,8 @@ export default function PixelCapiConfig() {
                           <input type="checkbox" checked={r.to_client} onChange={(e) => patchRule(stage.id, { to_client: e.target.checked })} />
                           Cliente
                         </label>
-                        <select
-                          className={`${inputCls} w-52`}
+                        <Seletor
+                          className={inputCls}
                           value={r.intent ?? 'none'}
                           onChange={(e) => patchRule(stage.id, { intent: e.target.value as CapiStageRule['intent'] })}
                         >
@@ -322,7 +323,7 @@ export default function PixelCapiConfig() {
                               {CAPI_INTENT_LABELS[it] ?? it}
                             </option>
                           ))}
-                        </select>
+                        </Seletor>
 
                         {showValue && (
                           <input

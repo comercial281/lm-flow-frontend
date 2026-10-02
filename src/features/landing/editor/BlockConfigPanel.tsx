@@ -18,6 +18,7 @@ import {
   Upload,
   inputCls,
 } from './panelKit';
+import { Seletor } from '@/components/base/Seletor';
 
 /* Editor de lista genérico. */
 function Repeater<T>({ items, onChange, empty, addLabel, render }: {
@@ -134,10 +135,10 @@ function Fields({ block }: { block: BlockInstance }) {
         <>
           <Field label="Texto do botão fixo"><Text value={c.label as string} onChange={(v) => set({ label: v })} /></Field>
           <Field label="Ação">
-            <select className={inputCls} value={(c.action as string) ?? 'open_form'} onChange={(e) => set({ action: e.target.value })}>
+            <Seletor className={inputCls} value={(c.action as string) ?? 'open_form'} onChange={(e) => set({ action: e.target.value })}>
               <option value="open_form">Abrir formulário</option>
               <option value="whatsapp">Abrir WhatsApp</option>
-            </select>
+            </Seletor>
           </Field>
           {c.action === 'whatsapp' && (
             <Field label="WhatsApp (com DDD)"><Text value={c.whatsappPhone as string} onChange={(v) => set({ whatsappPhone: v })} placeholder="5511999999999" /></Field>
@@ -296,10 +297,10 @@ function Fields({ block }: { block: BlockInstance }) {
         <>
           <Field label="Título da seção"><Text value={c.title as string} onChange={(v) => set({ title: v })} /></Field>
           <Field label="De onde vêm as fotos">
-            <select className={inputCls} value={(c.source as string) ?? 'property'} onChange={(e) => set({ source: e.target.value })}>
+            <Seletor className={inputCls} value={(c.source as string) ?? 'property'} onChange={(e) => set({ source: e.target.value })}>
               <option value="property">Fotos do imóvel</option>
               <option value="manual">Fotos que eu enviar</option>
-            </select>
+            </Seletor>
           </Field>
           {c.source === 'manual' ? (
             <Field label="Fotos desta seção" hint="Enviadas aqui mesmo. É o caminho para landing de imóvel que não está cadastrado.">
@@ -323,10 +324,10 @@ function Fields({ block }: { block: BlockInstance }) {
             <RichText value={c.html as string} onChange={(v) => set({ html: v })} placeholder="Escreva o texto desta seção…" />
           </Field>
           <Field label="Alinhamento">
-            <select className={inputCls} value={(c.align as string) ?? 'left'} onChange={(e) => set({ align: e.target.value })}>
+            <Seletor className={inputCls} value={(c.align as string) ?? 'left'} onChange={(e) => set({ align: e.target.value })}>
               <option value="left">À esquerda</option>
               <option value="center">Centralizado</option>
-            </select>
+            </Seletor>
           </Field>
         </>
       );

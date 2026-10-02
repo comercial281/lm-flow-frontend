@@ -11,6 +11,7 @@ import {
   FollowupEntryStage,
   FollowupEntryFormData,
 } from '@/services/followupSequences/followupSequencesService';
+import { Seletor } from '@/components/base/Seletor';
 
 /**
  * "Quando este funil começa": as portas de entrada do funil.
@@ -219,7 +220,7 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
                 detalhe do anterior — senão a coluna escolhida antes viajaria junto
                 com um gatilho de etiqueta. */}
             <UILabel className="text-xs" htmlFor="followup-entry-kind">O que faz o funil começar</UILabel>
-            <select
+            <Seletor
               id="followup-entry-kind"
               value={form.kind}
               onChange={e => setForm({ ...emptyForm, kind: e.target.value as FollowupEntryKind })}
@@ -228,7 +229,7 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
               {kinds.map(k => (
                 <option key={k.value} value={k.value}>{k.label}</option>
               ))}
-            </select>
+            </Seletor>
           </div>
 
           {needsOf(form.kind) === 'stage_id' && (
@@ -240,7 +241,7 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
             ) : (
               <div>
                 <UILabel className="text-xs" htmlFor="followup-entry-stage">Coluna que inicia o funil</UILabel>
-                <select
+                <Seletor
                   id="followup-entry-stage"
                   value={form.stage_id ?? ''}
                   onChange={e => setForm({ ...form, stage_id: e.target.value })}
@@ -254,7 +255,7 @@ export function SequenceEntries({ sequenceId, sequenceName, onChanged }: Props) 
                       ))}
                     </optgroup>
                   ))}
-                </select>
+                </Seletor>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Vale tanto pro card arrastado à mão quanto pro movido por outra automação.
                 </p>

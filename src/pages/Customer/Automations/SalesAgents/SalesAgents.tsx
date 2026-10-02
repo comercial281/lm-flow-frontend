@@ -86,6 +86,7 @@ import { followupSequencesService } from '@/services/followupSequences/followupS
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { usePergunta } from '@/hooks/usePergunta';
+import { Seletor } from '@/components/base/Seletor';
 type Tab = 'config' | 'resultados' | 'sugestoes' | 'relatorios' | 'knowledge' | 'learning' | 'test' | 'diagnostico';
 
 interface InboxOption {
@@ -562,7 +563,7 @@ function ConfigTab({
 
       <div>
         <Label htmlFor="inbox">Número de WhatsApp que ela opera</Label>
-        <select
+        <Seletor
           id="inbox"
           value={agent.inbox_id ?? ''}
           onChange={(e) => onSave({ inbox_id: e.target.value || null })}
@@ -572,7 +573,7 @@ function ConfigTab({
           {inboxes.map((i) => (
             <option key={i.id} value={String(i.id)}>{i.name}</option>
           ))}
-        </select>
+        </Seletor>
         <p className="text-xs text-muted-foreground mt-1">Escolha o número de WhatsApp onde a IA vai operar: ela recebe e responde os leads por esse número.</p>
         {/* Sem canal a IA não é candidata a conversa nenhuma — a seleção filtra por
             inbox. Ligada e sem canal é o pior estado possível: parece pronta e não é. */}
@@ -893,14 +894,14 @@ function AudioSection({ agent, onChange, onSave }: {
         <div className="mt-3 space-y-3 pl-1">
           <div>
             <Label htmlFor="audio_mode" className="text-xs">Quando responder por áudio</Label>
-            <select
+            <Seletor
               id="audio_mode"
               value={agent.audio_mode ?? 'mirror'}
               onChange={(e) => onSave({ audio_mode: e.target.value as 'mirror' | 'always' | 'never' })}
               className="mt-1 w-full rounded-md border border-sidebar-border bg-background px-3 py-2 text-sm"
             >
               {AUDIO_MODE_OPTIONS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-            </select>
+            </Seletor>
           </div>
           <div>
             <Label htmlFor="audio_voice" className="text-xs">Voz (ID do ElevenLabs)</Label>
@@ -1068,7 +1069,7 @@ function VisitSection({
     <div className="pt-2 border-t border-sidebar-border space-y-4">
       <div>
         <Label htmlFor="sales_method">Como a IA conduz a venda</Label>
-        <select
+        <Seletor
           id="sales_method"
           value={method}
           onChange={(e) => onSave({ sales_method: e.target.value as SalesMethod })}
@@ -1077,7 +1078,7 @@ function VisitSection({
           {SALES_METHOD_OPTIONS.map(([id, label]) => (
             <option key={id} value={id}>{label}</option>
           ))}
-        </select>
+        </Seletor>
         <p className="text-xs text-muted-foreground mt-1">
           {SALES_METHOD_OPTIONS.find(([id]) => id === method)?.[2]}
         </p>
@@ -1869,7 +1870,7 @@ function HandoffPolicySection({ agent, onSave }: {
               {opt.value === 'temperatura' && escolhido && (
                 <div className="mt-2 ml-7">
                   <Label htmlFor="handoff_min_temperature">A partir de</Label>
-                  <select
+                  <Seletor
                     id="handoff_min_temperature"
                     value={minTemp}
                     onChange={(e) => onSave({
@@ -1881,7 +1882,7 @@ function HandoffPolicySection({ agent, onSave }: {
                   >
                     <option value="hot">Lead quente</option>
                     <option value="warm">Lead morno ou quente</option>
-                  </select>
+                  </Seletor>
                   <p className="text-xs text-muted-foreground mt-1">
                     É a mesma leitura que aparece no painel <em>O que a IA entendeu</em>, dentro da conversa.
                   </p>
@@ -2086,7 +2087,7 @@ function HandoffDestinationSection({ agent, onSave }: {
               {opt.value === 'roleta' && escolhido && (
                 <div className="mt-2 ml-7">
                   <Label htmlFor="handoff_roleta">Qual roleta</Label>
-                  <select
+                  <Seletor
                     id="handoff_roleta"
                     value={roletaId}
                     onChange={(e) => onSave({ handoff_roleta_config_id: e.target.value || null })}
@@ -2096,7 +2097,7 @@ function HandoffDestinationSection({ agent, onSave }: {
                     {roletasVisiveis.map((r) => (
                       <option key={r.id} value={r.id}>{r.label}{r.ativa ? '' : ' (desativada)'}</option>
                     ))}
-                  </select>
+                  </Seletor>
                   {/* Sem este aviso o gestor sai da tela achando que escolheu, e
                       todo lead que a IA passar fica sem ninguém. */}
                   {roletaId === '' && (
@@ -2121,7 +2122,7 @@ function HandoffDestinationSection({ agent, onSave }: {
               {opt.value === 'user' && escolhido && (
                 <div className="mt-2 ml-7">
                   <Label htmlFor="handoff_user">Qual corretor</Label>
-                  <select
+                  <Seletor
                     id="handoff_user"
                     value={userId}
                     onChange={(e) => onSave({ handoff_user_id: e.target.value || null })}
@@ -2131,7 +2132,7 @@ function HandoffDestinationSection({ agent, onSave }: {
                     {pessoas.map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
-                  </select>
+                  </Seletor>
                   <p className="text-xs text-muted-foreground mt-1">
                     Ele recebe o lead no WhatsApp e no app, com o botão de aceitar, e <strong>sem prazo</strong>:
                     a oferta fica com ele até aceitar ou recusar. Não há para quem repassar.
@@ -2236,7 +2237,7 @@ function PipelineMoveSection({
         <div className="mt-3 pl-7 space-y-3">
           <div>
             <Label htmlFor="pipeline_move_funil" className="text-xs">Em qual funil</Label>
-            <select
+            <Seletor
               id="pipeline_move_funil"
               value={funil}
               onChange={(e) => trocarFunil(e.target.value)}
@@ -2244,7 +2245,7 @@ function PipelineMoveSection({
             >
               <option value="">— escolha o funil —</option>
               {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            </Seletor>
           </div>
 
           {funil && (
@@ -2259,14 +2260,14 @@ function PipelineMoveSection({
                     <div className="text-sm">{titulo}</div>
                     <div className="text-xs text-muted-foreground">{ajuda}</div>
                   </div>
-                  <select
+                  <Seletor
                     value={mapa[key] ?? ''}
                     onChange={(e) => escolherColuna(key, e.target.value)}
                     className="w-48 shrink-0 rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
                   >
                     <option value="">— não mover —</option>
                     {stages.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
-                  </select>
+                  </Seletor>
                 </div>
               ))}
               <p className="text-xs text-muted-foreground">
@@ -2834,25 +2835,25 @@ function FollowupActionPicker({
             <>
               <div className="flex items-center gap-3">
                 <div className="flex-1 text-sm">Coluna para o lead que sumiu</div>
-                <select
+                <Seletor
                   value={agent.followup_stage_id ?? ''}
                   onChange={(e) => onSave({ followup_stage_id: e.target.value || null })}
                   className="w-52 shrink-0 rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
                 >
                   <option value="">— escolha a coluna —</option>
                   {stages.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
-                </select>
+                </Seletor>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex-1 text-sm">Quando ele voltar a responder, o card vai para</div>
-                <select
+                <Seletor
                   value={agent.followup_return_stage_id ?? ''}
                   onChange={(e) => onSave({ followup_return_stage_id: e.target.value || null })}
                   className="w-52 shrink-0 rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
                 >
                   <option value="">Primeira coluna do funil (Novo)</option>
                   {stages.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
-                </select>
+                </Seletor>
               </div>
               <p className="text-xs text-muted-foreground">
                 Quem manda a mensagem é o funil que essa coluna dispara — configure a entrada
@@ -2869,14 +2870,14 @@ function FollowupActionPicker({
         <div className="mt-2 space-y-2 pl-7">
           <div className="flex items-center gap-3">
             <div className="flex-1 text-sm">Qual funil</div>
-            <select
+            <Seletor
               value={agent.followup_sequence_slug ?? ''}
               onChange={(e) => onSave({ followup_sequence_slug: e.target.value || null })}
               className="w-52 shrink-0 rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
             >
               <option value="">— escolha o funil —</option>
               {funis.map((f) => <option key={f.slug} value={f.slug}>{f.name}</option>)}
-            </select>
+            </Seletor>
           </div>
           <p className="text-xs text-muted-foreground">
             Só aparecem os funis ativos. O card não é movido neste modo — se você usa o quadro,
@@ -2933,7 +2934,7 @@ function AdvancedSection({
         <div className="mt-3 space-y-4 pl-1">
           <div>
             <Label htmlFor="adv_model">Modelo de IA (inteligência x custo)</Label>
-            <select
+            <Seletor
               id="adv_model"
               value={modelKnown ? agent.model : ''}
               onChange={(e) => onSave({ model: e.target.value })}
@@ -2943,13 +2944,13 @@ function AdvancedSection({
               {MODEL_OPTIONS.map(([id, label]) => (
                 <option key={id} value={id}>{label}</option>
               ))}
-            </select>
+            </Seletor>
             <p className="text-xs text-muted-foreground mt-1">Sonnet é o padrão. Haiku responde mais rápido e custa menos, mas é menos esperta.</p>
           </div>
 
           <div>
             <Label htmlFor="adv_temp">Criatividade das respostas</Label>
-            <select
+            <Seletor
               id="adv_temp"
               value={tempSel}
               onChange={(e) => onSave({ temperature: Number(e.target.value) })}
@@ -2958,7 +2959,7 @@ function AdvancedSection({
               {TEMP_OPTIONS.map(([t, label, help]) => (
                 <option key={t} value={t}>{label} — {help}</option>
               ))}
-            </select>
+            </Seletor>
           </div>
 
           <div>
@@ -3093,21 +3094,21 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
       <div className="space-y-2">
         {triggers.map((t, i) => (
           <div key={i} className="flex flex-wrap items-center gap-2 p-2 rounded-md border border-sidebar-border">
-            <select
+            <Seletor
               value={t.type}
               onChange={(e) => commit(triggers.map((tr, idx) => (idx === i ? newTrigger(e.target.value as SalesAgentTriggerType) : tr)))}
-              className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
+              className="w-72 max-w-full rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
             >
               {TRIGGER_TYPES.map((tt) => <option key={tt.value} value={tt.value}>{tt.label}</option>)}
-            </select>
+            </Seletor>
 
             {t.type === 'keyword' && (
               <>
-                <select value={t.match_type ?? 'contains'} onChange={(e) => update(i, { match_type: e.target.value as 'contains' | 'equals' })}
-                  className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+                <Seletor value={t.match_type ?? 'contains'} onChange={(e) => update(i, { match_type: e.target.value as 'contains' | 'equals' })}
+                  className="w-36 rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
                   <option value="contains">Contém</option>
                   <option value="equals">É exatamente</option>
-                </select>
+                </Seletor>
                 <Input className="flex-1 min-w-40" placeholder="palavra (ex: fluxoimob)" value={t.value ?? ''}
                   onChange={(e) => update(i, { value: e.target.value })} onBlur={() => commit(triggers)} />
               </>
@@ -3119,20 +3120,20 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
             )}
 
             {t.type === 'origin' && (
-              <select value={t.mode ?? 'ads'} onChange={(e) => update(i, { mode: e.target.value })}
-                className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+              <Seletor value={t.mode ?? 'ads'} onChange={(e) => update(i, { mode: e.target.value })}
+                className="w-64 max-w-full rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
                 <option value="ads">Só anúncios (FB/IG/Google)</option>
                 <option value="all">Todos os leads</option>
-              </select>
+              </Seletor>
             )}
 
             {t.type === 'property' && (
               <>
-                <select value={t.mode ?? 'any'} onChange={(e) => update(i, { mode: e.target.value })}
-                  className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+                <Seletor value={t.mode ?? 'any'} onChange={(e) => update(i, { mode: e.target.value })}
+                  className="w-[26rem] max-w-full rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
                   <option value="any">Qualquer imóvel (veio de form/anúncio de imóvel)</option>
                   <option value="code">Imóvel específico (código)</option>
-                </select>
+                </Seletor>
                 {t.mode === 'code' && (
                   <Input className="w-32" placeholder="código" value={t.code ?? ''}
                     onChange={(e) => update(i, { code: e.target.value })} onBlur={() => commit(triggers)} />
@@ -3174,14 +3175,14 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
 
             {t.type === 'pipeline' && (
               <>
-                <select
+                <Seletor
                   value={t.pipeline_id ?? ''}
                   onChange={(e) => update(i, { pipeline_id: e.target.value })}
-                  className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
+                  className="w-64 max-w-full rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
                 >
                   <option value="">Qualquer funil</option>
                   {pipelines.map((p) => <option key={p.id} value={p.id}>{`Só o funil ${p.name}`}</option>)}
-                </select>
+                </Seletor>
                 <span className="text-xs text-muted-foreground">
                   Card arquivado não conta — lead que saiu do funil e volta a escrever fica pro humano.
                 </span>
@@ -3190,16 +3191,16 @@ export function TriggersSection({ agent, onSave }: { agent: SalesAgent; onSave: 
 
             {t.type === 'pipeline_stage' && (
               <>
-                <select value={t.pipeline_id ?? ''} onChange={(e) => { loadStages(e.target.value); update(i, { pipeline_id: e.target.value, stage_id: '' }); }}
-                  className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+                <Seletor value={t.pipeline_id ?? ''} onChange={(e) => { loadStages(e.target.value); update(i, { pipeline_id: e.target.value, stage_id: '' }); }}
+                  className="w-48 rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
                   <option value="">— funil —</option>
                   {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-                <select value={t.stage_id ?? ''} onChange={(e) => update(i, { stage_id: e.target.value })} disabled={!t.pipeline_id}
-                  className="rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+                </Seletor>
+                <Seletor value={t.stage_id ?? ''} onChange={(e) => update(i, { stage_id: e.target.value })} disabled={!t.pipeline_id}
+                  className="w-48 rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
                   <option value="">— coluna —</option>
                   {(stagesByPipeline[t.pipeline_id ?? ''] ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                </Seletor>
               </>
             )}
 
@@ -4608,23 +4609,23 @@ function SuggestionsTab({ agent }: { agent: SalesAgent }) {
         </p>
         {data?.auto.auto && (
           <div className="flex flex-wrap items-center gap-2 pt-1">
-            <select
+            <Seletor
               value={data.auto.weekday}
               onChange={(e) => void salvarAuto({ weekday: Number(e.target.value) })}
-              className="rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
+              className="w-28 rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
             >
               {WEEKDAY_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
+            </Seletor>
             <span className="text-sm text-muted-foreground">às</span>
-            <select
+            <Seletor
               value={data.auto.hour}
               onChange={(e) => void salvarAuto({ hour: Number(e.target.value) })}
-              className="rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
+              className="w-24 rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
             >
               {Array.from({ length: 24 }, (_, h) => (
                 <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
               ))}
-            </select>
+            </Seletor>
           </div>
         )}
       </div>
@@ -5178,23 +5179,23 @@ function ReportsTab() {
           <>
             <div className="flex flex-wrap items-center gap-2">
               <CalendarDays className="h-4 w-4 text-muted-foreground" />
-              <select
+              <Seletor
                 value={config.weekday}
                 onChange={(e) => void salvarConfig({ weekday: Number(e.target.value) })}
-                className="rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
+                className="w-28 rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
               >
                 {WEEKDAY_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
+              </Seletor>
               <span className="text-sm text-muted-foreground">às</span>
-              <select
+              <Seletor
                 value={config.hour}
                 onChange={(e) => void salvarConfig({ hour: Number(e.target.value) })}
-                className="rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
+                className="w-24 rounded-md border border-sidebar-border bg-background px-3 py-1.5 text-sm"
               >
                 {Array.from({ length: 24 }, (_, h) => (
                   <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
                 ))}
-              </select>
+              </Seletor>
             </div>
             <p className="text-xs text-muted-foreground">
               O relatório sempre cobre a semana fechada anterior (segunda a domingo), para uma

@@ -239,12 +239,24 @@
 .lmf-campo-sem-icone .lmf-campo-controle { padding-left: 12px; }
 .lmf-campo-controle:hover { border-color: var(--lmf-border-strong); }
 .lmf-campo-controle:focus-visible { outline: 2px solid var(--lmf-accent); outline-offset: 2px; }
-/* Filtro em uso: borda roxa. No botão liga/desliga, também o fundo e o texto. */
+/* Filtro em uso: borda roxa. No botão liga/desliga (aria-pressed), também o fundo e o texto.
+   Não é `button.…[data-active]`: no computador a lista (Seletor) também é um <button> e
+   ficava pintada como o liga/desliga. */
 .lmf-campo-controle[data-active='true'] { border-color: var(--lmf-accent); }
-button.lmf-campo-controle[data-active='true'] { color: var(--lmf-accent); background: var(--lmf-accent-soft); }
-.dark button.lmf-campo-controle[data-active='true'] { color: #c4b5fd; }
+button.lmf-campo-controle[aria-pressed='true'] { color: var(--lmf-accent); background: var(--lmf-accent-soft); }
+.dark button.lmf-campo-controle[aria-pressed='true'] { color: #c4b5fd; }
 .lmf-campo-caixa:has(> [data-active='true']) .lmf-campo-icone { color: var(--lmf-accent); }
 .dark .lmf-campo-controle { color-scheme: dark; }
+/* Seletor no computador: a lista é o botão do design system, em modo bare (sem a
+   caixa e sem a seta dele). Este arquivo é CSS fora de camada, então vence as
+   utilidades do Tailwind que o botão traz. O campo já tem anel de foco próprio
+   (outline) e a seta própria (.lmf-campo-seta): sai o anel em box-shadow. O
+   .lmf-select simples não tem seta, e o <select> nativo desenhava a dele: volta a
+   seta do design system, que o bare esconde. */
+.lmf-campo-controle[data-slot='select-trigger'] { box-shadow: none; }
+.lmf-select[data-slot='select-trigger'] { gap: 8px; }
+.lmf-select[data-slot='select-trigger'] > svg:last-child,
+.lmf-select > [data-slot='select-trigger'] > svg:last-child { display: block; }
 .lmf-campo-icone,
 .lmf-campo-seta {
   position: absolute;

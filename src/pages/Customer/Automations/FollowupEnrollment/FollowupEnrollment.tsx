@@ -7,6 +7,7 @@ import {
   followupEnrollmentService,
   type FollowupEnrollmentConfig,
 } from '@/services/followupEnrollment/followupEnrollmentService';
+import { Seletor } from '@/components/base/Seletor';
 
 /**
  * Destino do follow-up por ORIGEM do lead.
@@ -145,7 +146,7 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
           {routes.map(r => (
             <div key={r.key} className="space-y-1">
               <label htmlFor={`routing-${r.key}`} className="text-sm">{r.label}</label>
-              <select
+              <Seletor
                 id={`routing-${r.key}`}
                 value={routing[r.key] ?? ''}
                 disabled={!r.exists}
@@ -158,7 +159,7 @@ export function FollowupEnrollment({ embedded = false }: FollowupEnrollmentProps
                     {s.name} ({s.steps_count} {s.steps_count === 1 ? 'passo' : 'passos'})
                   </option>
                 ))}
-              </select>
+              </Seletor>
               {!r.exists && (
                 <p className="text-xs text-amber-500">
                   Este CRM não tem a regra de origem para este caso — não há o que configurar aqui.

@@ -4,6 +4,7 @@ import { mayRead } from '@/store/appDataStore';
 import InboxesService from '@/services/channels/inboxesService';
 import type { Inbox } from '@/types/channels/inbox';
 import { CampoFiltro } from './CampoFiltro';
+import { Seletor } from '@/components/base/Seletor';
 
 interface InstanceOption {
   id: string;
@@ -72,10 +73,10 @@ export const InstancePicker: React.FC<Props> = ({ value, onChange, rotulo }) => 
   if (rotulo) {
     return (
       <CampoFiltro id={id} rotulo={rotulo} icone={<Smartphone size={14} />}>
-        <select id={id} className="lmf-campo-controle" data-active={value ? true : undefined}
+        <Seletor bare id={id} className="lmf-campo-controle" data-active={value ? true : undefined}
           value={value ?? ''} onChange={e => handleChange(e.target.value)}>
           {opcoes}
-        </select>
+        </Seletor>
       </CampoFiltro>
     );
   }
@@ -84,13 +85,14 @@ export const InstancePicker: React.FC<Props> = ({ value, onChange, rotulo }) => 
     <label className="lmf-select flex items-center gap-2" title="Filtrar por número de WhatsApp">
       <Smartphone size={14} aria-hidden />
       <span className="sr-only">Número</span>
-      <select
+      <Seletor
+        bare
         value={value ?? ''}
         onChange={e => handleChange(e.target.value)}
         style={{ background: 'transparent', border: 0, color: 'inherit', font: 'inherit', outline: 'none' }}
       >
         {opcoes}
-      </select>
+      </Seletor>
     </label>
   );
 };

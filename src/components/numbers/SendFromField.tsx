@@ -20,6 +20,7 @@ import {
   type SendNumbersScope,
   type SendNumbersState,
 } from '@/features/numbers/sendFrom';
+import { Seletor } from '@/components/base/Seletor';
 
 // "ENVIAR PELO NÚMERO" (fase 2b.2): o campo da ação de mensagem das Automações
 // de Lead e do funil de Follow-up. As palavras e as regras (inclusive o padrão
@@ -67,7 +68,7 @@ export default function SendFromField({ scope, value, onChange }: SendFromFieldP
   return (
     <div className="mt-2">
       <UILabel htmlFor={id}>{SEND_FROM_LABEL}</UILabel>
-      <select
+      <Seletor
         id={id}
         value={atual}
         onChange={e => onChange(fromSelectValue(e.target.value))}
@@ -85,7 +86,7 @@ export default function SendFromField({ scope, value, onChange }: SendFromFieldP
             ))}
           </optgroup>
         )}
-      </select>
+      </Seletor>
       <p className="text-xs text-muted-foreground mt-1">{sendFromHint(valor.send_from, scope)}</p>
       {state === 'failed' && <p className="text-xs text-amber-600 mt-1">{SEND_FROM_LOAD_FAILED}</p>}
     </div>

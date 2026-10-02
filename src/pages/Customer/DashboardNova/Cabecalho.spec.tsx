@@ -1,6 +1,7 @@
 // src/pages/Customer/DashboardNova/Cabecalho.spec.tsx
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 vi.mock('./base/InstancePicker', () => ({ InstancePicker: () => null }));
 vi.mock('./base/TagPicker', () => ({ TagPicker: () => null }));
@@ -182,5 +183,33 @@ describe('Cabecalho', () => {
         filtros={{ preset: 'last_7_days' }} onFiltros={vi.fn()} />,
     );
     expect(screen.getByText('Últimos 7 dias', { selector: 'p' })).toBeInTheDocument();
+  });
+});
+
+describe('Cabecalho no computador', () => {
+  beforeEach(() => {
+    // Polyfills de ponteiro do Radix que o jsdom não tem (os mesmos do Seletor.spec).
+    Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);
+    Element.prototype.releasePointerCapture = Element.prototype.releasePointerCapture ?? (() => {});
+    Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ?? (() => {});
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      matches: false, media: '(pointer: coarse)', addEventListener: () => {}, removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia;
+  });
+  afterEach(() => {
+    // @ts-expect-error: o jsdom não tem matchMedia; voltamos a não ter.
+    delete window.matchMedia;
+  });
+
+  it('Período: largura fixa (a barra não pula) e escolhe na lista do produto', async () => {
+    const onFiltros = vi.fn();
+    render(gestor({ filtros: { preset: 'last_7_days' }, onFiltros }));
+    const periodo = screen.getByRole('combobox', { name: 'Período' });
+    expect(periodo.tagName).toBe('BUTTON');
+    expect(periodo.className.split(/\s+/)).toContain('w-40');
+    expect(periodo.className.split(/\s+/)).not.toContain('w-fit');
+    await userEvent.click(periodo);
+    await userEvent.click(await screen.findByRole('option', { name: 'Este mês' }));
+    expect(onFiltros).toHaveBeenCalledWith({ preset: 'this_month' });
   });
 });

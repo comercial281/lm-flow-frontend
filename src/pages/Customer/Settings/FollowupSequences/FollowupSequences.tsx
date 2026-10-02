@@ -56,6 +56,7 @@ import type { User } from '@/types/users';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { plural } from '@/lib/formato';
+import { Seletor } from '@/components/base/Seletor';
 // Backend (Followup::SendStep#move_stage_if_configured) deriva o slug a partir do
 // nome do stage e NORMALIZA os dois lados: transliterate + downcase + strip + '-'.
 // Espelhamos exatamente isso aqui — com acento, 'follow-up-automatico' nao casava
@@ -1100,16 +1101,16 @@ export default function FollowupSequences() {
                               delay_minutes: Math.max(0, Number(e.target.value) || 0) * unitFactor(unitOf(idx)),
                             })}
                           />
-                          <select
+                          <Seletor
                             aria-label={`Unidade do passo ${idx + 1}`}
                             value={unitOf(idx)}
                             onChange={e => changeUnit(idx, e.target.value as DelayUnit)}
-                            className="rounded-md border border-border bg-background px-2 text-sm"
+                            className="w-28 rounded-md border border-border bg-background px-2 text-sm"
                           >
                             {UNITS.map(u => (
                               <option key={u.value} value={u.value}>{u.label}</option>
                             ))}
-                          </select>
+                          </Seletor>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {idx === 0 ? 'depois de o lead entrar no funil' : 'depois da mensagem anterior'}

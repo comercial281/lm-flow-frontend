@@ -6,6 +6,7 @@ import { Activity, Clock, Filter, RefreshCw, ChevronDown, ChevronUp } from 'luci
 import { useContactEvents } from '@/hooks/useContactEvents';
 import ContactEventCard from './ContactEventCard';
 import type { ContactEventsQueryParams, EventType } from '@/types/notifications';
+import { Seletor } from '@/components/base/Seletor';
 
 interface ContactEventsTimelineProps {
   contactId: string;
@@ -169,7 +170,7 @@ export default function ContactEventsTimeline({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">{t('events.timeline.filters.eventType')}</label>
-                    <select
+                    <Seletor
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                       value={filters.eventType || ''}
                       onChange={(e) => handleFilterChange({ eventType: e.target.value as EventType || undefined })}
@@ -179,11 +180,11 @@ export default function ContactEventsTimeline({
                           {option.label}
                         </option>
                       ))}
-                    </select>
+                    </Seletor>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">{t('events.timeline.filters.eventName')}</label>
-                    <select
+                    <Seletor
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                       value={filters.eventName || ''}
                       onChange={(e) => handleFilterChange({ eventName: e.target.value || undefined })}
@@ -193,7 +194,7 @@ export default function ContactEventsTimeline({
                           {option.label}
                         </option>
                       ))}
-                    </select>
+                    </Seletor>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">{t('events.timeline.filters.actions')}</label>

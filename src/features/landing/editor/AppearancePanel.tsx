@@ -6,6 +6,7 @@ import {
   type LandingTheme,
 } from '@/features/landing/blocks';
 import { useLandingEditorStore } from './landingEditorStore';
+import { Seletor } from '@/components/base/Seletor';
 
 const COLOR_FIELDS: { key: keyof LandingTheme; label: string }[] = [
   { key: 'primary', label: 'Primária' },
@@ -50,7 +51,7 @@ export function AppearancePanel() {
 
       <div>
         <span className="mb-1 block text-xs text-muted-foreground">Fonte da marca</span>
-        <select
+        <Seletor
           value={brandMode}
           onChange={(e) => setBrandMode(e.target.value as BrandMode)}
           className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
@@ -60,12 +61,12 @@ export function AppearancePanel() {
               {BRAND_MODE_LABELS[m]}
             </option>
           ))}
-        </select>
+        </Seletor>
       </div>
 
       <div>
         <span className="mb-1 block text-xs text-muted-foreground">Fonte</span>
-        <select
+        <Seletor
           value={currentFont}
           onChange={(e) => setTheme({ fontFamily: `${e.target.value}, sans-serif` })}
           className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
@@ -75,7 +76,7 @@ export function AppearancePanel() {
               {f}
             </option>
           ))}
-        </select>
+        </Seletor>
       </div>
 
       <div className="grid grid-cols-2 gap-3">

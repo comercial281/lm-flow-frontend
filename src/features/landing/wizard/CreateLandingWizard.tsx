@@ -11,6 +11,7 @@ import { safeParsePageBlocks } from '@/features/landing/blocks';
 // Mesmo conversor da lista e do editor: o endereço mostrado aqui tem que ser
 // idêntico ao que a página vai receber ao publicar.
 import { slugifyLandingName } from '@/features/landing/manage/landingUrl';
+import { Seletor } from '@/components/base/Seletor';
 
 interface Opt {
   id: string;
@@ -18,6 +19,33 @@ interface Opt {
 }
 
 type Base = 'blank' | 'property' | 'template';
+
+/**
+ * Campo de lista do passo 3 (pipeline, coluna, tag). Fora do componente do
+ * assistente de propósito: declarado dentro do render, era um componente novo a
+ * cada redesenho, o React desmontava e montava de novo e a lista do produto
+ * aberta fechava sozinha. Não se chama `Select` para não confundir com o Select
+ * do design system.
+ */
+function CampoDeLista({ label, value, onChange, options, placeholder }: {
+  label: string; value: string; onChange: (v: string) => void; options: Opt[]; placeholder: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs text-muted-foreground">{label}</span>
+      <Seletor
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+      >
+        <option value="">{placeholder}</option>
+        {options.map((o) => (
+          <option key={o.id} value={o.id}>{o.label}</option>
+        ))}
+      </Seletor>
+    </label>
+  );
+}
 
 /**
  * Assistente de criação de landing (Fatia 1): monta a landing já reusando o que
@@ -193,24 +221,6 @@ export default function CreateLandingWizard({
     }
   };
 
-  const Select = ({ label, value, onChange, options, placeholder }: {
-    label: string; value: string; onChange: (v: string) => void; options: Opt[]; placeholder: string;
-  }) => (
-    <label className="block">
-      <span className="mb-1 block text-xs text-muted-foreground">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-      >
-        <option value="">{placeholder}</option>
-        {options.map((o) => (
-          <option key={o.id} value={o.id}>{o.label}</option>
-        ))}
-      </select>
-    </label>
-  );
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-border bg-card">
@@ -361,11 +371,11 @@ export default function CreateLandingWizard({
                 </div>
               ) : (
                 <>
-                  <Select label="Pipeline" value={pipelineId} onChange={onPipeline} options={pipelines} placeholder="Sem pipeline (só vira contato)" />
+                  <CampoDeLista label="Pipeline" value={pipelineId} onChange={onPipeline} options={pipelines} placeholder="Sem pipeline (só vira contato)" />
                   {pipelineId && (
-                    <Select label="Coluna (estágio)" value={stageId} onChange={setStageId} options={stages} placeholder="Escolha a coluna" />
+                    <CampoDeLista label="Coluna (estágio)" value={stageId} onChange={setStageId} options={stages} placeholder="Escolha a coluna" />
                   )}
-                  <Select label="Tag" value={labelId} onChange={setLabelId} options={labels} placeholder="Sem tag" />
+                  <CampoDeLista label="Tag" value={labelId} onChange={setLabelId} options={labels} placeholder="Sem tag" />
                 </>
               )}
             </div>

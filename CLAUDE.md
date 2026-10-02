@@ -5130,7 +5130,13 @@ O que aparece na tela: no computador, toda lista migrada abre a lista do produto
 no celular e no tablet, a do sistema (a rodinha do iPhone). Neste PR: Imóveis
 (lista, cadastro e mapa), Roleta, ficha do contato, card do lead (interesses e
 follow-up), Agenda (folgas e horário), destino do lead, desativar usuário, portais
-e o formulário da landing. O resto vem em dois PRs (spec no fim desta seção).
+e o formulário da landing. No PR 2: Dashboard nova (filtros e Funil), Conversas
+(filtros rápidos), IA Vendedora (inclusive o assistente), Follow-up, Formulários de
+anúncio, Automações de lead, Boas-vindas, Pixel e CAPI, Academia, Variáveis, número
+que envia, Agendar mensagem, linha do tempo do contato, Site e a landing (roteamento
+de lead, assistente e editor). Falta o PR 3: painel raiz, primeiro acesso,
+`FormSelect` e os formulários de canal e de agente herdados do fork (spec no fim
+desta seção).
 
 Decisões (não reabrir sem o dono pedir):
 
@@ -5157,9 +5163,38 @@ Armadilhas:
 6. **Não é `featureKey` nem `clientToggleKey`**, e não tem metade de backend.
 7. **No celular é um `<select>` só, com a seta desenhada no fundo e sem largura
    padrão:** tela que quer largura cheia passa `w-full`.
+8. **Caixinha que fecha em clique fora precisa saber da lista.** No computador a
+   lista do produto abre num portal, fora da caixinha. Quem fecha no `mousedown` de
+   fora ignora alvo dentro de `[data-slot="select-content"],
+   [data-radix-popper-content-wrapper]`, e no Esc olha `defaultPrevented` (o Radix
+   fecha só a lista). Com a lista aberta o Radix desliga os cliques no body, então
+   o clique de fora chega no `<html>`: quem fecha no `mousedown` também ignora alvo
+   igual a `document.documentElement` (como o `QuickFilters`), senão qualquer clique
+   fecha a caixinha junto com a lista. Modelo: `chat/filters/QuickFilters.tsx`, com spec.
+9. **Componente com `Seletor` declarado dentro do render fecha a lista aberta**: é
+   um componente novo a cada redesenho, e o React desmonta e monta de novo. Declare
+   no escopo do módulo e passe o que ele usa por prop (`LeadRoutingModal`,
+   `CreateLandingWizard`, com spec).
+10. **No computador a caixa mede o rótulo escolhido (`w-fit`).** Lista que enchia o
+    espaço pede `w-full`; lista em linha ou de filtro pede largura fixa pelo maior
+    rótulo (gatilhos da IA Vendedora, dia e hora do relatório, unidade de espera,
+    Período da Dashboard), senão a linha pula a cada escolha. E o `tailwind-merge`
+    fica com a ÚLTIMA classe: `${inputCls} w-44` com `w-full` dentro vira `w-44`,
+    enquanto no CSS do Tailwind o `.w-full` vencia. Em Pixel e CAPI a largura morta
+    saiu para o desenho continuar o mesmo.
+11. **`bare` com fundo colorido:** o `Seletor` repete o último fundo da `className`
+    como `dark:hover:`, para o hover escuro do design system não apagar a cor do
+    status. CSS fora de camada (o `lmf.css` da Dashboard) vence qualquer utilidade
+    do botão; regra escrita para `<select>` ou para `button` precisa olhar
+    `[data-slot='select-trigger']`. Na Dashboard o liga/desliga é
+    `[aria-pressed]` (não `button[data-active]`) e o `.lmf-select` traz de volta a
+    seta do design system.
+12. **`assistente/steps/Campos.tsx` já tem um `Seletor` próprio** (o campo do
+    assistente, usado nas etapas). A peça da casa entra lá como `SeletorDaCasa`.
 
-Spec e plano: `LM FLOW/specs/2026-10-02-seletor-unico-design.md` e
-`LM FLOW/plans/2026-10-02-seletor-unico-pr1.md` (pasta do Tony, fora deste repo).
+Spec e planos: `LM FLOW/specs/2026-10-02-seletor-unico-design.md`,
+`LM FLOW/plans/2026-10-02-seletor-unico-pr1.md` e
+`LM FLOW/plans/2026-10-02-seletor-unico-pr2.md` (pasta do Tony, fora deste repo).
 
 ## Selo *Follow-up automático* nas Conversas (desde 2026-10-02)
 

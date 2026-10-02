@@ -12,6 +12,7 @@ import {
 } from '@/services/salesAgents/salesAgentsService';
 import { defaultCopyName, duplicateSummary } from '@/features/salesAgents/duplicateAgent';
 import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
+import { Seletor } from '@/components/base/Seletor';
 
 interface Props {
   agent: SalesAgent;
@@ -69,7 +70,7 @@ export default function DuplicateAgentDialog({ agent, inboxes, onClose, onDuplic
 
           <div>
             <Label htmlFor="dup_inbox">Número em que a cópia vai atender</Label>
-            <select
+            <Seletor
               id="dup_inbox"
               value={inboxId}
               onChange={(e) => setInboxId(e.target.value)}
@@ -79,7 +80,7 @@ export default function DuplicateAgentDialog({ agent, inboxes, onClose, onDuplic
               {inboxes.map((i) => (
                 <option key={i.id} value={String(i.id)}>{i.name}</option>
               ))}
-            </select>
+            </Seletor>
             {sameNumber && (
               <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
                 É o mesmo número da IA original. Se as duas ficarem ligadas nele, quem atende

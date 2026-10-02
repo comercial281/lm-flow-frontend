@@ -39,6 +39,7 @@ import LabelMultiSelect from '@/components/labels/LabelMultiSelect';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { connectedPagesFrom } from './connectedPages';
+import { Seletor } from '@/components/base/Seletor';
 // Etiqueta de marketing padrão de todo lead de formulário (igual ao backend).
 const PAID_TAG = 'tráfego pago';
 
@@ -602,7 +603,7 @@ export default function LeadAdsForms() {
           <div className="space-y-4 py-2">
             <div>
               <UILabel htmlFor="bf_days">Período (dias)</UILabel>
-              <select id="bf_days" value={backfillDays}
+              <Seletor id="bf_days" value={backfillDays}
                 onChange={e => { setBackfillDays(Number(e.target.value)); setBackfillPreview(null); }}
                 className={baseSelectClass}>
                 <option value={1}>Último 1 dia</option>
@@ -610,7 +611,7 @@ export default function LeadAdsForms() {
                 <option value={7}>Últimos 7 dias</option>
                 <option value={15}>Últimos 15 dias</option>
                 <option value={30}>Últimos 30 dias</option>
-              </select>
+              </Seletor>
             </div>
 
             {backfillPreview && (
@@ -1261,7 +1262,7 @@ export default function LeadAdsForms() {
           <div className="space-y-4 py-2">
             <div>
               <UILabel>Funil *</UILabel>
-              <select
+              <Seletor
                 value={form.pipeline_id}
                 onChange={e =>
                   setForm(f => ({ ...f, pipeline_id: e.target.value, pipeline_stage_id: '' }))
@@ -1272,13 +1273,13 @@ export default function LeadAdsForms() {
                 {resources.pipelines.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
-              </select>
+              </Seletor>
             </div>
 
             {form.pipeline_id && (
               <div>
                 <UILabel>Etapa *</UILabel>
-                <select
+                <Seletor
                   value={form.pipeline_stage_id}
                   onChange={e => setForm(f => ({ ...f, pipeline_stage_id: e.target.value }))}
                   className={baseSelectClass}
@@ -1287,7 +1288,7 @@ export default function LeadAdsForms() {
                   {(resources.stagesByPipeline[form.pipeline_id] ?? []).map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
-                </select>
+                </Seletor>
               </div>
             )}
 
@@ -1326,7 +1327,7 @@ export default function LeadAdsForms() {
             {/* Quem assume o lead na entrada: responsável fixo OU roleta */}
             <div>
               <UILabel htmlFor="assign_to">Quem assume o lead</UILabel>
-              <select
+              <Seletor
                 id="assign_to"
                 className={baseSelectClass}
                 value={form.assign_to}
@@ -1347,7 +1348,7 @@ export default function LeadAdsForms() {
                     ))}
                   </optgroup>
                 )}
-              </select>
+              </Seletor>
               <p className="text-xs text-muted-foreground mt-1">
                 Fixo manda pro mesmo corretor; roleta distribui automático entre os corretores.
               </p>
@@ -1390,7 +1391,7 @@ export default function LeadAdsForms() {
             {/* Imóvel vinculado a todo lead desse formulário */}
             <div>
               <UILabel htmlFor="property_id">Imóvel vinculado (opcional)</UILabel>
-              <select
+              <Seletor
                 id="property_id"
                 className={baseSelectClass}
                 value={form.property_id}
@@ -1400,7 +1401,7 @@ export default function LeadAdsForms() {
                 {properties.map(p => (
                   <option key={p.id} value={p.id}>{p.title || p.code || 'Imóvel'}</option>
                 ))}
-              </select>
+              </Seletor>
             </div>
 
             <div className="flex items-center gap-2">
