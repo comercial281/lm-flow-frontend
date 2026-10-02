@@ -11,6 +11,7 @@ export function formularioNovo(kind: ListingKind): Partial<PropertyFormData> {
 
 export function payloadDoFormulario(form: PropertyFormData): PropertyFormData {
   const emp = form.listing_kind === 'development';
-  const previsao = emp && form.stage !== 'ready' && form.delivery_forecast ? form.delivery_forecast : null;
+  const semPrevisao = emp && form.stage === 'ready';
+  const previsao = semPrevisao ? null : form.delivery_forecast || null;
   return { ...form, transaction_type: emp ? 'sale' : form.transaction_type, delivery_forecast: previsao };
 }

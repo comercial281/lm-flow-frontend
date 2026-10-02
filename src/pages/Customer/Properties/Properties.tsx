@@ -438,7 +438,8 @@ export default function Properties() {
     setForm({
       title: p.title,
       description: p.description ?? '',
-      transaction_type: p.transaction_type,
+      // Empreendimento é sempre venda: o campo some da tela, então o valor salvo não pode mandar nos preços.
+      transaction_type: tipoDoImovel(p) === 'development' ? 'sale' : p.transaction_type,
       category_type: p.category_type,
       property_type: p.property_type,
       status: p.status,
@@ -501,11 +502,13 @@ export default function Properties() {
     // backend (ele descartaria de qualquer jeito) — evita gravar planta fantasma.
     try {
       if (editing) {
-        const updated = await propertiesService.update(editing.id, payload);
+        // listing_kind só vai na criação: salvar não desfaz um "Mover para…" feito em outro lugar.
+        const { listing_kind: _tipo, ...semTipo } = payload;
+        const updated = await propertiesService.update(editing.id, semTipo);
         if (tipoDoImovel(updated) !== kind) {
           // Mudou de tipo: sai da aba aberta e as contagens recarregam.
+          if (properties.some(p => p.id === updated.id)) setTotal(t => Math.max(0, t - 1));
           setProperties(prev => prev.filter(p => p.id !== updated.id));
-          setTotal(t => Math.max(0, t - 1));
           recontar();
         } else {
           setProperties(prev => prev.map(p => p.id === updated.id ? updated : p));
@@ -725,7 +728,7 @@ export default function Properties() {
       const put = <K extends keyof PropertyFormData>(k: K, v: PropertyFormData[K] | null | undefined) => {
         if (v !== null && v !== undefined && v !== '') patch[k] = v;
       };
-      put('transaction_type', r.transaction_type);
+      if (f.listing_kind !== 'development') put('transaction_type', r.transaction_type);
       put('property_type', r.property_type);
       put('sale_price', r.sale_price);
       put('rent_price', r.rent_price);
@@ -751,7 +754,7 @@ export default function Properties() {
       // Tipologias achadas no book: só aplica quando veio alguma (não apaga as
       // que o corretor já digitou) e mantém as dele na frente.
       const found = cleanTypologies(r.typologies);
-      if (found.length) patch.typologies = [...cleanTypologies(f.typologies), ...found];
+      if (found.length && f.listing_kind === 'development') patch.typologies = [...cleanTypologies(f.typologies), ...found];
       const filled = Object.keys(patch).length;
       if (!filled) { toast.error('Não achei dados reconhecíveis no texto. Revise e preencha manualmente.'); return; }
       setF(patch);
@@ -1284,6 +1287,9 @@ export default function Properties() {
                 <Seletor value={f.status} onChange={e => setF({ status: e.target.value })}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                   {SITUACOES[f.listing_kind ?? 'resale'].map(s => <option key={s.valor} value={s.valor}>{s.rotulo}</option>)}
+                  {!SITUACOES[f.listing_kind ?? 'resale'].some(s => s.valor === f.status) && (
+                    <option value={f.status}>{rotuloDaSituacao('resale', f.status)}</option>
+                  )}
                 </Seletor>
               </div>
 

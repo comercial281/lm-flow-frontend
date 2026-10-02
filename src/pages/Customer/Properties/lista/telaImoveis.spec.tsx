@@ -11,6 +11,7 @@ const svc = vi.hoisted(() => ({
   contarPorTipo: vi.fn(),
   facets: vi.fn(),
   update: vi.fn(),
+  get: vi.fn(),
 }));
 
 vi.mock('@/services/properties/propertiesService', async importOriginal => {
@@ -26,8 +27,8 @@ vi.mock('@/services/users/usersService', () => ({
 }));
 // O lote com IA e o mapa têm testes próprios; aqui só importa que a tela os chama.
 vi.mock('../PropertyImportDialog', () => ({
-  default: ({ open, listingKind, onManual }: { open: boolean; listingKind?: string; onManual?: () => void }) =>
-    (open ? <div data-testid="lote">lote {listingKind}<button onClick={onManual}>Cadastrar à mão</button></div> : null),
+  default: ({ open, listingKind, onManual, onReview }: { open: boolean; listingKind?: string; onManual?: () => void; onReview?: (id: string) => void }) =>
+    (open ? <div data-testid="lote">lote {listingKind}<button onClick={onManual}>Cadastrar à mão</button><button onClick={() => onReview?.('d1')}>Revisar d1</button></div> : null),
 }));
 vi.mock('./VisaoMapa', () => ({
   default: ({ kind }: { kind: string }) => <div data-testid="mapa">mapa {kind}</div>,
@@ -179,5 +180,17 @@ describe('Tela de Imóveis', () => {
     expect(screen.queryByText('Fase da obra')).toBeNull();
     expect(screen.queryByText('Previsão de entrega')).toBeNull();
     expect(screen.queryByText('Tipologias do empreendimento')).toBeNull();
+  });
+
+  it('editar empreendimento salvo como locação mostra Valor de venda e a situação antiga', async () => {
+    svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 3 });
+    svc.get.mockResolvedValue(imovel({ id: 'd1', listing_kind: 'development', transaction_type: 'rent', status: 'reserved' }));
+    abrir('/properties?aba=empreendimentos');
+    await screen.findByRole('button', { name: /Novo empreendimento/ });
+    fireEvent.click(screen.getByRole('button', { name: /Novo empreendimento/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Revisar d1' }));
+    expect(await screen.findByText('Valor de venda (R$) *')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Reservado' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'À venda' })).toBeInTheDocument();
   });
 });

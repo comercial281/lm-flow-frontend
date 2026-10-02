@@ -14,4 +14,9 @@ describe('formulário por tipo', () => {
     expect(payloadDoFormulario({ ...base, listing_kind: 'development', transaction_type: 'sale', stage: 'ready', delivery_forecast: '2027-12' } as never).delivery_forecast).toBeNull();
     expect(payloadDoFormulario({ ...base, listing_kind: 'resale', transaction_type: 'rent', stage: 'ready', delivery_forecast: '' } as never).delivery_forecast).toBeNull();
   });
+
+  it('revenda mantém a previsão que veio do empreendimento', () => {
+    const base = { title: 'x', category_type: 'residential', property_type: 'apartment', status: 'active' };
+    expect(payloadDoFormulario({ ...base, listing_kind: 'resale', transaction_type: 'sale', stage: 'ready', delivery_forecast: '2027-12' } as never).delivery_forecast).toBe('2027-12');
+  });
 });
