@@ -47,7 +47,8 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
 }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [conversationPipelines, setConversationPipelines] = useState<Pipeline[]>([]);
-  const [isLoadingPipelines, setIsLoadingPipelines] = useState(false);
+  // Começa carregando: sem isso, "Colocar no funil" pisca antes da primeira resposta.
+  const [isLoadingPipelines, setIsLoadingPipelines] = useState(true);
   const [conversasDoContato, setConversasDoContato] = useState<ContactConversation[]>([]);
 
   // Detectar se é mobile para controlar renderização
