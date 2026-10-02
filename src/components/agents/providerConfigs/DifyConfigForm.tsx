@@ -1,5 +1,6 @@
 import { Label, Input } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
+import { Seletor } from '@/components/base/Seletor';
 
 export interface DifyConfig {
   apiUrl?: string;
@@ -53,7 +54,7 @@ export const DifyConfigForm = ({
       </div>
       <div className="space-y-2">
         <Label htmlFor="dify_botType">{t('edit.configuration.sections.externalIntegration.forms.dify.botType')}</Label>
-        <select
+        <Seletor
           id="dify_botType"
           value={config.botType || 'chatBot'}
           onChange={(e) =>
@@ -65,7 +66,7 @@ export const DifyConfigForm = ({
           <option value="chatBot">{t('edit.configuration.sections.externalIntegration.forms.dify.botTypes.chatBot')}</option>
           <option value="textGenerator">{t('edit.configuration.sections.externalIntegration.forms.dify.botTypes.textGenerator')}</option>
           <option value="agent">{t('edit.configuration.sections.externalIntegration.forms.dify.botTypes.agent')}</option>
-        </select>
+        </Seletor>
       </div>
     </>
   );

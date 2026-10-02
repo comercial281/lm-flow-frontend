@@ -1,5 +1,6 @@
 import { Label, Input } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
+import { Seletor } from '@/components/base/Seletor';
 
 export interface TypebotConfig {
   url?: string;
@@ -52,7 +53,7 @@ export const TypebotConfigForm = ({
       </div>
       <div className="space-y-2">
         <Label htmlFor="typebot_apiVersion">{t('edit.configuration.sections.externalIntegration.forms.typebot.apiVersion')}</Label>
-        <select
+        <Seletor
           id="typebot_apiVersion"
           value={config.apiVersion || 'latest'}
           onChange={(e) => onChange({ ...config, apiVersion: e.target.value })}
@@ -61,7 +62,7 @@ export const TypebotConfigForm = ({
         >
           <option value="latest">{t('edit.configuration.sections.externalIntegration.forms.typebot.apiVersions.latest')}</option>
           <option value="legacy">{t('edit.configuration.sections.externalIntegration.forms.typebot.apiVersions.legacy')}</option>
-        </select>
+        </Seletor>
       </div>
     </>
   );

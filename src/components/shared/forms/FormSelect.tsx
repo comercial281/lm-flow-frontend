@@ -1,4 +1,5 @@
 import { Label } from '@/components/ui/ds';
+import { Seletor } from '@/components/base/Seletor';
 
 interface FormSelectProps {
   id: string;
@@ -25,7 +26,7 @@ export function FormSelect({
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </Label>
-      <select
+      <Seletor
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -36,7 +37,7 @@ export function FormSelect({
             {option.label}
           </option>
         ))}
-      </select>
+      </Seletor>
       {description && (
         <p className="text-xs text-muted-foreground">{description}</p>
       )}

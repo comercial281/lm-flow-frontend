@@ -1,5 +1,6 @@
 import { Label, Input } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
+import { Seletor } from '@/components/base/Seletor';
 
 export interface OpenAIConfig {
   apiKey?: string;
@@ -42,7 +43,7 @@ export const OpenAIConfigForm = ({
       </div>
       <div className="space-y-2">
         <Label htmlFor="openai_botType">{t('edit.configuration.sections.externalIntegration.forms.openai.botType')}</Label>
-        <select
+        <Seletor
           id="openai_botType"
           value={config.botType || 'assistant'}
           onChange={(e) =>
@@ -53,7 +54,7 @@ export const OpenAIConfigForm = ({
         >
           <option value="assistant">{t('edit.configuration.sections.externalIntegration.forms.openai.botTypes.assistant')}</option>
           <option value="chatCompletion">{t('edit.configuration.sections.externalIntegration.forms.openai.botTypes.chatCompletion')}</option>
-        </select>
+        </Seletor>
       </div>
       {config.botType === 'assistant' && (
         <div className="space-y-2">
