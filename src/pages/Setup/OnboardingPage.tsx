@@ -157,6 +157,8 @@ export default function OnboardingPage() {
   // foco depois disso. O autoFocus do campo continua valendo no celular.
   const outroRef = useRef<HTMLInputElement>(null);
   const escolheuOutro = form.mainChannel === t('survey.channel.other');
+  const escolheuOutroRef = useRef(escolheuOutro);
+  escolheuOutroRef.current = escolheuOutro;
   useEffect(() => {
     if (!escolheuOutro) return undefined;
     const id = setTimeout(() => outroRef.current?.focus(), 0);
@@ -372,6 +374,13 @@ export default function OnboardingPage() {
                   <Seletor
                     bare
                     escuro
+                    onCloseAutoFocus={(e) => {
+                      // Lê o valor no momento da chamada (ref), sem closure velha.
+                      if (escolheuOutroRef.current) {
+                        e.preventDefault();
+                        outroRef.current?.focus();
+                      }
+                    }}
                     id="mainChannel"
                     value={form.mainChannel}
                     onChange={(e) => set('mainChannel')(e.target.value)}

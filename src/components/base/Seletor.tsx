@@ -31,7 +31,12 @@ import {
   deRadix, eventoDeMudanca, lerItens, paraRadix, valorExibido, type OpcaoDoSeletor,
 } from './seletorOpcoes';
 
-export type SeletorProps = SelectHTMLAttributes<HTMLSelectElement> & { bare?: boolean; escuro?: boolean };
+export type SeletorProps = SelectHTMLAttributes<HTMLSelectElement> & {
+  bare?: boolean;
+  escuro?: boolean;
+  // Radix chama isto quando a lista fecha de verdade (depois da animação); preventDefault() deixa a tela decidir para onde vai o foco.
+  onCloseAutoFocus?: (event: Event) => void;
+};
 
 // A caixa do nativo, com a cara dos Inputs (era o NativeSelect de 04/08).
 const CAIXA_NATIVA =
@@ -69,7 +74,7 @@ function hoverSemMudanca(className = ''): string {
 
 export function Seletor({
   bare = false, escuro = false, children, className, value, defaultValue, onChange,
-  disabled, name, required, id, title, style, ...resto
+  disabled, name, required, id, title, style, onCloseAutoFocus, ...resto
 }: SeletorProps) {
   const toque = usePonteiroDeToque();
   // Sem `value`, guarda a escolha aqui (o nativo faria o mesmo sozinho).
@@ -127,7 +132,7 @@ export function Seletor({
         </SelectTrigger>
         {/* Acima de qualquer janela da casa (modais em z-[200], mapa em z-[1000]).
             `dark` na própria lista liga as cores do tema escuro só nela. */}
-        <SelectContent className={cn('z-[1200]', escuro && 'dark')}>
+        <SelectContent className={cn('z-[1200]', escuro && 'dark')} onCloseAutoFocus={onCloseAutoFocus}>
           {itens.map((it, i) =>
             it.tipo === 'opcao' ? (
               item(it, i)

@@ -78,6 +78,10 @@ describe('Primeiro acesso no computador', () => {
     const campo = screen.getByPlaceholderText('survey.channel.otherPlaceholder');
     // A lista do produto devolve o foco ao botão ao fechar; o campo tem que ganhar.
     await waitFor(() => expect(campo).toHaveFocus());
+    // E continua nele depois que a lista termina de fechar (onCloseAutoFocus).
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+    await new Promise((r) => setTimeout(r, 300));
+    expect(campo).toHaveFocus();
   });
 
   it('o foco pinta a borda verde no botão, como pintava no select', () => {
