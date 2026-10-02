@@ -3201,6 +3201,32 @@ Armadilhas:
 3. **Não é `featureKey` nem `clientToggleKey`** — é modo da roleta. Os scanners do
    catálogo não entram nesta história.
 
+### Sua vez na fila, na Dashboard do corretor (desde 2026-10-02)
+
+Pedido do dono do produto: no modo Fila, o corretor vê na Dashboard a posição dele,
+quase em tempo real. Cartão **Sua vez na fila** (`blocos/MinhaVez.tsx`, bloco
+`minha_vez` no catálogo), ao lado de *Pendências*, só na visão do corretor.
+
+- **"3º de 8 na fila"** e *"2 corretores na sua frente"*; na vez dele, *"Você é o
+  próximo a receber"*. Pausado ou fora do sorteio: sem número, com o motivo e
+  *"Fale com o gestor"*. Com oferta aberta: *"Você está com um lead esperando seu
+  aceite"* no lugar da posição (a vez já passou por ele).
+- **Mais de uma roleta Fila: um cartão só**, com setas e "1 de 2", e dá para
+  **arrastar para o lado** (pointer events, `touch-action: pan-y` para a página
+  continuar rolando na vertical).
+- **Atualiza a cada 2 minutos**, só com a aba visível, e na hora em que uma oferta
+  dele chega ou sai (`usePendingOffers`, que já faz a ronda de 1 min do app).
+- Sem roleta Fila, ou contra o servidor antigo, o cartão não desenha nada e a coluna
+  some (`.lmfn-coluna:empty`): as *Pendências* ocupam a linha como antes.
+
+Decisões do dono (não reabrir sem ele pedir): **só a posição DELE**, nunca a fila
+com o nome dos colegas (essa é o *Roleta agora* do gestor); **2 minutos**, não
+tempo real de verdade; **sem frase explicando que a posição pode pular** ("ninguém
+recusa lead").
+
+Armadilha: **a metade do backend vem PRIMEIRO** (`GET /broker_assignments/queue_position`,
+na `saas-multitenant`). Sem ela o cartão simplesmente não aparece.
+
 ## O acesso vai por LINK, e a senha é criada por quem usa (desde 2026-09-22)
 
 Relato do dono do produto, com print: uma corretora não entrava pelo iPhone —

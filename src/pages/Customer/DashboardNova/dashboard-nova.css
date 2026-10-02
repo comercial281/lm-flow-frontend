@@ -71,3 +71,10 @@ button.lmfn-numero:focus-visible { outline: 2px solid var(--lmf-accent); outline
 .lmfn-carrossel { display: flex; align-items: center; gap: 6px; }
 .lmfn-carrossel button { border: 1px solid var(--lmf-border); background: var(--lmf-surface); border-radius: 8px; width: 28px; height: 28px; display: inline-grid; place-items: center; color: inherit; cursor: pointer; }
 .lmfn-carrossel button:disabled { opacity: 0.4; cursor: default; }
+/* Sua vez na fila: arrastar para o lado troca de roleta, então o toque na
+ * horizontal é da tela, e a rolagem vertical continua da página. */
+.lmfn-vez { touch-action: pan-y; user-select: none; }
+.lmfn-vez-numero { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 4px; }
+.lmfn-vez-numero strong { font-size: 34px; font-weight: 650; letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.lmfn-vez-numero span { font-size: 13px; color: var(--lmf-muted); }
+.lmfn-vez-texto { font-size: 13.5px; margin: 0; }

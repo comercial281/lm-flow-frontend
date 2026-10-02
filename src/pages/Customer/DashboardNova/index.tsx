@@ -18,6 +18,7 @@ import { Numeros } from './blocos/Numeros';
 import { Pendencias } from './blocos/Pendencias';
 import { ProximasVisitas } from './blocos/ProximasVisitas';
 import { RoletaAgora } from './blocos/RoletaAgora';
+import { MinhaVez } from './blocos/MinhaVez';
 import { AtendimentoTime } from './blocos/AtendimentoTime';
 import { Funil } from './blocos/Funil';
 import { Resultados } from './blocos/Resultados';
@@ -25,7 +26,7 @@ import { LeadsDiaSemana, LeadsHorario, LeadsSeisMeses, MapaCalor, Origem } from 
 
 const COMPONENTES: Record<BlocoId, React.FC<ContextoBloco>> = {
   imoveis: Imoveis, numeros: Numeros, pendencias: Pendencias, proximas_visitas: ProximasVisitas,
-  roleta_agora: RoletaAgora, atendimento_time: AtendimentoTime, funil: Funil, resultados: Resultados,
+  roleta_agora: RoletaAgora, minha_vez: MinhaVez, atendimento_time: AtendimentoTime, funil: Funil, resultados: Resultados,
   leads_dia_semana: LeadsDiaSemana, leads_horario: LeadsHorario, leads_seis_meses: LeadsSeisMeses,
   origem: Origem, mapa_calor: MapaCalor,
 };
