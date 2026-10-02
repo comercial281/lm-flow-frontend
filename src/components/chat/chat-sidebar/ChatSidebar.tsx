@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@evoapi/design-system/button';
 import { Input } from '@evoapi/design-system/input';
 import { Badge } from '@evoapi/design-system/badge';
@@ -40,12 +40,8 @@ import { ConversationSkeleton } from '../loading-states';
 import { NoConversations } from '../empty-states';
 import { AvisoListaVaziaNumero, FaixaReconectar } from '../empty-states/AvisoNumero';
 import {
-  avisoListaVazia,
   numerosParaReconectar,
 } from '@/features/numbers/avisoConversas';
-import { PermissionsContext } from '@/contexts/PermissionsContext';
-import { useCan } from '@/hooks/useCan';
-import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useAuth } from '@/contexts/AuthContext';
 import ContactAvatar from '../contact/ContactAvatar';
 import ConversationBadges from '../conversation/ConversationBadges';
@@ -63,6 +59,7 @@ import {
   type Pilula,
 } from '@/features/conversas/pilulas';
 import { useNumerosDaConversa } from '@/features/numbers/useNumerosDaConversa';
+import { useAvisoDeNumero, usePermissoesDeNumero } from '@/features/numbers/useAvisoDeNumero';
 import type { Inbox } from '@/types/channels/inbox';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -443,15 +440,11 @@ const ChatSidebar = ({
   // (`inboxes.update`, o mesmo sinal da tela de Canais); sem as permissões
   // carregadas a tela não decide nada. Só vale sem busca e sem filtro além do
   // `status=open` de sempre: lista vazia por filtro não é culpa do número.
-  const permissoes = useContext(PermissionsContext);
-  const can = useCan();
-  const permissoesProntas = permissoes ? permissoes.isReady : true;
-  const gestor = permissoesProntas && can('inboxes', 'update');
-  const podeCriarNumero = useFeature('channels_connect') && permissoesProntas && can('channels', 'create');
+  const { permissoesProntas, gestor } = usePermissoesDeNumero();
+  const avisoDeNumero = useAvisoDeNumero();
   const avisoVazio =
-    permissoesProntas &&
     deveAvisarNumero({ pilula, showArchived, busca: searchInput, filtros: conversationFilters })
-      ? avisoListaVazia({ numeros, gestor, podeCriar: podeCriarNumero })
+      ? avisoDeNumero
       : null;
   const paraReconectar =
     permissoesProntas && !showArchived

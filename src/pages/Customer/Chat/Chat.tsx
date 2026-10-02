@@ -45,7 +45,9 @@ import ChatHeader from '@/components/chat/chat-header/ChatHeader';
 import ChatArea from '@/components/chat/chat-area/ChatArea';
 import ChatTabs from '@/components/chat/chat-tabs/ChatTabs';
 
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { AlertTriangle, MessageCircle, Trash2 } from 'lucide-react';
+import { AvisoListaVaziaNumero } from '@/components/chat/empty-states/AvisoNumero';
+import { useAvisoDeNumero } from '@/features/numbers/useAvisoDeNumero';
 
 import { Conversation } from '@/types/chat/api';
 import { BaseFilter } from '@/types/core';
@@ -70,6 +72,7 @@ const UUID_V4_REGEX =
 
 const Chat = () => {
   const { t } = useLanguage('chat');
+  const avisoDeNumero = useAvisoDeNumero();
   const { can, isReady: permissionsReady } = usePermissions();
   const { conversationId } = useParams<{ conversationId?: string }>();
   const navigate = useNavigate();
@@ -864,12 +867,16 @@ const Chat = () => {
               )}
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">{t('empty.title')}</h3>
-                <p className="text-muted-foreground">{t('empty.description')}</p>
-              </div>
+            <div className="flex-1 flex items-center justify-center p-4">
+              {avisoDeNumero ? (
+                <AvisoListaVaziaNumero aviso={avisoDeNumero} />
+              ) : (
+                <div className="text-center">
+                  <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">{t('empty.title')}</h3>
+                  <p className="text-muted-foreground">{t('empty.description')}</p>
+                </div>
+              )}
             </div>
           )}
         </div>

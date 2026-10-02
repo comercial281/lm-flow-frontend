@@ -7,7 +7,6 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { useConversationModerations } from '@/hooks/chat/useConversationModerations';
 import { useAppDataStore } from '@/store/appDataStore';
 
-import { MessageCircle } from 'lucide-react';
 
 import { Button } from '@evoapi/design-system/button';
 
@@ -296,17 +295,8 @@ const ChatArea = ({
     return 'https://developers.facebook.com/docs/whatsapp/messaging-limits';
   };
 
-  if (!selectedConversationId) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">{t('chatArea.selectConversation.title')}</h3>
-          <p className="text-muted-foreground">{t('chatArea.selectConversation.description')}</p>
-        </div>
-      </div>
-    );
-  }
+  // ChatArea só monta com conversa aberta (o painel vazio mora em Chat.tsx).
+  if (!selectedConversationId) return null;
 
   const typingUsers = websocket.getTypingUsers(selectedConversationId);
 
