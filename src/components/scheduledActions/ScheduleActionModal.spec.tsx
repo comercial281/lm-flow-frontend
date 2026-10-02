@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { Inbox } from '@/types/channels/inbox';
 import InboxesService from '@/services/channels/inboxesService';
@@ -127,6 +128,11 @@ vi.mock('@evoapi/design-system', () => {
     }) => <label htmlFor={htmlFor}>{children}</label>,
     Select,
     SelectContent: passthrough,
+    // O Seletor (lista de escolha da casa) importa também estes dois. Nos testes
+    // ele desenha o <select> nativo e não usa nenhum dos dois; sem eles, um teste
+    // com matchMedia de computador quebraria com "No SelectGroup export".
+    SelectGroup: passthrough,
+    SelectLabel: passthrough,
     SelectItem,
     SelectTrigger: passthrough,
     SelectValue: ({ placeholder }: { placeholder?: string }) => <span>{placeholder}</span>,
@@ -183,5 +189,21 @@ describe('ScheduleActionModal', () => {
     expect(screen.queryByRole('option', { name: 'WhatsApp Legacy (scheduledActions.channelWhatsapp)' })).toBeNull();
     expect(screen.queryByRole('option', { name: 'SMS (scheduledActions.channelSms)' })).toBeNull();
     expect(screen.queryByRole('option', { name: /API Team/ })).toBeNull();
+  });
+
+  it('o segundo bloco agendado escolhe a unidade da espera (Seletor)', async () => {
+    mockedInboxesService.list.mockResolvedValue({
+      success: true,
+      data: [buildInbox({ id: 'wa-cloud', name: 'WhatsApp Cloud', channel_type: 'Channel::WhatsappCloud' })],
+      meta: {} as never,
+      message: '',
+    });
+
+    render(<ScheduleActionModal open onClose={vi.fn()} />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Adicionar bloco agendado/ }));
+    const unidade = screen.getByDisplayValue('dias');
+    await userEvent.selectOptions(unidade, 'hours');
+    expect(unidade).toHaveValue('hours');
   });
 });

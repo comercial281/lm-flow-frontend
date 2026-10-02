@@ -42,6 +42,7 @@ import {
   isSupportedPayloadChannel,
   type ChannelOption,
 } from './scheduledActionChannelUtils';
+import { Seletor } from '@/components/base/Seletor';
 
 interface ScheduleActionModalProps {
   open: boolean;
@@ -746,15 +747,15 @@ export function ScheduleActionModal({
                             onChange={e => updateBlock(i, { delayValue: Number(e.target.value) || 0 })}
                             className="h-7 w-16 text-xs"
                           />
-                          <select
+                          <Seletor
                             value={b.delayUnit}
                             onChange={e => updateBlock(i, { delayUnit: e.target.value as DelayUnit })}
-                            className="h-7 rounded-md border border-border bg-background px-2 text-xs"
+                            className="w-24 h-7 rounded-md border border-border bg-background px-2 text-xs"
                           >
                             <option value="minutes">minutos</option>
                             <option value="hours">horas</option>
                             <option value="days">dias</option>
-                          </select>
+                          </Seletor>
                           <span className="text-muted-foreground">depois do bloco anterior</span>
                         </div>
                       )}
