@@ -5271,3 +5271,26 @@ Armadilhas:
    ninguém elegível volta igual). A tela lê `roleta.offered_to`.
 4. **`aoLadoDaBusca` do BaseHeader** liga o `flex-wrap` só em quem usa o espaço;
    as outras 19 telas não mudam.
+
+## Imóveis: Empreendimentos e Revenda (desde 2026-10-02)
+
+Fase 4, entrega 2. Spec: `LM FLOW/specs/2026-10-02-fase-4-imoveis-empreendimento-revenda-design.md` (pasta do Tony, fora deste repo). Protótipo aprovado pelo dono: https://claude.ai/artifact/8h6NVs343WYK4Vsb5ga6yt
+
+O que aparece na tela:
+
+- **Abas Empreendimentos | Revenda**, cada uma com a sua contagem. Abre na aba com mais cadastros (empate: Empreendimentos); a vazia mostra o convite. A aba fica no endereço (`?aba=`).
+- **Filtro retrátil no topo** (botão *Filtros* com o número de ativos), que rola junto com a página; campos diferentes por aba; etiquetas dos ativos embaixo da busca. A lista atualiza na hora. *Ordenar* e as listas de escolha dos filtros usam o `Seletor`.
+- **Finalidade:** *Venda* traz os imóveis de venda e os de *Venda e locação*; *Locação* traz locação, *Venda e locação* e temporada. Um imóvel *Venda e locação* aparece nos dois filtros.
+- **Linhas largas** (estilo Kenlo), com visão em Grade e Mapa (`?visao=`). `/properties/map` redireciona para a visão Mapa. *Ver página no site* abre `/imovel/<slug>/<código>`.
+- **Situação só no menu ⋮**, com janela e efeito escrito. *Mover para Revenda/Empreendimentos* com confirmação. *Força do anúncio* e *Gerar descrições com IA* viraram botões com nome (contorno), sem menu *Mais ações*.
+- **O cadastro de hoje abre com o tipo da aba.** Empreendimento fixa *Venda* (também ao editar um cadastro antigo de locação) e mostra *Fase da obra*, *Previsão de entrega* (some em *Pronto para morar*) e *Tipologias*. Revenda esconde os três, mas **guarda a previsão que já estava salva**. Situação antiga (*Reservado*/*Alugado* num empreendimento) aparece como opção extra, para não sumir ao editar. O tipo só é enviado na criação: trocar de tipo é só por *Mover para…*.
+
+Decisões do dono (não reabrir sem ele pedir): uma entidade só (IA, portais e site continuam vendo "imóvel"); sem controle unidade por unidade; nomes "Empreendimentos | Revenda"; situações do empreendimento À venda / Esgotado / Inativo / Rascunho.
+
+Armadilhas:
+
+1. **As regras moram em `src/features/properties/listingKind.ts` e `formularioPorTipo.ts`**, com spec, e a tela em `src/pages/Customer/Properties/lista/`. A tela de Imóveis já passa de 2.000 linhas: regra nova não entra nela.
+2. **A contagem das abas usa a própria lista com 1 por página** (`contarPorTipo`), só com os parâmetros de recorte. Não troque por `/properties/stats`: ele pede outra permissão e não respeita o recorte.
+3. **Servidor antigo (sem `listing_kind`)**: tudo cai em Revenda (`tipoDoImovel`); a contagem de Empreendimentos fica 0 e a tela abre em Revenda. A metade do backend vem PRIMEIRO (`lm-flow`, `saas-multitenant`).
+4. **Cada aba guarda os próprios filtros.** Os parâmetros saem de `paramsDosFiltros(kind, ...)`: filtro de uma aba nunca vaza para a outra.
+5. **Não é `featureKey` nem `clientToggleKey`.**
