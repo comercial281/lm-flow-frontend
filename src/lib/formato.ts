@@ -61,6 +61,20 @@ export function hora(valor: unknown): string {
   return d ? fmtHora.format(d) : VAZIO;
 }
 
+/**
+ * Quando algo mudou, curto, pra coluna de lista: "hoje 14:32" · "ontem" ·
+ * "28/09" · "28/09/2025" (outro ano). Comparação pelo dia do calendário local.
+ */
+export function quandoMudou(valor: unknown, agora: Date = new Date()): string {
+  const d = toDate(valor);
+  if (!d) return VAZIO;
+  const dia = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const dias = Math.round((dia(agora) - dia(d)) / 86_400_000);
+  if (dias === 0) return `hoje ${fmtHora.format(d)}`;
+  if (dias === 1) return 'ontem';
+  return d.getFullYear() === agora.getFullYear() ? fmtDataCurta.format(d) : fmtData.format(d);
+}
+
 /** 30/09/2026 às 14:32 */
 export function dataHora(valor: unknown): string {
   const d = toDate(valor);

@@ -3,11 +3,9 @@ import { MessageSquare, Edit, Trash2, Users, Activity, Smartphone } from 'lucide
 import { Contact } from '@/types/contacts';
 import { BaseTable, TableColumn, TableAction } from '@/components/base';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
-import ContactStatusBadge from './ContactStatusBadge';
 import ContactTagsList from './ContactTagsList';
-import ContactTypeBadge from './ContactTypeBadge';
-import ContactPipelinesBadge from './ContactPipelinesBadge';
-import { telefone } from '@/lib/formato';
+import InicialDoCorretor from './InicialDoCorretor';
+import { quandoMudou, telefone, VAZIO } from '@/lib/formato';
 
 interface ContactsTableProps {
   contacts: Contact[];
@@ -23,6 +21,55 @@ interface ContactsTableProps {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   onSort?: (column: string) => void;
+}
+
+// Por qual NÚMERO o contato é atendido. O backend manda os vínculos do MAIS
+// RECENTE para o mais antigo, na mesma ordem que o OutboundInboxResolver usa
+// para escolher por onde a mensagem sai: o primeiro é "por onde fala hoje" —
+// o que muda quando a roleta abre o atendimento noutro número.
+export function numerosDoContato(contact: Contact): string[] {
+  const vinculos = (contact.contact_inboxes ?? []) as Array<{ inbox?: { name?: string } }>;
+  return Array.from(new Set(vinculos.map(v => v?.inbox?.name).filter((n): n is string => !!n)));
+}
+
+/**
+ * Coluna Atendimento (decisão do dono, 02/10/2026): número e corretor lado a
+ * lado — quase sempre o número é o do próprio corretor, então juntos se lê
+ * "por onde e com quem" de uma vez. Telefone pequeno + nome do número, uma
+ * barra, e a foto (ou inicial) do responsável.
+ */
+export function Atendimento({ contact }: { contact: Contact }) {
+  const nomes = numerosDoContato(contact);
+  const dono = contact.default_assignee;
+  // O tooltip separa o atual dos anteriores: sem isso, "+1" não diz se o outro
+  // número é um histórico ou um segundo canal ativo.
+  const tituloNumero =
+    nomes.length > 1
+      ? `Atende por ${nomes[0]} — também passou por ${nomes.slice(1).join(', ')}`
+      : nomes.length === 1
+        ? `Atende por ${nomes[0]}`
+        : 'Ainda não falou por nenhum número';
+
+  return (
+    <div className="flex min-w-0 items-center gap-2 text-xs">
+      <span className="flex min-w-0 items-center gap-1" title={tituloNumero}>
+        <Smartphone className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span className={`truncate ${nomes.length ? '' : 'text-muted-foreground'}`}>
+          {nomes[0] ?? VAZIO}
+          {nomes.length > 1 && <span className="text-muted-foreground"> +{nomes.length - 1}</span>}
+        </span>
+      </span>
+      <span className="h-4 w-px shrink-0 bg-border" aria-hidden="true" />
+      {dono ? (
+        <span className="flex min-w-0 items-center gap-1.5" title={`Responsável: ${dono.name}`}>
+          <InicialDoCorretor nome={dono.name} fotoUrl={dono.avatar_url} />
+          <span className="truncate">{dono.name.split(' ')[0]}</span>
+        </span>
+      ) : (
+        <span className="whitespace-nowrap text-muted-foreground">Sem responsável</span>
+      )}
+    </div>
+  );
 }
 
 export default function ContactsTable({
@@ -41,116 +88,58 @@ export default function ContactsTable({
   onSort,
 }: ContactsTableProps) {
   const { t } = useLanguage('contacts');
-  const contactsList = contacts || [];
 
-  // const formatLastActivity = (date: string) => {
-  //   if (!date) return 'Nunca';
-  //   try {
-  //     return formatDistanceToNow(new Date(date), {
-  //       addSuffix: true,
-  //       locale: ptBR,
-  //     });
-  //   } catch {
-  //     return 'Data inválida';
-  //   }
-  // };
-
+  // Lista enxuta (fase 4, 02/10/2026): saíram Tipo e Status (sempre "Pessoa" e
+  // "Ativo") e Pipelines (quase sempre vazia — a etapa se vê no funil e no card).
+  // Nome e celular em colunas separadas.
   const columns: TableColumn<Contact>[] = [
     {
-      key: 'contact',
-      label: t('table.columns.contact'),
+      key: 'name',
+      label: 'Nome',
       sortable: true,
       render: contact => (
-        <div
-          className="flex items-center gap-3 cursor-pointer hover:opacity-80 py-2"
+        <button
+          type="button"
+          className="flex min-w-0 items-center gap-3 py-1 text-left hover:opacity-80"
           onClick={() => onContactClick(contact)}
         >
-          <ContactAvatar contact={contact} size="md" showColoredFallback={true} />
-          <div className="min-w-0 flex-1">
-            <div className="lm-redact font-medium text-sm truncate mb-1">
-              {contact.name || t('table.noName')}
-            </div>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              {contact.email && <span className="lm-redact truncate">{contact.email}</span>}
-              {contact.email && contact.phone_number && (
-                <span className="text-muted-foreground/50">|</span>
-              )}
-              {contact.phone_number && (
-                <span className="lm-redact whitespace-nowrap">{telefone(contact.phone_number)}</span>
-              )}
-            </div>
-          </div>
-        </div>
+          <ContactAvatar contact={contact} size="sm" showColoredFallback={true} />
+          <span className="lm-redact truncate text-sm font-medium">{contact.name || t('table.noName')}</span>
+        </button>
       ),
     },
     {
-      key: 'type',
-      label: t('table.columns.type'),
+      key: 'phone_number',
+      label: 'Celular',
       sortable: false,
+      width: 'w-40',
       render: contact => (
-        <ContactTypeBadge type={contact.type || 'person'} className="justify-center" />
+        <span className="lm-redact whitespace-nowrap text-sm">
+          {contact.phone_number ? telefone(contact.phone_number) : VAZIO}
+        </span>
       ),
     },
     {
-      // Por qual NÚMERO o contato é atendido. Com um WhatsApp por corretor a
-      // pergunta "de quem é este contato" deixou de ter resposta óbvia — e quem
-      // entrou pela importação da agenda de um aparelho chegava sem marca.
-      //
-      // O backend manda os vínculos do MAIS RECENTE para o mais antigo, na
-      // mesma ordem que o OutboundInboxResolver usa para escolher por onde a
-      // mensagem sai. Então o primeiro item não é "por onde entrou", é "por
-      // onde fala hoje" — que é o que muda quando a roleta abre o atendimento
-      // noutro número.
-      key: 'origem',
-      label: 'Número',
+      key: 'atendimento',
+      label: 'Atendimento',
       sortable: false,
-      render: contact => {
-        const vinculos = (contact.contact_inboxes ?? []) as Array<{ inbox?: { name?: string } }>;
-        const nomes = Array.from(
-          new Set(vinculos.map(v => v?.inbox?.name).filter((n): n is string => !!n)),
-        );
-        if (nomes.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
-        // O tooltip separa o atual dos anteriores: sem isso, "+1" não diz se o
-        // outro número é um histórico ou um segundo canal ativo.
-        const titulo =
-          nomes.length > 1
-            ? `Atende por ${nomes[0]} — também passou por ${nomes.slice(1).join(', ')}`
-            : `Atende por ${nomes[0]}`;
-        return (
-          <div className="flex items-center gap-1 text-xs">
-            <Smartphone className="h-3 w-3 text-muted-foreground shrink-0" />
-            <span className="truncate" title={titulo}>
-              {nomes[0]}
-              {/* Contato que fala por mais de um número: mostra o atual e conta
-                  o resto, senão a coluna estoura a largura. */}
-              {nomes.length > 1 && (
-                <span className="text-muted-foreground"> +{nomes.length - 1}</span>
-              )}
-            </span>
-          </div>
-        );
-      },
+      width: 'w-64',
+      render: contact => <Atendimento contact={contact} />,
     },
     {
       key: 'labels',
-      label: t('table.columns.tags'),
+      label: 'Etiquetas',
       sortable: false,
-      render: contact => <ContactTagsList labels={contact.labels} maxVisible={3} size="sm" />,
+      render: contact => <ContactTagsList labels={contact.labels} maxVisible={2} size="sm" />,
     },
     {
-      key: 'pipelines',
-      label: t('table.columns.pipelines'),
+      key: 'updated_at',
+      label: 'Atualizado em',
       sortable: false,
-      render: contact =>
-        contact.pipelines && contact.pipelines.length > 0 ? (
-          <ContactPipelinesBadge contact={contact} maxPipelines={2} compact={true} />
-        ) : null,
-    },
-    {
-      key: 'status',
-      label: t('table.columns.status'),
-      sortable: false,
-      render: contact => <ContactStatusBadge blocked={contact.blocked} />,
+      width: 'w-32',
+      render: contact => (
+        <span className="whitespace-nowrap text-xs text-muted-foreground">{quandoMudou(contact.updated_at)}</span>
+      ),
     },
   ];
 
@@ -182,7 +171,7 @@ export default function ContactsTable({
 
   return (
     <BaseTable<Contact>
-      data={contactsList}
+      data={contacts || []}
       columns={columns}
       actions={actions}
       selectable
@@ -196,16 +185,8 @@ export default function ContactsTable({
       emptyIcon={Users}
       emptyTitle={t('table.empty.title')}
       emptyDescription={t('table.empty.description')}
-      emptyAction={
-        onCreateContact
-          ? {
-              label: t('table.actions.create'),
-              onClick: onCreateContact,
-            }
-          : undefined
-      }
+      emptyAction={onCreateContact ? { label: t('table.actions.create'), onClick: onCreateContact } : undefined}
       getRowKey={contact => String(contact.id)}
-      className="border-0 shadow-none"
     />
   );
 }

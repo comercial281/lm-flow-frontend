@@ -4,6 +4,9 @@ interface CustomAttributesProps {
   attributes: Record<string, unknown>;
   onAttributesChange: (attributes: Record<string, unknown>) => void;
   disabled?: boolean;
+  /** Só os campos criados pelo gestor (ver CustomAttributesForm). */
+  soDefinidos?: boolean;
+  aoCarregarDefinicoes?: (quantidade: number) => void;
 }
 
 /**
@@ -14,6 +17,8 @@ export default function CustomAttributes({
   attributes,
   onAttributesChange,
   disabled = false,
+  soDefinidos,
+  aoCarregarDefinicoes,
 }: CustomAttributesProps) {
   return (
     <CustomAttributesForm
@@ -22,6 +27,8 @@ export default function CustomAttributes({
       mode="form"
       onAttributesChange={onAttributesChange}
       disabled={disabled}
+      soDefinidos={soDefinidos}
+      aoCarregarDefinicoes={aoCarregarDefinicoes}
     />
   );
 }

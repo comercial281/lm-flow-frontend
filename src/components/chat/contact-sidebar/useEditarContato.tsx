@@ -50,7 +50,7 @@ export function useEditarContato(contact: Contact | null): { abrir: () => void; 
         blocked: salvo.blocked || false,
         last_activity_at: salvo.last_activity_at || '',
         created_at: salvo.created_at || '',
-        updated_at: salvo.updated_at || '',
+        updated_at: salvo.updated_at ? String(salvo.updated_at) : '',
       };
 
       updateContactInConversations(atualizado);

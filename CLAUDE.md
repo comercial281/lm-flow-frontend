@@ -5184,3 +5184,55 @@ Armadilhas:
 2. **A metade do backend vem PRIMEIRO** (`lm-flow` #367, branch `saas-multitenant`).
    Sem ela, o follow-up da IA continua como *Atendente*, e a bolha que o webhook
    grava antes do eco também.
+
+## Contatos: lista enxuta, filtros novos e cadastro curto (desde 2026-10-02)
+
+Pedido do dono do produto (Fase 4): a aba Contatos estava desalinhada, com
+colunas que não diziam nada e um cadastro de CRM genérico. Spec:
+`LM FLOW/specs/2026-10-02-fase-4-contatos-design.md`.
+
+O que aparece na tela:
+
+- **Topo:** só "Contatos", sem subtítulo. Busca ("Buscar por nome ou celular"),
+  pílulas, *Filtros*, **Exportar** com texto e *Novo contato*. O **Importar saiu**
+  (planilha entra pelo Bolsão e pelo quadro do funil, que distribuem).
+- **Colunas: Nome · Celular · Atendimento · Etiquetas · Atualizado em · ⋯.**
+  *Atendimento* = telefone pequeno + nome do número, uma barra e a foto (ou
+  inicial) do responsável; sem dono, "Sem responsável". *Atualizado em* =
+  `quandoMudou()` ("hoje 14:32", "ontem", "28/09"). Saíram Tipo, Status e
+  Pipelines. Ordem continua por nome.
+- **Pílulas Todos · Meus · Sem responsável** (só gestor) e **Filtros** fechado:
+  com a etiqueta, sem as etiquetas e (gestor) Responsável. Cidade e Empresa saíram,
+  e o modal de filtro avançado também.
+- **Sem alternador grade/lista.** Computador = tabela; celular = cartões com
+  Ligar e WhatsApp (`ContactCartaoMovel`).
+- **Novo contato / Editar contato:** Nome (um campo), Celular, E-mail,
+  Responsável, Origem (pílulas + "Outra") e Etiquetas; *Outras informações* só se
+  o gestor criou campo extra. Salvar fixo no rodapé. Saíram foto, tipo, sobrenome,
+  CPF, país, cidade, empresa, descrição e redes sociais (o que já estava gravado
+  continua no contato; o formulário só não manda mais).
+- **Responsável:** corretor = ele mesmo, travado. Gestor = **SeletorComAbas**
+  *Corretores | Roleta*, obrigatório no cadastro. Roleta só no cadastro: o contato
+  é **oferecido** a um corretor e só ganha dono quando ele aceita; o aviso diz a
+  quem foi oferecido (ou entregue, no cliente sem aceite).
+
+Peça nova da casa — **`components/base/SeletorComAbas`**: lista com abas no topo,
+uma escolha só. No celular vira a lista do sistema com um grupo por aba (mesma
+regra do Seletor; a trava `selectNativo` libera os dois arquivos). Pedido do dono:
+usar a mesma peça no destino dos formulários (Lead Ads, portal, site, landing),
+onde hoje Roleta e Responsável são dois seletores (`LeadDestinationFields`).
+
+Armadilhas:
+
+1. **A metade do backend vem PRIMEIRO** (`lm-flow` #372): filtro
+   `default_assignee_id`, `roleta_config_id` no cadastro, `updated_at` na lista e
+   o corretor sempre dono do que cadastra. Sem ela, *Meus*/*Sem responsável* dão
+   erro e *Atualizado em* mostra "—".
+2. **"Corretor" na tela = sem `conversations.read_all`** (`useCorretorLogado`). O
+   servidor usa `broker_isolated?`, que ainda olha a chave da imobiliária; se a
+   chave estiver desligada, a tela trava o responsável nele e o servidor aceita o
+   mesmo id, então o resultado é igual.
+3. **`roleta.outcome = "distribuido"` não garante oferta** (roleta fechada ou sem
+   ninguém elegível volta igual). A tela lê `roleta.offered_to`.
+4. **`aoLadoDaBusca` do BaseHeader** liga o `flex-wrap` só em quem usa o espaço;
+   as outras 19 telas não mudam.

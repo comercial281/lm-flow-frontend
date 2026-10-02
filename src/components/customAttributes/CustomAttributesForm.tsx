@@ -49,6 +49,13 @@ export interface CustomAttributesFormProps {
     yes?: string;
     no?: string;
   };
+  /**
+   * Só os campos que o gestor criou: sem "adicionar campo" solto, sem os soltos
+   * já gravados e sem o vazio. É o "Outras informações" do cadastro de contato.
+   */
+  soDefinidos?: boolean;
+  /** Avisa quantos campos o gestor criou, pra quem chama esconder a seção vazia. */
+  aoCarregarDefinicoes?: (quantidade: number) => void;
 }
 
 /**
@@ -67,6 +74,8 @@ export default function CustomAttributesForm({
   disabled = false,
   translationNamespace,
   translationKeys = {},
+  soDefinidos = false,
+  aoCarregarDefinicoes,
 }: CustomAttributesFormProps) {
   const defaultTranslationNamespace = mode === 'editable' ? 'chat' : 'customAttributes';
   const { t } = useLanguage(translationNamespace || defaultTranslationNamespace);
@@ -97,6 +106,7 @@ export default function CustomAttributesForm({
       try {
         const response = await customAttributesService.getCustomAttributes(attributeModel);
         setDefinedAttributes(response.data);
+        aoCarregarDefinicoes?.(response.data?.length ?? 0);
       } catch (error) {
         if (mode === 'editable') {
           const errorKey = translationKeys.loadError || 'contactSidebar.customAttributes.loadError';
@@ -652,12 +662,14 @@ export default function CustomAttributesForm({
       {/* Defined Custom Attributes */}
       {definedAttributes.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Settings className="h-4 w-4" />
-            <Label className="text-sm font-medium text-muted-foreground">
-              {t('sections.defined')}
-            </Label>
-          </div>
+          {!soDefinidos && (
+            <div className="flex items-center gap-2 mb-3">
+              <Settings className="h-4 w-4" />
+              <Label className="text-sm font-medium text-muted-foreground">
+                {t('sections.defined')}
+              </Label>
+            </div>
+          )}
           <div className="space-y-3">
             {definedAttributes.map(attribute => (
               <Card key={attribute.attribute_key}>
@@ -683,7 +695,7 @@ export default function CustomAttributesForm({
       )}
 
       {/* Ad-hoc Custom Attributes */}
-      {adHocAttributes.length > 0 && (
+      {!soDefinidos && adHocAttributes.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-3">
             <Plus className="h-4 w-4" />
@@ -750,7 +762,7 @@ export default function CustomAttributesForm({
       )}
 
       {/* Add New Attribute */}
-      {!disabled && (
+      {!disabled && !soDefinidos && (
         <div>
           {showAddForm ? (
             <Card>
@@ -813,7 +825,8 @@ export default function CustomAttributesForm({
       )}
 
       {/* Empty State */}
-      {definedAttributes.length === 0 &&
+      {!soDefinidos &&
+        definedAttributes.length === 0 &&
         attributeEntries.length === 0 &&
         !showAddForm &&
         !loading && (

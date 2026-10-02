@@ -129,8 +129,8 @@
       "content": "Clique aqui para adicionar um novo contato manualmente. Você também pode importar uma lista em CSV ou exportar sua base."
     },
     "step3": {
-      "title": "Filtros Avançados",
-      "content": "Filtre sua base por atributos como e-mail, telefone, etiqueta, funil ou qualquer campo customizado."
+      "title": "Filtros",
+      "content": "Veja só os seus contatos, os sem responsável, ou filtre por etiqueta."
     },
     "step4": {
       "title": "Modo de Visualização",

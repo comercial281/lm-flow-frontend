@@ -158,7 +158,9 @@ const CHAVE_DA_CASA = 'src/components/base/Chave.tsx';
 // A da casa é o Seletor, que decide sozinho entre a lista do produto e a do
 // celular. Spec: LM FLOW/specs/2026-10-02-seletor-unico-design.md.
 const SELECT_NATIVO = /<select(?=[\s>]|$)|<NativeSelect\b/;
-const SELETOR_DA_CASA = 'src/components/base/Seletor.tsx';
+// O SeletorComAbas segue a mesma regra (lista do sistema no celular, com um
+// grupo por aba), então também pode ter o <select> dele.
+const SELETORES_DA_CASA = new Set(['src/components/base/Seletor.tsx', 'src/components/base/SeletorComAbas.tsx']);
 const COMECO_DE_COMENTARIO = /^(\{?\/\*|\*)/;
 
 // Atributos e propriedades cujo valor é texto que aparece na tela.
@@ -399,7 +401,7 @@ export function varrer() {
       if (!MODULOS_DE_FORMATO.includes(rel) && FORMATO.some(re => re.test(l))) anotar('formato', rel, i + 1, 'formatação fora do módulo', l.trim());
       if (rel !== CHAVE_DA_CASA && CHAVE_A_MAO.test(l)) anotar('chaveMao', rel, i + 1, 'role="switch" feito à mão', l.trim());
       // selectNativo: pula linhas que começam com comentário ou têm */ após a tag
-      if (rel !== SELETOR_DA_CASA && SELECT_NATIVO.test(l) && !COMECO_DE_COMENTARIO.test(limpa)) {
+      if (!SELETORES_DA_CASA.has(rel) && SELECT_NATIVO.test(l) && !COMECO_DE_COMENTARIO.test(limpa)) {
         const match = SELECT_NATIVO.exec(l);
         const afterMatch = match ? l.substring(match.index + match[0].length) : '';
         if (!afterMatch.includes('*/')) {
