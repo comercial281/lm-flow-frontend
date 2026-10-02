@@ -11,6 +11,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { useConversationPresence } from '@/hooks/useConversationPresence';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { usePendingOffers } from '@/contexts/PendingOffersContext';
+import { painelAoTrocarDeConversa } from '@/features/conversas/painelDoLead';
 import ClaimLeadBanner from '@/components/chat/assignment/ClaimLeadBanner';
 import OfferActions from '@/components/roleta/OfferActions';
 
@@ -156,14 +157,15 @@ const Chat = () => {
   }, [conversationId, isContactSidebarOpen]);
 
   // Painel do lead: em tela larga (≥1280px) abre sozinho a cada conversa aberta.
-  // O X fecha até a próxima troca. Abaixo disso, só abre no clique no nome do lead.
-  // A largura é lida na troca, não acompanhada: redimensionar não reabre o que o X fechou.
+  // O X fecha até a próxima troca. Abaixo disso, a troca não mexe no painel (abre
+  // no clique no nome do lead, como antes). A largura é lida na troca, não
+  // acompanhada: redimensionar não reabre o que o X fechou.
   const telaLarga = useMediaQuery('(min-width: 1280px)');
   const telaLargaRef = useRef(telaLarga);
   telaLargaRef.current = telaLarga;
   useEffect(() => {
     if (!selectedConversationIdStr) return;
-    setIsContactSidebarOpen(telaLargaRef.current);
+    setIsContactSidebarOpen(aberto => painelAoTrocarDeConversa(telaLargaRef.current, aberto));
   }, [selectedConversationIdStr]);
 
   // A roleta ofertou este lead a quem está vendo e ainda não houve aceite (a mesma

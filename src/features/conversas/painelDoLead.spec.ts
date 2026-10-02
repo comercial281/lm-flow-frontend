@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  OUTRO_NUMERO, mascararTelefone, origemDoLead, outraConversa, respostasDoFormulario, textoOutraConversa,
+  OUTRO_NUMERO, mascararTelefone, origemDoLead, outraConversa, painelAoTrocarDeConversa, respostasDoFormulario,
+  textoOutraConversa,
 } from './painelDoLead';
 
 // Regras do topo do painel do lead em Conversas (Fase 4, 02/10).
@@ -131,5 +132,17 @@ describe('mascararTelefone — oferta da roleta aberta', () => {
 
   it('número de fora do Brasil também sai mascarado', () => {
     expect(mascararTelefone('+1 555 123 4567')).toBe('+• ••• ••• ••67');
+  });
+});
+
+describe('painelAoTrocarDeConversa — o painel ao abrir outra conversa', () => {
+  it('tela larga: abre sempre, mesmo depois do X', () => {
+    expect(painelAoTrocarDeConversa(true, false)).toBe(true);
+    expect(painelAoTrocarDeConversa(true, true)).toBe(true);
+  });
+
+  it('abaixo de 1280px: fica como estava (aberto segue aberto, fechado segue fechado)', () => {
+    expect(painelAoTrocarDeConversa(false, true)).toBe(true);
+    expect(painelAoTrocarDeConversa(false, false)).toBe(false);
   });
 });

@@ -162,3 +162,12 @@ export function mascararTelefone(telefoneCru: string | null | undefined): string
   });
   return `${prefixo}${mascarado}`;
 }
+
+/**
+ * Painel do lead ao trocar de conversa. Em tela larga (≥1280px) abre sempre,
+ * mesmo que o X o tenha fechado na conversa anterior. Abaixo disso, fica como
+ * estava, como era antes: aberto continua aberto, fechado continua fechado.
+ */
+export function painelAoTrocarDeConversa(telaLarga: boolean, abertoAgora: boolean): boolean {
+  return telaLarga ? true : abertoAgora;
+}

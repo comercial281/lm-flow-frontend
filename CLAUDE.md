@@ -4721,8 +4721,9 @@ do atendimento. No topo da conversa, o nome técnico do número e "Status: Abert
 O que aparece na tela:
 
 - **O painel do lead abre sozinho** em tela de 1280px ou mais, a cada conversa
-  aberta. O X fecha, e ele reabre ao trocar de conversa. Abaixo de 1280px, só
-  abre no clique no nome do lead (no celular, igual antes).
+  aberta. O X fecha, e ele reabre ao trocar de conversa. Abaixo de 1280px, como
+  antes: abre no clique no nome do lead, e trocar de conversa não abre nem fecha
+  (no celular, igual antes).
 - **Topo:** foto, nome, telefone com copiar, e-mail, o lápis (a mesma janela de
   edição de Contatos) e o X. Embaixo, **"Veio de: …"** com **Ver anúncio** quando
   há link, e **"Também conversou pelo número X · abrir (+N)"** quando o lead tem
@@ -4750,14 +4751,15 @@ Decisões do dono (não reabrir sem ele pedir):
 - **Telefone mascarado na oferta da roleta:** com a oferta aberta para quem está
   vendo (o mesmo estado da faixa "assuma o lead"), o topo mostra
   `(11) •••••-••34`, sem e-mail, sem copiar e sem o lápis (a janela de edição
-  mostraria o número). Ao aceitar, aparece inteiro.
+  mostraria o número). As **Respostas do formulário somem** (formulário de lead
+  costuma trazer telefone e e-mail). Ao aceitar, aparece tudo.
 
 Armadilhas:
 
 1. **A máscara é da tela.** O servidor continua mandando o contato inteiro pro
    corretor ofertado: é a dívida de 28/09 ("Roleta: o telefone do lead só chega
-   depois do aceite", armadilha 3), aberta para o backend. As Respostas do
-   formulário não passam pela máscara.
+   depois do aceite", armadilha 3), aberta para o backend. Na tela, as Respostas
+   do formulário saem inteiras durante a oferta (não são mascaradas campo a campo).
 2. **`SOURCE_META` mora em `src/features/leadOrigin/origem.ts`**, usado pela aba
    Origem do card e pelo "Veio de". Origem nova entra lá, uma vez. No painel o
    emoji do rótulo sai; `unknown` não mostra a linha; sem origem gravada, cai no

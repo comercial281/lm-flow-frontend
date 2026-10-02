@@ -204,7 +204,8 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
 
           {contact && <SecaoNotas key={`notas-${contact.id}`} contactId={String(contact.id)} />}
 
-          {contact && <SecaoRespostas key={`respostas-${contact.id}`} contact={contact} />}
+          {/* Formulário de lead costuma trazer telefone e e-mail: na oferta, a seção some. */}
+          {contact && !emOferta && <SecaoRespostas key={`respostas-${contact.id}`} contact={contact} />}
 
           {/* Conversão Meta (Pixel/CAPI): some sozinho quando o cliente não usa CAPI. */}
           <CapiConversionPanel contactId={contact?.id ?? null} className="m-4" />

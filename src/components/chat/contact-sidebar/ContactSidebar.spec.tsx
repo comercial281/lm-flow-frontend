@@ -61,13 +61,13 @@ const conversation = {
   custom_attributes: {},
 } as never;
 
-const renderPainel = (emOferta = false) =>
+const renderPainel = (emOferta = false, contato: unknown = contact) =>
   render(
     <MemoryRouter>
       <ContactSidebar
         isOpen
         onClose={vi.fn()}
-        contact={contact}
+        contact={contato as never}
         conversation={conversation}
         emOferta={emOferta}
       />
@@ -76,6 +76,8 @@ const renderPainel = (emOferta = false) =>
 
 describe('ContactSidebar — painel do lead em seções', () => {
   beforeEach(() => {
+    getPipelinesByConversation.mockReset();
+    getContactConversations.mockReset();
     getPipelinesByConversation.mockResolvedValue([]);
     getContactConversations.mockResolvedValue({ data: [] });
   });
@@ -136,5 +138,18 @@ describe('ContactSidebar — painel do lead em seções', () => {
     renderPainel();
     expect(await screen.findByText(/Também conversou pelo número Marina/)).toBeTruthy();
     expect(screen.getByText('abrir')).toBeTruthy();
+  });
+
+  it('Respostas do formulário: aparecem fora da oferta e somem com a oferta aberta', async () => {
+    const comFormulario = { ...(contact as object), custom_attributes: { telefone_alternativo: '11 98888-7777' } };
+
+    const { unmount } = renderPainel(false, comFormulario);
+    expect(screen.getByText('Respostas do formulário')).toBeTruthy();
+    await waitFor(() => expect(getContactConversations).toHaveBeenCalled());
+    unmount();
+
+    renderPainel(true, comFormulario);
+    expect(screen.queryByText('Respostas do formulário')).toBeNull();
+    await waitFor(() => expect(getContactConversations).toHaveBeenCalledTimes(2));
   });
 });
