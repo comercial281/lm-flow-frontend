@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { esperaDoLead, horaDoItem, camposDaConversaAoAtualizar } from './itemDaLista';
+import { esperaDoLead, horaDoItem, camposDaConversaAoAtualizar, camposDaConversaAoCriar } from './itemDaLista';
 import type { Conversation, Message } from '@/types/chat/api';
 
 const agora = new Date(2026, 9, 2, 12, 0, 0);
@@ -16,6 +16,10 @@ describe('esperaDoLead', () => {
   it('equipe ou IA respondeu por último: null', () => {
     expect(esperaDoLead({ ...base, last_non_activity_message: ultima(1) }, agora)).toBeNull();
     expect(esperaDoLead({ ...base, last_non_activity_message: ultima('outgoing') }, agora)).toBeNull();
+  });
+  it('sem última mensagem (null/undefined): null', () => {
+    expect(esperaDoLead({ ...base, last_non_activity_message: null }, agora)).toBeNull();
+    expect(esperaDoLead({ ...base, last_non_activity_message: undefined }, agora)).toBeNull();
   });
   it('sem waiting_since ou resolvida: null', () => {
     expect(esperaDoLead({ ...base, waiting_since: 0 }, agora)).toBeNull();
@@ -49,5 +53,21 @@ describe('camposDaConversaAoAtualizar', () => {
     expect(r.last_activity_at).toBe('x');
     expect(r.last_non_activity_message?.content).toBe('editada');
     expect(r.last_non_activity_message?.created_at).toBe(conv.last_non_activity_message!.created_at);
+  });
+});
+
+describe('camposDaConversaAoCriar', () => {
+  const conv = { id: 1, timestamp: 1000, last_activity_at: 'x', last_non_activity_message: ultima('incoming', 'm1') } as unknown as Conversation;
+  const msg = (tipo: string) => ({ id: 'm2', conversation_id: 1, content: 'nova', message_type: tipo, created_at: '2026-10-02T12:00:00Z' }) as unknown as Message;
+  it('atividade não muda timestamp, last_activity_at nem prévia', () => {
+    expect(camposDaConversaAoCriar(conv, msg('activity'), 2000)).toEqual(conv);
+  });
+  it('entrada e saída movem a conversa', () => {
+    for (const t of ['incoming', 'outgoing']) {
+      const r = camposDaConversaAoCriar(conv, msg(t), 2000);
+      expect(r.timestamp).toBe(2000);
+      expect(r.last_non_activity_message?.id).toBe('m2');
+      expect(r.last_non_activity_message?.message_type).toBe(t);
+    }
   });
 });

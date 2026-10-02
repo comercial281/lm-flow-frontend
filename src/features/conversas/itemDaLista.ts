@@ -52,3 +52,29 @@ export function camposDaConversaAoAtualizar(conv: Conversation, msg: Message): C
     },
   };
 }
+
+/**
+ * Decisão do onMessageCreated: mensagem nova de verdade (entrada/saída) move a
+ * conversa; atividade ("marcou etiqueta", "transferiu") entra na thread mas não
+ * mexe em timestamp, last_activity_at nem na prévia.
+ */
+export function camposDaConversaAoCriar(conv: Conversation, msg: Message, timestampSeg: number): Conversation {
+  if (msg.message_type === 'activity') return conv;
+  return {
+    ...conv,
+    timestamp: timestampSeg,
+    last_activity_at: new Date(timestampSeg * 1000).toISOString(),
+    last_non_activity_message: {
+      id: msg.id,
+      content: msg.content ?? '',
+      message_type: msg.message_type,
+      created_at:
+        typeof msg.created_at === 'number'
+          ? String(msg.created_at)
+          : (msg.created_at ?? new Date(timestampSeg * 1000).toISOString()),
+      processed_message_content:
+        (msg as { processed_message_content?: string }).processed_message_content ?? msg.content ?? '',
+      sender: msg.sender ?? { id: '', name: '', type: 'contact' },
+    },
+  };
+}

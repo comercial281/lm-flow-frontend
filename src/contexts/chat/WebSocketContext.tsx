@@ -544,7 +544,8 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
             team_id: data.team_id,
             unread_count: data.unread_count,
             timestamp: normalizeToUnixSeconds(data.last_activity_at),
-            waiting_since: data.waiting_since ?? normalizeToUnixSeconds(data.last_activity_at),
+            // Servidor mandou null = ninguém esperando; não inventar espera a partir de evento interno.
+            waiting_since: data.waiting_since ?? 0,
             meta: {
               sender: {
                 id: data.meta.sender.id,

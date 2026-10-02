@@ -10,7 +10,7 @@ import {
   useWebSocketContext as useWebSocketContextOriginal,
 } from '@/contexts/chat/WebSocketContext';
 import { UIProvider, useUI as useUIOriginal } from '@/contexts/chat/UIContext';
-import { camposDaConversaAoAtualizar } from '@/features/conversas/itemDaLista';
+import { camposDaConversaAoAtualizar, camposDaConversaAoCriar } from '@/features/conversas/itemDaLista';
 import {
   Conversation,
   Message,
@@ -244,25 +244,7 @@ function useChatIntegration() {
           messages.replaceMessage(targetConversationId, message.echo_id, message);
           if (conversation) {
             const validTs = normalizeToUnixSeconds(message.created_at);
-            conversations.updateConversation({
-              ...conversation,
-              timestamp: validTs,
-              last_activity_at: new Date(validTs * 1000).toISOString(),
-              last_non_activity_message: {
-                id: message.id,
-                content: message.content ?? '',
-                message_type: message.message_type,
-                created_at:
-                  typeof message.created_at === 'number'
-                    ? String(message.created_at)
-                    : (message.created_at ?? new Date(validTs * 1000).toISOString()),
-                processed_message_content:
-                  (message as { processed_message_content?: string }).processed_message_content ??
-                  message.content ??
-                  '',
-                sender: message.sender ?? { id: '', name: '', type: 'contact' },
-              },
-            });
+            conversations.updateConversation(camposDaConversaAoCriar(conversation, message, validTs));
           }
           return;
         }
@@ -342,24 +324,8 @@ function useChatIntegration() {
           const currentUnreadCount = conversations.getUnreadCount(targetConversationId);
 
           const updatedConversation: Conversation = {
-            ...conversation,
-            timestamp: validTimestamp,
-            last_activity_at: new Date(validTimestamp * 1000).toISOString(),
+            ...camposDaConversaAoCriar(conversation, message, validTimestamp),
             unread_count: currentUnreadCount ?? conversation.unread_count ?? 0,
-            last_non_activity_message: {
-              id: message.id,
-              content: message.content ?? '',
-              message_type: message.message_type,
-              created_at:
-                typeof message.created_at === 'number'
-                  ? String(message.created_at)
-                  : (message.created_at ?? new Date(validTimestamp * 1000).toISOString()),
-              processed_message_content:
-                (message as { processed_message_content?: string }).processed_message_content ??
-                message.content ??
-                '',
-              sender: message.sender ?? { id: '', name: '', type: 'contact' },
-            },
           };
 
           conversations.updateConversation(updatedConversation);

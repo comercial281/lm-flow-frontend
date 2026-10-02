@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, useContext } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
 import { Button } from '@evoapi/design-system/button';
 import { Input } from '@evoapi/design-system/input';
 import { Badge } from '@evoapi/design-system/badge';
@@ -180,6 +180,12 @@ const ChatSidebar = ({
     [inboxes],
   );
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+  // Re-render a cada minuto pra "sem resposta há X" não congelar (um relógio pra lista toda).
+  const [, setMinuto] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setMinuto(n => n + 1), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
   const [isLoadingMoreConversations, setIsLoadingMoreConversations] = useState(false);
   // `conversationFilters` = só o que o usuário escolheu no popover (fonte única,
   // escrita só por aplicar/limpar); a pílula é somada na hora de aplicar.
