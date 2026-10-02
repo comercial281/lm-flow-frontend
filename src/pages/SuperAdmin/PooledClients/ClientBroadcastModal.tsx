@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Send, Loader2, Check, Megaphone, Users } from 'lucide-react';
 import api from '@/services/core/api';
+import { Seletor } from '@/components/base/Seletor';
 
 interface PooledTenant {
   id: string; name: string; slug: string; status: string;
@@ -92,16 +93,16 @@ export default function ClientBroadcastModal({ tenants, onClose }: { tenants: Po
           {/* Instância remetente */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-white/70">Enviar pela instância (Leal Mídia)</label>
-            <select value={instance} onChange={e => setInstance(e.target.value)}
+            <Seletor escuro value={instance} onChange={e => setInstance(e.target.value)}
               className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none focus:ring-1 focus:ring-violet-500"
               style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(124,58,237,0.2)' }}>
-              {instances.length === 0 && <option value="" style={{ background: '#150a26' }}>Carregando...</option>}
+              {instances.length === 0 && <option value="">Carregando...</option>}
               {instances.map(i => (
-                <option key={i.name} value={i.name} style={{ background: '#150a26' }}>
+                <option key={i.name} value={i.name}>
                   {i.name} {i.connected ? '🟢' : '🔴 (offline)'}
                 </option>
               ))}
-            </select>
+            </Seletor>
           </div>
 
           {/* Destinatários */}
