@@ -11,7 +11,9 @@ export default function JanelaSituacao({ imovel, aoFechar, aoSalvar }: {
 }) {
   const [escolha, setEscolha] = useState('');
   const [salvando, setSalvando] = useState(false);
-  useEffect(() => { setEscolha(imovel?.status ?? ''); }, [imovel]);
+  // Depende do id e da situação, não do objeto: uma recarga da lista entrega um
+  // objeto novo do mesmo imóvel e não pode apagar a escolha ainda não salva.
+  useEffect(() => { setEscolha(imovel?.status ?? ''); }, [imovel?.id, imovel?.status]);
   if (!imovel) return null;
   const kind = tipoDoImovel(imovel);
   const efeito = kind === 'development'

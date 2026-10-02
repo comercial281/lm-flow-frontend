@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback, useRef, DragEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, DragEvent, Suspense, lazy } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { dinheiro, plural } from '@/lib/formato';
+import { numero, plural } from '@/lib/formato';
 import {
   Button,
   Input,
-  Badge,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -14,27 +13,14 @@ import {
   DialogTitle,
   Label as UILabel,
   Textarea,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
 } from '@/components/ui/ds';
 import {
   Plus,
   Search,
   Building2,
-  Bed,
-  Bath,
-  Car,
-  Ruler,
-  MapPin,
-  Edit,
   Trash2,
-  Star,
   Lock,
-  CheckCircle2,
   Wand2,
-  Gauge,
   Loader2,
   Image,
   X,
@@ -45,10 +31,11 @@ import {
   Link as LinkIcon,
   Film,
   Megaphone,
-  Check,
-  ChevronDown,
-  FileText,
-  UserCheck,
+  List,
+  LayoutGrid,
+  Map as MapIcon,
+  SlidersHorizontal,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   propertiesService,
@@ -57,13 +44,11 @@ import {
   TRANSACTION_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
   STATUS_LABELS,
-  STATUS_COLORS,
 } from '@/services/properties/propertiesService';
 import { PROPERTY_FEATURES, CONDO_FEATURES } from '@/features/properties/amenities';
 import {
   EMPTY_TYPOLOGY,
   cleanTypologies,
-  typologyHeadline,
   typologyName,
   type PropertyTypology,
 } from '@/features/properties/typologies';
@@ -90,6 +75,39 @@ import { Seletor } from '@/components/base/Seletor';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { lerRecorteImoveis, type FiltroDoLink } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
+import { getTenantSlug } from '@/services/core/tenant';
+import Abas from '@/components/base/Abas';
+import { EmptyState } from '@/components/base';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
+import {
+  ABA_NA_URL,
+  FILTROS_VAZIOS,
+  abaPadrao,
+  filtrosAtivos,
+  lerAba,
+  rotuloDaSituacao,
+  tipoDoImovel,
+  tirarFiltro,
+  type Filtros,
+  type ListingKind,
+} from '@/features/properties/listingKind';
+import PainelDeFiltros, { type Facetas } from './lista/PainelDeFiltros';
+import EtiquetasDosFiltros from './lista/EtiquetasDosFiltros';
+import LinhaRevenda from './lista/LinhaRevenda';
+import LinhaEmpreendimento from './lista/LinhaEmpreendimento';
+import CartaoGrade from './lista/CartaoGrade';
+import JanelaSituacao from './lista/JanelaSituacao';
+import type { AcoesDoImovel, Permissoes } from './lista/MenuDoImovel';
+import { lerVisao, paramsDaLista, type Ordem, type Visao } from './lista/estadoDaLista';
+
+// O mapa (Leaflet) só baixa quando a pessoa abre a visão Mapa.
+const VisaoMapa = lazy(() => import('./lista/VisaoMapa'));
+
+const VISOES: { valor: Visao; rotulo: string; icone: LucideIcon }[] = [
+  { valor: 'lista', rotulo: 'Lista', icone: List },
+  { valor: 'grade', rotulo: 'Grade', icone: LayoutGrid },
+  { valor: 'mapa', rotulo: 'Mapa', icone: MapIcon },
+];
 
 const EMPTY_FORM: PropertyFormData = {
   title: '',
@@ -132,9 +150,6 @@ const EMPTY_FORM: PropertyFormData = {
   typologies: [],
 };
 
-const formatCurrency = (v?: number | null) =>
-  v != null ? dinheiro(v, { centavos: false }) : null;
-
 /*
  * Observação interna do corretor trazida por importação (a "nota do corretor" do
  * Kenlo: "proprietário quer no mínimo X em mãos"). Fica nos campos livres do
@@ -168,7 +183,7 @@ export default function Properties() {
   const canAiBatch     = useFeature('properties_ai_batch');
   const [properties, setProperties] = useState<Property[]>([]);
   const [total, setTotal]           = useState(0);
-  const [loading, setLoading]       = useState(false);
+  const [loading, setLoading]       = useState(true);
   const [saving, setSaving]         = useState(false);
   const [deleting, setDeleting]     = useState(false);
   const [recusado, setRecusado]     = useState(false);
@@ -177,12 +192,23 @@ export default function Properties() {
   // Filtro que veio de um clique na Dashboard (?recorte=…). Lido uma vez ao abrir.
   const [recorte, setRecorte]                 = useState<FiltroDoLink | null>(() => lerRecorteImoveis(searchParams));
   const [search, setSearch]                   = useState(searchParams.get('q') ?? '');
-  const [filterStatus, setFilterStatus]       = useState('');
-  const [filterType, setFilterType]           = useState('');
-  const [filterTransaction, setFilterTransaction] = useState('');
-  // "Só os imóveis com destino próprio": responde "quais dos 900 têm regra?" sem
-  // exigir uma tela de exceções à parte.
-  const [filterLeadDestination, setFilterLeadDestination] = useState(false);
+  // A busca que a lista usa: anda 400 ms atrás do que a pessoa digita.
+  const [buscaAtiva, setBuscaAtiva]           = useState(search);
+
+  // ── Lista nova: abas Empreendimentos/Revenda, filtro retrátil, linhas ──────
+  // `kind` nulo = ainda não sabemos a aba (a padrão é a com mais cadastros).
+  const [kind, setKind]               = useState<ListingKind | null>(() => lerAba(searchParams));
+  const [contagem, setContagem]       = useState<{ development: number; resale: number } | null>(null);
+  const [filtros, setFiltros]         = useState<{ development: Filtros; resale: Filtros }>(FILTROS_VAZIOS);
+  const [painelAberto, setPainelAberto] = useState(false);
+  const [ordem, setOrdem]             = useState<Ordem>('recent');
+  const [visao, setVisao]             = useState<Visao>(() => lerVisao(searchParams));
+  const [pagina, setPagina]           = useState(1);
+  const [carregandoMais, setCarregandoMais] = useState(false);
+  const [erroDeCarga, setErroDeCarga] = useState(false);
+  const [facetas, setFacetas]         = useState<Facetas | null>(null);
+  const [situacaoDe, setSituacaoDe]   = useState<Property | null>(null);
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   const [modalOpen, setModalOpen]       = useState(false);
   const [importOpen, setImportOpen]     = useState(false);
@@ -195,7 +221,6 @@ export default function Properties() {
   const [generatingDesc, setGeneratingDesc]     = useState(false);
   const [cepLoading, setCepLoading]             = useState(false);
   const [propertyScores, setPropertyScores]     = useState<Record<string, number>>({});
-  const [scoringId, setScoringId]               = useState<string | null>(null);
 
   // Preencher com IA (cola texto / book / link do anúncio -> preenche o form)
   const [aiOpen, setAiOpen]       = useState(false);
@@ -220,11 +245,6 @@ export default function Properties() {
     id: string; status: 'ok' | 'error'; headline?: string; description?: string; error?: string;
   }> | null>(null);
 
-  const [stats, setStats] = useState<{
-    active: number; reserved: number; sold: number; rented: number;
-    exclusive: number; featured: number;
-  } | null>(null);
-
   // Sprint 2: usuários do tenant (responsável/captador)
   const [tenantUsers, setTenantUsers] = useState<Array<{ id: string; name: string }>>([]);
   // Tags (labels) do tenant, pro seletor "Tag do imóvel". Toleram falha (fica vazio).
@@ -233,42 +253,69 @@ export default function Properties() {
   const [creatingTag, setCreatingTag] = useState(false);
 
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Só a resposta do último pedido vale: trocar de aba rápido não pode deixar a
+  // lista da aba anterior aparecer por cima da atual.
+  const ultimoPedido = useRef(0);
 
-  const load = useCallback(async (
-    q = search,
-    status = filterStatus,
-    type = filterType,
-    transaction = filterTransaction,
-    leadDestination = filterLeadDestination,
-    doLink: FiltroDoLink | null = recorte,
-  ) => {
-    setLoading(true);
+  const filtrosDaAba = kind ? filtros[kind] : null;
+
+  const load = useCallback(async (pag = 1) => {
+    if (!kind || !filtrosDaAba) return;
+    const pedido = ++ultimoPedido.current;
+    if (pag > 1) setCarregandoMais(true); else setLoading(true);
     setRecusado(false);
+    setErroDeCarga(false);
     try {
-      const res = await propertiesService.list({
-        q: q || undefined,
-        status: status || undefined,
-        property_type: type || undefined,
-        transaction_type: transaction || undefined,
-        lead_goes_to_responsible: leadDestination || undefined,
-        // O filtro do link vence o da tela (ex.: "Sem fotos" já é "Ativo").
-        ...(doLink?.params ?? {}),
-        per_page: 60,
-      });
-      setProperties(res.data ?? []);
+      const res = await propertiesService.list(paramsDaLista({
+        kind, filtros: filtrosDaAba, busca: buscaAtiva, ordem, recorte: recorte?.params ?? null, pagina: pag,
+      }));
+      if (pedido !== ultimoPedido.current) return;
+      const novos = res.data ?? [];
+      // Página 2 em diante é o "Mostrar mais": acrescenta no fim.
+      setProperties(prev => (pag > 1 ? [...prev, ...novos.filter(n => !prev.some(p => p.id === n.id))] : novos));
       setTotal(res.meta?.total ?? 0);
+      setPagina(pag);
     } catch (e) {
+      if (pedido !== ultimoPedido.current) return;
       if (isForbiddenError(e)) setRecusado(true);
-      else toast.error('Erro ao carregar imóveis');
+      else if (pag > 1) toast.error('Não deu pra carregar mais imóveis');
+      else setErroDeCarga(true);
     } finally {
-      setLoading(false);
+      if (pedido === ultimoPedido.current) { setLoading(false); setCarregandoMais(false); }
     }
-  }, [search, filterStatus, filterType, filterTransaction, filterLeadDestination, recorte]);
+  }, [kind, filtrosDaAba, buscaAtiva, ordem, recorte]);
 
-  // Recarrega os contadores da barra de status (ativos/reservados/…). Tolerante a falha.
-  const loadStats = useCallback(() => {
-    propertiesService.stats().then(setStats).catch(() => {});
-  }, []);
+  // Recarrega da página 1 sempre que muda a aba, os filtros dela, a ordem, o
+  // recorte da Dashboard ou a busca (já com o atraso de 400 ms).
+  useEffect(() => { load(1); }, [load]);
+
+  // Quantos há em cada aba, com o mesmo recorte da lista (link da Dashboard e
+  // "só os meus"), mas sem os filtros do painel: é o total da aba.
+  const contar = useCallback(
+    () => propertiesService.contarPorTipo(recorte?.params ?? {}),
+    [recorte],
+  );
+  useEffect(() => {
+    let vivo = true;
+    contar()
+      .then(c => { if (!vivo) return; setContagem(c); setKind(k => k ?? abaPadrao(c)); })
+      .catch(() => { if (vivo) setKind(k => k ?? 'resale'); });
+    return () => { vivo = false; };
+  }, [contar]);
+  const recontar = () => { contar().then(setContagem).catch(() => {}); };
+
+  // Bairros, tipos e captadores da aba, para os seletores do painel. Leitura de
+  // fundo: falha deixa os seletores só com "Todos", sem aviso.
+  const soOsMeus = recorte?.params.mine === '1';
+  useEffect(() => {
+    if (!kind) return;
+    let vivo = true;
+    setFacetas(null);
+    propertiesService.facets(kind, { mine: soOsMeus })
+      .then(f => { if (vivo) setFacetas(f); })
+      .catch(() => { if (vivo) setFacetas(null); });
+    return () => { vivo = false; };
+  }, [kind, soOsMeus]);
 
   // Carrega/atualiza a lista de tags. Chamado no mount e ao abrir o modal, pra o
   // seletor refletir tags novas (inclusive a tag automática do código do imóvel).
@@ -279,8 +326,6 @@ export default function Properties() {
   }, []);
 
   useEffect(() => {
-    load();
-    loadStats();
     // Carrega usuários do tenant pra select de responsável/captador.
     // Tolerante a falha: se endpoint retornar erro, mantém array vazio (UI cai pro "Nenhum").
     import('@/services/users/usersService').then(({ default: svc }) => {
@@ -296,36 +341,71 @@ export default function Properties() {
     loadLabels();
   }, []);
 
+  useEffect(() => () => { if (searchTimeout.current) clearTimeout(searchTimeout.current); }, []);
+
   const handleSearch = (val: string) => {
     setSearch(val);
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(
-      () => load(val, filterStatus, filterType, filterTransaction, filterLeadDestination),
-      400,
-    );
+    searchTimeout.current = setTimeout(() => setBuscaAtiva(val), 400);
   };
 
-  const applyFilter = (s: string, t: string, tr: string, ld = filterLeadDestination) => {
-    setFilterStatus(s);
-    setFilterType(t);
-    setFilterTransaction(tr);
-    setFilterLeadDestination(ld);
-    load(search, s, t, tr, ld);
+  // Grava ?aba= e ?visao= sem mexer no resto do endereço (o recorte da Dashboard fica).
+  const gravarNoEndereco = (chave: string, valor: string | null) => {
+    setSearchParams(prev => {
+      const novo = new URLSearchParams(prev);
+      if (valor) novo.set(chave, valor); else novo.delete(chave);
+      return novo;
+    }, { replace: true });
   };
 
-  // Tira o filtro do link. Também é o caminho de quem escolhe um Status com o
-  // link ligado: o link manda o próprio status (ex.: "Sem fotos" é Ativo), então
-  // os dois juntos mostrariam "Vendido" no menu e imóveis ativos na lista.
-  const tirarRecorte = (status = filterStatus) => {
+  const trocarAba = (k: ListingKind) => {
+    if (k === kind) return;
+    setKind(k);
+    // A lista da outra aba sai na hora; o esqueleto fica até a nova chegar.
+    setProperties([]);
+    setTotal(0);
+    setLoading(true);
+    gravarNoEndereco('aba', ABA_NA_URL[k]);
+  };
+
+  const trocarVisao = (v: Visao) => {
+    setVisao(v);
+    gravarNoEndereco('visao', v === 'lista' ? null : v);
+  };
+
+  // Tira o filtro do link (e só ele: aba e visão continuam no endereço).
+  const tirarRecorte = () => {
     setRecorte(null);
-    setSearchParams({}, { replace: true });
-    setFilterStatus(status);
-    load(search, status, filterType, filterTransaction, filterLeadDestination, null);
+    setSearchParams(prev => {
+      const novo = new URLSearchParams(prev);
+      ['recorte', 'desde', 'ate', 'meus'].forEach(c => novo.delete(c));
+      return novo;
+    }, { replace: true });
   };
 
-  const escolherStatus = (status: string) => {
-    if (recorte) tirarRecorte(status);
-    else applyFilter(status, filterType, filterTransaction);
+  const mudarFiltros = (f: Filtros) => {
+    if (!kind) return;
+    // O link manda a própria situação (ex.: "Sem fotos" é Disponível). Quem
+    // escolhe outra situação no painel tira o link, senão o painel diria
+    // "Vendido" e a lista mostraria os disponíveis.
+    const nova = (f as { situacao?: string }).situacao;
+    const antes = (filtros[kind] as { situacao?: string }).situacao;
+    if (recorte?.params.status && nova && nova !== antes) tirarRecorte();
+    setFiltros(prev => ({ ...prev, [kind]: f }));
+  };
+
+  const limparFiltrosDaAba = () => {
+    if (!kind) return;
+    setFiltros(prev => ({ ...prev, [kind]: FILTROS_VAZIOS[kind] }));
+  };
+
+  // "Nada encontrado → Limpar filtros": tira tudo o que estreita a lista.
+  const limparFiltros = () => {
+    limparFiltrosDaAba();
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    setSearch('');
+    setBuscaAtiva('');
+    if (recorte) tirarRecorte();
   };
 
   const openCreate = () => {
@@ -412,8 +492,12 @@ export default function Properties() {
         setImportRefresh(n => n + 1);
       } else {
         const created = await propertiesService.create(payload);
-        setProperties(prev => [created, ...prev]);
-        setTotal(t => t + 1);
+        // Só entra na lista se for da aba aberta; a contagem das abas vem do servidor.
+        if (tipoDoImovel(created) === kind) {
+          setProperties(prev => [created, ...prev]);
+          setTotal(t => t + 1);
+        }
+        recontar();
         // Sobe as mídias que o usuário anexou no próprio modal (fotos/vídeos/áudios).
         if (mediaFiles.length) {
           setUploadingMedia(true);
@@ -442,18 +526,21 @@ export default function Properties() {
     }
   };
 
-  // Mudança rápida de status direto no card (sem abrir o modal de edição).
-  const handleStatusChange = async (p: Property, newStatus: string) => {
-    if (newStatus === p.status) return;
+  // Situação escolhida na janela "Mudar situação…" (não muda mais direto no card).
+  // Devolve se salvou, pra janela saber se fecha.
+  const handleStatusChange = async (p: Property, newStatus: string): Promise<boolean> => {
+    if (newStatus === p.status) return true;
     try {
       const updated = await propertiesService.update(p.id, { status: newStatus });
       setProperties(prev => prev.map(x => x.id === updated.id ? updated : x));
-      loadStats(); // atualiza a barra de contadores no topo
-      toast.success(`Status alterado para ${STATUS_LABELS[newStatus] ?? newStatus}`);
+      recontar();
+      toast.success(`Situação alterada para ${rotuloDaSituacao(tipoDoImovel(p), newStatus)}`);
+      return true;
     } catch (e) {
       const err = e as { response?: { data?: { error?: { message?: string }; message?: string } } };
-      const msg = err?.response?.data?.error?.message || err?.response?.data?.message || 'Erro ao alterar status';
+      const msg = err?.response?.data?.error?.message || err?.response?.data?.message || 'Não deu pra alterar a situação';
       toast.error(msg);
+      return false;
     }
   };
 
@@ -463,7 +550,8 @@ export default function Properties() {
     try {
       await propertiesService.delete(toDelete.id);
       setProperties(prev => prev.filter(p => p.id !== toDelete.id));
-      setTotal(t => t - 1);
+      setTotal(t => Math.max(0, t - 1));
+      recontar();
       toast.success('Imóvel removido');
       setDeleteDialogOpen(false);
     } catch {
@@ -514,14 +602,12 @@ export default function Properties() {
   };
 
   const handleCalculateScore = async (id: string) => {
-    setScoringId(id);
     try {
       const result = await propertiesService.calculateScore(id);
       setPropertyScores(prev => ({ ...prev, [id]: result.score }));
+      toast.success(`Força do anúncio: ${result.score}%`);
     } catch {
-      // silent
-    } finally {
-      setScoringId(null);
+      toast.error('Não deu pra calcular a força do anúncio');
     }
   };
 
@@ -534,7 +620,7 @@ export default function Properties() {
       setBatchResults(results);
       const ok = results.filter(r => r.status === 'ok').length;
       toast.success(plural(ok, 'descrição gerada', 'descrições geradas'));
-      load();
+      load(1);
     } catch {
       toast.error('Erro na geração em lote');
     } finally {
@@ -770,171 +856,229 @@ export default function Properties() {
     }
   };
 
+  // ── Ações do menu ⋮ de cada linha ─────────────────────────────────────────
+  // Página pública do imóvel, no site da própria imobiliária.
+  const abrirNoSite = (p: Property) => {
+    const slug = getTenantSlug();
+    if (!slug) { toast.error('Não achei o endereço do seu site'); return; }
+    window.open(`${window.location.origin}/imovel/${slug}/${p.code}`, '_blank', 'noopener');
+  };
+
+  const moverDeAba = async (p: Property) => {
+    const outro: ListingKind = tipoDoImovel(p) === 'development' ? 'resale' : 'development';
+    const destino = outro === 'resale' ? 'Revenda' : 'Empreendimentos';
+    const texto = outro === 'resale'
+      ? 'Ele passa a aparecer em Comprar e Alugar no site. Fase da obra, previsão de entrega e tipologias ficam guardadas, mas não aparecem mais.'
+      : 'Ele passa a aparecer em Lançamentos no site e ganha fase da obra e tipologias para preencher.';
+    if (!(await confirmar({ titulo: `Mover ${p.code} para ${destino}?`, descricao: texto, rotuloDaAcao: 'Mover' }))) return;
+    try {
+      await propertiesService.update(p.id, { listing_kind: outro });
+      toast.success(`Movido para ${destino}`);
+      setProperties(prev => prev.filter(x => x.id !== p.id));
+      setTotal(t => Math.max(0, t - 1));
+      recontar();
+    } catch (e) {
+      const err = e as { response?: { data?: { error?: { message?: string }; message?: string } } };
+      toast.error(err?.response?.data?.error?.message || err?.response?.data?.message || 'Não deu pra mover o imóvel');
+    }
+  };
+
+  const acoesDoImovel: AcoesDoImovel = {
+    editar: openEdit,
+    fotos: p => setPhotosProperty(p),
+    book: p => setBookProperty(p),
+    landing: p => navigate(`/properties/${p.id}/landing`),
+    site: abrirNoSite,
+    forca: p => handleCalculateScore(p.id),
+    situacao: p => setSituacaoDe(p),
+    mover: moverDeAba,
+    excluir: p => { setToDelete(p); setDeleteDialogOpen(true); },
+  };
+  const permissoes: Permissoes = { editar: pode('properties', 'update'), excluir: canDelete };
+
   if (recusado) return <NoAccessState />;
+
+  const filtrosDaTela = kind
+    ? filtrosAtivos(kind, filtros[kind], t => PROPERTY_TYPE_LABELS[t] ?? t, id => facetas?.captors.find(c => c.id === id)?.name ?? 'captador')
+    : [];
+  const temFiltro = filtrosDaTela.length > 0 || buscaAtiva.trim() !== '';
+  const totalDaAba = kind && contagem ? contagem[kind] : null;
+  const nomeDaAba = (n: number) => (kind === 'development'
+    ? plural(n, 'empreendimento', 'empreendimentos')
+    : plural(n, 'imóvel de revenda', 'imóveis de revenda'));
+  const abaVazia = totalDaAba === 0 && !temFiltro && !recorte && properties.length === 0;
+
+  const esqueleto = (
+    <div role="status" className="mt-4 flex flex-col gap-2.5">
+      <span className="sr-only">Carregando imóveis</span>
+      {[0, 1, 2].map(i => <div key={i} className="h-28 animate-pulse rounded-xl border bg-muted/40" />)}
+    </div>
+  );
+
+  const conteudo = !kind ? null
+    : visao === 'mapa' ? (
+      <Suspense fallback={esqueleto}><VisaoMapa kind={kind} /></Suspense>
+    ) : erroDeCarga ? (
+      <EmptyState tipo="erro" aoTentarDeNovo={() => load(1)} />
+    ) : loading && properties.length === 0 ? esqueleto
+    : abaVazia ? (
+      kind === 'development' ? (
+        <EmptyState
+          icon={Building2}
+          title="Você ainda não tem empreendimento cadastrado"
+          description="Empreendimento é lançamento ou prédio com várias plantas. Ele aparece em Lançamentos no seu site e a IA apresenta as tipologias."
+          action={canCreate ? { label: 'Cadastrar o primeiro empreendimento', onClick: () => setImportOpen(true) } : undefined}
+        />
+      ) : (
+        <EmptyState
+          icon={Building2}
+          title="Você ainda não tem imóvel de revenda"
+          description="Revenda é o imóvel de terceiro, à venda ou para alugar. Ele aparece em Comprar e Alugar no seu site."
+          action={canCreate ? { label: 'Cadastrar o primeiro imóvel', onClick: () => setImportOpen(true) } : undefined}
+        />
+      )
+    ) : properties.length === 0 ? (
+      <EmptyState tipo="semResultado" aoLimparFiltros={limparFiltros} />
+    ) : (
+      <>
+        {visao === 'grade' ? (
+          <div aria-busy={loading} className={`grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3.5 ${loading ? 'opacity-60' : ''}`}>
+            {properties.map(p => (
+              <CartaoGrade key={p.id} p={p} acoes={acoesDoImovel} permissoes={permissoes} forca={propertyScores[p.id]} />
+            ))}
+          </div>
+        ) : (
+          <div aria-busy={loading} className={`flex flex-col gap-2.5 ${loading ? 'opacity-60' : ''}`}>
+            {properties.map(p => (tipoDoImovel(p) === 'development'
+              ? <LinhaEmpreendimento key={p.id} p={p} acoes={acoesDoImovel} permissoes={permissoes} forca={propertyScores[p.id]} />
+              : <LinhaRevenda key={p.id} p={p} acoes={acoesDoImovel} permissoes={permissoes} forca={propertyScores[p.id]} />))}
+          </div>
+        )}
+        <div className="mt-4 flex flex-col items-center gap-2 text-xs text-muted-foreground">
+          <span>Mostrando {numero(properties.length)} de {numero(total)}</span>
+          {properties.length < total && (
+            <Button variant="outline" onClick={() => load(pagina + 1)} disabled={carregandoMais}>
+              {carregandoMais ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Carregando...</> : 'Mostrar mais'}
+            </Button>
+          )}
+        </div>
+      </>
+    );
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur px-6 py-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-          <div className="flex items-start gap-3">
-            <div
-              className="w-1 h-9 rounded-full shrink-0"
-              style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
-            />
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2 leading-tight">
-                <Building2 className="h-6 w-6 text-primary" />
-                Imóveis
-              </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">{plural(total, 'imóvel cadastrado', 'imóveis cadastrados')}</p>
+      <div className="flex-1 overflow-y-auto px-6 py-5">
+        {/* Topo */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold leading-tight">Imóveis</h1>
+            {contagem && (
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {plural(contagem.development + contagem.resale, 'cadastro na imobiliária', 'cadastros na imobiliária')}
+              </p>
+            )}
+          </div>
+          {kind && (
+            <div className="flex flex-wrap items-center gap-2">
+              {canAiBatch && (
+                <Button variant="outline" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Gerar descrições com IA
+                </Button>
+              )}
+              {canCreate && (
+                <Button onClick={() => setImportOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {kind === 'development' ? 'Novo empreendimento' : 'Novo imóvel'}
+                </Button>
+              )}
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Os dois botões "em breve" daqui saíram em 2026-08-26: a lista de
-                landings e o template da página de imóvel viraram abas do Site
-                Builder. O megafone de cada cartão (abaixo) continua — ele faz
-                outra coisa: a landing DAQUELE imóvel. */}
-            <Button variant="outline" size="icon" title="Ver no mapa" aria-label="Ver no mapa" onClick={() => navigate('/properties/map')}>
-              <MapPin className="h-4 w-4" />
-            </Button>
-            {canAiBatch && (
-              <Button variant="outline" size="icon" title="IA em lote" aria-label="IA em lote" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
-                <Wand2 className="h-4 w-4" />
-              </Button>
-            )}
-            {canCreate && (
-              <Button onClick={() => setImportOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Cadastrar imóveis
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 items-center">
-          <div className="relative flex-1 min-w-48 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por título, código, cidade..."
-              value={search}
-              onChange={e => handleSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-
-          <Seletor
-            value={filterTransaction}
-            onChange={e => applyFilter(filterStatus, filterType, e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm w-44"
-          >
-            <option value="">Tipo de negócio</option>
-            {Object.entries(TRANSACTION_TYPE_LABELS).map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </Seletor>
-
-          <Seletor
-            value={filterType}
-            onChange={e => applyFilter(filterStatus, e.target.value, filterTransaction)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm w-52"
-          >
-            <option value="">Tipo de imóvel</option>
-            {Object.entries(PROPERTY_TYPE_LABELS).map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </Seletor>
-
-          <Seletor
-            value={filterStatus}
-            onChange={e => escolherStatus(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm w-36"
-          >
-            <option value="">Status</option>
-            {Object.entries(STATUS_LABELS).map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </Seletor>
-
-          {/* Os imóveis que têm destino próprio são poucos entre centenas — sem
-              este atalho, achá-los exigiria abrir um por um. */}
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={filterLeadDestination}
-              onChange={e => applyFilter(filterStatus, filterType, filterTransaction, e.target.checked)}
-            />
-            Só com destino próprio
-          </label>
-
-          {recorte && <ChipDaDashboard rotulo={recorte.rotulo} onTirar={() => tirarRecorte()} />}
-
-          {(filterStatus || filterType || filterTransaction || filterLeadDestination || search || recorte) && (
-            <button
-              onClick={() => {
-                setSearch(''); setFilterStatus(''); setFilterType(''); setFilterTransaction('');
-                setFilterLeadDestination(false);
-                setRecorte(null); setSearchParams({}, { replace: true });
-                load('', '', '', '', false, null);
-              }}
-              className="text-xs text-primary hover:underline"
-            >
-              Limpar filtros
-            </button>
           )}
         </div>
-      </div>
 
-      {/* Stats bar */}
-      {stats && (
-        <div className="border-b px-6 py-2 flex flex-wrap gap-4 text-xs text-muted-foreground bg-muted/30">
-          <span><strong className="text-foreground">{stats.active}</strong> ativos</span>
-          <span><strong className="text-foreground">{stats.reserved}</strong> reservados</span>
-          <span><strong className="text-foreground">{stats.sold}</strong> vendidos</span>
-          <span><strong className="text-foreground">{stats.rented}</strong> alugados</span>
-          <span><strong className="text-violet-600">{stats.exclusive}</strong> exclusivos</span>
-          <span><strong className="text-orange-600">{stats.featured}</strong> em destaque</span>
-        </div>
-      )}
+        {/* Abas e lista só depois de saber a aba (a padrão é a com mais cadastros). */}
+        {!kind ? esqueleto : (
+          <>
+            <Abas
+              className="mt-4"
+              rotulo="Tipo de cadastro"
+              ativa={kind}
+              aoTrocar={k => trocarAba(k as ListingKind)}
+              abas={[
+                { chave: 'development', rotulo: `Empreendimentos (${contagem ? numero(contagem.development) : '…'})` },
+                { chave: 'resale', rotulo: `Revenda (${contagem ? numero(contagem.resale) : '…'})` },
+              ]}
+            />
 
-      {/* Grid */}
-      <div className="flex-1 overflow-y-auto p-6">
-        {loading ? (
-          <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-            Carregando imóveis...
-          </div>
-        ) : properties.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <Building2 className="h-12 w-12 mb-3" />
-            <p className="text-sm font-medium">Nenhum imóvel encontrado</p>
-            <p className="text-xs mt-1">Cadastre o primeiro imóvel do seu portfólio</p>
-            {canCreate && (
-              <Button className="mt-4" onClick={() => setImportOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Cadastrar imóveis
+            {/* Barra: busca, filtros, ordem e visão */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="relative min-w-48 max-w-md flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  aria-label="Buscar"
+                  placeholder={kind === 'development' ? 'Buscar por nome, código ou bairro' : 'Buscar por código, bairro ou rua'}
+                  value={search}
+                  onChange={e => handleSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button variant="outline" aria-expanded={painelAberto} onClick={() => setPainelAberto(a => !a)}>
+                <SlidersHorizontal className="h-4 w-4 mr-2" />
+                Filtros
+                {filtrosDaTela.length > 0 && (
+                  <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
+                    {filtrosDaTela.length}
+                  </span>
+                )}
               </Button>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {properties.map(property => (
-              <PropertyCard
-                key={property.id}
-                property={property}
-                onEdit={openEdit}
-                onStatusChange={handleStatusChange}
-                canDelete={canDelete}
-                onDelete={p => { setToDelete(p); setDeleteDialogOpen(true); }}
-                onManagePhotos={p => setPhotosProperty(p)}
-                onViewBook={p => setBookProperty(p)}
-                onLanding={p => navigate(`/properties/${p.id}/landing`)}
-                score={propertyScores[property.id]}
-                onCalculateScore={() => handleCalculateScore(property.id)}
-                scoringId={scoringId}
+              <Seletor aria-label="Ordenar" value={ordem} onChange={e => setOrdem(e.target.value as Ordem)} className="w-52">
+                <option value="recent">Mais recentes</option>
+                <option value="updated">Atualizados por último</option>
+                <option value="price_asc">Menor preço</option>
+                <option value="price_desc">Maior preço</option>
+              </Seletor>
+              <div role="group" aria-label="Visão" className="inline-flex rounded-md border border-input p-0.5">
+                {VISOES.map(({ valor, rotulo, icone: Icone }) => (
+                  <button
+                    key={valor}
+                    type="button"
+                    aria-pressed={visao === valor}
+                    onClick={() => trocarVisao(valor)}
+                    className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium ${visao === valor ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    <Icone className="h-3.5 w-3.5" aria-hidden="true" />
+                    {rotulo}
+                  </button>
+                ))}
+              </div>
+              {recorte && <ChipDaDashboard rotulo={recorte.rotulo} onTirar={tirarRecorte} />}
+            </div>
+
+            {painelAberto && (
+              <PainelDeFiltros
+                kind={kind}
+                filtros={filtros[kind]}
+                facetas={facetas}
+                aoMudar={mudarFiltros}
+                aoLimpar={limparFiltrosDaAba}
+                aoRecolher={() => setPainelAberto(false)}
               />
-            ))}
-          </div>
+            )}
+
+            <EtiquetasDosFiltros
+              itens={filtrosDaTela}
+              aoTirar={chave => setFiltros(prev => ({ ...prev, [kind]: tirarFiltro(kind, prev[kind], chave) }))}
+              aoLimparTudo={limparFiltrosDaAba}
+            />
+
+            {visao !== 'mapa' && !(loading && properties.length === 0) && !erroDeCarga && totalDaAba != null && !abaVazia && (
+              <p className="mt-4 text-sm text-muted-foreground">
+                {temFiltro ? `${numero(total)} de ${nomeDaAba(totalDaAba)}` : nomeDaAba(totalDaAba)}
+              </p>
+            )}
+
+            <div className="mt-3">{conteudo}</div>
+          </>
         )}
       </div>
 
@@ -1580,7 +1724,7 @@ export default function Properties() {
           property={photosProperty}
           // Recarrega a lista ao fechar: trocar a capa (ou subir/apagar foto) tem
           // que refletir na miniatura do card, que já foi renderizada com a capa antiga.
-          onClose={() => { setPhotosProperty(null); load(); }}
+          onClose={() => { setPhotosProperty(null); load(1); }}
         />
       )}
 
@@ -1606,8 +1750,20 @@ export default function Properties() {
             toast.error('Não consegui carregar o imóvel pra revisão');
           }
         }}
-        onChanged={() => load()}
+        onChanged={() => { load(1); recontar(); }}
+        listingKind={kind ?? undefined}
       />
+
+      {/* Mudar situação: a pessoa escolhe, lê o efeito e salva. */}
+      <JanelaSituacao
+        imovel={situacaoDe}
+        aoFechar={() => setSituacaoDe(null)}
+        aoSalvar={async status => {
+          if (situacaoDe && await handleStatusChange(situacaoDe, status)) setSituacaoDe(null);
+        }}
+      />
+
+      {dialogoDeConfirmacao}
 
 
       {/* Batch generate dialog */}
@@ -1690,232 +1846,6 @@ export default function Properties() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-function PropertyCard({
-  property: p,
-  onEdit,
-  onStatusChange,
-  canDelete,
-  onDelete,
-  onManagePhotos,
-  onViewBook,
-  onLanding,
-  score,
-  onCalculateScore,
-  scoringId,
-}: {
-  property: Property;
-  onEdit: (p: Property) => void;
-  onStatusChange: (p: Property, status: string) => void;
-  canDelete: boolean;
-  onDelete: (p: Property) => void;
-  onManagePhotos: (p: Property) => void;
-  onViewBook: (p: Property) => void;
-  onLanding: (p: Property) => void;
-  score?: number;
-  onCalculateScore: () => void;
-  scoringId: string | null;
-}) {
-  const price = p.display_price
-    ?? formatCurrency(p.sale_price)
-    ?? formatCurrency(p.rent_price);
-
-  // [redesign] placeholder da foto com gradiente da marca (varia por imóvel), estilo protótipo
-  const PROP_GRADS = [
-    'linear-gradient(135deg,#7C3AED,#4F46E5)',
-    'linear-gradient(135deg,#0EA5A4,#4F46E5)',
-    'linear-gradient(135deg,#D97706,#9333EA)',
-    'linear-gradient(135deg,#9333EA,#E11D48)',
-    'linear-gradient(135deg,#4F46E5,#7C3AED)',
-    'linear-gradient(135deg,#16A34A,#0EA5A4)',
-  ];
-  const propGradIdx =
-    Math.abs(String(p.id).split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % PROP_GRADS.length;
-
-  // Foto de capa: a mesma que aparece no site (o backend aplica a regra "capa
-  // marcada > primeira foto"). O gradiente deixa de ser o único desenho possível
-  // e passa a ser só o vazio: imóvel sem foto, ou foto que não carregou.
-  // Guarda a URL que falhou, não um booleano: o card é reaproveitado (a key é o
-  // id do imóvel), então um booleano deixaria a capa nova bloqueada para sempre
-  // depois de uma única falha de carregamento.
-  const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
-  const rawCoverUrl = p.cover_photo_url || null;
-  const coverUrl = rawCoverUrl && rawCoverUrl !== failedCoverUrl ? rawCoverUrl : null;
-
-  return (
-    <div className="group relative flex flex-col rounded-xl border border-border bg-card hover:shadow-md transition-shadow overflow-hidden">
-      {/* Capa do imóvel — cai no gradiente da marca quando não há foto */}
-      <div
-        className="h-36 flex items-center justify-center relative"
-        style={{ background: PROP_GRADS[propGradIdx] }}
-      >
-        {coverUrl ? (
-          <img
-            src={coverUrl}
-            alt={p.title}
-            loading="lazy"
-            className="absolute inset-0 h-full w-full object-cover"
-            onError={() => setFailedCoverUrl(coverUrl)}
-          />
-        ) : (
-          <Building2 className="h-10 w-10 text-white/30" />
-        )}
-        <div className="absolute top-2 left-2 flex gap-1 z-10">
-          {/* Badge de status vira um menu: muda o status direto no card, sem abrir o modal.
-              z-10 mantém clicável por cima do overlay de ações que aparece no hover. */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-              <button
-                type="button"
-                title="Alterar status"
-                className={`text-xs px-2 py-0.5 rounded font-medium inline-flex items-center gap-1 cursor-pointer ${STATUS_COLORS[p.status] ?? ''}`}
-              >
-                {STATUS_LABELS[p.status] ?? p.status}
-                <ChevronDown className="h-3 w-3 opacity-70" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                <DropdownMenuItem
-                  key={value}
-                  onClick={e => { e.stopPropagation(); onStatusChange(p, value); }}
-                >
-                  <Check className={`h-3.5 w-3.5 mr-2 ${p.status === value ? 'opacity-100' : 'opacity-0'}`} />
-                  {label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {p.exclusive && (
-            <span className="text-xs px-2 py-0.5 rounded font-medium bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 flex items-center gap-1">
-              <Lock className="h-2.5 w-2.5" />
-              Exclusivo
-            </span>
-          )}
-        </div>
-        {p.featured && (
-          <div className="absolute top-2 right-2">
-            <Star className="h-4 w-4 text-violet-400 fill-violet-400" />
-          </div>
-        )}
-
-        {/* Action buttons on hover */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-          <Button size="sm" variant="secondary" onClick={() => onEdit(p)}>
-            <Edit className="h-3.5 w-3.5 mr-1" />
-            Editar
-          </Button>
-          <Button size="sm" variant="secondary" onClick={() => onManagePhotos(p)} title="Gerenciar fotos">
-            <Image className="h-3.5 w-3.5" />
-          </Button>
-          {p.has_book && (
-            <Button size="sm" variant="secondary" onClick={() => onViewBook(p)} title="Ver book">
-              <FileText className="h-3.5 w-3.5" />
-            </Button>
-          )}
-          <Button size="sm" variant="secondary" onClick={() => onLanding(p)} title="Landing Page de anúncio">
-            <Megaphone className="h-3.5 w-3.5" />
-          </Button>
-          {canDelete && (
-            <Button size="sm" variant="destructive" onClick={() => onDelete(p)} aria-label="Excluir imóvel" title="Excluir imóvel">
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="p-4 flex-1 flex flex-col">
-        <div className="flex items-center gap-1.5 mb-1">
-          <Badge variant="outline" className="text-xs">
-            {TRANSACTION_TYPE_LABELS[p.transaction_type] ?? p.transaction_type}
-          </Badge>
-          <span className="text-xs text-muted-foreground">{PROPERTY_TYPE_LABELS[p.property_type] ?? p.property_type}</span>
-        </div>
-
-        <h3 className="font-medium text-sm line-clamp-2 mb-2 flex-1">{p.title}</h3>
-
-        {price && (
-          <p className="text-lg font-bold text-primary mb-2">{price}</p>
-        )}
-
-        {/* Icon summary */}
-        {p.icon_summary && (
-          <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
-            {p.icon_summary.bedrooms > 0 && (
-              <span className="flex items-center gap-1"><Bed className="h-3.5 w-3.5" />{p.icon_summary.bedrooms}</span>
-            )}
-            {p.icon_summary.bathrooms > 0 && (
-              <span className="flex items-center gap-1"><Bath className="h-3.5 w-3.5" />{p.icon_summary.bathrooms}</span>
-            )}
-            {p.icon_summary.parking > 0 && (
-              <span className="flex items-center gap-1"><Car className="h-3.5 w-3.5" />{p.icon_summary.parking}</span>
-            )}
-            {p.icon_summary.useful_area_m2 > 0 && (
-              <span className="flex items-center gap-1"><Ruler className="h-3.5 w-3.5" />{p.icon_summary.useful_area_m2}m²</span>
-            )}
-          </div>
-        )}
-
-        {/* Empreendimento com várias plantas: mostra a faixa no card, senão o
-            card do lançamento fingiria ser de uma unidade só. */}
-        {(p.typologies?.length ?? 0) > 1 && (
-          <p className="mb-2 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">{p.typologies!.length} tipologias</span>
-            {typologyHeadline(p.typologies) ? ` · ${typologyHeadline(p.typologies)}` : ''}
-          </p>
-        )}
-
-        {/* Destino próprio: o card DIZ para quem o lead deste anúncio vai. Sem
-            esta linha, o filtro "só com destino próprio" mostraria quais imóveis
-            têm regra e não para quem — que é a outra metade da pergunta. */}
-        {p.lead_goes_to_responsible && (
-          <p className="mb-2 flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400">
-            <UserCheck className="h-3 w-3 flex-shrink-0" />
-            <span className="truncate">
-              Leads vão para {p.responsible?.name || 'o responsável'}
-            </span>
-          </p>
-        )}
-
-        {p.address_city && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <MapPin className="h-3 w-3 flex-shrink-0" />
-            <span className="truncate">
-              {[p.address_neighborhood, p.address_city, p.address_state].filter(Boolean).join(', ')}
-            </span>
-          </div>
-        )}
-
-        <div className="mt-2 pt-2 border-t border-border flex items-center justify-between">
-          <span className="font-mono text-xs text-muted-foreground">{p.code}</span>
-          <div className="flex items-center gap-2">
-            {score != null ? (
-              <span className={`text-xs font-medium flex items-center gap-1 ${
-                score >= 70 ? 'text-emerald-600' : score >= 40 ? 'text-orange-600' : 'text-red-500'
-              }`}>
-                <Gauge className="h-3 w-3" />
-                {score}%
-              </span>
-            ) : (
-              <button
-                onClick={e => { e.stopPropagation(); onCalculateScore(); }}
-                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
-                disabled={scoringId === p.id}
-                title="Calcular força do anúncio"
-              >
-                {scoringId === p.id
-                  ? <Loader2 className="h-3 w-3 animate-spin" />
-                  : <Gauge className="h-3 w-3" />
-                }
-              </button>
-            )}
-            {p.status === 'active' && <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
