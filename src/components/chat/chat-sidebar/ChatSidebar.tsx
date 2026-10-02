@@ -42,7 +42,6 @@ import { AvisoListaVaziaNumero, FaixaReconectar } from '../empty-states/AvisoNum
 import {
   avisoListaVazia,
   numerosParaReconectar,
-  type NumeroDaConversa,
 } from '@/features/numbers/avisoConversas';
 import { PermissionsContext } from '@/contexts/PermissionsContext';
 import { useCan } from '@/hooks/useCan';
@@ -55,8 +54,7 @@ import ConversationsFilter from '../conversation/ConversationsFilter';
 import QuickFilters from '../filters/QuickFilters';
 import GlobalSearchPanel from '../search/GlobalSearchPanel';
 import { BaseFilter } from '@/types/core';
-import InboxesService from '@/services/channels/inboxesService';
-import { mayRead } from '@/store/appDataStore';
+import { useNumerosDaConversa } from '@/features/numbers/useNumerosDaConversa';
 import type { Inbox } from '@/types/channels/inbox';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -157,44 +155,19 @@ const ChatSidebar = ({
   // `iaAtiva` vem do backend (`Inbox#active_bot?`, ver InboxSerializer): diz
   // se tem um agent_bot LIGADO nesta instância — é o que desenha o
   // iconezinho roxo no `QuickFilters` (pedido do Giovani, 19/08).
-  const [inboxOptions, setInboxOptions] = useState<
-    Array<{ id: string; label: string; iaAtiva: boolean }>
-  >([]);
-  // A mesma lista, com o estado da conexão: é o que diz se a caixa está vazia
-  // porque o número não está no ar (aviso de número, 02/10/2026). `null` = não
-  // carregou ou o cargo não lê números, e aí a tela não arrisca dizer nada.
-  const [numeros, setNumeros] = useState<NumeroDaConversa[] | null>(null);
-  useEffect(() => {
-    let alive = true;
-    // Só pede se o cargo lê instâncias: sem a guarda, quem não lê levava um erro
-    // vermelho ao abrir a caixa. O seletor já some sozinho quando a lista vem
-    // vazia (precisa de mais de uma instância para aparecer).
-    mayRead('inboxes.read')
-      .then((pode) => (pode ? InboxesService.list() : null))
-      .then((res) => {
-        if (!alive || !res) return;
-        setNumeros(
-          (res.data ?? []).map((i: Inbox) => ({
-            id: String(i.id),
-            name: i.name,
-            connection_status: i.connection_status ?? null,
-            owner_user_id: i.owner_user_id ?? null,
-          })),
-        );
-        setInboxOptions(
-          (res.data ?? []).map((i: Inbox) => {
-            const ch = i.channel_type?.split('::')[1] || '';
-            return {
-              id: String(i.id),
-              label: ch ? `${i.name} (${ch})` : i.name,
-              iaAtiva: Boolean(i.has_active_agent_bot),
-            };
-          }),
-        );
-      })
-      .catch(() => { /* silencioso */ });
-    return () => { alive = false; };
-  }, []);
+  const { inboxes, numeros } = useNumerosDaConversa();
+  const inboxOptions = useMemo(
+    () =>
+      (inboxes ?? []).map((i: Inbox) => {
+        const ch = i.channel_type?.split('::')[1] || '';
+        return {
+          id: String(i.id),
+          label: ch ? `${i.name} (${ch})` : i.name,
+          iaAtiva: Boolean(i.has_active_agent_bot),
+        };
+      }),
+    [inboxes],
+  );
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [isLoadingMoreConversations, setIsLoadingMoreConversations] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
