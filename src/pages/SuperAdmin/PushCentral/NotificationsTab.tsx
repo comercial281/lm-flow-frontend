@@ -19,6 +19,7 @@ import notificationPolicyService, {
   type PolicyUser,
   type ResolvedPolicy,
 } from '@/services/notifications/notificationPolicyService';
+import { Seletor } from '@/components/base/Seletor';
 
 /**
  * Aba "Notificações" da Central de Push.
@@ -159,7 +160,7 @@ export default function NotificationsTab() {
       <div className="flex flex-wrap items-end gap-3 justify-between">
         <div className="min-w-[240px]">
           <Label htmlFor="np-tenant">Cliente</Label>
-          <select
+          <Seletor
             id="np-tenant"
             value={tenantId}
             onChange={e => setTenantId(e.target.value)}
@@ -170,7 +171,7 @@ export default function NotificationsTab() {
                 {t.name}
               </option>
             ))}
-          </select>
+          </Seletor>
         </div>
 
         <div className="flex items-center gap-3">

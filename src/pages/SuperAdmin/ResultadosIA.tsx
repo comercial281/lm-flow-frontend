@@ -9,6 +9,7 @@ import { superAgentsService } from '@/services/superAdmin/superAgentsService';
 import type {
   PerformanceCounts, PerformancePoint, PerformanceReport, PerformanceTenant,
 } from '@/types/aiResults';
+import { Seletor } from '@/components/base/Seletor';
 
 // Resultados da IA — a tela que o dono abre NA FRENTE do cliente.
 //
@@ -93,16 +94,16 @@ export default function ResultadosIA() {
         </div>
 
         {report && report.tenants.length > 0 && (
-          <select
+          <Seletor
             value={client}
             onChange={(e) => setClient(e.target.value)}
-            className="px-3 py-1.5 rounded-md text-sm border border-sidebar-border bg-background max-w-[16rem]"
+            className="h-auto w-64 px-3 py-1.5 rounded-md text-sm border border-sidebar-border bg-background max-w-[16rem]"
           >
             <option value={ALL}>Todos os clientes ({report.tenants.length})</option>
             {report.tenants.map((t) => (
               <option key={tenantKey(t)} value={tenantKey(t)}>{t.tenant_name}</option>
             ))}
-          </select>
+          </Seletor>
         )}
 
         <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} className="ml-auto">

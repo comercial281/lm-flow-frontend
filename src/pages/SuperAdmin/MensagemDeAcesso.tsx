@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/ds';
 import clientInstancesService, {
   type CentralInstance, type MemberAccessConfig,
 } from '@/services/clientInstances/clientInstancesService';
+import { Seletor } from '@/components/base/Seletor';
 
 // Preenche as variáveis com dados de exemplo pra pré-visualizar a mensagem.
 function preview(tpl: string): string {
@@ -137,7 +138,7 @@ export default function MensagemDeAcesso() {
         <label htmlFor="numero-remetente" className="mb-1 block text-xs font-medium text-muted-foreground">
           Número de WhatsApp que envia
         </label>
-        <select
+        <Seletor
           id="numero-remetente"
           value={instance}
           onChange={e => setInstance(e.target.value)}
@@ -149,7 +150,7 @@ export default function MensagemDeAcesso() {
               {i.name}{i.connected ? '' : ' (desconectado)'}
             </option>
           ))}
-        </select>
+        </Seletor>
       </div>
 
       <div>

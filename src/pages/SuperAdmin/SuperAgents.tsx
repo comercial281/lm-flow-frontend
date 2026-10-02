@@ -9,6 +9,7 @@ import {
   type SuperAgentPatch,
   type ModelOption,
 } from '@/services/superAdmin/superAgentsService';
+import { Seletor } from '@/components/base/Seletor';
 
 /** IA Vendedora → Agentes: todas as IAs Vendedoras de todos os clientes. */
 export default function SuperAgents() {
@@ -178,7 +179,7 @@ function AgentRow({
         <div className="space-y-3 border-t border-border p-3">
           <div>
             <Label>Modo</Label>
-            <select
+            <Seletor
               value={mode}
               onChange={e => setMode(e.target.value)}
               className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
@@ -186,18 +187,18 @@ function AgentRow({
               {Object.entries(MODE_LABELS).map(([v, l]) => (
                 <option key={v} value={v}>{l}</option>
               ))}
-            </select>
+            </Seletor>
           </div>
           <div>
             <Label className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> Instância (com qual WhatsApp opera)</Label>
-            <select
+            <Seletor
               value={inboxId}
               onChange={e => setInboxId(e.target.value)}
               className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
             >
               <option value="">{agent.inbox_name ? `Atual: ${agent.inbox_name}` : 'Nenhuma'}</option>
               {inboxes.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
-            </select>
+            </Seletor>
           </div>
           <div>
             <Label htmlFor={`kw-${agent.id}`}>Gatilho por palavra (vazio = atende todos)</Label>
@@ -218,20 +219,20 @@ function AgentRow({
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
               <div>
                 <Label className="text-xs">Atendimento ao lead</Label>
-                <select value={model} onChange={e => setModel(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs">
+                <Seletor value={model} onChange={e => setModel(e.target.value)} className="h-auto mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs">
                   <option value="">Padrão do sistema</option>
                   {catalog.map(m => <option key={m.id} value={m.id}>{m.label} — ${m.input}/${m.output} por 1M</option>)}
-                </select>
+                </Seletor>
                 {selectedModel && (
                   <p className="mt-1 text-[11px] text-muted-foreground">{selectedModel.use_for}</p>
                 )}
               </div>
               <div>
                 <Label className="text-xs">Painel Testar (você iterando)</Label>
-                <select value={testModel} onChange={e => setTestModel(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs">
+                <Seletor value={testModel} onChange={e => setTestModel(e.target.value)} className="h-auto mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs">
                   <option value="">Haiku (mais barato) — recomendado</option>
                   {catalog.map(m => <option key={m.id} value={m.id}>{m.label} — ${m.input}/${m.output} por 1M</option>)}
-                </select>
+                </Seletor>
                 <p className="mt-1 text-[11px] text-muted-foreground">Testar não precisa do modelo caro. Só afeta o painel, nunca o lead real.</p>
               </div>
             </div>

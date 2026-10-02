@@ -8,6 +8,7 @@ import {
 import superLogsService, {
   ActivityEvent, LogClient, ActivityParams, UserMetricsResponse,
 } from '@/services/superLogs/superLogsService';
+import { Seletor } from '@/components/base/Seletor';
 
 function fmtDur(seconds: number): string {
   if (!seconds || seconds < 60) return `${Math.max(0, seconds | 0)}s`;
@@ -253,19 +254,19 @@ export default function LogsView() {
               className="w-full pl-7 pr-2 py-1.5 text-sm rounded border bg-background"
             />
           </div>
-          <select value={category} onChange={e => setCategory(e.target.value)} className="text-sm rounded border bg-background px-2 py-1.5">
+          <Seletor value={category} onChange={e => setCategory(e.target.value)} className="h-auto w-48 text-sm rounded border bg-background px-2 py-1.5">
             <option value="">Todas categorias</option>
             {Object.keys(CATEGORY_LABEL).filter((v, i, a) => a.indexOf(v) === i).map(c => (
               <option key={c} value={c}>{CATEGORY_LABEL[c]}{categories[c] ? ` (${categories[c]})` : ''}</option>
             ))}
-          </select>
-          <select value={level} onChange={e => setLevel(e.target.value)} className="text-sm rounded border bg-background px-2 py-1.5">
+          </Seletor>
+          <Seletor value={level} onChange={e => setLevel(e.target.value)} className="h-auto w-40 text-sm rounded border bg-background px-2 py-1.5">
             <option value="">Todos níveis</option>
             <option value="error">Erro</option>
             <option value="warning">Alerta</option>
             <option value="success">Sucesso</option>
             <option value="info">Info</option>
-          </select>
+          </Seletor>
           <button
             onClick={() => setIncludeRaw(v => !v)}
             title="Mostrar requisições cruas de API (mais ruído)"
