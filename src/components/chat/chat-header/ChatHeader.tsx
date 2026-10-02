@@ -44,7 +44,9 @@ import { Conversation } from '@/types/chat/api';
 import type { SalesAgentCardState } from '@/types/analytics/pipelines';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import ActivateAiDialog from '@/components/chat/conversation/ActivateAiDialog';
-import { getStatusLabel, isPendingStatus } from '@/utils/chat/conversationStatus';
+import { isPendingStatus } from '@/utils/chat/conversationStatus';
+import { linhaDoTopo } from '@/features/conversas/topoDaConversa';
+import { useNumerosDaConversa } from '@/features/numbers/useNumerosDaConversa';
 import { useLanguage } from '@/hooks/useLanguage';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { chatService } from '@/services/chat/chatService';
@@ -145,7 +147,7 @@ const ChatHeader = ({
   const isPinned = Boolean(conversation.custom_attributes?.pinned);
   const isArchived = Boolean(conversation.custom_attributes?.archived);
 
-  const inboxName = conversation.inbox?.name || '';
+  const { inboxes } = useNumerosDaConversa();
 
   const renderConversationStatusDropdown = () => {
     return (
@@ -393,14 +395,13 @@ const ChatHeader = ({
               {conversation.contact?.name || t('chatHeader.contactNoName')}
             </h3>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              {inboxName && (
-                <>
-                  <span>{inboxName}</span>
-                  <span>•</span>
-                </>
-              )}
               <span>
-                {t('chatHeader.status')} {getStatusLabel(conversation.status)}
+                {linhaDoTopo({
+                  inboxId: conversation.inbox?.id,
+                  inboxNome: conversation.inbox?.name,
+                  inboxes,
+                  responsavel: conversation.assignee?.name,
+                })}
               </span>
             </div>
           </div>

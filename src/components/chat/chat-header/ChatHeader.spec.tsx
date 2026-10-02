@@ -29,7 +29,13 @@ vi.mock('@evoapi/design-system/dropdown-menu', () => ({
   DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DropdownMenuSeparator: () => <hr />,
-  DropdownMenuItem: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
+  DropdownMenuItem: ({
+    children,
+    onClick,
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+  }) => (
     <button type="button" onClick={onClick}>
       {children}
     </button>
@@ -46,11 +52,19 @@ vi.mock('@/components/chat/conversation/ActivateAiDialog', () => ({
   default: ({ open }: { open: boolean }) => (open ? <div>janela-ativar-ia</div> : null),
 }));
 
+vi.mock('@/features/numbers/useNumerosDaConversa', () => ({
+  useNumerosDaConversa: () => ({
+    inboxes: [{ id: 'inbox-1', name: 'WhatsApp Anúncios', phone_number: '+5511982350000' }],
+    numeros: null,
+  }),
+}));
+
 const conversation = {
   id: 'conversation-1',
   status: 'open',
   contact: { name: 'Giovani' },
-  inbox: { name: 'WhatsApp Anúncios' },
+  inbox: { id: 'inbox-1', name: 'WhatsApp Anúncios' },
+  assignee: { name: 'Marina' },
   custom_attributes: {},
 } as never;
 
@@ -99,5 +113,14 @@ describe('ChatHeader', () => {
     fireEvent.click(screen.getByText('Ativar IA pra este lead'));
 
     expect(screen.getByText('janela-ativar-ia')).toBeTruthy();
+  });
+
+  it('mostra número, telefone e responsável no topo, sem "Status"', () => {
+    renderHeader();
+
+    expect(
+      screen.getByText('Número WhatsApp Anúncios · (11) 98235-0000 · Responsável: Marina'),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Status/)).toBeNull();
   });
 });
