@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   OUTRO_NUMERO, emOfertaParaQuemVe, mascararTelefone, nomeNaTela, origemDoLead, outraConversa,
-  painelAoTrocarDeConversa, respostasDoFormulario, textoOutraConversa,
+  painelAoTrocarDeConversa, respostasDoFormulario, selosDoLead, textoOutraConversa,
 } from './painelDoLead';
 
 // Regras do topo do painel do lead em Conversas (Fase 4, 02/10).
@@ -217,5 +217,74 @@ describe('nomeNaTela — nome que é o telefone, na oferta', () => {
   it('sem nome: nada', () => {
     expect(nomeNaTela(null, true)).toBeNull();
     expect(nomeNaTela('', true)).toBe('');
+  });
+});
+
+// Proposta B (02/10): a faixa de selos logo abaixo do nome. Cor só onde informa.
+describe('selosDoLead — a faixa de selos do topo', () => {
+  const funil = (id: string, nome: string, etapas: Array<{ id: string; name: string; color: string; position: number; comLead?: boolean }>) => ({
+    id,
+    name: nome,
+    stages: etapas.map(e => ({ ...e, items: e.comLead ? [{ id: `item-${id}` }] : [] })),
+  });
+
+  const vendas = funil('f1', 'Funil de vendas', [
+    { id: 'e1', name: 'Novo lead', color: '#2563eb', position: 0 },
+    { id: 'e2', name: 'Primeiro contato', color: '#16a34a', position: 1, comLead: true },
+  ]);
+  const locacao = funil('f2', 'Locação', [{ id: 'e3', name: 'Visita marcada', color: '#d97706', position: 0, comLead: true }]);
+
+  it('etapa do funil com a cor da etapa', () => {
+    expect(selosDoLead({ pipelines: [vendas] })).toEqual([
+      { tipo: 'etapa', id: 'etapa-f1', texto: 'Primeiro contato', cor: '#16a34a', funil: 'Funil de vendas' },
+    ]);
+  });
+
+  it('lead em dois funis: um selo por funil', () => {
+    const selos = selosDoLead({ pipelines: [vendas, locacao] });
+    expect(selos.map(s => s.texto)).toEqual(['Primeiro contato', 'Visita marcada']);
+    expect(selos.every(s => s.tipo === 'etapa')).toBe(true);
+  });
+
+  it('fora de funil (ou funil sem o lead em etapa nenhuma): sem selo de etapa', () => {
+    expect(selosDoLead({ pipelines: [] })).toEqual([]);
+    expect(selosDoLead({ pipelines: [funil('f3', 'Vazio', [{ id: 'e9', name: 'Nada', color: '#000', position: 0 }])] })).toEqual([]);
+  });
+
+  it('temperatura da IA vira Quente, Morno ou Frio', () => {
+    expect(selosDoLead({ pipelines: [], temperatura: 'hot' })).toEqual([
+      { tipo: 'temperatura', id: 'temperatura', texto: 'Quente', tom: 'quente' },
+    ]);
+    expect(selosDoLead({ pipelines: [], temperatura: 'warm' })[0]).toMatchObject({ texto: 'Morno', tom: 'morno' });
+    expect(selosDoLead({ pipelines: [], temperatura: ' COLD ' })[0]).toMatchObject({ texto: 'Frio', tom: 'frio' });
+  });
+
+  it('sem temperatura (ou "unknown", a IA ainda não sabe): sem selo', () => {
+    expect(selosDoLead({ pipelines: [], temperatura: null })).toEqual([]);
+    expect(selosDoLead({ pipelines: [], temperatura: '' })).toEqual([]);
+    expect(selosDoLead({ pipelines: [], temperatura: 'unknown' })).toEqual([]);
+  });
+
+  it('origem com o link do anúncio', () => {
+    expect(selosDoLead({ pipelines: [], origem: { rotulo: 'Anúncio no Instagram', link: 'https://instagram.com/p/x' } })).toEqual([
+      { tipo: 'origem', id: 'origem', texto: 'Anúncio no Instagram', link: 'https://instagram.com/p/x' },
+    ]);
+  });
+
+  it('espera só quando esperaDoLead dá um texto', () => {
+    expect(selosDoLead({ pipelines: [], espera: null })).toEqual([]);
+    expect(selosDoLead({ pipelines: [], espera: 'sem resposta há 2 h' })).toEqual([
+      { tipo: 'espera', id: 'espera', texto: 'sem resposta há 2 h' },
+    ]);
+  });
+
+  it('ordem: etapa, temperatura, origem, espera', () => {
+    const selos = selosDoLead({
+      pipelines: [vendas, locacao],
+      temperatura: 'warm',
+      origem: { rotulo: 'Formulário Meta Ads', link: null },
+      espera: 'sem resposta há 5 min',
+    });
+    expect(selos.map(s => s.tipo)).toEqual(['etapa', 'etapa', 'temperatura', 'origem', 'espera']);
   });
 });

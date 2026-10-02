@@ -1,24 +1,26 @@
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
-import { useLanguage } from '@/hooks/useLanguage';
+// Card do lead em tela única (spec 2026-10-02-fase-4-card-do-lead).
+//
+// Duas colunas dentro de uma janela quase tela cheia por cima do funil:
+//   - ESQUERDA, fixa e sem rolagem: quem é, situação (etapa, responsável,
+//     origem), os três botões (visita, conversa, IA), etiquetas, follow-up numa
+//     linha, conversão Meta numa linha e Ganho | Perdido no rodapé;
+//   - DIREITA, abas: Detalhes · Conversa · Visitas e propostas · Origem.
+// Tudo grava na hora (não existe mais "Salvar alterações"). Nome, telefone e
+// e-mail não se editam aqui: o lápis de telefone/e-mail só aparece quando o
+// servidor diz (`identity_correctable` — gestor, lead cadastrado à mão).
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useAccountUsers } from '@/hooks/useAccountUsers';
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogTitle,
   DialogDescription,
   Button,
-  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Input,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
   Command,
   CommandEmpty,
   CommandGroup,
@@ -30,54 +32,44 @@ import {
   PopoverTrigger,
   Badge,
 } from '@/components/ui/ds';
-import { Plus, Trash2, ChevronsUpDown, Check, User, Phone, Mail, History, Loader2, Tag, Shuffle, X, RefreshCw, Home, Settings2, Link, MessageSquare, Megaphone } from 'lucide-react';
-import { PipelineItem, PipelineStage, Pipeline, PipelineTask, CreateTaskData, UpdateTaskData, PipelineServiceDefinition } from '@/types/analytics';
-import pipelineServiceDefinitionsService from '@/services/pipelines/pipelineServiceDefinitionsService';
-import PipelineItemCustomAttributes from './PipelineItemCustomAttributes';
-import PipelineTasksList, { PipelineTasksListRef } from './tasks/PipelineTasksList';
-import CreateTaskModal from './tasks/CreateTaskModal';
-import EditTaskModal from './tasks/EditTaskModal';
-// CardActionsPanel e CardNotesTab ficam na aba "Detalhes" (padrão, já visível
-// ao abrir o modal) — import estático de propósito, lazy aqui só atrasaria o
-// que já precisa carregar de cara. CardConversationTab (aba "Conversa") e
-// CardPropertyInterests (aba "Imóveis") só renderizam quando o usuário troca
-// de aba (Tabs sem forceMount não monta abas inativas); CreateRoletaModal e
-// RemoveFromRoletaDialog só aparecem com clique explícito ("Criar roleta" /
-// "Tirar da roleta") — todos viram lazy.
-import CardActionsPanel from './CardActionsPanel';
-import CardNotesTab from './CardNotesTab';
+import { Plus, Check, Loader2, X, Pencil, Phone, Mail, Shuffle, ClipboardList, MessageSquare, Megaphone, CalendarCheck } from 'lucide-react';
+import Abas from '@/components/base/Abas';
+import { PipelineItem, PipelineStage, Pipeline } from '@/types/analytics';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
+import FollowupTimeline from './FollowupTimeline';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useOpenLeadConversation } from '@/hooks/useOpenLeadConversation';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
-import { ManualOriginInput } from '@/components/shared/ManualOriginInput';
-import { MANUAL_ORIGIN_KEY, readManualOrigin } from '@/constants/manualLeadOrigin';
-import { dinheiro, moedaValida } from '@/lib/formato';
+import { readManualOrigin } from '@/constants/manualLeadOrigin';
+import { telefone } from '@/lib/formato';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { contactEventsService } from '@/services/contacts/contactEventsService';
 import { labelsService } from '@/services/contacts/labelsService';
 import { contactsService } from '@/services/contacts/contactsService';
+import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { brokerAssignmentsService, type BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
 import OfferActions from '@/components/roleta/OfferActions';
-import { normalizeFormAnswers, extraAttributeRows, landingVerdict } from '@/components/pipelines/formAnswers';
-// Rótulo + cor por origem: a mesma régua do painel do lead em Conversas.
-import { SOURCE_META } from '@/features/leadOrigin/origem';
 import { isPhoneLikeName } from '@/lib/nomeDoContato';
+import { classeDaOrigem, contatoDoCard, conversaDoCard, origemCurta, podeCorrigirContato } from '@/features/cardDoLead/cardDoLead';
+import LeadQuickActions from './card/LeadQuickActions';
+import LeadDetailsTab from './card/LeadDetailsTab';
+import CardResultFooter from './card/CardResultFooter';
+import CardMoreMenu from './card/CardMoreMenu';
+import CardOriginTab from './card/CardOriginTab';
 import { toast } from 'sonner';
 import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
 
 const CardConversationTab = lazyWithRetry(() => import('./CardConversationTab'));
-const CardPropertyInterests = lazyWithRetry(() => import('./CardPropertyInterests'));
+const VisitsProposalsTab = lazyWithRetry(() => import('./card/VisitsProposalsTab'));
 const CreateRoletaModal = lazyWithRetry(() => import('./CreateRoletaModal'));
 const RemoveFromRoletaDialog = lazyWithRetry(() => import('@/components/roleta/RemoveFromRoletaDialog'));
-
-interface Service {
-  name: string;
-  value: string;
-}
+const CorrigirContatoDialog = lazyWithRetry(() => import('./card/CorrigirContatoDialog'));
+const ScheduleActionModal = lazyWithRetry(() =>
+  import('@/components/scheduledActions/ScheduleActionModal').then(m => ({ default: m.ScheduleActionModal })),
+);
 
 interface EditItemModalProps {
   open: boolean;
@@ -85,49 +77,28 @@ interface EditItemModalProps {
   item: PipelineItem | null;
   stages: PipelineStage[];
   pipeline?: Pipeline | null;
-  onSubmit: (data: {
-    notes: string;
-    stage_id: string;
-    services: Service[];
-    currency: string;
-    custom_attributes?: Record<string, unknown>;
-  }) => void;
-  // Move otimista no board (sem reload) quando a etapa muda pelas ações do card.
+  /**
+   * Não é mais chamado: o card grava cada mudança na hora e não tem botão
+   * Salvar. Fica opcional para quem ainda passa (quadro, conversa, contato).
+   */
+  onSubmit?: (data: never) => void;
+  // Move otimista no board (sem reload) quando a etapa muda pelo card.
   onItemStageMoved?: (itemId: string, toStageId: string) => void;
-  // Tag aplicada/removida grava na hora, sem passar pelo botão Salvar. Sem este
-  // aviso o board só recarregava ao salvar o card, e quem só tirava uma tag e
-  // fechava continuava vendo o selo antigo — parecia que não tinha saído.
+  // Tag aplicada/removida grava na hora: avisa o quadro para o selo do card
+  // refletir sem esperar o próximo reload.
   onLabelsChanged?: () => void;
-  loading: boolean;
+  loading?: boolean;
 }
 
-// Os eventos da roleta são o motivo de o gestor abrir o histórico: quem aceitou o
-// lead e por que ele trocou de corretor. Sem cor, essas linhas ficam idênticas a
-// "Etiqueta adicionada" no meio de dezenas de mensagens. O prefixo do id vem do
-// backend (Leads::RoletaTimeline); o resto do histórico segue com a cor padrão.
-const historyDotColor = (id: string): string => {
-  if (id.startsWith('roleta-aceite-')) return 'bg-emerald-500';
-  if (id.startsWith('roleta-repasse-') || id.startsWith('roleta-prazo-')) return 'bg-amber-500';
-  if (id.startsWith('roleta-diag-')) return 'bg-red-500';
-  // "Puxado do Bolsão": conta de qual lista o lead veio, quem o puxou e quanto
-  // tempo ele esperou sem dono. Mesma razão da cor da roleta — é a linha que
-  // responde "de onde saiu esse lead?" no meio de dezenas de mensagens.
-  if (id.startsWith('bolsao-')) return 'bg-indigo-500';
-  return 'bg-primary';
-};
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export default function EditItemModal({
   open,
   onOpenChange,
   item,
   stages,
-  pipeline,
-  onSubmit,
   onItemStageMoved,
   onLabelsChanged,
-  loading,
 }: EditItemModalProps) {
-  const { t } = useLanguage('pipelines');
   const { users } = useAccountUsers();
   const {
     openLeadConversation,
@@ -137,42 +108,35 @@ export default function EditItemModal({
 
   // Feature flags do tenant (ausente/ligada = true → preserva comportamento atual).
   const canNotes = useFeature('card_notes');
-  const canTasks = useFeature('card_tasks');
   const canProperties = useFeature('card_property_interests');
+  const canScheduleAction = useFeature('card_schedule_action');
 
-  const [notes, setNotes] = useState('');
-  const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
-
-  // Dados do contato editáveis direto no card (antes eram readOnly: dava pra
-  // focar o campo mas não digitar — parecia bug de "não salva o e-mail").
-  const [contactName, setContactName] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [savingContact, setSavingContact] = useState(false);
-  const [services, setServices] = useState<Service[]>([]);
-  const [currency, setCurrency] = useState('BRL');
-  const [customAttributes, setCustomAttributes] = useState<Record<string, unknown>>({});
   const [activeTab, setActiveTab] = useState('overview');
-  const [catalogServices, setCatalogServices] = useState<PipelineServiceDefinition[]>([]);
-  const [openServicePopover, setOpenServicePopover] = useState<number | null>(null);
+
+  // Etapa: muda na hora (mesmo movimento do quadro), não espera Salvar.
+  const [etapaId, setEtapaId] = useState<string | null>(null);
+  const [movendoEtapa, setMovendoEtapa] = useState(false);
+
+  // Telefone/e-mail exibidos: começam do contato e mudam depois de uma correção.
+  const [telefoneDoLead, setTelefoneDoLead] = useState('');
+  const [emailDoLead, setEmailDoLead] = useState('');
+  const [corrigindoContato, setCorrigindoContato] = useState(false);
 
   // Responsável
   const [selectedAssigneeId, setSelectedAssigneeId] = useState<string | null>(null);
   const [assigningUser, setAssigningUser] = useState(false);
 
-  // Roleta de atendimento — roletas REAIS cadastradas (por inbox), não mais
-  // o round-robin fake. Escolher uma atribui o lead via sorteio ponderado.
+  // Roletas reais cadastradas (por número) para o "⋯ → Trocar roleta".
   const [roletas, setRoletas] = useState<RoletaConfig[]>([]);
   const [assigningRoleta, setAssigningRoleta] = useState(false);
 
-  // Ofertas EM ABERTO deste lead. Enquanto houver uma, o lead está no meio do
-  // sorteio com prazo correndo — e é só nesse caso que faz sentido oferecer
+  // Ofertas EM ABERTO deste lead: só nesse caso há prazo correndo e faz sentido
   // "Tirar da roleta".
   const [ofertasAbertas, setOfertasAbertas] = useState<BrokerAssignmentDetail[]>([]);
   const [tirandoDaRoleta, setTirandoDaRoleta] = useState(false);
   const [showCreateRoleta, setShowCreateRoleta] = useState(false);
 
-  // Tags/labels
+  // Etiquetas
   const [availableLabels, setAvailableLabels] = useState<LabelType[]>([]);
   const [activeLabels, setActiveLabels] = useState<string[]>([]);
   const [labelPopoverOpen, setLabelPopoverOpen] = useState(false);
@@ -180,7 +144,7 @@ export default function EditItemModal({
   const [savingLabel, setSavingLabel] = useState(false);
   const [creatingLabel, setCreatingLabel] = useState(false);
 
-  // History
+  // Histórico
   const [historyEvents, setHistoryEvents] = useState<ContactEvent[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
@@ -190,102 +154,77 @@ export default function EditItemModal({
   const [savedManualOrigin, setSavedManualOrigin] = useState('');
   const [savingManualOrigin, setSavingManualOrigin] = useState(false);
 
-  // Task modals state
-  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
-  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
-  const [taskToEdit, setTaskToEdit] = useState<PipelineTask | null>(null);
-  const [parentTaskForSubtask, setParentTaskForSubtask] = useState<PipelineTask | null>(null);
-  const [taskLoading, setTaskLoading] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [overdueCount, setOverdueCount] = useState(0);
+  // Agendar envio (a partir da caixa da conversa). null = fechado.
+  const [agendandoEnvio, setAgendandoEnvio] = useState<string | null>(null);
 
-  const tasksListRef = useRef<PipelineTasksListRef>(null);
+  const loadHistory = useCallback(async (target?: PipelineItem | null) => {
+    const contato = contatoDoCard(target ?? item);
+    if (!contato?.id) return;
+    setHistoryLoading(true);
+    try {
+      // Sem paginação neste painel: o que não vier aqui não tem como ser buscado
+      // depois. Um lead de roleta gasta duas linhas por oferta.
+      const res = await contactEventsService.getContactEvents(String(contato.id), { limit: 100 });
+      setHistoryEvents(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setHistoryEvents([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [item]);
 
-  useEffect(() => {
-    const updateCounts = () => {
-      if (tasksListRef.current) {
-        setPendingCount(tasksListRef.current.pendingCount);
-        setOverdueCount(tasksListRef.current.overdueCount);
-      }
-    };
-    updateCounts();
-    window.addEventListener('tasksCountChanged', updateCounts);
-    return () => window.removeEventListener('tasksCountChanged', updateCounts);
-  }, []);
-
-  // Initialize form when modal opens
+  // Inicializa quando o card abre.
   useEffect(() => {
     let cancelled = false;
     if (open && item) {
-      setNotes(item.notes || '');
-      setSelectedStageId(item.stage_id);
-      setServices(item.custom_fields?.services || []);
-      setCurrency(item.custom_fields?.currency || 'BRL');
-      const { services: _s, currency: _c, ...customAttrs } = item.custom_fields || {};
-      setCustomAttributes(customAttrs);
+      setEtapaId(item.stage_id);
       setActiveTab('overview');
 
-      // Contato (card pode ter contact direto ou via conversa)
-      const c = (item.contact || (item.conversation as any)?.contact) as any;
-      setContactName(c?.name || '');
-      setContactPhone(c?.phone_number || '');
-      setContactEmail(c?.email || '');
+      const c = contatoDoCard(item);
+      setTelefoneDoLead(c?.phone_number || '');
+      setEmailDoLead(c?.email || '');
 
       // Responsável: `item.assignee` (topo) já vem resolvido pelo backend —
-      // assignee da conversa OU default_assignee do contato. Lendo só da
-      // conversa, lead de formulário/anúncio abria sempre "sem responsável".
+      // assignee da conversa OU default_assignee do contato.
       const currentAssigneeId = item.assignee?.id ?? item.conversation?.assignee?.id;
       setSelectedAssigneeId(currentAssigneeId ? String(currentAssigneeId) : null);
 
       // Origem escrita: o card já traz o espelho, mas leads antigos podem só ter
       // no contato — por isso os fallbacks.
-      const contactAdditional = (item.contact ?? item.conversation?.contact) as
-        { additional_attributes?: { lead_origin?: unknown } } | undefined;
       const writtenOrigin =
         readManualOrigin(item.lead_origin)
-        || readManualOrigin(contactAdditional?.additional_attributes?.lead_origin);
+        || readManualOrigin((c?.additional_attributes as { lead_origin?: unknown } | undefined)?.lead_origin);
       setManualOrigin(writtenOrigin);
       setSavedManualOrigin(writtenOrigin);
 
-      // Roletas reais cadastradas (só as ativas) pra escolher no select.
       roletaConfigService.getAll()
         .then(list => { if (!cancelled) setRoletas((list || []).filter(r => r.is_active)); })
         .catch(() => { if (!cancelled) setRoletas([]); });
 
-      // Este lead está com oferta correndo agora? Falha aqui só esconde o botão
-      // "Tirar da roleta" — o corretor sem permissão de mexer na roleta recebe
-      // 403 e não deve ver o botão mesmo.
-      const contatoDoLead = item.contact?.id ?? (item.conversation as any)?.contact?.id;
-      if (contatoDoLead) {
-        brokerAssignmentsService.listForLead(String(contatoDoLead))
+      // Oferta correndo agora? Falha aqui só esconde o "Tirar da roleta" — quem
+      // não pode mexer na roleta recebe 403 e não deve ver o botão mesmo.
+      if (c?.id) {
+        brokerAssignmentsService.listForLead(String(c.id))
           .then(list => { if (!cancelled) setOfertasAbertas(list); })
           .catch(() => { if (!cancelled) setOfertasAbertas([]); });
       } else {
         setOfertasAbertas([]);
       }
 
-      // Tags ativas: a UNIÃO das tags do contato e das da conversa.
-      // Escolher só uma das duas listas escondia tag: o selo do card lê as do
-      // CONTATO (é onde as automações escrevem) e o chat espelha na CONVERSA. Com
-      // a lista da conversa ganhando, a tag que só existia no contato ficava
-      // invisível aqui — e o "x" parecia não funcionar, porque ela voltava a
-      // aparecer na próxima abertura do card.
-      // Do contato as tags vêm como {name}, da conversa como {title}.
-      const convLabels = (item.conversation as any)?.labels;
-      const contactLabels = (item.contact as any)?.labels;
+      // Tags ativas: a UNIÃO das do contato e das da conversa. O selo do card lê
+      // as do CONTATO (é onde as automações escrevem) e o chat espelha na
+      // CONVERSA; escolher só uma escondia tag. Do contato vêm {name}, da
+      // conversa {title}.
       const labelNames = (raw: unknown): string[] =>
         Array.isArray(raw)
           ? (raw as Array<string | { title?: string; name?: string }>)
               .map(l => (typeof l === 'string' ? l : (l?.title ?? l?.name ?? '')))
               .filter(Boolean)
           : [];
-      setActiveLabels([...new Set([...labelNames(contactLabels), ...labelNames(convLabels)])]);
-
-      // Fetch catalog e labels disponíveis
-      pipelineServiceDefinitionsService
-        .getServiceDefinitions(item.pipeline_id)
-        .then(data => { if (!cancelled) setCatalogServices(data); })
-        .catch(() => { if (!cancelled) setCatalogServices([]); });
+      setActiveLabels([...new Set([
+        ...labelNames((item.contact as any)?.labels),
+        ...labelNames((item.conversation as any)?.labels),
+      ])]);
 
       labelsService.getLabels()
         .then(res => {
@@ -293,17 +232,15 @@ export default function EditItemModal({
         })
         .catch(() => { if (!cancelled) setAvailableLabels([]); });
 
-      // Load history immediately on open
       loadHistory(item);
 
-      // Auto-tag "meta" for Facebook/Meta leads
+      // Etiqueta "meta" automática para lead de Facebook/Meta.
       const convId = item.conversation?.id ? String(item.conversation.id) : null;
-      const existingLabels = Array.isArray((item.conversation as any)?.labels)
-        ? ((item.conversation as any).labels as any[]).map((l: any) => typeof l === 'string' ? l : l?.title ?? '')
-        : [];
-      const contactAttrs = (item.contact as any)?.additional_attributes ?? {};
-      const convAttrs = (item.conversation as any)?.additional_attributes ?? {};
-      const allAttrs = { ...convAttrs, ...contactAttrs };
+      const existingLabels = labelNames((item.conversation as any)?.labels);
+      const allAttrs = {
+        ...((item.conversation as any)?.additional_attributes ?? {}),
+        ...((item.contact as any)?.additional_attributes ?? {}),
+      };
       const isMeta = ['campaign_source', 'utm_source', 'lead_source'].some(k =>
         String(allAttrs[k] ?? '').toLowerCase().includes('meta') ||
         String(allAttrs[k] ?? '').toLowerCase().includes('facebook')
@@ -316,34 +253,34 @@ export default function EditItemModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item?.id]);
 
-  const loadHistory = useCallback(async (target?: PipelineItem | null) => {
-    const src = target ?? item;
-    const contactId = src?.contact?.id ?? (src?.conversation as any)?.contact?.id;
-    if (!contactId) return;
-    setHistoryLoading(true);
+  const moverEtapa = useCallback(async (toStageId: string) => {
+    if (!item || !etapaId || toStageId === etapaId) return;
+    const anterior = etapaId;
+    setEtapaId(toStageId);
+    setMovendoEtapa(true);
     try {
-      // Sem paginação neste painel: o que não vier aqui não tem como ser buscado
-      // depois. Um lead de roleta gasta duas linhas por oferta, então 50 acabava
-      // rápido num lead com histórico de conversa.
-      const res = await contactEventsService.getContactEvents(String(contactId), { limit: 100 });
-      setHistoryEvents(Array.isArray(res.data) ? res.data : []);
+      await pipelinesService.moveItem({
+        item_id: item.id,
+        pipeline_id: item.pipeline_id,
+        from_stage_id: anterior,
+        to_stage_id: toStageId,
+      });
+      onItemStageMoved?.(item.id, toStageId);
+      loadHistory();
     } catch {
-      setHistoryEvents([]);
+      setEtapaId(anterior);
+      toast.error('Não consegui mudar a etapa');
     } finally {
-      setHistoryLoading(false);
+      setMovendoEtapa(false);
     }
-  }, [item]);
+  }, [item, etapaId, onItemStageMoved, loadHistory]);
 
-  // Atribuir responsável NÃO depende mais de existir conversa. Lead de
-  // formulário/anúncio entra no funil sem conversa nenhuma, e antes o campo
-  // simplesmente não aparecia — não havia como dar dono a ele pela tela.
-  //
-  // Com conversa: atribui a conversa (o backend espelha em
-  // contacts.default_assignee_id). Sem conversa: grava direto no contato, que é
-  // a fonte de verdade do dono do lead e o que uma conversa futura herda.
+  // Responsável sem depender de conversa: lead de formulário/anúncio entra sem
+  // conversa e precisa de dono. Com conversa, atribui a conversa (o backend
+  // espelha no contato); sem, grava direto no contato.
   const handleAssigneeChange = useCallback(async (userId: string) => {
     const nextId = userId === 'unassigned' ? null : userId;
-    const contactId = item?.contact?.id ?? item?.conversation?.contact?.id;
+    const contactId = contatoDoCard(item)?.id;
     if (!item?.conversation?.id && !contactId) return;
 
     setSelectedAssigneeId(nextId);
@@ -361,9 +298,8 @@ export default function EditItemModal({
     }
   }, [item]);
 
-  // Atribui o lead via uma roleta real (sorteio ponderado + notifica o corretor).
   const handleAssignViaRoleta = useCallback(async (roletaId: string) => {
-    const contactId = item?.contact?.id ?? (item?.conversation as any)?.contact?.id;
+    const contactId = contatoDoCard(item)?.id;
     if (!contactId) { toast.error('Lead sem contato'); return; }
     setAssigningRoleta(true);
     try {
@@ -373,26 +309,19 @@ export default function EditItemModal({
         pipeline_item_id: item?.id ? String(item.id) : undefined,
       });
       toast.success(`Atribuído pela roleta: ${a?.assigned_user?.name ?? 'corretor'}`);
+      loadHistory();
     } catch {
       toast.error('Erro ao atribuir pela roleta (sem membros ativos?)');
     } finally {
       setAssigningRoleta(false);
     }
-  }, [item]);
+  }, [item, loadHistory]);
 
-  // Alvo da tag: conversa (lead WhatsApp) OU, na ausência dela, o contato
-  // (lead de formulário/cadastro não tem conversa). Sem isso, o lead de
-  // formulário não recebia tag nenhuma pelo modal.
   const labelTargetConvId = item?.conversation?.id ? String(item.conversation.id) : null;
-  const labelTargetContactId =
-    item?.contact?.id ?? (item?.conversation as any)?.contact?.id ?? null;
+  const labelTargetContactId = contatoDoCard(item)?.id ?? null;
 
-  // Persiste a tag nos DOIS lugares onde ela vive.
-  // O contato é a fonte de verdade: é dele que sai o selo colorido no card e é
-  // nele que as automações escrevem. Gravando só na conversa, tirar a tag não
-  // tinha efeito nenhum visível — o selo continuava no card e a tag voltava ao
-  // reabrir. O contato recebe a lista inteira (substitui); a conversa recebe só
-  // o que mudou, pra não apagar marcador de follow-up que só existe lá.
+  // Contato = lista inteira (fonte do selo do card). Conversa = só o diff, que
+  // o endpoint dela só soma/subtrai.
   const persistLabels = useCallback(
     async (nextLabels: string[], change: { added?: string; removed?: string }) => {
       if (labelTargetContactId) {
@@ -411,15 +340,11 @@ export default function EditItemModal({
     setSavingLabel(true);
     const has = activeLabels.includes(labelTitle);
     try {
-      const next = has
-        ? activeLabels.filter(l => l !== labelTitle)
-        : [...activeLabels, labelTitle];
+      const next = has ? activeLabels.filter(l => l !== labelTitle) : [...activeLabels, labelTitle];
       await persistLabels(next, has ? { removed: labelTitle } : { added: labelTitle });
       setActiveLabels(next);
       onLabelsChanged?.();
     } catch {
-      // Falhar calado era o pior do caso antigo: a tag sumia da lista e voltava
-      // sozinha depois, sem nenhum aviso de que não tinha sido salva.
       toast.error(has ? 'Não foi possível remover a etiqueta' : 'Não foi possível aplicar a etiqueta');
     } finally {
       setSavingLabel(false);
@@ -432,8 +357,6 @@ export default function EditItemModal({
     setCreatingLabel(true);
     try {
       const created = await labelsService.createLabel({ title, color: '#7C3AED', show_on_sidebar: true });
-      // O backend normaliza o título (minúsculo). Usa o título canônico retornado
-      // pra a lista e o alvo baterem com o que ficou gravado.
       const canonical = (created as any)?.title ?? title.toLowerCase();
       setAvailableLabels(prev =>
         prev.some(l => l.title === canonical) ? prev : [...prev, created as unknown as LabelType]
@@ -453,115 +376,41 @@ export default function EditItemModal({
     }
   }, [activeLabels, persistLabels, labelTargetConvId, labelTargetContactId, onLabelsChanged]);
 
-  // Salva nome/telefone/e-mail no CONTATO (endpoint separado do item do funil).
-  // Só manda o que mudou; telefone vai em E.164 porque o backend recusa outro formato.
-  const saveContactFields = useCallback(async (): Promise<boolean> => {
-    const contactId = item?.contact?.id ?? (item?.conversation as any)?.contact?.id;
-    if (!contactId) return true;
-    const current = (item?.contact || (item?.conversation as any)?.contact) as any;
-
-    const name = contactName.trim();
-    const email = contactEmail.trim();
-    const digits = contactPhone.trim().replace(/\D/g, '');
-    const phone = digits ? `+${digits}` : '';
-
-    const payload: Record<string, string> = {};
-    if (name !== (current?.name || '')) payload.name = name;
-    if (email !== (current?.email || '')) payload.email = email;
-    if (phone !== (current?.phone_number || '')) payload.phone_number = phone;
-    if (Object.keys(payload).length === 0) return true;
-
-    if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
-      toast.error('E-mail inválido');
-      return false;
-    }
-
-    setSavingContact(true);
-    try {
-      await contactsService.updateContact(String(contactId), payload);
-      return true;
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        'Erro ao salvar os dados do contato';
-      toast.error(String(msg));
-      return false;
-    } finally {
-      setSavingContact(false);
-    }
-  }, [item, contactName, contactEmail, contactPhone]);
-
-  const handleSubmit = async () => {
-    if (!selectedStageId) return;
-    const ok = await saveContactFields();
-    if (!ok) return;
-    onSubmit({ notes, stage_id: selectedStageId, services, currency, custom_attributes: customAttributes });
-  };
-
-  // Service management (kept for data compat)
-  const addService = () => setServices([...services, { name: '', value: '' }]);
-  const removeService = (index: number) => setServices(services.filter((_, i) => i !== index));
-  const updateService = (index: number, field: 'name' | 'value', value: string) => {
-    const updated = [...services];
-    updated[index][field] = value;
-    setServices(updated);
-  };
-  const selectCatalogService = (index: number, cs: PipelineServiceDefinition) => {
-    const updated = [...services];
-    updated[index] = { name: cs.name, value: cs.default_value.toString() };
-    setServices(updated);
-    setOpenServicePopover(null);
-  };
-  const calculateTotalValue = () => services.reduce((t, s) => t + (parseFloat(s.value) || 0), 0);
-
-  const canSubmit = selectedStageId !== null;
-
   if (!item) return null;
 
-  // Nome cru às vezes vem como o telefone (Evolution não manda pushName no 1º evento).
-  // Descarta nomes que são só dígitos/telefone (isPhoneLikeName) e cai no melhor candidato.
-  const getItemDisplayName = () => {
-    const candidates = [item.contact?.name, (item.conversation as any)?.contact?.name];
-    const good = candidates.find(c => c && !isPhoneLikeName(c));
-    if (good) return good as string;
-    const phone =
-      item.contact?.phone_number || (item.conversation as any)?.contact?.phone_number;
-    return phone || candidates[0] || t('editItem.unknownUser');
-  };
-
-  const getItemDisplayId = () => {
-    if (item.type === 'conversation' && item.conversation) return item.conversation.display_id;
-    return item.id;
-  };
-
-  // Contato unificado (card pode ter contact direto ou via conversa)
-  const contactObj = (item.contact || (item.conversation as any)?.contact) as any;
-  const avatarContact = contactObj
+  const contato = contatoDoCard(item);
+  const nomeExibido = (() => {
+    const candidatos = [item.contact?.name, (item.conversation as any)?.contact?.name];
+    const bom = candidatos.find(c => c && !isPhoneLikeName(c));
+    if (bom) return bom as string;
+    return telefoneDoLead ? telefone(telefoneDoLead) : (candidatos[0] || 'Lead sem nome');
+  })();
+  const avatarContact = contato
     ? {
-        id: contactObj.id ? String(contactObj.id) : undefined,
-        name: getItemDisplayName(),
-        avatar_url: contactObj.avatar_url ?? null,
-        thumbnail: contactObj.thumbnail ?? null,
+        id: contato.id != null ? String(contato.id) : undefined,
+        name: nomeExibido,
+        avatar_url: (contato as any).avatar_url ?? null,
+        thumbnail: (contato as any).thumbnail ?? null,
       }
     : null;
+  const corrigivel = podeCorrigirContato(contato);
+  const dadosDaOrigem = (item.lead_origin as Record<string, unknown> | null)
+    ?? ((contato?.additional_attributes as { lead_origin?: Record<string, unknown> } | undefined)?.lead_origin ?? null);
+  const origem = origemCurta(dadosDaOrigem);
+  const etapaAtual = stages.find(s => s.id.toString() === etapaId);
 
-  // A origem escrita mora no contato, não no card — o card só espelha.
   const handleSaveManualOrigin = async () => {
-    const contactId = contactObj?.id ? String(contactObj.id) : null;
-    if (!contactId) {
+    if (!contato?.id) {
       toast.error('Este card não tem contato — não dá pra gravar a origem.');
       return;
     }
-
     const text = manualOrigin.trim();
     setSavingManualOrigin(true);
     try {
-      await contactsService.updateContact(contactId, { lead_origin_note: text });
+      await contactsService.updateContact(String(contato.id), { lead_origin_note: text });
       setManualOrigin(text);
       setSavedManualOrigin(text);
-      // O board só recarrega no submit do card. Sem espelhar aqui, fechar e
-      // reabrir o modal mostraria o valor antigo do item em memória.
+      // Espelho local para o card não voltar a mostrar a origem antiga.
       item.lead_origin = { ...(item.lead_origin ?? {}), manual_origin: text };
       toast.success(text ? 'Origem do lead salva.' : 'Origem do lead limpa.');
     } catch (error) {
@@ -572,26 +421,6 @@ export default function EditItemModal({
     }
   };
 
-  const handleCreateTask = async (data: CreateTaskData) => {
-    if (!tasksListRef.current) return;
-    setTaskLoading(true);
-    try {
-      const result = await tasksListRef.current.createTask(data);
-      if (result) setShowCreateTaskModal(false);
-    } finally { setTaskLoading(false); }
-  };
-
-  const handleEditTask = async (taskId: string, data: UpdateTaskData) => {
-    if (!tasksListRef.current) return;
-    setTaskLoading(true);
-    try {
-      const result = await tasksListRef.current.updateTask(taskId, data);
-      if (result) { setShowEditTaskModal(false); setTaskToEdit(null); }
-    } finally { setTaskLoading(false); }
-  };
-
-  const handleCreateTaskModalClose = () => { setShowCreateTaskModal(false); setParentTaskForSubtask(null); };
-
   const filteredLabels = availableLabels.filter(l =>
     l.title.toLowerCase().includes(labelSearch.toLowerCase())
   );
@@ -601,9 +430,8 @@ export default function EditItemModal({
   );
   const canCreateLabel = trimmedLabelSearch.length > 0 && !exactLabelExists;
 
-  // Cor de cada tag: prioriza a lista de labels da conta e cai nos labels crus do
-  // contato/conversa (que já trazem color). Sem isso as tags do modal saíam todas
-  // cinzas, diferentes das do card no board.
+  // Cor de cada tag: prioriza a lista de labels da conta e cai nos labels crus
+  // do contato/conversa (que já trazem color).
   const labelColorMap: Record<string, string> = {};
   [
     ...(Array.isArray((item.contact as any)?.labels) ? (item.contact as any).labels : []),
@@ -615,767 +443,327 @@ export default function EditItemModal({
   availableLabels.forEach(l => {
     if (l.color) labelColorMap[l.title.toLowerCase()] = l.color;
   });
-  const labelColor = (title: string) => labelColorMap[title.toLowerCase()] || '#7c3aed';
-  // Fundo suave só quando a cor é hex #rrggbb (sufixo de alpha). Caso contrário
-  // usa a própria cor com texto branco, pra nunca virar "#abc22" inválido.
   const labelStyle = (title: string) => {
-    const color = labelColor(title);
+    const color = labelColorMap[title.toLowerCase()] || '#7c3aed';
     return /^#[0-9a-f]{6}$/i.test(color)
       ? { backgroundColor: `${color}22`, color }
       : { backgroundColor: color, color: '#fff' };
   };
 
-  // Conta as abas visíveis pra ajustar o grid e não deixar buraco quando uma feature está off.
-  // Fixas: Detalhes, Conversa, Origem. Opcionais: Imóveis, Retorno.
-  // Observações saiu da barra de abas — agora vive no painel direito do Detalhes,
-  // dividindo espaço com o Histórico.
-  const visibleTabsCount = 3 + (canProperties ? 1 : 0) + (canTasks ? 1 : 0);
-  const tabsGridClass = {
-    3: 'grid-cols-3',
-    4: 'grid-cols-4',
-    5: 'grid-cols-5',
-    6: 'grid-cols-6',
-  }[visibleTabsCount] ?? 'grid-cols-6';
+  const roletaDoLead = item.roleta
+    ? `${roletaLabel(item.roleta)}${roletas.length > 0 && !roletas.some(r => r.id === item.roleta!.id) ? ' (desativada)' : ''}`
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="shrink-0 pb-2 border-b border-border flex items-start justify-between gap-2">
-          <div className="min-w-0 flex items-center gap-3">
-            {avatarContact && (
-              <ContactAvatar contact={avatarContact} size="md" showColoredFallback className="shrink-0" />
-            )}
-            <div className="min-w-0">
-              <DialogTitle className="truncate text-base font-semibold">{getItemDisplayName()}</DialogTitle>
-              <DialogDescription className="text-xs">#{getItemDisplayId()}</DialogDescription>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 shrink-0 mt-0.5">
-            {/* Um botão só. Havia dois ícones verdes de chat colados aqui — um
-                abria o wa.me (saía do CRM e perdia o histórico) e o outro a
-                conversa interna. Cara-ou-coroa para o usuário, e o lado errado
-                era o que levava embora. Ficou o interno, agora pelo hook, que
-                também atende lead ainda sem conversa (antes o botão nem
-                aparecia para lead de formulário/anúncio). */}
-            <button
-              type="button"
-              title="Abrir conversa no CRM"
-              disabled={openingConversation}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-60 dark:hover:bg-emerald-950/30 transition-colors"
-              onClick={() => openLeadConversation(item)}
-            >
-              <MessageSquare className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              title="Copiar link do card"
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              onClick={() => {
-                const url = `${window.location.origin}/pipelines/${item.pipeline_id}?card=${item.id}`;
-                navigator.clipboard.writeText(url).then(() => {
-                  const el = document.createElement('div');
-                  el.textContent = 'Link copiado!';
-                  el.className = 'fixed bottom-4 right-4 z-[9999] bg-foreground text-background text-xs px-3 py-2 rounded-lg shadow-lg';
-                  document.body.appendChild(el);
-                  setTimeout(() => el.remove(), 2000);
-                });
-              }}
-            >
-              <Link className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
+      <DialogContent className="sm:max-w-[1280px] w-[96vw] h-[92vh] max-h-[92vh] p-0 gap-0 overflow-hidden flex flex-col">
+        <DialogTitle className="sr-only">{nomeExibido}</DialogTitle>
+        <DialogDescription className="sr-only">Card do lead</DialogDescription>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden min-h-0">
-          <TabsList className={`grid w-full ${tabsGridClass} shrink-0`}>
-            <TabsTrigger value="overview">Detalhes</TabsTrigger>
-            <TabsTrigger value="conversation">Conversa</TabsTrigger>
-            {canProperties && (
-              <TabsTrigger value="properties" className="flex items-center gap-1">
-                <Home className="h-3 w-3" />
-                Imóveis
-              </TabsTrigger>
-            )}
-            <TabsTrigger value="origin" className="flex items-center gap-1">
-              <Megaphone className="h-3 w-3" />
-              Origem
-            </TabsTrigger>
-            {canTasks && (
-              <TabsTrigger value="tasks" className="relative">
-                Retorno
-                {(pendingCount > 0 || overdueCount > 0) && (
-                  <span className="ml-1 px-1 py-0.5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
-                    {pendingCount + overdueCount}
+        <div className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-[380px_minmax(0,1fr)] overflow-y-auto md:overflow-hidden">
+          {/* ESQUERDA — fixa, nunca rola */}
+          <aside className="flex flex-col gap-4 border-b md:border-b-0 md:border-r border-border p-5 md:min-h-0">
+            {/* Quem é */}
+            <div className="flex items-start gap-3 pr-6">
+              {avatarContact && (
+                <ContactAvatar contact={avatarContact} size="md" showColoredFallback className="shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xl font-semibold leading-tight lm-redact" title={nomeExibido}>{nomeExibido}</p>
+                {telefoneDoLead && (
+                  <p className="mt-1 text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5" /> {telefone(telefoneDoLead)}
+                  </p>
+                )}
+                {emailDoLead && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5 truncate" title={emailDoLead}>
+                    <Mail className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{emailDoLead}</span>
+                  </p>
+                )}
+                {/* Origem como selo, junto de quem é o lead — solta no meio da
+                    situação parecia um subtítulo sem dono. */}
+                {origem && (
+                  <span
+                    className={`mt-2 inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-medium ${classeDaOrigem(dadosDaOrigem)}`}
+                    title={origem}
+                  >
+                    <span className="truncate">{origem}</span>
                   </span>
                 )}
-              </TabsTrigger>
-            )}
-          </TabsList>
-
-          {/* Overview: split left=form right=history */}
-          <TabsContent value="overview" className="flex-1 overflow-hidden mt-0 pt-3 min-h-0 flex flex-col">
-            <div className="grid grid-cols-2 gap-4 flex-1 overflow-hidden min-h-0">
-              {/* LEFT: details form */}
-              <div className="space-y-4 overflow-y-auto pr-2 min-h-0">
-                {/* Contato — editável; grava no contato ao clicar em Salvar Alterações */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <Input
-                      value={contactName}
-                      onChange={e => setContactName(e.target.value)}
-                      disabled={savingContact}
-                      placeholder="Nome"
-                      className="text-sm h-8"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <Input
-                      value={contactPhone}
-                      onChange={e => setContactPhone(e.target.value)}
-                      disabled={savingContact}
-                      placeholder="Telefone (+5511999999999)"
-                      className="text-sm h-8"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <Input
-                      type="email"
-                      value={contactEmail}
-                      onChange={e => setContactEmail(e.target.value)}
-                      disabled={savingContact}
-                      placeholder="E-mail"
-                      className="text-sm h-8"
-                    />
-                  </div>
-                </div>
-
-                {/* Conversão Meta (Pixel/CAPI) — marcação manual do desfecho do lead */}
-                <CapiConversionPanel
-                  contactId={item.contact?.id ?? (item.conversation as any)?.contact?.id ?? null}
-                  pipelineItemId={item.id}
-                />
-
-                {/* Respostas do formulário (perguntas personalizadas da campanha) */}
-                {(() => {
-                  const ca = ((item.contact as any)?.custom_attributes) ?? {};
-                  // As respostas do formulário vivem DENTRO de `form_answers`, e o
-                  // bloco imprimia essa chave inteira com String(v) — uma linha
-                  // "Form Answers: [object Object]" no lugar do que o lead
-                  // respondeu. A mesma normalização da aba Origem abre os pares e
-                  // descarta o rastreio do anúncio, que nunca foi resposta.
-                  const respostas = normalizeFormAnswers(ca.form_answers);
-                  // O servidor espelha cada resposta solta no contato (é de lá que
-                  // a variável de funil lê), e o bloco imprimia as duas listas em
-                  // sequência: cada pergunta do Meta aparecia duas vezes, uma com
-                  // acento e "?" e outra sem. Ver formAnswers.ts.
-                  const outras = extraAttributeRows(ca, respostas);
-                  const entries = [...respostas, ...outras].map(r => [r.label, r.value] as const);
-                  if (entries.length === 0) return null;
-                  return (
-                    <div className="grid gap-1.5">
-                      <Label className="flex items-center gap-1 text-xs">
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        Respostas do lead
-                      </Label>
-                      <div className="rounded-lg border border-border/60 bg-muted/20 p-2 space-y-1.5">
-                        {/* A chave leva o índice: pergunta repetida (formulário
-                            copiado de outro) tem o mesmo rótulo, e a segunda
-                            linha sumiria. */}
-                        {entries.map(([k, v], i) => (
-                          <div key={`${k}-${i}`} className="flex items-start justify-between gap-3 text-xs">
-                            <span className="text-muted-foreground shrink-0 capitalize">{k}</span>
-                            <span className="text-right font-medium break-words">{v}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Tags */}
-                <div className="grid gap-1.5">
-                  <Label className="flex items-center gap-1 text-xs">
-                    <Tag className="h-3.5 w-3.5" />
-                    Etiquetas
-                    {(savingLabel || creatingLabel) && <Loader2 className="h-3 w-3 animate-spin" />}
-                  </Label>
-                  <div className="flex flex-wrap gap-1 mb-1">
-                    {activeLabels.map(l => (
-                      <Badge
-                        key={l}
-                        variant="secondary"
-                        className="gap-1 text-xs h-5 px-1.5 border-0 font-medium"
-                        style={labelStyle(l)}
-                      >
-                        {l}
-                        <button onClick={() => toggleLabel(l)} aria-label="Remover etiqueta" title="Remover etiqueta" className="hover:opacity-60">
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                  {(labelTargetConvId || labelTargetContactId) && (
-                    <Popover open={labelPopoverOpen} onOpenChange={setLabelPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-7 text-xs w-full justify-start">
-                          <Plus className="h-3 w-3 mr-1" /> Adicionar etiqueta
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-52 p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Buscar ou criar etiqueta..." value={labelSearch} onValueChange={setLabelSearch} />
-                          {/* max-h + overflow + onWheel stopPropagation: sem isso a roda
-                              do mouse não rolava a lista dentro do popover/modal. */}
-                          <CommandList
-                            className="max-h-56 overflow-y-auto overscroll-contain"
-                            onWheel={e => e.stopPropagation()}
-                          >
-                            <CommandEmpty>Digite o nome e clique em "Criar etiqueta".</CommandEmpty>
-                            {/* Criar nova tag: sempre visível no topo. Sem texto digitado,
-                                fica desabilitado pedindo o nome; com texto, cria na hora. */}
-                            <CommandGroup heading="Nova etiqueta">
-                              <CommandItem
-                                value={`__create__${trimmedLabelSearch}`}
-                                disabled={!canCreateLabel || creatingLabel}
-                                onSelect={() => canCreateLabel && createAndApplyLabel(trimmedLabelSearch)}
-                              >
-                                {creatingLabel
-                                  ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                                  : <Plus className="mr-2 h-3.5 w-3.5" />}
-                                {trimmedLabelSearch
-                                  ? `Criar etiqueta "${trimmedLabelSearch}"`
-                                  : 'Digite acima pra criar uma nova etiqueta'}
-                              </CommandItem>
-                            </CommandGroup>
-                            <CommandGroup heading="Etiquetas existentes">
-                              {filteredLabels.map(l => (
-                                <CommandItem key={l.id} value={l.title} onSelect={() => { toggleLabel(l.title); setLabelPopoverOpen(false); setLabelSearch(''); }}>
-                                  <Check className={`mr-2 h-3.5 w-3.5 ${activeLabels.includes(l.title) ? 'opacity-100' : 'opacity-0'}`} />
-                                  <span className="w-2.5 h-2.5 rounded-full mr-2 shrink-0 inline-block" style={{ backgroundColor: l.color }} />
-                                  {l.title}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                </div>
-
-                {/* Responsável — sem gate de conversa: lead de formulário/anúncio
-                    não tem conversa e mesmo assim precisa de dono. */}
-                {(item.conversation?.id || item.contact?.id) && (
-                  <div className="grid gap-1.5">
-                    <Label className="flex items-center gap-1 text-xs">
-                      Responsável
-                      {assigningUser && <Loader2 className="h-3 w-3 animate-spin" />}
-                    </Label>
-                    <Select value={selectedAssigneeId ?? 'unassigned'} onValueChange={handleAssigneeChange} disabled={assigningUser}>
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Sem responsável" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unassigned">Sem responsável</SelectItem>
-                        {users.map(u => (
-                          <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* Roleta de atendimento — roletas REAIS cadastradas (por canal).
-                    Se o lead já veio de uma roleta (broker_assignments), o seletor
-                    abre já marcado nela — antes ficava sempre vazio mesmo pra quem
-                    já tinha sido sorteado. Escolher uma diferente reatribui; sem
-                    nenhuma cadastrada, atalho pra criar. */}
-                <div className="grid gap-1.5">
-                  <Label className="flex items-center gap-1 text-xs">
-                    <Shuffle className="h-3.5 w-3.5" />
-                    Roleta de atendimento
-                    {assigningRoleta && <Loader2 className="h-3 w-3 animate-spin" />}
-                  </Label>
-                  {/* A oferta que espera o PRÓPRIO usuário — o corretor aceita daqui,
-                      sem procurar o link no WhatsApp. Diferente do bloco "No sorteio
-                      agora" abaixo, que é de gestão (só quem manda na roleta vê). */}
-                  <OfferActions
-                    contactId={item.contact?.id ?? (item.conversation as { contact?: { id?: string } } | undefined)?.contact?.id}
-                    conversationId={item.conversation?.id}
-                    onAccepted={() => onLabelsChanged?.()}
-                  />
-                  {item.roleta && !roletas.some(r => r.id === item.roleta!.id) && (
-                    <p className="text-[11px] text-muted-foreground">
-                      Veio da roleta <span className="font-medium text-foreground">{roletaLabel(item.roleta)}</span>{' '}
-                      (inativa ou removida)
-                    </p>
-                  )}
-                  <Select
-                    value={item.roleta?.id && roletas.some(r => r.id === item.roleta!.id) ? item.roleta.id : ''}
-                    onValueChange={(v) => {
-                      if (v === '__create__') { setShowCreateRoleta(true); return; }
-                      handleAssignViaRoleta(v);
-                    }}
-                    disabled={assigningRoleta}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder={roletas.length ? 'Atribuir por uma roleta' : 'Nenhuma roleta — criar uma'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {/* O NOME DA ROLETA — o mesmo da lista de roletas. Antes vinha
-                          o nome do número de entrada ("apto-premium-bernardo-numero-
-                          principal"), que não bate com roleta nenhuma pra quem só olha
-                          o card. */}
-                      {roletas.map(r => (
-                        <SelectItem key={r.id} value={r.id}>{roletaLabel(r)}</SelectItem>
-                      ))}
-                      <SelectItem value="__create__" className="text-primary font-medium">
-                        + Criar roleta
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {/* Só aparece com oferta EM ABERTO: é o único momento em que há
-                      prazo correndo e corretor esperando. Sem isto, a única forma
-                      de tirar um lead da roleta era trocar o responsável na mão —
-                      e trocar para o MESMO corretor da oferta não encerrava nada,
-                      porque o sistema lê isso como escolha da própria roleta. */}
-                  {ofertasAbertas.length > 0 && (
-                    <div className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 dark:border-amber-900 dark:bg-amber-950/30">
-                      <p className="text-[11px] text-amber-800 dark:text-amber-300">
-                        No sorteio agora, esperando o aceite de{' '}
-                        <strong>{ofertasAbertas.map(o => o.corretor ?? 'corretor').join(', ')}</strong>.
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-1.5 h-7 text-xs"
-                        onClick={() => setTirandoDaRoleta(true)}
-                      >
-                        Tirar da roleta
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Fase */}
-                <div className="grid gap-1.5">
-                  <Label className="text-xs">{t('editItem.currentStage')}</Label>
-                  <Select value={selectedStageId?.toString()} onValueChange={setSelectedStageId}>
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder={t('editItem.chooseStage')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {stages.map(stage => (
-                        <SelectItem key={stage.id} value={stage.id.toString()}>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
-                            {stage.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Ações do lead (movido da antiga aba Ações) */}
-                <div className="grid gap-1.5 pt-1">
-                  <Label className="flex items-center gap-1 text-xs">
-                    <Settings2 className="h-3.5 w-3.5" />
-                    Ações
-                  </Label>
-                  <CardActionsPanel
-                    item={item}
-                    stages={stages}
-                    onClose={() => onOpenChange(false)}
-                    onStageChanged={(newStageId) => {
-                      setSelectedStageId(newStageId);
-                      // Reflete o move no board na hora, sem reload.
-                      if (item) onItemStageMoved?.(item.id, newStageId);
-                    }}
-                  />
-                </div>
               </div>
-
-              {/* RIGHT: histórico (em cima) + observações (embaixo), dividindo a altura */}
-              <div className="flex flex-col overflow-hidden border-l border-border pl-4 min-h-0">
-                {/* Histórico */}
-                <div className={`flex flex-col overflow-hidden min-h-0 ${canNotes ? 'flex-1 pb-3' : 'flex-1'}`}>
-                  <div className="flex items-center justify-between mb-3 shrink-0">
-                    <h4 className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground uppercase tracking-wide">
-                      <History className="h-3.5 w-3.5" />
-                      Histórico
-                    </h4>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2"
-                      onClick={() => loadHistory()}
-                      disabled={historyLoading}
-                      aria-label="Atualizar histórico"
-                      title="Atualizar histórico"
-                    >
-                      <RefreshCw className={`h-3 w-3 ${historyLoading ? 'animate-spin' : ''}`} />
-                    </Button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto space-y-2">
-                    {historyLoading ? (
-                      <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : historyEvents.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-12">
-                        Nenhuma atividade registrada.
-                      </p>
-                    ) : (
-                      historyEvents.map(ev => (
-                        <div key={ev.id} className="flex gap-2 text-xs">
-                          <div className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${historyDotColor(ev.id)}`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-1">
-                              <span className="font-medium break-words">{ev.eventName}</span>
-                              <span className="text-[10px] text-muted-foreground shrink-0 whitespace-nowrap">
-                                {new Date(ev.occurredAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                            {ev.properties && Object.keys(ev.properties).length > 0 && (
-                              // Quebra as linhas em vez de cortar com reticências. O subtítulo é a
-                              // ÚNICA explicação de eventos como o "fora do horário" e o "ninguém
-                              // assumiu" da roleta — o texto do servidor tem uma frase inteira ali
-                              // ("O lead chegou fora do horário... ele NÃO volta sozinho para o
-                              // sorteio"), e com `truncate` ela morria no primeiro terço, sem
-                              // tooltip e sem nenhuma outra tela onde lê-la.
-                              //
-                              // Pelo mesmo motivo caiu o limite de 3 propriedades: ele existia
-                              // porque só cabia uma linha. A ORDEM continua importando (o servidor
-                              // manda De / Para / Por antes do nome do funil), agora só para
-                              // decidir o que se lê primeiro, não o que se lê.
-                              <p className="text-muted-foreground whitespace-pre-wrap break-words">
-                                {Object.entries(ev.properties).map(([k, v]) => `${k}: ${v}`).join(' · ')}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Observações (comentários da equipe) — dividindo o espaço, abaixo do histórico */}
-                {canNotes && (
-                  <div className="flex flex-col overflow-hidden min-h-0 flex-1 border-t border-border pt-3">
-                    <h4 className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground uppercase tracking-wide mb-3 shrink-0">
-                      <MessageSquare className="h-3.5 w-3.5" />
-                      Observações
-                    </h4>
-                    <div className="flex-1 overflow-hidden min-h-0">
-                      <CardNotesTab
-                        contactId={item.contact?.id ? String(item.contact.id) : ((item.conversation as any)?.contact?.id ? String((item.conversation as any).contact.id) : null)}
-                      />
-                    </div>
-                  </div>
+              <div className="flex items-center gap-0.5 shrink-0">
+                {corrigivel && contato?.id != null && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    aria-label="Corrigir telefone ou e-mail"
+                    title="Corrigir telefone ou e-mail"
+                    onClick={() => setCorrigindoContato(true)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
                 )}
+                <CardMoreMenu
+                  item={item}
+                  roletas={roletas}
+                  trocandoRoleta={assigningRoleta}
+                  onTrocarRoleta={handleAssignViaRoleta}
+                  onCriarRoleta={() => setShowCreateRoleta(true)}
+                  onRemovido={() => onOpenChange(false)}
+                />
               </div>
             </div>
-          </TabsContent>
 
-          {/* Conversa */}
-          <TabsContent value="conversation" className="flex-1 overflow-y-auto mt-0 pt-3">
-            {item && (
-              <Suspense fallback={null}>
-                <CardConversationTab
+            {/* Situação */}
+            <div className="space-y-2">
+              {/* Etapa e Responsável lado a lado: economiza altura na coluna fixa. */}
+              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1 min-w-0">
+                <span className="text-xs font-medium text-muted-foreground">Etapa</span>
+                <Select value={etapaId ?? undefined} onValueChange={moverEtapa} disabled={movendoEtapa}>
+                  <SelectTrigger className="h-10 w-full text-sm">
+                    <SelectValue placeholder="Escolha a etapa">
+                      {etapaAtual && (
+                        <span className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: etapaAtual.color }} />
+                          {etapaAtual.name}
+                        </span>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stages.map(stage => (
+                      <SelectItem key={stage.id} value={stage.id.toString()}>
+                        <span className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
+                          {stage.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Responsável — sem gate de conversa: lead de formulário/anúncio
+                  não tem conversa e mesmo assim precisa de dono. */}
+              {(item.conversation?.id || contato?.id) && (
+                <div className="grid gap-1 min-w-0">
+                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    Responsável
+                    {assigningUser && <Loader2 className="h-3 w-3 animate-spin" />}
+                  </span>
+                  <Select value={selectedAssigneeId ?? 'unassigned'} onValueChange={handleAssigneeChange} disabled={assigningUser}>
+                    <SelectTrigger className="h-10 w-full text-sm">
+                      <SelectValue placeholder="Sem responsável" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Sem responsável</SelectItem>
+                      {users.map(u => (
+                        <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              </div>
+              {roletaDoLead && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Shuffle className="h-3.5 w-3.5" /> veio pela {roletaDoLead}
+                </span>
+              )}
+
+              {/* A oferta que espera o PRÓPRIO usuário — o corretor aceita daqui. */}
+              <OfferActions
+                contactId={contato?.id != null ? String(contato.id) : undefined}
+                conversationId={item.conversation?.id}
+                onAccepted={() => { onLabelsChanged?.(); loadHistory(); }}
+              />
+              {ofertasAbertas.length > 0 && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 dark:border-amber-900 dark:bg-amber-950/30">
+                  <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                    No sorteio agora, esperando o aceite de{' '}
+                    <strong>{ofertasAbertas.map(o => o.corretor ?? 'corretor').join(', ')}</strong>.
+                  </p>
+                  <Button variant="outline" size="sm" className="mt-1.5 h-7 text-xs" onClick={() => setTirandoDaRoleta(true)}>
+                    Tirar da roleta
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <LeadQuickActions
+              item={item}
+              nomeExibido={nomeExibido}
+              abrindoConversa={openingConversation}
+              onAbrirConversa={() => openLeadConversation(item)}
+              onVisitaCriada={() => loadHistory()}
+            />
+
+            {/* Etiquetas */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {activeLabels.map(l => (
+                <Badge key={l} variant="secondary" className="gap-1 text-sm h-7 px-2.5 border-0 font-medium" style={labelStyle(l)}>
+                  {l}
+                  <button onClick={() => toggleLabel(l)} aria-label="Remover etiqueta" title="Remover etiqueta" className="hover:opacity-60">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </Badge>
+              ))}
+              {(labelTargetConvId || labelTargetContactId) && (
+                <Popover open={labelPopoverOpen} onOpenChange={setLabelPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 px-3 text-sm gap-1.5 border-dashed">
+                      {(savingLabel || creatingLabel) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                      Adicionar etiqueta
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-52 p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar ou criar etiqueta..." value={labelSearch} onValueChange={setLabelSearch} />
+                      {/* onWheel stopPropagation: sem isso a roda do mouse não
+                          rolava a lista dentro do popover/modal. */}
+                      <CommandList className="max-h-56 overflow-y-auto overscroll-contain" onWheel={e => e.stopPropagation()}>
+                        <CommandEmpty>Digite o nome e clique em "Criar etiqueta".</CommandEmpty>
+                        <CommandGroup heading="Nova etiqueta">
+                          <CommandItem
+                            value={`__create__${trimmedLabelSearch}`}
+                            disabled={!canCreateLabel || creatingLabel}
+                            onSelect={() => canCreateLabel && createAndApplyLabel(trimmedLabelSearch)}
+                          >
+                            {creatingLabel ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-2 h-3.5 w-3.5" />}
+                            {trimmedLabelSearch ? `Criar etiqueta "${trimmedLabelSearch}"` : 'Digite acima pra criar uma nova etiqueta'}
+                          </CommandItem>
+                        </CommandGroup>
+                        <CommandGroup heading="Etiquetas existentes">
+                          {filteredLabels.map(l => (
+                            <CommandItem key={l.id} value={l.title} onSelect={() => { toggleLabel(l.title); setLabelPopoverOpen(false); setLabelSearch(''); }}>
+                              <Check className={`mr-2 h-3.5 w-3.5 ${activeLabels.includes(l.title) ? 'opacity-100' : 'opacity-0'}`} />
+                              <span className="w-2.5 h-2.5 rounded-full mr-2 shrink-0 inline-block" style={{ backgroundColor: l.color }} />
+                              {l.title}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+
+            {/* Follow-up numa linha (a lista abre numa janelinha) */}
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-muted-foreground">Follow-up</span>
+              <FollowupTimeline
+                contactId={contato?.id != null ? String(contato.id) : null}
+                conversationId={conversaDoCard(item)}
+                leadName={contato?.name ?? null}
+                compacto
+              />
+            </div>
+
+            <CapiConversionPanel contactId={contato?.id ?? null} pipelineItemId={item.id} variante="compacto" />
+
+            {/* Rodapé fixo da coluna */}
+            <div className="mt-auto pt-2 border-t border-border">
+              <CardResultFooter stages={stages} etapaAtualId={etapaId} movendo={movendoEtapa} onMover={moverEtapa} />
+            </div>
+          </aside>
+
+          {/* DIREITA — abas da casa (sublinhado com ícone), a faixa inteira no topo */}
+          <section className="flex flex-col min-h-0 px-5 pt-3 pb-4">
+            <Abas
+              rotulo="Seções do card do lead"
+              abas={[
+                { chave: 'overview', rotulo: 'Detalhes', icone: ClipboardList },
+                { chave: 'conversation', rotulo: 'Conversa', icone: MessageSquare },
+                { chave: 'visits', rotulo: 'Visitas e propostas', icone: CalendarCheck },
+                { chave: 'origin', rotulo: 'Origem', icone: Megaphone },
+              ]}
+              ativa={activeTab}
+              aoTrocar={setActiveTab}
+              className="shrink-0 pr-8"
+            />
+
+            <div className="flex-1 min-h-0 overflow-y-auto pt-4">
+              {activeTab === 'overview' && (
+                <LeadDetailsTab
                   item={item}
-                  onCreateReminder={() => { setShowCreateTaskModal(true); }}
-                />
-              </Suspense>
-            )}
-          </TabsContent>
-
-          {/* Tarefas */}
-          {canTasks && (
-            <TabsContent value="tasks" className="flex-1 overflow-y-auto mt-0 pt-3">
-              {item && (
-                <PipelineTasksList
-                  ref={tasksListRef}
-                  pipelineId={item.pipeline_id}
-                  pipelineItemId={item.id}
-                  onCreateClick={() => setShowCreateTaskModal(true)}
-                  onEditClick={(task: PipelineTask) => { setTaskToEdit(task); setShowEditTaskModal(true); }}
-                  onAddSubtask={(parentTask: PipelineTask) => { setParentTaskForSubtask(parentTask); setShowCreateTaskModal(true); }}
+                  mostrarImoveis={canProperties}
+                  mostrarObservacoes={canNotes}
+                  historico={historyEvents}
+                  carregandoHistorico={historyLoading}
+                  onRecarregarHistorico={() => loadHistory()}
                 />
               )}
-            </TabsContent>
-          )}
 
-          {/* Imóveis de interesse */}
-          {canProperties && (
-            <TabsContent value="properties" className="flex-1 overflow-y-auto mt-0 pt-3">
-              {item && (
+              {activeTab === 'conversation' && (
                 <Suspense fallback={null}>
-                  <CardPropertyInterests
+                  <CardConversationTab
                     item={item}
+                    onAgendarEnvio={canScheduleAction && contato?.id != null ? texto => setAgendandoEnvio(texto) : undefined}
                   />
                 </Suspense>
               )}
-            </TabsContent>
-          )}
 
-          {/* Origem do lead (campanha / anúncio / tracking) */}
-          <TabsContent value="origin" className="flex-1 overflow-y-auto mt-0 pt-3">
-            {(() => {
-              const ar = (item as any).lead_origin
-                ?? ((item.contact as any)?.additional_attributes?.ad_referral)
-                ?? ((item.conversation as any)?.additional_attributes?.ad_referral)
-                ?? {};
-              const LABELS: Record<string, string> = {
-                source: 'Origem', campaign_name: 'Campanha', adset_name: 'Conjunto', ad_name: 'Anúncio',
-                campaign_id: 'ID da campanha', adset_id: 'ID do conjunto', ad_id: 'ID do anúncio',
-                form_id: 'ID do formulário', page_id: 'ID da página', page_name: 'Página', leadgen_id: 'ID do lead (Meta)',
-                lead_name: 'Nome', lead_email: 'E-mail', lead_phone: 'Telefone',
-                lead_hour: 'Hora do lead', lead_weekday: 'Dia da semana',
-                captured_at: 'Capturado em', fb_created_at: 'Criado no Facebook', lead_created_time: 'Data do lead',
-                // Click-to-WhatsApp (anúncio FB/Instagram → zap)
-                title: 'Anúncio', body: 'Descrição do anúncio', source_app: 'Plataforma',
-                source_url: 'Link do anúncio', source_id: 'ID do anúncio', source_type: 'Tipo',
-                ctwa_clid: 'ID do clique', thumbnail_url: 'Imagem do anúncio',
-                // Landing Page
-                landing_name: 'Landing', landing_slug: 'Nome na URL', landing_url: 'Link da landing',
-                // Origem universal (manual / orgânico / tracking interno)
-                inbox_name: 'Número de WhatsApp', added_by_name: 'Adicionado por',
-                // Bolsão: de qual planilha o lead saiu. Vive separado do texto de
-                // origem informada porque aquele é editável — reescrever "veio por
-                // indicação" apagava a rastreabilidade da lista.
-                bolsao_lista: 'Lista do Bolsão',
-                // Portal e formulário do site: o nome de qual portal/site trouxe o lead.
-                portal: 'Portal', site: 'Site',
-              };
-              // manual_origin sai da lista genérica: tem campo editável próprio no topo.
-              // bolsao_batch_id/bolsao_lead_id são identificadores internos: quem
-              // lê o card quer o NOME da lista, que sai em bolsao_lista.
-              const HIDDEN = new Set(['thumbnail_url', 'source', 'entered_via', 'added_by_id', 'channel_type',
-                'bolsao_batch_id', 'bolsao_lead_id', 'reclassificado', MANUAL_ORIGIN_KEY]);
-              const source = (ar as any).source as string | undefined;
-              const meta = source ? SOURCE_META[source] : undefined;
-              const entries = Object.entries(ar).filter(([k, v]) => k !== 'extra_fields' && !HIDDEN.has(k) && v != null && v !== '');
-              // Respostas do formulário Meta: o backend grava o hash completo de
-              // respostas em custom_attributes.form_answers (antes só nome/email/telefone
-              // eram aproveitados). Le tambem additional_attributes por compat com leads
-              // gravados na versao anterior. Fallback pro extra_fields legado.
-              const formAnswers = (item.contact as any)?.custom_attributes?.form_answers
-                ?? (item.contact as any)?.additional_attributes?.form_answers
-                ?? (item.conversation as any)?.custom_attributes?.form_answers
-                ?? (item.conversation as any)?.additional_attributes?.form_answers;
-              // A landing manda as perguntas dentro de UMA chave, como lista, com os
-              // cookies do anúncio soltos ao lado — cru, isso virava "[object Object]"
-              // por pergunta. A normalização entende os dois formatos e vale também
-              // para o lead que já foi capturado. Ver formAnswers.ts.
-              const extraRows = normalizeFormAnswers((ar as Record<string, unknown>).extra_fields);
-              const answerRows = extraRows.length > 0 ? extraRows : normalizeFormAnswers(formAnswers);
-              // Resultado da régua da landing, gravado no card na captura.
-              const verdict = landingVerdict(item.custom_fields);
-              const hasTrackedData = entries.length > 0 || answerRows.length > 0 || !!meta || !!verdict;
-              return (
-                <div className="space-y-4">
-                  {(meta || verdict) && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      {meta && (
-                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${meta.cls}`}>
-                          <span>{meta.label}</span>
-                        </div>
-                      )}
-                      {/* Resultado da régua do formulário: sem ele, as respostas
-                          não dizem se o lead passou no corte configurado. */}
-                      {verdict && (
-                        <div
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                            verdict.approved
-                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                              : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
-                          }`}
-                        >
-                          <span>{verdict.label}{verdict.score != null ? ` · nota ${verdict.score}` : ''}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+              {activeTab === 'visits' && (
+                <Suspense fallback={null}>
+                  <VisitsProposalsTab item={item} nomeExibido={nomeExibido} />
+                </Suspense>
+              )}
 
-                  {/* Origem por escrito — o rastreamento automático só sabe de
-                      anúncio/campanha; "veio por indicação" quem informa é o time. */}
-                  <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-3">
-                    <ManualOriginInput
-                      id={`manual-origin-${item.id}`}
-                      value={manualOrigin}
-                      onChange={setManualOrigin}
-                      disabled={savingManualOrigin}
-                    />
-                    <div className="flex items-center justify-end gap-2">
-                      {manualOrigin.trim() !== savedManualOrigin && (
-                        <span className="text-xs text-muted-foreground">Alteração não salva</span>
-                      )}
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7"
-                        disabled={savingManualOrigin || manualOrigin.trim() === savedManualOrigin}
-                        onClick={handleSaveManualOrigin}
-                      >
-                        {savingManualOrigin && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-                        Salvar origem
-                      </Button>
-                    </div>
-                  </div>
-
-                  {!hasTrackedData && (
-                    <div className="text-sm text-muted-foreground py-6 text-center border border-dashed border-border rounded-lg">
-                      Sem dados de rastreamento automático para este lead.
-                    </div>
-                  )}
-
-                  <div className="grid gap-2">
-                    {entries.map(([k, v]) => (
-                      <div key={k} className="flex items-start justify-between gap-3 text-sm border-b border-border/50 pb-1.5">
-                        <span className="text-muted-foreground shrink-0">{LABELS[k] ?? k.replace(/_/g, ' ')}</span>
-                        <span className="text-right font-medium break-all">{String(v)}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {answerRows.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Respostas do formulário</h4>
-                      <div className="grid gap-2">
-                        {answerRows.map((row, i) => (
-                          <div key={`${row.label}-${i}`} className="flex items-start justify-between gap-3 text-sm border-b border-border/50 pb-1.5">
-                            <span className="text-muted-foreground shrink-0 capitalize">{row.label}</span>
-                            <span className="text-right font-medium break-all">{row.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-          </TabsContent>
-
-          {/* Observações saiu daqui: agora vive no painel direito da aba Detalhes. */}
-
-          {/* Services Tab (hidden from tabs, kept for data compat) */}
-          <TabsContent value="services" className="py-4 space-y-4 overflow-y-auto max-h-[60vh]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">{t('editItem.services')}</h3>
-              <Button type="button" size="sm" onClick={addService} className="h-8">
-                <Plus className="w-4 h-4 mr-1" />{t('editItem.addService')}
-              </Button>
+              {activeTab === 'origin' && (
+                <CardOriginTab
+                  item={item}
+                  manualOrigin={manualOrigin}
+                  onManualOriginChange={setManualOrigin}
+                  savedManualOrigin={savedManualOrigin}
+                  savingManualOrigin={savingManualOrigin}
+                  onSaveManualOrigin={handleSaveManualOrigin}
+                />
+              )}
             </div>
-            {services.length === 0 ? (
-              <div className="text-sm text-muted-foreground py-12 text-center border border-dashed border-border rounded-lg">{t('editItem.noServices')}</div>
-            ) : (
-              <div className="space-y-3">
-                {services.map((service, index) => (
-                  <div key={index} className="border border-border rounded-lg p-3">
-                    <div className="flex gap-2 mb-2">
-                      <Popover open={openServicePopover === index} onOpenChange={isOpen => setOpenServicePopover(isOpen ? index : null)}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" role="combobox" className="flex-1 justify-between font-normal">
-                            <span className={service.name ? '' : 'text-muted-foreground'}>{service.name || t('editItem.serviceName')}</span>
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0" align="start">
-                          <Command filter={(value, search) => { const cs = catalogServices.find(c => c.id === value); return cs?.name.toLowerCase().includes(search.toLowerCase()) ? 1 : 0; }}>
-                            <CommandInput placeholder="Buscar ou digitar serviço..." value={service.name} onValueChange={v => updateService(index, 'name', v)} />
-                            <CommandList>
-                              <CommandEmpty>{service.name ? <button type="button" className="w-full px-2 py-1.5 text-sm text-left hover:bg-accent" onClick={() => setOpenServicePopover(null)}>{t('editItem.useCustomService', { name: service.name })}</button> : <span>{t('editItem.noServicesFound') || 'Nenhum encontrado'}</span>}</CommandEmpty>
-                              {catalogServices.length > 0 && (
-                                <CommandGroup heading="Catálogo">
-                                  {catalogServices.map(cs => (
-                                    <CommandItem key={cs.id} value={cs.id} onSelect={() => selectCatalogService(index, cs)}>
-                                      <Check className={`mr-2 h-4 w-4 ${service.name === cs.name ? 'opacity-100' : 'opacity-0'}`} />
-                                      <div className="flex flex-col"><span>{cs.name}</span><span className="text-xs text-muted-foreground">{cs.currency} {cs.formatted_default_value}</span></div>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              )}
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <Button type="button" variant="outline" size="sm" onClick={() => removeService(index)} aria-label="Remover serviço" title="Remover serviço" className="px-2">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <Input type="number" placeholder={t('editItem.serviceValue')} value={service.value} onChange={e => updateService(index, 'value', e.target.value)} step="0.01" min="0" />
-                  </div>
-                ))}
-                <div className="pt-3 border-t border-border">
-                  <div className="flex justify-between items-center text-sm font-medium">
-                    <span className="text-muted-foreground">{t('editItem.totalValue')}</span>
-                    <span className="text-green-600 dark:text-green-400">{dinheiro(calculateTotalValue(), { moeda: moedaValida(currency) })}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Attributes Tab (hidden) */}
-          <TabsContent value="attributes" className="py-4 overflow-y-auto max-h-[60vh]">
-            <PipelineItemCustomAttributes
-              attributes={customAttributes}
-              onAttributesChange={setCustomAttributes}
-              disabled={loading}
-              pipelineId={item.pipeline_id}
-              stageId={item.stage_id}
-              itemId={item.id}
-              pipelineCustomFields={pipeline?.custom_fields}
-              stageCustomFields={stages.find(s => s.id === item.stage_id)?.custom_fields}
-            />
-          </TabsContent>
-        </Tabs>
-
-        <DialogFooter className="shrink-0 border-t border-border pt-3">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            {t('editItem.cancel')}
-          </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit || loading || savingContact}>
-            {loading || savingContact ? t('editItem.saving') : t('editItem.save')}
-          </Button>
-        </DialogFooter>
+          </section>
+        </div>
       </DialogContent>
 
-      {item && (
-        <>
-          <CreateTaskModal
-            open={showCreateTaskModal}
-            onOpenChange={handleCreateTaskModalClose}
-            onSubmit={handleCreateTask}
-            loading={taskLoading}
-            availableUsers={users}
-            parentTask={parentTaskForSubtask}
+      {corrigindoContato && contato?.id != null && (
+        <Suspense fallback={null}>
+          <CorrigirContatoDialog
+            open={corrigindoContato}
+            onOpenChange={setCorrigindoContato}
+            contactId={String(contato.id)}
+            telefoneAtual={telefoneDoLead}
+            emailAtual={emailDoLead}
+            onCorrigido={({ phone_number, email }) => {
+              setTelefoneDoLead(phone_number);
+              setEmailDoLead(email);
+              loadHistory();
+            }}
           />
-          <EditTaskModal
-            open={showEditTaskModal}
-            onOpenChange={setShowEditTaskModal}
-            task={taskToEdit}
-            onSubmit={handleEditTask}
-            loading={taskLoading}
-            availableUsers={users}
+        </Suspense>
+      )}
+
+      {agendandoEnvio !== null && contato?.id != null && (
+        <Suspense fallback={null}>
+          <ScheduleActionModal
+            open
+            onClose={() => setAgendandoEnvio(null)}
+            contactId={String(contato.id)}
+            mensagemInicial={agendandoEnvio}
           />
-        </>
+        </Suspense>
       )}
 
       {/* Tirar da roleta — o destino do lead é escolhido no diálogo. */}
-      {tirandoDaRoleta && (item.contact?.id || (item.conversation as any)?.contact?.id) && (
+      {tirandoDaRoleta && contato?.id != null && (
         <Suspense fallback={null}>
           <RemoveFromRoletaDialog
             open
             onOpenChange={setTirandoDaRoleta}
-            contactId={String(item.contact?.id ?? (item.conversation as any)?.contact?.id)}
-            leadName={item.contact?.name ?? (item.conversation as any)?.contact?.name}
+            contactId={String(contato.id)}
+            leadName={contato.name ?? undefined}
             offers={ofertasAbertas}
             onDone={() => setOfertasAbertas([])}
           />
@@ -1383,14 +771,16 @@ export default function EditItemModal({
       )}
 
       {/* Criação de roleta direto do card (sem ir pra Configurações) */}
-      <Suspense fallback={null}>
-        <CreateRoletaModal
-          open={showCreateRoleta}
-          onOpenChange={setShowCreateRoleta}
-          users={users}
-          onCreated={(roleta) => setRoletas(prev => [...prev, roleta])}
-        />
-      </Suspense>
+      {showCreateRoleta && (
+        <Suspense fallback={null}>
+          <CreateRoletaModal
+            open={showCreateRoleta}
+            onOpenChange={setShowCreateRoleta}
+            users={users}
+            onCreated={(roleta) => setRoletas(prev => [...prev, roleta])}
+          />
+        </Suspense>
+      )}
 
       {/* Iniciar conversa — só monta para lead que ainda não tem conversa */}
       {startConversationModal}

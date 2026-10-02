@@ -11,6 +11,7 @@ import type { Contact, Conversation } from '@/types/chat/api';
 
 import AiUnderstandingPanel from './AiUnderstandingPanel';
 import TopoDoLead from './painel/TopoDoLead';
+import FaixaDeSelos from './painel/FaixaDeSelos';
 import SecaoFunil from './painel/SecaoFunil';
 import SecaoEtiquetas from './painel/SecaoEtiquetas';
 import SecaoNotas from './painel/SecaoNotas';
@@ -34,9 +35,10 @@ const anuncioDe = (attrs: unknown): Objeto | null => {
 };
 
 /**
- * O painel do lead ao lado da conversa: seções simples, uma embaixo da outra,
- * com o conteúdo à vista. Topo → Funil → O que a IA entendeu → Etiquetas →
- * Notas → Respostas do formulário → Conversão Meta.
+ * O painel do lead ao lado da conversa (Proposta B, 02/10): o resumo no topo e
+ * seções simples, uma embaixo da outra, com o conteúdo à vista. Topo (com a
+ * faixa de selos) → Conversão Meta (uma linha) → Funil → O que a IA entendeu →
+ * Etiquetas → Notas → Respostas do formulário.
  */
 const ContactSidebar: React.FC<ContactSidebarProps> = ({
   isOpen,
@@ -90,7 +92,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
     return () => { vivo = false; };
   }, [contatoId]);
 
-  // Funis desta conversa: alimentam a seção Funil e a origem do lead ("Veio de").
+  // Funis desta conversa: alimentam a seção Funil e os selos de etapa e origem.
   // A resposta de uma conversa que já foi trocada não pode cair na seguinte.
   const conversaAtual = useRef(conversaId);
   conversaAtual.current = conversaId;
@@ -147,6 +149,12 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
     });
   }, [conversationPipelines, conversation?.additional_attributes, contact?.additional_attributes]);
 
+  // A temperatura que a IA gravou na conversa: a mesma fonte do "O que a IA entendeu".
+  const temperatura = useMemo(() => {
+    const valor = (conversation?.additional_attributes as Objeto | undefined)?.sales_agent_temperature;
+    return typeof valor === 'string' ? valor : null;
+  }, [conversation?.additional_attributes]);
+
   // A mesma lista de números que a tela de Conversas já buscou (sem requisição a mais):
   // dá o nome que o gestor deu ao número da outra conversa.
   const { inboxes: numeros } = useNumerosDaConversa();
@@ -187,10 +195,31 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
         }}
       >
         <div className="border-b flex-shrink-0">
-          <TopoDoLead contact={contact} emOferta={emOferta} origem={origem} outra={outra} onClose={onClose} />
+          <TopoDoLead
+            contact={contact}
+            emOferta={emOferta}
+            selos={
+              <FaixaDeSelos
+                pipelines={conversationPipelines}
+                temperatura={temperatura}
+                origem={origem}
+                conversa={conversation}
+              />
+            }
+            outra={outra}
+            onClose={onClose}
+          />
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
+          {/* Conversão Meta (Pixel/CAPI), uma linha logo abaixo do resumo. Some
+              sozinha quando o cliente não usa CAPI. */}
+          <CapiConversionPanel
+            contactId={contact?.id ?? null}
+            variante="compacto"
+            className="px-4 py-2 border-b border-border/60"
+          />
+
           {conversation && (
             <SecaoFunil
               key={`funil-${conversation.id}`}
@@ -219,9 +248,6 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
 
           {/* Formulário de lead costuma trazer telefone e e-mail: na oferta, a seção some. */}
           {contact && !emOferta && <SecaoRespostas key={`respostas-${contact.id}`} contact={contact} />}
-
-          {/* Conversão Meta (Pixel/CAPI): some sozinho quando o cliente não usa CAPI. */}
-          <CapiConversionPanel contactId={contact?.id ?? null} className="m-4" />
         </div>
       </div>
     </>

@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ContactSidebar from './ContactSidebar';
 
 // O painel do lead em seções (Fase 4, 02/10): o que saiu não volta, e o que é
 // do dia a dia (funil, etiquetas, notas) aparece sem clicar. Com a oferta da
 // roleta aberta para quem vê, o telefone vem mascarado e o e-mail some.
+// Proposta B (02/10): faixa de selos logo abaixo do nome, Conversão Meta numa
+// linha logo abaixo, Etiquetas só com as do lead e o resumo da IA à vista.
 
 const getContactConversations = vi.fn();
 vi.mock('@/services/contacts/contactsService', () => ({
@@ -25,8 +27,27 @@ vi.mock('@/services/pipelines', () => ({
   },
 }));
 
-vi.mock('@/services/chat/chatService', () => ({
-  chatService: { getSalesAgentStatus: () => Promise.reject(new Error('sem IA')) },
+vi.mock('@/services/chat/chatService', () => {
+  const servico = {
+    getSalesAgentStatus: () => Promise.reject(new Error('sem IA')),
+    addLabels: vi.fn(),
+    removeLabels: vi.fn(),
+  };
+  return { chatService: servico, default: servico };
+});
+
+// O catálogo de etiquetas da conta (vem do store, que busca uma vez).
+vi.mock('@/services/contacts/labelsService', () => ({
+  labelsService: {
+    getLabels: () =>
+      Promise.resolve({
+        data: [
+          { id: 'l1', title: 'zona sul', color: '#2563eb' },
+          { id: 'l2', title: 'visita-agendada', color: '#16a34a' },
+        ],
+      }),
+    createLabel: vi.fn(),
+  },
 }));
 
 // A lista de números da tela: o nome que o gestor deu ao número é o display_name.
@@ -47,10 +68,11 @@ vi.mock('@/hooks/chat/useConversations', () => ({
 
 vi.mock('@/components/contacts/ContactModal', () => ({ default: () => null }));
 vi.mock('@/components/chat/contact/ContactAvatar', () => ({ default: () => <div /> }));
-vi.mock('@/components/capi/CapiConversionPanel', () => ({ default: () => null }));
+vi.mock('@/components/capi/CapiConversionPanel', () => ({
+  default: ({ variante }: { variante?: string }) => <div data-testid="conversao-meta">{variante}</div>,
+}));
 vi.mock('@/components/pipelines/EditItemModal', () => ({ default: () => null }));
 vi.mock('./PipelineManagement', () => ({ default: () => null }));
-vi.mock('./ContactTagsManager', () => ({ default: () => <div>gerenciador-de-etiquetas</div> }));
 
 const contact = {
   id: 'contato-1',
@@ -69,18 +91,48 @@ const conversation = {
   custom_attributes: {},
 } as never;
 
-const renderPainel = (emOferta = false, contato: unknown = contact) =>
+const renderPainel = (emOferta = false, contato: unknown = contact, conversa: unknown = conversation) =>
   render(
     <MemoryRouter>
       <ContactSidebar
         isOpen
         onClose={vi.fn()}
         contact={contato as never}
-        conversation={conversation}
+        conversation={conversa as never}
         emOferta={emOferta}
       />
     </MemoryRouter>,
   );
+
+// Lead no funil, com a IA dizendo "quente" e esperando resposta há 2 h.
+const funilComOLead = [
+  {
+    id: 'funil-1',
+    name: 'Funil de vendas',
+    stages: [
+      { id: 'etapa-0', name: 'Novo lead', color: '#2563eb', position: 0, items: [] },
+      {
+        id: 'etapa-1',
+        name: 'Primeiro contato',
+        color: '#16a34a',
+        position: 1,
+        items: [{ id: 'item-1', item_id: 'conv-1', pipeline_id: 'funil-1', stage_id: 'etapa-1' }],
+      },
+    ],
+  },
+];
+const conversaQuenteEsperando = () => ({
+  ...(conversation as object),
+  additional_attributes: {
+    ad_referral: { source_app: 'instagram', source_url: 'https://instagram.com/p/exemplo' },
+    sales_agent_temperature: 'hot',
+  },
+  waiting_since: Math.floor(Date.now() / 1000) - 2 * 3600,
+  last_non_activity_message: { id: 'm1', message_type: 0, content: 'oi', created_at: '' },
+});
+
+const segue = (antes: Element, depois: Element) =>
+  Boolean(antes.compareDocumentPosition(depois) & Node.DOCUMENT_POSITION_FOLLOWING);
 
 describe('ContactSidebar — painel do lead em seções', () => {
   beforeEach(() => {
@@ -111,16 +163,19 @@ describe('ContactSidebar — painel do lead em seções', () => {
     expect(await screen.findByText('Colocar no funil')).toBeTruthy();
     expect(screen.getByText('Funil')).toBeTruthy();
     expect(screen.getByText('Etiquetas')).toBeTruthy();
-    expect(screen.getByText('gerenciador-de-etiquetas')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '+ Etiqueta' })).toBeTruthy();
     expect(screen.getByText('Notas')).toBeTruthy();
   });
 
-  it('topo: telefone inteiro, e-mail, "Veio de" com o anúncio e o lápis de editar', async () => {
+  it('topo: telefone inteiro, e-mail, a origem como selo que leva ao anúncio e o lápis de editar', async () => {
     renderPainel();
     expect(screen.getByText('(11) 91234-5634')).toBeTruthy();
     expect(screen.getByText('lead.ficticio@exemplo.com')).toBeTruthy();
-    expect(screen.getByText('Anúncio no Instagram')).toBeTruthy();
-    expect(screen.getByText('Ver anúncio').closest('a')?.getAttribute('href')).toBe('https://instagram.com/p/exemplo');
+    const origem = screen.getByText('Anúncio no Instagram').closest('a');
+    expect(origem?.getAttribute('href')).toBe('https://instagram.com/p/exemplo');
+    expect(origem?.getAttribute('title')).toBe('Ver anúncio');
+    // A linha de texto "Veio de: ..." saiu: a origem é o selo.
+    expect(screen.queryByText(/Veio de/)).toBeNull();
     expect(screen.getByLabelText('Editar contato')).toBeTruthy();
     expect(screen.getByLabelText('Copiar telefone')).toBeTruthy();
     await waitFor(() => expect(getContactConversations).toHaveBeenCalled());
@@ -193,5 +248,84 @@ describe('ContactSidebar — painel do lead em seções', () => {
     expect(screen.getAllByText('(11) •••••-••34')).toHaveLength(2);
     expect(screen.queryByText('+5511912345634')).toBeNull();
     await waitFor(() => expect(getContactConversations).toHaveBeenCalled());
+  });
+  it('ordem: topo → selos → Conversão Meta (compacta) → Funil → Etiquetas → Notas', async () => {
+    getPipelinesByConversation.mockResolvedValue(funilComOLead);
+    renderPainel(false, contact, conversaQuenteEsperando());
+
+    const selos = await screen.findByRole('group', { name: 'Resumo do lead' });
+    expect(await within(selos).findByText('Primeiro contato')).toBeTruthy();
+    expect(within(selos).getByText('Quente')).toBeTruthy();
+    expect(within(selos).getByText('Anúncio no Instagram')).toBeTruthy();
+    expect(within(selos).getByText('sem resposta há 2 h')).toBeTruthy();
+
+    const nome = screen.getByRole('heading', { name: 'Lead Fictício' });
+    const meta = screen.getByTestId('conversao-meta');
+    expect(meta.textContent).toBe('compacto');
+    const funil = screen.getByRole('region', { name: 'Funil' });
+    const etiquetas = screen.getByRole('region', { name: 'Etiquetas' });
+    const notas = screen.getByRole('region', { name: 'Notas' });
+
+    expect(segue(nome, selos)).toBe(true);
+    expect(segue(selos, meta)).toBe(true);
+    expect(segue(meta, funil)).toBe(true);
+    expect(segue(funil, etiquetas)).toBe(true);
+    expect(segue(etiquetas, notas)).toBe(true);
+  });
+
+  it('lead fora de funil, sem IA e sem espera: só o selo da origem', async () => {
+    renderPainel();
+    const selos = await screen.findByRole('group', { name: 'Resumo do lead' });
+    await waitFor(() => expect(getPipelinesByConversation).toHaveBeenCalled());
+    expect(within(selos).getAllByText(/./).map(el => el.textContent)).toEqual(['Anúncio no Instagram']);
+  });
+
+  it('Etiquetas: só as do lead; o catálogo da conta só aparece no "+ Etiqueta"', async () => {
+    renderPainel(false, { ...(contact as object), labels: [{ name: 'zona sul', color: '#2563eb' }] });
+    const etiquetas = screen.getByRole('region', { name: 'Etiquetas' });
+    expect(within(etiquetas).getByText('zona sul')).toBeTruthy();
+    expect(within(etiquetas).queryByText('visita-agendada')).toBeNull();
+    expect(within(etiquetas).queryByText('Nenhuma etiqueta')).toBeNull();
+
+    fireEvent.click(within(etiquetas).getByRole('button', { name: '+ Etiqueta' }));
+    expect(await within(etiquetas).findByRole('button', { name: 'visita-agendada' })).toBeTruthy();
+  });
+
+  it('O que a IA entendeu: o resumo aparece sem clicar; a temperatura fica no selo', async () => {
+    const comResumo = {
+      ...conversaQuenteEsperando(),
+      additional_attributes: {
+        sales_agent_temperature: 'warm',
+        sales_agent_summary: 'Procura 2 dormitórios na zona sul, até R$ 450 mil.',
+      },
+    };
+    renderPainel(false, contact, comResumo);
+    const ia = screen.getByRole('region', { name: 'O que a IA entendeu' });
+    expect(within(ia).getByText('Procura 2 dormitórios na zona sul, até R$ 450 mil.')).toBeTruthy();
+    expect(within(ia).queryByText('Morno')).toBeNull();
+    expect(within(screen.getByRole('group', { name: 'Resumo do lead' })).getByText('Morno')).toBeTruthy();
+    await waitFor(() => expect(getContactConversations).toHaveBeenCalled());
+  });
+
+  it('IA só com a temperatura: a seção não aparece (a temperatura já está no selo)', async () => {
+    renderPainel(false, contact, conversaQuenteEsperando());
+    expect(within(screen.getByRole('group', { name: 'Resumo do lead' })).getByText('Quente')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'O que a IA entendeu' })).toBeNull();
+    await waitFor(() => expect(getContactConversations).toHaveBeenCalled());
+  });
+
+  it('oferta aberta: os selos aparecem e o telefone segue mascarado', async () => {
+    getPipelinesByConversation.mockResolvedValue(funilComOLead);
+    renderPainel(true, contact, conversaQuenteEsperando());
+
+    const selos = await screen.findByRole('group', { name: 'Resumo do lead' });
+    expect(await within(selos).findByText('Primeiro contato')).toBeTruthy();
+    expect(within(selos).getByText('Quente')).toBeTruthy();
+    expect(within(selos).getByText('Anúncio no Instagram')).toBeTruthy();
+    expect(within(selos).getByText('sem resposta há 2 h')).toBeTruthy();
+
+    expect(screen.getByText('(11) •••••-••34')).toBeTruthy();
+    expect(screen.queryByText('(11) 91234-5634')).toBeNull();
+    expect(screen.queryByText('lead.ficticio@exemplo.com')).toBeNull();
   });
 });

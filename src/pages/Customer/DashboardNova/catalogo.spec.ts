@@ -24,6 +24,11 @@ describe('catálogo da Dashboard', () => {
     expect(corretor).not.toContain('roleta_agora');
   });
 
+  it('o corretor vê a vez dele na fila ao lado das pendências; o gestor não', () => {
+    expect(ids('corretor').slice(0, 2)).toEqual(['pendencias', 'minha_vez']);
+    expect(ids('gestor')).not.toContain('minha_vez');
+  });
+
   it('o mapa de calor existe no catálogo, desligado, e não é pedido à API', () => {
     expect(CATALOGO.mapa_calor.ligado).toBe(false);
     expect(ids('gestor')).not.toContain('mapa_calor');

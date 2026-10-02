@@ -12,7 +12,7 @@ export const TEXTOS_DO_PAINEL = {
   erroAoCopiar: 'Não foi possível copiar o telefone.',
   editarContato: 'Editar contato',
   fechar: 'Fechar',
-  veioDe: 'Veio de:',
+  resumoDoLead: 'Resumo do lead',
   verAnuncio: 'Ver anúncio',
   abrir: 'abrir',
   funil: 'Funil',
@@ -206,4 +206,65 @@ export function painelAoTrocarDeConversa(telaLarga: boolean, abertoAgora: boolea
  */
 export function emOfertaParaQuemVe(e: { semDono: boolean; ofertasCarregadas: boolean; temOferta: boolean }): boolean {
   return e.semDono && (!e.ofertasCarregadas || e.temOferta);
+}
+
+// ── Faixa de selos do topo (Proposta B, 02/10) ─────────────────────────────
+
+/** Um selo da faixa logo abaixo do nome. A tela só pinta: cor e texto saem daqui. */
+export type SeloDoLead =
+  | { tipo: 'etapa'; id: string; texto: string; cor: string | null; funil: string }
+  | { tipo: 'temperatura'; id: string; texto: string; tom: 'quente' | 'morno' | 'frio' }
+  | { tipo: 'origem'; id: string; texto: string; link: string | null }
+  | { tipo: 'espera'; id: string; texto: string };
+
+// A temperatura que a IA Vendedora grava na conversa (`sales_agent_temperature`).
+// "unknown" é a IA dizendo que ainda não sabe: não vira selo.
+const TEMPERATURAS: Record<string, { texto: string; tom: 'quente' | 'morno' | 'frio' }> = {
+  hot: { texto: 'Quente', tom: 'quente' },
+  warm: { texto: 'Morno', tom: 'morno' },
+  cold: { texto: 'Frio', tom: 'frio' },
+};
+
+interface FunilComEtapas {
+  id: string | number;
+  name?: string;
+  stages?: Array<{ id: string | number; name: string; color?: string | null; position?: number; items?: unknown[] }>;
+}
+
+/**
+ * Os selos do topo do painel, nesta ordem: a etapa em cada funil (com a cor da
+ * etapa), a temperatura da IA, a origem e a espera ("sem resposta há X", a
+ * mesma régua da lista). O que não tem dado não vira selo.
+ */
+export function selosDoLead(e: {
+  pipelines: FunilComEtapas[];
+  temperatura?: string | null;
+  origem?: { rotulo: string; link: string | null } | null;
+  espera?: string | null;
+}): SeloDoLead[] {
+  const selos: SeloDoLead[] = [];
+
+  for (const funil of e.pipelines) {
+    // A etapa em que o lead está é a que tem o item dele (a lista já vem só com ele).
+    const etapa = [...(funil.stages ?? [])]
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+      .find(s => (s.items ?? []).length > 0);
+    if (!etapa) continue;
+    selos.push({
+      tipo: 'etapa',
+      id: `etapa-${funil.id}`,
+      texto: etapa.name,
+      cor: textoDe(etapa.color) || null,
+      funil: textoDe(funil.name),
+    });
+  }
+
+  const temperatura = TEMPERATURAS[textoDe(e.temperatura).toLowerCase()];
+  if (temperatura) selos.push({ tipo: 'temperatura', id: 'temperatura', ...temperatura });
+
+  if (e.origem) selos.push({ tipo: 'origem', id: 'origem', texto: e.origem.rotulo, link: e.origem.link });
+
+  if (e.espera) selos.push({ tipo: 'espera', id: 'espera', texto: e.espera });
+
+  return selos;
 }

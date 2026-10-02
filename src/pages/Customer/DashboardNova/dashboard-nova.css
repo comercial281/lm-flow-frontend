@@ -71,3 +71,27 @@ button.lmfn-numero:focus-visible { outline: 2px solid var(--lmf-accent); outline
 .lmfn-carrossel { display: flex; align-items: center; gap: 6px; }
 .lmfn-carrossel button { border: 1px solid var(--lmf-border); background: var(--lmf-surface); border-radius: 8px; width: 28px; height: 28px; display: inline-grid; place-items: center; color: inherit; cursor: pointer; }
 .lmfn-carrossel button:disabled { opacity: 0.4; cursor: default; }
+/* Linha com cartão lateral (Pendências + Sua vez na fila): o primeiro ocupa o
+ * resto, o segundo é estreito à direita. Flex, não grid: quando o cartão lateral
+ * não desenha nada a coluna some (`.lmfn-coluna:empty`) e o primeiro fica com a
+ * linha inteira, sem trilho vazio. No celular, um embaixo do outro. */
+.lmfn-linha-lateral { display: flex; align-items: stretch; }
+.lmfn-linha-lateral > .lmfn-coluna:first-child { flex: 1 1 0; }
+.lmfn-linha-lateral > .lmfn-coluna + .lmfn-coluna { flex: 0 0 260px; }
+@media (max-width: 720px) {
+  .lmfn-linha-lateral { flex-direction: column; }
+  .lmfn-linha-lateral > .lmfn-coluna + .lmfn-coluna { flex-basis: auto; }
+}
+/* Sua vez na fila: cartão quase quadrado, número grande no meio, setas embaixo.
+ * Arrastar para o lado troca de roleta, então o toque na horizontal é da tela e a
+ * rolagem vertical continua da página. */
+.lmfn-vez-card { flex: 1; display: flex; flex-direction: column; min-height: 240px; }
+.lmfn-vez-corpo { flex: 1; display: flex; flex-direction: column; }
+.lmfn-vez { flex: 1; display: flex; flex-direction: column; touch-action: pan-y; user-select: none; }
+.lmfn-vez-centro { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; }
+.lmfn-vez-roleta { font-size: 11.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--lmf-muted); margin: 0; }
+.lmfn-vez-numero { display: flex; flex-direction: column; align-items: center; margin: 4px 0; }
+.lmfn-vez-numero strong { font-size: 56px; font-weight: 650; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.lmfn-vez-numero span { font-size: 13px; color: var(--lmf-muted); margin-top: 4px; }
+.lmfn-vez-texto { font-size: 13.5px; margin: 0; }
+.lmfn-vez .lmfn-carrossel { padding-top: 14px; justify-content: center; }
