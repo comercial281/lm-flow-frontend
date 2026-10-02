@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Building2 } from 'lucide-react';
 import type { Property } from '@/services/properties/propertiesService';
+import { plural } from '@/lib/formato';
 
 // A capa é a mesma do site (regra do servidor). Guarda a URL que falhou, não um
 // booleano: o componente é reaproveitado entre imóveis (ver o card antigo).
@@ -29,7 +30,7 @@ export default function FotoDoImovel({ p, aoAdicionar, compacta = false }: {
       <img src={url} alt={p.title} loading="lazy" onError={() => setFalhou(url)} className="absolute inset-0 h-full w-full object-cover" />
       <span className="absolute left-2 top-2 rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-semibold text-white">{p.code}</span>
       {p.photos_count ? (
-        <span className="absolute bottom-2 left-2 rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-white">{p.photos_count} fotos</span>
+        <span className="absolute bottom-2 left-2 rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-white">{plural(p.photos_count, 'foto', 'fotos')}</span>
       ) : null}
     </div>
   );

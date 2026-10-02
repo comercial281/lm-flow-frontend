@@ -22,6 +22,8 @@ export default function MenuDoImovel({ p, acoes, permissoes, forca }: {
   p: Property; acoes: AcoesDoImovel; permissoes: Permissoes; forca?: number;
 }) {
   const emp = tipoDoImovel(p) === 'development';
+  // Fora do site (desmarcado, vendido, rascunho...) a página pública não existe.
+  const noSite = p.published_on_site !== false && (p.status === 'active' || p.status === 'reserved');
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -34,7 +36,7 @@ export default function MenuDoImovel({ p, acoes, permissoes, forca }: {
         {permissoes.editar && <DropdownMenuItem onClick={() => acoes.editar(p)}>{emp ? 'Editar empreendimento' : 'Editar imóvel'}</DropdownMenuItem>}
         <DropdownMenuItem onClick={() => acoes.fotos(p)}>Fotos e vídeos</DropdownMenuItem>
         {p.has_book && <DropdownMenuItem onClick={() => acoes.book(p)}>Ver book</DropdownMenuItem>}
-        <DropdownMenuItem onClick={() => acoes.site(p)}>Ver página no site</DropdownMenuItem>
+        {noSite && <DropdownMenuItem onClick={() => acoes.site(p)}>Ver página no site</DropdownMenuItem>}
         <DropdownMenuItem onClick={() => acoes.landing(p)}>Landing de anúncio</DropdownMenuItem>
         <DropdownMenuItem onClick={() => acoes.forca(p)}>
           {forca != null ? `Força do anúncio: ${forca}%` : 'Calcular força do anúncio'}

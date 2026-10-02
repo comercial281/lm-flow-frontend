@@ -2,11 +2,12 @@
 import { UserCheck } from 'lucide-react';
 import type { Property } from '@/services/properties/propertiesService';
 import { PROPERTY_TYPE_LABELS } from '@/services/properties/propertiesService';
-import { dinheiro, tempoDesde } from '@/lib/formato';
+import { dinheiro, numero, tempoDesde } from '@/lib/formato';
 import { rotuloDaSituacao, tomDaSituacao } from '@/features/properties/listingKind';
 import FotoDoImovel from './FotoDoImovel';
 import Selo from './SeloSituacao';
 import MenuDoImovel, { type AcoesDoImovel, type Permissoes } from './MenuDoImovel';
+import TituloDoImovel from './TituloDoImovel';
 
 const FINALIDADE: Record<string, string> = { sale: 'Venda', rent: 'Locação', sale_rent: 'Venda e locação', season: 'Temporada' };
 const reais = (v?: number | null) => (v ? dinheiro(v, { centavos: false }) : null);
@@ -15,11 +16,15 @@ export default function LinhaRevenda({ p, acoes, permissoes, forca }: {
   p: Property; acoes: AcoesDoImovel; permissoes: Permissoes; forca?: number;
 }) {
   const tipo = PROPERTY_TYPE_LABELS[p.property_type] ?? p.property_type;
-  const titulo = [p.address_neighborhood, tipo].filter(Boolean).join(' · ');
+  // Sem bairro, o título do cadastro diz mais do que só o tipo.
+  const titulo = p.address_neighborhood ? `${p.address_neighborhood} · ${tipo}` : p.title;
   const endereco = [p.address_street && [p.address_street, p.address_number].filter(Boolean).join(', '), p.address_complement, p.address_city]
     .filter(Boolean).join(' · ');
-  const area = Number(p.useful_area_m2 ?? p.total_area_m2 ?? 0);
+  const util = Number(p.useful_area_m2 ?? 0);
+  const area = util > 0 ? util : Number(p.total_area_m2 ?? 0);
   const terreno = /lot|terreno/.test(p.property_type);
+  const tipoDeArea = terreno ? 'de terreno' : util > 0 ? 'úteis' : 'de área total';
+  const semPreco = !p.sale_price && !p.rent_price && !p.condo_fee && !p.iptu;
 
   return (
     <article className="grid grid-cols-[110px_minmax(0,1fr)_40px] overflow-hidden rounded-xl border bg-card shadow-sm transition-colors hover:border-primary/40 sm:grid-cols-[200px_minmax(0,1fr)_220px_40px]">
@@ -29,15 +34,13 @@ export default function LinhaRevenda({ p, acoes, permissoes, forca }: {
           <Selo tom={tomDaSituacao('resale', p.status)}>{rotuloDaSituacao('resale', p.status)}</Selo>
           <Selo tom="neutro">{FINALIDADE[p.transaction_type] ?? p.transaction_type}</Selo>
         </div>
-        <button type="button" onClick={() => acoes.editar(p)} className="text-left font-semibold text-[15px] hover:text-primary sm:text-base">
-          {titulo || p.title}
-        </button>
+        <TituloDoImovel texto={titulo || tipo} podeEditar={permissoes.editar} aoAbrir={() => acoes.editar(p)} className="font-semibold text-[15px] sm:text-base" />
         {endereco && <p className="truncate text-xs text-muted-foreground">{endereco}</p>}
         <p className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
           {p.bedrooms ? <span><b className="text-base">{p.bedrooms}</b> dorm{p.bedrooms > 1 ? 's' : ''}</span> : null}
           {p.suites ? <span><b className="text-base">{p.suites}</b> suíte{p.suites > 1 ? 's' : ''}</span> : null}
           {p.parking_spaces ? <span><b className="text-base">{p.parking_spaces}</b> vaga{p.parking_spaces > 1 ? 's' : ''}</span> : null}
-          {area > 0 && <span><b className="text-base">{area}</b> m² {terreno ? 'de terreno' : 'úteis'}</span>}
+          {area > 0 && <span><b className="text-base">{numero(area, 2)}</b> m² {tipoDeArea}</span>}
         </p>
         <p className="mt-auto flex flex-wrap gap-x-3 gap-y-0.5 pt-1 text-xs text-muted-foreground">
           <span>Atualizado {tempoDesde(p.updated_at)}</span>
@@ -50,6 +53,7 @@ export default function LinhaRevenda({ p, acoes, permissoes, forca }: {
         </p>
       </div>
       <div className="col-span-3 flex flex-wrap items-baseline gap-x-5 gap-y-1 border-t bg-muted/40 px-4 py-3 text-xs text-muted-foreground sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:flex-col sm:flex-nowrap sm:border-l sm:border-t-0">
+        {semPreco && <span>Sem preço cadastrado</span>}
         {p.sale_price ? (
           <div><span>Venda </span><b className="text-lg text-primary">{reais(p.sale_price)}</b>
             {area > 0 && <span className="block">{dinheiro(p.sale_price / area, { centavos: false })}/m²</span>}</div>

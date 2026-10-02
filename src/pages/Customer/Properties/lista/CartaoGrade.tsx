@@ -7,12 +7,14 @@ import FotoDoImovel from './FotoDoImovel';
 import Selo, { TOM_DA_FASE } from './SeloSituacao';
 import MenuDoImovel, { type AcoesDoImovel, type Permissoes } from './MenuDoImovel';
 import { faixaDePreco } from './LinhaEmpreendimento';
+import TituloDoImovel from './TituloDoImovel';
 
 export default function CartaoGrade({ p, acoes, permissoes, forca }: {
   p: Property; acoes: AcoesDoImovel; permissoes: Permissoes; forca?: number;
 }) {
   const emp = tipoDoImovel(p) === 'development';
-  const titulo = emp ? p.title : [p.address_neighborhood, PROPERTY_TYPE_LABELS[p.property_type] ?? p.property_type].filter(Boolean).join(' · ');
+  // Revenda sem bairro cai no título do cadastro (só o tipo diria pouco).
+  const titulo = emp || !p.address_neighborhood ? p.title : [p.address_neighborhood, PROPERTY_TYPE_LABELS[p.property_type] ?? p.property_type].join(' · ');
   const preco = emp
     ? (faixaDePreco(p).de ? `a partir de ${dinheiro(faixaDePreco(p).de, { centavos: false })}` : null)
     : p.sale_price ? dinheiro(p.sale_price, { centavos: false }) : p.rent_price ? `${dinheiro(p.rent_price, { centavos: false })}/mês` : null;
@@ -21,11 +23,14 @@ export default function CartaoGrade({ p, acoes, permissoes, forca }: {
       <FotoDoImovel p={p} aoAdicionar={() => acoes.fotos(p)} compacta />
       <div className="flex flex-col gap-1.5 p-3">
         <div className="flex flex-wrap gap-1.5">
-          {emp
-            ? <Selo tom={TOM_DA_FASE[p.stage] ?? 'neutro'}>{seloDaFase(p.stage, p.delivery_forecast)}</Selo>
-            : <Selo tom={tomDaSituacao('resale', p.status)}>{rotuloDaSituacao('resale', p.status)}</Selo>}
+          {emp ? (
+            <>
+              <Selo tom={TOM_DA_FASE[p.stage] ?? 'neutro'}>{seloDaFase(p.stage, p.delivery_forecast)}</Selo>
+              {p.status !== 'active' && <Selo tom={tomDaSituacao('development', p.status)}>{rotuloDaSituacao('development', p.status)}</Selo>}
+            </>
+          ) : <Selo tom={tomDaSituacao('resale', p.status)}>{rotuloDaSituacao('resale', p.status)}</Selo>}
         </div>
-        <button type="button" onClick={() => acoes.editar(p)} className="text-left text-[15px] font-semibold hover:text-primary">{titulo || p.title}</button>
+        <TituloDoImovel texto={titulo || p.title} podeEditar={permissoes.editar} aoAbrir={() => acoes.editar(p)} className="text-[15px] font-semibold" />
         {emp && linhaDasTipologias(p.typologies) && <p className="text-xs text-muted-foreground">{linhaDasTipologias(p.typologies)}</p>}
         <div className="flex items-center justify-between gap-2">
           <span className="font-bold text-primary">{preco ?? 'Sem preço'}</span>

@@ -2,7 +2,7 @@
 // Regras puras da lista nova de Imóveis: aba, fase, situação por tipo,
 // tipologias e filtros. A tela só desenha; nada de regra no JSX.
 // Spec: LM FLOW/specs/2026-10-02-fase-4-imoveis-empreendimento-revenda-design.md
-import { dinheiro, plural } from '@/lib/formato';
+import { dinheiro, numero, plural } from '@/lib/formato';
 import type { PropertyTypology } from './typologies';
 
 export type ListingKind = 'development' | 'resale';
@@ -21,6 +21,14 @@ export function lerAba(sp: URLSearchParams): ListingKind | null {
   if (v === ABA_NA_URL.development) return 'development';
   if (v === ABA_NA_URL.resale) return 'resale';
   return null;
+}
+
+/**
+ * Link da lista já na aba certa e com a busca preenchida (busca global, Ctrl+K).
+ * Sem a aba, a tela abriria na aba com mais cadastros e buscaria só nela.
+ */
+export function linkNaLista(p: { listing_kind?: string | null; code?: string | null; title?: string | null }): string {
+  return `/properties?aba=${ABA_NA_URL[tipoDoImovel(p)]}&q=${encodeURIComponent(p.code || p.title || '')}`;
 }
 
 /** Abre na aba com mais cadastros; empate abre Empreendimentos. */
@@ -49,10 +57,29 @@ export function mesAno(iso?: string | null): string | null {
   return mes >= 1 && mes <= 12 ? `${MESES[mes - 1]}/${m[1]}` : null;
 }
 
-/** Valor do campo <input type="month">: '2027-12-01' → '2027-12'. */
+/** Valor guardado no formulário (mês e ano da previsão): '2027-12-01' → '2027-12'. */
 export function paraCampoMes(iso?: string | null): string {
   const m = /^(\d{4}-\d{2})/.exec(iso ?? '');
   return m ? m[1] : '';
+}
+
+export const MESES_DO_ANO = MESES.map((rotulo, i) => ({ valor: String(i + 1).padStart(2, '0'), rotulo }));
+
+/** '2027-12' → { ano: '2027', mes: '12' }; vazio ou inválido → os dois vazios. */
+export function separarMesAno(v?: string | null): { ano: string; mes: string } {
+  const m = /^(\d{4})-(\d{2})/.exec(v ?? '');
+  return m ? { ano: m[1], mes: m[2] } : { ano: '', mes: '' };
+}
+
+/** Mês e ano escolhidos → 'AAAA-MM'. Falta um dos dois → '' (sem previsão). */
+export function juntarMesAno(ano: string, mes: string): string {
+  return ano && mes ? `${ano}-${mes}` : '';
+}
+
+/** Anos da previsão: do ano passado até 8 à frente (e o já salvo, se estiver fora). */
+export function anosDaPrevisao(hoje: number, salvo?: string): string[] {
+  const anos = Array.from({ length: 10 }, (_, i) => String(hoje - 1 + i));
+  return salvo && !anos.includes(salvo) ? [...anos, salvo].sort() : anos;
 }
 
 export function seloDaFase(stage: string, entrega?: string | null): string {
@@ -100,7 +127,7 @@ export function linhaDasTipologias(list?: PropertyTypology[] | null): string | n
   if (!t.length) return null;
   const partes = [plural(t.length, 'tipologia', 'tipologias')];
   const dorms = faixa(t.map(x => Number(x.bedrooms)).filter(n => n > 0), n => (n === 1 ? '1 dorm' : `${n} dorms`));
-  const areas = faixa(t.map(x => Number(x.useful_area_m2)).filter(n => n > 0), n => `${n} m²`);
+  const areas = faixa(t.map(x => Number(x.useful_area_m2)).filter(n => n > 0), n => `${numero(n, 2)} m²`);
   if (dorms) partes.push(dorms);
   if (areas) partes.push(areas);
   return partes.join(' · ');

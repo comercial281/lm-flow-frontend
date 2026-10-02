@@ -4,6 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
 import type { Property } from '@/services/properties/propertiesService';
 
 const svc = vi.hoisted(() => ({
@@ -12,6 +13,7 @@ const svc = vi.hoisted(() => ({
   facets: vi.fn(),
   update: vi.fn(),
   get: vi.fn(),
+  create: vi.fn(),
 }));
 
 vi.mock('@/services/properties/propertiesService', async importOriginal => {
@@ -30,6 +32,10 @@ vi.mock('../PropertyImportDialog', () => ({
   default: ({ open, listingKind, onManual, onReview }: { open: boolean; listingKind?: string; onManual?: () => void; onReview?: (id: string) => void }) =>
     (open ? <div data-testid="lote">lote {listingKind}<button onClick={onManual}>Cadastrar à mão</button><button onClick={() => onReview?.('d1')}>Revisar d1</button></div> : null),
 }));
+vi.mock('@/services/propertyPhotos/propertyPhotosService', async importOriginal => {
+  const real = await importOriginal<typeof import('@/services/propertyPhotos/propertyPhotosService')>();
+  return { ...real, propertyPhotosService: { ...real.propertyPhotosService, list: () => Promise.resolve([]) } };
+});
 vi.mock('./VisaoMapa', () => ({
   default: ({ kind }: { kind: string }) => <div data-testid="mapa">mapa {kind}</div>,
 }));
@@ -192,5 +198,80 @@ describe('Tela de Imóveis', () => {
     expect(await screen.findByText('Valor de venda (R$) *')).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Reservado' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'À venda' })).toBeInTheDocument();
+  });
+
+  it('busca global (?aba=&q=) abre na aba do imóvel, já buscando', async () => {
+    svc.contarPorTipo.mockResolvedValue({ development: 2, resale: 38 });
+    abrir('/properties?aba=empreendimentos&q=EM0001');
+    expect(await screen.findByRole('tab', { name: 'Empreendimentos (2)' })).toHaveAttribute('aria-selected', 'true');
+    await waitFor(() => expect(svc.list).toHaveBeenCalledWith(expect.objectContaining({ listing_kind: 'development', q: 'EM0001' })));
+    expect(svc.list).not.toHaveBeenCalledWith(expect.objectContaining({ listing_kind: 'resale' }));
+    expect(screen.getByRole('textbox', { name: 'Buscar' })).toHaveValue('EM0001');
+  });
+
+  it('visão Mapa esconde busca, filtros e ordem e não recarrega a lista', async () => {
+    svc.contarPorTipo.mockResolvedValue({ development: 2, resale: 1 });
+    abrir('/properties?visao=mapa');
+    expect(await screen.findByTestId('mapa')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Empreendimentos (2)' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Buscar' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Filtros/ })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Ordenar' })).toBeNull();
+    expect(svc.list).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Lista' }));
+    await waitFor(() => expect(svc.list).toHaveBeenCalledWith(expect.objectContaining({ listing_kind: 'development', page: 1 })));
+    expect(screen.getByRole('textbox', { name: 'Buscar' })).toBeInTheDocument();
+  });
+
+  it('previsão de entrega em mês e ano: dez + 2027 salva 2027-12', async () => {
+    svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 3 });
+    svc.create.mockResolvedValue(imovel({ id: 'n1', listing_kind: 'development' }));
+    abrir('/properties?aba=empreendimentos');
+    fireEvent.click(await screen.findByRole('button', { name: /Novo empreendimento/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cadastrar à mão' }));
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Mês da previsão de entrega' }), { target: { value: '12' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Ano da previsão de entrega' }), { target: { value: '2027' } });
+    fireEvent.change(screen.getByPlaceholderText('450000'), { target: { value: '389900' } });
+    fireEvent.change(screen.getByPlaceholderText('Ex: Apartamento 3 quartos - Jardim Europa'), { target: { value: 'Vista Taquaral' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cadastrar e enviar fotos' }));
+    await waitFor(() => expect(svc.create).toHaveBeenCalledWith(expect.objectContaining({ delivery_forecast: '2027-12', stage: 'launch' })));
+  });
+
+  it('só o mês, sem ano, não é previsão', async () => {
+    svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 3 });
+    svc.create.mockResolvedValue(imovel({ id: 'n1', listing_kind: 'development' }));
+    abrir('/properties?aba=empreendimentos');
+    fireEvent.click(await screen.findByRole('button', { name: /Novo empreendimento/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cadastrar à mão' }));
+    const mes = await screen.findByRole('combobox', { name: 'Mês da previsão de entrega' });
+    fireEvent.change(mes, { target: { value: '12' } });
+    expect(mes).toHaveValue('12');
+    fireEvent.change(screen.getByPlaceholderText('450000'), { target: { value: '389900' } });
+    fireEvent.change(screen.getByPlaceholderText('Ex: Apartamento 3 quartos - Jardim Europa'), { target: { value: 'Vista Taquaral' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cadastrar e enviar fotos' }));
+    await waitFor(() => expect(svc.create).toHaveBeenCalledWith(expect.objectContaining({ delivery_forecast: null })));
+  });
+
+  it('fechar as fotos relê só aquele imóvel, sem voltar à página 1', async () => {
+    svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 1 });
+    svc.list.mockResolvedValue(resposta([imovel({ id: 'r1', code: 'AP0461', cover_photo_url: null })], 1));
+    svc.get.mockResolvedValue(imovel({ id: 'r1', code: 'AP0461', cover_photo_url: null, address_neighborhood: 'Taquaral' }));
+    abrir('/properties?aba=revenda');
+    fireEvent.click(await screen.findByRole('button', { name: 'Adicionar fotos' }));
+    const chamadas = svc.list.mock.calls.length;
+    fireEvent.click(await screen.findByRole('button', { name: 'Fechar' }));
+    await waitFor(() => expect(svc.get).toHaveBeenCalledWith('r1'));
+    expect(await screen.findByText('Taquaral · Apartamento')).toBeInTheDocument();
+    expect(svc.list.mock.calls.length).toBe(chamadas);
+  });
+
+  it('excluir usa Excluir, não Remover', async () => {
+    svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 1 });
+    abrir('/properties?aba=revenda');
+    await userEvent.click(await screen.findByRole('button', { name: 'Ações do AP0461' }));
+    await userEvent.click(await screen.findByText('Excluir'));
+    expect(await screen.findByText('Excluir imóvel')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Excluir' })).toBeInTheDocument();
+    expect(screen.queryByText('Remover imóvel')).toBeNull();
   });
 });

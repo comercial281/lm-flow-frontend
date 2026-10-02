@@ -7,7 +7,7 @@ import {
   Building2, Bed, Bath, Car, Ruler, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { numero } from '@/lib/formato';
+import { plural } from '@/lib/formato';
 import type { ListingKind } from '@/features/properties/listingKind';
 import {
   propertiesService,
@@ -79,10 +79,12 @@ export default function VisaoMapa({ kind }: { kind: ListingKind }) {
     <div className="space-y-2">
       {withoutCoords > 0 && !loading && (
         <p className="text-xs text-orange-600">
-          {numero(withoutCoords)} sem localização no cadastro {withoutCoords === 1 ? 'não aparece' : 'não aparecem'} no mapa. Na próxima etapa o mapa acha o imóvel pelo endereço.
+          {plural(withoutCoords, 'imóvel', 'imóveis')} sem localização no cadastro {withoutCoords === 1 ? 'não aparece' : 'não aparecem'} no mapa. Para aparecer, preencha a localização no cadastro do imóvel.
         </p>
       )}
-      <div className="relative h-[480px] rounded-xl border overflow-hidden">
+      {/* `isolate`: as camadas do Leaflet (z-index 400 a 1000) ficam presas aqui
+          dentro e não pintam por cima das janelas da casa (Novo imóvel, menus). */}
+      <div className="relative isolate h-[480px] rounded-xl border overflow-hidden">
         {loading && (
           <Loader2 className="absolute right-3 top-3 z-[500] h-4 w-4 animate-spin text-muted-foreground" />
         )}

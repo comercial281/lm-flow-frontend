@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  FILTROS_VAZIOS, abaPadrao, filtrosAtivos, lerAba, linhaDasTipologias, mesAno, paraCampoMes,
-  paramsDosFiltros, rotuloDaFase, rotuloDaSituacao, seloDaFase, textoDasUnidades, tipoDoImovel, tirarFiltro,
+  FILTROS_VAZIOS, abaPadrao, anosDaPrevisao, filtrosAtivos, juntarMesAno, lerAba, linhaDasTipologias, linkNaLista,
+  mesAno, paraCampoMes, paramsDosFiltros, separarMesAno, rotuloDaFase, rotuloDaSituacao, seloDaFase, textoDasUnidades, tipoDoImovel, tirarFiltro,
 } from './listingKind';
 
 describe('tipo do imóvel', () => {
@@ -18,6 +18,12 @@ describe('tipo do imóvel', () => {
     expect(abaPadrao({ development: 10, resale: 958 })).toBe('resale');
     expect(abaPadrao({ development: 25, resale: 0 })).toBe('development');
     expect(abaPadrao({ development: 0, resale: 0 })).toBe('development');
+  });
+
+  it('link da busca global abre a aba do imóvel, com a busca', () => {
+    expect(linkNaLista({ listing_kind: 'development', code: 'EM0001' })).toBe('/properties?aba=empreendimentos&q=EM0001');
+    expect(linkNaLista({ code: 'AP 10' })).toBe('/properties?aba=revenda&q=AP%2010');
+    expect(linkNaLista({ listing_kind: 'resale', code: '', title: 'Casa' })).toBe('/properties?aba=revenda&q=Casa');
   });
 });
 
@@ -61,6 +67,13 @@ describe('tipologias e unidades', () => {
     expect(linhaDasTipologias([])).toBeNull();
   });
 
+  it('área das tipologias no formato brasileiro', () => {
+    expect(linhaDasTipologias([{ bedrooms: 2, useful_area_m2: 58.5 }] as never)).toBe('1 tipologia · 2 dorms · 58,5 m²');
+    expect(linhaDasTipologias([
+      { bedrooms: 2, useful_area_m2: 58.5 }, { bedrooms: 3, useful_area_m2: 98.75 },
+    ] as never)).toBe('2 tipologias · 2 a 3 dorms · 58,5 a 98,75 m²');
+  });
+
   it('unidades', () => {
     expect(textoDasUnidades(14, 'active')).toBe('14 unidades disponíveis');
     expect(textoDasUnidades(1, 'active')).toBe('1 unidade disponível');
@@ -87,5 +100,22 @@ describe('filtros', () => {
     const chips = filtrosAtivos('development', emp);
     expect(chips.map(c => c.rotulo)).toEqual(['Fase: Na planta, Em obra', 'Bairro: Taquaral']);
     expect(tirarFiltro('development', emp, 'fases')).toEqual({ ...emp, fases: [] });
+  });
+});
+
+describe('previsão de entrega em mês e ano', () => {
+  it('junta e separa', () => {
+    expect(juntarMesAno('2027', '12')).toBe('2027-12');
+    expect(juntarMesAno('', '12')).toBe('');
+    expect(juntarMesAno('2027', '')).toBe('');
+    expect(separarMesAno('2027-12')).toEqual({ ano: '2027', mes: '12' });
+    expect(separarMesAno('2027-12-01')).toEqual({ ano: '2027', mes: '12' });
+    expect(separarMesAno('')).toEqual({ ano: '', mes: '' });
+  });
+
+  it('anos: do ano passado a 8 à frente, mais o já salvo', () => {
+    expect(anosDaPrevisao(2026)).toEqual(['2025', '2026', '2027', '2028', '2029', '2030', '2031', '2032', '2033', '2034']);
+    expect(anosDaPrevisao(2026, '2020')[0]).toBe('2020');
+    expect(anosDaPrevisao(2026, '2027')).toHaveLength(10);
   });
 });

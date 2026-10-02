@@ -100,6 +100,7 @@ import LinhaRevenda from './lista/LinhaRevenda';
 import LinhaEmpreendimento from './lista/LinhaEmpreendimento';
 import CartaoGrade from './lista/CartaoGrade';
 import JanelaSituacao from './lista/JanelaSituacao';
+import CampoMesAno from './lista/CampoMesAno';
 import type { AcoesDoImovel, Permissoes } from './lista/MenuDoImovel';
 import { lerVisao, paramsDaLista, type Ordem, type Visao } from './lista/estadoDaLista';
 
@@ -265,7 +266,8 @@ export default function Properties() {
   const filtrosDaAba = kind ? filtros[kind] : null;
 
   const load = useCallback(async (pag = 1) => {
-    if (!kind || !filtrosDaAba) return;
+    // Na visão Mapa a lista não aparece: nada de recarregar atrás do mapa.
+    if (!kind || !filtrosDaAba || visao === 'mapa') return;
     const pedido = ++ultimoPedido.current;
     if (pag > 1) setCarregandoMais(true); else setLoading(true);
     setRecusado(false);
@@ -288,10 +290,10 @@ export default function Properties() {
     } finally {
       if (pedido === ultimoPedido.current) { setLoading(false); setCarregandoMais(false); }
     }
-  }, [kind, filtrosDaAba, buscaAtiva, ordem, recorte]);
+  }, [kind, filtrosDaAba, buscaAtiva, ordem, recorte, visao]);
 
   // Recarrega da página 1 sempre que muda a aba, os filtros dela, a ordem, o
-  // recorte da Dashboard ou a busca (já com o atraso de 400 ms).
+  // recorte da Dashboard, a busca (já com o atraso de 400 ms) ou quando volta do mapa.
   useEffect(() => { load(1); }, [load]);
 
   // Quantos há em cada aba, com o mesmo recorte da lista (link da Dashboard e
@@ -357,6 +359,26 @@ export default function Properties() {
   }, []);
 
   useEffect(() => () => { if (searchTimeout.current) clearTimeout(searchTimeout.current); }, []);
+
+  // Busca global (Ctrl+K) com a tela já aberta: o endereço traz ?q= e ?aba= novos.
+  // Na abertura, os dois já entram pelo useState lá em cima.
+  const qDoEndereco = searchParams.get('q');
+  const ultimoQ = useRef(qDoEndereco);
+  useEffect(() => {
+    if (qDoEndereco === ultimoQ.current) return;
+    ultimoQ.current = qDoEndereco;
+    if (qDoEndereco == null) return;
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    setSearch(qDoEndereco);
+    setBuscaAtiva(qDoEndereco);
+    const aba = lerAba(searchParams);
+    if (aba && aba !== kind) {
+      setKind(aba);
+      setProperties([]);
+      setTotal(0);
+      setLoading(true);
+    }
+  }, [qDoEndereco, searchParams, kind]);
 
   const handleSearch = (val: string) => {
     setSearch(val);
@@ -579,13 +601,22 @@ export default function Properties() {
       setProperties(prev => prev.filter(p => p.id !== toDelete.id));
       setTotal(t => Math.max(0, t - 1));
       recontar();
-      toast.success('Imóvel removido');
+      toast.success('Imóvel excluído');
       setDeleteDialogOpen(false);
     } catch {
-      toast.error('Erro ao remover imóvel');
+      toast.error('Não deu pra excluir o imóvel');
     } finally {
       setDeleting(false);
     }
+  };
+
+  // Relê um imóvel e troca no lugar (contagens ficam como estão). Falha não avisa:
+  // a linha só fica com a capa antiga até a próxima recarga.
+  const atualizarImovel = async (id: string) => {
+    try {
+      const novo = await propertiesService.get(id);
+      setProperties(prev => prev.map(p => (p.id === novo.id ? novo : p)));
+    } catch { /* leitura de fundo */ }
   };
 
   const handleCepLookup = async (cep: string) => {
@@ -1040,33 +1071,38 @@ export default function Properties() {
               ]}
             />
 
-            {/* Barra: busca, filtros, ordem e visão */}
+            {/* Barra: busca, filtros, ordem e visão. O mapa mostra a aba inteira (não
+                usa busca, filtro, ordem nem o link da Dashboard): lá fica só a visão. */}
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <div className="relative min-w-48 max-w-md flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  aria-label="Buscar"
-                  placeholder={kind === 'development' ? 'Buscar por nome, código ou bairro' : 'Buscar por código, bairro ou rua'}
-                  value={search}
-                  onChange={e => handleSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Button variant="outline" aria-expanded={painelAberto} onClick={() => setPainelAberto(a => !a)}>
-                <SlidersHorizontal className="h-4 w-4 mr-2" />
-                Filtros
-                {filtrosDaTela.length > 0 && (
-                  <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
-                    {filtrosDaTela.length}
-                  </span>
-                )}
-              </Button>
-              <Seletor aria-label="Ordenar" value={ordem} onChange={e => setOrdem(e.target.value as Ordem)} className="w-52">
-                <option value="recent">Mais recentes</option>
-                <option value="updated">Atualizados por último</option>
-                <option value="price_asc">Menor preço</option>
-                <option value="price_desc">Maior preço</option>
-              </Seletor>
+              {visao !== 'mapa' && (
+                <>
+                  <div className="relative min-w-48 max-w-md flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      aria-label="Buscar"
+                      placeholder={kind === 'development' ? 'Buscar por nome, código ou bairro' : 'Buscar por código, bairro ou rua'}
+                      value={search}
+                      onChange={e => handleSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Button variant="outline" aria-expanded={painelAberto} onClick={() => setPainelAberto(a => !a)}>
+                    <SlidersHorizontal className="h-4 w-4 mr-2" />
+                    Filtros
+                    {filtrosDaTela.length > 0 && (
+                      <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
+                        {filtrosDaTela.length}
+                      </span>
+                    )}
+                  </Button>
+                  <Seletor aria-label="Ordenar" value={ordem} onChange={e => setOrdem(e.target.value as Ordem)} className="w-52">
+                    <option value="recent">Mais recentes</option>
+                    <option value="updated">Atualizados por último</option>
+                    <option value="price_asc">Menor preço</option>
+                    <option value="price_desc">Maior preço</option>
+                  </Seletor>
+                </>
+              )}
               <div role="group" aria-label="Visão" className="inline-flex rounded-md border border-input p-0.5">
                 {VISOES.map(({ valor, rotulo, icone: Icone }) => (
                   <button
@@ -1081,11 +1117,13 @@ export default function Properties() {
                   </button>
                 ))}
               </div>
-              {recorte && <ChipDaDashboard rotulo={recorte.rotulo} onTirar={tirarRecorte} />}
+              {recorte && visao !== 'mapa' && <ChipDaDashboard rotulo={recorte.rotulo} onTirar={tirarRecorte} />}
             </div>
 
-            {painelAberto && (
+            {painelAberto && visao !== 'mapa' && (
               <PainelDeFiltros
+                // Um painel por aba: preço digitado e ainda não enviado vai para a aba dele.
+                key={kind}
                 kind={kind}
                 filtros={filtros[kind]}
                 facetas={facetas}
@@ -1095,11 +1133,13 @@ export default function Properties() {
               />
             )}
 
-            <EtiquetasDosFiltros
-              itens={filtrosDaTela}
-              aoTirar={chave => setFiltros(prev => ({ ...prev, [kind]: tirarFiltro(kind, prev[kind], chave) }))}
-              aoLimparTudo={limparFiltrosDaAba}
-            />
+            {visao !== 'mapa' && (
+              <EtiquetasDosFiltros
+                itens={filtrosDaTela}
+                aoTirar={chave => setFiltros(prev => ({ ...prev, [kind]: tirarFiltro(kind, prev[kind], chave) }))}
+                aoLimparTudo={limparFiltrosDaAba}
+              />
+            )}
 
             {visao !== 'mapa' && !(loading && properties.length === 0) && !erroDeCarga && totalDaAba != null && !abaVazia && (
               <p className="mt-4 text-sm text-muted-foreground">
@@ -1305,8 +1345,8 @@ export default function Properties() {
                   {f.stage !== 'ready' && (
                     <div>
                       <UILabel>Previsão de entrega</UILabel>
-                      <Input type="month" value={f.delivery_forecast ?? ''}
-                        onChange={e => setF({ delivery_forecast: e.target.value })} className="mt-1" />
+                      <CampoMesAno rotulo="previsão de entrega" valor={f.delivery_forecast ?? ''}
+                        aoMudar={v => setF({ delivery_forecast: v })} />
                     </div>
                   )}
                 </>
@@ -1753,15 +1793,15 @@ export default function Properties() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Remover imóvel</DialogTitle>
+            <DialogTitle>Excluir imóvel</DialogTitle>
             <DialogDescription>
-              Tem certeza que deseja remover <strong>{toDelete?.title}</strong>? O histórico será preservado.
+              Tem certeza que deseja excluir <strong>{toDelete?.title}</strong>? O histórico será preservado.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? 'Removendo...' : 'Remover'}
+              {deleting ? 'Excluindo...' : 'Excluir'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1771,9 +1811,9 @@ export default function Properties() {
       {photosProperty && (
         <PropertyPhotosDialog
           property={photosProperty}
-          // Recarrega a lista ao fechar: trocar a capa (ou subir/apagar foto) tem
-          // que refletir na miniatura do card, que já foi renderizada com a capa antiga.
-          onClose={() => { setPhotosProperty(null); load(1); }}
+          // Ao fechar, relê só este imóvel: trocar a capa (ou subir/apagar foto) tem
+          // que refletir na miniatura, sem perder as páginas do "Mostrar mais" e a rolagem.
+          onClose={() => { const id = photosProperty.id; setPhotosProperty(null); atualizarImovel(id); }}
         />
       )}
 
