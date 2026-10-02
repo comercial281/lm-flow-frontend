@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Badge, Button } from '@/components/ui/ds';
 import { Check, Info, Loader2, TrendingUp } from 'lucide-react';
 import IconActionButton from '@/components/base/IconActionButton';
+import metaLogo from '@/assets/portals/meta.svg';
 import { dataHora } from '@/lib/formato';
 import {
   capiEventsService,
@@ -131,8 +132,10 @@ export default function CapiConversionPanel({
     return (
       <div className={`space-y-1 ${className ?? ''}`}>
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-            <TrendingUp aria-hidden className="h-3.5 w-3.5" />
+          {/* Logo da Meta (símbolo + nome), como na marca; o nome é texto pra
+              ler bem no tema escuro (pedido do dono, 02/10). */}
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-foreground">
+            <img src={metaLogo} alt="" aria-hidden className="h-3 w-auto" />
             Meta
           </span>
           {status.events.map(event => {
