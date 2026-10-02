@@ -73,6 +73,7 @@ import type {
   SearchMessageResult,
 } from '@/types/chat/search';
 import { telefone } from '@/lib/formato';
+import { esperaDoLead, horaDoItem } from '@/features/conversas/itemDaLista';
 
 interface ChatSidebarProps {
   mobileView: 'list' | 'chat';
@@ -109,16 +110,6 @@ interface ChatSidebarProps {
   onUnassignAgent: (conversation: Conversation) => void;
   onUnassignTeam: (conversation: Conversation) => void;
   onDeleteConversation: (conversation: Conversation) => void;
-}
-
-function getUrgencyColor(timestamp: number | string | undefined): string {
-  if (!timestamp) return 'transparent';
-  const ts = typeof timestamp === 'number' ? timestamp : Date.parse(String(timestamp));
-  if (Number.isNaN(ts)) return 'transparent';
-  const hours = (Date.now() - ts) / 3_600_000;
-  if (hours < 1) return '#10b981';
-  if (hours < 4) return '#f59e0b';
-  return '#ef4444';
 }
 
 const ChatSidebar = ({
@@ -831,7 +822,7 @@ const ChatSidebar = ({
               const channelType =
                 conversation.inbox?.channel_type || conversation.inbox?.channel_type;
               const channelProvider = conversation.inbox?.provider;
-              const urgencyColor = getUrgencyColor(conversation.timestamp);
+              const espera = esperaDoLead(conversation);
 
               return renderConversationContextMenu(
                 conversation,
@@ -842,22 +833,6 @@ const ChatSidebar = ({
                   }`}
                   onClick={() => onConversationSelect(conversation)}
                 >
-                  {/* Urgency strip — 3px left edge */}
-                  {!isSelected && conversation.status === 'open' && (
-                    <div
-                      aria-hidden
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: 3,
-                        background: urgencyColor,
-                        borderRadius: '0 2px 2px 0',
-                        opacity: 0.85,
-                      }}
-                    />
-                  )}
                   {/* Selected indicator */}
                   {isSelected && (
                     <div
@@ -917,6 +892,9 @@ const ChatSidebar = ({
                                     {telefone(conversation.contact.phone_number)}
                                   </p>
                                 )}
+                                {espera && (
+                                  <p className="text-xs text-amber-700 dark:text-amber-400 truncate">{espera}</p>
+                                )}
                               </div>
                               {Boolean(conversation.custom_attributes?.pinned) && (
                                 <Pin className="h-3.5 w-3.5 text-primary flex-shrink-0" />
@@ -935,9 +913,9 @@ const ChatSidebar = ({
                             <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                               <span
                                 className="text-xs text-muted-foreground"
-                                title={formatDetailedTime(conversation.timestamp)}
+                                title={formatDetailedTime(horaDoItem(conversation))}
                               >
-                                {formatConversationTime(conversation.timestamp)}
+                                {formatConversationTime(horaDoItem(conversation))}
                               </span>
                             </div>
                           </div>

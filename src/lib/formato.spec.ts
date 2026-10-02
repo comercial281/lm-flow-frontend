@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { data, dataCurta, hora, dataHora, numero, porcentagem, dinheiro, dolar, plural, telefone, toDate, VAZIO, moedaValida } from './formato';
+import { data, dataCurta, hora, dataHora, numero, porcentagem, dinheiro, dolar, plural, telefone, tempoDesde, toDate, VAZIO, moedaValida } from './formato';
 
 // Espaço não-quebrável: é o que o Intl põe entre "R$" e o número (não quebra linha).
 const NB = ' ';
@@ -123,5 +123,24 @@ describe('telefone', () => {
     expect(telefone('123')).toBe('123');
     expect(telefone('5511949329570@s.whatsapp.net')).toBe('(11) 94932-9570'); // o JID do WhatsApp também
     expect(telefone(null)).toBe('');
+  });
+});
+
+describe('tempoDesde', () => {
+  const agora = new Date(2026, 9, 2, 12, 0, 0);
+  const atras = (s: number) => new Date(agora.getTime() - s * 1000);
+  it('escolhe a unidade pelo tamanho do intervalo', () => {
+    expect(tempoDesde(atras(30), agora)).toBe('agora');
+    expect(tempoDesde(atras(5 * 60), agora)).toBe('há 5 min');
+    expect(tempoDesde(atras(3 * 3600), agora)).toBe('há 3 h');
+    expect(tempoDesde(atras(24 * 3600), agora)).toBe('há 1 dia');
+    expect(tempoDesde(atras(4 * 86400), agora)).toBe('há 4 dias');
+  });
+  it('aceita segundos Unix e ISO', () => {
+    expect(tempoDesde(Math.floor(atras(3 * 3600).getTime() / 1000), agora)).toBe('há 3 h');
+    expect(tempoDesde(atras(5 * 60).toISOString(), agora)).toBe('há 5 min');
+  });
+  it('entrada inválida vira travessão', () => {
+    expect(tempoDesde('lixo', agora)).toBe(VAZIO);
   });
 });

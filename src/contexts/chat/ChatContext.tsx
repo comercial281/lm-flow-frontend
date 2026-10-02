@@ -10,6 +10,7 @@ import {
   useWebSocketContext as useWebSocketContextOriginal,
 } from '@/contexts/chat/WebSocketContext';
 import { UIProvider, useUI as useUIOriginal } from '@/contexts/chat/UIContext';
+import { camposDaConversaAoAtualizar } from '@/features/conversas/itemDaLista';
 import {
   Conversation,
   Message,
@@ -426,35 +427,9 @@ function useChatIntegration() {
           return;
         }
 
-        const validTimestamp = normalizeToUnixSeconds(message.created_at);
-        const updatedConversationBase: Conversation = {
-          ...conversation,
-          timestamp: validTimestamp,
-          last_activity_at: new Date(validTimestamp * 1000).toISOString(),
-        };
-
-        if (message.message_type === MESSAGE_TYPE.ACTIVITY) {
-          conversations.updateConversation(updatedConversationBase);
-          return;
-        }
-
-        conversations.updateConversation({
-          ...updatedConversationBase,
-          last_non_activity_message: {
-            id: message.id,
-            content: message.content ?? '',
-            message_type: message.message_type,
-            created_at:
-              typeof message.created_at === 'number'
-                ? String(message.created_at)
-                : (message.created_at ?? new Date(validTimestamp * 1000).toISOString()),
-            processed_message_content:
-              (message as { processed_message_content?: string }).processed_message_content ??
-              message.content ??
-              '',
-            sender: message.sender ?? { id: '', name: '', type: 'contact' },
-          },
-        });
+        // Status de leitura/edição/atividade não move a conversa na lista: ver itemDaLista.
+        const atualizada = camposDaConversaAoAtualizar(conversation, message);
+        if (atualizada) conversations.updateConversation(atualizada);
 
         if (shouldReloadMessageForMissingImageData(message)) {
           const existingTimer = attachmentReloadTimersRef.current[conversationId];
