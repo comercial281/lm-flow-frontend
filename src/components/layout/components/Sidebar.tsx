@@ -54,6 +54,9 @@ export default function Sidebar({ isCollapsed, secoes, rodape }: SidebarProps) {
         aria-label="Menu lateral"
         className={cn(
           'hidden md:flex bg-sidebar text-sidebar-foreground flex-col border-r border-sidebar-border',
+          // Abre e fecha com movimento (200 ms). overflow-hidden corta o que passa da
+          // largura enquanto ela muda; sem animação para quem pede menos movimento.
+          'overflow-hidden transition-[width] duration-200 ease-out motion-reduce:transition-none',
           isCollapsed ? 'w-16' : 'w-60',
         )}
       >
@@ -67,15 +70,27 @@ export default function Sidebar({ isCollapsed, secoes, rodape }: SidebarProps) {
               (w-16) a reserva espremeria os ícones. */}
           <nav
             onClickCapture={guardarSaida}
-            className={cn('flex-1 min-h-0 overflow-y-auto px-3 py-4', !isCollapsed && '[scrollbar-gutter:stable]')}
-          >
-            {!isCollapsed && <CartaoDaConta />}
-            {isCollapsed ? (
-              // Recolhido: itens da seção fixa + um ícone por seção que abre a lista num popover.
-              <MenuRecolhido secoes={secoes} />
-            ) : (
-              <MenuSecoes secoes={secoes} />
+            // Largura própria e fixa (a do estado final): o conteúdo já nasce no tamanho
+            // certo e o container só o revela, então rótulo nenhum quebra de linha no meio
+            // do movimento.
+            className={cn(
+              'flex-1 min-h-0 overflow-y-auto px-3 py-4 shrink-0',
+              isCollapsed ? 'w-16' : 'w-60 [scrollbar-gutter:stable]',
             )}
+          >
+            {/* O conteúdo trocado entra com um fade curto (key remonta a cada troca). */}
+            <div
+              key={isCollapsed ? 'recolhido' : 'aberto'}
+              className="animate-in fade-in duration-200 motion-reduce:animate-none"
+            >
+              {!isCollapsed && <CartaoDaConta />}
+              {isCollapsed ? (
+                // Recolhido: itens da seção fixa + um ícone por seção que abre a lista num popover.
+                <MenuRecolhido secoes={secoes} />
+              ) : (
+                <MenuSecoes secoes={secoes} />
+              )}
+            </div>
 
             {/* Rodapé: Guia do LM Flow e suporte, depois de um divisor. */}
             <div className="mt-3 pt-3 space-y-1 border-t border-sidebar-border">
@@ -93,7 +108,7 @@ export default function Sidebar({ isCollapsed, secoes, rodape }: SidebarProps) {
                 )}
               >
                 <LifeBuoy className="flex-shrink-0" style={{ width: '1.125rem', height: '1.125rem' }} aria-hidden="true" />
-                {isCollapsed ? <span className="sr-only">Falar com o suporte</span> : <span className="font-medium text-sm">Falar com o suporte</span>}
+                {isCollapsed ? <span className="sr-only">Falar com o suporte</span> : <span className="font-medium text-sm whitespace-nowrap">Falar com o suporte</span>}
               </a>
             </div>
           </nav>

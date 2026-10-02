@@ -4269,6 +4269,7 @@ Armadilhas:
 7. **O hover não pode puxar o foco** (Conversas tem o campo de mensagem); abrir por
    clique ou teclado pode. Abrir por hover tem atraso de intenção (150 ms), pra
    passar o mouse pela barra não abrir caixa por cima da lista.
+8. **O menu abre e fecha com movimento (pedido do dono em 02/10/2026: "um movimentozinho dela fechando, e quando trocar de aba dela abrindo").** O container do `Sidebar` anima só a largura (`transition-[width] duration-200 ease-out`, `motion-reduce:transition-none`; sem animação para quem pede menos movimento) e a área de conteúdo ao lado segue sozinha por ser irmã flex. Para o rótulo não quebrar de linha no meio do movimento, o `overflow-hidden` fica no container e o `nav` tem largura própria fixa (`w-16`/`w-60`, a do estado final): o conteúdo já nasce no tamanho certo e o container só o revela. A troca entre `MenuRecolhido` e `MenuSecoes` entra com um fade de 200 ms (`animate-in fade-in`, também `motion-reduce:animate-none`). Não troque o `nav` para largura `w-full`: voltam as quebras de linha durante a animação.
 
 ## O logo novo do LM Flow (desde 2026-10-01)
 
