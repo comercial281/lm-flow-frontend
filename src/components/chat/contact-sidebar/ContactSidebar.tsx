@@ -46,10 +46,26 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
   emOferta = false,
 }) => {
   const [isMobile, setIsMobile] = useState(false);
-  const [conversationPipelines, setConversationPipelines] = useState<Pipeline[]>([]);
-  // Começa carregando: sem isso, "Colocar no funil" pisca antes da primeira resposta.
-  const [isLoadingPipelines, setIsLoadingPipelines] = useState(true);
-  const [conversasDoContato, setConversasDoContato] = useState<ContactConversation[]>([]);
+  // Cada lista guarda de quem ela é: logo depois de trocar de conversa, a da
+  // anterior ainda está no estado e não pode aparecer nem por um quadro.
+  const [funis, setFunis] = useState<{ de: string | null; pipelines: Pipeline[] }>({ de: null, pipelines: [] });
+  const [outrasConversas, setOutrasConversas] = useState<{ de: string | null; lista: ContactConversation[] }>({
+    de: null,
+    lista: [],
+  });
+
+  const conversaId = conversation?.id != null ? String(conversation.id) : null;
+  const contatoId = contact?.id != null ? String(contact.id) : null;
+  const conversationPipelines = useMemo(
+    () => (funis.de === conversaId ? funis.pipelines : []),
+    [funis, conversaId],
+  );
+  // Carregando enquanto não chegou a lista DESTA conversa (sem "Colocar no funil" piscando).
+  const isLoadingPipelines = funis.de !== conversaId;
+  const conversasDoContato = useMemo(
+    () => (outrasConversas.de === contatoId ? outrasConversas.lista : []),
+    [outrasConversas, contatoId],
+  );
 
   // Detectar se é mobile para controlar renderização
   useEffect(() => {
@@ -64,42 +80,34 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
 
   // Outras conversas do lead (a lista já vem recortada pela permissão do servidor).
   useEffect(() => {
-    setConversasDoContato([]);
-    if (!contact?.id) return;
+    if (!contatoId) return;
     let vivo = true;
     contactsService
-      .getContactConversations(String(contact.id))
-      .then(res => { if (vivo) setConversasDoContato(res.data ?? []); })
-      .catch(() => { if (vivo) setConversasDoContato([]); });
+      .getContactConversations(contatoId)
+      .then(res => { if (vivo) setOutrasConversas({ de: contatoId, lista: res.data ?? [] }); })
+      .catch(() => { if (vivo) setOutrasConversas({ de: contatoId, lista: [] }); });
     return () => { vivo = false; };
-  }, [contact?.id]);
+  }, [contatoId]);
 
   // Funis desta conversa: alimentam a seção Funil e a origem do lead ("Veio de").
   // A resposta de uma conversa que já foi trocada não pode cair na seguinte.
-  const conversaAtual = useRef(conversation?.id);
-  conversaAtual.current = conversation?.id;
+  const conversaAtual = useRef(conversaId);
+  conversaAtual.current = conversaId;
 
   const loadConversationPipelines = useCallback(async () => {
-    if (!conversation?.id) {
-      setConversationPipelines([]);
-      return;
-    }
+    if (!conversaId) return;
 
-    const pedida = conversation.id;
-    setIsLoadingPipelines(true);
+    const pedida = conversaId;
     try {
       const pipelines = await pipelinesService.getPipelinesByConversation(pedida);
-      if (pedida === conversaAtual.current) setConversationPipelines(pipelines);
+      if (pedida === conversaAtual.current) setFunis({ de: pedida, pipelines });
     } catch (error) {
       console.error('Error loading conversation pipelines:', error);
-      if (pedida === conversaAtual.current) setConversationPipelines([]);
-    } finally {
-      if (pedida === conversaAtual.current) setIsLoadingPipelines(false);
+      if (pedida === conversaAtual.current) setFunis({ de: pedida, pipelines: [] });
     }
-  }, [conversation?.id]);
+  }, [conversaId]);
 
   useEffect(() => {
-    setConversationPipelines([]);
     loadConversationPipelines();
   }, [loadConversationPipelines]);
 
@@ -186,11 +194,12 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
               pipelines={conversationPipelines}
               carregando={isLoadingPipelines}
               onAtualizado={handlePipelineUpdated}
+              emOferta={emOferta}
             />
           )}
 
           {/* Some sozinho em conversa sem IA. */}
-          <AiUnderstandingPanel conversation={conversation} embutido />
+          <AiUnderstandingPanel key={`ia-${conversaId}`} conversation={conversation} embutido />
 
           {contact && (
             <SecaoEtiquetas

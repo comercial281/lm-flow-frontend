@@ -46,6 +46,7 @@ import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import ActivateAiDialog from '@/components/chat/conversation/ActivateAiDialog';
 import { isPendingStatus } from '@/utils/chat/conversationStatus';
 import { linhaDoTopo } from '@/features/conversas/topoDaConversa';
+import { nomeNaTela } from '@/features/conversas/painelDoLead';
 import { useNumerosDaConversa } from '@/features/numbers/useNumerosDaConversa';
 import { useLanguage } from '@/hooks/useLanguage';
 import { apiErrorMessage } from '@/utils/apiHelpers';
@@ -77,6 +78,8 @@ interface ChatHeaderProps {
   onUnassignTeam: (conversation: Conversation) => void;
   onDeleteConversation: (conversation: Conversation) => void;
   unreadCount: number;
+  /** Oferta da roleta aberta para quem vê: nome que é o telefone sai mascarado. */
+  emOferta?: boolean;
 }
 
 const ChatHeader = ({
@@ -102,6 +105,7 @@ const ChatHeader = ({
   onUnassignTeam,
   onDeleteConversation,
   unreadCount,
+  emOferta = false,
 }: ChatHeaderProps) => {
   const { t } = useLanguage('chat');
   // O menu é controlado por causa da janela da IA: o item precisa FECHAR o menu
@@ -392,7 +396,7 @@ const ChatHeader = ({
             title={t('chatHeader.openContactInfo', 'Ver dados do contato')}
           >
             <h3 className="lm-redact font-semibold">
-              {conversation.contact?.name || t('chatHeader.contactNoName')}
+              {nomeNaTela(conversation.contact?.name, emOferta) || t('chatHeader.contactNoName')}
             </h3>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>

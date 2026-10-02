@@ -772,6 +772,7 @@ const Chat = () => {
                 onUnassignTeam={handleUnassignTeam}
                 onDeleteConversation={handleDeleteConversation}
                 unreadCount={conversations.getUnreadCount(selectedConversation.id) || 0}
+                emOferta={emOferta}
               />
 
               {/* Lead sem dono. Se a roleta ofertou este lead a MIM, a faixa é a

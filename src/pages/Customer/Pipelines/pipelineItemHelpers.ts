@@ -10,13 +10,12 @@
 // visitsByContact) recebem esses dados como argumento explícito, continuando puras.
 
 import { PipelineItem } from '@/types/analytics';
+import { isPhoneLikeName } from '@/lib/nomeDoContato';
 
 // Nome cru às vezes vem como o número de telefone (Evolution não manda pushName no 1º evento).
 // Resolve pro melhor candidato disponível, descartando nomes que são só dígitos/telefone.
-export const isPhoneLikeName = (value?: string | null): boolean => {
-  if (!value) return true;
-  return /^[+\d\s()\-@.]+$/.test(value.replace(/whatsapp|net|us|s\./gi, ''));
-};
+// A régua mora em @/lib/nomeDoContato (a mesma do card aberto e da oferta em Conversas).
+export { isPhoneLikeName };
 
 export const resolveItemName = (
   item: PipelineItem,

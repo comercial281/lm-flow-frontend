@@ -73,7 +73,7 @@ export default function SecaoNotas({ contactId }: { contactId: string }) {
         <div className="space-y-2">
           {visiveis.map(nota => (
             <div key={nota.id} className="text-xs">
-              <p className="whitespace-pre-wrap break-words">{nota.content}</p>
+              <p className="lm-redact whitespace-pre-wrap break-words">{nota.content}</p>
               {nota.created_at && <p className="text-muted-foreground mt-0.5">{dataHora(nota.created_at)}</p>}
             </div>
           ))}

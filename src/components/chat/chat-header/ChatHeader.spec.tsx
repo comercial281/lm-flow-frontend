@@ -70,10 +70,11 @@ const conversation = {
 
 const noop = () => {};
 
-const renderHeader = () =>
+const renderHeader = (extra: { conversation?: unknown; emOferta?: boolean } = {}) =>
   render(
     <ChatHeader
-      conversation={conversation}
+      conversation={(extra.conversation ?? conversation) as never}
+      emOferta={extra.emOferta}
       onBackClick={noop}
       onCloseConversation={noop}
       onContactSidebarOpen={noop}
@@ -122,5 +123,17 @@ describe('ChatHeader', () => {
       screen.getByText('Número WhatsApp Anúncios · (11) 98235-0000 · Responsável: Marina'),
     ).toBeTruthy();
     expect(screen.queryByText(/Status/)).toBeNull();
+  });
+
+  it('na oferta da roleta, nome que é o telefone sai mascarado; fora dela, como veio', () => {
+    const semNome = { ...(conversation as object), contact: { name: '+5511912345634' } };
+
+    const { unmount } = renderHeader({ conversation: semNome, emOferta: true });
+    expect(screen.getByText('(11) •••••-••34')).toBeTruthy();
+    expect(screen.queryByText('+5511912345634')).toBeNull();
+    unmount();
+
+    renderHeader({ conversation: semNome, emOferta: false });
+    expect(screen.getByText('+5511912345634')).toBeTruthy();
   });
 });

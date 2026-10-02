@@ -5,14 +5,19 @@ import { toast } from 'sonner';
 import IconActionButton from '@/components/base/IconActionButton';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import { telefone } from '@/lib/formato';
-import { TEXTOS_DO_PAINEL as T, mascararTelefone, textoOutraConversa } from '@/features/conversas/painelDoLead';
+import {
+  TEXTOS_DO_PAINEL as T, mascararTelefone, nomeNaTela, textoOutraConversa,
+} from '@/features/conversas/painelDoLead';
 import { useEditarContato } from '../useEditarContato';
 
 import type { Contact } from '@/types/chat/api';
 
 interface TopoDoLeadProps {
   contact: Contact | null;
-  /** Oferta da roleta aberta para quem vê: telefone mascarado, sem e-mail, sem copiar, sem editar. */
+  /**
+   * Oferta da roleta aberta para quem vê: telefone mascarado (e o nome, quando o
+   * nome é o telefone), sem e-mail, sem copiar, sem editar.
+   */
   emOferta: boolean;
   origem: { rotulo: string; link: string | null } | null;
   outra: { id: string; numero: string; mais: number } | null;
@@ -46,7 +51,7 @@ export default function TopoDoLead({ contact, emOferta, origem, outra, onClose }
         <ContactAvatar contact={contact} size="lg" />
 
         <div className="flex-1 min-w-0">
-          <h2 className="lm-redact text-base font-semibold truncate">{contact?.name || T.semNome}</h2>
+          <h2 className="lm-redact text-base font-semibold truncate">{nomeNaTela(contact?.name, emOferta) || T.semNome}</h2>
 
           {fone && (
             <div className="flex items-center gap-1 text-sm text-muted-foreground">

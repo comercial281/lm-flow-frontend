@@ -152,4 +152,38 @@ describe('ContactSidebar — painel do lead em seções', () => {
     expect(screen.queryByText('Respostas do formulário')).toBeNull();
     await waitFor(() => expect(getContactConversations).toHaveBeenCalledTimes(2));
   });
+
+  it('oferta aberta: "Abrir card do lead" some (o card mostra telefone e e-mail); sem oferta, aparece', async () => {
+    const comItem = [
+      {
+        id: 'funil-1',
+        name: 'Funil de vendas',
+        stages: [
+          {
+            id: 'etapa-1',
+            name: 'Novo lead',
+            position: 0,
+            items: [{ id: 'item-1', item_id: 'conv-1', pipeline_id: 'funil-1', stage_id: 'etapa-1' }],
+          },
+        ],
+      },
+    ];
+    getPipelinesByConversation.mockResolvedValue(comItem);
+
+    const { unmount } = renderPainel(false);
+    expect(await screen.findByText('Abrir card do lead')).toBeTruthy();
+    unmount();
+
+    renderPainel(true);
+    expect(await screen.findByText('Funil de vendas · Etapa')).toBeTruthy();
+    expect(screen.queryByText('Abrir card do lead')).toBeNull();
+  });
+
+  it('oferta aberta: nome que é o telefone sai mascarado no topo', async () => {
+    renderPainel(true, { ...(contact as object), name: '+5511912345634' });
+    // O nome e o telefone: os dois mascarados, nenhum inteiro.
+    expect(screen.getAllByText('(11) •••••-••34')).toHaveLength(2);
+    expect(screen.queryByText('+5511912345634')).toBeNull();
+    await waitFor(() => expect(getContactConversations).toHaveBeenCalled());
+  });
 });

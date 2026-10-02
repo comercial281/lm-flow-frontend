@@ -64,6 +64,7 @@ import OfferActions from '@/components/roleta/OfferActions';
 import { normalizeFormAnswers, extraAttributeRows, landingVerdict } from '@/components/pipelines/formAnswers';
 // Rótulo + cor por origem: a mesma régua do painel do lead em Conversas.
 import { SOURCE_META } from '@/features/leadOrigin/origem';
+import { isPhoneLikeName } from '@/lib/nomeDoContato';
 import { toast } from 'sonner';
 import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
@@ -519,11 +520,7 @@ export default function EditItemModal({
   if (!item) return null;
 
   // Nome cru às vezes vem como o telefone (Evolution não manda pushName no 1º evento).
-  // Descarta nomes que são só dígitos/telefone e cai no melhor candidato.
-  const isPhoneLikeName = (value?: string | null) => {
-    if (!value) return true;
-    return /^[+\d\s()\-@.]+$/.test(value.replace(/whatsapp|net|us|s\./gi, ''));
-  };
+  // Descarta nomes que são só dígitos/telefone (isPhoneLikeName) e cai no melhor candidato.
   const getItemDisplayName = () => {
     const candidates = [item.contact?.name, (item.conversation as any)?.contact?.name];
     const good = candidates.find(c => c && !isPhoneLikeName(c));

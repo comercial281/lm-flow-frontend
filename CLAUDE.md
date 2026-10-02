@@ -4752,18 +4752,28 @@ Decisões do dono (não reabrir sem ele pedir):
   vendo (o mesmo estado da faixa "assuma o lead"), o topo mostra
   `(11) •••••-••34`, sem e-mail, sem copiar e sem o lápis (a janela de edição
   mostraria o número). As **Respostas do formulário somem** (formulário de lead
-  costuma trazer telefone e e-mail). Ao aceitar, aparece tudo.
+  costuma trazer telefone e e-mail) e **"Abrir card do lead" some** (o card
+  mostra telefone, e-mail e respostas; o seletor de etapa fica). **Nome que é o
+  telefone** (o Evolution não manda o nome no 1º evento) sai mascarado também,
+  no painel e no topo da conversa. Ao aceitar, aparece tudo.
+- **"Remover do funil" saiu do painel**: fica no quadro do funil.
+- **O painel não coloca o lead num segundo funil.** "Colocar no funil" só existe
+  para lead fora de qualquer funil; o segundo funil é pelo quadro.
 
 Armadilhas:
 
 1. **A máscara é da tela.** O servidor continua mandando o contato inteiro pro
    corretor ofertado: é a dívida de 28/09 ("Roleta: o telefone do lead só chega
-   depois do aceite", armadilha 3), aberta para o backend. Na tela, as Respostas
-   do formulário saem inteiras durante a oferta (não são mascaradas campo a campo).
+   depois do aceite", armadilha 3), aberta para o backend. Na tela, durante a
+   oferta, a seção Respostas do formulário SOME inteira (não há máscara campo a
+   campo) e o card do lead não abre pelo painel.
 2. **`SOURCE_META` mora em `src/features/leadOrigin/origem.ts`**, usado pela aba
    Origem do card e pelo "Veio de". Origem nova entra lá, uma vez. No painel o
    emoji do rótulo sai; `unknown` não mostra a linha; sem origem gravada, cai no
-   anúncio da conversa ("Anúncio no Instagram/Facebook").
+   anúncio da conversa ("Anúncio no Instagram/Facebook"). **"Ver anúncio" só
+   aponta pra anúncio**: o link do `ad_referral` da conversa, ou o da origem
+   gravada quando ela é `whatsapp_ctwa`, `meta_lead_ads` ou `anuncio`. Landing,
+   site e portal não ganham link ali.
 3. **A linha "Também conversou" depende do recorte de permissão do servidor**
    (`GET /contacts/:id/conversations`, que passa pelo
    `Conversations::PermissionFilterService`). A tela não filtra de novo.
@@ -4776,3 +4786,7 @@ Armadilhas:
    requisição a mais por conversa. Lead fora de funil usa o `ad_referral`.
 6. **`ContactHeader`, o `ContactDetails` do painel e `ConversationPipelineItem`
    foram apagados.** A edição do contato é `useEditarContato`.
+7. **"Nome que é telefone" é uma régua só:** `isPhoneLikeName` em
+   `src/lib/nomeDoContato.ts`, usada pelo card do funil (`pipelineItemHelpers`
+   reexporta), pelo card aberto (`EditItemModal`) e pela máscara da oferta
+   (`nomeNaTela`, no painel e no `ChatHeader`, que recebe `emOferta` do `Chat`).

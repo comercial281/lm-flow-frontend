@@ -1,5 +1,6 @@
 import { telefone, toDate } from '@/lib/formato';
 import { SOURCE_META } from '@/features/leadOrigin/origem';
+import { isPhoneLikeName } from '@/lib/nomeDoContato';
 
 // Regras e textos do painel do lead em Conversas. Funções puras, com spec: a
 // tela só desenha o que sai daqui. Textos literais (chave nova de t() não entra).
@@ -33,6 +34,8 @@ export const TEXTOS_DO_PAINEL = {
 
 type Objeto = Record<string, unknown>;
 
+const FONTES_DE_ANUNCIO = new Set(['whatsapp_ctwa', 'meta_lead_ads', 'anuncio']);
+
 const textoDe = (valor: unknown): string => (typeof valor === 'string' ? valor.trim() : '');
 
 // Os rótulos da aba Origem do card têm emoji na frente (selo colorido). Na linha
@@ -50,9 +53,12 @@ export function origemDoLead(entrada: {
 }): { rotulo: string; link: string | null } | null {
   const origem = (entrada.leadOrigin ?? null) as Objeto | null;
   const anuncio = entrada.adReferral && Object.keys(entrada.adReferral).length > 0 ? entrada.adReferral : null;
-  const link = textoDe(anuncio?.source_url) || textoDe(origem?.source_url) || null;
-
   const source = textoDe(origem?.source);
+  // "Ver anúncio" só aponta pra anúncio: o link do anúncio da conversa, ou o da
+  // origem gravada quando ela É um anúncio. Landing, site e portal não têm link aqui.
+  const link =
+    textoDe(anuncio?.source_url) || (FONTES_DE_ANUNCIO.has(source) ? textoDe(origem?.source_url) : '') || null;
+
   if (source === 'unknown') return null;
 
   const meta = source ? SOURCE_META[source] : undefined;
@@ -139,6 +145,16 @@ export function respostasDoFormulario(
       .filter(([, valor]) => ehResposta(valor))
       .map(([chave, valor]) => ({ id: `${origem}.${chave}`, rotulo: rotuloDaChave(chave), valor: String(valor) }));
   return [...linhas('custom', personalizados), ...linhas('additional', adicionais)];
+}
+
+/**
+ * Nome do lead na tela. Quando o "nome" é na verdade o telefone (o Evolution não
+ * manda pushName no 1º evento), a oferta aberta mascara ele também: senão o
+ * número inteiro escapava pelo nome. Fora da oferta, o nome vai como veio.
+ */
+export function nomeNaTela(nome: string | null | undefined, emOferta: boolean): string | null | undefined {
+  if (!emOferta || !nome || !isPhoneLikeName(nome)) return nome;
+  return mascararTelefone(nome.replace(/@.*$/, ''));
 }
 
 /**

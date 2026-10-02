@@ -20,6 +20,8 @@ interface SecaoFunilProps {
   pipelines: Pipeline[];
   carregando: boolean;
   onAtualizado: () => void;
+  /** Oferta da roleta aberta: o card do lead mostra telefone, e-mail e respostas, então o botão some. */
+  emOferta?: boolean;
 }
 
 interface LinhaDoFunil {
@@ -35,7 +37,9 @@ const porPosicao = (a: PipelineStage, b: PipelineStage) => a.position - b.positi
  * Trocar a etapa move o lead na hora (o mesmo serviço de arrastar no quadro).
  * O card completo (Histórico, Tarefas, Imóveis, Origem) abre no botão.
  */
-export default function SecaoFunil({ conversationId, pipelines, carregando, onAtualizado }: SecaoFunilProps) {
+export default function SecaoFunil({
+  conversationId, pipelines, carregando, onAtualizado, emOferta = false,
+}: SecaoFunilProps) {
   const { t } = useLanguage('pipelines');
   // Etapa escolhida enquanto o servidor não confirma (volta se der erro).
   const [escolhida, setEscolhida] = useState<Record<string, string>>({});
@@ -143,9 +147,11 @@ export default function SecaoFunil({ conversationId, pipelines, carregando, onAt
                   </SelectContent>
                 </Select>
               </div>
-              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setCardAberto(linha)}>
-                {T.abrirCard}
-              </Button>
+              {!emOferta && (
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setCardAberto(linha)}>
+                  {T.abrirCard}
+                </Button>
+              )}
             </div>
           ))}
         </div>
@@ -157,7 +163,7 @@ export default function SecaoFunil({ conversationId, pipelines, carregando, onAt
         </Button>
       )}
 
-      {cardAberto && (
+      {cardAberto && !emOferta && (
         <EditItemModal
           open
           onOpenChange={aberto => !aberto && setCardAberto(null)}

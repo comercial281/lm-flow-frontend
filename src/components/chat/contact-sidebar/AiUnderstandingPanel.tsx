@@ -80,11 +80,18 @@ function Resumo({ texto, cortar }: { texto: string; cortar: boolean }) {
   const [aberto, setAberto] = useState(false);
   const [passa, setPassa] = useState(false);
 
+  // Mede só com o resumo cortado (aberto, nunca "passa"), e de novo quando a
+  // largura muda: o painel nasce com largura 0 e abre depois.
   useLayoutEffect(() => {
-    setAberto(false);
     const el = ref.current;
-    setPassa(Boolean(cortar && el && el.scrollHeight > el.clientHeight + 1));
-  }, [texto, cortar]);
+    if (!cortar || aberto || !el) return;
+    const medir = () => setPassa(el.scrollHeight > el.clientHeight + 1);
+    medir();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observador = new ResizeObserver(medir);
+    observador.observe(el);
+    return () => observador.disconnect();
+  }, [texto, cortar, aberto]);
 
   return (
     <div className="lm-redact text-xs text-muted-foreground bg-muted/40 rounded p-2 mt-1">

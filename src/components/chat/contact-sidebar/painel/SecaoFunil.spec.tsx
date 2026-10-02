@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import SecaoFunil from './SecaoFunil';
@@ -70,6 +70,10 @@ describe('SecaoFunil', () => {
     toastError.mockReset();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('mostra "Funil de vendas · Etapa" com a etapa atual', () => {
     render(<SecaoFunil conversationId="conv-1" pipelines={[funil()]} carregando={false} onAtualizado={vi.fn()} />);
     expect(screen.getByText('Funil de vendas · Etapa')).toBeTruthy();
@@ -117,5 +121,11 @@ describe('SecaoFunil', () => {
 
     fireEvent.click(screen.getByText('Colocar no funil'));
     expect(screen.getByText('escolher-funil-e-etapa')).toBeTruthy();
+  });
+
+  it('oferta da roleta aberta: o seletor fica, "Abrir card do lead" some', () => {
+    render(<SecaoFunil conversationId="conv-1" pipelines={[funil()]} carregando={false} onAtualizado={vi.fn()} emOferta />);
+    expect(screen.getByLabelText('etapa')).toBeTruthy();
+    expect(screen.queryByText('Abrir card do lead')).toBeNull();
   });
 });

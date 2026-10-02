@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  OUTRO_NUMERO, mascararTelefone, origemDoLead, outraConversa, painelAoTrocarDeConversa, respostasDoFormulario,
+  OUTRO_NUMERO, mascararTelefone, nomeNaTela, origemDoLead, outraConversa, painelAoTrocarDeConversa, respostasDoFormulario,
   textoOutraConversa,
 } from './painelDoLead';
 
@@ -44,6 +44,27 @@ describe('origemDoLead — a linha "Veio de"', () => {
     expect(
       origemDoLead({ leadOrigin: { source: 'whatsapp_ctwa', source_url: 'https://fb.me/exemplo' } }),
     ).toEqual({ rotulo: 'WhatsApp Direto (CTWA)', link: 'https://fb.me/exemplo' });
+  });
+
+  it('"Ver anúncio" só para anúncio: landing, site e portal não levam link da origem gravada', () => {
+    for (const source of ['landing', 'site', 'portal', 'utm', 'manual', 'bolsao', 'organic_whatsapp']) {
+      expect(origemDoLead({ leadOrigin: { source, source_url: 'https://exemplo.com/pagina' } })?.link).toBeNull();
+    }
+    expect(
+      origemDoLead({ leadOrigin: { source: 'meta_lead_ads', source_url: 'https://fb.me/form' } })?.link,
+    ).toBe('https://fb.me/form');
+    expect(
+      origemDoLead({ leadOrigin: { source: 'anuncio', source_app: 'instagram', source_url: 'https://instagram.com/p/x' } }),
+    ).toEqual({ rotulo: 'Anúncio no Instagram', link: 'https://instagram.com/p/x' });
+  });
+
+  it('o anúncio da conversa vale como link mesmo com outra origem gravada', () => {
+    expect(
+      origemDoLead({
+        leadOrigin: { source: 'landing', source_url: 'https://exemplo.com/lp' },
+        adReferral: { source_url: 'https://fb.me/anuncio' },
+      }),
+    ).toEqual({ rotulo: 'Landing Page', link: 'https://fb.me/anuncio' });
   });
 
   it('origem não identificada: a linha não aparece', () => {
@@ -144,5 +165,26 @@ describe('painelAoTrocarDeConversa — o painel ao abrir outra conversa', () => 
   it('abaixo de 1280px: fica como estava (aberto segue aberto, fechado segue fechado)', () => {
     expect(painelAoTrocarDeConversa(false, true)).toBe(true);
     expect(painelAoTrocarDeConversa(false, false)).toBe(false);
+  });
+});
+
+describe('nomeNaTela — nome que é o telefone, na oferta', () => {
+  it('na oferta, nome que é o telefone sai mascarado (inclusive o JID)', () => {
+    expect(nomeNaTela('+5511912345634', true)).toBe('(11) •••••-••34');
+    expect(nomeNaTela('5511912345634@s.whatsapp.net', true)).toBe('(11) •••••-••34');
+  });
+
+  it('nome de verdade não muda, com ou sem oferta', () => {
+    expect(nomeNaTela('Marcus Exemplo', true)).toBe('Marcus Exemplo');
+    expect(nomeNaTela('Marcus Exemplo', false)).toBe('Marcus Exemplo');
+  });
+
+  it('fora da oferta, o telefone-nome vai como veio', () => {
+    expect(nomeNaTela('+5511912345634', false)).toBe('+5511912345634');
+  });
+
+  it('sem nome: nada', () => {
+    expect(nomeNaTela(null, true)).toBeNull();
+    expect(nomeNaTela('', true)).toBe('');
   });
 });
