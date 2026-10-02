@@ -11,6 +11,7 @@ import superLeadsFeedService, {
   type LeadsFeedClient,
   type LeadsFeedData,
 } from '@/services/superLeadsFeed/superLeadsFeedService';
+import { Seletor } from '@/components/base/Seletor';
 
 /** Intervalo do poll. Não é WebSocket de propósito: não existe canal
  *  cross-tenant no backend (ver o comentário do LeadsFeedController). */
@@ -243,11 +244,13 @@ export default function LeadsFeed() {
     return () => clearInterval(id);
   }, []);
 
-  // ESC sai do modo mural (num segundo monitor é o atalho esperado).
+  // ESC sai do modo mural (num segundo monitor é o atalho esperado). Com a
+  // lista do "Alertar após" aberta, o Esc é dela: o Radix trata antes (na
+  // captura) e marca com preventDefault, e o mural fica.
   useEffect(() => {
     if (!mural) return undefined;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMural(false);
+      if (e.key === 'Escape' && !e.defaultPrevented) setMural(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -411,15 +414,15 @@ export default function LeadsFeed() {
       {/* Controles do alerta: limiar + reativar quando está oculto */}
       <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
         <span>Alertar após</span>
-        <select
+        <Seletor
           value={silenceMinutes}
           onChange={(e) => setSilenceMinutes(Number(e.target.value))}
-          className="rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground"
+          className="h-auto w-40 rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground"
         >
           {SILENCE_OPTIONS.map((m) => (
             <option key={m} value={m}>{ageLabel(m)} sem lead</option>
           ))}
-        </select>
+        </Seletor>
         {alertsHidden && (
           <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setAlertsHidden(false)}>
             <BellRing className="h-3.5 w-3.5 mr-1" />
