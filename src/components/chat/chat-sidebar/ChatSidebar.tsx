@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
+import { useState, useRef, useCallback, useMemo, useContext } from 'react';
 import { Button } from '@evoapi/design-system/button';
 import { Input } from '@evoapi/design-system/input';
 import { Badge } from '@evoapi/design-system/badge';
@@ -34,7 +34,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useChatContext } from '@/contexts/chat/ChatContext';
-import { Conversation, ConversationFilter } from '@/types/chat/api';
+import { Conversation } from '@/types/chat/api';
 import { formatConversationTime, formatDetailedTime } from '@/utils/time/timeHelpers';
 import { ConversationSkeleton } from '../loading-states';
 import { NoConversations } from '../empty-states';
@@ -58,7 +58,6 @@ import { getDefaultFilter } from '@/utils/storage/filtersStorage';
 import {
   PILULAS,
   filtrosComPilula,
-  semFiltrosDaPilula,
   mostraArquivadas,
   deveAvisarNumero,
   type Pilula,
@@ -85,6 +84,11 @@ interface ChatSidebarProps {
     filtrosParaSalvar?: BaseFilter[],
   ) => Promise<Conversation[] | void>;
   onFilterClear: () => void;
+  // Pílula e filtros do popover moram na página (sobrevivem ao remonte da lista).
+  pilula: Pilula;
+  onPilulaChange: (pilula: Pilula) => void;
+  conversationFilters: BaseFilter[];
+  onConversationFiltersChange: (filtros: BaseFilter[]) => void;
   onMarkAsRead: (conversation: Conversation) => void;
   onMarkAsUnread: (conversation: Conversation) => void;
   onMarkAsOpen: (conversation: Conversation) => void;
@@ -124,6 +128,10 @@ const ChatSidebar = ({
   onConversationSelect,
   onFilterApply,
   onFilterClear,
+  pilula,
+  onPilulaChange,
+  conversationFilters,
+  onConversationFiltersChange: setConversationFilters,
   onMarkAsRead,
   onMarkAsUnread,
   onMarkAsOpen,
@@ -162,11 +170,11 @@ const ChatSidebar = ({
     loadMoreConversations: () => Promise<void>;
   };
   const filters = chatContext.filters;
-  const [conversationFilters, setConversationFilters] = useState<BaseFilter[]>([]);
   // Instâncias (inboxes/WhatsApp) do tenant — pro seletor rápido de instância.
   // `iaAtiva` vem do backend (`Inbox#active_bot?`, ver InboxSerializer): diz
   // se tem um agent_bot LIGADO nesta instância — é o que desenha o
   // iconezinho roxo no `QuickFilters` (pedido do Giovani, 19/08).
+  const { user } = useAuth();
   const { inboxes, numeros } = useNumerosDaConversa();
   const inboxOptions = useMemo(
     () =>
@@ -182,30 +190,13 @@ const ChatSidebar = ({
   );
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [isLoadingMoreConversations, setIsLoadingMoreConversations] = useState(false);
-  // Pílula da lista (não é salva: abre em "Todas"). `conversationFilters` guarda
-  // só o que o usuário escolheu no popover; a pílula é somada na hora de aplicar.
-  const [pilula, setPilula] = useState<Pilula>('todas');
+  // `conversationFilters` = só o que o usuário escolheu no popover (fonte única,
+  // escrita só por aplicar/limpar); a pílula é somada na hora de aplicar.
   const showArchived = mostraArquivadas(pilula);
   const [selectedConversations, setSelectedConversations] = useState<Set<string>>(new Set());
   const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
   const loadingMoreRef = useRef(false);
 
-  useEffect(() => {
-    const doPopover = (list: ConversationFilter[]) =>
-      list.map((f: ConversationFilter) => ({
-        attributeKey: f.attribute_key,
-        filterOperator: f.filter_operator,
-        values: Array.isArray(f.values) ? f.values.join(',') : String(f.values[0] || ''),
-        queryOperator: f.query_operator,
-        attributeModel: 'standard' as const,
-      }));
-    // O filtro ativo no contexto inclui o da pílula; o popover só mostra o seu.
-    const next = semFiltrosDaPilula(doPopover(filters.state.activeFilters), pilula);
-
-    if (JSON.stringify(conversationFilters) !== JSON.stringify(next)) {
-      setConversationFilters(next);
-    }
-  }, [filters.state.activeFilters, conversationFilters, pilula]);
 
   const navigate = useNavigate();
   const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(false);
@@ -267,8 +258,9 @@ const ChatSidebar = ({
   );
 
   // Aplica os filtros do popover SOMADOS aos da pílula; só os do popover são salvos.
+  const meuId = user?.id != null ? String(user.id) : null;
   const aplicarComPilula = (doPopover: BaseFilter[], pilulaAtual: Pilula) =>
-    onFilterApply(filtrosComPilula(doPopover, pilulaAtual), doPopover);
+    onFilterApply(filtrosComPilula(doPopover, pilulaAtual, meuId), doPopover);
 
   const handleApplyFilters = async (newFilters: BaseFilter[]) => {
     setConversationFilters(newFilters);
@@ -277,9 +269,9 @@ const ChatSidebar = ({
 
   const handleChangePilula = (nova: Pilula) => {
     if (nova === pilula) return;
-    const antes = filtrosComPilula(conversationFilters, pilula);
-    const depois = filtrosComPilula(conversationFilters, nova);
-    setPilula(nova);
+    const antes = filtrosComPilula(conversationFilters, pilula, meuId);
+    const depois = filtrosComPilula(conversationFilters, nova, meuId);
+    onPilulaChange(nova);
     // Arquivadas é recorte da tela: a lista do servidor é a mesma de "Todas".
     if (JSON.stringify(antes) === JSON.stringify(depois)) return;
     void aplicarComPilula(conversationFilters, nova).catch(() => undefined);
@@ -459,7 +451,6 @@ const ChatSidebar = ({
   const permissoesProntas = permissoes ? permissoes.isReady : true;
   const gestor = permissoesProntas && can('inboxes', 'update');
   const podeCriarNumero = useFeature('channels_connect') && permissoesProntas && can('channels', 'create');
-  const { user } = useAuth();
   const avisoVazio =
     permissoesProntas &&
     deveAvisarNumero({ pilula, showArchived, busca: searchInput, filtros: conversationFilters })
@@ -467,7 +458,7 @@ const ChatSidebar = ({
       : null;
   const paraReconectar =
     permissoesProntas && !showArchived
-      ? numerosParaReconectar({ numeros, gestor, meuId: user?.id != null ? String(user.id) : null })
+      ? numerosParaReconectar({ numeros, gestor, meuId })
       : [];
 
   const stripHtml = (html: string): string => {

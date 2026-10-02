@@ -17,6 +17,8 @@ export const PILULAS: Array<{ id: Pilula; rotulo: string }> = [
   { id: 'arquivadas', rotulo: 'Arquivadas' },
 ];
 
+// "Minhas" filtra pelo id de quem está logado: o POST /conversations/filter põe o
+// valor cru no SQL, então "me" só serve de reserva (sem usuário carregado).
 const filtro = (attributeKey: string, values: string): BaseFilter => ({
   attributeKey,
   filterOperator: 'equal_to',
@@ -27,24 +29,18 @@ const filtro = (attributeKey: string, values: string): BaseFilter => ({
 
 // Filtros que a pílula SOMA aos do popover. "Minhas" substitui qualquer
 // responsável escolhido no popover.
-export function filtrosComPilula(filtrosDoPopover: BaseFilter[], pilula: Pilula): BaseFilter[] {
+export function filtrosComPilula(
+  filtrosDoPopover: BaseFilter[],
+  pilula: Pilula,
+  meuId?: string | null,
+): BaseFilter[] {
   if (pilula === 'minhas') {
-    return [...filtrosDoPopover.filter((f) => f.attributeKey !== 'assignee_id'), filtro('assignee_id', 'me')];
+    return [...filtrosDoPopover.filter((f) => f.attributeKey !== 'assignee_id'), filtro('assignee_id', meuId ? String(meuId) : 'me')];
   }
   if (pilula === 'sem_resposta') {
     return [...filtrosDoPopover.filter((f) => f.attributeKey !== 'waiting'), filtro('waiting', 'true')];
   }
   return filtrosDoPopover;
-}
-
-// O inverso: o que o servidor devolve como filtro ativo inclui o da pílula;
-// o popover só mostra (e reaplica) o que o usuário escolheu nele.
-export function semFiltrosDaPilula(filtrosAtivos: BaseFilter[], pilula: Pilula): BaseFilter[] {
-  return filtrosAtivos.filter((f) => {
-    if (f.attributeKey === 'waiting') return false;
-    if (pilula === 'minhas' && f.attributeKey === 'assignee_id' && String(f.values) === 'me') return false;
-    return true;
-  });
 }
 
 export function mostraArquivadas(pilula: Pilula): boolean {

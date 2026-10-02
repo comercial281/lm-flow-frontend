@@ -76,6 +76,23 @@ describe('waiting (pílula Sem resposta)', () => {
     expect(convertFiltersToUrlParams([minhas]).assignee_type).toBe('me');
   });
 
+  it('Minhas com o id do usuário vira params.assignee_id no GET', () => {
+    const minhas: ConversationFilter = {
+      attribute_key: 'assignee_id', filter_operator: 'equal_to', values: ['b1c2-uuid'], query_operator: 'and',
+    };
+    const params = convertFiltersToUrlParams([minhas]);
+    expect(params.assignee_id).toBe('b1c2-uuid');
+    expect(params.assignee_type).toBeUndefined();
+  });
+
+  it('Minhas com o id do usuário vai como valor do filtro no POST', () => {
+    const minhas: ConversationFilter = {
+      attribute_key: 'assignee_id', filter_operator: 'equal_to', values: ['7'], query_operator: 'and',
+    };
+    const body = convertFiltersToApiFormat([aberta, minhas, avancado]);
+    expect(body.filters.find(f => f.attribute_key === 'assignee_id')?.values).toEqual(['7']);
+  });
+
   it('segue na página seguinte do GET', () => {
     const req = buildPagedRequest([aberta, waiting], 2);
     expect(req.kind === 'get' && req.params.waiting).toBe('true');

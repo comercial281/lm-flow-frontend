@@ -49,6 +49,7 @@ import { AlertTriangle, Trash2 } from 'lucide-react';
 
 import { Conversation } from '@/types/chat/api';
 import { BaseFilter } from '@/types/core';
+import { usePilulaEFiltros } from '@/features/conversas/usePilulaEFiltros';
 import type { DashboardApp } from '../../../types/integrations';
 import type { AssignmentOption, AssignmentType } from '@/components/chat/assignment';
 
@@ -97,6 +98,10 @@ const Chat = () => {
 
   // Estados locais simplificados
   const [searchInput, setSearchInput] = useState('');
+  // Pílula e filtros do popover da lista: aqui pra sobreviver ao remonte da ChatSidebar.
+  const { pilula, setPilula, filtrosDoPopover, setFiltrosDoPopover } = usePilulaEFiltros(
+    () => loadConversationFilters() || getDefaultFilter(),
+  );
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
   // Modal states
@@ -716,6 +721,10 @@ const Chat = () => {
           onConversationSelect={handleConversationSelect}
           onFilterApply={handleApplyFilters}
           onFilterClear={handleClearFilters}
+          pilula={pilula}
+          onPilulaChange={setPilula}
+          conversationFilters={filtrosDoPopover}
+          onConversationFiltersChange={setFiltrosDoPopover}
           onMarkAsRead={handleMarkAsRead}
           onMarkAsUnread={handleMarkAsUnread}
           onMarkAsOpen={handleMarkAsOpen}

@@ -3,7 +3,6 @@ import type { BaseFilter } from '@/types/core';
 import {
   PILULAS,
   filtrosComPilula,
-  semFiltrosDaPilula,
   mostraArquivadas,
   deveAvisarNumero,
 } from './pilulas';
@@ -31,14 +30,20 @@ describe('filtrosComPilula', () => {
     expect(filtrosComPilula(popover, 'arquivadas')).toEqual(popover);
   });
 
-  it('minhas troca o responsável do popover por "me"', () => {
-    const r = filtrosComPilula([aberta, f('assignee_id', '42')], 'minhas');
-    expect(r.filter((x) => x.attributeKey === 'assignee_id')).toEqual([f('assignee_id', 'me')]);
+  it('minhas troca o responsável do popover pelo id de quem está logado', () => {
+    const r = filtrosComPilula([aberta, f('assignee_id', '42')], 'minhas', '7');
+    expect(r.filter((x) => x.attributeKey === 'assignee_id')).toEqual([f('assignee_id', '7')]);
     expect(r).toContainEqual(aberta);
   });
 
-  it('minhas sem responsável no popover acrescenta "me"', () => {
+  it('minhas sem responsável no popover acrescenta o id de quem está logado', () => {
+    expect(filtrosComPilula([aberta], 'minhas', '7')).toEqual([aberta, f('assignee_id', '7')]);
+    expect(filtrosComPilula([aberta], 'minhas', 'b1c2-uuid')).toEqual([aberta, f('assignee_id', 'b1c2-uuid')]);
+  });
+
+  it('minhas sem usuário carregado cai em "me"', () => {
     expect(filtrosComPilula([aberta], 'minhas')).toEqual([aberta, f('assignee_id', 'me')]);
+    expect(filtrosComPilula([aberta], 'minhas', null)).toEqual([aberta, f('assignee_id', 'me')]);
   });
 
   it('sem_resposta acrescenta waiting e mantém as etiquetas', () => {
@@ -55,18 +60,6 @@ describe('filtrosComPilula', () => {
     const popover = [f('assignee_id', '42')];
     filtrosComPilula(popover, 'minhas');
     expect(popover).toEqual([f('assignee_id', '42')]);
-  });
-});
-
-describe('semFiltrosDaPilula', () => {
-  it('tira waiting e, em minhas, o responsável "me"', () => {
-    expect(semFiltrosDaPilula([aberta, f('waiting', 'true')], 'sem_resposta')).toEqual([aberta]);
-    expect(semFiltrosDaPilula([aberta, f('assignee_id', 'me')], 'minhas')).toEqual([aberta]);
-  });
-
-  it('em todas deixa o responsável escolhido no popover', () => {
-    const popover = [aberta, f('assignee_id', 'me')];
-    expect(semFiltrosDaPilula(popover, 'todas')).toEqual(popover);
   });
 });
 
