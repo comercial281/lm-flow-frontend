@@ -43,7 +43,6 @@ import {
   PropertyFormData,
   TRANSACTION_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
-  STATUS_LABELS,
 } from '@/services/properties/propertiesService';
 import { PROPERTY_FEATURES, CONDO_FEATURES } from '@/features/properties/amenities';
 import {
@@ -81,16 +80,20 @@ import { EmptyState } from '@/components/base';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import {
   ABA_NA_URL,
+  FASES,
   FILTROS_VAZIOS,
+  SITUACOES,
   abaPadrao,
   filtrosAtivos,
   lerAba,
+  paraCampoMes,
   rotuloDaSituacao,
   tipoDoImovel,
   tirarFiltro,
   type Filtros,
   type ListingKind,
 } from '@/features/properties/listingKind';
+import { formularioNovo, payloadDoFormulario } from '@/features/properties/formularioPorTipo';
 import PainelDeFiltros, { type Facetas } from './lista/PainelDeFiltros';
 import EtiquetasDosFiltros from './lista/EtiquetasDosFiltros';
 import LinhaRevenda from './lista/LinhaRevenda';
@@ -117,6 +120,8 @@ const EMPTY_FORM: PropertyFormData = {
   property_type: 'apartment',
   status: 'active',
   stage: 'ready',
+  listing_kind: 'resale',
+  delivery_forecast: '',
   sale_price: null,
   rent_price: null,
   condo_fee: null,
@@ -418,9 +423,9 @@ export default function Properties() {
     if (recorte) tirarRecorte();
   };
 
-  const openCreate = () => {
+  const openCreate = (kindNovo: ListingKind) => {
     setEditing(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, ...formularioNovo(kindNovo) });
     setMediaFiles([]);
     setAiText('');
     loadLabels();
@@ -438,6 +443,8 @@ export default function Properties() {
       property_type: p.property_type,
       status: p.status,
       stage: p.stage,
+      listing_kind: tipoDoImovel(p),
+      delivery_forecast: paraCampoMes(p.delivery_forecast),
       sale_price: p.sale_price,
       rent_price: p.rent_price,
       condo_fee: p.condo_fee ?? null,
@@ -480,7 +487,8 @@ export default function Properties() {
     if (!form.title.trim()) { toast.error('Título é obrigatório'); return; }
     // Valor de venda é obrigatório p/ Venda/Venda e Locação (regra do backend) —
     // avisa antes de bater na API.
-    if ((form.transaction_type === 'sale' || form.transaction_type === 'sale_rent') && !form.sale_price) {
+    const payload = payloadDoFormulario({ ...form, typologies: cleanTypologies(form.typologies) });
+    if ((payload.transaction_type === 'sale' || payload.transaction_type === 'sale_rent') && !form.sale_price) {
       toast.error('Informe o Valor de venda (obrigatório para imóveis à venda).');
       return;
     }
@@ -491,11 +499,17 @@ export default function Properties() {
     setSaving(true);
     // Linha de tipologia que o corretor adicionou e não preencheu não vai pro
     // backend (ele descartaria de qualquer jeito) — evita gravar planta fantasma.
-    const payload: PropertyFormData = { ...form, typologies: cleanTypologies(form.typologies) };
     try {
       if (editing) {
         const updated = await propertiesService.update(editing.id, payload);
-        setProperties(prev => prev.map(p => p.id === updated.id ? updated : p));
+        if (tipoDoImovel(updated) !== kind) {
+          // Mudou de tipo: sai da aba aberta e as contagens recarregam.
+          setProperties(prev => prev.filter(p => p.id !== updated.id));
+          setTotal(t => Math.max(0, t - 1));
+          recontar();
+        } else {
+          setProperties(prev => prev.map(p => p.id === updated.id ? updated : p));
+        }
         toast.success('Imóvel atualizado');
         setModalOpen(false);
         // Avisa o modal de importação em lote (se aberto) pra re-buscar os chips/preço
@@ -1102,7 +1116,9 @@ export default function Properties() {
             deixa folga: num monitor grande o modal encostava nas duas bordas. */}
         <DialogContent size="wide" className="overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? 'Editar imóvel' : 'Cadastrar imóvel'}</DialogTitle>
+            <DialogTitle>{f.listing_kind === 'development'
+                ? (editing ? 'Editar empreendimento' : 'Novo empreendimento')
+                : (editing ? 'Editar imóvel' : 'Novo imóvel')}</DialogTitle>
             <DialogDescription>Preencha as informações do imóvel</DialogDescription>
           </DialogHeader>
 
@@ -1245,10 +1261,14 @@ export default function Properties() {
 
               <div>
                 <UILabel>Tipo de negócio</UILabel>
-                <Seletor value={f.transaction_type} onChange={e => setF({ transaction_type: e.target.value })}
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                  {Object.entries(TRANSACTION_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </Seletor>
+                {f.listing_kind === 'development' ? (
+                  <p className="mt-1 text-sm">Venda</p>
+                ) : (
+                  <Seletor value={f.transaction_type} onChange={e => setF({ transaction_type: e.target.value })}
+                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                    {Object.entries(TRANSACTION_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </Seletor>
+                )}
               </div>
 
               <div>
@@ -1260,23 +1280,31 @@ export default function Properties() {
               </div>
 
               <div>
-                <UILabel>Status</UILabel>
+                <UILabel>Situação</UILabel>
                 <Seletor value={f.status} onChange={e => setF({ status: e.target.value })}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                  {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  {SITUACOES[f.listing_kind ?? 'resale'].map(s => <option key={s.valor} value={s.valor}>{s.rotulo}</option>)}
                 </Seletor>
               </div>
 
-              <div>
-                <UILabel>Situação da obra</UILabel>
-                <Seletor value={f.stage} onChange={e => setF({ stage: e.target.value })}
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                  <option value="ready">Pronto</option>
-                  <option value="in_construction">Em construção</option>
-                  <option value="launch">Lançamento</option>
-                  <option value="pre_launch">Pré-lançamento</option>
-                </Seletor>
-              </div>
+              {f.listing_kind === 'development' && (
+                <>
+                  <div>
+                    <UILabel>Fase da obra</UILabel>
+                    <Seletor value={f.stage} onChange={e => setF({ stage: e.target.value })}
+                      className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      {FASES.map(x => <option key={x.valor} value={x.valor}>{x.rotulo}</option>)}
+                    </Seletor>
+                  </div>
+                  {f.stage !== 'ready' && (
+                    <div>
+                      <UILabel>Previsão de entrega</UILabel>
+                      <Input type="month" value={f.delivery_forecast ?? ''}
+                        onChange={e => setF({ delivery_forecast: e.target.value })} className="mt-1" />
+                    </div>
+                  )}
+                </>
+              )}
             </div>
             </div>
 
@@ -1550,102 +1578,104 @@ export default function Properties() {
             {/* Tipologias: as várias plantas de um mesmo empreendimento. Os campos
                 soltos acima (dorms/área/preço) seguem valendo como o RESUMO que
                 alimenta busca, filtro e card — normalmente o da planta de entrada. */}
-            <div className="rounded-lg border p-4">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <label className="block text-sm font-medium">Tipologias do empreendimento</label>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Tem mais de uma planta (2 dorms, 3 dorms, cobertura…)? Cadastre cada uma aqui.
-                    Deixe vazio quando o imóvel é uma unidade só.
-                  </p>
+            {f.listing_kind === 'development' && (
+              <div className="rounded-lg border p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <label className="block text-sm font-medium">Tipologias do empreendimento</label>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Tem mais de uma planta (2 dorms, 3 dorms, cobertura…)? Cadastre cada uma aqui.
+                      Deixe vazio quando o imóvel é uma unidade só.
+                    </p>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={addTypology} className="gap-1">
+                    <Plus className="h-3.5 w-3.5" />
+                    Adicionar tipologia
+                  </Button>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={addTypology} className="gap-1">
-                  <Plus className="h-3.5 w-3.5" />
-                  Adicionar tipologia
-                </Button>
-              </div>
 
-              {(f.typologies ?? []).length > 0 && (
-                <div className="mt-3 space-y-3">
-                  {(f.typologies ?? []).map((t, i) => (
-                    <div key={i} className="rounded-md border bg-muted/30 p-3">
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          {typologyName(t, i)}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          title="Remover tipologia"
-                          aria-label={`Remover ${typologyName(t, i)}`}
-                          onClick={() => removeTypology(i)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-                        <div className="col-span-2 sm:col-span-3 lg:col-span-2">
-                          <UILabel className="text-xs text-muted-foreground">Nome da planta</UILabel>
-                          <Input
-                            value={t.name ?? ''}
-                            onChange={e => setTypology(i, { name: e.target.value })}
-                            placeholder="Tipo A / Final 3"
-                            className="mt-1"
-                          />
+                {(f.typologies ?? []).length > 0 && (
+                  <div className="mt-3 space-y-3">
+                    {(f.typologies ?? []).map((t, i) => (
+                      <div key={i} className="rounded-md border bg-muted/30 p-3">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {typologyName(t, i)}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            title="Remover tipologia"
+                            aria-label={`Remover ${typologyName(t, i)}`}
+                            onClick={() => removeTypology(i)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
-                        {([
-                          ['bedrooms', 'Dorms'],
-                          ['suites', 'Suítes'],
-                          ['bathrooms', 'Banheiros'],
-                          ['parking_spaces', 'Vagas'],
-                          ['units_available', 'Unid. disp.'],
-                        ] as Array<[keyof PropertyTypology, string]>).map(([key, label]) => (
-                          <div key={key}>
-                            <UILabel className="text-xs text-muted-foreground">{label}</UILabel>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                          <div className="col-span-2 sm:col-span-3 lg:col-span-2">
+                            <UILabel className="text-xs text-muted-foreground">Nome da planta</UILabel>
                             <Input
-                              type="number"
-                              min={0}
-                              value={(t[key] as number | null | undefined) ?? ''}
-                              onChange={e => setTypology(i, { [key]: e.target.value ? parseInt(e.target.value, 10) : null })}
+                              value={t.name ?? ''}
+                              onChange={e => setTypology(i, { name: e.target.value })}
+                              placeholder="Tipo A / Final 3"
                               className="mt-1"
                             />
                           </div>
-                        ))}
-                        {([
-                          ['useful_area_m2', 'Área útil (m²)'],
-                          ['total_area_m2', 'Área total (m²)'],
-                          ['sale_price', 'Valor de venda (R$)'],
-                          ['rent_price', 'Aluguel (R$)'],
-                        ] as Array<[keyof PropertyTypology, string]>).map(([key, label]) => (
-                          <div key={key} className="col-span-1 sm:col-span-1 lg:col-span-1">
-                            <UILabel className="text-xs text-muted-foreground">{label}</UILabel>
+                          {([
+                            ['bedrooms', 'Dorms'],
+                            ['suites', 'Suítes'],
+                            ['bathrooms', 'Banheiros'],
+                            ['parking_spaces', 'Vagas'],
+                            ['units_available', 'Unid. disp.'],
+                          ] as Array<[keyof PropertyTypology, string]>).map(([key, label]) => (
+                            <div key={key}>
+                              <UILabel className="text-xs text-muted-foreground">{label}</UILabel>
+                              <Input
+                                type="number"
+                                min={0}
+                                value={(t[key] as number | null | undefined) ?? ''}
+                                onChange={e => setTypology(i, { [key]: e.target.value ? parseInt(e.target.value, 10) : null })}
+                                className="mt-1"
+                              />
+                            </div>
+                          ))}
+                          {([
+                            ['useful_area_m2', 'Área útil (m²)'],
+                            ['total_area_m2', 'Área total (m²)'],
+                            ['sale_price', 'Valor de venda (R$)'],
+                            ['rent_price', 'Aluguel (R$)'],
+                          ] as Array<[keyof PropertyTypology, string]>).map(([key, label]) => (
+                            <div key={key} className="col-span-1 sm:col-span-1 lg:col-span-1">
+                              <UILabel className="text-xs text-muted-foreground">{label}</UILabel>
+                              <Input
+                                type="number"
+                                min={0}
+                                step="any"
+                                value={(t[key] as number | null | undefined) ?? ''}
+                                onChange={e => setTypology(i, { [key]: e.target.value ? parseFloat(e.target.value) : null })}
+                                className="mt-1"
+                              />
+                            </div>
+                          ))}
+                          <div className="col-span-2 sm:col-span-3 lg:col-span-6">
+                            <UILabel className="text-xs text-muted-foreground">Observação (opcional)</UILabel>
                             <Input
-                              type="number"
-                              min={0}
-                              step="any"
-                              value={(t[key] as number | null | undefined) ?? ''}
-                              onChange={e => setTypology(i, { [key]: e.target.value ? parseFloat(e.target.value) : null })}
+                              value={t.notes ?? ''}
+                              onChange={e => setTypology(i, { notes: e.target.value })}
+                              placeholder="Ex.: última unidade, vista para o parque…"
                               className="mt-1"
                             />
                           </div>
-                        ))}
-                        <div className="col-span-2 sm:col-span-3 lg:col-span-6">
-                          <UILabel className="text-xs text-muted-foreground">Observação (opcional)</UILabel>
-                          <Input
-                            value={t.notes ?? ''}
-                            onChange={e => setTypology(i, { notes: e.target.value })}
-                            placeholder="Ex.: última unidade, vista para o parque…"
-                            className="mt-1"
-                          />
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Características do imóvel + comodidades do condomínio (aparecem na página pública) */}
             <div className="space-y-4">
@@ -1754,7 +1784,7 @@ export default function Properties() {
         open={importOpen}
         refreshSignal={importRefresh}
         onClose={() => setImportOpen(false)}
-        onManual={() => { setImportOpen(false); openCreate(); }}
+        onManual={() => { setImportOpen(false); openCreate(kind ?? 'resale'); }}
         onReview={async id => {
           try {
             const p = await propertiesService.get(id);

@@ -26,8 +26,8 @@ vi.mock('@/services/users/usersService', () => ({
 }));
 // O lote com IA e o mapa têm testes próprios; aqui só importa que a tela os chama.
 vi.mock('../PropertyImportDialog', () => ({
-  default: ({ open, listingKind }: { open: boolean; listingKind?: string }) =>
-    (open ? <div data-testid="lote">lote {listingKind}</div> : null),
+  default: ({ open, listingKind, onManual }: { open: boolean; listingKind?: string; onManual?: () => void }) =>
+    (open ? <div data-testid="lote">lote {listingKind}<button onClick={onManual}>Cadastrar à mão</button></div> : null),
 }));
 vi.mock('./VisaoMapa', () => ({
   default: ({ kind }: { kind: string }) => <div data-testid="mapa">mapa {kind}</div>,
@@ -157,5 +157,27 @@ describe('Tela de Imóveis', () => {
     expect(await screen.findByRole('tab', { name: 'Revenda (3)' })).toBeInTheDocument();
     expect(screen.queryByText(/cadastros? na imobiliária/)).toBeNull();
     expect(svc.contarPorTipo).toHaveBeenCalledWith({ status: 'active', without_photos: '1' });
+  });
+
+  it('Cadastrar à mão na aba Empreendimentos abre o formulário de empreendimento', async () => {
+    svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 3 });
+    abrir('/properties?aba=empreendimentos');
+    fireEvent.click(await screen.findByRole('button', { name: /Novo empreendimento/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cadastrar à mão' }));
+    expect(await screen.findByText('Fase da obra')).toBeInTheDocument();
+    expect(screen.getByText('Previsão de entrega')).toBeInTheDocument();
+    expect(screen.getByText('Tipologias do empreendimento')).toBeInTheDocument();
+    expect(screen.getByText('Venda')).toBeInTheDocument();
+  });
+
+  it('Cadastrar à mão na aba Revenda esconde fase, previsão e tipologias', async () => {
+    svc.contarPorTipo.mockResolvedValue({ development: 1, resale: 38 });
+    abrir('/properties?aba=revenda');
+    fireEvent.click(await screen.findByRole('button', { name: /Novo imóvel/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cadastrar à mão' }));
+    expect(await screen.findByText('Tipo de negócio')).toBeInTheDocument();
+    expect(screen.queryByText('Fase da obra')).toBeNull();
+    expect(screen.queryByText('Previsão de entrega')).toBeNull();
+    expect(screen.queryByText('Tipologias do empreendimento')).toBeNull();
   });
 });
