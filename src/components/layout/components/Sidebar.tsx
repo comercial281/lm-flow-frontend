@@ -3,6 +3,7 @@ import { LifeBuoy } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/ds';
 import { cn } from '@/lib/utils';
 import MenuItem from './MenuItem';
+import MenuRecolhido from './MenuRecolhido';
 import MenuSecoes from './MenuSecoes';
 import { useGuardaDeSaida } from '@/hooks/useAlteracoesNaoSalvas';
 import { useAppDataStore } from '@/store/appDataStore';
@@ -70,15 +71,8 @@ export default function Sidebar({ isCollapsed, secoes, rodape }: SidebarProps) {
           >
             {!isCollapsed && <CartaoDaConta />}
             {isCollapsed ? (
-              // Recolhido: só ícones, com um traço entre as seções. Sem seção
-              // que abre e fecha — o nome de cada item aparece ao passar o mouse.
-              secoes.map((secao, i) => (
-                <div key={secao.id} className={cn('space-y-1', i > 0 && 'mt-3 pt-3 border-t border-sidebar-border')}>
-                  {secao.itens.map(item => (
-                    <MenuItem key={item.id || item.href} item={item} isCollapsed isActive={itemAtivo(item, pathname)} />
-                  ))}
-                </div>
-              ))
+              // Recolhido: itens da seção fixa + um ícone por seção que abre a lista num popover.
+              <MenuRecolhido secoes={secoes} />
             ) : (
               <MenuSecoes secoes={secoes} />
             )}
