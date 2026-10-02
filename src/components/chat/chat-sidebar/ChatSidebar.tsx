@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
 import { Button } from '@evoapi/design-system/button';
 import { Input } from '@evoapi/design-system/input';
 import { Badge } from '@evoapi/design-system/badge';
@@ -38,6 +38,16 @@ import { Conversation, ConversationFilter } from '@/types/chat/api';
 import { formatConversationTime, formatDetailedTime } from '@/utils/time/timeHelpers';
 import { ConversationSkeleton } from '../loading-states';
 import { NoConversations } from '../empty-states';
+import { AvisoListaVaziaNumero, FaixaReconectar } from '../empty-states/AvisoNumero';
+import {
+  avisoListaVazia,
+  numerosParaReconectar,
+  type NumeroDaConversa,
+} from '@/features/numbers/avisoConversas';
+import { PermissionsContext } from '@/contexts/PermissionsContext';
+import { useCan } from '@/hooks/useCan';
+import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { useAuth } from '@/contexts/AuthContext';
 import ContactAvatar from '../contact/ContactAvatar';
 import ConversationBadges from '../conversation/ConversationBadges';
 import SalesAgentBadge from '@/components/salesAgents/SalesAgentBadge';
@@ -150,6 +160,10 @@ const ChatSidebar = ({
   const [inboxOptions, setInboxOptions] = useState<
     Array<{ id: string; label: string; iaAtiva: boolean }>
   >([]);
+  // A mesma lista, com o estado da conexão: é o que diz se a caixa está vazia
+  // porque o número não está no ar (aviso de número, 02/10/2026). `null` = não
+  // carregou ou o cargo não lê números, e aí a tela não arrisca dizer nada.
+  const [numeros, setNumeros] = useState<NumeroDaConversa[] | null>(null);
   useEffect(() => {
     let alive = true;
     // Só pede se o cargo lê instâncias: sem a guarda, quem não lê levava um erro
@@ -159,6 +173,14 @@ const ChatSidebar = ({
       .then((pode) => (pode ? InboxesService.list() : null))
       .then((res) => {
         if (!alive || !res) return;
+        setNumeros(
+          (res.data ?? []).map((i: Inbox) => ({
+            id: String(i.id),
+            name: i.name,
+            connection_status: i.connection_status ?? null,
+            owner_user_id: i.owner_user_id ?? null,
+          })),
+        );
         setInboxOptions(
           (res.data ?? []).map((i: Inbox) => {
             const ch = i.channel_type?.split('::')[1] || '';
@@ -428,6 +450,28 @@ const ChatSidebar = ({
       return getSortTimestamp(b) - getSortTimestamp(a);
     });
   }, [conversations.state.conversations, showArchived]);
+
+  // Aviso de número (02/10/2026). "Gestor" = quem vê qualquer número
+  // (`inboxes.update`, o mesmo sinal da tela de Canais); sem as permissões
+  // carregadas a tela não decide nada. Só vale sem busca e sem filtro além do
+  // `status=open` de sempre: lista vazia por filtro não é culpa do número.
+  const permissoes = useContext(PermissionsContext);
+  const can = useCan();
+  const permissoesProntas = permissoes ? permissoes.isReady : true;
+  const gestor = permissoesProntas && can('inboxes', 'update');
+  const podeCriarNumero = useFeature('channels_connect') && permissoesProntas && can('channels', 'create');
+  const { user } = useAuth();
+  const soFiltroPadrao = conversationFilters.every(
+    (f) => f.attributeKey === 'status' && String(f.values) === 'open',
+  );
+  const avisoVazio =
+    permissoesProntas && !showArchived && !searchInput && soFiltroPadrao
+      ? avisoListaVazia({ numeros, gestor, podeCriar: podeCriarNumero })
+      : null;
+  const paraReconectar =
+    permissoesProntas && !showArchived
+      ? numerosParaReconectar({ numeros, gestor, meuId: user?.id != null ? String(user.id) : null })
+      : [];
 
   const stripHtml = (html: string): string => {
     if (!html) return '';
@@ -773,7 +817,9 @@ const ChatSidebar = ({
           </div>
         ) : visibleConversations.length === 0 ? (
           <div className="p-4 text-center">
-            {searchInput ? (
+            {avisoVazio ? (
+              <AvisoListaVaziaNumero aviso={avisoVazio} />
+            ) : searchInput ? (
               <NoConversations
                 searchTerm={searchInput}
                 onCreateNew={() => console.log('Create new conversation')}
@@ -792,6 +838,7 @@ const ChatSidebar = ({
           </div>
         ) : (
           <>
+            <FaixaReconectar numeros={paraReconectar} />
             {visibleConversations.map((conversation: Conversation) => {
               const isSelected =
                 String(conversations.state.selectedConversationId) === String(conversation.id);
