@@ -4657,3 +4657,55 @@ de ser "Mesmo número da roleta" e passou a ser **"Padrão (número da Leal Míd
 
 A regra mora no backend (`RoletaConfig#person_notice_default?`, PR do backend
 "Avisos para pessoa"); a tela só descreve. Não reabrir sem o dono pedir.
+
+## Conversas avisa quando o número não está no ar (desde 2026-10-02)
+
+Pergunta do dono do produto, com print da caixa de Conversas vazia: quem não tem
+número conectado abria a tela e via *"Nenhuma conversa encontrada — Não há
+conversas disponíveis no momento"*, sem saber se era tela quebrada ou falta de
+alguma coisa. A ideia de um botão que criasse o número pelo próprio corretor foi
+descartada nesta leva (permissão nova no servidor, cota de números do plano e o
+WhatsApp pessoal dele entrando no CRM): ficou o aviso.
+
+O que aparece na tela, na lista de Conversas (aba *Ativas*, sem busca e sem
+filtro além do de sempre):
+
+- **Corretor sem número**: *"Você ainda não tem um número de WhatsApp — Peça ao
+  gestor da sua imobiliária para criar o seu."* A MESMA frase da tela de WhatsApp.
+- **Gestor num cliente sem número**: *"Nenhum número de WhatsApp conectado"*, com
+  **Conectar WhatsApp** levando ao *Novo canal* (só para quem pode criar).
+- **Número existe mas não está no ar** (nunca leu o QR code, caiu, ou está no
+  meio da leitura) e a lista está vazia: *"Seu WhatsApp não está conectado"*, com
+  **Conectar agora** abrindo a configuração do número na parte da conexão. Vários
+  números fora do ar viram uma lista, um botão por número.
+- **Já tem conversas e o número caiu**: faixa âmbar em cima da lista, *"O número
+  X está desconectado. Mensagens novas só chegam depois de reconectar."*, com
+  **Reconectar**.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Quem diz se o número está no ar é o servidor** (`connection_status`, a mesma
+  palavra do selo da tela de Canais). Número criado e nunca pareado já vem como
+  desconectado. Canal sem sessão (status nulo) conta como funcionando.
+- **A faixa do gestor só fala dos números de que ele é o Dono do número.** A lista
+  dele é a imobiliária inteira; um número largado de propósito viraria faixa
+  permanente na caixa de todo gestor. A queda dos outros já chega no sininho.
+- **Lista vazia por busca, filtro ou na aba *Arquivadas* não culpa o número**:
+  ali continua o texto de antes.
+- **Sem resposta da lista de números (ou cargo que não lê números), não diz
+  nada.** Melhor o texto genérico do que acusar o número errado.
+
+Armadilhas:
+
+1. **A regra e os textos moram em `src/features/numbers/avisoConversas.ts`**, com
+   spec; o desenho em `src/components/chat/empty-states/AvisoNumero.tsx`. Textos
+   literais: chave nova de `t()` não entra.
+2. **A lista de números é a MESMA que a barra de Conversas já buscava** para o
+   filtro de número (`InboxesService.list`, atrás de `inboxes.read`). Nenhuma
+   requisição a mais.
+3. **O estado é o da hora em que a tela abriu.** Quem reconecta e volta para
+   Conversas vê a tela montar de novo; quem fica parado nela não vê a faixa
+   sumir sozinha.
+4. **O filtro `status=open` é o de sempre** (`FiltersContext.DEFAULT_FILTER`) e
+   não conta como filtro; qualquer outro desliga o aviso da lista vazia.
+5. **Não tem metade de backend e não é `featureKey` nem `clientToggleKey`.**
