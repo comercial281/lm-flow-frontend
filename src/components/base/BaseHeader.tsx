@@ -62,6 +62,8 @@ export interface BaseHeaderProps {
   /** Conteúdo extra dentro da barra de seleção (ex.: "selecionar todos os N"). */
   selectionExtra?: ReactNode;
   bulkActions?: HeaderAction[];
+  /** Na linha da busca, logo depois dela (pílulas e "Filtros" de Contatos). */
+  aoLadoDaBusca?: ReactNode;
   className?: string;
   children?: ReactNode;
 }
@@ -84,6 +86,7 @@ export default function BaseHeader({
   onClearSelection,
   selectionExtra,
   bulkActions = [],
+  aoLadoDaBusca,
   className = '',
   children,
 }: BaseHeaderProps) {
@@ -131,10 +134,10 @@ export default function BaseHeader({
 
       {/* Search and Filter Row */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3 flex-1">
+        <div className={`flex items-center gap-3 flex-1 ${aoLadoDaBusca ? 'flex-wrap' : ''}`}>
           {/* Search */}
           {onSearchChange && (
-            <div className="relative flex-1 max-w-md" data-tour={searchDataTour}>
+            <div className={`relative flex-1 max-w-md ${aoLadoDaBusca ? 'min-w-[14rem]' : ''}`} data-tour={searchDataTour}>
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sidebar-foreground/60" />
               <Input
                 type="search"
@@ -167,6 +170,8 @@ export default function BaseHeader({
               )}
             </Button>
           )}
+
+          {aoLadoDaBusca}
         </div>
 
         {/* Secondary Actions */}

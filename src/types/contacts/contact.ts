@@ -156,7 +156,8 @@ export interface Contact {
   website: string;
   industry: string;
   created_at: string;
-  updated_at: string;
+  /** Segundos Unix (backend #372). */
+  updated_at: string | number;
   last_activity_at?: string;
   availability_status: 'online' | 'offline' | 'busy' | 'away';
   blocked: boolean;
@@ -176,6 +177,15 @@ export interface Contact {
     last_activity_at: string;
   };
   pipelines?: ContactPipelineInfo[];
+  /**
+   * Só na resposta do cadastro mandado pra roleta (backend #372): a quem a
+   * roleta OFERECEU o contato. O dono só é gravado quando o corretor aceita.
+   */
+  roleta?: {
+    outcome: string;
+    roleta_config_id: string;
+    offered_to: { id: string; name: string } | null;
+  } | null;
   /** Responsável pelo contato — herda pras conversas dele. */
   default_assignee_id?: string | null;
   default_assignee?: {
@@ -322,6 +332,12 @@ export interface ContactCreateData {
    * additional_attributes.lead_origin.manual_origin. String vazia limpa.
    */
   lead_origin_note?: string;
+  /**
+   * Só no cadastro, só gestor: manda o contato novo pra esta roleta sortear o
+   * corretor (mesma porta dos formulários). Com responsável escolhido, a roleta
+   * é ignorada. Corretor que manda isto é ignorado: ele é o dono.
+   */
+  roleta_config_id?: string;
 }
 
 export interface ContactUpdateData {

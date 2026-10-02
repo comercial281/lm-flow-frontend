@@ -1,4 +1,4 @@
-import { Suspense, useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -11,7 +11,7 @@ import {
   DialogTitle,
   Button,
 } from '@/components/ui/ds';
-import { Grid3X3, List, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -23,8 +23,7 @@ import {
   ContactFormData,
   ContactsBulkQuery,
 } from '@/types/contacts';
-import { BaseFilter, AppliedFilter } from '@/types/core';
-import { ContactCard } from '@/components/contacts';
+import { BaseFilter } from '@/types/core';
 import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 import { extractError } from '@/utils/apiHelpers';
 import { contactSaveError } from '@/utils/contactErrors';
@@ -35,18 +34,22 @@ import ContactsPagination from '@/components/contacts/ContactsPagination';
 import ContactModal from '@/components/contacts/ContactModal';
 import StartConversationModal from '@/components/contacts/StartConversationModal';
 import ContactDetails from '@/components/contacts/ContactDetails';
-import ContactsFilter from '@/components/contacts/ContactsFilter';
-import ContactQuickFilters from '@/components/contacts/ContactQuickFilters';
+import ContactsFiltros from '@/components/contacts/ContactsFiltros';
+import ContactCartaoMovel from '@/components/contacts/ContactCartaoMovel';
+import { useAccountUsers } from '@/hooks/useAccountUsers';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCorretorLogado } from '@/features/contatos/useCorretorLogado';
+import {
+  FILTROS_VAZIOS,
+  linhasDoFiltro,
+  type FiltrosDoPopover,
+  type PilulaDeContatos,
+} from '@/features/contatos/filtros';
 import ContactExportModal from '@/components/contacts/ContactExportModal';
 import ContactEventsModal from '@/components/contacts/ContactEventsModal';
 import ContactMergeModal from '@/components/contacts/ContactMergeModal';
 import { AxiosError } from 'axios';
 import { ContactsTour } from '@/tours';
-import { lazyWithRetry } from '@/utils/chunkReload';
-
-// Import estático aqui forçava carregar sempre, mesmo com o chunk já existindo
-// separado (outro ponto do app também importa lazy). Lazy aqui reusa o mesmo chunk.
-const ImportLeadsModal = lazyWithRetry(() => import('@/components/pipelines/ImportLeadsModal'));
 
 const INITIAL_STATE: ContactsState = {
   contacts: [],
@@ -84,7 +87,6 @@ export default function Contacts() {
   const navigate = useNavigate();
   const { can, isReady: permissionsReady } = useUserPermissions();
   const [state, setState] = useState<ContactsState>(INITIAL_STATE);
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
@@ -94,10 +96,13 @@ export default function Contacts() {
   const [conversationContact, setConversationContact] = useState<Contact | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [detailsContact, setDetailsContact] = useState<Contact | null>(null);
-  const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<BaseFilter[]>([]);
-  const [appliedFilters, setAppliedFilters] = useState<AppliedFilter[]>([]);
-  const [importModalOpen, setImportModalOpen] = useState(false);
+  // Pílula + popover (fase 4). Viram as linhas de `activeFilters`.
+  const [pilula, setPilula] = useState<PilulaDeContatos>('todos');
+  const [filtrosPopover, setFiltrosPopover] = useState<FiltrosDoPopover>(FILTROS_VAZIOS);
+  const { users: equipe } = useAccountUsers();
+  const { user: eu } = useAuth();
+  const corretor = useCorretorLogado();
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [eventsModalOpen, setEventsModalOpen] = useState(false);
   const [eventsContact, setEventsContact] = useState<Contact | null>(null);
@@ -333,26 +338,8 @@ export default function Contacts() {
     setState(prev => ({ ...prev, selectedContactIds: [] }));
   };
 
-  const convertFiltersToApplied = (filters: BaseFilter[]): AppliedFilter[] => {
-    return filters.map((filter, index) => ({
-      id: `filter-${index}`,
-      label: `${filter.attributeKey}: ${
-        Array.isArray(filter.values) ? filter.values.join(',') : filter.values
-      }`,
-      value: Array.isArray(filter.values)
-        ? String(filter.values.join(','))
-        : (filter.values as string | number),
-      onRemove: () => handleRemoveFilter(index),
-    }));
-  };
-
-  const handleOpenFilter = () => {
-    setFilterModalOpen(true);
-  };
-
   const handleApplyFilters = async (filters: BaseFilter[]) => {
     setActiveFilters(filters);
-    setAppliedFilters(convertFiltersToApplied(filters));
     setSelectAllMatching(false);
 
     setState(prev => ({
@@ -453,20 +440,10 @@ export default function Contacts() {
     }
   };
 
-  const handleClearFilters = () => {
-    setActiveFilters([]);
-    setAppliedFilters([]);
-    clearSelection();
-    loadContacts({ page: 1 });
-  };
-
-  const handleRemoveFilter = (index: number) => {
-    const newFilters = activeFilters.filter((_, i) => i !== index);
-    if (newFilters.length === 0) {
-      handleClearFilters();
-    } else {
-      handleApplyFilters(newFilters);
-    }
+  const aplicarFiltros = (proximaPilula: PilulaDeContatos, proximosFiltros: FiltrosDoPopover) => {
+    setPilula(proximaPilula);
+    setFiltrosPopover(proximosFiltros);
+    handleApplyFilters(linhasDoFiltro(proximosFiltros, proximaPilula, eu?.id ? String(eu.id) : null));
   };
 
   const handlePageChange = (page: number) => {
@@ -572,11 +549,7 @@ export default function Contacts() {
 
   // removed unused
 
-  // Import/Export
-  const handleImportContacts = () => {
-    setImportModalOpen(true);
-  };
-
+  // Export
   const handleExportContacts = () => {
     setExportModalOpen(true);
   };
@@ -757,8 +730,18 @@ export default function Contacts() {
         setEditingContact(null);
       } else {
         // Create new contact
-        await contactsService.createContact(data);
-        toast.success(t('messages.createSuccess'));
+        const criado = await contactsService.createContact(data);
+        // Mandado pra roleta: o contato é OFERECIDO a um corretor e só ganha
+        // dono quando ele aceita. A tela diz a quem foi, ou que ninguém pegou.
+        if (criado?.roleta) {
+          const quem = criado.roleta.offered_to?.name;
+          // Cliente com o aceite desligado: a roleta já grava o dono na hora.
+          if (criado.default_assignee?.name) toast.success(`Contato salvo e entregue a ${criado.default_assignee.name} pela roleta.`);
+          else if (quem) toast.success(`Contato salvo e oferecido a ${quem} pela roleta.`);
+          else toast.warning('Contato salvo, mas a roleta não achou corretor disponível. Ele ficou sem responsável.');
+        } else {
+          toast.success(t('messages.createSuccess'));
+        }
 
         // Close modal and clear editing state
         setContactModalOpen(false);
@@ -853,54 +836,41 @@ export default function Contacts() {
         searchValue={state.searchQuery}
         onSearchChange={handleSearchChange}
         onNewContact={handleCreateContact}
-        onImport={handleImportContacts}
         onExport={handleExportContacts}
-        onFilter={handleOpenFilter}
         onBulkDelete={handleBulkDelete}
         onMergeContacts={handleMergeContacts}
         onClearSelection={clearSelection}
         allMatchingSelected={selectAllMatching}
         onSelectAllMatching={() => setSelectAllMatching(true)}
-        activeFilters={appliedFilters}
-        showFilters={true}
+        filtros={
+          <ContactsFiltros
+            pilula={pilula}
+            onPilula={p => aplicarFiltros(p, filtrosPopover)}
+            filtros={filtrosPopover}
+            onFiltros={f => aplicarFiltros(pilula, f)}
+            daEquipe={!corretor}
+            users={equipe}
+          />
+        }
       />
       </div>
 
-      {/* Atalhos de filtro rápido */}
-      <ContactQuickFilters activeFilters={activeFilters} onApply={handleApplyFilters} />
-
-      {/* View Mode Toggle */}
-      <div className="flex items-center justify-end mb-3" data-tour="contacts-view-toggle">
-        <div className="flex items-center border rounded-lg">
-          <Button
-            variant={viewMode === 'cards' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('cards')}
-            aria-label="Ver em cartões"
-            title="Ver em cartões"
-            className="border-0 rounded-r-none"
-          >
-            <Grid3X3 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'table' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('table')}
-            aria-label="Ver em tabela"
-            title="Ver em tabela"
-            className="border-0 rounded-l-none"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
       {/* Content */}
-      <div className="flex-1 overflow-auto" data-tour="contacts-list">
+      <div className="mt-4 flex-1 overflow-auto" data-tour="contacts-list">
         {state.loading.list ? (
           <div className="flex items-center justify-center py-16">
             <div className="text-muted-foreground">{t('loading.contacts')}</div>
           </div>
+        ) : state.contacts.length === 0 && (activeFilters.length > 0 || state.searchQuery.trim()) ? (
+          // Lista vazia por busca ou filtro não convida a cadastrar o primeiro.
+          <EmptyState
+            tipo="semResultado"
+            icon={Users}
+            title="Nenhum contato com esses filtros"
+            description="Troque a busca ou limpe os filtros."
+            aoLimparFiltros={activeFilters.length > 0 ? () => aplicarFiltros('todos', FILTROS_VAZIOS) : undefined}
+            className="h-full"
+          />
         ) : state.contacts.length === 0 ? (
           <EmptyState
             icon={Users}
@@ -912,21 +882,21 @@ export default function Contacts() {
             }}
             className="h-full"
           />
-        ) : viewMode === 'cards' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {state.contacts.map(contact => (
-              <ContactCard
-                key={contact.id}
-                contact={contact}
-                onViewDetails={handleContactClick}
-                onStartConversation={handleStartConversation}
-                onEdit={handleEditContact}
-                onDelete={handleDeleteContact}
-                onViewEvents={handleViewEvents}
-              />
-            ))}
-          </div>
         ) : (
+          <>
+            {/* Celular: cartões. Computador: a tabela. Sem alternador — cada
+                tela tem o formato que funciona nela. */}
+            <div className="space-y-2 md:hidden">
+              {state.contacts.map(contact => (
+                <ContactCartaoMovel
+                  key={contact.id}
+                  contact={contact}
+                  onAbrir={handleContactClick}
+                  onConversa={handleStartConversation}
+                />
+              ))}
+            </div>
+            <div className="hidden md:block">
           <ContactsTable
             contacts={state.contacts}
             selectedContacts={state.contacts.filter(contact =>
@@ -964,6 +934,8 @@ export default function Contacts() {
               });
             }}
           />
+            </div>
+          </>
         )}
       </div>
 
@@ -1089,25 +1061,6 @@ export default function Contacts() {
           loadContacts();
         }}
       />
-
-      {/* Contacts Filter Modal */}
-      <ContactsFilter
-        open={filterModalOpen}
-        onOpenChange={setFilterModalOpen}
-        filters={activeFilters}
-        onFiltersChange={setActiveFilters}
-        onApplyFilters={handleApplyFilters}
-        onClearFilters={handleClearFilters}
-      />
-
-      {/* Contact Import Modal (com mapeamento de colunas e etiqueta) */}
-      <Suspense fallback={null}>
-        <ImportLeadsModal
-          open={importModalOpen}
-          onOpenChange={setImportModalOpen}
-          onImported={() => loadContacts()}
-        />
-      </Suspense>
 
       {/* Contact Export Modal */}
       <ContactExportModal

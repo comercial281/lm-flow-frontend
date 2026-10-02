@@ -1,14 +1,14 @@
+import type React from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   Plus,
   Download,
-  Upload,
   Trash2,
   Merge,
   CheckCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
-import { BaseHeader, HeaderAction, HeaderFilter } from '@/components/base';
+import { BaseHeader, HeaderAction } from '@/components/base';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { contactsHeaderGates } from './contactsHeaderGates';
@@ -19,17 +19,15 @@ interface ContactsHeaderProps {
   searchValue: string;
   onSearchChange: (value: string) => void;
   onNewContact: () => void;
-  onImport: () => void;
   onExport: () => void;
-  onFilter: () => void;
   onBulkDelete: () => void;
   onMergeContacts: () => void;
   onClearSelection: () => void;
   /** true quando a seleção alcança todos os contatos da consulta, não só a página. */
   allMatchingSelected?: boolean;
   onSelectAllMatching?: () => void;
-  activeFilters?: HeaderFilter[];
-  showFilters?: boolean;
+  /** Pílulas e "Filtros" (ContactsFiltros), na linha da busca. */
+  filtros?: React.ReactNode;
 }
 
 export default function ContactsHeader({
@@ -38,16 +36,13 @@ export default function ContactsHeader({
   searchValue,
   onSearchChange,
   onNewContact,
-  onImport,
   onExport,
-  onFilter,
   onBulkDelete,
   onMergeContacts,
   onClearSelection,
   allMatchingSelected = false,
   onSelectAllMatching,
-  activeFilters = [],
-  showFilters = true,
+  filtros,
 }: ContactsHeaderProps) {
   const { t } = useLanguage('contacts');
   const { can, isReady } = useUserPermissions();
@@ -64,28 +59,23 @@ export default function ContactsHeader({
   const gates = contactsHeaderGates(ff, isReady, can);
 
   const primaryAction: HeaderAction | undefined = gates.create ? {
-    label: t('header.newContact'),
+    label: 'Novo contato',
     icon: <Plus className="h-4 w-4" />,
     onClick: onNewContact,
     dataTour: 'contacts-new-button',
   } : undefined;
 
-  const secondaryActions: HeaderAction[] = [
-    ...(gates.export ? [{
-      label: t('header.export'),
-      icon: <Download className="h-4 w-4" />,
-      onClick: onExport,
-      variant: 'outline' as const,
-      iconOnly: true,
-    }] : []),
-    ...(gates.import ? [{
-      label: t('header.import'),
-      icon: <Upload className="h-4 w-4" />,
-      onClick: onImport,
-      variant: 'outline' as const,
-      iconOnly: true,
-    }] : []),
-  ];
+  // Só Exportar, com texto (decisão do dono, 02/10/2026). O Importar saiu de
+  // Contatos pra todo mundo: planilha entra pelo Bolsão e pelo quadro do funil,
+  // que distribuem; aqui ela virava contato solto, sem dono nem funil.
+  const secondaryActions: HeaderAction[] = gates.export
+    ? [{
+        label: 'Exportar',
+        icon: <Download className="h-4 w-4" />,
+        onClick: onExport,
+        variant: 'outline' as const,
+      }]
+    : [];
 
   const bulkActions: HeaderAction[] = [
     // Mesclar exige escolher quem fica e quem some, contato a contato — não faz
@@ -134,24 +124,20 @@ export default function ContactsHeader({
 
   return (
     <BaseHeader
-      title={t('header.title')}
-      subtitle={t('header.subtitle')}
+      title="Contatos"
       totalCount={totalCount}
       // No modo "todos", o número que importa é o do conjunto inteiro — mostrar
       // os 20 da página faria o usuário achar que o delete só pega a página.
       selectedCount={allMatchingSelected ? totalCount : selectedCount}
       searchValue={searchValue}
       onSearchChange={onSearchChange}
-      searchPlaceholder={t('header.searchPlaceholder')}
+      searchPlaceholder="Buscar por nome ou celular"
       primaryAction={primaryAction}
       secondaryActions={secondaryActions}
       bulkActions={bulkActions}
-      filters={activeFilters}
-      onFilterClick={onFilter}
-      showFilters={showFilters}
-      filterButtonDataTour="contacts-filter-button"
       onClearSelection={onClearSelection}
       selectionExtra={selectionExtra}
+      aoLadoDaBusca={filtros}
     />
   );
 }

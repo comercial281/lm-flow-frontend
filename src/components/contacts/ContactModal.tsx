@@ -1,10 +1,8 @@
-import { useLanguage } from '@/hooks/useLanguage';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  ScrollArea,
 } from '@/components/ui/ds';
 import { Contact, ContactFormData } from '@/types/contacts';
 import ContactForm from './ContactForm';
@@ -26,34 +24,21 @@ export default function ContactModal({
   loading = false,
   onSubmit,
 }: ContactModalProps) {
-  const { t } = useLanguage('contacts');
-
-  const handleCancel = () => {
-    onOpenChange(false);
-  };
-
-  const handleSubmit = (data: ContactFormData) => {
-    onSubmit(data);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0">
+      {/* A rolagem mora dentro do formulário, pra o rodapé com Salvar ficar fixo. */}
+      <DialogContent className="max-w-2xl max-h-[90dvh] gap-0 overflow-hidden p-0">
         <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle className="text-xl">
-            {isNew ? t('form.title.new') : t('form.title.edit')}
-          </DialogTitle>
+          <DialogTitle className="text-xl">{isNew ? 'Novo contato' : 'Editar contato'}</DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-80px)] px-6 py-4">
-          <ContactForm
-            contact={contact}
-            isNew={isNew}
-            loading={loading}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-          />
-        </ScrollArea>
+        <ContactForm
+          contact={contact}
+          isNew={isNew}
+          loading={loading}
+          onSubmit={onSubmit}
+          onCancel={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
   );
