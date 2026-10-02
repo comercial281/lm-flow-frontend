@@ -31,7 +31,7 @@ import SystemMessage from '@/components/chat/messages/SystemMessage';
 import ReplyPreview from '@/components/chat/messages/ReplyPreview';
 import MessageReactions from '@/components/chat/messages/MessageReactions';
 import { FacebookCommentModeration } from '@/types/channels/inbox';
-import { agentDisplayNameFor } from '@/features/numbers/messageAuthor';
+import { agentDisplayNameFor, isFollowupMessage } from '@/features/numbers/messageAuthor';
 
 interface MessageBubbleProps {
   message: Message;
@@ -106,6 +106,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   // As duas regras acima, mais a mensagem digitada no celular de número sem
   // dono ("· pelo celular", fase 2b.2), moram em features/numbers/messageAuthor.ts.
   const agentDisplayName = agentDisplayNameFor(message);
+  // Follow-up automático ganha selo próprio, amarelo, no lugar de "Atendente".
+  const isFollowup = isFollowupMessage(message);
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -434,13 +436,19 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         {/* 📛 Nome do Agente: mostrar para mensagens de agentes (lado direito) */}
         {isOwn && isFromAgent && (
           <div className="text-xs mb-1 flex items-center justify-end gap-1.5 text-muted-foreground">
-            <Badge variant="outline" className="h-4 px-1 text-[10px] font-medium bg-primary/10 text-primary border border-primary/30 dark:bg-primary/20 dark:text-primary dark:border-primary/50">
-              {t('messages.messageBubble.agent.badge')}
-            </Badge>
+            {isFollowup ? (
+              <Badge variant="outline" className="h-4 px-1 text-[10px] font-medium bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700">
+                {t('messages.messageBubble.followup.badge')}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="h-4 px-1 text-[10px] font-medium bg-primary/10 text-primary border border-primary/30 dark:bg-primary/20 dark:text-primary dark:border-primary/50">
+                {t('messages.messageBubble.agent.badge')}
+              </Badge>
+            )}
             {/* Sem nome, fica só o selo. O texto de reserva era a MESMA palavra do
                 selo, então mensagem automática saía como "Atendente Atendente" —
                 hoje isso valeria para todo o follow-up, não só para a IA Vendedora. */}
-            {agentDisplayName}
+            {!isFollowup && agentDisplayName}
           </div>
         )}
 
