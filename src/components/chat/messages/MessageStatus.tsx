@@ -63,11 +63,11 @@ const MessageStatus: React.FC<MessageStatusProps> = ({ message, isOwn, onRetry }
       case 'sent':
         // Para mensagens privadas, 'sent' é o status final correto
         // Para mensagens públicas, 'sent' indica que foi enviada para o canal
-        return <Check className="h-3 w-3 text-muted-foreground" />;
+        return <Check className="h-3 w-3 text-muted-foreground" aria-label="Enviado" />;
       case 'delivered':
-        return <CheckCheck className="h-3 w-3 text-muted-foreground" />;
+        return <CheckCheck className="h-3 w-3 text-muted-foreground" aria-label="Recebido" />;
       case 'read':
-        return <CheckCheck className="h-3 w-3 text-primary" />;
+        return <CheckCheck className="h-3 w-3 text-[#53bdeb]" aria-label="Visto" />;
       case 'progress':
         return <Loader2 className="h-3 w-3 text-blue-500 animate-spin" />;
       case 'failed':

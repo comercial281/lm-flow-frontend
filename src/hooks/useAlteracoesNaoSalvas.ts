@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 
 // ── ALTERAÇÃO NÃO SALVA: A TELA AVISA ANTES DE PERDER ───────────────────────
@@ -75,6 +76,7 @@ export const PEDIDO_SAIR_SEM_SALVAR = {
  */
 export function useGuardaDeSaida() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  const navigate = useNavigate();
 
   const aoClicar = useCallback(
     async (e: React.MouseEvent) => {
@@ -94,10 +96,14 @@ export function useGuardaDeSaida() {
         // fecha o menu do celular e abre o submenu de Contatos/Bolsão).
         // navigate(destino) direto pulava esse onClick.
         limparPendentes();
-        (link as HTMLElement).click();
+        // Link que saiu da tela enquanto o diálogo estava aberto (item de popover
+        // do menu recolhido fecha ao perder o foco): clicar no nó solto não faz
+        // nada, então navega direto pro destino guardado.
+        if (link.isConnected) (link as HTMLElement).click();
+        else navigate(destino);
       }
     },
-    [confirmar],
+    [confirmar, navigate],
   );
 
   return { aoClicar, dialogoDeConfirmacao };

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { useState } from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Link, Routes, Route } from 'react-router-dom';
 import {
@@ -119,6 +120,33 @@ describe('alteração não salva', () => {
     expect(await screen.findByText('chegou na outra')).toBeInTheDocument();
     expect(fecharMenu).toHaveBeenCalledTimes(1);
     expect(temAlteracaoPendente()).toBe(false);
+  });
+
+  it('link que sumiu da tela enquanto o diálogo estava aberto: navega pro destino guardado', async () => {
+    function MenuQueSome() {
+      const { aoClicar, dialogoDeConfirmacao } = useGuardaDeSaida();
+      const [aberto, setAberto] = useState(true);
+      return (
+        <nav onClickCapture={aoClicar}>
+          {/* Como o item do popover do menu recolhido: some quando o foco vai pro diálogo. */}
+          {aberto && <Link to="/outra" onMouseDown={() => setTimeout(() => setAberto(false), 0)}>Outra tela</Link>}
+          {dialogoDeConfirmacao}
+        </nav>
+      );
+    }
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <MenuQueSome />
+        <Routes>
+          <Route path="/" element={<Tela sujo />} />
+          <Route path="/outra" element={<p>chegou na outra</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await userEvent.click(screen.getByText('Outra tela'));
+    await waitFor(() => expect(screen.queryByText('Outra tela')).not.toBeInTheDocument());
+    await userEvent.click(await screen.findByRole('button', { name: 'Sair sem salvar' }));
+    expect(await screen.findByText('chegou na outra')).toBeInTheDocument();
   });
 
   it('link que só abre submenu passa direto, mesmo com alteração', async () => {

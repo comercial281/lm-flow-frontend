@@ -4145,7 +4145,7 @@ O que aparece na tela:
   rola se passar da tela. Abrir e fechar seção desliza (grade de `0fr` a `1fr`,
   200 ms); com "reduzir movimento" no sistema, sem animação. Seção fechada fica
   no DOM com `inert` + `aria-hidden`, fora do Tab e do leitor de tela.
-- **Recolhido:** só ícones, com um traço entre as seções.
+- **Recolhido:** um ícone por seção, que abre a lista da seção ao passar o mouse (ver "Menu recolhido por seção e Conversas recolhe o menu", mais abaixo).
 - **Nome da conta na barra do topo** (computador): só com o menu recolhido. Com
   o menu aberto o cartão já mostra o nome, e o selo no centro do topo repetia
   (pedido do dono, 01/10/2026). No celular o nome continua embaixo da logo: lá
@@ -4216,6 +4216,59 @@ Armadilhas:
 3. **Aba cujo endereço é começo do de outra** (`/bolsao` e `/bolsao/listas`)
    precisa de `exata: true`, senão as duas acendem.
 
+
+## Menu recolhido por seção e Conversas recolhe o menu (desde 2026-10-02)
+
+Três ajustes de Conversas no mesmo PR. O menu recolhido mostrava todos os itens
+como ícones soltos (uma coluna comprida); o painel do lead de Conversas precisava
+de mais largura; e o "visto" das mensagens não parecia o do WhatsApp.
+
+O que aparece na tela:
+
+- **Visto azul como o WhatsApp.** Enviada: 1 visto cinza. Entregue: 2 vistos
+  cinza. Lida: 2 vistos azuis. Para o leitor de tela:
+  *Enviado*, *Recebido*, *Visto*.
+- **Menu recolhido, um ícone por seção.** Ficam os itens da seção Principal
+  (Dashboard, Conversas, Funil de vendas, Visitas) e, abaixo, um ícone para cada
+  outra seção (Imóveis, Leads, Vendas e automação, Minha imobiliária). Passar o
+  mouse abre uma caixinha com os itens da seção; clicar num item vai para a
+  página e fecha a caixinha. O ícone da seção da página atual fica destacado. A
+  caixinha demora 150 ms para fechar, para dar tempo de levar o mouse até ela.
+- **Conversas recolhe o menu sozinho**, para o painel do lead caber. Quem abre
+  o menu pelo botão em Conversas fica com ele aberto até sair de Conversas.
+  Ao ir para qualquer outra tela, o menu volta ao que a pessoa deixou salvo.
+- **Mensagens antigas continuam com 1 visto.** O servidor só passa a marcar o
+  status certo daqui para frente (PR #363 do backend).
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Conversas recolhe o menu para o painel do lead caber, e essa escolha não
+  fica salva.** Recolher ali não troca a preferência da pessoa: quem deixou o
+  menu aberto o encontra aberto no Dashboard.
+- **Recolhido = um ícone por seção**, não um ícone por item.
+- **Vistos do WhatsApp:** 1 cinza enviada, 2 cinza entregue, 2 azuis lida.
+- **Mensagem antiga não é corrigida.** Fica com 1 visto.
+
+Armadilhas:
+
+1. **A regra mora em `src/components/layout/menuRecolhidoEm.ts`** (função pura, com
+   spec). No `MainLayout`, `salvo` é a preferência gravada em
+   `localStorage['sidebar-collapsed']` e `escolhaNaVisita` é o clique da visita,
+   que nunca é gravado. O botão do menu em Conversas mexe só em `escolhaNaVisita`.
+2. **O botão do topo e o `Sidebar` recebem o MESMO valor** (`menuRecolhido(...)`).
+   Não calcule "recolhido" em outro lugar.
+3. **`MenuRecolhido` usa o mesmo filtro e o mesmo `itemAtivo` do menu aberto**
+   (as `secoes` já filtradas por cargo, função do cliente e arquivamento).
+   Item que o cargo não vê não aparece na caixinha; seção vazia não ganha ícone.
+4. **A rota de Conversas é `/conversations` e `/conversations/:id`**, a mesma regex
+   do botão de Sugestões/Bugs (`/conversations-old` não conta).
+5. **Voltar para Conversas começa recolhido de novo**: a escolha da visita zera
+   ao sair.
+6. **O azul do visto é cor própria**, não a cor primária da marca, para não
+   mudar quando o cliente troca o tema.
+7. **O hover não pode puxar o foco** (Conversas tem o campo de mensagem); abrir por
+   clique ou teclado pode. Abrir por hover tem atraso de intenção (150 ms), pra
+   passar o mouse pela barra não abrir caixa por cima da lista.
 
 ## O logo novo do LM Flow (desde 2026-10-01)
 
