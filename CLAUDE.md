@@ -4953,7 +4953,7 @@ O que aparece na tela: no computador, toda lista migrada abre a lista do produto
 no celular e no tablet, a do sistema (a rodinha do iPhone). Neste PR: Imóveis
 (lista, cadastro e mapa), Roleta, ficha do contato, card do lead (interesses e
 follow-up), Agenda (folgas e horário), destino do lead, desativar usuário, portais
-e o formulário da landing. O resto vem em dois PRs (spec abaixo).
+e o formulário da landing. O resto vem em dois PRs (spec no fim desta seção).
 
 Decisões (não reabrir sem o dono pedir):
 

@@ -122,7 +122,7 @@ export default function PropertiesMap() {
           <Seletor
             value={filterTransaction}
             onChange={e => setFilterTransaction(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm w-44"
           >
             <option value="">Tipo de negócio</option>
             {Object.entries(TRANSACTION_TYPE_LABELS).map(([v, l]) => (
@@ -132,7 +132,7 @@ export default function PropertiesMap() {
           <Seletor
             value={filterType}
             onChange={e => setFilterType(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm w-52"
           >
             <option value="">Tipo de imóvel</option>
             {Object.entries(PROPERTY_TYPE_LABELS).map(([v, l]) => (

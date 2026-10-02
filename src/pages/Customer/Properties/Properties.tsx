@@ -827,7 +827,7 @@ export default function Properties() {
           <Seletor
             value={filterTransaction}
             onChange={e => applyFilter(filterStatus, filterType, e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm w-44"
           >
             <option value="">Tipo de negócio</option>
             {Object.entries(TRANSACTION_TYPE_LABELS).map(([v, l]) => (
@@ -838,7 +838,7 @@ export default function Properties() {
           <Seletor
             value={filterType}
             onChange={e => applyFilter(filterStatus, e.target.value, filterTransaction)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm w-52"
           >
             <option value="">Tipo de imóvel</option>
             {Object.entries(PROPERTY_TYPE_LABELS).map(([v, l]) => (
@@ -849,7 +849,7 @@ export default function Properties() {
           <Seletor
             value={filterStatus}
             onChange={e => escolherStatus(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm w-36"
           >
             <option value="">Status</option>
             {Object.entries(STATUS_LABELS).map(([v, l]) => (
@@ -2113,7 +2113,7 @@ function PropertyPhotosDialog({
           <Seletor
             value={newType}
             onChange={e => setNewType(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm w-48"
             disabled={uploading}
           >
             {Object.entries(PHOTO_TYPE_LABELS).map(([v, l]) => (

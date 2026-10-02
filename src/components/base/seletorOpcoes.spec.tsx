@@ -68,8 +68,8 @@ describe('valorExibido', () => {
     expect(valorExibido('zzz', itens)).toBe(VALOR_VAZIO);
     expect(valorExibido(undefined, lerItens(<option value="a">A</option>))).toBe('a');
   });
-  it('sem opção nenhuma devolve undefined', () => {
-    expect(valorExibido('a', [])).toBeUndefined();
+  it('sem opção nenhuma devolve texto vazio', () => {
+    expect(valorExibido('a', [])).toBe('');
   });
   it('acha opção dentro de grupo', () => {
     const g = lerItens(<optgroup label="G"><option value="x">X</option></optgroup>);

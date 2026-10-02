@@ -83,9 +83,9 @@ export const deRadix = (valor: string) => (valor === VALOR_VAZIO ? '' : valor);
 
 // O que a caixa mostra, já no formato do Radix. Valor que não casa com nenhuma
 // opção mostra a primeira, que é o que o <select> nativo faz.
-export function valorExibido(valor: unknown, itens: ItemDoSeletor[]): string | undefined {
+export function valorExibido(valor: unknown, itens: ItemDoSeletor[]): string {
   const opcoes = todasAsOpcoes(itens);
-  if (!opcoes.length) return undefined;
+  if (!opcoes.length) return '';
   const procurado = comoTexto(valor);
   const achada = opcoes.find(o => o.valor === procurado) ?? opcoes[0];
   return paraRadix(achada.valor);

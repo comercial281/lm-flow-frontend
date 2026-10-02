@@ -111,7 +111,7 @@ Cada peça mora em `src/components/base/` (ou `src/hooks/`). A regra de uso vale
 `scripts/conferir-padrao.mjs` conta, na tela do cliente, estas categorias:
 - termo técnico, palavra fora do glossário e palavra sem acento;
 - Maiúscula Em Toda Palavra e plural com parênteses;
-- formatação fora do módulo, chave feita à mão e botão só-ícone sem nome.
+- formatação fora do módulo, chave feita à mão, botão só-ícone sem nome e lista de escolha nativa.
 
 O build reprova se alguma passar do teto em `scripts/conferir-padrao.tetos.json`.
 - **Ver onde:** `node scripts/conferir-padrao.mjs --listar <categoria>`.
