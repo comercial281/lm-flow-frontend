@@ -181,6 +181,9 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
           {/* <select> antigo */}
           <select value="a"><option value="a">Ana</option></select>
           <NativeSelect value="b"><option value="b">Bia</option></NativeSelect>
+          /** Id do <select> de dentro...
+          {/*
+          menu"). Um <select> mostra uma linha só, fechado. */}
         </div>
       );`,
     );

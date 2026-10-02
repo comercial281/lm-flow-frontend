@@ -159,6 +159,7 @@ const CHAVE_DA_CASA = 'src/components/base/Chave.tsx';
 // celular. Spec: LM FLOW/specs/2026-10-02-seletor-unico-design.md.
 const SELECT_NATIVO = /<select(?=[\s>]|$)|<NativeSelect\b/;
 const SELETOR_DA_CASA = 'src/components/base/Seletor.tsx';
+const COMECO_DE_COMENTARIO = /^(\{?\/\*|\*)/;
 
 // Atributos e propriedades cujo valor é texto que aparece na tela.
 const ATRIBUTOS_DE_TEXTO = new Set([
@@ -397,7 +398,14 @@ export function varrer() {
       if (limpa.startsWith('//') || limpa.startsWith('*')) return;
       if (!MODULOS_DE_FORMATO.includes(rel) && FORMATO.some(re => re.test(l))) anotar('formato', rel, i + 1, 'formatação fora do módulo', l.trim());
       if (rel !== CHAVE_DA_CASA && CHAVE_A_MAO.test(l)) anotar('chaveMao', rel, i + 1, 'role="switch" feito à mão', l.trim());
-      if (rel !== SELETOR_DA_CASA && !limpa.startsWith('{/*') && SELECT_NATIVO.test(l)) anotar('selectNativo', rel, i + 1, 'lista nativa fora do Seletor', l.trim());
+      // selectNativo: pula linhas que começam com comentário ou têm */ após a tag
+      if (rel !== SELETOR_DA_CASA && SELECT_NATIVO.test(l) && !COMECO_DE_COMENTARIO.test(limpa)) {
+        const match = SELECT_NATIVO.exec(l);
+        const afterMatch = match ? l.substring(match.index + match[0].length) : '';
+        if (!afterMatch.includes('*/')) {
+          anotar('selectNativo', rel, i + 1, 'lista nativa fora do Seletor', l.trim());
+        }
+      }
     });
   }
 
