@@ -10,7 +10,7 @@ import type { BlocoApi } from './types';
 export type Visao = 'gestor' | 'corretor';
 
 export type BlocoId =
-  | 'imoveis' | 'numeros' | 'pendencias' | 'proximas_visitas' | 'roleta_agora'
+  | 'imoveis' | 'numeros' | 'pendencias' | 'proximas_visitas' | 'roleta_agora' | 'minha_vez'
   | 'atendimento_time' | 'funil' | 'resultados'
   | 'leads_dia_semana' | 'leads_horario' | 'leads_seis_meses' | 'origem' | 'mapa_calor';
 
@@ -31,6 +31,8 @@ export const CATALOGO: Record<BlocoId, BlocoCatalogo> = {
   pendencias:       bloco({ id: 'pendencias', titulo: 'Pendências', visoes: ['gestor', 'corretor'], api: ['pending'], seguePeriodo: false, ligado: true }),
   proximas_visitas: bloco({ id: 'proximas_visitas', titulo: 'Próximas visitas', visoes: ['gestor', 'corretor'], api: ['upcoming'], seguePeriodo: false, ligado: true }),
   roleta_agora:     bloco({ id: 'roleta_agora', titulo: 'Roleta agora', visoes: ['gestor'], api: [], seguePeriodo: false, ligado: true }),
+  // A posição do corretor nas roletas em modo Fila. Busca o próprio dado e some sem roleta Fila.
+  minha_vez:        bloco({ id: 'minha_vez', titulo: 'Sua vez na fila', visoes: ['corretor'], api: [], seguePeriodo: false, ligado: true }),
   atendimento_time: bloco({ id: 'atendimento_time', titulo: 'Atendimento do time', visoes: ['gestor'], api: ['team'], seguePeriodo: true, ligado: true }),
   funil:            bloco({ id: 'funil', titulo: 'Funil', visoes: ['gestor', 'corretor'], api: ['pipeline'], seguePeriodo: false, ligado: true }),
   resultados:       bloco({ id: 'resultados', titulo: 'Resultados', visoes: ['gestor'], api: ['results'], seguePeriodo: true, ligado: true }),
@@ -65,7 +67,9 @@ export const LINHAS: Record<Visao, Linha[]> = {
     { colunas: [['mapa_calor']] },
   ],
   corretor: [
-    { colunas: [['pendencias']] },
+    // Sem roleta Fila o cartão não desenha nada, a coluna some (`.lmfn-coluna:empty`)
+    // e as Pendências ocupam a linha inteira, como antes.
+    { colunas: [['pendencias'], ['minha_vez']] },
     { colunas: [['numeros']] },
     { colunas: [['proximas_visitas'], ['funil']] },
     { colunas: [['imoveis'], ['leads_dia_semana']] },

@@ -189,7 +189,7 @@ export default function Header({
         {/* Left side - aligned with sidebar */}
         <div
           className={cn(
-            'flex items-center justify-between transition-all duration-300 ease-in-out px-4 relative',
+            'flex items-center justify-between transition-[width] duration-200 ease-out motion-reduce:transition-none overflow-hidden px-4 relative',
             isCollapsed ? 'w-16' : 'w-60',
           )}
         >
@@ -230,7 +230,7 @@ export default function Header({
             nome, então aqui só aparece com o menu recolhido (onde o cartão some). */}
         <div className="flex-1 flex items-center justify-center min-w-0 px-4">
           {isCollapsed && account?.name && (
-            <div className="flex items-center gap-2 min-w-0 rounded-md bg-primary/10 px-3 py-1.5">
+            <div className="flex items-center gap-2 min-w-0 rounded-md bg-primary/10 px-3 py-1.5 animate-in fade-in duration-200 motion-reduce:animate-none">
               <Building2 className="h-4 w-4 text-primary flex-shrink-0" />
               <span className="lm-redact truncate text-sm font-semibold text-sidebar-foreground">
                 {account.name}

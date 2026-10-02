@@ -662,7 +662,7 @@ export default function EditItemModal({
               />
             </div>
 
-            <CapiConversionPanel contactId={contato?.id ?? null} pipelineItemId={item.id} compacto />
+            <CapiConversionPanel contactId={contato?.id ?? null} pipelineItemId={item.id} variante="compacto" />
 
             {/* Rodapé fixo da coluna */}
             <div className="mt-auto pt-2 border-t border-border">

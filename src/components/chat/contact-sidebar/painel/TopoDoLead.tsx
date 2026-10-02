@@ -1,5 +1,6 @@
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Copy, ExternalLink, Pencil, X } from 'lucide-react';
+import { Copy, Pencil, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import IconActionButton from '@/components/base/IconActionButton';
@@ -19,16 +20,18 @@ interface TopoDoLeadProps {
    * nome é o telefone), sem e-mail, sem copiar, sem editar.
    */
   emOferta: boolean;
-  origem: { rotulo: string; link: string | null } | null;
+  /** A faixa de selos (etapa, temperatura, origem, espera), logo abaixo do nome. */
+  selos?: ReactNode;
   outra: { id: string; numero: string; mais: number } | null;
   onClose: () => void;
 }
 
 /**
- * Topo do painel do lead: quem é, de onde veio e se já conversou por outro
+ * Topo do painel do lead: quem é, a faixa de selos (em que etapa está, a
+ * temperatura, de onde veio, há quanto espera) e se já conversou por outro
  * número. Sem o "Online" (era fixo no código e aparecia para todo lead).
  */
-export default function TopoDoLead({ contact, emOferta, origem, outra, onClose }: TopoDoLeadProps) {
+export default function TopoDoLead({ contact, emOferta, selos, outra, onClose }: TopoDoLeadProps) {
   const navigate = useNavigate();
   const { abrir: editar, modal } = useEditarContato(contact);
 
@@ -92,25 +95,7 @@ export default function TopoDoLead({ contact, emOferta, origem, outra, onClose }
         </div>
       </div>
 
-      {origem && (
-        <p className="text-xs text-muted-foreground">
-          {T.veioDe} <span className="font-medium text-foreground">{origem.rotulo}</span>
-          {origem.link && (
-            <>
-              {' · '}
-              <a
-                href={origem.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-0.5 text-primary hover:underline"
-              >
-                {T.verAnuncio}
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            </>
-          )}
-        </p>
-      )}
+      {selos}
 
       {outra && (
         <p className="text-xs text-muted-foreground">
