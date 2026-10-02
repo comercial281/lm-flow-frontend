@@ -8,6 +8,7 @@ import MenuSecoes from './MenuSecoes';
 import { useGuardaDeSaida } from '@/hooks/useAlteracoesNaoSalvas';
 import { useAppDataStore } from '@/store/appDataStore';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMenuRecolhidoAtrasado } from '../menuRecolhidoAtrasado';
 import { itemAtivo, type MenuItem as MenuItemType, type MenuSection } from '../config/menuItems';
 
 // WhatsApp de suporte da Leal Mídia (o mesmo "Preciso de suporte" de antes).
@@ -46,6 +47,9 @@ export default function Sidebar({ isCollapsed, secoes, rodape }: SidebarProps) {
   const { pathname } = useLocation();
   // Fase 3: com alteração não salva na tela, clicar no menu pergunta antes.
   const { aoClicar: guardarSaida, dialogoDeConfirmacao } = useGuardaDeSaida();
+  // A largura segue `isCollapsed` na hora; o conteúdo só vira "recolhido" quando a
+  // largura termina de fechar (ao abrir, na hora). Ver armadilha 8 no CLAUDE.md.
+  const recolhido = useMenuRecolhidoAtrasado(isCollapsed);
 
   return (
     <>
@@ -75,41 +79,42 @@ export default function Sidebar({ isCollapsed, secoes, rodape }: SidebarProps) {
             // do movimento.
             className={cn(
               'flex-1 min-h-0 overflow-y-auto px-3 py-4 shrink-0',
-              isCollapsed ? 'w-16' : 'w-60 [scrollbar-gutter:stable]',
+              // -1px: a borda do container come 1px da largura; sem isso o nav corta.
+              recolhido ? 'w-[calc(4rem-1px)]' : 'w-[calc(15rem-1px)] [scrollbar-gutter:stable]',
             )}
           >
             {/* O conteúdo trocado entra com um fade curto (key remonta a cada troca). */}
             <div
-              key={isCollapsed ? 'recolhido' : 'aberto'}
+              key={recolhido ? 'recolhido' : 'aberto'}
               className="animate-in fade-in duration-200 motion-reduce:animate-none"
             >
-              {!isCollapsed && <CartaoDaConta />}
-              {isCollapsed ? (
+              {!recolhido && <CartaoDaConta />}
+              {recolhido ? (
                 // Recolhido: itens da seção fixa + um ícone por seção que abre a lista num popover.
                 <MenuRecolhido secoes={secoes} />
               ) : (
                 <MenuSecoes secoes={secoes} />
               )}
-            </div>
 
             {/* Rodapé: Guia do LM Flow e suporte, depois de um divisor. */}
             <div className="mt-3 pt-3 space-y-1 border-t border-sidebar-border">
               {rodape.map(item => (
-                <MenuItem key={item.href} item={item} isCollapsed={isCollapsed} isActive={itemAtivo(item, pathname)} />
+                <MenuItem key={item.href} item={item} isCollapsed={recolhido} isActive={itemAtivo(item, pathname)} />
               ))}
               <a
                 href={SUPORTE_WHATSAPP_URL}
                 target="_blank"
                 rel="noreferrer"
-                title={isCollapsed ? 'Falar com o suporte' : undefined}
+                title={recolhido ? 'Falar com o suporte' : undefined}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-colors',
-                  isCollapsed && 'justify-center',
+                  recolhido && 'justify-center',
                 )}
               >
                 <LifeBuoy className="flex-shrink-0" style={{ width: '1.125rem', height: '1.125rem' }} aria-hidden="true" />
-                {isCollapsed ? <span className="sr-only">Falar com o suporte</span> : <span className="font-medium text-sm whitespace-nowrap">Falar com o suporte</span>}
+                {recolhido ? <span className="sr-only">Falar com o suporte</span> : <span className="font-medium text-sm min-w-0 truncate">Falar com o suporte</span>}
               </a>
+            </div>
             </div>
           </nav>
         </TooltipProvider>

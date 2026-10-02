@@ -78,7 +78,7 @@ export default function MenuSecoes({ secoes, mobile = false, aoNavegar }: MenuSe
               )}
             >
               {Icone && <Icone className="flex-shrink-0" style={{ width: '1.125rem', height: '1.125rem' }} aria-hidden="true" />}
-              <span className="flex-1">{secao.rotulo}</span>
+              <span className="flex-1 min-w-0 truncate text-left">{secao.rotulo}</span>
               <ChevronDown
                 className={cn(
                   'h-3.5 w-3.5 opacity-60 transition-transform duration-200 motion-reduce:transition-none',
