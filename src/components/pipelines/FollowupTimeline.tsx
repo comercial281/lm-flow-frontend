@@ -5,6 +5,7 @@ import {
 import { plural } from '@/lib/formato';
 import { toast } from 'sonner';
 import { Button, Popover, PopoverContent, PopoverTrigger } from '@/components/ui/ds';
+import { Seletor } from '@/components/base/Seletor';
 import {
   leadFollowupService,
   EMPTY_LEAD_FOLLOWUP_STATE,
@@ -241,7 +242,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
             state.sequences.length > 0 ? (
               <>
                 {state.sequences.length > 1 && (
-                  <select
+                  <Seletor
                     className="h-7 text-xs rounded-md border border-border bg-background px-2 max-w-[180px]"
                     value={chosenSlug}
                     disabled={busy}
@@ -253,7 +254,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
                         {s.name} ({s.steps_count} msg)
                       </option>
                     ))}
-                  </select>
+                  </Seletor>
                 )}
                 <Button size="sm" variant="default" className="h-7 text-xs gap-1.5"
                   disabled={busy || (state.sequences.length > 1 && !chosenSlug)}

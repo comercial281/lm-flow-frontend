@@ -86,6 +86,7 @@ import PropertyImportDialog from './PropertyImportDialog';
 import PropertyBookDialog from '@/components/properties/PropertyBookDialog';
 import { labelsService } from '@/services/contacts/labelsService';
 import NoAccessState from '@/components/permissions/NoAccessState';
+import { Seletor } from '@/components/base/Seletor';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { lerRecorteImoveis, type FiltroDoLink } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
@@ -823,38 +824,38 @@ export default function Properties() {
             />
           </div>
 
-          <select
+          <Seletor
             value={filterTransaction}
             onChange={e => applyFilter(filterStatus, filterType, e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm w-44"
           >
             <option value="">Tipo de negócio</option>
             {Object.entries(TRANSACTION_TYPE_LABELS).map(([v, l]) => (
               <option key={v} value={v}>{l}</option>
             ))}
-          </select>
+          </Seletor>
 
-          <select
+          <Seletor
             value={filterType}
             onChange={e => applyFilter(filterStatus, e.target.value, filterTransaction)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm w-52"
           >
             <option value="">Tipo de imóvel</option>
             {Object.entries(PROPERTY_TYPE_LABELS).map(([v, l]) => (
               <option key={v} value={v}>{l}</option>
             ))}
-          </select>
+          </Seletor>
 
-          <select
+          <Seletor
             value={filterStatus}
             onChange={e => escolherStatus(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm w-36"
           >
             <option value="">Status</option>
             {Object.entries(STATUS_LABELS).map(([v, l]) => (
               <option key={v} value={v}>{l}</option>
             ))}
-          </select>
+          </Seletor>
 
           {/* Os imóveis que têm destino próprio são poucos entre centenas — sem
               este atalho, achá-los exigiria abrir um por um. */}
@@ -1087,37 +1088,37 @@ export default function Properties() {
 
               <div>
                 <UILabel>Tipo de negócio</UILabel>
-                <select value={f.transaction_type} onChange={e => setF({ transaction_type: e.target.value })}
+                <Seletor value={f.transaction_type} onChange={e => setF({ transaction_type: e.target.value })}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                   {Object.entries(TRANSACTION_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
+                </Seletor>
               </div>
 
               <div>
                 <UILabel>Tipo de imóvel</UILabel>
-                <select value={f.property_type} onChange={e => setF({ property_type: e.target.value })}
+                <Seletor value={f.property_type} onChange={e => setF({ property_type: e.target.value })}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                   {Object.entries(PROPERTY_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
+                </Seletor>
               </div>
 
               <div>
                 <UILabel>Status</UILabel>
-                <select value={f.status} onChange={e => setF({ status: e.target.value })}
+                <Seletor value={f.status} onChange={e => setF({ status: e.target.value })}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                   {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
+                </Seletor>
               </div>
 
               <div>
                 <UILabel>Situação da obra</UILabel>
-                <select value={f.stage} onChange={e => setF({ stage: e.target.value })}
+                <Seletor value={f.stage} onChange={e => setF({ stage: e.target.value })}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                   <option value="ready">Pronto</option>
                   <option value="in_construction">Em construção</option>
                   <option value="launch">Lançamento</option>
                   <option value="pre_launch">Pré-lançamento</option>
-                </select>
+                </Seletor>
               </div>
             </div>
             </div>
@@ -1246,14 +1247,14 @@ export default function Properties() {
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
               <div>
                 <UILabel>Corretor responsável</UILabel>
-                <select
+                <Seletor
                   value={f.responsible_id ?? ''}
                   onChange={e => setF({ responsible_id: e.target.value || null })}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="">Nenhum</option>
                   {tenantUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
+                </Seletor>
 
                 {/* A exceção por IMÓVEL: tira este anúncio da roleta / do destino
                     do portal e entrega ao responsável acima. Fica COLADA no
@@ -1280,27 +1281,27 @@ export default function Properties() {
               </div>
               <div>
                 <UILabel>Captador</UILabel>
-                <select
+                <Seletor
                   value={f.captor_id ?? ''}
                   onChange={e => setF({ captor_id: e.target.value || null })}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="">Nenhum</option>
                   {tenantUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
+                </Seletor>
               </div>
               {/* Etiqueta do imóvel: o lead que entra pela página deste imóvel é etiquetado
                   com essa etiqueta. Assim o funil fica geral e a etiqueta identifica o imóvel. */}
               <div>
                 <UILabel>Etiqueta do imóvel</UILabel>
-              <select
+              <Seletor
                 value={f.label_id ?? ''}
                 onChange={e => setF({ label_id: e.target.value || null })}
                 className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="">Gerar automaticamente pelo título</option>
                 {labels.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
-              </select>
+              </Seletor>
               <div className="mt-2 flex gap-2">
                 <Input
                   value={newTagName}
@@ -2109,16 +2110,16 @@ function PropertyPhotosDialog({
 
         <div className="flex items-center gap-3">
           <UILabel className="text-xs text-muted-foreground shrink-0">Categorizar como:</UILabel>
-          <select
+          <Seletor
             value={newType}
             onChange={e => setNewType(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm w-48"
             disabled={uploading}
           >
             {Object.entries(PHOTO_TYPE_LABELS).map(([v, l]) => (
               <option key={v} value={v}>{l}</option>
             ))}
-          </select>
+          </Seletor>
           <button
             type="button"
             onClick={() => setShowUrlInput(s => !s)}

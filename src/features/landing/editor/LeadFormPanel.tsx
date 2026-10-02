@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { GripVertical, Plus, Trash2 } from 'lucide-react';
-import { NativeSelect } from '@/components/ui/native-select';
+import { Seletor } from '@/components/base/Seletor';
 import { labelsService } from '@/services/contacts/labelsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import type { BlockConfig, BlockInstance, LeadFormStep } from '@/features/landing/blocks';
@@ -235,7 +235,7 @@ function OptionRow({
 
           <label className="block">
             <span className="mb-1 block text-xs text-muted-foreground">Se responder isto, vai para</span>
-            <NativeSelect value={nextValue} onChange={(e) => onNextChange(e.target.value)}>
+            <Seletor className="w-full" value={nextValue} onChange={(e) => onNextChange(e.target.value)}>
               <option value="next">A próxima pergunta</option>
               {laterSteps.map((s, i) => (
                 <option key={s.id} value={`question:${s.id}`}>
@@ -245,7 +245,7 @@ function OptionRow({
               <option value="contact">Os dados de contato</option>
               <option value="finish:thankyou">Encerrar na tela de obrigado</option>
               <option value="finish:disqualified">Encerrar na tela de desqualificado</option>
-            </NativeSelect>
+            </Seletor>
           </label>
 
           <div className="rounded-md border border-dashed border-border p-2">
@@ -255,7 +255,7 @@ function OptionRow({
               pergunta com destino, vale a última que ele respondeu.
             </p>
             <div className="space-y-1.5">
-              <NativeSelect
+              <Seletor className="w-full"
                 value={dest.pipeline_id ?? ''}
                 onChange={(e) => patchDest({ pipeline_id: e.target.value || null })}
               >
@@ -265,9 +265,9 @@ function OptionRow({
                     {p.label}
                   </option>
                 ))}
-              </NativeSelect>
+              </Seletor>
               {dest.pipeline_id && (
-                <NativeSelect
+                <Seletor className="w-full"
                   value={dest.stage_id ?? ''}
                   onChange={(e) => patchDest({ stage_id: e.target.value || null })}
                 >
@@ -277,9 +277,9 @@ function OptionRow({
                       {s.label}
                     </option>
                   ))}
-                </NativeSelect>
+                </Seletor>
               )}
-              <NativeSelect
+              <Seletor className="w-full"
                 value={dest.label_id ?? ''}
                 onChange={(e) => patchDest({ label_id: e.target.value || null })}
               >
@@ -289,7 +289,7 @@ function OptionRow({
                     {l.label}
                   </option>
                 ))}
-              </NativeSelect>
+              </Seletor>
             </div>
           </div>
         </div>
@@ -427,10 +427,10 @@ export function LeadFormPanel({ block }: { block: BlockInstance }) {
           label="Onde mostrar o resultado"
           hint="Página própria dá um endereço separado, que o Pixel mede como visita própria."
         >
-          <NativeSelect value={config.resultMode} onChange={(e) => set({ resultMode: e.target.value as 'inline' | 'url' })}>
+          <Seletor className="w-full" value={config.resultMode} onChange={(e) => set({ resultMode: e.target.value as 'inline' | 'url' })}>
             <option value="inline">Na mesma página</option>
             <option value="url">Numa página própria</option>
-          </NativeSelect>
+          </Seletor>
         </Field>
       </Group>
     </div>

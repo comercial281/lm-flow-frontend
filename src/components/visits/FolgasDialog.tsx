@@ -17,7 +17,7 @@ import {
   Button, Checkbox, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
   Input, Label as UILabel,
 } from '@/components/ui/ds';
-import { NativeSelect } from '@/components/ui/native-select';
+import { Seletor } from '@/components/base/Seletor';
 import { EscolhaCorretor } from '@/components/visits/EscolhaCorretor';
 import { agendaService, type TimeOff } from '@/services/visits/agendaService';
 import { visitsService, type PersonRef } from '@/services/visits/visitsService';
@@ -236,15 +236,15 @@ export function FolgasDialog({ open, onOpenChange, soMinhas }: Props) {
               <div className="flex flex-wrap items-end gap-3">
                 <div className="w-32">
                   <UILabel htmlFor="folga_das">Das</UILabel>
-                  <NativeSelect id="folga_das" className="mt-1" value={das} onChange={e => setDas(e.target.value)}>
+                  <Seletor id="folga_das" className="mt-1 w-full" value={das} onChange={e => setDas(e.target.value)}>
                     {HORAS.map(h => <option key={h} value={h}>{h}</option>)}
-                  </NativeSelect>
+                  </Seletor>
                 </div>
                 <div className="w-32">
                   <UILabel htmlFor="folga_ate">Até</UILabel>
-                  <NativeSelect id="folga_ate" className="mt-1" value={ate} onChange={e => setAte(e.target.value)}>
+                  <Seletor id="folga_ate" className="mt-1 w-full" value={ate} onChange={e => setAte(e.target.value)}>
                     {HORAS.map(h => <option key={h} value={h}>{h}</option>)}
-                  </NativeSelect>
+                  </Seletor>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">A faixa vale em cada dia do período.</p>

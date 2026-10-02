@@ -5110,6 +5110,51 @@ Armadilhas:
 3. As visitas vêm do mesmo `GET /visits` da Agenda, com o recorte do servidor:
    corretor vê só as visitas dele.
 
+4. Ficou pra próxima entrega: aba **Visitas e propostas** (spec, entrega 3).
+
+## Lista de escolha: o Seletor (desde 2026-10-02)
+
+Relato do dono do produto, com print do filtro *Tipo de negócio* de Imóveis: metade
+das listas de escolha abria a lista cinza do sistema operacional — no Windows, a
+lista do Windows. Ninguém tinha decidido isso: o fork usa o Select do design system,
+e as telas escritas aqui usaram `<select>` cru porque ele aceita a opção vazia
+("Todos"), que o Select do design system recusa com erro.
+
+O que aparece na tela: no computador, toda lista migrada abre a lista do produto;
+no celular e no tablet, a do sistema (a rodinha do iPhone). Neste PR: Imóveis
+(lista, cadastro e mapa), Roleta, ficha do contato, card do lead (interesses e
+follow-up), Agenda (folgas e horário), destino do lead, desativar usuário, portais
+e o formulário da landing. O resto vem em dois PRs (spec no fim desta seção).
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Computador = lista do produto, celular = lista do sistema.**
+- **O widget de chat e o portal público continuam com a lista do sistema**: outro
+  público, outro visual, e o widget vive num iframe que mede a própria altura.
+- **Uma peça só (`Seletor`), com a mesma entrada do `<select>`.** Migrar é trocar
+  a tag; nenhuma tela reescreve lógica.
+
+Armadilhas:
+
+1. **A trava `selectNativo` (`conferir-padrao.mjs`) só desce.** `<select>` novo na
+   tela do cliente reprova o build. Use o `Seletor`.
+2. **A altura do Select do design system é presa por `data-size`.** O `Seletor`
+   manda `data-size="livre"` e põe `h-9` como classe comum, para `h-7` da tela
+   valer. Não tire.
+3. **Sem `matchMedia` (testes) ele é nativo.** É o que mantém os specs com
+   `selectOptions` valendo. O modo do computador tem testes próprios
+   (`Seletor.spec.tsx`), com `matchMedia` simulado e os polyfills de ponteiro do
+   Radix.
+4. **A lista abre em `z-[1200]`**, acima dos modais próprios (`z-[200]`) e do mapa
+   (`z-[1000]`). Janela nova com camada maior que isso esconde a lista.
+5. **Import pelo arquivo** (`@/components/base/Seletor`), nunca pelo índice.
+6. **Não é `featureKey` nem `clientToggleKey`**, e não tem metade de backend.
+7. **No celular é um `<select>` só, com a seta desenhada no fundo e sem largura
+   padrão:** tela que quer largura cheia passa `w-full`.
+
+Spec e plano: `LM FLOW/specs/2026-10-02-seletor-unico-design.md` e
+`LM FLOW/plans/2026-10-02-seletor-unico-pr1.md` (pasta do Tony, fora deste repo).
+
 ## Selo *Follow-up automático* nas Conversas (desde 2026-10-02)
 
 Pedido do dono do produto: a mensagem que saiu pelo follow-up automático aparecia
