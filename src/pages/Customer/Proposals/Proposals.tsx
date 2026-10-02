@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { formatDateBR } from '@/utils/dateUtils';
-import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import {
   Search, Plus, FileText, Building2, User, TrendingUp,
-  Send, CheckCircle, XCircle, RefreshCw, ChevronDown,
+  Send, CheckCircle, XCircle, RefreshCw, ChevronDown, X,
 } from 'lucide-react';
 import {
   Button,
@@ -22,29 +21,22 @@ import {
   DropdownMenuTrigger,
   Label,
   Textarea,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/components/ui/ds';
 import {
   proposalsService,
   Proposal,
-  ProposalFormData,
   PROPOSAL_STATUS_LABELS,
   PROPOSAL_STATUS_COLORS,
   PROPOSAL_TYPE_LABELS,
 } from '@/services/proposals/proposalsService';
-import { propertiesService, Property } from '@/services/properties/propertiesService';
-import { LeadCombobox } from '@/components/visits/LeadCombobox';
-import { LeadPickerItem } from '@/services/visits/visitsService';
+import ProposalFormDialog from '@/components/proposals/ProposalFormDialog';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { dinheiro } from '@/lib/formato';
 import { lerFiltroPropostas, type FiltroDoLink } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
+import IconActionButton from '@/components/base/IconActionButton';
 
 function formatCurrency(value?: number | null): string {
   return dinheiro(value);
@@ -54,28 +46,6 @@ function formatDate(iso?: string | null): string {
   if (!iso) return '-';
   return formatDateBR(iso);
 }
-
-interface ProposalFormState {
-  property_id: string;
-  contact_id: string;
-  proposal_type: 'purchase' | 'rent';
-  offered_value: string;
-  down_payment: string;
-  installments: string;
-  payment_method: string;
-  conditions: string;
-}
-
-const EMPTY_FORM: ProposalFormState = {
-  property_id: '',
-  contact_id: '',
-  proposal_type: 'purchase',
-  offered_value: '',
-  down_payment: '',
-  installments: '',
-  payment_method: '',
-  conditions: '',
-};
 
 const STATUS_TABS = [
   { key: '', label: 'Todas' },
@@ -97,8 +67,6 @@ export default function Proposals() {
   const [statusFilter, setStatusFilter] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [editProposal, setEditProposal] = useState<Proposal | null>(null);
-  const [form, setForm] = useState<ProposalFormState>(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
   const [rejectModal, setRejectModal] = useState<RejectModalState>({ open: false, proposalId: '', reason: '' });
   const [counterModal, setCounterModal] = useState<CounterModalState>({ open: false, proposalId: '', value: '' });
   const [recusado, setRecusado] = useState(false);
@@ -106,62 +74,18 @@ export default function Proposals() {
   const [searchParams, setSearchParams] = useSearchParams();
   // Filtro de período que veio de um clique na Dashboard (?desde=&ate=). Lido uma vez ao abrir.
   const [periodoLink, setPeriodoLink] = useState<FiltroDoLink | null>(() => lerFiltroPropostas(searchParams));
-
-  // Property combobox state (mirrors pattern from Visits.tsx)
-  const [propertyQuery, setPropertyQuery] = useState('');
-  const [propertyResults, setPropertyResults] = useState<Property[]>([]);
-  const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
-  const [propertySearching, setPropertySearching] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const propertyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const propertyWrapperRef = useRef<HTMLDivElement | null>(null);
-
-  // Lead combobox state
-  const [selectedLead, setSelectedLead] = useState<LeadPickerItem | null>(null);
-
-  // Close property dropdown on outside click
-  useEffect(() => {
-    function onDoc(e: MouseEvent) {
-      if (propertyWrapperRef.current && !propertyWrapperRef.current.contains(e.target as Node)) {
-        setShowPropertyDropdown(false);
-      }
-    }
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, []);
-
-  const searchProperties = (q: string) => {
-    setPropertyQuery(q);
-    if (propertyTimeout.current) clearTimeout(propertyTimeout.current);
-    if (!q.trim()) { setPropertyResults([]); setShowPropertyDropdown(false); return; }
-    setPropertySearching(true);
-    propertyTimeout.current = setTimeout(async () => {
-      try {
-        const res = await propertiesService.list({ q, per_page: 8 });
-        setPropertyResults(res.data ?? []);
-        setShowPropertyDropdown(true);
-      } catch { setPropertyResults([]); }
-      finally { setPropertySearching(false); }
-    }, 300);
-  };
-
-  const selectProperty = (p: Property) => {
-    setSelectedProperty(p);
-    setForm(f => ({ ...f, property_id: p.id }));
-    setPropertyQuery(p.title);
-    setShowPropertyDropdown(false);
-  };
-
-  const handleLeadChange = (lead: LeadPickerItem) => {
-    setSelectedLead(lead);
-    setForm(f => ({ ...f, contact_id: lead.id }));
-  };
+  // Filtro de um lead que veio do card dele ("Abrir em Propostas": ?contact_id=&nome=).
+  const [leadDoLink, setLeadDoLink] = useState<{ id: string; nome: string } | null>(() => {
+    const id = searchParams.get('contact_id');
+    return id ? { id, nome: searchParams.get('nome') || 'este lead' } : null;
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
     setRecusado(false);
     try {
       const params: Record<string, string> = { ...(periodoLink?.params ?? {}) };
+      if (leadDoLink) params.contact_id = leadDoLink.id;
       if (statusFilter) params.status = statusFilter;
       const res = await proposalsService.list(params);
       setProposals(res.data);
@@ -171,7 +95,7 @@ export default function Proposals() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, periodoLink]);
+  }, [statusFilter, periodoLink, leadDoLink]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -187,63 +111,13 @@ export default function Proposals() {
   });
 
   const openCreate = () => {
-    setForm(EMPTY_FORM);
     setEditProposal(null);
-    setSelectedProperty(null);
-    setSelectedLead(null);
-    setPropertyQuery('');
-    setPropertyResults([]);
     setCreateOpen(true);
   };
 
   const openEdit = (proposal: Proposal) => {
-    setForm({
-      property_id: proposal.property_id,
-      contact_id: proposal.contact_id,
-      proposal_type: proposal.proposal_type,
-      offered_value: proposal.offered_value?.toString() ?? '',
-      down_payment: proposal.down_payment?.toString() ?? '',
-      installments: proposal.installments?.toString() ?? '',
-      payment_method: proposal.payment_method ?? '',
-      conditions: proposal.conditions ?? '',
-    });
     setEditProposal(proposal);
-    setSelectedProperty(proposal.property ? { id: proposal.property.id, title: proposal.property.title, code: proposal.property.code } as Property : null);
-    setSelectedLead(proposal.contact ? { id: proposal.contact.id, name: proposal.contact.name } as LeadPickerItem : null);
-    setPropertyQuery(proposal.property?.title ?? '');
     setCreateOpen(true);
-  };
-
-  const handleSave = async () => {
-    if (!form.property_id) { toast.error('Selecione um imóvel'); return; }
-    if (!form.contact_id) { toast.error('Selecione um lead'); return; }
-    if (!form.offered_value) { toast.error('Informe o valor ofertado'); return; }
-    setSaving(true);
-    try {
-      const data: ProposalFormData = {
-        property_id: form.property_id,
-        contact_id: form.contact_id,
-        proposal_type: form.proposal_type,
-        offered_value: parseFloat(form.offered_value),
-        ...(form.down_payment && { down_payment: parseFloat(form.down_payment) }),
-        ...(form.installments && { installments: parseInt(form.installments) }),
-        ...(form.payment_method && { payment_method: form.payment_method }),
-        ...(form.conditions && { conditions: form.conditions }),
-      };
-      if (editProposal) {
-        await proposalsService.update(editProposal.id, data);
-        toast.success('Proposta atualizada');
-      } else {
-        await proposalsService.create(data);
-        toast.success('Rascunho criado');
-      }
-      setCreateOpen(false);
-      load();
-    } catch (e) {
-      toast.error(apiErrorMessage(e, 'Erro ao salvar proposta'));
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleSend = async (id: string) => {
@@ -384,6 +258,18 @@ export default function Proposals() {
               </Button>
             ))}
           </div>
+          {leadDoLink && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 py-0.5 pl-2.5 pr-0.5 text-xs font-medium text-primary">
+              Só de {leadDoLink.nome}
+              <IconActionButton
+                label="Ver as propostas de todos"
+                variant="ghost"
+                onClick={() => { setLeadDoLink(null); setSearchParams({}, { replace: true }); }}
+                className="size-6 rounded-full text-primary hover:bg-primary/15 hover:text-primary"
+                icon={<X className="h-3.5 w-3.5" aria-hidden />}
+              />
+            </span>
+          )}
           {periodoLink && (
             <ChipDaDashboard
               rotulo={periodoLink.rotulo}
@@ -443,135 +329,12 @@ export default function Proposals() {
       </div>
 
       {/* Create/Edit Modal */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{editProposal ? 'Editar Proposta' : 'Nova Proposta'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            {/* Property combobox */}
-            <div className="relative" ref={propertyWrapperRef}>
-              <Label>Imóvel *</Label>
-              <div className="relative mt-1">
-                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  placeholder="Buscar imóvel por título, código ou bairro..."
-                  value={propertyQuery}
-                  onChange={e => searchProperties(e.target.value)}
-                  onFocus={() => { if (propertyResults.length) setShowPropertyDropdown(true); }}
-                  className="pl-9"
-                />
-                {propertySearching && (
-                  <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
-                )}
-              </div>
-              {showPropertyDropdown && propertyResults.length > 0 && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-64 overflow-y-auto">
-                  {propertyResults.map(p => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className="w-full text-left px-3 py-2.5 hover:bg-muted/50 border-b border-border last:border-0"
-                      onClick={() => selectProperty(p)}
-                    >
-                      <div className="font-medium text-sm truncate">{p.title}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {[p.code, p.address_neighborhood, p.address_city].filter(Boolean).join(' · ') || '—'}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {selectedProperty && (
-                <div className="text-xs text-muted-foreground mt-1">
-                  Selecionado: <span className="font-medium text-foreground">{selectedProperty.code}</span> · {selectedProperty.title}
-                </div>
-              )}
-            </div>
-
-            {/* Lead combobox */}
-            <LeadCombobox
-              value={selectedLead}
-              onChange={handleLeadChange}
-              label="Lead *"
-              placeholder="Buscar lead ou contato por nome/telefone..."
-            />
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Tipo *</Label>
-                <Select
-                  value={form.proposal_type}
-                  onValueChange={(v: 'purchase' | 'rent') => setForm(f => ({ ...f, proposal_type: v }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="purchase">Compra</SelectItem>
-                    <SelectItem value="rent">Locação</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Valor Ofertado (R$) *</Label>
-                <Input
-                  type="number"
-                  placeholder="0,00"
-                  value={form.offered_value}
-                  onChange={e => setForm(f => ({ ...f, offered_value: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            {form.proposal_type === 'purchase' && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Entrada (R$)</Label>
-                  <Input
-                    type="number"
-                    placeholder="0,00"
-                    value={form.down_payment}
-                    onChange={e => setForm(f => ({ ...f, down_payment: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label>Parcelas</Label>
-                  <Input
-                    type="number"
-                    placeholder="360"
-                    value={form.installments}
-                    onChange={e => setForm(f => ({ ...f, installments: e.target.value }))}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div>
-              <Label>Forma de Pagamento</Label>
-              <Input
-                placeholder="Ex: Financiamento bancário, FGTS..."
-                value={form.payment_method}
-                onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}
-              />
-            </div>
-
-            <div>
-              <Label>Condições / Observações</Label>
-              <Textarea
-                placeholder="Condições específicas da proposta..."
-                value={form.conditions}
-                onChange={e => setForm(f => ({ ...f, conditions: e.target.value }))}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={saving || !form.property_id || !form.contact_id || !form.offered_value}>
-              {saving ? 'Salvando...' : editProposal ? 'Salvar' : 'Criar Rascunho'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProposalFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        proposta={editProposal}
+        onSaved={load}
+      />
 
       {/* Reject Modal */}
       <Dialog open={rejectModal.open} onOpenChange={(o: boolean) => setRejectModal(s => ({ ...s, open: o }))}>

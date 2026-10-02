@@ -4,7 +4,7 @@
 import { SOURCE_META } from '@/features/leadOrigin/origem';
 import { normalizeFormAnswers, extraAttributeRows, type FormAnswerRow } from '@/components/pipelines/formAnswers';
 import type { PipelineItem } from '@/types/analytics';
-import type { LeadPickerItem } from '@/services/visits/visitsService';
+import type { LeadPickerItem, Visit } from '@/services/visits/visitsService';
 
 type ContatoDoCard = {
   id?: string | number;
@@ -95,4 +95,24 @@ export function leadParaVisita(item: PipelineItem, nomeExibido: string): LeadPic
     pipeline_id: item.pipeline_id ?? null,
     owner: item.assignee ? { id: String(item.assignee.id), name: item.assignee.name } : null,
   };
+}
+
+// Visita que já aconteceu (ou devia ter acontecido) pede o retorno do corretor.
+const STATUS_SEM_FEEDBACK_ESPERADO = new Set(['cancelled', 'rescheduled']);
+
+/**
+ * "Sem feedback": a hora da visita já passou, ela não foi cancelada nem
+ * remarcada, e ninguém registrou nota nem comentário. É o que a aba Visitas e
+ * propostas destaca para o corretor completar.
+ */
+export function visitaSemFeedback(visita: Pick<Visit, 'status' | 'scheduled_at' | 'rating' | 'feedback_notes'>, agora: Date = new Date()): boolean {
+  if (STATUS_SEM_FEEDBACK_ESPERADO.has(visita.status)) return false;
+  const quando = new Date(visita.scheduled_at);
+  if (Number.isNaN(quando.getTime()) || quando > agora) return false;
+  return visita.rating == null && !visita.feedback_notes?.trim();
+}
+
+/** Visitas da mais recente para a mais antiga. */
+export function visitasEmOrdem<T extends { scheduled_at: string }>(visitas: T[]): T[] {
+  return [...visitas].sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
 }

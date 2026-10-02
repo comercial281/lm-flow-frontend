@@ -4,7 +4,7 @@
 //   - ESQUERDA, fixa e sem rolagem: quem é, situação (etapa, responsável,
 //     origem), os três botões (visita, conversa, IA), etiquetas, follow-up numa
 //     linha, conversão Meta numa linha e Ganho | Perdido no rodapé;
-//   - DIREITA, abas: Detalhes · Conversa · Origem.
+//   - DIREITA, abas: Detalhes · Conversa · Visitas e propostas · Origem.
 // Tudo grava na hora (não existe mais "Salvar alterações"). Nome, telefone e
 // e-mail não se editam aqui: o lápis de telefone/e-mail só aparece quando o
 // servidor diz (`identity_correctable` — gestor, lead cadastrado à mão).
@@ -32,7 +32,7 @@ import {
   PopoverTrigger,
   Badge,
 } from '@/components/ui/ds';
-import { Plus, Check, Loader2, X, Pencil, Phone, Mail, Shuffle, ClipboardList, MessageSquare, Megaphone } from 'lucide-react';
+import { Plus, Check, Loader2, X, Pencil, Phone, Mail, Shuffle, ClipboardList, MessageSquare, Megaphone, CalendarCheck } from 'lucide-react';
 import Abas from '@/components/base/Abas';
 import { PipelineItem, PipelineStage, Pipeline } from '@/types/analytics';
 import { lazyWithRetry } from '@/utils/chunkReload';
@@ -63,6 +63,7 @@ import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
 
 const CardConversationTab = lazyWithRetry(() => import('./CardConversationTab'));
+const VisitsProposalsTab = lazyWithRetry(() => import('./card/VisitsProposalsTab'));
 const CreateRoletaModal = lazyWithRetry(() => import('./CreateRoletaModal'));
 const RemoveFromRoletaDialog = lazyWithRetry(() => import('@/components/roleta/RemoveFromRoletaDialog'));
 const CorrigirContatoDialog = lazyWithRetry(() => import('./card/CorrigirContatoDialog'));
@@ -677,6 +678,7 @@ export default function EditItemModal({
               abas={[
                 { chave: 'overview', rotulo: 'Detalhes', icone: ClipboardList },
                 { chave: 'conversation', rotulo: 'Conversa', icone: MessageSquare },
+                { chave: 'visits', rotulo: 'Visitas e propostas', icone: CalendarCheck },
                 { chave: 'origin', rotulo: 'Origem', icone: Megaphone },
               ]}
               ativa={activeTab}
@@ -702,6 +704,12 @@ export default function EditItemModal({
                     item={item}
                     onAgendarEnvio={canScheduleAction && contato?.id != null ? texto => setAgendandoEnvio(texto) : undefined}
                   />
+                </Suspense>
+              )}
+
+              {activeTab === 'visits' && (
+                <Suspense fallback={null}>
+                  <VisitsProposalsTab item={item} nomeExibido={nomeExibido} />
                 </Suspense>
               )}
 

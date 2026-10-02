@@ -28,7 +28,7 @@ const texto = (r: QueuePosition) => {
  * uma oferta dele chega ou sai (é quando a fila anda para ele). Sem roleta Fila,
  * ou contra o servidor antigo, o cartão não aparece.
  *
- * Mais de uma roleta: um cartão só, com setas e arrastando para o lado.
+ * Mais de uma roleta: um cartão só, com as setas embaixo e arrastando para o lado.
  */
 export const MinhaVez: React.FC<ContextoBloco> = ({ visao }) => {
   const ativo = visao === 'corretor';
@@ -115,7 +115,7 @@ export const MinhaVez: React.FC<ContextoBloco> = ({ visao }) => {
   const mostraNumero = atual.situacao === 'na_fila' && !atual.com_oferta && atual.posicao !== null;
 
   return (
-    <GlassCard title="Sua vez na fila" action={setas}>
+    <GlassCard title="Sua vez na fila" className="lmfn-vez-card" bodyClassName="lmfn-vez-corpo">
       <div
         className="lmfn-vez"
         data-testid="minha-vez-arraste"
@@ -123,14 +123,17 @@ export const MinhaVez: React.FC<ContextoBloco> = ({ visao }) => {
         onPointerUp={e => soltar(e.clientX)}
         onPointerCancel={() => { inicioX.current = null; }}
       >
-        <p className="lmf-card-sub" style={{ marginTop: 0 }}>{atual.roleta_nome}</p>
-        {mostraNumero && (
-          <p className="lmfn-vez-numero">
-            <strong>{`${numero(atual.posicao)}º`}</strong>
-            <span>{`de ${numero(atual.total)} na fila`}</span>
-          </p>
-        )}
-        <p className="lmfn-vez-texto">{texto(atual)}</p>
+        <div className="lmfn-vez-centro">
+          <p className="lmfn-vez-roleta">{atual.roleta_nome}</p>
+          {mostraNumero && (
+            <p className="lmfn-vez-numero">
+              <strong>{`${numero(atual.posicao)}º`}</strong>
+              <span>{`de ${numero(atual.total)} na fila`}</span>
+            </p>
+          )}
+          <p className="lmfn-vez-texto">{texto(atual)}</p>
+        </div>
+        {setas}
       </div>
     </GlassCard>
   );
