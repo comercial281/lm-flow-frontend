@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { menuRecolhido, ROTA_CONVERSAS } from './menuRecolhidoEm';
 import {
   Button,
   Dialog,
@@ -60,7 +61,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
 
   // Estados do layout
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // `salvo` é a preferência da pessoa (gravada). Em Conversas o menu recolhe
+  // sozinho, sem mexer nela; `escolhaNaVisita` guarda só o clique da visita.
+  const [salvo, setSalvo] = useState(false);
+  const [escolhaNaVisita, setEscolhaNaVisita] = useState<boolean | null>(null);
+  const emConversas = ROTA_CONVERSAS.test(useLocation().pathname);
+  const isCollapsed = menuRecolhido({ salvo, emConversas, escolhaNaVisita });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
@@ -83,18 +89,23 @@ export default function MainLayout({ children }: MainLayoutProps) {
     loadDelay: 1000, // Defer slightly to not block initial render
   });
 
+  // Ao sair de Conversas a escolha da visita some.
+  useEffect(() => {
+    if (!emConversas) setEscolhaNaVisita(null);
+  }, [emConversas]);
+
   // Load saved sidebar state
   useEffect(() => {
     const savedState = localStorage.getItem('sidebar-collapsed');
     if (savedState) {
-      setIsCollapsed(JSON.parse(savedState));
+      setSalvo(JSON.parse(savedState));
     }
   }, []);
 
   // Save sidebar state
   useEffect(() => {
-    localStorage.setItem('sidebar-collapsed', JSON.stringify(isCollapsed));
-  }, [isCollapsed]);
+    localStorage.setItem('sidebar-collapsed', JSON.stringify(salvo));
+  }, [salvo]);
 
   // Menu em seções (fase 4), já filtrado por cargo, função do cliente e
   // arquivamento. A MESMA lista desenha o menu, a gaveta do celular, a busca e
@@ -131,7 +142,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
   };
 
   const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
+    if (emConversas) setEscolhaNaVisita(!isCollapsed);
+    else setSalvo(!salvo);
   };
 
   // Se não há usuário, não renderizar o layout
