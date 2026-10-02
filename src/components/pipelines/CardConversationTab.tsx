@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button, Textarea } from '@/components/ui/ds';
-import { MessageCircle, Send, Loader2, RefreshCw, Paperclip, Rocket, Bell, X, Mic, Archive, ArchiveX } from 'lucide-react';
+import { MessageCircle, Send, Loader2, RefreshCw, Paperclip, Rocket, Clock, X, Mic, Archive, ArchiveX } from 'lucide-react';
 
 const OPENAI_KEY = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
 
@@ -50,7 +50,12 @@ import type { Message, Conversation, Attachment } from '@/types/chat/api';
 
 interface CardConversationTabProps {
   item: PipelineItem;
-  onCreateReminder?: () => void;
+  /**
+   * Agendar o envio do que está escrito na caixa (abre o agendamento de mensagem
+   * com o texto). Substituiu o "Criar lembrete", que criava Retorno — a aba
+   * Retorno saiu do card (nenhum cliente usava; spec 2026-10-02).
+   */
+  onAgendarEnvio?: (texto: string) => void;
 }
 
 const POLL_INTERVAL_MS = 8_000;
@@ -169,7 +174,7 @@ function MessageBubble({ m, isOutgoing }: { m: Message; isOutgoing: boolean }) {
   );
 }
 
-export default function CardConversationTab({ item, onCreateReminder }: CardConversationTabProps) {
+export default function CardConversationTab({ item, onAgendarEnvio }: CardConversationTabProps) {
   // conversationId: prioriza conversa direta do item, depois whatsapp_conversation_id
   // (form leads que têm conversa WA associada ao contato mas não ao pipeline item).
   const conversationId =
@@ -433,14 +438,15 @@ export default function CardConversationTab({ item, onCreateReminder }: CardConv
             >
               <Rocket className="h-4 w-4" />
             </button>
-            {onCreateReminder && (
+            {onAgendarEnvio && (
               <button
                 type="button"
-                title="Criar lembrete"
-                onClick={onCreateReminder}
+                title="Agendar envio"
+                aria-label="Agendar envio"
+                onClick={() => onAgendarEnvio(text)}
                 className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
               >
-                <Bell className="h-4 w-4" />
+                <Clock className="h-4 w-4" />
               </button>
             )}
           </div>

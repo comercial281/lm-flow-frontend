@@ -48,6 +48,8 @@ interface ScheduleActionModalProps {
   onClose: () => void;
   contactId?: string;
   action?: ScheduledAction | null;
+  /** Texto já digitado (a caixa da conversa no card do lead abre daqui). */
+  mensagemInicial?: string;
 }
 
 type DelayUnit = 'minutes' | 'hours' | 'days';
@@ -98,6 +100,7 @@ export function ScheduleActionModal({
   onClose,
   contactId: initialContactId,
   action,
+  mensagemInicial,
 }: ScheduleActionModalProps) {
   const { t } = useLanguage('contacts');
   const [loading, setLoading] = useState(false);
@@ -314,6 +317,20 @@ export function ScheduleActionModal({
     const p = (n: number) => String(n).padStart(2, '0');
     return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}T${p(now.getHours())}:${p(now.getMinutes())}`;
   };
+
+  // Abriu com o texto da caixa da conversa (card do lead): ele vira a mensagem
+  // a agendar, do mesmo jeito que a edição de um agendamento preenche.
+  useEffect(() => {
+    if (!open || action || !mensagemInicial?.trim()) return;
+    setFormData(prev => ({ ...prev, action_type: 'send_message', message: mensagemInicial }));
+    setBlocks([
+      {
+        items: [{ ...newSequenceItem('text'), text_content: mensagemInicial }],
+        delayValue: 1,
+        delayUnit: 'days',
+      },
+    ]);
+  }, [open, action, mensagemInicial]);
 
   useEffect(() => {
     if (action) {

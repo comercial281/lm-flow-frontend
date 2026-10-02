@@ -4940,3 +4940,51 @@ Armadilhas:
 12. **Troca rápida de pílula:** `handleApplyFilters` ignora resposta de pedido
     superado (contador em `useFilterHandlers`). "Resolver em massa" e "Tentar de
     novo" recarregam com a pílula e os filtros em uso, não com a lista crua.
+
+## O card do lead em tela única (desde 2026-10-02)
+
+Queixa do dono do produto: o card escondia informação. A aba Detalhes era um
+formulário que rolava, e quem não sabia que dava pra descer não achava etapa,
+roleta, follow-up nem Ganho/Perdido. Spec: `LM FLOW/specs/2026-10-02-fase-4-card-do-lead-design.md`.
+
+O que aparece na tela hoje:
+
+- **Janela quase tela cheia por cima do funil** (fechar volta pro funil; o link
+  `?card=` continua valendo). Duas colunas.
+- **Esquerda, fixa, sem rolagem:** foto, nome, telefone e e-mail (só leitura);
+  Etapa (seletor colorido, muda na hora); Responsável + "veio pela Roleta X";
+  origem numa linha; aviso de sorteio em aberto; **Agendar visita · Conversa ·
+  IA**; etiquetas; follow-up numa linha (a lista abre em "Ver mensagens");
+  Conversão Meta numa linha; **Ganho | Perdido** no rodapé.
+- **Menu "⋯":** Copiar link, Trocar roleta, Remover do funil (com confirmação).
+- **Direita, abas Detalhes · Conversa · Origem.** Detalhes = "O que sabemos do
+  lead" (o que a IA entendeu + respostas do formulário, 4 e "ver todas") +
+  Imóveis de interesse + Histórico | Observações lado a lado. Conversa ganhou o
+  relógio **Agendar envio**, que leva o texto digitado para o agendamento.
+- **Sem botão Salvar.** Tudo grava na hora.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Nome, telefone e e-mail não se editam no card.** O lápis de telefone/e-mail
+  só aparece com `identity_correctable` do servidor (gestor, lead cadastrado à
+  mão); a correção vai pro Histórico. O formulário de Contatos e o "Editar
+  contato" da conversa seguem a mesma trava (`ContactForm`).
+- **Histórico e Observações ficam separados.** Um o sistema escreve sozinho, o
+  outro é o comentário que o corretor escolheu deixar.
+- **Aba Retorno saiu** (nenhum cliente tinha um retorno sequer, 02/10). **Aba
+  Imóveis saiu** e virou bloco em Detalhes.
+- **Agendar visita usa o modal da Agenda** (`ScheduleVisitDialog` com
+  `leadInicial`), não a janelinha antiga do card, que ignorava horário de visita
+  e folgas.
+- **Follow-up compacto é o MESMO `FollowupTimeline`** (prop `compacto`): estado,
+  comandos e lista com uma fonte só, como na decisão de 31/08.
+
+Armadilhas:
+
+1. A coluna esquerda não pode crescer: bloco novo ali tem que caber em
+   1366×768. Coisa que cresce (listas, textos) vai pra direita.
+2. `onSubmit` do `EditItemModal` não é mais chamado; os três lugares que abrem o
+   card ainda passam a prop (opcional).
+3. Regras puras do card em `src/features/cardDoLead/cardDoLead.ts` (com spec):
+   contato/conversa do card, lápis, respostas, origem curta, lead para visita.
+4. Ficou pra próxima entrega: aba **Visitas e propostas** (spec, entrega 3).

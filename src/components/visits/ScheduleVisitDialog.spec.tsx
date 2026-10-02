@@ -313,3 +313,30 @@ describe('Agendar visita', () => {
     expect(leadPickerPage).toHaveBeenCalledWith('', 1, 50);
   });
 });
+
+// O card do lead abre o modal da Agenda já com o cliente: o corretor não procura
+// de novo quem ele está olhando, e a visita segue o horário e as folgas da Agenda
+// (a janelinha antiga do card não seguia).
+describe('Agendar visita · aberto pelo card do lead', () => {
+  it('gestor: o cliente já vem escolhido e o dono dele marcado como corretor', async () => {
+    comoGestor();
+    render(
+      <ScheduleVisitDialog open onOpenChange={vi.fn()} diaInicial={amanha()} leadInicial={LEAD} onCreated={vi.fn()} />,
+    );
+
+    expect(await screen.findByDisplayValue(/Leonardo Teste/)).toBeInTheDocument();
+    expect(await botaoCorretor('Bruno')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('corretor: o cliente já vem escolhido e o corretor continua sendo ele', async () => {
+    comoCorretor();
+    realtors.mockResolvedValue([{ id: 'u-ana', name: 'Ana' }]);
+    render(
+      <ScheduleVisitDialog open onOpenChange={vi.fn()} diaInicial={amanha()} leadInicial={LEAD} onCreated={vi.fn()} />,
+    );
+
+    expect(await screen.findByDisplayValue(/Leonardo Teste/)).toBeInTheDocument();
+    expect(await screen.findByText('Ana')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bruno' })).not.toBeInTheDocument();
+  });
+});

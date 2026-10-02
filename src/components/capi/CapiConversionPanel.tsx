@@ -14,6 +14,12 @@ interface CapiConversionPanelProps {
   contactId?: string | number | null;
   pipelineItemId?: string | number | null;
   className?: string;
+  /**
+   * Uma linha: título + botões, sem o parágrafo de explicação (vira dica no
+   * título) e sem a lista de "enviado em" (vira dica em cada botão). É o modo da
+   * coluna fixa do card do lead, que não pode rolar.
+   */
+  compacto?: boolean;
 }
 
 function formatSentAt(iso: string) {
@@ -41,6 +47,7 @@ export default function CapiConversionPanel({
   contactId,
   pipelineItemId,
   className,
+  compacto,
 }: CapiConversionPanelProps) {
   const [status, setStatus] = useState<CapiManualStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,6 +97,47 @@ export default function CapiConversionPanel({
   if (!hasTarget || loading) return null;
   // Sem nenhum destino pronto pra receber a conversão, a seção não aparece.
   if (!status || !status.can_send) return null;
+
+  if (compacto) {
+    return (
+      <div className={`flex items-center gap-1.5 flex-wrap ${className ?? ''}`}>
+        <span
+          className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 mr-1"
+          title="Isso alimenta os anúncios, não substitui o CRM. Marque como o lead terminou para o Meta aprender quem vale a pena buscar."
+        >
+          <TrendingUp className="h-3.5 w-3.5" />
+          Conversão Meta
+        </span>
+        {status.events.map((event) => {
+          const sent = Boolean(event.sent_at);
+          const isSending = sending === event.event_name;
+          const enviadoEm = sent
+            ? ` · enviado em ${formatSentAt(event.sent_at as string)}${event.sent_by ? ` por ${event.sent_by}` : ''}`
+            : '';
+          return (
+            <Button
+              key={event.event_name}
+              type="button"
+              size="sm"
+              variant={sent ? 'default' : 'outline'}
+              disabled={Boolean(sending)}
+              onClick={() => handleSend(event)}
+              title={`${CAPI_MANUAL_HINTS[event.event_name] ?? ''}${enviadoEm}`}
+              className="h-6 px-2 text-[11px] gap-1"
+            >
+              {isSending ? <Loader2 className="h-3 w-3 animate-spin" /> : sent ? <Check className="h-3 w-3" /> : null}
+              {CAPI_MANUAL_LABELS[event.event_name] ?? event.event_name}
+            </Button>
+          );
+        })}
+        {!status.client_ready && (
+          <span className="text-[10px] text-amber-600" title="Pixel ou chave do cliente incompletos em Automações, Pixel/CAPI.">
+            configuração incompleta
+          </span>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={`rounded-lg border border-border p-3 space-y-3 ${className ?? ''}`}>

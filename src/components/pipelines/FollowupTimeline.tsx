@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { plural } from '@/lib/formato';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/ds';
+import { Button, Popover, PopoverContent, PopoverTrigger } from '@/components/ui/ds';
 import {
   leadFollowupService,
   EMPTY_LEAD_FOLLOWUP_STATE,
@@ -75,9 +75,16 @@ interface Props extends LeadRef {
   leadName?: string | null;
   /** Somente leitura: cargo sem permissão de mexer no card. */
   readOnly?: boolean;
+  /**
+   * Uma linha só (estado + próxima + comandos) e a linha do tempo numa janelinha.
+   * É o modo da coluna fixa do card do lead, que não pode rolar. Continua sendo
+   * ESTE componente, com a mesma fonte: separar estado e lista de novo é o erro
+   * de 31/08 (as duas metades discordavam na tela).
+   */
+  compacto?: boolean;
 }
 
-export default function FollowupTimeline({ contactId, conversationId, leadName, readOnly }: Props) {
+export default function FollowupTimeline({ contactId, conversationId, leadName, readOnly, compacto }: Props) {
   const [jobs, setJobs] = useState<LeadFollowupJob[]>([]);
   const [state, setState] = useState<LeadFollowupState>(EMPTY_LEAD_FOLLOWUP_STATE);
   const [loading, setLoading] = useState(true);
@@ -176,21 +183,10 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
     ? `${Math.min(state.sent_count, state.total_steps)} de ${state.total_steps} mensagens`
     : `${state.sent_count} mensagem(ns) enviada(s)`;
 
-  return (
-    <div className="space-y-2">
-      {/* Estado — o que está acontecendo AGORA com este lead. */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${headline.cls}`}>
-          {headline.label}
-        </span>
-        {state.sequence?.name && (
-          <span className="text-xs font-medium text-foreground">{state.sequence.name}</span>
-        )}
-        {(state.status === 'running' || state.status === 'paused' || state.status === 'done') && (
-          <span className="text-[10px] text-muted-foreground">{stepLabel}</span>
-        )}
-      </div>
+  const proximaCurta = state.status === 'running' && state.next_run_at ? fmt(state.next_run_at) : null;
 
+  const avisos = (
+    <>
       {state.status === 'running' && state.next_run_at && (
         <p className="text-[10px] text-muted-foreground">
           Próxima mensagem em <span className="font-medium text-foreground">{fmt(state.next_run_at)}</span>
@@ -208,7 +204,11 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
           escolher outro funil.
         </p>
       )}
+    </>
+  );
 
+  const comandos = (
+    <>
       {/* Comandos. Só aparecem quando o servidor diz que valem. */}
       {canAct && (
         <div className="flex items-center gap-2 flex-wrap">
@@ -270,7 +270,11 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
           )}
         </div>
       )}
+    </>
+  );
 
+  const linhaDoTempo = (
+    <>
       {/* Linha do tempo dos passos. */}
       <div className="pt-1.5 border-t border-border/60">
         <div className="flex items-center justify-between mb-1.5">
@@ -332,6 +336,62 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
           </p>
         )}
       </div>
+    </>
+  );
+
+  if (compacto) {
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${headline.cls}`}>
+            {headline.label}
+          </span>
+          {(state.status === 'running' || state.status === 'paused' || state.status === 'done') && (
+            <span className="text-[10px] text-muted-foreground">{stepLabel}</span>
+          )}
+          {proximaCurta && (
+            <span className="text-[10px] text-muted-foreground">· próxima {proximaCurta}</span>
+          )}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" className="ml-auto text-[10px] text-primary hover:underline">
+                Ver mensagens
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 max-h-96 overflow-y-auto space-y-2">
+              {state.sequence?.name && (
+                <p className="text-xs font-medium text-foreground">{state.sequence.name}</p>
+              )}
+              {avisos}
+              {linhaDoTempo}
+            </PopoverContent>
+          </Popover>
+        </div>
+        {comandos}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Estado — o que está acontecendo AGORA com este lead. */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${headline.cls}`}>
+          {headline.label}
+        </span>
+        {state.sequence?.name && (
+          <span className="text-xs font-medium text-foreground">{state.sequence.name}</span>
+        )}
+        {(state.status === 'running' || state.status === 'paused' || state.status === 'done') && (
+          <span className="text-[10px] text-muted-foreground">{stepLabel}</span>
+        )}
+      </div>
+
+      {avisos}
+
+      {comandos}
+
+      {linhaDoTempo}
     </div>
   );
 }
