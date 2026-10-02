@@ -4,6 +4,7 @@ import {
   conversaDoCard,
   leadParaVisita,
   origemCurta,
+  classeDaOrigem,
   podeCorrigirContato,
   respostasDoLead,
 } from './cardDoLead';
@@ -87,6 +88,17 @@ describe('origemCurta', () => {
   it('origem desconhecida sem detalhe não aparece', () => {
     expect(origemCurta({ source: 'unknown' })).toBeNull();
     expect(origemCurta(null)).toBeNull();
+  });
+});
+
+describe('classeDaOrigem', () => {
+  it('usa a cor da origem conhecida', () => {
+    expect(classeDaOrigem({ source: 'landing' })).toContain('violet');
+  });
+
+  it('origem desconhecida fica neutra', () => {
+    expect(classeDaOrigem({ source: 'xyz' })).toBe('bg-muted text-muted-foreground');
+    expect(classeDaOrigem(null)).toBe('bg-muted text-muted-foreground');
   });
 });
 

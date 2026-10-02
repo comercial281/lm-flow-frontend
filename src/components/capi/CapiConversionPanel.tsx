@@ -102,7 +102,7 @@ export default function CapiConversionPanel({
     return (
       <div className={`flex items-center gap-1.5 flex-wrap ${className ?? ''}`}>
         <span
-          className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 mr-1"
+          className="text-xs font-medium text-muted-foreground flex items-center gap-1 mr-1"
           title="Isso alimenta os anúncios, não substitui o CRM. Marque como o lead terminou para o Meta aprender quem vale a pena buscar."
         >
           <TrendingUp className="h-3.5 w-3.5" />
@@ -123,7 +123,7 @@ export default function CapiConversionPanel({
               disabled={Boolean(sending)}
               onClick={() => handleSend(event)}
               title={`${CAPI_MANUAL_HINTS[event.event_name] ?? ''}${enviadoEm}`}
-              className="h-6 px-2 text-[11px] gap-1"
+              className="h-8 px-2.5 text-xs gap-1"
             >
               {isSending ? <Loader2 className="h-3 w-3 animate-spin" /> : sent ? <Check className="h-3 w-3" /> : null}
               {CAPI_MANUAL_LABELS[event.event_name] ?? event.event_name}
@@ -131,7 +131,7 @@ export default function CapiConversionPanel({
           );
         })}
         {!status.client_ready && (
-          <span className="text-[10px] text-amber-600" title="Pixel ou chave do cliente incompletos em Automações, Pixel/CAPI.">
+          <span className="text-xs text-amber-600" title="Pixel ou chave do cliente incompletos em Automações, Pixel/CAPI.">
             configuração incompleta
           </span>
         )}

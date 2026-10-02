@@ -21,10 +21,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
   Command,
   CommandEmpty,
   CommandGroup,
@@ -36,7 +32,8 @@ import {
   PopoverTrigger,
   Badge,
 } from '@/components/ui/ds';
-import { Plus, Check, Loader2, X, Megaphone, Pencil, Phone, Mail, Shuffle } from 'lucide-react';
+import { Plus, Check, Loader2, X, Pencil, Phone, Mail, Shuffle, ClipboardList, MessageSquare, Megaphone } from 'lucide-react';
+import Abas from '@/components/base/Abas';
 import { PipelineItem, PipelineStage, Pipeline } from '@/types/analytics';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
@@ -55,7 +52,7 @@ import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/
 import { brokerAssignmentsService, type BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
 import OfferActions from '@/components/roleta/OfferActions';
 import { isPhoneLikeName } from '@/lib/nomeDoContato';
-import { contatoDoCard, conversaDoCard, origemCurta, podeCorrigirContato } from '@/features/cardDoLead/cardDoLead';
+import { classeDaOrigem, contatoDoCard, conversaDoCard, origemCurta, podeCorrigirContato } from '@/features/cardDoLead/cardDoLead';
 import LeadQuickActions from './card/LeadQuickActions';
 import LeadDetailsTab from './card/LeadDetailsTab';
 import CardResultFooter from './card/CardResultFooter';
@@ -396,10 +393,9 @@ export default function EditItemModal({
       }
     : null;
   const corrigivel = podeCorrigirContato(contato);
-  const origem = origemCurta(
-    (item.lead_origin as Record<string, unknown> | null)
-      ?? ((contato?.additional_attributes as { lead_origin?: Record<string, unknown> } | undefined)?.lead_origin ?? null),
-  );
+  const dadosDaOrigem = (item.lead_origin as Record<string, unknown> | null)
+    ?? ((contato?.additional_attributes as { lead_origin?: Record<string, unknown> } | undefined)?.lead_origin ?? null);
+  const origem = origemCurta(dadosDaOrigem);
   const etapaAtual = stages.find(s => s.id.toString() === etapaId);
 
   const handleSaveManualOrigin = async () => {
@@ -463,25 +459,35 @@ export default function EditItemModal({
         <DialogTitle className="sr-only">{nomeExibido}</DialogTitle>
         <DialogDescription className="sr-only">Card do lead</DialogDescription>
 
-        <div className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-[340px_minmax(0,1fr)] overflow-y-auto md:overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-[380px_minmax(0,1fr)] overflow-y-auto md:overflow-hidden">
           {/* ESQUERDA — fixa, nunca rola */}
-          <aside className="flex flex-col gap-3 border-b md:border-b-0 md:border-r border-border p-4 md:min-h-0">
+          <aside className="flex flex-col gap-4 border-b md:border-b-0 md:border-r border-border p-5 md:min-h-0">
             {/* Quem é */}
             <div className="flex items-start gap-3 pr-6">
               {avatarContact && (
                 <ContactAvatar contact={avatarContact} size="md" showColoredFallback className="shrink-0" />
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-base font-semibold lm-redact" title={nomeExibido}>{nomeExibido}</p>
+                <p className="truncate text-xl font-semibold leading-tight lm-redact" title={nomeExibido}>{nomeExibido}</p>
                 {telefoneDoLead && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Phone className="h-3 w-3" /> {telefone(telefoneDoLead)}
+                  <p className="mt-1 text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5" /> {telefone(telefoneDoLead)}
                   </p>
                 )}
                 {emailDoLead && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 truncate" title={emailDoLead}>
-                    <Mail className="h-3 w-3 shrink-0" /> <span className="truncate">{emailDoLead}</span>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5 truncate" title={emailDoLead}>
+                    <Mail className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{emailDoLead}</span>
                   </p>
+                )}
+                {/* Origem como selo, junto de quem é o lead — solta no meio da
+                    situação parecia um subtítulo sem dono. */}
+                {origem && (
+                  <span
+                    className={`mt-2 inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-medium ${classeDaOrigem(dadosDaOrigem)}`}
+                    title={origem}
+                  >
+                    <span className="truncate">{origem}</span>
+                  </span>
                 )}
               </div>
               <div className="flex items-center gap-0.5 shrink-0">
@@ -512,9 +518,9 @@ export default function EditItemModal({
             {/* Situação */}
             <div className="space-y-2">
               <div className="grid gap-1">
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Etapa</span>
+                <span className="text-xs font-medium text-muted-foreground">Etapa</span>
                 <Select value={etapaId ?? undefined} onValueChange={moverEtapa} disabled={movendoEtapa}>
-                  <SelectTrigger className="h-8 text-sm">
+                  <SelectTrigger className="h-10 text-sm">
                     <SelectValue placeholder="Escolha a etapa">
                       {etapaAtual && (
                         <span className="flex items-center gap-2">
@@ -541,12 +547,12 @@ export default function EditItemModal({
                   não tem conversa e mesmo assim precisa de dono. */}
               {(item.conversation?.id || contato?.id) && (
                 <div className="grid gap-1">
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                     Responsável
                     {assigningUser && <Loader2 className="h-3 w-3 animate-spin" />}
                   </span>
                   <Select value={selectedAssigneeId ?? 'unassigned'} onValueChange={handleAssigneeChange} disabled={assigningUser}>
-                    <SelectTrigger className="h-8 text-sm">
+                    <SelectTrigger className="h-10 text-sm">
                       <SelectValue placeholder="Sem responsável" />
                     </SelectTrigger>
                     <SelectContent>
@@ -557,17 +563,11 @@ export default function EditItemModal({
                     </SelectContent>
                   </Select>
                   {roletaDoLead && (
-                    <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                      <Shuffle className="h-3 w-3" /> veio pela {roletaDoLead}
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Shuffle className="h-3.5 w-3.5" /> veio pela {roletaDoLead}
                     </span>
                   )}
                 </div>
-              )}
-
-              {origem && (
-                <p className="text-[11px] text-muted-foreground flex items-center gap-1 truncate" title={origem}>
-                  <Megaphone className="h-3 w-3 shrink-0" /> <span className="truncate">{origem}</span>
-                </p>
               )}
 
               {/* A oferta que espera o PRÓPRIO usuário — o corretor aceita daqui. */}
@@ -598,21 +598,21 @@ export default function EditItemModal({
             />
 
             {/* Etiquetas */}
-            <div className="flex flex-wrap items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1.5">
               {activeLabels.map(l => (
-                <Badge key={l} variant="secondary" className="gap-1 text-xs h-5 px-1.5 border-0 font-medium" style={labelStyle(l)}>
+                <Badge key={l} variant="secondary" className="gap-1 text-sm h-7 px-2.5 border-0 font-medium" style={labelStyle(l)}>
                   {l}
                   <button onClick={() => toggleLabel(l)} aria-label="Remover etiqueta" title="Remover etiqueta" className="hover:opacity-60">
-                    <X className="h-2.5 w-2.5" />
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 </Badge>
               ))}
               {(labelTargetConvId || labelTargetContactId) && (
                 <Popover open={labelPopoverOpen} onOpenChange={setLabelPopoverOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-5 px-1.5 text-[11px] gap-0.5">
-                      {(savingLabel || creatingLabel) ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Plus className="h-2.5 w-2.5" />}
-                      Etiqueta
+                    <Button variant="outline" size="sm" className="h-8 px-3 text-sm gap-1.5 border-dashed">
+                      {(savingLabel || creatingLabel) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                      Adicionar etiqueta
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-52 p-0" align="start">
@@ -650,7 +650,7 @@ export default function EditItemModal({
 
             {/* Follow-up numa linha (a lista abre numa janelinha) */}
             <div className="space-y-1">
-              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Follow-up</span>
+              <span className="text-xs font-medium text-muted-foreground">Follow-up</span>
               <FollowupTimeline
                 contactId={contato?.id != null ? String(contato.id) : null}
                 conversationId={conversaDoCard(item)}
@@ -667,16 +667,22 @@ export default function EditItemModal({
             </div>
           </aside>
 
-          {/* DIREITA — abas */}
-          <section className="flex flex-col min-h-0 p-4 pt-3">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden min-h-0">
-              <TabsList className="grid w-full grid-cols-3 shrink-0 md:w-auto md:self-start">
-                <TabsTrigger value="overview">Detalhes</TabsTrigger>
-                <TabsTrigger value="conversation">Conversa</TabsTrigger>
-                <TabsTrigger value="origin">Origem</TabsTrigger>
-              </TabsList>
+          {/* DIREITA — abas da casa (sublinhado com ícone), a faixa inteira no topo */}
+          <section className="flex flex-col min-h-0 px-5 pt-3 pb-4">
+            <Abas
+              rotulo="Seções do card do lead"
+              abas={[
+                { chave: 'overview', rotulo: 'Detalhes', icone: ClipboardList },
+                { chave: 'conversation', rotulo: 'Conversa', icone: MessageSquare },
+                { chave: 'origin', rotulo: 'Origem', icone: Megaphone },
+              ]}
+              ativa={activeTab}
+              aoTrocar={setActiveTab}
+              className="shrink-0 pr-8"
+            />
 
-              <TabsContent value="overview" className="flex-1 overflow-y-auto mt-0 pt-3 min-h-0">
+            <div className="flex-1 min-h-0 overflow-y-auto pt-4">
+              {activeTab === 'overview' && (
                 <LeadDetailsTab
                   item={item}
                   mostrarImoveis={canProperties}
@@ -685,18 +691,18 @@ export default function EditItemModal({
                   carregandoHistorico={historyLoading}
                   onRecarregarHistorico={() => loadHistory()}
                 />
-              </TabsContent>
+              )}
 
-              <TabsContent value="conversation" className="flex-1 overflow-y-auto mt-0 pt-3 min-h-0">
+              {activeTab === 'conversation' && (
                 <Suspense fallback={null}>
                   <CardConversationTab
                     item={item}
                     onAgendarEnvio={canScheduleAction && contato?.id != null ? texto => setAgendandoEnvio(texto) : undefined}
                   />
                 </Suspense>
-              </TabsContent>
+              )}
 
-              <TabsContent value="origin" className="flex-1 overflow-y-auto mt-0 pt-3 min-h-0">
+              {activeTab === 'origin' && (
                 <CardOriginTab
                   item={item}
                   manualOrigin={manualOrigin}
@@ -705,8 +711,8 @@ export default function EditItemModal({
                   savingManualOrigin={savingManualOrigin}
                   onSaveManualOrigin={handleSaveManualOrigin}
                 />
-              </TabsContent>
-            </Tabs>
+              )}
+            </div>
           </section>
         </div>
       </DialogContent>

@@ -5,7 +5,7 @@
 import { useCallback, useState, Suspense } from 'react';
 import { Bot, BotOff, CalendarPlus, HelpCircle, Loader2, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button, Popover, PopoverContent, PopoverTrigger } from '@/components/ui/ds';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/ds';
 import { chatService } from '@/services/chat/chatService';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { lazyWithRetry } from '@/utils/chunkReload';
@@ -18,6 +18,12 @@ const ScheduleVisitDialog = lazyWithRetry(() =>
 );
 
 const VISIT_SCHEDULED_LABEL = 'visita-agendada';
+
+// Botão quadrado, ícone em cima e nome embaixo: é o que o corretor mais clica no
+// card, tem que ser alvo grande.
+const TILE =
+  'flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border border-border bg-background ' +
+  'text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50 disabled:pointer-events-none';
 
 interface LeadQuickActionsProps {
   item: PipelineItem;
@@ -92,55 +98,50 @@ export default function LeadQuickActions({
   const motivo = porQueDaIa(aiState, Boolean(convId));
 
   return (
-    <div className="space-y-1.5">
-      <div className="grid grid-cols-3 gap-1.5">
-        <Button
+    <div className="space-y-2">
+      <div className="grid grid-cols-3 gap-2">
+        <button
           type="button"
-          size="sm"
-          variant="outline"
-          className="h-8 text-xs gap-1 px-1.5"
+          className={TILE}
           disabled={!lead}
           onClick={() => setVisitaAberta(true)}
         >
-          <CalendarPlus className="h-3.5 w-3.5 shrink-0" />
+          <CalendarPlus className="h-6 w-6" />
           Agendar visita
-        </Button>
-        <Button
+        </button>
+        <button
           type="button"
-          size="sm"
-          variant="outline"
-          className="h-8 text-xs gap-1 px-1.5 text-emerald-700 dark:text-emerald-400"
+          className={`${TILE} text-emerald-700 dark:text-emerald-400`}
           disabled={abrindoConversa}
           onClick={onAbrirConversa}
         >
-          {abrindoConversa ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquare className="h-3.5 w-3.5 shrink-0" />}
+          {abrindoConversa ? <Loader2 className="h-6 w-6 animate-spin" /> : <MessageSquare className="h-6 w-6" />}
           Conversa
-        </Button>
-        <Button
+        </button>
+        <button
           type="button"
-          size="sm"
-          variant={iaLigada ? 'default' : 'outline'}
-          className="h-8 text-xs gap-1 px-1.5"
+          className={`${TILE} ${iaLigada ? 'border-primary bg-primary/10 text-primary' : ''}`}
           disabled={trocandoIa || iaIndisponivel}
           title={motivo ?? (iaLigada ? 'Desligar a IA neste lead' : 'Ligar a IA neste lead')}
+          aria-pressed={iaLigada}
           onClick={trocarIa}
         >
           {trocandoIa ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="h-6 w-6 animate-spin" />
           ) : iaLigada ? (
-            <Bot className="h-3.5 w-3.5 shrink-0" />
+            <Bot className="h-6 w-6" />
           ) : (
-            <BotOff className="h-3.5 w-3.5 shrink-0" />
+            <BotOff className="h-6 w-6" />
           )}
           {rotuloDaIa(aiState)}
-        </Button>
+        </button>
       </div>
 
       {convId && (
         <Popover onOpenChange={aberto => { if (aberto) void carregarRelatorio(); }}>
           <PopoverTrigger asChild>
-            <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1">
-              <HelpCircle className="h-3 w-3" />
+            <button type="button" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+              <HelpCircle className="h-3.5 w-3.5" />
               Por que a IA não respondeu?
             </button>
           </PopoverTrigger>

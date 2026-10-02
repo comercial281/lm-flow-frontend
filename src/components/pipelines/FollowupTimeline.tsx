@@ -343,18 +343,18 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
     return (
       <div className="space-y-1.5">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${headline.cls}`}>
+          <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${headline.cls}`}>
             {headline.label}
           </span>
           {(state.status === 'running' || state.status === 'paused' || state.status === 'done') && (
-            <span className="text-[10px] text-muted-foreground">{stepLabel}</span>
+            <span className="text-xs text-muted-foreground">{stepLabel}</span>
           )}
           {proximaCurta && (
-            <span className="text-[10px] text-muted-foreground">· próxima {proximaCurta}</span>
+            <span className="text-xs text-muted-foreground">· próxima {proximaCurta}</span>
           )}
           <Popover>
             <PopoverTrigger asChild>
-              <button type="button" className="ml-auto text-[10px] text-primary hover:underline">
+              <button type="button" className="ml-auto text-xs text-primary hover:underline">
                 Ver mensagens
               </button>
             </PopoverTrigger>

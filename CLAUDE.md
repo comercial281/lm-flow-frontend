@@ -4951,16 +4951,22 @@ O que aparece na tela hoje:
 
 - **Janela quase tela cheia por cima do funil** (fechar volta pro funil; o link
   `?card=` continua valendo). Duas colunas.
-- **Esquerda, fixa, sem rolagem:** foto, nome, telefone e e-mail (só leitura);
-  Etapa (seletor colorido, muda na hora); Responsável + "veio pela Roleta X";
-  origem numa linha; aviso de sorteio em aberto; **Agendar visita · Conversa ·
+- **Esquerda, fixa, sem rolagem:** foto, nome, telefone, e-mail (só leitura) e
+  selo da origem; Etapa (seletor colorido, muda na hora); Responsável + "veio
+  pela Roleta X"; aviso de sorteio em aberto; **Agendar visita · Conversa ·
   IA**; etiquetas; follow-up numa linha (a lista abre em "Ver mensagens");
   Conversão Meta numa linha; **Ganho | Perdido** no rodapé.
 - **Menu "⋯":** Copiar link, Trocar roleta, Remover do funil (com confirmação).
-- **Direita, abas Detalhes · Conversa · Origem.** Detalhes = "O que sabemos do
-  lead" (o que a IA entendeu + respostas do formulário, 4 e "ver todas") +
-  Imóveis de interesse + Histórico | Observações lado a lado. Conversa ganhou o
-  relógio **Agendar envio**, que leva o texto digitado para o agendamento.
+- **Direita, Abas da casa** (`components/base/Abas`, sublinhado com ícone — não
+  o Tabs de pílula do kit): Detalhes · Conversa · Origem. Detalhes em duas
+  colunas de caixas: à esquerda o que a IA entendeu, Respostas do formulário (4 e
+  "ver todas") e Imóveis de interesse; à direita **Histórico em cima,
+  Observações embaixo**. Conversa ganhou o relógio **Agendar envio**, que leva o
+  texto digitado para o agendamento.
+- **Tamanho (pedido do dono, 02/10, num Mac de 13"):** coluna de 380px, nome em
+  `text-xl`, Visita/Conversa/IA em botões quadrados com ícone em cima, etiqueta
+  como "Adicionar etiqueta" visível, e a origem como selo colorido junto de
+  telefone/e-mail (solta no meio parecia subtítulo sem dono).
 - **Sem botão Salvar.** Tudo grava na hora.
 
 Decisões do dono (não reabrir sem ele pedir):

@@ -76,6 +76,12 @@ export function origemCurta(origem: Record<string, unknown> | null | undefined):
   return [rotulo, detalhe?.trim()].filter(Boolean).join(' · ');
 }
 
+/** Cor do selo da origem (a mesma régua da aba Origem). Sem origem conhecida, neutro. */
+export function classeDaOrigem(origem: Record<string, unknown> | null | undefined): string {
+  const source = typeof origem?.source === 'string' ? origem.source : '';
+  return SOURCE_META[source]?.cls ?? 'bg-muted text-muted-foreground';
+}
+
 /** O lead do card no formato que o modal de visita da Agenda entende. */
 export function leadParaVisita(item: PipelineItem, nomeExibido: string): LeadPickerItem | null {
   const contato = contatoDoCard(item);
