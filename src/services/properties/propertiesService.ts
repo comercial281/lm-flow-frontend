@@ -13,6 +13,12 @@ export interface Property {
   property_type: string;
   status: 'draft' | 'active' | 'reserved' | 'sold' | 'rented' | 'inactive';
   stage: 'ready' | 'in_construction' | 'launch' | 'pre_launch';
+  /** Empreendimento ou Revenda. Ausente = servidor antigo (trate como revenda). */
+  listing_kind?: 'development' | 'resale';
+  /** Previsão de entrega, 'AAAA-MM-DD' (sempre dia 1). */
+  delivery_forecast?: string | null;
+  /** Soma das unidades disponíveis das tipologias; null = ninguém informou. */
+  units_available_total?: number | null;
   sale_price?: number | null;
   rent_price?: number | null;
   condo_fee?: number | null;
@@ -97,6 +103,9 @@ export interface PropertyFormData {
   property_type: string;
   status: string;
   stage: string;
+  listing_kind?: 'development' | 'resale';
+  /** 'AAAA-MM' do campo de mês; vazio = sem previsão. */
+  delivery_forecast?: string | null;
   sale_price?: number | null;
   rent_price?: number | null;
   condo_fee?: number | null;
@@ -177,6 +186,17 @@ export interface PropertiesListParams {
   mine?: string;
   page?: number;
   per_page?: number;
+  listing_kind?: 'development' | 'resale';
+  neighborhood?: string;
+  captor_id?: string;
+  min_price?: string;
+  max_price?: string;
+  delivery_until?: string;
+  sort?: 'recent' | 'updated' | 'price_asc' | 'price_desc';
+  'transaction_type[]'?: string[];
+  'stage[]'?: string[];
+  'bedrooms[]'?: string[];
+  'parking[]'?: string[];
 }
 
 export interface PropertiesResponse {
@@ -215,6 +235,33 @@ export const propertiesService = {
   async list(params: PropertiesListParams = {}): Promise<PropertiesResponse> {
     const res = await api.get('/properties', { params });
     return res.data as PropertiesResponse;
+  },
+
+  /** Bairros, tipos e captadores que existem naquele tipo, para os seletores do filtro. */
+  async facets(kind: 'development' | 'resale', opts: { mine?: boolean } = {}): Promise<{
+    neighborhoods: string[]; property_types: string[]; captors: { id: string; name: string }[];
+  }> {
+    const res = await api.get('/properties/facets', { params: { listing_kind: kind, mine: opts.mine ? '1' : undefined } });
+    return (res.data as { data: { neighborhoods: string[]; property_types: string[]; captors: { id: string; name: string }[] } }).data;
+  },
+
+  /**
+   * Quantos há em cada aba, com o mesmo recorte da lista (link da Dashboard,
+   * "só os meus"). Usa a própria lista com 1 por página: a contagem bate com a
+   * lista por construção e não depende da permissão de estatísticas.
+   */
+  async contarPorTipo(extra: Record<string, string> = {}): Promise<{ development: number; resale: number }> {
+    const [dev, rev] = await Promise.all([
+      api.get('/properties', { params: { ...extra, listing_kind: 'development', per_page: 1 } }),
+      api.get('/properties', { params: { ...extra, listing_kind: 'resale', per_page: 1 } }),
+    ]);
+    const total = (r: { data: unknown }) => (r.data as PropertiesResponse).meta?.total ?? 0;
+    // Servidor antigo ignora o listing_kind e devolve tudo, sem o campo no
+    // imóvel. Aí tudo é Revenda (como na tela) e Empreendimentos fica 0, senão
+    // as duas abas empatariam e a tela abriria em Empreendimentos com tudo dentro.
+    const primeiro = (dev.data as PropertiesResponse).data?.[0];
+    const servidorAntigo = !!primeiro && primeiro.listing_kind == null;
+    return { development: servidorAntigo ? 0 : total(dev), resale: total(rev) };
   },
 
   async get(id: string): Promise<Property> {
@@ -313,7 +360,7 @@ export const propertiesService = {
 
   async mapBounds(bounds?: {
     ne_lat?: number; ne_lng?: number; sw_lat?: number; sw_lng?: number;
-    transaction_type?: string; property_type?: string; max?: number;
+    transaction_type?: string; property_type?: string; max?: number; listing_kind?: string;
   }): Promise<PropertyMapMarker[]> {
     const res = await api.get('/properties/map', { params: bounds });
     return (res.data as { data: PropertyMapMarker[] }).data;

@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Button, Badge } from '@/components/ui/ds';
-import { Seletor } from '@/components/base/Seletor';
+import { Badge } from '@/components/ui/ds';
 import {
-  ArrowLeft, Building2, MapPin, Bed, Bath, Car, Ruler, Loader2,
+  Building2, Bed, Bath, Car, Ruler, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { numero } from '@/lib/formato';
+import { plural } from '@/lib/formato';
+import type { ListingKind } from '@/features/properties/listingKind';
 import {
   propertiesService,
   PropertyMapMarker,
@@ -58,111 +57,42 @@ function FitBoundsToMarkers({ markers }: { markers: PropertyMapMarker[] }) {
   return null;
 }
 
-export default function PropertiesMap() {
-  const navigate = useNavigate();
+export default function VisaoMapa({ kind }: { kind: ListingKind }) {
   const [markers, setMarkers] = useState<PropertyMapMarker[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterTransaction, setFilterTransaction] = useState('');
-  const [filterType, setFilterType] = useState('');
 
-  const load = async () => {
+  useEffect(() => {
+    let ativo = true;
     setLoading(true);
-    try {
-      const data = await propertiesService.mapBounds({
-        transaction_type: filterTransaction || undefined,
-        property_type: filterType || undefined,
-        max: 500,
-      });
-      setMarkers(data);
-    } catch {
-      toast.error('Erro ao carregar imóveis no mapa');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { void load(); }, [filterTransaction, filterType]);
+    propertiesService
+      .mapBounds({ listing_kind: kind, max: 500 })
+      .then(data => { if (ativo) setMarkers(data); })
+      .catch(() => { if (ativo) toast.error('Erro ao carregar imóveis no mapa'); })
+      .finally(() => { if (ativo) setLoading(false); });
+    return () => { ativo = false; };
+  }, [kind]);
 
   const valid = useMemo(() => markers.filter(m => m.lat != null && m.lng != null), [markers]);
   const withoutCoords = markers.length - valid.length;
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur px-6 py-4 z-[1000] relative">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => navigate('/properties')}>
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Voltar
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-primary" />
-                Imóveis no mapa
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                {loading ? 'Carregando...' : (
-                  <>
-                    <strong className="text-foreground">{numero(valid.length)}</strong> {valid.length === 1 ? 'imóvel' : 'imóveis'} com coordenadas
-                    {withoutCoords > 0 && (
-                      <span className="ml-2 text-orange-600">
-                        · {withoutCoords} sem lat/lng (não aparece{withoutCoords !== 1 ? 'm' : ''} no mapa)
-                      </span>
-                    )}
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
-          {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-        </div>
-
-        <div className="flex flex-wrap gap-2 items-center">
-          <Seletor
-            value={filterTransaction}
-            onChange={e => setFilterTransaction(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm w-44"
-          >
-            <option value="">Tipo de negócio</option>
-            {Object.entries(TRANSACTION_TYPE_LABELS).map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </Seletor>
-          <Seletor
-            value={filterType}
-            onChange={e => setFilterType(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm w-52"
-          >
-            <option value="">Tipo de imóvel</option>
-            {Object.entries(PROPERTY_TYPE_LABELS).map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </Seletor>
-          {(filterTransaction || filterType) && (
-            <button
-              onClick={() => { setFilterTransaction(''); setFilterType(''); }}
-              className="text-xs text-primary hover:underline"
-            >
-              Limpar filtros
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Map */}
-      <div className="flex-1 relative">
+    <div className="space-y-2">
+      {withoutCoords > 0 && !loading && (
+        <p className="text-xs text-orange-600">
+          {plural(withoutCoords, 'imóvel', 'imóveis')} sem localização no cadastro {withoutCoords === 1 ? 'não aparece' : 'não aparecem'} no mapa. Para aparecer, preencha a localização no cadastro do imóvel.
+        </p>
+      )}
+      {/* `isolate`: as camadas do Leaflet (z-index 400 a 1000) ficam presas aqui
+          dentro e não pintam por cima das janelas da casa (Novo imóvel, menus). */}
+      <div className="relative isolate h-[480px] rounded-xl border overflow-hidden">
+        {loading && (
+          <Loader2 className="absolute right-3 top-3 z-[500] h-4 w-4 animate-spin text-muted-foreground" />
+        )}
         {valid.length === 0 && !loading && (
           <div className="absolute inset-0 z-[500] flex items-center justify-center bg-background/80 pointer-events-none">
-            <div className="bg-card border border-border rounded-lg p-6 text-center max-w-md pointer-events-auto">
+            <div className="bg-card border border-border rounded-lg p-6 text-center max-w-md">
               <Building2 className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="text-sm font-medium">Nenhum imóvel com coordenadas</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Preencha latitude e longitude no cadastro do imóvel pra aparecer aqui.
-              </p>
-              <Button size="sm" className="mt-3" onClick={() => navigate('/properties')}>
-                Voltar pra lista
-              </Button>
+              <p className="text-sm font-medium">Nenhum imóvel desta aba tem localização no cadastro ainda.</p>
             </div>
           </div>
         )}
@@ -171,7 +101,6 @@ export default function PropertiesMap() {
           zoom={DEFAULT_ZOOM}
           scrollWheelZoom
           className="h-full w-full"
-          style={{ minHeight: 400 }}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

@@ -35,6 +35,7 @@ import {
   MISSING_FIELD_LABELS,
 } from '@/services/propertyImports/propertyImportsService';
 import { propertiesService } from '@/services/properties/propertiesService';
+import type { ListingKind } from '@/features/properties/listingKind';
 import { propertyPhotosService, ACCEPTED_MIME_TYPES as PHOTO_MIME_TYPES } from '@/services/propertyPhotos/propertyPhotosService';
 
 // Chave pra retomar o acompanhamento se o corretor fechar o modal/página no
@@ -57,9 +58,11 @@ interface Props {
   /** Incrementado pela tela quando um imóvel é salvo na revisão — re-busca o lote
    *  pra atualizar chips de campos faltantes, preço e thumbnail. */
   refreshSignal?: number;
+  /** Aba de onde o lote saiu: o imóvel nasce empreendimento ou revenda, nunca revenda calada. */
+  listingKind?: ListingKind;
 }
 
-export default function PropertyImportDialog({ open, onClose, onManual, onReview, onChanged, refreshSignal }: Props) {
+export default function PropertyImportDialog({ open, onClose, onManual, onReview, onChanged, refreshSignal, listingKind }: Props) {
   const [files, setFiles] = useState<File[]>([]);
   const [urlsText, setUrlsText] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -178,6 +181,7 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
       const b = await propertyImportsService.createBatch(files, {
         urls,
         onProgress: setUploadProgress,
+        listingKind,
       });
       setBatch(b);
       setFiles([]);
