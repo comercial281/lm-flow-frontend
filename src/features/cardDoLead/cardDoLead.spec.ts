@@ -7,6 +7,8 @@ import {
   classeDaOrigem,
   podeCorrigirContato,
   respostasDoLead,
+  visitaSemFeedback,
+  visitasEmOrdem,
 } from './cardDoLead';
 import type { PipelineItem } from '@/types/analytics';
 
@@ -114,5 +116,40 @@ describe('leadParaVisita', () => {
 
   it('sem contato não monta nada', () => {
     expect(leadParaVisita(item({}), 'X')).toBeNull();
+  });
+});
+
+describe('visitaSemFeedback', () => {
+  const agora = new Date('2026-10-02T12:00:00Z');
+  const visita = (extra: Record<string, unknown>) =>
+    ({ status: 'completed', scheduled_at: '2026-10-01T15:00:00Z', rating: null, feedback_notes: null, ...extra }) as never;
+
+  it('visita passada sem nota nem comentário', () => {
+    expect(visitaSemFeedback(visita({}), agora)).toBe(true);
+  });
+
+  it('com nota ou comentário já tem feedback', () => {
+    expect(visitaSemFeedback(visita({ rating: 4 }), agora)).toBe(false);
+    expect(visitaSemFeedback(visita({ feedback_notes: 'Gostou da varanda' }), agora)).toBe(false);
+  });
+
+  it('visita futura ainda não pede feedback', () => {
+    expect(visitaSemFeedback(visita({ status: 'scheduled', scheduled_at: '2026-10-05T15:00:00Z' }), agora)).toBe(false);
+  });
+
+  it('cancelada ou remarcada não pede feedback', () => {
+    expect(visitaSemFeedback(visita({ status: 'cancelled' }), agora)).toBe(false);
+    expect(visitaSemFeedback(visita({ status: 'rescheduled' }), agora)).toBe(false);
+  });
+
+  it('agendada que já passou e ninguém mexeu também pede', () => {
+    expect(visitaSemFeedback(visita({ status: 'scheduled' }), agora)).toBe(true);
+  });
+});
+
+describe('visitasEmOrdem', () => {
+  it('mais recente primeiro', () => {
+    const lista = visitasEmOrdem([{ scheduled_at: '2026-09-01T10:00:00Z' }, { scheduled_at: '2026-10-01T10:00:00Z' }]);
+    expect(lista[0].scheduled_at).toBe('2026-10-01T10:00:00Z');
   });
 });
