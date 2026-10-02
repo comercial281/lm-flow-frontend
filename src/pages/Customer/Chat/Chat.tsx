@@ -9,6 +9,8 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 
 import { useLanguage } from '@/hooks/useLanguage';
 import { useConversationPresence } from '@/hooks/useConversationPresence';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { usePendingOffers } from '@/contexts/PendingOffersContext';
 import ClaimLeadBanner from '@/components/chat/assignment/ClaimLeadBanner';
 import OfferActions from '@/components/roleta/OfferActions';
 
@@ -152,6 +154,30 @@ const Chat = () => {
       setIsContactSidebarOpen(false);
     }
   }, [conversationId, isContactSidebarOpen]);
+
+  // Painel do lead: em tela larga (≥1280px) abre sozinho a cada conversa aberta.
+  // O X fecha até a próxima troca. Abaixo disso, só abre no clique no nome do lead.
+  // A largura é lida na troca, não acompanhada: redimensionar não reabre o que o X fechou.
+  const telaLarga = useMediaQuery('(min-width: 1280px)');
+  const telaLargaRef = useRef(telaLarga);
+  telaLargaRef.current = telaLarga;
+  useEffect(() => {
+    if (!selectedConversationIdStr) return;
+    setIsContactSidebarOpen(telaLargaRef.current);
+  }, [selectedConversationIdStr]);
+
+  // A roleta ofertou este lead a quem está vendo e ainda não houve aceite (a mesma
+  // conta da faixa de oferta, OfferActions): o painel mascara o telefone.
+  const { offerFor } = usePendingOffers();
+  const emOferta = Boolean(
+    selectedConversation &&
+      !selectedConversation.assignee_id &&
+      offerFor({
+        contactId: selectedConversation.contact?.id ?? selectedConversation.meta?.sender?.id,
+        conversationId: String(selectedConversation.id),
+        conversationDisplayId: selectedConversation.display_id,
+      }),
+  );
 
   // Load conversations on mount
   useEffect(() => {
@@ -847,6 +873,7 @@ const Chat = () => {
             contact={selectedConversation?.contact || null}
             conversation={selectedConversation}
             onFilterReload={reloadCurrentFilters}
+            emOferta={emOferta}
           />
         </Suspense>
 
