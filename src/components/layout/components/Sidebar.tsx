@@ -24,7 +24,9 @@ function CartaoDaConta() {
   if (!account?.name) return null;
   const cargo = user?.role?.name;
   return (
-    <div className="mb-4 rounded-xl bg-sidebar-accent/60 px-3 py-2.5">
+    // "Vidro roxo": gradiente da marca bem vazado + borda e sombra roxas suaves.
+    // Fica abaixo do item ativo do menu (gradiente cheio) na hierarquia.
+    <div className="mb-4 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent px-3 py-2.5 shadow-[0_6px_16px_-8px_rgba(124,58,237,0.45)]">
       <p className="lm-redact text-sm font-semibold text-sidebar-foreground truncate" title={account.name}>
         {account.name}
       </p>
