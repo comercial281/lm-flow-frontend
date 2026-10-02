@@ -17,12 +17,21 @@ export function useEditarContato(contact: Contact | null): { abrir: () => void; 
   const { t } = useLanguage('chat');
   const { updateContactInConversations } = useConversations();
   const [aberto, setAberto] = useState(false);
+  // Cópia de quando a janela abriu: o formulário recomeça quando a referência do
+  // contato muda, e uma atualização do servidor no meio apagaria o que se digitou.
+  const [emEdicao, setEmEdicao] = useState<Contact | null>(null);
+
+  const abrir = () => {
+    if (!contact) return;
+    setEmEdicao({ ...contact });
+    setAberto(true);
+  };
 
   const salvar = async (data: ContactFormData) => {
-    if (!contact?.id) return;
+    if (!emEdicao?.id) return;
 
     try {
-      const salvo = await contactsService.updateContact(contact.id, data);
+      const salvo = await contactsService.updateContact(emEdicao.id, data);
 
       // O contato de Contatos (@/types/contacts) tem outro formato que o da conversa.
       const atualizado: Contact = {
@@ -53,16 +62,16 @@ export function useEditarContato(contact: Contact | null): { abrir: () => void; 
     }
   };
 
-  const modal = contact ? (
+  const modal = emEdicao ? (
     <ContactModal
       open={aberto}
       onOpenChange={setAberto}
-      contact={contact as unknown as FullContact}
+      contact={emEdicao as unknown as FullContact}
       isNew={false}
       loading={false}
       onSubmit={salvar}
     />
   ) : null;
 
-  return { abrir: () => setAberto(true), modal };
+  return { abrir, modal };
 }

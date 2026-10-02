@@ -4,6 +4,7 @@ import CapiConversionPanel from '@/components/capi/CapiConversionPanel';
 import { pipelinesService } from '@/services/pipelines';
 import { contactsService } from '@/services/contacts/contactsService';
 import { origemDoLead, outraConversa } from '@/features/conversas/painelDoLead';
+import { useNumerosDaConversa } from '@/features/numbers/useNumerosDaConversa';
 import type { Pipeline } from '@/types/analytics';
 import type { ContactConversation } from '@/types/contacts';
 import type { Contact, Conversation } from '@/types/chat/api';
@@ -146,9 +147,12 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
     });
   }, [conversationPipelines, conversation?.additional_attributes, contact?.additional_attributes]);
 
+  // A mesma lista de números que a tela de Conversas já buscou (sem requisição a mais):
+  // dá o nome que o gestor deu ao número da outra conversa.
+  const { inboxes: numeros } = useNumerosDaConversa();
   const outra = useMemo(
-    () => (conversation ? outraConversa(conversasDoContato, conversation.id) : null),
-    [conversasDoContato, conversation],
+    () => (conversation ? outraConversa(conversasDoContato, conversation.id, numeros) : null),
+    [conversasDoContato, conversation, numeros],
   );
 
   // No mobile, esconder completamente quando fechado

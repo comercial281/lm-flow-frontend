@@ -43,6 +43,22 @@ describe('linhaDoTopo', () => {
     );
   });
 
+  it('prefere o nome que o gestor deu (display_name) ao identificador interno', () => {
+    const comApelido = [
+      { id: '7', name: 'whatsapp-horizonte-imoveis', display_name: 'Horizonte Imóveis', phone_number: '+5511982350000' },
+    ] as unknown as Inbox[];
+    expect(
+      linhaDoTopo({ inboxId: '7', inboxNome: 'whatsapp-horizonte-imoveis', inboxes: comApelido, responsavel: 'Marina' }),
+    ).toBe('Número Horizonte Imóveis · (11) 98235-0000 · Responsável: Marina');
+  });
+
+  it('display_name vazio: cai no nome que veio com a conversa', () => {
+    const semApelido = [{ id: '7', name: 'Guatemala', display_name: '  ' }] as unknown as Inbox[];
+    expect(
+      linhaDoTopo({ inboxId: '7', inboxNome: 'Guatemala', inboxes: semApelido, responsavel: 'Marina' }),
+    ).toBe('Número Guatemala · Responsável: Marina');
+  });
+
   it('inboxes nulo: usa só o nome', () => {
     expect(
       linhaDoTopo({ inboxId: '7', inboxNome: 'Guatemala', inboxes: null, responsavel: 'Marina' }),

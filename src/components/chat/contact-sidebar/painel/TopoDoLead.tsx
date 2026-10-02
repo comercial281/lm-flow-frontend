@@ -118,7 +118,7 @@ export default function TopoDoLead({ contact, emOferta, origem, outra, onClose }
           {' · '}
           <button
             type="button"
-            onClick={() => navigate(`/conversations/${outra.id}`)}
+            onClick={() => navigate(`/conversations/${outra.id}`, { replace: true })}
             className="text-primary hover:underline"
           >
             {T.abrir}

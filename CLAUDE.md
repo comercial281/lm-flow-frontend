@@ -4755,7 +4755,13 @@ Decisões do dono (não reabrir sem ele pedir):
   costuma trazer telefone e e-mail) e **"Abrir card do lead" some** (o card
   mostra telefone, e-mail e respostas; o seletor de etapa fica). **Nome que é o
   telefone** (o Evolution não manda o nome no 1º evento) sai mascarado também,
-  no painel e no topo da conversa. Ao aceitar, aparece tudo.
+  no painel e no topo da conversa. Ao aceitar, aparece tudo. Enquanto a lista
+  de ofertas ainda não chegou (logo depois de abrir o app), lead sem dono já
+  aparece mascarado.
+- **O nome do número é o que o gestor deu** (`display_name` da lista de
+  números), no topo da conversa e na linha "Também conversou". O `inbox.name`
+  que vem com a conversa é o identificador interno
+  ("whatsapp-horizonte-imveis") e só aparece se a lista não tiver o número.
 - **"Remover do funil" saiu do painel**: fica no quadro do funil.
 - **O painel não coloca o lead num segundo funil.** "Colocar no funil" só existe
   para lead fora de qualquer funil; o segundo funil é pelo quadro.
@@ -4790,3 +4796,14 @@ Armadilhas:
    `src/lib/nomeDoContato.ts`, usada pelo card do funil (`pipelineItemHelpers`
    reexporta), pelo card aberto (`EditItemModal`) e pela máscara da oferta
    (`nomeNaTela`, no painel e no `ChatHeader`, que recebe `emOferta` do `Chat`).
+8. **Abrir/fechar o painel mora em `usePainelDoLeadAberto`** (com spec). O
+   fechamento ("endereço sem conversa fecha") depende SÓ do endereço. Ao abrir
+   uma conversa a partir de /conversations, a seleção muda antes do endereço (o
+   `navigate` roda em transição); se o fechamento também olhasse o "aberto",
+   fecharia o painel que a seleção acabou de abrir. Não junte as duas regras.
+9. **O nome do número vem da lista que a tela já busca** (`useNumerosDaConversa`,
+   `display_name`), no topo e no painel. Nenhuma requisição a mais.
+10. **O catálogo de etiquetas vem do store** (`useAppDataStore.labels` +
+    `fetchLabels()`, com cache e busca única). O painel remonta as Etiquetas a
+    cada contato: buscar direto no serviço fazia uma requisição por troca de
+    conversa, até com o painel fechado.

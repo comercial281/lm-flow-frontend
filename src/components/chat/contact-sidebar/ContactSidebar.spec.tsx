@@ -29,6 +29,14 @@ vi.mock('@/services/chat/chatService', () => ({
   chatService: { getSalesAgentStatus: () => Promise.reject(new Error('sem IA')) },
 }));
 
+// A lista de números da tela: o nome que o gestor deu ao número é o display_name.
+vi.mock('@/features/numbers/useNumerosDaConversa', () => ({
+  useNumerosDaConversa: () => ({
+    inboxes: [{ id: 'i2', name: 'whatsapp-marina-imoveis', display_name: 'Marina' }],
+    numeros: null,
+  }),
+}));
+
 vi.mock('@/hooks/useLanguage', () => ({
   useLanguage: () => ({ t: (key: string) => key }),
 }));
@@ -128,11 +136,11 @@ describe('ContactSidebar — painel do lead em seções', () => {
     await waitFor(() => expect(getContactConversations).toHaveBeenCalled());
   });
 
-  it('outra conversa do lead: "Também conversou pelo número" com o atalho', async () => {
+  it('outra conversa do lead: "Também conversou pelo número" (nome do gestor) com o atalho', async () => {
     getContactConversations.mockResolvedValue({
       data: [
         { id: 'conv-1', inbox: { id: 'i1', name: 'Plantão' }, last_activity_at: 1_790_000_900 },
-        { id: 'conv-2', inbox: { id: 'i2', name: 'Marina' }, last_activity_at: 1_790_000_500 },
+        { id: 'conv-2', inbox: { id: 'i2', name: 'whatsapp-marina-imoveis' }, last_activity_at: 1_790_000_500 },
       ],
     });
     renderPainel();
