@@ -256,7 +256,12 @@ export const propertiesService = {
       api.get('/properties', { params: { ...extra, listing_kind: 'resale', per_page: 1 } }),
     ]);
     const total = (r: { data: unknown }) => (r.data as PropertiesResponse).meta?.total ?? 0;
-    return { development: total(dev), resale: total(rev) };
+    // Servidor antigo ignora o listing_kind e devolve tudo, sem o campo no
+    // imóvel. Aí tudo é Revenda (como na tela) e Empreendimentos fica 0, senão
+    // as duas abas empatariam e a tela abriria em Empreendimentos com tudo dentro.
+    const primeiro = (dev.data as PropertiesResponse).data?.[0];
+    const servidorAntigo = !!primeiro && primeiro.listing_kind == null;
+    return { development: servidorAntigo ? 0 : total(dev), resale: total(rev) };
   },
 
   async get(id: string): Promise<Property> {

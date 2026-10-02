@@ -295,14 +295,24 @@ export default function Properties() {
     () => propertiesService.contarPorTipo(recorte?.params ?? {}),
     [recorte],
   );
-  useEffect(() => {
-    let vivo = true;
+  // Só a última contagem pedida vale: uma recontagem começada com o recorte
+  // antigo não pode sobrescrever a do recorte novo.
+  const ultimaContagem = useRef(0);
+  const recontar = useCallback(() => {
+    const pedido = ++ultimaContagem.current;
     contar()
-      .then(c => { if (!vivo) return; setContagem(c); setKind(k => k ?? abaPadrao(c)); })
-      .catch(() => { if (vivo) setKind(k => k ?? 'resale'); });
-    return () => { vivo = false; };
+      .then(c => {
+        if (pedido !== ultimaContagem.current) return;
+        setContagem(c);
+        setKind(k => k ?? abaPadrao(c));
+      })
+      .catch(() => { if (pedido === ultimaContagem.current) setKind(k => k ?? 'resale'); });
   }, [contar]);
-  const recontar = () => { contar().then(setContagem).catch(() => {}); };
+  useEffect(() => {
+    recontar();
+    // Sair da tela invalida a resposta que ainda estiver no ar.
+    return () => { ultimaContagem.current++; };
+  }, [recontar]);
 
   // Bairros, tipos e captadores da aba, para os seletores do painel. Leitura de
   // fundo: falha deixa os seletores só com "Todos", sem aviso.
@@ -957,7 +967,9 @@ export default function Properties() {
         <div className="mt-4 flex flex-col items-center gap-2 text-xs text-muted-foreground">
           <span>Mostrando {numero(properties.length)} de {numero(total)}</span>
           {properties.length < total && (
-            <Button variant="outline" onClick={() => load(pagina + 1)} disabled={carregandoMais}>
+            // Travado enquanto a lista recarrega: com filtro novo e página antiga,
+            // a página 2 do filtro novo grudaria na página 1 do antigo.
+            <Button variant="outline" onClick={() => load(pagina + 1)} disabled={carregandoMais || loading}>
               {carregandoMais ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Carregando...</> : 'Mostrar mais'}
             </Button>
           )}
@@ -967,12 +979,13 @@ export default function Properties() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto px-6 py-5">
+      <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
         {/* Topo */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold leading-tight">Imóveis</h1>
-            {contagem && (
+            {/* Com recorte da Dashboard a soma seria do recorte; o chip já diz o que está filtrado. */}
+            {contagem && !recorte && (
               <p className="text-sm text-muted-foreground mt-0.5">
                 {plural(contagem.development + contagem.resale, 'cadastro na imobiliária', 'cadastros na imobiliária')}
               </p>

@@ -133,4 +133,29 @@ describe('Tela de Imóveis', () => {
     expect(await screen.findByText('Mostrando 2 de 2')).toBeInTheDocument();
     expect(svc.list).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
   });
+
+  it('Mostrar mais fica travado enquanto a lista recarrega com filtro novo', async () => {
+    svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 2 });
+    svc.list.mockImplementation((p: Record<string, unknown>) =>
+      (p['transaction_type[]']
+        ? new Promise(() => {}) // a recarga com o filtro novo fica no ar
+        : Promise.resolve(resposta([imovel({ id: 'a', code: 'AP1' })], 2))));
+    abrir('/properties?aba=revenda');
+    const mostrarMais = await screen.findByRole('button', { name: 'Mostrar mais' });
+    expect(mostrarMais).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: /Filtros/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Venda' }));
+    await waitFor(() => expect(svc.list).toHaveBeenLastCalledWith(expect.objectContaining({ 'transaction_type[]': ['sale', 'sale_rent'], page: 1 })));
+    expect(screen.getByRole('button', { name: 'Mostrar mais' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar mais' }));
+    expect(svc.list).not.toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+  });
+
+  it('com recorte da Dashboard não soma os cadastros da imobiliária', async () => {
+    svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 3 });
+    abrir('/properties?recorte=sem_fotos');
+    expect(await screen.findByRole('tab', { name: 'Revenda (3)' })).toBeInTheDocument();
+    expect(screen.queryByText(/cadastros? na imobiliária/)).toBeNull();
+    expect(svc.contarPorTipo).toHaveBeenCalledWith({ status: 'active', without_photos: '1' });
+  });
 });
