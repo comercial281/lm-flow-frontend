@@ -4150,6 +4150,9 @@ O que aparece na tela:
   o menu aberto o cartão já mostra o nome, e o selo no centro do topo repetia
   (pedido do dono, 01/10/2026). No celular o nome continua embaixo da logo: lá
   não tem cartão.
+- **Cartão da conta** (topo do menu): "vidro roxo", gradiente da marca vazado
+  com borda e sombra roxas suaves, pra não ficar apagado (pedido do dono,
+  01/10/2026). Mais fraco que o item ativo (gradiente cheio) de propósito.
 - **Rodapé:** Guia do LM Flow e Falar com o suporte. Saíram o © e o link
   "Documentação" (era a documentação da Evolution).
 - **Avatar:** Meu perfil, **Meus números**, Sugestões/Bugs, Sair. Meus números
