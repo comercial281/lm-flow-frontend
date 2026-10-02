@@ -19,6 +19,7 @@ import {
   WelcomeAutomation,
   WelcomeAutomationFormData,
 } from '@/services/welcomeAutomations/welcomeAutomationsService';
+import { Seletor } from '@/components/base/Seletor';
 
 const TRIGGERS = [
   { value: 'new_conversation', label: 'Nova conversa (qualquer)' },
@@ -257,7 +258,7 @@ export default function WelcomeAutomations() {
 
             <div className="space-y-1.5">
               <UILabel htmlFor="wa-trigger">Gatilho</UILabel>
-              <select
+              <Seletor
                 id="wa-trigger"
                 value={formData.trigger}
                 onChange={e => setFormData(p => ({ ...p, trigger: e.target.value as WelcomeAutomationFormData['trigger'] }))}
@@ -266,7 +267,7 @@ export default function WelcomeAutomations() {
                 {TRIGGERS.map(t => (
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
-              </select>
+              </Seletor>
             </div>
 
             <div className="space-y-1.5">

@@ -8,6 +8,7 @@ import {
   type NoReplyRobotConfig,
   type NoReplyAudience,
 } from '@/services/noReplyRobot/noReplyRobotService';
+import { Seletor } from '@/components/base/Seletor';
 
 interface NoReplyRobotProps {
   /** Renderiza sem o cabeçalho e o padding de página, pra encaixar dentro da tela de
@@ -238,7 +239,7 @@ export function NoReplyRobot({ embedded = false }: NoReplyRobotProps = {}) {
       {/* Funil */}
       <div className={`rounded-lg border border-border p-4 space-y-3 ${disabledCls}`}>
         <h3 className="text-sm font-medium">Funil de follow-up</h3>
-        <select
+        <Seletor
           value={sequenceSlug}
           onChange={e => setSequenceSlug(e.target.value)}
           className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
@@ -249,7 +250,7 @@ export function NoReplyRobot({ embedded = false }: NoReplyRobotProps = {}) {
               {s.name} ({s.steps_count} {s.steps_count === 1 ? 'passo' : 'passos'})
             </option>
           ))}
-        </select>
+        </Seletor>
         <p className="text-xs text-muted-foreground">
           Edite as mensagens e os tempos de cada passo {embedded ? 'na lista abaixo' : <>em <strong>Automações → Follow-up</strong></>}.
         </p>

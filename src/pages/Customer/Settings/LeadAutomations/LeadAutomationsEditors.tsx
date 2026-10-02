@@ -33,6 +33,7 @@ import {
   acceptedBySummary,
   toggleAcceptedBy,
 } from './acceptedByFilter';
+import { Seletor } from '@/components/base/Seletor';
 
 // ============================================================================
 // Catálogos por gatilho/ação
@@ -243,13 +244,13 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
       <div className="space-y-2">
         <div>
           <UILabel>Origem do lead (opcional)</UILabel>
-          <select value={origin} onChange={e => commitOrigin(e.target.value)} className={baseSelectClass}>
+          <Seletor value={origin} onChange={e => commitOrigin(e.target.value)} className={baseSelectClass}>
             <option value="">Qualquer origem</option>
             <option value="formulario">Formulário (Meta Lead Ads)</option>
             <option value="formulario_site">Formulário do site / landing</option>
             <option value="lead_whats_meta">Lead Whats Meta (anúncio no WhatsApp)</option>
             <option value="organico">Orgânico (sem anúncio)</option>
-          </select>
+          </Seletor>
           <p className="text-xs text-muted-foreground mt-1">
             Em branco = qualquer lead novo. <strong>Formulário</strong>: veio de um formulário de anúncio.{' '}
             <strong>Formulário do site</strong>: preencheu um formulário do site ou de uma landing.{' '}
@@ -352,14 +353,14 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
       <div className="space-y-2">
         <div>
           <UILabel>Qual anúncio? (opcional)</UILabel>
-          <select value={value} onChange={e => commit(e.target.value)} className={baseSelectClass}>
+          <Seletor value={value} onChange={e => commit(e.target.value)} className={baseSelectClass}>
             <option value="">Qualquer anúncio (todo lead que veio de anúncio no WhatsApp)</option>
             {withId.map(o => (
               <option key={o.ad_id!} value={o.ad_id!}>
                 {(o.title || o.campaign_name || o.ad_id)} · {o.count} lead{o.count === 1 ? '' : 's'}
               </option>
             ))}
-          </select>
+          </Seletor>
           <p className="text-xs text-muted-foreground mt-1">
             Em branco = vale pra qualquer anúncio. Escolha um anúncio pra esse fluxo valer só pra ele.
             {withId.length === 0 && ' (Nenhum anúncio detectado ainda — cole o ID abaixo ou espere chegar lead de anúncio.)'}
@@ -386,7 +387,7 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
     return (
       <div>
         <UILabel>Qual etiqueta? *</UILabel>
-        <select
+        <Seletor
           value={value}
           onChange={e =>
             onChange({ field: 'label', operator: 'eq', value: e.target.value })
@@ -397,7 +398,7 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
           {resources.labels.map(l => (
             <option key={l.id} value={l.title}>{l.title}</option>
           ))}
-        </select>
+        </Seletor>
         {resources.labels.length === 0 && !resources.loading && (
           <p className="text-xs text-muted-foreground mt-1">
             Nenhuma etiqueta cadastrada. Crie em Configurações &rarr; Etiquetas.
@@ -444,14 +445,14 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
       <div className="space-y-2">
         <div>
           <UILabel>Comparação</UILabel>
-          <select
+          <Seletor
             value={operator}
             onChange={e => commit(e.target.value, value)}
             className={baseSelectClass}
           >
             <option value="contains">Contém</option>
             <option value="eq">É igual a</option>
-          </select>
+          </Seletor>
           <p className="text-xs text-muted-foreground mt-1">
             <strong>Contém:</strong> dispara se a mensagem tiver a palavra em qualquer lugar (recomendado).{' '}
             <strong>É igual a:</strong> só dispara se a mensagem for exatamente a palavra-chave.
@@ -487,7 +488,7 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
     return (
       <div>
         <UILabel>Para qual etapa? *</UILabel>
-        <select
+        <Seletor
           value={value}
           onChange={e =>
             onChange({ field: 'to_stage_id', operator: 'eq', value: e.target.value })
@@ -500,7 +501,7 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
               {s.pipelineName} &rarr; {s.name}
             </option>
           ))}
-        </select>
+        </Seletor>
       </div>
     );
   }
@@ -559,7 +560,7 @@ export function PipelineFilterEditor({
   return (
     <div>
       <UILabel>Funil (opcional)</UILabel>
-      <select
+      <Seletor
         value={value}
         onChange={e =>
           onChange(e.target.value
@@ -572,7 +573,7 @@ export function PipelineFilterEditor({
         {resources.pipelines.map(p => (
           <option key={p.id} value={p.id}>{p.name}</option>
         ))}
-      </select>
+      </Seletor>
       <p className="text-xs text-muted-foreground mt-1">
         Em branco = vale para todo lead do CRM. Escolhendo um funil, essa automação
         só roda para o lead cujo card está nele — é assim que o mesmo CRM tem uma IA
@@ -699,7 +700,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             label="Funil de mensagens *"
             hint="Mesma sequência que o atendente dispara no chat (texto, áudio, imagem, vídeo — com delay por passo)."
           >
-            <select
+            <Seletor
               value={selectedFunnelId}
               onChange={e => setParam('funnel_id', e.target.value)}
               className={baseSelectClass}
@@ -710,7 +711,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                   {f.name}{f.items?.length ? ` · ${f.items.length} passo${f.items.length === 1 ? '' : 's'}` : ''}
                 </option>
               ))}
-            </select>
+            </Seletor>
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <Button
                 type="button"
@@ -757,7 +758,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     case 'start_followup_sequence':
       return (
         <Field label="Sequência de follow-up *">
-          <select
+          <Seletor
             value={String(params.sequence_slug ?? '')}
             onChange={e => setParam('sequence_slug', e.target.value)}
             className={baseSelectClass}
@@ -768,7 +769,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                 {s.name}{!s.is_active ? ' (inativa)' : ''}
               </option>
             ))}
-          </select>
+          </Seletor>
         </Field>
       );
 
@@ -803,7 +804,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               label="Número de envio (admin)"
               hint="Só você vê este campo. Deixe em branco para usar o número padrão do cliente."
             >
-              <select
+              <Seletor
                 value={String(params.sender_instance ?? '')}
                 onChange={e => setParam('sender_instance', e.target.value)}
                 className={baseSelectClass}
@@ -814,7 +815,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                     {inst.name} {inst.status === 'open' ? '✓' : `(${inst.status})`}
                   </option>
                 ))}
-              </select>
+              </Seletor>
               {params.sender_instance && (
                 <p className="text-xs text-amber-500 mt-1">
                   ⚠️ Mensagem enviada pelo número selecionado, não pelo número do cliente.
@@ -863,7 +864,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     case 'assign_broker':
       return (
         <Field label="Corretor *">
-          <select
+          <Seletor
             value={String(params.user_id ?? '')}
             onChange={e => setParam('user_id', e.target.value)}
             className={baseSelectClass}
@@ -872,7 +873,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             {resources.users.map(u => (
               <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
             ))}
-          </select>
+          </Seletor>
         </Field>
       );
 
@@ -882,7 +883,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     case 'remove_label':
       return (
         <Field label="Etiqueta *">
-          <select
+          <Seletor
             value={String(params.label_id ?? '')}
             onChange={e => setParam('label_id', e.target.value)}
             className={baseSelectClass}
@@ -891,7 +892,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             {resources.labels.map(l => (
               <option key={l.id} value={l.id}>{l.title}</option>
             ))}
-          </select>
+          </Seletor>
         </Field>
       );
 
@@ -902,7 +903,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       return (
         <>
           <Field label="Funil *">
-            <select
+            <Seletor
               value={pipelineId}
               onChange={e =>
                 onChange({
@@ -916,11 +917,11 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
               {resources.pipelines.map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
-            </select>
+            </Seletor>
           </Field>
           {pipelineId && (
             <Field label="Etapa *">
-              <select
+              <Seletor
                 value={stageId}
                 onChange={e => setParam('stage_id', e.target.value)}
                 className={baseSelectClass}
@@ -929,7 +930,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                 {(resources.stagesByPipeline[pipelineId] ?? []).map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
-              </select>
+              </Seletor>
             </Field>
           )}
         </>
@@ -974,7 +975,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             hint="De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central Operacional (LM01)."
           >
             {resources.evolutionInstances.length > 0 ? (
-              <select
+              <Seletor
                 value={String(params.instance ?? '')}
                 onChange={e => setParam('instance', e.target.value)}
                 className={baseSelectClass}
@@ -993,7 +994,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                     {String(params.instance)} — não encontrada no servidor
                   </option>
                 )}
-              </select>
+              </Seletor>
             ) : (
               <Input
                 value={String(params.instance ?? '')}
@@ -1004,7 +1005,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             )}
           </Field>
           <Field label="Destino do lembrete *" hint={loadingGroups ? 'Carregando…' : 'O grupo do cliente, ou um usuário (vai no WhatsApp privado dele).'}>
-            <select
+            <Seletor
               value={String(params.group_jid ?? '')}
               onChange={e => setParam('group_jid', e.target.value)}
               className={baseSelectClass}
@@ -1029,7 +1030,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                 && !usersWithWhatsapp.some(u => String(u.whatsapp_number) === params.group_jid) && (
                 <option value={String(params.group_jid)}>{String(params.group_jid)}</option>
               )}
-            </select>
+            </Seletor>
             {/* Lista vazia com o motivo: quase sempre é o nome da instância
                 escrito diferente do painel, ou a instância desconectada. */}
             {!loadingGroups && groups.length === 0 && groupsReason && (
@@ -1058,7 +1059,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       return (
         <>
           <Field label="Avisar qual usuário? *">
-            <select
+            <Seletor
               value={String(params.user_id ?? '')}
               onChange={e => setParam('user_id', e.target.value)}
               className={baseSelectClass}
@@ -1072,7 +1073,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
                   </option>
                 );
               })}
-            </select>
+            </Seletor>
           </Field>
           {selected && !selectedWa && (
             <p className="text-xs text-red-500 mt-1">
@@ -1097,7 +1098,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     case 'send_quick_reply':
       return (
         <Field label="Resposta rápida *">
-          <select
+          <Seletor
             value={String(params.quick_reply_id ?? '')}
             onChange={e => setParam('quick_reply_id', e.target.value)}
             className={baseSelectClass}
@@ -1106,7 +1107,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
             {resources.quickReplies.map(q => (
               <option key={q.id} value={q.id}>{q.title}</option>
             ))}
-          </select>
+          </Seletor>
         </Field>
       );
 

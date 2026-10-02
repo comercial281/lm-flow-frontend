@@ -53,6 +53,7 @@ import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useTenantFeatures } from '@/contexts/TenantFeaturesContext';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
+import { Seletor } from '@/components/base/Seletor';
 
 const TRIGGERS = Object.entries(TRIGGER_LABELS).map(([value, label]) => ({ value, label }));
 const ACTION_TYPES = Object.entries(ACTION_TYPE_LABELS).map(([value, label]) => ({ value, label }));
@@ -733,7 +734,7 @@ export default function LeadAutomations() {
 
               <div>
                 <UILabel>Gatilho *</UILabel>
-                <select
+                <Seletor
                   value={form.trigger}
                   onChange={e => setTrigger(e.target.value)}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -741,7 +742,7 @@ export default function LeadAutomations() {
                   {TRIGGERS.map(t => (
                     <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
-                </select>
+                </Seletor>
                 {TRIGGER_HINTS[form.trigger] && (
                   <p className="text-xs text-muted-foreground mt-1">{TRIGGER_HINTS[form.trigger]}</p>
                 )}
@@ -792,7 +793,7 @@ export default function LeadAutomations() {
                 {form.actions.map((action, i) => (
                   <div key={i} className="p-3 rounded-lg border border-border bg-muted/20 space-y-2">
                     <div className="flex items-center gap-2">
-                      <select
+                      <Seletor
                         value={action.type}
                         onChange={e => updateActionType(i, e.target.value)}
                         className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -800,7 +801,7 @@ export default function LeadAutomations() {
                         {ACTION_TYPES.map(a => (
                           <option key={a.value} value={a.value}>{a.label}</option>
                         ))}
-                      </select>
+                      </Seletor>
                       <Button
                         variant="ghost"
                         size="icon"
