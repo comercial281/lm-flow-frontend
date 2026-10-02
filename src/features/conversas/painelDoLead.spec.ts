@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { OUTRO_NUMERO, mascararTelefone, origemDoLead, outraConversa } from './painelDoLead';
+import {
+  OUTRO_NUMERO, mascararTelefone, origemDoLead, outraConversa, respostasDoFormulario, textoOutraConversa,
+} from './painelDoLead';
 
 // Regras do topo do painel do lead em Conversas (Fase 4, 02/10).
 
@@ -80,6 +82,35 @@ describe('outraConversa — a linha "Também conversou pelo número"', () => {
   it('sem nome do número: "outro número"', () => {
     expect(outraConversa([{ id: 1 }, { id: 2, inbox: null }], 1)?.numero).toBe(OUTRO_NUMERO);
     expect(OUTRO_NUMERO).toBe('outro número');
+  });
+
+  it('texto da linha: com o nome do número, ou "por outro número" sem ele', () => {
+    expect(textoOutraConversa('Marina')).toBe('Também conversou pelo número Marina');
+    expect(textoOutraConversa(OUTRO_NUMERO)).toBe('Também conversou por outro número');
+  });
+});
+
+describe('respostasDoFormulario — a seção recolhida', () => {
+  it('junta personalizados e extras, com a chave legível', () => {
+    expect(
+      respostasDoFormulario({ renda_mensal: '5 mil' }, { cidade: 'Campinas' }),
+    ).toEqual([
+      { id: 'custom.renda_mensal', rotulo: 'Renda Mensal', valor: '5 mil' },
+      { id: 'additional.cidade', rotulo: 'Cidade', valor: 'Campinas' },
+    ]);
+  });
+
+  it('o mesmo filtro de vazios de antes: vazio, "null", objeto e "not informed" saem', () => {
+    expect(
+      respostasDoFormulario(
+        { a: '', b: 'null', c: 'undefined', d: '  ', e: 'Not Informed', f: null, g: 0 },
+        { ad_referral: { source_app: 'instagram' }, lead_origin: { source: 'portal' } },
+      ),
+    ).toEqual([]);
+  });
+
+  it('sem atributos: lista vazia', () => {
+    expect(respostasDoFormulario(undefined, null)).toEqual([]);
   });
 });
 

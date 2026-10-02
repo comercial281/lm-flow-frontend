@@ -1,8 +1,35 @@
 import { telefone, toDate } from '@/lib/formato';
 import { SOURCE_META } from '@/features/leadOrigin/origem';
 
-// Regras do topo do painel do lead em Conversas. Funções puras, com spec: a tela
-// só desenha o que sai daqui.
+// Regras e textos do painel do lead em Conversas. Funções puras, com spec: a
+// tela só desenha o que sai daqui. Textos literais (chave nova de t() não entra).
+
+export const TEXTOS_DO_PAINEL = {
+  semNome: 'Contato sem nome',
+  copiarTelefone: 'Copiar telefone',
+  telefoneCopiado: 'Telefone copiado.',
+  erroAoCopiar: 'Não foi possível copiar o telefone.',
+  editarContato: 'Editar contato',
+  fechar: 'Fechar',
+  veioDe: 'Veio de:',
+  verAnuncio: 'Ver anúncio',
+  abrir: 'abrir',
+  funil: 'Funil',
+  etapa: 'Etapa',
+  abrirCard: 'Abrir card do lead',
+  colocarNoFunil: 'Colocar no funil',
+  erroAoMudarEtapa: 'Não foi possível mudar a etapa.',
+  etiquetas: 'Etiquetas',
+  notas: 'Notas',
+  escrevaUmaNota: 'Escreva uma nota...',
+  salvarNota: 'Salvar nota',
+  semNotas: 'Nenhuma nota ainda.',
+  verTodas: 'Ver todas',
+  verMenos: 'Ver menos',
+  erroAoSalvarNota: 'Não foi possível salvar a nota.',
+  respostasDoFormulario: 'Respostas do formulário',
+  verMais: 'Ver mais',
+} as const;
 
 type Objeto = Record<string, unknown>;
 
@@ -71,6 +98,47 @@ export function outraConversa(
     numero: textoDe(maisRecente.inbox?.name) || OUTRO_NUMERO,
     mais: outras.length - 1,
   };
+}
+
+/** O texto da linha, antes do "abrir". Sem nome do número, não fica "pelo número outro número". */
+export function textoOutraConversa(numero: string): string {
+  return numero === OUTRO_NUMERO ? 'Também conversou por outro número' : `Também conversou pelo número ${numero}`;
+}
+
+// Mesmo filtro de vazios que "Informações do Contato" usava: valor vazio, nulo
+// escrito por extenso, objeto (ad_referral, lead_origin) e o "not informed" do
+// formulário não são resposta.
+const ehResposta = (valor: unknown): boolean => {
+  if (!valor) return false;
+  const texto = String(valor);
+  return (
+    texto.trim() !== '' &&
+    texto !== 'null' &&
+    texto !== 'undefined' &&
+    texto !== '[object Object]' &&
+    texto.toLowerCase() !== 'not informed'
+  );
+};
+
+const rotuloDaChave = (chave: string): string =>
+  chave
+    .split('_')
+    .map(palavra => palavra.charAt(0).toUpperCase() + palavra.slice(1))
+    .join(' ');
+
+/**
+ * "Respostas do formulário": os atributos personalizados e as informações
+ * extras do contato que têm valor de verdade. Lista vazia = a seção não aparece.
+ */
+export function respostasDoFormulario(
+  personalizados: Record<string, unknown> | null | undefined,
+  adicionais: Record<string, unknown> | null | undefined,
+): Array<{ id: string; rotulo: string; valor: string }> {
+  const linhas = (origem: string, attrs: Record<string, unknown> | null | undefined) =>
+    Object.entries(attrs ?? {})
+      .filter(([, valor]) => ehResposta(valor))
+      .map(([chave, valor]) => ({ id: `${origem}.${chave}`, rotulo: rotuloDaChave(chave), valor: String(valor) }));
+  return [...linhas('custom', personalizados), ...linhas('additional', adicionais)];
 }
 
 /**
