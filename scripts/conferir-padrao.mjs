@@ -153,6 +153,13 @@ const MODULOS_DE_FORMATO = ['src/lib/formato.ts', 'src/utils/dateUtils.ts'];
 const CHAVE_A_MAO = /role=["']switch["']/;
 const CHAVE_DA_CASA = 'src/components/base/Chave.tsx';
 
+// Lista de escolha feita com <select> cru (ou o NativeSelect antigo): no
+// computador abre a lista cinza do sistema operacional — a do Windows também.
+// A da casa é o Seletor, que decide sozinho entre a lista do produto e a do
+// celular. Spec: LM FLOW/specs/2026-10-02-seletor-unico-design.md.
+const SELECT_NATIVO = /<select(?=[\s>]|$)|<NativeSelect\b/;
+const SELETOR_DA_CASA = 'src/components/base/Seletor.tsx';
+
 // Atributos e propriedades cujo valor é texto que aparece na tela.
 const ATRIBUTOS_DE_TEXTO = new Set([
   'title', 'placeholder', 'label', 'aria-label', 'alt', 'description', 'subtitle',
@@ -390,6 +397,7 @@ export function varrer() {
       if (limpa.startsWith('//') || limpa.startsWith('*')) return;
       if (!MODULOS_DE_FORMATO.includes(rel) && FORMATO.some(re => re.test(l))) anotar('formato', rel, i + 1, 'formatação fora do módulo', l.trim());
       if (rel !== CHAVE_DA_CASA && CHAVE_A_MAO.test(l)) anotar('chaveMao', rel, i + 1, 'role="switch" feito à mão', l.trim());
+      if (rel !== SELETOR_DA_CASA && !limpa.startsWith('{/*') && SELECT_NATIVO.test(l)) anotar('selectNativo', rel, i + 1, 'lista nativa fora do Seletor', l.trim());
     });
   }
 
@@ -411,6 +419,7 @@ export const CATEGORIAS = {
   maiusculas: 'Maiúscula Em Toda Palavra',
   chaveMao: 'chave feita à mão',
   iconeSemNome: 'botão só-ícone sem nome',
+  selectNativo: 'lista de escolha nativa',
 };
 
 function principal() {

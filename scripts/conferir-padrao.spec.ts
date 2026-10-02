@@ -173,6 +173,19 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
         return <div><p>Deletar {v} contato(s)</p><Button><Trash2 /></Button><span role="switch" /></div>;
       }`,
     );
+    // lista nativa conta na tela do cliente; comentário JSX e o próprio Seletor não
+    writeFileSync(
+      join(raiz, 'src/pages/Customer/Lista.tsx'),
+      `export const L = () => (
+        <div>
+          {/* <select> antigo */}
+          <select value="a"><option value="a">Ana</option></select>
+          <NativeSelect value="b"><option value="b">Bia</option></NativeSelect>
+        </div>
+      );`,
+    );
+    mkdirSync(join(raiz, 'src/components/base'), { recursive: true });
+    writeFileSync(join(raiz, 'src/components/base/Seletor.tsx'), 'const s = <select />;');
     // no painel raiz, o mesmo texto NÃO conta
     writeFileSync(join(raiz, 'src/pages/SuperAdmin/Painel.tsx'), 'const x = <p>Deletar instância</p>;');
     writeFileSync(
@@ -218,10 +231,11 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     expect(contagem(saida, 'maiusculas')).toBe(1); // "Novo Cargo"
     expect(contagem(saida, 'chaveMao')).toBe(1);
     expect(contagem(saida, 'iconeSemNome')).toBe(1);
+    expect(contagem(saida, 'selectNativo')).toBe(2); // <select> e <NativeSelect> de Lista.tsx
   });
 
   it('PASSA no teto exato e REPROVA um abaixo', () => {
-    const exato = { tecnico: 1, glossario: 1, plural: 1, acento: 1, maiusculas: 1, formato: 1, chaveMao: 1, iconeSemNome: 1 };
+    const exato = { tecnico: 1, glossario: 1, plural: 1, acento: 1, maiusculas: 1, formato: 1, chaveMao: 1, iconeSemNome: 1, selectNativo: 2 };
     expect(rodar(['--tetos', tetos(exato)]).codigo).toBe(0);
     const { saida, codigo } = rodar(['--tetos', tetos({ ...exato, glossario: 0 })]);
     expect(codigo).toBe(1);
