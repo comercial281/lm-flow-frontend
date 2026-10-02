@@ -1,0 +1,197 @@
+// src/components/base/Seletor.spec.tsx
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
+import { Seletor } from './Seletor';
+
+// O Select do design system é Radix: o jsdom não tem estas três APIs de
+// ponteiro, e sem elas abrir a lista estoura (mesmo polyfill do
+// CollaboratorsForm.owner.spec).
+beforeEach(() => {
+  Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);
+  Element.prototype.releasePointerCapture = Element.prototype.releasePointerCapture ?? (() => {});
+  Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ?? (() => {});
+});
+
+// Simula a tela: toque (celular) ou ponteiro fino (computador).
+let avisar: (() => void) | null = null;
+let toque = false;
+function simularTela(comToque: boolean) {
+  toque = comToque;
+  window.matchMedia = vi.fn().mockImplementation(() => ({
+    get matches() { return toque; },
+    media: '(pointer: coarse)',
+    addEventListener: (_: string, cb: () => void) => { avisar = cb; },
+    removeEventListener: () => { avisar = null; },
+  })) as unknown as typeof window.matchMedia;
+}
+afterEach(() => {
+  // @ts-expect-error: o jsdom não tem matchMedia; voltamos a não ter.
+  delete window.matchMedia;
+  avisar = null;
+});
+
+function Filtro({ inicial = '', onEscolha = (_: string) => {} }) {
+  const [v, setV] = useState(inicial);
+  return (
+    <>
+      <label htmlFor="tipo">Tipo</label>
+      <Seletor id="tipo" value={v} onChange={e => { setV(e.target.value); onEscolha(e.target.value); }}>
+        <option value="">Tipo de negócio</option>
+        <option value="sale">Venda</option>
+        <option value="rent">Locação</option>
+      </Seletor>
+    </>
+  );
+}
+
+describe('Seletor no celular (e sem matchMedia)', () => {
+  it('sem matchMedia desenha o select nativo e escolhe como sempre', async () => {
+    const escolha = vi.fn();
+    render(<Filtro onEscolha={escolha} />);
+    const caixa = screen.getByLabelText('Tipo');
+    expect(caixa.tagName).toBe('SELECT');
+    await userEvent.selectOptions(caixa, 'rent');
+    expect(escolha).toHaveBeenCalledWith('rent');
+  });
+
+  it('com toque também é nativo', () => {
+    simularTela(true);
+    render(<Filtro />);
+    expect(screen.getByLabelText('Tipo').tagName).toBe('SELECT');
+  });
+
+  it('bare no nativo devolve o select com a className da tela, sem invólucro', () => {
+    const { container } = render(
+      <Seletor bare value="a" onChange={() => {}} className="text-xs pl-2">
+        <option value="a">A</option>
+      </Seletor>,
+    );
+    const select = container.querySelector('select')!;
+    expect(select.className).toBe('text-xs pl-2');
+    expect(select.parentElement).toBe(container);
+  });
+
+  it('pede w-full no invólucro só quando a tela pediu', () => {
+    const { container } = render(
+      <Seletor value="a" onChange={() => {}} className="w-full"><option value="a">A</option></Seletor>,
+    );
+    expect(container.firstElementChild!.className).toContain('w-full');
+  });
+});
+
+describe('Seletor no computador', () => {
+  beforeEach(() => simularTela(false));
+
+  it('desenha a lista do produto e mostra a opção vazia pelo rótulo', () => {
+    render(<Filtro />);
+    const caixa = screen.getByLabelText('Tipo');
+    expect(caixa.tagName).toBe('BUTTON');
+    expect(caixa).toHaveTextContent('Tipo de negócio');
+  });
+
+  it('escolher devolve e.target.value; voltar pra vazia devolve ""', async () => {
+    const escolha = vi.fn();
+    render(<Filtro onEscolha={escolha} />);
+    await userEvent.click(screen.getByLabelText('Tipo'));
+    await userEvent.click(await screen.findByRole('option', { name: 'Locação' }));
+    expect(escolha).toHaveBeenLastCalledWith('rent');
+    expect(screen.getByLabelText('Tipo')).toHaveTextContent('Locação');
+
+    await userEvent.click(screen.getByLabelText('Tipo'));
+    await userEvent.click(await screen.findByRole('option', { name: 'Tipo de negócio' }));
+    expect(escolha).toHaveBeenLastCalledWith('');
+  });
+
+  it('valor numérico mostra o rótulo e devolve texto', async () => {
+    const mudou = vi.fn();
+    render(
+      <Seletor aria-label="Dia" value={2} onChange={e => mudou(e.target.value)}>
+        <option value={1}>Segunda</option>
+        <option value={2}>Terça</option>
+      </Seletor>,
+    );
+    expect(screen.getByLabelText('Dia')).toHaveTextContent('Terça');
+    await userEvent.click(screen.getByLabelText('Dia'));
+    await userEvent.click(await screen.findByRole('option', { name: 'Segunda' }));
+    expect(mudou).toHaveBeenCalledWith('1');
+  });
+
+  it('valor que não casa mostra a primeira opção e não dispara onChange', () => {
+    const mudou = vi.fn();
+    render(
+      <Seletor aria-label="Número" value="sumiu" onChange={mudou}>
+        <option value="a">Loja</option>
+        <option value="b">Centro</option>
+      </Seletor>,
+    );
+    expect(screen.getByLabelText('Número')).toHaveTextContent('Loja');
+    expect(mudou).not.toHaveBeenCalled();
+  });
+
+  it('optgroup vira grupo com título; opção desligada não escolhe', async () => {
+    const mudou = vi.fn();
+    render(
+      <Seletor aria-label="Quem" value="" onChange={e => mudou(e.target.value)}>
+        <option value="">Ninguém</option>
+        <optgroup label="Roletas">
+          <option value="r1">Roleta Centro</option>
+          <option value="r2" disabled>Roleta Pausada</option>
+        </optgroup>
+      </Seletor>,
+    );
+    await userEvent.click(screen.getByLabelText('Quem'));
+    expect(await screen.findByText('Roletas')).toBeInTheDocument();
+    const pausada = screen.getByRole('option', { name: 'Roleta Pausada' });
+    expect(pausada).toHaveAttribute('data-disabled');
+    await userEvent.click(screen.getByRole('option', { name: 'Roleta Centro' }));
+    expect(mudou).toHaveBeenCalledWith('r1');
+  });
+
+  it('a lista abre por cima de modal e mapa', async () => {
+    render(<Filtro />);
+    await userEvent.click(screen.getByLabelText('Tipo'));
+    const lista = await screen.findByRole('listbox');
+    expect(lista.className).toContain('z-[1200]');
+  });
+
+  it('altura: h-9 por padrão e a classe da tela troca', () => {
+    render(
+      <>
+        <Seletor aria-label="Padrão" value="a" onChange={() => {}}><option value="a">A</option></Seletor>
+        <Seletor aria-label="Miúda" value="a" onChange={() => {}} className="h-7 text-xs"><option value="a">A</option></Seletor>
+      </>,
+    );
+    // Compara por classe inteira: "data-[size=default]:h-9" do design system
+    // contém "h-9" como pedaço de texto, mas não é a classe h-9.
+    const classes = (nome: string) => screen.getByLabelText(nome).className.split(/\s+/);
+    expect(classes('Padrão')).toContain('h-9');
+    expect(screen.getByLabelText('Padrão')).toHaveAttribute('data-size', 'livre');
+    expect(classes('Miúda')).toContain('h-7');
+    expect(classes('Miúda')).not.toContain('h-9');
+  });
+
+  it('bare: sem a seta do design system, com a className da tela', () => {
+    render(
+      <Seletor bare aria-label="Status" value="a" onChange={() => {}} className="text-[10px] pl-1.5">
+        <option value="a">Novo</option>
+      </Seletor>,
+    );
+    const caixa = screen.getByLabelText('Status');
+    expect(caixa.className).toContain('text-[10px]');
+    expect(caixa.className).toContain('[&>svg:last-child]:hidden');
+  });
+
+  it('desligado não abre', async () => {
+    render(<Seletor aria-label="X" value="a" onChange={() => {}} disabled><option value="a">A</option></Seletor>);
+    expect(screen.getByLabelText('X')).toBeDisabled();
+  });
+
+  it('troca de modo com a tela aberta (iPad que conecta mouse)', () => {
+    render(<Filtro />);
+    expect(screen.getByLabelText('Tipo').tagName).toBe('BUTTON');
+    act(() => { toque = true; avisar?.(); });
+    expect(screen.getByLabelText('Tipo').tagName).toBe('SELECT');
+  });
+});
