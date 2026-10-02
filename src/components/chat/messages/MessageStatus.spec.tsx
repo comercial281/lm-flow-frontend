@@ -7,22 +7,6 @@ vi.mock('@/hooks/useLanguage', () => ({
   useLanguage: () => ({ t: (key: string, fallback?: string) => fallback ?? key }),
 }));
 
-vi.mock('@evoapi/design-system/button', () => ({
-  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
-    <button type="button" {...props}>
-      {children}
-    </button>
-  ),
-}));
-
-vi.mock('sonner', () => ({
-  toast: {
-    warning: vi.fn(),
-    info: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
 vi.mock('@/utils/time/timeHelpers', () => ({
   formatMessageTime: () => '10:30',
 }));
