@@ -18,6 +18,7 @@ import MessageList from '../messages/MessageList';
 import { Banner } from '../banner';
 import PendingResponseBanner from '../banner/PendingResponseBanner';
 
+import { fraseDoCampo } from '@/features/conversas/fraseDoCampo';
 import type { Message, Conversation } from '@/types/chat/api';
 
 interface PostData {
@@ -378,13 +379,14 @@ const ChatArea = ({
       <div className="flex-shrink-0 w-full">
         <MessageInput
           onSendMessage={handleSendMessage}
-          placeholder={
-            isPendingConversation
-              ? t('chatArea.messageInput.pendingPlaceholder')
-              : shouldShowRestrictionBanner
-              ? t('chatArea.messageInput.restrictedPlaceholder')
-              : t('chatArea.messageInput.defaultPlaceholder')
-          }
+          placeholder={fraseDoCampo({
+            pendente: isPendingConversation,
+            desconectado: isDisconnected,
+            janelaFechada:
+              !canReply && hasMessagingWindowRestriction && !isWhatsAppFreeTextChannel,
+            textoPendente: t('chatArea.messageInput.pendingPlaceholder'),
+            textoPadrao: t('chatArea.messageInput.defaultPlaceholder'),
+          })}
           isDisabled={shouldShowRestrictionBanner}
           isPendingConversation={isPendingConversation}
           onTypingStart={handleTypingStart}
