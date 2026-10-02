@@ -5127,7 +5127,7 @@ e as telas escritas aqui usaram `<select>` cru porque ele aceita a opção vazia
 ("Todos"), que o Select do design system recusa com erro.
 
 O que aparece na tela: no computador, toda lista migrada abre a lista do produto;
-no celular e no tablet, a do sistema (a rodinha do iPhone). Neste PR: Imóveis
+no celular e no tablet, a do sistema (a rodinha do iPhone). No PR 1: Imóveis
 (lista, cadastro e mapa), Roleta, ficha do contato, card do lead (interesses e
 follow-up), Agenda (folgas e horário), destino do lead, desativar usuário, portais
 e o formulário da landing. No PR 2: Dashboard nova (filtros e Funil), Conversas

@@ -153,17 +153,11 @@ export default function OnboardingPage() {
   };
 
   // "Outro" abre o campo livre com o foco nele. No computador a lista do produto
-  // devolve o foco ao botão ao fechar (num setTimeout do Radix); o campo pega o
-  // foco depois disso. O autoFocus do campo continua valendo no celular.
+  // devolve o foco ao botão quando ela desmonta (depois da animação de saída);
+  // o onCloseAutoFocus abaixo segura isso e manda o foco pro campo, só logo depois
+  // de escolher "Outro". No celular o autoFocus do campo cobre a montagem.
   const outroRef = useRef<HTMLInputElement>(null);
-  const escolheuOutro = form.mainChannel === t('survey.channel.other');
-  const escolheuOutroRef = useRef(escolheuOutro);
-  escolheuOutroRef.current = escolheuOutro;
-  useEffect(() => {
-    if (!escolheuOutro) return undefined;
-    const id = setTimeout(() => outroRef.current?.focus(), 0);
-    return () => clearTimeout(id);
-  }, [escolheuOutro]);
+  const acabouDeEscolherOutroRef = useRef(false);
 
   const isChannelValid =
     form.mainChannel !== '' &&
@@ -375,15 +369,20 @@ export default function OnboardingPage() {
                     bare
                     escuro
                     onCloseAutoFocus={(e) => {
-                      // Lê o valor no momento da chamada (ref), sem closure velha.
-                      if (escolheuOutroRef.current) {
+                      // Só logo depois de escolher "Outro": reabrir a lista e fechar
+                      // com Esc ou clique fora devolve o foco ao botão, como no resto.
+                      if (acabouDeEscolherOutroRef.current) {
+                        acabouDeEscolherOutroRef.current = false;
                         e.preventDefault();
                         outroRef.current?.focus();
                       }
                     }}
                     id="mainChannel"
                     value={form.mainChannel}
-                    onChange={(e) => set('mainChannel')(e.target.value)}
+                    onChange={(e) => {
+                      acabouDeEscolherOutroRef.current = e.target.value === t('survey.channel.other');
+                      set('mainChannel')(e.target.value);
+                    }}
                     style={{
                       width: '100%',
                       height: '40px',

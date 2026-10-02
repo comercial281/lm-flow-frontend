@@ -84,6 +84,22 @@ describe('Primeiro acesso no computador', () => {
     expect(campo).toHaveFocus();
   });
 
+  it('com "Outro" já escolhido, reabrir a lista e fechar com Esc devolve o foco ao botão, não ao campo', async () => {
+    tela();
+    const botao = screen.getByLabelText('survey.channel.label');
+    await userEvent.click(botao);
+    await userEvent.click(await screen.findByRole('option', { name: 'Outro' }));
+    const campo = screen.getByPlaceholderText('survey.channel.otherPlaceholder');
+    await waitFor(() => expect(campo).toHaveFocus());
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+    await userEvent.click(botao);
+    await screen.findByRole('listbox');
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+    await waitFor(() => expect(botao).toHaveFocus());
+    expect(campo).not.toHaveFocus();
+  });
+
   it('o foco pinta a borda verde no botão, como pintava no select', () => {
     tela();
     const caixa = screen.getByLabelText('survey.teamSize.label');

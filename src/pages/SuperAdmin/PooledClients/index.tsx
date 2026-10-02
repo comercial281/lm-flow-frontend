@@ -829,7 +829,7 @@ function FeaturesModal({ tenant, onClose, onTenantUpdated }: {
                       <div className="mt-2 space-y-1.5">
                         {groupsError && <div className="text-xs text-amber-300">{groupsError}</div>}
                         <Seletor escuro value={pickedJid} onChange={e => setPickedJid(e.target.value)} disabled={loadingGroups}
-                          className="w-full px-2 py-1.5 rounded text-sm text-white outline-none focus:ring-1 focus:ring-violet-500"
+                          className="h-auto w-full px-2 py-1.5 rounded text-sm text-white outline-none focus:ring-1 focus:ring-violet-500"
                           style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(124,58,237,0.25)' }}>
                           <option value="">
                             {loadingGroups ? 'Carregando grupos do número operacional...'
