@@ -5078,4 +5078,34 @@ Armadilhas:
    card ainda passam a prop (opcional).
 3. Regras puras do card em `src/features/cardDoLead/cardDoLead.ts` (com spec):
    contato/conversa do card, lápis, respostas, origem curta, lead para visita.
-4. Ficou pra próxima entrega: aba **Visitas e propostas** (spec, entrega 3).
+4. A aba **Visitas e propostas** entrou depois, na seção abaixo.
+
+## Card do lead: aba Visitas e propostas (desde 2026-10-02)
+
+Entrega 3 da spec do card. Propostas existia e estava parada por falta de uso:
+o corretor teria de sair do card para registrar.
+
+O que aparece na tela hoje:
+
+- **Aba "Visitas e propostas"** (entre Conversa e Origem), duas caixas:
+  - **Visitas** do lead, mais recente primeiro: data, status, imóvel, corretor,
+    nota e comentário. Visita que já passou, não foi cancelada nem remarcada e
+    não tem nota nem comentário mostra **"Sem feedback"** (`visitaSemFeedback`).
+  - **Propostas** do lead: valor, status, imóvel, tipo, contraproposta.
+    **Registrar proposta** abre a janela da tela de Propostas com o lead e o
+    imóvel de interesse já preenchidos. **Abrir em Propostas** leva para a tela
+    filtrada pelo lead (`?contact_id=&nome=`), com selo para tirar o filtro.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Registrar proposta não move o card de etapa** (fica para uma segunda versão).
+
+Armadilhas:
+
+1. A janela de proposta é **uma só**: `src/components/proposals/ProposalFormDialog.tsx`,
+   usada na tela de Propostas e no card. Não copiar de novo para dentro de uma tela.
+2. Sem permissão de ver propostas (403), a caixa de Propostas some e a de Visitas
+   fica. O botão de registrar exige `proposals_create` (chave do cliente) e o
+   cargo com `proposals.create`.
+3. As visitas vêm do mesmo `GET /visits` da Agenda, com o recorte do servidor:
+   corretor vê só as visitas dele.
