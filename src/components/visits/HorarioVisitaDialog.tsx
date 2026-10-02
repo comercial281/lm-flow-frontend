@@ -16,7 +16,7 @@ import {
   Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
   Input, Label as UILabel,
 } from '@/components/ui/ds';
-import { NativeSelect } from '@/components/ui/native-select';
+import { Seletor } from '@/components/base/Seletor';
 import IconActionButton from '@/components/base/IconActionButton';
 import { PilulasDias } from '@/pages/Customer/Automations/SalesAgents/assistente/steps/Campos';
 import { agendaService } from '@/services/visits/agendaService';
@@ -138,15 +138,15 @@ export function HorarioVisitaDialog({ open, onOpenChange }: Props) {
             <div className="flex flex-wrap items-end gap-3">
               <div className="w-32">
                 <UILabel htmlFor="hv_inicio">Início</UILabel>
-                <NativeSelect id="hv_inicio" className="mt-1" value={inicio} onChange={e => setInicio(e.target.value)}>
+                <Seletor id="hv_inicio" className="mt-1 w-full" value={inicio} onChange={e => setInicio(e.target.value)}>
                   {opcoesDeHora(inicio).map(h => <option key={h} value={h}>{h}</option>)}
-                </NativeSelect>
+                </Seletor>
               </div>
               <div className="w-32">
                 <UILabel htmlFor="hv_fim">Fim</UILabel>
-                <NativeSelect id="hv_fim" className="mt-1" value={fim} onChange={e => setFim(e.target.value)}>
+                <Seletor id="hv_fim" className="mt-1 w-full" value={fim} onChange={e => setFim(e.target.value)}>
                   {opcoesDeHora(fim).map(h => <option key={h} value={h}>{h}</option>)}
-                </NativeSelect>
+                </Seletor>
               </div>
             </div>
 

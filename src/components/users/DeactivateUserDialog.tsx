@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/ds';
-import { NativeSelect } from '@/components/ui/native-select';
+import { Seletor } from '@/components/base/Seletor';
 import { usersService } from '@/services/users';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import type { DeactivationPreview, DeactivationReason } from '@/types/users';
@@ -168,25 +168,25 @@ export default function DeactivateUserDialog({ open, user, users, onClose, onDon
 
           <label className="block">
             <span className="mb-1 block text-xs text-muted-foreground">Motivo</span>
-            <NativeSelect value={reason} onChange={e => setReason(e.target.value as DeactivationReason)}>
+            <Seletor className="w-full" value={reason} onChange={e => setReason(e.target.value as DeactivationReason)}>
               {(Object.keys(REASON_LABELS) as DeactivationReason[]).map(key => (
                 <option key={key} value={key}>
                   {REASON_LABELS[key]}
                 </option>
               ))}
-            </NativeSelect>
+            </Seletor>
           </label>
 
           <label className="block">
             <span className="mb-1 block text-xs text-muted-foreground">Os leads dele vão para</span>
-            <NativeSelect value={transferToId} onChange={e => setTransferToId(e.target.value)}>
+            <Seletor className="w-full" value={transferToId} onChange={e => setTransferToId(e.target.value)}>
               <option value="">Deixar como estão (continuam com ele)</option>
               {candidates.map(c => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
-            </NativeSelect>
+            </Seletor>
             {transferToId && (
               <p className="mt-1 text-[11px] text-muted-foreground">
                 O atendimento passa a sair pelo número de quem recebe. O lead que responder na

@@ -6,7 +6,7 @@ import {
   Button, Input, Label as UILabel, Badge,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/ds';
-import { NativeSelect } from '@/components/ui/native-select';
+import { Seletor } from '@/components/base/Seletor';
 import {
   Shuffle, Plus, Trash2, Save, Phone,
   Clock, Bell, ToggleLeft, ToggleRight, Users, BarChart2,
@@ -2056,7 +2056,7 @@ export default function RoletaConfigPage() {
             <div className="lg:col-span-2">
               <UILabel>Número de WhatsApp *</UILabel>
               <div className="mt-1">
-                <NativeSelect
+                <Seletor className="w-full"
                   value={inboxId}
                   onChange={e => setInboxId(e.target.value)}
                   disabled={!!editing}
@@ -2068,7 +2068,7 @@ export default function RoletaConfigPage() {
                   {inboxes.map(i => (
                     <option key={i.id} value={i.id}>{i.name}</option>
                   ))}
-                </NativeSelect>
+                </Seletor>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 O número de WhatsApp que essa roleta distribui.
@@ -2177,7 +2177,7 @@ export default function RoletaConfigPage() {
                         >
                           {idx === 0 ? 'Entrada' : 'Número'}
                         </span>
-                        <NativeSelect
+                        <Seletor className="w-full"
                           value={inst.inbox_id}
                           onChange={e => updateInstance(inst.localId, 'inbox_id', e.target.value)}
                           disabled={idx === 0 && !!editing}
@@ -2194,7 +2194,7 @@ export default function RoletaConfigPage() {
                               {i.name}
                             </option>
                           ))}
-                        </NativeSelect>
+                        </Seletor>
                       </div>
                       <div className="sm:col-span-3 sm:pt-[22px]">
                         <Input
@@ -2463,7 +2463,7 @@ export default function RoletaConfigPage() {
                         Fora do horário, atender por
                       </UILabel>
                       <div className="mt-1">
-                        <NativeSelect
+                        <Seletor className="w-full"
                           value={plantaoInboxId}
                           onChange={e => setPlantaoInboxId(e.target.value)}
                         >
@@ -2474,7 +2474,7 @@ export default function RoletaConfigPage() {
                           {inboxes.map(i => (
                             <option key={i.id} value={i.id}>{i.name}</option>
                           ))}
-                        </NativeSelect>
+                        </Seletor>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         Fora do horário a roleta não sorteia corretor. O lead vai para o número escolhido,
@@ -2527,7 +2527,7 @@ export default function RoletaConfigPage() {
                 Grupo de avisos (opcional)
               </UILabel>
               <div className="mt-1">
-                <NativeSelect
+                <Seletor className="w-full"
                   value={gestorGroupJid}
                   onChange={e => setGestorGroupJid(e.target.value)}
                   disabled={loadingGroups}
@@ -2544,7 +2544,7 @@ export default function RoletaConfigPage() {
                       <option key={g.id} value={g.id}>{g.name}{suggested ? '  ⭐ (sugerido)' : ''}</option>
                     );
                   })}
-                </NativeSelect>
+                </Seletor>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {loadingGroups
@@ -2562,7 +2562,7 @@ export default function RoletaConfigPage() {
                 Número que envia os avisos (opcional)
               </UILabel>
               <div className="mt-1">
-                <NativeSelect
+                <Seletor className="w-full"
                   value={senderSelectValue(notifInboxId, notifInstance)}
                   onChange={e => {
                     const f = senderFields(e.target.value);
@@ -2598,7 +2598,7 @@ export default function RoletaConfigPage() {
                       ))}
                     </optgroup>
                   )}
-                </NativeSelect>
+                </Seletor>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {notifInstance
@@ -3073,14 +3073,14 @@ export default function RoletaConfigPage() {
                                 <div>
                                   <UILabel className="text-xs">Atende pelo número</UILabel>
                                   <div className="mt-1">
-                                    <NativeSelect
+                                    <Seletor className="w-full"
                                       value={memberInbox(m)}
                                       onChange={e => updateMember(m.localId, 'inbox_id', e.target.value)}
                                     >
                                       {u.acessos.map(id => (
                                         <option key={id} value={id}>{instanceName(id)}</option>
                                       ))}
-                                    </NativeSelect>
+                                    </Seletor>
                                   </div>
                                 </div>
                               )}
