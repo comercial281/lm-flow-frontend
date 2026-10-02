@@ -17,10 +17,11 @@ const getLabels = vi.fn().mockResolvedValue({
   ],
 });
 
+const createLabel = vi.fn().mockResolvedValue({});
 vi.mock('@/services/contacts/labelsService', () => ({
   labelsService: {
     getLabels: (...a: unknown[]) => getLabels(...a),
-    createLabel: vi.fn(),
+    createLabel: (...a: unknown[]) => createLabel(...a),
   },
 }));
 const updateContact = vi.fn().mockResolvedValue({});
@@ -41,6 +42,7 @@ describe('ContactTagsManager', () => {
     updateContact.mockClear();
     removeLabels.mockClear();
     addLabels.mockClear();
+    createLabel.mockClear();
   });
 
   it('busca o catálogo uma vez só, mesmo remontando por contato', async () => {
@@ -103,5 +105,49 @@ describe('ContactTagsManager', () => {
     await waitFor(() => expect(updateContact).toHaveBeenCalledWith('contato-7', { labels: [] }));
     expect(removeLabels).toHaveBeenCalledWith('conv-7', ['zona sul']);
     await waitFor(() => expect(screen.queryByText('zona sul')).toBeNull());
+  });
+  // Enter na busca (revisão de 02/10): "vis" + Enter não pode criar uma etiqueta
+  // "vis" na conta inteira quando o catálogo já mostra "visita-agendada".
+  const abrirEDigitar = async (contato: string, texto: string) => {
+    render(<ContactTagsManager contactId={contato} initialLabels={[]} />);
+    fireEvent.click(screen.getByRole('button', { name: '+ Etiqueta' }));
+    await screen.findByRole('button', { name: 'zona sul' });
+    const campo = screen.getByPlaceholderText('Buscar ou criar etiqueta...');
+    fireEvent.change(campo, { target: { value: texto } });
+    fireEvent.keyDown(campo, { key: 'Enter' });
+    return campo;
+  };
+
+  it('Enter com parte do nome aplica a 1ª sugestão, sem criar etiqueta nova', async () => {
+    await abrirEDigitar('contato-8', 'vis');
+    await waitFor(() => expect(updateContact).toHaveBeenCalledWith('contato-8', { labels: ['visita-agendada'] }));
+    expect(createLabel).not.toHaveBeenCalled();
+  });
+
+  it('Enter com o nome exato (sem diferença de maiúscula) aplica essa, não a 1ª sugestão', async () => {
+    // O catálogo já está no store; "Zona Sul" casa exato com "zona sul".
+    await abrirEDigitar('contato-9', 'Zona Sul');
+    await waitFor(() => expect(updateContact).toHaveBeenCalledWith('contato-9', { labels: ['zona sul'] }));
+    expect(createLabel).not.toHaveBeenCalled();
+  });
+
+  it('Enter sem sugestão nenhuma cria a etiqueta', async () => {
+    await abrirEDigitar('contato-10', 'investidor');
+    await waitFor(() => expect(createLabel).toHaveBeenCalledWith(expect.objectContaining({ title: 'investidor' })));
+    await waitFor(() => expect(updateContact).toHaveBeenCalledWith('contato-10', { labels: ['investidor'] }));
+  });
+
+  it('enquanto salva, o campo não é desabilitado (desabilitar tira o foco no navegador)', async () => {
+    let terminar: (v: unknown) => void = () => {};
+    updateContact.mockImplementationOnce(() => new Promise(r => { terminar = r; }));
+    const campo = (await abrirEDigitar('contato-11', 'zona')) as HTMLInputElement;
+    await waitFor(() => expect(updateContact).toHaveBeenCalled());
+    // Salvando: só leitura, mas ainda focável e com o foco.
+    expect(campo.disabled).toBe(false);
+    expect(campo.readOnly).toBe(true);
+    expect(document.activeElement).toBe(campo);
+    terminar({});
+    await waitFor(() => expect(campo.readOnly).toBe(false));
+    expect(document.activeElement).toBe(campo);
   });
 });

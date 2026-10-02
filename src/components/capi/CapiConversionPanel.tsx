@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Badge, Button } from '@/components/ui/ds';
 import { Check, Info, Loader2, TrendingUp } from 'lucide-react';
@@ -63,19 +63,32 @@ export default function CapiConversionPanel({
 
   const hasTarget = Boolean(contactId || pipelineItemId);
 
+  // De quem é a tela agora. No painel do lead o componente não remonta ao trocar
+  // de conversa: a resposta (do status ou de um envio) de um lead que já saiu da
+  // tela não pode cair no lead novo.
+  const alvo = `${contactId ?? ''}|${pipelineItemId ?? ''}`;
+  const alvoAtual = useRef(alvo);
+  alvoAtual.current = alvo;
+  // A última resposta dizia que dá pra enviar: no compacto, a linha guarda o
+  // lugar enquanto o lead novo carrega, e o que vem embaixo não pula.
+  const podiaEnviar = useRef(false);
+
   const load = useCallback(async () => {
     if (!hasTarget) {
       setLoading(false);
       return;
     }
+    const pedido = `${contactId ?? ''}|${pipelineItemId ?? ''}`;
+    let data: CapiManualStatus | null = null;
     try {
-      const data = await capiEventsService.status({ contactId, pipelineItemId });
-      setStatus(data);
+      data = await capiEventsService.status({ contactId, pipelineItemId });
     } catch {
-      setStatus(null);
-    } finally {
-      setLoading(false);
+      data = null;
     }
+    if (pedido !== alvoAtual.current) return;
+    podiaEnviar.current = Boolean(data?.can_send);
+    setStatus(data);
+    setLoading(false);
   }, [contactId, pipelineItemId, hasTarget]);
 
   useEffect(() => {
@@ -86,9 +99,10 @@ export default function CapiConversionPanel({
   async function handleSend(event: CapiManualEvent) {
     if (sending) return;
     setSending(event.event_name);
+    const pedido = alvo;
     try {
       const updated = await capiEventsService.send({ contactId, pipelineItemId }, event.event_name);
-      setStatus(updated);
+      if (pedido === alvoAtual.current) setStatus(updated);
       toast.success(`${CAPI_MANUAL_LABELS[event.event_name] ?? event.event_name} enviado ao Meta.`);
     } catch (err: unknown) {
       const message =
@@ -102,6 +116,13 @@ export default function CapiConversionPanel({
     }
   }
 
+  if (loading && hasTarget && variante === 'compacto' && podiaEnviar.current) {
+    return (
+      <div data-testid="conversao-meta-carregando" aria-hidden className={className}>
+        <div className="h-7" />
+      </div>
+    );
+  }
   if (!hasTarget || loading) return null;
   // Sem nenhum destino pronto pra receber a conversão, a seção não aparece.
   if (!status || !status.can_send) return null;

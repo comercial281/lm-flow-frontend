@@ -127,6 +127,19 @@ export default function ContactTagsManager({
     await persist([...tags, name], name, 'add');
   };
 
+  // Enter na busca: escolhe, não inventa. O nome exato do catálogo (sem diferença
+  // de maiúscula) vence; senão, a 1ª sugestão que a pessoa está vendo; só cria
+  // quando não há sugestão nenhuma. Criar de propósito é o botão "Criar".
+  // ("vis" + Enter criava a etiqueta "vis" na conta inteira.)
+  const aoApertarEnter = () => {
+    const busca = input.trim().toLowerCase();
+    if (!busca) return;
+    const exata = catalog.find(l => l.title?.toLowerCase() === busca);
+    if (exata) return void addTag(exata.title);
+    if (suggestions.length > 0) return void addTag(suggestions[0].title);
+    void addTag(input);
+  };
+
   const removeTag = async (name: string) => {
     await persist(
       tags.filter(t => t !== name),
@@ -176,7 +189,9 @@ export default function ContactTagsManager({
 
       {catalogoAberto && (
         <div className="space-y-2">
-          {/* Buscar no catálogo; Enter aplica (e cria, se não existir). */}
+          {/* Buscar no catálogo; Enter aplica a exata ou a 1ª sugestão (e só cria sem
+              sugestão). Salvando, fica só leitura e não desabilitado: desabilitar
+              tira o foco, e a pessoa quer pôr outra ou fechar com Esc. */}
           <input
             ref={campo}
             value={input}
@@ -184,7 +199,7 @@ export default function ContactTagsManager({
             onKeyDown={e => {
               if (e.key === 'Enter') {
                 e.preventDefault();
-                void addTag(input);
+                if (!saving) aoApertarEnter();
               } else if (e.key === 'Escape') {
                 setInput('');
                 setCatalogoAberto(false);
@@ -192,8 +207,9 @@ export default function ContactTagsManager({
             }}
             placeholder="Buscar ou criar etiqueta..."
             aria-label="Buscar ou criar etiqueta"
-            disabled={saving}
-            className="w-full h-8 rounded-md border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+            readOnly={saving}
+            aria-busy={saving}
+            className="w-full h-8 rounded-md border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-primary read-only:opacity-60"
           />
 
           <div className="flex flex-wrap gap-1.5">

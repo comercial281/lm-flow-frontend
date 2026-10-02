@@ -56,4 +56,48 @@ describe('CapiConversionPanel', () => {
     await act(() => new Promise(r => setTimeout(r, 0)));
     expect(container.innerHTML).toBe('');
   });
+  // Trocar de conversa (revisão de 02/10): o painel do lead não remonta a Meta.
+  const adiada = () => {
+    let resolver: (v: unknown) => void = () => {};
+    const promessa = new Promise(r => { resolver = r; });
+    return { promessa, resolver };
+  };
+
+  it('compacto: trocando de lead, a linha guarda o lugar enquanto carrega (nada pula)', async () => {
+    status.mockResolvedValueOnce(pronto);
+    const { rerender } = render(<CapiConversionPanel contactId="c1" variante="compacto" className="linha-meta" />);
+    expect(await screen.findByText('Meta')).toBeTruthy();
+
+    const c2 = adiada();
+    status.mockReturnValueOnce(c2.promessa);
+    rerender(<CapiConversionPanel contactId="c2" variante="compacto" className="linha-meta" />);
+
+    // Carregando o c2: a linha ocupa o mesmo lugar, sem os botões do lead anterior.
+    const reserva = screen.getByTestId('conversao-meta-carregando');
+    expect(reserva.className).toContain('linha-meta');
+    expect(screen.queryByRole('button', { name: 'Qualificado' })).toBeNull();
+
+    await act(async () => { c2.resolver(pronto); });
+    expect(await screen.findByRole('button', { name: 'Qualificado' })).toBeTruthy();
+    expect(screen.queryByTestId('conversao-meta-carregando')).toBeNull();
+  });
+
+  it('resposta atrasada do lead anterior não cai no lead novo', async () => {
+    const c1 = adiada();
+    status.mockReturnValueOnce(c1.promessa);
+    const { rerender } = render(<CapiConversionPanel contactId="c1" variante="compacto" />);
+
+    const sentNoC2 = {
+      ...pronto,
+      events: pronto.events.map(e => (e.event_name === 'Qualificado' ? { ...e, sent_at: '2026-10-02T12:00:00Z' } : e)),
+    };
+    status.mockResolvedValueOnce(sentNoC2);
+    rerender(<CapiConversionPanel contactId="c2" variante="compacto" />);
+    expect(await screen.findByRole('button', { name: 'Qualificado' })).toBeTruthy();
+
+    // A resposta do c1 chega depois: "não pode enviar". Não vale mais.
+    await act(async () => { c1.resolver({ ...pronto, can_send: false }); });
+    expect(screen.getByRole('button', { name: 'Qualificado' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Qualificado' }).getAttribute('title')).toMatch(/enviado em/);
+  });
 });

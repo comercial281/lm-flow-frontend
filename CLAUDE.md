@@ -4791,8 +4791,11 @@ O que aparece na tela:
   linha de texto "Veio de: …" saiu.
 - **Conversão Meta numa linha logo abaixo do topo:** "Meta" em verde + Qualificado,
   Desqualificado e Venda. A explicação longa virou o ⓘ (balão); quando e quem
-  enviou fica no balão do botão já enviado. Continua sumindo quando o cliente não
-  usa Pixel/CAPI. No card do lead, o bloco completo de antes (`variante`).
+  enviou aparece ao passar o mouse no botão já enviado (dica nativa, `title`).
+  Continua sumindo quando o cliente não usa Pixel/CAPI; ao trocar de conversa a
+  linha guarda o lugar enquanto carrega (nada pula), e a resposta atrasada do
+  lead anterior é descartada. No card do lead, o bloco completo de antes
+  (`variante`).
 - **Seções simples, uma embaixo da outra, com um ícone colorido pequeno no
   título** (Funil azul, O que a IA entendeu roxo, Etiquetas rosa, Notas laranja):
   Funil (uma linha *nome do funil · Etapa [▾]* por funil, que move o lead na
@@ -4800,8 +4803,10 @@ O que aparece na tela:
   a IA entendeu (só se a IA atendeu; **o resumo primeiro, à vista**, em 3 linhas
   com **Ver mais**; "Histórico e próximos passos" continua fechado; a
   temperatura não se repete ali, está no selo), Etiquetas (**só as do lead**,
-  com ✕ pra tirar, e **+ Etiqueta**, que abre a busca no catálogo da conta e
-  cria a que não existe; sem etiqueta, só o "+ Etiqueta"), Notas (campo, as 3
+  com ✕ pra tirar, e **+ Etiqueta**, que abre a busca no catálogo da conta;
+  Enter aplica a etiqueta de nome exato ou a 1ª sugestão e só cria quando não
+  há sugestão, e o botão **Criar "x"** cria de propósito; sem etiqueta, só o
+  "+ Etiqueta"), Notas (campo, as 3
   últimas e **Ver todas**) e **Respostas do formulário** (a única que abre e
   fecha, começa fechada, sem ícone, e só existe com dado).
 - **Topo da conversa:** *"Número Guatemala · (11) 98235-3462 · Responsável:
@@ -4851,7 +4856,7 @@ Armadilhas:
    campo) e o card do lead não abre pelo painel.
 2. **`SOURCE_META` mora em `src/features/leadOrigin/origem.ts`**, usado pela aba
    Origem do card e pelo selo de origem (o antigo "Veio de"). Origem nova entra lá, uma vez. No painel o
-   emoji do rótulo sai; `unknown` não mostra a linha; sem origem gravada, cai no
+   emoji do rótulo sai; `unknown` não vira selo; sem origem gravada, cai no
    anúncio da conversa ("Anúncio no Instagram/Facebook"). **"Ver anúncio" só
    aponta pra anúncio**: o link do `ad_referral` da conversa, ou o da origem
    gravada quando ela é `whatsapp_ctwa`, `meta_lead_ads` ou `anuncio`. Landing,
