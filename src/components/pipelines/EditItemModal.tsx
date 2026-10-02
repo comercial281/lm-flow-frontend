@@ -517,10 +517,12 @@ export default function EditItemModal({
 
             {/* Situação */}
             <div className="space-y-2">
-              <div className="grid gap-1">
+              {/* Etapa e Responsável lado a lado: economiza altura na coluna fixa. */}
+              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1 min-w-0">
                 <span className="text-xs font-medium text-muted-foreground">Etapa</span>
                 <Select value={etapaId ?? undefined} onValueChange={moverEtapa} disabled={movendoEtapa}>
-                  <SelectTrigger className="h-10 text-sm">
+                  <SelectTrigger className="h-10 w-full text-sm">
                     <SelectValue placeholder="Escolha a etapa">
                       {etapaAtual && (
                         <span className="flex items-center gap-2">
@@ -546,13 +548,13 @@ export default function EditItemModal({
               {/* Responsável — sem gate de conversa: lead de formulário/anúncio
                   não tem conversa e mesmo assim precisa de dono. */}
               {(item.conversation?.id || contato?.id) && (
-                <div className="grid gap-1">
+                <div className="grid gap-1 min-w-0">
                   <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                     Responsável
                     {assigningUser && <Loader2 className="h-3 w-3 animate-spin" />}
                   </span>
                   <Select value={selectedAssigneeId ?? 'unassigned'} onValueChange={handleAssigneeChange} disabled={assigningUser}>
-                    <SelectTrigger className="h-10 text-sm">
+                    <SelectTrigger className="h-10 w-full text-sm">
                       <SelectValue placeholder="Sem responsável" />
                     </SelectTrigger>
                     <SelectContent>
@@ -562,12 +564,13 @@ export default function EditItemModal({
                       ))}
                     </SelectContent>
                   </Select>
-                  {roletaDoLead && (
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Shuffle className="h-3.5 w-3.5" /> veio pela {roletaDoLead}
-                    </span>
-                  )}
                 </div>
+              )}
+              </div>
+              {roletaDoLead && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Shuffle className="h-3.5 w-3.5" /> veio pela {roletaDoLead}
+                </span>
               )}
 
               {/* A oferta que espera o PRÓPRIO usuário — o corretor aceita daqui. */}
