@@ -1,3 +1,4 @@
+import { ordemDaLista } from '@/features/conversas/itemDaLista';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@evoapi/design-system/button';
 import { Input } from '@evoapi/design-system/input';
@@ -350,7 +351,7 @@ const ChatSidebar = ({
         fields: { status: 'resolved' },
       });
       setSelectedConversations(new Set());
-      await conversations.loadConversations({});
+      await aplicarComPilula(conversationFilters, pilula);
       toast.success(`${count} conversa${count !== 1 ? 's' : ''} resolvida${count !== 1 ? 's' : ''}`);
     } catch (error) {
       console.error('Bulk resolve error:', error);
@@ -407,33 +408,8 @@ const ChatSidebar = ({
       return showArchived ? isArchived : !isArchived;
     });
 
-    const getSortTimestamp = (conversation: Conversation) => {
-      if (typeof conversation.timestamp === 'number') {
-        return conversation.timestamp;
-      }
-      const activityTime = Date.parse(conversation.last_activity_at || '');
-      if (!Number.isNaN(activityTime)) {
-        return activityTime;
-      }
-      const updatedTime = Date.parse(conversation.updated_at || '');
-      if (!Number.isNaN(updatedTime)) {
-        return updatedTime;
-      }
-      const createdTime = Date.parse(conversation.created_at || '');
-      if (!Number.isNaN(createdTime)) {
-        return createdTime;
-      }
-      return 0;
-    };
-
-    return [...filtered].sort((a, b) => {
-      const aPinned = Boolean(a.custom_attributes?.pinned);
-      const bPinned = Boolean(b.custom_attributes?.pinned);
-      if (aPinned !== bPinned) {
-        return aPinned ? -1 : 1;
-      }
-      return getSortTimestamp(b) - getSortTimestamp(a);
-    });
+    // Ordem pelo horário que o item mostra (última mensagem de verdade); o servidor pagina por atividade.
+    return [...filtered].sort(ordemDaLista);
   }, [conversations.state.conversations, showArchived]);
 
   // Aviso de número (02/10/2026). "Gestor" = quem vê qualquer número
@@ -786,7 +762,7 @@ const ChatSidebar = ({
             <p className="text-sm text-muted-foreground mb-4">
               {conversations.state.conversationsError}
             </p>
-            <Button variant="outline" size="sm" onClick={() => conversations.loadConversations({})}>
+            <Button variant="outline" size="sm" onClick={() => void aplicarComPilula(conversationFilters, pilula).catch(() => undefined)}>
               {t('chatSidebar.errors.tryAgain')}
             </Button>
           </div>

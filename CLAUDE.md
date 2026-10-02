@@ -4830,7 +4830,8 @@ O que aparece na tela:
   "/"; o Alt+P saiu. A frase de fundo diz o bloqueio real: número desconectado
   -> "Seu WhatsApp está desconectado. Reconecte o número para responder."; janela
   de 24 h fechada -> "Faz mais de 24 h que o lead não escreve. Envie um modelo
-  de mensagem para retomar." Dicas dos ícones: **Funis de mensagem**, **Enviar
+  de mensagem para retomar."; sem bloqueio, o campo mostra "Escreva uma
+  mensagem..." (`chatArea.messageInput.defaultPlaceholder`, do `ChatArea`). Dicas dos ícones: **Funis de mensagem**, **Enviar
   book**, **Modelos de mensagem**.
 - **Histórico:** etiquetas citadas ("adicionou visita-agendada, demo-0001")
   aparecem como etiquetas coloridas, e o nome sai do texto.
@@ -4875,3 +4876,14 @@ Armadilhas:
    Número solto não casa. O catálogo vem do store (`useAppDataStore.labels` + `fetchLabels()`),
    sem requisição a mais. O texto do servidor usa o slug como título.
 9. **Lista colada no campo do chat sai achatada** (já era assim; não é desta leva).
+10. **Responder em "Sem resposta" não tira a conversa da lista.** Ela perde só a
+    linha "sem resposta há X" e sai quando a lista recarrega. É de propósito:
+    não some debaixo do corretor no meio do atendimento.
+11. **A lista é ordenada pelo horário mostrado** (`ordemDaLista`, por
+    `horaDoItem`, fixadas primeiro), mas o servidor pagina por última atividade.
+    Mensagem de atividade bumpa a atividade no servidor e não muda a ordem na
+    tela; um item de uma página mais pra frente pode aparecer depois num ponto
+    diferente do que a paginação sugere.
+12. **Troca rápida de pílula:** `handleApplyFilters` ignora resposta de pedido
+    superado (contador em `useFilterHandlers`). "Resolver em massa" e "Tentar de
+    novo" recarregam com a pílula e os filtros em uso, não com a lista crua.

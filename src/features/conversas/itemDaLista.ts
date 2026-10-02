@@ -31,6 +31,17 @@ export function horaDoItem(conv: Pick<Conversation, 'timestamp' | 'last_non_acti
   return conv.timestamp;
 }
 
+/** Ordem da lista: fixadas primeiro, depois pelo horário que o item mostra (mais novo em cima). */
+export function ordemDaLista(
+  a: Pick<Conversation, 'timestamp' | 'last_non_activity_message' | 'custom_attributes'>,
+  b: Pick<Conversation, 'timestamp' | 'last_non_activity_message' | 'custom_attributes'>,
+): number {
+  const fa = Boolean(a.custom_attributes?.pinned);
+  const fb = Boolean(b.custom_attributes?.pinned);
+  if (fa !== fb) return fa ? -1 : 1;
+  return horaDoItem(b) - horaDoItem(a);
+}
+
 /**
  * Decisão do onMessageUpdated: devolve a conversa atualizada ou null (nada a mudar).
  * Atividade e status de leitura NUNCA mexem em timestamp/last_activity_at (a lista

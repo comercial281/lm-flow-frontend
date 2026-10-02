@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { esperaDoLead, horaDoItem, camposDaConversaAoAtualizar, camposDaConversaAoCriar } from './itemDaLista';
+import { esperaDoLead, horaDoItem, ordemDaLista, camposDaConversaAoAtualizar, camposDaConversaAoCriar } from './itemDaLista';
 import type { Conversation, Message } from '@/types/chat/api';
 
 const agora = new Date(2026, 9, 2, 12, 0, 0);
@@ -69,5 +69,29 @@ describe('camposDaConversaAoCriar', () => {
       expect(r.last_non_activity_message?.id).toBe('m2');
       expect(r.last_non_activity_message?.message_type).toBe(t);
     }
+  });
+});
+
+describe('ordemDaLista', () => {
+  const conv = (timestamp: number, real?: Date, pinned = false) =>
+    ({
+      timestamp,
+      custom_attributes: pinned ? { pinned: true } : {},
+      last_non_activity_message: real ? ultima('incoming', 'x', real.toISOString()) : undefined,
+    }) as unknown as Conversation;
+  const antiga = new Date(2026, 9, 1, 9, 0, 0);
+  const nova = new Date(2026, 9, 2, 9, 0, 0);
+
+  it('fixadas primeiro, depois pelo horário mostrado', () => {
+    const lista = [conv(seg(antiga), antiga), conv(seg(nova), nova, true), conv(seg(nova), nova)];
+    lista.sort(ordemDaLista);
+    expect(lista[0].custom_attributes?.pinned).toBe(true);
+  });
+  it('atividade que só mexeu no timestamp não passa uma mensagem real mais nova', () => {
+    const comAtividade = conv(seg(new Date(2026, 9, 2, 11, 0, 0)), antiga);
+    const maisNova = conv(seg(nova), nova);
+    const lista = [comAtividade, maisNova];
+    lista.sort(ordemDaLista);
+    expect(lista[0]).toBe(maisNova);
   });
 });

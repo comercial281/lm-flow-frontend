@@ -1,7 +1,7 @@
 // AS PÍLULAS DA LISTA DE CONVERSAS: Todas · Minhas · Sem resposta · Arquivadas.
 //
 // Substituem o par Ativas/Arquivadas. "Minhas" e "Sem resposta" filtram NO
-// SERVIDOR (assignee_type=me e waiting=true): o contador "20 / 110" e o
+// SERVIDOR (assignee_id = id do usuário e waiting=true): o contador "20 / 110" e o
 // "carregar mais" já vêm certos. "Arquivadas" continua sendo recorte da tela.
 // A pílula soma aos filtros do popover e não é salva (a lista abre em "Todas").
 // Textos literais de propósito (chave nova de t() não entra).

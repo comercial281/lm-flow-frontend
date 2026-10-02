@@ -240,8 +240,8 @@ const ChatArea = ({
   // Determinar se deve mostrar restrições
   const hasMessagingWindowRestriction =
     isWhatsAppChannel || isInstagramChannel || isMessengerChannel;
-  const shouldShowRestrictionBanner =
-    (!canReply && hasMessagingWindowRestriction && !isWhatsAppFreeTextChannel) || isDisconnected;
+  const janelaFechada = !canReply && hasMessagingWindowRestriction && !isWhatsAppFreeTextChannel;
+  const shouldShowRestrictionBanner = janelaFechada || isDisconnected;
 
   // Mensagem do banner quando não pode responder
   const getBannerMessage = () => {
@@ -382,8 +382,7 @@ const ChatArea = ({
           placeholder={fraseDoCampo({
             pendente: isPendingConversation,
             desconectado: isDisconnected,
-            janelaFechada:
-              !canReply && hasMessagingWindowRestriction && !isWhatsAppFreeTextChannel,
+            janelaFechada,
             textoPendente: t('chatArea.messageInput.pendingPlaceholder'),
             textoPadrao: t('chatArea.messageInput.defaultPlaceholder'),
           })}
