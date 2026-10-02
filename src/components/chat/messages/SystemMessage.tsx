@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Message } from '@/types/chat/api';
 import { formatMessageTime } from '@/utils/time/timeHelpers';
+import { etiquetasNaMensagem } from '@/features/conversas/etiquetasNaMensagem';
 
 interface SystemMessageProps {
   message: Message;
@@ -143,33 +144,11 @@ const SystemMessage: React.FC<SystemMessageProps> = ({ message, labels = [] }) =
   // Formatação do timestamp - usando a mesma função das mensagens normais
   const timestamp = formatMessageTime(message.created_at);
 
-  // Extrair IDs de labels do conteúdo (padrão UUID ou número)
-  const extractLabelIds = (content: string): string[] => {
-    // Regex para UUIDs
-    const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
-    // Regex para números simples quando aparecem sozinhos (ex: "added 39")
-    const numberRegex = /\b(\d+)\b/g;
-
-    const uuids = content.match(uuidRegex) || [];
-    const numbers = content.match(numberRegex) || [];
-
-    return [...uuids, ...numbers];
-  };
-
-  // Buscar labels mencionadas no conteúdo
-  const mentionedLabelIds = extractLabelIds(message.content);
-  const mentionedLabels = mentionedLabelIds
-    .map(id => labels.find(l => String(l.id) === id))
-    .filter((label): label is { id: string; title: string; color: string } => Boolean(label));
+  // Etiquetas citadas no texto (id ou título inteiro): viram etiqueta colorida
+  const { texto: cleanContent, etiquetas: mentionedLabels } = etiquetasNaMensagem(message.content, labels);
 
   // Se tem labels, renderizar com badges
   if (mentionedLabels.length > 0) {
-    // Remover IDs do texto para melhor legibilidade
-    let cleanContent = message.content;
-    mentionedLabelIds.forEach(id => {
-      cleanContent = cleanContent.replace(id, '').replace(/\s+/g, ' ').trim();
-    });
-
     return (
       <div className="text-center py-4">
         <div className="inline-flex flex-col items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">

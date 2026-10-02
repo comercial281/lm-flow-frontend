@@ -51,6 +51,7 @@ import { useAvisoDeNumero } from '@/features/numbers/useAvisoDeNumero';
 
 import { Conversation } from '@/types/chat/api';
 import { BaseFilter } from '@/types/core';
+import { useAppDataStore } from '@/store/appDataStore';
 import { usePilulaEFiltros } from '@/features/conversas/usePilulaEFiltros';
 import type { DashboardApp } from '../../../types/integrations';
 import type { AssignmentOption, AssignmentType } from '@/components/chat/assignment';
@@ -71,6 +72,18 @@ const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const Chat = () => {
+  // Catálogo de etiquetas da conta (store com cache): o histórico pinta as etiquetas citadas
+  const catalogoDeEtiquetas = useAppDataStore(s => s.labels);
+  const fetchLabels = useAppDataStore(s => s.fetchLabels);
+  useEffect(() => {
+    fetchLabels().catch(() => {
+      /* sem catálogo, o histórico mostra o texto puro */
+    });
+  }, [fetchLabels]);
+  const etiquetasDaConta = useMemo(
+    () => catalogoDeEtiquetas.map(l => ({ id: String(l.id), title: l.title, color: l.color })),
+    [catalogoDeEtiquetas],
+  );
   const { t } = useLanguage('chat');
   const avisoDeNumero = useAvisoDeNumero();
   const { can, isReady: permissionsReady } = usePermissions();
@@ -831,6 +844,7 @@ const Chat = () => {
                   onLoadMore={handleLoadMore}
                   onRetryMessage={handleRetryMessage}
                   isPendingConversation={selectedConversation?.status === 'pending'}
+                  labels={etiquetasDaConta}
                 />
               ) : (
                 // Show Dashboard App iframe when an app tab is active
