@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/hooks/useLanguage';
 import { setupService } from '@/services/setup/setupService';
 import { surveyService } from '@/services/survey/surveyService';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLogo } from '@/components/AppLogo';
+import { Seletor } from '@/components/base/Seletor';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -46,7 +47,12 @@ function SelectField({ label, id, value, options, onChange }: SelectFieldProps) 
         {label}
       </label>
       <div style={{ position: 'relative' }}>
-        <select
+        {/* bare: a caixa é a desenhada aqui (a seta é o <span> abaixo). escuro: a
+            lista aberta no tema escuro, como esta tela. No computador o foco cai
+            no botão da lista, e e.target.style vale nele igual. */}
+        <Seletor
+          bare
+          escuro
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -75,15 +81,15 @@ function SelectField({ label, id, value, options, onChange }: SelectFieldProps) 
             e.target.style.boxShadow = 'none';
           }}
         >
-          <option value="" style={{ background: '#18181b', color: '#52525b' }}>
+          <option value="">
             Selecionar...
           </option>
           {options.map((opt) => (
-            <option key={opt} value={opt} style={{ background: '#18181b', color: '#fafafa' }}>
+            <option key={opt} value={opt}>
               {opt}
             </option>
           ))}
-        </select>
+        </Seletor>
         <span
           style={{
             position: 'absolute',
@@ -145,6 +151,17 @@ export default function OnboardingPage() {
       return next;
     });
   };
+
+  // "Outro" abre o campo livre com o foco nele. No computador a lista do produto
+  // devolve o foco ao botão ao fechar (num setTimeout do Radix); o campo pega o
+  // foco depois disso. O autoFocus do campo continua valendo no celular.
+  const outroRef = useRef<HTMLInputElement>(null);
+  const escolheuOutro = form.mainChannel === t('survey.channel.other');
+  useEffect(() => {
+    if (!escolheuOutro) return undefined;
+    const id = setTimeout(() => outroRef.current?.focus(), 0);
+    return () => clearTimeout(id);
+  }, [escolheuOutro]);
 
   const isChannelValid =
     form.mainChannel !== '' &&
@@ -352,7 +369,9 @@ export default function OnboardingPage() {
                   {t('survey.channel.label')}
                 </label>
                 <div style={{ position: 'relative' }}>
-                  <select
+                  <Seletor
+                    bare
+                    escuro
                     id="mainChannel"
                     value={form.mainChannel}
                     onChange={(e) => set('mainChannel')(e.target.value)}
@@ -381,15 +400,15 @@ export default function OnboardingPage() {
                       e.target.style.boxShadow = 'none';
                     }}
                   >
-                    <option value="" style={{ background: '#18181b', color: '#52525b' }}>
+                    <option value="">
                       {t('survey.placeholder')}
                     </option>
                     {Array.isArray(channelOptions) && channelOptions.map((opt) => (
-                      <option key={opt} value={opt} style={{ background: '#18181b', color: '#fafafa' }}>
+                      <option key={opt} value={opt}>
                         {opt}
                       </option>
                     ))}
-                  </select>
+                  </Seletor>
                   <span
                     style={{
                       position: 'absolute',
@@ -409,6 +428,7 @@ export default function OnboardingPage() {
                 {form.mainChannel === t('survey.channel.other') && (
                   <div className="evo-other-input">
                     <input
+                      ref={outroRef}
                       type="text"
                       placeholder={t('survey.channel.otherPlaceholder')}
                       value={form.mainChannelOther}
