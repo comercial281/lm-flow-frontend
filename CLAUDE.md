@@ -5271,3 +5271,37 @@ Armadilhas:
    ninguém elegível volta igual). A tela lê `roleta.offered_to`.
 4. **`aoLadoDaBusca` do BaseHeader** liga o `flex-wrap` só em quem usa o espaço;
    as outras 19 telas não mudam.
+
+## Uma tela só pro cliente: o card do lead abre de Contatos (desde 2026-10-02)
+
+Decisão do dono do produto (Fase 4): a janela "Detalhes do Contato" morreu.
+Clicar num contato em Contatos (e o link `/contacts/:id`) abre o **card do lead**.
+Spec: `LM FLOW/specs/2026-10-02-fase-4-card-do-contato-design.md`.
+
+O que aparece na tela:
+
+- **Contato em um funil:** o card daquele atendimento, igual ao do quadro.
+- **Em mais de um funil** (raro): **abinhas centralizadas no topo do card**, uma
+  por funil, com a bolinha da etapa. Abre no mais recente. É o modelo do Kenlo:
+  o contato é o cliente, e cada card no funil é um atendimento dele.
+- **Em nenhum funil:** o mesmo card, com **"Colocar no funil"** no lugar da Etapa
+  (o contato entra na primeira coluna e o card recarrega). Somem Ganho/Perdido,
+  Conversão Meta e "Remover do funil". "Copiar link" copia `/contacts/:id`. A aba
+  Conversa usa a conversa mais recente do contato.
+- **Vieram da janela antiga:** *Juntar com outro contato* (menu ⋯, só gestor) e
+  *Outras informações* (campos extras do gestor, bloco na aba Detalhes, editados
+  na hora; aparecem também no card do quadro).
+- **Morreram:** a "Detalhes do Contato", a ação *Histórico* da lista de Contatos
+  (o card tem) e a **Consulta de crédito** (BigDataCorp, nunca usada; a metade do
+  servidor sai no `lm-flow`).
+
+Armadilhas:
+
+1. **Card sem funil = o mesmo formato do card do funil sem `id`**
+   (`itemSemFunil` em `features/cardDoLead`). Parte nova que dependa do card do
+   funil (id, etapa, `custom_fields`) tem que olhar `semFunil(item)`.
+2. **O card inicializa por `item.id`.** Quem abre vários cards sem funil precisa
+   do `key` (o `CardDoContato` passa `sem-funil-<contato>`), senão o card do
+   segundo contato herda o estado do primeiro.
+3. **Os atendimentos vêm de `GET /pipelines/by_contact/:id`**, o mesmo de Conversas.
+   A ordem (mais recente primeiro) mora em `atendimentosDoContato`.

@@ -9,6 +9,7 @@ import { History, Loader2, MessageSquare, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import AiUnderstandingPanel from '@/components/chat/contact-sidebar/AiUnderstandingPanel';
 import CardNotesTab from '@/components/pipelines/CardNotesTab';
+import OutrasInformacoes from './OutrasInformacoes';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import { RESPOSTAS_VISIVEIS, contatoDoCard, respostasDoLead } from '@/features/cardDoLead/cardDoLead';
 import type { PipelineItem } from '@/types/analytics';
@@ -151,6 +152,13 @@ export default function LeadDetailsTab({
               <CardPropertyInterests item={item} />
             </Suspense>
           </div>
+        )}
+
+        {contato?.id != null && (
+          <OutrasInformacoes
+            contactId={String(contato.id)}
+            atributos={contato.custom_attributes as Record<string, unknown> | null | undefined}
+          />
         )}
       </div>
 

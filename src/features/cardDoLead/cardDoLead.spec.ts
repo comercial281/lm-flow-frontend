@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   contatoDoCard,
+  itemSemFunil,
+  semFunil,
+  atendimentosDoContato,
   conversaDoCard,
   leadParaVisita,
   origemCurta,
@@ -151,5 +154,41 @@ describe('visitasEmOrdem', () => {
   it('mais recente primeiro', () => {
     const lista = visitasEmOrdem([{ scheduled_at: '2026-09-01T10:00:00Z' }, { scheduled_at: '2026-10-01T10:00:00Z' }]);
     expect(lista[0].scheduled_at).toBe('2026-10-01T10:00:00Z');
+  });
+});
+
+describe('card aberto pela pessoa (Contatos)', () => {
+  it('sem funil: mesmo formato do card, sem id, com dono, origem e conversa do contato', () => {
+    const item = itemSemFunil(
+      {
+        id: 'c1',
+        name: 'Ana',
+        default_assignee: { id: 'u1', name: 'Bruna' },
+        additional_attributes: { lead_origin: { source: 'manual', manual_origin: 'Indicação' } },
+      },
+      '77',
+    );
+    expect(semFunil(item)).toBe(true);
+    expect(item.assignee?.name).toBe('Bruna');
+    expect(item.lead_origin?.manual_origin).toBe('Indicação');
+    expect(conversaDoCard(item)).toBe('77');
+    expect(contatoDoCard(item)?.id).toBe('c1');
+  });
+
+  it('atendimentos: um por card no funil, o mais recente primeiro, com as etapas em ordem', () => {
+    const lista = atendimentosDoContato([
+      {
+        id: 'p1', name: 'Venda',
+        stages: [
+          { id: 's2', name: 'Visita', color: '#0f0', position: 2, items: [] },
+          { id: 's1', name: 'Novo', color: '#f00', position: 1, items: [{ id: 'i1', updated_at: 100 } as never] },
+        ],
+      },
+      { id: 'p2', name: 'Locação', stages: [{ id: 's9', name: 'Novo', color: '#00f', position: 1, items: [{ id: 'i2', updated_at: 200 } as never] }] },
+    ]);
+    expect(lista.map(a => a.pipeline.name)).toEqual(['Locação', 'Venda']);
+    expect(lista[1].item.stage_id).toBe('s1');
+    expect(lista[1].stages.map(s => s.name)).toEqual(['Novo', 'Visita']);
+    expect(semFunil(lista[0].item)).toBe(false);
   });
 });

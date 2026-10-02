@@ -8,7 +8,7 @@
 // Tudo grava na hora (não existe mais "Salvar alterações"). Nome, telefone e
 // e-mail não se editam aqui: o lápis de telefone/e-mail só aparece quando o
 // servidor diz (`identity_correctable` — gestor, lead cadastrado à mão).
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense, type ReactNode } from 'react';
 import { useAccountUsers } from '@/hooks/useAccountUsers';
 import {
   Dialog,
@@ -52,12 +52,16 @@ import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/
 import { brokerAssignmentsService, type BrokerAssignmentDetail } from '@/services/roletaConfig/brokerAssignmentsService';
 import OfferActions from '@/components/roleta/OfferActions';
 import { isPhoneLikeName } from '@/lib/nomeDoContato';
-import { classeDaOrigem, contatoDoCard, conversaDoCard, origemCurta, podeCorrigirContato } from '@/features/cardDoLead/cardDoLead';
+import { classeDaOrigem, contatoDoCard, conversaDoCard, origemCurta, podeCorrigirContato, semFunil } from '@/features/cardDoLead/cardDoLead';
+import { useCorretorLogado } from '@/features/contatos/useCorretorLogado';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
+import type { Contact } from '@/types/contacts';
 import LeadQuickActions from './card/LeadQuickActions';
 import LeadDetailsTab from './card/LeadDetailsTab';
 import CardResultFooter from './card/CardResultFooter';
 import CardMoreMenu from './card/CardMoreMenu';
 import CardOriginTab from './card/CardOriginTab';
+import ColocarNoFunil from './card/ColocarNoFunil';
 import { toast } from 'sonner';
 import type { ContactEvent } from '@/types/notifications/contact-events';
 import type { Label as LabelType } from '@/types/settings';
@@ -67,6 +71,7 @@ const VisitsProposalsTab = lazyWithRetry(() => import('./card/VisitsProposalsTab
 const CreateRoletaModal = lazyWithRetry(() => import('./CreateRoletaModal'));
 const RemoveFromRoletaDialog = lazyWithRetry(() => import('@/components/roleta/RemoveFromRoletaDialog'));
 const CorrigirContatoDialog = lazyWithRetry(() => import('./card/CorrigirContatoDialog'));
+const JuntarContato = lazyWithRetry(() => import('./card/JuntarContato'));
 const ScheduleActionModal = lazyWithRetry(() =>
   import('@/components/scheduledActions/ScheduleActionModal').then(m => ({ default: m.ScheduleActionModal })),
 );
@@ -88,6 +93,15 @@ interface EditItemModalProps {
   // refletir sem esperar o próximo reload.
   onLabelsChanged?: () => void;
   loading?: boolean;
+  /**
+   * Faixa centralizada acima do card. De Contatos: as abinhas dos atendimentos
+   * quando a pessoa está em mais de um funil.
+   */
+  cabecalho?: ReactNode;
+  /** Card sem funil (aberto de Contatos): o contato entrou num funil pelo card. */
+  onColocadoNoFunil?: () => void;
+  /** Juntou com outro contato: o aberto pode ter sumido. */
+  onContatoJuntado?: () => void;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -98,8 +112,16 @@ export default function EditItemModal({
   stages,
   onItemStageMoved,
   onLabelsChanged,
+  cabecalho,
+  onColocadoNoFunil,
+  onContatoJuntado,
 }: EditItemModalProps) {
   const { users } = useAccountUsers();
+  // Juntar contatos: só gestor (corretor isolado não vê a base pra escolher o outro).
+  const corretor = useCorretorLogado();
+  const { can } = useUserPermissions();
+  const podeJuntar = !corretor && can('contacts', 'update');
+  const [juntando, setJuntando] = useState(false);
   const {
     openLeadConversation,
     startConversationModal,
@@ -398,6 +420,9 @@ export default function EditItemModal({
     ?? ((contato?.additional_attributes as { lead_origin?: Record<string, unknown> } | undefined)?.lead_origin ?? null);
   const origem = origemCurta(dadosDaOrigem);
   const etapaAtual = stages.find(s => s.id.toString() === etapaId);
+  // Card aberto de Contatos pra quem não está em funil: sem etapa, sem
+  // Ganho/Perdido, sem Conversão Meta (spec 2026-10-02-fase-4-card-do-contato).
+  const foraDoFunil = semFunil(item);
 
   const handleSaveManualOrigin = async () => {
     if (!contato?.id) {
@@ -460,6 +485,10 @@ export default function EditItemModal({
         <DialogTitle className="sr-only">{nomeExibido}</DialogTitle>
         <DialogDescription className="sr-only">Card do lead</DialogDescription>
 
+        {cabecalho && (
+          <div className="flex shrink-0 justify-center border-b border-border px-12 py-2.5">{cabecalho}</div>
+        )}
+
         <div className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-[380px_minmax(0,1fr)] overflow-y-auto md:overflow-hidden">
           {/* ESQUERDA — fixa, nunca rola */}
           <aside className="flex flex-col gap-4 border-b md:border-b-0 md:border-r border-border p-5 md:min-h-0">
@@ -512,6 +541,7 @@ export default function EditItemModal({
                   onTrocarRoleta={handleAssignViaRoleta}
                   onCriarRoleta={() => setShowCreateRoleta(true)}
                   onRemovido={() => onOpenChange(false)}
+                  onJuntar={podeJuntar && contato?.id != null ? () => setJuntando(true) : undefined}
                 />
               </div>
             </div>
@@ -520,6 +550,11 @@ export default function EditItemModal({
             <div className="space-y-2">
               {/* Etapa e Responsável lado a lado: economiza altura na coluna fixa. */}
               <div className="grid grid-cols-2 gap-3">
+              {foraDoFunil ? (
+                contato?.id != null && onColocadoNoFunil ? (
+                  <ColocarNoFunil contactId={String(contato.id)} onColocado={onColocadoNoFunil} />
+                ) : <div />
+              ) : (
               <div className="grid gap-1 min-w-0">
                 <span className="text-xs font-medium text-muted-foreground">Etapa</span>
                 <Select value={etapaId ?? undefined} onValueChange={moverEtapa} disabled={movendoEtapa}>
@@ -545,6 +580,7 @@ export default function EditItemModal({
                   </SelectContent>
                 </Select>
               </div>
+              )}
 
               {/* Responsável — sem gate de conversa: lead de formulário/anúncio
                   não tem conversa e mesmo assim precisa de dono. */}
@@ -663,12 +699,16 @@ export default function EditItemModal({
               />
             </div>
 
-            <CapiConversionPanel contactId={contato?.id ?? null} pipelineItemId={item.id} variante="compacto" />
+            {!foraDoFunil && (
+              <>
+                <CapiConversionPanel contactId={contato?.id ?? null} pipelineItemId={item.id} variante="compacto" />
 
-            {/* Rodapé fixo da coluna */}
-            <div className="mt-auto pt-2 border-t border-border">
-              <CardResultFooter stages={stages} etapaAtualId={etapaId} movendo={movendoEtapa} onMover={moverEtapa} />
-            </div>
+                {/* Rodapé fixo da coluna */}
+                <div className="mt-auto pt-2 border-t border-border">
+                  <CardResultFooter stages={stages} etapaAtualId={etapaId} movendo={movendoEtapa} onMover={moverEtapa} />
+                </div>
+              </>
+            )}
           </aside>
 
           {/* DIREITA — abas da casa (sublinhado com ícone), a faixa inteira no topo */}
@@ -778,6 +818,20 @@ export default function EditItemModal({
             onOpenChange={setShowCreateRoleta}
             users={users}
             onCreated={(roleta) => setRoletas(prev => [...prev, roleta])}
+          />
+        </Suspense>
+      )}
+
+      {juntando && contato?.id != null && (
+        <Suspense fallback={null}>
+          <JuntarContato
+            contato={contato as unknown as Contact}
+            onFechar={() => setJuntando(false)}
+            onJuntado={() => {
+              setJuntando(false);
+              onOpenChange(false);
+              onContatoJuntado?.();
+            }}
           />
         </Suspense>
       )}
