@@ -4709,3 +4709,68 @@ Armadilhas:
 4. **O filtro `status=open` é o de sempre** (`FiltersContext.DEFAULT_FILTER`) e
    não conta como filtro; qualquer outro desliga o aviso da lista vazia.
 5. **Não tem metade de backend e não é `featureKey` nem `clientToggleKey`.**
+
+## Conversas: o lead ao lado da conversa (desde 2026-10-02)
+
+Relato do dono do produto (Fase 4, jornada 8): o que o corretor precisa saber
+do lead ficava escondido. Etapa, etiquetas, notas e o que a IA entendeu só
+apareciam clicando no nome, e o painel era uma pilha de 12 cards fechados,
+metade repetida ou sem uso, com um botão vermelho de excluir o contato no meio
+do atendimento. No topo da conversa, o nome técnico do número e "Status: Aberta".
+
+O que aparece na tela:
+
+- **O painel do lead abre sozinho** em tela de 1280px ou mais, a cada conversa
+  aberta. O X fecha, e ele reabre ao trocar de conversa. Abaixo de 1280px, só
+  abre no clique no nome do lead (no celular, igual antes).
+- **Topo:** foto, nome, telefone com copiar, e-mail, o lápis (a mesma janela de
+  edição de Contatos) e o X. Embaixo, **"Veio de: …"** com **Ver anúncio** quando
+  há link, e **"Também conversou pelo número X · abrir (+N)"** quando o lead tem
+  outra conversa que a pessoa pode abrir (leva a mais recente).
+- **Seções simples, uma embaixo da outra:** Funil (uma linha *nome do funil ·
+  Etapa [▾]* por funil, que move o lead na hora, e **Abrir card do lead**; fora
+  de funil, só **Colocar no funil**), O que a IA entendeu (só se a IA atendeu,
+  resumo em 3 linhas com **Ver mais**), Etiquetas, Notas (campo, as 3 últimas e
+  **Ver todas**), **Respostas do formulário** (a única que abre e fecha, começa
+  fechada e só existe com dado) e Conversão Meta (só se o cliente usa CAPI).
+- **Topo da conversa:** *"Número Guatemala · (11) 98235-3462 · Responsável:
+  Marina"* (ou *"Sem responsável"*). Saiu o "Status: Aberta". O cabeçalho continua
+  verde.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **O painel abre a cada conversa**, em tela larga. Fechar vale até a próxima troca.
+- **Saíram do painel:** Nome do atendente, Informações da conversa, Origem do
+  Anúncio, Origem (dados crus), Conversas anteriores (virou a linha do topo), a
+  repetição de Informações Básicas, Histórico e Excluir contato. E o "Online"
+  verde do topo, que era fixo no código e aparecia pra todo lead.
+- **Histórico só no card do lead** (Funil → Abrir card do lead), onde já existia.
+- **Excluir contato só em Contatos.**
+- **O verde fica** (cabeçalho e botão de enviar): reconhecimento com o WhatsApp.
+- **Telefone mascarado na oferta da roleta:** com a oferta aberta para quem está
+  vendo (o mesmo estado da faixa "assuma o lead"), o topo mostra
+  `(11) •••••-••34`, sem e-mail, sem copiar e sem o lápis (a janela de edição
+  mostraria o número). Ao aceitar, aparece inteiro.
+
+Armadilhas:
+
+1. **A máscara é da tela.** O servidor continua mandando o contato inteiro pro
+   corretor ofertado: é a dívida de 28/09 ("Roleta: o telefone do lead só chega
+   depois do aceite", armadilha 3), aberta para o backend. As Respostas do
+   formulário não passam pela máscara.
+2. **`SOURCE_META` mora em `src/features/leadOrigin/origem.ts`**, usado pela aba
+   Origem do card e pelo "Veio de". Origem nova entra lá, uma vez. No painel o
+   emoji do rótulo sai; `unknown` não mostra a linha; sem origem gravada, cai no
+   anúncio da conversa ("Anúncio no Instagram/Facebook").
+3. **A linha "Também conversou" depende do recorte de permissão do servidor**
+   (`GET /contacts/:id/conversations`, que passa pelo
+   `Conversations::PermissionFilterService`). A tela não filtra de novo.
+4. **As regras e os textos moram em `src/features/conversas/painelDoLead.ts`**
+   (com spec); a linha do topo da conversa, em `topoDaConversa.ts`
+   (`linhaDoTopo`), na mesma pasta. Textos literais: chave nova de `t()` não
+   entra. As seções ficam em `src/components/chat/contact-sidebar/painel/`.
+5. **A origem do "Veio de" vem dos funis que o painel já busca**
+   (`getPipelinesByConversation`, campo `lead_origin` do item). Nenhuma
+   requisição a mais por conversa. Lead fora de funil usa o `ad_referral`.
+6. **`ContactHeader`, o `ContactDetails` do painel e `ConversationPipelineItem`
+   foram apagados.** A edição do contato é `useEditarContato`.
