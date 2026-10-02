@@ -88,11 +88,17 @@ Cada peça mora em `src/components/base/` (ou `src/hooks/`). A regra de uso vale
    - `erro` oferece tentar de novo.
    - Sem acesso é o `NoAccessState`.
    - **Erro nunca aparece como lista vazia.**
-8. **Botão de ícone:** sempre com nome (o efeito).
+8. **Lista de escolha** (`Seletor`): toda lista de escolha usa ele, nunca `<select>` cru.
+   - Recebe o mesmo que o `<select>`: `value`, `onChange` com `e.target.value`, `<option>`/`<optgroup>`. Trocar uma tela é trocar a tag.
+   - No computador abre a lista do produto; no celular, a do sistema.
+   - Opção vazia ("Todos") e valor numérico funcionam sem truque.
+   - `bare` deixa a caixa só com a `className` de quem chama (status colorido, filtro com ícone).
+   - A trava do build (`selectNativo`) reprova lista nativa nova na tela do cliente.
+9. **Botão de ícone:** sempre com nome (o efeito).
    - Em botão novo, use `IconActionButton`.
    - Os 202 que já existiam ganharam `aria-label` + `title` na Fase 3.4 e migram pro `IconActionButton` tela a tela na fase 4.
    - **Excluir não é lixeira solta ao lado da ação principal:** vai pro menu "…" e pede confirmação.
-9. **Selo de situação** (`BaseStatusBadge`):
+10. **Selo de situação** (`BaseStatusBadge`):
    - verde = funcionando;
    - cinza = desligado;
    - laranja = precisa de atenção;
