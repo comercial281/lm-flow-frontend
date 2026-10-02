@@ -7,6 +7,7 @@ import { isAvailable } from '../base/types';
 import { linkFunil } from '@/features/dashboard/links';
 import type { ContextoBloco } from '../usePodeAbrir';
 import { recorteBateComDestino } from '../visao';
+import { Seletor } from '@/components/base/Seletor';
 
 export const Funil: React.FC<ContextoBloco> = ({ dados, visao, pode, filtros, funil, mudarFunil }) => {
   const navigate = useNavigate();
@@ -20,9 +21,9 @@ export const Funil: React.FC<ContextoBloco> = ({ dados, visao, pode, filtros, fu
   const disponivel = isAvailable(bloco) ? bloco : null;
   const escolhido = disponivel && (funil.pendente ? filtros.pipelineId ?? disponivel.pipeline.id : disponivel.pipeline.id);
   const seletor = disponivel && disponivel.pipelines.length > 1 ? (
-    <select className="lmf-select" aria-label="Funil" value={escolhido ?? undefined} onChange={e => mudarFunil(e.target.value)}>
+    <Seletor bare className="lmf-select" aria-label="Funil" value={escolhido ?? undefined} onChange={e => mudarFunil(e.target.value)}>
       {disponivel.pipelines.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-    </select>
+    </Seletor>
   ) : null;
 
   // Erro no pedido do funil: nunca mostrar o funil da última vez calado.

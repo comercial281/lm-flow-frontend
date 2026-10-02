@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 vi.mock('@/store/appDataStore', () => ({ mayRead: vi.fn().mockResolvedValue(true) }));
@@ -46,5 +46,32 @@ describe('seletores com rótulo', () => {
     agentes = [{ id: 'a', name: 'Sara', enabled: true }, { id: 'b', name: 'Bia', enabled: true }];
     render(<AiToggle rotulo="Atendimento" active={false} onChange={vi.fn()} />);
     expect(await screen.findByRole('combobox', { name: 'Atendimento' })).toHaveValue('');
+  });
+});
+
+// No computador a lista é o botão do design system, em modo bare. O lmf.css pinta
+// a caixa pelo data-active e acende o ícone com `.lmf-campo-caixa:has(> [data-active])`:
+// o botão tem que levar o data-active e ser filho direto da caixa.
+describe('seletores com rótulo, no computador', () => {
+  beforeEach(() => {
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      matches: false, media: '(pointer: coarse)', addEventListener: () => {}, removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia;
+  });
+  afterEach(() => {
+    // @ts-expect-error: o jsdom não tem matchMedia; voltamos a não ter.
+    delete window.matchMedia;
+  });
+
+  it('Número de WhatsApp: botão filho direto da caixa, com data-active e uma seta só', async () => {
+    render(<InstancePicker rotulo="Número de WhatsApp" value="2" onChange={vi.fn()} />);
+    const caixa = await screen.findByRole('combobox', { name: 'Número de WhatsApp' });
+    expect(caixa.tagName).toBe('BUTTON');
+    expect(caixa).toHaveAttribute('data-active', 'true');
+    expect(caixa).toHaveTextContent('Plantão');
+    expect(caixa.parentElement).toHaveClass('lmf-campo-caixa');
+    // A seta do design system some (bare); fica só a .lmf-campo-seta do campo.
+    expect(caixa.className).toContain('[&>svg:last-child]:hidden');
+    expect(caixa.parentElement!.querySelectorAll('.lmf-campo-seta')).toHaveLength(1);
   });
 });

@@ -7,6 +7,7 @@ import { AiToggle } from './base/AiToggle';
 import { CampoFiltro } from './base/CampoFiltro';
 import type { PeriodPreset, ScopeMode } from './base/types';
 import { usersService } from '@/services/users';
+import { Seletor } from '@/components/base/Seletor';
 import type { FiltrosDashboard, ScopeInfoNova } from './types';
 import type { Visao } from './catalogo';
 import { deQuemSaoOsNumeros } from './visao';
@@ -101,10 +102,11 @@ export const Cabecalho: React.FC<Props> = ({ nome, visao, scope, carregando, fil
               ))}
             </div>
           )}
-          <select className="lmf-select" aria-label="Período" value={filtros.preset}
+          {/* w-40: no computador a caixa não muda de largura a cada período ("Últimos 30 dias" é o maior). */}
+          <Seletor bare className="lmf-select w-40" aria-label="Período" value={filtros.preset}
             onChange={e => onFiltros({ ...filtros, preset: e.target.value as PeriodPreset })}>
             {PERIODOS.map(p => <option key={p.valor} value={p.valor}>{p.rotulo}</option>)}
-          </select>
+          </Seletor>
           <button type="button" className="lmf-select flex items-center gap-2" aria-expanded={aberto}
             aria-controls={idPainel} onClick={() => setAberto(a => !a)}>
             <SlidersHorizontal size={14} aria-hidden />
@@ -119,12 +121,12 @@ export const Cabecalho: React.FC<Props> = ({ nome, visao, scope, carregando, fil
           {/* Os quatro com o mesmo desenho: rótulo em cima, caixa de 40 px (CampoFiltro). */}
           {visao === 'gestor' && (
             <CampoFiltro id={idCorretor} rotulo="Corretor" icone={<User size={14} />}>
-              <select id={idCorretor} className="lmf-campo-controle" data-active={donoAplicado ? true : undefined}
+              <Seletor bare id={idCorretor} className="lmf-campo-controle" data-active={donoAplicado ? true : undefined}
                 value={donoAplicado ?? ''}
                 onChange={e => onFiltros({ ...filtros, ownerId: e.target.value || undefined })}>
                 <option value="">Todos</option>
                 {corretores.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-              </select>
+              </Seletor>
             </CampoFiltro>
           )}
           <InstancePicker rotulo="Número de WhatsApp" value={filtros.inboxId}

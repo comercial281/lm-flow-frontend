@@ -46,8 +46,22 @@ const SETA_NATIVA: CSSProperties = {
 
 // Tira o visual do design system no modo `bare`. A seta é o último svg.
 const SEM_CAIXA =
-  'h-auto gap-1 border-0 bg-transparent p-0 shadow-none dark:bg-transparent ' +
-  'dark:hover:bg-transparent [&>svg:last-child]:hidden';
+  'h-auto gap-1 border-0 bg-transparent p-0 shadow-none dark:bg-transparent [&>svg:last-child]:hidden';
+
+// No escuro o design system pinta o fundo no hover (`dark:hover:bg-input/50`).
+// Sem caixa, o hover tem que manter o fundo de quem chama (o status colorido do
+// interesse): repete o último fundo da className como `dark:hover:`. O
+// tailwind-merge derruba o hover do design system, que é do mesmo grupo. Se o
+// Tailwind não gerar a classe repetida (ela não aparece escrita no código), o
+// hover não muda nada; se gerar, pinta a mesma cor. Dá no mesmo.
+// Só fundo de cor: `bg-[url()]`, `bg-none` e `bg-gradient` não entram aqui.
+function hoverSemMudanca(className = ''): string {
+  const classes = className.split(/\s+/);
+  const ultima = (prefixo: string) =>
+    classes.filter(c => c.startsWith(prefixo) && !/^(dark:)?bg-(\[url|none|gradient|linear|radial|conic)/.test(c)).pop();
+  const escuro = ultima('dark:bg-')?.slice('dark:'.length);
+  return `dark:hover:${escuro ?? ultima('bg-') ?? 'bg-transparent'}`;
+}
 
 export function Seletor({
   bare = false, children, className, value, defaultValue, onChange,
@@ -101,7 +115,7 @@ export function Seletor({
           // Vence o data-size="default" do design system, que prende a altura
           // em h-9 por cima de qualquer classe da tela.
           data-size="livre"
-          className={cn('h-9', bare && SEM_CAIXA, className)}
+          className={cn('h-9', bare && SEM_CAIXA, className, bare && hoverSemMudanca(className))}
         >
           <SelectValue />
         </SelectTrigger>

@@ -2,6 +2,7 @@ import React, { useEffect, useId, useState } from 'react';
 import { Bot } from 'lucide-react';
 import { salesAgentsService } from '@/services/salesAgents/salesAgentsService';
 import { CampoFiltro } from './CampoFiltro';
+import { Seletor } from '@/components/base/Seletor';
 
 interface Props {
   active: boolean;
@@ -106,10 +107,10 @@ export const AiToggle: React.FC<Props> = ({ active, salesAgentId, onChange, rotu
   if (rotulo) {
     return (
       <CampoFiltro id={id} rotulo={rotulo} icone={<Bot size={14} />}>
-        <select id={id} className="lmf-campo-controle" data-active={active || undefined}
+        <Seletor bare id={id} className="lmf-campo-controle" data-active={active || undefined}
           value={value} onChange={e => handleChange(e.target.value)}>
           {opcoes}
-        </select>
+        </Seletor>
       </CampoFiltro>
     );
   }
@@ -118,13 +119,14 @@ export const AiToggle: React.FC<Props> = ({ active, salesAgentId, onChange, rotu
     <label className="lmf-select flex items-center gap-2" title="Filtrar por IA que atendeu">
       <Bot size={14} aria-hidden />
       <span className="sr-only">IA</span>
-      <select
+      <Seletor
+        bare
         value={value}
         onChange={e => handleChange(e.target.value)}
         style={{ background: 'transparent', border: 0, color: 'inherit', font: 'inherit', outline: 'none' }}
       >
         {opcoes}
-      </select>
+      </Seletor>
     </label>
   );
 };

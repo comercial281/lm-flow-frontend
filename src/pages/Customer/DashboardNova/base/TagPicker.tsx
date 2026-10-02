@@ -2,6 +2,7 @@ import React, { useEffect, useId, useState } from 'react';
 import { Tag } from 'lucide-react';
 import { labelsService } from '@/services/contacts/labelsService';
 import { CampoFiltro } from './CampoFiltro';
+import { Seletor } from '@/components/base/Seletor';
 
 interface LabelOption {
   id: string;
@@ -73,10 +74,10 @@ export const TagPicker: React.FC<Props> = ({ value, onChange, rotulo }) => {
       : <Tag size={14} />;
     return (
       <CampoFiltro id={id} rotulo={rotulo} icone={icone}>
-        <select id={id} className="lmf-campo-controle" data-active={selected ? true : undefined}
+        <Seletor bare id={id} className="lmf-campo-controle" data-active={selected ? true : undefined}
           value={value ?? ''} onChange={e => handleChange(e.target.value)}>
           {opcoes}
-        </select>
+        </Seletor>
       </CampoFiltro>
     );
   }
@@ -94,13 +95,14 @@ export const TagPicker: React.FC<Props> = ({ value, onChange, rotulo }) => {
         <Tag size={14} aria-hidden />
       )}
       <span className="sr-only">Etiqueta</span>
-      <select
+      <Seletor
+        bare
         value={value ?? ''}
         onChange={e => handleChange(e.target.value)}
         style={{ background: 'transparent', border: 0, color: 'inherit', font: 'inherit', outline: 'none' }}
       >
         {opcoes}
-      </select>
+      </Seletor>
     </label>
   );
 };

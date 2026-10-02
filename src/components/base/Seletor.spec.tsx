@@ -187,6 +187,30 @@ describe('Seletor no computador', () => {
     expect(caixa.className).toContain('[&>svg:last-child]:hidden');
   });
 
+  it('bare: no escuro o hover mantém o fundo colorido de quem chama', () => {
+    render(
+      <Seletor bare aria-label="Status" value="a" onChange={() => {}}
+        className="rounded-md bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400">
+        <option value="a">Visto</option>
+      </Seletor>,
+    );
+    const classes = screen.getByLabelText('Status').className.split(/\s+/);
+    expect(classes).toContain('dark:hover:bg-sky-900/30');
+    expect(classes).not.toContain('dark:hover:bg-input/50');
+    expect(classes).not.toContain('dark:hover:bg-transparent');
+  });
+
+  it('bare sem fundo: hover escuro transparente, sem o do design system', () => {
+    render(
+      <Seletor bare aria-label="Campo" value="a" onChange={() => {}} className="lmf-campo-controle">
+        <option value="a">A</option>
+      </Seletor>,
+    );
+    const classes = screen.getByLabelText('Campo').className.split(/\s+/);
+    expect(classes).toContain('dark:hover:bg-transparent');
+    expect(classes).not.toContain('dark:hover:bg-input/50');
+  });
+
   it('desligado não abre', async () => {
     render(<Seletor aria-label="X" value="a" onChange={() => {}} disabled><option value="a">A</option></Seletor>);
     expect(screen.getByLabelText('X')).toBeDisabled();
