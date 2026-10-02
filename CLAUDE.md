@@ -4860,3 +4860,83 @@ Armadilhas:
     `fetchLabels()`, com cache e busca única). O painel remonta as Etiquetas a
     cada contato: buscar direto no serviço fazia uma requisição por troca de
     conversa, até com o painel fechado.
+
+## Conversas: pílulas, hora certa e campo enxuto (desde 2026-10-02)
+
+Relato do dono do produto (Fase 4): a lista de Conversas tinha duas pílulas que
+pouco ajudavam (Ativas/Arquivadas), uma faixa vermelha que gritava, hora que
+mudava com qualquer evento do histórico e um campo de mensagem cheio de coisa
+que o corretor não usa. O histórico também mostrava "adicionou demo-0001" em
+texto puro.
+
+O que aparece na tela:
+
+- **Pílulas no topo da lista: Todas · Minhas · Sem resposta · Arquivadas**
+  (no lugar de Ativas/Arquivadas). A pílula e o popover **Filtros** se somam.
+- **Item da lista sem faixa colorida.** Quando o lead é quem falou por último e
+  a conversa está esperando, aparece **"sem resposta há X"** (atualiza a cada
+  60 s). A hora do item é a da última mensagem de verdade; avisos do histórico
+  ("Tony adicionou ...", criados ou atualizados) não mexem na hora nem na prévia.
+- **Painel direito vazio** ("Selecione uma conversa") mostra o aviso de número
+  desconectado sempre que houver um.
+- **Campo de mensagem:** a barra tem só **negrito e itálico**; sumiu a dica do
+  "/"; o Alt+P saiu. A frase de fundo diz o bloqueio real: número desconectado
+  -> "Seu WhatsApp está desconectado. Reconecte o número para responder."; janela
+  de 24 h fechada -> "Faz mais de 24 h que o lead não escreve. Envie um modelo
+  de mensagem para retomar."; sem bloqueio, o campo mostra "Escreva uma
+  mensagem..." (`chatArea.messageInput.defaultPlaceholder`, do `ChatArea`). Dicas dos ícones: **Funis de mensagem**, **Enviar
+  book**, **Modelos de mensagem**.
+- **Histórico:** etiquetas citadas ("adicionou visita-agendada, demo-0001")
+  aparecem como etiquetas coloridas, e o nome sai do texto.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **"Sem resposta" usa a mesma régua das Pendências da Dashboard, sem o limiar
+  de 1 h:** o lead está esperando e a IA não está atendendo.
+- **A pílula nunca é salva.** Só os filtros do popover vão pro localStorage. Ao
+  voltar pra Todas, volta o Responsável do próprio popover.
+- **Nota interna fica fora do campo** (02/10): sem botão Resposta/Nota e sem Alt+P.
+- **A barra do chat é só negrito e itálico.** Landings e Site Builder mantêm
+  todas as formatações.
+- **O aviso de número (PR #398) só acusa em Todas + filtro padrão + sem busca.**
+- **Sem faixa colorida no item.** O sinal é o texto "sem resposta há X".
+
+Armadilhas:
+
+1. **"Minhas" filtra pelo id do usuário** (`assignee_id`), não por `'me'`: o
+   `POST /conversations/filter` coloca o valor cru no SQL. Só cai em `'me'`
+   quando a tela ainda não sabe o id do usuário.
+2. **`waiting` mora no servidor** (backend lm-flow #364): `waiting_since`
+   preenchido e IA fora do atendimento. Vai no GET e no POST e na rolagem
+   ("carregar mais"). Não recalcule no front.
+3. **Pílula e filtros do popover vivem na página** (`usePilulaEFiltros`); por isso
+   o Responsável do popover volta ao sair de Minhas.
+4. **O aviso do painel vazio vem de `useAvisoDeNumero`**; a regra de quando
+   acusar na lista é outra (item 5 de "Decisões").
+5. **Hora e prévia do item ignoram mensagem de atividade** (criada ou
+   atualizada). Tempo relativo: `tempoDesde` em `@/lib/formato`.
+6. **`acoes` do editor é por tela.** O `RichTextEditor` é compartilhado: o chat
+   passa só negrito/itálico; sem `acoes`, todas as formatações aparecem. Desfazer
+   e refazer (atalhos) ficam sempre ligados. O editor reaplica a frase de fundo
+   a cada mudança (`classeDoEditor`).
+7. **Janela de 24 h fechada** = não pode responder + restrição de janela + canal
+   que não é de texto livre (baileys, evolution, evolution_go, zapi, notificame
+   são de texto livre e nunca mostram a frase).
+8. **A etiqueta no histórico casa por título inteiro** (ou UUID), separado por
+   espaço/vírgula, e só na lista depois de "adicionou"/"removeu" ("Tony
+   adicionou visita-agendada, demo-0001"); o resto do texto nunca é editado, então
+   "Atribuído a Ana por Bia" não vira etiqueta mesmo existindo etiqueta "Ana".
+   Número solto não casa. O catálogo vem do store (`useAppDataStore.labels` + `fetchLabels()`),
+   sem requisição a mais. O texto do servidor usa o slug como título.
+9. **Lista colada no campo do chat sai achatada** (já era assim; não é desta leva).
+10. **Responder em "Sem resposta" não tira a conversa da lista.** Ela perde só a
+    linha "sem resposta há X" e sai quando a lista recarrega. É de propósito:
+    não some debaixo do corretor no meio do atendimento.
+11. **A lista é ordenada pelo horário mostrado** (`ordemDaLista`, por
+    `horaDoItem`, fixadas primeiro), mas o servidor pagina por última atividade.
+    Mensagem de atividade bumpa a atividade no servidor e não muda a ordem na
+    tela; um item de uma página mais pra frente pode aparecer depois num ponto
+    diferente do que a paginação sugere.
+12. **Troca rápida de pílula:** `handleApplyFilters` ignora resposta de pedido
+    superado (contador em `useFilterHandlers`). "Resolver em massa" e "Tentar de
+    novo" recarregam com a pílula e os filtros em uso, não com a lista crua.

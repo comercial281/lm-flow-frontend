@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
+import { ordemDaLista } from '@/features/conversas/itemDaLista';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@evoapi/design-system/button';
 import { Input } from '@evoapi/design-system/input';
 import { Badge } from '@evoapi/design-system/badge';
@@ -34,18 +35,14 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useChatContext } from '@/contexts/chat/ChatContext';
-import { Conversation, ConversationFilter } from '@/types/chat/api';
+import { Conversation } from '@/types/chat/api';
 import { formatConversationTime, formatDetailedTime } from '@/utils/time/timeHelpers';
 import { ConversationSkeleton } from '../loading-states';
 import { NoConversations } from '../empty-states';
 import { AvisoListaVaziaNumero, FaixaReconectar } from '../empty-states/AvisoNumero';
 import {
-  avisoListaVazia,
   numerosParaReconectar,
 } from '@/features/numbers/avisoConversas';
-import { PermissionsContext } from '@/contexts/PermissionsContext';
-import { useCan } from '@/hooks/useCan';
-import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useAuth } from '@/contexts/AuthContext';
 import ContactAvatar from '../contact/ContactAvatar';
 import ConversationBadges from '../conversation/ConversationBadges';
@@ -54,7 +51,16 @@ import ConversationsFilter from '../conversation/ConversationsFilter';
 import QuickFilters from '../filters/QuickFilters';
 import GlobalSearchPanel from '../search/GlobalSearchPanel';
 import { BaseFilter } from '@/types/core';
+import { getDefaultFilter } from '@/utils/storage/filtersStorage';
+import {
+  PILULAS,
+  filtrosComPilula,
+  mostraArquivadas,
+  deveAvisarNumero,
+  type Pilula,
+} from '@/features/conversas/pilulas';
 import { useNumerosDaConversa } from '@/features/numbers/useNumerosDaConversa';
+import { useAvisoDeNumero, usePermissoesDeNumero } from '@/features/numbers/useAvisoDeNumero';
 import type { Inbox } from '@/types/channels/inbox';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -65,14 +71,23 @@ import type {
   SearchMessageResult,
 } from '@/types/chat/search';
 import { telefone } from '@/lib/formato';
+import { esperaDoLead, horaDoItem } from '@/features/conversas/itemDaLista';
 
 interface ChatSidebarProps {
   mobileView: 'list' | 'chat';
   searchInput: string;
   onSearchChange: (value: string) => void;
   onConversationSelect: (conversation: Conversation) => void;
-  onFilterApply: (filters: BaseFilter[]) => Promise<Conversation[] | void>;
+  onFilterApply: (
+    filters: BaseFilter[],
+    filtrosParaSalvar?: BaseFilter[],
+  ) => Promise<Conversation[] | void>;
   onFilterClear: () => void;
+  // Pílula e filtros do popover moram na página (sobrevivem ao remonte da lista).
+  pilula: Pilula;
+  onPilulaChange: (pilula: Pilula) => void;
+  conversationFilters: BaseFilter[];
+  onConversationFiltersChange: (filtros: BaseFilter[]) => void;
   onMarkAsRead: (conversation: Conversation) => void;
   onMarkAsUnread: (conversation: Conversation) => void;
   onMarkAsOpen: (conversation: Conversation) => void;
@@ -95,16 +110,6 @@ interface ChatSidebarProps {
   onDeleteConversation: (conversation: Conversation) => void;
 }
 
-function getUrgencyColor(timestamp: number | string | undefined): string {
-  if (!timestamp) return 'transparent';
-  const ts = typeof timestamp === 'number' ? timestamp : Date.parse(String(timestamp));
-  if (Number.isNaN(ts)) return 'transparent';
-  const hours = (Date.now() - ts) / 3_600_000;
-  if (hours < 1) return '#10b981';
-  if (hours < 4) return '#f59e0b';
-  return '#ef4444';
-}
-
 const ChatSidebar = ({
   mobileView,
   searchInput,
@@ -112,6 +117,10 @@ const ChatSidebar = ({
   onConversationSelect,
   onFilterApply,
   onFilterClear,
+  pilula,
+  onPilulaChange,
+  conversationFilters,
+  onConversationFiltersChange: setConversationFilters,
   onMarkAsRead,
   onMarkAsUnread,
   onMarkAsOpen,
@@ -150,11 +159,11 @@ const ChatSidebar = ({
     loadMoreConversations: () => Promise<void>;
   };
   const filters = chatContext.filters;
-  const [conversationFilters, setConversationFilters] = useState<BaseFilter[]>([]);
   // Instâncias (inboxes/WhatsApp) do tenant — pro seletor rápido de instância.
   // `iaAtiva` vem do backend (`Inbox#active_bot?`, ver InboxSerializer): diz
   // se tem um agent_bot LIGADO nesta instância — é o que desenha o
   // iconezinho roxo no `QuickFilters` (pedido do Giovani, 19/08).
+  const { user } = useAuth();
   const { inboxes, numeros } = useNumerosDaConversa();
   const inboxOptions = useMemo(
     () =>
@@ -169,36 +178,20 @@ const ChatSidebar = ({
     [inboxes],
   );
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+  // Re-render a cada minuto pra "sem resposta há X" não congelar (um relógio pra lista toda).
+  const [, setMinuto] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setMinuto(n => n + 1), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
   const [isLoadingMoreConversations, setIsLoadingMoreConversations] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
+  // `conversationFilters` = só o que o usuário escolheu no popover (fonte única,
+  // escrita só por aplicar/limpar); a pílula é somada na hora de aplicar.
+  const showArchived = mostraArquivadas(pilula);
   const [selectedConversations, setSelectedConversations] = useState<Set<string>>(new Set());
   const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
   const loadingMoreRef = useRef(false);
 
-  useEffect(() => {
-    const currentLocal = JSON.stringify(conversationFilters);
-    const currentContext = JSON.stringify(
-      filters.state.activeFilters.map((f: ConversationFilter) => ({
-        attributeKey: f.attribute_key,
-        filterOperator: f.filter_operator,
-        values: Array.isArray(f.values) ? f.values.join(',') : String(f.values[0] || ''),
-        queryOperator: f.query_operator,
-        attributeModel: 'standard' as const,
-      })),
-    );
-
-    if (currentLocal !== currentContext) {
-      setConversationFilters(
-        filters.state.activeFilters.map((f: ConversationFilter) => ({
-          attributeKey: f.attribute_key,
-          filterOperator: f.filter_operator,
-          values: Array.isArray(f.values) ? f.values.join(',') : String(f.values[0] || ''),
-          queryOperator: f.query_operator,
-          attributeModel: 'standard' as const,
-        })),
-      );
-    }
-  }, [filters.state.activeFilters, conversationFilters]);
 
   const navigate = useNavigate();
   const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(false);
@@ -259,14 +252,34 @@ const ChatSidebar = ({
     [navigate, onSearchChange],
   );
 
+  // Aplica os filtros do popover SOMADOS aos da pílula; só os do popover são salvos.
+  const meuId = user?.id != null ? String(user.id) : null;
+  const aplicarComPilula = (doPopover: BaseFilter[], pilulaAtual: Pilula) =>
+    onFilterApply(filtrosComPilula(doPopover, pilulaAtual, meuId), doPopover);
+
   const handleApplyFilters = async (newFilters: BaseFilter[]) => {
     setConversationFilters(newFilters);
-    return onFilterApply(newFilters);
+    return aplicarComPilula(newFilters, pilula);
+  };
+
+  const handleChangePilula = (nova: Pilula) => {
+    if (nova === pilula) return;
+    const antes = filtrosComPilula(conversationFilters, pilula, meuId);
+    const depois = filtrosComPilula(conversationFilters, nova, meuId);
+    onPilulaChange(nova);
+    // Arquivadas é recorte da tela: a lista do servidor é a mesma de "Todas".
+    if (JSON.stringify(antes) === JSON.stringify(depois)) return;
+    void aplicarComPilula(conversationFilters, nova).catch(() => undefined);
   };
 
   const handleClearFilters = async () => {
     setConversationFilters([]);
-    onFilterClear();
+    if (pilula === 'todas' || pilula === 'arquivadas') {
+      onFilterClear();
+      return;
+    }
+    // Limpar o popover não tira a pílula: volta ao padrão (abertas) + pílula.
+    void aplicarComPilula(getDefaultFilter(), pilula).catch(() => undefined);
   };
 
   // Filtro rápido (tag, instância, responsável, roleta, período) — um
@@ -338,7 +351,7 @@ const ChatSidebar = ({
         fields: { status: 'resolved' },
       });
       setSelectedConversations(new Set());
-      await conversations.loadConversations({});
+      await aplicarComPilula(conversationFilters, pilula);
       toast.success(`${count} conversa${count !== 1 ? 's' : ''} resolvida${count !== 1 ? 's' : ''}`);
     } catch (error) {
       console.error('Bulk resolve error:', error);
@@ -395,55 +408,23 @@ const ChatSidebar = ({
       return showArchived ? isArchived : !isArchived;
     });
 
-    const getSortTimestamp = (conversation: Conversation) => {
-      if (typeof conversation.timestamp === 'number') {
-        return conversation.timestamp;
-      }
-      const activityTime = Date.parse(conversation.last_activity_at || '');
-      if (!Number.isNaN(activityTime)) {
-        return activityTime;
-      }
-      const updatedTime = Date.parse(conversation.updated_at || '');
-      if (!Number.isNaN(updatedTime)) {
-        return updatedTime;
-      }
-      const createdTime = Date.parse(conversation.created_at || '');
-      if (!Number.isNaN(createdTime)) {
-        return createdTime;
-      }
-      return 0;
-    };
-
-    return [...filtered].sort((a, b) => {
-      const aPinned = Boolean(a.custom_attributes?.pinned);
-      const bPinned = Boolean(b.custom_attributes?.pinned);
-      if (aPinned !== bPinned) {
-        return aPinned ? -1 : 1;
-      }
-      return getSortTimestamp(b) - getSortTimestamp(a);
-    });
+    // Ordem pelo horário que o item mostra (última mensagem de verdade); o servidor pagina por atividade.
+    return [...filtered].sort(ordemDaLista);
   }, [conversations.state.conversations, showArchived]);
 
   // Aviso de número (02/10/2026). "Gestor" = quem vê qualquer número
   // (`inboxes.update`, o mesmo sinal da tela de Canais); sem as permissões
   // carregadas a tela não decide nada. Só vale sem busca e sem filtro além do
   // `status=open` de sempre: lista vazia por filtro não é culpa do número.
-  const permissoes = useContext(PermissionsContext);
-  const can = useCan();
-  const permissoesProntas = permissoes ? permissoes.isReady : true;
-  const gestor = permissoesProntas && can('inboxes', 'update');
-  const podeCriarNumero = useFeature('channels_connect') && permissoesProntas && can('channels', 'create');
-  const { user } = useAuth();
-  const soFiltroPadrao = conversationFilters.every(
-    (f) => f.attributeKey === 'status' && String(f.values) === 'open',
-  );
+  const { permissoesProntas, gestor } = usePermissoesDeNumero();
+  const avisoDeNumero = useAvisoDeNumero();
   const avisoVazio =
-    permissoesProntas && !showArchived && !searchInput && soFiltroPadrao
-      ? avisoListaVazia({ numeros, gestor, podeCriar: podeCriarNumero })
+    deveAvisarNumero({ pilula, showArchived, busca: searchInput, filtros: conversationFilters })
+      ? avisoDeNumero
       : null;
   const paraReconectar =
     permissoesProntas && !showArchived
-      ? numerosParaReconectar({ numeros, gestor, meuId: user?.id != null ? String(user.id) : null })
+      ? numerosParaReconectar({ numeros, gestor, meuId })
       : [];
 
   const stripHtml = (html: string): string => {
@@ -692,31 +673,28 @@ const ChatSidebar = ({
         </div>
 
         <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
-          <button
-            type="button"
-            aria-pressed={!showArchived}
-            onClick={() => setShowArchived(false)}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-              !showArchived
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {t('chatSidebar.view.active')}
-          </button>
-          <button
-            type="button"
-            aria-pressed={showArchived}
-            onClick={() => setShowArchived(true)}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-              showArchived
-                ? 'bg-orange-100 text-orange-700 shadow-sm dark:bg-orange-950/40 dark:text-orange-400'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Archive className="h-3 w-3" />
-            {t('chatSidebar.view.archived')}
-          </button>
+          {PILULAS.map(({ id, rotulo }) => {
+            const ativa = pilula === id;
+            const arquivadas = id === 'arquivadas';
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={ativa}
+                onClick={() => handleChangePilula(id)}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all ${
+                  ativa
+                    ? arquivadas
+                      ? 'bg-orange-100 text-orange-700 shadow-sm dark:bg-orange-950/40 dark:text-orange-400'
+                      : 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {arquivadas && <Archive className="h-3 w-3" />}
+                {rotulo}
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex items-center justify-between">
@@ -784,7 +762,7 @@ const ChatSidebar = ({
             <p className="text-sm text-muted-foreground mb-4">
               {conversations.state.conversationsError}
             </p>
-            <Button variant="outline" size="sm" onClick={() => conversations.loadConversations({})}>
+            <Button variant="outline" size="sm" onClick={() => void aplicarComPilula(conversationFilters, pilula).catch(() => undefined)}>
               {t('chatSidebar.errors.tryAgain')}
             </Button>
           </div>
@@ -819,7 +797,7 @@ const ChatSidebar = ({
               const channelType =
                 conversation.inbox?.channel_type || conversation.inbox?.channel_type;
               const channelProvider = conversation.inbox?.provider;
-              const urgencyColor = getUrgencyColor(conversation.timestamp);
+              const espera = esperaDoLead(conversation);
 
               return renderConversationContextMenu(
                 conversation,
@@ -830,22 +808,6 @@ const ChatSidebar = ({
                   }`}
                   onClick={() => onConversationSelect(conversation)}
                 >
-                  {/* Urgency strip — 3px left edge */}
-                  {!isSelected && conversation.status === 'open' && (
-                    <div
-                      aria-hidden
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: 3,
-                        background: urgencyColor,
-                        borderRadius: '0 2px 2px 0',
-                        opacity: 0.85,
-                      }}
-                    />
-                  )}
                   {/* Selected indicator */}
                   {isSelected && (
                     <div
@@ -905,6 +867,9 @@ const ChatSidebar = ({
                                     {telefone(conversation.contact.phone_number)}
                                   </p>
                                 )}
+                                {espera && (
+                                  <p className="text-xs text-amber-700 dark:text-amber-400 truncate">{espera}</p>
+                                )}
                               </div>
                               {Boolean(conversation.custom_attributes?.pinned) && (
                                 <Pin className="h-3.5 w-3.5 text-primary flex-shrink-0" />
@@ -923,9 +888,9 @@ const ChatSidebar = ({
                             <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                               <span
                                 className="text-xs text-muted-foreground"
-                                title={formatDetailedTime(conversation.timestamp)}
+                                title={formatDetailedTime(horaDoItem(conversation))}
                               >
-                                {formatConversationTime(conversation.timestamp)}
+                                {formatConversationTime(horaDoItem(conversation))}
                               </span>
                             </div>
                           </div>

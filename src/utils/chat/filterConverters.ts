@@ -1,12 +1,22 @@
 import { ConversationFilter, ConversationListParams, FilterRequest } from '@/types/chat/api';
 
+const isWaitingFilter = (filter: ConversationFilter): boolean =>
+  filter.attribute_key === 'waiting' && filter.values.length === 1 && String(filter.values[0]) === 'true';
+
 /**
  * Converte filtros do modal para o formato da API do CRM Chat (POST /conversations/filter)
  */
-export const convertFiltersToApiFormat = (filters: ConversationFilter[]): { filters: any[] } => {
+export const convertFiltersToApiFormat = (
+  filters: ConversationFilter[],
+): { filters: any[]; waiting?: true } => {
   const filterArray: any[] = [];
 
-  filters.forEach((filter, index) => {
+  // "Sem resposta" (pílula da lista) não é filtro de coluna: o servidor lê
+  // `waiting: true` na raiz do corpo, e a pílula não some quando o popover
+  // avançado manda a busca pelo POST.
+  const waiting = filters.some(isWaitingFilter);
+
+  filters.filter(filter => !isWaitingFilter(filter)).forEach((filter, index) => {
     const { attribute_key, filter_operator, values } = filter;
     const query_operator = index === 0 ? null : 'AND'; // Primeiro filtro não tem operador, demais usam AND
 
@@ -41,7 +51,7 @@ export const convertFiltersToApiFormat = (filters: ConversationFilter[]): { filt
     filterArray.push(filterItem);
   });
 
-  return { filters: filterArray };
+  return waiting ? { filters: filterArray, waiting: true } : { filters: filterArray };
 };
 
 /**
@@ -102,6 +112,12 @@ export const convertFiltersToUrlParams = (
       case 'handled_by_ai':
         if (values.length === 1 && values[0] === 'true') {
           params.handled_by_ai = true;
+        }
+        break;
+
+      case 'waiting':
+        if (values.length === 1 && String(values[0]) === 'true') {
+          params.waiting = 'true';
         }
         break;
 

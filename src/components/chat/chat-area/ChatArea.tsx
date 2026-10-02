@@ -7,7 +7,6 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { useConversationModerations } from '@/hooks/chat/useConversationModerations';
 import { useAppDataStore } from '@/store/appDataStore';
 
-import { MessageCircle } from 'lucide-react';
 
 import { Button } from '@evoapi/design-system/button';
 
@@ -19,6 +18,7 @@ import MessageList from '../messages/MessageList';
 import { Banner } from '../banner';
 import PendingResponseBanner from '../banner/PendingResponseBanner';
 
+import { fraseDoCampo } from '@/features/conversas/fraseDoCampo';
 import type { Message, Conversation } from '@/types/chat/api';
 
 interface PostData {
@@ -240,8 +240,8 @@ const ChatArea = ({
   // Determinar se deve mostrar restrições
   const hasMessagingWindowRestriction =
     isWhatsAppChannel || isInstagramChannel || isMessengerChannel;
-  const shouldShowRestrictionBanner =
-    (!canReply && hasMessagingWindowRestriction && !isWhatsAppFreeTextChannel) || isDisconnected;
+  const janelaFechada = !canReply && hasMessagingWindowRestriction && !isWhatsAppFreeTextChannel;
+  const shouldShowRestrictionBanner = janelaFechada || isDisconnected;
 
   // Mensagem do banner quando não pode responder
   const getBannerMessage = () => {
@@ -296,17 +296,8 @@ const ChatArea = ({
     return 'https://developers.facebook.com/docs/whatsapp/messaging-limits';
   };
 
-  if (!selectedConversationId) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">{t('chatArea.selectConversation.title')}</h3>
-          <p className="text-muted-foreground">{t('chatArea.selectConversation.description')}</p>
-        </div>
-      </div>
-    );
-  }
+  // ChatArea só monta com conversa aberta (o painel vazio mora em Chat.tsx).
+  if (!selectedConversationId) return null;
 
   const typingUsers = websocket.getTypingUsers(selectedConversationId);
 
@@ -388,13 +379,13 @@ const ChatArea = ({
       <div className="flex-shrink-0 w-full">
         <MessageInput
           onSendMessage={handleSendMessage}
-          placeholder={
-            isPendingConversation
-              ? t('chatArea.messageInput.pendingPlaceholder')
-              : shouldShowRestrictionBanner
-              ? t('chatArea.messageInput.restrictedPlaceholder')
-              : t('chatArea.messageInput.defaultPlaceholder')
-          }
+          placeholder={fraseDoCampo({
+            pendente: isPendingConversation,
+            desconectado: isDisconnected,
+            janelaFechada,
+            textoPendente: t('chatArea.messageInput.pendingPlaceholder'),
+            textoPadrao: t('chatArea.messageInput.defaultPlaceholder'),
+          })}
           isDisabled={shouldShowRestrictionBanner}
           isPendingConversation={isPendingConversation}
           onTypingStart={handleTypingStart}

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useChatContext } from '@/contexts/chat/ChatContext';
 import { BaseFilter } from '@/types/core';
 import { Conversation } from '@/types/chat/api';
@@ -7,24 +7,32 @@ import { saveConversationFilters, clearConversationFilters } from '@/utils/stora
 
 export const useFilterHandlers = () => {
   const { conversations, filters } = useChatContext();
+  // Resposta de um pedido superado (troca rápida de pílula) não sobrescreve a lista nova.
+  const pedidoAtual = useRef(0);
 
   const handleApplyFilters = useCallback(
-    async (newFilters: BaseFilter[]) => {
+    async (newFilters: BaseFilter[], filtrosParaSalvar: BaseFilter[] = newFilters) => {
       // Converter BaseFilter para ConversationFilter e aplicar
       const apiFilters = convertBaseFiltersToConversationFilters(newFilters);
 
       // Resolve com a lista recém-carregada (não só void): quem chama
       // precisa saber se a conversa aberta ainda está nela pra decidir se
       // fecha o painel — ver `applyQuickFilters` em `ChatSidebar.tsx`.
+      const meuPedido = ++pedidoAtual.current;
       return new Promise<Conversation[]>((resolve, reject) => {
         filters.applyFilters(
           apiFilters,
           (conversationsResult, pagination) => {
+            if (meuPedido !== pedidoAtual.current) {
+              resolve(conversationsResult);
+              return;
+            }
             // Atualizar o estado das conversas com os resultados do filtro
             conversations.setConversations(conversationsResult, pagination);
 
             // 💾 PERSISTIR: Salvar filtros aplicados no localStorage
-            saveConversationFilters(newFilters);
+            // (sem o filtro da pílula: ela não é salva, a lista abre em "Todas")
+            saveConversationFilters(filtrosParaSalvar);
             resolve(conversationsResult);
           },
           error => {

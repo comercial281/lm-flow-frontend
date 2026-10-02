@@ -733,9 +733,9 @@
       "disable": "Desabilitar assinatura"
     },
     "placeholders": {
-      "default": "Digite sua mensagem... (digite / para respostas prontas)",
+      "default": "Digite sua mensagem...",
       "pendingNote": "Digite sua nota privada (conversa pendente)...",
-      "privateNote": "Digite sua nota privada... (digite / para respostas prontas)"
+      "privateNote": "Digite sua nota privada..."
     }
   },
   "conversationsFilter": {

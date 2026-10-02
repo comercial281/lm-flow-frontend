@@ -166,3 +166,17 @@ export function telefone(valor: string | null | undefined): string {
   const corte = resto.length === 9 ? 5 : 4;
   return `(${ddd}) ${resto.slice(0, corte)}-${resto.slice(corte)}`;
 }
+
+// ── Tempo decorrido ──────────────────────────────────────────────────────────
+/** "agora" · "há 5 min" · "há 3 h" · "há 1 dia" · "há 4 dias". Número = segundos Unix. */
+export function tempoDesde(desde: Date | string | number, agora: Date = new Date()): string {
+  const d = toDate(desde);
+  if (!d) return VAZIO;
+  const minutos = Math.floor((agora.getTime() - d.getTime()) / 60_000);
+  if (minutos < 1) return 'agora';
+  if (minutos < 60) return `há ${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return `há ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  return dias === 1 ? 'há 1 dia' : `há ${dias} dias`;
+}

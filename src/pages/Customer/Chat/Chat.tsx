@@ -45,10 +45,14 @@ import ChatHeader from '@/components/chat/chat-header/ChatHeader';
 import ChatArea from '@/components/chat/chat-area/ChatArea';
 import ChatTabs from '@/components/chat/chat-tabs/ChatTabs';
 
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { AlertTriangle, MessageCircle, Trash2 } from 'lucide-react';
+import { AvisoListaVaziaNumero } from '@/components/chat/empty-states/AvisoNumero';
+import { useAvisoDeNumero } from '@/features/numbers/useAvisoDeNumero';
 
 import { Conversation } from '@/types/chat/api';
 import { BaseFilter } from '@/types/core';
+import { useAppDataStore } from '@/store/appDataStore';
+import { usePilulaEFiltros } from '@/features/conversas/usePilulaEFiltros';
 import type { DashboardApp } from '../../../types/integrations';
 import type { AssignmentOption, AssignmentType } from '@/components/chat/assignment';
 
@@ -68,7 +72,20 @@ const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const Chat = () => {
+  // Catálogo de etiquetas da conta (store com cache): o histórico pinta as etiquetas citadas
+  const catalogoDeEtiquetas = useAppDataStore(s => s.labels);
+  const fetchLabels = useAppDataStore(s => s.fetchLabels);
+  useEffect(() => {
+    fetchLabels().catch(() => {
+      /* sem catálogo, o histórico mostra o texto puro */
+    });
+  }, [fetchLabels]);
+  const etiquetasDaConta = useMemo(
+    () => catalogoDeEtiquetas.map(l => ({ id: String(l.id), title: l.title, color: l.color })),
+    [catalogoDeEtiquetas],
+  );
   const { t } = useLanguage('chat');
+  const avisoDeNumero = useAvisoDeNumero();
   const { can, isReady: permissionsReady } = usePermissions();
   const { conversationId } = useParams<{ conversationId?: string }>();
   const navigate = useNavigate();
@@ -97,6 +114,10 @@ const Chat = () => {
 
   // Estados locais simplificados
   const [searchInput, setSearchInput] = useState('');
+  // Pílula e filtros do popover da lista: aqui pra sobreviver ao remonte da ChatSidebar.
+  const { pilula, setPilula, filtrosDoPopover, setFiltrosDoPopover } = usePilulaEFiltros(
+    () => loadConversationFilters() || getDefaultFilter(),
+  );
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
   // Modal states
@@ -134,9 +155,9 @@ const Chat = () => {
 
   // 🎯 FILTROS: Usar handlers dos hooks customizados (DEFINIR ANTES DOS useEffect)
   const handleApplyFilters = useCallback(
-    async (newFilters: BaseFilter[]) => {
+    async (newFilters: BaseFilter[], filtrosParaSalvar?: BaseFilter[]) => {
       try {
-        return await filterHandlers.handleApplyFilters(newFilters);
+        return await filterHandlers.handleApplyFilters(newFilters, filtrosParaSalvar);
       } catch (error) {
         // Se erro 403 ou 404, marcar como erro
         const axiosError = error as AxiosError;
@@ -716,6 +737,10 @@ const Chat = () => {
           onConversationSelect={handleConversationSelect}
           onFilterApply={handleApplyFilters}
           onFilterClear={handleClearFilters}
+          pilula={pilula}
+          onPilulaChange={setPilula}
+          conversationFilters={filtrosDoPopover}
+          onConversationFiltersChange={setFiltrosDoPopover}
           onMarkAsRead={handleMarkAsRead}
           onMarkAsUnread={handleMarkAsUnread}
           onMarkAsOpen={handleMarkAsOpen}
@@ -819,6 +844,7 @@ const Chat = () => {
                   onLoadMore={handleLoadMore}
                   onRetryMessage={handleRetryMessage}
                   isPendingConversation={selectedConversation?.status === 'pending'}
+                  labels={etiquetasDaConta}
                 />
               ) : (
                 // Show Dashboard App iframe when an app tab is active
@@ -855,12 +881,16 @@ const Chat = () => {
               )}
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">{t('empty.title')}</h3>
-                <p className="text-muted-foreground">{t('empty.description')}</p>
-              </div>
+            <div className="flex-1 flex items-center justify-center p-4">
+              {avisoDeNumero ? (
+                <AvisoListaVaziaNumero aviso={avisoDeNumero} />
+              ) : (
+                <div className="text-center">
+                  <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">{t('empty.title')}</h3>
+                  <p className="text-muted-foreground">{t('empty.description')}</p>
+                </div>
+              )}
             </div>
           )}
         </div>

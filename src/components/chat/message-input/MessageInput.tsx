@@ -38,6 +38,7 @@ import AudioRecorder from '../audio';
 import { AIAssistanceButton } from '../ai-assistance';
 import { MessageFunnelPopover } from '../message-funnels';
 import { PropertyBookPopover } from '../property-book';
+import { IconActionButton } from '@/components/base';
 import { RichTextEditor, RichTextEditorRef } from '../rich-text-editor';
 
 import { ReplyMode, Message, Conversation } from '@/types/chat/api';
@@ -74,6 +75,7 @@ interface MessageInputProps {
 const MessageInput: React.FC<MessageInputProps> = ({
   onSendMessage,
   isDisabled = false,
+  placeholder,
   isPendingConversation = false,
   onTypingStart,
   onTypingStop,
@@ -601,44 +603,41 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
               {/* 🚀 Funis de Mensagem (substitui Canned Responses + Quick Replies) */}
               {canMessageFunnel && (
-                <Button
+                <IconActionButton
+                  label="Funis de mensagem"
+                  icon={<Rocket className="h-4 w-4" />}
                   variant={showFunnels ? 'default' : 'ghost'}
-                  size="icon"
                   disabled={isDisabled || isSending || isPendingConversation}
                   className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
                   onClick={() => setShowFunnels(v => !v)}
-                  title="Funis de Mensagem"
-                >
-                  <Rocket className="h-4 w-4" />
-                </Button>
+                  side="top"
+                />
               )}
 
               {/* 🏠 Enviar book de imóvel */}
               {isWhatsApp && canSendAttachment && (
-                <Button
+                <IconActionButton
+                  label="Enviar book"
+                  icon={<Building2 className="h-4 w-4" />}
                   variant={showBookPicker ? 'default' : 'ghost'}
-                  size="icon"
                   disabled={isDisabled || isSending || isPendingConversation}
                   className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
                   onClick={() => setShowBookPicker(v => !v)}
-                  title="Enviar book de imóvel"
-                >
-                  <Building2 className="h-4 w-4" />
-                </Button>
+                  side="top"
+                />
               )}
 
               {/* Template Button */}
               {canMessageTemplate && (
-                <Button
+                <IconActionButton
+                  label="Modelos de mensagem"
+                  icon={<FileText className="h-4 w-4" />}
                   variant="ghost"
-                  size="icon"
                   disabled={isSending || isPendingConversation}
                   className="h-9 w-9 flex-shrink-0 hover:bg-accent disabled:opacity-50"
                   onClick={handleTemplateClick}
-                  title={t('messageTemplates.button.title')}
-                >
-                  <FileText className="h-4 w-4" />
-                </Button>
+                  side="top"
+                />
               )}
             </div>
 
@@ -650,10 +649,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 placeholder={
                   isPendingConversation
                     ? t('messageInput.placeholders.pendingNote')
-                    : replyMode === ReplyMode.NOTE
+                    : replyMode === ReplyMode.NOTE && !isDisabled
                       ? t('messageInput.placeholders.privateNote')
-                      : t('messageInput.placeholders.default')
+                      : (placeholder ?? t('messageInput.placeholders.default'))
                 }
+                acoes={['bold', 'italic']}
                 onChange={content => {
                   setCurrentEditorMessage(content);
                   if (content.trim()) {
@@ -663,19 +663,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   }
                 }}
                 onKeyDown={event => {
-                  if (event.altKey) {
-                    if (event.key === 'p' || event.key === 'P') {
-                      event.preventDefault();
-                      setReplyMode(ReplyMode.NOTE);
-                      return true;
-                    }
-                    if (event.key === 'l' || event.key === 'L') {
-                      event.preventDefault();
-                      setReplyMode(ReplyMode.REPLY);
-                      return true;
-                    }
-                  }
-
                   const messageKey = user?.ui_settings?.editor_message_key || 'enter';
 
                   if (messageKey === 'enter') {
