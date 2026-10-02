@@ -139,6 +139,12 @@ export interface ContactPipelineInfo {
 export interface Contact {
   id: string;
   name: string;
+  /**
+   * Quem está olhando pode corrigir telefone/e-mail? Vem do servidor
+   * (Contacts::IdentityEditPolicy): só gestor, só em lead cadastrado à mão.
+   * Nome nunca muda depois do cadastro.
+   */
+  identity_correctable?: boolean;
   type: 'person' | 'company';
   email: string;
   phone_number: string;

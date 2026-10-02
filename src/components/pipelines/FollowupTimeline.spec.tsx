@@ -157,3 +157,49 @@ describe('Follow-up do card — o estado vem da fila', () => {
     expect(get).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Modo compacto da coluna fixa do card do lead (spec 2026-10-02): uma linha com
+ * estado e comandos; a linha do tempo só aparece ao pedir. Continua o MESMO
+ * componente, com a mesma fonte.
+ */
+describe('Follow-up do card — modo compacto', () => {
+  beforeEach(() => {
+    [get, start, pause, resume, stop].forEach(m => m.mockReset());
+  });
+
+  it('mostra estado, contagem e comandos sem a linha do tempo aberta', async () => {
+    get.mockResolvedValue({
+      jobs: [job({ status: 'sent', executed_at: 1_755_000_000 }), job()],
+      state: state({
+        status: 'running', queued_count: 7, sent_count: 1, total_steps: 8,
+        next_run_at: 1_756_000_000,
+        sequence: { id: '1', slug: 'pos-visita', name: 'Pós-visita' },
+        can_pause: true, can_stop: true,
+      }),
+    });
+
+    render(<FollowupTimeline contactId="c-1" compacto />);
+
+    expect(await screen.findByText('Rodando')).toBeInTheDocument();
+    expect(screen.getByText('1 de 8 mensagens')).toBeInTheDocument();
+    expect(screen.getByText(/próxima/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Pausar/ })).toBeInTheDocument();
+    expect(screen.queryByText('Linha do tempo')).not.toBeInTheDocument();
+  });
+
+  it('"Ver mensagens" abre a linha do tempo da mesma fila', async () => {
+    get.mockResolvedValue({
+      jobs: [job()],
+      state: state({ status: 'running', queued_count: 1, sent_count: 0, total_steps: 1, can_pause: true, can_stop: true }),
+    });
+
+    render(<FollowupTimeline contactId="c-1" leadName="Ana" compacto />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Ver mensagens' }));
+
+    expect(await screen.findByText('Linha do tempo')).toBeInTheDocument();
+    expect(screen.getByText('Oi Ana, tudo bem?')).toBeInTheDocument();
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+});

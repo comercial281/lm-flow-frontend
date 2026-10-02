@@ -18,8 +18,8 @@ interface CapiConversionPanelProps {
   className?: string;
   /**
    * `compacto`: uma linha só ("Meta" + os 3 botões), com a explicação num ⓘ.
-   * É o do painel do lead em Conversas (logo abaixo dos selos). O card do lead
-   * usa o completo.
+   * É o do painel do lead em Conversas (logo abaixo dos selos) e o da coluna
+   * fixa do card do lead, que não pode rolar.
    */
   variante?: 'completo' | 'compacto';
 }

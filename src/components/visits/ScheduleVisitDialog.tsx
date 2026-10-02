@@ -45,6 +45,11 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   diaInicial?: Date | null;
+  /**
+   * Cliente já escolhido ao abrir (o card do lead abre daqui). Igual a escolher
+   * na lista: o dono dele vira o corretor, e o corretor travado continua travado.
+   */
+  leadInicial?: LeadPickerItem | null;
   onCreated: (v: Visit) => void;
 }
 
@@ -68,7 +73,7 @@ const hojeSemHora = () => {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 };
 
-export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated }: Props) {
+export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, leadInicial, onCreated }: Props) {
   const [travado, setTravado] = useState<PersonRef | null>(null);
   const [verificandoCargo, setVerificandoCargo] = useState(true);
   const [lead, setLead] = useState<LeadPickerItem | null>(null);
@@ -107,14 +112,16 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
   // O efeito abaixo lê o valor mais recente só no instante em que abre.
   const diaInicialRef = useRef<Date | null | undefined>(diaInicial);
   diaInicialRef.current = diaInicial;
+  const leadInicialRef = useRef<LeadPickerItem | null | undefined>(leadInicial);
+  leadInicialRef.current = leadInicial;
 
   // Abriu: zera e descobre se é corretor travado. Só depende de `open` —
   // reabrir é a única hora de zerar o formulário.
   useEffect(() => {
     if (!open) return;
     let vivo = true;
-    setLead(null);
-    setCorretor(null);
+    setLead(leadInicialRef.current ?? null);
+    setCorretor(leadInicialRef.current?.owner ?? null);
     setDia(diaInicialRef.current ?? hojeSemHora());
     setInicio(null);
     setDuracao(60);
@@ -273,7 +280,12 @@ export function ScheduleVisitDialog({ open, onOpenChange, diaInicial, onCreated 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90dvh] overflow-y-auto">
+      <DialogContent
+        className="max-w-5xl max-h-[90dvh] overflow-y-auto"
+        // Cliente já escolhido (veio do card): o foco automático no campo de
+        // cliente abriria a busca por cima do nome, como se nada estivesse escolhido.
+        onOpenAutoFocus={e => { if (leadInicialRef.current) e.preventDefault(); }}
+      >
         <DialogHeader>
           <DialogTitle>Agendar visita</DialogTitle>
           <DialogDescription>Quem vai visitar e quando</DialogDescription>

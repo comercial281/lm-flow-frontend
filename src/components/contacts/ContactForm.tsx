@@ -388,6 +388,13 @@ export default function ContactForm({
   // Get Tax ID label based on detected country
   const taxIdLabel = getTaxIdLabel(phoneCountry, formData.type);
 
+  // Nome, telefone e e-mail não mudam depois do cadastro (decisão do dono,
+  // 02/10/2026). Telefone/e-mail só o gestor corrige, e só em lead cadastrado
+  // à mão — quem diz é o servidor (`identity_correctable`), que confere de novo
+  // ao salvar.
+  const nomeTravado = !isNew;
+  const contatoTravado = !isNew && !contact?.identity_correctable;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Contact Type - Selector for new, Badge for edit */}
@@ -515,6 +522,14 @@ export default function ContactForm({
           {t('form.sections.basicInfo')}
         </h3>
 
+        {nomeTravado && (
+          <p className="text-xs text-muted-foreground">
+            {contatoTravado
+              ? 'Nome, telefone e e-mail não mudam depois do cadastro.'
+              : 'O nome não muda depois do cadastro. Telefone e e-mail: corrija só se foi erro de digitação.'}
+          </p>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Nome - Labels diferentes conforme tipo */}
           <div className="space-y-2">
@@ -531,7 +546,7 @@ export default function ContactForm({
                   ? t('form.fields.companyName.placeholder')
                   : t('form.fields.firstName.placeholder')
               }
-              disabled={loading}
+              disabled={loading || nomeTravado}
               className={errors.firstName ? 'border-destructive' : ''}
             />
             {errors.firstName && <p className="text-sm text-destructive">{errors.firstName}</p>}
@@ -546,7 +561,7 @@ export default function ContactForm({
                 value={formData.lastName}
                 onChange={e => handleInputChange('lastName', e.target.value)}
                 placeholder={t('form.fields.lastName.placeholder')}
-                disabled={loading}
+                disabled={loading || nomeTravado}
               />
             </div>
           )}
@@ -574,7 +589,7 @@ export default function ContactForm({
               value={formData.email}
               onChange={e => handleInputChange('email', e.target.value)}
               placeholder={t('form.fields.email.placeholder')}
-              disabled={loading}
+              disabled={loading || contatoTravado}
               className={errors.email ? 'border-destructive' : ''}
             />
             {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
@@ -586,7 +601,7 @@ export default function ContactForm({
               value={formData.phoneNumber}
               onChange={handlePhoneChange}
               placeholder={t('form.fields.phone.placeholder')}
-              disabled={loading}
+              disabled={loading || contatoTravado}
               error={!!errors.phoneNumber}
               defaultCountry={phoneCountry}
             />
