@@ -4934,6 +4934,11 @@ Armadilhas:
     resumo (só o "Histórico e próximos passos", que é buscado na hora). A
     correção é no backend (avisar a conversa atualizada depois de gravar, ou
     mandar temperatura e resumo no `sales_agent_status`); fica em aberto.
+13. **Turno "Nenhuma IA vinculada a este canal" não conta como histórico** (02/10).
+    O backend grava um `agent_missing` a cada mensagem do lead em número sem IA,
+    e a seção *O que a IA entendeu* aparecia só com essas linhas repetidas. Elas
+    saem da lista e da contagem, e o "por quê" sozinho só segura a seção quando
+    há IA no canal (`state.status !== 'none'`). Há spec.
 
 ## Conversas: pílulas, hora certa e campo enxuto (desde 2026-10-02)
 

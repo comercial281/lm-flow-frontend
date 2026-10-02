@@ -156,7 +156,12 @@ export default function AiUnderstandingPanel({ conversation, embutido = false }:
   // caso o bloco só aparece se houver alguma outra coisa de verdade para mostrar
   // — incluindo o log de turnos (uma IA que só falhou não tem "leitura" nenhuma
   // do lead, mas o corretor ainda precisa ver que ela tentou e não deu certo).
-  const temLog = Boolean(report && (report.runs.length > 0 || report.why));
+  // Turno "sem IA no canal" não é tentativa: o backend grava um a cada mensagem
+  // do lead em número sem IA, e contá-los fazia a seção aparecer só com
+  // "Nenhuma IA vinculada a este canal" repetido.
+  const runs = (report?.runs ?? []).filter(run => run.reason !== 'agent_missing');
+  const semIaNoCanal = report?.state?.status === 'none';
+  const temLog = Boolean(report && (runs.length > 0 || (report.why && !semIaNoCanal)));
   // No painel do lead a temperatura mora na faixa de selos: sozinha, não segura a seção.
   const temLeitura =
     (!embutido && temperatura && temperatura !== 'unknown') ||
@@ -254,8 +259,8 @@ export default function AiUnderstandingPanel({ conversation, embutido = false }:
             <span className="flex items-center gap-1.5">
               <History className="h-3 w-3" />
               Histórico e próximos passos
-              {report.runs.length > 0 && (
-                <span className="normal-case font-normal">({report.runs.length})</span>
+              {runs.length > 0 && (
+                <span className="normal-case font-normal">({runs.length})</span>
               )}
             </span>
             <ChevronDown className={`h-3 w-3 transition-transform ${logsAbertos ? 'rotate-180' : ''}`} />
@@ -270,9 +275,9 @@ export default function AiUnderstandingPanel({ conversation, embutido = false }:
                 )}
               </div>
 
-              {report.runs.length > 0 && (
+              {runs.length > 0 && (
                 <ul className="space-y-1">
-                  {report.runs.map((run, i) => {
+                  {runs.map((run, i) => {
                     const Icon =
                       run.status === 'replied' && run.delivered
                         ? CheckCircle2
