@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { FunnelItemKind, TemplateVariable } from '@/types/messageFunnels';
+import { Seletor } from '@/components/base/Seletor';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Editor de SEQUÊNCIA de mensagens (itens text/audio/image/video/document).
@@ -269,7 +270,7 @@ function ItemEditor({
           <span className="text-xs font-semibold">{KIND_LABELS[item.kind]}</span>
         </div>
         {item.kind !== 'text' && item.kind !== 'delay' && item.kind !== 'contact' && (
-          <select
+          <Seletor
             value={item.kind}
             onChange={e =>
               onUpdate({
@@ -279,14 +280,14 @@ function ItemEditor({
                 pendingFile: null,
               })
             }
-            className="text-xs bg-background border border-border rounded px-1.5 py-0.5"
+            className="h-auto w-28 text-xs bg-background border border-border rounded px-1.5 py-0.5"
           >
             <option value="audio">Áudio</option>
             <option value="image">Imagem</option>
             <option value="video">Vídeo</option>
             <option value="document">Documento</option>
             <option value="sticker">Figurinha</option>
-          </select>
+          </Seletor>
         )}
         <div className="ml-auto flex items-center gap-0.5">
           <Button variant="ghost" size="icon" className="h-7 w-7"
