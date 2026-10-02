@@ -200,4 +200,33 @@ describe('Seletor no computador', () => {
     act(() => { toque = true; avisar?.(); });
     expect(screen.getByLabelText('Tipo').tagName).toBe('SELECT');
   });
+
+  // Formulário enviado pelo navegador (FormData, validação nativa): tem que
+  // receber o mesmo que o <select> mandaria — nunca o valor interno da opção vazia.
+  function Formulario({ valor, obrigatorio = false }: { valor: string; obrigatorio?: boolean }) {
+    return (
+      <form data-testid="form">
+        <Seletor aria-label="Tipo" name="tipo" required={obrigatorio} value={valor} onChange={() => {}}>
+          <option value="">Tipo de negócio</option>
+          <option value="sale">Venda</option>
+          <optgroup label="Outros"><option value="rent">Locação</option></optgroup>
+        </Seletor>
+      </form>
+    );
+  }
+  const form = () => screen.getByTestId('form') as HTMLFormElement;
+
+  it('no envio pelo navegador, a opção vazia vai como "" e a escolhida pelo valor', () => {
+    const { rerender } = render(<Formulario valor="" />);
+    expect(new FormData(form()).getAll('tipo')).toEqual(['']);
+    rerender(<Formulario valor="rent" />);
+    expect(new FormData(form()).getAll('tipo')).toEqual(['rent']);
+  });
+
+  it('obrigatório barra a opção vazia, como o nativo', () => {
+    const { rerender } = render(<Formulario valor="" obrigatorio />);
+    expect(form().checkValidity()).toBe(false);
+    rerender(<Formulario valor="sale" obrigatorio />);
+    expect(form().checkValidity()).toBe(true);
+  });
 });

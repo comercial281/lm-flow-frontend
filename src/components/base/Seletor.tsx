@@ -9,9 +9,10 @@
 // sistema operacional no computador — a do Windows inclusive. Decisão do dono
 // em 02/10/2026; spec em LM FLOW/specs/2026-10-02-seletor-unico-design.md.
 //
-// Dentro de um <form> nativo, no computador, `name` envia o valor interno da
-// opção vazia e `required` não barra a opção vazia: tela que precise de
-// FormData ou validação nativa não pode contar com isto (nenhuma conta hoje).
+// Dentro de um <form>, no computador, quem responde ao navegador (FormData,
+// `required`) é um <select> escondido que espelha a escolha com o valor REAL. O
+// select escondido do próprio Radix carregaria o valor interno da opção vazia e
+// nunca barraria o `required`.
 //
 // `bare`: caixa sem o visual do design system e sem a seta, só a className de
 // quem chama (status colorido, filtros com ícone próprio). A lista que abre é a
@@ -76,6 +77,7 @@ export function Seletor({
 
   const itens = lerItens(children);
   const atual = value !== undefined ? value : interno;
+  const exibido = valorExibido(atual, itens);
   const mudar = (radix: string) => {
     const novo = deRadix(radix);
     if (value === undefined) setInterno(novo);
@@ -88,38 +90,51 @@ export function Seletor({
   );
 
   return (
-    <Select
-      value={valorExibido(atual, itens)}
-      onValueChange={mudar}
-      disabled={disabled}
-      name={name}
-      required={required}
-    >
-      <SelectTrigger
-        {...(resto as ComponentProps<typeof SelectTrigger>)}
-        id={id}
-        title={title}
-        style={style}
-        // Vence o data-size="default" do design system, que prende a altura
-        // em h-9 por cima de qualquer classe da tela.
-        data-size="livre"
-        className={cn('h-9', bare && SEM_CAIXA, className)}
-      >
-        <SelectValue />
-      </SelectTrigger>
-      {/* Acima de qualquer janela da casa (modais em z-[200], mapa em z-[1000]). */}
-      <SelectContent className="z-[1200]">
-        {itens.map((it, i) =>
-          it.tipo === 'opcao' ? (
-            item(it, i)
-          ) : (
-            <SelectGroup key={`grupo-${i}`}>
-              <SelectLabel>{it.rotulo}</SelectLabel>
-              {it.opcoes.map(item)}
-            </SelectGroup>
-          ),
-        )}
-      </SelectContent>
-    </Select>
+    <>
+      {/* Sem name/required aqui: quem fala com o <form> é o espelho abaixo. */}
+      <Select value={exibido} onValueChange={mudar} disabled={disabled}>
+        <SelectTrigger
+          {...(resto as ComponentProps<typeof SelectTrigger>)}
+          id={id}
+          title={title}
+          style={style}
+          // Vence o data-size="default" do design system, que prende a altura
+          // em h-9 por cima de qualquer classe da tela.
+          data-size="livre"
+          className={cn('h-9', bare && SEM_CAIXA, className)}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        {/* Acima de qualquer janela da casa (modais em z-[200], mapa em z-[1000]). */}
+        <SelectContent className="z-[1200]">
+          {itens.map((it, i) =>
+            it.tipo === 'opcao' ? (
+              item(it, i)
+            ) : (
+              <SelectGroup key={`grupo-${i}`}>
+                <SelectLabel>{it.rotulo}</SelectLabel>
+                {it.opcoes.map(item)}
+              </SelectGroup>
+            ),
+          )}
+        </SelectContent>
+      </Select>
+      {(name !== undefined || required) && (
+        <select
+          aria-hidden
+          tabIndex={-1}
+          className="sr-only"
+          name={name}
+          required={required}
+          disabled={disabled}
+          value={deRadix(exibido)}
+          onChange={() => {}}
+        >
+          {itens.flatMap(it => (it.tipo === 'opcao' ? [it] : it.opcoes)).map((o, i) => (
+            <option key={`${o.valor}-${i}`} value={o.valor} disabled={o.desligada} />
+          ))}
+        </select>
+      )}
+    </>
   );
 }
