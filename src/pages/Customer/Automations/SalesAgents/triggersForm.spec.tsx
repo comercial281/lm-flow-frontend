@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 vi.mock('@/services/leadAds/leadAdsFormsService', () => ({
   leadAdsFormsService: { getAll: vi.fn().mockResolvedValue([{ form_id: '111', form_name: 'Capri', page_name: null, is_active: true }]) },
@@ -25,5 +26,34 @@ describe('gatilho de formulário', () => {
     const box = await screen.findByRole('checkbox');
     fireEvent.click(box);
     await waitFor(() => expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true));
+  });
+});
+
+// No computador a caixa da lista do produto mede o rótulo escolhido (w-fit). Na
+// linha do gatilho, cada lista tem largura fixa pelo maior rótulo: a linha não
+// pula quando se troca a escolha, como o <select> nativo.
+describe('gatilho no computador', () => {
+  beforeEach(() => {
+    Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);
+    Element.prototype.releasePointerCapture = Element.prototype.releasePointerCapture ?? (() => {});
+    Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ?? (() => {});
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      matches: false, media: '(pointer: coarse)', addEventListener: () => {}, removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia;
+  });
+  afterEach(() => {
+    // @ts-expect-error: o jsdom não tem matchMedia; voltamos a não ter.
+    delete window.matchMedia;
+  });
+
+  it('o tipo do gatilho tem largura fixa e troca pela lista do produto', async () => {
+    render(<Harness />);
+    // A lista não tem rótulo: acha-se a caixa pelo texto da escolha atual.
+    const tipo = (await screen.findByText('Veio de um destes formulários')).closest('button')!;
+    expect(tipo.className.split(/\s+/)).toContain('w-72');
+    await userEvent.click(tipo);
+    await userEvent.click(await screen.findByRole('option', { name: 'Origem do lead' }));
+    const origem = (await screen.findByText('Só anúncios (FB/IG/Google)')).closest('button')!;
+    expect(origem.className.split(/\s+/)).toContain('w-64');
   });
 });

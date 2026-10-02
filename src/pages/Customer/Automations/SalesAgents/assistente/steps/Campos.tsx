@@ -5,6 +5,8 @@
 import type { ReactNode } from 'react';
 import { Input, Label, Textarea } from '@/components/ui/ds';
 import { WEEKDAYS } from '@/components/schedule/scheduleWindows';
+// Este arquivo já tem um `Seletor` (o campo do assistente, mais abaixo): a peça da casa entra com outro nome.
+import { Seletor as SeletorDaCasa } from '@/components/base/Seletor';
 
 export function Secao({ titulo, ajuda, children }: { titulo: string; ajuda?: ReactNode; children: ReactNode }) {
   return (
@@ -159,7 +161,7 @@ export function Seletor({
   id: string; value: string; onChange: (v: string) => void; opcoes: { value: string; label: string }[]; vazio?: string;
 }) {
   return (
-    <select
+    <SeletorDaCasa
       id={id}
       value={value}
       onChange={(e) => onChange(e.target.value)}
@@ -167,6 +169,6 @@ export function Seletor({
     >
       {vazio !== undefined && <option value="">{vazio}</option>}
       {opcoes.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
+    </SeletorDaCasa>
   );
 }

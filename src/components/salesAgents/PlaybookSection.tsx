@@ -10,6 +10,7 @@ import {
   type PlaybookObjection,
   type PlaybookVars,
 } from '@/services/salesAgents/salesAgentsService';
+import { Seletor } from '@/components/base/Seletor';
 
 // A seção "Roteiro da conversa".
 //
@@ -235,7 +236,7 @@ export default function PlaybookSection({
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <Label htmlFor="pv-tipo" className="text-xs">{label('tipo_venda')}</Label>
-            <select
+            <Seletor
               id="pv-tipo"
               className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
               value={vars.tipo_venda ?? 'lancamento'}
@@ -248,13 +249,13 @@ export default function PlaybookSection({
               {data.sale_types.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
-            </select>
+            </Seletor>
             <p className="text-[11px] text-muted-foreground mt-1">{hint('tipo_venda')}</p>
           </div>
 
           <div>
             <Label htmlFor="pv-passo" className="text-xs">{label('proximo_passo')}</Label>
-            <select
+            <Seletor
               id="pv-passo"
               className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
               value={vars.proximo_passo ?? 'visita'}
@@ -267,7 +268,7 @@ export default function PlaybookSection({
               {data.next_steps.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
-            </select>
+            </Seletor>
             <p className="text-[11px] text-muted-foreground mt-1">{hint('proximo_passo')}</p>
           </div>
         </div>
