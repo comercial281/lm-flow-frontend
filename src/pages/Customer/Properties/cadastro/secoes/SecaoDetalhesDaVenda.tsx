@@ -11,8 +11,7 @@ const PADROES: { valor: PadraoDoImovel; rotulo: string }[] = [
   { valor: 'luxury', rotulo: 'Luxo' },
 ];
 
-// Os dois tipos. Destaque, Publicar no site e Encontrável pela IA seguem aqui
-// até "Onde divulgar" (B6) assumir.
+// Os dois tipos. Destaque, Publicar no site e IA moram em "Onde divulgar".
 export default function SecaoDetalhesDaVenda({ form: f, setF }: PropsDaSecao) {
   const revenda = (f.listing_kind ?? 'resale') === 'resale';
   return (
@@ -36,18 +35,6 @@ export default function SecaoDetalhesDaVenda({ form: f, setF }: PropsDaSecao) {
             <span className="text-sm">Exclusividade</span>
           </label>
         )}
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" checked={f.featured} onChange={e => setF({ featured: e.target.checked })} className="rounded" />
-          <span className="text-sm">Destaque</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" checked={f.published_on_site ?? false} onChange={e => setF({ published_on_site: e.target.checked })} className="rounded" />
-          <span className="text-sm">Publicar no site</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer" title="A IA Vendedora pode usar e oferecer este imóvel nas conversas">
-          <input type="checkbox" checked={f.ai_enabled ?? true} onChange={e => setF({ ai_enabled: e.target.checked })} className="rounded" />
-          <span className="text-sm">Encontrável pela IA</span>
-        </label>
       </div>
     </div>
   );

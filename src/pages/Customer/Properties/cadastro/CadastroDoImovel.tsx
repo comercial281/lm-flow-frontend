@@ -35,7 +35,6 @@ import PreencherPorTexto from './PreencherPorTexto';
 import { propertiesActionGates } from '../propertiesActionGates';
 import type { MudancaDoFormulario } from './secoes/tipos';
 import { useSecaoVisivel } from './useSecaoVisivel';
-import EmBreve from './secoes/EmBreve';
 import SecaoBasico from './secoes/SecaoBasico';
 import SecaoLocalizacao from './secoes/SecaoLocalizacao';
 import SecaoObra from './secoes/SecaoObra';
@@ -51,6 +50,7 @@ import SecaoDadosInternos from './secoes/SecaoDadosInternos';
 import SecaoConstrutora from './secoes/SecaoConstrutora';
 import SecaoComissao from './secoes/SecaoComissao';
 import SecaoProprietario from './secoes/SecaoProprietario';
+import OndeDivulgar from './OndeDivulgar';
 
 // A mensagem real do servidor (ex.: "Valor de venda é obrigatório..."), não um genérico.
 function mensagemDoErro(e: unknown, reserva: string): string {
@@ -135,6 +135,15 @@ function Cadastro() {
     propertiesService.get(editandoId).then(setImovel).catch(() => { /* leitura de fundo */ });
   };
 
+  // "Onde divulgar" grava na hora. O formulário (e o que ele considera "salvo")
+  // acompanha, senão o Salvar da página devolveria o valor antigo.
+  const aoMudarImovelDivulgado = (p: Property) => {
+    setImovel(p);
+    const marcas = { featured: p.featured ?? false, published_on_site: p.published_on_site ?? false, ai_enabled: p.ai_enabled ?? true };
+    setForm(prev => ({ ...prev, ...marcas }));
+    setInicial(prev => ({ ...prev, ...marcas }));
+  };
+
   const voltarParaLista = () => {
     const aba = ABA_NA_URL[kind];
     navigate(sp.get('de') === 'lote' ? `/properties?aba=${aba}&importar=1` : `/properties?aba=${aba}`);
@@ -171,7 +180,6 @@ function Cadastro() {
       } else {
         toast.success(rascunho ? 'Rascunho salvo' : 'Imóvel cadastrado');
       }
-      // Até o passo "Onde divulgar" existir, cai na edição do imóvel criado.
       if (rascunho) navigate(`/properties?aba=${ABA_NA_URL[kind]}`);
       else navigate(`/properties/${criado.id}/editar?passo=divulgar`);
     } catch (e) {
@@ -246,11 +254,13 @@ function Cadastro() {
       case 'construtora': return <SecaoConstrutora {...props} />;
       case 'comissao': return <SecaoComissao {...props} />;
       case 'proprietario': return <SecaoProprietario {...props} />;
-      // Onde divulgar (B6).
       case 'ondeDivulgar':
-        return <EmBreve />;
+        return imovel && <OndeDivulgar imovel={imovel} modo="cartao" aoMudarImovel={aoMudarImovelDivulgado} />;
     }
   };
+
+  // ?passo=divulgar (logo depois de criar): só o "Onde divulgar", sem o formulário.
+  const soDivulgar = !!editandoId && sp.get('passo') === 'divulgar';
 
   const titulo = kind === 'development'
     ? (editandoId ? 'Editar empreendimento' : 'Novo empreendimento')
@@ -266,6 +276,10 @@ function Cadastro() {
               {[0, 1, 2].map(i => <div key={i} className="h-32 animate-pulse rounded-xl border bg-muted/40" />)}
             </div>
           )
+        ) : soDivulgar && imovel ? (
+          <div className="mx-auto max-w-2xl">
+            <OndeDivulgar imovel={imovel} modo="passo" aoMudarImovel={aoMudarImovelDivulgado} />
+          </div>
         ) : (
           <div className="mx-auto max-w-6xl">
             <h1 className="text-2xl font-bold leading-tight">{titulo}</h1>
@@ -289,7 +303,7 @@ function Cadastro() {
         )}
       </div>
 
-      {pronto && (
+      {pronto && !soDivulgar && (
         <BarraDoCadastro
           editando={!!editandoId}
           salvando={salvando}

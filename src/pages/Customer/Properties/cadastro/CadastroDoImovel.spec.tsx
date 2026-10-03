@@ -13,6 +13,7 @@ const desligadas = vi.hoisted(() => new Set<string>());
 vi.mock('@/contexts/TenantFeaturesContext', () => ({ useFeature: (k: string) => !desligadas.has(k) }));
 vi.mock('@/services/contacts/labelsService', () => ({ labelsService: { getLabels: () => Promise.resolve({ data: [] }) } }));
 vi.mock('@/services/users/usersService', () => ({ default: { getUsers: () => Promise.resolve({ data: [] }) } }));
+vi.mock('@/services/portals/portalsService', () => ({ portalsService: { list: () => Promise.resolve([]), get: vi.fn() } }));
 const own = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('@/services/propertyOwners/propertyOwnersService', () => ({ propertyOwnersService: { list: () => Promise.resolve({ data: [], meta: { total: 0 } }), get: own.get } }));
 
@@ -109,6 +110,19 @@ describe('CadastroDoImovel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(svc.update).toHaveBeenCalledWith('e1', expect.not.objectContaining({ listing_kind: expect.anything() })));
     expect(screen.getByTestId('onde')).toHaveTextContent('/properties?aba=revenda&importar=1');
+  });
+
+  it('?passo=divulgar mostra só o Onde divulgar, sem o formulário nem a barra', async () => {
+    svc.get.mockResolvedValue({ id: 'e1', code: 'AP1', title: 'Apê do passo', transaction_type: 'sale', category_type: 'residential',
+      property_type: 'apartment', status: 'active', stage: 'ready', listing_kind: 'resale', sale_price: 1, created_at: '', updated_at: '' });
+    abrir('/properties/e1/editar?passo=divulgar');
+    expect(await screen.findByRole('heading', { name: 'Onde divulgar' })).toBeInTheDocument();
+    expect(screen.getByText('Apê do passo')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Publicar no site' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Título')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Salvar' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Concluir' }));
+    await waitFor(() => expect(screen.getByTestId('onde')).toHaveTextContent('/properties?aba=revenda'));
   });
 
   it('cancelar com alteração pergunta antes', async () => {
