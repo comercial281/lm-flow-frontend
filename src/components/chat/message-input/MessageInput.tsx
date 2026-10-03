@@ -247,6 +247,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
         setIsRecordingAudio(false);
         toast.success(t('messageInput.audio.sentSuccess'));
       } catch (error) {
+        // Fechou a pergunta "tirar o lead da automação?": não enviou, não é erro.
+        if ((error as Error)?.name === 'EnvioCancelado') return;
         console.error('Erro ao enviar áudio:', error);
         toast.error(t('messageInput.audio.sendError'));
       } finally {
@@ -296,6 +298,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         setShowTemplatesModal(false);
         toast.success(t('messageTemplates.success.sent'));
       } catch (error) {
+        if ((error as Error)?.name === 'EnvioCancelado') return;
         console.error('Error sending WhatsApp template:', error);
         toast.error(t('messageTemplates.errors.sendError'));
       } finally {
@@ -343,7 +346,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
         richEditorRef.current?.focus();
       }, 0);
     } catch (error) {
-      console.error('Error sending message:', error);
+      // Fechou a pergunta "tirar o lead da automação?": o texto fica no campo.
+      if ((error as Error)?.name !== 'EnvioCancelado') console.error('Error sending message:', error);
     } finally {
       setIsSending(false);
       setUploadProgress({});

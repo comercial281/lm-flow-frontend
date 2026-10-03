@@ -17,7 +17,7 @@ import TypingIndicator from '../typing-indicator/TypingIndicator';
 import MessageList from '../messages/MessageList';
 import { Banner } from '../banner';
 import PendingResponseBanner from '../banner/PendingResponseBanner';
-import AutomacaoRodando from '../banner/AutomacaoRodando';
+import { EnvioCancelado, useAutomacaoRodando } from '../banner/AutomacaoRodando';
 
 import { fraseDoCampo } from '@/features/conversas/fraseDoCampo';
 import type { Message, Conversation } from '@/types/chat/api';
@@ -102,11 +102,25 @@ const ChatArea = ({
     }
   }, [selectedConversationId, onLoadMore]);
 
+  // Fluxo ou follow-up rodando pra este lead: faixa acima do campo e, ao
+  // enviar (mensagem que o lead vê), a pergunta "tirar o lead da automação?".
+  const automacao = useAutomacaoRodando({
+    conversationId: selectedConversationId,
+    atualizarQuando: selectedMessages.length,
+  });
+  const { perguntarAntesDeEnviar, pararTudo } = automacao;
+
   const handleSendMessage = useCallback(
     async (options: SendMessageOptions) => {
+      // Nota interna não chega ao lead: não é "assumir a conversa".
+      const resposta = options.isPrivate ? 'manter' : await perguntarAntesDeEnviar();
+      // Lança pra o campo tratar como envio que não aconteceu e manter o texto.
+      if (resposta === 'cancelar') throw new EnvioCancelado();
+      // Tira ANTES de enviar: a automação não pode soltar mensagem no meio.
+      if (resposta === 'parar') await pararTudo();
       await onSendMessage(options);
     },
-    [onSendMessage],
+    [onSendMessage, perguntarAntesDeEnviar, pararTudo],
   );
 
   const handleRetryMessage = useCallback(
@@ -377,10 +391,8 @@ const ChatArea = ({
       <TypingIndicator typingUsers={typingUsers} />
 
       {/* Fluxo ou follow-up rodando pra este lead, com "Parar" */}
-      <AutomacaoRodando
-        conversationId={selectedConversationId}
-        atualizarQuando={selectedMessages.length}
-      />
+      {automacao.faixa}
+      {automacao.dialogos}
 
       {/* Message Input - Fixo na parte inferior */}
       <div className="flex-shrink-0 w-full">

@@ -5537,7 +5537,11 @@ Pedido do Tony: quando um fluxo do construtor ou um follow-up está rodando pra 
 - **O que mostra:** uma linha por automação. `Fluxo "X" · aguardando resposta até 14:32` / `· esperando até 04/10 às 09:00` / `· em andamento`, e `Follow-up "Y" · próxima mensagem às 15:00` / `· pausado`. Texto montado em `features/conversas/automacaoRodando.ts` (com spec).
 - **Botão "Parar", não "Pausar":** encerra aquele fluxo (ou a fila do follow-up) só pra esse lead, com confirmação. Pausar exigiria decidir o que fazer com a espera que vence durante a pausa; ninguém pediu.
 - **Dados:** fluxos em `GET /flow_automation_instances?conversation_id=` e `POST /flow_automation_instances/:id/stop` (backend `lm-flow`, PR "Conversa: ver e parar o fluxo"); follow-up reaproveita `/followup_jobs` do card do lead. Relê quando a lista de mensagens muda e a cada minuto. Erro de leitura = faixa some.
-- **Fora (decisão em aberto):** parar sozinho quando o corretor escreve. Hoje só pelo botão; o follow-up continua com o comportamento de antes.
+- **Ao enviar com automação rodando (decisão do Tony, 03/10):** o envio de mensagem que o lead vê (nota interna não conta) abre a pergunta "Este lead está numa automação", com as linhas da faixa e dois botões: **Enviar e tirar do fluxo** (ou "parar o follow-up" / "tirar das automações") e **Enviar e manter**. Fechar = não envia e o texto fica no campo (`EnvioCancelado`, que o `MessageInput` não trata como erro). Tirar acontece ANTES de enviar. "Manter" vale pra conversa enquanto o mesmo conjunto de automações estiver rodando, pra não perguntar a cada mensagem. Hook `useAutomacaoRodando` (mesmo arquivo da faixa).
+
+## Pacote de marketing do follow-up retirado (03/10/2026)
+
+Pedido do Tony. O botão "Pacote completo de marketing" (Follow-up → modelos) e o "Aplicar template Leads (Marketing)" (Funil de vendas) saíram. O pacote criava, sem a pessoa ver, regras na aba Automações ("Auto: meta-ads → …", "Auto: keyword → …") e dois funis de follow-up com texto genérico ("deixei uma proposta esperando ontem"). Era a origem das automações que ninguém entendia. O backend responde 410 nas rotas antigas e o cadastro de cliente novo também parou de criar as regras "Follow-up: entrada por anúncio / orgânico". Funil novo nasce em Follow-up → Novo funil ou pelos modelos de funil. Não reabrir sem o dono pedir.
 
 ## A IA retoma a pergunta antes do follow-up (desde 2026-10-03)
 
