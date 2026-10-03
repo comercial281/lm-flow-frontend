@@ -464,6 +464,19 @@ export const siteBuilderService = {
     return (res.data as { data: SiteDomainState }).data;
   },
 
+  // Logo da marca d'água: salva na hora (não espera o Salvar do formulário).
+  async uploadWatermarkLogo(siteId: string, file: File): Promise<Site> {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await api.post(`/sites/${siteId}/watermark_logo`, form);
+    return (res.data as { data: Site }).data;
+  },
+
+  async removeWatermarkLogo(siteId: string): Promise<Site> {
+    const res = await api.delete(`/sites/${siteId}/watermark_logo`);
+    return (res.data as { data: Site }).data;
+  },
+
   async disconnectDomain(siteId: string): Promise<SiteDomainState> {
     const res = await api.delete(`/sites/${siteId}/domain`);
     return (res.data as { data: SiteDomainState }).data;  },

@@ -40,6 +40,7 @@ import TelaAnuncios from './telas/TelaAnuncios';
 import TelaRastreamento from './telas/TelaRastreamento';
 import TelaRedes from './telas/TelaRedes';
 import TelaTraducao from './telas/TelaTraducao';
+import TelaMarcaDagua from './telas/TelaMarcaDagua';
 
 // A landing de anúncio é liberada CLIENTE A CLIENTE pela Leal Mídia. O gate mora
 // no ITEM "Páginas de anúncio" da barra do Meu site, nunca na rota nem no item
@@ -346,6 +347,7 @@ export default function SiteBuilder() {
         {tela === 'rastreamento' && <TelaRastreamento {...formProps} irPara={irPara} />}
         {tela === 'redes' && <TelaRedes {...formProps} />}
         {tela === 'traducao' && <TelaTraducao {...formProps} />}
+        {tela === 'marca' && <TelaMarcaDagua {...formProps} onLogoAtualizado={setSite} fotoExemplo={null} />}
         {site && tela === 'paginas' && <TelaPaginas site={site} />}
         {site && tela === 'blog' && <TelaBlog site={site} />}
         {site && tela === 'contatos' && <TelaContatos site={site} />}
