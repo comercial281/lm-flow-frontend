@@ -4,8 +4,10 @@ import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
 import { costsService } from '@/services/superAdmin/costsService';
 import type { CostsSummary } from '@/types/admin/costs';
+import { Button } from '@/components/ui/ds';
 import CartoesDoMes from './CartoesDoMes';
 import Conferencia from './Conferencia';
+import LancarFaturas from './LancarFaturas';
 import ListaDeChamadas from './ListaDeChamadas';
 import Recortes from './Recortes';
 import { rotuloMes } from './formatoCustos';
@@ -23,8 +25,7 @@ export default function Custos() {
   const [month, setMonth] = useState(mesAtual);
   const [tenant, setTenant] = useState<string | null>(null);
   const [summary, setSummary] = useState<CostsSummary | null>(null);
-  // A janela de lançar fatura é a Task F5; até lá só guardamos o pedido.
-  const [, setLancando] = useState(false);
+  const [lancando, setLancando] = useState(false);
   const [estado, setEstado] = useState<'carregando' | 'pronto' | 'erro'>('carregando');
 
   // Só a última chamada vale: resposta atrasada de filtro antigo não sobrescreve a atual.
@@ -63,6 +64,7 @@ export default function Custos() {
               {(summary?.tenants ?? []).map((t) => <option key={t.schema} value={t.schema}>{t.name}</option>)}
             </Seletor>
           </label>
+          <Button className="ml-auto" variant="outline" onClick={() => setLancando(true)}>Lançar faturas do mês</Button>
         </div>
 
         {estado === 'erro' && (
@@ -86,6 +88,7 @@ export default function Custos() {
           </>
         )}
       </div>
+      <LancarFaturas month={month} aberta={lancando} aoFechar={() => setLancando(false)} aoSalvar={carregar} />
     </AdminConteudo>
   );
 }
