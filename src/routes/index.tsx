@@ -95,7 +95,6 @@ const Origem = lazyWithRetry(() => import('@/pages/Customer/Automations/Origem/O
 const WelcomeAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings/WelcomeAutomations').then(m => ({ default: m.WelcomeAutomations })));
 const LeadAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadAutomations').then(m => ({ default: m.LeadAutomations })));
 const LeadAdsForms = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadAdsForms'));
-const FollowupSequences = lazyWithRetry(() => import('@/pages/Customer/Settings/FollowupSequences').then(m => ({ default: m.FollowupSequences })));
 const LandingPageEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingPageEditorPage'));
 const LandingByIdEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingByIdEditorPage'));
 const SimulatorDemo = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/SimulatorDemoPage'));
@@ -697,12 +696,26 @@ const AppRouter = () => {
                   </Suspense>
                 }
               />
+              {/* Follow-up (Automações · sprint 3, 03/10/2026): a mesma lista e o
+                  mesmo canvas das Automações, com os fluxos de follow-up. O editor
+                  de funil antigo saiu da tela. A chave continua followup_sequences:
+                  o servidor aceita ela em /flow_automations pra fluxo kind=followup. */}
               <Route
                 path="follow-ups"
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
                     <PermissionRoute resource="followup_sequences" action="read">
-                      <FollowupSequences />
+                      <FlowAutomationsList kind="followup" />
+                    </PermissionRoute>
+                  </Suspense>
+                }
+              />
+              <Route
+                path="follow-ups/:id"
+                element={
+                  <Suspense fallback={outletSuspenseFallback}>
+                    <PermissionRoute resource="followup_sequences" action="read">
+                      <FlowAutomationCanvas />
                     </PermissionRoute>
                   </Suspense>
                 }
@@ -846,14 +859,8 @@ const AppRouter = () => {
               }
             />
 
-            <Route
-              path="/settings/follow-ups"
-              element={
-                <PermissionRoute resource="followup_sequences" action="read">
-                  <FollowupSequences />
-                </PermissionRoute>
-              }
-            />
+            {/* O endereço antigo do Follow-up leva pra aba nova (sprint 3). */}
+            <Route path="/settings/follow-ups" element={<Navigate to="/automations/follow-ups" replace />} />
 
             <Route
               path="/settings/site-builder"

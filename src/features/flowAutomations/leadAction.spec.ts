@@ -7,7 +7,7 @@ import { formatActionSummary, type AutomationResources } from '@/pages/Customer/
 import { missingActionParams } from '@/services/leadAutomation/leadAutomationService';
 
 const resources: AutomationResources = {
-  labels: [], sequences: [], users: [{ id: 'u1', name: 'Ana' } as never], pipelines: [], stagesByPipeline: {}, quickReplies: [],
+  labels: [], sequences: [], followupFlows: [], users: [{ id: 'u1', name: 'Ana' } as never], pipelines: [], stagesByPipeline: {}, quickReplies: [],
   adOrigins: [], formOrigins: [], messageFunnels: [], evolutionInstances: [],
   reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
 };

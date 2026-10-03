@@ -11,6 +11,9 @@ import type { LeadAutomationAction } from '@/services/leadAutomation/leadAutomat
 import { conditionSentence, type ConditionLookups } from '@/features/flowAutomations/conditions';
 import { WAIT_FOR_REPLY_HELP, describeWait, describeWaitForReply } from '@/features/flowAutomations/waitTime';
 import { sendFromOf } from '@/features/numbers/sendFrom';
+import { progressLine } from '@/features/flowAutomations/progress';
+import { RECOVERED_SUMMARY } from '@/features/flowAutomations/recovered';
+import { moveStageModeOf, stageNameOf } from '@/features/flowAutomations/moveStage';
 import { cn } from '@/lib/utils';
 
 /** O que o cartão precisa pra montar a frase do bloco. */
@@ -63,9 +66,15 @@ export function summaryLine(node: FlowAutomationNode, lookups: FlowLookups = {})
       return labels.length ? labels.join(', ') : '(nenhuma etiqueta)';
     }
     case 'move_stage': {
+      if (moveStageModeOf(cfg) === 'name') {
+        const name = stageNameOf(cfg).trim();
+        return name ? `Para a coluna "${name}" do funil do card` : '(escreva o nome da coluna)';
+      }
       const id = String(cfg.stage_id ?? '');
       return id ? `Para a etapa "${lookups.stageName?.(id) ?? id}"` : '(escolha a etapa)';
     }
+    case 'followup_recovered':
+      return RECOVERED_SUMMARY;
     case 'lead_action':
       return lookups.actionSummary?.(leadActionOf(cfg)) ?? '';
     default:
@@ -86,7 +95,7 @@ export function FlowTriggerNode({ data }: NodeProps) {
       </div>
       {(details.length > 0 || hint) && (
         <div className="px-3 pb-2 space-y-0.5 text-xs text-emerald-800/80 dark:text-emerald-200/80">
-          {details.map(d => <div key={d} className="truncate">{d}</div>)}
+          {details.map((d, i) => <div key={`${i}-${d}`} className="truncate">{d}</div>)}
           {hint && <div className="line-clamp-3">{hint}</div>}
         </div>
       )}
@@ -104,6 +113,7 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
   const branches = branchHandles(node);
   const title = node.label || blockLabel(node);
   const envio = node.kind === 'send_whatsapp' ? sendFromLine(node.config || {}) : null;
+  const progresso = node.kind === 'send_whatsapp' ? progressLine(node.config) : null;
 
   return (
     <div
@@ -135,6 +145,7 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
         {summaryLine(node, lookups)}
       </div>
       {envio && <div className="px-3 -mt-1 pb-2 text-[11px] text-muted-foreground/80">{envio}</div>}
+      {progresso && <div className="px-3 -mt-1 pb-2 text-[11px] text-violet-600 dark:text-violet-300">{progresso}</div>}
       {problem && (
         <div className="mx-3 mb-2 flex items-start gap-1 rounded bg-amber-500/10 px-1.5 py-1 text-[11px] text-amber-700 dark:text-amber-300">
           <AlertTriangle className="h-3 w-3 mt-px shrink-0" aria-hidden="true" />

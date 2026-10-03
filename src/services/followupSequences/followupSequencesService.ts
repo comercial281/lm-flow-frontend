@@ -43,6 +43,10 @@ export interface FollowupSequence {
   /** Quantas portas de entrada o funil tem. Zero = só roda quando alguém mandar
    *  pelo card; a lista avisa, senão parece que o funil está quebrado. */
   entries_count: number;
+  /** Mensagens ainda programadas na fila deste funil (sprint 3: a faixa "Terminando no formato antigo"). */
+  queued_count?: number;
+  /** O fluxo de follow-up em que este funil foi convertido (sprint 3), ou null. */
+  migrated_to_flow_id?: string | null;
   steps: FollowupStep[];
   created_at: string;
   updated_at: string;

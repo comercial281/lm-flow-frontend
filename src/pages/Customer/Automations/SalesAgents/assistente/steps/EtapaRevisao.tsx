@@ -128,7 +128,7 @@ export default function EtapaRevisao({
               {FOLLOWUP_OPCOES.find((o) => o.value === a.followup_action)?.title}, depois de {a.followup_min_days} a {a.followup_max_days} dias
               {a.followup_action === 'ai' ? `, no máximo ${a.followup_max_attempts} vezes` : ''}
               {a.followup_action === 'pipeline' ? ` · coluna: ${nome(stages, a.followup_stage_id, 'não escolhida')} · volta para: ${nome(stages, a.followup_return_stage_id, 'primeira coluna')}` : ''}
-              {a.followup_action === 'sequence' ? ` · funil: ${nome(funis, a.followup_sequence_slug, 'não escolhido')}` : ''}
+              {a.followup_action === 'sequence' ? ` · follow-up: ${nome(funis, a.followup_flow_id, 'não escolhido')}` : ''}
               {`\nPode sair ${resumoDaJanela(a.followup_janelas)}`}
             </>
           )

@@ -22,7 +22,7 @@ const user = (id: string, name: string, extra: Partial<User> = {}) =>
 const users = [user('1', 'Ana'), user('2', 'Bia'), user('3', 'Carlos', { deactivated: true })];
 
 const resources = {
-  labels: [], sequences: [], users, pipelines: [], stagesByPipeline: {},
+  labels: [], sequences: [], followupFlows: [], users, pipelines: [], stagesByPipeline: {},
   quickReplies: [], adOrigins: [], formOrigins: [], messageFunnels: [], evolutionInstances: [],
   reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
 } as unknown as AutomationResources;

@@ -16,6 +16,7 @@ import type { LeadAutomationAction } from '@/services/leadAutomation/leadAutomat
 const resources: AutomationResources = {
   labels: [],
   sequences: [],
+  followupFlows: [],
   users: [],
   pipelines: [],
   stagesByPipeline: {},

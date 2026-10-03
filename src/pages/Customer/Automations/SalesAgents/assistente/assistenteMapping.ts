@@ -123,6 +123,8 @@ export interface AssistenteAnswers {
   followup_stage_id: string;
   followup_return_stage_id: string;
   followup_sequence_slug: string;
+  /** Sprint 3: o fluxo de follow-up de "Entregar pro follow-up". */
+  followup_flow_id: string;
   followup_janelas: ScheduleWindow[];
   pipeline_move_enabled: boolean;
   pipeline_id: string;
@@ -224,6 +226,7 @@ export function answersFromAgent(agent: SalesAgent, playbook?: AgentPlaybook | n
     followup_stage_id: agent.followup_stage_id ?? '',
     followup_return_stage_id: agent.followup_return_stage_id ?? '',
     followup_sequence_slug: agent.followup_sequence_slug ?? '',
+    followup_flow_id: agent.followup_flow_id ?? '',
     followup_janelas: janelaDoFollowup(agent),
     pipeline_move_enabled: agent.pipeline_move_enabled === true,
     pipeline_id: agent.pipeline_id ?? '',
@@ -420,6 +423,9 @@ export function payloadFromAnswers(
   if (retorno !== (agent.followup_return_stage_id ?? null)) p.followup_return_stage_id = retorno;
   const funil = a.followup_sequence_slug || null;
   if (funil !== (agent.followup_sequence_slug ?? null)) p.followup_sequence_slug = funil;
+  // Sprint 3: a tela escolhe o fluxo de follow-up; o slug do funil antigo fica como está.
+  const fluxo = a.followup_flow_id || null;
+  if (fluxo !== (agent.followup_flow_id ?? null)) p.followup_flow_id = fluxo;
 
   if (!iguais(a.followup_janelas, janelaDoFollowup(agent))) {
     p.followup_hours = { mode: 'custom', tz: FUSO, windows: a.followup_janelas };

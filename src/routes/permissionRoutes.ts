@@ -56,6 +56,7 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: 'lead-automations', resource: 'lead_automation_rules', action: 'read', automationsChild: true },
   { path: 'lead-ads-forms', resource: 'lead_ads_form_configs', action: 'read', automationsChild: true },
   { path: 'follow-ups', resource: 'followup_sequences', action: 'read', automationsChild: true },
+  { path: 'follow-ups/:id', resource: 'followup_sequences', action: 'read', automationsChild: true },
   { path: 'whatsapp-reminders', resource: 'whatsapp_reminders', action: 'read', automationsChild: true },
   { path: 'roleta-config', resource: 'roleta_configs', action: 'read', automationsChild: true },
 
@@ -67,7 +68,6 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/settings/template-variables', resource: 'canned_responses', action: 'read' },
   { path: '/settings/lead-automations', resource: 'lead_automation_rules', action: 'read' },
   { path: '/settings/lead-ads-forms', resource: 'lead_ads_form_configs', action: 'read' },
-  { path: '/settings/follow-ups', resource: 'followup_sequences', action: 'read' },
   { path: '/settings/site-builder', resource: 'sites', action: 'read' },
   { path: '/settings/macros', resource: 'macros', action: 'read' },
   { path: '/settings/whatsapp-reminders', resource: 'whatsapp_reminders', action: 'read' },

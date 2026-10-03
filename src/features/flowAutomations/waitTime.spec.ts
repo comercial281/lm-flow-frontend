@@ -15,6 +15,9 @@ describe('tempo em minutos, horas ou dias (guardado em minutos)', () => {
     expect(describeWaitForReply({ minutes: 30 })).toBe('Espera a resposta por até 30 minutos');
     expect(describeWaitForReply({ minutes: 1440, indefinite: true })).toBe('Espera a resposta, sem limite');
     expect(describeWait({ mode: 'interval', minutes: 60 })).toBe('Espera 1 hora');
-    expect(describeWait({ mode: 'schedule', minutes: 2880 })).toBe('Espera 2 dias, saindo em horário comercial');
+    // O modo antigo `schedule` e a caixa nova (`business_hours`) dizem o mesmo (sprint 3).
+    expect(describeWait({ mode: 'schedule', minutes: 2880 })).toBe('Espera 2 dias, em horário comercial');
+    expect(describeWait({ mode: 'interval', minutes: 2880, business_hours: true })).toBe('Espera 2 dias, em horário comercial');
+    expect(describeWaitForReply({ minutes: 1440, business_hours: true })).toBe('Espera a resposta por até 1 dia, em horário comercial');
   });
 });

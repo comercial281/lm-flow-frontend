@@ -31,7 +31,7 @@ export const HANDOFF_OPCOES: Opcao<HandoffMode | ''>[] = [
 export const FOLLOWUP_OPCOES: Opcao<SalesAgentFollowupAction>[] = [
   { value: 'ai', title: 'A IA escreve a mensagem', desc: 'Ela lê a conversa e escreve uma cutucada curta. É o único caminho que consome IA.' },
   { value: 'pipeline', title: 'Mover o card para uma coluna', desc: 'A IA leva o card para a coluna que você escolher e sai de cena. Quem manda a mensagem é o funil que essa coluna dispara. Não consome IA.' },
-  { value: 'sequence', title: 'Disparar um funil pronto', desc: 'A IA coloca o lead no funil escolhido, sem mexer no card. Para quem não usa o quadro. Não consome IA.' },
+  { value: 'sequence', title: 'Entregar pro follow-up', desc: 'A IA coloca o lead no follow-up escolhido, sem mexer no card. Para quem não usa o quadro. Não consome IA.' },
 ];
 
 export const INTENCAO_OPCOES: Opcao<IntentQuestionMode>[] = [

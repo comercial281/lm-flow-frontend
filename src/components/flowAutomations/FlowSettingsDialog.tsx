@@ -8,25 +8,36 @@ import {
   type ReentryMode,
   type ReentrySetting,
 } from '@/features/flowAutomations/reentry';
+import { BUSINESS_HOURS_FLOW_HELP, BUSINESS_HOURS_LABEL } from '@/features/flowAutomations/businessHours';
 
 // Configurações do fluxo: "Pode rodar de novo pro mesmo lead" (sprint 2,
-// spec 03/10/2026, seção 3). Rascunho local, como a janela do gatilho; o fluxo
-// vai pro servidor no Salvar do topo do canvas.
+// spec 03/10/2026, seção 3) e "Só em horário comercial" (sprint 3). Rascunho
+// local, como a janela do gatilho; o fluxo vai pro servidor no Salvar do topo
+// do canvas.
+
+export interface FlowSettings {
+  reentry: ReentrySetting;
+  businessHoursOnly: boolean;
+}
 
 interface Props {
   open: boolean;
-  reentry: ReentrySetting;
+  settings: FlowSettings;
   /** O evento do gatilho, pro aviso de "Mensagem recebida". */
   triggerEvent: string;
   onClose: () => void;
-  onSave: (next: ReentrySetting) => void;
+  onSave: (next: FlowSettings) => void;
 }
 
-export function FlowSettingsDialog({ open, reentry, triggerEvent, onClose, onSave }: Props) {
-  const [draft, setDraft] = useState<ReentrySetting>(reentry);
+export function FlowSettingsDialog({ open, settings, triggerEvent, onClose, onSave }: Props) {
+  const [draft, setDraft] = useState<ReentrySetting>(settings.reentry);
+  const [businessHoursOnly, setBusinessHoursOnly] = useState(settings.businessHoursOnly);
 
   React.useEffect(() => {
-    if (open) setDraft(reentry);
+    if (open) {
+      setDraft(settings.reentry);
+      setBusinessHoursOnly(settings.businessHoursOnly);
+    }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- reabre a partir do que está no canvas
 
   const warning = reentryWarning(draft, triggerEvent);
@@ -37,7 +48,7 @@ export function FlowSettingsDialog({ open, reentry, triggerEvent, onClose, onSav
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Configurações do fluxo</DialogTitle>
-          <DialogDescription>Quando o mesmo lead pode passar por este fluxo outra vez.</DialogDescription>
+          <DialogDescription>Quando o mesmo lead pode passar por este fluxo outra vez, e em que horário as mensagens saem.</DialogDescription>
         </DialogHeader>
 
         <fieldset className="space-y-3 py-2">
@@ -80,9 +91,23 @@ export function FlowSettingsDialog({ open, reentry, triggerEvent, onClose, onSav
           ))}
         </fieldset>
 
+        <fieldset className="space-y-1 border-t border-border pt-3">
+          <legend className="sr-only">Horário</legend>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={businessHoursOnly}
+              onChange={e => setBusinessHoursOnly(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            {BUSINESS_HOURS_LABEL}
+          </label>
+          <p className="ml-6 text-xs text-muted-foreground">{BUSINESS_HOURS_FLOW_HELP}</p>
+        </fieldset>
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave(draft)}>Salvar</Button>
+          <Button onClick={() => onSave({ reentry: draft, businessHoursOnly })}>Salvar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

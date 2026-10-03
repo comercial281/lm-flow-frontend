@@ -312,3 +312,25 @@ describe('assistente da IA: agenda do corretor ligada', () => {
   });
 });
 
+
+// Automações · sprint 3 (03/10/2026): "Entregar pro follow-up" escolhe um FLUXO
+// de follow-up (`followup_flow_id`); o slug do funil antigo não é mais escrito.
+describe('assistente da IA: entregar pro follow-up', () => {
+  it('escolher o follow-up grava followup_flow_id e não mexe no slug antigo', () => {
+    const agent = iaNova({ followup_sequence_slug: 'follow-up-longo' });
+    const respostas: AssistenteAnswers = {
+      ...answersFromAgent(agent, null),
+      followup_action: 'sequence',
+      followup_flow_id: 'f1',
+    };
+    const patch = payloadFromAnswers(respostas, agent);
+    expect(patch.followup_flow_id).toBe('f1');
+    expect(patch).not.toHaveProperty('followup_sequence_slug');
+  });
+
+  it('limpar manda null', () => {
+    const agent = iaNova({ followup_flow_id: 'f1' });
+    const respostas: AssistenteAnswers = { ...answersFromAgent(agent, null), followup_flow_id: '' };
+    expect(payloadFromAnswers(respostas, agent).followup_flow_id).toBeNull();
+  });
+});

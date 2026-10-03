@@ -5,7 +5,8 @@ import { ArrowLeft, ArrowRight, Bot, Check, Loader2, RotateCcw, X } from 'lucide
 import { Button } from '@/components/ui/ds';
 import { salesAgentsService, type AgentPlaybook, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
-import { followupSequencesService } from '@/services/followupSequences/followupSequencesService';
+import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
+import { followupFlowOptions } from '@/features/flowAutomations/followupOptions';
 import { useAgendaLigada } from '@/features/visits/useAgendaLigada';
 import { answersFromAgent, payloadFromAnswers, type AssistenteAnswers } from './assistenteMapping';
 import { chaveDoRascunho, ETAPAS, motivoDoErro } from './assistenteOpcoes';
@@ -99,14 +100,15 @@ export default function AssistenteIA() {
       salesAgentsService.get(id),
       salesAgentsService.playbook(id).catch(() => null),
       pipelinesService.getPipelines().then(listaDe).catch(() => []),
-      followupSequencesService.getAll().catch(() => []),
+      flowAutomationsService.list({ kind: 'followup' }).catch(() => []),
     ])
-      .then(([ag, pb, pipes, seqs]) => {
+      .then(([ag, pb, pipes, fuFlows]) => {
         if (!vivo) return;
         setAgent(ag);
         setPlaybook(pb);
         setPipelines(pipes.map((p) => ({ value: String(p.id), label: p.name })));
-        setFunis(seqs.filter((f) => f.is_active).map((f) => ({ value: f.slug, label: f.name })));
+        // Sprint 3: "Entregar pro follow-up" escolhe um fluxo de follow-up.
+        setFunis(followupFlowOptions(fuFlows));
         const base = answersFromAgent(ag, pb);
         setInicial(base);
         const rascunho = lerRascunho(ag.id);

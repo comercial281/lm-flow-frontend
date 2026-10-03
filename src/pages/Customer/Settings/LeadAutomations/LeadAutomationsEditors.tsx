@@ -10,6 +10,8 @@ import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import usersService from '@/services/users/usersService';
 import { quickRepliesService } from '@/services/quickReplies/quickRepliesService';
 import { followupSequencesService, FollowupSequence } from '@/services/followupSequences/followupSequencesService';
+import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
+import type { FlowAutomation } from '@/types/flowAutomations';
 import type { Label as ContactLabel } from '@/types/settings/labels';
 import type { Pipeline, PipelineStage } from '@/types/analytics/pipelines';
 import type { User } from '@/types/users';
@@ -66,6 +68,8 @@ export const triggerNeedsCondition = (trigger: string): boolean =>
 export interface AutomationResources {
   labels: ContactLabel[];
   sequences: FollowupSequence[];
+  /** Os fluxos de follow-up (sprint 3): a ação "Iniciar follow-up" escolhe um deles. */
+  followupFlows: FlowAutomation[];
   users: User[];
   pipelines: Pipeline[];
   stagesByPipeline: Record<string, PipelineStage[]>;
@@ -83,6 +87,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
   const isSuperAdmin = useIsSuperAdmin();
   const [labels, setLabels] = useState<ContactLabel[]>([]);
   const [sequences, setSequences] = useState<FollowupSequence[]>([]);
+  const [followupFlows, setFollowupFlows] = useState<FlowAutomation[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [stagesByPipeline, setStagesByPipeline] = useState<Record<string, PipelineStage[]>>({});
@@ -113,7 +118,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     setLoading(true);
 
     (async () => {
-      const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes, funnelsRes, evoRes] = await Promise.allSettled([
+      const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes, funnelsRes, evoRes, fuFlowsRes] = await Promise.allSettled([
         labelsService.getLabels(),
         followupSequencesService.getAll(),
         usersService.getUsers(),
@@ -123,6 +128,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
         leadAutomationService.getFormOrigins(),
         messageFunnelsService.list({ activeOnly: false }),
         isSuperAdmin ? leadAutomationService.getEvolutionInstances() : Promise.resolve([]),
+        flowAutomationsService.list({ kind: 'followup' }),
       ]);
 
       if (cancelled) return;
@@ -135,6 +141,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
       if (formRes.status === 'fulfilled') setFormOrigins(formRes.value ?? []);
       if (funnelsRes.status === 'fulfilled') setMessageFunnels(funnelsRes.value ?? []);
       if (evoRes.status === 'fulfilled') setEvolutionInstances(evoRes.value ?? []);
+      if (fuFlowsRes.status === 'fulfilled') setFollowupFlows((fuFlowsRes.value ?? []).filter(f => !f.archived_at));
 
       if (pipelinesRes.status === 'fulfilled') {
         const list = pipelinesRes.value.data ?? [];
@@ -157,7 +164,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
     return () => { cancelled = true; };
   }, [enabled]);
 
-  return { labels, sequences, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, evolutionInstances, reloadFunnels, reloadLabels, loading };
+  return { labels, sequences, followupFlows, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, evolutionInstances, reloadFunnels, reloadLabels, loading };
 }
 
 // ============================================================================
@@ -773,11 +780,41 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
       );
     }
 
+    // ----- start_followup_flow -----
+    // Sprint 3 (03/10/2026): o follow-up é um fluxo do construtor (aba Follow-up).
+    case 'start_followup_flow': {
+      const atual = String(params.flow_automation_id ?? '');
+      const conhecido = resources.followupFlows.some(f => f.id === atual);
+      return (
+        <Field label="Qual follow-up *" hint="Os follow-ups ficam em Automações → Follow-up. Desligado, ele não recebe o lead.">
+          <Seletor
+            value={atual}
+            onChange={e => setParam('flow_automation_id', e.target.value)}
+            className={baseSelectClass}
+            aria-label="Qual follow-up"
+          >
+            <option value="">Escolha o follow-up</option>
+            {atual && !conhecido && <option value={atual}>{resources.loading ? 'Carregando…' : 'Follow-up que não existe mais'}</option>}
+            {resources.followupFlows.map(f => (
+              <option key={f.id} value={f.id}>
+                {f.name}{!f.is_enabled ? ' (desligado)' : ''}
+              </option>
+            ))}
+          </Seletor>
+        </Field>
+      );
+    }
+
     // ----- start_followup_sequence -----
-    // Backend lookup: FollowupSequence.active.find_by(slug: slug). Value = slug, NÃO id.
+    // Formato antigo (funil de follow-up). Não é mais oferecida pra regra nova;
+    // a que já existe continua editável, e o servidor manda o funil convertido
+    // pro fluxo novo. Backend lookup: FollowupSequence.active.find_by(slug: slug).
     case 'start_followup_sequence':
       return (
-        <Field label="Sequência de follow-up *">
+        <Field
+          label="Sequência de follow-up *"
+          hint='Formato antigo. Pra escolher um dos follow-ups novos, troque a ação por "Iniciar follow-up".'
+        >
           <Seletor
             value={String(params.sequence_slug ?? '')}
             onChange={e => setParam('sequence_slug', e.target.value)}
@@ -1410,6 +1447,10 @@ export function formatActionSummary(
     case 'start_followup_sequence': {
       const seq = resources.sequences.find(s => s.slug === p.sequence_slug);
       return seq ? `Sequência: ${seq.name}` : 'Sequência: (não definida)';
+    }
+    case 'start_followup_flow': {
+      const flow = resources.followupFlows.find(f => f.id === p.flow_automation_id);
+      return flow ? `Follow-up: ${flow.name}` : 'Follow-up: (não definido)';
     }
     case 'send_whatsapp_message':
       return p.message ? `"${String(p.message).slice(0, 60)}…"` : '(mensagem vazia)';

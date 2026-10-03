@@ -26,8 +26,11 @@ import {
   useAutomationResources,
 } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
 import {
-  LEAD_CREATED_HINT, flowTriggerLabel, normalizeTrigger, serializeTrigger, triggerProblem, type FlowTrigger,
+  LEAD_CREATED_HINT, flowTriggerLabel, flowTriggerSummary, normalizeTrigger, serializeTrigger, triggerEvents, triggerProblem,
+  type FlowTrigger,
 } from '@/features/flowAutomations/trigger';
+import { businessHoursOnlyOf } from '@/features/flowAutomations/businessHours';
+import { FLOW_KIND_COPY, kindOf } from '@/features/flowAutomations/kind';
 import type { PaletteItem } from '@/features/flowAutomations/palette';
 import { enableProblem, nodeProblem } from '@/features/flowAutomations/readiness';
 import {
@@ -43,14 +46,15 @@ import { useConfirmacao } from '@/hooks/useConfirmacao';
 // editados diretamente — clique/arraste chamam as funções puras de
 // flowAutomationGraph.ts, que devolvem uma nova árvore.
 
-// O que conta como "alteração não salva": nome, gatilho, "pode rodar de novo" e
-// blocos. A posição dos blocos fica de fora — ela já é gravada sozinha quando o
-// arraste termina.
-function snapshot(name: string, trigger: FlowTrigger, reentry: ReentrySetting, nodes: FlowAutomationNode[], initialNodeId: string | null) {
+// O que conta como "alteração não salva": nome, gatilho, configurações ("pode
+// rodar de novo", horário comercial) e blocos. A posição dos blocos fica de
+// fora — ela já é gravada sozinha quando o arraste termina.
+function snapshot(name: string, trigger: FlowTrigger, reentry: ReentrySetting, businessHoursOnly: boolean, nodes: FlowAutomationNode[], initialNodeId: string | null) {
   return {
     name,
     trigger: serializeTrigger(trigger),
     reentry: serializeReentry(reentry),
+    businessHoursOnly,
     initialNodeId,
     nodes: nodes.map(({ pos_x: _x, pos_y: _y, ...rest }) => rest),
   };
@@ -65,6 +69,7 @@ export default function FlowAutomationCanvas() {
   const [automation, setAutomation] = useState<FlowAutomation | null>(null);
   const [trigger, setTrigger] = useState<FlowTrigger>({ event: '', conditions: [] });
   const [reentry, setReentry] = useState<ReentrySetting>(() => reentryOf(null));
+  const [businessHoursOnly, setBusinessHoursOnly] = useState(false);
   const [editingSettings, setEditingSettings] = useState(false);
   const [nodes, setNodes] = useState<FlowAutomationNode[]>([]);
   const [initialNodeId, setInitialNodeId] = useState<string | null>(null);
@@ -87,12 +92,14 @@ export default function FlowAutomationCanvas() {
       const nextTrigger = normalizeTrigger(data.trigger);
       const nextNodes = normalizeLoadedNodes(data.nodes || []);
       const nextReentry = reentryOf(data);
+      const nextBusinessHours = businessHoursOnlyOf(data);
       setAutomation(data);
       setTrigger(nextTrigger);
       setReentry(nextReentry);
+      setBusinessHoursOnly(nextBusinessHours);
       setNodes(nextNodes);
       setInitialNodeId(data.initial_node_id);
-      setLoaded(snapshot(data.name, nextTrigger, nextReentry, nextNodes, data.initial_node_id));
+      setLoaded(snapshot(data.name, nextTrigger, nextReentry, nextBusinessHours, nextNodes, data.initial_node_id));
     } catch {
       toast.error('Não deu pra carregar o fluxo');
     } finally {
@@ -104,7 +111,10 @@ export default function FlowAutomationCanvas() {
     load();
   }, [load]);
 
-  const hasChanges = !!automation && !!loaded && !mesmoConteudo(snapshot(automation.name, trigger, reentry, nodes, initialNodeId), loaded);
+  const hasChanges = !!automation && !!loaded
+    && !mesmoConteudo(snapshot(automation.name, trigger, reentry, businessHoursOnly, nodes, initialNodeId), loaded);
+  // Follow-up (sprint 3) usa este mesmo canvas; a seta volta pra lista dele.
+  const listPath = FLOW_KIND_COPY[kindOf(automation)].listPath;
   useAlteracoesNaoSalvas(hasChanges);
 
   // Voltar pra lista pergunta antes de perder o que não foi salvo (a guarda da
@@ -114,7 +124,7 @@ export default function FlowAutomationCanvas() {
       if (!(await confirmar(PEDIDO_SAIR_SEM_SALVAR))) return;
       limparPendentes();
     }
-    navigate('/automations/flow-builder');
+    navigate(listPath);
   };
 
   // O que falta em cada bloco (modelo cria com campo em branco) e por que o
@@ -222,10 +232,17 @@ export default function FlowAutomationCanvas() {
     if (posChanges.some(c => c.dragging === false)) scheduleSavePositions();
   }, [scheduleSavePositions]);
 
+  // O cartão do gatilho mostra o principal e cada "Ou quando" com os filtros dele.
   const triggerData: FlowTriggerNodeData = useMemo(() => ({
     title: flowTriggerLabel(trigger.event),
-    details: trigger.event ? trigger.conditions.map(c => formatConditionSummary(trigger.event, c, resources)) : [],
-    hint: trigger.event === 'lead.created' ? LEAD_CREATED_HINT : null,
+    details: [
+      ...(trigger.event ? trigger.conditions.map(c => formatConditionSummary(trigger.event, c, resources)) : []),
+      ...(trigger.alternatives ?? []).flatMap(alt => [
+        `ou quando: ${flowTriggerLabel(alt.event)}`,
+        ...(alt.event ? alt.conditions.map(c => `  ${formatConditionSummary(alt.event, c, resources)}`) : []),
+      ]),
+    ],
+    hint: triggerEvents(trigger).includes('lead.created') ? LEAD_CREATED_HINT : null,
     onEdit: () => setEditingTrigger(true),
   }), [trigger, resources]);
 
@@ -269,7 +286,12 @@ export default function FlowAutomationCanvas() {
     }
     setSaving(true);
     try {
-      await flowAutomationsService.update(id, { name: automation.name, trigger: serializeTrigger(trigger), ...serializeReentry(reentry) });
+      await flowAutomationsService.update(id, {
+        name: automation.name,
+        trigger: serializeTrigger(trigger),
+        ...serializeReentry(reentry),
+        business_hours_only: businessHoursOnly,
+      });
       // Manda o id ATUAL de cada bloco, definitivo (uuid) ou temporário (tmp_xxx,
       // bloco novo desta sessão): o servidor decide "é novo?" batendo contra os
       // blocos que já existem no fluxo. `initial_node_id` pode ser temporário
@@ -299,6 +321,10 @@ export default function FlowAutomationCanvas() {
     }
   };
 
+  // O aviso de "Mensagem recebida" vale se ela for o gatilho principal ou um "Ou quando".
+  const messageEvent = triggerEvents(trigger).includes('lead.message_received') ? 'lead.message_received' : trigger.event;
+  const reentryAlert = reentryWarning(reentry, messageEvent);
+
   if (loading || !automation) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
   }
@@ -317,7 +343,7 @@ export default function FlowAutomationCanvas() {
         />
         <Button size="sm" variant="outline" className="h-8 max-w-xs" onClick={() => setEditingTrigger(true)}>
           <Zap className="h-3.5 w-3.5 mr-1 shrink-0" />
-          <span className="truncate">{flowTriggerLabel(trigger.event)}</span>
+          <span className="truncate">{flowTriggerSummary(trigger)}</span>
         </Button>
         <Chave
           rotulo="Ligar o fluxo"
@@ -347,7 +373,7 @@ export default function FlowAutomationCanvas() {
           variant="ghost"
           className="h-8"
           onClick={() => setEditingSettings(true)}
-          title={reentrySummary(reentry)}
+          title={businessHoursOnly ? `${reentrySummary(reentry)} · só em horário comercial` : reentrySummary(reentry)}
         >
           <Settings2 className="h-3.5 w-3.5 mr-1" aria-hidden="true" /> Configurações
         </Button>
@@ -367,10 +393,10 @@ export default function FlowAutomationCanvas() {
           <span>{blockingProblem}</span>
         </div>
       )}
-      {reentryWarning(reentry, trigger.event) && (
+      {reentryAlert && (
         <div className="flex items-center gap-2 border-b border-amber-500/40 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-700 dark:text-amber-300" role="status">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span>{reentryWarning(reentry, trigger.event)}</span>
+          <span>{reentryAlert}</span>
         </div>
       )}
 
@@ -427,11 +453,12 @@ export default function FlowAutomationCanvas() {
       <FlowNodeConfigModal node={editingNode} resources={resources} onClose={() => setEditingId(null)} onSave={handleSaveNodeConfig} />
       <FlowSettingsDialog
         open={editingSettings}
-        reentry={reentry}
-        triggerEvent={trigger.event}
+        settings={{ reentry, businessHoursOnly }}
+        triggerEvent={messageEvent}
         onClose={() => setEditingSettings(false)}
         onSave={next => {
-          setReentry(next);
+          setReentry(next.reentry);
+          setBusinessHoursOnly(next.businessHoursOnly);
           setEditingSettings(false);
         }}
       />
