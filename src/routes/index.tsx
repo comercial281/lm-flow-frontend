@@ -1342,7 +1342,16 @@ const AppRouter = () => {
           />
 
           {/* Editor de blocos da página do imóvel aposentado: vai para o Meu site. */}
-          <Route path="/properties/template-imovel" element={<Navigate to="/settings/site-builder" replace />} />
+          <Route
+            path="/properties/template-imovel"
+            element={
+              <PrivateRoute>
+                <CustomerRoute>
+                  <Navigate to="/settings/site-builder" replace />
+                </CustomerRoute>
+              </PrivateRoute>
+            }
+          />
 
           <Route
             path="/simulador"
