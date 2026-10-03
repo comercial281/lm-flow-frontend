@@ -28,6 +28,18 @@ const site: SiteInfo = {
 /** O container que posiciona o cabeçalho — é ele que gruda (ou não). */
 const headerHolder = (c: HTMLElement) => c.querySelector('header')!.parentElement!;
 
+const montarCom = async (extra: Partial<SiteInfo>) => {
+  let out!: ReturnType<typeof render>;
+  await act(async () => {
+    out = render(
+      <MemoryRouter>
+        <PortalHeader site={{ ...site, ...extra }} tenant="teste" />
+      </MemoryRouter>,
+    );
+  });
+  return out;
+};
+
 const rolar = (px: number) => {
   Object.defineProperty(window, 'scrollY', { value: px, writable: true, configurable: true });
   act(() => { window.dispatchEvent(new Event('scroll')); });
@@ -68,6 +80,25 @@ describe('PortalHeader', () => {
       const telefone = container.querySelector('a[href^="tel:"]')!;
       expect(telefone.closest('.sticky, .fixed')).toBeNull();
       expect(headerHolder(container).className).toContain('sticky');
+    });
+  });
+
+  describe('páginas criadas no menu', () => {
+    it('aparecem como link para /portal/:tenant/p/:slug', async () => {
+      const { getAllByText } = await montarCom({ menu: [{ title: 'Sobre nós', slug: 'sobre' }] });
+      const link = getAllByText('Sobre nós')[0].closest('a')!;
+      expect(link.getAttribute('href')).toBe('/portal/teste/p/sobre');
+    });
+  });
+
+  describe('tradução', () => {
+    it('mostra o botão de idiomas quando ligada', async () => {
+      const { container } = await montarCom({ translate: { enabled: true, languages: ['en'] } });
+      expect(container.querySelector('#lmf-google-translate')).toBeTruthy();
+    });
+    it('não mostra quando desligada', async () => {
+      const { container } = await montarCom({ translate: { enabled: false, languages: ['en'] } });
+      expect(container.querySelector('#lmf-google-translate')).toBeNull();
     });
   });
 

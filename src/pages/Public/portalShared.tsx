@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from
 import { Link } from 'react-router-dom';
 import { fetchAllPortalProperties } from './portalProperties';
 import { imovelHref } from './finalidade';
+import { menuPagesLinks } from '@/features/siteBuilder/public/portalMenu';
+import PortalTranslate from './PortalTranslate';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — peças compartilhadas (Produto A do LM Flow)
@@ -57,6 +59,10 @@ export interface SiteInfo {
   financiamento?: PortalFinancing | null;
   /** Página *Anuncie seu imóvel* (Site Builder). Ausente = desligada. */
   anuncie?: PortalListing | null;
+  tracking?: { gtm_id?: string | null; ga4?: string | null; facebook_pixel?: string | null } | null;
+  custom_code?: { head?: string | null; body?: string | null } | null;
+  translate?: { enabled?: boolean; languages?: string[] } | null;
+  menu?: { title: string; slug: string }[] | null;
 }
 export interface PortalProperty {
   id: string;
@@ -342,7 +348,8 @@ export function Stat({ n, label }: { n: string; label: string }) {
 type NavItem =
   | { label: string; kind: 'tab'; value: PortalTab }
   | { label: string; kind: 'section'; value: string }
-  | { label: string; kind: 'page'; value: string };
+  | { label: string; kind: 'page'; value: string }
+  | { label: string; kind: 'href'; value: string };
 
 const NAV: NavItem[] = [
   { label: 'Comprar', kind: 'tab', value: 'sale' },
@@ -450,6 +457,7 @@ export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo;
   const nav = [
     ...NAV.filter(n => (n.value === 'sobre' ? showStats : n.value === 'contato' ? showLeadCapture : true)),
     ...extraPages(site),
+    ...menuPagesLinks(site, tenant).map((l): NavItem => ({ label: l.label, kind: 'href', value: l.href })),
   ];
 
   const sectionHref = (id: string) => (onHome ? `#${id}` : `/portal/${tenant}#${id}`);
@@ -462,6 +470,9 @@ export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo;
     }
     if (n.kind === 'page') {
       return <Link key={n.label} to={`/portal/${tenant}/${n.value}`} onClick={onClick} className={cls}>{n.label}</Link>;
+    }
+    if (n.kind === 'href') {
+      return <Link key={n.value} to={n.value} onClick={onClick} className={cls}>{n.label}</Link>;
     }
     return <a key={n.label} href={sectionHref(n.value)} onClick={onClick} className={cls}>{n.label}</a>;
   };
@@ -520,6 +531,7 @@ export function PortalHeader({ site, tenant, onHome = false }: { site: SiteInfo;
             </nav>
 
             <div className="flex items-center gap-2">
+              {site.translate?.enabled && <PortalTranslate languages={site.translate.languages ?? []} />}
               {waHref && (
                 <a
                   href={waHref} target="_blank" rel="noreferrer"

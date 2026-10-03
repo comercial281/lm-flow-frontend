@@ -9,6 +9,7 @@ import {
 } from '@/features/landing/blocks';
 import { loadLanding, type LandingPixel, type PublicLandingDTO } from './landingLoader';
 import { installPixel } from './metaPixel';
+import { sendSiteVisit } from '@/features/siteBuilder/public/siteVisits';
 
 /**
  * A landing de anúncio pública, já com tenant e slug resolvidos. Quem resolve
@@ -226,6 +227,15 @@ export function LandingPublicView({ tenant, slug }: LandingPublicViewProps) {
     if (!id) return;
     installPixel(id, { pageView: pixel?.events?.page_view !== false });
   }, [pixel?.pixel_id, pixel?.events?.page_view]);
+
+  // Contador de visitas do Painel (escopo landing): uma por landing carregada.
+  useEffect(() => {
+    if (state !== 'ok') return;
+    sendSiteVisit(
+      { kind: 'landing', path: window.location.pathname, pageSlug: slug },
+      { api: import.meta.env.VITE_API_URL as string, tenant },
+    );
+  }, [state, tenant, slug]);
 
   if (state === 'loading') {
     return <div className="flex min-h-screen items-center justify-center bg-[#0F0520] text-neutral-400">Carregando…</div>;

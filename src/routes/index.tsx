@@ -98,7 +98,6 @@ const LeadAdsForms = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadA
 const FollowupSequences = lazyWithRetry(() => import('@/pages/Customer/Settings/FollowupSequences').then(m => ({ default: m.FollowupSequences })));
 const LandingPageEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingPageEditorPage'));
 const LandingByIdEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingByIdEditorPage'));
-const PropertyTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/PropertyTemplateEditor/PropertyTemplateEditorPage'));
 const SimulatorDemo = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/SimulatorDemoPage'));
 const LandingPublic = lazyWithRetry(() => import('@/pages/Public/LandingPublicPage'));
 const LandingResult = lazyWithRetry(() => import('@/pages/Public/LandingResultPage'));
@@ -109,6 +108,7 @@ const PortalBlog = lazyWithRetry(() => import('@/pages/Public/PortalBlogPage'));
 const PortalFinanciamento = lazyWithRetry(() => import('@/pages/Public/PortalFinanciamentoPage'));
 const PortalAnuncie = lazyWithRetry(() => import('@/pages/Public/PortalAnunciePage'));
 const PortalArticle = lazyWithRetry(() => import('@/pages/Public/PortalArticlePage'));
+const PortalCustomPage = lazyWithRetry(() => import('@/pages/Public/PortalCustomPage'));
 const PortalDetailPage = lazyWithRetry(() => import('../pages/Customer/Settings/Portals/PortalDetailPage'));
 // Gate de rota da Área do Admin: só no deploy raiz (app.lmflow.com.br) E com
 // acesso de admin (o dono por e-mail OU a equipe cadastrada, via whoami). Em
@@ -1384,13 +1384,13 @@ const AppRouter = () => {
             }
           />
 
-          {/* Editor do template único da página de imóvel (portal Produto A). */}
+          {/* Editor de blocos da página do imóvel aposentado: vai para o Meu site. */}
           <Route
             path="/properties/template-imovel"
             element={
               <PrivateRoute>
                 <CustomerRoute>
-                  <PropertyTemplateEditor />
+                  <Navigate to="/settings/site-builder" replace />
                 </CustomerRoute>
               </PrivateRoute>
             }
@@ -1439,6 +1439,7 @@ const AppRouter = () => {
           {/* Público INDEXÁVEL — blog do portal (listagem + artigo). */}
           <Route path="/portal/:tenant/blog" element={<PortalBlog />} />
           <Route path="/portal/:tenant/blog/:slug" element={<PortalArticle />} />
+          <Route path="/portal/:tenant/p/:slug" element={<PortalCustomPage />} />
 
           {/* Endereços antigos da Área do Admin (reorganizações de 19/08 e
               01/10/2026). Continuam vivos pra não quebrar link salvo. */}

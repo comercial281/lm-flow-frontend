@@ -5721,3 +5721,32 @@ Clientes → Custos (`/admin/clientes/custos`, `src/pages/SuperAdmin/Custos/`). 
 - **Erro nunca vira vazio** em nenhuma das três cargas (resumo, chamadas, detalhe).
 - Conteúdo da chamada só aparece no prazo (7 dias, 30 se falhou); fora dele o painel diz "Conteúdo apagado depois de N dias".
 - O endpoint antigo `/super/sales_agents/costs` sai num PR do backend depois que esta tela estiver no ar. A tela antiga (`CustoIA.tsx`) e `superAgentsService.costs()` já foram removidas.
+
+## Meu site virou painel com barra de topo (desde 2026-10-03)
+
+> Pedido do dono (03/10): "um painel mais bonito e mais independente, no estilo do Kenlo, sem tirar a aba lateral". Spec: `LM FLOW/specs/2026-10-03-meu-site-painel-design.md`.
+
+**O que aparece na tela:** barra de topo própria (endereço + selo No ar + Painel · Personalizar ▾ · Marketing ▾ · Configurações ▾ + Ver site). Telas: Painel (visitas, origens, imóveis mais vistos, contatos recentes, "N% pronto" e o Preencher com IA), Aparência, Páginas, Financiamento, Anuncie, Tradução, Blog, Páginas de anúncio, Redes sociais, Rastreamento, Marca d'água, Endereço do site, Dados de contato, Para onde vão os contatos, Aparecer no Google, Contatos do site (aberta pelo Painel, "Ver todos" nos contatos recentes, sem item na barra).
+
+**Decisões (não reabrir sem o dono pedir):**
+1. O menu lateral do LM Flow não muda nem recolhe; a navegação do Meu site é a barra horizontal dentro da página (não é segunda coluna).
+2. Fonte única das telas: `src/features/siteBuilder/meuSiteMenu.ts`. `?tab=` antigo redireciona (`telaDaUrl`).
+3. Um Salvar só (`BarraSalvar` no pai); estado do formulário no pai, listas (páginas, artigos, contatos) dentro da própria tela.
+4. GTM e Códigos avançados só carregam em domínio próprio (`isOwnDomain`); GA4 e Pixel em qualquer endereço. Motivo: CRM e site dividem `*.lmflow.com.br` e a sessão fica no localStorage. `isOwnDomain` tira ponto final do host e trata IP como "não é domínio próprio". O rastreamento só é instalado quando há algo para instalar (ID ou código preenchido).
+5. Marca d'água é cópia gravada no servidor (`/public/site-photos/...`); a prévia da tela usa `estiloDaMarca`, com a mesma geometria do servidor (40% centro, 22% cantos, margem 3%). O logo aceita só PNG, JPG ou WEBP (o servidor confere pelo conteúdo, não pela extensão), até 5 MB.
+6. Editor de blocos da página do imóvel aposentado: `/properties/template-imovel` redireciona para o Meu site. As opções da página do imóvel vêm no projeto C (chaves, jeito Kenlo). A pasta `PropertyTemplateEditor` e `get/savePropertyTemplate` ficam até a limpeza junto da coluna no backend.
+7. O `initGA4` (ID do Evolution) saiu do `main.tsx`: mandava a navegação do LM Flow para o Analytics do projeto de origem.
+8. O "Preencher com IA" mora no Painel (card "N% pronto"), não numa tela própria.
+9. "Ver site" sempre abre `/portal/<slug>`: domínio próprio ainda não roteia para o site (item em aberto; quando rotear, a barra passa a mostrar o domínio).
+10. A marca d'água aparece no "N% pronto" como sugestão, mas **não conta** (`conta: false` em `siteReadiness.ts`): a liberação dela espera a faxina do disco (decisão do dono). Hoje contam 5 itens; quando a faxina sair, volta a contar. A prévia da tela usa a capa de um imóvel publicado (`propertiesService.list`, sem endpoint novo); sem foto, fica o quadro cinza.
+11. Botão de idiomas (tradutor do Google): o tradutor reescreve os nós de texto do React (facebook/react#11538) e a navegação seguinte estourava `removeChild`/`insertBefore`, derrubando o site. `features/siteBuilder/public/translateGuard.ts` instala uma vez a proteção conhecida em `Node.prototype` (nó que não é mais filho é ignorado, com 1 aviso no console), só no site público com a tradução ligada; o `new TranslateElement` fica em `try/catch`.
+12. Contador de visitas **sem `keepalive`**: numa SPA a página não fecha no meio do envio, e `keepalive` + preflight de CORS falha calado em alguns navegadores. A visita leva `site_host` (hostname da página) para o servidor separar navegação interna de origem.
+13. Rastreamento só carrega ID no formato (GA4 `G-…`, Pixel só números, GTM `GTM-…`): valor antigo que nunca passou pela validação da tela é ignorado. A conversão (`trackLead`) só dispara quando o servidor aceitou o contato (`res.ok`).
+14. Páginas criadas usam os nomes do servidor: corpo em `content_html`, SEO em `seo_title`/`seo_description` (e volta aninhado em `seo`). Com `content`/`meta_*` o Rails descartava em silêncio e a página ia vazia pro menu.
+
+**Armadilhas:**
+1. Backend vem PRIMEIRO (`lm-flow`, `saas-multitenant`): `site_visits`, `/sites/:id/dashboard`, `watermark_logo`, `translate`/`custom_code` no `/site` público.
+2. Contador e rastreamento nunca podem derrubar o site: tudo em `try/catch`, storage bloqueado vira id em memória.
+3. O stub do `gtag` precisa empurrar `arguments` no `dataLayer`, não um array: o gtag.js ignora array.
+4. A exceção do glossário "Google Tag Manager" mora em `telas/TelaRastreamento.tsx`.
+5. Não é `featureKey` nem `clientToggleKey`: o Meu site continua no `site_builder`; Páginas de anúncio continua no `useClientToggle('landing_pages')` literal.

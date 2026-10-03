@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useLocation } from 'react-router-dom';
 import {
   Ic, I, PortalFooter, PortalHeader, PropertyCard, fetchArticle, onlyDigits, usePortalData,
   type PortalArticleFull,
 } from './portalShared';
+import { usePortalTracking } from './usePortalTracking';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — ARTIGO (detalhe de um post do blog) (Produto A).
@@ -28,6 +29,8 @@ function setMetaDescription(content: string) {
 export default function PortalArticlePage() {
   const { tenant, slug } = useParams<{ tenant: string; slug: string }>();
   const { state, site, items, fontHref, cssVars } = usePortalData(tenant);
+  const { pathname } = useLocation();
+  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'article', path: pathname, pageSlug: slug });
 
   // Vitrine de imóveis ao fim do artigo (destaques, com fallback pros primeiros).
   const featured = useMemo(() => {

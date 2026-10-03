@@ -140,6 +140,15 @@ export interface SiteLeadRoutingPayload {
   rent?: SiteLeadRoutingSide;
 }
 
+export interface SiteWatermark {
+  enabled: boolean;
+  position: 'bottom_left' | 'bottom_right' | 'center' | 'top_left' | 'top_right';
+  opacity: number;
+  logo_url?: string | null;
+}
+
+export interface SiteTranslate { enabled: boolean; languages: string[] }
+
 export interface Site {
   id: string;
   name: string;
@@ -161,6 +170,10 @@ export interface Site {
   anuncie?: SiteListingPage | null;
   contact: SiteContact;
   social_links?: Record<string, string>;
+  watermark?: SiteWatermark;
+  translate?: SiteTranslate;
+  /** Códigos avançados do cliente (null quando vazio). */
+  custom_code?: { head: string | null; body: string | null };
   seo: SiteSeo;
   tracking: SiteTracking;
   pages_count?: number;
@@ -219,13 +232,14 @@ export interface SitePage {
    *  A aba Páginas do Site Builder filtra por isto: a landing é feita de blocos
    *  e o editor simples de título/HTML salvaria POR CIMA dela. */
   page_kind?: 'portal_static' | 'ad_landing' | string;
-  content?: string | null;
-  meta_title?: string | null;
-  meta_description?: string | null;
+  /** Nomes do servidor (pages_controller): o corpo é `content_html` e o SEO
+   *  volta aninhado em `seo`. Com outro nome o Rails descarta em silêncio. */
+  content_html?: string | null;
+  seo?: { title: string | null; description: string | null; og_image: string | null } | null;
   active: boolean;
   in_menu: boolean;
   menu_position?: number;
-  template?: string | null;
+  template_type?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -279,6 +293,11 @@ export interface SiteFormData {
   gtm_id?: string;
   ga4_measurement_id?: string;
   facebook_pixel_id?: string;
+  social_links?: Record<string, string>;
+  translate?: SiteTranslate;
+  watermark?: Omit<SiteWatermark, 'logo_url'>;
+  custom_head_html?: string;
+  custom_body_html?: string;
   lead_pipeline_id?: string | null;
   lead_stage_id?: string | null;
   lead_label_id?: string | null;
@@ -304,16 +323,17 @@ export interface SiteListingForm {
   emails?: string[];
 }
 
+/** Exatamente o que o `page_params` do servidor aceita (nomes do servidor). */
 export interface PageFormData {
   title: string;
   slug?: string;
-  content?: string;
-  meta_title?: string;
-  meta_description?: string;
+  content_html?: string;
+  seo_title?: string;
+  seo_description?: string;
   active?: boolean;
   in_menu?: boolean;
   menu_position?: number;
-  template?: string;
+  template_type?: string;
 }
 
 export interface ArticleFormData {
@@ -323,6 +343,16 @@ export interface ArticleFormData {
   cover_image_url?: string;
   meta_title?: string;
   meta_description?: string;
+}
+
+export type DashboardScope = 'site' | 'landing';
+export interface DashboardNumbers { visits: number; visitors: number; contacts: number; conversion_rate: number | null }
+export interface SiteDashboard extends DashboardNumbers {
+  period_days: 7 | 30 | 90; scope: DashboardScope; counting_since: string | null;
+  previous: DashboardNumbers | null;
+  sources: { key: 'google' | 'direct' | 'ads' | 'social' | 'other'; count: number; pct: number }[];
+  top_properties: { id: string; code: string; title: string; views: number; cover_url: string | null }[];
+  published_properties: number;
 }
 
 export interface SiteLead {
@@ -436,6 +466,19 @@ export const siteBuilderService = {
     return (res.data as { data: SiteDomainState }).data;
   },
 
+  // Logo da marca d'água: salva na hora (não espera o Salvar do formulário).
+  async uploadWatermarkLogo(siteId: string, file: File): Promise<Site> {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await api.post(`/sites/${siteId}/watermark_logo`, form);
+    return (res.data as { data: Site }).data;
+  },
+
+  async removeWatermarkLogo(siteId: string): Promise<Site> {
+    const res = await api.delete(`/sites/${siteId}/watermark_logo`);
+    return (res.data as { data: Site }).data;
+  },
+
   async disconnectDomain(siteId: string): Promise<SiteDomainState> {
     const res = await api.delete(`/sites/${siteId}/domain`);
     return (res.data as { data: SiteDomainState }).data;  },
@@ -506,6 +549,12 @@ export const siteBuilderService = {
   async listLeads(siteId: string, params: { status?: string; per_page?: number } = {}): Promise<{ data: SiteLead[]; meta: { total: number } }> {
     const res = await api.get(`/sites/${siteId}/leads`, { params });
     return res.data as { data: SiteLead[]; meta: { total: number } };
+  },
+
+  /** Números do Painel: visitas, origens, imóveis mais vistos (período e escopo). */
+  async getDashboard(siteId: string, opts: { period: 7 | 30 | 90; scope: DashboardScope }): Promise<SiteDashboard> {
+    const res = await api.get(`/sites/${siteId}/dashboard`, { params: { period: opts.period, scope: opts.scope } });
+    return (res.data as { data: SiteDashboard }).data;
   },
 };
 
