@@ -48,6 +48,8 @@ import SecaoMidia from './secoes/SecaoMidia';
 import SecaoDescricao from './secoes/SecaoDescricao';
 import SecaoEquipe from './secoes/SecaoEquipe';
 import SecaoDadosInternos from './secoes/SecaoDadosInternos';
+import SecaoConstrutora from './secoes/SecaoConstrutora';
+import SecaoComissao from './secoes/SecaoComissao';
 
 // A mensagem real do servidor (ex.: "Valor de venda é obrigatório..."), não um genérico.
 function mensagemDoErro(e: unknown, reserva: string): string {
@@ -233,10 +235,10 @@ function Cadastro() {
         return <SecaoDescricao {...props} podeGerar={canAiDesc} gerando={gerandoDescricao} aoGerar={gerarDescricao} />;
       case 'equipe': return <SecaoEquipe {...props} />;
       case 'dadosInternos': return <SecaoDadosInternos {...props} />;
-      // Construtora e Comissão (B4), Proprietário (B5) e Onde divulgar (B6).
-      case 'construtora':
+      case 'construtora': return <SecaoConstrutora {...props} />;
+      case 'comissao': return <SecaoComissao {...props} />;
+      // Proprietário (B5) e Onde divulgar (B6).
       case 'proprietario':
-      case 'comissao':
       case 'ondeDivulgar':
         return <EmBreve />;
     }

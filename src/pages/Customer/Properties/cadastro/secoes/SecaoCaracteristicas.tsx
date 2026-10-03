@@ -2,9 +2,12 @@ import { PROPERTY_FEATURES, CONDO_FEATURES } from '@/features/properties/ameniti
 import type { PropsDaSecao } from './tipos';
 
 // Características do imóvel + comodidades do condomínio (aparecem na página pública).
+// Empreendimento mostra só o lazer e o condomínio.
 export default function SecaoCaracteristicas({ form: f, setF }: PropsDaSecao) {
-  // Por atualização funcional (prev), como a janela antiga fazia: cliques
-  // seguidos não se atropelam.
+  const empreendimento = f.listing_kind === 'development';
+  // Por atualização funcional (prev): cliques seguidos não se atropelam. Parte
+  // do array salvo, então slug já gravado e que não é mais oferecido (ex.:
+  // 'agua') continua lá.
   const alternar = (key: 'features' | 'condo_features', slug: string) =>
     setF(prev => {
       const atual = prev[key] ?? [];
@@ -20,6 +23,7 @@ export default function SecaoCaracteristicas({ form: f, setF }: PropsDaSecao) {
             <button
               key={a.slug}
               type="button"
+              aria-pressed={on}
               onClick={() => alternar(key, a.slug)}
               className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${on ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border text-muted-foreground hover:bg-muted'}`}
             >
@@ -32,8 +36,8 @@ export default function SecaoCaracteristicas({ form: f, setF }: PropsDaSecao) {
   );
   return (
     <div className="mt-4 space-y-4">
-      {grupo('Características do imóvel', 'features', PROPERTY_FEATURES)}
-      {grupo('Comodidades do condomínio', 'condo_features', CONDO_FEATURES)}
+      {!empreendimento && grupo('Do imóvel', 'features', PROPERTY_FEATURES)}
+      {grupo(empreendimento ? 'Lazer e condomínio do empreendimento' : 'Do condomínio', 'condo_features', CONDO_FEATURES)}
     </div>
   );
 }

@@ -106,9 +106,9 @@ describe('CadastroDoImovel: campos por tipo (herdados da janela)', () => {
     expect(screen.getByText('Tipologias do empreendimento')).toBeInTheDocument();
   });
 
-  it('revenda mostra o tipo de negócio e esconde fase, previsão e tipologias', async () => {
+  it('revenda mostra a finalidade e esconde fase, previsão e tipologias', async () => {
     abrir('/properties/new?tipo=revenda');
-    expect(await screen.findByText('Tipo de negócio')).toBeInTheDocument();
+    expect(await screen.findByRole('radiogroup', { name: 'Finalidade' })).toBeInTheDocument();
     expect(screen.queryByText('Fase da obra')).toBeNull();
     expect(screen.queryByText('Previsão de entrega')).toBeNull();
     expect(screen.queryByText('Tipologias do empreendimento')).toBeNull();

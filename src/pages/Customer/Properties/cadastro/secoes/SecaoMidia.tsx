@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/ds';
 import { ACCEPTED_MIME_TYPES } from '@/services/propertyPhotos/propertyPhotosService';
 import { numero, plural } from '@/lib/formato';
 import PropertyPhotosDialog from '../../PropertyPhotosDialog';
+import { CampoTexto } from './campos';
 import type { PropsDaSecao } from './tipos';
 
 interface Props extends PropsDaSecao {
@@ -15,7 +16,7 @@ interface Props extends PropsDaSecao {
   aoFecharFotos: () => void;
 }
 
-export default function SecaoMidia({ editando, arquivos, aoMudarArquivos, enviando, aoFecharFotos }: Props) {
+function Arquivos({ editando, arquivos, aoMudarArquivos, enviando, aoFecharFotos }: Props) {
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const [fotosAbertas, setFotosAbertas] = useState(false);
 
@@ -101,5 +102,21 @@ export default function SecaoMidia({ editando, arquivos, aoMudarArquivos, envian
         </ul>
       )}
     </div>
+  );
+}
+
+// Links de vídeo e tour virtual, mais o envio de fotos e vídeos.
+export default function SecaoMidia(props: Props) {
+  const { form: f, setF } = props;
+  return (
+    <>
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <CampoTexto rotulo="Link do vídeo (YouTube)" type="url" valor={f.video_url} placeholder="https://www.youtube.com/watch?v=..."
+          aoMudar={v => setF({ video_url: v || null })} />
+        <CampoTexto rotulo="Link do tour virtual" type="url" valor={f.virtual_tour_url}
+          aoMudar={v => setF({ virtual_tour_url: v || null })} />
+      </div>
+      <Arquivos {...props} />
+    </>
   );
 }

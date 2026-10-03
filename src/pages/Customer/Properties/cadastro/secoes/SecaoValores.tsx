@@ -1,4 +1,5 @@
 import { Input, Label as UILabel } from '@/components/ui/ds';
+import { Seletor } from '@/components/base/Seletor';
 import { numeroOuNulo, type PropsDaSecao } from './tipos';
 
 // Revenda. O preço que aparece segue a finalidade (o backend exige o do tipo de negócio).
@@ -27,9 +28,17 @@ export default function SecaoValores({ form: f, setF }: PropsDaSecao) {
           placeholder="800" className="mt-1" />
       </div>
       <div>
-        <UILabel>IPTU (R$/ano)</UILabel>
-        <Input type="number" value={f.iptu ?? ''} onChange={e => setF({ iptu: numeroOuNulo(e.target.value) })}
-          placeholder="1200" className="mt-1" />
+        <UILabel htmlFor="campo-iptu">IPTU (R$)</UILabel>
+        <div className="mt-1 flex gap-2">
+          <Input id="campo-iptu" type="number" value={f.iptu ?? ''} onChange={e => setF({ iptu: numeroOuNulo(e.target.value) })}
+            placeholder="1200" />
+          <Seletor aria-label="Período do IPTU" value={f.iptu_period ?? ''} className="w-32 shrink-0"
+            onChange={e => setF({ iptu_period: (e.target.value || null) as 'monthly' | 'yearly' | null })}>
+            <option value="">—</option>
+            <option value="monthly">Mensal</option>
+            <option value="yearly">Anual</option>
+          </Seletor>
+        </div>
       </div>
     </div>
   );
