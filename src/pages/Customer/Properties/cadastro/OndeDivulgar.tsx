@@ -1,7 +1,7 @@
 // "Onde divulgar" (Fase 4, Imóveis, entrega 3). Depois de criar o imóvel é o
 // passo 2 (?passo=divulgar); na edição é o cartão da seção. Nos dois, cada
 // clique grava na hora — não há botão Salvar. Erro: volta a chave e avisa.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button, Switch } from '@/components/ui/ds';
@@ -16,8 +16,6 @@ import { contarPorTipo, estourosDoErro, mensagemDeEstouro, temTiposDeAnuncio, ti
 import { ABA_NA_URL, tipoDoImovel } from '@/features/properties/listingKind';
 
 const ROTA_DOS_PORTAIS = '/settings/portals';
-// Nome da tela, como aparece no menu (nome próprio, não título em Caixa Alta).
-const TELA_DOS_PORTAIS = 'Integrações';
 
 type Marca = 'published_on_site' | 'ai_enabled' | 'featured';
 
@@ -35,7 +33,8 @@ interface EstadoDoPortal {
 interface Props {
   imovel: Property;
   modo: 'passo' | 'cartao';
-  aoMudarImovel: (p: Property) => void;
+  /** Só o que mudou (a marca gravada): quem recebe junta no imóvel que já tem. */
+  aoMudarImovel: (patch: Partial<Property>) => void;
   aoConcluir?: () => void;
 }
 
@@ -55,9 +54,6 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
     featured: imovel.featured ?? false,
   });
   const [salvandoMarca, setSalvandoMarca] = useState<Record<Marca, boolean>>({ published_on_site: false, ai_enabled: false, featured: false });
-  // O imóvel mais recente que esta tela conhece: cada chave mexe só no SEU campo, e
-  // respostas fora de ordem não desfazem a chave vizinha.
-  const imovelAtual = useRef(imovel);
   const [estados, setEstados] = useState<EstadoDoPortal[] | null>(null);
   const [naoConectados, setNaoConectados] = useState(0);
   const [erroDeCarga, setErroDeCarga] = useState(false);
@@ -97,8 +93,8 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
     setSalvandoMarca(m => ({ ...m, [campo]: true }));
     try {
       const salvo = await propertiesService.update(imovel.id, { [campo]: valor });
-      imovelAtual.current = { ...imovelAtual.current, [campo]: salvo[campo] ?? valor };
-      aoMudarImovel(imovelAtual.current);
+      // Só a marca tocada vai para cima: fotos e o resto do imóvel não voltam ao que eram.
+      aoMudarImovel({ [campo]: salvo[campo] ?? valor });
     } catch (err) {
       setMarcas(m => ({ ...m, [campo]: anterior }));
       toast.error(mensagemDe(err, 'Não foi possível salvar. Tente de novo.'));
@@ -165,7 +161,7 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
   );
 
   const linkConectar = (
-    <Link to={ROTA_DOS_PORTAIS} className="text-primary hover:underline">{`Conecte em ${TELA_DOS_PORTAIS} →`}</Link>
+    <Link to={ROTA_DOS_PORTAIS} className="text-primary hover:underline">Conecte em Integrações →</Link>
   );
 
   const linhaDoPortal = (e: EstadoDoPortal) => {
@@ -192,7 +188,7 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
                   className="w-full"
                   aria-label={`Tipo de anúncio no ${portal.name}`}
                   value={atual ?? ''}
-                  disabled={e.salvando}
+                  disabled={rascunho || e.salvando}
                   onChange={ev => gravar(e, ev.target.value)}
                 >
                   {tipos.map(t => (
@@ -209,7 +205,7 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
             <Switch
               aria-label={`Publicar no ${portal.name}`}
               checked={ligado}
-              disabled={e.salvando}
+              disabled={rascunho || e.salvando}
               onCheckedChange={v => gravar(e, v ? (tipoBase(tipos)?.key ?? 'standard') : null)}
             />
           </>
@@ -217,6 +213,8 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
       </div>
     );
   };
+
+  const rascunho = imovel.status === 'draft';
 
   const MARCAS: { campo: Marca; rotulo: string }[] = [
     { campo: 'published_on_site', rotulo: 'Publicar no site' },
@@ -232,6 +230,11 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
           <p className="mt-1 text-sm text-muted-foreground">{imovel.title}</p>
         </div>
       )}
+      {rascunho && (
+        <p role="status" className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-500">
+          Este imóvel está em rascunho: nada sai no site, nos portais nem na IA até a situação mudar para Disponível.
+        </p>
+      )}
       <div className="space-y-3">
         {MARCAS.map(({ campo, rotulo }) => (
           <div key={campo} className="flex items-center justify-between gap-3">
@@ -239,7 +242,7 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
             <Switch
               aria-label={rotulo}
               checked={marcas[campo]}
-              disabled={salvandoMarca[campo]}
+              disabled={rascunho || salvandoMarca[campo]}
               onCheckedChange={v => mudarMarca(campo, v)}
             />
           </div>

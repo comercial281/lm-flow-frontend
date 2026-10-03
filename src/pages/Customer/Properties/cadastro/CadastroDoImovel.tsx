@@ -135,9 +135,10 @@ function Cadastro() {
     propertiesService.get(editandoId).then(setImovel).catch(() => { /* leitura de fundo */ });
   };
 
-  // "Onde divulgar" grava na hora e já devolve o imóvel com a mudança; o Salvar
+  // "Onde divulgar" grava na hora e devolve só a marca mexida; junta no imóvel que a
+  // página já tem (a contagem de fotos, por exemplo, não volta atrás). O Salvar
   // da página não manda mais essas três marcas.
-  const aoMudarImovelDivulgado = (p: Property) => setImovel(p);
+  const aoMudarImovelDivulgado = (patch: Partial<Property>) => setImovel(prev => prev && { ...prev, ...patch });
 
   const voltarParaLista = () => {
     const aba = ABA_NA_URL[kind];

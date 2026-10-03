@@ -29,6 +29,15 @@ const abrir = () => render(<MemoryRouter initialEntries={['/property-owners/o1']
   <Route path="/property-owners/:id" element={<FichaDoProprietario />} /></Routes></MemoryRouter>);
 
 describe('FichaDoProprietario', () => {
+  it('sem autorizados: diz que captador e gestão veem; sem captador, só a gestão', async () => {
+    const { unmount } = abrir();
+    expect(await screen.findByText('Só quem captou e a gestão veem este proprietário.')).toBeInTheDocument();
+    unmount();
+    own.get.mockResolvedValue({ ...ficha, captor: null });
+    abrir();
+    expect(await screen.findByText('Só a gestão vê este proprietário.')).toBeInTheDocument();
+  });
+
   it('mostra WhatsApp com 55, imóveis, histórico e cadastrar imóvel', async () => {
     abrir();
     expect(await screen.findByRole('link', { name: /WhatsApp/ })).toHaveAttribute('href', 'https://wa.me/5511999998888');

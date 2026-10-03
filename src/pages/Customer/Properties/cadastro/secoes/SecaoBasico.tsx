@@ -17,7 +17,7 @@ export default function SecaoBasico({ form: f, setF }: PropsDaSecao) {
   return (
     <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div className="sm:col-span-2">
-        <UILabel htmlFor="campo-titulo">Título</UILabel><span aria-hidden="true" className="text-sm"> *</span>
+        <UILabel htmlFor="campo-titulo">{kind === 'development' ? 'Nome do empreendimento' : 'Título'}</UILabel><span aria-hidden="true" className="text-sm"> *</span>
         <Input
           id="campo-titulo"
           value={f.title}

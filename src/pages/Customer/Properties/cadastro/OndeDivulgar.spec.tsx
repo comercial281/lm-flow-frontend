@@ -34,6 +34,31 @@ const abrir = (modo: 'passo' | 'cartao' = 'passo', aoMudarImovel = vi.fn()) =>
   render(<MemoryRouter><OndeDivulgar imovel={imovel} modo={modo} aoMudarImovel={aoMudarImovel} /></MemoryRouter>);
 
 describe('OndeDivulgar', () => {
+  it('rascunho: avisa no topo, trava chaves e portais e não chama o serviço', async () => {
+    const aoMudar = vi.fn();
+    render(<MemoryRouter><OndeDivulgar imovel={{ ...(imovel as object), status: 'draft' } as never} modo="cartao" aoMudarImovel={aoMudar} /></MemoryRouter>);
+    expect(screen.getByText('Este imóvel está em rascunho: nada sai no site, nos portais nem na IA até a situação mudar para Disponível.')).toBeInTheDocument();
+    const portal = await screen.findByRole('switch', { name: 'Publicar no ZAP' });
+    for (const nome of ['Publicar no site', 'IA Vendedora pode oferecer', 'Destaque']) {
+      expect(screen.getByRole('switch', { name: nome })).toBeDisabled();
+      await userEvent.click(screen.getByRole('switch', { name: nome }));
+    }
+    expect(portal).toBeDisabled();
+    await userEvent.click(portal);
+    expect(imoveis.update).not.toHaveBeenCalled();
+    expect(portais.updatePublications).not.toHaveBeenCalled();
+    expect(aoMudar).not.toHaveBeenCalled();
+  });
+
+  it('imóvel ativo: sem aviso e as chaves funcionam; só a marca mexida sobe', async () => {
+    imoveis.update.mockResolvedValue({ featured: true });
+    const aoMudar = vi.fn();
+    abrir('cartao', aoMudar);
+    expect(screen.queryByText(/está em rascunho/)).toBeNull();
+    await userEvent.click(await screen.findByRole('switch', { name: 'Destaque' }));
+    await waitFor(() => expect(aoMudar).toHaveBeenCalledWith({ featured: true }));
+  });
+
   it('mostra só o conectado e resume o resto', async () => {
     abrir();
     expect(await screen.findByText('ZAP')).toBeInTheDocument();
@@ -142,7 +167,7 @@ describe('OndeDivulgar', () => {
     abrir('passo', aoMudar);
     await userEvent.click(await screen.findByRole('switch', { name: 'Publicar no site' }));
     expect(imoveis.update).toHaveBeenCalledWith('p1', { published_on_site: true });
-    await waitFor(() => expect(aoMudar).toHaveBeenCalledWith(atualizado));
+    await waitFor(() => expect(aoMudar).toHaveBeenCalledWith({ published_on_site: true }));
   });
 
   it('erro ao gravar o site volta a chave', async () => {

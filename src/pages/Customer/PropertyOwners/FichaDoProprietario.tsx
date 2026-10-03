@@ -272,7 +272,7 @@ export default function FichaDoProprietario() {
             <Button variant="outline" size="sm" onClick={() => setEscolhendo(true)}>Escolher corretores</Button>
           </div>
           {dono.authorized_users.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Só quem captou vê este proprietário.</p>
+            <p className="text-sm text-muted-foreground">{dono.captor ? 'Só quem captou e a gestão veem este proprietário.' : 'Só a gestão vê este proprietário.'}</p>
           ) : (
             <ul className="flex flex-wrap gap-2">
               {dono.authorized_users.map(u => <li key={u.id} className="rounded-full border px-2.5 py-0.5 text-sm">{u.name}</li>)}

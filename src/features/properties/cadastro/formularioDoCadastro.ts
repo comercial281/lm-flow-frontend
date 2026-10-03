@@ -125,7 +125,8 @@ export function errosDoCadastro(form: PropertyFormData): ErroDoCadastro[] {
   if (!form.title?.trim()) erros.push({ secao: 'basico', mensagem: 'Título é obrigatório' });
   const p = payloadDoFormulario(form);
   // Valor de venda é obrigatório p/ Venda/Venda e Locação (regra do backend).
-  if ((p.transaction_type === 'sale' || p.transaction_type === 'sale_rent') && !form.sale_price) {
+  // Rascunho (criado ou editado) pode ficar sem preço: o servidor aceita.
+  if (form.status !== 'draft' && (p.transaction_type === 'sale' || p.transaction_type === 'sale_rent') && !form.sale_price) {
     erros.push({ secao: form.listing_kind === 'development' ? 'tipologias' : 'valores',
       mensagem: 'Informe o Valor de venda (obrigatório para imóveis à venda).' });
   }

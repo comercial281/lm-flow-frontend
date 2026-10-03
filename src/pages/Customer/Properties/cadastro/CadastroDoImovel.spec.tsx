@@ -84,7 +84,7 @@ describe('CadastroDoImovel', () => {
   it('?proprietario= no empreendimento é ignorado', async () => {
     svc.create.mockResolvedValue({ id: 'n4', listing_kind: 'development' });
     abrir('/properties/new?tipo=empreendimento&proprietario=o1');
-    await userEvent.type(await screen.findByLabelText('Título'), 'Residencial');
+    await userEvent.type(await screen.findByLabelText('Nome do empreendimento'), 'Residencial');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
     await waitFor(() => expect(svc.create).toHaveBeenCalled());
     expect(svc.create.mock.calls[0][0].owner_id ?? null).toBeNull();
@@ -114,6 +114,22 @@ describe('CadastroDoImovel', () => {
     expect(enviado).not.toHaveProperty('featured');
     expect(enviado).not.toHaveProperty('published_on_site');
     expect(enviado).not.toHaveProperty('ai_enabled');
+  });
+
+  it('editar um rascunho sem preço salva (o preço só é exigido fora do rascunho)', async () => {
+    svc.get.mockResolvedValue({ id: 'r1', code: 'AP2', title: 'Rascunho sem preço', transaction_type: 'sale', category_type: 'residential',
+      property_type: 'apartment', status: 'draft', stage: 'ready', listing_kind: 'resale', created_at: '', updated_at: '' });
+    svc.update.mockResolvedValue({ id: 'r1', listing_kind: 'resale' });
+    abrir('/properties/r1/editar');
+    expect(await screen.findByRole('heading', { name: 'Editar imóvel' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(svc.update).toHaveBeenCalledWith('r1', expect.anything()));
+  });
+
+  it('empreendimento chama o título de Nome do empreendimento; revenda segue Título', async () => {
+    abrir('/properties/new?tipo=empreendimento');
+    expect(await screen.findByLabelText('Nome do empreendimento')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Título')).toBeNull();
   });
 
   it('?passo=divulgar mostra só o Onde divulgar, sem o formulário nem a barra', async () => {

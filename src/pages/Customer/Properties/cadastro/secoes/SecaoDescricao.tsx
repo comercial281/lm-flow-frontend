@@ -52,7 +52,7 @@ export default function SecaoDescricao({ form: f, setF, editando, podeGerar, ger
                 ? <Loader2 className="h-3 w-3 animate-spin" />
                 : <Wand2 className="h-3 w-3" />
               }
-              Gerar com IA
+              Gerar descrição com IA
             </Button>
           )}
         </div>
