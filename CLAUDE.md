@@ -5494,3 +5494,13 @@ Armadilhas:
    `ScheduleVisitDialog`** e passa pela mesma conferência da grade de horários do
    modal; não validar de novo na Agenda.
 4. **Não é `featureKey` nem `clientToggleKey`.**
+
+## Conversa: faixa "automação rodando" acima do campo de mensagem (03/10/2026)
+
+Pedido do Tony: quando um fluxo do construtor ou um follow-up está rodando pra um lead, quem atende precisa ver isso na conversa e conseguir parar. Senão o corretor assume a conversa e o lead recebe a mensagem automática ("Oi de novo!") no meio do atendimento.
+
+- **Onde:** uma faixa fina logo acima do campo de mensagem (`components/chat/banner/AutomacaoRodando.tsx`, encaixada no `ChatArea`). Só aparece quando há algo rodando. Não repete no painel da direita: ele fecha em tela pequena, e o momento que importa é o de digitar.
+- **O que mostra:** uma linha por automação. `Fluxo "X" · aguardando resposta até 14:32` / `· esperando até 04/10 às 09:00` / `· em andamento`, e `Follow-up "Y" · próxima mensagem às 15:00` / `· pausado`. Texto montado em `features/conversas/automacaoRodando.ts` (com spec).
+- **Botão "Parar", não "Pausar":** encerra aquele fluxo (ou a fila do follow-up) só pra esse lead, com confirmação. Pausar exigiria decidir o que fazer com a espera que vence durante a pausa; ninguém pediu.
+- **Dados:** fluxos em `GET /flow_automation_instances?conversation_id=` e `POST /flow_automation_instances/:id/stop` (backend `lm-flow`, PR "Conversa: ver e parar o fluxo"); follow-up reaproveita `/followup_jobs` do card do lead. Relê quando a lista de mensagens muda e a cada minuto. Erro de leitura = faixa some.
+- **Fora (decisão em aberto):** parar sozinho quando o corretor escreve. Hoje só pelo botão; o follow-up continua com o comportamento de antes.
