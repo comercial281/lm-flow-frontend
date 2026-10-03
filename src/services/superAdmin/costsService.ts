@@ -3,6 +3,10 @@ import type { CallFilters, CostCallDetail, CostCallsPage, CostsSummary, Invoice,
 
 interface Envelope<T> { success: boolean; data: T }
 
+// Linhas por página na lista de chamadas. 20 e não os 50 do servidor: a lista
+// fica no fim da tela de Custos, embaixo dos cartões e recortes (Tony, 03/10).
+export const CHAMADAS_POR_PAGINA = 20;
+
 export const costsService = {
   async summary({ month, tenant }: { month: string; tenant: string | null }): Promise<CostsSummary> {
     const params: Record<string, string> = { month };
@@ -12,7 +16,7 @@ export const costsService = {
   },
 
   async calls(f: CallFilters): Promise<CostCallsPage> {
-    const params: Record<string, string | number> = { month: f.month };
+    const params: Record<string, string | number> = { month: f.month, per_page: CHAMADAS_POR_PAGINA };
     if (f.tenant) params.tenant = f.tenant;
     if (f.feature) params.feature = f.feature;
     if (f.provider) params.provider = f.provider;

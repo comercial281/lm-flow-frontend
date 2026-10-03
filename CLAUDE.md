@@ -5718,6 +5718,7 @@ Clientes → Custos (`/admin/clientes/custos`, `src/pages/SuperAdmin/Custos/`). 
 - **Trocou o filtro, a tela recarrega do zero:** durante a carga aparece o esqueleto, nunca os números do filtro anterior; resposta que chega fora de ordem é ignorada; na lista de chamadas as linhas antigas somem até chegarem as novas.
 - **Mês sem chamada:** o gráfico dia a dia vira "Nenhuma chamada de IA neste mês" e a conferência diz "Fatura ainda não lançada". Nunca erro, nunca divisão por zero.
 - **Sem a palavra token na tela:** a coluna se chama *Tamanho*.
+- **Lista de chamadas: 20 por página** (`CHAMADAS_POR_PAGINA` no `costsService`; o servidor aceita até 200 e o padrão dele é 50). A lista fica no fim da tela, embaixo dos cartões e recortes (Tony, 03/10). Se a lista ganhar uso diário, a evolução combinada é virar aba própria (Clientes → Custos | Chamadas).
 - **Erro nunca vira vazio** em nenhuma das três cargas (resumo, chamadas, detalhe).
 - Conteúdo da chamada só aparece no prazo (7 dias, 30 se falhou); fora dele o painel diz "Conteúdo apagado depois de N dias".
 - O endpoint antigo `/super/sales_agents/costs` sai num PR do backend depois que esta tela estiver no ar. A tela antiga (`CustoIA.tsx`) e `superAgentsService.costs()` já foram removidas.
