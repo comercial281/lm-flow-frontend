@@ -17,6 +17,7 @@ import TypingIndicator from '../typing-indicator/TypingIndicator';
 import MessageList from '../messages/MessageList';
 import { Banner } from '../banner';
 import PendingResponseBanner from '../banner/PendingResponseBanner';
+import AutomacaoRodando from '../banner/AutomacaoRodando';
 
 import { fraseDoCampo } from '@/features/conversas/fraseDoCampo';
 import type { Message, Conversation } from '@/types/chat/api';
@@ -374,6 +375,12 @@ const ChatArea = ({
 
       {/* Typing Indicator */}
       <TypingIndicator typingUsers={typingUsers} />
+
+      {/* Fluxo ou follow-up rodando pra este lead, com "Parar" */}
+      <AutomacaoRodando
+        conversationId={selectedConversationId}
+        atualizarQuando={selectedMessages.length}
+      />
 
       {/* Message Input - Fixo na parte inferior */}
       <div className="flex-shrink-0 w-full">
