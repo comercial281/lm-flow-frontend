@@ -5542,3 +5542,73 @@ Pedido do Tony: quando um fluxo do construtor ou um follow-up está rodando pra 
 ## Pacote de marketing do follow-up retirado (03/10/2026)
 
 Pedido do Tony. O botão "Pacote completo de marketing" (Follow-up → modelos) e o "Aplicar template Leads (Marketing)" (Funil de vendas) saíram. O pacote criava, sem a pessoa ver, regras na aba Automações ("Auto: meta-ads → …", "Auto: keyword → …") e dois funis de follow-up com texto genérico ("deixei uma proposta esperando ontem"). Era a origem das automações que ninguém entendia. O backend responde 410 nas rotas antigas e o cadastro de cliente novo também parou de criar as regras "Follow-up: entrada por anúncio / orgânico". Funil novo nasce em Follow-up → Novo funil ou pelos modelos de funil. Não reabrir sem o dono pedir.
+
+## Automações viram o construtor (03/10/2026)
+
+Sprint 2 de 4 da unificação das automações (decisões do dono do produto em 02 e
+03/10, não reabrir sem ele pedir). Spec:
+`LM FLOW/specs/2026-10-03-automacoes-sprint-2-automacoes-viram-o-construtor-design.md`.
+A metade do backend vem PRIMEIRO (`lm-flow`, branch `claude/automacoes-sprint2`):
+o bloco `lead_action`, o "uma vez por lead" e as rotas de modelos.
+
+O que aparece na tela:
+
+- **Menu, Vendas e automação:** *Fluxos de mensagem* virou **Funis de mensagem**,
+  uma página só com o editor de funis (sem abas). **Automações** abre direto a
+  lista de fluxos do construtor, com o título "Automações" (o nome "FlowBuilder"
+  sumiu da tela; cada item é um "fluxo"). *Regras de lead* e *Lembretes* saíram do
+  menu e abrem só pelo endereço (`/automations/lead-automations` e
+  `/automations/whatsapp-reminders`), pro suporte e pros avisos do Follow-up.
+  `/automations` puro abre Automações quando a pessoa a vê.
+- **Paleta com todas as ações das Automações**, nos grupos Mensagem pro lead ·
+  Lead · Avisos · Controle: Mandar áudio, imagem, vídeo, documento, figurinha,
+  Mandar resposta rápida, Disparar funil de mensagens, Definir corretor,
+  Distribuir pela roleta, Criar tarefa, Iniciar follow-up, Avisar no grupo, Avisar
+  pessoa, Avisar corretor, Avisar gestor e Notificação no celular. Cada uma abre
+  o MESMO editor da tela de regras e faz exatamente o que a ação faz lá (mesmas
+  variáveis `{{nome}}`, `{{corretor}}`…). O cartão mostra a frase da lista de regras.
+- **Ação que já tinha bloco da sprint 1 não aparece duas vezes:** ficam os blocos
+  Mandar WhatsApp, Aplicar etiqueta, Tirar etiqueta e Mover de etapa da sprint 1.
+  Fluxo convertido de regra que traga essas ações como ação das Automações abre e
+  edita normalmente (com o nome do bloco), só não é oferecido na paleta.
+- **Configurações do fluxo** (botão no topo do canvas): *Pode rodar de novo pro
+  mesmo lead* = **Depois de [X] horas** (padrão 24) · **Sempre que o gatilho
+  acontecer** · **Só uma vez por lead**. Com "Sempre" e o gatilho *Mensagem
+  recebida*, aparece "Com "Mensagem recebida", roda a cada mensagem do lead." na
+  janela e numa faixa acima do canvas. Vai pro servidor no Salvar, e conta como
+  alteração não salva.
+- **Modelos:** botão ao lado de *Novo fluxo* e a lista no estado vazio (substitui
+  o exemplo da sprint 1, que a tela montava sozinha). *Usar este modelo* cria o
+  fluxo **desligado** no servidor e abre o canvas.
+- **O que falta antes de ligar:** bloco com campo obrigatório em branco ganha
+  borda amarela e a frase do que falta ("Falta preencher o destino do aviso.");
+  com o fluxo desligado, uma faixa no topo diz o primeiro bloco a completar. A
+  chave recusa ligar com falta (e com alteração não salva: o fluxo liga como está
+  salvo). O play da lista confere o fluxo salvo antes de ligar.
+- **A seta de voltar do canvas pergunta antes de sair** com alteração não salva
+  (o mesmo "Sair sem salvar?" do menu).
+
+Armadilhas:
+
+1. **Bloco de ação = kind `lead_action`, config `{ action_type, params }`.**
+   `params` é exatamente o que a regra grava (`features/flowAutomations/leadAction.ts`
+   converte nos dois sentidos pro `ActionEditor`). `wait` ("Aguardar (delay)")
+   nunca vira bloco. Ação desconhecida abre com "Este bloco volta na próxima versão".
+2. **Os obrigatórios moram em `ACTION_REQUIRED_PARAMS`** (`leadAutomationService.ts`),
+   o mesmo mapa do `validateRule` da tela de regras. Mexer nele muda as duas telas.
+3. **"O que falta" é uma régua só:** `nodeProblem`/`enableProblem`
+   (`features/flowAutomations/readiness.ts`) — a janela do bloco, o cartão, a
+   faixa e a chave usam ela. Aplicar/Tirar etiqueta sem etiqueta agora não salva.
+4. **Ordem e composição da paleta:** `paletteItems()` em `palette.ts`
+   (blocos da sprint 1 do grupo primeiro, depois as ações de `PALETTE_LEAD_ACTIONS`).
+   Nome/cor do bloco saem de `blockLabel`/`blockGroup`, nunca direto do
+   `FLOW_NODE_DEF_BY_KIND` (o `lead_action` não tem nome próprio).
+5. **"Pode rodar de novo":** `reentry_window_hours` (0 = sempre) + `once_per_lead`.
+   O servidor guarda `once_per_lead` em `state`: `reentryOf` lê solto ou dentro de
+   `state`; a gravação manda solto, no mesmo PATCH do nome e do gatilho.
+6. **Modelos:** `GET /flow_automations/templates` e
+   `POST /flow_automations/templates/:key/apply`, com ou sem o envelope `{ data }`
+   (`features/flowAutomations/templates.ts`). Os modelos são do servidor; a tela
+   não monta fluxo sozinha.
+7. **Não é `featureKey` novo:** Automações usa as travas que a aba FlowBuilder
+   tinha (`lead_automations` + `client_manage_automations`).
