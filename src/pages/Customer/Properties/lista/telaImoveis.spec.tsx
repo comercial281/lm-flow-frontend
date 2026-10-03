@@ -3,7 +3,7 @@
 // contagem, aba padrão, troca de aba, aba vazia e a visão Mapa.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import type { Property } from '@/services/properties/propertiesService';
 
@@ -29,8 +29,8 @@ vi.mock('@/services/users/usersService', () => ({
 }));
 // O lote com IA e o mapa têm testes próprios; aqui só importa que a tela os chama.
 vi.mock('../PropertyImportDialog', () => ({
-  default: ({ open, listingKind, onManual, onReview }: { open: boolean; listingKind?: string; onManual?: () => void; onReview?: (id: string) => void }) =>
-    (open ? <div data-testid="lote">lote {listingKind}<button onClick={onManual}>Cadastrar à mão</button><button onClick={() => onReview?.('d1')}>Revisar d1</button></div> : null),
+  default: ({ open, listingKind, retomarRevisao, onManual, onReview }: { open: boolean; listingKind?: string; retomarRevisao?: boolean; onManual?: () => void; onReview?: (id: string) => void }) =>
+    (open ? <div data-testid="lote">lote {listingKind}{retomarRevisao ? ' retomando' : ''}<button onClick={onManual}>Cadastrar à mão</button><button onClick={() => onReview?.('d1')}>Revisar d1</button></div> : null),
 }));
 vi.mock('@/services/propertyPhotos/propertyPhotosService', async importOriginal => {
   const real = await importOriginal<typeof import('@/services/propertyPhotos/propertyPhotosService')>();
@@ -50,10 +50,14 @@ const imovel = (over: Partial<Property>): Property => ({
 
 const resposta = (data: Property[], total = data.length) => ({ data, meta: { total, page: 1, per_page: 50 } });
 
+// Onde a tela mandou a pessoa: o cadastro virou página (/properties/new, /properties/:id/editar).
+function Onde() { const l = useLocation(); return <p data-testid="onde">{l.pathname}{l.search}</p>; }
+
 function abrir(endereco = '/properties') {
   return render(
     <MemoryRouter initialEntries={[endereco]}>
       <Properties />
+      <Onde />
     </MemoryRouter>,
   );
 }
@@ -166,38 +170,45 @@ describe('Tela de Imóveis', () => {
     expect(svc.contarPorTipo).toHaveBeenCalledWith({ status: 'active', without_photos: '1' });
   });
 
-  it('Cadastrar à mão na aba Empreendimentos abre o formulário de empreendimento', async () => {
+  it('Cadastrar à mão na aba Empreendimentos abre o cadastro de empreendimento', async () => {
     svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 3 });
     abrir('/properties?aba=empreendimentos');
     fireEvent.click(await screen.findByRole('button', { name: /Novo empreendimento/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Cadastrar à mão' }));
-    expect(await screen.findByText('Fase da obra')).toBeInTheDocument();
-    expect(screen.getByText('Previsão de entrega')).toBeInTheDocument();
-    expect(screen.getByText('Tipologias do empreendimento')).toBeInTheDocument();
-    expect(screen.getByText('Venda')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('onde')).toHaveTextContent('/properties/new?tipo=empreendimento'));
   });
 
-  it('Cadastrar à mão na aba Revenda esconde fase, previsão e tipologias', async () => {
+  it('Cadastrar à mão na aba Revenda abre o cadastro de revenda', async () => {
     svc.contarPorTipo.mockResolvedValue({ development: 1, resale: 38 });
     abrir('/properties?aba=revenda');
     fireEvent.click(await screen.findByRole('button', { name: /Novo imóvel/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Cadastrar à mão' }));
-    expect(await screen.findByText('Tipo de negócio')).toBeInTheDocument();
-    expect(screen.queryByText('Fase da obra')).toBeNull();
-    expect(screen.queryByText('Previsão de entrega')).toBeNull();
-    expect(screen.queryByText('Tipologias do empreendimento')).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('onde')).toHaveTextContent('/properties/new?tipo=revenda'));
   });
 
-  it('editar empreendimento salvo como locação mostra Valor de venda e a situação antiga', async () => {
+  it('Revisar um imóvel do lote abre a edição, marcando que veio do lote', async () => {
     svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 3 });
-    svc.get.mockResolvedValue(imovel({ id: 'd1', listing_kind: 'development', transaction_type: 'rent', status: 'reserved' }));
     abrir('/properties?aba=empreendimentos');
-    await screen.findByRole('button', { name: /Novo empreendimento/ });
-    fireEvent.click(screen.getByRole('button', { name: /Novo empreendimento/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Novo empreendimento/ }));
+    expect(screen.getByTestId('lote')).not.toHaveTextContent('retomando');
     fireEvent.click(screen.getByRole('button', { name: 'Revisar d1' }));
-    expect(await screen.findByText('Valor de venda (R$) *')).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Reservado' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'À venda' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('onde')).toHaveTextContent('/properties/d1/editar?de=lote'));
+  });
+
+  it('?importar=1 (volta da revisão) reabre o lote e tira o parâmetro', async () => {
+    svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 3 });
+    abrir('/properties?aba=empreendimentos&importar=1');
+    expect(await screen.findByTestId('lote')).toHaveTextContent('retomando');
+    await waitFor(() => expect(screen.getByTestId('onde')).not.toHaveTextContent('importar'));
+    expect(screen.getByTestId('onde')).toHaveTextContent('aba=empreendimentos');
+  });
+
+  it('Editar no menu do imóvel abre a página de edição', async () => {
+    svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 1 });
+    abrir('/properties?aba=revenda');
+    await userEvent.click(await screen.findByRole('button', { name: 'Ações do AP0461' }));
+    await userEvent.click(await screen.findByText('Editar imóvel'));
+    await waitFor(() => expect(screen.getByTestId('onde')).toHaveTextContent('/properties/r1/editar'));
   });
 
   it('busca global (?aba=&q=) abre na aba do imóvel, já buscando', async () => {
@@ -221,35 +232,6 @@ describe('Tela de Imóveis', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Lista' }));
     await waitFor(() => expect(svc.list).toHaveBeenCalledWith(expect.objectContaining({ listing_kind: 'development', page: 1 })));
     expect(screen.getByRole('textbox', { name: 'Buscar' })).toBeInTheDocument();
-  });
-
-  it('previsão de entrega em mês e ano: dez + 2027 salva 2027-12', async () => {
-    svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 3 });
-    svc.create.mockResolvedValue(imovel({ id: 'n1', listing_kind: 'development' }));
-    abrir('/properties?aba=empreendimentos');
-    fireEvent.click(await screen.findByRole('button', { name: /Novo empreendimento/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Cadastrar à mão' }));
-    fireEvent.change(await screen.findByRole('combobox', { name: 'Mês da previsão de entrega' }), { target: { value: '12' } });
-    fireEvent.change(screen.getByRole('combobox', { name: 'Ano da previsão de entrega' }), { target: { value: '2027' } });
-    fireEvent.change(screen.getByPlaceholderText('450000'), { target: { value: '389900' } });
-    fireEvent.change(screen.getByPlaceholderText('Ex: Apartamento 3 quartos - Jardim Europa'), { target: { value: 'Vista Taquaral' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Cadastrar e enviar fotos' }));
-    await waitFor(() => expect(svc.create).toHaveBeenCalledWith(expect.objectContaining({ delivery_forecast: '2027-12', stage: 'launch' })));
-  });
-
-  it('só o mês, sem ano, não é previsão', async () => {
-    svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 3 });
-    svc.create.mockResolvedValue(imovel({ id: 'n1', listing_kind: 'development' }));
-    abrir('/properties?aba=empreendimentos');
-    fireEvent.click(await screen.findByRole('button', { name: /Novo empreendimento/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Cadastrar à mão' }));
-    const mes = await screen.findByRole('combobox', { name: 'Mês da previsão de entrega' });
-    fireEvent.change(mes, { target: { value: '12' } });
-    expect(mes).toHaveValue('12');
-    fireEvent.change(screen.getByPlaceholderText('450000'), { target: { value: '389900' } });
-    fireEvent.change(screen.getByPlaceholderText('Ex: Apartamento 3 quartos - Jardim Europa'), { target: { value: 'Vista Taquaral' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Cadastrar e enviar fotos' }));
-    await waitFor(() => expect(svc.create).toHaveBeenCalledWith(expect.objectContaining({ delivery_forecast: null })));
   });
 
   it('fechar as fotos relê só aquele imóvel, sem voltar à página 1', async () => {

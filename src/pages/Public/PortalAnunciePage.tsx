@@ -1,10 +1,11 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import {
   API, I, Ic, PROPERTY_TYPE_LABEL, PortalFooter, PortalHeader, Select, onlyDigits, usePortalData,
 } from './portalShared';
+import { usePortalTracking } from './usePortalTracking';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — ANUNCIE SEU IMÓVEL
@@ -60,6 +61,8 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
 export default function PortalAnunciePage() {
   const { tenant } = useParams<{ tenant: string }>();
   const { state, site, fontHref, wa, cssVars } = usePortalData(tenant);
+  const { pathname } = useLocation();
+  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'listing', path: pathname });
 
   const [step, setStep] = useState<1 | 2>(1);
   const [sent, setSent] = useState(false);

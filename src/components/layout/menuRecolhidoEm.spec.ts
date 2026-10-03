@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { menuRecolhido, ROTA_CONVERSAS } from './menuRecolhidoEm';
+import { menuRecolhido, ROTA_CONVERSAS, ROTA_RECOLHE_MENU } from './menuRecolhidoEm';
 
 describe('menuRecolhido', () => {
   it('fora de Conversas devolve a preferência salva', () => {
@@ -30,5 +30,17 @@ describe('ROTA_CONVERSAS', () => {
   it('não casa outras rotas parecidas', () => {
     expect(ROTA_CONVERSAS.test('/conversations-old')).toBe(false);
     expect(ROTA_CONVERSAS.test('/contacts')).toBe(false);
+  });
+});
+
+describe('ROTA_RECOLHE_MENU', () => {
+  it('cadastro de imóvel recolhe como Conversas', () => {
+    for (const url of ['/properties/new', '/properties/abc/editar']) expect(ROTA_RECOLHE_MENU.test(url)).toBe(true);
+    for (const url of ['/properties', '/properties/map', '/property-owners']) expect(ROTA_RECOLHE_MENU.test(url)).toBe(false);
+  });
+
+  it('continua recolhendo em Conversas', () => {
+    expect(ROTA_RECOLHE_MENU.test('/conversations')).toBe(true);
+    expect(ROTA_RECOLHE_MENU.test('/conversations/123')).toBe(true);
   });
 });

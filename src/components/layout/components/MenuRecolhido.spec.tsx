@@ -133,3 +133,21 @@ describe('menu recolhido: abrir pelo mouse', () => {
     expect(screen.getByRole('link', { name: 'Contatos' })).toBeTruthy();
   });
 });
+
+describe('bolinha de novidade no menu recolhido', () => {
+  it('o botão da seção mostra a bolinha quando um item dela tem novidade', () => {
+    const comNovidade: MenuSection[] = [
+      { id: 'imoveis', rotulo: 'Imóveis', icone: Building2, itens: [{ name: 'Meus imóveis', href: '/properties', icon: Building2, marcador: true }] },
+      { id: 'leads', rotulo: 'Leads', icone: Users, itens: [{ name: 'Contatos', href: '/contacts', icon: Contact }] },
+    ];
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <TooltipProvider><MenuRecolhido secoes={comNovidade} /></TooltipProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('button', { name: 'Imóveis' }).querySelector('[data-marcador]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Leads' }).querySelector('[data-marcador]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Imóveis' }));
+    expect(screen.getByRole('link', { name: /Meus imóveis/ })).toContainElement(screen.getByLabelText('Novidade'));
+  });
+});

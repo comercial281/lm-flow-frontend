@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { trackLead } from '@/features/siteBuilder/public/siteTracking';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import { labelsFor } from '@/features/properties/amenities';
@@ -15,6 +16,7 @@ import {
   type PortalProperty, type SiteInfo as PortalSiteInfo,
 } from './portalShared';
 import FinalidadeChoice from './FinalidadeChoice';
+import { usePortalTracking } from './usePortalTracking';
 import { FINALIDADE_PARAM, finalidadeDoImovel, finalidadeInicial, type Finalidade } from './finalidade';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -81,10 +83,13 @@ export default function ImovelPublicPage() {
   const { tenant, code } = useParams<{ tenant: string; code: string }>();
   const [state, setState] = useState<'loading' | 'ok' | 'notfound'>('loading');
   const [site, setSite] = useState<SiteInfo>({});
+  const [siteLoaded, setSiteLoaded] = useState(false);
   const [prop, setProp] = useState<PropertyDTO | null>(null);
   const [active, setActive] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   const [suggestions, setSuggestions] = useState<PortalProperty[]>([]);
+  const { pathname } = useLocation();
+  usePortalTracking(state === 'ok' && siteLoaded ? site : null, tenant, { kind: 'property', path: pathname, propertyCode: code });
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -110,6 +115,7 @@ export default function ImovelPublicPage() {
         const property = (await imovelRes.json()).data as PropertyDTO;
         const siteInfo = siteRes.ok ? ((await siteRes.json()).data as SiteInfo) : {};
         setSite(siteInfo);
+        setSiteLoaded(siteRes.ok);
         setProp(property);
 
         const siteName = siteInfo.name || 'Imóveis';
@@ -185,7 +191,7 @@ export default function ImovelPublicPage() {
     if (!isValidBrPhone(phone)) { setPhoneErr(true); return; }
     const params = new URLSearchParams(window.location.search);
     try {
-      await fetch(`${API}/api/public/v1/site/leads`, {
+      const res = await fetch(`${API}/api/public/v1/site/leads`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
         body: JSON.stringify({ lead: {
           name, phone, source: 'portal', form_type: 'imovel',
@@ -197,6 +203,8 @@ export default function ImovelPublicPage() {
         } }),
       });
       setSent(true);
+      // Conversão só conta quando o servidor aceitou o contato.
+      if (res.ok) trackLead();
     } catch { /* silencioso */ }
   };
 

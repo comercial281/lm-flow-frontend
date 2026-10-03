@@ -41,6 +41,10 @@ import { propertyPhotosService, ACCEPTED_MIME_TYPES as PHOTO_MIME_TYPES } from '
 // Chave pra retomar o acompanhamento se o corretor fechar o modal/página no
 // meio do lote (o processamento continua no backend).
 const ACTIVE_BATCH_KEY = 'lmflow.property_import.batch_id';
+// Lote de onde o corretor saiu para "Revisar" um imóvel (o cadastro é outra
+// página). A chave acima some quando o lote termina; esta fica até fechar a
+// janela ou começar outro lote, pra a volta da revisão reabrir a mesma lista.
+const REVIEW_BATCH_KEY = 'lmflow.property_import.review_batch_id';
 
 const POLL_MS = 4000;
 
@@ -51,18 +55,17 @@ interface Props {
   onClose: () => void;
   /** Abre o modal de cadastro manual (escrever à mão) a partir do fluxo de IA. */
   onManual: () => void;
-  /** Abre o modal de edição existente pro corretor revisar o imóvel criado. */
+  /** Abre a página de edição pro corretor revisar o imóvel criado. */
   onReview: (propertyId: string) => void;
   /** Recarrega a listagem quando o lote cria/ativa imóveis. */
   onChanged: () => void;
-  /** Incrementado pela tela quando um imóvel é salvo na revisão — re-busca o lote
-   *  pra atualizar chips de campos faltantes, preço e thumbnail. */
-  refreshSignal?: number;
+  /** Voltou da revisão de um imóvel (?importar=1): reabre o lote de onde saiu. */
+  retomarRevisao?: boolean;
   /** Aba de onde o lote saiu: o imóvel nasce empreendimento ou revenda, nunca revenda calada. */
   listingKind?: ListingKind;
 }
 
-export default function PropertyImportDialog({ open, onClose, onManual, onReview, onChanged, refreshSignal, listingKind }: Props) {
+export default function PropertyImportDialog({ open, onClose, onManual, onReview, onChanged, retomarRevisao, listingKind }: Props) {
   const [files, setFiles] = useState<File[]>([]);
   const [urlsText, setUrlsText] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -107,18 +110,14 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
   useEffect(() => {
     if (!open) { stopPolling(); return; }
     const saved = sessionStorage.getItem(ACTIVE_BATCH_KEY);
+    const revisado = retomarRevisao ? sessionStorage.getItem(REVIEW_BATCH_KEY) : null;
     if (saved && !batch) startPolling(saved);
+    // Lote já concluído: uma leitura só, sem repetir o aviso de "Lote concluído"
+    // nem recarregar a lista (a volta da revisão já recarrega).
+    else if (revisado && !batch) propertyImportsService.get(revisado).then(setBatch).catch(() => { /* fica a tela de envio */ });
     return stopPolling;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
-  // Revisou/salvou um imóvel na tela? Re-busca o lote pra atualizar chips/preço/capa.
-  useEffect(() => {
-    if (!open || !refreshSignal) return;
-    const id = batch?.id ?? sessionStorage.getItem(ACTIVE_BATCH_KEY);
-    if (id) poll(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshSignal]);
 
   const openPhotoPicker = (propertyId: string) => {
     photoTargetRef.current = propertyId;
@@ -254,9 +253,21 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
     }
   };
 
+  const fechar = () => {
+    sessionStorage.removeItem(REVIEW_BATCH_KEY);
+    onClose();
+  };
+
+  // Sai para a página de edição: guarda o lote pra voltar a ele depois.
+  const revisar = (propertyId: string) => {
+    if (batch) sessionStorage.setItem(REVIEW_BATCH_KEY, batch.id);
+    onReview(propertyId);
+  };
+
   const handleNewBatch = () => {
     stopPolling();
     sessionStorage.removeItem(ACTIVE_BATCH_KEY);
+    sessionStorage.removeItem(REVIEW_BATCH_KEY);
     setBatch(null);
   };
 
@@ -276,7 +287,7 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
   };
 
   return (
-    <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
+    <Dialog open={open} onOpenChange={v => { if (!v) fechar(); }}>
       {/* Folga e altura vêm do preset `size="wide"` (ver ds.tsx); aqui fica só o
           teto, que é maior no modo lote por causa da tabela de conferência. */}
       <DialogContent
@@ -511,7 +522,7 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
 
                       {/* Ações */}
                       <div className="flex gap-1.5 justify-end">
-                        <Button size="sm" variant="outline" onClick={() => onReview(item.property!.id)}>
+                        <Button size="sm" variant="outline" onClick={() => revisar(item.property!.id)}>
                           Revisar
                         </Button>
                         {item.property.status === 'draft' ? (
@@ -549,7 +560,7 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
         <DialogFooter className="gap-2">
           {!batch && (
             <>
-              <Button variant="outline" onClick={onClose} disabled={uploading}>Cancelar</Button>
+              <Button variant="outline" onClick={fechar} disabled={uploading}>Cancelar</Button>
               <Button onClick={handleStart} disabled={uploading || (!files.length && !parseUrls().length)}>
                 {uploading
                   ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Enviando…</>
@@ -574,7 +585,7 @@ export default function PropertyImportDialog({ open, onClose, onManual, onReview
                   Ativar todos
                 </Button>
               )}
-              <Button variant="outline" onClick={onClose}>
+              <Button variant="outline" onClick={fechar}>
                 {running ? 'Continuar em segundo plano' : 'Fechar'}
               </Button>
             </>

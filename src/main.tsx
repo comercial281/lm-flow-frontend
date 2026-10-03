@@ -9,7 +9,6 @@ import { i18nReady } from './i18n/config'; // Configuração do i18n — carrega
 import App from './App.tsx';
 import { consumeMasterSso } from './utils/masterSso';
 import { initTheme } from './utils/themeUtils';
-import { initGA4 } from './utils/ga4Utils';
 import { reloadForNewVersion } from './utils/chunkReload';
 
 // O Modo Cliente saiu em 01/10/2026. A chave que ele guardava no navegador
@@ -110,9 +109,6 @@ consumeMasterSso();
 
 // Inicialização do tema antes do React montar
 initTheme();
-
-// Inicialização do Google Analytics 4
-initGA4();
 
 // ⚡ OTIMIZAÇÃO: StrictMode removido para evitar duplicação de requests
 // Em desenvolvimento, StrictMode executa useEffect 2x para detectar problemas

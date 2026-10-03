@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useLocation } from 'react-router-dom';
 import {
   I, Ic, PROPERTY_TYPE_LABEL, PortalFooter, PortalHeader, PropertyCard, Select,
   filterProperties, usePortalData, type PortalFilters, type PortalTab,
 } from './portalShared';
+import { usePortalTracking } from './usePortalTracking';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — página dedicada de BUSCA / FILTROS (Produto A).
@@ -25,6 +26,8 @@ export default function PortalSearchPage() {
   const { tenant } = useParams<{ tenant: string }>();
   const [params, setParams] = useSearchParams();
   const { state, site, items, fontHref, wa, cities, hoods, types, cssVars } = usePortalData(tenant);
+  const { pathname } = useLocation();
+  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'search', path: pathname });
 
   const filters: PortalFilters = useMemo(() => ({
     tab: (params.get('tab') as PortalTab) || 'sale',

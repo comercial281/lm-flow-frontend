@@ -23,11 +23,13 @@ import {
   CustomAttributes,
   SiteBuilder,
   Properties,
+  CadastroDoImovel,
+  GestaoDeProprietarios,
+  FichaDoProprietario,
   PropertyBooks,
   Visits,
   Proposals,
   Contracts,
-  PropertyCaptureRequests,
   PropertyInterests,
   AutomationsLayout,
   SalesAgents,
@@ -71,7 +73,7 @@ import SurveyResponse from '@/pages/Public/Survey/SurveyResponse';
 // baixado só quando a rota é acessada. Reduz o bundle inicial (era ~7MB num arquivo).
 // (Dashboard, Contacts, ScheduledActions, Channels, ChatPage, Pipelines, Disparos,
 // TeamAccess, AccountSettings, Labels, CustomAttributes, SiteBuilder,
-// Properties, PropertyBooks, Visits, Proposals, Contracts, PropertyCaptureRequests,
+// Properties, PropertyBooks, Visits, Proposals, Contracts,
 // PropertyInterests, AutomationsLayout, SalesAgents, PortalsList,
 // DashboardAppPage, Tutorials, Marketplace — importadas de
 // ./lazyPages, ver import acima.)
@@ -95,7 +97,6 @@ const LeadAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings/Le
 const LeadAdsForms = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadAdsForms'));
 const LandingPageEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingPageEditorPage'));
 const LandingByIdEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingByIdEditorPage'));
-const PropertyTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/PropertyTemplateEditor/PropertyTemplateEditorPage'));
 const SimulatorDemo = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/SimulatorDemoPage'));
 const LandingPublic = lazyWithRetry(() => import('@/pages/Public/LandingPublicPage'));
 const LandingResult = lazyWithRetry(() => import('@/pages/Public/LandingResultPage'));
@@ -106,6 +107,7 @@ const PortalBlog = lazyWithRetry(() => import('@/pages/Public/PortalBlogPage'));
 const PortalFinanciamento = lazyWithRetry(() => import('@/pages/Public/PortalFinanciamentoPage'));
 const PortalAnuncie = lazyWithRetry(() => import('@/pages/Public/PortalAnunciePage'));
 const PortalArticle = lazyWithRetry(() => import('@/pages/Public/PortalArticlePage'));
+const PortalCustomPage = lazyWithRetry(() => import('@/pages/Public/PortalCustomPage'));
 const PortalDetailPage = lazyWithRetry(() => import('../pages/Customer/Settings/Portals/PortalDetailPage'));
 // Gate de rota da Área do Admin: só no deploy raiz (app.lmflow.com.br) E com
 // acesso de admin (o dono por e-mail OU a equipe cadastrada, via whoami). Em
@@ -125,7 +127,7 @@ function SuperAdminRoute({ children }: { children: ReactNode }) {
 // Clientes → aba Clientes (a lista). As outras abas são rotas próprias desde 01/10/2026.
 const PooledClients = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients'));
 const PushCentral = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral'));
-const CustoIA = lazyWithRetry(() => import('@/pages/SuperAdmin/CustoIA'));
+const Custos = lazyWithRetry(() => import('@/pages/SuperAdmin/Custos'));
 // IA Vendedora → aba Agentes. As outras abas são rotas próprias desde 01/10/2026.
 const SuperAgents = lazyWithRetry(() => import('@/pages/SuperAdmin/SuperAgents'));
 
@@ -1086,6 +1088,47 @@ const AppRouter = () => {
               }
             />
 
+            {/* Cadastro de imóvel em página (era a janela da lista). O menu recolhe
+                sozinho nas duas, como em Conversas (ROTA_RECOLHE_MENU). */}
+            <Route
+              path="/properties/new"
+              element={
+                <PermissionRoute resource="properties" action="create">
+                  <CadastroDoImovel />
+                </PermissionRoute>
+              }
+            />
+
+            <Route
+              path="/properties/:id/editar"
+              element={
+                <PermissionRoute resource="properties" action="update">
+                  <CadastroDoImovel />
+                </PermissionRoute>
+              }
+            />
+
+            {/* Gestão de proprietários: a lista (com a aba Novas captações) e a
+                ficha. O corretor só vê os proprietários liberados para ele
+                (o servidor recorta; fora do recorte a ficha dá 404). */}
+            <Route
+              path="/property-owners"
+              element={
+                <PermissionRoute resource="properties" action="read">
+                  <GestaoDeProprietarios />
+                </PermissionRoute>
+              }
+            />
+
+            <Route
+              path="/property-owners/:id"
+              element={
+                <PermissionRoute resource="properties" action="read">
+                  <FichaDoProprietario />
+                </PermissionRoute>
+              }
+            />
+
             {/* A lista de landings virou aba do Site Builder (é uma página do
                 site do cliente, e é lá que o site nasce). Rota antiga mantida
                 como redirect pra não quebrar link salvo. */}
@@ -1122,7 +1165,7 @@ const AppRouter = () => {
               path="/property-capture-requests"
               element={
                 <PermissionRoute resource="property_capture_requests" action="read">
-                  <PropertyCaptureRequests />
+                  <Navigate to="/property-owners?aba=captacoes" replace />
                 </PermissionRoute>
               }
             />
@@ -1203,9 +1246,9 @@ const AppRouter = () => {
               {/* Clientes */}
               <Route path="/admin/clientes" element={<ComAbaAntiga base="/admin/clientes"><PooledClients /></ComAbaAntiga>} />
               <Route path="/admin/clientes/numeros" element={<AdminConteudo><AdminNumeros /></AdminConteudo>} />
-              {/* Custos: por enquanto a tela Custo da IA. O rateio de Railway,
-                  Evolution e Vercel entra no PR de Custos. */}
-              <Route path="/admin/clientes/custos" element={<CustoIA />} />
+              {/* Custos: IA exata (registro de chamadas) + estrutura (Railway, Vercel,
+                  Evolution) lançada à mão, numa tela só. */}
+              <Route path="/admin/clientes/custos" element={<Custos />} />
               {/* Usuários */}
               <Route path="/admin/usuarios" element={<AdminConteudo><AdminUsuarios /></AdminConteudo>} />
               <Route path="/admin/usuarios/logs" element={<AdminConteudo><AdminLogs /></AdminConteudo>} />
@@ -1348,13 +1391,13 @@ const AppRouter = () => {
             }
           />
 
-          {/* Editor do template único da página de imóvel (portal Produto A). */}
+          {/* Editor de blocos da página do imóvel aposentado: vai para o Meu site. */}
           <Route
             path="/properties/template-imovel"
             element={
               <PrivateRoute>
                 <CustomerRoute>
-                  <PropertyTemplateEditor />
+                  <Navigate to="/settings/site-builder" replace />
                 </CustomerRoute>
               </PrivateRoute>
             }
@@ -1403,6 +1446,7 @@ const AppRouter = () => {
           {/* Público INDEXÁVEL — blog do portal (listagem + artigo). */}
           <Route path="/portal/:tenant/blog" element={<PortalBlog />} />
           <Route path="/portal/:tenant/blog/:slug" element={<PortalArticle />} />
+          <Route path="/portal/:tenant/p/:slug" element={<PortalCustomPage />} />
 
           {/* Endereços antigos da Área do Admin (reorganizações de 19/08 e
               01/10/2026). Continuam vivos pra não quebrar link salvo. */}

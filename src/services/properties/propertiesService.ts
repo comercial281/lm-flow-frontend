@@ -3,6 +3,11 @@ import type { PropertyTypology, TypologySummary } from '@/features/properties/ty
 
 export type { PropertyTypology, TypologySummary };
 
+export type PadraoDoImovel = 'economic' | 'medium' | 'high' | 'luxury';
+export interface Construtora { name?: string; contact_name?: string; phone?: string; website?: string; cnpj?: string }
+export interface DadosInternos { keys_location?: string; registration_number?: string; iptu_code?: string; notary?: string; appraised_value?: string; notes?: string }
+export interface Comissao { percent?: string; notes?: string }
+
 export interface Property {
   id: string;
   code: string;
@@ -90,6 +95,23 @@ export interface Property {
   has_book?: boolean;
   book_url?: string | null;
   book_file_name?: string | null;
+  owner_id?: string | null;
+  owner?: { id: string; name: string } | null;
+  accepts_financing?: boolean | null;
+  accepts_fgts?: boolean | null;
+  mcmv?: boolean | null;
+  building_standard?: PadraoDoImovel | null;
+  total_units?: number | null;
+  towers?: number | null;
+  floors?: number | null;
+  construction_year?: number | null;
+  iptu_period?: 'monthly' | 'yearly' | null;
+  video_url?: string | null;
+  virtual_tour_url?: string | null;
+  builder?: Construtora;
+  /** Dados internos e comissão NÃO vão para site, portal nem IA. */
+  internal_info?: DadosInternos | null;
+  commission?: Comissao | null;
   created_at: string;
   updated_at: string;
 }
@@ -140,6 +162,22 @@ export interface PropertyFormData {
   condo_features?: string[];
   /** Tipologias (plantas) do empreendimento. Linha em branco é descartada no save. */
   typologies?: PropertyTypology[];
+  owner_id?: string | null;
+  accepts_financing?: boolean | null;
+  accepts_fgts?: boolean | null;
+  mcmv?: boolean | null;
+  building_standard?: PadraoDoImovel | null;
+  total_units?: number | null;
+  towers?: number | null;
+  floors?: number | null;
+  construction_year?: number | null;
+  iptu_period?: 'monthly' | 'yearly' | null;
+  video_url?: string | null;
+  virtual_tour_url?: string | null;
+  builder?: Construtora;
+  /** Dados internos e comissão NÃO vão para site, portal nem IA. */
+  internal_info?: DadosInternos | null;
+  commission?: Comissao | null;
 }
 
 export interface PropertyMapMarker {

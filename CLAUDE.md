@@ -4731,7 +4731,7 @@ O que aparece na tela, no menu da Área do Admin:
 - **Mensagem de acesso** saiu da janela e virou aba; a variável `{senha}` saiu da lista (a senha é criada pela pessoa, pelo link, desde a fase 1).
 - **WhatsApp** é o Comunicado. Neste passo a escrita continua na janela de sempre, com todos os clientes marcados (decisão). Confirmação e tela própria entram no PR de Comunicação.
 - **Push** ainda tem três abas por dentro (Regras, Disparo manual, Histórico): viram seções no PR de Comunicação. É a única exceção ao "sem terceiro nível", e é temporária.
-- **Custos** ainda é a tela Custo da IA (US$, N dias). O rateio de Railway, Evolution e Vercel entra no PR de Custos.
+- **Custos** é a tela nova de 03/10 (ver seção "Custos do admin").
 - **Banner** ainda não tem aba: entra com a spec própria.
 
 ## Número que envia os avisos: vazio = número da Leal Mídia (desde 2026-10-01)
@@ -5753,3 +5753,85 @@ Armadilhas:
    Iniciar = `POST /flow_automation_instances/start` com o contato e a conversa.
 10. **Faixa do formato antigo:** `queued_count` de cada funil em
     `GET /followup_sequences` (uma leitura só, sem histórico por funil).
+
+## Imóveis: cadastro em página e Gestão de proprietários (desde 2026-10-03)
+
+Fase 4, entrega 3. Spec: `LM FLOW/specs/2026-10-03-fase-4-imoveis-cadastro-e-proprietarios-design.md` (pasta do Tony, fora deste repo). Depende do backend `lm-flow#377` (campos novos, `property_owners`, aprovação de captação corrigida), que já está no ar.
+
+**Cadastro em página (substitui a janela):**
+
+- **Rotas:** `/properties/new?tipo=empreendimento|revenda[&proprietario=<id>]` e `/properties/:id/editar[?de=lote][&passo=divulgar]`. `/properties/new` respeita a feature `properties_create`, como a lista.
+- **Seções por tipo** vêm de `secoesDoCadastro` (`src/features/properties/cadastro/`). Índice fixo ao lado com scrollspy; erro de validação rola até a seção e a marca. Cada seção recebe `{form, setF, editando}`; `setF` aceita objeto ou `(prev) => patch`.
+- **O menu recolhe** nessas rotas, como em Conversas (`emConversas` no `MainLayout` cobre as duas).
+- **Barra de baixo:** criação = *Cancelar* / *Salvar rascunho* / *Criar e escolher onde divulgar →*; edição = *Cancelar* / *Salvar*. Há trava de "alterações não salvas".
+- **Volta ao lote:** revisar um item do lote e salvar volta para a janela do lote com a lista de itens (`importar=1`, chave própria no `sessionStorage`).
+- **Campos novos:** Construtora; Obra (total de unidades, torres, andares); Finalidade em pílulas; IPTU mensal/anual; ano de construção; Financiamento / FGTS / MCMV como Sim / Não / Não informado; Padrão; links de vídeo e tour; Comissão; **Dados internos** (só revenda: chaves, placa, matrícula, código do IPTU, cartório, valor de avaliação, comentários). O empreendimento mantém o "Resumo do empreendimento" (quartos, suítes, etc.) dentro de *Tipologias e valores*: o backend não deriva o resumo das tipologias.
+- **"Água" saiu das opções** mas continua legível em imóvel antigo (o slug fica no array ao salvar). *Piscina* e *Sauna* do imóvel viraram "privativa".
+- **Proprietário (revenda):** busca, cadastro na hora, aviso de telefone repetido e cartão com *Trocar*. Erro que não seja 404 mostra *Tentar de novo* / *Trocar* em vez de travar o cartão.
+- **Nada de Dados internos, Comissão ou Proprietário vai para site, portal ou IA.**
+
+**Onde divulgar** (passo depois de criar e cartão na edição):
+
+- Site / IA / Destaque gravam na hora. Cada portal conectado tem chave, tipo de anúncio e contador de cota; vermelho em `count >= limit`, e tipo cheio fica bloqueado para adicionar.
+- **A lista do portal é lida de novo logo antes de gravar** (o servidor substitui a lista inteira: snapshot velho despublicaria os outros imóveis). Mudança que não aumenta tipo estourado vai com `confirmOverflow` (decisão do Tony de 14/09: "avisa, não trava").
+- Portais não conectados viram uma linha só, com link para `/settings/portals`.
+- **Na edição, o *Salvar* da página não manda `featured`, `published_on_site` nem `ai_enabled`:** o cartão é o dono deles.
+
+**Gestão de proprietários** (`/property-owners`):
+
+- **Menu em Imóveis.** O gestor sempre vê; o corretor só com contagem > 0 (recorte do servidor). Bolinha vermelha "Novidade" no menu, no cabeçalho da seção fechada e na aba quando há captação nova.
+- **A marca `captacoes_vistas_ate` mora em `ui_settings`** (created_at mais novo dos pendentes + 1 ms: o JSON tem ms e o banco µs). **O servidor substitui `ui_settings` inteiro**, então toda gravação passa por `salvarUISettings` (mescla e manda o objeto completo). Isso corrigiu um bug antigo: o Perfil mandava `ui_settings` parcial e apagava as outras chaves.
+- Lista com pílula de status (*Disponível* · *Com alteração* · *Indisponível* · *Sem resposta*), busca e filtro; *Novo proprietário* em janela.
+- **Ficha** (`/property-owners/:id`): status, WhatsApp (`wa.me`, prefixo 55 para 10/11 dígitos), *Editar dados* / *Excluir* (só gestor), cartões dos imóveis (gestor vai ao cadastro; **corretor abre uma janela com Dados internos**), *Cadastrar imóvel deste proprietário*, observações (o corretor edita; o rascunho não se perde ao trocar o status), dados e histórico.
+- **Corretores autorizados** (só gestor). O captor é implícito.
+- **Novas captações** (aba, só pendentes, com busca e *Atualizar*; usa `pending: 'true'`). `/property-capture-requests` redireciona para cá. *Recusar* exige motivo. *Aprovar e cadastrar* abre a edição do rascunho criado; o `property_id` vem do envelope da resposta (o service antigo devolvia o envelope inteiro) e o duplo clique é travado.
+
+Decisões do dono (não reabrir sem ele pedir): cadastro em página e não em janela; seções por tipo; Dados internos só na revenda; proprietário só na revenda; menu com visibilidade dinâmica para o corretor; captação nova entra como rascunho e nunca vai ao ar sozinha.
+
+Armadilhas:
+
+1. **As regras moram em `src/features/properties/cadastro/`** (`secoesDoCadastro.ts` e `formularioDoCadastro.ts`, que traz `errosDoCadastro` e `payloadDoCadastro`), com spec; as telas em `src/pages/Customer/Properties/cadastro/`. Regra nova não entra na tela.
+2. **`mascaraReais`:** o PR #421 (máscara de preço dos filtros) cria um `mascaraReais`; `cadastro/secoes/campos.tsx` tem um helper local equivalente. Unificar depois que os dois entrarem.
+3. **Pendências conhecidas:** histórico de captações aprovadas/recusadas, abrir WhatsApp dentro do LM Flow, ficha da construtora e funil de captação com IA ficaram fora. O servidor ainda substitui a lista inteira do portal (endpoint por imóvel fecharia a corrida de vez).
+
+## Custos do admin (03/10/2026)
+
+Clientes → Custos (`/admin/clientes/custos`, `src/pages/SuperAdmin/Custos/`). Spec: `LM FLOW/specs/2026-10-03-admin-registro-custos-usuarios-design.md`.
+
+- **Uma régua só pro dinheiro, em R$ por mês.** IA exata (registro de chamadas do backend, `public.ai_calls`) + Railway, Vercel e Evolution lançados à mão em US$ no botão *Lançar faturas do mês*. A conferência com a fatura fica em US$ e os fornecedores aparecem com nome de gente (Anthropic, OpenAI, ElevenLabs).
+- **Filtro por cliente:** só a IA dele; a estrutura mostra "não é dividida por cliente" e sai do total; somem o recorte por cliente e a conferência. Margem e divisão da estrutura ficam pra quando o "quanto o cliente paga" existir (decisão do Tony, 03/10). Não reabrir sem ele pedir.
+- **Trocou o filtro, a tela recarrega do zero:** durante a carga aparece o esqueleto, nunca os números do filtro anterior; resposta que chega fora de ordem é ignorada; na lista de chamadas as linhas antigas somem até chegarem as novas.
+- **Mês sem chamada:** o gráfico dia a dia vira "Nenhuma chamada de IA neste mês" e a conferência diz "Fatura ainda não lançada". Nunca erro, nunca divisão por zero.
+- **Sem a palavra token na tela:** a coluna se chama *Tamanho*.
+- **Erro nunca vira vazio** em nenhuma das três cargas (resumo, chamadas, detalhe).
+- Conteúdo da chamada só aparece no prazo (7 dias, 30 se falhou); fora dele o painel diz "Conteúdo apagado depois de N dias".
+- O endpoint antigo `/super/sales_agents/costs` sai num PR do backend depois que esta tela estiver no ar. A tela antiga (`CustoIA.tsx`) e `superAgentsService.costs()` já foram removidas.
+
+## Meu site virou painel com barra de topo (desde 2026-10-03)
+
+> Pedido do dono (03/10): "um painel mais bonito e mais independente, no estilo do Kenlo, sem tirar a aba lateral". Spec: `LM FLOW/specs/2026-10-03-meu-site-painel-design.md`.
+
+**O que aparece na tela:** barra de topo própria (endereço + selo No ar + Painel · Personalizar ▾ · Marketing ▾ · Configurações ▾ + Ver site). Telas: Painel (visitas, origens, imóveis mais vistos, contatos recentes, "N% pronto" e o Preencher com IA), Aparência, Páginas, Financiamento, Anuncie, Tradução, Blog, Páginas de anúncio, Redes sociais, Rastreamento, Marca d'água, Endereço do site, Dados de contato, Para onde vão os contatos, Aparecer no Google, Contatos do site (aberta pelo Painel, "Ver todos" nos contatos recentes, sem item na barra).
+
+**Decisões (não reabrir sem o dono pedir):**
+1. O menu lateral do LM Flow não muda nem recolhe; a navegação do Meu site é a barra horizontal dentro da página (não é segunda coluna).
+2. Fonte única das telas: `src/features/siteBuilder/meuSiteMenu.ts`. `?tab=` antigo redireciona (`telaDaUrl`).
+3. Um Salvar só (`BarraSalvar` no pai); estado do formulário no pai, listas (páginas, artigos, contatos) dentro da própria tela.
+4. GTM e Códigos avançados só carregam em domínio próprio (`isOwnDomain`); GA4 e Pixel em qualquer endereço. Motivo: CRM e site dividem `*.lmflow.com.br` e a sessão fica no localStorage. `isOwnDomain` tira ponto final do host e trata IP como "não é domínio próprio". O rastreamento só é instalado quando há algo para instalar (ID ou código preenchido).
+5. Marca d'água é cópia gravada no servidor (`/public/site-photos/...`); a prévia da tela usa `estiloDaMarca`, com a mesma geometria do servidor (40% centro, 22% cantos, margem 3%). O logo aceita só PNG, JPG ou WEBP (o servidor confere pelo conteúdo, não pela extensão), até 5 MB.
+6. Editor de blocos da página do imóvel aposentado: `/properties/template-imovel` redireciona para o Meu site. As opções da página do imóvel vêm no projeto C (chaves, jeito Kenlo). A pasta `PropertyTemplateEditor` e `get/savePropertyTemplate` ficam até a limpeza junto da coluna no backend.
+7. O `initGA4` (ID do Evolution) saiu do `main.tsx`: mandava a navegação do LM Flow para o Analytics do projeto de origem.
+8. O "Preencher com IA" mora no Painel (card "N% pronto"), não numa tela própria.
+9. "Ver site" sempre abre `/portal/<slug>`: domínio próprio ainda não roteia para o site (item em aberto; quando rotear, a barra passa a mostrar o domínio).
+10. A marca d'água aparece no "N% pronto" como sugestão, mas **não conta** (`conta: false` em `siteReadiness.ts`): a liberação dela espera a faxina do disco (decisão do dono). Hoje contam 5 itens; quando a faxina sair, volta a contar. A prévia da tela usa a capa de um imóvel publicado (`propertiesService.list`, sem endpoint novo); sem foto, fica o quadro cinza.
+11. Botão de idiomas (tradutor do Google): o tradutor reescreve os nós de texto do React (facebook/react#11538) e a navegação seguinte estourava `removeChild`/`insertBefore`, derrubando o site. `features/siteBuilder/public/translateGuard.ts` instala uma vez a proteção conhecida em `Node.prototype` (nó que não é mais filho é ignorado, com 1 aviso no console), só no site público com a tradução ligada; o `new TranslateElement` fica em `try/catch`.
+12. Contador de visitas **sem `keepalive`**: numa SPA a página não fecha no meio do envio, e `keepalive` + preflight de CORS falha calado em alguns navegadores. A visita leva `site_host` (hostname da página) para o servidor separar navegação interna de origem.
+13. Rastreamento só carrega ID no formato (GA4 `G-…`, Pixel só números, GTM `GTM-…`): valor antigo que nunca passou pela validação da tela é ignorado. A conversão (`trackLead`) só dispara quando o servidor aceitou o contato (`res.ok`).
+14. Páginas criadas usam os nomes do servidor: corpo em `content_html`, SEO em `seo_title`/`seo_description` (e volta aninhado em `seo`). Com `content`/`meta_*` o Rails descartava em silêncio e a página ia vazia pro menu.
+
+**Armadilhas:**
+1. Backend vem PRIMEIRO (`lm-flow`, `saas-multitenant`): `site_visits`, `/sites/:id/dashboard`, `watermark_logo`, `translate`/`custom_code` no `/site` público.
+2. Contador e rastreamento nunca podem derrubar o site: tudo em `try/catch`, storage bloqueado vira id em memória.
+3. O stub do `gtag` precisa empurrar `arguments` no `dataLayer`, não um array: o gtag.js ignora array.
+4. A exceção do glossário "Google Tag Manager" mora em `telas/TelaRastreamento.tsx`.
+5. Não é `featureKey` nem `clientToggleKey`: o Meu site continua no `site_builder`; Páginas de anúncio continua no `useClientToggle('landing_pages')` literal.

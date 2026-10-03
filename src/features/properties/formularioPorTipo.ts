@@ -1,5 +1,5 @@
-// O formulário de hoje com o tipo já marcado (Fase 4, entrega 2). O redesenho
-// dos dois cadastros é a entrega 3 (empreendimento) e a 7 (revenda).
+// O formulário de hoje com o tipo já marcado (Fase 4, entrega 2). A entrega 3
+// é a página de cadastro (cadastro/), que usa estas duas funções.
 import type { PropertyFormData } from '@/services/properties/propertiesService';
 import type { ListingKind } from './listingKind';
 
