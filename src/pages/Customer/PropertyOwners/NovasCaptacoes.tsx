@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, ClipboardList } from 'lucide-react';
+import { ClipboardList, Loader2, RefreshCw, Search } from 'lucide-react';
 import {
-  Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Label, Textarea,
+  Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Textarea,
 } from '@/components/ui/ds';
 import { EmptyState } from '@/components/base';
 import NoAccessState from '@/components/permissions/NoAccessState';
@@ -64,8 +64,8 @@ function Cartao({ r, ocupado, podeAprovar, aoAprovar, aoRecusar }: {
 
       {fotos.length > 0 && (
         <div className="flex gap-2">
-          {fotos.map(url => (
-            <img key={url} src={url} alt="" loading="lazy" className="h-16 w-16 rounded-md border object-cover" />
+          {fotos.map((url, i) => (
+            <img key={`${i}-${url}`} src={url} alt="" loading="lazy" className="h-16 w-16 rounded-md border object-cover" />
           ))}
         </div>
       )}
@@ -94,6 +94,7 @@ export default function NovasCaptacoes() {
   const [agindo, setAgindo] = useState<string | null>(null);
   const [recusando, setRecusando] = useState<string | null>(null);
   const [motivo, setMotivo] = useState('');
+  const [busca, setBusca] = useState('');
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -113,9 +114,14 @@ export default function NovasCaptacoes() {
   useEffect(() => { void carregar(); }, [carregar]);
 
   const aprovar = async (id: string) => {
+    if (agindo) return;
     setAgindo(id);
     try {
       const { property_id } = await propertyCaptureRequestsService.approve(id);
+      if (!property_id) {
+        toast.error('O imóvel não foi criado. Tente de novo.');
+        return;
+      }
       toast.success('Proprietário e imóvel criados. Complete o cadastro.');
       navigate(`/properties/${property_id}/editar`);
     } catch (e) {
@@ -128,7 +134,7 @@ export default function NovasCaptacoes() {
   const fecharRecusa = () => { setRecusando(null); setMotivo(''); };
 
   const recusar = async () => {
-    if (!recusando) return;
+    if (!recusando || agindo) return;
     const id = recusando;
     setAgindo(id);
     try {
@@ -142,16 +148,34 @@ export default function NovasCaptacoes() {
     }
   };
 
+  const termo = busca.trim().toLowerCase();
+  const visiveis = termo
+    ? pedidos.filter(r => [r.owner.name, r.owner.phone, r.address.city, r.address.full]
+        .some(v => v?.toLowerCase().includes(termo)))
+    : pedidos;
+
   if (semAcesso) return <NoAccessState />;
 
   return (
     <div className="mt-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="relative max-w-sm flex-1">
+          <Search aria-hidden className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input aria-label="Buscar captação" placeholder="Buscar por proprietário, telefone ou cidade..."
+            value={busca} onChange={e => setBusca(e.target.value)} className="pl-9" />
+        </div>
+        <Button variant="outline" size="sm" onClick={() => void carregar()} disabled={carregando} className="gap-1.5">
+          <RefreshCw className="h-4 w-4" />Atualizar
+        </Button>
+      </div>
       {carregando ? (
         <div className="flex h-40 items-center justify-center text-muted-foreground">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />Carregando...
         </div>
       ) : falhou ? (
         <EmptyState tipo="erro" aoTentarDeNovo={() => void carregar()} />
+      ) : pedidos.length > 0 && visiveis.length === 0 ? (
+        <EmptyState tipo="semResultado" aoLimparFiltros={() => setBusca('')} />
       ) : pedidos.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
@@ -159,11 +183,11 @@ export default function NovasCaptacoes() {
           description="Quando alguém preencher o formulário 'Anuncie seu imóvel' do seu site, o pedido aparece aqui."
         />
       ) : (
-        pedidos.map(r => (
+        visiveis.map(r => (
           <Cartao
             key={r.id}
             r={r}
-            ocupado={agindo === r.id}
+            ocupado={agindo !== null}
             podeAprovar={podeAprovar}
             aoAprovar={() => void aprovar(r.id)}
             aoRecusar={() => setRecusando(r.id)}

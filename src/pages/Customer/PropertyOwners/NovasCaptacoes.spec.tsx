@@ -11,7 +11,8 @@ vi.mock('@/services/propertyCaptureRequests/propertyCaptureRequestsService', asy
   const real = await importOriginal<typeof import('@/services/propertyCaptureRequests/propertyCaptureRequestsService')>();
   return { ...real, propertyCaptureRequestsService: { ...real.propertyCaptureRequestsService, ...cap } };
 });
-vi.mock('@/contexts/TenantFeaturesContext', () => ({ useFeature: () => true }));
+const feature = vi.hoisted(() => ({ on: true }));
+vi.mock('@/contexts/TenantFeaturesContext', () => ({ useFeature: () => feature.on }));
 import NovasCaptacoes from './NovasCaptacoes';
 
 function Onde() { return <p data-testid="onde">{useLocation().pathname}</p>; }
@@ -19,7 +20,7 @@ const pedido = { id: 'c1', status: 'received', source: 'site', transaction_type:
   owner: { name: 'Maria', phone: '11999998888' }, address: { city: 'Campinas', state: 'SP' }, expected_price: 450000,
   photo_urls: [], created_at: new Date().toISOString(), updated_at: '' };
 
-beforeEach(() => { vi.clearAllMocks(); cap.list.mockResolvedValue({ data: [pedido], meta: { total: 1 } }); });
+beforeEach(() => { vi.clearAllMocks(); feature.on = true; cap.list.mockResolvedValue({ data: [pedido], meta: { total: 1 } }); });
 
 const abrir = () => render(<MemoryRouter initialEntries={['/property-owners?aba=captacoes']}><Routes>
   <Route path="/property-owners" element={<NovasCaptacoes />} />
@@ -47,6 +48,46 @@ describe('NovasCaptacoes', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Aprovar e cadastrar' }));
     await waitFor(() => expect(toasts.error).toHaveBeenCalledWith('Pedido já recusado'));
     expect(screen.getByText('Maria')).toBeInTheDocument();
+  });
+
+  it('sem property_id na resposta avisa e não navega', async () => {
+    cap.approve.mockResolvedValue({});
+    abrir();
+    await userEvent.click(await screen.findByRole('button', { name: 'Aprovar e cadastrar' }));
+    await waitFor(() => expect(toasts.error).toHaveBeenCalled());
+    expect(screen.queryByTestId('onde')).toBeNull();
+  });
+
+  it('enquanto aprova, trava todos os botões e ignora segundo clique', async () => {
+    cap.list.mockResolvedValue({ data: [pedido, { ...pedido, id: 'c2', owner: { name: 'João' } }], meta: { total: 2 } });
+    cap.approve.mockReturnValue(new Promise(() => {}));
+    abrir();
+    const botoes = await screen.findAllByRole('button', { name: 'Aprovar e cadastrar' });
+    await userEvent.click(botoes[0]);
+    await waitFor(() => expect(botoes[1]).toBeDisabled());
+    expect(botoes[0]).toBeDisabled();
+    screen.getAllByRole('button', { name: 'Recusar' }).forEach(b => expect(b).toBeDisabled());
+    await userEvent.click(botoes[1]);
+    expect(cap.approve).toHaveBeenCalledTimes(1);
+  });
+
+  it('sem a feature de aprovar, o botão some', async () => {
+    feature.on = false;
+    abrir();
+    await screen.findByText('Maria');
+    expect(screen.queryByRole('button', { name: 'Aprovar e cadastrar' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Recusar' })).toBeInTheDocument();
+  });
+
+  it('busca filtra no cliente e Atualizar recarrega', async () => {
+    cap.list.mockResolvedValue({ data: [pedido, { ...pedido, id: 'c2', owner: { name: 'João' }, address: { city: 'Santos' } }], meta: { total: 2 } });
+    abrir();
+    await screen.findByText('João');
+    await userEvent.type(screen.getByLabelText('Buscar captação'), 'santos');
+    expect(screen.queryByText('Maria')).toBeNull();
+    expect(screen.getByText('João')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Atualizar' }));
+    await waitFor(() => expect(cap.list).toHaveBeenCalledTimes(2));
   });
 
   it('recusar exige motivo', async () => {

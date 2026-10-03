@@ -63,33 +63,12 @@ export const propertyCaptureRequestsService = {
 
   async approve(id: string): Promise<{ property_id: string }> {
     const res = await api.post(`${BASE}/${id}/approve`);
-    return res.data as { property_id: string };
+    // Envelope do servidor: { success, data: { ...pedido, property_id }, meta }.
+    return (res.data as { data: { property_id: string } }).data;
   },
 
   async reject(id: string, reason: string): Promise<PropertyCaptureRequest> {
     const res = await api.post(`${BASE}/${id}/reject`, { reason });
     return (res.data as { data: PropertyCaptureRequest }).data;
   },
-
-  async assign(id: string, userId: string): Promise<PropertyCaptureRequest> {
-    const res = await api.post(`${BASE}/${id}/assign`, { user_id: userId });
-    return (res.data as { data: PropertyCaptureRequest }).data;
-  },
-};
-
-// Estados reais do servidor (received/in_review/approved/rejected/withdrawn).
-export const CAPTURE_STATUS_LABELS: Record<string, string> = {
-  received:  'Recebido',
-  in_review: 'Em análise',
-  approved:  'Aprovado',
-  rejected:  'Recusado',
-  withdrawn: 'Retirado',
-};
-
-export const CAPTURE_STATUS_COLORS: Record<string, string> = {
-  received:  'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  in_review: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  approved:  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  rejected:  'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  withdrawn: 'bg-muted text-muted-foreground',
 };
