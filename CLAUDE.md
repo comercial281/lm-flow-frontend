@@ -5538,3 +5538,46 @@ Pedido do Tony: quando um fluxo do construtor ou um follow-up está rodando pra 
 - **Botão "Parar", não "Pausar":** encerra aquele fluxo (ou a fila do follow-up) só pra esse lead, com confirmação. Pausar exigiria decidir o que fazer com a espera que vence durante a pausa; ninguém pediu.
 - **Dados:** fluxos em `GET /flow_automation_instances?conversation_id=` e `POST /flow_automation_instances/:id/stop` (backend `lm-flow`, PR "Conversa: ver e parar o fluxo"); follow-up reaproveita `/followup_jobs` do card do lead. Relê quando a lista de mensagens muda e a cada minuto. Erro de leitura = faixa some.
 - **Fora (decisão em aberto):** parar sozinho quando o corretor escreve. Hoje só pelo botão; o follow-up continua com o comportamento de antes.
+
+## A IA retoma a pergunta antes do follow-up (desde 2026-10-03)
+
+Pedido do dono do produto: quando a IA pergunta e o lead some no meio da conversa,
+ela manda outra mensagem pouco depois, e outra mais tarde; sem resposta, o lead
+segue pro follow-up automático.
+
+O que aparece na tela, em *IA Vendedora → Configuração → Follow-up automático*:
+
+- **Bloco *Antes do follow-up: reengajamento***, logo depois de *De quais leads ela
+  vai atrás*. Chave (estreia desligada) e dois campos: *1ª mensagem depois de [2] h
+  sem resposta* e *2ª mensagem [8] h depois da 1ª* (1 a 48).
+- Na conversa, a retomada aparece com o selo azul **🤖 Reengajamento** no lugar de
+  *Atendente* (o follow-up é o amarelo).
+- No Diagnóstico, cada retomada é uma linha do tipo *Reengajamento*.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **Só quem conversou e parou no meio.** Quem nunca respondeu é do *Robô Sem
+  Resposta*, em Automações.
+- **É uma etapa do follow-up**, não uma automação: só funciona com ele ligado, segue
+  o MESMO horário (*Quando o follow-up pode sair*), o mesmo gotejamento e o mesmo
+  público. Nada de horário próprio: seriam duas verdades sobre quando a IA toma a
+  iniciativa. Com o padrão 9h–17h, a retomada pode escorregar pra manhã seguinte;
+  quem quiser no mesmo dia alarga o horário.
+- **A 2ª conta da 1ª**, não da pergunta original (espaça mais as mensagens, o que
+  protege o número).
+- **Mora na IA, não no construtor**: quem escreve é a IA, com o contexto, e o
+  construtor não sabe que ela perguntou alguma coisa. Ponto de encaixe na sprint 3
+  das automações (Follow-up no construtor).
+- **A retomada não puxa visita** (isso é do follow-up): retoma o que ficou no ar; a
+  2ª oferece uma saída fácil.
+- **Selo só pra retomada.** Automação continua sem selo.
+
+Armadilhas:
+
+1. **Os três campos PRECISAM estar no `saveAgent`** (com `??`). Fora da lista, a
+   tela diz *Salvo* e o servidor nunca recebe.
+2. **O estado não é gravado na conversa**: o servidor lê das mensagens depois da
+   última fala do lead (`SalesAgents::ReengagementState`). A marca
+   `content_attributes.reengagement` é o estado — não remover nem reaproveitar.
+3. **Em *Só follow-up* o reengajamento não age** (a IA não responde ao vivo); o
+   bloco avisa em vez de esconder.
