@@ -1,7 +1,7 @@
 // "Onde divulgar" (Fase 4, Imóveis, entrega 3). Depois de criar o imóvel é o
 // passo 2 (?passo=divulgar); na edição é o cartão da seção. Nos dois, cada
 // clique grava na hora — não há botão Salvar. Erro: volta a chave e avisa.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button, Switch } from '@/components/ui/ds';
@@ -12,10 +12,12 @@ import {
   portalsService, type Portal, type PortalAdType, type PortalPublication,
 } from '@/services/portals/portalsService';
 import { extractError } from '@/utils/apiHelpers';
-import { estourosDoErro, mensagemDeEstouro, temTiposDeAnuncio, tipoBase } from '@/features/portals/adPlan';
+import { contarPorTipo, estourosDoErro, mensagemDeEstouro, temTiposDeAnuncio, tipoBase } from '@/features/portals/adPlan';
 import { ABA_NA_URL, tipoDoImovel } from '@/features/properties/listingKind';
 
 const ROTA_DOS_PORTAIS = '/settings/portals';
+// Nome da tela, como aparece no menu (nome próprio, não título em Caixa Alta).
+const TELA_DOS_PORTAIS = 'Integrações';
 
 type Marca = 'published_on_site' | 'ai_enabled' | 'featured';
 
@@ -27,8 +29,6 @@ interface EstadoDoPortal {
   /** Modo legado (servidor sem `ad_types`): ids e destaques. */
   ids: string[];
   featuredIds: string[];
-  /** Tipo deste imóvel quando a tela abriu: a cota do servidor já o conta. */
-  tipoInicial: string | null;
   salvando: boolean;
 }
 
@@ -41,7 +41,7 @@ interface Props {
 
 const mensagemDe = (err: unknown, reserva: string) => extractError(err).message || reserva;
 
-// Tipo desconhecido do catálogo conta no base (é o que o servidor faz).
+// Tipo que o catálogo do portal conhece; o desconhecido conta no base (é o que o servidor faz).
 function tipoEfetivo(adTypes: PortalAdType[], adType: string | null | undefined): string | null {
   if (adType == null) return null;
   return adTypes.some(t => t.key === adType) ? adType : (tipoBase(adTypes)?.key ?? null);
@@ -54,7 +54,10 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
     ai_enabled: imovel.ai_enabled ?? true,
     featured: imovel.featured ?? false,
   });
-  const [salvandoMarca, setSalvandoMarca] = useState<Marca | null>(null);
+  const [salvandoMarca, setSalvandoMarca] = useState<Record<Marca, boolean>>({ published_on_site: false, ai_enabled: false, featured: false });
+  // O imóvel mais recente que esta tela conhece: cada chave mexe só no SEU campo, e
+  // respostas fora de ordem não desfazem a chave vizinha.
+  const imovelAtual = useRef(imovel);
   const [estados, setEstados] = useState<EstadoDoPortal[] | null>(null);
   const [naoConectados, setNaoConectados] = useState(0);
   const [erroDeCarga, setErroDeCarga] = useState(false);
@@ -66,16 +69,13 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
         const todos = await portalsService.list();
         const conectados = todos.filter(p => p.connected && p.is_enabled);
         const lidos = await Promise.all(conectados.map(async (portal): Promise<EstadoDoPortal> => {
-          const vazio = { portal, pubs: [], ids: [], featuredIds: [], tipoInicial: null, salvando: false };
+          const vazio = { portal, pubs: [], ids: [], featuredIds: [], salvando: false };
           try {
             const d = await portalsService.get(portal.portal_key);
-            const tipos = portal.ad_types ?? [];
             const pubs = d.publications ?? [];
-            const meu = pubs.find(p => p.property_id === imovel.id);
             return {
               ...vazio, erro: false, pubs,
               ids: d.property_ids ?? [], featuredIds: d.featured_property_ids ?? [],
-              tipoInicial: tipoEfetivo(tipos, meu?.ad_type),
             };
           } catch {
             return { ...vazio, erro: true };
@@ -94,34 +94,63 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
   const mudarMarca = async (campo: Marca, valor: boolean) => {
     const anterior = marcas[campo];
     setMarcas(m => ({ ...m, [campo]: valor }));
-    setSalvandoMarca(campo);
+    setSalvandoMarca(m => ({ ...m, [campo]: true }));
     try {
-      aoMudarImovel(await propertiesService.update(imovel.id, { [campo]: valor }));
+      const salvo = await propertiesService.update(imovel.id, { [campo]: valor });
+      imovelAtual.current = { ...imovelAtual.current, [campo]: salvo[campo] ?? valor };
+      aoMudarImovel(imovelAtual.current);
     } catch (err) {
       setMarcas(m => ({ ...m, [campo]: anterior }));
       toast.error(mensagemDe(err, 'Não foi possível salvar. Tente de novo.'));
     } finally {
-      setSalvandoMarca(null);
+      setSalvandoMarca(m => ({ ...m, [campo]: false }));
     }
   };
 
   const mexer = (key: string, patch: Partial<EstadoDoPortal>) =>
     setEstados(prev => prev && prev.map(e => (e.portal.portal_key === key ? { ...e, ...patch } : e)));
 
+  // O servidor SUBSTITUI a lista do portal: o que faltar nela é pausado. Por isso
+  // a lista nova sai de uma leitura feita AGORA, não da de quando a tela abriu
+  // (outro imóvel pode ter entrado no portal nesse meio-tempo).
   // `proximo` é o tipo novo deste imóvel; nulo = tirar do portal.
   const gravar = async (e: EstadoDoPortal, proximo: string | null) => {
     const key = e.portal.portal_key;
-    const legado = !temTiposDeAnuncio(e.portal);
-    const antes = { pubs: e.pubs, ids: e.ids, featuredIds: e.featuredIds };
-    const outras = e.pubs.filter(p => p.property_id !== imovel.id);
-    const pubs = proximo === null ? outras : [...outras, { property_id: imovel.id, ad_type: proximo }];
-    const ids = proximo === null ? e.ids.filter(i => i !== imovel.id) : [...new Set([...e.ids, imovel.id])];
-    const featuredIds = e.featuredIds.filter(i => i !== imovel.id);
-    mexer(key, legado ? { ids, featuredIds, salvando: true } : { pubs, salvando: true });
+    const antes = { portal: e.portal, pubs: e.pubs, ids: e.ids, featuredIds: e.featuredIds };
+    mexer(key, { salvando: true });
     try {
-      if (legado) await portalsService.updatePublicationsLegacy(key, ids, featuredIds);
-      else await portalsService.updatePublications(key, pubs, {});
-      mexer(key, { salvando: false });
+      const fresco = await portalsService.get(key);
+      const tipos = fresco.ad_types ?? e.portal.ad_types ?? [];
+      const legado = tipos.length === 0;
+      const freshPubs = fresco.publications ?? [];
+      const outras = freshPubs.filter(p => p.property_id !== imovel.id);
+      const freshIds = fresco.property_ids ?? [];
+      const freshDestaques = fresco.featured_property_ids ?? [];
+      if (!legado && proximo !== null) {
+        // Entrar num tipo cheio o servidor recusa: avisa aqui, sem requisição.
+        const alvo = tipos.find(t => t.key === proximo);
+        const ocupados = contarPorTipo(tipos, new Map(outras.map(p => [p.property_id, p.ad_type])));
+        if (alvo && alvo.limit != null && (ocupados[alvo.key] ?? 0) >= alvo.limit) {
+          mexer(key, { portal: { ...e.portal, ad_types: tipos }, pubs: freshPubs, ids: freshIds, featuredIds: freshDestaques, salvando: false });
+          toast.error(`${alvo.label} está com a cota cheia no ${e.portal.name} (${alvo.limit} de ${alvo.limit}).`);
+          return;
+        }
+      }
+      const pubs = proximo === null ? outras : [...outras, { property_id: imovel.id, ad_type: proximo }];
+      const ids = proximo === null ? freshIds.filter(i => i !== imovel.id) : [...new Set([...freshIds, imovel.id])];
+      const featuredIds = freshDestaques.filter(i => i !== imovel.id);
+      // Quem não ENTRA num tipo cheio (desligar, ou mudar para um com vaga) segue
+      // mesmo com o portal já acima da cota: sem a confirmação o servidor recusaria.
+      const res = legado
+        ? await portalsService.updatePublicationsLegacy(key, ids, featuredIds)
+        : await portalsService.updatePublications(key, pubs, { confirmOverflow: true });
+      mexer(key, {
+        portal: { ...e.portal, ad_types: res?.ad_types ?? tipos },
+        pubs: legado ? [] : (res?.publications ?? pubs),
+        ids: res?.property_ids ?? ids,
+        featuredIds: res?.featured_property_ids ?? featuredIds,
+        salvando: false,
+      });
     } catch (err) {
       mexer(key, { ...antes, salvando: false });
       const estouros = estourosDoErro(err);
@@ -135,6 +164,10 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
     <Link to={ROTA_DOS_PORTAIS} className="text-primary hover:underline">conecte em Integrações →</Link>
   );
 
+  const linkConectar = (
+    <Link to={ROTA_DOS_PORTAIS} className="text-primary hover:underline">{`Conecte em ${TELA_DOS_PORTAIS} →`}</Link>
+  );
+
   const linhaDoPortal = (e: EstadoDoPortal) => {
     const { portal } = e;
     const tipos = portal.ad_types ?? [];
@@ -143,9 +176,8 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
     const ligado = legado ? e.ids.includes(imovel.id) : !!meu;
     const atual = tipoEfetivo(tipos, meu?.ad_type);
     const tipoAtual = tipos.find(t => t.key === atual);
-    // A cota do servidor já conta este imóvel no tipo em que a tela abriu.
-    const contar = (t: PortalAdType) =>
-      t.count + (atual === t.key ? 1 : 0) - (e.tipoInicial === t.key ? 1 : 0);
+    const contagens = contarPorTipo(tipos, new Map(e.pubs.map(p => [p.property_id, p.ad_type])));
+    const contar = (t: PortalAdType) => contagens[t.key] ?? 0;
     const cheio = (t: PortalAdType) => t.limit != null && contar(t) >= t.limit;
     return (
       <div key={portal.portal_key} data-testid={`portal-${portal.portal_key}`} className="flex flex-wrap items-center gap-3 py-3">
@@ -207,7 +239,7 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
             <Switch
               aria-label={rotulo}
               checked={marcas[campo]}
-              disabled={salvandoMarca === campo}
+              disabled={salvandoMarca[campo]}
               onCheckedChange={v => mudarMarca(campo, v)}
             />
           </div>
@@ -219,7 +251,7 @@ export default function OndeDivulgar({ imovel, modo, aoMudarImovel, aoConcluir }
         ) : estados === null ? (
           <p className="pt-3 text-sm text-muted-foreground">Carregando portais...</p>
         ) : estados.length === 0 ? (
-          <p className="pt-3 text-sm text-muted-foreground">Nenhum portal conectado. {linkIntegracoes}</p>
+          <p className="pt-3 text-sm text-muted-foreground">Nenhum portal conectado. {linkConectar}</p>
         ) : (
           <>
             {estados.map(linhaDoPortal)}

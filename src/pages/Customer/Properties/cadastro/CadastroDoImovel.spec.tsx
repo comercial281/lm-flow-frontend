@@ -110,6 +110,10 @@ describe('CadastroDoImovel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(svc.update).toHaveBeenCalledWith('e1', expect.not.objectContaining({ listing_kind: expect.anything() })));
     expect(screen.getByTestId('onde')).toHaveTextContent('/properties?aba=revenda&importar=1');
+    const enviado = svc.update.mock.calls[0][1];
+    expect(enviado).not.toHaveProperty('featured');
+    expect(enviado).not.toHaveProperty('published_on_site');
+    expect(enviado).not.toHaveProperty('ai_enabled');
   });
 
   it('?passo=divulgar mostra só o Onde divulgar, sem o formulário nem a barra', async () => {

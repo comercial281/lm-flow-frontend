@@ -135,14 +135,9 @@ function Cadastro() {
     propertiesService.get(editandoId).then(setImovel).catch(() => { /* leitura de fundo */ });
   };
 
-  // "Onde divulgar" grava na hora. O formulário (e o que ele considera "salvo")
-  // acompanha, senão o Salvar da página devolveria o valor antigo.
-  const aoMudarImovelDivulgado = (p: Property) => {
-    setImovel(p);
-    const marcas = { featured: p.featured ?? false, published_on_site: p.published_on_site ?? false, ai_enabled: p.ai_enabled ?? true };
-    setForm(prev => ({ ...prev, ...marcas }));
-    setInicial(prev => ({ ...prev, ...marcas }));
-  };
+  // "Onde divulgar" grava na hora e já devolve o imóvel com a mudança; o Salvar
+  // da página não manda mais essas três marcas.
+  const aoMudarImovelDivulgado = (p: Property) => setImovel(p);
 
   const voltarParaLista = () => {
     const aba = ABA_NA_URL[kind];
@@ -198,6 +193,10 @@ function Cadastro() {
       // listing_kind só vai na criação: salvar não desfaz um "Mover para…" feito em outro lugar.
       const semTipo: Partial<PropertyFormData> = payloadDoCadastro(formLimpo(), { rascunho: false });
       delete semTipo.listing_kind;
+      // Destaque, site e IA são do cartão "Onde divulgar", que grava na hora.
+      delete semTipo.featured;
+      delete semTipo.published_on_site;
+      delete semTipo.ai_enabled;
       await propertiesService.update(imovel.id, semTipo);
       toast.success('Imóvel atualizado');
       voltarParaLista();

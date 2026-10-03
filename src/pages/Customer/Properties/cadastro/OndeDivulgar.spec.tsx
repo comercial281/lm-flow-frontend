@@ -27,7 +27,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   portais.list.mockResolvedValue([zap, olx]);
   portais.get.mockResolvedValue({ ...zap, publications: [{ property_id: 'x', ad_type: 'standard' }] });
-  portais.updatePublications.mockResolvedValue({ ...zap, publications: [] });
+  portais.updatePublications.mockImplementation(async (_k: string, pubs: unknown) => ({ ...zap, publications: pubs }));
 });
 
 const abrir = (modo: 'passo' | 'cartao' = 'passo', aoMudarImovel = vi.fn()) =>
@@ -48,7 +48,52 @@ describe('OndeDivulgar', () => {
       [{ property_id: 'x', ad_type: 'standard' }, { property_id: 'p1', ad_type: 'standard' }], expect.anything()));
   });
 
+  it('ligar usa a leitura de agora, não a da abertura (não pausa quem entrou no meio)', async () => {
+    portais.get.mockResolvedValueOnce({ ...zap, publications: [{ property_id: 'x', ad_type: 'standard' }] })
+      .mockResolvedValue({ ...zap, publications: [{ property_id: 'x', ad_type: 'standard' }, { property_id: 'B', ad_type: 'standard' }] });
+    abrir();
+    await userEvent.click(await screen.findByRole('switch', { name: 'Publicar no ZAP' }));
+    await waitFor(() => expect(portais.updatePublications).toHaveBeenCalledWith('zap',
+      [{ property_id: 'x', ad_type: 'standard' }, { property_id: 'B', ad_type: 'standard' }, { property_id: 'p1', ad_type: 'standard' }], expect.anything()));
+  });
+
+  it('portal já acima da cota: desligar este imóvel segue com confirmOverflow', async () => {
+    portais.get.mockResolvedValue({ ...zap, publications: [
+      { property_id: 'p1', ad_type: 'premium' }, { property_id: 'y', ad_type: 'premium' }, { property_id: 'z', ad_type: 'premium' }] });
+    abrir();
+    await userEvent.click(await screen.findByRole('switch', { name: 'Publicar no ZAP' }));
+    await waitFor(() => expect(portais.updatePublications).toHaveBeenCalledWith('zap',
+      [{ property_id: 'y', ad_type: 'premium' }, { property_id: 'z', ad_type: 'premium' }], { confirmOverflow: true }));
+  });
+
+  it('contador mostra "2 de 2" em vermelho quando cheio e acompanha a troca de tipo', async () => {
+    const portal = { ...zap, ad_types: [
+      { key: 'standard', label: 'Simples', feed_value: 'S', base: true, limit: 5, count: 0 },
+      { key: 'premium', label: 'Destaque', feed_value: 'P', limit: 2, count: 0 }] };
+    portais.list.mockResolvedValue([portal]);
+    portais.get.mockResolvedValue({ ...portal, publications: [{ property_id: 'p1', ad_type: 'premium' }, { property_id: 'y', ad_type: 'premium' }] });
+    portais.updatePublications.mockImplementation(async (_k: string, pubs: unknown) => ({ ...portal, publications: pubs }));
+    abrir();
+    const cheio = await screen.findByText('2 de 2');
+    expect(cheio).toHaveClass('text-destructive');
+    await userEvent.selectOptions(within(screen.getByTestId('portal-zap')).getByRole('combobox'), 'standard');
+    const vaga = await screen.findByText('1 de 5');
+    expect(vaga).not.toHaveClass('text-destructive');
+  });
+
+  it('ligar com o tipo base cheio avisa e não faz requisição', async () => {
+    const portal = { ...zap, ad_types: [{ key: 'standard', label: 'Simples', feed_value: 'S', base: true, limit: 1, count: 1 }] };
+    portais.list.mockResolvedValue([portal]);
+    portais.get.mockResolvedValue({ ...portal, publications: [{ property_id: 'x', ad_type: 'standard' }] });
+    abrir();
+    await userEvent.click(await screen.findByRole('switch', { name: 'Publicar no ZAP' }));
+    await waitFor(() => expect(avisos.error).toHaveBeenCalledWith(expect.stringContaining('cota cheia')));
+    expect(portais.updatePublications).not.toHaveBeenCalled();
+  });
+
   it('tipo com cota cheia fica bloqueado', async () => {
+    portais.get.mockResolvedValue({ ...zap, publications: [
+      { property_id: 'x', ad_type: 'standard' }, { property_id: 'y', ad_type: 'premium' }, { property_id: 'z', ad_type: 'premium' }] });
     abrir();
     await userEvent.click(await screen.findByRole('switch', { name: 'Publicar no ZAP' }));
     const linha = screen.getByTestId('portal-zap');
@@ -86,8 +131,8 @@ describe('OndeDivulgar', () => {
   it('sem portal conectado manda para Integrações', async () => {
     portais.list.mockResolvedValue([olx]);
     abrir();
-    expect(await screen.findByText(/Nenhum portal conectado/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Integrações/ })).toHaveAttribute('href', '/settings/portals');
+    expect(await screen.findByText('Nenhum portal conectado.', { exact: false })).toHaveTextContent('Nenhum portal conectado. Conecte em Integrações →');
+    expect(screen.getByRole('link', { name: 'Conecte em Integrações →' })).toHaveAttribute('href', '/settings/portals');
   });
 
   it('site grava na hora e avisa o pai', async () => {
