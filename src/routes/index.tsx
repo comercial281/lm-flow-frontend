@@ -96,7 +96,6 @@ const LeadAdsForms = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadA
 const FollowupSequences = lazyWithRetry(() => import('@/pages/Customer/Settings/FollowupSequences').then(m => ({ default: m.FollowupSequences })));
 const LandingPageEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingPageEditorPage'));
 const LandingByIdEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingByIdEditorPage'));
-const PropertyTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/PropertyTemplateEditor/PropertyTemplateEditorPage'));
 const SimulatorDemo = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/SimulatorDemoPage'));
 const LandingPublic = lazyWithRetry(() => import('@/pages/Public/LandingPublicPage'));
 const LandingResult = lazyWithRetry(() => import('@/pages/Public/LandingResultPage'));
@@ -1342,17 +1341,8 @@ const AppRouter = () => {
             }
           />
 
-          {/* Editor do template único da página de imóvel (portal Produto A). */}
-          <Route
-            path="/properties/template-imovel"
-            element={
-              <PrivateRoute>
-                <CustomerRoute>
-                  <PropertyTemplateEditor />
-                </CustomerRoute>
-              </PrivateRoute>
-            }
-          />
+          {/* Editor de blocos da página do imóvel aposentado: vai para o Meu site. */}
+          <Route path="/properties/template-imovel" element={<Navigate to="/settings/site-builder" replace />} />
 
           <Route
             path="/simulador"
