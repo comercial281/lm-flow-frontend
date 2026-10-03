@@ -5578,15 +5578,23 @@ Decisões (não reabrir sem o dono pedir):
 - **O aviso de fora do horário não é resposta.** O lead que escreveu fora do
   horário e só recebeu o aviso não ganha retomada: quem está esperando é ele.
 - **Se o lead volta a falar enquanto a retomada é escrita**, ela não sai e a IA
-  responde a ele normalmente (no Diagnóstico: *O lead respondeu enquanto a
-  retomada era escrita*).
+  responde a ele como responde qualquer mensagem (com a mesma espera pra juntar as
+  mensagens seguidas). No Diagnóstico a linha *Reengajamento* fica como *Respondeu*,
+  porque o texto foi escrito e pago, e mostra embaixo o motivo de não ter saído:
+  *O lead respondeu enquanto a retomada era escrita*. No painel da conversa aparece
+  o mesmo motivo. Se ele fala no instante do envio, a retomada já saiu, e a IA
+  responde a ele logo depois.
 
 Armadilhas:
 
 1. **Os três campos PRECISAM estar no `saveAgent`** (com `??`). Fora da lista, a
    tela diz *Salvo* e o servidor nunca recebe.
 2. **O estado não é gravado na conversa**: o servidor lê das mensagens depois da
-   última fala do lead (`SalesAgents::ReengagementState`). A marca
-   `content_attributes.reengagement` é o estado — não remover nem reaproveitar.
+   última fala do lead (`SalesAgents::ReengagementState`). O estado é a mensagem
+   com a marca `content_attributes.reengagement` MAIS as linhas *Reengajamento*
+   entregues do Diagnóstico (`sales_agent_runs`, `kind = 'reengage'`): o teto de 2
+   retomadas e a liberação do follow-up leem essas linhas, porque a bolha marcada
+   pode não ser gravada mesmo com a mensagem entregue. Nenhum dos dois pode ser
+   removido nem reaproveitado.
 3. **Em *Só follow-up* o reengajamento não age** (a IA não responde ao vivo); o
    bloco avisa em vez de esconder.

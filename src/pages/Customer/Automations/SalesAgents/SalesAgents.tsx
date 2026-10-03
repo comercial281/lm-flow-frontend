@@ -5573,7 +5573,10 @@ function DiagnosticsTab({ agent }: { agent: SalesAgent }) {
                     <span className="text-muted-foreground">· {RUN_KIND_LABEL[run.kind] ?? run.kind}</span>
                     <span className="text-muted-foreground">· {new Date(run.created_at).toLocaleString('pt-BR')}</span>
                   </div>
-                  {run.status !== 'replied' && run.reason_label && (
+                  {/* Respondeu mas NÃO enviou também tem motivo quando foi de propósito
+                      (o lead voltou a falar no meio da retomada, resposta vazia): sem
+                      ele a linha fica verde, "Respondeu", e ninguém entende o custo. */}
+                  {run.reason_label && (run.status !== 'replied' || (run.delivered === false && run.skip_reason)) && (
                     <div className="text-muted-foreground">{run.reason_label}</div>
                   )}
                   {/* Turno PULADO carrega o detalhe concreto do bloqueio (qual mensagem
@@ -5584,7 +5587,7 @@ function DiagnosticsTab({ agent }: { agent: SalesAgent }) {
                       {run.error_class === 'Detalhe' ? run.error_message : `${run.error_class}: ${run.error_message}`}
                     </div>
                   )}
-                  {run.status === 'replied' && !run.delivered && (
+                  {run.status === 'replied' && !run.delivered && !run.skip_reason && (
                     <div className="text-amber-600">A resposta foi gerada mas o WhatsApp não aceitou o envio.</div>
                   )}
                 </div>

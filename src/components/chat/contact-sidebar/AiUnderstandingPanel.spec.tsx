@@ -63,4 +63,43 @@ describe('AiUnderstandingPanel', () => {
     expect(screen.getByText(/Respondeu o lead/)).toBeTruthy();
     expect(screen.queryByText(/· Nenhuma IA vinculada/)).toBeNull();
   });
+
+  // Gerou (o modelo foi pago) mas não enviou DE PROPÓSITO — o lead voltou a falar
+  // no meio, ou a IA devolveu vazio. Não é falha do WhatsApp: mostra o motivo.
+  it('gerou e não enviou com motivo: mostra o motivo, não o texto genérico', async () => {
+    const report = semIa('idle');
+    report.why = 'A IA está acompanhando.';
+    report.runs.push({
+      status: 'replied',
+      delivered: false,
+      reason: 'lead_replied_meanwhile',
+      reason_label: 'O lead respondeu enquanto a retomada era escrita; ela não foi enviada e a IA respondeu a ele',
+      error_message: null,
+      created_at: '2026-10-02T17:00:00Z',
+    });
+    getSalesAgentStatus.mockResolvedValue(report);
+    render(<AiUnderstandingPanel conversation={conversa} embutido />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Histórico e próximos passos/ }));
+    expect(screen.getByText(/O lead respondeu enquanto a retomada era escrita/)).toBeTruthy();
+    expect(screen.queryByText(/não conseguiu enviar/)).toBeNull();
+  });
+
+  it('gerou e não enviou sem motivo: continua o texto genérico', async () => {
+    const report = semIa('idle');
+    report.why = 'A IA está acompanhando.';
+    report.runs.push({
+      status: 'replied',
+      delivered: false,
+      reason: null,
+      reason_label: null,
+      error_message: null,
+      created_at: '2026-10-02T17:00:00Z',
+    });
+    getSalesAgentStatus.mockResolvedValue(report);
+    render(<AiUnderstandingPanel conversation={conversa} embutido />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Histórico e próximos passos/ }));
+    expect(screen.getByText(/Gerou resposta, mas não conseguiu enviar/)).toBeTruthy();
+  });
 });
