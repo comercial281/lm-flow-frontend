@@ -21,6 +21,7 @@ import {
   type AdOrigin,
   type FormOrigin,
   type EvolutionInstance,
+  WAIT_ACTION_NOTICE,
 } from '@/services/leadAutomation/leadAutomationService';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import SendFromField from '@/components/numbers/SendFromField';
@@ -1145,7 +1146,7 @@ export function ActionEditor({ action, onChange, resources }: ActionEditorProps)
     // ----- wait -----
     case 'wait':
       return (
-        <Field label="Aguardar (minutos) *">
+        <Field label="Aguardar (minutos) *" hint={`${WAIT_ACTION_NOTICE}. Pra esperar de verdade, use o construtor de fluxos.`}>
           <Input
             type="number"
             min={1}
@@ -1433,7 +1434,7 @@ export function formatActionSummary(
     case 'assign_via_roleta':
       return 'Distribui via roleta';
     case 'wait':
-      return p.minutes ? `Aguarda ${p.minutes} min` : '(delay nao definido)';
+      return WAIT_ACTION_NOTICE;
     case 'notify_broker':
       return p.message ? `Corretor: "${String(p.message).slice(0, 50)}..."` : '(mensagem vazia)';
     case 'notify_gestor':

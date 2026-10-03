@@ -9,9 +9,24 @@ export type FlowNodeKind =
   | 'wait' | 'filter_label' | 'wait_for_reply' | 'condition'
   | 'webhook' | 'http_call';
 
+// Gatilho do fluxo (sprint 1 das Automações, 02/10/2026): o MESMO evento e o
+// MESMO formato de condição das regras de Automações (LeadAutomationRule::TRIGGERS),
+// tirando os que não disparam. `flow_called` é interno (bloco Conexão de fluxo).
 export type FlowTriggerEvent =
-  | 'contact_created' | 'form_submitted' | 'lead_ads' | 'tag_added' | 'tag_removed'
-  | 'stage_changed' | 'pipeline_changed' | 'reply_received' | 'keyword' | 'flow_called' | 'no_reply';
+  | 'lead.created' | 'lead.campaign_received'
+  | 'lead.roleta_accepted' | 'lead.message_received'
+  | 'lead.stage_changed' | 'lead.tag_added'
+  | 'lead.visit_scheduled' | 'lead.visit_completed'
+  | 'lead.visit_reminder_24h' | 'lead.visit_reminder_1h' | 'lead.visit_reminder_15min'
+  | 'lead.interest_created'
+  | 'flow_called';
+
+/** Mesmo formato das condições das regras: { field, operator, value }. */
+export interface FlowTriggerCondition {
+  field: string;
+  operator: string;
+  value: string | string[];
+}
 
 export interface FlowNodeConfig {
   [key: string]: unknown;
@@ -42,14 +57,12 @@ export interface FlowAutomationNode {
   steps: FlowAutomationStep[];
 }
 
+// Contrato (spec 02/10): o backend devolve SEMPRE `{ event, conditions }`. O
+// formato antigo (`contact_created`, `stage_id` solto…) só é lido por
+// normalizeTrigger, por garantia.
 export interface FlowAutomationTrigger {
-  event: FlowTriggerEvent | '';
-  stage_id?: string;
-  pipeline_id?: string;
-  label?: string;
-  source?: string;
-  form_id?: string;
-  keyword?: string;
+  event: FlowTriggerEvent | string;
+  conditions?: FlowTriggerCondition[];
   callers?: string[] | null;
   [key: string]: unknown;
 }
@@ -109,7 +122,7 @@ export const FLOW_NODE_DEFS: FlowNodeDef[] = [
   { kind: 'send_email', label: 'Mandar e-mail', group: 'message', canFail: true, defaultConfig: { subject: '', text: '' } },
   { kind: 'notify_group', label: 'Avisar no WhatsApp (grupo ou número)', group: 'notify', canFail: true, defaultConfig: { text: '', targets: [] } },
   { kind: 'send_capi', label: 'Enviar evento pra Meta (CAPI)', group: 'notify', canFail: true, defaultConfig: { event_name: 'Lead' } },
-  { kind: 'notify_bell', label: 'Avisar no sino do Hub', group: 'notify', canFail: false, defaultConfig: { user_id: '' } },
+  { kind: 'notify_bell', label: 'Avisar no sino', group: 'notify', canFail: false, defaultConfig: { user_id: '' } },
   { kind: 'sequence', label: 'Sequência de follow-up', group: 'message', canFail: false, defaultConfig: {} },
   { kind: 'funnel', label: 'Disparar funil de mensagens', group: 'message', canFail: true, defaultConfig: { funnel_id: '' } },
   { kind: 'call_flow', label: 'Conexão de fluxo', group: 'control', canFail: false, defaultConfig: { flow_automation_id: '' } },
@@ -123,8 +136,8 @@ export const FLOW_NODE_DEFS: FlowNodeDef[] = [
   { kind: 'set_next_action', label: 'Marcar próxima ação', group: 'contact', canFail: false, defaultConfig: { text: '', in_hours: 24 } },
   { kind: 'log_event', label: 'Escrever na linha do tempo', group: 'contact', canFail: false, defaultConfig: { detail: '' } },
   { kind: 'wait', label: 'Esperar', group: 'control', canFail: false, defaultConfig: { mode: 'interval', minutes: 1440 } },
-  { kind: 'filter_label', label: 'Só continuar se', group: 'control', canFail: false, defaultConfig: { labels: [], mode: 'all' } },
-  { kind: 'wait_for_reply', label: 'Aguardar resposta', group: 'control', canFail: false, defaultConfig: { minutes: 1440 } },
+  { kind: 'filter_label', label: 'Só continuar se', group: 'control', canFail: false, defaultConfig: { criterion: 'has_label', label: '', labels: [], mode: 'all' } },
+  { kind: 'wait_for_reply', label: 'Aguardar resposta', group: 'control', canFail: false, defaultConfig: { minutes: 1440, indefinite: false } },
   { kind: 'condition', label: 'Se / senão', group: 'control', canFail: false, defaultConfig: { criterion: 'replied', window_hours: 24 } },
   { kind: 'webhook', label: 'Avisar um sistema de fora', group: 'notify', canFail: true, defaultConfig: { event_name: '' } },
   { kind: 'http_call', label: 'Chamar uma API', group: 'notify', canFail: true, defaultConfig: { method: 'POST', url: '', headers: '', body: '' } },
@@ -135,16 +148,11 @@ export const FLOW_NODE_DEF_BY_KIND: Record<FlowNodeKind, FlowNodeDef> = FLOW_NOD
   {} as Record<FlowNodeKind, FlowNodeDef>
 );
 
-export const FLOW_TRIGGER_LABELS: Record<FlowTriggerEvent, string> = {
-  contact_created: 'Quando um contato é criado',
-  form_submitted: 'Quando um formulário é respondido',
-  lead_ads: 'Quando chega um lead do Meta (Lead Ads)',
-  tag_added: 'Quando uma etiqueta é aplicada',
-  tag_removed: 'Quando uma etiqueta é removida',
-  stage_changed: 'Quando muda de etapa',
-  pipeline_changed: 'Quando muda de funil',
-  reply_received: 'Quando o contato responde',
-  keyword: 'Quando o contato manda uma palavra-chave',
-  flow_called: 'Quando outro fluxo chama este',
-  no_reply: 'Quando o contato fica sem responder',
-};
+// Os blocos que o motor garante nesta versão (spec 02/10, seção 5), na ordem da
+// paleta. Os outros saem da paleta até a sprint 2; fluxo antigo que já tem um
+// deles abre e mostra o bloco com o aviso de que ele volta na próxima versão.
+export const FLOW_VISIBLE_NODE_KINDS: FlowNodeKind[] = [
+  'send_whatsapp',
+  'wait', 'wait_for_reply', 'condition', 'filter_label',
+  'add_label', 'remove_label', 'move_stage',
+];

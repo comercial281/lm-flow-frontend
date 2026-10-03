@@ -5307,6 +5307,88 @@ Armadilhas:
 4. **`aoLadoDaBusca` do BaseHeader** liga o `flex-wrap` só em quem usa o espaço;
    as outras 19 telas não mudam.
 
+## Construtor de fluxos: gatilhos das Automações e "Aguardar resposta" (desde 2026-10-02)
+
+Sprint 1 de 4 da unificação das automações (decisões do dono do produto em 02/10,
+não reabrir sem ele pedir). Spec:
+`LM FLOW/specs/2026-10-02-automacoes-sprint-1-motor-e-aguardar-resposta-design.md`.
+O construtor (hoje *FlowBuilder*, em *Fluxos de mensagem*) vira o único motor de
+automação; nome e lugar no menu mudam na sprint 2.
+
+O que aparece na tela:
+
+- **Gatilho igual ao das Automações.** O botão do gatilho no topo do canvas e o
+  cartão verde do gatilho abrem a janela *Gatilho do fluxo*: a mesma lista, os
+  mesmos nomes e os MESMOS filtros da tela Automações (Origem e *Quais
+  formulários?*, *Qual anúncio?*, *Só quando quem aceitou for*, palavra-chave,
+  etapa, etiqueta e *Funil*), agrupados em Lead chegou · Atendimento · Funil de
+  vendas · Visita · Imóvel. Ficam de fora *Inativo há 7/14 dias*, *Sem resposta
+  após X minutos* (virou o bloco abaixo) e *Imóvel compatível encontrado*. Em
+  *Lead criado* aparece fixo: "Dispara pra todo contato novo, inclusive os que
+  entram pela agenda do celular. Use a origem pra limitar." O cartão do gatilho
+  mostra os filtros escolhidos.
+- **Bloco *Aguardar resposta*:** *Esperar até* (número + minutos/horas/dias) ou
+  *Sem limite*. Duas saídas no cartão e nas linhas: **Respondeu** (verde) e **Não
+  respondeu** (cinza); com *Sem limite*, só *Respondeu*. Texto de ajuda: "Respondeu:
+  o lead mandou qualquer mensagem depois da última que este fluxo enviou."
+- **Bloco *Esperar*:** minutos/horas/dias e os três modos (por um tempo; por um
+  tempo saindo só em horário comercial; até uma data e hora).
+- **Bloco *Mandar WhatsApp*:** campo *Enviar pelo número*, o mesmo das Automações
+  (automático, número do responsável pelo lead, um número específico). Chips de
+  variável do construtor (*Primeiro nome* etc.).
+- **Paleta enxuta:** só Mandar WhatsApp · Esperar · Aguardar resposta · Se / senão ·
+  Só continuar se · Aplicar etiqueta · Tirar etiqueta · Mover de etapa, nos grupos
+  Mensagem / Controle / Lead. Bloco escondido num fluxo antigo abre e mostra "Este
+  bloco volta na próxima versão".
+- **Se / senão e Só continuar se:** respondeu nas últimas X horas, tem a etiqueta,
+  está na etapa, tem e-mail, tem telefone e **Resposta do formulário** (formulário
+  com rótulo *Anúncio*/*Site* → pergunta → opções pra marcar, ou "contém o texto…"
+  / "respondeu qualquer coisa"). O cartão mostra a frase pronta. Se o servidor não
+  conseguir ler as perguntas, a janela mostra o motivo e deixa digitar pergunta e
+  resposta. "Veio de" e o formulário antigo saíram da lista; bloco antigo com eles
+  continua mostrando e valendo.
+- **Estado vazio** com o exemplo pronto *Primeiro contato com nova tentativa*
+  (Lead criado → mensagem pelo número do responsável → Aguardar resposta 30 min →
+  Não respondeu: outra mensagem), montado pela tela com as rotas de criar/salvar.
+  Saiu o "igual ao editor de automações do Hub".
+- **Ligar/desligar** virou a `Chave` da casa e não recarrega o fluxo (antes apagava
+  o que não estava salvo); "Alterações não salvas" aparece ao lado do Salvar, e
+  fechar a aba ou sair pelo menu pergunta antes (a seta de voltar do canvas não).
+- **Automações:** *Aguardar (delay)* saiu da lista de ações (o servidor nunca
+  esperou). Regra que já tem a ação continua com ela, e o cartão diz "Esta etapa
+  não espera: as ações seguintes saem na hora".
+
+Armadilhas:
+
+1. **A metade do backend vem PRIMEIRO** (`lm-flow`, branch `claude/automacoes-motor`):
+   sim/não no `wait_for_reply`, gatilho `{event, conditions}`, `send_from`,
+   critério `form_answer` e as rotas `/flow_automations/forms` e
+   `/flow_automations/form_questions`. Sem ela o save_flow recusa as duas saídas.
+2. **O gatilho grava SÓ `{ event, conditions }`** (`features/flowAutomations/trigger.ts`),
+   com os nomes de evento e o formato de condição das regras. O formato antigo
+   (`contact_created`, `stage_id` solto) é traduzido pelo servidor ao ler;
+   `normalizeTrigger` traduz de novo só por garantia.
+3. **Os editores de filtro são os da tela Automações** (`ConditionEditor`,
+   `PipelineFilterEditor`, `useAutomationResources`, `formatConditionSummary`, em
+   `LeadAutomationsEditors.tsx`). Mexer neles muda as duas telas.
+4. **Duas saídas = `branchHandles()`** em `lib/flowAutomationGraph.ts`: condição e
+   Aguardar resposta. Desenho, "+", layout, onde a paleta pendura o bloco novo
+   (`appendTarget`) e o corpo do save_flow (`buildSaveFlowPayload`) saem todos dele.
+   Com *Sem limite* o `next_no_node_id` vai nulo (contrato).
+5. **Fluxo salvo antes** com Aguardar resposta de saída única: `normalizeLoadedNodes`
+   põe a saída em *Respondeu*.
+6. **"Só continuar se" com etiqueta grava também `labels: [título]`** — é o que o
+   motor de antes lia nesse bloco. Etiqueta no construtor é sempre pelo TÍTULO.
+7. **Resposta do formulário guarda chave E texto de cada opção marcada em `values`**
+   (o Meta devolve um ou outro; "é qualquer uma destas" não muda) e
+   `value_labels` só pra frase. As rotas aceitam com ou sem o envelope `{ data }`.
+8. **As variáveis do construtor são outras:** `{{first_name}}`, `{{name}}`,
+   `{{phone}}`, `{{email}}` (`FlowAutomations::VariableInterpolator`). `{{nome}}` e
+   `{{corretor}}` das Automações saem VAZIOS aqui. A sprint 2 alinha.
+9. **"Enviar pelo número" lista pela rota das Automações**
+   (`/lead_automation_rules/send_numbers`): mesma lista de números, mesma regra.
+10. **Paleta = `FLOW_VISIBLE_NODE_KINDS`** (`types/flowAutomations.ts`); a sprint 2
+    devolve os blocos como ações das Automações.
 ## Imóveis: Empreendimentos e Revenda (desde 2026-10-02)
 
 Fase 4, entrega 2. Spec: `LM FLOW/specs/2026-10-02-fase-4-imoveis-empreendimento-revenda-design.md` (pasta do Tony, fora deste repo). Protótipo aprovado pelo dono: https://claude.ai/artifact/8h6NVs343WYK4Vsb5ga6yt

@@ -32,6 +32,7 @@ import {
   LeadAutomationCondition,
   TRIGGER_LABELS,
   ACTION_TYPE_LABELS,
+  RETIRED_ACTION_TYPES,
 } from '@/services/leadAutomation/leadAutomationService';
 import {
   useAutomationResources,
@@ -56,7 +57,14 @@ import { isForbiddenError } from '@/services/core/forbidden';
 import { Seletor } from '@/components/base/Seletor';
 
 const TRIGGERS = Object.entries(TRIGGER_LABELS).map(([value, label]) => ({ value, label }));
-const ACTION_TYPES = Object.entries(ACTION_TYPE_LABELS).map(([value, label]) => ({ value, label }));
+// "Aguardar (delay)" saiu da lista (Automações · sprint 1, 02/10/2026): o
+// servidor nunca esperou nessa etapa. Regra que já tem a ação continua com ela
+// (ver actionTypesFor), e o cartão avisa que ela não espera.
+const ACTION_TYPES = Object.entries(ACTION_TYPE_LABELS)
+  .filter(([value]) => !RETIRED_ACTION_TYPES.has(value))
+  .map(([value, label]) => ({ value, label }));
+const actionTypesFor = (current: string) =>
+  RETIRED_ACTION_TYPES.has(current) ? [...ACTION_TYPES, { value: current, label: ACTION_TYPE_LABELS[current] ?? current }] : ACTION_TYPES;
 
 // Explica quando cada gatilho dispara — tira a confusão entre "todo lead" e "lead de anúncio".
 const TRIGGER_HINTS: Record<string, string> = {
@@ -798,7 +806,7 @@ export default function LeadAutomations() {
                         onChange={e => updateActionType(i, e.target.value)}
                         className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        {ACTION_TYPES.map(a => (
+                        {actionTypesFor(action.type).map(a => (
                           <option key={a.value} value={a.value}>{a.label}</option>
                         ))}
                       </Seletor>

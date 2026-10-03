@@ -246,7 +246,7 @@ export const TRIGGER_LABELS: Record<string, string> = {
   'lead.property_matched':     'Imóvel compatível encontrado',
   'lead.tag_added':            'Etiqueta adicionada',
   'lead.message_received':     'Mensagem recebida do lead',
-  'lead.campaign_received':    'Lead Whats Meta (anúncio no WhatsApp / CTWA)',
+  'lead.campaign_received':    'Lead Whats Meta (anúncio no WhatsApp)',
   'lead.no_reply_after':       'Sem resposta após X minutos',
   'lead.roleta_accepted':      'Corretor aceitou o lead (roleta)',
 };
@@ -275,3 +275,10 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
   send_quick_reply:        'Enviar resposta rápida',
   wait:                    'Aguardar (delay)',
 };
+
+// Ações que não aparecem mais na lista pra regra nova. "Aguardar (delay)"
+// prometia uma espera que o servidor nunca fez (as ações seguintes saem na
+// hora); quem precisa esperar usa o construtor de fluxos. Regra antiga que já
+// tem a ação continua igual, com o aviso no cartão.
+export const RETIRED_ACTION_TYPES = new Set(['wait']);
+export const WAIT_ACTION_NOTICE = 'Esta etapa não espera: as ações seguintes saem na hora';

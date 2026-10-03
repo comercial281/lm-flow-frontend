@@ -5,11 +5,25 @@ import type {
   SaveFlowPayload,
   TestRunResult,
 } from '@/types/flowAutomations';
+import {
+  formsFrom,
+  questionsFrom,
+  type FlowForm,
+  type FormQuestionsResult,
+  type FormSource,
+} from '@/features/flowAutomations/formAnswer';
 
 // Envelope do backend: { success: true, data: T } — mesmo padrão de
 // messageFunnelsService (feedback_response_envelope_pattern).
 function unwrap<T>(response: { data: { data: T } }): T {
   return response.data.data;
+}
+
+// As rotas novas da sprint 1 (formulários da condição): aceita com ou sem o
+// envelope `{ data }`, porque o contrato descreve só o corpo.
+function unwrapLoose(response: { data: unknown }): unknown {
+  const body = response.data as { data?: unknown } | null;
+  return body && typeof body === 'object' && 'data' in body ? body.data : body;
 }
 
 class FlowAutomationsService {
@@ -33,6 +47,16 @@ class FlowAutomationsService {
 
   async create(payload: { name: string; folder_id?: string | null }): Promise<FlowAutomation> {
     return unwrap<FlowAutomation>(await api.post(this.baseUrl, payload));
+  }
+
+  // Formulários pro critério "Resposta do formulário": os do anúncio (Meta) e os do site.
+  async forms(): Promise<FlowForm[]> {
+    return formsFrom(unwrapLoose(await api.get(`${this.baseUrl}/forms`)));
+  }
+
+  // Perguntas de um formulário. Falha do Meta volta com `error` em português (status 200).
+  async formQuestions(source: FormSource, formId: string): Promise<FormQuestionsResult> {
+    return questionsFrom(unwrapLoose(await api.get(`${this.baseUrl}/form_questions`, { params: { source, form_id: formId } })));
   }
 
   async update(id: string, payload: Partial<Pick<FlowAutomation, 'name' | 'folder_id' | 'trigger' | 'reentry_window_hours' | 'max_depth'>>): Promise<FlowAutomation> {

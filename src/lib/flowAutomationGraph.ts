@@ -1,7 +1,39 @@
 // Funções puras de árvore <-> grafo visual do FlowBuilder — mirror de
 // `grafo.ts` do Hub. Nada aqui conhece React nem @xyflow/react: só o
 // FlowAutomationCanvas traduz o resultado pra Node/Edge da lib.
-import type { FlowAutomationNode, FlowNodeKind } from '@/types/flowAutomations';
+import type { FlowAutomationNode, FlowNodeKind, SaveFlowPayload } from '@/types/flowAutomations';
+
+export type OutputHandle = 'out' | 'yes' | 'no';
+export type BranchHandle = 'yes' | 'no';
+
+// Blocos com duas saídas. "Se / senão": Sim / Não. "Aguardar resposta"
+// (sprint 1 das Automações, 02/10/2026): Respondeu / Não respondeu, gravados
+// em next_yes_node_id / next_no_node_id. Com "Sem limite" o bloco só sai
+// quando o lead responde, então só existe "Respondeu".
+export function branchHandles(node: Pick<FlowAutomationNode, 'kind' | 'config'>): BranchHandle[] {
+  if (node.kind === 'condition') return ['yes', 'no'];
+  if (node.kind === 'wait_for_reply') return node.config?.indefinite === true ? ['yes'] : ['yes', 'no'];
+  return [];
+}
+
+export function isBranching(node: Pick<FlowAutomationNode, 'kind'>): boolean {
+  return node.kind === 'condition' || node.kind === 'wait_for_reply';
+}
+
+/** O nome da saída na tela. */
+export function handleLabel(kind: FlowNodeKind, handle: OutputHandle): string {
+  if (kind === 'wait_for_reply') return handle === 'no' ? 'Não respondeu' : 'Respondeu';
+  if (handle === 'yes') return 'Sim';
+  if (handle === 'no') return 'Não';
+  return 'Continuar';
+}
+
+/** Cor da saída e da linha: sim/respondeu verde, não vermelho, não respondeu cinza. */
+export function handleColor(kind: FlowNodeKind, handle: OutputHandle): string {
+  if (handle === 'yes') return '#059669';
+  if (handle === 'no') return kind === 'wait_for_reply' ? '#64748b' : '#dc2626';
+  return '#94a3b8';
+}
 
 export const NODE_WIDTH = 260;
 const STEP_X = 320;
@@ -25,11 +57,13 @@ export function calculateLayout(nodes: FlowAutomationNode[], initialNodeId: stri
     visited.add(id);
     const node = byId.get(id)!;
 
-    if (node.kind === 'condition') {
+    if (isBranching(node)) {
+      const handles = branchHandles(node);
       place(node.next_yes_node_id, depth + 1);
       const row = nextRow;
       positions[id] = { x: depth * STEP_X, y: row * STEP_Y };
-      place(node.next_no_node_id, depth + 1);
+      if (handles.includes('no')) place(node.next_no_node_id, depth + 1);
+      if (!node.next_yes_node_id && !(handles.includes('no') && node.next_no_node_id)) nextRow += 1;
       return row;
     }
 
@@ -64,8 +98,11 @@ export interface GraphEdge {
   id: string;
   source: string;
   target: string;
-  sourceHandle: 'out' | 'yes' | 'no';
+  sourceHandle: OutputHandle;
   deletable: boolean;
+  /** Nome da saída quando o bloco tem duas ("Respondeu", "Não"…); vazio na saída única. */
+  label: string;
+  color: string;
 }
 
 // O gatilho é sintético (não existe como nó no banco) — id fixo reconhecível.
@@ -74,14 +111,16 @@ export const TRIGGER_NODE_ID = '__trigger__';
 export function buildEdges(nodes: FlowAutomationNode[], initialNodeId: string | null): GraphEdge[] {
   const edges: GraphEdge[] = [];
   if (initialNodeId) {
-    edges.push({ id: 'trigger:out', source: TRIGGER_NODE_ID, target: initialNodeId, sourceHandle: 'out', deletable: false });
+    edges.push({ id: 'trigger:out', source: TRIGGER_NODE_ID, target: initialNodeId, sourceHandle: 'out', deletable: false, label: '', color: handleColor('wait', 'out') });
   }
   nodes.forEach(n => {
-    if (n.kind === 'condition') {
-      if (n.next_yes_node_id) edges.push({ id: `${n.id}:yes`, source: n.id, target: n.next_yes_node_id, sourceHandle: 'yes', deletable: true });
-      if (n.next_no_node_id) edges.push({ id: `${n.id}:no`, source: n.id, target: n.next_no_node_id, sourceHandle: 'no', deletable: true });
+    if (isBranching(n)) {
+      branchHandles(n).forEach(h => {
+        const target = h === 'yes' ? n.next_yes_node_id : n.next_no_node_id;
+        if (target) edges.push({ id: `${n.id}:${h}`, source: n.id, target, sourceHandle: h, deletable: true, label: handleLabel(n.kind, h), color: handleColor(n.kind, h) });
+      });
     } else if (n.next_node_id) {
-      edges.push({ id: `${n.id}:out`, source: n.id, target: n.next_node_id, sourceHandle: 'out', deletable: true });
+      edges.push({ id: `${n.id}:out`, source: n.id, target: n.next_node_id, sourceHandle: 'out', deletable: true, label: '', color: handleColor(n.kind, 'out') });
     }
   });
   return edges;
@@ -99,12 +138,27 @@ export function findChainEnd(nodes: FlowAutomationNode[], initialNodeId: string 
     seen.add(current);
     last = current;
     const node = byId.get(current)!;
-    current = node.kind === 'condition' ? null : node.next_node_id; // condição é fim de cadeia principal — a inserção liga nela manualmente
+    current = isBranching(node) ? null : node.next_node_id; // bloco de duas saídas é fim de cadeia principal
   }
   return last;
 }
 
-export function link(nodes: FlowAutomationNode[], sourceId: string, handle: 'out' | 'yes' | 'no', targetId: string | null): FlowAutomationNode[] {
+/**
+ * Onde a paleta pendura o bloco novo: no fim do caminho principal. Se o fim é
+ * um bloco de duas saídas, na primeira saída livre dele (Sim / Respondeu antes
+ * de Não / Não respondeu). Sem saída livre, o bloco entra solto (null) — antes
+ * ele ia pra uma saída "continuar" que esses blocos não desenham, e sumia.
+ */
+export function appendTarget(nodes: FlowAutomationNode[], initialNodeId: string | null): { id: string; handle: OutputHandle } | null {
+  const end = findChainEnd(nodes, initialNodeId);
+  if (!end) return null;
+  const node = nodes.find(n => n.id === end);
+  if (!node) return null;
+  const free = looseOutputs(node);
+  return free.length ? { id: end, handle: free[0] } : null;
+}
+
+export function link(nodes: FlowAutomationNode[], sourceId: string, handle: OutputHandle, targetId: string | null): FlowAutomationNode[] {
   return nodes.map(n => {
     if (n.id !== sourceId) return n;
     if (handle === 'yes') return { ...n, next_yes_node_id: targetId };
@@ -132,14 +186,44 @@ export function moveNode(nodes: FlowAutomationNode[], id: string, x: number, y: 
 
 // Uma saída "solta" (ponteiro nulo) do tipo certo pro bloco — usado pra
 // mostrar o botão "+" no rodapé do cartão.
-export function looseOutputs(node: FlowAutomationNode): Array<'out' | 'yes' | 'no'> {
-  if (node.kind === 'condition') {
-    const out: Array<'yes' | 'no'> = [];
-    if (!node.next_yes_node_id) out.push('yes');
-    if (!node.next_no_node_id) out.push('no');
-    return out;
+export function looseOutputs(node: FlowAutomationNode): OutputHandle[] {
+  if (isBranching(node)) {
+    return branchHandles(node).filter(h => !(h === 'yes' ? node.next_yes_node_id : node.next_no_node_id));
   }
   return node.next_node_id ? [] : ['out'];
+}
+
+/**
+ * Fluxo salvo antes da sprint 1: o "Aguardar resposta" só tinha a saída única
+ * (o modelo não aceitava sim/não nele). Ela vira "Respondeu" pra o caminho não
+ * sumir do desenho.
+ */
+export function normalizeLoadedNodes(nodes: FlowAutomationNode[]): FlowAutomationNode[] {
+  return nodes.map(n => {
+    if (n.kind !== 'wait_for_reply' || !n.next_node_id) return n;
+    return { ...n, next_yes_node_id: n.next_yes_node_id || n.next_node_id, next_node_id: null };
+  });
+}
+
+/**
+ * O corpo do save_flow. Cada bloco leva só os ponteiros que ele tem: saída
+ * única → next_node_id; duas saídas → next_yes/next_no. "Aguardar resposta"
+ * com "Sem limite" vai sem "Não respondeu" (contrato: nulo quando indefinite).
+ */
+export function buildSaveFlowPayload(nodes: FlowAutomationNode[], initialNodeId: string | null): SaveFlowPayload {
+  return {
+    initial_node_id: initialNodeId,
+    nodes: nodes.map(n => {
+      if (!isBranching(n)) return { ...n, next_yes_node_id: null, next_no_node_id: null };
+      const handles = branchHandles(n);
+      return {
+        ...n,
+        next_node_id: null,
+        next_yes_node_id: n.next_yes_node_id,
+        next_no_node_id: handles.includes('no') ? n.next_no_node_id : null,
+      };
+    }),
+  };
 }
 
 export function newTempId(): string {

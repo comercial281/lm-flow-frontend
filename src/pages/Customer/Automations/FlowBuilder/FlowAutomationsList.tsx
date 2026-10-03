@@ -6,7 +6,8 @@ import { GitBranch, Plus, Search, Folder, FolderPlus, Pencil, Play, Pause, Copy,
 import EmptyState from '@/components/base/EmptyState';
 import { flowAutomationsService, flowAutomationFoldersService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationFolder } from '@/types/flowAutomations';
-import { FLOW_TRIGGER_LABELS } from '@/types/flowAutomations';
+import { flowTriggerLabel, normalizeTrigger, serializeTrigger } from '@/features/flowAutomations/trigger';
+import { EXAMPLE_FLOW_DESCRIPTION, EXAMPLE_FLOW_NAME, buildExampleFlow } from '@/features/flowAutomations/exampleFlow';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { usePergunta } from '@/hooks/usePergunta';
@@ -48,6 +49,25 @@ export default function FlowAutomationsList() {
       navigate(`/automations/flow-builder/${created.id}`);
     } catch {
       toast.error('Erro ao criar fluxo');
+    }
+  };
+
+  // Estado vazio: abre o exemplo pronto já montado (gatilho + blocos), pela
+  // mesma rota de criar e salvar que o canvas usa.
+  const [creatingExample, setCreatingExample] = useState(false);
+  const handleCreateExample = async () => {
+    if (creatingExample) return;
+    setCreatingExample(true);
+    try {
+      const { trigger, flow } = buildExampleFlow();
+      const created = await flowAutomationsService.create({ name: EXAMPLE_FLOW_NAME, folder_id: folderId ?? null });
+      await flowAutomationsService.update(created.id, { trigger: serializeTrigger(trigger) });
+      await flowAutomationsService.saveFlow(created.id, flow);
+      navigate(`/automations/flow-builder/${created.id}`);
+    } catch {
+      toast.error('Não deu pra abrir o exemplo. Tente de novo.');
+    } finally {
+      setCreatingExample(false);
     }
   };
 
@@ -152,7 +172,7 @@ export default function FlowAutomationsList() {
         <h1 className="text-xl font-bold">FlowBuilder</h1>
       </div>
       <p className="text-sm text-muted-foreground mb-4">
-        Editor visual de automações: monte um fluxo com blocos, condições e espera — igual ao editor de automações do Hub.
+        Monte uma automação com blocos: mande mensagem, espere o lead responder e decida o que fazer em cada caso.
       </p>
 
       <div className="flex items-center gap-2 mb-4">
@@ -199,8 +219,17 @@ export default function FlowAutomationsList() {
         </button>
       )}
 
-      {!loading && automations.length === 0 && (
-        <EmptyState icon={GitBranch} title="Nenhum fluxo ainda" description="Crie o primeiro fluxo de automação visual." />
+      {!loading && automations.length === 0 && !search && (
+        <EmptyState
+          icon={GitBranch}
+          title="Nenhum fluxo ainda"
+          description="Comece pelo exemplo pronto e troque só os textos e o tempo, ou crie um fluxo do zero em Novo fluxo."
+          exemplo={`${EXAMPLE_FLOW_NAME}: ${EXAMPLE_FLOW_DESCRIPTION}`}
+          action={{ label: `Abrir o exemplo "${EXAMPLE_FLOW_NAME}"`, onClick: handleCreateExample, disabled: creatingExample }}
+        />
+      )}
+      {!loading && automations.length === 0 && search && (
+        <EmptyState tipo="semResultado" aoLimparFiltros={() => setSearch('')} />
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-auto">
@@ -217,7 +246,7 @@ export default function FlowAutomationsList() {
                 </Badge>
               </div>
               <div className="text-xs text-muted-foreground mb-3 truncate">
-                {FLOW_TRIGGER_LABELS[a.trigger?.event as keyof typeof FLOW_TRIGGER_LABELS] || 'Sem gatilho definido'}
+                {normalizeTrigger(a.trigger).event ? flowTriggerLabel(normalizeTrigger(a.trigger).event) : 'Sem gatilho definido'}
               </div>
               <div className="flex items-center gap-1">
                 <Button size="sm" variant="ghost" onClick={() => toggle(a)} title={a.is_enabled ? 'Desligar' : 'Ligar'}>
