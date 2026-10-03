@@ -180,6 +180,9 @@ export default function FlowAutomationsList() {
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input className="pl-8" placeholder="Buscar fluxo..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+        <Button variant="outline" onClick={handleCreateExample} disabled={creatingExample}>
+          Usar o exemplo pronto
+        </Button>
         <Button onClick={handleCreate}><Plus className="h-4 w-4 mr-1" /> Novo fluxo</Button>
       </div>
 
