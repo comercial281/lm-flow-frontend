@@ -31,9 +31,11 @@ export default function Custos() {
   // Só a última chamada vale: resposta atrasada de filtro antigo não sobrescreve a atual.
   const seq = useRef(0);
 
-  const carregar = useCallback(async () => {
+  // `silencioso`: recarga depois de salvar faturas. Mantém o resumo atual na tela (sem
+  // skeleton) pra lista não perder filtro/página nem a rolagem pular. Mês/cliente usam o skeleton.
+  const carregar = useCallback(async (silencioso = false) => {
     const minha = ++seq.current;
-    setEstado('carregando');
+    if (!silencioso) setEstado('carregando');
     try {
       const dados = await costsService.summary({ month, tenant });
       if (minha !== seq.current) return;
@@ -68,12 +70,19 @@ export default function Custos() {
         </div>
 
         {estado === 'erro' && (
-          <EmptyState tipo="erro" title="Não deu para carregar os custos" aoTentarDeNovo={carregar} />
+          <EmptyState tipo="erro" title="Não deu para carregar os custos" aoTentarDeNovo={() => void carregar()} />
         )}
 
         {estado === 'carregando' && (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5" aria-busy="true">
-            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-24 animate-pulse rounded-lg bg-muted" />)}
+          // Mesmas classes do BaseStatsGrid (5 colunas) + placeholders do que vem depois: sem salto de layout.
+          <div aria-busy="true" className="flex flex-col gap-6">
+            <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-5">
+              {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-[74px] animate-pulse rounded-lg bg-muted" />)}
+            </div>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-48 animate-pulse rounded-lg bg-muted" />)}
+            </div>
+            <div className="h-64 animate-pulse rounded-lg bg-muted" />
           </div>
         )}
 
@@ -88,7 +97,7 @@ export default function Custos() {
           </>
         )}
       </div>
-      <LancarFaturas month={month} aberta={lancando} aoFechar={() => setLancando(false)} aoSalvar={carregar} />
+      <LancarFaturas month={month} aberta={lancando} aoFechar={() => setLancando(false)} aoSalvar={() => void carregar(true)} />
     </AdminConteudo>
   );
 }
