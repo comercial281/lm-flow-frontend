@@ -5354,3 +5354,61 @@ Armadilhas:
    (`/lead_automation_rules/send_numbers`): mesma lista de números, mesma regra.
 10. **Paleta = `FLOW_VISIBLE_NODE_KINDS`** (`types/flowAutomations.ts`); a sprint 2
     devolve os blocos como ações das Automações.
+## Imóveis: Empreendimentos e Revenda (desde 2026-10-02)
+
+Fase 4, entrega 2. Spec: `LM FLOW/specs/2026-10-02-fase-4-imoveis-empreendimento-revenda-design.md` (pasta do Tony, fora deste repo). Protótipo aprovado pelo dono: https://claude.ai/artifact/8h6NVs343WYK4Vsb5ga6yt
+
+O que aparece na tela:
+
+- **Abas Empreendimentos | Revenda**, cada uma com a sua contagem. Abre na aba com mais cadastros (empate: Empreendimentos); a vazia mostra o convite. A aba fica no endereço (`?aba=`), e `?aba=` vence a aba padrão.
+- **Busca global (Ctrl+K) abre o imóvel na aba certa:** o link é `linkNaLista(p)` (`/properties?aba=<aba do imóvel>&q=<código>`). Sem a aba, a tela abria na aba com mais cadastros, buscava só nela e um empreendimento achado dava *Nada encontrado* em Revenda. Com a tela já aberta, um `?q=` novo no endereço troca a busca e a aba.
+- **Filtro retrátil no topo** (botão *Filtros* com o número de ativos), que rola junto com a página; campos diferentes por aba; etiquetas dos ativos embaixo da busca. A lista atualiza na hora. *Ordenar* e as listas de escolha dos filtros usam o `Seletor`.
+- **Finalidade:** *Venda* traz os imóveis de venda e os de *Venda e locação*; *Locação* traz locação, *Venda e locação* e temporada. Um imóvel *Venda e locação* aparece nos dois filtros.
+- **Linhas largas** (estilo Kenlo), com visão em Grade e Mapa (`?visao=`). `/properties/map` redireciona para a visão Mapa. *Ver página no site* abre `/imovel/<slug>/<código>` e só aparece para imóvel que está no site (marcado para o site e *Disponível*/*Reservado*). O nome do imóvel só abre o cadastro para quem pode editar.
+- **O Mapa mostra a aba inteira:** na visão Mapa somem busca, *Filtros*, *Ordenar*, etiquetas e contador (o mapa não usa nenhum deles), e a lista não recarrega por trás. Ficam as abas e a troca de visão. O mapa tem `isolate`: as camadas do Leaflet (z 400 a 1000) não pintam por cima das janelas.
+- **Situação só no menu ⋮**, com janela e efeito escrito. *Mover para Revenda/Empreendimentos* com confirmação. *Força do anúncio* é item do menu ⋮ de cada imóvel (mostra o número depois de calculado). *Gerar descrições com IA* é botão com nome (contorno) no topo, sem menu *Mais ações*. Exclusão é *Excluir imóvel* (glossário: some de vez).
+- **O cadastro de hoje abre com o tipo da aba.** Empreendimento fixa *Venda* (também ao editar um cadastro antigo de locação) e mostra *Fase da obra*, *Previsão de entrega* (some em *Pronto para morar*) e *Tipologias*. A previsão é escolhida em duas listas, **Mês** e **Ano** (do ano passado a 8 à frente), que compõem o mesmo `AAAA-MM`: o `<input type="month">` vira texto livre no Firefox e no Safari do computador, o servidor descartava e a previsão salva sumia. Mês sem ano (ou o contrário) é sem previsão. Revenda esconde os três, mas **guarda a previsão que já estava salva**. Situação antiga (*Reservado*/*Alugado* num empreendimento) aparece como opção extra, para não sumir ao editar. O tipo só é enviado na criação: trocar de tipo é só por *Mover para…*.
+
+Decisões do dono (não reabrir sem ele pedir): uma entidade só (IA, portais e site continuam vendo "imóvel"); sem controle unidade por unidade; nomes "Empreendimentos | Revenda"; situações do empreendimento À venda / Esgotado / Inativo / Rascunho.
+
+Armadilhas:
+
+1. **As regras moram em `src/features/properties/listingKind.ts` e `formularioPorTipo.ts`**, com spec, e a tela em `src/pages/Customer/Properties/lista/`. A tela de Imóveis já passa de 2.000 linhas: regra nova não entra nela.
+2. **A contagem das abas usa a própria lista com 1 por página** (`contarPorTipo`), só com os parâmetros de recorte. Não troque por `/properties/stats`: ele pede outra permissão e não respeita o recorte.
+3. **Servidor antigo (sem `listing_kind`)**: tudo cai em Revenda (`tipoDoImovel`); a contagem de Empreendimentos fica 0 e a tela abre em Revenda. A metade do backend vem PRIMEIRO (`lm-flow`, `saas-multitenant`).
+4. **Cada aba guarda os próprios filtros.** Os parâmetros saem de `paramsDosFiltros(kind, ...)`: filtro de uma aba nunca vaza para a outra.
+5. **Não é `featureKey` nem `clientToggleKey`.**
+
+## Uma tela só pro cliente: o card do lead abre de Contatos (desde 2026-10-02)
+
+Decisão do dono do produto (Fase 4): a janela "Detalhes do Contato" morreu.
+Clicar num contato em Contatos (e o link `/contacts/:id`) abre o **card do lead**.
+Spec: `LM FLOW/specs/2026-10-02-fase-4-card-do-contato-design.md`.
+
+O que aparece na tela:
+
+- **Contato em um funil:** o card daquele atendimento, igual ao do quadro.
+- **Em mais de um funil** (raro): **abinhas centralizadas no topo do card**, uma
+  por funil, com a bolinha da etapa. Abre no mais recente. É o modelo do Kenlo:
+  o contato é o cliente, e cada card no funil é um atendimento dele.
+- **Em nenhum funil:** o mesmo card, com **"Colocar no funil"** no lugar da Etapa
+  (o contato entra na primeira coluna e o card recarrega). Somem Ganho/Perdido,
+  Conversão Meta e "Remover do funil". "Copiar link" copia `/contacts/:id`. A aba
+  Conversa usa a conversa mais recente do contato.
+- **Vieram da janela antiga:** *Juntar com outro contato* (menu ⋯, só gestor) e
+  *Outras informações* (campos extras do gestor, bloco na aba Detalhes, editados
+  na hora; aparecem também no card do quadro).
+- **Morreram:** a "Detalhes do Contato", a ação *Histórico* da lista de Contatos
+  (o card tem) e a **Consulta de crédito** (BigDataCorp, nunca usada; a metade do
+  servidor sai no `lm-flow`).
+
+Armadilhas:
+
+1. **Card sem funil = o mesmo formato do card do funil sem `id`**
+   (`itemSemFunil` em `features/cardDoLead`). Parte nova que dependa do card do
+   funil (id, etapa, `custom_fields`) tem que olhar `semFunil(item)`.
+2. **O card inicializa por `item.id`.** Quem abre vários cards sem funil precisa
+   do `key` (o `CardDoContato` passa `sem-funil-<contato>`), senão o card do
+   segundo contato herda o estado do primeiro.
+3. **Os atendimentos vêm de `GET /pipelines/by_contact/:id`**, o mesmo de Conversas.
+   A ordem (mais recente primeiro) mora em `atendimentosDoContato`.

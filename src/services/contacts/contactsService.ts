@@ -20,7 +20,6 @@ import type {
   ContactNote,
   ContactConversation,
   ContactableInboxes,
-  CreditCheckResult,
 } from '@/types/contacts';
 
 /** Lê o conteúdo de um Blob com `FileReader`, nunca com `blob.text()`.
@@ -248,12 +247,6 @@ class ContactsService {
       labels,
     });
     return extractData<Contact>(response);
-  }
-
-  // Consulta de CPF/crédito (BigDataCorp) sob demanda
-  async checkContactCredit(contactId: string): Promise<{ credit_check: CreditCheckResult }> {
-    const response = await api.post(`/contacts/${contactId}/credit_check`);
-    return extractData<{ credit_check: CreditCheckResult }>(response);
   }
 
   // Contact Notes

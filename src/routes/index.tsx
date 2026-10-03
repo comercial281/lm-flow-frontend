@@ -80,7 +80,6 @@ const ChannelSettings = lazyWithRetry(() => import('@/pages/Customer/Channels').
 const NewChannel = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.NewChannel })));
 
 const PipelineKanban = lazyWithRetry(() => import('@/pages/Customer/Pipelines/PipelineKanban'));
-const PropertiesMap = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.PropertiesMap })));
 // Times e Cargos não têm mais rota própria: viraram abas da tela de Equipe, que
 // os carrega junto. Só a sub-tela de adicionar gente a um Time continua com rota
 // (é navegação interna da lista de Times).
@@ -1075,7 +1074,7 @@ const AppRouter = () => {
               path="/properties/map"
               element={
                 <PermissionRoute resource="properties" action="read">
-                  <PropertiesMap />
+                  <Navigate to="/properties?visao=mapa" replace />
                 </PermissionRoute>
               }
             />

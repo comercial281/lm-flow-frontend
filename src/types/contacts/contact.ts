@@ -67,28 +67,12 @@ export interface ContactAdditionalAttributes {
   campaign_source?: string;
   campaign_medium?: string;
   campaign_name?: string;
-  credit_check?: CreditCheckResult;
   /**
    * Espelho da origem do lead gravado pelo backend (LeadOrigin::Recorder).
    * Chaves variam por origem (anúncio, formulário, landing, manual...), por isso
    * o índice aberto. `manual_origin` é a origem escrita à mão.
    */
   lead_origin?: { source?: string; manual_origin?: string; [key: string]: unknown };
-}
-
-export type CreditCheckStatus = 'clean' | 'restricted' | 'unknown';
-
-export interface CreditCheckResult {
-  checked_at: string;
-  provider: string;
-  datasets: string[];
-  status: CreditCheckStatus;
-  has_restriction: boolean | null;
-  score: number | null;
-  summary: string;
-  checked_by?: string | null;
-  // Resposta crua da BigDataCorp — guardada sempre para inspeção
-  raw?: unknown;
 }
 
 export interface ContactLabel {
