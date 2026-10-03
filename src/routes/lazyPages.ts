@@ -37,7 +37,6 @@ export const PropertyBooks = lazyWithRetry(() => import('@/pages/Customer/Proper
 export const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => ({ default: m.Visits })));
 export const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
 export const Contracts = lazyWithRetry(() => import('@/pages/Customer/Contracts').then(m => ({ default: m.Contracts })));
-export const PropertyCaptureRequests = lazyWithRetry(() => import('@/pages/Customer/PropertyCapture').then(m => ({ default: m.PropertyCaptureRequests })));
 export const PropertyInterests = lazyWithRetry(() => import('@/pages/Customer/PropertyInterests').then(m => ({ default: m.PropertyInterests })));
 export const AutomationsLayout = lazyWithRetry(() => import('@/pages/Customer/Automations/AutomationsLayout'));
 export const SalesAgents = lazyWithRetry(() => import('@/pages/Customer/Automations/SalesAgents/SalesAgents'));
@@ -70,7 +69,6 @@ export const routePrefetchMap: Record<string, () => Promise<unknown>> = {
   '/visits': Visits.__preload,
   '/proposals': Proposals.__preload,
   '/contracts': Contracts.__preload,
-  '/property-capture-requests': PropertyCaptureRequests.__preload,
   '/property-interests': PropertyInterests.__preload,
   '/channels': Channels.__preload,
   '/automations': AutomationsLayout.__preload,

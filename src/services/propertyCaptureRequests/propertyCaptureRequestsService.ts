@@ -2,7 +2,7 @@ import api from '@/services/core/api';
 
 export interface PropertyCaptureRequest {
   id: string;
-  status: 'pending_review' | 'assigned' | 'visiting' | 'approved' | 'rejected' | 'converted';
+  status: 'received' | 'in_review' | 'approved' | 'rejected' | 'withdrawn';
   source: string;
   transaction_type: string;
   property_type: string;
@@ -61,9 +61,9 @@ export const propertyCaptureRequestsService = {
     await api.delete(`${BASE}/${id}`);
   },
 
-  async approve(id: string): Promise<{ property_id?: string }> {
+  async approve(id: string): Promise<{ property_id: string }> {
     const res = await api.post(`${BASE}/${id}/approve`);
-    return res.data as { property_id?: string };
+    return res.data as { property_id: string };
   },
 
   async reject(id: string, reason: string): Promise<PropertyCaptureRequest> {
@@ -77,20 +77,19 @@ export const propertyCaptureRequestsService = {
   },
 };
 
+// Estados reais do servidor (received/in_review/approved/rejected/withdrawn).
 export const CAPTURE_STATUS_LABELS: Record<string, string> = {
-  pending_review: 'Aguardando análise',
-  assigned:       'Captador designado',
-  visiting:       'Em visita',
-  approved:       'Aprovado',
-  rejected:       'Rejeitado',
-  converted:      'Convertido em imóvel',
+  received:  'Recebido',
+  in_review: 'Em análise',
+  approved:  'Aprovado',
+  rejected:  'Recusado',
+  withdrawn: 'Retirado',
 };
 
 export const CAPTURE_STATUS_COLORS: Record<string, string> = {
-  pending_review: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  assigned:       'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  visiting:       'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
-  approved:       'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  rejected:       'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  converted:      'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
+  received:  'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  in_review: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  approved:  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  rejected:  'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  withdrawn: 'bg-muted text-muted-foreground',
 };

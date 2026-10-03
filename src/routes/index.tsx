@@ -30,7 +30,6 @@ import {
   Visits,
   Proposals,
   Contracts,
-  PropertyCaptureRequests,
   PropertyInterests,
   AutomationsLayout,
   SalesAgents,
@@ -74,7 +73,7 @@ import SurveyResponse from '@/pages/Public/Survey/SurveyResponse';
 // baixado só quando a rota é acessada. Reduz o bundle inicial (era ~7MB num arquivo).
 // (Dashboard, Contacts, ScheduledActions, Channels, ChatPage, Pipelines, Disparos,
 // TeamAccess, AccountSettings, Labels, CustomAttributes, SiteBuilder,
-// Properties, PropertyBooks, Visits, Proposals, Contracts, PropertyCaptureRequests,
+// Properties, PropertyBooks, Visits, Proposals, Contracts,
 // PropertyInterests, AutomationsLayout, SalesAgents, PortalsList,
 // DashboardAppPage, Tutorials, Marketplace — importadas de
 // ./lazyPages, ver import acima.)
@@ -1159,7 +1158,7 @@ const AppRouter = () => {
               path="/property-capture-requests"
               element={
                 <PermissionRoute resource="property_capture_requests" action="read">
-                  <PropertyCaptureRequests />
+                  <Navigate to="/property-owners?aba=captacoes" replace />
                 </PermissionRoute>
               }
             />
