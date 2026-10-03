@@ -26,6 +26,9 @@
       "followup": {
         "badge": "Follow-up automático"
       },
+      "reengagement": {
+        "badge": "🤖 Reengajamento"
+      },
       "bot": {
         "badge": "🤖 Bot",
         "fallback": "Bot"

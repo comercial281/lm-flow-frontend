@@ -31,3 +31,11 @@ export function isFollowupMessage(message: MessageAuthorLike): boolean {
   const attrs = message.content_attributes ?? {};
   return Boolean(attrs.followup_job_id || attrs.followup);
 }
+
+// Reengajamento da IA Vendedora (03/10/2026): a retomada da pergunta que ficou no
+// ar, antes do follow-up (SalesAgents::ReengagementRunner, marca `reengagement`).
+// Selo próprio "🤖 Reengajamento", azul, no lugar de "Atendente".
+export function isReengagementMessage(message: MessageAuthorLike): boolean {
+  const attrs = message.content_attributes ?? {};
+  return Boolean(attrs.reengagement);
+}
