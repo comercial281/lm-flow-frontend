@@ -97,6 +97,20 @@ describe('janela do bloco', () => {
     expect(screen.getByText('O número do responsável pelo lead')).toBeTruthy();
   });
 
+  it('ação das Automações: o editor da regra, gravando { action_type, params }', async () => {
+    const onSave = vi.fn();
+    render(<FlowNodeConfigModal node={node({ kind: 'lead_action', config: { action_type: 'notify_broker', params: {} } })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    expect(screen.getByRole('heading', { name: 'Avisar corretor' })).toBeTruthy();
+    fireEvent.click(screen.getByText('Salvar'));
+    expect(screen.getByRole('alert').textContent).toBe('Falta preencher a mensagem.');
+    expect(onSave).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByPlaceholderText('Novo lead: {{nome}} — {{telefone}}'), { target: { value: 'Lead novo: {{nome}}' } });
+    fireEvent.click(screen.getByText('Salvar'));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith('n1', expect.objectContaining({
+      config: { action_type: 'notify_broker', params: { message: 'Lead novo: {{nome}}' } },
+    })));
+  });
+
   it('bloco escondido abre com o aviso e sem Salvar', () => {
     render(<FlowNodeConfigModal node={node({ kind: 'http_call', config: { url: 'x' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
     expect(screen.getByText(/Este bloco volta na próxima versão/)).toBeTruthy();

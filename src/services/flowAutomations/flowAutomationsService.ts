@@ -12,6 +12,7 @@ import {
   type FormQuestionsResult,
   type FormSource,
 } from '@/features/flowAutomations/formAnswer';
+import { appliedFlowFrom, templatesFrom, type FlowTemplate } from '@/features/flowAutomations/templates';
 
 // Envelope do backend: { success: true, data: T } — mesmo padrão de
 // messageFunnelsService (feedback_response_envelope_pattern).
@@ -59,7 +60,16 @@ class FlowAutomationsService {
     return questionsFrom(unwrapLoose(await api.get(`${this.baseUrl}/form_questions`, { params: { source, form_id: formId } })));
   }
 
-  async update(id: string, payload: Partial<Pick<FlowAutomation, 'name' | 'folder_id' | 'trigger' | 'reentry_window_hours' | 'max_depth'>>): Promise<FlowAutomation> {
+  // Modelos (sprint 2): a lista e "usar o modelo", que cria o fluxo desligado.
+  async templates(): Promise<FlowTemplate[]> {
+    return templatesFrom((await api.get(`${this.baseUrl}/templates`)).data);
+  }
+
+  async applyTemplate(key: string): Promise<FlowAutomation> {
+    return appliedFlowFrom<FlowAutomation>((await api.post(`${this.baseUrl}/templates/${encodeURIComponent(key)}/apply`)).data);
+  }
+
+  async update(id: string, payload: Partial<Pick<FlowAutomation, 'name' | 'folder_id' | 'trigger' | 'reentry_window_hours' | 'once_per_lead' | 'max_depth'>>): Promise<FlowAutomation> {
     return unwrap<FlowAutomation>(await api.patch(`${this.baseUrl}/${id}`, payload));
   }
 

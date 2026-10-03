@@ -5,16 +5,16 @@ import {
 } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import SendFromField from '@/components/numbers/SendFromField';
-import { applySendFrom, sendFromOf, sendFromProblem } from '@/features/numbers/sendFrom';
+import { applySendFrom, sendFromOf } from '@/features/numbers/sendFrom';
 import type { FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
-import { FLOW_NODE_DEF_BY_KIND } from '@/types/flowAutomations';
-import type { AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
-import { HIDDEN_BLOCK_NOTICE, isVisibleKind } from '@/features/flowAutomations/palette';
+import { ActionEditor, type AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
+import { HIDDEN_BLOCK_NOTICE, blockLabel, isVisibleNode } from '@/features/flowAutomations/palette';
+import { leadActionConfig, leadActionOf } from '@/features/flowAutomations/leadAction';
+import { nodeProblem } from '@/features/flowAutomations/readiness';
 import { WAIT_FOR_REPLY_HELP, WAIT_UNITS, joinMinutes, splitMinutes, type WaitUnit } from '@/features/flowAutomations/waitTime';
 import {
   CONDITION_CRITERIA,
   LEGACY_CRITERIA_LABELS,
-  conditionProblem,
   configForCriterion,
   criterionOf,
   labelOf,
@@ -146,8 +146,8 @@ export function FlowNodeConfigModal({ node, resources, onClose, onSave }: Props)
 
   if (!node) return null;
   const activeNode = node; // const próprio pra narrowing sobreviver dentro das funções aninhadas
-  const def = FLOW_NODE_DEF_BY_KIND[activeNode.kind];
-  const hidden = !isVisibleKind(activeNode.kind);
+  const title = blockLabel(activeNode);
+  const hidden = !isVisibleNode(activeNode);
 
   const set = (key: string, value: unknown) => setConfig(c => ({ ...c, [key]: value }));
 
@@ -359,27 +359,27 @@ export function FlowNodeConfigModal({ node, resources, onClose, onSave }: Props)
         return conditionFields('condition');
       case 'filter_label':
         return conditionFields('filter_label');
+      // Ação das Automações: o MESMO editor da tela de regras, gravando
+      // `{ action_type, params }` (leadAction.ts).
+      case 'lead_action':
+        return (
+          <ActionEditor
+            action={leadActionOf(config)}
+            onChange={next => setConfig(leadActionConfig(next))}
+            resources={resources}
+          />
+        );
       default:
         return <p className="text-xs text-muted-foreground">Sem configuração adicional.</p>;
     }
   }
 
   const save = () => {
-    if (!hidden) {
-      let issue: string | null = null;
-      if (activeNode.kind === 'send_whatsapp') {
-        issue = !String(config.text ?? '').trim() ? 'Escreva a mensagem.' : sendFromProblem(sendFromOf(config));
-      } else if (activeNode.kind === 'condition' || activeNode.kind === 'filter_label') {
-        issue = conditionProblem(config);
-      } else if (activeNode.kind === 'move_stage' && !config.stage_id) {
-        issue = 'Escolha a etapa.';
-      } else if (activeNode.kind === 'wait' && config.mode === 'date' && !config.target_at) {
-        issue = 'Escolha a data e a hora.';
-      }
-      if (issue) {
-        setProblem(issue);
-        return;
-      }
+    // Mesma régua do cartão e da chave de ligar (readiness.ts).
+    const issue = nodeProblem({ kind: activeNode.kind, config });
+    if (issue) {
+      setProblem(issue);
+      return;
     }
     onSave(activeNode.id, { label, config });
   };
@@ -388,13 +388,13 @@ export function FlowNodeConfigModal({ node, resources, onClose, onSave }: Props)
     <Dialog open={!!node} onOpenChange={o => !o && onClose()}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{def?.label || 'Bloco'}</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           {!hidden && (
             <div className="space-y-1">
               <Label className="text-xs">Apelido do bloco (opcional)</Label>
-              <Input value={label} onChange={e => setLabel(e.target.value)} placeholder={def?.label} />
+              <Input value={label} onChange={e => setLabel(e.target.value)} placeholder={title} />
             </div>
           )}
           {renderFields()}

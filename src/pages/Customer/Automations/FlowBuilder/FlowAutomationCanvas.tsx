@@ -6,41 +6,51 @@ import {
   type Node, type Edge, type NodeChange, type Connection, BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { ArrowLeft, Save, Play, Loader2, Zap } from 'lucide-react';
+import { ArrowLeft, Save, Play, Loader2, Zap, Settings2, AlertTriangle } from 'lucide-react';
 import { Button, Input } from '@/components/ui/ds';
 import Chave from '@/components/base/Chave';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
-import type { FlowAutomation, FlowAutomationNode, FlowNodeKind, TestRunResult } from '@/types/flowAutomations';
-import { FLOW_NODE_DEF_BY_KIND } from '@/types/flowAutomations';
+import type { FlowAutomation, FlowAutomationNode, TestRunResult } from '@/types/flowAutomations';
 import {
   resolvedPositions, buildEdges, appendTarget, link, removeNode, moveNode, newTempId, TRIGGER_NODE_ID,
   normalizeLoadedNodes, buildSaveFlowPayload, handleLabel, type OutputHandle,
 } from '@/lib/flowAutomationGraph';
-import { flowNodeTypes, type FlowTriggerNodeData } from '@/components/flowAutomations/FlowNodeCard';
+import { flowNodeTypes, type FlowLookups, type FlowTriggerNodeData } from '@/components/flowAutomations/FlowNodeCard';
 import { FlowNodePalette } from '@/components/flowAutomations/FlowNodePalette';
 import { FlowNodeConfigModal } from '@/components/flowAutomations/FlowNodeConfigModal';
 import { FlowTriggerDialog } from '@/components/flowAutomations/FlowTriggerDialog';
+import { FlowSettingsDialog } from '@/components/flowAutomations/FlowSettingsDialog';
 import {
+  formatActionSummary,
   formatConditionSummary,
   useAutomationResources,
 } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
 import {
   LEAD_CREATED_HINT, flowTriggerLabel, normalizeTrigger, serializeTrigger, triggerProblem, type FlowTrigger,
 } from '@/features/flowAutomations/trigger';
-import type { ConditionLookups } from '@/features/flowAutomations/conditions';
-import { useAlteracoesNaoSalvas, mesmoConteudo } from '@/hooks/useAlteracoesNaoSalvas';
+import type { PaletteItem } from '@/features/flowAutomations/palette';
+import { enableProblem, nodeProblem } from '@/features/flowAutomations/readiness';
+import {
+  reentryOf, reentrySummary, reentryWarning, serializeReentry, type ReentrySetting,
+} from '@/features/flowAutomations/reentry';
+import {
+  useAlteracoesNaoSalvas, mesmoConteudo, limparPendentes, PEDIDO_SAIR_SEM_SALVAR,
+} from '@/hooks/useAlteracoesNaoSalvas';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 
 // Canvas do construtor de fluxos. Fonte de verdade é o array `nodes` (árvore
 // de ponteiros); os Node/Edge do React Flow são SEMPRE derivados dele, nunca
 // editados diretamente — clique/arraste chamam as funções puras de
 // flowAutomationGraph.ts, que devolvem uma nova árvore.
 
-// O que conta como "alteração não salva": nome, gatilho e blocos. A posição dos
-// blocos fica de fora — ela já é gravada sozinha quando o arraste termina.
-function snapshot(name: string, trigger: FlowTrigger, nodes: FlowAutomationNode[], initialNodeId: string | null) {
+// O que conta como "alteração não salva": nome, gatilho, "pode rodar de novo" e
+// blocos. A posição dos blocos fica de fora — ela já é gravada sozinha quando o
+// arraste termina.
+function snapshot(name: string, trigger: FlowTrigger, reentry: ReentrySetting, nodes: FlowAutomationNode[], initialNodeId: string | null) {
   return {
     name,
     trigger: serializeTrigger(trigger),
+    reentry: serializeReentry(reentry),
     initialNodeId,
     nodes: nodes.map(({ pos_x: _x, pos_y: _y, ...rest }) => rest),
   };
@@ -50,9 +60,12 @@ export default function FlowAutomationCanvas() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const resources = useAutomationResources(true);
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   const [automation, setAutomation] = useState<FlowAutomation | null>(null);
   const [trigger, setTrigger] = useState<FlowTrigger>({ event: '', conditions: [] });
+  const [reentry, setReentry] = useState<ReentrySetting>(() => reentryOf(null));
+  const [editingSettings, setEditingSettings] = useState(false);
   const [nodes, setNodes] = useState<FlowAutomationNode[]>([]);
   const [initialNodeId, setInitialNodeId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState<ReturnType<typeof snapshot> | null>(null);
@@ -73,11 +86,13 @@ export default function FlowAutomationCanvas() {
       const data = await flowAutomationsService.get(id);
       const nextTrigger = normalizeTrigger(data.trigger);
       const nextNodes = normalizeLoadedNodes(data.nodes || []);
+      const nextReentry = reentryOf(data);
       setAutomation(data);
       setTrigger(nextTrigger);
+      setReentry(nextReentry);
       setNodes(nextNodes);
       setInitialNodeId(data.initial_node_id);
-      setLoaded(snapshot(data.name, nextTrigger, nextNodes, data.initial_node_id));
+      setLoaded(snapshot(data.name, nextTrigger, nextReentry, nextNodes, data.initial_node_id));
     } catch {
       toast.error('Não deu pra carregar o fluxo');
     } finally {
@@ -89,26 +104,48 @@ export default function FlowAutomationCanvas() {
     load();
   }, [load]);
 
-  const hasChanges = !!automation && !!loaded && !mesmoConteudo(snapshot(automation.name, trigger, nodes, initialNodeId), loaded);
+  const hasChanges = !!automation && !!loaded && !mesmoConteudo(snapshot(automation.name, trigger, reentry, nodes, initialNodeId), loaded);
   useAlteracoesNaoSalvas(hasChanges);
+
+  // Voltar pra lista pergunta antes de perder o que não foi salvo (a guarda da
+  // casa cobre o menu e fechar a aba; a seta do canvas é um navigate direto).
+  const goBack = async () => {
+    if (hasChanges) {
+      if (!(await confirmar(PEDIDO_SAIR_SEM_SALVAR))) return;
+      limparPendentes();
+    }
+    navigate('/automations/flow-builder');
+  };
+
+  // O que falta em cada bloco (modelo cria com campo em branco) e por que o
+  // fluxo ainda não liga. O cartão mostra; a chave recusa.
+  const problems = useMemo(
+    () => Object.fromEntries(nodes.map(n => [n.id, nodeProblem(n)])) as Record<string, string | null>,
+    [nodes],
+  );
+  const blockingProblem = useMemo(() => enableProblem(trigger, nodes), [trigger, nodes]);
 
   const positions = useMemo(() => resolvedPositions(nodes, initialNodeId), [nodes, initialNodeId]);
   const graphEdges = useMemo(() => buildEdges(nodes, initialNodeId), [nodes, initialNodeId]);
 
-  const lookups: ConditionLookups = useMemo(() => {
+  const lookups: FlowLookups = useMemo(() => {
     const stages = Object.values(resources.stagesByPipeline).flat();
-    return { stageName: (stageId: string) => stages.find(s => s.id === stageId)?.name };
-  }, [resources.stagesByPipeline]);
+    return {
+      stageName: (stageId: string) => stages.find(s => s.id === stageId)?.name,
+      // A frase da ação é a mesma da lista de regras.
+      actionSummary: action => formatActionSummary(action, resources),
+    };
+  }, [resources]);
 
   const editingNode = editingId ? nodes.find(n => n.id === editingId) || null : null;
 
-  const insertNode = useCallback((kind: FlowNodeKind, from: { id: string; handle: OutputHandle } | null) => {
+  const insertNode = useCallback((item: PaletteItem, from: { id: string; handle: OutputHandle } | null) => {
     // Sem alvo explícito, pendura no fim do caminho principal (a paleta nunca
     // pergunta "onde"). Sem NENHUM bloco ainda, o novo vira o início do fluxo.
     const target = from || (initialNodeId ? appendTarget(nodes, initialNodeId) : null);
     const newId = newTempId();
     const newNode: FlowAutomationNode = {
-      id: newId, kind, label: null, config: { ...(FLOW_NODE_DEF_BY_KIND[kind]?.defaultConfig ?? {}) },
+      id: newId, kind: item.kind, label: null, config: { ...item.config },
       next_node_id: null, next_yes_node_id: null, next_no_node_id: null,
       pos_x: null, pos_y: null, steps: [],
     };
@@ -201,10 +238,10 @@ export default function FlowAutomationCanvas() {
       id: n.id,
       type: 'flowNode',
       position: positions[n.id] || { x: 0, y: 0 },
-      data: { node: n, lookups, onEdit: setEditingId, onDuplicate: handleDuplicate, onRemove: handleRemove, onAddFrom: (sid: string, h: OutputHandle) => setPendingSource({ id: sid, handle: h }) },
+      data: { node: n, lookups, problem: problems[n.id] ?? null, onEdit: setEditingId, onDuplicate: handleDuplicate, onRemove: handleRemove, onAddFrom: (sid: string, h: OutputHandle) => setPendingSource({ id: sid, handle: h }) },
     }));
     return [triggerNode, ...rest];
-  }, [nodes, positions, triggerData, lookups, handleDuplicate, handleRemove]);
+  }, [nodes, positions, triggerData, lookups, problems, handleDuplicate, handleRemove]);
 
   const reactFlowEdges: Edge[] = useMemo(
     () => graphEdges.map(e => ({
@@ -232,7 +269,7 @@ export default function FlowAutomationCanvas() {
     }
     setSaving(true);
     try {
-      await flowAutomationsService.update(id, { name: automation.name, trigger: serializeTrigger(trigger) });
+      await flowAutomationsService.update(id, { name: automation.name, trigger: serializeTrigger(trigger), ...serializeReentry(reentry) });
       // Manda o id ATUAL de cada bloco, definitivo (uuid) ou temporário (tmp_xxx,
       // bloco novo desta sessão): o servidor decide "é novo?" batendo contra os
       // blocos que já existem no fluxo. `initial_node_id` pode ser temporário
@@ -269,7 +306,7 @@ export default function FlowAutomationCanvas() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 border-b border-border px-4 py-2">
-        <Button size="sm" variant="ghost" onClick={() => navigate('/automations/flow-builder')} aria-label="Voltar" title="Voltar">
+        <Button size="sm" variant="ghost" onClick={goBack} aria-label="Voltar" title="Voltar">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <Input
@@ -288,11 +325,32 @@ export default function FlowAutomationCanvas() {
           className="ml-2"
           ligada={automation.is_enabled}
           aoMudar={async () => {
+            // Ligar: o fluxo liga como está SALVO, então pede o Salvar antes e
+            // recusa enquanto faltar algo num bloco (modelo com campo em branco).
+            if (!automation.is_enabled) {
+              if (hasChanges) {
+                toast.error('Salve as alterações antes de ligar: o fluxo liga como está salvo.');
+                return;
+              }
+              if (blockingProblem) {
+                toast.error(blockingProblem);
+                return;
+              }
+            }
             const updated = await flowAutomationsService.toggle(automation.id);
             // Só a chave: recarregar o fluxo apagaria o que ainda não foi salvo.
             setAutomation(a => (a ? { ...a, is_enabled: updated.is_enabled } : a));
           }}
         />
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8"
+          onClick={() => setEditingSettings(true)}
+          title={reentrySummary(reentry)}
+        >
+          <Settings2 className="h-3.5 w-3.5 mr-1" aria-hidden="true" /> Configurações
+        </Button>
         <div className="flex-1" />
         {hasChanges && <span className="text-xs text-muted-foreground">Alterações não salvas</span>}
         <Button size="sm" variant="outline" onClick={runTest} disabled={testing}>
@@ -303,8 +361,21 @@ export default function FlowAutomationCanvas() {
         </Button>
       </div>
 
+      {!automation.is_enabled && blockingProblem && nodes.length > 0 && (
+        <div className="flex items-center gap-2 border-b border-amber-500/40 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-700 dark:text-amber-300" role="status">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>{blockingProblem}</span>
+        </div>
+      )}
+      {reentryWarning(reentry, trigger.event) && (
+        <div className="flex items-center gap-2 border-b border-amber-500/40 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-700 dark:text-amber-300" role="status">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>{reentryWarning(reentry, trigger.event)}</span>
+        </div>
+      )}
+
       <div className="flex-1 flex min-h-0">
-        <FlowNodePalette onPick={kind => insertNode(kind, pendingSource)} />
+        <FlowNodePalette onPick={item => insertNode(item, pendingSource)} />
 
         <div className="flex-1 relative">
           <ReactFlowProvider>
@@ -354,6 +425,16 @@ export default function FlowAutomationCanvas() {
       </div>
 
       <FlowNodeConfigModal node={editingNode} resources={resources} onClose={() => setEditingId(null)} onSave={handleSaveNodeConfig} />
+      <FlowSettingsDialog
+        open={editingSettings}
+        reentry={reentry}
+        triggerEvent={trigger.event}
+        onClose={() => setEditingSettings(false)}
+        onSave={next => {
+          setReentry(next);
+          setEditingSettings(false);
+        }}
+      />
       <FlowTriggerDialog
         open={editingTrigger}
         trigger={trigger}
@@ -364,6 +445,7 @@ export default function FlowAutomationCanvas() {
           setEditingTrigger(false);
         }}
       />
+      {dialogoDeConfirmacao}
     </div>
   );
 }
