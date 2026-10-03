@@ -232,13 +232,14 @@ export interface SitePage {
    *  A aba Páginas do Site Builder filtra por isto: a landing é feita de blocos
    *  e o editor simples de título/HTML salvaria POR CIMA dela. */
   page_kind?: 'portal_static' | 'ad_landing' | string;
-  content?: string | null;
-  meta_title?: string | null;
-  meta_description?: string | null;
+  /** Nomes do servidor (pages_controller): o corpo é `content_html` e o SEO
+   *  volta aninhado em `seo`. Com outro nome o Rails descarta em silêncio. */
+  content_html?: string | null;
+  seo?: { title: string | null; description: string | null; og_image: string | null } | null;
   active: boolean;
   in_menu: boolean;
   menu_position?: number;
-  template?: string | null;
+  template_type?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -322,16 +323,17 @@ export interface SiteListingForm {
   emails?: string[];
 }
 
+/** Exatamente o que o `page_params` do servidor aceita (nomes do servidor). */
 export interface PageFormData {
   title: string;
   slug?: string;
-  content?: string;
-  meta_title?: string;
-  meta_description?: string;
+  content_html?: string;
+  seo_title?: string;
+  seo_description?: string;
   active?: boolean;
   in_menu?: boolean;
   menu_position?: number;
-  template?: string;
+  template_type?: string;
 }
 
 export interface ArticleFormData {

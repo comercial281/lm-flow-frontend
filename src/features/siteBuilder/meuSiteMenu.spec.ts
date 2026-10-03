@@ -21,6 +21,11 @@ describe('meuSiteMenu', () => {
     casos.forEach(([tab, tela]) => expect(telaDaUrl(new URLSearchParams(`tab=${tab}`))).toBe(tela));
   });
 
+  it('?tab= com nome de propriedade do objeto (constructor, toString) cai no Painel', () => {
+    ['constructor', 'toString', '__proto__', 'hasOwnProperty'].forEach(tab =>
+      expect(telaDaUrl(new URLSearchParams(`tab=${tab}`))).toBe('painel'));
+  });
+
   it('Páginas de anúncio some sem a chave do cliente', () => {
     expect(itensDoGrupo('marketing', { podeAnuncios: false }).map(t => t.id)).not.toContain('anuncios');
     expect(itensDoGrupo('marketing', { podeAnuncios: true }).map(t => t.id)).toContain('anuncios');

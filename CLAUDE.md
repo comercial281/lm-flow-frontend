@@ -5685,6 +5685,11 @@ Armadilhas:
 7. O `initGA4` (ID do Evolution) saiu do `main.tsx`: mandava a navegação do LM Flow para o Analytics do projeto de origem.
 8. O "Preencher com IA" mora no Painel (card "N% pronto"), não numa tela própria.
 9. "Ver site" sempre abre `/portal/<slug>`: domínio próprio ainda não roteia para o site (item em aberto; quando rotear, a barra passa a mostrar o domínio).
+10. A marca d'água aparece no "N% pronto" como sugestão, mas **não conta** (`conta: false` em `siteReadiness.ts`): a liberação dela espera a faxina do disco (decisão do dono). Hoje contam 5 itens; quando a faxina sair, volta a contar. A prévia da tela usa a capa de um imóvel publicado (`propertiesService.list`, sem endpoint novo); sem foto, fica o quadro cinza.
+11. Botão de idiomas (tradutor do Google): o tradutor reescreve os nós de texto do React (facebook/react#11538) e a navegação seguinte estourava `removeChild`/`insertBefore`, derrubando o site. `features/siteBuilder/public/translateGuard.ts` instala uma vez a proteção conhecida em `Node.prototype` (nó que não é mais filho é ignorado, com 1 aviso no console), só no site público com a tradução ligada; o `new TranslateElement` fica em `try/catch`.
+12. Contador de visitas **sem `keepalive`**: numa SPA a página não fecha no meio do envio, e `keepalive` + preflight de CORS falha calado em alguns navegadores. A visita leva `site_host` (hostname da página) para o servidor separar navegação interna de origem.
+13. Rastreamento só carrega ID no formato (GA4 `G-…`, Pixel só números, GTM `GTM-…`): valor antigo que nunca passou pela validação da tela é ignorado. A conversão (`trackLead`) só dispara quando o servidor aceitou o contato (`res.ok`).
+14. Páginas criadas usam os nomes do servidor: corpo em `content_html`, SEO em `seo_title`/`seo_description` (e volta aninhado em `seo`). Com `content`/`meta_*` o Rails descartava em silêncio e a página ia vazia pro menu.
 
 **Armadilhas:**
 1. Backend vem PRIMEIRO (`lm-flow`, `saas-multitenant`): `site_visits`, `/sites/:id/dashboard`, `watermark_logo`, `translate`/`custom_code` no `/site` público.

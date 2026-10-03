@@ -56,7 +56,8 @@ export function telaDaUrl(params: URLSearchParams): TelaId {
   const tela = params.get('tela');
   if (tela && POR_ID.has(tela as TelaId)) return tela as TelaId;
   const tab = params.get('tab');
-  if (tab && LEGADO[tab]) return LEGADO[tab];
+  // Só chave própria: `?tab=constructor` não pode cair numa propriedade herdada do objeto.
+  if (tab && Object.prototype.hasOwnProperty.call(LEGADO, tab)) return LEGADO[tab];
   return 'painel';
 }
 

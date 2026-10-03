@@ -47,7 +47,7 @@ export function sessionSource(storage: Storage | null, loc: { search: string }, 
 
 export function sendSiteVisit(input: VisitInput, ctx: {
   api: string; tenant: string; fetchFn?: typeof fetch; local?: Storage | null; session?: Storage | null;
-  loc?: { search: string }; referrer?: string;
+  loc?: { search: string }; referrer?: string; host?: string;
 }): void {
   try {
     const local = ctx.local !== undefined ? ctx.local : safeStorage('localStorage');
@@ -56,10 +56,14 @@ export function sendSiteVisit(input: VisitInput, ctx: {
     const visit = {
       kind: input.kind, path: input.path, property_code: input.propertyCode, page_slug: input.pageSlug,
       visitor_id: getVisitorId(local), ...src,
+      // O servidor usa o host do próprio site para não contar a navegação interna como origem.
+      site_host: ctx.host ?? window.location.hostname,
     };
     const f = ctx.fetchFn ?? fetch;
     void f(`${ctx.api}/api/public/v1/site/visits`, {
-      method: 'POST', keepalive: true,
+      // Sem keepalive: numa SPA a página não fecha no meio do envio, e keepalive
+      // + preflight de CORS falha calado em alguns navegadores.
+      method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Tenant': ctx.tenant },
       body: JSON.stringify({ visit }),
     }).catch(() => undefined);

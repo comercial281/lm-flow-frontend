@@ -191,7 +191,7 @@ export default function ImovelPublicPage() {
     if (!isValidBrPhone(phone)) { setPhoneErr(true); return; }
     const params = new URLSearchParams(window.location.search);
     try {
-      await fetch(`${API}/api/public/v1/site/leads`, {
+      const res = await fetch(`${API}/api/public/v1/site/leads`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
         body: JSON.stringify({ lead: {
           name, phone, source: 'portal', form_type: 'imovel',
@@ -203,7 +203,8 @@ export default function ImovelPublicPage() {
         } }),
       });
       setSent(true);
-      trackLead();
+      // Conversão só conta quando o servidor aceitou o contato.
+      if (res.ok) trackLead();
     } catch { /* silencioso */ }
   };
 

@@ -71,13 +71,14 @@ export default function PortalHomePage() {
     if (!tenant || !leadName.trim()) return;
     if (!isValidBrPhone(leadPhone)) { setLeadPhoneErr(true); return; }
     try {
-      await fetch(`${API}/api/public/v1/site/leads`, {
+      const res = await fetch(`${API}/api/public/v1/site/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant': tenant },
         body: JSON.stringify({ lead: { name: leadName, phone: leadPhone, source: 'portal', form_type: 'home', finalidade: leadFinalidade, message: 'Quero ajuda pra encontrar um imóvel (portal home).' } }),
       });
       setLeadSent(true);
-      trackLead();
+      // Conversão só conta quando o servidor aceitou o contato.
+      if (res.ok) trackLead();
     } catch { /* silencioso */ }
   };
 

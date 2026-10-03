@@ -24,6 +24,15 @@ describe('PortalTranslate', () => {
     expect(document.querySelectorAll('#lmf-gt-script')).toHaveLength(1);
   });
 
+  it('se o tradutor do Google falhar ao iniciar, o site segue de pé', () => {
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const ctor = vi.fn(() => { throw new Error('quebrou'); });
+    (window as unknown as { google: unknown }).google = { translate: { TranslateElement: ctor } };
+    expect(() => render(<PortalTranslate languages={['en']} />)).not.toThrow();
+    expect(ctor).toHaveBeenCalledTimes(1);
+    aviso.mockRestore();
+  });
+
   it('sem idiomas, não desenha nada', () => {
     const { container } = render(<PortalTranslate languages={[]} />);
     expect(container.innerHTML).toBe('');

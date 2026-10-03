@@ -347,7 +347,7 @@ export default function SiteBuilder() {
         {tela === 'rastreamento' && <TelaRastreamento {...formProps} irPara={irPara} />}
         {tela === 'redes' && <TelaRedes {...formProps} />}
         {tela === 'traducao' && <TelaTraducao {...formProps} />}
-        {tela === 'marca' && <TelaMarcaDagua {...formProps} onLogoAtualizado={setSite} fotoExemplo={null} />}
+        {tela === 'marca' && <TelaMarcaDagua {...formProps} onLogoAtualizado={setSite} />}
         {site && tela === 'paginas' && <TelaPaginas site={site} />}
         {site && tela === 'blog' && <TelaBlog site={site} />}
         {site && tela === 'contatos' && <TelaContatos site={site} />}

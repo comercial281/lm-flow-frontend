@@ -8,7 +8,7 @@ import { siteBuilderService, type Site, type SiteFormData } from '@/services/sit
 // "Preencher com IA": proposta da IA que cai no formulário do pai (setF) — o
 // usuário revisa e salva. Embutido no cartão "Seu site está N% pronto" do Painel.
 interface Props {
-  site: Site | null;
+  site: Site;
   setF: (field: Partial<SiteFormData>) => void;
 }
 
@@ -22,7 +22,6 @@ export default function PreencherComIA({ site, setF }: Props) {
   // IA lê o material colado e devolve os campos NOS LUGARES CERTOS do form.
   // Nada é salvo sozinho: o form fica sujo e o usuário revisa + salva.
   const handleAiSetup = async () => {
-    if (!site) { toast.error('Crie o site primeiro (em Endereço do site).'); return; }
     if (aiText.trim().length < 40) { toast.error('Cole um material com mais contexto (mín. 40 caracteres).'); return; }
     setAiRunning(true);
     try {
@@ -52,13 +51,13 @@ export default function PreencherComIA({ site, setF }: Props) {
 
   // Cria a página "Sobre nós" com o HTML proposto pela IA (clique explícito).
   const handleCreateAboutPage = async () => {
-    if (!site || !aiAboutHtml) return;
+    if (!aiAboutHtml) return;
     setSaving(true);
     try {
       await siteBuilderService.createPage(site.id, {
         title: 'Sobre nós',
         slug: 'sobre-nos',
-        content: aiAboutHtml,
+        content_html: aiAboutHtml,
         active: true,
         in_menu: true,
         menu_position: 99,
@@ -90,7 +89,7 @@ export default function PreencherComIA({ site, setF }: Props) {
         className="resize-none bg-background"
       />
       <div className="mt-2 flex items-center gap-2">
-        <Button onClick={handleAiSetup} disabled={aiRunning || !site}>
+        <Button onClick={handleAiSetup} disabled={aiRunning}>
           {aiRunning
             ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Interpretando...</>
             : <><Sparkles className="mr-1.5 h-4 w-4" /> Preencher campos</>}
@@ -99,9 +98,6 @@ export default function PreencherComIA({ site, setF }: Props) {
           <Button variant="outline" onClick={handleCreateAboutPage} disabled={saving}>
             <FileText className="mr-1.5 h-4 w-4" /> Criar página "Sobre nós" com o texto gerado
           </Button>
-        )}
-        {!site && (
-          <span className="text-xs text-muted-foreground">Crie o site primeiro (preencha o nome e salve).</span>
         )}
       </div>
     </section>

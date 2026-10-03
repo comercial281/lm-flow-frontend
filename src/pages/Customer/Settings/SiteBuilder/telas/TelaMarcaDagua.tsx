@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button, Checkbox, Label as UILabel } from '@/components/ui/ds';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { estiloDaMarca } from '@/features/siteBuilder/watermarkPreview';
 import { siteBuilderService, type Site, type SiteWatermark } from '@/services/siteBuilder/siteBuilderService';
+import { propertiesService } from '@/services/properties/propertiesService';
 import type { FormProps } from './tipos';
 
 type Posicao = SiteWatermark['position'];
@@ -23,10 +24,27 @@ interface Props extends FormProps {
   // O logo é salvo na hora e só atualiza o `site` do pai: o formulário (com
   // edições ainda não salvas em outras telas) não é tocado.
   onLogoAtualizado: (site: Site) => void;
-  fotoExemplo: string | null;
 }
 
-export default function TelaMarcaDagua({ site, siteForm, setF, onLogoAtualizado, fotoExemplo }: Props) {
+// Foto real para o preview: a capa de um imóvel publicado no site (ou, sem
+// nenhum publicado, o primeiro com capa). Sem foto ou com erro: quadro cinza.
+function useFotoDeExemplo(): string | null {
+  const [foto, setFoto] = useState<string | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    propertiesService.list({ status: 'active', per_page: 20, sort: 'recent' })
+      .then(({ data }) => {
+        const capa = data.find(p => p.published_on_site && p.cover_photo_url) ?? data.find(p => p.cover_photo_url);
+        if (vivo) setFoto(capa?.cover_photo_url ?? null);
+      })
+      .catch(() => { /* fica o quadro cinza */ });
+    return () => { vivo = false; };
+  }, []);
+  return foto;
+}
+
+export default function TelaMarcaDagua({ site, siteForm, setF, onLogoAtualizado }: Props) {
+  const fotoExemplo = useFotoDeExemplo();
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const inputRef = useRef<HTMLInputElement>(null);
   const [enviando, setEnviando] = useState(false);

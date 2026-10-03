@@ -40,6 +40,21 @@ describe('installSiteTracking', () => {
     expect(document.head.querySelector('meta[name="lmf-teste"]')).not.toBeNull();
   });
 
+  it('id fora do formato (valor antigo) não carrega nada: GTM no campo do GA4 num endereço lmflow', () => {
+    installSiteTracking({ tracking: { ga4: 'GTM-XXX', facebook_pixel: 'abc<script>' } }, { host: 'imob.lmflow.com.br' });
+    expect(document.querySelectorAll('script').length).toBe(0);
+    expect((window as unknown as { dataLayer?: unknown }).dataLayer).toBeUndefined();
+    expect((window as unknown as { fbq?: unknown }).fbq).toBeUndefined();
+    // Não travou: uma config válida depois ainda instala.
+    installSiteTracking({ tracking: { ga4: 'G-AB12' } }, { host: 'imob.lmflow.com.br' });
+    expect(document.querySelectorAll('script[src*="gtag/js"]').length).toBe(1);
+  });
+
+  it('GTM fora do formato não carrega nem em domínio próprio', () => {
+    installSiteTracking({ tracking: { gtm_id: 'G-AB12' } }, { host: 'www.imob.com.br' });
+    expect(document.querySelectorAll('script[src*="gtm.js"]').length).toBe(0);
+  });
+
   it('não instala duas vezes', () => {
     const cfg = { tracking: { ga4: 'G-AB12' } };
     installSiteTracking(cfg, { host: 'imob.lmflow.com.br' });

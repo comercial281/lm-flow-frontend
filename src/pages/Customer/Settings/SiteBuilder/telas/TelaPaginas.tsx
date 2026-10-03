@@ -14,7 +14,7 @@ import {
 const EMPTY_PAGE_FORM: PageFormData = {
   title: '',
   slug: '',
-  content: '',
+  content_html: '',
   active: true,
   in_menu: true,
   menu_position: 0,
@@ -59,7 +59,7 @@ export default function TelaPaginas({ site }: { site: Site }) {
     setPageForm({
       title: page.title,
       slug: page.slug,
-      content: page.content ?? '',
+      content_html: page.content_html ?? '',
       active: page.active,
       in_menu: page.in_menu,
       menu_position: page.menu_position ?? 0,
@@ -179,8 +179,8 @@ export default function TelaPaginas({ site }: { site: Site }) {
             </div>
             <div>
               <UILabel>Conteúdo (HTML)</UILabel>
-              <Textarea value={pageForm.content ?? ''}
-                onChange={e => setPageForm(f => ({ ...f, content: e.target.value }))}
+              <Textarea value={pageForm.content_html ?? ''}
+                onChange={e => setPageForm(f => ({ ...f, content_html: e.target.value }))}
                 rows={5} placeholder="<h1>...</h1>" className="mt-1 font-mono text-xs resize-none" />
             </div>
             <div className="flex gap-6">

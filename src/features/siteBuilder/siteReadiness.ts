@@ -1,5 +1,7 @@
-// "Seu site está N% pronto" do Painel. Seis itens contam; o endereço próprio
-// aparece mas não conta (é opcional e pago).
+// "Seu site está N% pronto" do Painel. Cinco itens contam; o endereço próprio
+// aparece mas não conta (é opcional e pago). A marca d'água também aparece como
+// sugestão e NÃO conta por enquanto: a liberação dela espera a faxina do disco
+// (decisão do dono). Quando liberar, volta a `conta: true`.
 import type { Site } from '@/services/siteBuilder/siteBuilderService';
 import type { TelaId } from './meuSiteMenu';
 
@@ -15,7 +17,7 @@ export function siteReadiness(site: Site, publishedProperties: number): { percen
     { id: 'imovel', rotulo: 'Ao menos 1 imóvel no site', feito: publishedProperties > 0, tela: 'aparencia', conta: true },
     { id: 'rastreamento', rotulo: 'Rastreamento ligado', feito: tem(s.tracking?.ga4_measurement_id) || tem(s.tracking?.facebook_pixel_id), tela: 'rastreamento', conta: true },
     { id: 'redes', rotulo: 'Redes sociais', feito: Object.values(s.social_links ?? {}).some(tem), tela: 'redes', conta: true },
-    { id: 'marca', rotulo: "Marca d'água", feito: !!s.watermark?.enabled && tem(s.watermark?.logo_url), tela: 'marca', conta: true },
+    { id: 'marca', rotulo: "Marca d'água", feito: !!s.watermark?.enabled && tem(s.watermark?.logo_url), tela: 'marca', conta: false },
     { id: 'endereco', rotulo: 'Endereço próprio (opcional)', feito: tem(s.primary_domain), tela: 'endereco', conta: false },
   ];
   const contam = itens.filter(i => i.conta);
