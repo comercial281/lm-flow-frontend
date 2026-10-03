@@ -1239,8 +1239,8 @@ const AppRouter = () => {
               {/* Clientes */}
               <Route path="/admin/clientes" element={<ComAbaAntiga base="/admin/clientes"><PooledClients /></ComAbaAntiga>} />
               <Route path="/admin/clientes/numeros" element={<AdminConteudo><AdminNumeros /></AdminConteudo>} />
-              {/* Custos: por enquanto a tela Custo da IA. O rateio de Railway,
-                  Evolution e Vercel entra no PR de Custos. */}
+              {/* Custos: IA exata (registro de chamadas) + estrutura (Railway, Vercel,
+                  Evolution) lançada à mão, numa tela só. */}
               <Route path="/admin/clientes/custos" element={<Custos />} />
               {/* Usuários */}
               <Route path="/admin/usuarios" element={<AdminConteudo><AdminUsuarios /></AdminConteudo>} />

@@ -15,7 +15,8 @@ export default function CartoesDoMes({ summary }: { summary: CostsSummary }) {
       icon: ICONE[s.provider],
       valueFormat: 'custom' as const,
       value: filtrado ? '—' : s.launched ? dinheiro(s.brl, { centavos: true }) : 'Não lançada',
-      extra: filtrado ? <span className="text-xs text-muted-foreground">não é dividida por cliente</span> : undefined,
+      // Embaixo do card (e não ao lado): com 5 colunas o texto ao lado espremia o card.
+      footer: filtrado ? <span className="block text-xs text-muted-foreground">não é dividida por cliente</span> : undefined,
     })),
   ];
   return <BaseStatsGrid cards={cards} columns={5} />;

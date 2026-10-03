@@ -41,6 +41,11 @@ export default function DetalheDaChamada({ id, aoFechar }: { id: string; aoFecha
       <SheetContent side="right" className="flex w-full flex-col gap-4 overflow-y-auto sm:max-w-xl">
         <SheetHeader><SheetTitle>{c ? c.feature_label : 'Chamada'}</SheetTitle><SheetDescription className="sr-only">Detalhe da chamada de IA</SheetDescription></SheetHeader>
         {erro && <EmptyState tipo="erro" title="Não deu para abrir a chamada" aoTentarDeNovo={carregar} />}
+        {!c && !erro && (
+          <div className="flex flex-col gap-3 px-4" aria-busy="true">
+            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-4 animate-pulse rounded bg-muted" />)}
+          </div>
+        )}
         {c && (
           <>
             <div className="flex flex-col gap-2 px-4">
@@ -58,10 +63,10 @@ export default function DetalheDaChamada({ id, aoFechar }: { id: string; aoFecha
             </div>
             {c.payload_status === 'disponivel' ? (
               <div className="flex flex-col gap-3 px-4 pb-4">
-                <h4 className="text-sm font-semibold">O que foi enviado</h4>
-                <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-xs">{texto(c.request)}</pre>
-                <h4 className="text-sm font-semibold">O que voltou</h4>
-                <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-xs">{texto(c.response)}</pre>
+                <h3 className="text-sm font-semibold">O que foi enviado</h3>
+                <pre tabIndex={0} className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-xs">{texto(c.request)}</pre>
+                <h3 className="text-sm font-semibold">O que voltou</h3>
+                <pre tabIndex={0} className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-xs">{texto(c.response)}</pre>
               </div>
             ) : (
               <p className="px-4 text-sm text-muted-foreground">

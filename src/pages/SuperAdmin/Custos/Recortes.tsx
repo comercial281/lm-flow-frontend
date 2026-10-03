@@ -20,7 +20,7 @@ export default function Recortes({ summary }: { summary: CostsSummary }) {
         itens={summary.by_model.map((m) => ({ chave: m.key, rotulo: m.label, valor: m.brl, parte: m.share, detalhe: chamadas(m.calls) }))} />
       {summary.totals.calls === 0 ? (
         <section className="rounded-lg border bg-card p-4">
-          <h3 className="mb-3 text-sm font-semibold">Gasto de IA dia a dia</h3>
+          <h2 className="mb-3 text-sm font-semibold">Gasto de IA dia a dia</h2>
           <EmptyState tipo="vazio" title={VAZIO} />
         </section>
       ) : (

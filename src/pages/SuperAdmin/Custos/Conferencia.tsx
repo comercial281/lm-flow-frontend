@@ -8,18 +8,18 @@ export default function Conferencia({ reconciliation, aoLancar }: { reconciliati
   return (
     <section className="rounded-lg border bg-card p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Conferência com a fatura</h3>
+        <h2 className="text-sm font-semibold">Conferência com a fatura</h2>
         <Button variant="outline" size="sm" onClick={aoLancar}>Lançar faturas do mês</Button>
       </div>
       <ul className="flex flex-col gap-2 text-sm">
-        {reconciliation.map((r) => (
+        {reconciliation.filter((r) => r.provider === 'anthropic' || r.invoice_usd != null || Number(r.recorded_usd) > 0).map((r) => (
           <li key={r.provider} className="flex flex-wrap justify-between gap-2">
             <span>{r.label}</span>
             <span className="tabular-nums text-muted-foreground">
               Registrado {dolar(r.recorded_usd)}
               {r.invoice_usd == null
                 ? ' · Fatura ainda não lançada'
-                : ` · Fatura ${dolar(r.invoice_usd)} · diferença ${porcentagem(r.diff_pct ?? 0, 1)}`}
+                : ` · Fatura ${dolar(r.invoice_usd)} · diferença ${r.diff_pct == null ? '—' : porcentagem(r.diff_pct, 1)}`}
             </span>
           </li>
         ))}
