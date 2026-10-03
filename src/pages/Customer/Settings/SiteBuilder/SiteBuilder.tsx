@@ -1,78 +1,48 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { formatDateBR } from '@/utils/dateUtils';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
-import {
-  Button,
-  Input,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Label as UILabel,
-  Textarea,
-  Badge,
-  Switch,
-} from '@/components/ui/ds';
-import {
-  Globe, Plus, Edit, Trash2, FileText, Newspaper,
-  ExternalLink, Archive, Send, RefreshCw, Users,
-  LayoutTemplate, Copy, Check, Home, Building2, Search, MessageCircle,
-  Upload, Loader2, Sparkles, Image as ImageIcon, Lightbulb, X, Megaphone, EyeOff,
-  Landmark, Signpost, Mail, AlertTriangle,
-} from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { getTenantSlug } from '@/services/core/tenant';
-import { RichTextEditor, type RichTextEditorRef } from '@/components/chat/rich-text-editor';
-import SaleRentDestination from '@/components/pipelines/SaleRentDestination';
 import { useLeadDestinationOptions } from '@/components/pipelines/useLeadDestinationOptions';
 import { siteRoutingFrom, siteRoutingPayload, type SiteRoutingState } from './siteLeadRouting';
-import { extractLogoColors } from '@/utils/logoColors';
 import {
   siteBuilderService,
   Site,
-  SitePage,
-  SiteArticle,
-  SiteLead,
   SiteFormData,
-  PageFormData,
-  ArticleFormData,
-  ARTICLE_STATUS_LABELS,
-  ARTICLE_STATUS_COLORS,
-  SITE_LEAD_STATUS_LABELS,
-  SITE_LEAD_STATUS_COLORS,
   type SiteFinancingPage,
   type SiteListingPage,
 } from '@/services/siteBuilder/siteBuilderService';
-import DomainSettings from './DomainSettings';
-import LandingsPanel from '@/features/landing/manage/LandingsPanel';
-import HeroImagePicker, { type HeroImagePick } from '@/features/siteBuilder/HeroImagePicker';
-import { EMPTY_HERO_IMAGE, HERO_IMAGE_MODE_LABELS, heroImageChoiceFrom, heroImageWarning } from '@/features/siteBuilder/heroImage';
+import { type HeroImagePick } from '@/features/siteBuilder/HeroImagePicker';
+import { EMPTY_HERO_IMAGE, heroImageChoiceFrom } from '@/features/siteBuilder/heroImage';
 import {
-  bankLogoSource, emailDeliveryLabel, financingFrom, financingPayload, financingWarning,
-  listingFrom, listingPayload, listingWarning, parseEmails,
+  financingFrom, financingPayload, listingFrom, listingPayload, parseEmails,
 } from '@/features/siteBuilder/portalPages';
+import { telaDaUrl, telaInfo, trilhaDe, type TelaId } from '@/features/siteBuilder/meuSiteMenu';
 import { useTenantFeatures, useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
-import { telefone } from '@/lib/formato';
-import { Seletor } from '@/components/base/Seletor';
-
-const TABS = [
-  { key: 'portal', label: 'Portal', icon: LayoutTemplate },
-  { key: 'config', label: 'Configurações', icon: Globe },
-  { key: 'pages', label: 'Páginas', icon: FileText },
-  { key: 'articles', label: 'Artigos', icon: Newspaper },
-  { key: 'leads', label: 'Leads', icon: Users },
-  { key: 'landings', label: 'Landings de anúncio', icon: Megaphone },
-];
+import { useAlteracoesNaoSalvas } from '@/hooks/useAlteracoesNaoSalvas';
+import BarraSalvar from '@/components/base/BarraSalvar';
+import MeuSiteBarra from './MeuSiteBarra';
+import PreencherComIA from './telas/PreencherComIA';
+import TelaAparencia from './telas/TelaAparencia';
+import TelaFinanciamento from './telas/TelaFinanciamento';
+import TelaAnuncie from './telas/TelaAnuncie';
+import TelaEndereco from './telas/TelaEndereco';
+import TelaDados from './telas/TelaDados';
+import TelaDestino from './telas/TelaDestino';
+import TelaGoogle from './telas/TelaGoogle';
+import TelaPaginas from './telas/TelaPaginas';
+import TelaBlog from './telas/TelaBlog';
+import TelaContatos from './telas/TelaContatos';
+import TelaAnuncios from './telas/TelaAnuncios';
 
 // A landing de anúncio é liberada CLIENTE A CLIENTE pela Leal Mídia. O gate mora
-// na ABA, nunca na rota nem no item de menu: quem digita o endereço alcança a
-// tela, como em todo o resto do produto. O item Site Builder do menu continua
-// com `featureKey: 'site_builder'` e não muda — portal e landing são duas
-// vendas diferentes, por isso são duas chaves.
+// no ITEM "Páginas de anúncio" da barra do Meu site, nunca na rota nem no item
+// de menu lateral: quem digita o endereço alcança a tela, como em todo o resto
+// do produto. O item Meu site do menu continua com `featureKey: 'site_builder'`
+// e não muda — portal e landing são duas vendas diferentes, por isso são duas
+// chaves.
 //
 // ⚠️ A chave é escrita LITERAL na chamada do useClientToggle abaixo, e não
 // através desta constante, de propósito: scripts/sync-feature-catalog.mjs varre
@@ -80,22 +50,6 @@ const TABS = [
 // tira a chave do catálogo no deploy seguinte — o painel de Funções deixa de
 // oferecer o botão de liberar e ninguém é avisado.
 const LANDINGS_KEY = 'landing_pages';
-
-// Estado vazio comum das abas que dependem do site existir. Antes cada aba
-// repetia essa marcação, e a de landings morria num aviso vermelho sem saída.
-function NoSiteYet({ onGoToConfig }: { onGoToConfig: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-      <Globe className="h-10 w-10 mb-2 opacity-30" />
-      <p className="text-sm">Configure o site primeiro na aba Configurações</p>
-      <Button variant="outline" size="sm" className="mt-3" onClick={onGoToConfig}>
-        Ir para Configurações
-      </Button>
-    </div>
-  );
-}
-
-const SITE_FONTS = ['Inter', 'Space Grotesk', 'Lato', 'Poppins', 'Montserrat', 'Roboto'];
 
 const EMPTY_SITE_FORM: SiteFormData = {
   name: '',
@@ -121,65 +75,31 @@ const EMPTY_SITE_FORM: SiteFormData = {
   facebook_pixel_id: '',
 };
 
-const EMPTY_PAGE_FORM: PageFormData = {
-  title: '',
-  slug: '',
-  content: '',
-  active: true,
-  in_menu: true,
-  menu_position: 0,
-};
-
-const EMPTY_ARTICLE_FORM: ArticleFormData = {
-  title: '',
-  body_html: '',
-  excerpt: '',
-  cover_image_url: '',
-};
-
-// Sugestões prontas de pauta (nicho imobiliário) — clicar preenche o título.
-const ARTICLE_IDEAS = [
-  'Como financiar um imóvel: passo a passo',
-  'Documentos necessários para comprar um imóvel',
-  'Vale a pena alugar ou comprar? Como decidir',
-  'Dicas para valorizar seu imóvel antes de vender',
-  'O que avaliar antes de comprar o primeiro apê',
-  'Financiamento pela Caixa: como funciona',
-  'Erros comuns na hora de alugar um imóvel',
-  'Como funciona o processo de compra na planta',
-  'Bairros em alta na região: onde investir',
-  'Checklist de vistoria antes de assinar o contrato',
-];
-
-function formatDate(iso: string) {
-  return formatDateBR(iso);
-}
-
 export default function SiteBuilder() {
-  const navigate = useNavigate();
   const [site, setSite] = useState<Site | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Aba no endereço pra dar link direto (o "voltar" do editor de landing aponta
-  // pra cá). `replace` de propósito: sem ele o botão Voltar do navegador passa a
-  // percorrer as abas em vez de sair da tela.
+  // Tela no endereço (`?tela=`) pra dar link direto (o "voltar" do editor de
+  // landing aponta pra cá; `?tab=` antigo ainda resolve). `replace` de
+  // propósito: sem ele o botão Voltar do navegador passa a percorrer as telas
+  // em vez de sair da página. Sem site ainda, só a tela Endereço abre: é onde
+  // se cria o site.
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') ?? 'portal';
-  const setActiveTab = useCallback((key: string) => {
-    setSearchParams(key === 'portal' ? {} : { tab: key }, { replace: true });
+  const tela: TelaId = site ? telaDaUrl(searchParams) : 'endereco';
+  const irPara = useCallback((t: TelaId) => {
+    setSearchParams(t === 'painel' ? {} : { tela: t }, { replace: true });
   }, [setSearchParams]);
 
-  // Gate da aba de landings: default DESLIGADO, a Leal Mídia sempre vê.
-  // `archivedKeys` é a camada acima — tira a aba do ar pra TODO MUNDO, inclusive
+  // Gate das páginas de anúncio: default DESLIGADO, a Leal Mídia sempre vê.
+  // `archivedKeys` é a camada acima — tira o item do ar pra TODO MUNDO, inclusive
   // a Leal Mídia, enquanto algo estiver em obra (painel Clientes > Arquivados).
   const { archivedKeys } = useTenantFeatures();
   const isSuper = useIsSuperAdmin();
   const landingsToggle = useClientToggle('landing_pages');
   const canLandings = !archivedKeys?.includes(LANDINGS_KEY) && (isSuper || landingsToggle);
-  // Só o super-admin recebe o selo "oculto pro cliente" — o cliente sem a chave
-  // nem vê a aba, então nunca veria selo.
+  // Só o super-admin recebe o aviso "oculto pro cliente" — o cliente sem a chave
+  // nem vê o item, então nunca veria o aviso.
   const landingsHiddenFromClient = isSuper && !landingsToggle;
-  const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Site form
@@ -195,46 +115,10 @@ export default function SiteBuilder() {
     ? destinationOptions
     : { ...destinationOptions, roletas: null, users: null };
 
-  // Logo upload + extração de cores (determinística, canvas)
-  const logoInputRef = useRef<HTMLInputElement | null>(null);
-  const [logoUploading, setLogoUploading] = useState(false);
-
-  // Vídeo do banner da home (upload → URL pública)
-  const bannerVideoInputRef = useRef<HTMLInputElement | null>(null);
-  const [bannerVideoUploading, setBannerVideoUploading] = useState(false);
-
-  // Foto do banner da home: escolhida de um imóvel (janela própria) ou enviada.
-  // A prévia da foto de imóvel recém-escolhida fica aqui até salvar; depois de
-  // salvo, quem diz qual imagem o site serve é o servidor (site.hero_image.url).
-  const heroImageInputRef = useRef<HTMLInputElement | null>(null);
-  const [heroImageUploading, setHeroImageUploading] = useState(false);
-  const [heroPickerOpen, setHeroPickerOpen] = useState(false);
+  // Prévia da foto de imóvel recém-escolhida para o banner da home. Fica aqui
+  // (e não na tela Aparência) porque é o Salvar que a limpa: depois de salvo,
+  // quem diz qual imagem o site serve é o servidor (site.hero_image.url).
   const [heroPickPreview, setHeroPickPreview] = useState<HeroImagePick | null>(null);
-
-  // Preencher com IA (proposta — o usuário revisa e salva)
-  const [aiText, setAiText] = useState('');
-  const [aiRunning, setAiRunning] = useState(false);
-  const [aiAboutHtml, setAiAboutHtml] = useState<string | null>(null);
-
-  // Pages
-  const [pages, setPages] = useState<SitePage[]>([]);
-  const [pagesLoading, setPagesLoading] = useState(false);
-  const [pageModal, setPageModal] = useState(false);
-  const [editingPage, setEditingPage] = useState<SitePage | null>(null);
-  const [pageForm, setPageForm] = useState<PageFormData>(EMPTY_PAGE_FORM);
-
-  // Articles
-  const [articles, setArticles] = useState<SiteArticle[]>([]);
-  const [articlesLoading, setArticlesLoading] = useState(false);
-  const [articleModal, setArticleModal] = useState(false);
-  const [editingArticle, setEditingArticle] = useState<SiteArticle | null>(null);
-  const [articleForm, setArticleForm] = useState<ArticleFormData>(EMPTY_ARTICLE_FORM);
-  const [articleLoadingBody, setArticleLoadingBody] = useState(false);
-  const [coverUploading, setCoverUploading] = useState(false);
-  const coverInputRef = useRef<HTMLInputElement>(null);
-  const articleEditorRef = useRef<RichTextEditorRef>(null);
-  // Semente do editor: (re)carrega o HTML no editor a cada abertura do modal.
-  const [editorSeed, setEditorSeed] = useState({ html: '', nonce: 0 });
 
   // As duas páginas extras do portal. Estado PRÓPRIO (e não dentro do
   // formulário do site) porque o que a tela edita é o RESOLVIDO — os cinco
@@ -245,18 +129,6 @@ export default function SiteBuilder() {
   const [financingPage, setFinancingPage] = useState<SiteFinancingPage>(() => financingFrom(null));
   const [listingPage, setListingPage] = useState<SiteListingPage>(() => listingFrom(null));
   const [emailsText, setEmailsText] = useState('');
-  const [testingEmail, setTestingEmail] = useState(false);
-  // Qual logo de banco está subindo agora (chave do banco), para o botão daquela
-  // linha girar sem travar as outras quatro.
-  const [bankLogoUploading, setBankLogoUploading] = useState<string | null>(null);
-  const bankLogoInputRef = useRef<HTMLInputElement>(null);
-  const bankLogoTargetRef = useRef<string | null>(null);
-
-  // Leads
-  const [leads, setLeads] = useState<SiteLead[]>([]);
-  const [leadsTotal, setLeadsTotal] = useState(0);
-  const [leadsLoading, setLeadsLoading] = useState(false);
-  const [leadsStatusFilter, setLeadsStatusFilter] = useState('');
 
   const loadSite = useCallback(async () => {
     setLoading(true);
@@ -305,63 +177,7 @@ export default function SiteBuilder() {
     }
   }, []);
 
-  const loadPages = useCallback(async () => {
-    if (!site) return;
-    setPagesLoading(true);
-    try {
-      // Só as páginas do PORTAL. A landing de anúncio é feita de blocos e tem
-      // aba própria — listada aqui, o botão Editar abria o editor simples de
-      // título/HTML e salvava por cima do que o construtor montou.
-      const all = await siteBuilderService.listPages(site.id);
-      setPages(all.filter(p => p.page_kind !== 'ad_landing'));
-    } catch {
-      toast.error('Erro ao carregar páginas');
-    } finally {
-      setPagesLoading(false);
-    }
-  }, [site]);
-
-  const loadArticles = useCallback(async () => {
-    if (!site) return;
-    setArticlesLoading(true);
-    try {
-      setArticles(await siteBuilderService.listArticles(site.id));
-    } catch {
-      toast.error('Erro ao carregar artigos');
-    } finally {
-      setArticlesLoading(false);
-    }
-  }, [site]);
-
-  const loadLeads = useCallback(async (statusFilter?: string) => {
-    if (!site) return;
-    setLeadsLoading(true);
-    try {
-      const params: { status?: string; per_page: number } = { per_page: 50 };
-      if (statusFilter) params.status = statusFilter;
-      const result = await siteBuilderService.listLeads(site.id, params);
-      setLeads(result.data);
-      setLeadsTotal(result.meta.total);
-    } catch {
-      toast.error('Erro ao carregar leads');
-    } finally {
-      setLeadsLoading(false);
-    }
-  }, [site]);
-
   useEffect(() => { loadSite(); }, [loadSite]);
-  useEffect(() => {
-    if (site && activeTab === 'pages') loadPages();
-    if (site && activeTab === 'articles') loadArticles();
-    if (site && activeTab === 'leads') loadLeads(leadsStatusFilter || undefined);
-  }, [site, activeTab, loadPages, loadArticles, loadLeads, leadsStatusFilter]);
-
-  // (Re)injeta o HTML no editor sempre que o modal abre ou o corpo é carregado.
-  // O editor prosemirror lida com HTML via setContent (o `value` só trata texto).
-  useEffect(() => {
-    if (!articleModal) return;
-    articleEditorRef.current?.setContent(editorSeed.html || '');
-  }, [articleModal, editorSeed.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSaveSite = async () => {
     setSaving(true);
@@ -409,320 +225,18 @@ export default function SiteBuilder() {
     setSiteFormDirty(true);
   };
 
-  // Sobe a logo E extrai as cores dela (canvas local, sem IA): preenche
-  // logo_url + cor primária/destaque de uma vez. Usuário revisa e salva.
-  const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (logoInputRef.current) logoInputRef.current.value = '';
-    if (!file) return;
-    if (file.size > 8 * 1024 * 1024) { toast.error('Logo muito grande (máx 8MB).'); return; }
+  // Telas que mexem em estado fora do siteForm (financiamento, anuncie, destino)
+  // marcam o formulário como alterado por aqui.
+  const marcarAlterado = useCallback(() => setSiteFormDirty(true), []);
 
-    setLogoUploading(true);
-    try {
-      // Cores primeiro (arquivo local — funciona mesmo se o upload falhar).
-      const colors = await extractLogoColors(file);
-      const { url } = await siteBuilderService.uploadAsset(file);
-      setF({
-        logo_url: url,
-        ...(colors ? { primary_color: colors.primary, accent_color: colors.accent } : {}),
-      });
-      toast.success(colors
-        ? `Logo no ar. Cores extraídas: ${colors.primary} / ${colors.accent} — revise e salve.`
-        : 'Logo no ar. Não achei cor de marca na imagem (P&B?) — cores mantidas.');
-    } catch {
-      toast.error('Falha no upload da logo.');
-    } finally {
-      setLogoUploading(false);
-    }
+  // Descartar volta ao que está gravado no servidor.
+  const descartar = async () => {
+    await loadSite();
+    setHeroPickPreview(null);
+    setSiteFormDirty(false);
   };
 
-  // Sobe o logo de um banco da página de financiamento. Vai para o armazenamento
-  // do próprio CRM — logo apontado para o site do banco quebra no dia em que ele
-  // troca o endereço da imagem, e o site do cliente fica com o círculo vazio.
-  const handleBankLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    const key = bankLogoTargetRef.current;
-    if (bankLogoInputRef.current) bankLogoInputRef.current.value = '';
-    bankLogoTargetRef.current = null;
-    if (!file || !key) return;
-    if (!file.type.startsWith('image/')) { toast.error('Envie um arquivo de imagem (PNG, JPG, WebP ou SVG).'); return; }
-    if (file.size > 2 * 1024 * 1024) { toast.error('Imagem muito grande (máx 2MB).'); return; }
-
-    setBankLogoUploading(key);
-    try {
-      const { url } = await siteBuilderService.uploadAsset(file);
-      setFinancingPage(prev => ({
-        ...prev,
-        banks: prev.banks.map(b => (b.key === key ? { ...b, logo_url: url } : b)),
-      }));
-      setSiteFormDirty(true);
-      toast.success('Logo no ar. Clique em Salvar para valer no site.');
-    } catch {
-      toast.error('Falha no upload do logo.');
-    } finally {
-      setBankLogoUploading(null);
-    }
-  };
-
-  // Sobe o vídeo do banner da home. Fica no form (hero_video_url) até o usuário salvar.
-  const handleBannerVideoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (bannerVideoInputRef.current) bannerVideoInputRef.current.value = '';
-    if (!file) return;
-    if (!file.type.startsWith('video/')) { toast.error('Envie um arquivo de vídeo (MP4/WebM).'); return; }
-    if (file.size > 60 * 1024 * 1024) { toast.error('Vídeo muito grande (máx 60MB). Comprima antes de enviar.'); return; }
-
-    setBannerVideoUploading(true);
-    try {
-      const { url } = await siteBuilderService.uploadAsset(file);
-      setF({ hero_video_url: url });
-      toast.success('Vídeo no ar. Revise o preview e clique em Salvar.');
-    } catch {
-      toast.error('Falha no upload do vídeo.');
-    } finally {
-      setBannerVideoUploading(false);
-    }
-  };
-
-  // Sobe a foto do banner da home (modo "Enviar uma foto"). Fica no form até salvar.
-  const handleHeroImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (heroImageInputRef.current) heroImageInputRef.current.value = '';
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { toast.error('Envie um arquivo de imagem (JPG, PNG ou WebP).'); return; }
-    if (file.size > 8 * 1024 * 1024) { toast.error('Imagem muito grande (máx 8MB). Comprima antes de enviar.'); return; }
-
-    setHeroImageUploading(true);
-    try {
-      const { url } = await siteBuilderService.uploadAsset(file);
-      setF({ hero_image: { mode: 'upload', url } });
-      toast.success('Foto enviada. Revise a prévia e clique em Salvar.');
-    } catch {
-      toast.error('Falha no upload da foto.');
-    } finally {
-      setHeroImageUploading(false);
-    }
-  };
-
-  const handleHeroPick = (pick: HeroImagePick) => {
-    setHeroPickPreview(pick);
-    setF({ hero_image: { mode: 'property', property_id: pick.property_id, photo_id: pick.photo_id } });
-    setHeroPickerOpen(false);
-  };
-
-  // IA lê o material colado e devolve os campos NOS LUGARES CERTOS do form.
-  // Nada é salvo sozinho: o form fica sujo e o usuário revisa + salva.
-  const handleAiSetup = async () => {
-    if (!site) { toast.error('Crie o site primeiro (aba Configurações).'); return; }
-    if (aiText.trim().length < 40) { toast.error('Cole um material com mais contexto (mín. 40 caracteres).'); return; }
-    setAiRunning(true);
-    try {
-      const p = await siteBuilderService.aiSetup(site.id, aiText.trim());
-      const patch: Partial<SiteFormData> = {};
-      if (p.name) patch.name = p.name;
-      if (p.seo_title) patch.seo_title = p.seo_title;
-      if (p.seo_description) patch.seo_description = p.seo_description;
-      if (p.contact_phone) patch.contact_phone = p.contact_phone;
-      if (p.contact_whatsapp) patch.contact_whatsapp = p.contact_whatsapp;
-      if (p.contact_email) patch.contact_email = p.contact_email;
-      if (p.contact_address) patch.contact_address = p.contact_address;
-      const filled = Object.keys(patch).length;
-      if (filled === 0 && !p.about_html) {
-        toast.error('A IA não achou dados utilizáveis nesse material.');
-        return;
-      }
-      setF(patch);
-      setAiAboutHtml(p.about_html ?? null);
-      toast.success(`${filled} campo${filled !== 1 ? 's' : ''} preenchido${filled !== 1 ? 's' : ''}. Revise e clique em Salvar.`);
-    } catch (e) {
-      toast.error(apiErrorMessage(e, 'IA falhou ao interpretar o material.'));
-    } finally {
-      setAiRunning(false);
-    }
-  };
-
-  // Cria a página "Sobre nós" com o HTML proposto pela IA (clique explícito).
-  const handleCreateAboutPage = async () => {
-    if (!site || !aiAboutHtml) return;
-    setSaving(true);
-    try {
-      await siteBuilderService.createPage(site.id, {
-        title: 'Sobre nós',
-        slug: 'sobre-nos',
-        content: aiAboutHtml,
-        active: true,
-        in_menu: true,
-        menu_position: 99,
-      });
-      toast.success('Página "Sobre nós" criada (aba Páginas).');
-      setAiAboutHtml(null);
-    } catch (e) {
-      toast.error(apiErrorMessage(e, 'Falha ao criar a página.'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Pages handlers
-  const openCreatePage = () => {
-    setEditingPage(null);
-    setPageForm(EMPTY_PAGE_FORM);
-    setPageModal(true);
-  };
-
-  const openEditPage = (page: SitePage) => {
-    setEditingPage(page);
-    setPageForm({
-      title: page.title,
-      slug: page.slug,
-      content: page.content ?? '',
-      active: page.active,
-      in_menu: page.in_menu,
-      menu_position: page.menu_position ?? 0,
-    });
-    setPageModal(true);
-  };
-
-  const handleSavePage = async () => {
-    if (!site || !pageForm.title.trim()) { toast.error('Título é obrigatório'); return; }
-    setSaving(true);
-    try {
-      if (editingPage) {
-        const updated = await siteBuilderService.updatePage(site.id, editingPage.id, pageForm);
-        setPages(prev => prev.map(p => p.id === updated.id ? updated : p));
-        toast.success('Página atualizada');
-      } else {
-        const created = await siteBuilderService.createPage(site.id, pageForm);
-        setPages(prev => [...prev, created]);
-        toast.success('Página criada');
-      }
-      setPageModal(false);
-    } catch (e) {
-      toast.error(apiErrorMessage(e, 'Erro ao salvar página'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeletePage = async (page: SitePage) => {
-    if (!site) return;
-    try {
-      await siteBuilderService.deletePage(site.id, page.id);
-      setPages(prev => prev.filter(p => p.id !== page.id));
-      toast.success('Página removida');
-    } catch {
-      toast.error('Erro ao remover página');
-    }
-  };
-
-  // Articles handlers
-  const openCreateArticle = () => {
-    setEditingArticle(null);
-    setArticleForm(EMPTY_ARTICLE_FORM);
-    setEditorSeed(s => ({ html: '', nonce: s.nonce + 1 }));
-    setArticleModal(true);
-  };
-
-  const openEditArticle = async (article: SiteArticle) => {
-    setEditingArticle(article);
-    setArticleForm({
-      title: article.title,
-      body_html: article.body_html ?? '',
-      excerpt: article.excerpt ?? '',
-      cover_image_url: article.cover_image_url ?? '',
-    });
-    setEditorSeed(s => ({ html: article.body_html ?? '', nonce: s.nonce + 1 }));
-    setArticleModal(true);
-    // A listagem não traz o corpo; busca o artigo completo e recarrega o editor.
-    if (!site) return;
-    setArticleLoadingBody(true);
-    try {
-      const full = await siteBuilderService.getArticle(site.id, article.id);
-      setArticleForm(f => ({ ...f, body_html: full.body_html ?? '', excerpt: full.excerpt ?? f.excerpt }));
-      setEditorSeed(s => ({ html: full.body_html ?? '', nonce: s.nonce + 1 }));
-    } catch {
-      toast.error('Erro ao carregar o conteúdo do artigo');
-    } finally {
-      setArticleLoadingBody(false);
-    }
-  };
-
-  const handleCoverFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (coverInputRef.current) coverInputRef.current.value = '';
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { toast.error('Envie um arquivo de imagem.'); return; }
-    if (file.size > 8 * 1024 * 1024) { toast.error('Imagem muito grande (máx 8MB).'); return; }
-    setCoverUploading(true);
-    try {
-      const { url } = await siteBuilderService.uploadAsset(file);
-      setArticleForm(f => ({ ...f, cover_image_url: url }));
-      toast.success('Capa enviada.');
-    } catch {
-      toast.error('Falha no upload da capa.');
-    } finally {
-      setCoverUploading(false);
-    }
-  };
-
-  const handleSaveArticle = async () => {
-    if (!site || !articleForm.title.trim()) { toast.error('Título é obrigatório'); return; }
-    // O editor é a fonte da verdade do corpo (HTML serializado via ref).
-    const payload: ArticleFormData = {
-      ...articleForm,
-      body_html: articleEditorRef.current?.getContent() ?? articleForm.body_html ?? '',
-    };
-    setSaving(true);
-    try {
-      if (editingArticle) {
-        const updated = await siteBuilderService.updateArticle(site.id, editingArticle.id, payload);
-        setArticles(prev => prev.map(a => a.id === updated.id ? updated : a));
-        toast.success('Artigo atualizado');
-      } else {
-        const created = await siteBuilderService.createArticle(site.id, payload);
-        setArticles(prev => [...prev, created]);
-        toast.success('Artigo criado');
-      }
-      setArticleModal(false);
-    } catch (e) {
-      toast.error(apiErrorMessage(e, 'Erro ao salvar artigo'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handlePublishArticle = async (article: SiteArticle) => {
-    if (!site) return;
-    try {
-      const updated = await siteBuilderService.publishArticle(site.id, article.id);
-      setArticles(prev => prev.map(a => a.id === updated.id ? updated : a));
-      toast.success('Artigo publicado');
-    } catch {
-      toast.error('Erro ao publicar artigo');
-    }
-  };
-
-  const handleArchiveArticle = async (article: SiteArticle) => {
-    if (!site) return;
-    try {
-      const updated = await siteBuilderService.archiveArticle(site.id, article.id);
-      setArticles(prev => prev.map(a => a.id === updated.id ? updated : a));
-      toast.success('Artigo arquivado');
-    } catch {
-      toast.error('Erro ao arquivar artigo');
-    }
-  };
-
-  const handleDeleteArticle = async (article: SiteArticle) => {
-    if (!site) return;
-    try {
-      await siteBuilderService.deleteArticle(site.id, article.id);
-      setArticles(prev => prev.filter(a => a.id !== article.id));
-      toast.success('Artigo removido');
-    } catch {
-      toast.error('Erro ao remover artigo');
-    }
-  };
+  useAlteracoesNaoSalvas(!!site && siteFormDirty);
 
   if (loading) {
     return (
@@ -733,1221 +247,71 @@ export default function SiteBuilder() {
     );
   }
 
+  const portalUrl = `${window.location.origin}/portal/${getTenantSlug() ?? site?.slug ?? ''}`;
+  const info = telaInfo(tela);
+  const trilha = trilhaDe(tela);
+  const formProps = { site, siteForm, setF };
+
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Globe className="h-6 w-6 text-primary" />
-            Site Builder
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {site
-              ? <>Site: <strong>{site.name}</strong> — /{site.slug}</>
-              : 'Nenhum site configurado ainda'
-            }
+    <div className="flex min-h-full flex-col">
+      {site && (
+        <MeuSiteBarra
+          tela={tela}
+          aoIr={irPara}
+          enderecoVisivel={portalUrl.replace(/^https?:\/\//, '')}
+          urlDoSite={portalUrl}
+          noAr={!!site.published && !!site.active}
+          podeAnuncios={canLandings}
+        />
+      )}
+      <div className="mx-auto w-full max-w-6xl space-y-5 px-6 py-6">
+        <div className="space-y-1">
+          {trilha && <p className="text-xs font-medium text-muted-foreground">{trilha}</p>}
+          <h1 className="text-2xl font-semibold">{site ? info.titulo : 'Criar o site'}</h1>
+          <p className="text-sm text-muted-foreground">
+            {site ? info.frase : 'Dê um nome e um endereço para o site da imobiliária.'}
           </p>
         </div>
-        {site && (
-          <div className="flex items-center gap-2">
-            <Badge className={site.published
-              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-              : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-            }>
-              {site.published ? 'Publicado' : 'Rascunho'}
-            </Badge>
-            {site.primary_domain && (
-              <a
-                href={`https://${site.primary_domain}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Visualizar
-              </a>
-            )}
-          </div>
+
+        {/* Até o TelaPainel existir, o Painel mostra só o "Preencher com IA". */}
+        {tela === 'painel' && <PreencherComIA site={site} setF={setF} />}
+        {tela === 'aparencia' && (
+          <TelaAparencia {...formProps} heroPickPreview={heroPickPreview} setHeroPickPreview={setHeroPickPreview} />
         )}
+        {tela === 'financiamento' && (
+          <TelaFinanciamento financingPage={financingPage} setFinancingPage={setFinancingPage} marcarAlterado={marcarAlterado} />
+        )}
+        {tela === 'anuncie' && (
+          <TelaAnuncie
+            site={site}
+            listingPage={listingPage}
+            setListingPage={setListingPage}
+            emailsText={emailsText}
+            setEmailsText={setEmailsText}
+            alterado={siteFormDirty}
+            marcarAlterado={marcarAlterado}
+          />
+        )}
+        {tela === 'endereco' && <TelaEndereco {...formProps} aoCriar={handleSaveSite} salvando={saving} />}
+        {tela === 'dados' && <TelaDados {...formProps} />}
+        {tela === 'destino' && (
+          <TelaDestino
+            leadRouting={leadRouting}
+            setLeadRouting={setLeadRouting}
+            routingOptions={routingOptions}
+            marcarAlterado={marcarAlterado}
+          />
+        )}
+        {tela === 'google' && <TelaGoogle {...formProps} />}
+        {site && tela === 'paginas' && <TelaPaginas site={site} />}
+        {site && tela === 'blog' && <TelaBlog site={site} />}
+        {site && tela === 'contatos' && <TelaContatos site={site} />}
+        {site && tela === 'anuncios' && canLandings && (
+          <TelaAnuncios site={site} landingsHiddenFromClient={landingsHiddenFromClient} />
+        )}
+
+        <BarraSalvar visivel={!!site && siteFormDirty} salvando={saving} aoSalvar={handleSaveSite} aoDescartar={descartar} />
       </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-border mb-6">
-        {TABS.filter(tab => tab.key !== 'landings' || canLandings).map(tab => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.key
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              {tab.label}
-              {tab.key === 'landings' && landingsHiddenFromClient && (
-                <EyeOff
-                  className="h-3.5 w-3.5 text-amber-500"
-                  aria-label="Oculto pro cliente"
-                />
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Portal tab */}
-      {activeTab === 'portal' && (() => {
-        const portalUrl = `${window.location.origin}/portal/${getTenantSlug() ?? site?.slug ?? ''}`;
-        const brand = site?.branding.primary_color || '#0E7C5A';
-        const copyLink = () => {
-          navigator.clipboard?.writeText(portalUrl);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1800);
-        };
-        return (
-          <div className="space-y-6">
-            {/* Template escolhido */}
-            <section className="overflow-hidden rounded-xl border border-border bg-card">
-              <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 flex-none items-center justify-center rounded-xl text-white" style={{ background: brand }}>
-                    <LayoutTemplate className="h-7 w-7" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-base font-semibold">Portal Imobiliário</h2>
-                      <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Ativo</Badge>
-                    </div>
-                    <p className="mt-0.5 text-sm text-muted-foreground">
-                      Template <strong>Moderno (Editorial)</strong> — o site público da imobiliária, com a sua marca e os seus imóveis.
-                    </p>
-                  </div>
-                </div>
-                <a
-                  href={portalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold text-white"
-                  style={{ background: brand }}
-                >
-                  <ExternalLink className="h-4 w-4" /> Ver portal
-                </a>
-              </div>
-
-              {/* Link público */}
-              <div className="border-t border-border bg-muted/30 p-5">
-                <UILabel className="text-xs text-muted-foreground">Link público do portal</UILabel>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <Input readOnly value={portalUrl} className="flex-1 font-mono text-sm" />
-                  <Button variant="outline" size="sm" onClick={copyLink} className="flex-none">
-                    {copied ? <><Check className="mr-1 h-4 w-4 text-emerald-600" /> Copiado</> : <><Copy className="mr-1 h-4 w-4" /> Copiar</>}
-                  </Button>
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Indexável no Google. Depois dá pra apontar um domínio próprio na aba Configurações.
-                </p>
-              </div>
-            </section>
-
-            {/* O que o portal faz */}
-            <section className="rounded-xl border border-border bg-card p-5">
-              <h3 className="mb-4 text-base font-semibold">O que já vem pronto</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {[
-                  { icon: Home, title: 'Home com busca', desc: 'Vitrine dos imóveis com busca por tipo, bairro, cidade e dormitórios.' },
-                  { icon: Building2, title: 'Página de cada imóvel', desc: 'Gerada sozinha de cada imóvel publicado — galeria, ficha, mapa. Indexável.' },
-                  { icon: MessageCircle, title: 'Contato via WhatsApp', desc: 'Botão de WhatsApp em cada imóvel e captura de lead direto no seu CRM.' },
-                  { icon: Search, title: 'SEO da sua marca', desc: 'Usa sua logo, cores e conteúdo (editáveis na aba Configurações).' },
-                ].map((f) => (
-                  <div key={f.title} className="flex gap-3">
-                    <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg" style={{ background: `${brand}1a`, color: brand }}>
-                      <f.icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">{f.title}</div>
-                      <p className="text-xs text-muted-foreground">{f.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
-                <Button variant="outline" size="sm" onClick={() => setActiveTab('config')}>
-                  <Edit className="mr-1.5 h-4 w-4" /> Editar marca e SEO
-                </Button>
-                <a href="/properties" className="inline-flex items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted">
-                  <Building2 className="mr-1.5 h-4 w-4" /> Gerenciar imóveis
-                </a>
-                {/* O template vale pra TODOS os imóveis publicados do portal —
-                    por isso mora aqui, e não na tela de Imóveis, onde o botão
-                    fazia parecer configuração de um imóvel só. */}
-                <Button variant="outline" size="sm" onClick={() => navigate('/properties/template-imovel')}>
-                  <LayoutTemplate className="mr-1.5 h-4 w-4" /> Editar o template da página de imóvel
-                </Button>
-              </div>
-            </section>
-          </div>
-        );
-      })()}
-
-      {/* Config tab */}
-      {activeTab === 'config' && (
-        <div className="space-y-6">
-          {/* Preencher com IA */}
-          <section className="rounded-xl border border-primary/30 bg-primary/5 p-5">
-            <h2 className="mb-1 flex items-center gap-2 text-base font-semibold">
-              <Sparkles className="h-4 w-4 text-primary" /> Preencher com IA
-            </h2>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Cole a apresentação da imobiliária (texto do Instagram, sobre-nós, documento institucional).
-              A IA distribui as informações nos campos certos abaixo — nome, SEO, contato e página Sobre.
-              Nada é salvo sozinho: você revisa e clica em Salvar.
-            </p>
-            <Textarea
-              value={aiText}
-              onChange={e => setAiText(e.target.value)}
-              rows={4}
-              placeholder="Ex: A Imobiliária XYZ atua há 15 anos em Campinas com foco em lançamentos... Fale com a gente no (19) 99999-9999 ou contato@xyz.com.br"
-              className="resize-none bg-background"
-            />
-            <div className="mt-2 flex items-center gap-2">
-              <Button onClick={handleAiSetup} disabled={aiRunning || !site}>
-                {aiRunning
-                  ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Interpretando...</>
-                  : <><Sparkles className="mr-1.5 h-4 w-4" /> Preencher campos</>}
-              </Button>
-              {aiAboutHtml && (
-                <Button variant="outline" onClick={handleCreateAboutPage} disabled={saving}>
-                  <FileText className="mr-1.5 h-4 w-4" /> Criar página "Sobre nós" com o texto gerado
-                </Button>
-              )}
-              {!site && (
-                <span className="text-xs text-muted-foreground">Crie o site primeiro (preencha o nome e salve).</span>
-              )}
-            </div>
-          </section>
-
-          {/* Basic */}
-          <section className="rounded-xl border border-border bg-card p-5">
-            <h2 className="text-base font-semibold mb-4">Informações básicas</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2 sm:col-span-1">
-                <UILabel>Nome do site *</UILabel>
-                <Input value={siteForm.name} onChange={e => setF({ name: e.target.value })}
-                  placeholder="Imobiliária XYZ" className="mt-1" />
-              </div>
-              <div className="col-span-2 sm:col-span-1">
-                <UILabel>Endereço do site (URL)</UILabel>
-                <Input value={siteForm.slug} onChange={e => setF({ slug: e.target.value })}
-                  placeholder="imobiliaria-xyz" className="mt-1 font-mono" />
-              </div>
-              <div className="flex items-center gap-3">
-                <input type="checkbox" id="active" checked={siteForm.active}
-                  onChange={e => setF({ active: e.target.checked })} className="rounded" />
-                <UILabel htmlFor="active" className="cursor-pointer">Ativo</UILabel>
-              </div>
-              <div className="flex items-center gap-3">
-                <input type="checkbox" id="published" checked={siteForm.published}
-                  onChange={e => setF({ published: e.target.checked })} className="rounded" />
-                <UILabel htmlFor="published" className="cursor-pointer">Publicado</UILabel>
-              </div>
-            </div>
-          </section>
-
-          {/* Domínio próprio — conectado direto na Vercel, sem ninguém entrar lá na mão */}
-          {site && <DomainSettings siteId={site.id} />}
-
-          {/* Branding */}
-          <section className="rounded-xl border border-border bg-card p-5">
-            <h2 className="text-base font-semibold mb-4">Identidade visual</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <UILabel>Logo</UILabel>
-                <div className="mt-1 flex items-center gap-2">
-                  {siteForm.logo_url && (
-                    <img src={siteForm.logo_url} alt="logo"
-                      className="h-9 w-9 rounded border border-border object-contain bg-white flex-none"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                  )}
-                  <Input value={siteForm.logo_url ?? ''} onChange={e => setF({ logo_url: e.target.value })}
-                    placeholder="https://... ou envie o arquivo" className="flex-1" />
-                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoFile} />
-                  <Button type="button" variant="outline" onClick={() => logoInputRef.current?.click()}
-                    disabled={logoUploading} className="flex-none">
-                    {logoUploading
-                      ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Enviando...</>
-                      : <><Upload className="mr-1.5 h-4 w-4" /> Enviar logo</>}
-                  </Button>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Ao enviar a logo, as cores da marca abaixo são extraídas dela automaticamente.
-                </p>
-              </div>
-              <div>
-                <UILabel>Cor primária</UILabel>
-                <div className="flex items-center gap-2 mt-1">
-                  <input type="color" value={siteForm.primary_color ?? '#7C3AED'}
-                    onChange={e => setF({ primary_color: e.target.value })}
-                    className="h-9 w-14 rounded border border-input cursor-pointer" />
-                  <Input value={siteForm.primary_color ?? ''} onChange={e => setF({ primary_color: e.target.value })}
-                    placeholder="#7C3AED" className="font-mono flex-1" />
-                </div>
-              </div>
-              <div>
-                <UILabel>Cor de destaque</UILabel>
-                <div className="flex items-center gap-2 mt-1">
-                  <input type="color" value={siteForm.accent_color ?? '#9333EA'}
-                    onChange={e => setF({ accent_color: e.target.value })}
-                    className="h-9 w-14 rounded border border-input cursor-pointer" />
-                  <Input value={siteForm.accent_color ?? ''} onChange={e => setF({ accent_color: e.target.value })}
-                    placeholder="#9333EA" className="font-mono flex-1" />
-                </div>
-              </div>
-              <div className="col-span-2">
-                <UILabel htmlFor="site-font">Fonte</UILabel>
-                <Seletor
-                  id="site-font"
-                  value={siteForm.font_family ?? 'Inter'}
-                  onChange={e => setF({ font_family: e.target.value })}
-                  className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  style={{ fontFamily: `${siteForm.font_family ?? 'Inter'}, system-ui, sans-serif` }}
-                >
-                  {SITE_FONTS.map(f => (
-                    <option key={f} value={f} style={{ fontFamily: `${f}, system-ui, sans-serif` }}>{f}</option>
-                  ))}
-                </Seletor>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Aplica-se a textos e títulos do site público.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* Banner da home: a FOTO (automática, de um imóvel ou enviada) e o vídeo,
-              que quando preenchido passa por cima da foto. */}
-          <section className="rounded-xl border border-border bg-card p-5">
-            <h2 className="text-base font-semibold mb-1">Banner da home</h2>
-            <p className="mb-4 text-xs text-muted-foreground">
-              A imagem que ocupa o topo do site. Com vídeo preenchido, o vídeo passa por cima da foto.
-            </p>
-
-            {(() => {
-              const choice = siteForm.hero_image ?? EMPTY_HERO_IMAGE;
-              const resolved = site?.hero_image;
-              const savedMatches = resolved?.mode === 'property'
-                && resolved.property_id === choice.property_id
-                && (choice.photo_id ?? null) === (resolved.photo_id ?? null);
-              // Prévia: a foto recém-escolhida (ainda não salva) ou a que o servidor serve hoje.
-              const propertyPreviewUrl = heroPickPreview?.url ?? (savedMatches ? resolved?.url : null);
-              const propertyTitle = heroPickPreview?.property_title ?? (savedMatches ? resolved?.property?.title : null);
-              const warning = !heroPickPreview && savedMatches ? heroImageWarning(resolved) : null;
-              const setMode = (mode: typeof choice.mode) => {
-                setHeroPickPreview(null);
-                if (mode === 'auto') setF({ hero_image: { mode: 'auto' } });
-                else if (mode === 'upload') setF({ hero_image: { mode: 'upload', url: resolved?.mode === 'upload' ? resolved.url ?? '' : '' } });
-                // Voltando ao modo imóvel, recupera a escolha já gravada (se houver).
-                else setF({ hero_image: resolved?.mode === 'property' && resolved.property_id
-                  ? heroImageChoiceFrom(resolved)
-                  : { mode: 'property', property_id: null, photo_id: null } });
-              };
-              return (
-                <div className="mb-5 space-y-3">
-                  <UILabel>Foto</UILabel>
-                  <div className="flex flex-wrap gap-2">
-                    {(['auto', 'property', 'upload'] as const).map(mode => (
-                      <label key={mode} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${choice.mode === mode ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                        <input type="radio" name="hero-image-mode" checked={choice.mode === mode} onChange={() => setMode(mode)} />
-                        {HERO_IMAGE_MODE_LABELS[mode]}
-                      </label>
-                    ))}
-                  </div>
-
-                  {choice.mode === 'auto' && (
-                    <p className="text-xs text-muted-foreground">
-                      O site usa a capa do primeiro imóvel da lista. Ela troca sozinha quando outro imóvel entra na frente.
-                    </p>
-                  )}
-
-                  {choice.mode === 'property' && (
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button type="button" variant="outline" onClick={() => setHeroPickerOpen(true)}>
-                          <ImageIcon className="mr-1.5 h-4 w-4" /> {choice.property_id ? 'Trocar a foto' : 'Escolher foto de um imóvel'}
-                        </Button>
-                        {propertyTitle && <span className="text-xs text-muted-foreground">Imóvel: {propertyTitle}</span>}
-                      </div>
-                      {!choice.property_id && (
-                        <p className="text-xs text-amber-700">Nenhuma foto escolhida ainda. Até escolher, o site continua no automático.</p>
-                      )}
-                      {warning && <p className="text-xs text-amber-700">{warning}</p>}
-                      {propertyPreviewUrl && (
-                        <img src={propertyPreviewUrl} alt="" className="aspect-video w-full max-w-md rounded-lg border border-border object-cover" />
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        Se o imóvel for despublicado ou excluído, o site volta ao automático e esta tela avisa.
-                      </p>
-                    </div>
-                  )}
-
-                  {choice.mode === 'upload' && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Input value={choice.url ?? ''} onChange={e => setF({ hero_image: { mode: 'upload', url: e.target.value } })}
-                          placeholder="https://... ou envie o arquivo" className="flex-1" />
-                        <input ref={heroImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleHeroImageFile} />
-                        <Button type="button" variant="outline" onClick={() => heroImageInputRef.current?.click()}
-                          disabled={heroImageUploading} className="flex-none">
-                          {heroImageUploading
-                            ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Enviando...</>
-                            : <><Upload className="mr-1.5 h-4 w-4" /> Enviar foto</>}
-                        </Button>
-                      </div>
-                      {choice.url
-                        ? <img src={choice.url} alt="" className="aspect-video w-full max-w-md rounded-lg border border-border object-cover" />
-                        : <p className="text-xs text-amber-700">Sem foto enviada, o site continua no automático.</p>}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            <HeroImagePicker
-              open={heroPickerOpen}
-              onClose={() => setHeroPickerOpen(false)}
-              onPick={handleHeroPick}
-              currentPropertyId={siteForm.hero_image?.property_id}
-              currentPhotoId={siteForm.hero_image?.photo_id}
-            />
-
-            <UILabel>Vídeo (opcional)</UILabel>
-            <p className="mb-2 mt-1 text-xs text-muted-foreground">
-              MP4/WebM, máx 60MB. Toca como fundo do banner, sem som, em loop, por cima da foto.
-            </p>
-            <div className="flex items-center gap-2">
-              <Input value={siteForm.hero_video_url ?? ''} onChange={e => setF({ hero_video_url: e.target.value })}
-                placeholder="https://... ou envie o arquivo" className="flex-1" />
-              <input ref={bannerVideoInputRef} type="file" accept="video/mp4,video/webm,video/*" className="hidden" onChange={handleBannerVideoFile} />
-              <Button type="button" variant="outline" onClick={() => bannerVideoInputRef.current?.click()}
-                disabled={bannerVideoUploading} className="flex-none">
-                {bannerVideoUploading
-                  ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Enviando...</>
-                  : <><Upload className="mr-1.5 h-4 w-4" /> Enviar vídeo</>}
-              </Button>
-              {siteForm.hero_video_url && (
-                <Button type="button" variant="ghost" size="icon" title="Remover vídeo"
-                  className="flex-none text-destructive hover:text-destructive"
-                  onClick={() => setF({ hero_video_url: '' })}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            {siteForm.hero_video_url && (
-              <video key={siteForm.hero_video_url} src={siteForm.hero_video_url} muted loop autoPlay playsInline
-                className="mt-3 aspect-video w-full max-w-md rounded-lg border border-border object-cover" />
-            )}
-          </section>
-
-          {/* Seções da home — liga/desliga blocos do portal. Nem toda imobiliária
-              tem imóveis/cidades suficientes pra faixa de números fazer sentido. */}
-          <section className="rounded-xl border border-border bg-card p-5">
-            <h2 className="text-base font-semibold mb-1">Seções da home</h2>
-            <p className="mb-4 text-xs text-muted-foreground">
-              Ligue ou desligue blocos do portal. Desligado, o bloco some da home pública.
-            </p>
-            <div className="divide-y divide-border">
-              {[
-                {
-                  key: 'stats' as const,
-                  title: 'Faixa de números',
-                  desc: 'Ex.: "5 imóveis disponíveis", "2 cidades atendidas", "24h no WhatsApp".',
-                },
-                {
-                  key: 'lead_capture' as const,
-                  title: 'Captura de lead',
-                  desc: 'Bloco "Não achou? A gente encontra pra você" com formulário de contato.',
-                },
-              ].map(s => (
-                <div key={s.key} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium">{s.title}</div>
-                    <p className="text-xs text-muted-foreground">{s.desc}</p>
-                  </div>
-                  <Switch
-                    checked={siteForm.sections?.[s.key] ?? true}
-                    onCheckedChange={checked =>
-                      setF({ sections: { ...siteForm.sections, [s.key]: checked } })
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Financiamento e bancos — a segunda pergunta de todo lead de imóvel,
-              que até aqui só era respondida no WhatsApp. */}
-          <section className="rounded-xl border border-border bg-card p-5">
-            <div className="mb-1 flex items-start justify-between gap-4">
-              <div>
-                <h2 className="flex items-center gap-2 text-base font-semibold">
-                  <Landmark className="h-4 w-4 text-muted-foreground" /> Financiamento e bancos
-                </h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Uma página no site com os bancos parceiros. O visitante clica no banco
-                  e cai direto no simulador dele.
-                </p>
-              </div>
-              <Switch
-                checked={financingPage.enabled}
-                onCheckedChange={enabled => { setFinancingPage(p => ({ ...p, enabled })); setSiteFormDirty(true); }}
-              />
-            </div>
-
-            {financingPage.enabled && (
-              <div className="mt-4 space-y-4 border-t border-border pt-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <UILabel>Título da página</UILabel>
-                    <Input
-                      value={financingPage.title}
-                      onChange={e => { setFinancingPage(p => ({ ...p, title: e.target.value })); setSiteFormDirty(true); }}
-                    />
-                  </div>
-                  <div>
-                    <UILabel>Chamada acima dos bancos</UILabel>
-                    <Input
-                      value={financingPage.intro}
-                      onChange={e => { setFinancingPage(p => ({ ...p, intro: e.target.value })); setSiteFormDirty(true); }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <UILabel>Texto abaixo dos bancos</UILabel>
-                  <Input
-                    value={financingPage.footer}
-                    onChange={e => { setFinancingPage(p => ({ ...p, footer: e.target.value })); setSiteFormDirty(true); }}
-                  />
-                  <p className="mt-1 text-xs text-muted-foreground">Deixe em branco para voltar ao texto padrão.</p>
-                </div>
-
-                <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">
-                    Os cinco já vêm com o <strong>simulador oficial</strong> de cada banco — a página
-                    funciona assim que você liga a chave acima. Trocar o link só é preciso se você tiver
-                    um endereço de parceria; apagando o campo, ele volta ao oficial.
-                    Para <strong>tirar um banco da página, desligue a chave dele</strong>.
-                  </p>
-                  <input
-                    ref={bankLogoInputRef} type="file" accept="image/*" className="hidden"
-                    onChange={handleBankLogoFile}
-                  />
-                  {financingPage.banks.map((bank, i) => (
-                    <div key={bank.key} className="rounded-lg border border-border p-3">
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-full text-[9px] font-bold leading-none"
-                          style={{ background: bank.color, color: bank.ink || '#fff' }}
-                        >
-                          {bank.logo_url
-                            ? <img src={bank.logo_url} alt="" className="h-full w-full object-contain p-1" />
-                            : bank.name.slice(0, 3).toUpperCase()}
-                        </span>
-                        <div className="min-w-0 flex-1 text-sm font-medium">{bank.name}</div>
-                        <Switch
-                          checked={bank.enabled !== false}
-                          onCheckedChange={enabled => {
-                            setFinancingPage(p => {
-                              const banks = [...p.banks];
-                              banks[i] = { ...banks[i], enabled };
-                              return { ...p, banks };
-                            });
-                            setSiteFormDirty(true);
-                          }}
-                        />
-                      </div>
-                      {bank.enabled !== false && (
-                        <div className="mt-3 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Input
-                              placeholder="Link de simulação (https://...)"
-                              value={bank.url ?? ''}
-                              onChange={e => {
-                                setFinancingPage(p => {
-                                  const banks = [...p.banks];
-                                  banks[i] = { ...banks[i], url: e.target.value };
-                                  return { ...p, banks };
-                                });
-                                setSiteFormDirty(true);
-                              }}
-                            />
-                            {bank.default_url && bank.url !== bank.default_url && (
-                              <Button
-                                type="button" variant="ghost" size="sm" className="flex-none whitespace-nowrap"
-                                onClick={() => {
-                                  setFinancingPage(p => {
-                                    const banks = [...p.banks];
-                                    banks[i] = { ...banks[i], url: bank.default_url ?? '' };
-                                    return { ...p, banks };
-                                  });
-                                  setSiteFormDirty(true);
-                                }}
-                              >
-                                Voltar ao oficial
-                              </Button>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button" variant="outline" size="sm"
-                              disabled={bankLogoUploading === bank.key}
-                              onClick={() => {
-                                bankLogoTargetRef.current = bank.key;
-                                bankLogoInputRef.current?.click();
-                              }}
-                            >
-                              {bankLogoUploading === bank.key
-                                ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                                : <Upload className="mr-1.5 h-3.5 w-3.5" />}
-                              {bank.logo_url ? 'Trocar logo' : 'Enviar logo'}
-                            </Button>
-                            {/* A lixeira VOLTA A HERDAR quando existe logo da Leal
-                                Mídia — nunca "ficar sem logo". Sem essa distinção
-                                o gestor não entende o que o botão faz. */}
-                            {bankLogoSource(bank) === 'own' && (
-                              <Button
-                                type="button" variant="ghost" size="icon"
-                                title={bank.default_logo_url ? 'Voltar ao logo da Leal Mídia' : 'Remover logo'}
-                                className="flex-none text-destructive hover:text-destructive"
-                                onClick={() => {
-                                  setFinancingPage(p => {
-                                    const banks = [...p.banks];
-                                    banks[i] = { ...banks[i], logo_url: bank.default_logo_url ?? '' };
-                                    return { ...p, banks };
-                                  });
-                                  setSiteFormDirty(true);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <span className="text-xs text-muted-foreground">
-                              {bankLogoSource(bank) === 'inherited'
-                                ? 'Logo herdado da Leal Mídia. Envie um para usar arte própria.'
-                                : bank.logo_url
-                                  ? 'Sai com o logo no site.'
-                                  : 'Sem logo, o círculo sai na cor do banco com o nome escrito.'}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {financingWarning(financingPage) && (
-                  <p className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-none" />
-                    {financingWarning(financingPage)}
-                  </p>
-                )}
-              </div>
-            )}
-          </section>
-
-          {/* Anuncie seu imóvel — o proprietário que quer VENDER. Antes, o link
-              "Anuncie" do rodapé rolava para o formulário de quem COMPRA. */}
-          <section className="rounded-xl border border-border bg-card p-5">
-            <div className="mb-1 flex items-start justify-between gap-4">
-              <div>
-                <h2 className="flex items-center gap-2 text-base font-semibold">
-                  <Signpost className="h-4 w-4 text-muted-foreground" /> Anuncie seu imóvel
-                </h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Uma ficha no site para o proprietário oferecer o imóvel dele. Ela chega
-                  por e-mail — não cria contato nem card no CRM.
-                </p>
-              </div>
-              <Switch
-                checked={listingPage.enabled}
-                onCheckedChange={enabled => { setListingPage(p => ({ ...p, enabled })); setSiteFormDirty(true); }}
-              />
-            </div>
-
-            {listingPage.enabled && (
-              <div className="mt-4 space-y-4 border-t border-border pt-4">
-                <div>
-                  <UILabel>Quem recebe a ficha por e-mail</UILabel>
-                  <Input
-                    placeholder="dono@imobiliaria.com, gerente@imobiliaria.com"
-                    value={emailsText}
-                    onChange={e => { setEmailsText(e.target.value); setSiteFormDirty(true); }}
-                  />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Separe por vírgula (até 5). A ficha também fica guardada na aba Leads.
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Button
-                      type="button" variant="outline" size="sm"
-                      disabled={testingEmail || !site || siteFormDirty}
-                      onClick={async () => {
-                        if (!site) return;
-                        setTestingEmail(true);
-                        try {
-                          const r = await siteBuilderService.testListingEmail(site.id);
-                          toast.success(`Ficha de teste enviada para ${r.sent_to.join(', ')}.`);
-                        } catch (e) {
-                          toast.error(apiErrorMessage(e, 'Não consegui enviar o teste.'));
-                        } finally {
-                          setTestingEmail(false);
-                        }
-                      }}
-                    >
-                      {testingEmail ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Mail className="mr-1.5 h-3.5 w-3.5" />}
-                      Enviar um teste
-                    </Button>
-                    {siteFormDirty && (
-                      <span className="text-xs text-muted-foreground">Salve as alterações para testar.</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <UILabel>Título da página</UILabel>
-                    <Input
-                      value={listingPage.title}
-                      onChange={e => { setListingPage(p => ({ ...p, title: e.target.value })); setSiteFormDirty(true); }}
-                    />
-                  </div>
-                  <div>
-                    <UILabel>Mensagem do botão de WhatsApp</UILabel>
-                    <Input
-                      value={listingPage.whatsapp_text}
-                      onChange={e => { setListingPage(p => ({ ...p, whatsapp_text: e.target.value })); setSiteFormDirty(true); }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <UILabel>Chamada acima da ficha</UILabel>
-                  <Textarea
-                    rows={2}
-                    value={listingPage.intro}
-                    onChange={e => { setListingPage(p => ({ ...p, intro: e.target.value })); setSiteFormDirty(true); }}
-                  />
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <UILabel>Título da tela de obrigado</UILabel>
-                    <Input
-                      value={listingPage.thanks_title}
-                      onChange={e => { setListingPage(p => ({ ...p, thanks_title: e.target.value })); setSiteFormDirty(true); }}
-                    />
-                  </div>
-                  <div>
-                    <UILabel>Texto da tela de obrigado</UILabel>
-                    <Input
-                      value={listingPage.thanks_text}
-                      onChange={e => { setListingPage(p => ({ ...p, thanks_text: e.target.value })); setSiteFormDirty(true); }}
-                    />
-                  </div>
-                </div>
-
-                {listingWarning({ ...listingPage, emails: parseEmails(emailsText) }) && (
-                  <p className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-none" />
-                    {listingWarning({ ...listingPage, emails: parseEmails(emailsText) })}
-                  </p>
-                )}
-              </div>
-            )}
-          </section>
-
-          {/* Contact */}
-          <section className="rounded-xl border border-border bg-card p-5">
-            <h2 className="text-base font-semibold mb-4">Contato</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { key: 'contact_phone', label: 'Telefone', placeholder: '(11) 9999-9999' },
-                { key: 'contact_whatsapp', label: 'WhatsApp', placeholder: '5511999999999' },
-                { key: 'contact_email', label: 'E-mail', placeholder: 'contato@...' },
-              ].map(f => (
-                <div key={f.key}>
-                  <UILabel>{f.label}</UILabel>
-                  <Input
-                    value={(siteForm as unknown as Record<string, string>)[f.key] ?? ''}
-                    onChange={e => setF({ [f.key]: e.target.value } as Partial<SiteFormData>)}
-                    placeholder={f.placeholder}
-                    className="mt-1"
-                  />
-                </div>
-              ))}
-              <div className="col-span-2">
-                <UILabel>Endereço</UILabel>
-                <Input value={siteForm.contact_address ?? ''} onChange={e => setF({ contact_address: e.target.value })}
-                  placeholder="Rua..." className="mt-1" />
-              </div>
-            </div>
-          </section>
-
-          {/* Destino do lead: para onde vão os leads dos formulários do site e
-              quem atende, separado por Venda e Locação (spec 2026-09-30). Sem
-              funil = funil padrão; sem roleta = entra sem responsável, como todo
-              site funcionou até aqui. A etiqueta do imóvel é aplicada por cima. */}
-          <section className="rounded-xl border border-border bg-card p-5">
-            <h2 className="text-base font-semibold mb-1">Destino do lead</h2>
-            <p className="mb-4 text-xs text-muted-foreground">
-              Para onde vai o lead dos formulários do site. O imóvel decide se ele é de Venda ou de
-              Locação; no formulário da home e no imóvel de Venda + Locação, quem preenche escolhe.
-              Funil em branco usa o funil padrão; roleta em branco deixa o lead sem responsável.
-            </p>
-            <SaleRentDestination
-              sale={leadRouting.sale}
-              rent={leadRouting.rent}
-              rentSameAsSale={leadRouting.rentSameAsSale}
-              onSale={patch => { setLeadRouting(prev => ({ ...prev, sale: { ...prev.sale, ...patch } })); setSiteFormDirty(true); }}
-              onRent={patch => { setLeadRouting(prev => ({ ...prev, rent: { ...prev.rent, ...patch } })); setSiteFormDirty(true); }}
-              onRentSameAsSale={v => { setLeadRouting(prev => ({ ...prev, rentSameAsSale: v })); setSiteFormDirty(true); }}
-              options={routingOptions}
-              showRent={leadRouting.supported}
-              showLabel
-            />
-          </section>
-
-          {/* SEO */}
-          <section className="rounded-xl border border-border bg-card p-5">
-            <h2 className="text-base font-semibold mb-4">SEO</h2>
-            <div className="space-y-3">
-              <div>
-                <UILabel>Título SEO</UILabel>
-                <Input value={siteForm.seo_title ?? ''} onChange={e => setF({ seo_title: e.target.value })}
-                  placeholder="Imobiliária XYZ — Venda e locação de imóveis" className="mt-1" />
-              </div>
-              <div>
-                <UILabel>Meta description</UILabel>
-                <Textarea value={siteForm.seo_description ?? ''} onChange={e => setF({ seo_description: e.target.value })}
-                  placeholder="Encontre o imóvel ideal..." rows={2} className="mt-1 resize-none" />
-              </div>
-            </div>
-          </section>
-
-          {/* Tracking */}
-          <section className="rounded-xl border border-border bg-card p-5">
-            <h2 className="text-base font-semibold mb-4">Rastreamento</h2>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { key: 'gtm_id', label: 'Google Tag Manager ID', placeholder: 'GTM-XXXXXX' },
-                { key: 'ga4_measurement_id', label: 'GA4 Measurement ID', placeholder: 'G-XXXXXXXXXX' },
-                { key: 'facebook_pixel_id', label: 'Meta Pixel ID', placeholder: '1234567890' },
-              ].map(f => (
-                <div key={f.key}>
-                  <UILabel>{f.label}</UILabel>
-                  <Input
-                    value={(siteForm as unknown as Record<string, string>)[f.key] ?? ''}
-                    onChange={e => setF({ [f.key]: e.target.value } as Partial<SiteFormData>)}
-                    placeholder={f.placeholder}
-                    className="mt-1 font-mono text-sm"
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <div className="flex justify-end">
-            <Button onClick={handleSaveSite} disabled={saving || !siteFormDirty && !!site}>
-              {saving ? 'Salvando...' : site ? 'Salvar' : 'Criar site'}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Pages tab */}
-      {activeTab === 'pages' && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">{pages.length} página{pages.length !== 1 ? 's' : ''}</p>
-            <Button size="sm" onClick={openCreatePage} disabled={!site}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Nova página
-            </Button>
-          </div>
-
-          {!site ? (
-            <div className="text-center py-12 text-muted-foreground text-sm">
-              Configure o site primeiro na aba Configurações
-            </div>
-          ) : pagesLoading ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-              <RefreshCw className="h-4 w-4 animate-spin mr-2" />Carregando...
-            </div>
-          ) : pages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <FileText className="h-10 w-10 mb-2 opacity-30" />
-              <p className="text-sm">Nenhuma página criada</p>
-              <Button size="sm" className="mt-3" onClick={openCreatePage}>
-                <Plus className="h-4 w-4 mr-1" />
-                Criar primeira página
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {pages.map(page => (
-                <div key={page.id} className="flex items-center gap-4 p-4 rounded-lg border border-border bg-card">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{page.title}</span>
-                      {page.in_menu && (
-                        <Badge variant="secondary" className="text-xs">Menu</Badge>
-                      )}
-                      {!page.active && (
-                        <Badge variant="outline" className="text-xs text-muted-foreground">Inativa</Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">/{page.slug} · Criada {formatDate(page.created_at)}</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEditPage(page)} aria-label="Editar página" title="Editar página">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => handleDeletePage(page)}
-                      aria-label="Excluir página"
-                      title="Excluir página">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Articles tab */}
-      {activeTab === 'articles' && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">{articles.length} artigo{articles.length !== 1 ? 's' : ''}</p>
-            <Button size="sm" onClick={openCreateArticle} disabled={!site}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Novo artigo
-            </Button>
-          </div>
-
-          {!site ? (
-            <div className="text-center py-12 text-muted-foreground text-sm">
-              Configure o site primeiro
-            </div>
-          ) : articlesLoading ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-              <RefreshCw className="h-4 w-4 animate-spin mr-2" />Carregando...
-            </div>
-          ) : articles.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <Newspaper className="h-10 w-10 mb-2 opacity-30" />
-              <p className="text-sm">Nenhum artigo criado</p>
-              <Button size="sm" className="mt-3" onClick={openCreateArticle}>
-                <Plus className="h-4 w-4 mr-1" />
-                Criar primeiro artigo
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {articles.map(article => (
-                <div key={article.id} className="flex items-center gap-4 p-4 rounded-lg border border-border bg-card">
-                  {article.cover_image_url && (
-                    <img src={article.cover_image_url} alt=""
-                      className="h-14 w-20 object-cover rounded flex-shrink-0"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm truncate">{article.title}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded font-medium ${ARTICLE_STATUS_COLORS[article.status] ?? ''}`}>
-                        {ARTICLE_STATUS_LABELS[article.status] ?? article.status}
-                      </span>
-                    </div>
-                    {article.excerpt && (
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{article.excerpt}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {article.published_at ? `Publicado ${formatDate(article.published_at)}` : `Criado ${formatDate(article.created_at)}`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {article.status === 'draft' && (
-                      <Button variant="ghost" size="icon" title="Publicar"
-                        onClick={() => handlePublishArticle(article)}>
-                        <Send className="h-4 w-4 text-emerald-600" />
-                      </Button>
-                    )}
-                    {article.status === 'published' && (
-                      <Button variant="ghost" size="icon" title="Arquivar"
-                        onClick={() => handleArchiveArticle(article)}>
-                        <Archive className="h-4 w-4 text-orange-600" />
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="icon" onClick={() => openEditArticle(article)} aria-label="Editar artigo" title="Editar artigo">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => handleDeleteArticle(article)}
-                      aria-label="Excluir artigo"
-                      title="Excluir artigo">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Leads tab */}
-      {activeTab === 'leads' && (
-        <div>
-          {/* Status filter */}
-          <div className="flex items-center gap-2 mb-4 flex-wrap">
-            {['', 'received', 'contacted', 'converted', 'lost', 'spam'].map(s => (
-              <button
-                key={s}
-                onClick={() => setLeadsStatusFilter(s)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                  leadsStatusFilter === s
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'border-border text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {s === '' ? `Todos (${leadsTotal})` : SITE_LEAD_STATUS_LABELS[s]}
-              </button>
-            ))}
-          </div>
-
-          {!site ? (
-            <div className="text-center py-12 text-muted-foreground text-sm">
-              Configure o site primeiro
-            </div>
-          ) : leadsLoading ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-              <RefreshCw className="h-4 w-4 animate-spin mr-2" />Carregando...
-            </div>
-          ) : leads.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <Users className="h-10 w-10 mb-2 opacity-30" />
-              <p className="text-sm">Nenhum lead capturado ainda</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {leads.map(lead => (
-                <div key={lead.id} className="flex items-start gap-4 p-4 rounded-lg border border-border bg-card">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm">{lead.name ?? '—'}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded font-medium ${SITE_LEAD_STATUS_COLORS[lead.status] ?? ''}`}>
-                        {SITE_LEAD_STATUS_LABELS[lead.status] ?? lead.status}
-                      </span>
-                      {lead.form_type === 'anuncie_imovel' && (
-                        <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium">Anuncie seu imóvel</span>
-                      )}
-                      {lead.source && (
-                        <span className="text-xs text-muted-foreground">via {lead.source}</span>
-                      )}
-                    </div>
-                    {/* Desfecho do e-mail da ficha de "Anuncie". Sem esta linha,
-                        e-mail não configurado apagaria em silêncio um imóvel que
-                        alguém ofereceu: a ficha fica guardada e ninguém sabe. */}
-                    {(() => {
-                      const d = emailDeliveryLabel(lead.email_delivery);
-                      if (!d) return null;
-                      const tone = d.tone === 'ok'
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : d.tone === 'warn'
-                          ? 'text-amber-600 dark:text-amber-400'
-                          : 'text-destructive';
-                      return (
-                        <p className={`mt-1 flex items-center gap-1.5 text-xs ${tone}`}>
-                          <Mail className="h-3 w-3 flex-none" /> {d.text}
-                        </p>
-                      );
-                    })()}
-                    <div className="flex items-center gap-3 mt-1 flex-wrap">
-                      {lead.email && (
-                        <span className="text-xs text-muted-foreground">{lead.email}</span>
-                      )}
-                      {lead.phone && (
-                        <span className="text-xs text-muted-foreground">{telefone(lead.phone)}</span>
-                      )}
-                    </div>
-                    {lead.message && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{lead.message}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatDate(lead.created_at)}
-                      {lead.utm_campaign && ` · campanha: ${lead.utm_campaign}`}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Landings de anúncio tab */}
-      {activeTab === 'landings' && canLandings && (
-        site
-          ? <LandingsPanel siteId={site.id} siteSlug={site.slug} />
-          : <NoSiteYet onGoToConfig={() => setActiveTab('config')} />
-      )}
-
-      {/* Page modal */}
-      <Dialog open={pageModal} onOpenChange={setPageModal}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingPage ? 'Editar página' : 'Nova página'}</DialogTitle>
-            <DialogDescription>Configure o conteúdo e as opções desta página</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <UILabel>Título *</UILabel>
-              <Input value={pageForm.title}
-                onChange={e => setPageForm(f => ({ ...f, title: e.target.value }))}
-                placeholder="Ex: Sobre nós" className="mt-1" />
-            </div>
-            <div>
-              <UILabel>Endereço da página (URL)</UILabel>
-              <Input value={pageForm.slug ?? ''}
-                onChange={e => setPageForm(f => ({ ...f, slug: e.target.value }))}
-                placeholder="sobre-nos" className="mt-1 font-mono" />
-            </div>
-            <div>
-              <UILabel>Conteúdo (HTML)</UILabel>
-              <Textarea value={pageForm.content ?? ''}
-                onChange={e => setPageForm(f => ({ ...f, content: e.target.value }))}
-                rows={5} placeholder="<h1>...</h1>" className="mt-1 font-mono text-xs resize-none" />
-            </div>
-            <div className="flex gap-6">
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="page_active" checked={pageForm.active ?? true}
-                  onChange={e => setPageForm(f => ({ ...f, active: e.target.checked }))} className="rounded" />
-                <UILabel htmlFor="page_active" className="cursor-pointer">Ativa</UILabel>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="page_menu" checked={pageForm.in_menu ?? true}
-                  onChange={e => setPageForm(f => ({ ...f, in_menu: e.target.checked }))} className="rounded" />
-                <UILabel htmlFor="page_menu" className="cursor-pointer">Exibir no menu</UILabel>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPageModal(false)}>Cancelar</Button>
-            <Button onClick={handleSavePage} disabled={saving}>
-              {saving ? 'Salvando...' : editingPage ? 'Salvar' : 'Criar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Article modal */}
-      <Dialog open={articleModal} onOpenChange={setArticleModal}>
-        <DialogContent size="wide" className="sm:max-w-5xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingArticle ? 'Editar artigo' : 'Novo artigo'}</DialogTitle>
-            <DialogDescription>Escreva o conteúdo do artigo para o blog do site</DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-6 py-2 md:grid-cols-[1fr_260px]">
-            {/* Coluna principal — formulário */}
-            <div className="space-y-4 min-w-0">
-              <div>
-                <UILabel>Título *</UILabel>
-                <Input value={articleForm.title}
-                  onChange={e => setArticleForm(f => ({ ...f, title: e.target.value }))}
-                  placeholder="Ex: Como financiar um imóvel?" className="mt-1" />
-              </div>
-
-              <div>
-                <UILabel>Capa</UILabel>
-                <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFile} />
-                {articleForm.cover_image_url ? (
-                  <div className="mt-1 relative w-full overflow-hidden rounded-lg border border-border">
-                    <img src={articleForm.cover_image_url} alt="Capa"
-                      className="h-40 w-full object-cover"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    <div className="absolute right-2 top-2 flex gap-1.5">
-                      <Button type="button" size="sm" variant="secondary"
-                        onClick={() => coverInputRef.current?.click()} disabled={coverUploading}>
-                        {coverUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Trocar'}
-                      </Button>
-                      <Button type="button" size="icon" variant="secondary"
-                        onClick={() => setArticleForm(f => ({ ...f, cover_image_url: '' }))} title="Remover capa">
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => coverInputRef.current?.click()} disabled={coverUploading}
-                    className="mt-1 flex h-32 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50">
-                    {coverUploading
-                      ? <><Loader2 className="h-5 w-5 animate-spin" /> Enviando...</>
-                      : <><ImageIcon className="h-6 w-6" /> <span className="text-sm">Enviar imagem de capa</span></>}
-                  </button>
-                )}
-              </div>
-
-              <div>
-                <UILabel>Resumo</UILabel>
-                <Textarea value={articleForm.excerpt ?? ''}
-                  onChange={e => setArticleForm(f => ({ ...f, excerpt: e.target.value }))}
-                  rows={2} placeholder="Breve descrição exibida na listagem..." className="mt-1 resize-none" />
-              </div>
-
-              <div>
-                <UILabel>Conteúdo</UILabel>
-                <div className="mt-1 relative">
-                  <RichTextEditor ref={articleEditorRef} showToolbar
-                    placeholder="Escreva o conteúdo do artigo... (use a barra para negrito, itálico e listas)" />
-                  {articleLoadingBody && (
-                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/70 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" /> Carregando conteúdo...
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Coluna lateral — sugestões de pauta */}
-            <aside className="md:border-l md:border-border md:pl-5">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Lightbulb className="h-4 w-4 text-amber-500" /> Ideias de artigo
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">Clique para usar como título e comece a escrever.</p>
-              <div className="mt-3 space-y-1.5">
-                {ARTICLE_IDEAS.map(idea => (
-                  <button key={idea} type="button"
-                    onClick={() => setArticleForm(f => ({ ...f, title: idea }))}
-                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-left text-xs leading-snug text-muted-foreground transition-colors hover:border-primary hover:text-foreground">
-                    {idea}
-                  </button>
-                ))}
-              </div>
-            </aside>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setArticleModal(false)}>Cancelar</Button>
-            <Button onClick={handleSaveArticle} disabled={saving || coverUploading}>
-              {saving ? 'Salvando...' : editingArticle ? 'Salvar' : 'Criar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
