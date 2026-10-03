@@ -47,12 +47,15 @@ export default function ListaDeChamadas({ month, tenant, funcoes }: { month: str
   // Dados de outro conjunto de filtros contam como "carregando": nada de linha velha sob filtro novo.
   // Só troca de página mantém as linhas antigas até a próxima chegar.
   const atual = dados && dados.chave === chave && !erro ? dados : null;
+  const trocandoPagina = Boolean(atual && atual.meta.page !== page);
+  const comFiltro = Boolean(feature || provider || onlyErrors);
+  const limparFiltros = () => { setFeature(''); setProvider(''); setOnlyErrors(false); };
   const paginas = atual ? Math.max(1, Math.ceil(atual.meta.total / atual.meta.per_page)) : 1;
 
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold">Chamadas {atual ? `(${numero(atual.meta.total)})` : ''}</h3>
+        <h2 className="text-sm font-semibold">Chamadas {atual ? `(${numero(atual.meta.total)})` : ''}</h2>
         <div className="flex flex-wrap items-center gap-3">
           <Seletor aria-label="Função" value={feature} onChange={(e) => setFeature(e.target.value)} className="w-56">
             <option value="">Todas as funções</option>
@@ -70,33 +73,38 @@ export default function ListaDeChamadas({ month, tenant, funcoes }: { month: str
 
       {erro ? (
         <EmptyState tipo="erro" title="Não deu para carregar as chamadas" aoTentarDeNovo={carregar} />
+      ) : atual && atual.items.length === 0 ? (
+        comFiltro
+          ? <EmptyState tipo="semResultado" title="Nenhuma chamada com esses filtros" aoLimparFiltros={limparFiltros} />
+          : <EmptyState tipo="vazio" title="Nenhuma chamada de IA neste mês" />
       ) : (
+        <div aria-busy={trocandoPagina} className={trocandoPagina ? 'opacity-60' : undefined}>
         <BaseTable<CostCall>
           data={atual?.items ?? []}
           loading={!atual}
           getRowKey={(c) => c.id}
-          emptyTitle="Nenhuma chamada com esses filtros"
           columns={[
             { key: 'created_at', label: 'Quando', render: (c) => dataHora(c.created_at) },
             { key: 'tenant_name', label: 'Cliente', render: (c) => c.tenant_name },
             { key: 'feature_label', label: 'Função', render: (c) => (
-              <button type="button" className="text-left underline-offset-2 hover:underline" onClick={() => setAberta(c.id)}>{c.feature_label}</button>
+              <button type="button" className="text-left text-primary underline-offset-2 hover:underline" onClick={() => setAberta(c.id)}>{c.feature_label}</button>
             ) },
             { key: 'model', label: 'Modelo', render: (c) => c.model ?? '—' },
             { key: 'tamanho', label: 'Tamanho', render: (c) => tamanho(c) },
-            { key: 'cost_brl', label: 'Custo', align: 'right', render: (c) => (c.priced ? dinheiro(c.cost_brl) : 'Sem preço') },
+            { key: 'cost_brl', label: 'Custo', align: 'right', render: (c) => (!c.priced ? 'Sem preço' : Number(c.cost_brl) > 0 && Number(c.cost_brl) < 0.01 ? `< ${dinheiro(0.01)}` : dinheiro(c.cost_brl)) },
             { key: 'status', label: 'Situação', render: (c) => (
               <BaseStatusBadge status={c.status === 'ok' ? 'success' : 'error'} text={c.status === 'ok' ? 'Ok' : 'Falhou'} />
             ) },
           ]}
         />
+        </div>
       )}
 
       {atual && !erro && paginas > 1 && (
         <div className="flex items-center justify-end gap-2 text-sm">
-          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => irPara(page - 1)}>Anterior</Button>
+          <Button variant="outline" size="sm" disabled={trocandoPagina || page <= 1} onClick={() => irPara(page - 1)}>Anterior</Button>
           <span className="tabular-nums text-muted-foreground">{page} de {paginas}</span>
-          <Button variant="outline" size="sm" disabled={page >= paginas} onClick={() => irPara(page + 1)}>Próxima</Button>
+          <Button variant="outline" size="sm" disabled={trocandoPagina || page >= paginas} onClick={() => irPara(page + 1)}>Próxima</Button>
         </div>
       )}
 
