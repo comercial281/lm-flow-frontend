@@ -125,18 +125,22 @@ export default function FichaDoProprietario() {
   const [escolhendo, setEscolhendo] = useState(false);
   const [imovelAberto, setImovelAberto] = useState<ImovelDoProprietario | null>(null);
 
-  const aplicar = useCallback((o: ProprietarioCompleto) => { setDono(o); setNotas(o.notes ?? ''); }, []);
+  // Só troca o dono: o texto das observações é de quem está digitando.
+  const aplicar = useCallback((o: ProprietarioCompleto) => setDono(o), []);
+  const [tentativa, setTentativa] = useState(0);
 
-  const carregar = useCallback(async () => {
-    setErro(null);
-    try {
-      aplicar(await propertyOwnersService.get(id));
-    } catch (e) {
-      setErro((e as { response?: { status?: number } })?.response?.status === 404 ? 'sem-acesso' : 'falha');
-    }
-  }, [id, aplicar]);
-
-  useEffect(() => { void carregar(); }, [carregar]);
+  useEffect(() => {
+    let vivo = true;
+    setDono(null); setErro(null);
+    propertyOwnersService.get(id).then(o => {
+      if (!vivo) return;
+      setDono(o); setNotas(o.notes ?? '');
+    }).catch(e => {
+      if (vivo) setErro((e as { response?: { status?: number } })?.response?.status === 404 ? 'sem-acesso' : 'falha');
+    });
+    return () => { vivo = false; };
+  }, [id, tentativa]);
+  const carregar = () => setTentativa(t => t + 1);
 
   if (erro) {
     return (
@@ -146,7 +150,7 @@ export default function FichaDoProprietario() {
         </Link>
         {erro === 'sem-acesso'
           ? <EmptyState tipo="erro" description="Proprietário não encontrado ou sem acesso." aoTentarDeNovo={() => navigate('/property-owners')} />
-          : <EmptyState tipo="erro" aoTentarDeNovo={() => void carregar()} />}
+          : <EmptyState tipo="erro" aoTentarDeNovo={carregar} />}
       </div>
     );
   }
@@ -160,7 +164,11 @@ export default function FichaDoProprietario() {
   const salvarNotas = async () => {
     setSalvandoNotas(true);
     try {
-      aplicar(await propertyOwnersService.salvarObservacoes(dono.id, notas));
+      const enviado = notas;
+      const salvo = await propertyOwnersService.salvarObservacoes(dono.id, enviado);
+      setDono(salvo);
+      // Se a pessoa digitou mais durante o pedido, o texto novo fica.
+      setNotas(atual => (atual === enviado ? salvo.notes ?? '' : atual));
     } catch {
       toast.error('Não foi possível salvar as observações');
     } finally {
@@ -279,8 +287,8 @@ export default function FichaDoProprietario() {
           <p className="text-sm text-muted-foreground">Nenhuma troca ainda.</p>
         ) : (
           <ul className="space-y-1 text-sm">
-            {[...dono.history].sort((a, b) => b.at.localeCompare(a.at)).map(h => (
-              <li key={`${h.at}-${h.to}`}>
+            {[...dono.history].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).map((h, i) => (
+              <li key={`${h.at}-${h.to}-${i}`}>
                 {dataHora(h.at)} · {h.user?.name ?? 'Sistema'} · {h.from ? rotuloDoStatus(h.from) : 'Novo'} → {rotuloDoStatus(h.to)}
               </li>
             ))}

@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 const own = vi.hoisted(() => ({ get: vi.fn(), update: vi.fn(), mudarStatus: vi.fn(), salvarObservacoes: vi.fn(), remove: vi.fn() }));
+const nav = vi.hoisted(() => ({ fn: vi.fn() }));
+vi.mock('react-router-dom', async importOriginal => ({ ...(await importOriginal<typeof import('react-router-dom')>()), useNavigate: () => nav.fn }));
 const pode = vi.hoisted(() => ({ gerir: true }));
 vi.mock('@/services/propertyOwners/propertyOwnersService', () => ({ propertyOwnersService: own }));
 vi.mock('@/hooks/useCan', () => ({ useCan: () => (r: string, a: string) => (r === 'properties' && (a === 'update' || a === 'create') ? pode.gerir : true) }));
@@ -65,5 +67,62 @@ describe('FichaDoProprietario', () => {
     await userEvent.click(await screen.findByText('AP0461'));
     expect(await screen.findByText('Portaria')).toBeInTheDocument();
     expect(screen.getByText('Tem placa')).toBeInTheDocument();
+  });
+
+  it('trocar o status não apaga a observação que está sendo digitada', async () => {
+    own.mudarStatus.mockResolvedValue({ ...ficha, status: 'unavailable' });
+    abrir();
+    await userEvent.type(await screen.findByLabelText('Observações internas'), 'rascunho');
+    await userEvent.click(screen.getByRole('button', { name: /Status/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Indisponível' }));
+    await waitFor(() => expect(own.mudarStatus).toHaveBeenCalled());
+    expect(screen.getByLabelText('Observações internas')).toHaveValue('rascunho');
+  });
+
+  it('corretor não vê o menu de excluir', async () => {
+    pode.gerir = false;
+    abrir();
+    await screen.findByText('Maria Souza');
+    expect(screen.queryByRole('button', { name: 'Mais ações' })).toBeNull();
+    expect(screen.queryByText('Excluir proprietário')).toBeNull();
+  });
+
+  it('gestor: o cartão do imóvel leva ao cadastro', async () => {
+    abrir();
+    expect((await screen.findByText('AP0461')).closest('a')).toHaveAttribute('href', '/properties/p1/editar');
+  });
+
+  it('excluir confirma, remove e volta para a lista', async () => {
+    own.remove.mockResolvedValue(undefined);
+    abrir();
+    await userEvent.click(await screen.findByRole('button', { name: 'Mais ações' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Excluir proprietário' }));
+    expect(own.remove).not.toHaveBeenCalled();
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir' }));
+    await waitFor(() => expect(own.remove).toHaveBeenCalledWith('o1'));
+    expect(nav.fn).toHaveBeenCalledWith('/property-owners');
+  });
+
+  it('404 mostra proprietário não encontrado', async () => {
+    own.get.mockRejectedValue({ response: { status: 404 } });
+    abrir();
+    expect(await screen.findByText('Proprietário não encontrado ou sem acesso.')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['(11) 3333-4444', 'https://wa.me/551133334444'],
+    ['+55 11 99999-8888', 'https://wa.me/5511999998888'],
+    ['5511999998888', 'https://wa.me/5511999998888'],
+  ])('WhatsApp de %s', async (fone, href) => {
+    own.get.mockResolvedValue({ ...ficha, phone: fone });
+    abrir();
+    expect(await screen.findByRole('link', { name: /WhatsApp/ })).toHaveAttribute('href', href);
+  });
+
+  it('sem telefone não há botão de WhatsApp', async () => {
+    own.get.mockResolvedValue({ ...ficha, phone: null });
+    abrir();
+    await screen.findByText('Maria Souza');
+    expect(screen.queryByRole('link', { name: /WhatsApp/ })).toBeNull();
   });
 });
