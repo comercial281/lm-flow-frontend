@@ -163,11 +163,18 @@ export function useAutomacaoRodando({ conversationId, atualizarQuando }: Opcoes)
         {linhas.map(linha => (
           <div key={linha.key} className="flex items-center gap-2 text-sm">
             <GitBranch className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-            <span className="min-w-0 flex-1 truncate text-muted-foreground" title={linha.texto}>
+            {/* Celular: até 2 linhas (cortar em 1 escondia o fim da espera); tela grande: 1 linha. */}
+            <span className="min-w-0 flex-1 text-muted-foreground line-clamp-2 sm:truncate" title={linha.texto}>
               {linha.texto}
             </span>
             {linha.podeParar && (
-              <Button size="sm" variant="outline" onClick={() => void pararUma(linha)} disabled={parando === linha.key}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-11 shrink-0 px-4 sm:h-8 sm:px-3"
+                onClick={() => void pararUma(linha)}
+                disabled={parando === linha.key}
+              >
                 Parar
               </Button>
             )}
@@ -194,10 +201,11 @@ export function useAutomacaoRodando({ conversationId, atualizarQuando }: Opcoes)
             ))}
           </ul>
           <DialogFooter>
-            <Button variant="outline" onClick={() => responderPergunta('manter')}>
+            {/* No celular o rodapé empilha (o principal fica em cima) e cada botão ocupa a largura toda; 44px de altura pro dedo. */}
+            <Button variant="outline" className="h-11 sm:h-9" onClick={() => responderPergunta('manter')}>
               Enviar e manter
             </Button>
-            <Button onClick={() => responderPergunta('parar')} autoFocus>
+            <Button className="h-11 sm:h-9" onClick={() => responderPergunta('parar')} autoFocus>
               {rotuloDeParar(pergunta ?? [])}
             </Button>
           </DialogFooter>
