@@ -107,6 +107,7 @@ const PortalBlog = lazyWithRetry(() => import('@/pages/Public/PortalBlogPage'));
 const PortalFinanciamento = lazyWithRetry(() => import('@/pages/Public/PortalFinanciamentoPage'));
 const PortalAnuncie = lazyWithRetry(() => import('@/pages/Public/PortalAnunciePage'));
 const PortalArticle = lazyWithRetry(() => import('@/pages/Public/PortalArticlePage'));
+const PortalCustomPage = lazyWithRetry(() => import('@/pages/Public/PortalCustomPage'));
 const PortalDetailPage = lazyWithRetry(() => import('../pages/Customer/Settings/Portals/PortalDetailPage'));
 // Gate de rota da Área do Admin: só no deploy raiz (app.lmflow.com.br) E com
 // acesso de admin (o dono por e-mail OU a equipe cadastrada, via whoami). Em
@@ -1396,6 +1397,7 @@ const AppRouter = () => {
           {/* Público INDEXÁVEL — blog do portal (listagem + artigo). */}
           <Route path="/portal/:tenant/blog" element={<PortalBlog />} />
           <Route path="/portal/:tenant/blog/:slug" element={<PortalArticle />} />
+          <Route path="/portal/:tenant/p/:slug" element={<PortalCustomPage />} />
 
           {/* Endereços antigos da Área do Admin (reorganizações de 19/08 e
               01/10/2026). Continuam vivos pra não quebrar link salvo. */}
