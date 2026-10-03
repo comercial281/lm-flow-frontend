@@ -263,7 +263,7 @@ export const followupSequencesService = {
     return (res.data as { data: FollowupTemplate[] }).data ?? [];
   },
 
-  /** Cria UM funil a partir do catálogo. Diferente de `reseedTemplate`, não toca
+  /** Cria UM funil a partir do catálogo. Diferente do antigo pacote de marketing (retirado em 03/10/2026), não toca
    *  em pipeline, coluna, etiqueta nem regra — só nasce a sequência. */
   async createFromTemplate(templateKey: string, name?: string): Promise<FollowupSequence> {
     const res = await api.post(`${BASE}/create_from_template`, { template_key: templateKey, name });
@@ -320,29 +320,6 @@ export const followupSequencesService = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return (res.data as { data: { url: string; filename: string; content_type: string; byte_size: number } }).data;
-  },
-};
-
-// Apply template — endpoint REST autenticado (admin only). Substituiu
-// /_admin/followup/reseed_template (que ainda existe como fallback).
-export const followupAdminService = {
-  async reseedTemplate(): Promise<{
-    pipeline_id: string;
-    pipeline_name: string;
-    stages_count: number;
-    sequences: string[];
-    labels_count: number;
-  }> {
-    const res = await api.post(`${BASE}/seed_template`);
-    return (res.data as {
-      data: {
-        pipeline_id: string;
-        pipeline_name: string;
-        stages_count: number;
-        sequences: string[];
-        labels_count: number;
-      };
-    }).data;
   },
 };
 

@@ -19,11 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/ds';
-import { Clock, Edit, Send, ToggleLeft, ToggleRight, Trash2, Plus, GripVertical, Upload, Loader2, Mic, Square, Sparkles, History, LayoutGrid, MessageSquare, ChevronDown, ChevronRight, Download, FileUp, AlertTriangle } from 'lucide-react';
+import { Clock, Edit, Send, ToggleLeft, ToggleRight, Trash2, Plus, GripVertical, Upload, Loader2, Mic, Square, Sparkles, History, MessageSquare, ChevronDown, ChevronRight, Download, FileUp, AlertTriangle } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
 import {
   followupSequencesService,
-  followupAdminService,
   readFollowupPackage,
   FollowupSequence,
   FollowupStep,
@@ -417,7 +416,6 @@ export default function FollowupSequences() {
 
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [stagesByPipeline, setStagesByPipeline] = useState<Record<string, PipelineStage[]>>({});
-  const [applyingTemplate, setApplyingTemplate] = useState(false);
 
   // Escolher modelo. Antes o botão aplicava o pacote de marketing direto, sem
   // mostrar o que ia acontecer — e quando falhava não dava pra saber o que teria
@@ -515,26 +513,6 @@ export default function FollowupSequences() {
       toast.error(apiErrorMessage(e, 'Falha ao criar o funil a partir do modelo.'));
     } finally {
       setCreatingTemplate(null);
-    }
-  };
-
-  // O pacote de marketing continua disponível, mas agora como escolha declarada:
-  // ele cria pipeline, colunas, etiquetas e regras além dos funis, e é a única
-  // opção daqui que pode esbarrar em permissão.
-  const applyTemplate = async () => {
-    setApplyingTemplate(true);
-    try {
-      const out = await followupAdminService.reseedTemplate();
-      toast.success(`Pacote aplicado: ${out.sequences.length} funis, ${out.stages_count} colunas.`);
-      setTemplateDialogOpen(false);
-      load();
-    } catch (e) {
-      // Mensagem REAL do servidor: a recusa mais comum é de cargo, e a frase fixa
-      // que existia antes ("verifique se o tenant tem usuário admin") mandava
-      // procurar no lugar errado.
-      toast.error(apiErrorMessage(e, 'Falha ao aplicar o pacote.'));
-    } finally {
-      setApplyingTemplate(false);
     }
   };
 
@@ -1419,35 +1397,6 @@ export default function FollowupSequences() {
                 </div>
               ))}
 
-              {/* O pacote de marketing é outra categoria de coisa: mexe no CRM inteiro.
-                  Fica separado e avisado, pra ninguém aplicar achando que é só um funil. */}
-              <div className="rounded-lg border border-dashed bg-muted/30 p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <LayoutGrid className="h-4 w-4 text-muted-foreground" />
-                      <h3 className="font-medium">Pacote completo de marketing</h3>
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Além de dois funis, cria um funil novo com suas colunas, as etiquetas de
-                      origem e as regras que ligam tudo. Use num CRM que está começando do zero —
-                      num CRM já em uso, prefira um modelo de funil acima.
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={applyTemplate}
-                    disabled={applyingTemplate}
-                  >
-                    {applyingTemplate
-                      ? <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                      : <Sparkles className="mr-1 h-3 w-3" />}
-                    Aplicar pacote
-                  </Button>
-                </div>
-              </div>
             </div>
           )}
         </DialogContent>
