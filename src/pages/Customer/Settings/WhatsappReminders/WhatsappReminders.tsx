@@ -45,6 +45,7 @@ import BaseHeader from '@/components/base/BaseHeader';
 import EmptyState from '@/components/base/EmptyState';
 import Chave from '@/components/base/Chave';
 import IconActionButton from '@/components/base/IconActionButton';
+import { PhoneInput } from '@/components/shared/PhoneInput';
 
 // Tela piloto da Fase 3 (base de design e linguagem). O que mudou aqui é a
 // referência pra fase 4 levar pras outras telas:
@@ -469,14 +470,13 @@ export default function WhatsappReminders() {
 
             {showNumberField && (
               <div>
-                <Label htmlFor="lembrete-destino">Número de quem recebe (com 55 e DDD, só números)</Label>
-                <Input
+                <Label htmlFor="lembrete-destino">Número de quem recebe</Label>
+                <PhoneInput
                   id="lembrete-destino"
                   value={form.destination_value?.number || ''}
-                  onChange={e =>
-                    setForm({ ...form, destination_value: { number: e.target.value.replace(/\D/g, '') } })
-                  }
-                  placeholder="5511999990000"
+                  onChange={number => setForm({ ...form, destination_value: { number } })}
+                  placeholder="(11) 99999-9999"
+                  valueFormat="digits"
                 />
               </div>
             )}

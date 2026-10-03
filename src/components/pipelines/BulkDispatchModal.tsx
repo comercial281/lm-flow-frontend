@@ -60,6 +60,7 @@ import MessageSequenceEditor, {
 } from '@/components/messaging/MessageSequenceEditor';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { PhoneInput } from '@/components/shared/PhoneInput';
 interface BulkDispatchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -1157,11 +1158,12 @@ export default function BulkDispatchModal({
                     <Send className="w-3.5 h-3.5" /> Enviar teste pra um número (opcional)
                   </Label>
                   <div className="flex items-center gap-2">
-                    <Input
+                    <PhoneInput
                       value={testPhone}
-                      onChange={e => setTestPhone(e.target.value)}
-                      placeholder="5511999999999"
-                      className="h-9"
+                      onChange={setTestPhone}
+                      placeholder="(11) 99999-9999"
+                      valueFormat="digits"
+                      className="flex-1"
                     />
                     <Button
                       variant="outline"

@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import PhoneInputLib, { type Country } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
+import './PhoneInput.css';
 import { cn } from '@/lib/utils';
+import { phoneDigits, toE164 } from '@/lib/phoneValue';
 
 interface PhoneInputProps {
   value: string;
@@ -11,6 +13,15 @@ interface PhoneInputProps {
   error?: boolean;
   placeholder?: string;
   className?: string;
+  id?: string;
+  /** Classes do campo de número, por cima do visual padrão (telas com fundo próprio). */
+  inputClassName?: string;
+  /**
+   * Formato do valor que entra e sai:
+   * - `e164` (padrão): `+5511999999999`
+   * - `digits`: `5511999999999`, para as telas que guardam só os dígitos
+   */
+  valueFormat?: 'e164' | 'digits';
 }
 
 /**
@@ -19,7 +30,8 @@ interface PhoneInputProps {
  * Padronized phone input with:
  * - Country selector with flags
  * - Dynamic mask per country
- * - E.164 format output (e.g., +5531912345678)
+ * - E.164 format output (e.g., +5531912345678), ou só dígitos com `valueFormat="digits"`
+ * - Aceita valor salvo sem "+" e número antigo só com DDD (ganha o 55)
  * - Built-in validation
  *
  * @example
@@ -38,14 +50,32 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   error = false,
   placeholder,
   className,
+  id,
+  inputClassName,
+  valueFormat = 'e164',
 }) => {
+  // O que este campo acabou de emitir. Sem isso, no modo `digits` um número
+  // pela metade com 10–11 dígitos ("5511987654") seria relido como DDD e
+  // ganharia outro 55 enquanto a pessoa digita.
+  const lastEmitted = useRef<{ out: string; e164: string } | null>(null);
+  const shown =
+    lastEmitted.current && lastEmitted.current.out === (value || '')
+      ? lastEmitted.current.e164
+      : toE164(value);
+
   return (
     <PhoneInputLib
       international
       defaultCountry={defaultCountry}
-      value={value || ''}
-      onChange={(value) => onChange(value || '')}
+      value={shown}
+      onChange={(next) => {
+        const e164 = next || '';
+        const out = valueFormat === 'digits' ? phoneDigits(e164) : e164;
+        lastEmitted.current = { out, e164 };
+        onChange(out);
+      }}
       disabled={disabled}
+      id={id}
       placeholder={placeholder}
       className={cn(
         'phone-input',
@@ -64,7 +94,8 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
           'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
           'disabled:cursor-not-allowed disabled:opacity-50',
           'md:text-sm',
-          error && 'border-destructive focus-visible:ring-destructive'
+          error && 'border-destructive focus-visible:ring-destructive',
+          inputClassName
         ),
       }}
     />

@@ -19,6 +19,7 @@ import {
   inputCls,
 } from './panelKit';
 import { Seletor } from '@/components/base/Seletor';
+import { PhoneInput } from '@/components/shared/PhoneInput';
 
 /* Editor de lista genérico. */
 function Repeater<T>({ items, onChange, empty, addLabel, render }: {
@@ -141,7 +142,7 @@ function Fields({ block }: { block: BlockInstance }) {
             </Seletor>
           </Field>
           {c.action === 'whatsapp' && (
-            <Field label="WhatsApp (com DDD)"><Text value={c.whatsappPhone as string} onChange={(v) => set({ whatsappPhone: v })} placeholder="5511999999999" /></Field>
+            <Field label="WhatsApp"><PhoneInput value={(c.whatsappPhone as string) ?? ''} onChange={(v) => set({ whatsappPhone: v })} placeholder="(11) 99999-9999" valueFormat="digits" /></Field>
           )}
         </>
       );
@@ -157,7 +158,7 @@ function Fields({ block }: { block: BlockInstance }) {
         <>
           <Field label="Nome do corretor"><Text value={c.name as string} onChange={(v) => set({ name: v })} /></Field>
           <Field label="CRECI"><Text value={c.creci as string} onChange={(v) => set({ creci: v })} /></Field>
-          <Field label="WhatsApp"><Text value={c.phone as string} onChange={(v) => set({ phone: v })} placeholder="5511999999999" /></Field>
+          <Field label="WhatsApp"><PhoneInput value={(c.phone as string) ?? ''} onChange={(v) => set({ phone: v })} placeholder="(11) 99999-9999" valueFormat="digits" /></Field>
           <Field label="Foto"><Upload value={c.photoUrl as string} onChange={(v) => set({ photoUrl: v })} accept="image/*" /></Field>
         </>
       );

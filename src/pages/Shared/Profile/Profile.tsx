@@ -45,6 +45,7 @@ import { getAudioSettings, playNotificationSoundPreview } from '@/utils/audioNot
 import { getModifierKey } from '@/utils/platform';
 import { normalizeAvatarUrl } from '@/utils/avatarUrl';
 import { ProfilePhotoUploader, TwoFactorSetup } from '@/components/shared/profile';
+import { PhoneInput } from '@/components/shared/PhoneInput';
 
 const Profile = () => {
   const { user, refreshUser, logout } = useAuth();
@@ -409,12 +410,12 @@ const Profile = () => {
 
           <div className="space-y-2">
             <Label htmlFor="whatsapp_number">{t('personalData.fields.whatsappNumber')}</Label>
-            <Input
+            <PhoneInput
               id="whatsapp_number"
-              type="tel"
               value={userData.whatsapp_number}
-              onChange={handleInputChange('whatsapp_number')}
+              onChange={v => handleUserDataChange('whatsapp_number', v)}
               placeholder={t('personalData.fields.whatsappNumberPlaceholder')}
+              valueFormat="digits"
             />
             <p className="text-xs text-muted-foreground">
               {t('personalData.fields.whatsappNumberHelp')}

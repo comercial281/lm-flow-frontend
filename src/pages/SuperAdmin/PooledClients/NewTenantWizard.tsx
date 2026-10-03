@@ -3,6 +3,7 @@ import type { ReactNode, Dispatch, SetStateAction } from 'react';
 import { X, ChevronRight, ChevronLeft, Plus, Trash2, Loader2, Check } from 'lucide-react';
 import api from '@/services/core/api';
 import { Seletor } from '@/components/base/Seletor';
+import { PhoneInput } from '@/components/shared/PhoneInput';
 
 interface WaGroup { jid: string; name: string; }
 interface AutomationTemplate { id: string; slug: string; name: string; description: string; category: string; }
@@ -204,7 +205,13 @@ function StepDados({ state, set }: { state: WizardState; set: (k: keyof WizardSt
         <TextInput type="email" value={state.admin_email} onChange={v => set('admin_email', v)} placeholder="joao@casagrande.com.br" />
       </Field>
       <Field label="Telefone" hint="Para notificacao de boas-vindas no WhatsApp">
-        <TextInput value={state.phone} onChange={v => set('phone', v)} placeholder="(11) 99999-9999" />
+        <PhoneInput
+          value={state.phone}
+          onChange={v => set('phone', v)}
+          placeholder="(11) 99999-9999"
+          valueFormat="digits"
+          inputClassName="h-auto py-2 rounded-lg text-white placeholder:text-white/25 bg-white/5 border-violet-600/20 focus-visible:ring-violet-500"
+        />
       </Field>
       <Field label="Slug do CRM" hint={`URL: ${(state.slug || slugify(state.name || 'cliente'))}.lmflow.com.br`}>
         <TextInput value={state.slug || slugify(state.name)} onChange={v => set('slug', slugify(v))} placeholder="casa-grande" />
