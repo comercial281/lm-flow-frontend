@@ -44,3 +44,22 @@ describe('faixa de automação rodando', () => {
     expect(linhas.map(l => l.tipo)).toEqual(['fluxo', 'followup']);
   });
 });
+
+describe('pergunta ao enviar', () => {
+  it('rótulo do botão segue o que está rodando', async () => {
+    const { rotuloDeParar } = await import('./automacaoRodando');
+    const f = { key: 'fluxo-1', tipo: 'fluxo' as const, id: '1', texto: '', podeParar: true };
+    const fu = { key: 'followup', tipo: 'followup' as const, id: '', texto: '', podeParar: true };
+    expect(rotuloDeParar([f])).toBe('Enviar e tirar do fluxo');
+    expect(rotuloDeParar([fu])).toBe('Enviar e parar o follow-up');
+    expect(rotuloDeParar([f, fu])).toBe('Enviar e tirar das automações');
+  });
+
+  it('"manter" vale enquanto o mesmo conjunto estiver rodando', async () => {
+    const { assinaturaDasLinhas } = await import('./automacaoRodando');
+    const a = { key: 'fluxo-1', tipo: 'fluxo' as const, id: '1', texto: '', podeParar: true };
+    const b = { key: 'followup', tipo: 'followup' as const, id: '', texto: '', podeParar: true };
+    expect(assinaturaDasLinhas([a, b])).toBe(assinaturaDasLinhas([b, a]));
+    expect(assinaturaDasLinhas([a])).not.toBe(assinaturaDasLinhas([a, b]));
+  });
+});
