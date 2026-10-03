@@ -7,7 +7,10 @@ export type FlowNodeKind =
   | 'add_label' | 'remove_label' | 'create_pipeline_item' | 'move_stage' | 'move_pipeline'
   | 'assign_owner' | 'assign_round_robin' | 'set_next_action' | 'log_event'
   | 'wait' | 'filter_label' | 'wait_for_reply' | 'condition'
-  | 'webhook' | 'http_call';
+  | 'webhook' | 'http_call'
+  // Sprint 2 (03/10/2026): uma ação das Automações como bloco. Config
+  // `{ action_type, params }`, executada pelo MESMO LeadAutomation::Executor.
+  | 'lead_action';
 
 // Gatilho do fluxo (sprint 1 das Automações, 02/10/2026): o MESMO evento e o
 // MESMO formato de condição das regras de Automações (LeadAutomationRule::TRIGGERS),
@@ -75,7 +78,11 @@ export interface FlowAutomation {
   is_enabled: boolean;
   initial_node_id: string | null;
   version: number;
+  /** "Pode rodar de novo pro mesmo lead": horas; 0 = sempre que o gatilho acontecer. */
   reentry_window_hours: number;
+  /** "Só uma vez por lead" (sprint 2). O servidor guarda em `state`; aceita os dois. */
+  once_per_lead?: boolean;
+  state?: { once_per_lead?: boolean; [key: string]: unknown } | null;
   max_depth: number;
   archived_at: string | null;
   created_at: string;
@@ -141,6 +148,8 @@ export const FLOW_NODE_DEFS: FlowNodeDef[] = [
   { kind: 'condition', label: 'Se / senão', group: 'control', canFail: false, defaultConfig: { criterion: 'replied', window_hours: 24 } },
   { kind: 'webhook', label: 'Avisar um sistema de fora', group: 'notify', canFail: true, defaultConfig: { event_name: '' } },
   { kind: 'http_call', label: 'Chamar uma API', group: 'notify', canFail: true, defaultConfig: { method: 'POST', url: '', headers: '', body: '' } },
+  // Nome e grupo de cada ação vêm de features/flowAutomations/leadAction.ts.
+  { kind: 'lead_action', label: 'Ação', group: 'contact', canFail: true, defaultConfig: { action_type: '', params: {} } },
 ];
 
 export const FLOW_NODE_DEF_BY_KIND: Record<FlowNodeKind, FlowNodeDef> = FLOW_NODE_DEFS.reduce(
@@ -148,11 +157,13 @@ export const FLOW_NODE_DEF_BY_KIND: Record<FlowNodeKind, FlowNodeDef> = FLOW_NOD
   {} as Record<FlowNodeKind, FlowNodeDef>
 );
 
-// Os blocos que o motor garante nesta versão (spec 02/10, seção 5), na ordem da
-// paleta. Os outros saem da paleta até a sprint 2; fluxo antigo que já tem um
-// deles abre e mostra o bloco com o aviso de que ele volta na próxima versão.
+// Os blocos que o motor garante (spec 02/10, seção 5, e sprint 2 de 03/10). Os
+// blocos antigos do Hub continuam fora; fluxo que já tem um deles abre e mostra
+// o bloco com o aviso de que ele volta na próxima versão. A ordem da paleta
+// mora em features/flowAutomations/palette.ts.
 export const FLOW_VISIBLE_NODE_KINDS: FlowNodeKind[] = [
   'send_whatsapp',
   'wait', 'wait_for_reply', 'condition', 'filter_label',
   'add_label', 'remove_label', 'move_stage',
+  'lead_action',
 ];

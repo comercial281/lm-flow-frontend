@@ -282,3 +282,39 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
 // tem a ação continua igual, com o aviso no cartão.
 export const RETIRED_ACTION_TYPES = new Set(['wait']);
 export const WAIT_ACTION_NOTICE = 'Esta etapa não espera: as ações seguintes saem na hora';
+
+// Params obrigatórios por action.type — chaves exatas do backend (LeadAutomation::Executor).
+// Um mapa só para as duas telas: a regra (validateRule) e o bloco de ação do
+// construtor de fluxos (features/flowAutomations/leadAction.ts).
+export const ACTION_REQUIRED_PARAMS: Record<string, string[]> = {
+  send_whatsapp_message:   ['message'],
+  send_audio:              ['media_url'],
+  send_image:              ['media_url'],
+  send_video:              ['media_url'],
+  send_document:           ['media_url'],
+  send_sticker:            ['media_url'],
+  send_message_funnel:     ['funnel_id'],
+  start_followup_sequence: ['sequence_slug'],
+  assign_broker:           ['user_id'],
+  add_label:               ['label_id'],
+  remove_label:            ['label_id'],
+  move_pipeline_stage:     ['stage_id'],
+  create_task:             ['title'],
+  notify_group:            ['group_jid', 'message'],
+  notify_user:             ['user_id', 'message'],
+  send_quick_reply:        ['quick_reply_id'],
+  notify_broker:           ['message'],
+  notify_gestor:           ['message'],
+  notify_push:             ['user_ids', 'message'],
+  // assign_via_roleta e wait não têm params obrigatórios
+};
+
+/** Os params obrigatórios da ação que estão vazios, na ordem do mapa. */
+export function missingActionParams(action: { type: string; params?: Record<string, unknown> | null }): string[] {
+  const required = ACTION_REQUIRED_PARAMS[action.type] ?? [];
+  return required.filter(key => {
+    const value = action.params?.[key];
+    return value === undefined || value === null || value === '' ||
+      (Array.isArray(value) && value.length === 0);
+  });
+}
