@@ -33,6 +33,8 @@ describe('toda rota do CRM confere o cargo', () => {
     ['/settings/pixel-capi', 'capi_configs', 'read'],
     ['/properties', 'properties', 'read'],
     ['/properties/map', 'properties', 'read'],
+    ['/properties/new', 'properties', 'create'],
+    ['/properties/:id/editar', 'properties', 'update'],
     ['/books', 'properties', 'read'],
     ['/visits', 'visits', 'read'],
     ['/proposals', 'proposals', 'read'],

@@ -23,6 +23,7 @@ import {
   CustomAttributes,
   SiteBuilder,
   Properties,
+  CadastroDoImovel,
   PropertyBooks,
   Visits,
   Proposals,
@@ -1075,6 +1076,26 @@ const AppRouter = () => {
               element={
                 <PermissionRoute resource="properties" action="read">
                   <Navigate to="/properties?visao=mapa" replace />
+                </PermissionRoute>
+              }
+            />
+
+            {/* Cadastro de imóvel em página (era a janela da lista). O menu recolhe
+                sozinho nas duas, como em Conversas (ROTA_RECOLHE_MENU). */}
+            <Route
+              path="/properties/new"
+              element={
+                <PermissionRoute resource="properties" action="create">
+                  <CadastroDoImovel />
+                </PermissionRoute>
+              }
+            />
+
+            <Route
+              path="/properties/:id/editar"
+              element={
+                <PermissionRoute resource="properties" action="update">
+                  <CadastroDoImovel />
                 </PermissionRoute>
               }
             />

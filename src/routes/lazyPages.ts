@@ -28,6 +28,8 @@ export const Labels = lazyWithRetry(() => import('@/pages/Customer/Settings/Labe
 export const CustomAttributes = lazyWithRetry(() => import('@/pages/Customer/Settings/CustomAttributes'));
 export const SiteBuilder = lazyWithRetry(() => import('@/pages/Customer/Settings/SiteBuilder').then(m => ({ default: m.SiteBuilder })));
 export const Properties = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.Properties })));
+// Cadastro de imóvel (/properties/new e /properties/:id/editar): abre a partir da lista de Imóveis.
+export const CadastroDoImovel = lazyWithRetry(() => import('@/pages/Customer/Properties/cadastro/CadastroDoImovel'));
 export const PropertyBooks = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.PropertyBooks })));
 export const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => ({ default: m.Visits })));
 export const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));

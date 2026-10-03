@@ -8,6 +8,51 @@ import type { SecaoId } from './secoesDoCadastro';
 
 export interface ErroDoCadastro { secao: SecaoId; mensagem: string }
 
+// O formulário em branco (era o EMPTY_FORM de Properties.tsx). O cadastro novo
+// soma o `formularioNovo(kind)` por cima, para o tipo vir marcado.
+export const FORMULARIO_VAZIO: PropertyFormData = {
+  title: '',
+  description: '',
+  transaction_type: 'sale',
+  category_type: 'residential',
+  property_type: 'apartment',
+  status: 'active',
+  stage: 'ready',
+  listing_kind: 'resale',
+  delivery_forecast: '',
+  sale_price: null,
+  rent_price: null,
+  condo_fee: null,
+  iptu: null,
+  bedrooms: null,
+  bathrooms: null,
+  suites: null,
+  parking_spaces: null,
+  useful_area_m2: null,
+  total_area_m2: null,
+  address_street: '',
+  address_number: '',
+  address_complement: '',
+  address_neighborhood: '',
+  address_city: '',
+  address_state: '',
+  address_zip: '',
+  latitude: null,
+  longitude: null,
+  exclusive: false,
+  featured: false,
+  published_on_site: false,
+  ai_enabled: true,
+  on_sign: false,
+  responsible_id: null,
+  lead_goes_to_responsible: false,
+  captor_id: null,
+  label_id: null,
+  features: [],
+  condo_features: [],
+  typologies: [],
+};
+
 export function formularioDoImovel(p: Property): PropertyFormData {
   return {
     title: p.title,
