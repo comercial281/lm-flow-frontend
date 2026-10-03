@@ -18,6 +18,7 @@ import { EMPTY_HERO_IMAGE, heroImageChoiceFrom } from '@/features/siteBuilder/he
 import {
   financingFrom, financingPayload, listingFrom, listingPayload, parseEmails,
 } from '@/features/siteBuilder/portalPages';
+import { erroGa4, erroGtm, erroPixel, normalizarGa4, normalizarGtm, normalizarPixel } from '@/features/siteBuilder/trackingIds';
 import { telaDaUrl, telaInfo, trilhaDe, type TelaId } from '@/features/siteBuilder/meuSiteMenu';
 import { useTenantFeatures, useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
@@ -36,6 +37,9 @@ import TelaPaginas from './telas/TelaPaginas';
 import TelaBlog from './telas/TelaBlog';
 import TelaContatos from './telas/TelaContatos';
 import TelaAnuncios from './telas/TelaAnuncios';
+import TelaRastreamento from './telas/TelaRastreamento';
+import TelaRedes from './telas/TelaRedes';
+import TelaTraducao from './telas/TelaTraducao';
 
 // A landing de anúncio é liberada CLIENTE A CLIENTE pela Leal Mídia. O gate mora
 // no ITEM "Páginas de anúncio" da barra do Meu site, nunca na rota nem no item
@@ -73,6 +77,11 @@ const EMPTY_SITE_FORM: SiteFormData = {
   gtm_id: '',
   ga4_measurement_id: '',
   facebook_pixel_id: '',
+  social_links: {},
+  translate: { enabled: false, languages: ['en', 'es'] },
+  watermark: { enabled: false, position: 'center', opacity: 60 },
+  custom_head_html: '',
+  custom_body_html: '',
 };
 
 export default function SiteBuilder() {
@@ -165,6 +174,15 @@ export default function SiteBuilder() {
           gtm_id: s.tracking.gtm_id ?? '',
           ga4_measurement_id: s.tracking.ga4_measurement_id ?? '',
           facebook_pixel_id: s.tracking.facebook_pixel_id ?? '',
+          social_links: s.social_links ?? {},
+          translate: s.translate ?? { enabled: false, languages: ['en', 'es'] },
+          watermark: {
+            enabled: s.watermark?.enabled ?? false,
+            position: s.watermark?.position ?? 'center',
+            opacity: s.watermark?.opacity ?? 60,
+          },
+          custom_head_html: s.custom_code?.head ?? '',
+          custom_body_html: s.custom_code?.body ?? '',
         });
         setLeadRouting(siteRoutingFrom(s));
         const fin = financingFrom(s);
@@ -183,12 +201,25 @@ export default function SiteBuilder() {
   useEffect(() => { loadSite(); }, [loadSite]);
 
   const handleSaveSite = async () => {
+    // Código de rastreamento torto não vai pro servidor: a tela avisa e leva até o campo.
+    const erroRastreio =
+      erroGa4(siteForm.ga4_measurement_id ?? '')
+      ?? erroPixel(siteForm.facebook_pixel_id ?? '')
+      ?? erroGtm(siteForm.gtm_id ?? '');
+    if (erroRastreio) {
+      toast.error(erroRastreio);
+      irPara('rastreamento');
+      return;
+    }
     setSaving(true);
     try {
       // primary_domain é gerenciado pelo card "Domínio próprio" (que também
       // registra o domínio na Vercel). Mandá-lo aqui sobrescreveria o valor.
       const payload: SiteFormData = { ...siteForm };
       delete payload.primary_domain;
+      payload.ga4_measurement_id = normalizarGa4(siteForm.ga4_measurement_id ?? '');
+      payload.facebook_pixel_id = normalizarPixel(siteForm.facebook_pixel_id ?? '');
+      payload.gtm_id = normalizarGtm(siteForm.gtm_id ?? '');
       // As duas páginas extras: o que a tela edita é o resolvido; o que viaja é
       // o payload enxuto (texto igual ao de fábrica não vai). Cada uma é gravada
       // sozinha no servidor — salvar uma não apaga a outra.
@@ -198,6 +229,13 @@ export default function SiteBuilder() {
       if (site) {
         const updated = await siteBuilderService.updateSite(site.id, payload);
         setSite(updated);
+        // O campo mostra o código já normalizado, igual ao que foi gravado.
+        setSiteForm(prev => ({
+          ...prev,
+          ga4_measurement_id: payload.ga4_measurement_id,
+          facebook_pixel_id: payload.facebook_pixel_id,
+          gtm_id: payload.gtm_id,
+        }));
         setLeadRouting(siteRoutingFrom(updated));
         // Salvo: a prévia do banner passa a vir do servidor (site.hero_image).
         setHeroPickPreview(null);
@@ -305,6 +343,9 @@ export default function SiteBuilder() {
           />
         )}
         {tela === 'google' && <TelaGoogle {...formProps} />}
+        {tela === 'rastreamento' && <TelaRastreamento {...formProps} irPara={irPara} />}
+        {tela === 'redes' && <TelaRedes {...formProps} />}
+        {tela === 'traducao' && <TelaTraducao {...formProps} />}
         {site && tela === 'paginas' && <TelaPaginas site={site} />}
         {site && tela === 'blog' && <TelaBlog site={site} />}
         {site && tela === 'contatos' && <TelaContatos site={site} />}

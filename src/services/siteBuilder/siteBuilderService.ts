@@ -140,6 +140,15 @@ export interface SiteLeadRoutingPayload {
   rent?: SiteLeadRoutingSide;
 }
 
+export interface SiteWatermark {
+  enabled: boolean;
+  position: 'bottom_left' | 'bottom_right' | 'center' | 'top_left' | 'top_right';
+  opacity: number;
+  logo_url?: string | null;
+}
+
+export interface SiteTranslate { enabled: boolean; languages: string[] }
+
 export interface Site {
   id: string;
   name: string;
@@ -161,6 +170,10 @@ export interface Site {
   anuncie?: SiteListingPage | null;
   contact: SiteContact;
   social_links?: Record<string, string>;
+  watermark?: SiteWatermark;
+  translate?: SiteTranslate;
+  /** Códigos avançados do cliente (null quando vazio). */
+  custom_code?: { head: string | null; body: string | null };
   seo: SiteSeo;
   tracking: SiteTracking;
   pages_count?: number;
@@ -279,6 +292,11 @@ export interface SiteFormData {
   gtm_id?: string;
   ga4_measurement_id?: string;
   facebook_pixel_id?: string;
+  social_links?: Record<string, string>;
+  translate?: SiteTranslate;
+  watermark?: Omit<SiteWatermark, 'logo_url'>;
+  custom_head_html?: string;
+  custom_body_html?: string;
   lead_pipeline_id?: string | null;
   lead_stage_id?: string | null;
   lead_label_id?: string | null;
