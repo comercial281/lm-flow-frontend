@@ -21,7 +21,7 @@ describe('costsService', () => {
     apiGet.mockResolvedValue({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
     await costsService.calls({ month: '2026-10', tenant: null, feature: '', provider: 'openai', onlyErrors: true, page: 2 });
     expect(apiGet).toHaveBeenCalledWith('/super/costs/calls', {
-      params: { month: '2026-10', provider: 'openai', status: 'error', page: 2 },
+      params: { month: '2026-10', per_page: 20, provider: 'openai', status: 'error', page: 2 },
     });
   });
 

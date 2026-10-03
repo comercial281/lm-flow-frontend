@@ -35,7 +35,7 @@ describe('ListaDeChamadas', () => {
     expect(screen.getByText('Alfa')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /próxima/i }));
-    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/calls', { params: { month: '2026-10', page: 2 } }));
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/super/costs/calls', { params: { month: '2026-10', per_page: 20, page: 2 } }));
 
     fireEvent.click(screen.getByText('Follow-up'));
     await waitFor(() => expect(screen.getByText('Conteúdo apagado depois de 7 dias')).toBeInTheDocument());
@@ -46,7 +46,7 @@ describe('ListaDeChamadas', () => {
     render(<ListaDeChamadas month="2026-10" tenant="tenant_a" funcoes={[]} />);
     await waitFor(() => expect(apiGet).toHaveBeenCalled());
     fireEvent.click(screen.getByLabelText('Só erros'));
-    await waitFor(() => expect(apiGet).toHaveBeenLastCalledWith('/super/costs/calls', { params: { month: '2026-10', tenant: 'tenant_a', status: 'error' } }));
+    await waitFor(() => expect(apiGet).toHaveBeenLastCalledWith('/super/costs/calls', { params: { month: '2026-10', per_page: 20, tenant: 'tenant_a', status: 'error' } }));
   });
 
   it('erro na lista vira erro com tentar de novo', async () => {
@@ -66,7 +66,7 @@ describe('ListaDeChamadas', () => {
     await waitFor(() => expect(apiGet).toHaveBeenCalledTimes(3));
     await act(async () => { await Promise.resolve(); });
     expect(apiGet).toHaveBeenCalledTimes(3);
-    expect(apiGet).toHaveBeenLastCalledWith('/super/costs/calls', { params: { month: '2026-10', status: 'error' } });
+    expect(apiGet).toHaveBeenLastCalledWith('/super/costs/calls', { params: { month: '2026-10', per_page: 20, status: 'error' } });
   });
 
   it('resposta lenta de busca antiga não sobrescreve a nova', async () => {
