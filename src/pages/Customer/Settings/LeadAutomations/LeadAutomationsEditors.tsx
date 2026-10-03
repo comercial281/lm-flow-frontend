@@ -479,35 +479,74 @@ export function ConditionEditor({ trigger, condition, onChange, resources }: Con
   // Backend emite context { ..., from_stage_id, to_stage_id }.
   // Pra filtrar por estágio destino, usamos field=to_stage_id.
   if (trigger === 'lead.stage_changed') {
-    const value = typeof condition?.value === 'string' ? condition.value : '';
-    const allStages = Object.entries(resources.stagesByPipeline).flatMap(
-      ([pid, stages]) => stages.map(s => ({
-        ...s,
-        pipelineName: resources.pipelines.find(p => p.id === pid)?.name ?? '',
-      })),
-    );
     return (
-      <div>
-        <UILabel>Para qual etapa? *</UILabel>
-        <Seletor
-          value={value}
-          onChange={e =>
-            onChange({ field: 'to_stage_id', operator: 'eq', value: e.target.value })
-          }
-          className={baseSelectClass}
-        >
-          <option value="">Selecione uma etapa</option>
-          {allStages.map(s => (
-            <option key={s.id} value={s.id}>
-              {s.pipelineName} &rarr; {s.name}
-            </option>
-          ))}
-        </Seletor>
-      </div>
+      <StageConditionEditor
+        value={typeof condition?.value === 'string' ? condition.value : ''}
+        resources={resources}
+        onChange={stageId => onChange({ field: 'to_stage_id', operator: 'eq', value: stageId })}
+      />
     );
   }
 
   return null;
+}
+
+// "Etapa alterada": primeiro o funil, depois as etapas DELE. Uma lista única
+// "Funil → Etapa" com todas as etapas de todos os funis ficava longa e confusa
+// (pedido do Tony, 03/10/2026). Grava só a etapa (`to_stage_id`): a etapa já
+// diz de qual funil é, então o funil escolhido aqui é só pra filtrar a lista.
+function StageConditionEditor({
+  value,
+  resources,
+  onChange,
+}: {
+  value: string;
+  resources: AutomationResources;
+  onChange: (stageId: string) => void;
+}) {
+  const pipelineOfValue = Object.entries(resources.stagesByPipeline).find(([, stages]) =>
+    stages.some(st => st.id === value),
+  )?.[0] ?? '';
+  const [pipelineId, setPipelineId] = useState(pipelineOfValue);
+  useEffect(() => {
+    if (pipelineOfValue) setPipelineId(pipelineOfValue);
+  }, [pipelineOfValue]);
+  const stages = pipelineId ? resources.stagesByPipeline[pipelineId] ?? [] : [];
+
+  return (
+    <div className="space-y-2">
+      <div>
+        <UILabel>Em qual funil? *</UILabel>
+        <Seletor
+          value={pipelineId}
+          onChange={e => {
+            setPipelineId(e.target.value);
+            onChange('');
+          }}
+          className={baseSelectClass}
+        >
+          <option value="">Selecione um funil</option>
+          {resources.pipelines.map(p => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </Seletor>
+      </div>
+      <div>
+        <UILabel>Para qual etapa? *</UILabel>
+        <Seletor
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className={baseSelectClass}
+          disabled={!pipelineId}
+        >
+          <option value="">{pipelineId ? 'Selecione uma etapa' : 'Escolha o funil primeiro'}</option>
+          {stages.map(st => (
+            <option key={st.id} value={st.id}>{st.name}</option>
+          ))}
+        </Seletor>
+      </div>
+    </div>
+  );
 }
 
 // ============================================================================
@@ -1368,9 +1407,13 @@ export function formatConditionSummary(
     return `${op}: "${condition.value}"`;
   }
   if (trigger === 'lead.stage_changed') {
-    const allStages = Object.values(resources.stagesByPipeline).flat();
-    const stage = allStages.find(s => s.id === condition.value);
-    return `Para a etapa: ${stage?.name ?? condition.value}`;
+    const entry = Object.entries(resources.stagesByPipeline).find(([, stages]) =>
+      stages.some(s => s.id === condition.value),
+    );
+    const stage = entry?.[1].find(s => s.id === condition.value);
+    const pipeline = entry ? resources.pipelines.find(p => p.id === entry[0]) : undefined;
+    if (!stage) return `Para a etapa: ${condition.value}`;
+    return pipeline ? `Funil ${pipeline.name} → etapa ${stage.name}` : `Para a etapa: ${stage.name}`;
   }
   if (trigger === 'lead.no_reply_after') {
     return `Sem resposta por ${condition.value} min`;
