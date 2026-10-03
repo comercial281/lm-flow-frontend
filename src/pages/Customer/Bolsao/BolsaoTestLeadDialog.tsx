@@ -15,6 +15,7 @@ import { FlaskConical, Loader2, Wand2 } from 'lucide-react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import bolsaoService from '@/services/bolsao/bolsaoService';
 import { useAuth } from '@/contexts/AuthContext';
+import { PhoneInput } from '@/components/shared/PhoneInput';
 
 const SAMPLE = {
   name: 'Lead de Teste',
@@ -76,12 +77,12 @@ export default function BolsaoTestLeadDialog({ open, onOpenChange, onCreated }: 
         <div className="space-y-4">
           <div>
             <Label htmlFor="test-phone">Telefone com DDD *</Label>
-            <Input
+            <PhoneInput
               id="test-phone"
               className="mt-1"
               placeholder="(11) 98888-7777"
               value={form.phone_number}
-              onChange={e => setForm(f => ({ ...f, phone_number: e.target.value }))}
+              onChange={phone_number => setForm(f => ({ ...f, phone_number }))}
             />
             {/* Número inventado é o número de alguém de verdade — o teste terminaria
                 com um estranho recebendo mensagem de corretor. */}

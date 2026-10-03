@@ -5495,6 +5495,40 @@ Armadilhas:
    modal; não validar de novo na Agenda.
 4. **Não é `featureKey` nem `clientToggleKey`.**
 
+## Campo de telefone: um só, com máscara, no app inteiro (desde 2026-10-03)
+
+Relato do dono do produto: no *Adicionar Lead ao Funil → Criar novo lead* o
+Telefone era texto livre e aceitava letra. Pedido em seguida: *"padroniza isso
+pra gente"*. Havia 12 campos de telefone de texto livre, cada um com uma
+instrução diferente ("com 55 e DDD, só números", "com DDI", "ex: 5543…").
+
+O que aparece na tela: todo campo de telefone do CRM é o mesmo da aba Contatos,
+com bandeira (Brasil por padrão), máscara enquanto digita e sem aceitar letra.
+Vale para Criar novo lead (funil), Criar contato (Agenda), lead de teste do
+Bolsão, Número do gestor (Roleta), Lembretes de WhatsApp, teste de Follow-up e
+de Disparo em massa, WhatsApp da landing (Fura a fila, botão fixo e corretor),
+Celular para avisos (Equipe e Perfil) e Telefone do assistente de novo cliente
+(painel raiz). Fica de fora o site público, que usa o `BrPhoneInput` (sem
+bandeira e sem puxar o CRM pro pacote da landing).
+
+Decisões (não reabrir sem o dono pedir):
+
+- **O que chega no servidor não muda.** O campo é um só, e cada tela recebe o
+  formato que já gravava: com "+" (`valueFormat` padrão, contato, Bolsão,
+  Agenda) ou só dígitos com o 55 (`valueFormat="digits"`, os demais).
+- **Número antigo gravado sem país** (10 ou 11 dígitos, só DDD) aparece como
+  Brasil e passa a ser salvo com o 55 no próximo Salvar.
+
+Armadilhas:
+
+1. **Campo de telefone novo usa o `PhoneInput`** (`@/components/shared/PhoneInput`,
+   import pelo arquivo). Ele já traz o próprio CSS. Tela com fundo próprio passa
+   `inputClassName`.
+2. **No modo `digits` o campo lembra o que acabou de emitir.** Sem isso,
+   "5511987654" no meio da digitação seria relido como DDD e ganharia outro 55.
+   A conversão mora em `src/lib/phoneValue.ts`; os dois têm spec.
+3. **Não é `featureKey` nem `clientToggleKey`**, e não tem metade de backend.
+
 ## Conversa: faixa "automação rodando" acima do campo de mensagem (03/10/2026)
 
 Pedido do Tony: quando um fluxo do construtor ou um follow-up está rodando pra um lead, quem atende precisa ver isso na conversa e conseguir parar. Senão o corretor assume a conversa e o lead recebe a mensagem automática ("Oi de novo!") no meio do atendimento.

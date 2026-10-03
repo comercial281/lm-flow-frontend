@@ -6,6 +6,7 @@ import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import type { BlockConfig, BlockInstance, LeadFormStep } from '@/features/landing/blocks';
 import { useLandingEditorStore, type AnswerDestination } from './landingEditorStore';
 import { Field, Group, Num, Text, TextArea, inputCls } from './panelKit';
+import { PhoneInput } from '@/components/shared/PhoneInput';
 
 /* ------------------------------------------------------------------ */
 /* Funis, colunas e etiquetas — carregados uma vez por sessão do editor */
@@ -398,12 +399,13 @@ export function LeadFormPanel({ block }: { block: BlockInstance }) {
         </Field>
         <Field
           label="WhatsApp do botão “Fura a fila”"
-          hint="Com DDD e país (ex: 5511999999999). Sem número, o botão não aparece."
+          hint="Sem número, o botão não aparece."
         >
-          <Text
-            value={config.whatsappPhone}
-            placeholder="5511999999999"
+          <PhoneInput
+            value={config.whatsappPhone ?? ''}
             onChange={(v) => set({ whatsappPhone: v })}
+            placeholder="(11) 99999-9999"
+            valueFormat="digits"
           />
         </Field>
         <Field label="Texto do botão do WhatsApp">

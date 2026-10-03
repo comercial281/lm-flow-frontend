@@ -20,6 +20,7 @@ import type { User, UserFormData, CRole } from '@/types/users';
 import type { CustomRole } from '@/types/customRoles';
 import { Loader2, Shield } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
+import { PhoneInput } from '@/components/shared/PhoneInput';
 
 // Fallback estático (mostrado enquanto o backend não respondeu ou se
 // a API de cargos falhar). Substituído pelos cargos reais do DB assim
@@ -244,13 +245,13 @@ export default function UserFormModal({ isOpen, onClose, user, onSuccess }: User
           {/* WhatsApp (para receber lembretes de automação) */}
           <div className="space-y-2">
             <Label htmlFor="whatsapp_number">WhatsApp</Label>
-            <Input
+            <PhoneInput
               id="whatsapp_number"
-              type="tel"
               value={formData.whatsapp_number ?? ''}
-              onChange={e => handleFieldChange('whatsapp_number', e.target.value)}
-              placeholder="Ex: 5511959462815 (com DDD e país)"
-              className="bg-sidebar border-sidebar-border text-sidebar-foreground"
+              onChange={v => handleFieldChange('whatsapp_number', v)}
+              placeholder="(11) 99999-9999"
+              valueFormat="digits"
+              inputClassName="bg-sidebar border-sidebar-border text-sidebar-foreground"
               disabled={loading}
             />
             <p className="text-xs text-sidebar-foreground/60">

@@ -79,6 +79,7 @@ const DEFAULT_REPASSE_PREVIEW =
 import type { User } from '@/types/users';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { PhoneInput } from '@/components/shared/PhoneInput';
 const STATUS_COLOR: Record<string, string> = {
   pending:  'bg-orange-100 text-orange-700',
   accepted: 'bg-emerald-100 text-emerald-700',
@@ -2509,10 +2510,11 @@ export default function RoletaConfigPage() {
                 <Bell className="h-4 w-4" />
                 Número do gestor (WhatsApp) *
               </UILabel>
-              <Input
+              <PhoneInput
                 value={gestorNum}
-                onChange={e => setGestorNum(e.target.value)}
-                placeholder="5511999990000"
+                onChange={setGestorNum}
+                placeholder="(11) 99999-9999"
+                valueFormat="digits"
                 className="mt-1"
               />
               <p className="text-xs text-muted-foreground mt-1">

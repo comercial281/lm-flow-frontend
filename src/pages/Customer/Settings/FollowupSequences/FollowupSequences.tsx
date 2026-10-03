@@ -57,6 +57,7 @@ import type { User } from '@/types/users';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { plural } from '@/lib/formato';
 import { Seletor } from '@/components/base/Seletor';
+import { PhoneInput } from '@/components/shared/PhoneInput';
 // Backend (Followup::SendStep#move_stage_if_configured) deriva o slug a partir do
 // nome do stage e NORMALIZA os dois lados: transliterate + downcase + strip + '-'.
 // Espelhamos exatamente isso aqui — com acento, 'follow-up-automatico' nao casava
@@ -1239,8 +1240,8 @@ export default function FollowupSequences() {
             </DialogDescription>
           </DialogHeader>
           <div>
-            <UILabel>Telefone (com DDI, só números)</UILabel>
-            <Input placeholder="5511949329570" value={testPhone} onChange={e => setTestPhone(e.target.value)} />
+            <UILabel>Telefone</UILabel>
+            <PhoneInput value={testPhone} onChange={setTestPhone} placeholder="(11) 99999-9999" valueFormat="digits" />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTestDialogOpen(false)}>Cancelar</Button>

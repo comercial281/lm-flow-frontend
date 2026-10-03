@@ -14,6 +14,7 @@ import { Search, ChevronDown, UserPlus, User as UserIcon, KanbanSquare } from 'l
 import { toast } from 'sonner';
 import { visitsService, LeadPickerItem } from '@/services/visits/visitsService';
 import { numero, telefone } from '@/lib/formato';
+import { PhoneInput } from '@/components/shared/PhoneInput';
 
 interface Props {
   value: LeadPickerItem | null;
@@ -283,10 +284,10 @@ export function LeadCombobox({
               </div>
               <div>
                 <UILabel>Telefone *</UILabel>
-                <Input
+                <PhoneInput
                   value={quickPhone}
-                  onChange={e => setQuickPhone(e.target.value)}
-                  placeholder="+5511999999999"
+                  onChange={setQuickPhone}
+                  placeholder="(11) 99999-9999"
                   className="mt-1"
                 />
               </div>
