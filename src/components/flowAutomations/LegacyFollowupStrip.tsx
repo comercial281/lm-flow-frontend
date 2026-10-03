@@ -13,20 +13,12 @@ export function LegacyFollowupStrip() {
 
   useEffect(() => {
     let alive = true;
-    (async () => {
-      try {
-        // Funil que nunca disparou não tem fila: nem pergunta o histórico.
-        const sequences = (await followupSequencesService.getAll()).filter(s => (s.jobs_count ?? 0) > 0);
-        const histories = await Promise.allSettled(sequences.map(s => followupSequencesService.getHistory(s.id)));
+    followupSequencesService.getAll()
+      .then(sequences => {
         if (!alive) return;
-        setQueues(legacyQueuesWithPending(sequences.map((s, i) => {
-          const h = histories[i];
-          return { id: s.id, name: s.name, pending: h.status === 'fulfilled' ? h.value.summary?.pending ?? 0 : 0 };
-        })));
-      } catch {
-        if (alive) setQueues([]);
-      }
-    })();
+        setQueues(legacyQueuesWithPending(sequences.map(s => ({ id: s.id, name: s.name, pending: Number(s.queued_count) || 0 }))));
+      })
+      .catch(() => { if (alive) setQueues([]); });
     return () => { alive = false; };
   }, []);
 

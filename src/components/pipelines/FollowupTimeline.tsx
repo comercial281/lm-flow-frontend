@@ -13,9 +13,11 @@ import {
   type LeadFollowupState,
   type LeadRef,
 } from '@/services/leadFollowup/leadFollowupService';
-import { flowAutomationInstancesService, type RunningFlow } from '@/services/flowAutomations/flowAutomationInstancesService';
-import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
-import type { FlowAutomation } from '@/types/flowAutomations';
+import {
+  flowAutomationInstancesService,
+  type RunningFlow,
+  type StartableFollowup,
+} from '@/services/flowAutomations/flowAutomationInstancesService';
 import { linhaDoFluxo, linhaDoFollowup } from '@/features/conversas/automacaoRodando';
 
 /**
@@ -27,7 +29,8 @@ import { linhaDoFluxo, linhaDoFollowup } from '@/features/conversas/automacaoRod
  *   conversa ("Follow-up "X" · aguardando resposta até…") e **Parar**;
  * - a fila de um funil antigo, se o lead ainda está terminando nele (formato
  *   antigo), também só com **Parar**;
- * - sem nada rodando, **Iniciar**: escolhe um dos follow-ups ligados.
+ * - sem nada rodando, **Iniciar**: escolhe um dos follow-ups que o servidor
+ *   lista em `meta.startable_followups` (o corretor não lê o construtor).
  *
  * Pausar e Retomar saíram (decisão do Tony, 02–03/10). O estado continua vindo
  * do servidor, nunca de etiqueta: a lição de 31/08 (o botão lia a etiqueta e a
@@ -81,7 +84,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
   const [flows, setFlows] = useState<RunningFlow[]>([]);
   const [legacyJobs, setLegacyJobs] = useState<LeadFollowupJob[]>([]);
   const [legacy, setLegacy] = useState<LeadFollowupState>(EMPTY_LEAD_FOLLOWUP_STATE);
-  const [options, setOptions] = useState<FlowAutomation[]>([]);
+  const [options, setOptions] = useState<StartableFollowup[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [denied, setDenied] = useState(false);
@@ -95,11 +98,12 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
   const load = useCallback(async () => {
     if (!contactId && !conversationId) { setLoading(false); return; }
     const [running, old] = await Promise.allSettled([
-      flowAutomationInstancesService.running(ref),
+      flowAutomationInstancesService.forCard(ref),
       leadFollowupService.get(ref),
     ]);
     if (!alive.current) return;
-    setFlows(running.status === 'fulfilled' ? running.value.filter(f => f.kind === 'followup' && f.active) : []);
+    setFlows(running.status === 'fulfilled' ? running.value.flows.filter(f => f.kind === 'followup' && f.active) : []);
+    setOptions(running.status === 'fulfilled' ? running.value.startable : []);
     setLegacyJobs(old.status === 'fulfilled' ? old.value.jobs : []);
     setLegacy(old.status === 'fulfilled' ? old.value.state : EMPTY_LEAD_FOLLOWUP_STATE);
     // 403 é o cargo sem a permissão, e precisa aparecer: engolir o erro e
@@ -111,16 +115,6 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
   }, [ref, contactId, conversationId]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
-
-  // Os follow-ups que dá pra iniciar: os ligados. Falha = lista vazia.
-  useEffect(() => {
-    if (readOnly) return undefined;
-    let vivo = true;
-    flowAutomationsService.list({ kind: 'followup' })
-      .then(list => { if (vivo) setOptions(list.filter(f => f.is_enabled && !f.archived_at)); })
-      .catch(() => { if (vivo) setOptions([]); });
-    return () => { vivo = false; };
-  }, [readOnly]);
 
   const act = useCallback(async (fn: () => Promise<{ message?: string }>, fallbackMsg: string) => {
     setBusy(true);
@@ -291,7 +285,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
           </div>
         ) : (
           <p className="text-[10px] text-muted-foreground">
-            Nenhum follow-up ligado. Crie e ligue um em <em>Automações → Follow-up</em>.
+            Nenhum follow-up pra iniciar. Crie e ligue um em <em>Automações → Follow-up</em>.
           </p>
         )
       )}

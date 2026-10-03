@@ -55,8 +55,8 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: 'origem', resource: 'lead_ads_form_configs', action: 'read', automationsChild: true },
   { path: 'lead-automations', resource: 'lead_automation_rules', action: 'read', automationsChild: true },
   { path: 'lead-ads-forms', resource: 'lead_ads_form_configs', action: 'read', automationsChild: true },
-  { path: 'follow-ups', resource: 'flow_automations', action: 'read', automationsChild: true },
-  { path: 'follow-ups/:id', resource: 'flow_automations', action: 'read', automationsChild: true },
+  { path: 'follow-ups', resource: 'followup_sequences', action: 'read', automationsChild: true },
+  { path: 'follow-ups/:id', resource: 'followup_sequences', action: 'read', automationsChild: true },
   { path: 'whatsapp-reminders', resource: 'whatsapp_reminders', action: 'read', automationsChild: true },
   { path: 'roleta-config', resource: 'roleta_configs', action: 'read', automationsChild: true },
 

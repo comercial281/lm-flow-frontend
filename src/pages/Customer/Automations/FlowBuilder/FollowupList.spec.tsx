@@ -71,20 +71,20 @@ describe('aba Follow-up', () => {
     expect(await screen.findByText('canvas do follow-up')).toBeTruthy();
   });
 
-  it('faixa dos funis antigos com fila: só os que têm mensagem programada', async () => {
+  it('faixa dos funis antigos com fila: só os que têm mensagem programada (queued_count)', async () => {
     getAll.mockResolvedValue([
-      { id: 's1', name: 'Follow-up longo', jobs_count: 120 },
-      { id: 's2', name: 'Follow-up automatico', jobs_count: 30 },
-      { id: 's3', name: 'Nunca usado', jobs_count: 0 },
+      { id: 's1', name: 'Follow-up longo', queued_count: 87 },
+      { id: 's2', name: 'Follow-up automatico', queued_count: 0 },
+      { id: 's3', name: 'Apto', queued_count: 13 },
     ]);
-    getHistory.mockImplementation(async (id: string) => ({ summary: { pending: id === 's1' ? 87 : 0 } }));
     renderAt('followup');
 
     expect(await screen.findByText(/Follow-up longo — 87 mensagens programadas/)).toBeTruthy();
-    expect(screen.getByText('Terminando no formato antigo:')).toBeTruthy();
+    expect(screen.getByText(/Apto — 13 mensagens programadas/)).toBeTruthy();
+    expect(screen.getAllByText('Terminando no formato antigo:')).toHaveLength(2);
     expect(screen.queryByText(/Follow-up automatico/)).toBeNull();
-    // Funil que nunca disparou nem é consultado.
-    expect(getHistory).not.toHaveBeenCalledWith('s3');
+    // Uma leitura só: nada de histórico por funil.
+    expect(getHistory).not.toHaveBeenCalled();
   });
 
   it('a aba Automações continua igual: sem kind, com pastas e Modelos', async () => {

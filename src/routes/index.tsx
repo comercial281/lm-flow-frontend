@@ -696,13 +696,13 @@ const AppRouter = () => {
               />
               {/* Follow-up (Automações · sprint 3, 03/10/2026): a mesma lista e o
                   mesmo canvas das Automações, com os fluxos de follow-up. O editor
-                  de funil antigo saiu da tela. A chave é a do construtor
-                  (flow_automations), a que o servidor confere nessas rotas. */}
+                  de funil antigo saiu da tela. A chave continua followup_sequences:
+                  o servidor aceita ela em /flow_automations pra fluxo kind=followup. */}
               <Route
                 path="follow-ups"
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
-                    <PermissionRoute resource="flow_automations" action="read">
+                    <PermissionRoute resource="followup_sequences" action="read">
                       <FlowAutomationsList kind="followup" />
                     </PermissionRoute>
                   </Suspense>
@@ -712,7 +712,7 @@ const AppRouter = () => {
                 path="follow-ups/:id"
                 element={
                   <Suspense fallback={outletSuspenseFallback}>
-                    <PermissionRoute resource="flow_automations" action="read">
+                    <PermissionRoute resource="followup_sequences" action="read">
                       <FlowAutomationCanvas />
                     </PermissionRoute>
                   </Suspense>

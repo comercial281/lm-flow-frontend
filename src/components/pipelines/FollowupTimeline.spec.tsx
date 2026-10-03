@@ -8,7 +8,8 @@ const legacyStop = vi.fn();
 const running = vi.fn();
 const instanceStart = vi.fn();
 const instanceStop = vi.fn();
-const listFlows = vi.fn();
+// Os follow-ups que dá pra iniciar vêm na mesma leitura (meta.startable_followups).
+let startable: Array<{ id: string; name: string }> = [];
 
 vi.mock('@/services/leadFollowup/leadFollowupService', async () => {
   const actual = await vi.importActual<Record<string, unknown>>(
@@ -25,14 +26,10 @@ vi.mock('@/services/leadFollowup/leadFollowupService', async () => {
 
 vi.mock('@/services/flowAutomations/flowAutomationInstancesService', () => ({
   flowAutomationInstancesService: {
-    running: (...a: unknown[]) => running(...a),
+    forCard: async (...a: unknown[]) => ({ flows: await running(...a), startable }),
     start: (...a: unknown[]) => instanceStart(...a),
     stop: (...a: unknown[]) => instanceStop(...a),
   },
-}));
-
-vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
-  flowAutomationsService: { list: (...a: unknown[]) => listFlows(...a) },
 }));
 
 vi.mock('sonner', () => ({
@@ -70,15 +67,13 @@ const instance = (over: Record<string, unknown> = {}) => ({
   phase: 'waiting_reply', until: null, started_at: null, kind: 'followup', ...over,
 });
 
-const flow = (over: Record<string, unknown> = {}) => ({
-  id: 'f1', name: 'Follow-up longo', is_enabled: true, archived_at: null, kind: 'followup', ...over,
-});
+const flow = (over: Record<string, unknown> = {}) => ({ id: 'f1', name: 'Follow-up longo', ...over });
 
 beforeEach(() => {
-  [get, legacyStop, running, instanceStart, instanceStop, listFlows].forEach(m => m.mockReset());
+  [get, legacyStop, running, instanceStart, instanceStop].forEach(m => m.mockReset());
   get.mockResolvedValue({ jobs: [], state: state() });
   running.mockResolvedValue([]);
-  listFlows.mockResolvedValue([]);
+  startable = [];
 });
 
 /**
@@ -113,19 +108,14 @@ describe('Follow-up do card — fluxo de follow-up', () => {
     expect(screen.queryByText(/Boas-vindas/)).not.toBeInTheDocument();
   });
 
-  it('sem nada rodando, Iniciar escolhe um dos follow-ups ligados', async () => {
-    listFlows.mockResolvedValue([
-      flow(),
-      flow({ id: 'f2', name: 'Follow-up curto' }),
-      flow({ id: 'f3', name: 'Desligado', is_enabled: false }),
-    ]);
+  it('sem nada rodando, Iniciar escolhe um dos follow-ups que o servidor lista', async () => {
+    startable = [flow(), flow({ id: 'f2', name: 'Follow-up curto' })];
     instanceStart.mockResolvedValue({ message: 'Follow-up iniciado' });
 
     render(<FollowupTimeline contactId="c-1" />);
 
     const seletor = await screen.findByLabelText('Qual follow-up');
-    expect(listFlows).toHaveBeenCalledWith({ kind: 'followup' });
-    expect(screen.queryByRole('option', { name: 'Desligado' })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Follow-up curto' })).toBeInTheDocument();
     const iniciar = screen.getByRole('button', { name: /Iniciar follow-up/ });
     expect(iniciar).toBeDisabled();
 
@@ -136,7 +126,7 @@ describe('Follow-up do card — fluxo de follow-up', () => {
   });
 
   it('com um follow-up só, o botão já inicia ele', async () => {
-    listFlows.mockResolvedValue([flow()]);
+    startable = [flow()];
     instanceStart.mockResolvedValue({});
 
     render(<FollowupTimeline contactId="c-1" />);
@@ -148,15 +138,24 @@ describe('Follow-up do card — fluxo de follow-up', () => {
 
   it('sem follow-up ligado, diz onde criar', async () => {
     render(<FollowupTimeline contactId="c-1" />);
-    expect(await screen.findByText(/Nenhum follow-up ligado/)).toBeInTheDocument();
+    expect(await screen.findByText(/Nenhum follow-up pra iniciar/)).toBeInTheDocument();
   });
 
   it('somente leitura: nem Iniciar nem Parar', async () => {
     running.mockResolvedValue([instance()]);
+    startable = [flow()];
     render(<FollowupTimeline contactId="c-1" readOnly />);
     expect(await screen.findByText('Rodando')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Parar/ })).not.toBeInTheDocument();
-    expect(listFlows).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /Iniciar/ })).not.toBeInTheDocument();
+  });
+
+  it('com follow-up rodando, a lista do Iniciar não aparece mesmo vindo do servidor', async () => {
+    running.mockResolvedValue([instance()]);
+    startable = [flow()];
+    render(<FollowupTimeline contactId="c-1" />);
+    expect(await screen.findByText('Rodando')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Iniciar/ })).not.toBeInTheDocument();
   });
 });
 

@@ -5689,7 +5689,8 @@ O que aparece na tela:
   O editor de funil antigo, "Quando este funil começa" e "Follow-up iniciado à
   mão" saíram da tela. `/settings/follow-ups` leva pra aba nova.
 - **Faixa "Terminando no formato antigo: Follow-up longo — 87 mensagens
-  programadas"** no topo da aba: os funis antigos que ainda têm fila, só pra ver.
+  programadas"** no topo da aba: os funis antigos que ainda têm fila
+  (`queued_count`), só pra ver.
   Some quando a fila zera.
 - **"+ Ou quando…"** na janela do gatilho: outros gatilhos, cada um com o mesmo
   editor (filtro e funil). O fluxo começa quando qualquer um acontece. O cartão
@@ -5711,7 +5712,8 @@ O que aparece na tela:
   não é mais oferecida; regra/bloco que já tem continua abrindo e valendo.
 - **Card do lead:** o bloco Follow-up mostra cada follow-up rodando com a mesma
   linha da faixa da conversa ("Follow-up "X" · aguardando resposta até…") e
-  **Parar**; sem nada rodando, **Iniciar follow-up** (escolhe entre os ligados).
+  **Parar**; sem nada rodando, **Iniciar follow-up** (escolhe entre os que o
+  servidor lista pra este lead).
   A fila de funil antigo aparece com "· formato antigo", só com Parar e o "Ver
   mensagens". Pausar e Retomar saíram.
 - **Faixa da conversa:** o fluxo de follow-up aparece como **Follow-up "X"**, e o
@@ -5741,9 +5743,13 @@ Armadilhas:
 7. **A IA grava `followup_flow_id`** (no `saveAgent` com `in`, pra limpar com
    `null`). O servidor guarda na coluna do slug com a marca `flow:`; a tela só vê
    os dois campos.
-8. **Permissão da aba Follow-up:** `flow_automations.read` (a chave que o servidor
-   confere em `/flow_automations`), na rota e no menu. Antes era
-   `followup_sequences.read`.
+8. **Permissão da aba Follow-up continua `followup_sequences.read`** (rota, menu e
+   `permissionRoutes`): o servidor aceita as chaves `followup_sequences.*` em
+   `/flow_automations` pra fluxo `kind=followup`. Quem via o Follow-up continua vendo.
 9. **Card:** fluxos de `/flow_automation_instances` filtrados por `kind ===
-   'followup'`; a fila antiga continua vindo de `/followup_jobs`. Iniciar = `POST
-   /flow_automation_instances/start` com o contato e a conversa.
+   'followup'`; a lista do Iniciar vem da MESMA leitura, em
+   `meta.startable_followups` (o corretor não lê `/flow_automations`, essa rota
+   pede só `pipelines.read`). A fila antiga continua vindo de `/followup_jobs`.
+   Iniciar = `POST /flow_automation_instances/start` com o contato e a conversa.
+10. **Faixa do formato antigo:** `queued_count` de cada funil em
+    `GET /followup_sequences` (uma leitura só, sem histórico por funil).

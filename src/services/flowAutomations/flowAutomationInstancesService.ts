@@ -24,7 +24,23 @@ export interface RunningFlow {
   progress_step?: number | null;
 }
 
+/** Um follow-up que o card pode iniciar (`meta.startable_followups`, sprint 3). */
+export interface StartableFollowup {
+  id: string;
+  name: string;
+}
+
 const BASE = '/flow_automation_instances';
+
+const startableFrom = (body: unknown): StartableFollowup[] => {
+  const meta = body && typeof body === 'object' ? (body as { meta?: { startable_followups?: unknown } }).meta : undefined;
+  const list = meta?.startable_followups;
+  if (!Array.isArray(list)) return [];
+  return list.flatMap(item => {
+    const raw = item as { id?: unknown; name?: unknown } | null;
+    return raw && raw.id ? [{ id: String(raw.id), name: String(raw.name ?? '') }] : [];
+  });
+};
 
 const listFrom = (body: unknown): RunningFlow[] => {
   const data = body && typeof body === 'object' && 'data' in body ? (body as { data: unknown }).data : body;
@@ -36,6 +52,17 @@ export const flowAutomationInstancesService = {
     const params = ref.contactId ? { contact_id: ref.contactId } : { conversation_id: ref.conversationId };
     const { data } = await api.get(BASE, { params });
     return listFrom(data);
+  },
+
+  /**
+   * Os fluxos rodando e os follow-ups que dá pra iniciar, numa leitura só. A
+   * lista do "Iniciar" vem daqui (e não de `/flow_automations`) porque o
+   * corretor não lê o construtor; esta rota pede só `pipelines.read`.
+   */
+  async forCard(ref: { conversationId?: string | null; contactId?: string | null }): Promise<{ flows: RunningFlow[]; startable: StartableFollowup[] }> {
+    const params = ref.contactId ? { contact_id: ref.contactId } : { conversation_id: ref.conversationId };
+    const { data } = await api.get(BASE, { params });
+    return { flows: listFrom(data), startable: startableFrom(data) };
   },
 
   /** Põe o lead num fluxo agora (o "Iniciar" do card), pela mesma trava de reentrada do gatilho. */

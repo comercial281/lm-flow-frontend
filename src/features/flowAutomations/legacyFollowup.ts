@@ -2,9 +2,9 @@
 //
 // Quem já estava na fila de um funil antigo termina nele: o funil continua
 // ativo até a fila zerar (desativar cancelaria a fila). A aba Follow-up mostra,
-// só pra ver, os funis que ainda têm mensagem programada. A contagem vem do
-// histórico do funil (`GET /followup_sequences/:id/history`, `summary.pending`).
-// A faixa some quando a fila zera.
+// só pra ver, os funis que ainda têm mensagem programada. A contagem é o
+// `queued_count` de cada funil em `GET /followup_sequences`. A faixa some
+// quando a fila zera.
 
 import { plural } from '@/lib/formato';
 
