@@ -5127,16 +5127,18 @@ e as telas escritas aqui usaram `<select>` cru porque ele aceita a opção vazia
 ("Todos"), que o Select do design system recusa com erro.
 
 O que aparece na tela: no computador, toda lista migrada abre a lista do produto;
-no celular e no tablet, a do sistema (a rodinha do iPhone). Neste PR: Imóveis
+no celular e no tablet, a do sistema (a rodinha do iPhone). No PR 1: Imóveis
 (lista, cadastro e mapa), Roleta, ficha do contato, card do lead (interesses e
 follow-up), Agenda (folgas e horário), destino do lead, desativar usuário, portais
 e o formulário da landing. No PR 2: Dashboard nova (filtros e Funil), Conversas
 (filtros rápidos), IA Vendedora (inclusive o assistente), Follow-up, Formulários de
 anúncio, Automações de lead, Boas-vindas, Pixel e CAPI, Academia, Variáveis, número
 que envia, Agendar mensagem, linha do tempo do contato, Site e a landing (roteamento
-de lead, assistente e editor). Falta o PR 3: painel raiz, primeiro acesso,
-`FormSelect` e os formulários de canal e de agente herdados do fork (spec no fim
-desta seção).
+de lead, assistente e editor). No PR 3: painel raiz (Clientes e as janelas roxas,
+Mural de leads, Push, Avisos na tela, Mensagem de acesso, Resultados da IA,
+Agentes, Refinamento, Logs), primeiro acesso, `FormSelect` e os formulários de
+canal e de agente herdados do fork. Não sobrou lista nativa fora do widget de chat
+e do portal público (spec no fim desta seção).
 
 Decisões (não reabrir sem o dono pedir):
 
@@ -5148,8 +5150,13 @@ Decisões (não reabrir sem o dono pedir):
 
 Armadilhas:
 
-1. **A trava `selectNativo` (`conferir-padrao.mjs`) só desce.** `<select>` novo na
-   tela do cliente reprova o build. Use o `Seletor`.
+1. **A trava `selectNativo` (`conferir-padrao.mjs`) está em zero e vale para o app
+   inteiro** (painel raiz, landing, primeiro acesso e a sobra do fork também; as
+   outras categorias da catraca seguem só na tela do cliente). `<select>` novo em
+   qualquer `.tsx` reprova o build. Use o `Seletor`. Fora da conta: o `Seletor`, o
+   `SeletorComAbas`, os testes e as duas exceções da decisão
+   (`SELECT_NATIVO_PERMITIDO`: `widget/PreChatForm.tsx` e `Public/portalShared.tsx`).
+   Não entra exceção nova sem o dono pedir.
 2. **A altura do Select do design system é presa por `data-size`.** O `Seletor`
    manda `data-size="livre"` e põe `h-9` como classe comum, para `h-7` da tela
    valer. Não tire.
@@ -5191,10 +5198,30 @@ Armadilhas:
     seta do design system.
 12. **`assistente/steps/Campos.tsx` já tem um `Seletor` próprio** (o campo do
     assistente, usado nas etapas). A peça da casa entra lá como `SeletorDaCasa`.
+13. **Tela pintada de escuro à mão passa `escuro`** (primeiro acesso, janelas roxas
+    do painel raiz): a lista aberta sai no tema escuro mesmo com o app no claro
+    (classe `dark` na própria lista). E tira o `style` das `<option>`: fundo ou cor
+    inline na opção vence o realce do mouse e, no tema claro, deixa texto escuro em
+    fundo roxo. O primeiro acesso é `bare` + `escuro`: a caixa e a seta são as da
+    tela, e o `onFocus` que pinta `e.target.style` vale igual no botão. Testes:
+    `OnboardingPage.spec.tsx`, `ClientBroadcastModal.spec.tsx`.
+14. **No celular a seta é imagem de fundo e vai DEPOIS do `style` da tela.** O atalho
+    `background` no `style` (janelas roxas) apagava a seta. Não inverta a ordem
+    (`Seletor.spec.tsx`, "a seta resiste a style com o atalho background").
+15. **Atalho de teclado na janela inteira (`window` keydown) com lista na tela:** no
+    Esc, olhe `e.defaultPrevented`, senão o Esc fecha a lista E a tela. Mesma regra
+    da armadilha 8. Modelo: modo mural do Mural de leads, com spec.
+16. **Tela que manda o foco para outro lugar depois de escolher usa
+    `onCloseAutoFocus`** (prop opcional do `Seletor`, repassada ao conteúdo do Radix
+    no computador), com `e.preventDefault()` e o foco no campo certo. Nunca um
+    `setTimeout`: a animação de fechar devolve o foco ao botão da lista depois dele.
+    Modelo: campo "Outro" do primeiro acesso, que aparece com `autoFocus` depois da
+    escolha.
 
 Spec e planos: `LM FLOW/specs/2026-10-02-seletor-unico-design.md`,
-`LM FLOW/plans/2026-10-02-seletor-unico-pr1.md` e
-`LM FLOW/plans/2026-10-02-seletor-unico-pr2.md` (pasta do Tony, fora deste repo).
+`LM FLOW/plans/2026-10-02-seletor-unico-pr1.md`,
+`LM FLOW/plans/2026-10-02-seletor-unico-pr2.md` e
+`LM FLOW/plans/2026-10-02-seletor-unico-pr3.md` (pasta do Tony, fora deste repo).
 
 ## Selo *Follow-up automático* nas Conversas (desde 2026-10-02)
 

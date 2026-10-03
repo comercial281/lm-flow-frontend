@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { X, Check, Loader2, Send, Users, Workflow, FileUp, AlertTriangle } from 'lucide-react';
 import api from '@/services/core/api';
 import { readFollowupPackage, FollowupPackage, FollowupPackageSummary } from '@/services/followupSequences/followupSequencesService';
+import { Seletor } from '@/components/base/Seletor';
 
 /**
  * Plantar o MESMO funil de follow-up em vários clientes de uma vez.
@@ -167,28 +168,28 @@ export default function ClientFollowupRolloutModal({
 
             {origin === 'client' ? (
               <div className="grid gap-2 sm:grid-cols-2">
-                <select value={sourceTenantId} onChange={e => setSourceTenantId(e.target.value)}
+                <Seletor escuro value={sourceTenantId} onChange={e => setSourceTenantId(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none focus:ring-1 focus:ring-violet-500"
                   style={inputStyle}>
-                  <option value="" style={{ background: '#150a26' }}>Cliente de origem...</option>
+                  <option value="">Cliente de origem...</option>
                   {sourceTenants.map(t => (
-                    <option key={t.id} value={t.id} style={{ background: '#150a26' }}>
+                    <option key={t.id} value={t.id}>
                       {t.name}{typeof t.count === 'number' ? ` (${t.count} funis)` : ''}
                     </option>
                   ))}
-                </select>
-                <select value={sequenceId} onChange={e => setSequenceId(e.target.value)} disabled={!sourceTenantId || loadingSequences}
+                </Seletor>
+                <Seletor escuro value={sequenceId} onChange={e => setSequenceId(e.target.value)} disabled={!sourceTenantId || loadingSequences}
                   className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none focus:ring-1 focus:ring-violet-500 disabled:opacity-50"
                   style={inputStyle}>
-                  <option value="" style={{ background: '#150a26' }}>
+                  <option value="">
                     {loadingSequences ? 'Carregando...' : 'Funil...'}
                   </option>
                   {sequences.map(s => (
-                    <option key={s.id} value={s.id} style={{ background: '#150a26' }}>
+                    <option key={s.id} value={s.id}>
                       {s.name} — {s.steps_count} msg{s.media_count > 0 ? `, ${s.media_count} mídia(s)` : ''}
                     </option>
                   ))}
-                </select>
+                </Seletor>
               </div>
             ) : (
               <div className="space-y-2">

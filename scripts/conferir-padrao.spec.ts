@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, textosDoJson, noEscopo, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, textosDoJson, noEscopo, contaSelectNativo, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -158,6 +158,26 @@ describe('noEscopo: o que é tela do cliente', () => {
   });
 });
 
+describe('contaSelectNativo: a lista nativa vale para o app inteiro', () => {
+  it('conta o painel raiz, a landing, a sobra e o primeiro acesso', () => {
+    expect(contaSelectNativo('src/pages/SuperAdmin/LeadsFeed/index.tsx')).toBe(true);
+    expect(contaSelectNativo('src/pages/Admin/Area/Overview.tsx')).toBe(true);
+    expect(contaSelectNativo('src/features/landing/editor/BlockConfigPanel.tsx')).toBe(true);
+    expect(contaSelectNativo('src/components/agents/providerConfigs/DifyConfigForm.tsx')).toBe(true);
+    expect(contaSelectNativo('src/pages/Setup/OnboardingPage.tsx')).toBe(true);
+    expect(contaSelectNativo('src/pages/Customer/Settings/Account/AccountSettings.tsx')).toBe(true);
+  });
+
+  it('não conta as peças da casa, o widget, o portal público e os testes', () => {
+    expect(contaSelectNativo('src/components/base/Seletor.tsx')).toBe(false);
+    expect(contaSelectNativo('src/components/base/SeletorComAbas.tsx')).toBe(false);
+    expect(contaSelectNativo('src/components/widget/PreChatForm.tsx')).toBe(false);
+    expect(contaSelectNativo('src/pages/Public/portalShared.tsx')).toBe(false);
+    expect(contaSelectNativo('src/pages/SuperAdmin/LeadsFeed/index.spec.tsx')).toBe(false);
+    expect(contaSelectNativo('src/components/base/seletorOpcoes.ts')).toBe(false);
+  });
+});
+
 describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
   let raiz: string;
 
@@ -189,6 +209,16 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     );
     mkdirSync(join(raiz, 'src/components/base'), { recursive: true });
     writeFileSync(join(raiz, 'src/components/base/Seletor.tsx'), 'const s = <select />;');
+    // A lista nativa conta no app inteiro: painel raiz e sobra contam; o widget,
+    // o portal público e os testes, não.
+    writeFileSync(join(raiz, 'src/pages/SuperAdmin/Filtro.tsx'), 'const f = <select value="x"><option value="x">Todos</option></select>;');
+    mkdirSync(join(raiz, 'src/components/agents'), { recursive: true });
+    writeFileSync(join(raiz, 'src/components/agents/Herdado.tsx'), 'const h = <select value="x" />;');
+    mkdirSync(join(raiz, 'src/components/widget'), { recursive: true });
+    writeFileSync(join(raiz, 'src/components/widget/PreChatForm.tsx'), 'const w = <select value="x" />;');
+    mkdirSync(join(raiz, 'src/pages/Public'), { recursive: true });
+    writeFileSync(join(raiz, 'src/pages/Public/portalShared.tsx'), 'const p = <select value="x" />;');
+    writeFileSync(join(raiz, 'src/pages/Customer/Lista.spec.tsx'), 'const t = <select value="x" />;');
     // no painel raiz, o mesmo texto NÃO conta
     writeFileSync(join(raiz, 'src/pages/SuperAdmin/Painel.tsx'), 'const x = <p>Deletar instância</p>;');
     writeFileSync(
@@ -234,11 +264,12 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
     expect(contagem(saida, 'maiusculas')).toBe(1); // "Novo Cargo"
     expect(contagem(saida, 'chaveMao')).toBe(1);
     expect(contagem(saida, 'iconeSemNome')).toBe(1);
-    expect(contagem(saida, 'selectNativo')).toBe(2); // <select> e <NativeSelect> de Lista.tsx
+    // <select> e <NativeSelect> de Lista.tsx + painel raiz (Filtro.tsx) + sobra (Herdado.tsx)
+    expect(contagem(saida, 'selectNativo')).toBe(4);
   });
 
   it('PASSA no teto exato e REPROVA um abaixo', () => {
-    const exato = { tecnico: 1, glossario: 1, plural: 1, acento: 1, maiusculas: 1, formato: 1, chaveMao: 1, iconeSemNome: 1, selectNativo: 2 };
+    const exato = { tecnico: 1, glossario: 1, plural: 1, acento: 1, maiusculas: 1, formato: 1, chaveMao: 1, iconeSemNome: 1, selectNativo: 4 };
     expect(rodar(['--tetos', tetos(exato)]).codigo).toBe(0);
     const { saida, codigo } = rodar(['--tetos', tetos({ ...exato, glossario: 0 })]);
     expect(codigo).toBe(1);
@@ -247,5 +278,14 @@ describe('a catraca, de ponta a ponta, numa raiz de mentira', () => {
 
   it('--listar mostra onde', () => {
     expect(rodar(['--listar', 'glossario']).saida).toContain('src/pages/Customer/Tela.tsx:3');
+  });
+
+  it('--listar selectNativo mostra o painel raiz e não mostra o widget nem o portal', () => {
+    const { saida } = rodar(['--listar', 'selectNativo']);
+    expect(saida).toContain('src/pages/SuperAdmin/Filtro.tsx:1');
+    expect(saida).toContain('src/components/agents/Herdado.tsx:1');
+    expect(saida).not.toContain('PreChatForm.tsx');
+    expect(saida).not.toContain('portalShared.tsx');
+    expect(saida).not.toContain('Lista.spec.tsx');
   });
 });

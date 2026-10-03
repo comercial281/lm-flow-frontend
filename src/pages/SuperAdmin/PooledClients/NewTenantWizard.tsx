@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { ReactNode, Dispatch, SetStateAction } from 'react';
 import { X, ChevronRight, ChevronLeft, Plus, Trash2, Loader2, Check } from 'lucide-react';
 import api from '@/services/core/api';
+import { Seletor } from '@/components/base/Seletor';
 
 interface WaGroup { jid: string; name: string; }
 interface AutomationTemplate { id: string; slug: string; name: string; description: string; category: string; }
@@ -181,12 +182,12 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 
 function GroupSelect({ value, onChange, groups, placeholder, loading }: { value: string; onChange: (v: string) => void; groups: WaGroup[]; placeholder: string; loading?: boolean }) {
   return (
-    <select value={value} onChange={e => onChange(e.target.value)}
+    <Seletor escuro value={value} onChange={e => onChange(e.target.value)}
       className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none focus:ring-1 focus:ring-violet-500"
       style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(124,58,237,0.2)' }}>
-      <option value="" style={{ background: '#150a26' }}>{loading ? 'Carregando grupos...' : placeholder}</option>
-      {groups.map(g => <option key={g.jid} value={g.jid} style={{ background: '#150a26' }}>{g.name}</option>)}
-    </select>
+      <option value="">{loading ? 'Carregando grupos...' : placeholder}</option>
+      {groups.map(g => <option key={g.jid} value={g.jid}>{g.name}</option>)}
+    </Seletor>
   );
 }
 

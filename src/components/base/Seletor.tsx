@@ -17,6 +17,10 @@
 // `bare`: caixa sem o visual do design system e sem a seta, só a className de
 // quem chama (status colorido, filtros com ícone próprio). A lista que abre é a
 // do produto do mesmo jeito.
+//
+// `escuro`: a lista aberta sai no tema escuro mesmo com o app no claro. Para
+// tela pintada de escuro à mão, que não segue o tema (primeiro acesso, janelas
+// roxas do painel raiz): lá a lista clara destoava. No celular não muda nada.
 import { useState, type ComponentProps, type CSSProperties, type SelectHTMLAttributes } from 'react';
 import {
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
@@ -27,7 +31,12 @@ import {
   deRadix, eventoDeMudanca, lerItens, paraRadix, valorExibido, type OpcaoDoSeletor,
 } from './seletorOpcoes';
 
-export type SeletorProps = SelectHTMLAttributes<HTMLSelectElement> & { bare?: boolean };
+export type SeletorProps = SelectHTMLAttributes<HTMLSelectElement> & {
+  bare?: boolean;
+  escuro?: boolean;
+  // Radix chama isto quando a lista fecha de verdade (depois da animação); preventDefault() deixa a tela decidir para onde vai o foco.
+  onCloseAutoFocus?: (event: Event) => void;
+};
 
 // A caixa do nativo, com a cara dos Inputs (era o NativeSelect de 04/08).
 const CAIXA_NATIVA =
@@ -64,8 +73,8 @@ function hoverSemMudanca(className = ''): string {
 }
 
 export function Seletor({
-  bare = false, children, className, value, defaultValue, onChange,
-  disabled, name, required, id, title, style, ...resto
+  bare = false, escuro = false, children, className, value, defaultValue, onChange,
+  disabled, name, required, id, title, style, onCloseAutoFocus, ...resto
 }: SeletorProps) {
   const toque = usePonteiroDeToque();
   // Sem `value`, guarda a escolha aqui (o nativo faria o mesmo sozinho).
@@ -77,11 +86,13 @@ export function Seletor({
     // Um <select> só, sem invólucro: as classes de layout da tela (flex-1,
     // w-48, col-span-*, m*-...) valem nele como valem no botão do computador.
     // A seta vai como imagem de fundo, em style: o twMerge trata bg-[url()] e
-    // bg-background como o mesmo grupo e derrubaria um dos dois.
+    // bg-background como o mesmo grupo e derrubaria um dos dois. E vai DEPOIS do
+    // style da tela: o atalho `background` (janelas roxas do painel raiz) apaga a
+    // imagem de fundo, e a lista ficava sem seta no celular.
     return (
       <select
         {...props}
-        style={{ ...SETA_NATIVA, ...style }}
+        style={{ ...style, ...SETA_NATIVA }}
         className={cn(CAIXA_NATIVA, className, 'pr-8')}
       >
         {children}
@@ -119,8 +130,9 @@ export function Seletor({
         >
           <SelectValue />
         </SelectTrigger>
-        {/* Acima de qualquer janela da casa (modais em z-[200], mapa em z-[1000]). */}
-        <SelectContent className="z-[1200]">
+        {/* Acima de qualquer janela da casa (modais em z-[200], mapa em z-[1000]).
+            `dark` na própria lista liga as cores do tema escuro só nela. */}
+        <SelectContent className={cn('z-[1200]', escuro && 'dark')} onCloseAutoFocus={onCloseAutoFocus}>
           {itens.map((it, i) =>
             it.tipo === 'opcao' ? (
               item(it, i)

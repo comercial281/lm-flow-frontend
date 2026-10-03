@@ -93,7 +93,7 @@ Cada peça mora em `src/components/base/` (ou `src/hooks/`). A regra de uso vale
    - No computador abre a lista do produto; no celular, a do sistema.
    - Opção vazia ("Todos") e valor numérico funcionam sem truque.
    - `bare` deixa a caixa só com a `className` de quem chama (status colorido, filtro com ícone).
-   - A trava do build (`selectNativo`) reprova lista nativa nova na tela do cliente.
+   - A trava do build (`selectNativo`) está em zero e vale para o app inteiro, painel raiz inclusive. Só o widget de chat e o portal público ficam com a lista do sistema.
 9. **Botão de ícone:** sempre com nome (o efeito).
    - Em botão novo, use `IconActionButton`.
    - Os 202 que já existiam ganharam `aria-label` + `title` na Fase 3.4 e migram pro `IconActionButton` tela a tela na fase 4.
@@ -111,7 +111,8 @@ Cada peça mora em `src/components/base/` (ou `src/hooks/`). A regra de uso vale
 `scripts/conferir-padrao.mjs` conta, na tela do cliente, estas categorias:
 - termo técnico, palavra fora do glossário e palavra sem acento;
 - Maiúscula Em Toda Palavra e plural com parênteses;
-- formatação fora do módulo, chave feita à mão, botão só-ícone sem nome e lista de escolha nativa.
+- formatação fora do módulo, chave feita à mão e botão só-ícone sem nome;
+- lista de escolha nativa, que é a exceção: vale para o app inteiro (painel raiz, landing e a sobra do fork também).
 
 O build reprova se alguma passar do teto em `scripts/conferir-padrao.tetos.json`.
 - **Ver onde:** `node scripts/conferir-padrao.mjs --listar <categoria>`.

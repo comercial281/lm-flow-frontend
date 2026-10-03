@@ -15,6 +15,7 @@ import {
 import { toast } from 'sonner';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { Seletor } from '@/components/base/Seletor';
 // Consumo de IA do mês corrente, já cruzado com a franquia contratada.
 // Vem pronto do backend (SalesAgents::UsageReport) de propósito: a conta do
 // excedente é a mesma que vai virar fatura, e ter a regra em dois lugares é
@@ -341,16 +342,16 @@ function MembersModal({ tenant, onClose }: { tenant: PooledTenant; onClose: () =
               {willSend && (
                 <div className="flex items-center gap-2 pl-6">
                   <span className="text-xs text-white/40">Enviar por:</span>
-                  <select value={instance} onChange={e => setInstance(e.target.value)}
-                    className="flex-1 px-2 py-1 rounded text-xs text-white outline-none"
+                  <Seletor escuro value={instance} onChange={e => setInstance(e.target.value)}
+                    className="h-auto flex-1 px-2 py-1 rounded text-xs text-white outline-none"
                     style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(124,58,237,0.2)' }}>
                     {instances.length === 0 && <option value="">padrão (Operacional LM01)</option>}
                     {instances.map(i => (
-                      <option key={i.name} value={i.name} style={{ background: '#150a26' }}>
+                      <option key={i.name} value={i.name}>
                         {i.name}{i.connected ? '' : ' (desconectada)'}
                       </option>
                     ))}
-                  </select>
+                  </Seletor>
                 </div>
               )}
             </div>
@@ -827,20 +828,20 @@ function FeaturesModal({ tenant, onClose, onTenantUpdated }: {
                     {editando && (
                       <div className="mt-2 space-y-1.5">
                         {groupsError && <div className="text-xs text-amber-300">{groupsError}</div>}
-                        <select value={pickedJid} onChange={e => setPickedJid(e.target.value)} disabled={loadingGroups}
-                          className="w-full px-2 py-1.5 rounded text-sm text-white outline-none focus:ring-1 focus:ring-violet-500"
+                        <Seletor escuro value={pickedJid} onChange={e => setPickedJid(e.target.value)} disabled={loadingGroups}
+                          className="h-auto w-full px-2 py-1.5 rounded text-sm text-white outline-none focus:ring-1 focus:ring-violet-500"
                           style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(124,58,237,0.25)' }}>
-                          <option value="" style={{ background: '#150a26' }}>
+                          <option value="">
                             {loadingGroups ? 'Carregando grupos do número operacional...'
                               : kind === 'reminder' ? '— sem cadastro (reconhecer pelo nome do grupo) —' : '— sem cadastro —'}
                           </option>
                           {/* O grupo gravado que sumiu da lista continua escolhível:
                               sumir com ele faria o Salvar gravar vazio sem ninguém ver. */}
                           {gravadoForaDaLista && (
-                            <option value={groupJids[kind]} style={{ background: '#150a26' }}>{groupJids[kind]} (gravado, fora da lista)</option>
+                            <option value={groupJids[kind]}>{groupJids[kind]} (gravado, fora da lista)</option>
                           )}
-                          {lista.map(g => <option key={g.jid} value={g.jid} style={{ background: '#150a26' }}>{g.name}</option>)}
-                        </select>
+                          {lista.map(g => <option key={g.jid} value={g.jid}>{g.name}</option>)}
+                        </Seletor>
                         {waGroups !== null && waGroups.length === 0 && !loadingGroups && (
                           <div className="text-xs text-amber-300">O número operacional não devolveu grupo nenhum.</div>
                         )}

@@ -1,5 +1,6 @@
 import { Switch } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
+import { Seletor } from '@/components/base/Seletor';
 
 interface WebWidgetFormData {
   reply_time?: string;
@@ -44,7 +45,7 @@ export default function WebWidgetAdvancedForm({
         <label className="text-sm font-medium text-foreground">
           {t('settings.webWidgetAdvanced.replyTime.label')}
         </label>
-        <select
+        <Seletor
           value={formData.reply_time || 'in_a_few_minutes'}
           onChange={(e) => onFormChange({ reply_time: e.target.value })}
           className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
@@ -52,7 +53,7 @@ export default function WebWidgetAdvancedForm({
           <option value="in_a_few_minutes">{t('settings.webWidgetAdvanced.replyTime.options.fewMinutes')}</option>
           <option value="in_a_few_hours">{t('settings.webWidgetAdvanced.replyTime.options.fewHours')}</option>
           <option value="in_a_day">{t('settings.webWidgetAdvanced.replyTime.options.day')}</option>
-        </select>
+        </Seletor>
         <p className="text-xs text-muted-foreground">
           {t('settings.webWidgetAdvanced.replyTime.helpText')}
         </p>
@@ -63,7 +64,7 @@ export default function WebWidgetAdvancedForm({
         <label className="text-sm font-medium text-foreground">
           {t('settings.webWidgetAdvanced.language.label', { defaultValue: 'Widget language' })}
         </label>
-        <select
+        <Seletor
           value={formData.locale ?? ''}
           onChange={(e) => onFormChange({ locale: e.target.value.trim() ? e.target.value : null })}
           className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
@@ -79,7 +80,7 @@ export default function WebWidgetAdvancedForm({
           <option value="es">Español</option>
           <option value="fr">Français</option>
           <option value="it">Italiano</option>
-        </select>
+        </Seletor>
         <p className="text-xs text-muted-foreground">
           {t('settings.webWidgetAdvanced.language.helpText', {
             defaultValue: 'Defines language for this embed only.',

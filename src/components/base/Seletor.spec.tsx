@@ -1,6 +1,6 @@
 // src/components/base/Seletor.spec.tsx
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { Seletor } from './Seletor';
@@ -71,6 +71,43 @@ describe('Seletor no celular (e sem matchMedia)', () => {
     const select = container.querySelector('select')!;
     expect(select.className).toBe('text-xs pl-2');
     expect(select.parentElement).toBe(container);
+  });
+
+  it('nativo: a seta resiste a style com o atalho background', () => {
+    const { container } = render(
+      <Seletor value="a" onChange={() => {}} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid red' }}>
+        <option value="a">A</option>
+      </Seletor>,
+    );
+    const select = container.querySelector('select')!;
+    expect(select.style.backgroundImage).toContain('data:image/svg+xml');
+    expect(select.style.backgroundColor).toBe('rgba(255, 255, 255, 0.05)');
+  });
+
+  it('escuro no nativo não vaza para o <select> (sem aviso do React)', () => {
+    const aviso = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { container } = render(
+      <>
+        <Seletor escuro value="a" onChange={() => {}}><option value="a">A</option></Seletor>
+        <Seletor escuro bare value="a" onChange={() => {}}><option value="a">A</option></Seletor>
+      </>,
+    );
+    expect(container.querySelectorAll('select')).toHaveLength(2);
+    expect(aviso).not.toHaveBeenCalled();
+    aviso.mockRestore();
+  });
+
+  it('onCloseAutoFocus no nativo não vaza para o <select> (sem aviso do React)', () => {
+    const aviso = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { container } = render(
+      <>
+        <Seletor onCloseAutoFocus={() => {}} value="a" onChange={() => {}}><option value="a">A</option></Seletor>
+        <Seletor bare onCloseAutoFocus={() => {}} value="a" onChange={() => {}}><option value="a">A</option></Seletor>
+      </>,
+    );
+    expect(container.querySelectorAll('select')).toHaveLength(2);
+    expect(aviso).not.toHaveBeenCalled();
+    aviso.mockRestore();
   });
 
   it('nativo sem bare é um select só, com a className da tela e a seta de fundo', () => {
@@ -209,6 +246,38 @@ describe('Seletor no computador', () => {
     const classes = screen.getByLabelText('Campo').className.split(/\s+/);
     expect(classes).toContain('dark:hover:bg-transparent');
     expect(classes).not.toContain('dark:hover:bg-input/50');
+  });
+
+  it('escuro: a lista aberta sai no tema escuro, mesmo com o app no claro', async () => {
+    render(
+      <Seletor escuro aria-label="Canal" value="" onChange={() => {}}>
+        <option value="">Selecionar...</option>
+        <option value="wa">WhatsApp</option>
+      </Seletor>,
+    );
+    await userEvent.click(screen.getByLabelText('Canal'));
+    const lista = await screen.findByRole('listbox');
+    expect(lista).toHaveClass('dark');
+    expect(lista.className).toContain('z-[1200]');
+  });
+
+  it('onCloseAutoFocus é chamado quando a lista fecha depois de escolher', async () => {
+    const aoFechar = vi.fn();
+    render(
+      <Seletor aria-label="Canal" value="" onChange={() => {}} onCloseAutoFocus={aoFechar}>
+        <option value="">Selecionar...</option>
+        <option value="wa">WhatsApp</option>
+      </Seletor>,
+    );
+    await userEvent.click(screen.getByLabelText('Canal'));
+    await userEvent.click(await screen.findByRole('option', { name: 'WhatsApp' }));
+    await waitFor(() => expect(aoFechar).toHaveBeenCalled());
+  });
+
+  it('sem escuro, a lista segue o tema do app', async () => {
+    render(<Filtro />);
+    await userEvent.click(screen.getByLabelText('Tipo'));
+    expect(await screen.findByRole('listbox')).not.toHaveClass('dark');
   });
 
   it('desligado não abre', async () => {

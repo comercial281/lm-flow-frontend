@@ -161,6 +161,23 @@ const SELECT_NATIVO = /<select(?=[\s>]|$)|<NativeSelect\b/;
 // O SeletorComAbas segue a mesma regra (lista do sistema no celular, com um
 // grupo por aba), então também pode ter o <select> dele.
 const SELETORES_DA_CASA = new Set(['src/components/base/Seletor.tsx', 'src/components/base/SeletorComAbas.tsx']);
+// Ficam com a lista do sistema DE PROPÓSITO (decisão 3 da spec do Seletor): o
+// widget de chat roda num iframe no site do cliente, que mede a própria altura,
+// e o portal público é outro público, com outro visual. Não entra mais ninguém
+// aqui sem o dono pedir.
+export const SELECT_NATIVO_PERMITIDO = new Set([
+  'src/components/widget/PreChatForm.tsx',
+  'src/pages/Public/portalShared.tsx',
+]);
+// Diferente das outras categorias, a lista nativa vale para o app INTEIRO:
+// painel raiz, landing, primeiro acesso e a sobra do Evolution também. Desde o
+// PR 3 do Seletor (02/10/2026) não sobrou nenhuma fora das exceções acima.
+export const contaSelectNativo = rel =>
+  rel.startsWith('src/') &&
+  rel.endsWith('.tsx') &&
+  !/\.(spec|test)\.tsx$/.test(rel) &&
+  !SELETORES_DA_CASA.has(rel) &&
+  !SELECT_NATIVO_PERMITIDO.has(rel);
 const COMECO_DE_COMENTARIO = /^(\{?\/\*|\*)/;
 
 // Atributos e propriedades cujo valor é texto que aparece na tela.
@@ -387,21 +404,23 @@ export function varrer() {
 
   for (const arquivo of andar(join(RAIZ, 'src'))) {
     const rel = relative(RAIZ, arquivo).split(sep).join('/');
-    if (!noEscopo(rel)) continue;
+    const escopo = noEscopo(rel);
+    const lista = contaSelectNativo(rel);
+    if (!escopo && !lista) continue;
     const codigo = readFileSync(arquivo, 'utf8');
-    if (rel.endsWith('.tsx') || rel.endsWith('.ts')) {
+    if (escopo && (rel.endsWith('.tsx') || rel.endsWith('.ts'))) {
       for (const { linha, texto } of textosDaTela(codigo, rel)) conferirTexto(rel, linha, texto);
     }
-    if (rel.endsWith('.tsx')) {
+    if (escopo && rel.endsWith('.tsx')) {
       for (const { linha, texto } of botoesSemNome(codigo, rel)) anotar('iconeSemNome', rel, linha, texto, texto);
     }
     codigo.split('\n').forEach((l, i) => {
       const limpa = l.trimStart();
       if (limpa.startsWith('//') || limpa.startsWith('*')) return;
-      if (!MODULOS_DE_FORMATO.includes(rel) && FORMATO.some(re => re.test(l))) anotar('formato', rel, i + 1, 'formatação fora do módulo', l.trim());
-      if (rel !== CHAVE_DA_CASA && CHAVE_A_MAO.test(l)) anotar('chaveMao', rel, i + 1, 'role="switch" feito à mão', l.trim());
-      // selectNativo: pula linhas que começam com comentário ou têm */ após a tag
-      if (!SELETORES_DA_CASA.has(rel) && SELECT_NATIVO.test(l) && !COMECO_DE_COMENTARIO.test(limpa)) {
+      if (escopo && !MODULOS_DE_FORMATO.includes(rel) && FORMATO.some(re => re.test(l))) anotar('formato', rel, i + 1, 'formatação fora do módulo', l.trim());
+      if (escopo && rel !== CHAVE_DA_CASA && CHAVE_A_MAO.test(l)) anotar('chaveMao', rel, i + 1, 'role="switch" feito à mão', l.trim());
+      // selectNativo (app inteiro): pula linhas que começam com comentário ou têm */ após a tag
+      if (lista && SELECT_NATIVO.test(l) && !COMECO_DE_COMENTARIO.test(limpa)) {
         const match = SELECT_NATIVO.exec(l);
         const afterMatch = match ? l.substring(match.index + match[0].length) : '';
         if (!afterMatch.includes('*/')) {
@@ -429,7 +448,7 @@ export const CATEGORIAS = {
   maiusculas: 'Maiúscula Em Toda Palavra',
   chaveMao: 'chave feita à mão',
   iconeSemNome: 'botão só-ícone sem nome',
-  selectNativo: 'lista de escolha nativa',
+  selectNativo: 'lista de escolha nativa (app inteiro)',
 };
 
 function principal() {

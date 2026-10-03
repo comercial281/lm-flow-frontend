@@ -24,6 +24,7 @@ import pushCentralService, {
 } from '@/services/push/pushCentralService';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { Seletor } from '@/components/base/Seletor';
 /**
  * Central de Push (Área do Admin).
  *
@@ -365,7 +366,7 @@ export default function PushCentral() {
           <div className="max-w-xl space-y-4">
             <div>
               <Label>Para quem</Label>
-              <select
+              <Seletor
                 className="mt-1 w-full h-9 rounded-md border bg-transparent px-3 text-sm"
                 value={manual.audience}
                 onChange={e => setManual(m => ({ ...m, audience: e.target.value as PushAudience }))}
@@ -375,13 +376,13 @@ export default function PushCentral() {
                     {o.label}
                   </option>
                 ))}
-              </select>
+              </Seletor>
             </div>
 
             {manual.audience === 'client' && (
               <div>
                 <Label>Cliente</Label>
-                <select
+                <Seletor
                   className="mt-1 w-full h-9 rounded-md border bg-transparent px-3 text-sm"
                   value={manual.tenant_slug}
                   onChange={e => setManual(m => ({ ...m, tenant_slug: e.target.value }))}
@@ -392,7 +393,7 @@ export default function PushCentral() {
                       {t.name}
                     </option>
                   ))}
-                </select>
+                </Seletor>
               </div>
             )}
 
@@ -513,7 +514,7 @@ export default function PushCentral() {
 
             <div>
               <Label>De quais clientes</Label>
-              <select
+              <Seletor
                 className="mt-1 w-full h-9 rounded-md border bg-transparent px-3 text-sm"
                 value={form.tenant_scope}
                 onChange={e =>
@@ -525,7 +526,7 @@ export default function PushCentral() {
                     {o.label}
                   </option>
                 ))}
-              </select>
+              </Seletor>
             </div>
 
             {form.tenant_scope === 'selected' && (
@@ -552,7 +553,7 @@ export default function PushCentral() {
 
             <div>
               <Label>Para quem</Label>
-              <select
+              <Seletor
                 className="mt-1 w-full h-9 rounded-md border bg-transparent px-3 text-sm"
                 value={form.audience}
                 onChange={e => setForm(f => ({ ...f, audience: e.target.value as PushAudience }))}
@@ -562,7 +563,7 @@ export default function PushCentral() {
                     {o.label}
                   </option>
                 ))}
-              </select>
+              </Seletor>
               {/*
                 A opção continua na lista porque as regras antigas ainda a usam e
                 precisam abrir para edição. Mas criar uma nova assim não avisa

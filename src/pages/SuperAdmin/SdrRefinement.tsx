@@ -9,6 +9,7 @@ import {
   type SdrProposal,
 } from '@/services/superAdmin/sdrProposalsService';
 import { superAgentsService, type SuperAgent } from '@/services/superAdmin/superAgentsService';
+import { Seletor } from '@/components/base/Seletor';
 
 /**
  * Épicos C+D — Aperfeiçoamento do Cérebro SDR.
@@ -133,10 +134,10 @@ function ScopePicker({
         ))}
       </div>
       {scope === 'individual' && (
-        <select value={agentId} onChange={e => setAgentId(e.target.value)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
+        <Seletor value={agentId} onChange={e => setAgentId(e.target.value)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
           <option value="">Escolha o agente...</option>
           {agents.map(a => <option key={a.id} value={a.id}>{a.tenant_name} — {a.name}</option>)}
-        </select>
+        </Seletor>
       )}
     </div>
   );
@@ -214,10 +215,10 @@ function CurateBox({ agents, onNew }: { agents: SuperAgent[]; onNew: (p: SdrProp
         A IA lê as conversas passadas do cliente, separa o que é de anúncio e capta o tom de voz, e propõe lições pra você aprovar.
       </p>
       <div className="space-y-3">
-        <select value={agentId} onChange={e => setAgentId(e.target.value)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
+        <Seletor value={agentId} onChange={e => setAgentId(e.target.value)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
           <option value="">Escolha o agente do cliente...</option>
           {agents.map(a => <option key={a.id} value={a.id}>{a.tenant_name} — {a.name}</option>)}
-        </select>
+        </Seletor>
         <Button onClick={run} disabled={busy} variant="outline"><BookOpenCheck className="mr-1 h-4 w-4" /> {busy ? 'Analisando...' : 'Aprender com histórico'}</Button>
       </div>
     </div>

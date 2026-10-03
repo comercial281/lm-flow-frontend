@@ -5,6 +5,7 @@ import { FormSection } from '../../shared/FormSection';
 import { FormData } from '@/hooks/channels/useChannelForm';
 import  { sanitizeInboxName } from '@/utils/sanitizeName';
 import { PhoneInput } from '@/components/shared/PhoneInput';
+import { Seletor } from '@/components/base/Seletor';
 
 interface EvolutionFormProps {
   form: FormData;
@@ -110,16 +111,16 @@ export const EvolutionForm = ({ form, onFormChange, hasEvolutionConfig }: Evolut
               <label className="text-sm font-medium text-sidebar-foreground/80">
                 {t('evolutionForm.sections.proxy.protocol')}
               </label>
-              <select
+              <Seletor
                 value={getStr('proxy_protocol', 'http')}
                 onChange={e => onFormChange('proxy_protocol', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                className="mt-1 w-full"
               >
                 <option value="http">HTTP</option>
                 <option value="https">HTTPS</option>
                 <option value="socks4">SOCKS4</option>
                 <option value="socks5">SOCKS5</option>
-              </select>
+              </Seletor>
             </div>
             <FormField
               label={t('evolutionForm.sections.proxy.username.label')}
