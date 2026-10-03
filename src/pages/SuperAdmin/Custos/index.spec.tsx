@@ -48,4 +48,45 @@ describe('Custos', () => {
     await waitFor(() => expect(screen.getAllByText('não é dividida por cliente').length).toBe(3));
     expect(apiGet).toHaveBeenCalledWith('/super/costs/summary', { params: { month: '2026-10', tenant: 'tenant_a' } });
   });
+
+  function filtrado(total: number) {
+    return fakeSummary({ tenant: 'tenant_a', totals: { ai_brl: total, ai_usd: 1, structure_brl: 0, total_brl: total, calls: 1, errors: 0, unpriced: 0 } });
+  }
+
+  it('enquanto o filtro novo carrega, o resumo antigo some (skeleton)', async () => {
+    let resolver: (v: unknown) => void = () => {};
+    apiGet.mockImplementation((_u: string, cfg?: { params?: Record<string, string> }) =>
+      cfg?.params?.tenant
+        ? new Promise((r) => { resolver = r; })
+        : Promise.resolve({ data: { success: true, data: fakeSummary() } }));
+    const { container } = renderPage();
+    await waitFor(() => expect(screen.getByText(/1\.300,00/)).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'tenant_a' } });
+    await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).not.toBeNull());
+    expect(screen.queryByText(/1\.300,00/)).not.toBeInTheDocument();
+    resolver({ data: { success: true, data: filtrado(77) } });
+    await waitFor(() => expect(screen.getAllByText(/77,00/).length).toBeGreaterThan(0));
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+  });
+
+  it('resposta fora de ordem não sobrescreve a mais recente', async () => {
+    const pend: Record<string, (v: unknown) => void> = {};
+    apiGet.mockImplementation((_u: string, cfg?: { params?: Record<string, string> }) => {
+      const t = cfg?.params?.tenant;
+      if (!t) return Promise.resolve({ data: { success: true, data: fakeSummary() } });
+      return new Promise((r) => { pend[t] = r; });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/1\.300,00/)).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'tenant_a' } });
+    await waitFor(() => expect(pend.tenant_a).toBeDefined());
+    fireEvent.change(screen.getByLabelText('Cliente'), { target: { value: 'public' } });
+    await waitFor(() => expect(pend.public).toBeDefined());
+    pend.public({ data: { success: true, data: { ...filtrado(22), tenant: 'public' } } });
+    await waitFor(() => expect(screen.getAllByText(/22,00/).length).toBeGreaterThan(0));
+    pend.tenant_a({ data: { success: true, data: filtrado(99) } });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByText(/99,00/)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/22,00/).length).toBeGreaterThan(0);
+  });
 });

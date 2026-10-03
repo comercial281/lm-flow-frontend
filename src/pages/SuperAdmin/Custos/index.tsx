@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import AdminConteudo from '@/pages/Admin/Area/AdminConteudo';
 import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
@@ -22,12 +22,19 @@ export default function Custos() {
   const [summary, setSummary] = useState<CostsSummary | null>(null);
   const [estado, setEstado] = useState<'carregando' | 'pronto' | 'erro'>('carregando');
 
+  // Só a última chamada vale: resposta atrasada de filtro antigo não sobrescreve a atual.
+  const seq = useRef(0);
+
   const carregar = useCallback(async () => {
+    const minha = ++seq.current;
     setEstado('carregando');
     try {
-      setSummary(await costsService.summary({ month, tenant }));
+      const dados = await costsService.summary({ month, tenant });
+      if (minha !== seq.current) return;
+      setSummary(dados);
       setEstado('pronto');
     } catch {
+      if (minha !== seq.current) return;
       setEstado('erro');
     }
   }, [month, tenant]);
@@ -41,7 +48,7 @@ export default function Custos() {
           <label className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Mês</span>
             <Seletor aria-label="Mês" value={month} onChange={(e) => setMonth(e.target.value)} className="w-48">
-              {(summary?.months ?? [month]).map((m) => <option key={m} value={m}>{rotuloMes(m)}</option>)}
+              {(summary?.months.includes(month) ? summary.months : [month, ...(summary?.months ?? [])]).map((m) => <option key={m} value={m}>{rotuloMes(m)}</option>)}
             </Seletor>
           </label>
           <label className="flex items-center gap-2 text-sm">
@@ -57,13 +64,13 @@ export default function Custos() {
           <EmptyState tipo="erro" title="Não deu para carregar os custos" aoTentarDeNovo={carregar} />
         )}
 
-        {estado === 'carregando' && !summary && (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-5" aria-busy="true">
+        {estado === 'carregando' && (
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5" aria-busy="true">
             {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-24 animate-pulse rounded-lg bg-muted" />)}
           </div>
         )}
 
-        {estado !== 'erro' && summary && (
+        {estado === 'pronto' && summary && (
           <>
             <CartoesDoMes summary={summary} />
             <div data-testid="custos-detalhes" className="flex flex-col gap-6" />
