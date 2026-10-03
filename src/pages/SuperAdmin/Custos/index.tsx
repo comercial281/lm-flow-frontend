@@ -6,6 +6,7 @@ import { costsService } from '@/services/superAdmin/costsService';
 import type { CostsSummary } from '@/types/admin/costs';
 import CartoesDoMes from './CartoesDoMes';
 import Conferencia from './Conferencia';
+import ListaDeChamadas from './ListaDeChamadas';
 import Recortes from './Recortes';
 import { rotuloMes } from './formatoCustos';
 
@@ -80,6 +81,7 @@ export default function Custos() {
             <div data-testid="custos-detalhes" className="flex flex-col gap-6">
               <Recortes summary={summary} />
               {!summary.tenant && <Conferencia reconciliation={summary.reconciliation} aoLancar={() => setLancando(true)} />}
+              <ListaDeChamadas month={month} tenant={tenant} funcoes={summary.by_feature} />
             </div>
           </>
         )}

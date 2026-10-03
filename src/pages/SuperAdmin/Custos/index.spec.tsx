@@ -56,6 +56,7 @@ describe('Custos', () => {
   it('enquanto o filtro novo carrega, o resumo antigo some (skeleton)', async () => {
     let resolver: (v: unknown) => void = () => {};
     apiGet.mockImplementation((_u: string, cfg?: { params?: Record<string, string> }) =>
+      _u.includes('/calls') ? Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } }) :
       cfg?.params?.tenant
         ? new Promise((r) => { resolver = r; })
         : Promise.resolve({ data: { success: true, data: fakeSummary() } }));
@@ -72,6 +73,7 @@ describe('Custos', () => {
   it('resposta fora de ordem não sobrescreve a mais recente', async () => {
     const pend: Record<string, (v: unknown) => void> = {};
     apiGet.mockImplementation((_u: string, cfg?: { params?: Record<string, string> }) => {
+      if (_u.includes('/calls')) return Promise.resolve({ data: { success: true, data: { items: [], meta: { total: 0, page: 1, per_page: 50 } } } });
       const t = cfg?.params?.tenant;
       if (!t) return Promise.resolve({ data: { success: true, data: fakeSummary() } });
       return new Promise((r) => { pend[t] = r; });
