@@ -1,6 +1,6 @@
 // src/features/visits/contagem.spec.ts
 import { describe, it, expect } from 'vitest';
-import { intervaloDoMes, rotuloContador, lerContador } from './contagem';
+import { intervaloDoMes, intervaloDosDias, rotuloContador, lerContador } from './contagem';
 
 describe('contagem da Agenda', () => {
   it('o intervalo do mês visível', () => {
@@ -35,5 +35,16 @@ describe('contagem da Agenda', () => {
 
   it('sem meta, zero', () => {
     expect(lerContador(undefined, { mesInteiro: true })).toEqual({ total: 0, servidorNovo: false });
+  });
+});
+
+describe('contador da Semana e do Dia', () => {
+  it('o período escrito vence o mês', () => {
+    expect(rotuloContador(3, { soMinhas: true, mes: new Date(2026, 9, 1), periodo: 'nesta semana' })).toBe('3 visitas suas nesta semana');
+    expect(rotuloContador(1, { soMinhas: false, periodo: 'hoje' })).toBe('1 visita hoje');
+  });
+
+  it('intervalo de um período qualquer', () => {
+    expect(intervaloDosDias(new Date(2026, 8, 27), new Date(2026, 9, 3))).toEqual({ desde: '2026-09-27', ate: '2026-10-03' });
   });
 });

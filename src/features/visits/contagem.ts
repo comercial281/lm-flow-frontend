@@ -17,16 +17,25 @@ export function intervaloDoMes(d: Date): { desde: string; ate: string } {
   };
 }
 
+/** Um período qualquer (a semana ou o dia do calendário), no mesmo formato. */
+export function intervaloDosDias(primeiro: Date, ultimo: Date): { desde: string; ate: string } {
+  return { desde: dia(primeiro), ate: dia(ultimo) };
+}
+
 /**
  * O contador do cabeçalho conta o que a pessoa VÊ, no mês que está na tela.
  * Antes era o total da história do cliente, de todos os corretores (o "10
  * visitas" do Raio-X, ao lado de um calendário com 2).
  */
-export function rotuloContador(total: number, opcoes: { soMinhas: boolean; mes?: Date }): string {
+export function rotuloContador(
+  total: number,
+  opcoes: { soMinhas: boolean; mes?: Date; periodo?: string },
+): string {
   const base = plural(total, 'visita', 'visitas');
   const dono = opcoes.soMinhas ? (total === 1 ? ' sua' : ' suas') : '';
-  const mes = opcoes.mes ? ` em ${MESES[opcoes.mes.getMonth()]}` : '';
-  return `${base}${dono}${mes}`;
+  // `periodo` (Semana/Dia: "nesta semana", "hoje", "em 02/10") vence o mês.
+  const quando = opcoes.periodo ? ` ${opcoes.periodo}` : opcoes.mes ? ` em ${MESES[opcoes.mes.getMonth()]}` : '';
+  return `${base}${dono}${quando}`;
 }
 
 export interface MetaVisitas {
@@ -39,9 +48,9 @@ export interface MetaVisitas {
 /**
  * Qual número o contador mostra, a partir do `meta` da lista.
  *
- * - `mesInteiro`: o calendário pedindo o mês inteiro, sem filtro do link e sem
- *   aba de situação. Só aí vale `active_total` (o mês sem as canceladas, o
- *   mesmo número da Dashboard). Em todo o resto é `total`, senão a aba
+ * - `mesInteiro`: o calendário pedindo o período inteiro (mês, semana ou dia),
+ *   sem filtro do link e sem aba de situação. Só aí vale `active_total` (o
+ *   período sem as canceladas, o mesmo número da Dashboard). Em todo o resto é `total`, senão a aba
  *   "Canceladas" diria "0 visitas" ao lado de uma lista de canceladas.
  * - `servidorNovo`: o servidor entendeu o recorte do mês (só ele manda
  *   `active_total`). O servidor antigo devolve a história inteira, então o

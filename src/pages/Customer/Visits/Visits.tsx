@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -44,10 +44,23 @@ import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { useAgendaLigada } from '@/features/visits/useAgendaLigada';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
-import { telefone } from '@/lib/formato';
+import { telefone, hora } from '@/lib/formato';
 import { lerFiltroAgenda, type FiltroAgenda } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
-import { intervaloDoMes, rotuloContador, lerContador } from '@/features/visits/contagem';
+import { intervaloDosDias, rotuloContador, lerContador } from '@/features/visits/contagem';
+import type { AgendaSettings } from '@/features/visits/agenda';
+import {
+  type VisaoCalendario,
+  blocosDoDia,
+  diasDaVisao,
+  faixaAberta,
+  horaDeAbertura,
+  horarioDoClique,
+  limitesDaVisao,
+  navegar,
+  periodoDoContador,
+  tituloDaVisao,
+} from '@/features/visits/gradeDoCalendario';
 import { acaoDaVisita, temRetorno, type AcaoDaVisita } from '@/features/visits/acaoDaVisita';
 
 const FILTER_TABS = [
@@ -82,6 +95,17 @@ function isPast(iso: string) {
 
 type ViewMode = 'calendar' | 'list';
 
+// Mês / Semana / Dia fica guardado no navegador (conveniência de quem usa).
+const CHAVE_VISAO = 'lm-visitas-visao';
+function lerVisao(): VisaoCalendario {
+  try {
+    const v = localStorage.getItem(CHAVE_VISAO);
+    return v === 'semana' || v === 'dia' ? v : 'mes';
+  } catch {
+    return 'mes';
+  }
+}
+
 // Pill de evento por status — cores espelhando o protótipo (accent/info/warn/good).
 const PILL_STYLES: Record<string, string> = {
   scheduled:   'text-violet-300 bg-violet-500/15 hover:bg-violet-500/25',
@@ -93,7 +117,6 @@ const PILL_STYLES: Record<string, string> = {
   no_show:     'text-gray-400 bg-gray-500/15 hover:bg-gray-500/25',
 };
 const DOW = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 function dayKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -101,10 +124,9 @@ function dayKey(d: Date) {
 
 /** Calendário de mês idêntico ao protótipo: grade 7 colunas, células com dia +
  *  pills coloridos por status. Dados reais das visitas. */
-function MonthGrid({ date, visits, onNavigate, onDayClick, onVisitClick, destacadaId }: {
+function MonthGrid({ date, visits, onDayClick, onVisitClick, destacadaId }: {
   date: Date;
   visits: Visit[];
-  onNavigate: (d: Date) => void;
   onDayClick: (d: Date) => void;
   onVisitClick: (v: Visit) => void;
   /** Visita que veio pelo link: ganha contorno. */
@@ -137,24 +159,7 @@ function MonthGrid({ date, visits, onNavigate, onDayClick, onVisitClick, destaca
   }
 
   return (
-    <div className="rounded-xl border bg-card p-4">
-      {/* Navegação do mês */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="w-1 h-6 rounded-full shrink-0" style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }} />
-          <h2 className="text-base font-bold">{MONTHS[month]} {year}</h2>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(new Date(year, month - 1, 1))} aria-label="Mês anterior" title="Mês anterior">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => onNavigate(new Date())}>Hoje</Button>
-          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(new Date(year, month + 1, 1))} aria-label="Próximo mês" title="Próximo mês">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
+    <div>
       {/* Dias da semana */}
       <div className="grid grid-cols-7 gap-2 mb-2">
         {DOW.map(d => (
@@ -205,11 +210,233 @@ function MonthGrid({ date, visits, onNavigate, onDayClick, onVisitClick, destaca
   );
 }
 
+const ALTURA_HORA = 48;
+const HORAS = Array.from({ length: 24 }, (_, h) => h);
+
+/** Barra do calendário: Hoje, ‹ ›, o período e Mês / Semana / Dia (como na Lais). */
+function BarraDoCalendario({ visao, date, onVisao, onNavigate }: {
+  visao: VisaoCalendario;
+  date: Date;
+  onVisao: (v: VisaoCalendario) => void;
+  onNavigate: (d: Date) => void;
+}) {
+  const nomes: Record<VisaoCalendario, { anterior: string; proximo: string }> = {
+    mes: { anterior: 'Mês anterior', proximo: 'Próximo mês' },
+    semana: { anterior: 'Semana anterior', proximo: 'Próxima semana' },
+    dia: { anterior: 'Dia anterior', proximo: 'Próximo dia' },
+  };
+  return (
+    <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+      <div className="flex items-center gap-2 min-w-0">
+        <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => onNavigate(new Date())}>Hoje</Button>
+        <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(navegar(visao, date, -1))} aria-label={nomes[visao].anterior} title={nomes[visao].anterior}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(navegar(visao, date, 1))} aria-label={nomes[visao].proximo} title={nomes[visao].proximo}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <div className="w-1 h-6 rounded-full shrink-0 ml-1" style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }} />
+        <h2 className="text-base font-bold truncate">{tituloDaVisao(visao, date)}</h2>
+      </div>
+      <div className="inline-flex rounded-md border border-border bg-background p-0.5" role="group" aria-label="Visão do calendário">
+        {VISOES.map(v => (
+          <button
+            key={v.key}
+            type="button"
+            aria-pressed={visao === v.key}
+            onClick={() => onVisao(v.key)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+              visao === v.key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const VISOES: { key: VisaoCalendario; label: string }[] = [
+  { key: 'mes', label: 'Mês' },
+  { key: 'semana', label: 'Semana' },
+  { key: 'dia', label: 'Dia' },
+];
+
+const mesmoDiaQue = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+
+/** Identifica o período na tela (a visão + o primeiro dia dela). */
+const chaveDoPeriodo = (visao: VisaoCalendario, d: Date) => `${visao}-${limitesDaVisao(visao, d).primeiro.toDateString()}`;
+
+/** Grade de horas da Semana e do Dia: colunas por dia, visitas em blocos pelo horário e duração. */
+function GradeDeHoras({ visao, date, visits, carregadoPara, podeAgendar, ajustes, onDayHeaderClick, onSlotClick, onVisitClick, destacadaId }: {
+  visao: 'semana' | 'dia';
+  date: Date;
+  visits: Visit[];
+  /** Período da última lista que chegou (`chaveDoPeriodo`): só rola com a lista certa na mão. */
+  carregadoPara: string | null;
+  /** Sem permissão de agendar, clicar na grade não abre nada. */
+  podeAgendar: boolean;
+  /** Horário de visita da Agenda (agenda ligada): o que fica fora dele sai em cinza. */
+  ajustes: AgendaSettings | null;
+  onDayHeaderClick: (d: Date) => void;
+  onSlotClick: (inicio: Date) => void;
+  onVisitClick: (v: Visit) => void;
+  destacadaId?: string | null;
+}) {
+  const dias = diasDaVisao(visao, date);
+  const [agora, setAgora] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setAgora(new Date()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const blocosPorDia = dias.map(d => blocosDoDia(visits, d));
+
+  // Rola até a primeira visita (ou o começo do horário de visita) UMA vez por
+  // período, depois que a lista dele chega. Recarregar a mesma semana (agendar,
+  // cancelar) não tira a pessoa de onde ela estava.
+  const rolagem = useRef<HTMLDivElement>(null);
+  const rolouPara = useRef<string | null>(null);
+  const chave = chaveDoPeriodo(visao, date);
+  useLayoutEffect(() => {
+    if (carregadoPara !== chave || rolouPara.current === chave || !rolagem.current) return;
+    rolouPara.current = chave;
+    const inicioDoHorario = ajustes ? Number(ajustes.start.split(':')[0]) * 60 : undefined;
+    rolagem.current.scrollTop = horaDeAbertura(blocosPorDia.flat(), inicioDoHorario) * ALTURA_HORA;
+  });
+
+  const colunas = `3.5rem repeat(${dias.length}, minmax(0, 1fr))`;
+
+  return (
+    <div ref={rolagem} className="relative overflow-auto rounded-[10px] border border-border max-h-[calc(100dvh-300px)] min-h-[420px]">
+      <div className={visao === 'semana' ? 'min-w-[640px]' : ''}>
+        {visao === 'semana' && (
+          <div className="grid sticky top-0 z-20 bg-card border-b border-border" style={{ gridTemplateColumns: colunas }}>
+            <div />
+            {dias.map(d => {
+              const hoje = mesmoDiaQue(d, agora);
+              return (
+                <button
+                  key={d.toDateString()}
+                  type="button"
+                  onClick={() => onDayHeaderClick(d)}
+                  className={`py-2 flex flex-col items-center border-l border-border transition-colors hover:bg-muted/40 ${hoje ? 'text-primary' : 'text-muted-foreground'}`}
+                  aria-label={`Ver o dia ${d.getDate()}`}
+                  title={`Ver o dia ${d.getDate()}`}
+                >
+                  <span className="text-[10.5px] font-semibold uppercase">{DOW[d.getDay()]}</span>
+                  <span className={`text-lg leading-tight ${hoje ? 'font-bold' : 'font-medium text-foreground'}`}>{d.getDate()}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="grid relative" style={{ gridTemplateColumns: colunas, height: 24 * ALTURA_HORA }}>
+          {/* Horas */}
+          <div className="relative">
+            {HORAS.map(h => (
+              <span
+                key={h}
+                className="absolute right-2 text-[11px] text-muted-foreground tabular-nums"
+                style={{ top: h === 0 ? 2 : h * ALTURA_HORA - 7 }}
+              >
+                {String(h).padStart(2, '0')}:00
+              </span>
+            ))}
+          </div>
+
+          {dias.map((d, i) => {
+            const hoje = mesmoDiaQue(d, agora);
+            const faixa = ajustes ? faixaAberta(d, ajustes) : undefined;
+            const agoraMin = agora.getHours() * 60 + agora.getMinutes();
+            return (
+              <div
+                key={d.toDateString()}
+                className={`relative border-l border-border ${podeAgendar ? 'cursor-pointer' : ''} ${hoje ? 'bg-primary/5' : ''}`}
+                onClick={e => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  onSlotClick(horarioDoClique(d, e.clientY - r.top, ALTURA_HORA));
+                }}
+              >
+                {/* Fora do horário de visita (agenda ligada): cinza */}
+                {faixa === null && <div className="absolute inset-0 bg-muted/50 pointer-events-none" />}
+                {faixa && faixa.de > 0 && (
+                  <div className="absolute inset-x-0 top-0 bg-muted/50 pointer-events-none" style={{ height: (faixa.de / 60) * ALTURA_HORA }} />
+                )}
+                {faixa && faixa.ate < 24 * 60 && (
+                  <div className="absolute inset-x-0 bottom-0 bg-muted/50 pointer-events-none" style={{ top: (faixa.ate / 60) * ALTURA_HORA }} />
+                )}
+
+                {HORAS.map(h => (
+                  <div key={h} className="absolute inset-x-0 border-t border-border/70 pointer-events-none" style={{ top: h * ALTURA_HORA }} />
+                ))}
+
+                {blocosPorDia[i].map(b => {
+                  const v = b.visita;
+                  const inicio = new Date(v.scheduled_at);
+                  const fim = new Date(inicio.getTime() + b.duracaoMin * 60000);
+                  const time = hora(inicio);
+                  const who = v.contact?.name || v.property?.title || 'Visita';
+                  const altura = Math.max((b.duracaoMin / 60) * ALTURA_HORA - 2, 20);
+                  const detalhe = [
+                    `${time}–${hora(fim)}`,
+                    who,
+                    v.realtor?.name ? `Corretor: ${v.realtor.name}` : null,
+                    VISIT_STATUS_LABELS[v.status] ?? v.status,
+                  ].filter(Boolean).join(' · ');
+                  return (
+                    <button
+                      key={v.id}
+                      id={`visita-${v.id}`}
+                      type="button"
+                      onClick={e => { e.stopPropagation(); onVisitClick(v); }}
+                      className={`absolute z-10 rounded-md px-1.5 py-1 text-left overflow-hidden border border-border/60 transition-colors ${PILL_STYLES[v.status] || PILL_STYLES.scheduled} ${destacadaId === v.id ? 'ring-2 ring-primary' : ''}`}
+                      style={{
+                        top: (b.inicioMin / 60) * ALTURA_HORA + 1,
+                        height: altura,
+                        left: `calc(${(b.coluna / b.colunas) * 100}% + 2px)`,
+                        width: `calc(${100 / b.colunas}% - 4px)`,
+                      }}
+                      title={detalhe}
+                      aria-label={detalhe}
+                    >
+                      {altura < 36 ? (
+                        <span className="block text-[10.5px] font-semibold truncate">{time} · {who}</span>
+                      ) : (
+                        <>
+                          <span className="block text-[10.5px] opacity-80 tabular-nums">{time}</span>
+                          <span className="block text-[11.5px] font-semibold truncate">{who}</span>
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+
+                {/* Agora */}
+                {hoje && (
+                  <div className="absolute inset-x-0 z-10 pointer-events-none" style={{ top: (agoraMin / 60) * ALTURA_HORA }}>
+                    <div className="relative h-0.5 bg-primary">
+                      <span className="absolute -left-1 -top-[3px] h-2 w-2 rounded-full bg-primary" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Visits() {
   const canCreate = useFeature('visits_create');
   // Agenda do corretor (horário de visita + folgas): ligada quando o servidor
   // diz (`GET /visit_settings`). Sem resposta, desligada ou erro: sem os botões.
-  const agendaLigada = useAgendaLigada().ligada === true;
+  const agenda = useAgendaLigada();
+  const agendaLigada = agenda.ligada === true;
   const [visits, setVisits]         = useState<Visit[]>([]);
   const [total, setTotal]           = useState(0);
   const [loading, setLoading]       = useState(false);
@@ -222,6 +449,10 @@ export default function Visits() {
   const [recusado, setRecusado]     = useState(false);
 
   const [calDate, setCalDate]       = useState<Date>(new Date());
+  const [visaoCal, setVisaoCal]     = useState<VisaoCalendario>(lerVisao);
+  // Período da última lista que chegou do calendário (a grade de horas espera
+  // por ela para rolar até a primeira visita).
+  const [carregadoPara, setCarregadoPara] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   // Filtro que veio de um clique na Dashboard (?situacao=, ?desde=, ?visita=).
   const [filtroLink, setFiltroLink] = useState<FiltroAgenda | null>(() => lerFiltroAgenda(searchParams));
@@ -238,6 +469,7 @@ export default function Visits() {
 
   const [modalOpen, setModalOpen]   = useState(false);
   const [diaDoModal, setDiaDoModal] = useState<Date | null>(null);
+  const [inicioDoModal, setInicioDoModal] = useState<Date | null>(null);
 
   const [actionModal, setActionModal] = useState<{ visit: Visit; action: AcaoDaVisita } | null>(null);
   const [rating, setRating]           = useState(0);
@@ -271,14 +503,19 @@ export default function Visits() {
     setLoading(true);
     setRecusado(false);
     try {
-      // No calendário, pede SÓ o mês visível: é o escopo do contador do
-      // cabeçalho. Com o mês inteiro (sem aba de situação), o contador soma as
+      // No calendário, pede SÓ o período visível (mês, semana ou dia): é o
+      // escopo do contador do cabeçalho. Com o período inteiro (sem aba de
+      // situação), o contador soma as
       // visitas ATIVAS (meta.active_total, sem canceladas) — a grade continua
       // desenhando a pílula cancelada, então o número pode ficar menor que a
       // quantidade de pílulas. Na lista, o que o link ou a aba pedirem, e o
       // contador é o total do que veio. Regra em features/visits/contagem.ts.
       const doMes = viewMode === 'calendar' && !temFiltroNoLink
-        ? (() => { const m = intervaloDoMes(calDate); return { since: m.desde, until: m.ate }; })()
+        ? (() => {
+          const { primeiro, ultimo } = limitesDaVisao(visaoCal, calDate);
+          const p = intervaloDosDias(primeiro, ultimo);
+          return { since: p.desde, until: p.ate };
+        })()
         : {};
       const res = await visitsService.list({
         status: status || undefined,
@@ -288,6 +525,7 @@ export default function Visits() {
       });
       if (!atual()) return;
       setVisits(res.data ?? []);
+      setCarregadoPara(viewMode === 'calendar' && !temFiltroNoLink ? chaveDoPeriodo(visaoCal, calDate) : null);
       const contador = lerContador(res.meta, {
         mesInteiro: viewMode === 'calendar' && !temFiltroNoLink && !status,
       });
@@ -302,9 +540,20 @@ export default function Visits() {
     } finally {
       if (atual()) setLoading(false);
     }
-  }, [activeTab, viewMode, calDate, filtroLink, temFiltroNoLink]);
+  }, [activeTab, viewMode, calDate, visaoCal, filtroLink, temFiltroNoLink]);
 
-  useEffect(() => { load(); }, [viewMode, calDate, filtroLink]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [viewMode, calDate, visaoCal, filtroLink]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const trocarVisao = (v: VisaoCalendario) => {
+    try { localStorage.setItem(CHAVE_VISAO, v); } catch { /* sem armazenamento: só não lembra */ }
+    // Do mês para a semana/dia: se hoje está no mês da tela, vai pra hoje
+    // (senão o 1º do mês, que é onde a navegação do mês deixa a data).
+    if (visaoCal === 'mes' && v !== 'mes') {
+      const hoje = new Date();
+      if (hoje.getFullYear() === calDate.getFullYear() && hoje.getMonth() === calDate.getMonth()) setCalDate(hoje);
+    }
+    setVisaoCal(v);
+  };
 
   // A visita que veio pelo link fica com contorno por 2 s, e a tela rola até ela.
   const [visitaDestacada, setVisitaDestacada] = useState<string | null>(null);
@@ -339,13 +588,15 @@ export default function Visits() {
         abrirAcao(v, 'complete');
         return;
       }
-      // Sem filtro do link, o calendário vai pro mês da visita (e recarrega esse
-      // mês). Com filtro, a pessoa fica na lista filtrada.
+      // Sem filtro do link, o calendário vai pro período da visita (e recarrega
+      // esse período). Com filtro, a pessoa fica na lista filtrada.
       if (!temFiltroNoLink) {
         const quando = new Date(v.scheduled_at);
-        setCalDate(d => (
-          d.getFullYear() === quando.getFullYear() && d.getMonth() === quando.getMonth() ? d : quando
-        ));
+        setCalDate(d => {
+          const { primeiro, ultimo } = limitesDaVisao(visaoCal, d);
+          const fimDoUltimo = new Date(ultimo.getFullYear(), ultimo.getMonth(), ultimo.getDate() + 1);
+          return quando >= primeiro && quando < fimDoUltimo ? d : quando;
+        });
       }
       setVisitaDestacada(v.id);
       if (acao === 'retorno') abrirAcao(v, 'retorno');
@@ -389,9 +640,19 @@ export default function Visits() {
     load(key);
   };
 
-  const openScheduleModal = (dia?: Date) => {
+  const openScheduleModal = (dia?: Date, inicio?: Date) => {
     setDiaDoModal(dia ?? null);
+    setInicioDoModal(inicio ?? null);
     setModalOpen(true);
+  };
+
+  // Clique num dia (Mês) ou num horário (Semana/Dia). Dia que já passou não
+  // abre: o servidor recusaria e o modal abriria com data vencida.
+  const agendarNoCalendario = (d: Date, inicio?: Date) => {
+    if (!canCreate) return;
+    const hoje = new Date();
+    if (d < new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())) return;
+    openScheduleModal(new Date(d.getFullYear(), d.getMonth(), d.getDate()), inicio);
   };
 
   const handleConfirm = async (visit: Visit) => {
@@ -463,10 +724,14 @@ export default function Visits() {
                 Agenda de Visitas
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {rotuloContador(total, {
-                  soMinhas,
-                  mes: servidorNovo && viewMode === 'calendar' && !temFiltroNoLink ? calDate : undefined,
-                })}
+                {(() => {
+                  const comPeriodo = servidorNovo && viewMode === 'calendar' && !temFiltroNoLink;
+                  return rotuloContador(total, {
+                    soMinhas,
+                    mes: comPeriodo && visaoCal === 'mes' ? calDate : undefined,
+                    periodo: comPeriodo && visaoCal !== 'mes' ? periodoDoContador(visaoCal, calDate) : undefined,
+                  });
+                })()}
               </p>
               {filtroLink?.rotulo && (
                 <div className="mt-1.5">
@@ -546,19 +811,31 @@ export default function Visits() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
         {viewMode === 'calendar' ? (
-          <MonthGrid
-            date={calDate}
-            visits={visits}
-            onNavigate={setCalDate}
-            onDayClick={d => {
-              // Dia que já passou não abre: o servidor recusaria e o modal abriria com data vencida.
-              const hoje = new Date();
-              if (d < new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())) return;
-              openScheduleModal(d);
-            }}
-            onVisitClick={handleVisitClick}
-            destacadaId={visitaDestacada}
-          />
+          <div className="rounded-xl border bg-card p-4">
+            <BarraDoCalendario visao={visaoCal} date={calDate} onVisao={trocarVisao} onNavigate={setCalDate} />
+            {visaoCal === 'mes' ? (
+              <MonthGrid
+                date={calDate}
+                visits={visits}
+                onDayClick={d => agendarNoCalendario(d)}
+                onVisitClick={handleVisitClick}
+                destacadaId={visitaDestacada}
+              />
+            ) : (
+              <GradeDeHoras
+                visao={visaoCal}
+                date={calDate}
+                visits={visits}
+                carregadoPara={carregadoPara}
+                podeAgendar={canCreate}
+                ajustes={agendaLigada ? agenda.ajustes : null}
+                onDayHeaderClick={d => { setCalDate(d); trocarVisao('dia'); }}
+                onSlotClick={inicio => agendarNoCalendario(inicio, inicio)}
+                onVisitClick={handleVisitClick}
+                destacadaId={visitaDestacada}
+              />
+            )}
+          </div>
         ) : loading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
             Carregando visitas...
@@ -613,6 +890,7 @@ export default function Visits() {
         open={modalOpen}
         onOpenChange={setModalOpen}
         diaInicial={diaDoModal}
+        inicioInicial={inicioDoModal}
         // Recarrega em vez de somar 1 na mão: a visita nova pode ser de outro mês
         // ou de outro corretor, e aí o contador do mês não muda.
         onCreated={() => load()}

@@ -90,3 +90,44 @@ describe('Agenda de Visitas: botões da agenda do corretor', () => {
     expect(screen.queryByRole('button', { name: /Horário de visita/ })).toBeNull();
   });
 });
+
+describe('Agenda de Visitas: Semana e Dia', () => {
+  beforeEach(() => {
+    try { localStorage.removeItem('lm-visitas-visao'); } catch { /* sem armazenamento */ }
+  });
+
+  it('Semana pede ao servidor só a semana e desenha a visita como bloco', async () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    list.mockResolvedValue({
+      data: [{ id: 'v1', status: 'scheduled', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Thyago' } }],
+      meta: { total: 1, active_total: 1, only_mine: false },
+    });
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Semana' }));
+
+    const domingo = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - hoje.getDay());
+    const sabado = new Date(domingo.getFullYear(), domingo.getMonth(), domingo.getDate() + 6);
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ since: iso(domingo), until: iso(sabado) })));
+    expect(await screen.findByRole('button', { name: /15:00–16:00 · Thyago/ })).toBeInTheDocument();
+    expect(screen.getByText('1 visita nesta semana')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Semana' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('clicar no dia da semana abre a visão Dia, e a escolha fica guardada', async () => {
+    list.mockResolvedValue({ data: [], meta: { total: 0, active_total: 0, only_mine: false } });
+    const user = userEvent.setup();
+    const { unmount } = abrir();
+    await user.click(await screen.findByRole('button', { name: 'Semana' }));
+    const hoje = new Date();
+    await user.click(screen.getByRole('button', { name: `Ver o dia ${hoje.getDate()}` }));
+    expect(screen.getByRole('button', { name: 'Dia' })).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() => expect(screen.getByText('0 visitas hoje')).toBeInTheDocument());
+    unmount();
+
+    abrir();
+    expect(await screen.findByRole('button', { name: 'Dia' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});
