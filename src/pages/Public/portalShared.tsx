@@ -57,6 +57,10 @@ export interface SiteInfo {
   financiamento?: PortalFinancing | null;
   /** Página *Anuncie seu imóvel* (Site Builder). Ausente = desligada. */
   anuncie?: PortalListing | null;
+  tracking?: { gtm_id?: string | null; ga4?: string | null; facebook_pixel?: string | null } | null;
+  custom_code?: { head?: string | null; body?: string | null } | null;
+  translate?: { enabled?: boolean; languages?: string[] } | null;
+  menu?: { title: string; slug: string }[] | null;
 }
 export interface PortalProperty {
   id: string;

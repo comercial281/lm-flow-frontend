@@ -1,9 +1,10 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useLocation } from 'react-router-dom';
 import {
   Ic, I, PortalFooter, PortalHeader, fetchArticles, usePortalData,
   type PortalArticleSummary,
 } from './portalShared';
+import { usePortalTracking } from './usePortalTracking';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — BLOG (listagem de artigos publicados) (Produto A).
@@ -61,6 +62,8 @@ function ArticleCard({ tenant, a }: { tenant: string; a: PortalArticleSummary })
 export default function PortalBlogPage() {
   const { tenant } = useParams<{ tenant: string }>();
   const { state, site, fontHref, cssVars } = usePortalData(tenant);
+  const { pathname } = useLocation();
+  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'blog', path: pathname });
 
   const [articles, setArticles] = useState<PortalArticleSummary[]>([]);
   const [total, setTotal] = useState(0);

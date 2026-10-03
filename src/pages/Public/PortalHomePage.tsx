@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import {
@@ -8,6 +8,8 @@ import {
 } from './portalShared';
 import FinalidadeChoice from './FinalidadeChoice';
 import { finalidadeInicial, type Finalidade } from './finalidade';
+import { usePortalTracking } from './usePortalTracking';
+import { trackLead } from '@/features/siteBuilder/public/siteTracking';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — HOME (Produto A do LM Flow)
@@ -25,6 +27,8 @@ export default function PortalHomePage() {
   const { tenant } = useParams<{ tenant: string }>();
   const navigate = useNavigate();
   const { state, site, items, fontHref, wa, cities, hoods, types, cssVars } = usePortalData(tenant);
+  const { pathname } = useLocation();
+  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'home', path: pathname });
 
   // filtros do formulário do hero (entrada da busca)
   const [tab, setTab] = useState<PortalTab>('sale');
@@ -73,6 +77,7 @@ export default function PortalHomePage() {
         body: JSON.stringify({ lead: { name: leadName, phone: leadPhone, source: 'portal', form_type: 'home', finalidade: leadFinalidade, message: 'Quero ajuda pra encontrar um imóvel (portal home).' } }),
       });
       setLeadSent(true);
+      trackLead();
     } catch { /* silencioso */ }
   };
 

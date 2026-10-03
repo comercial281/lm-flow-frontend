@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { trackLead } from '@/features/siteBuilder/public/siteTracking';
 import { BrPhoneInput } from '@/components/shared';
 import { isValidBrPhone } from '@/lib/brPhone';
 import { labelsFor } from '@/features/properties/amenities';
@@ -15,6 +16,7 @@ import {
   type PortalProperty, type SiteInfo as PortalSiteInfo,
 } from './portalShared';
 import FinalidadeChoice from './FinalidadeChoice';
+import { usePortalTracking } from './usePortalTracking';
 import { FINALIDADE_PARAM, finalidadeDoImovel, finalidadeInicial, type Finalidade } from './finalidade';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -85,6 +87,8 @@ export default function ImovelPublicPage() {
   const [active, setActive] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   const [suggestions, setSuggestions] = useState<PortalProperty[]>([]);
+  const { pathname } = useLocation();
+  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'property', path: pathname, propertyCode: code });
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -197,6 +201,7 @@ export default function ImovelPublicPage() {
         } }),
       });
       setSent(true);
+      trackLead();
     } catch { /* silencioso */ }
   };
 

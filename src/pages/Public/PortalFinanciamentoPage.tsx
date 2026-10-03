@@ -1,8 +1,9 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import {
   I, Ic, PortalFooter, PortalHeader, onlyDigits, usePortalData,
   type PortalBank,
 } from './portalShared';
+import { usePortalTracking } from './usePortalTracking';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — SIMULE SEU FINANCIAMENTO
@@ -60,6 +61,8 @@ function BankBadge({ bank }: { bank: PortalBank }) {
 export default function PortalFinanciamentoPage() {
   const { tenant } = useParams<{ tenant: string }>();
   const { state, site, fontHref, wa, cssVars } = usePortalData(tenant);
+  const { pathname } = useLocation();
+  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'financing', path: pathname });
 
   if (state === 'loading') {
     return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
