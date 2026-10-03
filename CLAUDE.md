@@ -5668,3 +5668,82 @@ Armadilhas:
    removido nem reaproveitado.
 3. **Em *Só follow-up* o reengajamento não age** (a IA não responde ao vivo); o
    bloco avisa em vez de esconder.
+
+## Follow-up vira fluxo (03/10/2026)
+
+Sprint 3 de 4 da unificação das automações (decisões do dono do produto em 02 e
+03/10, não reabrir sem ele pedir). Spec:
+`LM FLOW/specs/2026-10-03-automacoes-sprint-3-follow-up-vira-fluxo-design.md`.
+A metade do backend vem PRIMEIRO (`lm-flow`, branch `claude/automacoes-sprint3`):
+`kind` do fluxo, gatilho com `alternatives`, os blocos e opções novos, o
+`/flow_automation_instances/start`, a ação `start_followup_flow` e o
+`followup_flow_id` da IA.
+
+O que aparece na tela:
+
+- **Aba Follow-up = o construtor.** `/automations/follow-ups` é a MESMA lista das
+  Automações (`FlowAutomationsList kind="followup"`), com o título "Follow-up" e
+  os fluxos de follow-up; o canvas abre em `/automations/follow-ups/:id` e a seta
+  volta pra aba. **"Novo follow-up"** cria o fluxo já montado com o modelo
+  "Follow-up padrão" (o servidor monta). Sem Modelos e sem pastas nessa aba.
+  O editor de funil antigo, "Quando este funil começa" e "Follow-up iniciado à
+  mão" saíram da tela. `/settings/follow-ups` leva pra aba nova.
+- **Faixa "Terminando no formato antigo: Follow-up longo — 87 mensagens
+  programadas"** no topo da aba: os funis antigos que ainda têm fila, só pra ver.
+  Some quando a fila zera.
+- **"+ Ou quando…"** na janela do gatilho: outros gatilhos, cada um com o mesmo
+  editor (filtro e funil). O fluxo começa quando qualquer um acontece. O cartão
+  do gatilho lista cada "ou quando", e o botão do topo e a lista juntam os nomes
+  com "ou".
+- **Mandar WhatsApp → "Marcar progresso"**: nome da etiqueta + "Mensagem nº". Ao
+  sair, o lead ganha `<nome>-msg-N` e perde a anterior. O cartão mostra a etiqueta.
+- **"Só em horário comercial (seg–sex 8h–20h, sáb 9h–18h)"**: caixa no Esperar
+  (modo Por um tempo) e no Aguardar resposta, e nas Configurações do fluxo
+  (nenhuma mensagem sai fora da janela). O modo "saindo só em horário comercial"
+  do Esperar virou essa caixa.
+- **Bloco "Marcar como recuperado pelo follow-up"** (grupo Lead, sem campos): a
+  janela lista os 5 efeitos (etiqueta "recuperado-pelo-follow-up", tira
+  "follow-up", histórico do relatório, aviso pra equipe, WhatsApp pro corretor).
+- **"Mover de etapa" → "Coluna com este nome no funil do card"**, ao lado de "Uma
+  etapa específica".
+- **"Iniciar follow-up"** (bloco e ação das regras) escolhe um **fluxo de
+  follow-up**. A ação antiga "Iniciar sequência de follow-up (formato antigo)"
+  não é mais oferecida; regra/bloco que já tem continua abrindo e valendo.
+- **Card do lead:** o bloco Follow-up mostra cada follow-up rodando com a mesma
+  linha da faixa da conversa ("Follow-up "X" · aguardando resposta até…") e
+  **Parar**; sem nada rodando, **Iniciar follow-up** (escolhe entre os ligados).
+  A fila de funil antigo aparece com "· formato antigo", só com Parar e o "Ver
+  mensagens". Pausar e Retomar saíram.
+- **Faixa da conversa:** o fluxo de follow-up aparece como **Follow-up "X"**, e o
+  botão da pergunta ao enviar vira "Enviar e parar o follow-up".
+- **IA Vendedora** (e o assistente): a opção virou **"Entregar pro follow-up"** e
+  escolhe um fluxo de follow-up. IA que só tem o funil antigo mostra o aviso
+  amarelo.
+
+Armadilhas:
+
+1. **Tipo do fluxo:** `kind` no fluxo e na instância (`features/flowAutomations/kind.ts`).
+   Ausente = automação. A lista das Automações NÃO manda `kind` (o servidor
+   devolve só automações por padrão); a aba Follow-up manda `kind=followup`.
+2. **Gatilho:** `serializeTrigger` manda SEMPRE `alternatives` (vazia apaga o
+   último "Ou quando"). `changeTriggerEvent`/`withTriggerCondition` preservam as
+   alternativas; `triggerProblem` confere cada uma ("No "Ou quando": …").
+3. **Configurações do fluxo:** `business_hours_only` vai solto no mesmo PATCH do
+   "pode rodar de novo"; a leitura aceita solto ou em `state` (`businessHoursOnlyOf`).
+4. **Esperar:** o `mode: 'schedule'` antigo é lido como Por um tempo + caixa
+   marcada; mexer na caixa grava `mode: 'interval'` + `business_hours`.
+5. **Mover de etapa:** `stage_id` OU `stage_name`, nunca os dois. O motor NÃO lê o
+   `stage_slug` dos modelos da sprint 2: o cartão mostra o slug como nome e pede
+   "Abra o bloco e confirme o nome da coluna"; salvar a janela grava `stage_name`.
+6. **Ação nova:** `start_followup_flow { flow_automation_id }`. A antiga
+   (`start_followup_sequence`) está em `LEGACY_ACTION_TYPES`: fora da lista e da
+   paleta, mas válida (o servidor redireciona o funil convertido pro fluxo).
+7. **A IA grava `followup_flow_id`** (no `saveAgent` com `in`, pra limpar com
+   `null`). O servidor guarda na coluna do slug com a marca `flow:`; a tela só vê
+   os dois campos.
+8. **Permissão da aba Follow-up:** `flow_automations.read` (a chave que o servidor
+   confere em `/flow_automations`), na rota e no menu. Antes era
+   `followup_sequences.read`.
+9. **Card:** fluxos de `/flow_automation_instances` filtrados por `kind ===
+   'followup'`; a fila antiga continua vindo de `/followup_jobs`. Iniciar = `POST
+   /flow_automation_instances/start` com o contato e a conversa.
