@@ -33,6 +33,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useAuthStore } from '@/store/authStore';
+import { salvarUISettings } from '@/features/auth/uiSettings';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   profileService,
@@ -529,7 +530,8 @@ const Profile = () => {
   const handleUISettingsChange = async (settings: Partial<typeof uiSettings>) => {
     try {
       setUiSettings(prev => ({ ...prev, ...settings }));
-      await profileService.updateUISettings(settings);
+      // Junta com o ui_settings inteiro do usuário: o servidor troca o objeto todo.
+      await salvarUISettings(settings);
 
       // Atualizar contexto do usuário para que as mudanças sejam aplicadas globalmente
       await refreshUser();

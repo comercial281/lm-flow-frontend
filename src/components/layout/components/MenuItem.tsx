@@ -52,6 +52,9 @@ export default function MenuItem({
       {(!isCollapsed || mobile) && (
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className="font-medium text-sm min-w-0 truncate">{item.name}</span>
+          {item.marcador && (
+            <span role="img" aria-label="Novidade" data-marcador className="ml-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-destructive" />
+          )}
           {item.hiddenFromClient && (
             <span className="flex items-center" title="Oculto pro cliente (você vê como super-admin)">
               <EyeOff className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" aria-label="Oculto pro cliente" />

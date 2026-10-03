@@ -7,6 +7,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import { PROPERTY_TYPE_LABELS } from '@/services/properties/propertiesService';
+import { numero } from '@/lib/formato';
 import {
   FASES, SITUACOES,
   type Filtros, type FiltrosEmpreendimento, type FiltrosRevenda, type ListingKind,
@@ -55,6 +56,11 @@ export const ATRASO_DO_PRECO = 400;
 
 // Campo de preço com o valor local: cada tecla muda a caixa na hora, e a lista
 // só recebe o número depois da pausa. Fechar o painel no meio entrega o pendente.
+/** '300000' → 'R$ 300.000'; vazio continua vazio (mostra o placeholder). */
+export function mascaraReais(digitos: string): string {
+  return digitos ? `R$ ${numero(Number(digitos))}` : '';
+}
+
 function CampoDePreco({ valor, aoConfirmar, ...resto }: {
   valor: string; aoConfirmar: (v: string) => void; 'aria-label': string; placeholder: string;
 }) {
@@ -64,8 +70,15 @@ function CampoDePreco({ valor, aoConfirmar, ...resto }: {
   const confirmar = useRef(aoConfirmar);
   confirmar.current = aoConfirmar;
 
-  // Valor trocado por fora (Limpar filtros, etiqueta tirada).
-  useEffect(() => { setTexto(valor); }, [valor]);
+  // Valor trocado por fora (Limpar filtros, etiqueta tirada): o que estava
+  // esperando a pausa é descartado, senão o preço apagado voltaria sozinho.
+  useEffect(() => {
+    if (pendente.current && pendente.current.v !== valor) {
+      clearTimeout(pendente.current.timer);
+      pendente.current = null;
+    }
+    setTexto(valor);
+  }, [valor]);
   useEffect(() => () => {
     if (pendente.current) { clearTimeout(pendente.current.timer); confirmar.current(pendente.current.v); }
   }, []);
@@ -79,7 +92,8 @@ function CampoDePreco({ valor, aoConfirmar, ...resto }: {
       timer: setTimeout(() => { pendente.current = null; confirmar.current(v); }, ATRASO_DO_PRECO),
     };
   };
-  return <input {...resto} className={campo} inputMode="numeric" value={texto} onChange={e => mudar(e.target.value)} />;
+  // Guarda só os dígitos e mostra com máscara de reais ("R$ 300.000").
+  return <input {...resto} className={campo} inputMode="numeric" value={mascaraReais(texto)} onChange={e => mudar(e.target.value)} />;
 }
 
 export default function PainelDeFiltros({ kind, filtros, facetas, aoMudar, aoLimpar, aoRecolher }: Props) {

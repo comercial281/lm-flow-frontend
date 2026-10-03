@@ -23,6 +23,8 @@ function SecaoRecolhida({ secao, pathname }: { secao: MenuSection; pathname: str
   const viaHover = useRef(false);
   const Icone = secao.icone ?? LayoutGrid;
   const ativa = secao.itens.some(item => itemAtivo(item, pathname));
+  // Item com novidade fica escondido no popover: a bolinha sobe pro ícone da seção.
+  const temNovidade = secao.itens.some(item => item.marcador);
 
   useEffect(
     () => () => {
@@ -72,11 +74,12 @@ function SecaoRecolhida({ secao, pathname }: { secao: MenuSection; pathname: str
           onMouseEnter={abrirComAtraso}
           onMouseLeave={fecharComAtraso}
           className={cn(
-            'flex w-full items-center justify-center px-3 py-2 rounded-lg transition-all duration-200',
+            'relative flex w-full items-center justify-center px-3 py-2 rounded-lg transition-all duration-200',
             ativa ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-accent/80',
           )}
         >
           <Icone className="flex-shrink-0" style={{ width: '1.125rem', height: '1.125rem' }} aria-hidden="true" />
+          {temNovidade && <span aria-hidden="true" data-marcador className="absolute right-2 top-1.5 h-2 w-2 rounded-full bg-destructive" />}
         </button>
       </PopoverTrigger>
       <PopoverContent

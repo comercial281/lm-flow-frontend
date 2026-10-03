@@ -4731,7 +4731,7 @@ O que aparece na tela, no menu da Área do Admin:
 - **Mensagem de acesso** saiu da janela e virou aba; a variável `{senha}` saiu da lista (a senha é criada pela pessoa, pelo link, desde a fase 1).
 - **WhatsApp** é o Comunicado. Neste passo a escrita continua na janela de sempre, com todos os clientes marcados (decisão). Confirmação e tela própria entram no PR de Comunicação.
 - **Push** ainda tem três abas por dentro (Regras, Disparo manual, Histórico): viram seções no PR de Comunicação. É a única exceção ao "sem terceiro nível", e é temporária.
-- **Custos** ainda é a tela Custo da IA (US$, N dias). O rateio de Railway, Evolution e Vercel entra no PR de Custos.
+- **Custos** é a tela nova de 03/10 (ver seção "Custos do admin").
 - **Banner** ainda não tem aba: entra com a spec própria.
 
 ## Número que envia os avisos: vazio = número da Leal Mídia (desde 2026-10-01)
@@ -5668,6 +5668,59 @@ Armadilhas:
    removido nem reaproveitado.
 3. **Em *Só follow-up* o reengajamento não age** (a IA não responde ao vivo); o
    bloco avisa em vez de esconder.
+
+## Imóveis: cadastro em página e Gestão de proprietários (desde 2026-10-03)
+
+Fase 4, entrega 3. Spec: `LM FLOW/specs/2026-10-03-fase-4-imoveis-cadastro-e-proprietarios-design.md` (pasta do Tony, fora deste repo). Depende do backend `lm-flow#377` (campos novos, `property_owners`, aprovação de captação corrigida), que já está no ar.
+
+**Cadastro em página (substitui a janela):**
+
+- **Rotas:** `/properties/new?tipo=empreendimento|revenda[&proprietario=<id>]` e `/properties/:id/editar[?de=lote][&passo=divulgar]`. `/properties/new` respeita a feature `properties_create`, como a lista.
+- **Seções por tipo** vêm de `secoesDoCadastro` (`src/features/properties/cadastro/`). Índice fixo ao lado com scrollspy; erro de validação rola até a seção e a marca. Cada seção recebe `{form, setF, editando}`; `setF` aceita objeto ou `(prev) => patch`.
+- **O menu recolhe** nessas rotas, como em Conversas (`emConversas` no `MainLayout` cobre as duas).
+- **Barra de baixo:** criação = *Cancelar* / *Salvar rascunho* / *Criar e escolher onde divulgar →*; edição = *Cancelar* / *Salvar*. Há trava de "alterações não salvas".
+- **Volta ao lote:** revisar um item do lote e salvar volta para a janela do lote com a lista de itens (`importar=1`, chave própria no `sessionStorage`).
+- **Campos novos:** Construtora; Obra (total de unidades, torres, andares); Finalidade em pílulas; IPTU mensal/anual; ano de construção; Financiamento / FGTS / MCMV como Sim / Não / Não informado; Padrão; links de vídeo e tour; Comissão; **Dados internos** (só revenda: chaves, placa, matrícula, código do IPTU, cartório, valor de avaliação, comentários). O empreendimento mantém o "Resumo do empreendimento" (quartos, suítes, etc.) dentro de *Tipologias e valores*: o backend não deriva o resumo das tipologias.
+- **"Água" saiu das opções** mas continua legível em imóvel antigo (o slug fica no array ao salvar). *Piscina* e *Sauna* do imóvel viraram "privativa".
+- **Proprietário (revenda):** busca, cadastro na hora, aviso de telefone repetido e cartão com *Trocar*. Erro que não seja 404 mostra *Tentar de novo* / *Trocar* em vez de travar o cartão.
+- **Nada de Dados internos, Comissão ou Proprietário vai para site, portal ou IA.**
+
+**Onde divulgar** (passo depois de criar e cartão na edição):
+
+- Site / IA / Destaque gravam na hora. Cada portal conectado tem chave, tipo de anúncio e contador de cota; vermelho em `count >= limit`, e tipo cheio fica bloqueado para adicionar.
+- **A lista do portal é lida de novo logo antes de gravar** (o servidor substitui a lista inteira: snapshot velho despublicaria os outros imóveis). Mudança que não aumenta tipo estourado vai com `confirmOverflow` (decisão do Tony de 14/09: "avisa, não trava").
+- Portais não conectados viram uma linha só, com link para `/settings/portals`.
+- **Na edição, o *Salvar* da página não manda `featured`, `published_on_site` nem `ai_enabled`:** o cartão é o dono deles.
+
+**Gestão de proprietários** (`/property-owners`):
+
+- **Menu em Imóveis.** O gestor sempre vê; o corretor só com contagem > 0 (recorte do servidor). Bolinha vermelha "Novidade" no menu, no cabeçalho da seção fechada e na aba quando há captação nova.
+- **A marca `captacoes_vistas_ate` mora em `ui_settings`** (created_at mais novo dos pendentes + 1 ms: o JSON tem ms e o banco µs). **O servidor substitui `ui_settings` inteiro**, então toda gravação passa por `salvarUISettings` (mescla e manda o objeto completo). Isso corrigiu um bug antigo: o Perfil mandava `ui_settings` parcial e apagava as outras chaves.
+- Lista com pílula de status (*Disponível* · *Com alteração* · *Indisponível* · *Sem resposta*), busca e filtro; *Novo proprietário* em janela.
+- **Ficha** (`/property-owners/:id`): status, WhatsApp (`wa.me`, prefixo 55 para 10/11 dígitos), *Editar dados* / *Excluir* (só gestor), cartões dos imóveis (gestor vai ao cadastro; **corretor abre uma janela com Dados internos**), *Cadastrar imóvel deste proprietário*, observações (o corretor edita; o rascunho não se perde ao trocar o status), dados e histórico.
+- **Corretores autorizados** (só gestor). O captor é implícito.
+- **Novas captações** (aba, só pendentes, com busca e *Atualizar*; usa `pending: 'true'`). `/property-capture-requests` redireciona para cá. *Recusar* exige motivo. *Aprovar e cadastrar* abre a edição do rascunho criado; o `property_id` vem do envelope da resposta (o service antigo devolvia o envelope inteiro) e o duplo clique é travado.
+
+Decisões do dono (não reabrir sem ele pedir): cadastro em página e não em janela; seções por tipo; Dados internos só na revenda; proprietário só na revenda; menu com visibilidade dinâmica para o corretor; captação nova entra como rascunho e nunca vai ao ar sozinha.
+
+Armadilhas:
+
+1. **As regras moram em `src/features/properties/cadastro/`** (`secoesDoCadastro.ts` e `formularioDoCadastro.ts`, que traz `errosDoCadastro` e `payloadDoCadastro`), com spec; as telas em `src/pages/Customer/Properties/cadastro/`. Regra nova não entra na tela.
+2. **`mascaraReais`:** o PR #421 (máscara de preço dos filtros) cria um `mascaraReais`; `cadastro/secoes/campos.tsx` tem um helper local equivalente. Unificar depois que os dois entrarem.
+3. **Pendências conhecidas:** histórico de captações aprovadas/recusadas, abrir WhatsApp dentro do LM Flow, ficha da construtora e funil de captação com IA ficaram fora. O servidor ainda substitui a lista inteira do portal (endpoint por imóvel fecharia a corrida de vez).
+
+## Custos do admin (03/10/2026)
+
+Clientes → Custos (`/admin/clientes/custos`, `src/pages/SuperAdmin/Custos/`). Spec: `LM FLOW/specs/2026-10-03-admin-registro-custos-usuarios-design.md`.
+
+- **Uma régua só pro dinheiro, em R$ por mês.** IA exata (registro de chamadas do backend, `public.ai_calls`) + Railway, Vercel e Evolution lançados à mão em US$ no botão *Lançar faturas do mês*. A conferência com a fatura fica em US$ e os fornecedores aparecem com nome de gente (Anthropic, OpenAI, ElevenLabs).
+- **Filtro por cliente:** só a IA dele; a estrutura mostra "não é dividida por cliente" e sai do total; somem o recorte por cliente e a conferência. Margem e divisão da estrutura ficam pra quando o "quanto o cliente paga" existir (decisão do Tony, 03/10). Não reabrir sem ele pedir.
+- **Trocou o filtro, a tela recarrega do zero:** durante a carga aparece o esqueleto, nunca os números do filtro anterior; resposta que chega fora de ordem é ignorada; na lista de chamadas as linhas antigas somem até chegarem as novas.
+- **Mês sem chamada:** o gráfico dia a dia vira "Nenhuma chamada de IA neste mês" e a conferência diz "Fatura ainda não lançada". Nunca erro, nunca divisão por zero.
+- **Sem a palavra token na tela:** a coluna se chama *Tamanho*.
+- **Erro nunca vira vazio** em nenhuma das três cargas (resumo, chamadas, detalhe).
+- Conteúdo da chamada só aparece no prazo (7 dias, 30 se falhou); fora dele o painel diz "Conteúdo apagado depois de N dias".
+- O endpoint antigo `/super/sales_agents/costs` sai num PR do backend depois que esta tela estiver no ar. A tela antiga (`CustoIA.tsx`) e `superAgentsService.costs()` já foram removidas.
 
 ## Meu site virou painel com barra de topo (desde 2026-10-03)
 

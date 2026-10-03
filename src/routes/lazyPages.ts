@@ -28,11 +28,15 @@ export const Labels = lazyWithRetry(() => import('@/pages/Customer/Settings/Labe
 export const CustomAttributes = lazyWithRetry(() => import('@/pages/Customer/Settings/CustomAttributes'));
 export const SiteBuilder = lazyWithRetry(() => import('@/pages/Customer/Settings/SiteBuilder').then(m => ({ default: m.SiteBuilder })));
 export const Properties = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.Properties })));
+// Cadastro de imóvel (/properties/new e /properties/:id/editar): abre a partir da lista de Imóveis.
+export const CadastroDoImovel = lazyWithRetry(() => import('@/pages/Customer/Properties/cadastro/CadastroDoImovel'));
+// Gestão de proprietários (lista + Novas captações) e a ficha de cada um.
+export const GestaoDeProprietarios = lazyWithRetry(() => import('@/pages/Customer/PropertyOwners/GestaoDeProprietarios'));
+export const FichaDoProprietario = lazyWithRetry(() => import('@/pages/Customer/PropertyOwners/FichaDoProprietario'));
 export const PropertyBooks = lazyWithRetry(() => import('@/pages/Customer/Properties').then(m => ({ default: m.PropertyBooks })));
 export const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then(m => ({ default: m.Visits })));
 export const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
 export const Contracts = lazyWithRetry(() => import('@/pages/Customer/Contracts').then(m => ({ default: m.Contracts })));
-export const PropertyCaptureRequests = lazyWithRetry(() => import('@/pages/Customer/PropertyCapture').then(m => ({ default: m.PropertyCaptureRequests })));
 export const PropertyInterests = lazyWithRetry(() => import('@/pages/Customer/PropertyInterests').then(m => ({ default: m.PropertyInterests })));
 export const AutomationsLayout = lazyWithRetry(() => import('@/pages/Customer/Automations/AutomationsLayout'));
 export const SalesAgents = lazyWithRetry(() => import('@/pages/Customer/Automations/SalesAgents/SalesAgents'));
@@ -60,11 +64,11 @@ export const routePrefetchMap: Record<string, () => Promise<unknown>> = {
   '/equipe': TeamAccess.__preload,
   '/properties': Properties.__preload,
   '/books': PropertyBooks.__preload,
+  '/property-owners': GestaoDeProprietarios.__preload,
   '/settings/portals': PortalsList.__preload,
   '/visits': Visits.__preload,
   '/proposals': Proposals.__preload,
   '/contracts': Contracts.__preload,
-  '/property-capture-requests': PropertyCaptureRequests.__preload,
   '/property-interests': PropertyInterests.__preload,
   '/channels': Channels.__preload,
   '/automations': AutomationsLayout.__preload,

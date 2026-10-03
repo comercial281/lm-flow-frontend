@@ -59,3 +59,20 @@ describe('menu em seções', () => {
     expect(screen.queryByRole('link', { name: 'Contatos' })).toBeNull();
   });
 });
+
+describe('bolinha de novidade no menu em seções', () => {
+  const comNovidade: MenuSection[] = [
+    SECOES[0],
+    { id: 'imoveis', rotulo: 'Imóveis', icone: Building2, itens: [{ name: 'Meus imóveis', href: '/properties', icon: Building2, marcador: true }] },
+    SECOES[2],
+  ];
+
+  it('seção fechada mostra a bolinha no cabeçalho; aberta, no item', () => {
+    render(<MemoryRouter initialEntries={['/dashboard']}><MenuSecoes secoes={comNovidade} /></MemoryRouter>);
+    expect(secao('Imóveis').querySelector('[data-marcador]')).toBeTruthy();
+    expect(secao('Leads').querySelector('[data-marcador]')).toBeNull();
+    fireEvent.click(secao('Imóveis'));
+    expect(secao('Imóveis').querySelector('[data-marcador]')).toBeNull();
+    expect(screen.getByRole('link', { name: /Meus imóveis/ })).toContainElement(screen.getByLabelText('Novidade'));
+  });
+});

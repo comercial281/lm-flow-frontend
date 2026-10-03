@@ -13,10 +13,10 @@ import { Seletor } from '@/components/base/Seletor';
 
 // Resultados da IA — a tela que o dono abre NA FRENTE do cliente.
 //
-// O Custo da IA responde "quanto gastei". Esta responde a pergunta que a
+// A tela Custos responde "quanto gastei". Esta responde a pergunta que a
 // imobiliária faz: "isso está funcionando?". Por isso nenhum token e nenhum dólar
 // aparecem aqui — o que convence é lead atendido, lead que respondeu e visita
-// marcada. O custo continua na tela dele, que é onde ele importa.
+// marcada. O custo continua em Clientes → Custos, que é onde ele importa.
 //
 // O painel em si é compartilhado com a aba Resultados que o cliente vê dentro do
 // CRM dele: mesma medição no servidor e mesma apresentação aqui, pra não existir

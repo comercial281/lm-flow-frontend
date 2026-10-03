@@ -57,7 +57,7 @@ describe('nove listas que viravam vazias na recusa (G3)', () => {
   });
 
   it('Captação: leitura principal recusada mostra o aviso do cargo', () => {
-    const src = read('src/pages/Customer/PropertyCapture/PropertyCaptureRequests.tsx');
+    const src = read('src/pages/Customer/PropertyOwners/NovasCaptacoes.tsx');
     expect(src).toContain('isForbiddenError');
     expect(src).toContain('<NoAccessState');
   });

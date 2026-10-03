@@ -29,6 +29,8 @@ export interface BaseStatsCardProps {
   onClick?: () => void;
   /** Componente adicional no final do card */
   extra?: React.ReactNode;
+  /** Texto de apoio embaixo do card inteiro (não disputa largura com o valor) */
+  footer?: React.ReactNode;
 }
 
 const colorVariants = {
@@ -84,6 +86,7 @@ export default function BaseStatsCard({
   valueColor,
   onClick,
   extra,
+  footer,
 }: BaseStatsCardProps) {
   // Não renderizar se show for false
   if (!show) return null;
@@ -178,6 +181,7 @@ export default function BaseStatsCard({
           </div>
         )}
       </div>
+      {footer && <div className="mt-2">{footer}</div>}
     </div>
   );
 }
