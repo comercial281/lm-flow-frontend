@@ -38,6 +38,10 @@ export interface PropertyCaptureRequest {
 const BASE = '/property_capture_requests';
 
 export const propertyCaptureRequestsService = {
+  /**
+   * Filtros além de `status`: `created_after` (ISO 8601, só captações criadas
+   * depois) e `pending` (true = só as que ainda aguardam decisão).
+   */
   async list(params: Record<string, string | boolean | undefined> = {}): Promise<{ data: PropertyCaptureRequest[]; meta: { total: number } }> {
     const res = await api.get(BASE, { params });
     return res.data as { data: PropertyCaptureRequest[]; meta: { total: number } };
