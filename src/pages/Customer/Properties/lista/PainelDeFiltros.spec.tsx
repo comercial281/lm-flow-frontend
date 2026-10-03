@@ -38,11 +38,28 @@ describe('PainelDeFiltros: preço', () => {
     fireEvent.change(campo, { target: { value: '3' } });
     fireEvent.change(campo, { target: { value: '30' } });
     fireEvent.change(campo, { target: { value: '300.000' } });
-    expect(campo).toHaveValue('300000');
+    // Mostra com máscara de reais; o filtro continua só com os dígitos.
+    expect(campo).toHaveValue('R$ 300.000');
     expect(aoMudar).not.toHaveBeenCalled();
     vi.advanceTimersByTime(ATRASO_DO_PRECO);
     expect(aoMudar).toHaveBeenCalledTimes(1);
     expect(aoMudar).toHaveBeenCalledWith({ ...FILTROS_VAZIOS.resale, precoMin: '300000' });
+  });
+
+  it('Limpar filtros logo depois de digitar não traz o preço de volta', () => {
+    vi.useFakeTimers();
+    const aoMudar = vi.fn();
+    const { rerender } = render(<PainelDeFiltros kind="resale" filtros={{ ...FILTROS_VAZIOS.resale, precoMin: '100000' }} facetas={facetas}
+      aoMudar={aoMudar} aoLimpar={vi.fn()} aoRecolher={vi.fn()} />);
+    const campo = screen.getByLabelText('Preço de');
+    expect(campo).toHaveValue('R$ 100.000');
+    fireEvent.change(campo, { target: { value: 'R$ 100.0005' } });
+    // Antes da pausa, o filtro é limpo por fora.
+    rerender(<PainelDeFiltros kind="resale" filtros={FILTROS_VAZIOS.resale} facetas={facetas}
+      aoMudar={aoMudar} aoLimpar={vi.fn()} aoRecolher={vi.fn()} />);
+    vi.advanceTimersByTime(ATRASO_DO_PRECO);
+    expect(aoMudar).not.toHaveBeenCalled();
+    expect(campo).toHaveValue('');
   });
 
   it('pílulas ficam num grupo com o nome do campo', () => {
