@@ -17,7 +17,7 @@ import type { AutomationResources } from '@/pages/Customer/Settings/LeadAutomati
 import type { FlowAutomationNode } from '@/types/flowAutomations';
 
 const resources: AutomationResources = {
-  labels: [], sequences: [], users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
+  labels: [], sequences: [], followupFlows: [], users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
   adOrigins: [], formOrigins: [], messageFunnels: [], evolutionInstances: [],
   reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
 };

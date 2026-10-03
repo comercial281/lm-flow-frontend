@@ -63,3 +63,22 @@ describe('pergunta ao enviar', () => {
     expect(assinaturaDasLinhas([a])).not.toBe(assinaturaDasLinhas([a, b]));
   });
 });
+
+// Sprint 3 (03/10/2026): o follow-up virou fluxo do construtor. Na faixa ele
+// aparece como "Follow-up "X"", e o Parar continua sendo o da instância.
+describe('fluxo de follow-up na faixa', () => {
+  it('kind followup vira "Follow-up "X"", e o comum continua "Fluxo"', () => {
+    const fu = linhaDoFluxo(fluxo({ kind: 'followup', flow_name: 'Follow-up longo', phase: 'waiting_reply', until: epoch(new Date(2026, 9, 3, 14, 32)) }), agora);
+    expect(fu.texto).toBe('Follow-up "Follow-up longo" · aguardando resposta até 14:32');
+    expect(fu.tipo).toBe('followup');
+    // O id da instância vai junto: é por ele que a faixa para o fluxo.
+    expect(fu.id).toBe('i1');
+    expect(linhaDoFluxo(fluxo({ kind: 'automation' }), agora).texto).toBe('Fluxo "Primeiro contato" · em andamento');
+    expect(linhaDoFluxo(fluxo({ kind: undefined }), agora).tipo).toBe('fluxo');
+  });
+
+  it('o botão da pergunta fala de follow-up', async () => {
+    const { rotuloDeParar } = await import('./automacaoRodando');
+    expect(rotuloDeParar([linhaDoFluxo(fluxo({ kind: 'followup' }), agora)])).toBe('Enviar e parar o follow-up');
+  });
+});

@@ -33,6 +33,7 @@ import {
   TRIGGER_LABELS,
   ACTION_TYPE_LABELS,
   RETIRED_ACTION_TYPES,
+  LEGACY_ACTION_TYPES,
 } from '@/services/leadAutomation/leadAutomationService';
 import {
   useAutomationResources,
@@ -60,11 +61,14 @@ const TRIGGERS = Object.entries(TRIGGER_LABELS).map(([value, label]) => ({ value
 // "Aguardar (delay)" saiu da lista (Automações · sprint 1, 02/10/2026): o
 // servidor nunca esperou nessa etapa. Regra que já tem a ação continua com ela
 // (ver actionTypesFor), e o cartão avisa que ela não espera.
+// "Iniciar sequência de follow-up" (funil antigo) também sai da lista: a ação
+// nova é "Iniciar follow-up", que escolhe um fluxo de follow-up (sprint 3).
+const naoOferecida = (value: string) => RETIRED_ACTION_TYPES.has(value) || LEGACY_ACTION_TYPES.has(value);
 const ACTION_TYPES = Object.entries(ACTION_TYPE_LABELS)
-  .filter(([value]) => !RETIRED_ACTION_TYPES.has(value))
+  .filter(([value]) => !naoOferecida(value))
   .map(([value, label]) => ({ value, label }));
 const actionTypesFor = (current: string) =>
-  RETIRED_ACTION_TYPES.has(current) ? [...ACTION_TYPES, { value: current, label: ACTION_TYPE_LABELS[current] ?? current }] : ACTION_TYPES;
+  naoOferecida(current) ? [...ACTION_TYPES, { value: current, label: ACTION_TYPE_LABELS[current] ?? current }] : ACTION_TYPES;
 
 // Explica quando cada gatilho dispara — tira a confusão entre "todo lead" e "lead de anúncio".
 const TRIGGER_HINTS: Record<string, string> = {

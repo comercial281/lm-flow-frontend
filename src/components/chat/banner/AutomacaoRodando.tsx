@@ -102,10 +102,11 @@ export function useAutomacaoRodando({ conversationId, atualizarQuando }: Opcoes)
 
   const pararLinha = useCallback(
     async (linha: LinhaAutomatica) => {
-      const r =
-        linha.tipo === 'fluxo'
-          ? await flowAutomationInstancesService.stop(linha.id)
-          : await leadFollowupService.stop({ conversationId });
+      // Com id = instância do construtor (automação ou follow-up novo);
+      // sem id = a fila do follow-up antigo, que para pelo lead.
+      const r = linha.id
+        ? await flowAutomationInstancesService.stop(linha.id)
+        : await leadFollowupService.stop({ conversationId });
       return r.message;
     },
     [conversationId],

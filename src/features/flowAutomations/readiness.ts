@@ -9,6 +9,8 @@ import type { FlowAutomationNode } from '@/types/flowAutomations';
 import { sendFromOf, sendFromProblem } from '@/features/numbers/sendFrom';
 import { conditionProblem } from './conditions';
 import { leadActionProblem } from './leadAction';
+import { moveStageProblem } from './moveStage';
+import { progressProblem } from './progress';
 import { blockLabel, isVisibleNode } from './palette';
 import { triggerProblem, type FlowTrigger } from './trigger';
 
@@ -20,12 +22,13 @@ export function nodeProblem(node: BlockLike): string | null {
   const config = node.config ?? {};
   switch (node.kind) {
     case 'send_whatsapp':
-      return !String(config.text ?? '').trim() ? 'Escreva a mensagem.' : sendFromProblem(sendFromOf(config));
+      if (!String(config.text ?? '').trim()) return 'Escreva a mensagem.';
+      return sendFromProblem(sendFromOf(config)) ?? progressProblem(config);
     case 'condition':
     case 'filter_label':
       return conditionProblem(config);
     case 'move_stage':
-      return config.stage_id ? null : 'Escolha a etapa.';
+      return moveStageProblem(config);
     case 'add_label':
     case 'remove_label':
       return Array.isArray(config.labels) && config.labels.length > 0 ? null : 'Escolha a etiqueta.';

@@ -21,6 +21,16 @@ import {
   withLabel,
 } from '@/features/flowAutomations/conditions';
 import { formAnswerOf } from '@/features/flowAutomations/formAnswer';
+import {
+  BUSINESS_HOURS_LABEL,
+  BUSINESS_HOURS_WAIT_HELP,
+  waitModeOf,
+  waitUsesBusinessHours,
+  withWaitBusinessHours,
+} from '@/features/flowAutomations/businessHours';
+import { cleanProgressPrefix, progressOf, progressTagName, withProgress } from '@/features/flowAutomations/progress';
+import { RECOVERED_EFFECTS } from '@/features/flowAutomations/recovered';
+import { moveStageModeOf, stageNameOf, withMoveStageMode, withStageName } from '@/features/flowAutomations/moveStage';
 import { FormAnswerPicker } from './FormAnswerPicker';
 
 interface Props {
@@ -39,9 +49,10 @@ const FLOW_MESSAGE_VARS: { label: string; token: string }[] = [
   { label: 'E-mail', token: '{{email}}' },
 ];
 
+// "Por um tempo, saindo só em horário comercial" (o modo `schedule`) virou a
+// caixa "Só em horário comercial" do modo Por um tempo (sprint 3).
 const WAIT_MODES = [
   { value: 'interval', label: 'Por um tempo' },
-  { value: 'schedule', label: 'Por um tempo, saindo só em horário comercial' },
   { value: 'date', label: 'Até uma data e hora' },
 ];
 
@@ -80,6 +91,71 @@ function DurationField({ minutes, onChange, label }: { minutes: unknown; onChang
           <option key={u.value} value={u.value}>{u.label}</option>
         ))}
       </Seletor>
+    </div>
+  );
+}
+
+function BusinessHoursCheck({ checked, onChange }: { checked: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <div className="space-y-1">
+      <label className="flex items-center gap-2 text-sm cursor-pointer">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={e => onChange(e.target.checked)}
+          className="h-4 w-4 accent-primary"
+        />
+        {BUSINESS_HOURS_LABEL}
+      </label>
+      {checked && <p className="pl-6 text-xs text-muted-foreground">{BUSINESS_HOURS_WAIT_HELP}</p>}
+    </div>
+  );
+}
+
+function ProgressFields({ config, onChange }: { config: FlowNodeConfig; onChange: (next: FlowNodeConfig) => void }) {
+  const mark = progressOf(config);
+  return (
+    <div className="space-y-2 rounded-md border border-border p-3">
+      <label className="flex items-center gap-2 text-sm cursor-pointer">
+        <input
+          type="checkbox"
+          checked={mark.on}
+          onChange={e => onChange(withProgress(config, { ...mark, on: e.target.checked }))}
+          className="h-4 w-4 accent-primary"
+        />
+        Marcar progresso
+      </label>
+      {mark.on && (
+        <div className="pl-6 space-y-2">
+          <div className="flex items-end gap-2">
+            <div className="flex-1 space-y-1">
+              <Label className="text-xs">Nome da etiqueta</Label>
+              <Input
+                value={mark.prefix}
+                onChange={e => onChange(withProgress(config, { ...mark, prefix: cleanProgressPrefix(e.target.value) }))}
+                placeholder="follow-up-longo"
+                aria-label="Nome da etiqueta de progresso"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Mensagem nº</Label>
+              <Input
+                type="number"
+                min={1}
+                className="w-20"
+                value={mark.step}
+                onChange={e => onChange(withProgress(config, { ...mark, step: Number(e.target.value) || 1 }))}
+                aria-label="Número da mensagem"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Quando esta mensagem sai, o lead ganha a etiqueta{' '}
+            <strong>{progressTagName(mark.prefix || 'nome', mark.step)}</strong> e perde a da mensagem anterior. É ela que
+            faz o lead que volta ao fluxo continuar de onde parou.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -259,6 +335,7 @@ export function FlowNodeConfigModal({ node, resources, onClose, onSave }: Props)
               value={envio}
               onChange={v => setConfig(c => applySendFrom(c, v))}
             />
+            <ProgressFields config={config} onChange={setConfig} />
             <p className="text-xs text-muted-foreground">A mensagem sai marcada como automática, igual o Follow-up.</p>
           </>
         );
@@ -272,20 +349,69 @@ export function FlowNodeConfigModal({ node, resources, onClose, onSave }: Props)
             resources={resources}
           />
         );
-      case 'move_stage':
+      case 'move_stage': {
+        const stageMode = moveStageModeOf(config);
         return (
-          <div className="space-y-1">
-            <Label className="text-xs">Mover para a etapa</Label>
-            <StagePicker value={String(config.stage_id ?? '')} onPick={id => set('stage_id', id)} resources={resources} />
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="flow-move-stage-mode"
+                checked={stageMode === 'stage'}
+                onChange={() => setConfig(c => withMoveStageMode(c, 'stage'))}
+                className="h-4 w-4 accent-primary"
+              />
+              Uma etapa específica
+            </label>
+            {stageMode === 'stage' && (
+              <div className="pl-6">
+                <StagePicker value={String(config.stage_id ?? '')} onPick={id => set('stage_id', id)} resources={resources} />
+              </div>
+            )}
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="flow-move-stage-mode"
+                checked={stageMode === 'name'}
+                onChange={() => setConfig(c => withMoveStageMode(c, 'name'))}
+                className="h-4 w-4 accent-primary"
+              />
+              Coluna com este nome no funil do card
+            </label>
+            {stageMode === 'name' && (
+              <div className="pl-6 space-y-1">
+                <Input
+                  value={stageNameOf(config)}
+                  onChange={e => setConfig(c => withStageName(c, e.target.value))}
+                  placeholder="Em atendimento"
+                  aria-label="Nome da coluna"
+                />
+                <p className="text-xs text-muted-foreground">
+                  O card vai pra coluna com esse nome no funil em que ele está (sem ligar pra acento e maiúscula). Se o
+                  funil do card não tiver essa coluna, ele não sai do lugar.
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      }
+      case 'followup_recovered':
+        return (
+          <div className="space-y-2 text-sm">
+            <p>Faz o que o follow-up faz quando o lead responde:</p>
+            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+              {RECOVERED_EFFECTS.map(effect => <li key={effect}>{effect}</li>)}
+            </ul>
+            <p className="text-xs text-muted-foreground">Use no caminho Respondeu do Aguardar resposta.</p>
           </div>
         );
       case 'wait': {
-        const mode = (config.mode as string) || 'interval';
+        const mode = waitModeOf(config);
         return (
           <>
             <div className="space-y-1">
               <Label className="text-xs">Esperar</Label>
-              <Seletor value={mode} onChange={e => set('mode', e.target.value)} className={fieldClass} aria-label="Como esperar">
+              <Seletor value={mode} onChange={e => setConfig(c => ({ ...c, mode: e.target.value }))} className={fieldClass} aria-label="Como esperar">
                 {WAIT_MODES.map(m => (
                   <option key={m.value} value={m.value}>{m.label}</option>
                 ))}
@@ -305,11 +431,10 @@ export function FlowNodeConfigModal({ node, resources, onClose, onSave }: Props)
               <div className="space-y-1">
                 <Label className="text-xs">Quanto tempo</Label>
                 <DurationField minutes={config.minutes ?? 1440} onChange={m => set('minutes', m)} label="Quanto tempo" />
-                {mode === 'schedule' && (
-                  <p className="text-xs text-muted-foreground">
-                    Se o tempo acabar fora do horário comercial (segunda a sexta, das 8h às 18h), o fluxo segue no próximo horário comercial.
-                  </p>
-                )}
+                <BusinessHoursCheck
+                  checked={waitUsesBusinessHours(config)}
+                  onChange={on => setConfig(c => withWaitBusinessHours(c, on))}
+                />
               </div>
             )}
           </>
@@ -331,8 +456,12 @@ export function FlowNodeConfigModal({ node, resources, onClose, onSave }: Props)
                 Esperar até
               </label>
               {!indefinite && (
-                <div className="pl-6">
+                <div className="pl-6 space-y-2">
                   <DurationField minutes={config.minutes ?? 1440} onChange={m => set('minutes', m)} label="Prazo" />
+                  <BusinessHoursCheck
+                    checked={waitUsesBusinessHours(config)}
+                    onChange={on => setConfig(c => withWaitBusinessHours(c, on))}
+                  />
                 </div>
               )}
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -375,13 +504,18 @@ export function FlowNodeConfigModal({ node, resources, onClose, onSave }: Props)
   }
 
   const save = () => {
+    // "Mover de etapa" com o `stage_slug` dos modelos antigos: salvar grava
+    // como `stage_name`, que é o que o motor lê.
+    const finalConfig = activeNode.kind === 'move_stage' && moveStageModeOf(config) === 'name'
+      ? withStageName(config, stageNameOf(config))
+      : config;
     // Mesma régua do cartão e da chave de ligar (readiness.ts).
-    const issue = nodeProblem({ kind: activeNode.kind, config });
+    const issue = nodeProblem({ kind: activeNode.kind, config: finalConfig });
     if (issue) {
       setProblem(issue);
       return;
     }
-    onSave(activeNode.id, { label, config });
+    onSave(activeNode.id, { label, config: finalConfig });
   };
 
   return (

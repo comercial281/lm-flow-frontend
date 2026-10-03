@@ -17,8 +17,8 @@ describe('paleta da sprint 2', () => {
         'Mandar figurinha', 'Mandar resposta rápida', 'Disparar funil de mensagens',
       ]],
       ['Lead', [
-        'Aplicar etiqueta', 'Tirar etiqueta', 'Mover de etapa', 'Definir corretor',
-        'Distribuir pela roleta', 'Criar tarefa', 'Iniciar follow-up',
+        'Aplicar etiqueta', 'Tirar etiqueta', 'Mover de etapa', 'Marcar como recuperado pelo follow-up',
+        'Definir corretor', 'Distribuir pela roleta', 'Criar tarefa', 'Iniciar follow-up',
       ]],
       ['Avisos', ['Avisar no grupo', 'Avisar pessoa', 'Avisar corretor', 'Avisar gestor', 'Notificação no celular']],
       ['Controle', ['Esperar', 'Aguardar resposta', 'Se / senão', 'Só continuar se']],
@@ -36,11 +36,14 @@ describe('paleta da sprint 2', () => {
     expect(byLabel('Mover de etapa').kind).toBe('move_stage');
   });
 
-  it('toda ação das Automações tem bloco, menos "Aguardar (delay)"', () => {
+  // Sprint 3: "Iniciar follow-up" é o `start_followup_flow` (escolhe um fluxo
+  // de follow-up); o do funil antigo não é mais oferecido.
+  it('toda ação das Automações tem bloco, menos "Aguardar (delay)" e o follow-up antigo', () => {
     const actions = new Set(paletteItems().filter(i => i.kind === 'lead_action').map(i => i.config.action_type));
     const comBlocoProprio = ['send_whatsapp_message', 'add_label', 'remove_label', 'move_pipeline_stage'];
     const faltando = Object.keys(ACTION_TYPE_LABELS).filter(t => !actions.has(t) && !comBlocoProprio.includes(t));
-    expect(faltando).toEqual(['wait']);
+    expect(faltando).toEqual(['start_followup_sequence', 'wait']);
+    expect(paletteItems().find(i => i.label === 'Iniciar follow-up')?.config).toEqual({ action_type: 'start_followup_flow', params: {} });
   });
 
   it('o botão da ação cria o bloco lead_action com { action_type, params }', () => {

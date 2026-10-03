@@ -87,7 +87,8 @@ import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { leadAdsFormsService } from '@/services/leadAds/leadAdsFormsService';
 import type { LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
 import { formIdsDropped, formOptions, formTriggerNotice, toggleForm } from '@/features/salesAgents/formTrigger';
-import { followupSequencesService } from '@/services/followupSequences/followupSequencesService';
+import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
+import { followupFlowOptions, legacySequenceNotice, type FollowupFlowOption } from '@/features/flowAutomations/followupOptions';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { usePergunta } from '@/hooks/usePergunta';
@@ -230,6 +231,8 @@ export default function SalesAgents() {
           'followup_return_stage_id' in patch ? patch.followup_return_stage_id : selected.followup_return_stage_id,
         followup_sequence_slug:
           'followup_sequence_slug' in patch ? patch.followup_sequence_slug : selected.followup_sequence_slug,
+        // Sprint 3: o fluxo de follow-up. `in` pelo mesmo motivo (limpar manda null).
+        followup_flow_id: 'followup_flow_id' in patch ? patch.followup_flow_id : selected.followup_flow_id,
         followup_drip_enabled: patch.followup_drip_enabled ?? selected.followup_drip_enabled,
         followup_drip_min_leads: patch.followup_drip_min_leads ?? selected.followup_drip_min_leads,
         followup_drip_max_leads: patch.followup_drip_max_leads ?? selected.followup_drip_max_leads,
@@ -2854,9 +2857,9 @@ const FOLLOWUP_ACTIONS: [SalesAgentFollowupAction, string, string][] = [
   ['ai', 'A IA escreve a mensagem',
    'Personalizada com base na conversa inteira e no imóvel de interesse. É a que mais converte — e a única que consome IA a cada envio.'],
   ['pipeline', 'Mover o card para uma coluna',
-   'A IA leva o card para a coluna que você escolher e sai de cena. Quem manda a mensagem é o funil de follow-up que essa coluna dispara. Não consome IA.'],
-  ['sequence', 'Disparar um funil pronto',
-   'A IA coloca o lead no funil escolhido, sem mexer no card. Para quem não usa o quadro de funil. Não consome IA.'],
+   'A IA leva o card para a coluna que você escolher e sai de cena. Quem manda a mensagem é o follow-up que começa quando o card entra nessa coluna. Não consome IA.'],
+  ['sequence', 'Entregar pro follow-up',
+   'A IA coloca o lead no follow-up escolhido, sem mexer no card. Para quem não usa o quadro de funil. Não consome IA.'],
 ];
 
 function FollowupActionPicker({
@@ -2866,7 +2869,7 @@ function FollowupActionPicker({
   onSave: (patch: Partial<SalesAgent>) => void;
 }) {
   const [stages, setStages] = useState<StageOpt[]>([]);
-  const [funis, setFunis] = useState<{ slug: string; name: string }[]>([]);
+  const [followups, setFollowups] = useState<FollowupFlowOption[]>([]);
   const acao = agent.followup_action ?? 'ai';
   const pipeline = agent.pipeline_id ?? '';
 
@@ -2884,12 +2887,15 @@ function FollowupActionPicker({
       .catch(() => setStages([]));
   }, [acao, pipeline]);
 
+  // Sprint 3: a IA entrega pra um FLUXO de follow-up (aba Follow-up), não mais
+  // pra um funil antigo.
   useEffect(() => {
-    if (acao !== 'sequence') { setFunis([]); return; }
-    followupSequencesService.getAll()
-      .then((lista) => setFunis(lista.filter((f) => f.is_active).map((f) => ({ slug: f.slug, name: f.name }))))
-      .catch(() => setFunis([]));
+    if (acao !== 'sequence') { setFollowups([]); return; }
+    flowAutomationsService.list({ kind: 'followup' })
+      .then((lista) => setFollowups(followupFlowOptions(lista)))
+      .catch(() => setFollowups([]));
   }, [acao]);
+  const avisoFunilAntigo = legacySequenceNotice(agent);
 
   return (
     <div className="space-y-2">
@@ -2942,9 +2948,9 @@ function FollowupActionPicker({
                 </Seletor>
               </div>
               <p className="text-xs text-muted-foreground">
-                Quem manda a mensagem é o funil que essa coluna dispara — configure a entrada
-                <em> Card entrou numa coluna</em> em Automações → Follow-up, senão o card muda de
-                lugar e ninguém fala com o lead. A IA só empurra o card para a frente: card que o
+                Quem manda a mensagem é o follow-up que começa nessa coluna — em Automações →
+                Follow-up, ele precisa ter o gatilho <em>Etapa alterada</em> pra essa coluna, senão o
+                card muda de lugar e ninguém fala com o lead. A IA só empurra o card para a frente: card que o
                 corretor já levou para uma coluna adiantada ela não puxa de volta.
               </p>
             </>
@@ -2955,19 +2961,25 @@ function FollowupActionPicker({
       {acao === 'sequence' && (
         <div className="mt-2 space-y-2 pl-7">
           <div className="flex items-center gap-3">
-            <div className="flex-1 text-sm">Qual funil</div>
+            <div className="flex-1 text-sm">Qual follow-up</div>
             <Seletor
-              value={agent.followup_sequence_slug ?? ''}
-              onChange={(e) => onSave({ followup_sequence_slug: e.target.value || null })}
+              value={agent.followup_flow_id ?? ''}
+              onChange={(e) => onSave({ followup_flow_id: e.target.value || null })}
               className="w-52 shrink-0 rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
+              aria-label="Qual follow-up"
             >
-              <option value="">— escolha o funil —</option>
-              {funis.map((f) => <option key={f.slug} value={f.slug}>{f.name}</option>)}
+              <option value="">— escolha o follow-up —</option>
+              {agent.followup_flow_id && !followups.some((f) => f.value === agent.followup_flow_id) && (
+                <option value={agent.followup_flow_id}>Follow-up que não existe mais</option>
+              )}
+              {followups.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
             </Seletor>
           </div>
+          {avisoFunilAntigo && <p className="text-xs text-amber-600">{avisoFunilAntigo}</p>}
           <p className="text-xs text-muted-foreground">
-            Só aparecem os funis ativos. O card não é movido neste modo — se você usa o quadro,
-            prefira a opção de cima, que também deixa o lead sumido visível numa coluna.
+            Os follow-ups ficam em Automações → Follow-up. Desligado, ele não recebe o lead. O card
+            não é movido neste modo — se você usa o quadro, prefira a opção de cima, que também
+            deixa o lead sumido visível numa coluna.
           </p>
         </div>
       )}

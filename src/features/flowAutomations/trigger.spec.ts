@@ -11,6 +11,11 @@ import {
   triggerProblem,
   withPipelineFilter,
   withTriggerCondition,
+  addAlternative,
+  updateAlternative,
+  removeAlternative,
+  flowTriggerSummary,
+  triggerEvents,
   type FlowTrigger,
 } from './trigger';
 
@@ -51,36 +56,38 @@ describe('o gatilho vai pro servidor como { event, conditions }', () => {
         { field: 'form_id', operator: 'in', value: ['f1', 'f2'] },
         { field: 'pipeline_id', operator: 'eq', value: 'p1' },
       ],
+      alternatives: [],
     });
   });
 
   it('nada solto (stage_id, label…) e condição vazia não vai', () => {
     const out = serializeTrigger({ event: 'lead.tag_added', conditions: [{ field: 'label', operator: 'eq', value: '' }] });
-    expect(out).toEqual({ event: 'lead.tag_added', conditions: [] });
-    expect(Object.keys(out)).toEqual(['event', 'conditions']);
+    expect(out).toEqual({ event: 'lead.tag_added', conditions: [], alternatives: [] });
+    // `alternatives` vai sempre (vazia apaga o último "Ou quando" tirado na tela).
+    expect(Object.keys(out)).toEqual(['event', 'conditions', 'alternatives']);
   });
 });
 
 describe('leitura', () => {
   it('o formato novo passa como veio', () => {
     expect(normalizeTrigger({ event: 'lead.stage_changed', conditions: [{ field: 'to_stage_id', operator: 'eq', value: 's1' }] }))
-      .toEqual({ event: 'lead.stage_changed', conditions: [{ field: 'to_stage_id', operator: 'eq', value: 's1' }] });
+      .toEqual({ event: 'lead.stage_changed', conditions: [{ field: 'to_stage_id', operator: 'eq', value: 's1' }], alternatives: [] });
   });
 
   it('o formato antigo é traduzido', () => {
-    expect(normalizeTrigger({ event: 'contact_created' })).toEqual({ event: 'lead.created', conditions: [] });
+    expect(normalizeTrigger({ event: 'contact_created' })).toEqual({ event: 'lead.created', conditions: [], alternatives: [] });
     expect(normalizeTrigger({ event: 'stage_changed', stage_id: 's1', pipeline_id: 'p1' }))
-      .toEqual({ event: 'lead.stage_changed', conditions: [{ field: 'to_stage_id', operator: 'eq', value: 's1' }] });
+      .toEqual({ event: 'lead.stage_changed', conditions: [{ field: 'to_stage_id', operator: 'eq', value: 's1' }], alternatives: [] });
     expect(normalizeTrigger({ event: 'tag_added', label: 'quente' }).conditions)
       .toEqual([{ field: 'label', operator: 'eq', value: 'quente' }]);
     expect(normalizeTrigger({ event: 'keyword', keyword: 'visita' }))
-      .toEqual({ event: 'lead.message_received', conditions: [{ field: 'content', operator: 'contains', value: 'visita' }] });
+      .toMatchObject({ event: 'lead.message_received', conditions: [{ field: 'content', operator: 'contains', value: 'visita' }] });
     expect(normalizeTrigger({ event: 'lead_ads', form_id: 'f9' }))
-      .toEqual({ event: 'lead.created', conditions: [{ field: 'form_id', operator: 'in', value: ['f9'] }] });
+      .toMatchObject({ event: 'lead.created', conditions: [{ field: 'form_id', operator: 'in', value: ['f9'] }] });
   });
 
   it('vazio vira "Escolha o gatilho"', () => {
-    expect(normalizeTrigger(null)).toEqual({ event: '', conditions: [] });
+    expect(normalizeTrigger(null)).toEqual({ event: '', conditions: [], alternatives: [] });
     expect(flowTriggerLabel('')).toBe('Escolha o gatilho');
   });
 });
@@ -116,5 +123,75 @@ describe('edição', () => {
     expect(triggerProblem({ event: 'lead.tag_added', conditions: [{ field: 'label', operator: 'eq', value: 'quente' }] })).toBeNull();
     expect(triggerProblem({ event: 'lead.stage_changed', conditions: [{ field: 'pipeline_id', operator: 'eq', value: 'p' }] })).toBeTruthy();
     expect(triggerProblem({ event: 'lead.created', conditions: [] })).toBeNull();
+  });
+});
+
+// Sprint 3 (03/10/2026): "+ Ou quando…". O fluxo começa quando QUALQUER um
+// acontece; cada alternativa tem o próprio filtro e o próprio funil.
+describe('mais de um gatilho ("Ou quando")', () => {
+  const principal: FlowTrigger = {
+    event: 'lead.stage_changed',
+    conditions: [{ field: 'to_stage_id', operator: 'eq', value: 's1' }],
+  };
+
+  it('vai pro servidor como alternatives: [{ event, conditions }]', () => {
+    let t = addAlternative(principal);
+    t = updateAlternative(t, 0, { event: 'lead.tag_added', conditions: [{ field: 'label', operator: 'eq', value: 'follow-up' }] });
+    t = addAlternative(t);
+    t = updateAlternative(t, 1, { event: 'lead.visit_completed', conditions: [{ field: 'pipeline_id', operator: 'eq', value: '' }] });
+    expect(serializeTrigger(t)).toEqual({
+      event: 'lead.stage_changed',
+      conditions: [{ field: 'to_stage_id', operator: 'eq', value: 's1' }],
+      alternatives: [
+        { event: 'lead.tag_added', conditions: [{ field: 'label', operator: 'eq', value: 'follow-up' }] },
+        // Condição vazia não vai, igual no principal.
+        { event: 'lead.visit_completed', conditions: [] },
+      ],
+    });
+  });
+
+  it('lê as alternativas do servidor (e traduz nome antigo de evento)', () => {
+    const t = normalizeTrigger({
+      event: 'lead.stage_changed',
+      conditions: [],
+      alternatives: [{ event: 'tag_added', conditions: [{ field: 'label', operator: 'eq', value: 'follow-up' }] }, { event: 'lead.visit_completed' }],
+    });
+    expect(t.alternatives).toEqual([
+      { event: 'lead.tag_added', conditions: [{ field: 'label', operator: 'eq', value: 'follow-up' }] },
+      { event: 'lead.visit_completed', conditions: [] },
+    ]);
+  });
+
+  it('ida e volta sem perder nada', () => {
+    const t: FlowTrigger = {
+      ...principal,
+      alternatives: [{ event: 'lead.tag_added', conditions: [{ field: 'label', operator: 'eq', value: 'follow-up' }] }],
+    };
+    expect(normalizeTrigger(serializeTrigger(t))).toEqual(t);
+  });
+
+  it('tirar a alternativa e trocar o principal não mexem nas outras', () => {
+    const t: FlowTrigger = {
+      ...principal,
+      alternatives: [{ event: 'lead.visit_completed', conditions: [] }, { event: 'lead.created', conditions: [] }],
+    };
+    expect(removeAlternative(t, 0).alternatives).toEqual([{ event: 'lead.created', conditions: [] }]);
+    expect(changeTriggerEvent(t, 'lead.created').alternatives).toEqual(t.alternatives);
+    expect(withTriggerCondition(t, null).alternatives).toEqual(t.alternatives);
+  });
+
+  it('o resumo junta os nomes com "ou"', () => {
+    const t: FlowTrigger = { ...principal, alternatives: [{ event: 'lead.tag_added', conditions: [] }, { event: 'lead.visit_completed', conditions: [] }] };
+    expect(flowTriggerSummary(t)).toBe('Etapa alterada ou Etiqueta adicionada ou Visita realizada');
+    expect(triggerEvents(t)).toEqual(['lead.stage_changed', 'lead.tag_added', 'lead.visit_completed']);
+  });
+
+  it('cada alternativa é conferida como o principal', () => {
+    const vazia = addAlternative(principal);
+    expect(triggerProblem(vazia)).toBe('No "Ou quando": escolha o gatilho.');
+    const semEtiqueta = updateAlternative(vazia, 0, { event: 'lead.tag_added', conditions: [] });
+    expect(triggerProblem(semEtiqueta)).toBe('No "Ou quando": escolha qual etiqueta dispara o fluxo.');
+    const pronta = updateAlternative(vazia, 0, { event: 'lead.tag_added', conditions: [{ field: 'label', operator: 'eq', value: 'follow-up' }] });
+    expect(triggerProblem(pronta)).toBeNull();
   });
 });

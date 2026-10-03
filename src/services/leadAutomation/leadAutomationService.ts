@@ -260,7 +260,8 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
   send_document:           'Enviar documento',
   send_sticker:            'Enviar figurinha',
   send_message_funnel:     'Disparar funil de mensagens',
-  start_followup_sequence: 'Iniciar sequência de follow-up',
+  start_followup_sequence: 'Iniciar sequência de follow-up (formato antigo)',
+  start_followup_flow:     'Iniciar follow-up',
   assign_broker:           'Atribuir corretor',
   assign_via_roleta:       'Distribuir via roleta',
   add_label:               'Adicionar etiqueta',
@@ -281,6 +282,13 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
 // hora); quem precisa esperar usa o construtor de fluxos. Regra antiga que já
 // tem a ação continua igual, com o aviso no cartão.
 export const RETIRED_ACTION_TYPES = new Set(['wait']);
+
+// Ações que continuam valendo, mas não são oferecidas pra regra ou bloco novo.
+// "Iniciar sequência de follow-up" escolhia um funil antigo; desde a sprint 3
+// (03/10/2026) o follow-up é um fluxo e a ação é "Iniciar follow-up"
+// (`start_followup_flow`). A regra antiga continua igual: o servidor manda o
+// funil convertido pro fluxo novo.
+export const LEGACY_ACTION_TYPES = new Set(['start_followup_sequence']);
 export const WAIT_ACTION_NOTICE = 'Esta etapa não espera: as ações seguintes saem na hora';
 
 // Params obrigatórios por action.type — chaves exatas do backend (LeadAutomation::Executor).
@@ -295,6 +303,7 @@ export const ACTION_REQUIRED_PARAMS: Record<string, string[]> = {
   send_sticker:            ['media_url'],
   send_message_funnel:     ['funnel_id'],
   start_followup_sequence: ['sequence_slug'],
+  start_followup_flow:     ['flow_automation_id'],
   assign_broker:           ['user_id'],
   add_label:               ['label_id'],
   remove_label:            ['label_id'],

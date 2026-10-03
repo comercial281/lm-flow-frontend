@@ -35,7 +35,8 @@ export const LEAD_ACTION_BLOCK_LABELS: Record<string, string> = {
   assign_broker: 'Definir corretor',
   assign_via_roleta: 'Distribuir pela roleta',
   create_task: 'Criar tarefa',
-  start_followup_sequence: 'Iniciar follow-up',
+  start_followup_sequence: 'Iniciar follow-up (formato antigo)',
+  start_followup_flow: 'Iniciar follow-up',
   notify_group: 'Avisar no grupo',
   notify_user: 'Avisar pessoa',
   notify_broker: 'Avisar corretor',
@@ -60,6 +61,7 @@ export const LEAD_ACTION_GROUP: Record<string, FlowNodeGroup> = {
   assign_via_roleta: 'contact',
   create_task: 'contact',
   start_followup_sequence: 'contact',
+  start_followup_flow: 'contact',
   notify_group: 'notify',
   notify_user: 'notify',
   notify_broker: 'notify',
@@ -74,11 +76,15 @@ export const LEAD_ACTION_GROUP: Record<string, FlowNodeGroup> = {
  * título, várias de uma vez) e Mover de etapa (`move_stage`). Um fluxo
  * convertido de regra pode trazer essas ações como `lead_action`: o canvas abre
  * e edita normalmente, elas só não são oferecidas duas vezes na paleta.
+ *
+ * "Iniciar follow-up" é `start_followup_flow` (escolhe um fluxo de follow-up,
+ * sprint 3). O `start_followup_sequence` (funil antigo) abre e edita, mas não
+ * é mais oferecido.
  */
 export const PALETTE_LEAD_ACTIONS: string[] = [
   'send_audio', 'send_image', 'send_video', 'send_document', 'send_sticker',
   'send_quick_reply', 'send_message_funnel',
-  'assign_broker', 'assign_via_roleta', 'create_task', 'start_followup_sequence',
+  'assign_broker', 'assign_via_roleta', 'create_task', 'start_followup_flow',
   'notify_group', 'notify_user', 'notify_broker', 'notify_gestor', 'notify_push',
 ];
 
@@ -122,6 +128,7 @@ const PARAM_NAMES: Record<string, string> = {
   media_url: 'o endereço do arquivo',
   funnel_id: 'o funil de mensagens',
   sequence_slug: 'a sequência de follow-up',
+  flow_automation_id: 'o follow-up',
   user_id: 'a pessoa',
   label_id: 'a etiqueta',
   stage_id: 'a etapa',

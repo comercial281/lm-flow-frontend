@@ -12,9 +12,19 @@
 import type { FlowAutomationTrigger, FlowTriggerCondition, FlowTriggerEvent } from '@/types/flowAutomations';
 import { TRIGGER_LABELS } from '@/services/leadAutomation/leadAutomationService';
 
-export interface FlowTrigger {
+/** Um gatilho: o evento e as condições dele. */
+export interface FlowTriggerPart {
   event: FlowTriggerEvent | '';
   conditions: FlowTriggerCondition[];
+}
+
+/**
+ * O gatilho do fluxo: o principal e, desde a sprint 3, os outros ("+ Ou
+ * quando…"). O fluxo começa quando QUALQUER um deles acontece; cada um tem o
+ * próprio filtro e o próprio funil, editados com o mesmo editor.
+ */
+export interface FlowTrigger extends FlowTriggerPart {
+  alternatives?: FlowTriggerPart[];
 }
 
 export interface FlowTriggerGroup {
@@ -83,11 +93,25 @@ function isCondition(c: unknown): c is FlowTriggerCondition {
   return !!c && typeof c === 'object' && typeof (c as FlowTriggerCondition).field === 'string';
 }
 
+function normalizeAlternatives(raw: unknown): FlowTriggerPart[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap(item => {
+    if (!item || typeof item !== 'object') return [];
+    const alt = item as { event?: unknown; conditions?: unknown };
+    const event = str(alt.event);
+    return [{
+      event: (LEGACY_EVENTS[event] ?? event) as FlowTriggerPart['event'],
+      conditions: Array.isArray(alt.conditions) ? alt.conditions.filter(isCondition) : [],
+    }];
+  });
+}
+
 export function normalizeTrigger(raw: FlowAutomationTrigger | null | undefined): FlowTrigger {
-  if (!raw || typeof raw !== 'object') return { event: '', conditions: [] };
+  if (!raw || typeof raw !== 'object') return { event: '', conditions: [], alternatives: [] };
+  const alternatives = normalizeAlternatives(raw.alternatives);
   const rawEvent = str(raw.event);
   if (Array.isArray(raw.conditions)) {
-    return { event: (LEGACY_EVENTS[rawEvent] ?? rawEvent) as FlowTrigger['event'], conditions: raw.conditions.filter(isCondition) };
+    return { event: (LEGACY_EVENTS[rawEvent] ?? rawEvent) as FlowTrigger['event'], conditions: raw.conditions.filter(isCondition), alternatives };
   }
   // Formato antigo: os filtros soltos no próprio objeto.
   const event = (LEGACY_EVENTS[rawEvent] ?? rawEvent) as FlowTrigger['event'];
@@ -105,15 +129,55 @@ export function normalizeTrigger(raw: FlowAutomationTrigger | null | undefined):
   if (str(raw.pipeline_id) && event !== 'lead.stage_changed') {
     conditions.push({ field: 'pipeline_id', operator: 'eq', value: str(raw.pipeline_id) });
   }
-  return { event, conditions };
+  return { event, conditions, alternatives };
 }
 
-/** O que vai pro servidor: só `{ event, conditions }`, nada solto. */
-export function serializeTrigger(t: FlowTrigger): { event: string; conditions: FlowTriggerCondition[] } {
+const filledConditions = (conditions: FlowTriggerCondition[]) =>
+  conditions.filter(c => c.value !== '' && !(Array.isArray(c.value) && c.value.length === 0));
+
+// `type` (e não `interface`): precisa caber no `FlowAutomationTrigger`, que tem índice livre.
+export type SerializedTrigger = {
+  event: string;
+  conditions: FlowTriggerCondition[];
+  alternatives: Array<{ event: string; conditions: FlowTriggerCondition[] }>;
+};
+
+/**
+ * O que vai pro servidor: `{ event, conditions, alternatives }`, nada solto.
+ * `alternatives` vai SEMPRE (vazia quando não há): é o que apaga o último
+ * "Ou quando" tirado na tela.
+ */
+export function serializeTrigger(t: FlowTrigger): SerializedTrigger {
   return {
     event: t.event,
-    conditions: t.conditions.filter(c => c.value !== '' && !(Array.isArray(c.value) && c.value.length === 0)),
+    conditions: filledConditions(t.conditions),
+    alternatives: (t.alternatives ?? []).map(a => ({ event: a.event, conditions: filledConditions(a.conditions) })),
   };
+}
+
+/** Todos os eventos do gatilho: o principal e os do "Ou quando". */
+export function triggerEvents(t: FlowTrigger): string[] {
+  return [t.event, ...(t.alternatives ?? []).map(a => a.event)].filter(Boolean);
+}
+
+/** "Etapa alterada ou Etiqueta adicionada": o botão do topo do canvas e a lista. */
+export function flowTriggerSummary(t: FlowTrigger): string {
+  const events = triggerEvents(t);
+  return events.length ? events.map(flowTriggerLabel).join(' ou ') : NO_TRIGGER_LABEL;
+}
+
+// ── "+ Ou quando…" (sprint 3) ──────────────────────────────────────────────
+
+export function addAlternative(t: FlowTrigger): FlowTrigger {
+  return { ...t, alternatives: [...(t.alternatives ?? []), { event: '', conditions: [] }] };
+}
+
+export function updateAlternative(t: FlowTrigger, index: number, next: FlowTriggerPart): FlowTrigger {
+  return { ...t, alternatives: (t.alternatives ?? []).map((a, i) => (i === index ? next : a)) };
+}
+
+export function removeAlternative(t: FlowTrigger, index: number): FlowTrigger {
+  return { ...t, alternatives: (t.alternatives ?? []).filter((_, i) => i !== index) };
 }
 
 // ── Edição ──────────────────────────────────────────────────────────────────
@@ -123,20 +187,20 @@ export const isPipelineFilter = (c: FlowTriggerCondition): boolean => c.field ==
 /** "Etapa alterada" já escolhe a etapa, e a etapa já diz o funil. */
 export const eventAcceptsPipelineFilter = (event: string): boolean => event !== 'lead.stage_changed';
 
-export function triggerConditionOf(t: FlowTrigger): FlowTriggerCondition | null {
+export function triggerConditionOf(t: FlowTriggerPart): FlowTriggerCondition | null {
   return t.conditions.find(c => !isPipelineFilter(c)) ?? null;
 }
 
-export function pipelineFilterOf(t: FlowTrigger): FlowTriggerCondition | null {
+export function pipelineFilterOf(t: FlowTriggerPart): FlowTriggerCondition | null {
   return t.conditions.find(isPipelineFilter) ?? null;
 }
 
-export function withTriggerCondition(t: FlowTrigger, next: FlowTriggerCondition | null): FlowTrigger {
+export function withTriggerCondition<T extends FlowTriggerPart>(t: T, next: FlowTriggerCondition | null): T {
   const funil = pipelineFilterOf(t);
   return { ...t, conditions: [...(next ? [next] : []), ...(funil ? [funil] : [])] };
 }
 
-export function withPipelineFilter(t: FlowTrigger, next: FlowTriggerCondition | null): FlowTrigger {
+export function withPipelineFilter<T extends FlowTriggerPart>(t: T, next: FlowTriggerCondition | null): T {
   return { ...t, conditions: [...t.conditions.filter(c => !isPipelineFilter(c)), ...(next ? [next] : [])] };
 }
 
@@ -145,10 +209,10 @@ export function withPipelineFilter(t: FlowTrigger, next: FlowTriggerCondition | 
  * barraria o fluxo sem nada na tela dizer por quê); o filtro de funil fica, onde
  * o gatilho novo o oferece. Mesma regra de `conditionsOnTriggerChange`.
  */
-export function changeTriggerEvent(t: FlowTrigger, event: FlowTrigger['event']): FlowTrigger {
+export function changeTriggerEvent<T extends FlowTriggerPart>(t: T, event: FlowTriggerPart['event']): T {
   if (event === t.event) return t;
   const funil = eventAcceptsPipelineFilter(event) ? pipelineFilterOf(t) : null;
-  return { event, conditions: funil ? [funil] : [] };
+  return { ...t, event, conditions: funil ? [funil] : [] };
 }
 
 // Gatilhos em que o filtro é obrigatório (sem ele o fluxo rodaria pra
@@ -158,11 +222,26 @@ const REQUIRED_CONDITION: Record<string, string> = {
   'lead.stage_changed': 'Escolha para qual etapa o lead precisa ir.',
 };
 
-export function triggerProblem(t: FlowTrigger): string | null {
+function partProblem(t: FlowTriggerPart): string | null {
   if (!t.event) return 'Escolha o gatilho do fluxo.';
   const message = REQUIRED_CONDITION[t.event];
   if (!message) return null;
   const c = triggerConditionOf(t);
   const filled = !!c && c.value !== '' && !(Array.isArray(c.value) && c.value.length === 0);
   return filled ? null : message;
+}
+
+/** O que falta no gatilho principal ou num "Ou quando", em português, ou null. */
+export function triggerProblem(t: FlowTrigger): string | null {
+  const main = partProblem(t);
+  if (main) return main;
+  const alternatives = t.alternatives ?? [];
+  for (let i = 0; i < alternatives.length; i += 1) {
+    const issue = partProblem(alternatives[i]);
+    if (issue) {
+      const what = alternatives[i].event ? issue : 'Escolha o gatilho.';
+      return `No "Ou quando"${alternatives.length > 1 ? ` nº ${i + 1}` : ''}: ${what.charAt(0).toLowerCase()}${what.slice(1)}`;
+    }
+  }
+  return null;
 }

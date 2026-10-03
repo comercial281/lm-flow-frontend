@@ -74,8 +74,9 @@ describe('nove listas que viravam vazias na recusa (G3)', () => {
     expect(src).toContain('<NoAccessState');
   });
 
+  // Follow-up (sprint 3): a aba é a lista do construtor com `kind="followup"`.
   it('Follow-up: leitura principal recusada mostra o aviso do cargo', () => {
-    const src = read('src/pages/Customer/Settings/FollowupSequences/FollowupSequences.tsx');
+    const src = read('src/pages/Customer/Automations/FlowBuilder/FlowAutomationsList.tsx');
     expect(src).toContain('isForbiddenError');
     expect(src).toContain('<NoAccessState');
   });

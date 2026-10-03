@@ -104,7 +104,7 @@ export default function EtapaOperacao({
                 <p className="text-xs text-amber-600">Escolha o funil no bloco <em>A IA move o card</em>, logo abaixo. As colunas saem de lá.</p>
               ) : (
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <Campo id="as_fu_stage" label="Coluna para o lead que sumiu" ajuda="Ela precisa ter a entrada Card entrou numa coluna, em Automações → Follow-up — senão o card muda de lugar e ninguém fala com o lead.">
+                  <Campo id="as_fu_stage" label="Coluna para o lead que sumiu" ajuda="Um follow-up precisa começar nela (gatilho Etapa alterada, em Automações → Follow-up) — senão o card muda de lugar e ninguém fala com o lead.">
                     <Seletor id="as_fu_stage" value={a.followup_stage_id} onChange={(v) => set({ followup_stage_id: v })} opcoes={stages} vazio="— escolha a coluna —" />
                   </Campo>
                   <Campo id="as_fu_ret" label="Quando ele voltar a responder, o card vai para">
@@ -114,8 +114,8 @@ export default function EtapaOperacao({
               )
             )}
             {a.followup_action === 'sequence' && (
-              <Campo id="as_fu_seq" label="Funil de follow-up" ajuda="Só os funis ativos aparecem.">
-                <Seletor id="as_fu_seq" value={a.followup_sequence_slug} onChange={(v) => set({ followup_sequence_slug: v })} opcoes={funis} vazio="— escolha o funil —" />
+              <Campo id="as_fu_seq" label="Qual follow-up" ajuda="Os follow-ups ficam em Automações → Follow-up. Desligado, ele não recebe o lead.">
+                <Seletor id="as_fu_seq" value={a.followup_flow_id} onChange={(v) => set({ followup_flow_id: v })} opcoes={funis} vazio="— escolha o follow-up —" />
               </Campo>
             )}
 

@@ -10,7 +10,13 @@ export type FlowNodeKind =
   | 'webhook' | 'http_call'
   // Sprint 2 (03/10/2026): uma ação das Automações como bloco. Config
   // `{ action_type, params }`, executada pelo MESMO LeadAutomation::Executor.
-  | 'lead_action';
+  | 'lead_action'
+  // Sprint 3 (03/10/2026): o que o follow-up antigo fazia quando o lead
+  // respondia, como bloco. Sem config.
+  | 'followup_recovered';
+
+/** Sprint 3: o fluxo é uma automação (aba Automações) ou um follow-up (aba Follow-up). */
+export type FlowAutomationKind = 'automation' | 'followup';
 
 // Gatilho do fluxo (sprint 1 das Automações, 02/10/2026): o MESMO evento e o
 // MESMO formato de condição das regras de Automações (LeadAutomationRule::TRIGGERS),
@@ -62,10 +68,12 @@ export interface FlowAutomationNode {
 
 // Contrato (spec 02/10): o backend devolve SEMPRE `{ event, conditions }`. O
 // formato antigo (`contact_created`, `stage_id` solto…) só é lido por
-// normalizeTrigger, por garantia.
+// normalizeTrigger, por garantia. Sprint 3: `alternatives` são os outros
+// gatilhos ("+ Ou quando…"), com OU entre o principal e cada um.
 export interface FlowAutomationTrigger {
   event: FlowTriggerEvent | string;
   conditions?: FlowTriggerCondition[];
+  alternatives?: Array<{ event: FlowTriggerEvent | string; conditions?: FlowTriggerCondition[] }>;
   callers?: string[] | null;
   [key: string]: unknown;
 }
@@ -73,6 +81,8 @@ export interface FlowAutomationTrigger {
 export interface FlowAutomation {
   id: string;
   name: string;
+  /** Sprint 3: o servidor guarda em `state.kind`; ausente = automação. */
+  kind?: FlowAutomationKind;
   folder_id: string | null;
   trigger: FlowAutomationTrigger;
   is_enabled: boolean;
@@ -82,7 +92,9 @@ export interface FlowAutomation {
   reentry_window_hours: number;
   /** "Só uma vez por lead" (sprint 2). O servidor guarda em `state`; aceita os dois. */
   once_per_lead?: boolean;
-  state?: { once_per_lead?: boolean; [key: string]: unknown } | null;
+  /** "Só em horário comercial" (sprint 3): nenhuma mensagem do fluxo sai fora da janela. Também em `state`. */
+  business_hours_only?: boolean;
+  state?: { once_per_lead?: boolean; business_hours_only?: boolean; kind?: FlowAutomationKind; [key: string]: unknown } | null;
   max_depth: number;
   archived_at: string | null;
   created_at: string;
@@ -150,6 +162,7 @@ export const FLOW_NODE_DEFS: FlowNodeDef[] = [
   { kind: 'http_call', label: 'Chamar uma API', group: 'notify', canFail: true, defaultConfig: { method: 'POST', url: '', headers: '', body: '' } },
   // Nome e grupo de cada ação vêm de features/flowAutomations/leadAction.ts.
   { kind: 'lead_action', label: 'Ação', group: 'contact', canFail: true, defaultConfig: { action_type: '', params: {} } },
+  { kind: 'followup_recovered', label: 'Marcar como recuperado pelo follow-up', group: 'contact', canFail: false, defaultConfig: {} },
 ];
 
 export const FLOW_NODE_DEF_BY_KIND: Record<FlowNodeKind, FlowNodeDef> = FLOW_NODE_DEFS.reduce(
@@ -166,4 +179,5 @@ export const FLOW_VISIBLE_NODE_KINDS: FlowNodeKind[] = [
   'wait', 'wait_for_reply', 'condition', 'filter_label',
   'add_label', 'remove_label', 'move_stage',
   'lead_action',
+  'followup_recovered',
 ];

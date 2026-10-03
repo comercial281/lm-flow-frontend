@@ -2,6 +2,7 @@ import api from '@/services/core/api';
 import type {
   FlowAutomation,
   FlowAutomationFolder,
+  FlowAutomationKind,
   SaveFlowPayload,
   TestRunResult,
 } from '@/types/flowAutomations';
@@ -32,9 +33,12 @@ class FlowAutomationsService {
     return '/flow_automations';
   }
 
-  async list(params: { search?: string; folderId?: string | null } = {}): Promise<FlowAutomation[]> {
+  // `kind` (sprint 3): o servidor devolve só as automações quando não vem; a aba
+  // Follow-up pede `followup`.
+  async list(params: { search?: string; folderId?: string | null; kind?: FlowAutomationKind } = {}): Promise<FlowAutomation[]> {
     const response = await api.get(this.baseUrl, {
       params: {
+        ...(params.kind ? { kind: params.kind } : {}),
         ...(params.search ? { search: params.search } : {}),
         ...(params.folderId !== undefined ? { folder_id: params.folderId ?? '' } : {}),
       },
@@ -46,7 +50,8 @@ class FlowAutomationsService {
     return unwrap<FlowAutomation>(await api.get(`${this.baseUrl}/${id}`));
   }
 
-  async create(payload: { name: string; folder_id?: string | null }): Promise<FlowAutomation> {
+  // Follow-up novo (`kind: 'followup'`) nasce com o modelo "Follow-up padrão", montado pelo servidor.
+  async create(payload: { name: string; folder_id?: string | null; kind?: FlowAutomationKind }): Promise<FlowAutomation> {
     return unwrap<FlowAutomation>(await api.post(this.baseUrl, payload));
   }
 
@@ -69,7 +74,7 @@ class FlowAutomationsService {
     return appliedFlowFrom<FlowAutomation>((await api.post(`${this.baseUrl}/templates/${encodeURIComponent(key)}/apply`)).data);
   }
 
-  async update(id: string, payload: Partial<Pick<FlowAutomation, 'name' | 'folder_id' | 'trigger' | 'reentry_window_hours' | 'once_per_lead' | 'max_depth'>>): Promise<FlowAutomation> {
+  async update(id: string, payload: Partial<Pick<FlowAutomation, 'name' | 'folder_id' | 'trigger' | 'reentry_window_hours' | 'once_per_lead' | 'business_hours_only' | 'max_depth'>>): Promise<FlowAutomation> {
     return unwrap<FlowAutomation>(await api.patch(`${this.baseUrl}/${id}`, payload));
   }
 

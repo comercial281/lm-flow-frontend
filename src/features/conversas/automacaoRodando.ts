@@ -9,8 +9,9 @@ import type { LeadFollowupState } from '@/services/leadFollowup/leadFollowupServ
  */
 export interface LinhaAutomatica {
   key: string;
+  /** Como a linha se apresenta. O fluxo de follow-up (sprint 3) é `followup`. */
   tipo: 'fluxo' | 'followup';
-  /** Fluxo: id da instância. Follow-up: vazio (para pelo lead). */
+  /** Fluxo (automação ou follow-up novo): id da instância. Follow-up antigo: vazio (para pelo lead). */
   id: string;
   texto: string;
   podeParar: boolean;
@@ -26,14 +27,17 @@ export function quando(valor: unknown, agora: Date = new Date()): string {
 }
 
 export function linhaDoFluxo(fluxo: RunningFlow, agora: Date = new Date()): LinhaAutomatica {
-  const nome = fluxo.flow_name ? `Fluxo "${fluxo.flow_name}"` : 'Fluxo';
+  // Sprint 3: o fluxo da aba Follow-up aparece como "Follow-up "X"".
+  const followup = fluxo.kind === 'followup';
+  const rotulo = followup ? 'Follow-up' : 'Fluxo';
+  const nome = fluxo.flow_name ? `${rotulo} "${fluxo.flow_name}"` : rotulo;
   let fase = 'em andamento';
   if (fluxo.phase === 'waiting_reply') {
     fase = fluxo.until ? `aguardando resposta até ${quando(fluxo.until, agora)}` : 'aguardando resposta, sem limite';
   } else if (fluxo.phase === 'waiting') {
     fase = fluxo.until ? `esperando até ${quando(fluxo.until, agora)}` : 'esperando';
   }
-  return { key: `fluxo-${fluxo.id}`, tipo: 'fluxo', id: fluxo.id, texto: `${nome} · ${fase}`, podeParar: fluxo.active };
+  return { key: `fluxo-${fluxo.id}`, tipo: followup ? 'followup' : 'fluxo', id: fluxo.id, texto: `${nome} · ${fase}`, podeParar: fluxo.active };
 }
 
 export function linhaDoFollowup(estado: LeadFollowupState, agora: Date = new Date()): LinhaAutomatica | null {

@@ -14,7 +14,7 @@ const origem: LeadAutomationCondition = { field: 'source', operator: 'eq', value
 const etiqueta: LeadAutomationCondition = { field: 'label', operator: 'eq', value: 'quente' };
 
 const resources = {
-  labels: [], sequences: [], users: [],
+  labels: [], sequences: [], followupFlows: [], users: [],
   pipelines: [{ id: 'p1', name: 'Lançamento' }, { id: 'p2', name: 'Locação' }],
   stagesByPipeline: {}, quickReplies: [], adOrigins: [], formOrigins: [],
   messageFunnels: [], evolutionInstances: [],

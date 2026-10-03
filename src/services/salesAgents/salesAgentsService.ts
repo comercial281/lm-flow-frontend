@@ -77,6 +77,10 @@ export interface SalesAgent {
   /** Coluna de volta quando o lead responde. Vazia = a primeira coluna do funil. */
   followup_return_stage_id: string | null;
   followup_sequence_slug: string | null;
+  /** Sprint 3 (03/10/2026): o fluxo de follow-up que recebe o lead em
+   *  "Entregar pro follow-up". Sem ele, o servidor usa o funil antigo do slug
+   *  (e o redireciona pro fluxo convertido). */
+  followup_flow_id?: string | null;
   /** Gotejamento: a IA entrega um punhado de leads por vez, com pausa sorteada
    *  entre um punhado e o próximo. Sem ele saem até 200 de uma vez, e o funil
    *  despeja até 100 mensagens a cada 5 min — é assim que um número é derrubado. */
@@ -485,6 +489,7 @@ export interface SalesAgentPayload {
   followup_stage_id?: string | null;
   followup_return_stage_id?: string | null;
   followup_sequence_slug?: string | null;
+  followup_flow_id?: string | null;
   followup_drip_enabled?: boolean;
   followup_drip_min_leads?: number;
   followup_drip_max_leads?: number;
