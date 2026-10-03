@@ -110,8 +110,6 @@ consumeMasterSso();
 // Inicialização do tema antes do React montar
 initTheme();
 
-// Inicialização do Google Analytics 4
-
 // ⚡ OTIMIZAÇÃO: StrictMode removido para evitar duplicação de requests
 // Em desenvolvimento, StrictMode executa useEffect 2x para detectar problemas
 //

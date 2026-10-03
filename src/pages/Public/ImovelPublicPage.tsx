@@ -83,12 +83,13 @@ export default function ImovelPublicPage() {
   const { tenant, code } = useParams<{ tenant: string; code: string }>();
   const [state, setState] = useState<'loading' | 'ok' | 'notfound'>('loading');
   const [site, setSite] = useState<SiteInfo>({});
+  const [siteLoaded, setSiteLoaded] = useState(false);
   const [prop, setProp] = useState<PropertyDTO | null>(null);
   const [active, setActive] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   const [suggestions, setSuggestions] = useState<PortalProperty[]>([]);
   const { pathname } = useLocation();
-  usePortalTracking(state === 'ok' ? site : null, tenant, { kind: 'property', path: pathname, propertyCode: code });
+  usePortalTracking(state === 'ok' && siteLoaded ? site : null, tenant, { kind: 'property', path: pathname, propertyCode: code });
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -114,6 +115,7 @@ export default function ImovelPublicPage() {
         const property = (await imovelRes.json()).data as PropertyDTO;
         const siteInfo = siteRes.ok ? ((await siteRes.json()).data as SiteInfo) : {};
         setSite(siteInfo);
+        setSiteLoaded(siteRes.ok);
         setProp(property);
 
         const siteName = siteInfo.name || 'Imóveis';

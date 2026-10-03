@@ -16,8 +16,9 @@ type W = Window & { dataLayer?: unknown[]; gtag?: (...a: unknown[]) => void; fbq
 const NOT_OWN = [/(^|\.)lmflow\.com\.br$/i, /\.vercel\.app$/i, /^localhost$/i, /^127\.0\.0\.1$/];
 
 export function isOwnDomain(host: string): boolean {
-  const h = host.toLowerCase().split(':')[0];
-  return !!h && !NOT_OWN.some(r => r.test(h));
+  const h = host.toLowerCase().split(':')[0].replace(/\.+$/, '');
+  if (!h || h.startsWith('[') || /^\d+\.\d+\.\d+\.\d+$/.test(h)) return false;
+  return !NOT_OWN.some(r => r.test(h));
 }
 
 function addScript(doc: Document, src: string) {
@@ -38,6 +39,7 @@ function injectHtml(doc: Document, html: string, target: HTMLElement, prepend: b
     const s = doc.createElement('script');
     Array.from(old.attributes).forEach(a => s.setAttribute(a.name, a.value));
     s.text = old.text;
+    if (old.src) s.async = false; // mantém a ordem colada pelo cliente
     return s;
   });
   if (prepend) nodes.reverse().forEach(n => target.insertBefore(n, target.firstChild));
@@ -47,22 +49,30 @@ function injectHtml(doc: Document, html: string, target: HTMLElement, prepend: b
 export function installSiteTracking(cfg: SiteTrackingConfig, deps: { win?: Window; host?: string } = {}): void {
   const w = (deps.win ?? window) as W;
   if (w.__lmfTracking) return;
-  w.__lmfTracking = true;
   const doc = w.document;
   const host = deps.host ?? w.location.hostname;
   const t = cfg.tracking ?? {};
+  const own = isOwnDomain(host);
+  const hasAdvanced = !!(t.gtm_id || cfg.custom_code?.head || cfg.custom_code?.body);
+  // Config vazia (site que falhou ao carregar) não trava a instalação da próxima tentativa.
+  if (!t.ga4 && !t.facebook_pixel && !(own && hasAdvanced)) return;
+  w.__lmfTracking = true;
 
   try {
     if (t.ga4) {
       w.dataLayer = w.dataLayer || [];
-      w.gtag = (...args: unknown[]) => { w.dataLayer!.push(args); };
-      w.gtag('js', new Date());
-      w.gtag('config', t.ga4, { send_page_view: false });
+      // gtag.js só entende `arguments` (não array) como comando.
+      w.gtag = function () {
+        // eslint-disable-next-line prefer-rest-params
+        w.dataLayer!.push(arguments);
+      } as W['gtag'];
+      w.gtag!('js', new Date());
+      w.gtag!('config', t.ga4, { send_page_view: false });
       addScript(doc, `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(t.ga4)}`);
     }
     if (t.facebook_pixel) installPixel(t.facebook_pixel, { win: w, pageView: false });
 
-    if (!isOwnDomain(host)) return;
+    if (!own) return;
 
     if (t.gtm_id) {
       w.dataLayer = w.dataLayer || [];
