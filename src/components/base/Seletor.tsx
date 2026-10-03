@@ -53,6 +53,16 @@ const SETA_NATIVA: CSSProperties = {
   backgroundPosition: 'right 0.625rem center',
 };
 
+// Lista comprida rola como qualquer lista. O Radix põe uma seta em cima e outra
+// embaixo que rolam sozinhas ao passar o mouse, e esconde a barra de rolagem: quem
+// usa nem percebe que dá para rolar com a rodinha. Some com as setas e devolve a
+// barra fina. O `!` é necessário: o <style> que o Radix injeta não tem camada e
+// venceria a utilidade do Tailwind (que tem).
+const ROLAGEM_COMUM =
+  '[&_[data-slot=select-scroll-up-button]]:hidden [&_[data-slot=select-scroll-down-button]]:hidden ' +
+  '[&_[data-radix-select-viewport]]:![scrollbar-width:thin] ' +
+  '[&_[data-radix-select-viewport]::-webkit-scrollbar]:!block';
+
 // Tira o visual do design system no modo `bare`. A seta é o último svg.
 const SEM_CAIXA =
   'h-auto gap-1 border-0 bg-transparent p-0 shadow-none dark:bg-transparent [&>svg:last-child]:hidden';
@@ -132,7 +142,7 @@ export function Seletor({
         </SelectTrigger>
         {/* Acima de qualquer janela da casa (modais em z-[200], mapa em z-[1000]).
             `dark` na própria lista liga as cores do tema escuro só nela. */}
-        <SelectContent className={cn('z-[1200]', escuro && 'dark')} onCloseAutoFocus={onCloseAutoFocus}>
+        <SelectContent className={cn('z-[1200]', ROLAGEM_COMUM, escuro && 'dark')} onCloseAutoFocus={onCloseAutoFocus}>
           {itens.map((it, i) =>
             it.tipo === 'opcao' ? (
               item(it, i)

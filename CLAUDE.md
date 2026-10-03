@@ -5217,6 +5217,11 @@ Armadilhas:
     `setTimeout`: a animação de fechar devolve o foco ao botão da lista depois dele.
     Modelo: campo "Outro" do primeiro acesso, que aparece com `autoFocus` depois da
     escolha.
+17. **Lista comprida rola como qualquer lista** (pedido do dono, 02/10): sem as setas
+    do Radix que rolam sozinhas ao passar o mouse, com a barra de rolagem fina à vista
+    (o Radix a esconde). Mora em `ROLAGEM_COMUM`, no `Seletor`, e vale para todas as
+    listas. As classes levam `!` porque o `<style>` que o Radix injeta não tem camada
+    e venceria a utilidade do Tailwind. Não trazer as setas de volta.
 
 Spec e planos: `LM FLOW/specs/2026-10-02-seletor-unico-design.md`,
 `LM FLOW/plans/2026-10-02-seletor-unico-pr1.md`,

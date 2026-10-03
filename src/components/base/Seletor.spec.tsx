@@ -197,6 +197,18 @@ describe('Seletor no computador', () => {
     expect(lista.className).toContain('z-[1200]');
   });
 
+  // Lista comprida rola como qualquer lista: sem as setas do Radix que rolam
+  // sozinhas ao passar o mouse, com a barra de rolagem à vista (o Radix a esconde).
+  it('lista comprida: sem setas que rolam no hover, com barra de rolagem', async () => {
+    render(<Filtro />);
+    await userEvent.click(screen.getByLabelText('Tipo'));
+    const classes = (await screen.findByRole('listbox')).className.split(/\s+/);
+    expect(classes).toContain('[&_[data-slot=select-scroll-up-button]]:hidden');
+    expect(classes).toContain('[&_[data-slot=select-scroll-down-button]]:hidden');
+    expect(classes).toContain('[&_[data-radix-select-viewport]]:![scrollbar-width:thin]');
+    expect(classes).toContain('[&_[data-radix-select-viewport]::-webkit-scrollbar]:!block');
+  });
+
   it('altura: h-9 por padrão e a classe da tela troca', () => {
     render(
       <>
